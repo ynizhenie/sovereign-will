@@ -96,6 +96,10 @@ function isTileBlockedForEnemyPermissive(gx, gy) {
   let ty = gy * TILE_SIZE + 15;
   if (naturalRocks.some(r => r.x === tx && r.y === ty)) return true;
   if (waterTiles.some(w => w.x === tx && w.y === ty)) return true;
+  // enemies can chop trees and boulders on the way (see update()), but not cacti or ore
+  if (cacti.some(c => c.x === tx && c.y === ty)) return true;
+  if (ironOres.some(i => i.x === tx && i.y === ty)) return true;
+  if (coalOres.some(c => c.x === tx && c.y === ty)) return true;
   return false;
 }
 
@@ -110,16 +114,24 @@ function findGridPath(startG, endG, targetX, targetY, options) {
   }
 
   const key = (gx, gy) => `${gx},${gy}`;
+  const blockedCache = new Map();
+  const isBlocked = (gx, gy) => {
+    const k = key(gx, gy);
+    if (!blockedCache.has(k)) blockedCache.set(k, options.isBlocked(gx, gy));
+    return blockedCache.get(k);
+  };
   const openList = [{ gx: startG.gx, gy: startG.gy, f: Math.hypot(startG.gx - endG.gx, startG.gy - endG.gy) }];
   const closedSet = new Set();
   const parentMap = new Map();
   const gScore = new Map([[key(startG.gx, startG.gy), 0]]);
   let found = false;
 
-  for (let steps = 0; openList.length > 0 && steps < 350; steps++) {
+  for (let steps = 0; openList.length > 0 && steps < (options.maxSteps || 350); steps++) {
     openList.sort((a, b) => a.f - b.f);
     const current = openList.shift();
     const currentKey = key(current.gx, current.gy);
+    // a node can be queued several times before it's expanded; skip stale copies
+    if (closedSet.has(currentKey)) continue;
     if (current.gx === endG.gx && current.gy === endG.gy) {
       found = true;
       break;
@@ -130,9 +142,9 @@ function findGridPath(startG, endG, targetX, targetY, options) {
       const gx = current.gx + direction.dx;
       const gy = current.gy + direction.dy;
       const nextKey = key(gx, gy);
-      if (closedSet.has(nextKey) || options.isBlocked(gx, gy)) continue;
+      if (closedSet.has(nextKey) || isBlocked(gx, gy)) continue;
       if (!options.allowCornerCutting && direction.dx !== 0 && direction.dy !== 0 &&
-          (options.isBlocked(current.gx + direction.dx, current.gy) || options.isBlocked(current.gx, current.gy + direction.dy))) continue;
+          (isBlocked(current.gx + direction.dx, current.gy) || isBlocked(current.gx, current.gy + direction.dy))) continue;
 
       const worldX = gx * TILE_SIZE + 15;
       const worldY = gy * TILE_SIZE + 15;
@@ -161,11 +173,14 @@ function findPathAStarPermissive(startX, startY, targetX, targetY) {
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(ROWS - 1, endG.gy));
+  const breakable = new Set([...trees.filter(t => !t.isGrowing), ...boulders].map(r => `${r.x},${r.y}`));
   return findGridPath(startG, endG, targetX, targetY, {
     isBlocked: isTileBlockedForEnemyPermissive,
     allowCornerCutting: true,
     isBlockedPath: true,
-    extraCost: (x, y) => (trees.some(t => !t.isGrowing && t.x === x && t.y === y) || boulders.some(b => b.x === x && b.y === y) ? 10 : 0)
+    // fallback search: let it cover the whole map, otherwise enemies walled in by trees never find a path
+    maxSteps: COLS * ROWS,
+    extraCost: (x, y) => (breakable.has(`${x},${y}`) ? 10 : 0)
   });
 }
 
@@ -284,7 +299,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
 
   let targetChanged = !entity.pathTarget || Math.hypot(entity.pathTarget.x - targetX, entity.pathTarget.y - targetY) > threshold;
   let needsPath = !entity.path || entity.path.length === 0 || targetChanged || (isEnemy && entity.pathTimer <= 0);
-  let canRetryPath = !entity.path || entity.path.length > 0 || !Number.isFinite(entity.pathRetryTimer) || entity.pathRetryTimer <= 0;
+  let canRetryPath = !(entity.pathRetryTimer > 0);
 
   if (needsPath && canRetryPath) {
     let res = findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy);
@@ -319,6 +334,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         entity.moveVx = 0;
         entity.moveVy = 0;
         entity.path = null;
+        entity.pathRetryTimer = 0.25;
         entity.directBlockedTimer = 1.5;
         return;
       }
@@ -375,6 +391,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         entity.moveVx = 0;
         entity.moveVy = 0;
         entity.path = null;
+        entity.pathRetryTimer = 0.25;
       } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, entity.radius)) {
         let fallback = findSafeStepAroundObstacle(entity, targetX, targetY, speed);
         if (fallback) {

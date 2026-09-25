@@ -890,7 +890,8 @@ function update(dt) {
       }
     }
 
-    let touchingBuilding = buildings.find(b => Math.hypot(en.x - b.x, en.y - b.y) < en.radius + 15);
+    // box distance, not center distance: an enemy pressed against a wall off-center is still touching it
+    let touchingBuilding = buildings.find(b => collidesWithBoxList(en.x, en.y, en.radius + 2, [b], 15));
     let blockedRes = null;
 
     if (touchingBuilding) {
@@ -932,7 +933,7 @@ function update(dt) {
           destroyableResources.push(...cacti, ...ironOres, ...coalOres, ...naturalRocks);
         }
         for (let r of destroyableResources) {
-          if (Math.hypot(en.x - r.x, en.y - r.y) < en.radius + 15) {
+          if (collidesWithBoxList(en.x, en.y, en.radius + 2, [r], 15)) {
             blockedRes = r;
             break;
           }
