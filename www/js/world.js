@@ -369,6 +369,7 @@ function resetGame() {
   projectiles = []; farmPlots = []; boars = []; selectedSettler = null;
   
   generateMap();
+  resetTileIndex();
   updateSeedHud();
 
   settlers.push(

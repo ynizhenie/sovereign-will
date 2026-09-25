@@ -115,6 +115,7 @@ function harvestResourceDirect(r, p) {
 }
 
 function invalidateAllPaths() {
+  resetTileIndex();
   settlers.forEach(s => { s.path = null; s.pathTarget = null; });
   enemies.forEach(en => { en.path = null; en.pathTarget = null; });
 }
