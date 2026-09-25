@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI overrides these from the git tag / run number
-        versionCode (System.getenv("APP_VERSION_CODE") ?: "105").toInteger()
-        versionName System.getenv("APP_VERSION_NAME") ?: "0.1.5"
+        versionCode = Integer.parseInt(System.getenv("APP_VERSION_CODE") ?: "105")
+        versionName = System.getenv("APP_VERSION_NAME") ?: "0.1.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
