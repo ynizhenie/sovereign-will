@@ -1,6 +1,7 @@
 function update(dt) {
   if (!gameStarted || isPaused) return;
   resetTileIndex();
+  pathTick++;
 
   const possessed = getPossessed();
   const dpad = document.getElementById('mobile-dpad');
@@ -160,6 +161,13 @@ function update(dt) {
   let workerAssignments = new Map();
   let blueprintAssignments = new Map();
   let allResources = getHarvestableResources();
+  // which list each resource is in, so every settler's canHarvest() below doesn't scan all the lists
+  const resourceKind = new Map();
+  for (const [kind, list] of [['boar', boars], ['grass', grassList], ['tree', trees], ['cactus', cacti], ['boulder', boulders],
+                              ['iron', ironOres], ['coal', coalOres], ['rock', naturalRocks], ['stick', sticks],
+                              ['pebble', pebbles], ['bush', berryBushes], ['farm', farmPlots]]) {
+    for (const r of list) resourceKind.set(r, kind);
+  }
   let markedResources = allResources.filter(r => (r.priority || 0) > 0);
   markedResources.sort((a, b) => b.priority - a.priority);
 
@@ -549,13 +557,14 @@ function update(dt) {
         }
 
         const canHarvest = (r) => {
+          const kind = resourceKind.get(r);
           if (s.role !== 'worker') {
             if (r.isCarcass) return r.collector === s;
-            if (boars.includes(r)) return !isWaveActive && !r.hidden && !r.hideTarget;
+            if (kind === 'boar') return !isWaveActive && !r.hidden && !r.hideTarget;
             return false;
           }
           if (r.isCarcass) return r.collector === s;
-          if (boars.includes(r)) {
+          if (kind === 'boar') {
             if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
             if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool)) return false;
             if (r.hidden || r.hideTarget) return false;
@@ -564,26 +573,27 @@ function update(dt) {
             return !hasNothing && !hasRod;
           }
 
-          if (grassList.includes(r) && boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
+          if (kind === 'grass' && boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
           
-          if (trees.includes(r)) return hasAxeTool(s.tool) && !r.isGrowing;
-          if (cacti.includes(r)) return hasAxeTool(s.tool);
-          if (boulders.includes(r)) return hasPickaxeTool(s.tool);
-          if (ironOres.includes(r)) return hasPickaxeTool(s.tool);
-          if (coalOres.includes(r)) return hasPickaxeTool(s.tool);
-          if (naturalRocks.includes(r)) return hasPickaxeTool(s.tool);
+          if (kind === 'tree') return hasAxeTool(s.tool) && !r.isGrowing;
+          if (kind === 'cactus') return hasAxeTool(s.tool);
+          if (kind === 'boulder') return hasPickaxeTool(s.tool);
+          if (kind === 'iron') return hasPickaxeTool(s.tool);
+          if (kind === 'coal') return hasPickaxeTool(s.tool);
+          if (kind === 'rock') return hasPickaxeTool(s.tool);
           
           let hasPriority = (r.priority || 0) > 0;
-          if (sticks.includes(r) || pebbles.includes(r) || grassList.includes(r) || berryBushes.includes(r) || (farmPlots.includes(r) && r.growth >= 100)) {
+          if (kind === 'stick' || kind === 'pebble' || kind === 'grass' || kind === 'bush' || (kind === 'farm' && r.growth >= 100)) {
             return s.tool === 'none' || hasPriority;
           }
           
           return false;
         };
 
+        const settlerReach = getSettlerReach(s);
         let assignedRes = null;
         for (let r of markedResources) {
-          if (canHarvest(r)) {
+          if (canHarvest(r) && getReachDistanceToResource(settlerReach, r) < Infinity) {
             let currentWorkers = workerAssignments.get(r) || 0;
             if (currentWorkers < r.priority) {
               assignedRes = r;
@@ -594,10 +604,11 @@ function update(dt) {
         }
 
         if (!assignedRes && !isWaveActive) {
-          let availableRes = allResources.filter(r => canHarvest(r) && (!r.priority || r.priority === 0) && !naturalRocks.includes(r));
+          let availableRes = allResources.filter(r => canHarvest(r) && (!r.priority || r.priority === 0) && resourceKind.get(r) !== 'rock');
+          // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
           let minDist = Infinity;
           availableRes.forEach(r => {
-            let d = Math.hypot(r.x - s.x, r.y - s.y);
+            let d = getReachDistanceToResource(settlerReach, r);
             if (d < minDist) { minDist = d; assignedRes = r; }
           });
         }
