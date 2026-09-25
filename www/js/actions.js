@@ -317,8 +317,7 @@ function assignTool(toolType) {
     return;
   }
 
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
 
   if (!target) {
     if (toolType === 'rod') {
@@ -355,8 +354,7 @@ function craftWeapon(type) {
     return;
   }
 
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
 
   if (!target) {
     target = settlers.find(s => s.type === 'big' && s.weapon === 'fist' && !s.targetEquipment) ||
@@ -379,8 +377,7 @@ function craftWeapon(type) {
 }
 
 function craftArrows() {
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
   if (!target) target = settlers.find(s => s.weapon === 'bow' && s.quiver);
   if (!target || target.weapon !== 'bow' || !target.quiver) {
     showNotification("⚠️ Сначала нужен лучник с колчаном", true);
@@ -409,7 +406,7 @@ function craftArmor() {
 }
 
 function equipArmorToSelected() {
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : getPossessed();
+  let target = getSelectedSettler() || getPossessed();
   
   if (!target) {
     showNotification("⚠️ Сначала выберите поселенца или вселитесь в него!", true);
@@ -435,8 +432,7 @@ function equipArmorToSelected() {
 }
 
 function disarmSettler(type = 'all') {
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
 
   const hasTargetItem = (s) => {
     if (type === 'tool') return s.tool && s.tool !== 'none';
@@ -523,7 +519,7 @@ function spawnSettler(type = 'normal') {
 }
 
 function upgradeToBig(target) {
-  if (!target) target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : getPossessed();
+  if (!target) target = getSelectedSettler() || getPossessed();
   if (!target || target.type !== 'normal') target = settlers.find(s => s.type === 'normal');
 
   if (!target || target.type !== 'normal') {
@@ -573,6 +569,11 @@ function setMode(mode) {
 }
 
 function getPossessed() { return settlers.find(s => s.isPossessed); }
+
+// the settler picked in the UI, if it's still alive
+function getSelectedSettler() {
+  return selectedSettler && settlers.includes(selectedSettler) ? selectedSettler : null;
+}
 
 let lastPossessedIndex = -1;
 
