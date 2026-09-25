@@ -4,3 +4,6 @@ node_modules/
 *.aab
 # original archive the project was imported from
 /_import/
+# signing keys: keep them out of the repo
+*.keystore
+*.jks
