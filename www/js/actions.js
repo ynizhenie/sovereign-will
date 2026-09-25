@@ -120,18 +120,14 @@ function invalidateAllPaths() {
 }
 
 function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
-  if (settler.weapon === 'club') wood += 4;
-  if (settler.weapon === 'sword') { wood += 6; stone += 3; }
-  if (settler.weapon === 'spear') { wood += 10; stone += 5; }
-  if (settler.weapon === 'iron_sword') { wood += 6; iron += 3; }
-  if (settler.weapon === 'iron_spear') { wood += 10; iron += 3; }
-  if (settler.weapon === 'bow') { wood += 15; leather += 5; }
-
-  if (settler.tool === 'axe') { wood += 5; stone += 5; }
-  if (settler.tool === 'pickaxe') { wood += 5; stone += 10; }
-  if (settler.tool === 'iron_axe') { wood += 5; iron += 3; }
-  if (settler.tool === 'iron_pickaxe') { wood += 5; iron += 4; }
-  if (settler.tool === 'rod') wood += 10;
+  // refund exactly what the item cost, as defined in GAME_CONFIG
+  let wallet = getWallet();
+  for (const item of [getDefinition('weapons', settler.weapon), getDefinition('tools', settler.tool)]) {
+    for (const [resource, amount] of Object.entries((item && item.cost) || {})) {
+      wallet = spendResources(wallet, { [resource]: -amount });
+    }
+  }
+  applyWallet(wallet);
 
   if (includeArmor && settler.armor === 'iron') iron += 8;
   if (includeQuiver && settler.quiver) {
