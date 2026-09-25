@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sovereign Will</title>
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="main-menu">
+    <div class="main-menu-content">
+        <h1>Sovereign Will</h1>
+
+        <button id="play-button">ИГРАТЬ</button>
+
+        <div class="wave-settings">
+            <div>Интервал волн (сек):</div>
+
+            <div class="wave-options">
+                <button class="wave-option active" data-wave-interval="90">90</button>
+                <button class="wave-option" data-wave-interval="120">120</button>
+                <button class="wave-option" data-wave-interval="180">180</button>
+            </div>
+        </div>
+
+        <div class="seed-settings">
+            <label for="seed-input">Сид мира</label>
+            <div>
+                <input id="seed-input" type="text" value="default-world-seed" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="game-container">
+
+  <div id="top-bar">
+    <div class="top-wave">
+      🌊 Волна <span id="wave-num">1</span> (<span id="wave-timer">90</span>с)
+    </div>
+
+    <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" title="Пауза">⏸️</button>
+
+    <div class="top-actions">
+      <button class="btn btn-unpossess" onclick="switchPossession()">👁️</button>
+    </div>
+  </div>
+
+  <div id="main-area">
+    <div id="toast-notification"></div>
+
+    <div style="position: absolute; top: 8px; left: 10px; z-index: 5; font-size: 10px; color: rgba(255, 255, 255, 0.35); pointer-events: none; user-select: none; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);">
+      <span id="hud-seed">-</span>
+    </div>
+
+    <div id="zoom-controls">
+      <button class="btn-zoom" onclick="zoomIn()" title="Приблизить">
+        ➕
+      </button>
+      <button class="btn-zoom" onclick="zoomOut()" title="Отдалить">
+        ➖
+      </button>
+    </div>
+
+    <canvas id="gameCanvas" width="1200" height="1200"></canvas>
+
+    <div id="mobile-dpad">
+      <button id="btn-w" class="dpad-btn up">▲</button>
+      <div class="dpad-row">
+        <button id="btn-a" class="dpad-btn left">◄</button>
+        <button id="btn-s" class="dpad-btn down">▼</button>
+        <button id="btn-d" class="dpad-btn right">►</button>
+      </div>
+    </div>
+
+    <button class="btn active" id="btn-interact" onclick="setMode('interact')">
+      <span class="fab-icon">👆</span>
+      <span class="fab-label">Указать</span>
+    </button>
+  </div>
+
+  <div id="bottom-panel">
+
+    <div id="selected-bar" class="selected-unit-box">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 11px; color: #aaa;">Выбран: <b id="selected-settler-txt" style="color: #f1c40f;">Никто</b></span>
+        <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()">❌</button>
+      </div>
+      <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()">🧌 Улучшить рабочего (15🍞 15🪵)</button>
+    </div>
+
+    <div class="resources-grid" id="resources-hud"></div>
+
+    <div class="recruit-row">
+      <button class="btn" onclick="spawnSettler('normal')">👨‍🌾 Рабочий (15🍞)</button>
+      <button class="btn" onclick="spawnSettler('big')">🧌 Богатырь (30🍞 15🪵)</button>
+      <button class="btn btn-armor" onclick="upgradeToBig()">🧌 Улучшить (15🍞 15🪵)</button>
+    </div>
+
+    <div class="tab-navigation">
+      <button class="tab-btn active" onclick="switchTab(this, 'tab-build')">🏗️ Строительство</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-tools')">🛠️ Инструменты</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')">⚔️ Оружие</button>
+    </div>
+
+    <div class="tab-content-container">
+
+      <div id="tab-build" class="tab-pane active">
+        <div class="btn-grid-2col" id="build-actions"></div>
+
+        <div class="action-row">
+          <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')">🔨 Снести</button>
+        </div>
+      </div>
+
+      <div id="tab-tools" class="tab-pane">
+        <div class="btn-grid-2col" id="tool-actions"></div>
+
+        <div class="action-row">
+          <button class="btn btn-disarm" onclick="disarmSettler('tool')">❌ Разобрать инструмент</button>
+        </div>
+      </div>
+
+      <div id="tab-weapons" class="tab-pane">
+        <div class="btn-grid-2col" id="weapon-actions"></div>
+        <div class="btn-grid-2col" id="special-actions">
+          <button class="btn" onclick="craftArrows()">🏹 Стрелы (3🪵 1🪨 → 6)</button>
+          <button class="btn" onclick="craftArmor()">🛡️ Броня (8🔩)</button>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-armor" onclick="equipArmorToSelected()">🛡️ Надеть броню</button>
+          <button class="btn btn-disarm" onclick="disarmSettler('weapon')">❌ Разобрать оружие</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script src="js/tabs.js"></script>
+<script src="js/config.js"></script>
+<script src="js/economy.js"></script>
+<script src="js/state.js"></script>
+<script src="js/world.js"></script>
+<script src="js/movement.js"></script>
+<script src="js/input.js"></script>
+<script src="js/actions.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/waves.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/update.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

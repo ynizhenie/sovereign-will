@@ -1,0 +1,20 @@
+{
+  "name": "sovereign-will",
+  "version": "0.1.5",
+  "private": true,
+  "description": "Sovereign Will: canvas strategy/survival game, packaged for Android with Capacitor",
+  "scripts": {
+    "start": "npx --yes serve www -l 8080",
+    "lint": "npx --yes eslint@8 --no-eslintrc -c .eslintrc.json www/js",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "npx cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}
