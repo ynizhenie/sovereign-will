@@ -1,5 +1,6 @@
 function update(dt) {
   if (!gameStarted || isPaused) return;
+  resetTileIndex();
 
   const possessed = getPossessed();
   const dpad = document.getElementById('mobile-dpad');
@@ -890,7 +891,10 @@ function update(dt) {
       }
     }
 
-    let touchingBuilding = buildings.find(b => Math.hypot(en.x - b.x, en.y - b.y) < en.radius + 15);
+    // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
+    // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
+    const contactRadius = Math.min(en.radius, 13) + 2;
+    let touchingBuilding = buildings.find(b => collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
     let blockedRes = null;
 
     if (touchingBuilding) {
@@ -900,7 +904,8 @@ function update(dt) {
           buildings.splice(buildings.indexOf(touchingBuilding), 1);
           invalidateAllPaths();
         }
-      } else if (en.type === 'big' || !isBuildingSingle(touchingBuilding)) {
+      } else if (en.type === 'big' || en.isBlockedPath || !isBuildingSingle(touchingBuilding)) {
+        // a lone wall can be walked around, unless it's what blocks the only way in
         touchingBuilding.hp -= dt * (en.type === 'big' ? 25 : 10);
         if (touchingBuilding.hp <= 0) {
           buildings.splice(buildings.indexOf(touchingBuilding), 1);
@@ -929,10 +934,12 @@ function update(dt) {
           ...grassList
         ];
         if (en.type === 'big') {
-          destroyableResources.push(...cacti, ...ironOres, ...coalOres, ...naturalRocks);
+          // not naturalRocks: paths never go through rock, so a brute only ever grazed rock beside its
+          // corridor and then spent ~25s chewing through 100 hp instead of walking on
+          destroyableResources.push(...cacti, ...ironOres, ...coalOres);
         }
         for (let r of destroyableResources) {
-          if (Math.hypot(en.x - r.x, en.y - r.y) < en.radius + 15) {
+          if (collidesWithBoxList(en.x, en.y, contactRadius, [r], 15)) {
             blockedRes = r;
             break;
           }

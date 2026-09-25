@@ -2,6 +2,29 @@ function deselectSettler() { selectedSettler = null; }
 
 function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: Math.floor(y / TILE_SIZE) }; }
 
+// What occupies each tile, keyed "x,y" by tile center. Path searches check thousands of tiles,
+// so they look tiles up here instead of scanning every object list. Rebuilt lazily after
+// resetTileIndex(), which runs every tick and whenever paths are invalidated.
+let tileIndex = null;
+
+function resetTileIndex() { tileIndex = null; }
+
+function getTileIndex() {
+  if (tileIndex) return tileIndex;
+  const keys = list => new Set(list.map(o => `${o.x},${o.y}`));
+  tileIndex = {
+    rocks: keys(naturalRocks),
+    water: keys(waterTiles),
+    trees: keys(trees.filter(t => !t.isGrowing)),
+    cacti: keys(cacti),
+    boulders: keys(boulders),
+    ores: keys([...ironOres, ...coalOres]),
+    buildings: keys(buildings),
+    walls: keys(buildings.filter(b => b.type !== 'door'))
+  };
+  return tileIndex;
+}
+
 function isTileBlockedForSettler(gx, gy) {
   if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
@@ -9,15 +32,9 @@ function isTileBlockedForSettler(gx, gy) {
   
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
 
-  if (buildings.some(b => b.x === tx && b.y === ty && b.type !== 'door')) return true;
-  if (naturalRocks.some(r => r.x === tx && r.y === ty)) return true;
-  if (waterTiles.some(w => w.x === tx && w.y === ty)) return true;
-  if (trees.some(t => !t.isGrowing && t.x === tx && t.y === ty)) return true;
-  if (cacti.some(c => c.x === tx && c.y === ty)) return true;
-  if (boulders.some(b => b.x === tx && b.y === ty)) return true;
-  if (ironOres.some(i => i.x === tx && i.y === ty)) return true;
-  if (coalOres.some(c => c.x === tx && c.y === ty)) return true;
-  return false;
+  const tiles = getTileIndex(), k = `${tx},${ty}`;
+  return tiles.walls.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+         tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
 function getResourceApproachPoint(entity, resource) {
@@ -74,15 +91,10 @@ function isTileBlockedForEnemyStrict(gx, gy) {
   let ty = gy * TILE_SIZE + 15;
   
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
-  //if (buildings.some(b => b.x === tx && b.y === ty && b.type !== 'door')) return true;
-  if (naturalRocks.some(r => r.x === tx && r.y === ty)) return true;
-  if (waterTiles.some(w => w.x === tx && w.y === ty)) return true;
-  if (trees.some(t => !t.isGrowing && t.x === tx && t.y === ty)) return true;
-  if (cacti.some(c => c.x === tx && c.y === ty)) return true;
-  if (boulders.some(b => b.x === tx && b.y === ty)) return true;
-  if (ironOres.some(i => i.x === tx && i.y === ty)) return true;
-  if (coalOres.some(c => c.x === tx && c.y === ty)) return true;
-  return false;
+  // route around buildings when possible; if walled in, the fallback search paths through them and enemies break them
+  const tiles = getTileIndex(), k = `${tx},${ty}`;
+  return tiles.buildings.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+         tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
 function collidesWithEnemyNaturalResource(x, y, radius) {
@@ -94,9 +106,9 @@ function isTileBlockedForEnemyPermissive(gx, gy) {
   if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
-  if (naturalRocks.some(r => r.x === tx && r.y === ty)) return true;
-  if (waterTiles.some(w => w.x === tx && w.y === ty)) return true;
-  return false;
+  // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore
+  const tiles = getTileIndex(), k = `${tx},${ty}`;
+  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k);
 }
 
 const PATH_DIRECTIONS = [
@@ -104,22 +116,67 @@ const PATH_DIRECTIONS = [
   {dx:-1, dy:-1, cost:1.41}, {dx:1, dy:-1, cost:1.41}, {dx:-1, dy:1, cost:1.41}, {dx:1, dy:1, cost:1.41}
 ];
 
+// min-heap keyed by f, for the A* open list
+function createOpenList() {
+  const items = [];
+  const swap = (i, j) => { const t = items[i]; items[i] = items[j]; items[j] = t; };
+  return {
+    get size() { return items.length; },
+    push(node) {
+      items.push(node);
+      let i = items.length - 1;
+      while (i > 0) {
+        const parent = (i - 1) >> 1;
+        if (items[parent].f <= items[i].f) break;
+        swap(i, parent); i = parent;
+      }
+    },
+    pop() {
+      const top = items[0];
+      const last = items.pop();
+      if (items.length > 0) {
+        items[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1;
+          let smallest = i;
+          if (l < items.length && items[l].f < items[smallest].f) smallest = l;
+          if (r < items.length && items[r].f < items[smallest].f) smallest = r;
+          if (smallest === i) break;
+          swap(i, smallest); i = smallest;
+        }
+      }
+      return top;
+    }
+  };
+}
+
 function findGridPath(startG, endG, targetX, targetY, options) {
   if (startG.gx === endG.gx && startG.gy === endG.gy) {
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: options.isBlockedPath };
   }
 
   const key = (gx, gy) => `${gx},${gy}`;
-  const openList = [{ gx: startG.gx, gy: startG.gy, f: Math.hypot(startG.gx - endG.gx, startG.gy - endG.gy) }];
+  const blockedCache = new Map();
+  const isBlocked = (gx, gy) => {
+    const k = key(gx, gy);
+    if (!blockedCache.has(k)) blockedCache.set(k, options.isBlocked(gx, gy));
+    return blockedCache.get(k);
+  };
+  const openList = createOpenList();
+  openList.push({ gx: startG.gx, gy: startG.gy, f: Math.hypot(startG.gx - endG.gx, startG.gy - endG.gy) });
   const closedSet = new Set();
   const parentMap = new Map();
   const gScore = new Map([[key(startG.gx, startG.gy), 0]]);
   let found = false;
 
-  for (let steps = 0; openList.length > 0 && steps < 350; steps++) {
-    openList.sort((a, b) => a.f - b.f);
-    const current = openList.shift();
+  // no step cap: with the heap a failed search over the whole 40x40 map is still cheap,
+  // and long detours through rock mazes need it
+  while (openList.size > 0) {
+    const current = openList.pop();
     const currentKey = key(current.gx, current.gy);
+    // a node can be queued several times before it's expanded; skip stale copies
+    if (closedSet.has(currentKey)) continue;
     if (current.gx === endG.gx && current.gy === endG.gy) {
       found = true;
       break;
@@ -130,9 +187,9 @@ function findGridPath(startG, endG, targetX, targetY, options) {
       const gx = current.gx + direction.dx;
       const gy = current.gy + direction.dy;
       const nextKey = key(gx, gy);
-      if (closedSet.has(nextKey) || options.isBlocked(gx, gy)) continue;
+      if (closedSet.has(nextKey) || isBlocked(gx, gy)) continue;
       if (!options.allowCornerCutting && direction.dx !== 0 && direction.dy !== 0 &&
-          (options.isBlocked(current.gx + direction.dx, current.gy) || options.isBlocked(current.gx, current.gy + direction.dy))) continue;
+          (isBlocked(current.gx + direction.dx, current.gy) || isBlocked(current.gx, current.gy + direction.dy))) continue;
 
       const worldX = gx * TILE_SIZE + 15;
       const worldY = gy * TILE_SIZE + 15;
@@ -161,11 +218,14 @@ function findPathAStarPermissive(startX, startY, targetX, targetY) {
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(ROWS - 1, endG.gy));
+  const tiles = getTileIndex();
+  const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || tiles.buildings.has(k);
   return findGridPath(startG, endG, targetX, targetY, {
     isBlocked: isTileBlockedForEnemyPermissive,
-    allowCornerCutting: true,
+    // no squeezing diagonally between two rocks
+    allowCornerCutting: false,
     isBlockedPath: true,
-    extraCost: (x, y) => (trees.some(t => !t.isGrowing && t.x === x && t.y === y) || boulders.some(b => b.x === x && b.y === y) ? 10 : 0)
+    extraCost: (x, y) => (isBreakable(`${x},${y}`) ? 10 : 0)
   });
 }
 
@@ -277,17 +337,25 @@ function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
 
 function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   let threshold = isEnemy ? 50 : 25;
+  // terrain collision body; big units are drawn larger but must still fit one-tile gaps (30px)
+  const bodyRadius = Math.min(entity.radius, 13);
 
   if (entity.pathRetryTimer > 0) entity.pathRetryTimer -= dt;
+  if (entity.strictPathFailTimer > 0) entity.strictPathFailTimer -= dt;
   if (isEnemy) entity.pathTimer = (entity.pathTimer || 0) - dt;
   if (entity.directBlockedTimer > 0) entity.directBlockedTimer -= dt;
 
   let targetChanged = !entity.pathTarget || Math.hypot(entity.pathTarget.x - targetX, entity.pathTarget.y - targetY) > threshold;
   let needsPath = !entity.path || entity.path.length === 0 || targetChanged || (isEnemy && entity.pathTimer <= 0);
-  let canRetryPath = !entity.path || entity.path.length > 0 || !Number.isFinite(entity.pathRetryTimer) || entity.pathRetryTimer <= 0;
+  let canRetryPath = !(entity.pathRetryTimer > 0);
 
   if (needsPath && canRetryPath) {
-    let res = findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy);
+    // once the normal search found no way around (walled in), go straight to the breaking-through
+    // search for a while instead of exploring the whole map again on every re-path
+    let res = isEnemy && entity.strictPathFailTimer > 0
+      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY)
+      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy);
+    if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
     entity.isBlockedPath = res.isBlockedPath || false;
     entity.pathTarget = { x: targetX, y: targetY };
@@ -300,7 +368,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
     }
   }
 
-  if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, entity.radius)) {
+  if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, bodyRadius)) {
     let directDx = targetX - entity.x;
     let directDy = targetY - entity.y;
     let directDist = Math.hypot(directDx, directDy);
@@ -310,15 +378,16 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
       entity.moveVx = (entity.moveVx || 0) * 0.8 + directVx * 0.2;
       entity.moveVy = (entity.moveVy || 0) * 0.8 + directVy * 0.2;
 
-      if (!collidesWithEnemyNaturalResource(entity.x + entity.moveVx, entity.y + entity.moveVy, entity.radius) &&
-          !collidesWithWall(entity.x + entity.moveVx, entity.y + entity.moveVy, entity.radius) &&
-          !collidesWithWater(entity.x + entity.moveVx, entity.y + entity.moveVy, entity.radius)) {
+      if (!collidesWithEnemyNaturalResource(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius) &&
+          !collidesWithWall(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius) &&
+          !collidesWithWater(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius)) {
         entity.x += entity.moveVx;
         entity.y += entity.moveVy;
       } else {
         entity.moveVx = 0;
         entity.moveVy = 0;
         entity.path = null;
+        entity.pathRetryTimer = 0.25;
         entity.directBlockedTimer = 1.5;
         return;
       }
@@ -369,13 +438,14 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         }
       }
 
-      if (isEnemy && (collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, entity.radius) ||
-          collidesWithWall(entity.x + vx, entity.y + vy, entity.radius) ||
-          collidesWithWater(entity.x + vx, entity.y + vy, entity.radius))) {
+      if (isEnemy && (collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
+          collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius) ||
+          collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius))) {
         entity.moveVx = 0;
         entity.moveVy = 0;
         entity.path = null;
-      } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, entity.radius)) {
+        entity.pathRetryTimer = 0.25;
+      } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius)) {
         let fallback = findSafeStepAroundObstacle(entity, targetX, targetY, speed);
         if (fallback) {
           entity.x += fallback.x;
@@ -399,7 +469,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
       let directVx = (directDx / directDist) * speed;
       let directVy = (directDy / directDist) * speed;
 
-      if (!collidesWithWall(entity.x + directVx, entity.y + directVy, entity.radius)) {
+      if (!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius)) {
         entity.x += directVx;
         entity.y += directVy;
       }

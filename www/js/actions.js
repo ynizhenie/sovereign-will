@@ -115,23 +115,20 @@ function harvestResourceDirect(r, p) {
 }
 
 function invalidateAllPaths() {
+  resetTileIndex();
   settlers.forEach(s => { s.path = null; s.pathTarget = null; });
   enemies.forEach(en => { en.path = null; en.pathTarget = null; });
 }
 
 function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
-  if (settler.weapon === 'club') wood += 4;
-  if (settler.weapon === 'sword') { wood += 6; stone += 3; }
-  if (settler.weapon === 'spear') { wood += 10; stone += 5; }
-  if (settler.weapon === 'iron_sword') { wood += 6; iron += 3; }
-  if (settler.weapon === 'iron_spear') { wood += 10; iron += 3; }
-  if (settler.weapon === 'bow') { wood += 15; leather += 5; }
-
-  if (settler.tool === 'axe') { wood += 5; stone += 5; }
-  if (settler.tool === 'pickaxe') { wood += 5; stone += 10; }
-  if (settler.tool === 'iron_axe') { wood += 5; iron += 3; }
-  if (settler.tool === 'iron_pickaxe') { wood += 5; iron += 4; }
-  if (settler.tool === 'rod') wood += 10;
+  // refund exactly what the item cost, as defined in GAME_CONFIG
+  let wallet = getWallet();
+  for (const item of [getDefinition('weapons', settler.weapon), getDefinition('tools', settler.tool)]) {
+    for (const [resource, amount] of Object.entries((item && item.cost) || {})) {
+      wallet = spendResources(wallet, { [resource]: -amount });
+    }
+  }
+  applyWallet(wallet);
 
   if (includeArmor && settler.armor === 'iron') iron += 8;
   if (includeQuiver && settler.quiver) {
@@ -321,8 +318,7 @@ function assignTool(toolType) {
     return;
   }
 
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
 
   if (!target) {
     if (toolType === 'rod') {
@@ -359,8 +355,7 @@ function craftWeapon(type) {
     return;
   }
 
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
 
   if (!target) {
     target = settlers.find(s => s.type === 'big' && s.weapon === 'fist' && !s.targetEquipment) ||
@@ -383,8 +378,7 @@ function craftWeapon(type) {
 }
 
 function craftArrows() {
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
   if (!target) target = settlers.find(s => s.weapon === 'bow' && s.quiver);
   if (!target || target.weapon !== 'bow' || !target.quiver) {
     showNotification("⚠️ Сначала нужен лучник с колчаном", true);
@@ -413,7 +407,7 @@ function craftArmor() {
 }
 
 function equipArmorToSelected() {
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : getPossessed();
+  let target = getSelectedSettler() || getPossessed();
   
   if (!target) {
     showNotification("⚠️ Сначала выберите поселенца или вселитесь в него!", true);
@@ -439,8 +433,7 @@ function equipArmorToSelected() {
 }
 
 function disarmSettler(type = 'all') {
-  let target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : null;
-  if (!target) target = getPossessed();
+  let target = getSelectedSettler() || getPossessed();
 
   const hasTargetItem = (s) => {
     if (type === 'tool') return s.tool && s.tool !== 'none';
@@ -527,7 +520,7 @@ function spawnSettler(type = 'normal') {
 }
 
 function upgradeToBig(target) {
-  if (!target) target = (selectedSettler && settlers.includes(selectedSettler)) ? selectedSettler : getPossessed();
+  if (!target) target = getSelectedSettler() || getPossessed();
   if (!target || target.type !== 'normal') target = settlers.find(s => s.type === 'normal');
 
   if (!target || target.type !== 'normal') {
@@ -577,6 +570,11 @@ function setMode(mode) {
 }
 
 function getPossessed() { return settlers.find(s => s.isPossessed); }
+
+// the settler picked in the UI, if it's still alive
+function getSelectedSettler() {
+  return selectedSettler && settlers.includes(selectedSettler) ? selectedSettler : null;
+}
 
 let lastPossessedIndex = -1;
 
