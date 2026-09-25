@@ -10,10 +10,10 @@ function updateUI() {
 
   let btnUpgrade = document.getElementById('btn-upgrade-big');
 
-  if (selectedSettler && settlers.includes(selectedSettler)) {
+  if (getSelectedSettler()) {
     let name = selectedSettler.type === 'big' ? '🧌 Богатырь' : '👨‍🌾 Рабочий';
-    let wName = selectedSettler.weapon === 'fist' ? 'Кулаки' : (selectedSettler.weapon === 'sword' ? 'Меч' : (selectedSettler.weapon === 'spear' ? 'Копье' : (selectedSettler.weapon === 'iron_sword' ? 'Железный меч' : (selectedSettler.weapon === 'iron_spear' ? 'Железное копье' : 'Лук'))));
-    let tName = selectedSettler.tool === 'none' ? '' : (selectedSettler.tool === 'axe' ? ' / Топор' : (selectedSettler.tool === 'pickaxe' ? ' / Кирка' : (selectedSettler.tool === 'iron_axe' ? ' / Железный топор' : (selectedSettler.tool === 'iron_pickaxe' ? ' / Железная кирка' : ' / Удочка'))));
+    let wName = getDefinition('weapons', selectedSettler.weapon)?.label || selectedSettler.weapon;
+    let tName = selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selectedSettler.tool)?.label || selectedSettler.tool);
     let aName = selectedSettler.armor === 'iron' ? ' / Железная броня' : '';
     let qName = selectedSettler.quiver ? ` / Колчан ${selectedSettler.arrows || 0}/12` : '';
     document.getElementById('selected-settler-txt').innerText = `${name} (${wName}${tName}${aName}${qName})`;
