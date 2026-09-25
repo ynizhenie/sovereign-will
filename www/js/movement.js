@@ -6,26 +6,58 @@ function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: Math.flo
 // so they look tiles up here instead of scanning every object list. Rebuilt lazily after
 // resetTileIndex(), which runs every tick and whenever paths are invalidated.
 let tileIndex = null;
+// game ticks, for short-lived per-settler caches
+let pathTick = 0;
 
 function resetTileIndex() { tileIndex = null; }
 
 function getTileIndex() {
   if (tileIndex) return tileIndex;
   const keys = list => new Set(list.map(o => `${o.x},${o.y}`));
+  // changes whenever anything that blocks a tile appears, disappears or moves; used to invalidate
+  // cached reachability without every harvest/build site having to remember to do it
+  let signature = 0;
+  for (const list of [naturalRocks, waterTiles, trees, cacti, boulders, ironOres, coalOres, buildings]) {
+    signature = (signature * 31 + list.length) | 0;
+    for (const o of list) signature = (signature * 31 + o.x * 1601 + o.y + (o.isGrowing ? 7 : 0)) | 0;
+  }
   tileIndex = {
+    signature,
     rocks: keys(naturalRocks),
     water: keys(waterTiles),
     trees: keys(trees.filter(t => !t.isGrowing)),
     cacti: keys(cacti),
     boulders: keys(boulders),
     ores: keys([...ironOres, ...coalOres]),
+    solids: keys([...boulders, ...cacti, ...ironOres, ...coalOres]),
     buildings: keys(buildings),
     walls: keys(buildings.filter(b => b.type !== 'door'))
   };
   return tileIndex;
 }
 
+// isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
+// world's blocking tiles change. Settler path searches read this instead of re-checking each tile.
+let settlerBlockedGrid = { signature: null, grid: null };
+
+function getSettlerBlockedGrid() {
+  const signature = getTileIndex().signature;
+  if (settlerBlockedGrid.signature !== signature) {
+    const grid = new Uint8Array(COLS * ROWS);
+    for (let gy = 0; gy < ROWS; gy++) {
+      for (let gx = 0; gx < COLS; gx++) grid[gy * COLS + gx] = computeTileBlockedForSettler(gx, gy) ? 1 : 0;
+    }
+    settlerBlockedGrid = { signature, grid };
+  }
+  return settlerBlockedGrid.grid;
+}
+
 function isTileBlockedForSettler(gx, gy) {
+  if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
+  return getSettlerBlockedGrid()[gy * COLS + gx] === 1;
+}
+
+function computeTileBlockedForSettler(gx, gy) {
   if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
@@ -37,10 +69,64 @@ function isTileBlockedForSettler(gx, gy) {
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
+// Walking distance (in tiles) from the settler's tile to every tile, as an Int16Array indexed gy * COLS + gx,
+// -1 where it can't get. Cached until the settler changes tile or the world's blocking tiles change.
+function getSettlerReach(settler) {
+  const start = getGridPos(settler.x, settler.y);
+  const startIndex = start.gy * COLS + start.gx;
+  const signature = getTileIndex().signature;
+  const cache = settler.reachCache;
+  if (cache && cache.startIndex === startIndex && cache.signature === signature) return cache.steps;
+
+  const blocked = getSettlerBlockedGrid();
+  const steps = new Int16Array(COLS * ROWS).fill(-1);
+  const queue = [startIndex];
+  if (startIndex >= 0 && startIndex < steps.length) steps[startIndex] = 0;
+  for (let i = 0; i < queue.length; i++) {
+    const current = queue[i];
+    const cx = current % COLS, cy = (current - cx) / COLS;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const gx = cx + dx, gy = cy + dy;
+      if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) continue;
+      const index = gy * COLS + gx;
+      if (steps[index] !== -1 || blocked[index]) continue;
+      steps[index] = steps[current] + 1;
+      queue.push(index);
+    }
+  }
+  settler.reachCache = { startIndex, signature, steps };
+  return steps;
+}
+
+function getReachSteps(reach, gx, gy) {
+  if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) return -1;
+  return reach[gy * COLS + gx];
+}
+
+// Steps to stand next to (or on) a resource, or Infinity if the settler can't get there.
+// reach comes from getSettlerReach().
+function getReachDistanceToResource(reach, resource) {
+  const g = getGridPos(resource.x, resource.y);
+  let best = Infinity;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const steps = getReachSteps(reach, g.gx + dx, g.gy + dy);
+      if (steps !== -1 && steps < best) best = steps;
+    }
+  }
+  return best;
+}
+
 function getResourceApproachPoint(entity, resource) {
   let resRadius = resource.radius || 14;
   let entRadius = entity.radius || 10;
   let minDistance = resRadius + entRadius + 1;
+  // only consider spots the settler can actually walk to; a spot that's free but sealed off by rock
+  // used to win on straight-line distance and leave the settler standing there forever
+  const reach = settlers.includes(entity) ? getSettlerReach(entity) : null;
+  // the spot rarely changes frame to frame; re-pick it twice a second or when the situation changes
+  const cache = entity.approachCache;
+  if (reach && cache && cache.resource === resource && cache.reach === reach && pathTick - cache.tick < 30) return cache.point;
 
   const approachDistances = [minDistance, minDistance + 3, minDistance + 6];
 
@@ -55,13 +141,24 @@ function getResourceApproachPoint(entity, resource) {
       if (collidesWithWall(x, y, entRadius) || collidesWithWater(x, y, entRadius)) continue;
 
       let score = Math.hypot(x - entity.x, y - entity.y);
+      if (reach) {
+        const g = getGridPos(x, y);
+        const steps = getReachSteps(reach, g.gx, g.gy);
+        if (steps === -1) continue;
+        score += steps * TILE_SIZE;
+        // spread settlers working the same resource around it instead of stacking them on one spot
+        if (settlers.some(other => other !== entity && Math.hypot(other.x - x, other.y - y) < entRadius * 2)) score += 1000;
+      }
       if (score < bestScore) {
         bestScore = score;
         best = { x, y };
       }
     }
 
-    if (best) return best;
+    if (best) {
+      if (reach) entity.approachCache = { resource, reach, tick: pathTick, point: best };
+      return best;
+    }
   }
 
   return null;
@@ -69,9 +166,13 @@ function getResourceApproachPoint(entity, resource) {
 
 function rescueSettlerFromResource(settler) {
   if (settler.towerAssignment) return;
-  const solidResources = [...trees.filter(tree => !tree.isGrowing), cacti, boulders, ironOres, coalOres, naturalRocks].flat();
-  const blockedResource = solidResources.find(resource => Math.hypot(settler.x - resource.x, settler.y - resource.y) < 14);
-  if (!blockedResource) return;
+  // solid things sit on tile centers, so only the settler's own tile can be within 14px of it
+  const tile = getGridPos(settler.x, settler.y);
+  const cx = tile.gx * TILE_SIZE + 15, cy = tile.gy * TILE_SIZE + 15, key = `${cx},${cy}`;
+  const tiles = getTileIndex();
+  if (!(tiles.trees.has(key) || tiles.solids.has(key) || tiles.rocks.has(key))) return;
+  if (Math.hypot(settler.x - cx, settler.y - cy) >= 14) return;
+  const blockedResource = { x: cx, y: cy };
   let dx = settler.x - blockedResource.x;
   let dy = settler.y - blockedResource.y;
   const distance = Math.hypot(dx, dy) || 1;
@@ -98,8 +199,7 @@ function isTileBlockedForEnemyStrict(gx, gy) {
 }
 
 function collidesWithEnemyNaturalResource(x, y, radius) {
-  let resources = [...trees.filter(t => !t.isGrowing), ...cacti, ...boulders, ...ironOres, ...coalOres];
-  return collidesWithBoxList(x, y, radius, resources, 14);
+  return collidesWithTiles(x, y, radius, [['trees', 14], ['solids', 14]]);
 }
 
 function isTileBlockedForEnemyPermissive(gx, gy) {
@@ -396,6 +496,19 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
     return;
   }
 
+  // the world changed under the path (a resource respawned on it, a wall was built): re-plan instead of
+  // pushing against the new obstacle. The last node is the exact target point, not a tile to walk through.
+  if (!isEnemy && entity.path && entity.path.length > 1) {
+    const nextTile = getGridPos(entity.path[0].x, entity.path[0].y);
+    const hereTile = getGridPos(entity.x, entity.y);
+    const stepsOffTile = nextTile.gx !== hereTile.gx || nextTile.gy !== hereTile.gy;
+    if (stepsOffTile && isTileBlockedForSettler(nextTile.gx, nextTile.gy)) {
+      entity.path = null;
+      entity.pathRetryTimer = 0;
+      return;
+    }
+  }
+
   if (entity.path && entity.path.length > 0) {
     let nextNode = entity.path[0];
     let dx = nextNode.x - entity.x;
@@ -446,7 +559,14 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         entity.path = null;
         entity.pathRetryTimer = 0.25;
       } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius)) {
-        let fallback = findSafeStepAroundObstacle(entity, targetX, targetY, speed);
+        // the push away from other settlers can shove a settler into a rock corner: try the plain
+        // path direction first, then sidestep toward the next path node (not the final target, which
+        // around a corner points straight back into the rock)
+        const plainVx = (dx / dist) * speed;
+        const plainVy = (dy / dist) * speed;
+        let fallback = !collidesWithWall(entity.x + plainVx, entity.y + plainVy, bodyRadius)
+          ? { x: plainVx, y: plainVy }
+          : findSafeStepAroundObstacle(entity, nextNode.x, nextNode.y, speed);
         if (fallback) {
           entity.x += fallback.x;
           entity.y += fallback.y;
