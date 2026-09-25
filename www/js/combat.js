@@ -8,12 +8,31 @@ function collidesWithBoxList(x, y, radius, objects, halfSize) {
   });
 }
 
+// Box collision against what occupies the tiles around (x, y). Everything solid sits on a tile center,
+// so only the few nearby tiles need checking instead of every object on the map.
+// kinds: [[tileIndex set name, box half size], ...]
+function collidesWithTiles(x, y, radius, kinds) {
+  const tiles = getTileIndex();
+  const span = Math.ceil((radius + 15) / TILE_SIZE);
+  const g = getGridPos(x, y);
+  for (let gy = g.gy - span; gy <= g.gy + span; gy++) {
+    for (let gx = g.gx - span; gx <= g.gx + span; gx++) {
+      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15, key = `${cx},${cy}`;
+      for (const [set, halfSize] of kinds) {
+        if (!tiles[set].has(key)) continue;
+        const dx = x - Math.max(cx - halfSize, Math.min(x, cx + halfSize));
+        const dy = y - Math.max(cy - halfSize, Math.min(y, cy + halfSize));
+        if (dx * dx + dy * dy < radius * radius) return true;
+      }
+    }
+  }
+  return false;
+}
+
+const WALL_COLLISION_KINDS = [['walls', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
+
 function collidesWithWall(x, y, radius) {
-  return collidesWithBoxList(x, y, radius, buildings.filter(b => b.type !== 'door'), 14) ||
-    collidesWithBoxList(x, y, radius, naturalRocks, 14) ||
-    collidesWithBoxList(x, y, radius, waterTiles, 15) ||
-    collidesWithBoxList(x, y, radius, trees.filter(t => !t.isGrowing), 12) ||
-    collidesWithBoxList(x, y, radius, [...boulders, ...cacti, ...ironOres, ...coalOres], 12);
+  return collidesWithTiles(x, y, radius, WALL_COLLISION_KINDS);
 }
 
 function getTownHallApproachPoint(settler) {
@@ -59,7 +78,7 @@ function getSettlerAvoidance(entity) {
 }
 
 function collidesWithWater(x, y, radius) {
-  return collidesWithBoxList(x, y, radius, waterTiles, 15);
+  return collidesWithTiles(x, y, radius, [['water', 15]]);
 }
 
 function performAttack(attacker, targetX, targetY) {
