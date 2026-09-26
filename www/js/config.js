@@ -52,225 +52,227 @@ const GAME_CONFIG = {
   ],
 
 attackGroups: [
+
   // ============================================================
   // Сложность 1 — волны 1-5
   // ============================================================
   [
-    { club: 4, raider: 2, brute: 0, archer: 0 },
-    { club: 3, raider: 2, brute: 1, archer: 0 },
-    { club: 3, raider: 2, brute: 0, archer: 1 },
-    { club: 2, raider: 2, brute: 0, archer: 2 },
-    { club: 4, raider: 1, brute: 1, archer: 1 }
+    { club: 5, raider: 3, brute: 0, archer: 0 },
+    { club: 6, raider: 4, brute: 1, archer: 0 },
+    { club: 4, raider: 3, brute: 0, archer: 2 },
+    { club: 4, raider: 5, brute: 2, archer: 1 },
+    { club: 3, raider: 2, brute: 1, archer: 1 }
   ],
 
   // ============================================================
   // Сложность 2 — волны 6-10
   // ============================================================
   [
-    { club: 5, raider: 4, brute: 0, archer: 0 },
-    { club: 6, raider: 3, brute: 1, archer: 0 },
-    { club: 4, raider: 4, brute: 0, archer: 2 },
-    { club: 5, raider: 2, brute: 1, archer: 2 },
-    { club: 3, raider: 4, brute: 1, archer: 1 }
+    { club: 10, raider: 7, brute: 0, archer: 0 },
+    { club: 10, raider: 7, brute: 2, archer: 1 },
+    { club: 8, raider: 6, brute: 0, archer: 4 },
+    { club: 6, raider: 8, brute: 4, archer: 3 },
+    { club: 7, raider: 5, brute: 2, archer: 2 }
   ],
 
   // ============================================================
   // Сложность 3 — волны 11-15
   // ============================================================
   [
-    { club: 7, raider: 4, brute: 0, archer: 0 },
-    { club: 6, raider: 4, brute: 1, archer: 1 },
-    { club: 5, raider: 5, brute: 0, archer: 2 },
-    { club: 4, raider: 5, brute: 1, archer: 2 },
-    { club: 7, raider: 2, brute: 1, archer: 2 }
+    { club: 17, raider: 12, brute: 0, archer: 0 },
+    { club: 17, raider: 10, brute: 3, archer: 2 },
+    { club: 13, raider: 10, brute: 0, archer: 7 },
+    { club: 10, raider: 13, brute: 7, archer: 3 },
+    { club: 13, raider: 8, brute: 4, archer: 3 }
   ],
 
   // ============================================================
   // Сложность 4 — волны 16-20
   // ============================================================
   [
-    { club: 8, raider: 5, brute: 0, archer: 0 },
-    { club: 7, raider: 5, brute: 1, archer: 1 },
-    { club: 6, raider: 5, brute: 0, archer: 3 },
-    { club: 5, raider: 6, brute: 2, archer: 1 },
-    { club: 8, raider: 3, brute: 2, archer: 2 }
+    { club: 29, raider: 19, brute: 0, archer: 0 },
+    { club: 26, raider: 17, brute: 5, archer: 2 },
+    { club: 20, raider: 16, brute: 0, archer: 12 },
+    { club: 15, raider: 20, brute: 10, archer: 6 },
+    { club: 21, raider: 14, brute: 7, archer: 4 }
   ],
 
   // ============================================================
   // Сложность 5 — волны 21-25
   // ============================================================
   [
-    { club: 10, raider: 5, brute: 0, archer: 0 },
-    { club: 8, raider: 6, brute: 1, archer: 1 },
-    { club: 7, raider: 6, brute: 0, archer: 3 },
-    { club: 6, raider: 7, brute: 2, archer: 1 },
-    { club: 9, raider: 4, brute: 2, archer: 2 }
+    { club: 32, raider: 22, brute: 0, archer: 0 },
+    { club: 30, raider: 18, brute: 6, archer: 3 },
+    { club: 23, raider: 18, brute: 0, archer: 14 },
+    { club: 17, raider: 23, brute: 11, archer: 7 },
+    { club: 24, raider: 16, brute: 8, archer: 5 }
   ],
 
   // ============================================================
   // Сложность 6 — волны 26-30
   // ============================================================
   [
-    { club: 11, raider: 7, brute: 0, archer: 0 },
-    { club: 10, raider: 6, brute: 2, archer: 1 },
-    { club: 8, raider: 7, brute: 0, archer: 4 },
-    { club: 7, raider: 8, brute: 2, archer: 2 },
-    { club: 10, raider: 5, brute: 3, archer: 1 }
+    { club: 35, raider: 23, brute: 0, archer: 0 },
+    { club: 32, raider: 20, brute: 6, archer: 3 },
+    { club: 25, raider: 20, brute: 0, archer: 14 },
+    { club: 18, raider: 24, brute: 12, archer: 8 },
+    { club: 26, raider: 17, brute: 8, archer: 6 }
   ],
 
   // ============================================================
   // Сложность 7 — волны 31-35
   // ============================================================
   [
-    { club: 13, raider: 7, brute: 0, archer: 0 },
-    { club: 11, raider: 8, brute: 2, archer: 1 },
-    { club: 9, raider: 8, brute: 0, archer: 5 },
-    { club: 8, raider: 9, brute: 2, archer: 3 },
-    { club: 11, raider: 6, brute: 3, archer: 2 }
+    { club: 37, raider: 25, brute: 0, archer: 0 },
+    { club: 34, raider: 21, brute: 7, archer: 3 },
+    { club: 27, raider: 21, brute: 0, archer: 15 },
+    { club: 20, raider: 26, brute: 13, archer: 7 },
+    { club: 28, raider: 19, brute: 9, archer: 5 }
   ],
 
   // ============================================================
   // Сложность 8 — волны 36-40
   // ============================================================
   [
-    { club: 14, raider: 8, brute: 0, archer: 0 },
-    { club: 12, raider: 8, brute: 2, archer: 2 },
-    { club: 10, raider: 9, brute: 0, archer: 6 },
-    { club: 9, raider: 10, brute: 3, archer: 3 },
-    { club: 12, raider: 6, brute: 3, archer: 3 }
+    { club: 40, raider: 26, brute: 0, archer: 0 },
+    { club: 36, raider: 22, brute: 7, archer: 4 },
+    { club: 28, raider: 22, brute: 0, archer: 16 },
+    { club: 20, raider: 28, brute: 14, archer: 8 },
+    { club: 29, raider: 20, brute: 10, archer: 6 }
   ],
 
   // ============================================================
   // Сложность 9 — волны 41-45
   // ============================================================
   [
-    { club: 16, raider: 9, brute: 0, archer: 0 },
-    { club: 14, raider: 9, brute: 2, archer: 2 },
-    { club: 11, raider: 10, brute: 0, archer: 7 },
-    { club: 10, raider: 11, brute: 3, archer: 3 },
-    { club: 14, raider: 7, brute: 3, archer: 3 }
+    { club: 42, raider: 28, brute: 0, archer: 0 },
+    { club: 38, raider: 23, brute: 7, archer: 5 },
+    { club: 30, raider: 23, brute: 0, archer: 18 },
+    { club: 22, raider: 30, brute: 15, archer: 7 },
+    { club: 31, raider: 21, brute: 11, archer: 6 }
   ],
 
   // ============================================================
   // Сложность 10 — волны 46-50
   // ============================================================
   [
-    { club: 18, raider: 10, brute: 0, archer: 0 },
-    { club: 15, raider: 10, brute: 3, archer: 2 },
-    { club: 12, raider: 11, brute: 0, archer: 8 },
-    { club: 11, raider: 12, brute: 3, archer: 3 },
-    { club: 15, raider: 8, brute: 4, archer: 2 }
+    { club: 44, raider: 30, brute: 0, archer: 0 },
+    { club: 40, raider: 24, brute: 8, archer: 5 },
+    { club: 31, raider: 25, brute: 0, archer: 19 },
+    { club: 22, raider: 31, brute: 16, archer: 9 },
+    { club: 33, raider: 22, brute: 11, archer: 7 }
   ],
 
   // ============================================================
   // Сложность 11 — волны 51-55
   // ============================================================
   [
-    { club: 20, raider: 11, brute: 0, archer: 0 },
-    { club: 17, raider: 11, brute: 3, archer: 2 },
-    { club: 13, raider: 12, brute: 0, archer: 9 },
-    { club: 12, raider: 13, brute: 4, archer: 3 },
-    { club: 17, raider: 9, brute: 4, archer: 3 }
+    { club: 47, raider: 31, brute: 0, archer: 0 },
+    { club: 41, raider: 26, brute: 8, archer: 6 },
+    { club: 33, raider: 26, brute: 0, archer: 19 },
+    { club: 23, raider: 32, brute: 16, archer: 10 },
+    { club: 35, raider: 23, brute: 12, archer: 7 }
   ],
 
   // ============================================================
   // Сложность 12 — волны 56-60
   // ============================================================
   [
-    { club: 22, raider: 12, brute: 0, archer: 0 },
-    { club: 19, raider: 12, brute: 3, archer: 2 },
-    { club: 14, raider: 13, brute: 0, archer: 10 },
-    { club: 13, raider: 14, brute: 4, archer: 3 },
-    { club: 19, raider: 10, brute: 4, archer: 3 }
+    { club: 50, raider: 33, brute: 0, archer: 0 },
+    { club: 43, raider: 28, brute: 9, archer: 5 },
+    { club: 35, raider: 27, brute: 0, archer: 21 },
+    { club: 25, raider: 35, brute: 17, archer: 9 },
+    { club: 37, raider: 25, brute: 13, archer: 7 }
   ],
 
   // ============================================================
   // Сложность 13 — волны 61-65
   // ============================================================
   [
-    { club: 24, raider: 13, brute: 0, archer: 0 },
-    { club: 21, raider: 13, brute: 3, archer: 2 },
-    { club: 16, raider: 14, brute: 0, archer: 11 },
-    { club: 14, raider: 15, brute: 4, archer: 3 },
-    { club: 21, raider: 11, brute: 5, archer: 3 }
+    { club: 52, raider: 34, brute: 0, archer: 0 },
+    { club: 46, raider: 29, brute: 9, archer: 5 },
+    { club: 36, raider: 29, brute: 0, archer: 21 },
+    { club: 26, raider: 36, brute: 18, archer: 10 },
+    { club: 39, raider: 26, brute: 13, archer: 7 }
   ],
 
   // ============================================================
   // Сложность 14 — волны 66-70
   // ============================================================
   [
-    { club: 26, raider: 14, brute: 0, archer: 0 },
-    { club: 23, raider: 14, brute: 3, archer: 2 },
-    { club: 17, raider: 15, brute: 0, archer: 12 },
-    { club: 15, raider: 16, brute: 4, archer: 3 },
-    { club: 23, raider: 12, brute: 5, archer: 3 }
+    { club: 54, raider: 36, brute: 0, archer: 0 },
+    { club: 48, raider: 31, brute: 9, archer: 5 },
+    { club: 38, raider: 31, brute: 0, archer: 22 },
+    { club: 27, raider: 38, brute: 19, archer: 10 },
+    { club: 41, raider: 27, brute: 14, archer: 7 }
   ],
 
   // ============================================================
   // Сложность 15 — волны 71-75
   // ============================================================
   [
-    { club: 28, raider: 15, brute: 0, archer: 0 },
-    { club: 25, raider: 15, brute: 3, archer: 2 },
-    { club: 18, raider: 16, brute: 0, archer: 13 },
-    { club: 16, raider: 17, brute: 5, archer: 3 },
-    { club: 25, raider: 13, brute: 5, archer: 3 }
+    { club: 56, raider: 38, brute: 0, archer: 0 },
+    { club: 50, raider: 32, brute: 10, archer: 5 },
+    { club: 40, raider: 32, brute: 0, archer: 23 },
+    { club: 29, raider: 40, brute: 20, archer: 9 },
+    { club: 43, raider: 29, brute: 14, archer: 7 }
   ],
 
   // ============================================================
   // Сложность 16 — волны 76-80
   // ============================================================
   [
-    { club: 30, raider: 16, brute: 0, archer: 0 },
-    { club: 27, raider: 16, brute: 3, archer: 2 },
-    { club: 20, raider: 17, brute: 0, archer: 14 },
-    { club: 17, raider: 18, brute: 5, archer: 3 },
-    { club: 27, raider: 14, brute: 6, archer: 3 }
+    { club: 59, raider: 39, brute: 0, archer: 0 },
+    { club: 52, raider: 34, brute: 10, archer: 5 },
+    { club: 41, raider: 33, brute: 0, archer: 25 },
+    { club: 30, raider: 42, brute: 21, archer: 9 },
+    { club: 45, raider: 30, brute: 15, archer: 8 }
   ],
 
   // ============================================================
   // Сложность 17 — волны 81-85
   // ============================================================
   [
-    { club: 32, raider: 17, brute: 0, archer: 0 },
-    { club: 29, raider: 17, brute: 3, archer: 2 },
-    { club: 21, raider: 18, brute: 0, archer: 15 },
-    { club: 18, raider: 19, brute: 6, archer: 3 },
-    { club: 29, raider: 15, brute: 6, archer: 3 }
+    { club: 61, raider: 41, brute: 0, archer: 0 },
+    { club: 55, raider: 36, brute: 10, archer: 5 },
+    { club: 43, raider: 34, brute: 0, archer: 26 },
+    { club: 31, raider: 44, brute: 22, archer: 9 },
+    { club: 46, raider: 31, brute: 15, archer: 8 }
   ],
 
   // ============================================================
   // Сложность 18 — волны 86-90
   // ============================================================
   [
-    { club: 34, raider: 18, brute: 0, archer: 0 },
-    { club: 31, raider: 18, brute: 3, archer: 2 },
-    { club: 22, raider: 19, brute: 0, archer: 16 },
-    { club: 19, raider: 20, brute: 6, archer: 3 },
-    { club: 31, raider: 16, brute: 6, archer: 3 }
+    { club: 63, raider: 42, brute: 0, archer: 0 },
+    { club: 57, raider: 37, brute: 11, archer: 5 },
+    { club: 44, raider: 36, brute: 0, archer: 26 },
+    { club: 32, raider: 46, brute: 22, archer: 9 },
+    { club: 47, raider: 32, brute: 16, archer: 8 }
   ],
 
   // ============================================================
   // Сложность 19 — волны 91-95
   // ============================================================
   [
-    { club: 36, raider: 19, brute: 0, archer: 0 },
-    { club: 33, raider: 19, brute: 3, archer: 2 },
-    { club: 23, raider: 20, brute: 0, archer: 17 },
-    { club: 20, raider: 21, brute: 6, archer: 3 },
-    { club: 33, raider: 17, brute: 7, archer: 3 }
+    { club: 65, raider: 43, brute: 0, archer: 0 },
+    { club: 59, raider: 39, brute: 11, archer: 5 },
+    { club: 46, raider: 37, brute: 0, archer: 27 },
+    { club: 33, raider: 48, brute: 23, archer: 8 },
+    { club: 49, raider: 32, brute: 16, archer: 10 }
   ],
 
   // ============================================================
   // Сложность 20 — волны 96-100
   // ============================================================
   [
-    { club: 39, raider: 20, brute: 0, archer: 0 },
-    { club: 36, raider: 20, brute: 3, archer: 2 },
-    { club: 25, raider: 21, brute: 0, archer: 18 },
-    { club: 21, raider: 22, brute: 7, archer: 3 },
-    { club: 35, raider: 18, brute: 8, archer: 4 }
+    { club: 67, raider: 44, brute: 0, archer: 0 },
+    { club: 60, raider: 40, brute: 11, archer: 5 },
+    { club: 47, raider: 38, brute: 0, archer: 27 },
+    { club: 35, raider: 48, brute: 23, archer: 9 },
+    { club: 50, raider: 33, brute: 17, archer: 10 }
   ]
+
 ],
 
   map: {
