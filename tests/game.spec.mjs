@@ -32,6 +32,34 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('pause opens a menu with Continue and Main menu (#19)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  await expect(page.locator('#pause-menu')).toBeHidden();
+
+  await page.click('#btn-pause-toggle');
+  await expect(page.locator('#pause-menu')).toBeVisible();
+  expect(await page.evaluate(() => isPaused)).toBe(true);
+  await page.click('#resume-button');
+  await expect(page.locator('#pause-menu')).toBeHidden();
+  expect(await page.evaluate(() => isPaused)).toBe(false);
+
+  await page.keyboard.press('Space');
+  await expect(page.locator('#pause-menu')).toBeVisible();
+  await page.click('#exit-to-menu-button');
+  await expect(page.locator('#pause-menu')).toBeHidden();
+  await expect(page.locator('#main-menu')).toBeVisible();
+  expect(await page.evaluate(() => gameStarted)).toBe(false);
+
+  // Space in the main menu doesn't pause a game that isn't running; a new game starts unpaused
+  await page.keyboard.press('Space');
+  await expect(page.locator('#pause-menu')).toBeHidden();
+  await page.click('#play-button');
+  await expect(page.locator('#main-menu')).toBeHidden();
+  expect(await page.evaluate(() => [gameStarted, isPaused])).toEqual([true, false]);
+  expect(errors).toEqual([]);
+});
+
 test('the same seed generates the same map', async ({ page }) => {
   await openGame(page);
   const [a, b, c] = await page.evaluate(() => {
@@ -132,6 +160,28 @@ test('mined ores grow back around their spawner, and spawners cannot be mined', 
   }
   expect(r.spawnerSurvivesMining).toBe(true);
   expect(r.spawnerHarvestable).toBe(false);
+});
+
+test('a wounded soldier under fire fights back instead of running to heal (#10)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'woundedUnderFire', { hpShare: 0.6 });
+  expect(r.went).toBe('archer');
+  expect(r.archerHurt).toBe(true);
+});
+
+test('a badly wounded soldier (< 25% hp) retreats to heal (#10)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'woundedUnderFire', { hpShare: 0.2 });
+  expect(r.went).toBe('tent');
+});
+
+test('each catch uses one seed as bait, and fishing stops without seeds (#18)', async ({ page }) => {
+  await openGame(page);
+  const withSeeds = await sim(page, 'fishing', { seeds: 3 });
+  expect(withSeeds.catches).toBe(3);
+  expect(withSeeds.seedsLeft).toBe(0);
+  const noSeeds = await sim(page, 'fishing', { seeds: 0 });
+  expect(noSeeds.catches).toBe(0);
 });
 
 test('disarming refunds exactly what the item cost', async ({ page }) => {

@@ -225,15 +225,8 @@ function isWaterReachable(w) {
     {gx: gx + 1, gy: gy}, {gx: gx - 1, gy: gy},
     {gx: gx, gy: gy + 1}, {gx: gx, gy: gy - 1}
   ];
-  for (let d of dirs) {
-    if (d.gx >= 0 && d.gx < COLS && d.gy >= 0 && d.gy < ROWS) {
-      let tx = d.gx * TILE_SIZE + 15;
-      let ty = d.gy * TILE_SIZE + 15;
-      let isWater = waterTiles.some(wt => wt.x === tx && wt.y === ty);
-      if (!isWater) return true;
-    }
-  }
-  return false;
+  // a fisher needs a tile to stand on next to the water; rock or trees on the shore don't count
+  return dirs.some(d => !isTileBlockedForSettler(d.gx, d.gy));
 }
 
 function generateMap() {
