@@ -308,6 +308,47 @@ window.sim = (() => {
     return result;
   }
 
+  // A wounded swordsman next to a healing tent is shot at by an enemy archer from range.
+  // Returns where he goes: 'tent' (retreated to heal) or 'archer' (went for the attacker).
+  function woundedUnderFire({ seed = 'wounded-test', hpShare, seconds = 6 }) {
+    start(seed);
+    const hx = townHall.x + 120, hy = townHall.y;
+    const tent = placeBuilding('tent', hx + 30 * 3, hy);
+    settlers = [makeSettler(1, hx, hy, { weapon: 'sword', role: 'soldier', hp: 100 * hpShare })];
+    const archer = createConfiguredEnemy({ x: hx, y: hy + 160 }, 'raider_archer', 'archer', 10);
+    archer.speed = 0; // stays put and keeps shooting
+    archer.damage = 3; // this is about the decision, not balance: survive long enough to act
+    enemies = [archer];
+    const s = settlers[0];
+    // where he heads first: whichever of the two he gets close to first
+    let went = null;
+    run(seconds, { each: () => {
+      if (went) return;
+      if (Math.hypot(s.x - archer.x, s.y - archer.y) < 40) went = 'archer';
+      else if (Math.hypot(s.x - tent.x, s.y - tent.y) < 40) went = 'tent';
+    } });
+    return { went, archerHurt: archer.hp < archer.maxHp || !enemies.includes(archer) };
+  }
+
+  // A fisher with a rod and a marked fishing spot; counts catches against the seeds in stock
+  function fishing({ seed = 'fishing-test', seeds, seconds = 90 }) {
+    start(seed);
+    // nearest reachable water to the town hall
+    const spot = waterTiles.filter(w => isWaterReachable(w))
+      .sort((a, b) => Math.hypot(a.x - townHall.x, a.y - townHall.y) - Math.hypot(b.x - townHall.x, b.y - townHall.y))[0];
+    spot.isFishing = true;
+    settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
+    wheatSeeds = seeds;
+    let catches = 0;
+    const original = giveResourceToSettler;
+    window.giveResourceToSettler = function (s, type, amount) {
+      if (type === 'food' && s === settlers[0]) catches++;
+      return original.apply(this, arguments);
+    };
+    try { run(seconds); } finally { window.giveResourceToSettler = original; }
+    return { catches, seedsLeft: wheatSeeds };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -329,6 +370,6 @@ window.sim = (() => {
 
   return {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
-    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn
+    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing
   };
 })();
