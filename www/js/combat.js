@@ -84,42 +84,26 @@ function collidesWithWater(x, y, radius) {
 function performAttack(attacker, targetX, targetY) {
   if (attacker.attackCooldown > 0) return;
 
-  let baseDmgMult = attacker.type === 'big' ? 1.8 : 1.0;
+  const stats = getWeaponStats(attacker, 'combat');
 
-  if (attacker.weapon === 'bow') {
+  if (isBowWeapon(attacker.weapon)) {
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
     projectiles.push({ 
       x: attacker.x, 
       y: attacker.y, 
-      vx: Math.cos(angle) * 4.5, 
-      vy: Math.sin(angle) * 4.5, 
-      damage: 30 * baseDmgMult,
-      life: 80, 
+      vx: Math.cos(angle) * stats.projectileSpeed, 
+      vy: Math.sin(angle) * stats.projectileSpeed, 
+      damage: stats.damage * stats.multiplier,
+      life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker 
     });
     attacker.arrows--;
-    attacker.attackCooldown = 0.8;
+    attacker.attackCooldown = stats.cooldown;
   } else {
-    let range = isSpearWeapon(attacker.weapon) ? 65 : 
-               (isSwordWeapon(attacker.weapon) ? 42 : 
-               (isClubWeapon(attacker.weapon) ? 35 : 28));
-
-    let toolDamage = hasAxeTool(attacker.tool) ? (attacker.tool === 'iron_axe' ? 18 : 15) : 
-                    (hasPickaxeTool(attacker.tool) ? (attacker.tool === 'iron_pickaxe' ? 13 : 10) : 
-                    (attacker.tool === 'rod' ? 6 : 6));
-
-    let weaponDamage = toolDamage;
-    if (isSpearWeapon(attacker.weapon)) {
-      weaponDamage = attacker.weapon === 'iron_spear' ? 40 : 25;
-    } else if (isSwordWeapon(attacker.weapon)) {
-      weaponDamage = attacker.weapon === 'iron_sword' ? 30 : 20;
-    } else if (isClubWeapon(attacker.weapon)) {
-      weaponDamage = 10;
-    }
-
-    let dmg = weaponDamage * baseDmgMult;
+    let range = stats.range;
+    let dmg = stats.damage * stats.multiplier;
     
     enemies.forEach(en => {
       if (Math.hypot(en.x - attacker.x, en.y - attacker.y) <= range + en.radius) {
@@ -141,8 +125,7 @@ function performAttack(attacker, targetX, targetY) {
       }
     });
 
-    attacker.attackCooldown = isSwordWeapon(attacker.weapon) ? 0.4 : 
-                              (isClubWeapon(attacker.weapon) ? 0.6 : 0.7);
+    attacker.attackCooldown = stats.cooldown;
   }
 }
 

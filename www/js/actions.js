@@ -38,12 +38,31 @@ function getRecentAttacker(settler) {
   return recent && enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
 }
 
-function hasAxeTool(tool) { return tool === 'axe' || tool === 'iron_axe'; }
-function hasPickaxeTool(tool) { return tool === 'pickaxe' || tool === 'iron_pickaxe'; }
-function isClubWeapon(weapon) { return weapon === 'club'; }
-function isSwordWeapon(weapon) { return weapon === 'sword' || weapon === 'iron_sword'; }
-function isSpearWeapon(weapon) { return weapon === 'spear' || weapon === 'iron_spear'; }
-function isBowWeapon(weapon) { return weapon === 'bow'; }
+// weapon / tool families, from GAME_CONFIG
+function getToolFamily(tool) { const def = getDefinition('tools', tool); return def ? def.family : null; }
+function getWeaponFamily(weapon) { const def = getDefinition('weapons', weapon); return def ? def.family : null; }
+function hasAxeTool(tool) { return getToolFamily(tool) === 'axe'; }
+function hasPickaxeTool(tool) { return getToolFamily(tool) === 'pickaxe'; }
+function isClubWeapon(weapon) { return getWeaponFamily(weapon) === 'club'; }
+function isSwordWeapon(weapon) { return getWeaponFamily(weapon) === 'sword'; }
+function isSpearWeapon(weapon) { return getWeaponFamily(weapon) === 'spear'; }
+function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; }
+
+// A settler's weapon stats for `use` ('combat' or 'hunt'). Damage: the weapon's, or, for fists (and weapons
+// with no damage for that use), the carried tool's, else bare hands; times the settler type's multiplier.
+function getWeaponStats(s, use) {
+  const fist = GAME_CONFIG.weapons.fist;
+  const weapon = getDefinition('weapons', s.weapon) || fist;
+  const stats = weapon[use];
+  let damage = s.weapon !== 'fist' ? stats.damage : undefined;
+  if (damage === undefined) {
+    const tool = getDefinition('tools', s.tool);
+    const toolDamage = tool && (use === 'combat' ? tool.combatDamage : tool.huntDamage);
+    damage = toolDamage !== undefined && toolDamage !== null ? toolDamage : fist[use].damage;
+  }
+  const settlerType = GAME_CONFIG.settlerTypes[s.type];
+  return { ...stats, damage, multiplier: settlerType ? settlerType.damageMultiplier : 1 };
+}
 
 // The possessed settler works a resource with a click: a hit (GAME_CONFIG.mapResources `hit`), or taken at once
 function harvestResourceDirect(r, p) {
