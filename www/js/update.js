@@ -22,6 +22,8 @@ function update(dt) {
     waveTimer = waveInterval;
   }
 
+  updatePendingRespawns(dt);
+
   foodTimer -= dt;
   if (foodTimer <= 0) {
     let mealCost = settlers.reduce((sum, s) => sum + (s.type === 'big' ? 2 : 1), 0);
@@ -366,23 +368,23 @@ function update(dt) {
           blockedRes.hp -= dt * (en.type === 'big' ? 4 : 2);
           if (blockedRes.hp <= 0) {
             trees.splice(trees.indexOf(blockedRes), 1);
-            spawnResource('tree');
+            scheduleRespawn('tree');
             invalidateAllPaths();
           }
         } else if (boulders.includes(blockedRes)) {
           blockedRes.hp -= dt * (en.type === 'big' ? 4 : 2);
           if (blockedRes.hp <= 0) {
             boulders.splice(boulders.indexOf(blockedRes), 1);
-            spawnResource('boulder');
+            scheduleRespawn('boulder');
             invalidateAllPaths();
           }
         } else if (berryBushes.includes(blockedRes)) {
           berryBushes.splice(berryBushes.indexOf(blockedRes), 1);
-          spawnResource('berry_bush');
+          scheduleRespawn('berry_bush');
           invalidateAllPaths();
         } else if (grassList.includes(blockedRes)) {
           grassList.splice(grassList.indexOf(blockedRes), 1);
-          spawnResource('grass');
+          scheduleRespawn('grass');
           invalidateAllPaths();
         } else if (en.type === 'big') {
           blockedRes.hp -= dt * 4;
