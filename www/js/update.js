@@ -342,6 +342,7 @@ function update(dt) {
           if (item.type === 'wheatSeeds') wheatSeeds += item.amount;
         });
         s.carrying = null;
+        takeFishingBait(s);
       }
       return;
     }
@@ -363,9 +364,12 @@ function update(dt) {
       }
     }
 
-    if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed) {
+    // While enemies are on the map, only badly wounded settlers (< 25% hp) leave the fight to heal;
+    // the rest keep fighting, starting with whoever is attacking them.
+    const badlyWounded = s.hp < s.maxHp * 0.25;
+    if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed && (enemies.length === 0 || badlyWounded)) {
       let nearbyThreat = enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 100);
-      if (!nearbyThreat) {
+      if (!nearbyThreat || badlyWounded) {
         let nearestTent = tents.reduce((closest, t) => {
           let d = Math.hypot(t.x - s.x, t.y - s.y);
           return d < closest.d ? { tent: t, d: d } : closest;
@@ -395,6 +399,9 @@ function update(dt) {
         let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
         if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
       });
+      // strike back at whoever is hitting this settler first
+      const attacker = getRecentAttacker(s);
+      if (attacker) targetEnemy = attacker;
 
     if (isBowWeapon(s.weapon) && s.quiver) {
 	  let currentArrows = s.arrows || 0;
@@ -441,7 +448,7 @@ function update(dt) {
       let isToolWorker = isUnarmedOrRod && (hasAxeTool(s.tool) || hasPickaxeTool(s.tool));
       let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
       if (targetEnemy && (isWaveActive || distToClosestEn < 260 || s.role !== 'worker')) {
-        if (isUnarmedOrRod && defendersCount > 0 && !(isToolWorker && enemyNearTownHall)) {
+        if (isUnarmedOrRod && defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker) {
           let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
           if (distToTown > townHall.radius + 15) {
             moveSettlerToTownHall(s, s.speed, dt);
@@ -539,6 +546,18 @@ function update(dt) {
       if (s.role === 'worker' || (s.role !== 'worker' && !isWaveActive)) {
         if (s.role === 'worker' && s.tool === 'rod') {
           let fishSpot = activeWaterSpots[assignedFishersCount];
+          // every catch uses one seed as bait, picked up at the town hall; no seeds, no fishing
+          if (fishSpot && !s.bait && wheatSeeds <= 0) fishSpot = null;
+          if (fishSpot && !s.bait) {
+            assignedFishersCount++;
+            if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius) {
+              moveSettlerToTownHall(s, s.speed, dt);
+            } else {
+              takeFishingBait(s);
+            }
+            s.patrolTarget = null;
+            return;
+          }
           if (fishSpot) {
             assignedFishersCount++;
             let dist = Math.hypot(fishSpot.x - s.x, fishSpot.y - s.y);
@@ -548,6 +567,7 @@ function update(dt) {
               fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
               if (fishSpot.fishTimer >= 3.0) {
                 giveResourceToSettler(s, 'food', 2);
+                s.bait = false;
                 fishSpot.fishTimer = 0;
               }
             }
@@ -800,7 +820,7 @@ function update(dt) {
       }
       for (let s of settlers) {
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
-          damageSettler(s, proj.damage);
+          damageSettler(s, proj.damage, proj.owner);
           projectiles.splice(i, 1);
           break;
         }
@@ -897,7 +917,7 @@ function update(dt) {
       en.attackCooldown = (en.attackCooldown || 0) - dt;
       if (minDist < 180 && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
-        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * 3.8, vy: Math.sin(angle) * 3.8, damage: en.damage, life: 75, fromEnemy: true });
+        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * 3.8, vy: Math.sin(angle) * 3.8, damage: en.damage, life: 75, fromEnemy: true, owner: en });
         en.attackCooldown = 1.5;
       }
     }
@@ -1004,11 +1024,11 @@ function update(dt) {
         let splashRadius = 70;
         let splashDamage = dt * en.damage * 0.6;
         if (target === townHall) townHall.hp -= dt * en.damage;
-        else damageSettler(target, dt * en.damage);
+        else damageSettler(target, dt * en.damage, en);
 
         settlers.forEach(s => {
           if (s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius) {
-            damageSettler(s, splashDamage);
+            damageSettler(s, splashDamage, en);
           }
         });
 
@@ -1017,7 +1037,7 @@ function update(dt) {
         }
       } else {
         if (target === townHall) townHall.hp -= dt * en.damage;
-        else damageSettler(target, dt * en.damage);
+        else damageSettler(target, dt * en.damage, en);
       }
     }
   }
