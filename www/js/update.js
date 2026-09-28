@@ -694,7 +694,7 @@ function update(dt) {
                 if (assignedRes.harvestProgress >= assignedRes.harvestDuration) {
                   ironOres.splice(ironOres.indexOf(assignedRes), 1);
                   giveResourceToSettler(s, 'ironOre', 3);
-                  spawnResource('iron_ore', assignedRes.x, assignedRes.y);
+                  respawnOre('iron');
                 }
               } else if (coalOres.includes(assignedRes)) {
                 assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
@@ -703,7 +703,7 @@ function update(dt) {
                 if (assignedRes.harvestProgress >= assignedRes.harvestDuration) {
                   coalOres.splice(coalOres.indexOf(assignedRes), 1);
                   giveResourceToSettler(s, 'coal', 3);
-                  spawnResource('coal_ore', assignedRes.x, assignedRes.y);
+                  respawnOre('coal');
                 }
               } else if (farmPlots.includes(assignedRes)) {
                 assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
@@ -746,7 +746,7 @@ function update(dt) {
                   }
                   else if (cacti.includes(assignedRes)) { giveResourceToSettler(s, 'wood', 1); cacti.splice(cacti.indexOf(assignedRes), 1); spawnResource('cactus', assignedRes.x, assignedRes.y); }
                   else if (boulders.includes(assignedRes)) { giveResourceToSettler(s, 'stone', 3); boulders.splice(boulders.indexOf(assignedRes), 1); spawnResource('boulder'); }
-                  else if (ironOres.includes(assignedRes)) { giveResourceToSettler(s, 'iron', 3); ironOres.splice(ironOres.indexOf(assignedRes), 1); spawnResource('iron_ore'); }
+                  else if (ironOres.includes(assignedRes)) { giveResourceToSettler(s, 'iron', 3); ironOres.splice(ironOres.indexOf(assignedRes), 1); respawnOre('iron'); }
                 }
               }
             }

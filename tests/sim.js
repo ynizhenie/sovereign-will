@@ -267,6 +267,47 @@ window.sim = (() => {
     return { spawned, msPerGameSecond: (performance.now() - t0) / seconds };
   }
 
+  // Per seed: spawners and ores of each kind, and whether a settler from the hall can reach an ore of each kind
+  function oreReport(seeds) {
+    const problems = [];
+    for (const seed of seeds) {
+      start(seed);
+      const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
+      const reachable = list => list.some(o => getReachDistanceToResource(reach, o) < Infinity);
+      const row = {
+        seed,
+        ironSpawners: getOreSpawners('iron').length, coalSpawners: getOreSpawners('coal').length,
+        iron: ironOres.length, coal: coalOres.length,
+        ironReachable: reachable(ironOres), coalReachable: reachable(coalOres)
+      };
+      if (!row.ironSpawners || !row.coalSpawners || !row.ironReachable || !row.coalReachable) problems.push(row);
+    }
+    return problems;
+  }
+
+  // Mine every ore once (directly, like a possessed settler) and check where they come back
+  function oreRespawn(seed) {
+    start(seed);
+    const radius = getOreSpawnerRadius();
+    const result = {};
+    for (const kind of ['iron', 'coal']) {
+      const list = kind === 'iron' ? ironOres : coalOres;
+      const before = list.length;
+      const miner = makeSettler(1, 0, 0, { tool: 'pickaxe' });
+      for (const ore of [...list]) { while (list.includes(ore)) { miner.carrying = null; harvestResourceDirect(ore, miner); } }
+      const spawners = getOreSpawners(kind);
+      const nearSpawner = o => spawners.some(sp => Math.max(Math.abs(sp.x - o.x), Math.abs(sp.y - o.y)) <= radius * TILE_SIZE);
+      result[kind] = { before, after: list.length, allNearSpawner: list.every(nearSpawner) };
+    }
+    // spawners themselves can't be mined or marked
+    const spawner = getOreSpawners('iron')[0];
+    const miner = makeSettler(2, 0, 0, { tool: 'iron_pickaxe' });
+    for (let i = 0; i < 20; i++) { miner.carrying = null; harvestResourceDirect(spawner, miner); }
+    result.spawnerSurvivesMining = naturalRocks.includes(spawner);
+    result.spawnerHarvestable = getHarvestableResources().includes(spawner);
+    return result;
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -288,6 +329,6 @@ window.sim = (() => {
 
   return {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
-    homecoming, crowd, bunker, waveCost, refundMismatches
+    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn
   };
 })();
