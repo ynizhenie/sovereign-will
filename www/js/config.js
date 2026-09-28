@@ -29,12 +29,13 @@ const GAME_CONFIG = {
     bow: { id: 'bow', label: 'Лук', icon: '🏹', cost: { wood: 15, leather: 5 } }
   },
   buildings: {
-    wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, build: { maxProgress: 80, hp: 150 } },
-    wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, build: { maxProgress: 120, hp: 300 } },
-    door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, build: { maxProgress: 80, hp: 150 } },
-    tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, build: { maxProgress: 70, hp: 80 } },
+    wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 } },
+    wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 } },
+    door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 } },
+    // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
+    tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
     smelter: { id: 'smelter', label: 'Плавильня', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160, smelter: true } },
-    watchtower: { id: 'watchtower', label: 'Сторожевая башня', icon: '🗼', cost: { wood: 25, stone: 20 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
+    watchtower: { id: 'watchtower', label: 'Сторожевая башня', icon: '🗼', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
     wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 } },
     sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 } }
   },
@@ -44,6 +45,33 @@ const GAME_CONFIG = {
     raider_archer: { id: 'raider_archer', label: 'Лучник', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow' },
     brute: { id: 'brute', label: 'Громила', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear' }
   },
+  // ---- Colony
+
+  start: {
+    // stock at the start of a game (ids from `resources`)
+    resources: { wood: 30, stone: 20, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, armor: 0, food: 25, wheatSeeds: 3, saplings: 0 },
+    // population limit before tents (each tent adds buildings.tent.population)
+    population: 5
+  },
+
+  // kinds of settlers: stats, how many population slots they take, and what hiring / upgrading costs
+  settlerTypes: {
+    normal: { id: 'normal', label: 'Рабочий', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, hireCost: { food: 15 } },
+    big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
+  },
+
+  // crafted at the town hall into the stock
+  recipes: {
+    arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } },
+    armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, produces: { armor: 1 }, hpBonus: 50 }
+  },
+
+  // what one repair step costs and restores (watchtower: one step per `interval` seconds)
+  repairs: {
+    townHall: { cost: { wood: 15, stone: 15 }, hp: 35 },
+    watchtower: { cost: { wood: 10, stone: 10 }, hp: 35, interval: 1 }
+  },
+
   waves: [
   { enemy: 'raider_club', type: 'normal', radius: 10, buildsTents: true },
   { enemy: 'raider', type: 'normal', radius: 10 },

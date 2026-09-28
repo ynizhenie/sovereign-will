@@ -96,15 +96,15 @@
         <span style="font-size: 11px; color: #aaa;">Выбран: <b id="selected-settler-txt" style="color: #f1c40f;">Никто</b></span>
         <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()">❌</button>
       </div>
-      <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()">🧌 Улучшить рабочего (15🍞 15🪵)</button>
+      <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()"></button>
     </div>
 
     <div class="resources-grid" id="resources-hud"></div>
 
     <div class="recruit-row">
-      <button class="btn" onclick="spawnSettler('normal')">👨‍🌾 Рабочий (15🍞)</button>
-      <button class="btn" onclick="spawnSettler('big')">🧌 Богатырь (30🍞 15🪵)</button>
-      <button class="btn btn-armor" onclick="upgradeToBig()">🧌 Улучшить (15🍞 15🪵)</button>
+      <button class="btn" id="btn-hire-normal" onclick="spawnSettler('normal')"></button>
+      <button class="btn" id="btn-hire-big" onclick="spawnSettler('big')"></button>
+      <button class="btn btn-armor" id="btn-upgrade" onclick="upgradeToBig()"></button>
     </div>
 
     <div class="tab-navigation">
@@ -134,8 +134,8 @@
       <div id="tab-weapons" class="tab-pane">
         <div class="btn-grid-2col" id="weapon-actions"></div>
         <div class="btn-grid-2col" id="special-actions">
-          <button class="btn" onclick="craftArrows()">🏹 Стрелы (3🪵 1🪨 → 6)</button>
-          <button class="btn" onclick="craftArmor()">🛡️ Броня (8🔩)</button>
+          <button class="btn" id="btn-craft-arrows" onclick="craftArrows()"></button>
+          <button class="btn" id="btn-craft-armor" onclick="craftArmor()"></button>
         </div>
 
         <div class="action-row">

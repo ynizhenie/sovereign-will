@@ -149,7 +149,7 @@ function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
   }
   applyWallet(wallet);
 
-  if (includeArmor && settler.armor === 'iron') iron += 8;
+  if (includeArmor && settler.armor === 'iron') addResources(GAME_CONFIG.recipes.armor.cost);
   if (includeQuiver && settler.quiver) {
     leather += 5;
     arrowsStock += settler.arrows || 0;
@@ -424,25 +424,26 @@ function craftArrows() {
     showNotification("⚠️ Сначала нужен лучник с колчаном", true);
     return;
   }
-  if (wood < 3 || stone < 1) {
-    showNotification("❌ Для стрел нужно 3🪵 и 1🪨", true);
+  const recipe = GAME_CONFIG.recipes.arrows;
+  if (!canAfford(getWallet(), recipe.cost)) {
+    showCostError(recipe.cost, `❌ ${recipe.label}: нужно`);
     return;
   }
 
-  wood -= 3;
-  stone -= 1;
-  arrowsStock += 6;
-  showNotification("✅ Создано 6 стрел. Они хранятся в ратуше", false);
+  payCost(recipe.cost);
+  addResources(recipe.produces);
+  showNotification(`✅ Создано ${recipe.produces.arrows} стрел. Они хранятся в ратуше`, false);
 }
 
 function craftArmor() {
-  if (iron >= 8) {
-    iron -= 8;
-    armorStock++;
+  const recipe = GAME_CONFIG.recipes.armor;
+  if (canAfford(getWallet(), recipe.cost)) {
+    payCost(recipe.cost);
+    addResources(recipe.produces);
     showNotification("✅ Железная броня создана и отправлена на склад Ратуши!", false);
     updateUI();
   } else {
-    showNotification("❌ Не хватает переплавленного железа! Нужно 8🔩", true);
+    showCostError(recipe.cost, `❌ ${recipe.label}: нужно`);
   }
 }
 
@@ -465,8 +466,9 @@ function equipArmorToSelected() {
   armorStock--;
   target.armor = 'iron';
   target.hasArmor = true;
-  target.maxHp = (target.maxHp || 100) + 50;
-  target.hp += 50;
+  const hpBonus = GAME_CONFIG.recipes.armor.hpBonus;
+  target.maxHp = (target.maxHp || 100) + hpBonus;
+  target.hp += hpBonus;
 
   showNotification("🛡️ Броня успешно надета на поселенца!", false);
   updateUI();
@@ -512,54 +514,24 @@ function disarmSettler(type = 'all') {
 }
 
 function spawnSettler(type = 'normal') {
-  let curPop = getCurrentPop();
-  let maxPop = getMaxPop();
-  let needed = (type === 'big' ? 2 : 1);
+  const settlerType = GAME_CONFIG.settlerTypes[type];
+  if (!settlerType) return;
 
-  if (curPop + needed > maxPop) {
+  if (getCurrentPop() + settlerType.population > getMaxPop()) {
     showNotification("⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)", true);
     return;
   }
-
-  if (type === 'normal') {
-    if (food < 15) {
-      showNotification("❌ Не хватает еды! Нужно 15🍞 (у вас " + Math.floor(food) + "🍞)", true);
-      return;
-    }
-    food -= 15;
-    settlers.push({
-    id: Date.now() + rand(),
-    x: townHall.x + (rand() - 0.5) * 30,
-    y: townHall.y + (rand() - 0.5) * 30,
-	  hp: 100, maxHp: 100, 
-	  armor: 'none',
-	  hasArmor: false,
-	  isPossessed: false, speed: 1.0, radius: 11, visualRadius: 11, weapon: 'fist', tool: 'none', role: 'worker', type: 'normal', carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
-	});
-    showNotification("✅ Нанят рабочий!", false);
-  } else if (type === 'big') {
-    if (food < 30 || wood < 15) {
-      let missing = [];
-      if (food < 30) missing.push((30 - Math.floor(food)) + "🍞");
-      if (wood < 15) missing.push((15 - Math.floor(wood)) + "🪵");
-      showNotification("❌ Не хватает ресурсов! Нужно 30🍞 15🪵 (не хватает " + missing.join(", ") + ")", true);
-      return;
-    }
-    food -= 30; wood -= 15;
-    settlers.push({
-    id: Date.now() + rand(),
-    x: townHall.x + (rand() - 0.5) * 30,
-    y: townHall.y + (rand() - 0.5) * 30,
-	  hp: 250, maxHp: 250, 
-	  armor: 'none',
-	  hasArmor: false,
-	  isPossessed: false, speed: 0.7, radius: 13, visualRadius: 18, weapon: 'fist', tool: 'none', role: 'worker', type: 'big', carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
-	});
-    showNotification("✅ Нанят Богатырь!", false);
+  if (!canAfford(getWallet(), settlerType.hireCost)) {
+    showCostError(settlerType.hireCost, `❌ ${settlerType.label}: нужно`);
+    return;
   }
+  payCost(settlerType.hireCost);
+  settlers.push(createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false }));
+  showNotification(`✅ Нанят: ${settlerType.label}!`, false);
 }
 
 function upgradeToBig(target) {
+  const normal = GAME_CONFIG.settlerTypes.normal, big = GAME_CONFIG.settlerTypes.big;
   if (!target) target = getSelectedSettler() || getPossessed();
   if (!target || target.type !== 'normal') target = settlers.find(s => s.type === 'normal');
 
@@ -567,28 +539,24 @@ function upgradeToBig(target) {
     showNotification("❌ Нет подходящего обычного поселенца для улучшения!", true);
     return;
   }
-  if (getCurrentPop() + 1 > getMaxPop()) {
+  if (getCurrentPop() + big.population - normal.population > getMaxPop()) {
     showNotification("⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)", true);
     return;
   }
-  if (food < 15 || wood < 15) {
-    let missing = [];
-    if (food < 15) missing.push((15 - Math.floor(food)) + "🍞");
-    if (wood < 15) missing.push((15 - Math.floor(wood)) + "🪵");
-    showNotification("❌ Не хватает ресурсов! Нужно 15🍞 и 15🪵 (не хватает " + missing.join(", ") + ")", true);
+  if (!canAfford(getWallet(), big.upgradeCost)) {
+    showCostError(big.upgradeCost, `❌ Улучшение в ${big.label}а: нужно`);
     return;
   }
 
-  food -= 15;
-  wood -= 15;
+  payCost(big.upgradeCost);
 
   target.type = 'big';
-  target.maxHp = 250;
-  target.hp = Math.min(target.hp + 150, 250);
-  target.speed = 0.7;
-  target.radius = 13;
-  target.visualRadius = 18;
-  showNotification("✅ Поселенец улучшен в Богатыря!", false);
+  target.maxHp = big.hp;
+  target.hp = Math.min(target.hp + (big.hp - normal.hp), big.hp);
+  target.speed = big.speed;
+  target.radius = big.radius;
+  target.visualRadius = big.visualRadius;
+  showNotification(`✅ Поселенец улучшен: ${big.label}!`, false);
 }
 
 function setMode(mode) {
