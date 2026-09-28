@@ -257,10 +257,11 @@ window.sim = (() => {
     return { wallsBroken: walls0 - buildings.length, playerDamage: 100000 - settlers[0].hp };
   }
 
-  // Real waves from GAME_CONFIG.attackGroups at a given wave number; returns update cost per game second
-  function waveCost({ seed = 'wave-test', wave = 16, waves = 2, seconds = 30 }) {
+  // Real waves from GAME_CONFIG from a given wave number on, until at least minEnemies are on the map
+  // (so it doesn't depend on wave balance); returns update cost per game second
+  function waveCost({ seed = 'wave-test', wave = 16, minEnemies = 45, seconds = 30 }) {
     start(seed);
-    for (let w = 0; w < waves; w++) { waveNum = wave + w; startNextWave(); }
+    for (let w = wave; enemies.length < minEnemies && w < wave + 30; w++) { waveNum = w; startNextWave(); }
     const spawned = enemies.length;
     const t0 = performance.now();
     run(seconds);
