@@ -139,7 +139,7 @@ function performAttack(attacker, targetX, targetY) {
         makeBoarFlee(b, attacker.x, attacker.y);
         if (b.hp <= 0) {
           boars.splice(boars.indexOf(b), 1);
-          giveResourceToSettler(attacker, 'food', 6);
+          giveResourceToSettler(attacker, 'food', GAME_CONFIG.mapResources.boar.yield.food);
           invalidateAllPaths();
         }
       }
