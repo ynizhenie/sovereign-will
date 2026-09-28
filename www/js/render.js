@@ -32,6 +32,49 @@ const ORE_COLORS = {
   coal: { body: '#050608', shine: '#6b7785' }
 };
 
+// Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
+// Shared by settlers and enemies. Returns false for no weapon (fists).
+function drawHeldWeapon(weapon) {
+  if (isSwordWeapon(weapon)) {
+    ctx.fillStyle = weapon === 'iron_sword' ? '#b0bec5' : '#e0e0e0'; ctx.fillRect(8, -2, 14, 4);
+    ctx.fillStyle = '#f39c12'; ctx.fillRect(6, -4, 2, 8);
+  } else if (isClubWeapon(weapon)) {
+    ctx.fillStyle = '#7a4b21'; ctx.fillRect(6, -2, 8, 4);
+    ctx.fillRect(14, -3, 6, 6);
+  } else if (isSpearWeapon(weapon)) {
+    ctx.fillStyle = weapon === 'iron_spear' ? '#7f8c8d' : '#8e5a2b'; ctx.fillRect(6, -1, 22, 3);
+    ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(28, -3); ctx.lineTo(35, 0); ctx.lineTo(28, 3); ctx.fill();
+  } else if (weapon === 'bow') {
+    ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(10, 0, 10, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  } else {
+    return false;
+  }
+  return true;
+}
+
+// Idle settler: a small thought bubble with "zZ" above the head
+function drawIdleIcon(x, y) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 6, y + 7, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#34495e'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('zZ', x, y + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
+// Enemy the player marked as a priority target: a red reticle
+function drawTargetMark(en) {
+  const r = en.radius + 6;
+  ctx.strokeStyle = '#ff5c5c'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(en.x, en.y, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(en.x - r - 4, en.y); ctx.lineTo(en.x - r + 3, en.y);
+  ctx.moveTo(en.x + r - 3, en.y); ctx.lineTo(en.x + r + 4, en.y);
+  ctx.moveTo(en.x, en.y - r - 4); ctx.lineTo(en.x, en.y - r + 3);
+  ctx.moveTo(en.x, en.y + r - 3); ctx.lineTo(en.x, en.y + r + 4);
+  ctx.stroke();
+}
+
 function drawOreVeins(x, y, kind, half) {
   const c = ORE_COLORS[kind];
   const k = half / 14;
@@ -376,18 +419,8 @@ function render() {
 
     ctx.save();
     ctx.translate(s.x, s.y);
-    if (isSwordWeapon(s.weapon)) {
-      ctx.fillStyle = s.weapon === 'iron_sword' ? '#b0bec5' : '#e0e0e0'; ctx.fillRect(8, -2, 14, 4);
-      ctx.fillStyle = '#f39c12'; ctx.fillRect(6, -4, 2, 8);
-    } else if (isClubWeapon(s.weapon)) {
-      ctx.fillStyle = '#7a4b21'; ctx.fillRect(6, -2, 8, 4);
-      ctx.fillRect(14, -3, 6, 6);
-    } else if (isSpearWeapon(s.weapon)) {
-      ctx.fillStyle = s.weapon === 'iron_spear' ? '#7f8c8d' : '#8e5a2b'; ctx.fillRect(6, -1, 22, 3);
-      ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(28, -3); ctx.lineTo(35, 0); ctx.lineTo(28, 3); ctx.fill();
-    } else if (s.weapon === 'bow') {
-      ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(10, 0, 10, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-    } else if (s.tool === 'axe' || s.tool === 'iron_axe') {
+    if (!drawHeldWeapon(s.weapon)) {
+    if (s.tool === 'axe' || s.tool === 'iron_axe') {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
       ctx.fillStyle = s.tool === 'iron_axe' ? '#cfd8dc' : '#7f8c8d'; ctx.fillRect(16, -5, 5, 10);
     } else if (s.tool === 'pickaxe' || s.tool === 'iron_pickaxe') {
@@ -395,6 +428,7 @@ function render() {
       ctx.fillStyle = s.tool === 'iron_pickaxe' ? '#cfd8dc' : '#7f8c8d'; ctx.beginPath(); ctx.arc(18, 0, 7, -Math.PI/2, Math.PI/2); ctx.fill();
     } else if (s.tool === 'rod') {
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
+    }
     }
     if (s.armor === 'iron' || s.hasArmor) {
 	  ctx.strokeStyle = '#95a5a6';
@@ -415,23 +449,25 @@ function render() {
       ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius + 4, 0, Math.PI * 2); ctx.stroke();
     }
 
+    if (s.isIdle && !s.carrying) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
   });
 
   enemies.forEach(en => {
-    ctx.fillStyle = en.type === 'big' ? '#9b59b6' : (en.type === 'archer' ? '#e67e22' : '#e74c3c');
+    // enemies are red (brutes darker), holding their weapon the same way settlers do
+    ctx.fillStyle = en.type === 'big' ? '#a93226' : '#e74c3c';
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#7b241c'; ctx.lineWidth = 2; ctx.stroke();
 
-    if (en.weapon === 'sword') {
-      ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(en.x + 5, en.y - 5); ctx.lineTo(en.x + 15, en.y - 15); ctx.stroke();
-    } else if (en.weapon === 'spear') {
-      ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(en.x + 4, en.y + 5); ctx.lineTo(en.x + 18, en.y - 9); ctx.stroke();
-      ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(en.x + 18, en.y - 9); ctx.lineTo(en.x + 23, en.y - 12); ctx.lineTo(en.x + 20, en.y - 6); ctx.closePath(); ctx.fill();
-    }
+    ctx.save();
+    ctx.translate(en.x, en.y);
+    if (en.type === 'big') ctx.translate(en.radius - 11, 0); // hands at the edge of the larger body
+    drawHeldWeapon(en.weapon);
+    ctx.restore();
+
+    if (en.markedTarget) drawTargetMark(en);
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(en.x - 12, en.y - en.radius - 8, 24, 3);
     ctx.fillStyle = '#e74c3c'; ctx.fillRect(en.x - 12, en.y - en.radius - 8, (Math.max(0, en.hp) / en.maxHp) * 24, 3);

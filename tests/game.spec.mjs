@@ -228,6 +228,37 @@ test('trees, grass, berries and sticks grow mostly in forests (#13)', async ({ p
   expect(r.undergrowth).toBeGreaterThan(0.55);
 });
 
+test('armed settlers go for an enemy the player marked (#35)', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'markedTarget', { mark: false })).toBe('nearHall');
+  expect(await sim(page, 'markedTarget', { mark: true })).toBe('marked');
+});
+
+test('clicking an enemy with the Point tool marks and unmarks it (#35)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const at = await page.evaluate(() => {
+    const e = createNormalEnemy({ x: townHall.x + 150, y: townHall.y + 90 }, 'raider');
+    e.speed = 0;
+    enemies = [e];
+    isPaused = true;
+    camera.zoom = 1; camera.x = canvas.width / 2; camera.y = canvas.height / 2;
+    const rect = canvas.getBoundingClientRect();
+    const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
+    const offX = (rect.width - canvas.width * scale) / 2, offY = (rect.height - canvas.height * scale) / 2;
+    return { x: rect.left + offX + e.x * scale, y: rect.top + offY + e.y * scale };
+  });
+  await page.mouse.click(at.x, at.y);
+  expect(await page.evaluate(() => enemies[0].markedTarget)).toBe(true);
+  await page.mouse.click(at.x, at.y);
+  expect(await page.evaluate(() => enemies[0].markedTarget)).toBe(false);
+});
+
+test('a settler with nothing to do is flagged idle, a working one is not (#33)', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'idleFlags', {})).toEqual({ idleWorker: true, busyWorker: false });
+});
+
 test('disarming refunds exactly what the item cost', async ({ page }) => {
   await openGame(page);
   expect(await page.evaluate(() => window.sim.refundMismatches())).toEqual([]);
