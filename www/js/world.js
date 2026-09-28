@@ -83,8 +83,8 @@ function getHarvestableResources() {
 // rock itself (the ore replaces that rock tile, so mining it cuts into the rock).
 
 const ORE_KINDS = {
-  iron: { list: () => ironOres, spawnerKey: 'ironSpawners' },
-  coal: { list: () => coalOres, spawnerKey: 'coalSpawners' }
+  iron: { resource: 'iron_ore', spawnerKey: 'ironSpawners' },
+  coal: { resource: 'coal_ore', spawnerKey: 'coalSpawners' }
 };
 
 function getOreSpawnerRadius() {
@@ -118,7 +118,7 @@ function getOreSpotsAround(spawner, radius) {
 
 function placeOre(kind, spot) {
   if (spot.rock) naturalRocks.splice(naturalRocks.indexOf(spot.rock), 1);
-  ORE_KINDS[kind].list().push({ x: spot.x, y: spot.y, hp: 5, maxHp: 5, priority: 0 });
+  addMapResource(ORE_KINDS[kind].resource, spot.x, spot.y);
 }
 
 // A mined ore grows back around a random spawner of its kind
@@ -145,7 +145,7 @@ function placeRockOutcrop() {
     const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 3));
     const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
     if (tiles.some(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) < 220 || isTileOccupied(t.x, t.y) || isDesertTile(t.x, t.y))) continue;
-    for (const t of tiles) naturalRocks.push({ x: t.x, y: t.y, hp: 100, maxHp: 100, priority: 0 });
+    for (const t of tiles) addMapResource('natural_rock', t.x, t.y);
     return true;
   }
   return false;
@@ -210,17 +210,55 @@ function spawnResource(type, nearX = null, nearY = null, spread = 180) {
     }
   }
   if (isValid) {
-    if (type === 'tree') trees.push({ x: tx, y: ty, hp: 3, priority: 0, isGrowing: false, growProgress: 0 });
-    if (type === 'cactus') cacti.push({ x: tx, y: ty, hp: 2, maxHp: 2, priority: 0 });
-    if (type === 'boulder') boulders.push({ x: tx, y: ty, hp: 4, priority: 0 });
-    if (type === 'grass') grassList.push({ x: tx, y: ty, hp: 1, priority: 0 });
-    if (type === 'berry_bush') berryBushes.push({ x: tx, y: ty, hp: 1, priority: 0 });
-    if (type === 'stick') sticks.push({ x: tx, y: ty, hp: 1, priority: 0 });
-    if (type === 'pebble') pebbles.push({ x: tx, y: ty, hp: 1, priority: 0 });
-    if (type === 'iron_ore') ironOres.push({ x: tx, y: ty, hp: 5, maxHp: 5, priority: 0 });
-    if (type === 'coal_ore') coalOres.push({ x: tx, y: ty, hp: 5, maxHp: 5, priority: 0 });
-    if (type === 'boar') boars.push({ x: tx, y: ty, hp: 40, maxHp: 40, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: tx, targetY: ty });
+    if (type === 'boar') {
+      const hp = GAME_CONFIG.mapResources.boar.hp;
+      boars.push({ x: tx, y: ty, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: tx, targetY: ty });
+    } else {
+      addMapResource(type, tx, ty);
+    }
   }
+}
+
+// ---- Map resources (GAME_CONFIG.mapResources)
+
+function getMapResourceDef(kind) {
+  return GAME_CONFIG.mapResources[kind] || null;
+}
+
+// Which GAME_CONFIG.mapResources entry an object on the map is, by the list it's in
+function getMapResourceKind(resource) {
+  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
+    if (WORLD[def.list].includes(resource)) return kind;
+  }
+  return null;
+}
+
+function addMapResource(kind, x, y) {
+  const def = GAME_CONFIG.mapResources[kind];
+  const resource = { x, y, hp: def.hp, maxHp: def.hp, priority: 0 };
+  if (def.list === 'trees') Object.assign(resource, { isGrowing: false, growProgress: 0 });
+  WORLD[def.list].push(resource);
+  return resource;
+}
+
+function hasToolFamily(tool, family) {
+  if (family === 'axe') return hasAxeTool(tool);
+  if (family === 'pickaxe') return hasPickaxeTool(tool);
+  return false;
+}
+
+// A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
+function finishHarvest(settler, resource, kind) {
+  const def = GAME_CONFIG.mapResources[kind];
+  for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount);
+  for (const [item, chance] of Object.entries(def.bonusChance || {})) {
+    if (rand() < chance) addResources({ [item]: 1 });
+  }
+  const list = WORLD[def.list];
+  const index = list.indexOf(resource);
+  if (index !== -1) list.splice(index, 1);
+  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y);
+  if (def.clearsPath) invalidateAllPaths();
 }
 
 function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
@@ -233,15 +271,13 @@ function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
 // Trees grow in forests; grass, berry bushes and sticks favour them too (forestUndergrowthShare), both at
 // map generation and when they grow back. Forest centres are kept in `forests`.
 
-const FOREST_TYPES = ['tree', 'grass', 'berry_bush', 'stick'];
-
 function getForestSpread() {
   return (getMapCount('forestRadius', 3) * 2 + 1) * TILE_SIZE;
 }
 
 function spawnForestAware(type) {
-  // trees always grow back in a forest, so forests don't thin out into a scatter over time
-  const share = type === 'tree' ? 1 : (GAME_CONFIG.map.forestUndergrowthShare ?? 0.7);
+  // trees (forestShare 1) always grow back in a forest, so forests don't thin out into a scatter
+  const share = getMapResourceDef(type).forestShare ?? GAME_CONFIG.map.forestUndergrowthShare ?? 0.7;
   if (forests.length > 0 && rand() < share) {
     const forest = forests[Math.floor(rand() * forests.length)];
     spawnResource(type, forest.x, forest.y, getForestSpread());
@@ -288,7 +324,7 @@ function placeBoulderPiles() {
         if (pile.some(t => t.gx === next.gx && t.gy === next.gy) || !free(next.gx, next.gy)) continue;
         pile.push(next);
       }
-      for (const t of pile) boulders.push({ x: t.gx * TILE_SIZE + 15, y: t.gy * TILE_SIZE + 15, hp: 4, priority: 0 });
+      for (const t of pile) addMapResource('boulder', t.gx * TILE_SIZE + 15, t.gy * TILE_SIZE + 15);
       break;
     }
   }
@@ -299,7 +335,7 @@ function placeBoulderPiles() {
 // respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti).
 
 function scheduleRespawn(type, nearX = null, nearY = null) {
-  const isOre = type === 'iron_ore' || type === 'coal_ore';
+  const isOre = getMapResourceDef(type).regrow === 'spawner';
   const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
   pendingRespawns.push({ type, nearX, nearY, timer: delay });
 }
@@ -310,13 +346,13 @@ function updatePendingRespawns(dt) {
     pending.timer -= dt;
     if (pending.timer > 0) continue;
     pendingRespawns.splice(i, 1);
-    if (pending.type === 'iron_ore') respawnOre('iron');
-    else if (pending.type === 'coal_ore') respawnOre('coal');
-    else if (pending.nearX !== null) spawnResource(pending.type, pending.nearX, pending.nearY);
-    else if (FOREST_TYPES.includes(pending.type)) spawnForestAware(pending.type);
+    const def = getMapResourceDef(pending.type);
+    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type));
+    else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
+    else if (def.regrow === 'forest') spawnForestAware(pending.type);
     else spawnResource(pending.type);
-    // trees, boulders and cacti block paths
-    if (pending.type === 'tree' || pending.type === 'boulder' || pending.type === 'cactus') invalidateAllPaths();
+    // things that need a tool to remove (trees, boulders, cacti, ore) block paths
+    if (def.tool) invalidateAllPaths();
   }
 }
 
@@ -505,7 +541,7 @@ function generateMap() {
         let dynamicThreshold = 0.85 + Math.sin(angle * waves + phase) * amp;
 
         if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 150 && !isDesertTile(tx, ty) && !isTileOccupied(tx, ty)) {
-          naturalRocks.push({ x: tx, y: ty, hp: 100, maxHp: 100, priority: 0 });
+          addMapResource('natural_rock', tx, ty);
         }
       }
     }
