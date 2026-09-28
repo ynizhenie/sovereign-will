@@ -96,7 +96,17 @@ function render() {
   naturalRocks.forEach(r => {
     ctx.fillStyle = '#34495e'; ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
     ctx.strokeStyle = '#1a252f'; ctx.lineWidth = 2; ctx.strokeRect(r.x - 14, r.y - 14, 28, 28);
-    
+
+    if (r.oreSpawner) {
+      // ore spawner: rock veined with the ore it grows (iron: pale streaks, coal: black nuggets)
+      const body = r.oreSpawner === 'iron' ? '#aab7c3' : '#050608';
+      const shine = r.oreSpawner === 'iron' ? '#dfe6ed' : '#6b7785';
+      ctx.fillStyle = body;
+      ctx.fillRect(r.x - 10, r.y - 10, 8, 8); ctx.fillRect(r.x + 1, r.y - 5, 9, 9); ctx.fillRect(r.x - 7, r.y + 3, 7, 7);
+      ctx.fillStyle = shine;
+      ctx.fillRect(r.x - 8, r.y - 8, 3, 3); ctx.fillRect(r.x + 4, r.y - 2, 3, 3); ctx.fillRect(r.x - 5, r.y + 5, 2, 2);
+    }
+
     drawHarvestProgress(r, 36);
   });
 
