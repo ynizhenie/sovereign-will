@@ -104,15 +104,15 @@ function getReachSteps(reach, gx, gy) {
 }
 
 // Steps to stand next to (or on) a resource, or Infinity if the settler can't get there.
-// reach comes from getSettlerReach().
+// reach comes from getSettlerReach(). Only the resource's own tile and its 4 direct neighbours count:
+// a diagonal neighbour is only usable through one of those, and a resource reachable only across a
+// corner between two rocks has no spot a settler can actually stand on.
 function getReachDistanceToResource(reach, resource) {
   const g = getGridPos(resource.x, resource.y);
   let best = Infinity;
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const steps = getReachSteps(reach, g.gx + dx, g.gy + dy);
-      if (steps !== -1 && steps < best) best = steps;
-    }
+  for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const steps = getReachSteps(reach, g.gx + dx, g.gy + dy);
+    if (steps !== -1 && steps < best) best = steps;
   }
   return best;
 }

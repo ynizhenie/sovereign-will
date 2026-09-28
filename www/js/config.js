@@ -287,8 +287,21 @@ attackGroups: [
     desertCactus: { min: 4, max: 8 },
     desertPebbles: { min: 3, max: 7 },
 
-    trees: { min: 18, max: 26 },
+    // forests: centres placed apart; each gets forestTrees trees within forestRadius tiles
+    forests: { min: 3, max: 5 },
+    forestTrees: { min: 7, max: 12 },
+    forestRadius: 3,
+    // share of grass, berry bushes and sticks that spawn (and grow back) in forests
+    forestUndergrowthShare: 0.7,
+    // lone trees outside forests
+    trees: { min: 6, max: 10 },
     boulders: { min: 12, max: 18 },
+    // small piles of boulders on touching tiles, in addition to the scattered ones
+    boulderPiles: { min: 1, max: 3 },
+    boulderPileSize: { min: 3, max: 5 },
+    // seconds before a harvested resource grows back somewhere
+    respawnDelay: { min: 30, max: 60 },
+    oreRespawnDelay: { min: 60, max: 120 },
     grass: { min: 12, max: 20 },
     berryBushes: { min: 6, max: 10 },
     sticks: { min: 12, max: 18 },
@@ -299,11 +312,6 @@ attackGroups: [
     coalSpawners: { min: 1, max: 2 },
     orePerSpawner: { min: 4, max: 6 },
     oreSpawnerRadius: 3,
-    resourceClusters: { min: 3, max: 5 },
-    clusterTrees: { min: 4, max: 6 },
-    clusterGrass: { min: 3, max: 5 },
-    clusterBerryBushes: { min: 1, max: 3 },
-    clusterPebbles: { min: 1, max: 3 },
 
     boars: { min: 3, max: 8 },
 

@@ -237,8 +237,10 @@ function render() {
   });
 
   boulders.forEach(b => {
-    ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.arc(b.x, b.y, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(b.x - 2, b.y - 2, 7, 0, Math.PI * 2); ctx.fill();
+    // square like natural rock, but a smaller, lighter grey block so it reads as loose, minable stone
+    ctx.fillStyle = '#7f8c8d'; ctx.fillRect(b.x - 11, b.y - 11, 22, 22);
+    ctx.fillStyle = '#a4b0b5'; ctx.fillRect(b.x - 11, b.y - 11, 22, 5); ctx.fillRect(b.x - 11, b.y - 11, 5, 22);
+    ctx.strokeStyle = '#5d6d7e'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 11, b.y - 11, 22, 22);
     drawHarvestProgress(b);
   });
 
