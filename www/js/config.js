@@ -55,12 +55,35 @@ const GAME_CONFIG = {
     wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 } },
     sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 } }
   },
+  // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
+  //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
+  // waveKey: its name in attackGroups. buildsTents: can be sent to build an enemy tent.
+  // damage: per second in melee (per arrow for archers). reach: melee reach beyond touching.
+  // siege: hp per second it takes off buildings, and off trees / boulders (cacti / ore for big) in its way.
+  // ranged: range, keepAway (stops walking this close to its target), cooldown, arrowSpeed, arrowLife.
+  // splash: radius, share of the damage dealt to everyone else around.
+  // reward: added to the stock when it dies. Waves spawn kinds in this order.
   enemies: {
-    raider_club: { id: 'raider_club', label: 'Дикарь', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club' },
-    raider: { id: 'raider', label: 'Разбойник', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword' },
-    raider_archer: { id: 'raider_archer', label: 'Лучник', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow' },
-    brute: { id: 'brute', label: 'Громила', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear' }
+    raider_club: { id: 'raider_club', label: 'Дикарь', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
+      type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
+    raider: { id: 'raider', label: 'Разбойник', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
+    brute: { id: 'brute', label: 'Громила', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear',
+      type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
+    raider_archer: { id: 'raider_archer', label: 'Лучник', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow',
+      type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
+      ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 } }
   },
+
+  // enemy tents: builders put them up near the map edge; each summons extra enemies during a wave
+  enemyTents: {
+    hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
+    summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
+  },
+
+  // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves; each wave
+  // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
+  waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 } },
   // ---- Things on the map to gather
   //
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
@@ -128,12 +151,6 @@ const GAME_CONFIG = {
     watchtower: { cost: { wood: 10, stone: 10 }, hp: 35, interval: 1 }
   },
 
-  waves: [
-  { enemy: 'raider_club', type: 'normal', radius: 10, buildsTents: true },
-  { enemy: 'raider', type: 'normal', radius: 10 },
-  { enemy: 'brute', type: 'big', radius: 18 },
-  { enemy: 'raider_archer', type: 'archer', radius: 11 }
-  ],
 
 attackGroups: [
   // Базовые шаблоны отрядов (соответствуют стартовой сложности)

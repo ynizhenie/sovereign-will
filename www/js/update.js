@@ -183,14 +183,15 @@ function update(dt) {
 
   enemyTents.forEach(et => {
     et.summonTimer = (et.summonTimer || 0) + dt;
-    if ((et.summonsLeft || 0) > 0 && et.summonTimer >= 5.0 && enemies.length < 60) {
+    const tentConfig = GAME_CONFIG.enemyTents;
+    if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && enemies.length < tentConfig.maxEnemies) {
       et.summonTimer = 0;
       et.summonsLeft--;
       let spawnPos = {
         x: Math.max(15, Math.min(canvas.width - 15, et.x + (rand() - 0.5) * 30)),
         y: Math.max(15, Math.min(canvas.height - 15, et.y + (rand() - 0.5) * 30))
       };
-      enemies.push(createNormalEnemy(spawnPos));
+      enemies.push(createConfiguredEnemy(spawnPos, tentConfig.summonEnemy));
     }
   });
 
@@ -256,13 +257,14 @@ function update(dt) {
       if (!enemyTentBlueprints.includes(site)) {
         en.buildTarget = null;
       } else {
+        const tentConfig = GAME_CONFIG.enemyTents;
         let distToSite = Math.hypot(site.x - en.x, site.y - en.y);
-        if (distToSite > 28) {
+        if (distToSite > tentConfig.buildDistance) {
           moveEntityTowards(en, site.x, site.y, en.speed, true, dt);
         } else {
-          site.progress += dt * 20;
+          site.progress += dt * tentConfig.buildRate;
           if (site.progress >= site.maxProgress) {
-            enemyTents.push({ x: site.x, y: site.y, hp: 60, maxHp: 60, summonTimer: 0, summonsLeft: 2 });
+            enemyTents.push({ x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp, summonTimer: 0, summonsLeft: tentConfig.summonsPerWave });
             enemyTentBlueprints.splice(enemyTentBlueprints.indexOf(site), 1);
             en.buildTarget = null;
             invalidateAllPaths();
@@ -272,6 +274,7 @@ function update(dt) {
       continue;
     }
 
+    const enemyDef = getEnemyDef(en);
     let target = townHall;
     let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let closestSettler = null;
@@ -299,12 +302,13 @@ function update(dt) {
       minDist = Math.hypot(en.x - closestSettler.x, en.y - closestSettler.y);
     }
 
+    const ranged = enemyDef.ranged;
     if (en.type === 'archer') {
       en.attackCooldown = (en.attackCooldown || 0) - dt;
-      if (minDist < 180 && en.attackCooldown <= 0) {
+      if (minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
-        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * 3.8, vy: Math.sin(angle) * 3.8, damage: en.damage, life: 75, fromEnemy: true, owner: en });
-        en.attackCooldown = 1.5;
+        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
+        en.attackCooldown = ranged.cooldown;
       }
     }
 
@@ -316,14 +320,14 @@ function update(dt) {
 
     if (touchingBuilding) {
       if (touchingBuilding.type === 'tent') {
-        touchingBuilding.hp -= dt * (en.type === 'big' ? 25 : 10);
+        touchingBuilding.hp -= dt * enemyDef.siege.buildings;
         if (touchingBuilding.hp <= 0) {
           buildings.splice(buildings.indexOf(touchingBuilding), 1);
           invalidateAllPaths();
         }
       } else if (en.type === 'big' || en.isBlockedPath || !isBuildingSingle(touchingBuilding)) {
         // a lone wall can be walked around, unless it's what blocks the only way in
-        touchingBuilding.hp -= dt * (en.type === 'big' ? 25 : 10);
+        touchingBuilding.hp -= dt * enemyDef.siege.buildings;
         if (touchingBuilding.hp <= 0) {
           buildings.splice(buildings.indexOf(touchingBuilding), 1);
           invalidateAllPaths();
@@ -337,7 +341,7 @@ function update(dt) {
           en.x += (dx / dist) * (minDist - dist);
           en.y += (dy / dist) * (minDist - dist);
         }
-        if (en.type === 'archer' && minDist < 150) {
+        if (en.type === 'archer' && minDist < ranged.keepAway) {
         } else {
           moveEntityTowards(en, target.x, target.y, en.speed, true, dt);
         }
@@ -365,14 +369,14 @@ function update(dt) {
 
       if (blockedRes) {
         if (trees.includes(blockedRes)) {
-          blockedRes.hp -= dt * (en.type === 'big' ? 4 : 2);
+          blockedRes.hp -= dt * enemyDef.siege.resources;
           if (blockedRes.hp <= 0) {
             trees.splice(trees.indexOf(blockedRes), 1);
             scheduleRespawn('tree');
             invalidateAllPaths();
           }
         } else if (boulders.includes(blockedRes)) {
-          blockedRes.hp -= dt * (en.type === 'big' ? 4 : 2);
+          blockedRes.hp -= dt * enemyDef.siege.resources;
           if (blockedRes.hp <= 0) {
             boulders.splice(boulders.indexOf(blockedRes), 1);
             scheduleRespawn('boulder');
@@ -387,7 +391,7 @@ function update(dt) {
           scheduleRespawn('grass');
           invalidateAllPaths();
         } else if (en.type === 'big') {
-          blockedRes.hp -= dt * 4;
+          blockedRes.hp -= dt * enemyDef.siege.resources;
           if (blockedRes.hp <= 0) {
             const resourceLists = [cacti, ironOres, coalOres, naturalRocks];
             const list = resourceLists.find(resources => resources.includes(blockedRes));
@@ -396,19 +400,18 @@ function update(dt) {
           }
         }
       } else {
-        if (en.type === 'archer' && minDist < 150) {
+        if (en.type === 'archer' && minDist < ranged.keepAway) {
         } else {
           moveEntityTowards(en, target.x, target.y, en.speed, true, dt);
         }
       }
     }
 
-    let weaponReach = en.weapon === 'spear' ? 24 : (en.weapon === 'sword' ? 12 : 6);
-    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + weaponReach;
+    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + enemyDef.reach;
     if (en.type !== 'archer' && minDist < attackRange) {
       if (en.type === 'big') {
-        let splashRadius = 70;
-        let splashDamage = dt * en.damage * 0.6;
+        let splashRadius = enemyDef.splash.radius;
+        let splashDamage = dt * en.damage * enemyDef.splash.share;
         if (target === townHall) townHall.hp -= dt * en.damage;
         else damageSettler(target, dt * en.damage, en);
 
