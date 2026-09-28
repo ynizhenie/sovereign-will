@@ -1,7 +1,8 @@
 // A fisher at the town hall takes one seed as bait for the next catch
 function takeFishingBait(s) {
-  if (s.tool === 'rod' && !s.bait && wheatSeeds > 0) {
-    wheatSeeds--;
+  const bait = GAME_CONFIG.fishing.bait;
+  if (s.tool === 'rod' && !s.bait && canAfford(getWallet(), bait)) {
+    payCost(bait);
     s.bait = true;
   }
 }
@@ -44,93 +45,32 @@ function isSwordWeapon(weapon) { return weapon === 'sword' || weapon === 'iron_s
 function isSpearWeapon(weapon) { return weapon === 'spear' || weapon === 'iron_spear'; }
 function isBowWeapon(weapon) { return weapon === 'bow'; }
 
+// The possessed settler works a resource with a click: a hit (GAME_CONFIG.mapResources `hit`), or taken at once
 function harvestResourceDirect(r, p) {
   if (!p || p.carrying || r.hidden || r.hideTarget) return;
 
-  if (sticks.includes(r)) {
-    sticks.splice(sticks.indexOf(r), 1);
-    giveResourceToSettler(p, 'wood', 1);
-    scheduleRespawn('stick');
-  } else if (pebbles.includes(r)) {
-    pebbles.splice(pebbles.indexOf(r), 1);
-    giveResourceToSettler(p, 'stone', 1);
-    scheduleRespawn('pebble');
-  } else if (trees.includes(r)) {
-    if (!hasAxeTool(p.tool) || r.isGrowing) return;
-    r.hp -= p.tool === 'iron_axe' ? 1.5 : 1;
-    if (r.hp <= 0) {
-      trees.splice(trees.indexOf(r), 1);
-      giveResourceToSettler(p, 'wood', 3);
-      if (rand() < 0.5) saplings++;
-      scheduleRespawn('tree');
-    }
-  } else if (cacti.includes(r)) {
-    if (!hasAxeTool(p.tool)) return;
-    r.hp -= p.tool === 'iron_axe' ? 1.5 : 1;
-    if (r.hp <= 0) {
-      cacti.splice(cacti.indexOf(r), 1);
-      giveResourceToSettler(p, 'wood', 1);
-      scheduleRespawn('cactus', r.x, r.y);
-    }
-  } else if (boulders.includes(r)) {
-    if (!hasPickaxeTool(p.tool)) return;
-    r.hp -= p.tool === 'iron_pickaxe' ? 1.5 : 1;
-    if (r.hp <= 0) {
-      boulders.splice(boulders.indexOf(r), 1);
-      giveResourceToSettler(p, 'stone', 3);
-      scheduleRespawn('boulder');
-    }
-  } else if (ironOres.includes(r)) {
-    if (!hasPickaxeTool(p.tool)) return;
-    r.hp -= p.tool === 'iron_pickaxe' ? 1.5 : 1;
-    if (r.hp <= 0) {
-      ironOres.splice(ironOres.indexOf(r), 1);
-      giveResourceToSettler(p, 'ironOre', 3);
-      scheduleRespawn('iron_ore');
-    }
-  } else if (coalOres.includes(r)) {
-    if (!hasPickaxeTool(p.tool)) return;
-    r.hp -= p.tool === 'iron_pickaxe' ? 1.5 : 1;
-    if (r.hp <= 0) {
-      coalOres.splice(coalOres.indexOf(r), 1);
-      giveResourceToSettler(p, 'coal', 3);
-      scheduleRespawn('coal_ore');
-    }
-  } else if (naturalRocks.includes(r)) {
-    if (!hasPickaxeTool(p.tool) || r.oreSpawner) return;
-    r.hp -= 25; 
-    if (r.hp <= 0) {
-      naturalRocks.splice(naturalRocks.indexOf(r), 1);
-      giveResourceToSettler(p, 'stone', 15);
-      invalidateAllPaths();
-    }
-  } else if (grassList.includes(r)) {
-    grassList.splice(grassList.indexOf(r), 1);
-    giveResourceToSettler(p, 'wheatSeeds', 1);
-    scheduleRespawn('grass');
-  } else if (berryBushes.includes(r)) {
-    berryBushes.splice(berryBushes.indexOf(r), 1);
-    giveResourceToSettler(p, 'food', 2);
-    scheduleRespawn('berry_bush');
-  } else if (r.isCarcass) {
+  if (r.isCarcass) {
     if (r.collector && r.collector !== p) return;
-    boars.splice(boars.indexOf(r), 1);
-    giveResourceToSettler(p, 'food', 6);
-    giveResourceToSettler(p, 'leather', 2);
-    invalidateAllPaths();
-  } else if (boars.includes(r)) {
+    finishHarvest(p, r, 'boar');
+    return;
+  }
+  if (boars.includes(r)) {
     r.hp -= 10;
     makeBoarFlee(r, p.x, p.y);
-    if (r.hp <= 0) {
-      boars.splice(boars.indexOf(r), 1);
-      giveResourceToSettler(p, 'food', 6);
-      giveResourceToSettler(p, 'leather', 2);
-      invalidateAllPaths();
-    }
-  } else if (farmPlots.includes(r) && r.growth >= 100) {
-    farmPlots.splice(farmPlots.indexOf(r), 1);
-    giveResourceToSettler(p, 'food', 4);
+    if (r.hp <= 0) finishHarvest(p, r, 'boar');
+    return;
   }
+
+  const kind = getMapResourceKind(r);
+  if (!kind) return;
+  const def = getMapResourceDef(kind);
+  if (kind === 'farm' && !(r.growth >= 100)) return;
+  if (def.tool && (!hasToolFamily(p.tool, def.tool) || r.isGrowing || r.oreSpawner)) return;
+  if (def.hit) {
+    r.hp -= def.hit[p.tool] ?? def.hit.default;
+    if (r.hp > 0) return;
+  }
+  finishHarvest(p, r, kind);
 }
 
 function invalidateAllPaths() {
@@ -201,7 +141,7 @@ function handleCanvasClick() {
 
     let clickedWater = waterTiles.find(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 20);
     if (clickedWater && Math.hypot(p.x - clickedWater.x, p.y - clickedWater.y) < 50) {
-      giveResourceToSettler(p, 'food', 2);
+      for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(p, item, amount);
       return;
     }
   }

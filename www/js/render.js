@@ -1,12 +1,7 @@
 function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
-  if (trees.includes(resource)) return 3;
-  if (cacti.includes(resource)) return 2;
-  if (boulders.includes(resource)) return 4;
-  if (ironOres.includes(resource)) return 5;
-  if (coalOres.includes(resource)) return 5;
-  if (naturalRocks.includes(resource)) return 100;
-  return 1;
+  const def = getMapResourceDef(getMapResourceKind(resource));
+  return (def && def.hp) || 1;
 }
 
 function drawHarvestProgress(resource, width = 24) {

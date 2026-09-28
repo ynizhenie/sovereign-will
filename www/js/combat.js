@@ -137,11 +137,7 @@ function performAttack(attacker, targetX, targetY) {
       if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - attacker.x, b.y - attacker.y) <= range + 12 && (b.fleeTimer || 0) <= 0) {
         b.hp -= dmg;
         makeBoarFlee(b, attacker.x, attacker.y);
-        if (b.hp <= 0) {
-          boars.splice(boars.indexOf(b), 1);
-          giveResourceToSettler(attacker, 'food', 6);
-          invalidateAllPaths();
-        }
+        if (b.hp <= 0) finishHarvest(attacker, b, 'boar');
       }
     });
 
