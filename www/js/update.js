@@ -162,8 +162,12 @@ function update(dt) {
 
   settlers.forEach(s => {
     prepareSettler(s, dt);
+    s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
-      if (behaviour(s, settlerTick)) return;
+      if (behaviour(s, settlerTick)) {
+        s.isIdle = behaviour === patrol;
+        return;
+      }
     }
   });
 

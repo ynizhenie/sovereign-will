@@ -349,6 +349,39 @@ window.sim = (() => {
     return { catches, seedsLeft: wheatSeeds };
   }
 
+  // A swordsman between two enemies: an unmarked one right by the town hall and one the player marked
+  // farther out. Returns which one he goes for.
+  function markedTarget({ seed = 'marked-test', mark = true, seconds = 3 }) {
+    start(seed);
+    const hx = townHall.x, hy = townHall.y;
+    settlers = [makeSettler(1, hx + 60, hy, { weapon: 'sword', role: 'soldier', hp: 1000, maxHp: 1000 })];
+    const near = createNormalEnemy({ x: hx - 60, y: hy }, 'raider');
+    const far = createNormalEnemy({ x: hx + 60, y: hy + 150 }, 'raider');
+    for (const e of [near, far]) { e.speed = 0; e.damage = 0; }
+    far.markedTarget = mark;
+    enemies = [near, far];
+    const s = settlers[0];
+    let went = null;
+    run(seconds, { each: () => {
+      if (went) return;
+      if (Math.hypot(s.x - far.x, s.y - far.y) < 40) went = 'marked';
+      else if (Math.hypot(s.x - near.x, s.y - near.y) < 40) went = 'nearHall';
+    } });
+    return went;
+  }
+
+  // Two settlers: one with nothing to do on an empty map, one with a tree to chop
+  function idleFlags({ seed = 'idle-test' }) {
+    start(seed);
+    for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars]) list.length = 0;
+    const hx = townHall.x, hy = townHall.y;
+    trees.push({ x: hx + 5 * TILE_SIZE, y: hy, hp: 1000, priority: 0, isGrowing: false, growProgress: 0 });
+    settlers = [makeSettler(1, hx - 60, hy), makeSettler(2, hx + 60, hy, { tool: 'axe' })];
+    invalidateAllPaths();
+    run(2);
+    return { idleWorker: settlers[0].isIdle, busyWorker: settlers[1].isIdle };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -370,6 +403,6 @@ window.sim = (() => {
 
   return {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
-    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing
+    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing, markedTarget, idleFlags
   };
 })();
