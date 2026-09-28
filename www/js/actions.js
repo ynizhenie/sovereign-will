@@ -241,6 +241,13 @@ function handleCanvasClick() {
   }
 
   if (buildMode === 'interact') {
+    // pointing at an enemy marks it as a priority target for armed settlers; again to unmark
+    let clickedEnemy = enemies.find(en => Math.hypot(mouse.x - en.x, mouse.y - en.y) < en.radius + 8);
+    if (clickedEnemy) {
+      clickedEnemy.markedTarget = !clickedEnemy.markedTarget;
+      return;
+    }
+
     let clickedWater = waterTiles.find(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 18);
     if (clickedWater) {
       if (isWaterReachable(clickedWater)) {

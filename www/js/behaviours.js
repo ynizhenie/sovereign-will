@@ -322,7 +322,16 @@ function fightEnemies(s, tick) {
     let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
   });
-  // strike back at whoever is hitting this settler first
+  // enemies the player marked with the Point tool come first for anyone armed...
+  if (s.weapon !== 'fist') {
+    let nearestMarked = Infinity;
+    enemies.forEach(en => {
+      if (!en.markedTarget) return;
+      const d = Math.hypot(en.x - s.x, en.y - s.y);
+      if (d < nearestMarked) { nearestMarked = d; targetEnemy = en; }
+    });
+  }
+  // ...but whoever is hitting this settler right now comes first of all
   const attacker = getRecentAttacker(s);
   if (attacker) targetEnemy = attacker;
 
@@ -748,7 +757,7 @@ function harvest(s, tick) {
   return true;
 }
 
-// Nothing else to do: wander near the town hall
+// Nothing else to do: wander near the town hall (shown with an idle icon, see render())
 function patrol(s, tick) {
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
     let ang = rand() * Math.PI * 2;
