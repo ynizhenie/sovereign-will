@@ -17,40 +17,30 @@ function getRandomBorderPos() {
   return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
 }
 
-function createNormalEnemy(pos, enemyKey = 'raider') {
-  const definition = getDefinition('enemies', enemyKey) || getDefinition('enemies', 'raider');
-  const weapon = definition.weapon || 'sword';
-  return {
-    type: 'normal', enemyKey, x: pos.x, y: pos.y, radius: 10,
-    hp: definition.hp, maxHp: definition.hp,
-    weapon, speed: definition.speed, damage: definition.damage,
-    reward: { ...(definition.reward || {}) }, path: [], pathTarget: null, pathTimer: 0,
-    buildTarget: null
-  };
+// The config entry of an enemy on the map
+function getEnemyDef(enemy) {
+  return getDefinition('enemies', enemy.enemyKey) || GAME_CONFIG.enemies.raider;
 }
 
+// A new enemy from GAME_CONFIG.enemies; type and radius come from the config unless given
 function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return null;
   return {
-    type, enemyKey, x: pos.x, y: pos.y, radius,
+    type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
     hp: definition.hp, maxHp: definition.hp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
-    path: [], pathTarget: null, pathTimer: 0
+    path: [], pathTarget: null, pathTimer: 0, buildTarget: null
   };
 }
 
+function createNormalEnemy(pos, enemyKey = 'raider') {
+  return createConfiguredEnemy(pos, getDefinition('enemies', enemyKey) ? enemyKey : 'raider');
+}
+
 function grantEnemyReward(enemy) {
-  Object.entries(enemy.reward || {}).forEach(([resource, amount]) => {
-    if (resource === 'food') food += amount;
-    if (resource === 'wood') wood += amount;
-    if (resource === 'stone') stone += amount;
-    if (resource === 'coal') coal += amount;
-    if (resource === 'ironOre') ironOreStock += amount;
-    if (resource === 'iron') iron += amount;
-    if (resource === 'leather') leather += amount;
-  });
+  addResources(enemy.reward);
 }
 
 function getNearbyEnemyTentSite(origin) {
@@ -67,36 +57,34 @@ function getNearbyEnemyTentSite(origin) {
       enemyTentBlueprints.some(t => t.x === x && t.y === y);
 
     if (isBorderZone(gx, gy) && !occupied && Math.hypot(x - origin.x, y - origin.y) <= 150) {
-      return { x: x, y: y, progress: 0, maxProgress: 180, builder: null };
+      return { x: x, y: y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null };
     }
   }
   return null;
 }
 
 function startNextWave() {
+  const scaling = GAME_CONFIG.waveScaling;
   enemyTents.forEach(et => {
     et.summonTimer = 0;
-    et.summonsLeft = 2;
+    et.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
   });
 
-  // Уровень сложности повышается каждые 5 волн (начинается с 0)
-  const difficulty = Math.floor((waveNum - 1) / 5);
+  // difficulty goes up every wavesPerDifficulty waves (starting at 0)
+  const difficulty = Math.floor((waveNum - 1) / scaling.wavesPerDifficulty);
 
-  const maxTentsByDifficulty = Math.min(8, difficulty + 1);
+  const maxTentsByDifficulty = Math.min(scaling.maxTents, difficulty + 1);
   let tentCount = Math.min(
     Math.max(0, maxTentsByDifficulty - enemyTents.length - enemyTentBlueprints.length),
-    1 + Math.floor(rand() * 2)
+    scaling.newTents.min + Math.floor(rand() * (scaling.newTents.max - scaling.newTents.min + 1))
   );
 
   let normalEnemies = [];
 
-  // Вычисляем множитель врагов. 
-  // Пример: +50% к размеру отряда за каждый уровень сложности (каждые 5 волн)
-  // Сложность 0 (1-5 волны): множитель 1.0 (оригинальные значения)
-  // Сложность 19 (96-100 волны): множитель 10.5 (как в вашем старом конфиге)
-  const multiplier = 1 + (difficulty * 0.5);
+  // squad size grows by growthPerDifficulty per difficulty level (+50%: wave 1-5 x1, 96-100 x10.5)
+  const multiplier = 1 + (difficulty * scaling.growthPerDifficulty);
 
-  // Выбираем случайный базовый шаблон из конфига
+  // a random base squad from the config
   const baseGroups = GAME_CONFIG.attackGroups || [];
   let group = null;
 
@@ -106,31 +94,18 @@ function startNextWave() {
   }
 
   if (group) {
-    const enemyTypes = [
-      { key: 'club', enemy: 'raider_club', type: 'normal', radius: 10, buildsTents: true },
-      { key: 'raider', enemy: 'raider', type: 'normal', radius: 10, buildsTents: false },
-      { key: 'brute', enemy: 'brute', type: 'big', radius: 18, buildsTents: false },
-      { key: 'archer', enemy: 'raider_archer', type: 'archer', radius: 11, buildsTents: false }
-    ];
-
-    enemyTypes.forEach(entry => {
-      // Берем базовое количество и умножаем на множитель сложности
-      const baseCount = Number(group[entry.key] || 0);
+    // every enemy kind with a waveKey, in config order
+    Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey).forEach(def => {
+      const baseCount = Number(group[def.waveKey] || 0);
       const count = Math.max(0, Math.floor(baseCount * multiplier));
 
       for (let i = 0; i < count; i++) {
-        const enemy = createConfiguredEnemy(
-          getRandomBorderPos(),
-          entry.enemy,
-          entry.type,
-          entry.radius
-        );
-
+        const enemy = createConfiguredEnemy(getRandomBorderPos(), def.id);
         if (!enemy) continue;
 
         enemies.push(enemy);
 
-        if (entry.buildsTents) {
+        if (def.buildsTents) {
           normalEnemies.push(enemy);
         }
       }
