@@ -4,11 +4,21 @@ function isBorderZone(gx, gy) {
 
 function getMaxPop() {
   let tentsCount = buildings.filter(b => b.type === 'tent').length;
-  return 5 + tentsCount * 3;
+  return GAME_CONFIG.start.population + tentsCount * GAME_CONFIG.buildings.tent.population;
 }
 
 function getCurrentPop() {
-  return settlers.reduce((sum, s) => sum + (s.type === 'big' ? 2 : 1), 0);
+  return settlers.reduce((sum, s) => sum + GAME_CONFIG.settlerTypes[s.type].population, 0);
+}
+
+// A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker
+function createSettler(typeKey, id, x, y, extra = {}) {
+  const t = GAME_CONFIG.settlerTypes[typeKey];
+  return {
+    id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
+    isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
+    carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
+  };
 }
 
 function isBuildingSingle(building) {
@@ -519,7 +529,10 @@ function generateMap() {
 }
 
 function resetGame() {
-  wood = 30; stone = 20; coal = 0; ironOreStock = 0; iron = 0; leather = 0; arrowsStock = 0; food = 25; wheatSeeds = 3; saplings = 0;
+  // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
+  const startWallet = Object.fromEntries(Object.keys(getWallet()).map(key => [key, 0]));
+  for (const [resource, amount] of Object.entries(GAME_CONFIG.start.resources)) startWallet[getWalletKey(resource)] = amount;
+  applyWallet(startWallet);
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
@@ -531,8 +544,8 @@ function resetGame() {
   updateSeedHud();
 
   settlers.push(
-    { id: 101, x: townHall.x - 45, y: townHall.y, hp: 100, maxHp: 100, isPossessed: false, speed: 1.0, radius: 11, visualRadius: 11, weapon: 'fist', tool: 'none', role: 'worker', type: 'normal', carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false },
-    { id: 102, x: townHall.x + 45, y: townHall.y, hp: 100, maxHp: 100, isPossessed: false, speed: 1.0, radius: 11, visualRadius: 11, weapon: 'fist', tool: 'none', role: 'worker', type: 'normal', carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false }
+    createSettler('normal', 101, townHall.x - 45, townHall.y),
+    createSettler('normal', 102, townHall.x + 45, townHall.y)
   );
 
   updateUnitCounts();
