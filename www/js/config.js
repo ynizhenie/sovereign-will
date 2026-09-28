@@ -45,6 +45,46 @@ const GAME_CONFIG = {
     raider_archer: { id: 'raider_archer', label: 'Лучник', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow' },
     brute: { id: 'brute', label: 'Громила', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear' }
   },
+  // ---- Things on the map to gather
+  //
+  // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
+  // gathered by hand, by settlers who have no tool (or anyone, if the player marks it).
+  // markOnly: settlers only work it when the player marks it. hp: toughness.
+  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra.
+  // regrow: where it grows back after map.respawnDelay ('forest', 'anywhere', 'nearby' = around where
+  // it was, 'spawner' = around an ore spawner, after map.oreRespawnDelay); none = gone for good.
+  // forestShare: share of regrowth in a forest (default map.forestUndergrowthShare).
+  // clearsPath: removing it can open a way (paths are re-planned).
+  //
+  // work (settlers): pickup — taken at once; seconds — takes that long (per tool if an object);
+  //   chop — loses hp per second by settler type, times toolBonus; drain — loses hp per second by tool.
+  // hit (possessed settler): hp per hit by tool (default otherwise); none — taken at once.
+  mapResources: {
+    tree: { list: 'trees', tool: 'axe', hp: 3, yield: { wood: 3 }, bonusChance: { saplings: 0.5 }, regrow: 'forest', forestShare: 1,
+      work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } }, hit: { default: 1, iron_axe: 1.5 } },
+    cactus: { list: 'cacti', tool: 'axe', hp: 2, yield: { wood: 1 }, regrow: 'nearby',
+      work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } }, hit: { default: 1, iron_axe: 1.5 } },
+    boulder: { list: 'boulders', tool: 'pickaxe', hp: 4, yield: { stone: 3 }, regrow: 'anywhere',
+      work: { chop: { normal: 1.5, big: 2.5 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
+    iron_ore: { list: 'ironOres', tool: 'pickaxe', hp: 5, yield: { ironOre: 3 }, regrow: 'spawner',
+      work: { seconds: { pickaxe: 3.0, iron_pickaxe: 2.0 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
+    coal_ore: { list: 'coalOres', tool: 'pickaxe', hp: 5, yield: { coal: 3 }, regrow: 'spawner',
+      work: { seconds: { pickaxe: 2.5, iron_pickaxe: 1.7 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
+    natural_rock: { list: 'naturalRocks', tool: 'pickaxe', markOnly: true, hp: 100, yield: { stone: 15 }, clearsPath: true,
+      work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, hit: { default: 25 } },
+    stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
+    pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
+    grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
+    berry_bush: { list: 'berryBushes', hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
+    farm: { list: 'farmPlots', yield: { food: 4 }, work: { seconds: 2.5 } },
+    // boars are hunted rather than worked (see huntBoar); this is what one gives
+    boar: { list: 'boars', hp: 40, yield: { food: 6, leather: 2 }, clearsPath: true }
+  },
+
+  // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
+  // (a possessed settler clicking water next to it gets a catch at once, without rod or bait)
+  fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
+
   // ---- Colony
 
   start: {
