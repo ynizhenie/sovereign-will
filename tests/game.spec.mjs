@@ -174,6 +174,7 @@ test('mined ores grow back around their spawner, and spawners cannot be mined', 
   await openGame(page);
   const r = await sim(page, 'oreRespawn', 'maze-137');
   for (const kind of ['iron', 'coal']) {
+    expect(r[kind].rightAfter).toBe(0);
     expect(r[kind].after).toBe(r[kind].before);
     expect(r[kind].allNearSpawner).toBe(true);
   }
@@ -201,6 +202,30 @@ test('each catch uses one seed as bait, and fishing stops without seeds (#18)', 
   expect(withSeeds.seedsLeft).toBe(0);
   const noSeeds = await sim(page, 'fishing', { seeds: 0 });
   expect(noSeeds.catches).toBe(0);
+});
+
+test('harvested resources grow back after a delay, not at once (#11)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'treeRegrowth');
+  expect(r.rightAfter).toBe(r.count0 - 1);
+  expect(r.beforeMinDelay).toBe(r.count0 - 1);
+  expect(r.afterMaxDelay).toBe(r.count0);
+});
+
+test('boulders also come in piles on touching tiles (#12)', async ({ page }) => {
+  await openGame(page);
+  const seeds = Array.from({ length: 30 }, (_, i) => `piles-${i}`);
+  const largest = await page.evaluate(seeds => window.sim.largestBoulderPiles(seeds), seeds);
+  // a pile can occasionally come out small if its spot is crowded
+  expect(largest.filter(n => n >= 3).length).toBeGreaterThanOrEqual(27);
+});
+
+test('trees, grass, berries and sticks grow mostly in forests (#13)', async ({ page }) => {
+  await openGame(page);
+  const seeds = Array.from({ length: 30 }, (_, i) => `forest-${i}`);
+  const r = await page.evaluate(seeds => window.sim.forestShares(seeds), seeds);
+  expect(r.trees).toBeGreaterThan(0.7);
+  expect(r.undergrowth).toBeGreaterThan(0.55);
 });
 
 test('disarming refunds exactly what the item cost', async ({ page }) => {

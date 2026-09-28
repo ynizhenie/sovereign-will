@@ -79,7 +79,9 @@ const WORLD = {
   enemies: [],
   enemyTents: [],
   enemyTentBlueprints: [],
-  projectiles: []
+  projectiles: [],
+  forests: [],          // forest centres, see placeForests()
+  pendingRespawns: []   // harvested resources waiting to grow back, see scheduleRespawn()
 };
 
 const WORLD_ALIASES = Object.keys(WORLD);

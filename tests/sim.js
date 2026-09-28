@@ -285,24 +285,30 @@ window.sim = (() => {
     return problems;
   }
 
-  // Mine every ore once (directly, like a possessed settler) and check where they come back
+  // Mine every ore once (directly, like a possessed settler) and check where they come back.
+  // Ore grows back after oreRespawnDelay, so this waits it out (nobody else here can mine).
   function oreRespawn(seed) {
     start(seed);
+    settlers = [];
     const radius = getOreSpawnerRadius();
     const result = {};
+    const miner = makeSettler(1, 0, 0, { tool: 'pickaxe' });
+    const before = { iron: ironOres.length, coal: coalOres.length };
+    for (const list of [ironOres, coalOres]) {
+      for (const ore of [...list]) { while (list.includes(ore)) { miner.carrying = null; harvestResourceDirect(ore, miner); } }
+    }
+    const rightAfter = { iron: ironOres.length, coal: coalOres.length };
+    run(GAME_CONFIG.map.oreRespawnDelay.max + 1);
     for (const kind of ['iron', 'coal']) {
       const list = kind === 'iron' ? ironOres : coalOres;
-      const before = list.length;
-      const miner = makeSettler(1, 0, 0, { tool: 'pickaxe' });
-      for (const ore of [...list]) { while (list.includes(ore)) { miner.carrying = null; harvestResourceDirect(ore, miner); } }
       const spawners = getOreSpawners(kind);
       const nearSpawner = o => spawners.some(sp => Math.max(Math.abs(sp.x - o.x), Math.abs(sp.y - o.y)) <= radius * TILE_SIZE);
-      result[kind] = { before, after: list.length, allNearSpawner: list.every(nearSpawner) };
+      result[kind] = { before: before[kind], rightAfter: rightAfter[kind], after: list.length, allNearSpawner: list.every(nearSpawner) };
     }
     // spawners themselves can't be mined or marked
     const spawner = getOreSpawners('iron')[0];
-    const miner = makeSettler(2, 0, 0, { tool: 'iron_pickaxe' });
-    for (let i = 0; i < 20; i++) { miner.carrying = null; harvestResourceDirect(spawner, miner); }
+    const spawnerMiner = makeSettler(2, 0, 0, { tool: 'iron_pickaxe' });
+    for (let i = 0; i < 20; i++) { spawnerMiner.carrying = null; harvestResourceDirect(spawner, spawnerMiner); }
     result.spawnerSurvivesMining = naturalRocks.includes(spawner);
     result.spawnerHarvestable = getHarvestableResources().includes(spawner);
     return result;
@@ -349,6 +355,61 @@ window.sim = (() => {
     return { catches, seedsLeft: wheatSeeds };
   }
 
+  // Chop a tree directly and watch the tree count: no instant regrowth, back after respawnDelay
+  function treeRegrowth({ seed = 'regrowth-test' } = {}) {
+    start(seed);
+    settlers = [];
+    const count0 = trees.length;
+    const tree = trees.find(t => !t.isGrowing);
+    const lumberjack = makeSettler(1, tree.x, tree.y, { tool: 'axe' });
+    while (trees.includes(tree)) { lumberjack.carrying = null; harvestResourceDirect(tree, lumberjack); }
+    const rightAfter = trees.length;
+    run(GAME_CONFIG.map.respawnDelay.min - 1);
+    const beforeMinDelay = trees.length;
+    run(GAME_CONFIG.map.respawnDelay.max - GAME_CONFIG.map.respawnDelay.min + 2);
+    return { count0, rightAfter, beforeMinDelay, afterMaxDelay: trees.length };
+  }
+
+  // Largest group of boulders on 4-connected tiles, per seed
+  function largestBoulderPiles(seeds) {
+    return seeds.map(seed => {
+      start(seed);
+      const key = b => `${b.x},${b.y}`;
+      const all = new Set(boulders.map(key));
+      const seen = new Set();
+      let largest = 0;
+      for (const b of boulders) {
+        if (seen.has(key(b))) continue;
+        let size = 0;
+        const queue = [b];
+        seen.add(key(b));
+        while (queue.length) {
+          const c = queue.pop(); size++;
+          for (const [dx, dy] of [[30, 0], [-30, 0], [0, 30], [0, -30]]) {
+            const k = `${c.x + dx},${c.y + dy}`;
+            if (all.has(k) && !seen.has(k)) { seen.add(k); queue.push({ x: c.x + dx, y: c.y + dy }); }
+          }
+        }
+        largest = Math.max(largest, size);
+      }
+      return largest;
+    });
+  }
+
+  // Share of trees and of undergrowth (grass, berry bushes, sticks) inside a forest, over many seeds
+  function forestShares(seeds) {
+    let trees0 = 0, treesIn = 0, under0 = 0, underIn = 0;
+    for (const seed of seeds) {
+      start(seed);
+      const half = getForestSpread() / 2 + TILE_SIZE;
+      const inForest = o => forests.some(f => Math.abs(f.x - o.x) <= half && Math.abs(f.y - o.y) <= half);
+      trees0 += trees.length; treesIn += trees.filter(inForest).length;
+      const under = [...grassList, ...berryBushes, ...sticks];
+      under0 += under.length; underIn += under.filter(inForest).length;
+    }
+    return { trees: treesIn / trees0, undergrowth: underIn / under0 };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -370,6 +431,7 @@ window.sim = (() => {
 
   return {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
-    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing
+    homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
+    treeRegrowth, largestBoulderPiles, forestShares
   };
 })();

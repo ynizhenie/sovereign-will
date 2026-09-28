@@ -560,9 +560,11 @@ function canSettlerHarvest(s, r, tick) {
 // can walk to. Returns null if there's nothing to do.
 function pickResourceToHarvest(s, tick) {
   const settlerReach = getSettlerReach(s);
+  // resources this settler recently found no spot next to (see harvest())
+  const skipped = r => s.skippedResource === r && pathTick < s.skippedUntilTick;
   let assignedRes = null;
   for (let r of tick.markedResources) {
-    if (canSettlerHarvest(s, r, tick) && getReachDistanceToResource(settlerReach, r) < Infinity) {
+    if (canSettlerHarvest(s, r, tick) && !skipped(r) && getReachDistanceToResource(settlerReach, r) < Infinity) {
       let currentWorkers = tick.workerAssignments.get(r) || 0;
       if (currentWorkers < r.priority) {
         assignedRes = r;
@@ -573,7 +575,7 @@ function pickResourceToHarvest(s, tick) {
   }
 
   if (!assignedRes && !tick.isWaveActive) {
-    let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && (!r.priority || r.priority === 0) && tick.resourceKind.get(r) !== 'rock');
+    let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) && tick.resourceKind.get(r) !== 'rock');
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
     let minDist = Infinity;
     availableRes.forEach(r => {
@@ -648,11 +650,11 @@ function workResource(s, assignedRes, tick) {
   if (sticks.includes(assignedRes)) {
     sticks.splice(sticks.indexOf(assignedRes), 1);
     giveResourceToSettler(s, 'wood', 1);
-    spawnResource('stick');
+    scheduleRespawn('stick');
   } else if (pebbles.includes(assignedRes)) {
     pebbles.splice(pebbles.indexOf(assignedRes), 1);
     giveResourceToSettler(s, 'stone', 1);
-    spawnResource('pebble');
+    scheduleRespawn('pebble');
   } else if (ironOres.includes(assignedRes)) {
     assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
     assignedRes.harvestDuration = s.tool === 'iron_pickaxe' ? 2.0 : 3.0;
@@ -660,7 +662,7 @@ function workResource(s, assignedRes, tick) {
     if (assignedRes.harvestProgress >= assignedRes.harvestDuration) {
       ironOres.splice(ironOres.indexOf(assignedRes), 1);
       giveResourceToSettler(s, 'ironOre', 3);
-      respawnOre('iron');
+      scheduleRespawn('iron_ore');
     }
   } else if (coalOres.includes(assignedRes)) {
     assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
@@ -669,7 +671,7 @@ function workResource(s, assignedRes, tick) {
     if (assignedRes.harvestProgress >= assignedRes.harvestDuration) {
       coalOres.splice(coalOres.indexOf(assignedRes), 1);
       giveResourceToSettler(s, 'coal', 3);
-      respawnOre('coal');
+      scheduleRespawn('coal_ore');
     }
   } else if (farmPlots.includes(assignedRes)) {
     assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
@@ -686,11 +688,11 @@ function workResource(s, assignedRes, tick) {
       if (grassList.includes(assignedRes)) {
         grassList.splice(grassList.indexOf(assignedRes), 1);
         giveResourceToSettler(s, 'wheatSeeds', 1);
-        spawnResource('grass');
+        scheduleRespawn('grass');
       } else {
         berryBushes.splice(berryBushes.indexOf(assignedRes), 1);
         giveResourceToSettler(s, 'food', 2);
-        spawnResource('berry_bush');
+        scheduleRespawn('berry_bush');
       }
     }
   } else if (naturalRocks.includes(assignedRes)) {
@@ -708,11 +710,11 @@ function workResource(s, assignedRes, tick) {
         giveResourceToSettler(s, 'wood', 3);
         if (rand() < 0.5) saplings++;
         trees.splice(trees.indexOf(assignedRes), 1);
-        spawnResource('tree');
+        scheduleRespawn('tree');
       }
-      else if (cacti.includes(assignedRes)) { giveResourceToSettler(s, 'wood', 1); cacti.splice(cacti.indexOf(assignedRes), 1); spawnResource('cactus', assignedRes.x, assignedRes.y); }
-      else if (boulders.includes(assignedRes)) { giveResourceToSettler(s, 'stone', 3); boulders.splice(boulders.indexOf(assignedRes), 1); spawnResource('boulder'); }
-      else if (ironOres.includes(assignedRes)) { giveResourceToSettler(s, 'iron', 3); ironOres.splice(ironOres.indexOf(assignedRes), 1); respawnOre('iron'); }
+      else if (cacti.includes(assignedRes)) { giveResourceToSettler(s, 'wood', 1); cacti.splice(cacti.indexOf(assignedRes), 1); scheduleRespawn('cactus', assignedRes.x, assignedRes.y); }
+      else if (boulders.includes(assignedRes)) { giveResourceToSettler(s, 'stone', 3); boulders.splice(boulders.indexOf(assignedRes), 1); scheduleRespawn('boulder'); }
+      else if (ironOres.includes(assignedRes)) { giveResourceToSettler(s, 'iron', 3); ironOres.splice(ironOres.indexOf(assignedRes), 1); scheduleRespawn('iron_ore'); }
     }
   }
   s.patrolTarget = null;
@@ -726,6 +728,9 @@ function harvest(s, tick) {
 
   let approachPos = getResourceApproachPoint(s, assignedRes);
   if (!approachPos) {
+    // nowhere to stand next to it: pick something else for a while instead of standing here
+    s.skippedResource = assignedRes;
+    s.skippedUntilTick = pathTick + 5 * 60;
     s.patrolTarget = null;
     return true;
   }
