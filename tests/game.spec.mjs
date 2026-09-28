@@ -157,8 +157,8 @@ test('settlers spread over a rock-heavy map do not get stuck', async ({ page }) 
 
 test('a large late-game wave stays cheap to simulate', async ({ page }) => {
   await openGame(page);
-  const r = await sim(page, 'waveCost', { wave: 16, waves: 2 });
-  expect(r.spawned).toBeGreaterThan(40);
+  const r = await sim(page, 'waveCost', { wave: 16, minEnemies: 45 });
+  expect(r.spawned).toBeGreaterThanOrEqual(45);
   // measured ~20-40ms on a laptop; CI runners are slower, this only catches big regressions
   expect(r.msPerGameSecond).toBeLessThan(250);
 });
