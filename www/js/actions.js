@@ -157,13 +157,15 @@ function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
 }
 
 function handleCanvasClick() {
-  if (townHall.hp <= 0 || settlers.length === 0) {     
-    let btnX = canvas.width / 2 - 100;     
-    let btnY = canvas.height / 2 + 50;     
-    if (mouse.x >= btnX && mouse.x <= btnX + 200 && mouse.y >= btnY && mouse.y <= btnY + 45) {       
-      resetGame();       
-      return;     
-    }   
+  if (townHall.hp <= 0 || settlers.length === 0) {
+    // the defeat screen is drawn in screen space (see render()), so hit-test in screen coords:
+    // world coords only matched it with the camera centered at zoom 1
+    let btnX = canvas.width / 2 - 100;
+    let btnY = canvas.height / 2 + 50;
+    if (mouse.screenX >= btnX && mouse.screenX <= btnX + 200 && mouse.screenY >= btnY && mouse.screenY <= btnY + 45) {
+      resetGame();
+    }
+    return;
   }
 
   if (buildMode === 'possess') {
