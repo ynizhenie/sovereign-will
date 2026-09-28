@@ -156,17 +156,18 @@ function guardTower(s, tick) {
   return false;
 }
 
-// Repair the town hall when the player asked for it (15 wood + 15 stone per +35 hp)
+// Repair the town hall when the player asked for it (cost and hp per step: GAME_CONFIG.repairs.townHall)
 function repairTownHall(s, tick) {
   if (townHall.repairRequested && townHall.hp < townHall.maxHp && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed) {
-    if (wood >= 15 && stone >= 15) {
+    const repair = GAME_CONFIG.repairs.townHall;
+    if (canAfford(getWallet(), repair.cost)) {
       let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (dist > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
         return true;
       } else {
-        wood -= 15; stone -= 15;
-        townHall.hp = Math.min(townHall.maxHp, townHall.hp + 35);
+        payCost(repair.cost);
+        townHall.hp = Math.min(townHall.maxHp, townHall.hp + repair.hp);
         if (townHall.hp >= townHall.maxHp) townHall.repairRequested = false;
         return true;
       }
@@ -175,20 +176,20 @@ function repairTownHall(s, tick) {
   return false;
 }
 
-// Repair a damaged watchtower (10 wood + 10 stone per +35 hp)
+// Repair a damaged watchtower (cost, hp and pace: GAME_CONFIG.repairs.watchtower)
 function repairTower(s, tick) {
   const damagedTower = buildings.find(building => building.type === 'watchtower' && building.hp < building.maxHp);
   if (damagedTower && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed && !s.towerAssignment) {
     const distanceToTower = Math.hypot(damagedTower.x - s.x, damagedTower.y - s.y);
     if (distanceToTower > 34) {
       moveEntityTowards(s, damagedTower.x, damagedTower.y, s.speed, false, tick.dt);
-    } else if (wood >= 10 && stone >= 10) {
+    } else if (canAfford(getWallet(), GAME_CONFIG.repairs.watchtower.cost)) {
+      const repair = GAME_CONFIG.repairs.watchtower;
       damagedTower.repairTimer = (damagedTower.repairTimer || 0) - tick.dt;
       if (damagedTower.repairTimer <= 0) {
-        wood -= 10;
-        stone -= 10;
-        damagedTower.hp = Math.min(damagedTower.maxHp, damagedTower.hp + 35);
-        damagedTower.repairTimer = 1;
+        payCost(repair.cost);
+        damagedTower.hp = Math.min(damagedTower.maxHp, damagedTower.hp + repair.hp);
+        damagedTower.repairTimer = repair.interval;
       }
     }
     s.patrolTarget = null;
@@ -264,7 +265,7 @@ function repairTent(s, tick) {
         if (distToTent > 32) {
           moveEntityTowards(s, damagedTent.x, damagedTent.y, s.speed, false, tick.dt);
         } else {
-          damagedTent.hp = Math.min(damagedTent.maxHp, damagedTent.hp + tick.dt * 15);
+          damagedTent.hp = Math.min(damagedTent.maxHp, damagedTent.hp + tick.dt * GAME_CONFIG.buildings.tent.repairPerSecond);
         }
         s.patrolTarget = null;
         return true;
@@ -293,7 +294,7 @@ function healAtTent(s, tick) {
         s.patrolTarget = null;
         return true;
       } else {
-        s.hp = Math.min(s.maxHp, s.hp + tick.dt * 20);
+        s.hp = Math.min(s.maxHp, s.hp + tick.dt * GAME_CONFIG.buildings.tent.healPerSecond);
         s.patrolTarget = null;
         if (s.hp < s.maxHp) return true;
       }
@@ -461,11 +462,8 @@ function build(s, tick) {
               let bIdx = buildings.indexOf(bestBp.targetBuilding);
               if (bIdx !== -1) {
                 let b = buildings[bIdx];
-                if (b.type === 'wall_wood') wood += 3;
-                else if (b.type === 'wall_stone') stone += 3;
-                else if (b.type === 'door') wood += 3;
-                else if (b.type === 'tent') wood += 5;
-                else if (b.type === 'watchtower') { wood += 12; stone += 10; }
+                const definition = getDefinition('buildings', b.type);
+                addResources(definition && definition.demolishRefund);
                 buildings.splice(bIdx, 1);
               }
               invalidateAllPaths();

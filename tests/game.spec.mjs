@@ -79,6 +79,25 @@ test('the defeat screen restart button works with the camera moved and zoomed (#
   expect(errors).toEqual([]);
 });
 
+test('hire, upgrade and craft buttons show their cost from the config (#45)', async ({ page }) => {
+  await openGame(page);
+  await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Рабочий (15🍞)');
+  await expect(page.locator('#btn-hire-big')).toHaveText('🧌 Богатырь (30🍞 15🪵)');
+  await expect(page.locator('#btn-upgrade')).toHaveText('🧌 Улучшить (15🍞 15🪵)');
+  await expect(page.locator('#btn-craft-arrows')).toHaveText('🏹 Стрелы (3🪵 1🪨 → 6)');
+  await expect(page.locator('#btn-craft-armor')).toHaveText('🛡️ Броня (8🔩)');
+  // change a price in the config and the button follows
+  await page.evaluate(() => {
+    GAME_CONFIG.settlerTypes.normal.hireCost = { food: 20, wood: 2 };
+    document.getElementById('build-actions').innerHTML = '';
+    document.getElementById('tool-actions').innerHTML = '';
+    document.getElementById('weapon-actions').innerHTML = '';
+    document.getElementById('resources-hud').innerHTML = '';
+    renderConfigHud();
+  });
+  await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Рабочий (20🍞 2🪵)');
+});
+
 test('the same seed generates the same map', async ({ page }) => {
   await openGame(page);
   const [a, b, c] = await page.evaluate(() => {
