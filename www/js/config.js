@@ -294,8 +294,11 @@ attackGroups: [
     sticks: { min: 12, max: 18 },
     pebbles: { min: 10, max: 18 },
 
-    ironVeins: { min: 1, max: 3 },
-    coalVeins: { min: 1, max: 3 },
+    // ore spawners sit inside natural rock; ores grow within oreSpawnerRadius tiles of them
+    ironSpawners: { min: 1, max: 2 },
+    coalSpawners: { min: 1, max: 2 },
+    orePerSpawner: { min: 4, max: 6 },
+    oreSpawnerRadius: 3,
     resourceClusters: { min: 3, max: 5 },
     clusterTrees: { min: 4, max: 6 },
     clusterGrass: { min: 3, max: 5 },

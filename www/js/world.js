@@ -63,7 +63,115 @@ function getPlacedResources(includeGrowingTrees = true) {
 }
 
 function getHarvestableResources() {
-  return [...getPlacedResources(false), ...farmPlots.filter(plot => plot.growth >= 100), ...boars];
+  // ore spawners are natural rock that can't be mined
+  return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...farmPlots.filter(plot => plot.growth >= 100), ...boars];
+}
+
+// ---- Ore spawners
+// A spawner is a natural rock tile marked oreSpawner: 'iron' | 'coal'. It blocks and draws like rock but
+// can't be mined, and ores of its kind appear within a few tiles of it: on free ground, or inside the
+// rock itself (the ore replaces that rock tile, so mining it cuts into the rock).
+
+const ORE_KINDS = {
+  iron: { list: () => ironOres, spawnerKey: 'ironSpawners' },
+  coal: { list: () => coalOres, spawnerKey: 'coalSpawners' }
+};
+
+function getOreSpawnerRadius() {
+  return getMapCount('oreSpawnerRadius', 3);
+}
+
+function getOreSpawners(kind) {
+  return naturalRocks.filter(r => r.oreSpawner === kind);
+}
+
+// Tiles around a spawner where an ore can appear; rock is set when the ore would replace natural rock
+function getOreSpotsAround(spawner, radius) {
+  const spots = [];
+  const center = getGridPos(spawner.x, spawner.y);
+  for (let gy = center.gy - radius; gy <= center.gy + radius; gy++) {
+    for (let gx = center.gx - radius; gx <= center.gx + radius; gx++) {
+      if (gx === center.gx && gy === center.gy) continue;
+      if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS || isBorderZone(gx, gy)) continue;
+      const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+      if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
+      const rock = naturalRocks.find(r => r.x === x && r.y === y);
+      if (rock) {
+        if (!rock.oreSpawner) spots.push({ x, y, rock });
+      } else if (!isDesertTile(x, y) && !isTileOccupied(x, y)) {
+        spots.push({ x, y, rock: null });
+      }
+    }
+  }
+  return spots;
+}
+
+function placeOre(kind, spot) {
+  if (spot.rock) naturalRocks.splice(naturalRocks.indexOf(spot.rock), 1);
+  ORE_KINDS[kind].list().push({ x: spot.x, y: spot.y, hp: 5, maxHp: 5, priority: 0 });
+}
+
+// A mined ore grows back around a random spawner of its kind
+function respawnOre(kind) {
+  const spawners = getOreSpawners(kind);
+  if (spawners.length === 0) return;
+  const spawner = spawners[Math.floor(rand() * spawners.length)];
+  const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
+  if (spots.length === 0) return;
+  placeOre(kind, spots[Math.floor(rand() * spots.length)]);
+  invalidateAllPaths();
+}
+
+// A spot is exposed when a settler starting at the town hall can stand next to it
+function isOreSpotExposed(spot, reach) {
+  const g = getGridPos(spot.x, spot.y);
+  return [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => getReachSteps(reach, g.gx + dx, g.gy + dy) >= 0);
+}
+
+// Put a small rock outcrop on free ground far from the hall, for maps with no usable rock
+function placeRockOutcrop() {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 3));
+    const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 3));
+    const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
+    if (tiles.some(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) < 220 || isTileOccupied(t.x, t.y) || isDesertTile(t.x, t.y))) continue;
+    for (const t of tiles) naturalRocks.push({ x: t.x, y: t.y, hp: 100, maxHp: 100, priority: 0 });
+    return true;
+  }
+  return false;
+}
+
+function placeOreSpawners(kind, count) {
+  const radius = getOreSpawnerRadius();
+  for (let n = 0; n < count; n++) {
+    resetTileIndex();
+    const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
+    const others = naturalRocks.filter(r => r.oreSpawner);
+    // rock far from the hall and from other spawners, with room for ores and at least one reachable spot
+    const candidates = naturalRocks.filter(r => !r.oreSpawner &&
+      Math.hypot(r.x - townHall.x, r.y - townHall.y) > 220 &&
+      others.every(o => Math.hypot(o.x - r.x, o.y - r.y) > 6 * TILE_SIZE) &&
+      getOreSpotsAround(r, radius).filter(s => isOreSpotExposed(s, reach)).length >= 2);
+    let spawner = candidates.length ? candidates[Math.floor(rand() * candidates.length)] : null;
+    if (!spawner) {
+      if (n > 0 || !placeRockOutcrop()) continue;
+      spawner = naturalRocks[naturalRocks.length - 1];
+    }
+    spawner.oreSpawner = kind;
+
+    const spots = getOreSpotsAround(spawner, radius);
+    const exposed = spots.filter(s => isOreSpotExposed(s, reach));
+    const ores = getMapCount('orePerSpawner', 5);
+    // one ore is always reachable from the start; the rest land anywhere around the spawner
+    const first = exposed[Math.floor(rand() * exposed.length)];
+    if (first) placeOre(kind, first);
+    for (let i = 1; i < ores; i++) {
+      const free = getOreSpotsAround(spawner, radius);
+      if (free.length === 0) break;
+      placeOre(kind, free[Math.floor(rand() * free.length)]);
+    }
+  }
+  resetTileIndex();
 }
 
 function spawnResource(type, nearX = null, nearY = null) {
@@ -108,23 +216,6 @@ function spawnResourceCluster(type, count, centerX, centerY) {
   for (let i = 0; i < count; i++) {
     spawnResource(type, centerX, centerY);
   }
-}
-
-function findSeparateVeinCenter() {
-  for (let attempt = 0; attempt < 80; attempt++) {
-    let gx = Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 6)) + BORDER_MARGIN + 3;
-    let gy = Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 6)) + BORDER_MARGIN + 3;
-    let x = gx * TILE_SIZE + 15;
-    let y = gy * TILE_SIZE + 15;
-    let allPlacedResources = getPlacedResources();
-    let isFarFromResources = !allPlacedResources.some(resource => Math.hypot(resource.x - x, resource.y - y) < 90);
-    if (Math.hypot(x - townHall.x, y - townHall.y) > 220 &&
-      !waterTiles.some(w => Math.hypot(w.x - x, w.y - y) < 80) &&
-        !isDesertTile(x, y) && isFarFromResources) {
-      return { x, y };
-    }
-  }
-  return null;
 }
 
 function isWaterReachable(w) {
@@ -348,13 +439,9 @@ function generateMap() {
     }
   }
 
-  for (let vein = 0; vein < getMapCount('ironVeins', 2); vein++) {
-    let center = findSeparateVeinCenter();
-    if (center) spawnResourceCluster('iron_ore', 4 + Math.floor(rand() * 3), center.x, center.y);
-  }
-  for (let vein = 0; vein < getMapCount('coalVeins', 2); vein++) {
-    let center = findSeparateVeinCenter();
-    if (center) spawnResourceCluster('coal_ore', 4 + Math.floor(rand() * 3), center.x, center.y);
+  // at least one spawner of each kind, even if the config says 0
+  for (const kind of Object.keys(ORE_KINDS)) {
+    placeOreSpawners(kind, Math.max(1, getMapCount(ORE_KINDS[kind].spawnerKey, 1)));
   }
 
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
