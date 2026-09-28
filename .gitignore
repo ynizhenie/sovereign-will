@@ -7,3 +7,6 @@ node_modules/
 # signing keys: keep them out of the repo
 *.keystore
 *.jks
+# Playwright output
+test-results/
+playwright-report/
