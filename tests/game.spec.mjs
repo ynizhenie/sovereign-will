@@ -81,7 +81,8 @@ test('enemies pressed against a wall damage it', async ({ page }) => {
 
 test('enemies break into a walled-in player', async ({ page }) => {
   await openGame(page);
-  const r = await sim(page, 'bunker', { seed: 'maze-283' });
+  // stone walls are 300 hp and the bunker can be far from the border, so give it two minutes
+  const r = await sim(page, 'bunker', { seed: 'maze-283', seconds: 120 });
   expect(r.wallsBroken).toBeGreaterThan(0);
   expect(r.playerDamage).toBeGreaterThan(0);
 });
@@ -113,6 +114,24 @@ test('a large late-game wave stays cheap to simulate', async ({ page }) => {
   expect(r.spawned).toBeGreaterThan(40);
   // measured ~20-40ms on a laptop; CI runners are slower, this only catches big regressions
   expect(r.msPerGameSecond).toBeLessThan(250);
+});
+
+test('every map has iron and coal spawners with an ore reachable from the town hall', async ({ page }) => {
+  await openGame(page);
+  // before spawners (#4) ~14% of maps had no iron and ~32% no coal
+  const seeds = Array.from({ length: 150 }, (_, i) => `ore-${i}`).concat(ROCK_SEEDS);
+  expect(await page.evaluate(seeds => window.sim.oreReport(seeds), seeds)).toEqual([]);
+});
+
+test('mined ores grow back around their spawner, and spawners cannot be mined', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'oreRespawn', 'maze-137');
+  for (const kind of ['iron', 'coal']) {
+    expect(r[kind].after).toBe(r[kind].before);
+    expect(r[kind].allNearSpawner).toBe(true);
+  }
+  expect(r.spawnerSurvivesMining).toBe(true);
+  expect(r.spawnerHarvestable).toBe(false);
 });
 
 test('disarming refunds exactly what the item cost', async ({ page }) => {

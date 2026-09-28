@@ -67,7 +67,7 @@ function harvestResourceDirect(r, p) {
     if (r.hp <= 0) {
       ironOres.splice(ironOres.indexOf(r), 1);
       giveResourceToSettler(p, 'ironOre', 3);
-      spawnResource('iron_ore', r.x, r.y);
+      respawnOre('iron');
     }
   } else if (coalOres.includes(r)) {
     if (!hasPickaxeTool(p.tool)) return;
@@ -75,10 +75,10 @@ function harvestResourceDirect(r, p) {
     if (r.hp <= 0) {
       coalOres.splice(coalOres.indexOf(r), 1);
       giveResourceToSettler(p, 'coal', 3);
-      spawnResource('coal_ore', r.x, r.y);
+      respawnOre('coal');
     }
   } else if (naturalRocks.includes(r)) {
-    if (!hasPickaxeTool(p.tool)) return;
+    if (!hasPickaxeTool(p.tool) || r.oreSpawner) return;
     r.hp -= 25; 
     if (r.hp <= 0) {
       naturalRocks.splice(naturalRocks.indexOf(r), 1);
