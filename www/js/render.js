@@ -25,6 +25,34 @@ function drawHarvestProgress(resource, width = 24) {
   ctx.strokeRect(x, y, width, 4);
 }
 
+// Rock with ore veins, shared by ore tiles and ore spawners so they read as the same material.
+// half: half the square's size (rock tiles are 14, minable ore 12)
+const ORE_COLORS = {
+  iron: { body: '#aab7c3', shine: '#dfe6ed' },
+  coal: { body: '#050608', shine: '#6b7785' }
+};
+
+function drawOreVeins(x, y, kind, half) {
+  const c = ORE_COLORS[kind];
+  const k = half / 14;
+  ctx.fillStyle = '#34495e'; ctx.fillRect(x - half, y - half, half * 2, half * 2);
+  ctx.strokeStyle = '#1a252f'; ctx.lineWidth = 2; ctx.strokeRect(x - half, y - half, half * 2, half * 2);
+  ctx.fillStyle = c.body;
+  ctx.fillRect(x - 10 * k, y - 10 * k, 8 * k, 8 * k); ctx.fillRect(x + 1 * k, y - 5 * k, 9 * k, 9 * k); ctx.fillRect(x - 7 * k, y + 3 * k, 7 * k, 7 * k);
+  ctx.fillStyle = c.shine;
+  ctx.fillRect(x - 8 * k, y - 8 * k, 3 * k, 3 * k); ctx.fillRect(x + 4 * k, y - 2 * k, 3 * k, 3 * k); ctx.fillRect(x - 5 * k, y + 5 * k, 2 * k, 2 * k);
+}
+
+// Spawner: the same veined rock on a full tile, framed in the ore colour with a large crystal in the middle
+function drawOreSpawner(x, y, kind) {
+  const c = ORE_COLORS[kind];
+  drawOreVeins(x, y, kind, 14);
+  ctx.strokeStyle = c.body; ctx.lineWidth = 2; ctx.strokeRect(x - 11, y - 11, 22, 22);
+  ctx.fillStyle = c.body;
+  ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = c.shine; ctx.fillRect(x - 1, y - 4, 2, 4);
+}
+
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
@@ -94,19 +122,12 @@ function render() {
   });
 
   naturalRocks.forEach(r => {
-    ctx.fillStyle = '#34495e'; ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
-    ctx.strokeStyle = '#1a252f'; ctx.lineWidth = 2; ctx.strokeRect(r.x - 14, r.y - 14, 28, 28);
-
     if (r.oreSpawner) {
-      // ore spawner: rock veined with the ore it grows (iron: pale streaks, coal: black nuggets)
-      const body = r.oreSpawner === 'iron' ? '#aab7c3' : '#050608';
-      const shine = r.oreSpawner === 'iron' ? '#dfe6ed' : '#6b7785';
-      ctx.fillStyle = body;
-      ctx.fillRect(r.x - 10, r.y - 10, 8, 8); ctx.fillRect(r.x + 1, r.y - 5, 9, 9); ctx.fillRect(r.x - 7, r.y + 3, 7, 7);
-      ctx.fillStyle = shine;
-      ctx.fillRect(r.x - 8, r.y - 8, 3, 3); ctx.fillRect(r.x + 4, r.y - 2, 3, 3); ctx.fillRect(r.x - 5, r.y + 5, 2, 2);
+      drawOreSpawner(r.x, r.y, r.oreSpawner);
+    } else {
+      ctx.fillStyle = '#34495e'; ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
+      ctx.strokeStyle = '#1a252f'; ctx.lineWidth = 2; ctx.strokeRect(r.x - 14, r.y - 14, 28, 28);
     }
-
     drawHarvestProgress(r, 36);
   });
 
@@ -121,17 +142,14 @@ function render() {
     ctx.beginPath(); ctx.arc(pe.x + 3, pe.y + 2, 2, 0, Math.PI * 2); ctx.fill();
   });
 
+  // minable ore: the spawner's veined rock on a slightly smaller square
   ironOres.forEach(ore => {
-    ctx.fillStyle = '#4b5d6f'; ctx.fillRect(ore.x - 12, ore.y - 12, 24, 24);
-    ctx.fillStyle = '#aab7c3'; ctx.fillRect(ore.x - 6, ore.y - 10, 12, 20);
-    ctx.fillStyle = '#dfe6ed'; ctx.fillRect(ore.x - 2, ore.y - 8, 4, 16);
+    drawOreVeins(ore.x, ore.y, 'iron', 12);
     drawHarvestProgress(ore);
   });
 
   coalOres.forEach(ore => {
-    ctx.fillStyle = '#20252b'; ctx.beginPath(); ctx.arc(ore.x, ore.y, 13, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#080a0d'; ctx.beginPath(); ctx.arc(ore.x - 4, ore.y - 3, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#4b5563'; ctx.beginPath(); ctx.arc(ore.x + 4, ore.y + 3, 4, 0, Math.PI * 2); ctx.fill();
+    drawOreVeins(ore.x, ore.y, 'coal', 12);
     drawHarvestProgress(ore);
   });
 
