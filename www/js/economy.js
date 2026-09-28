@@ -74,6 +74,16 @@ function renderConfigHud() {
     if (toolActions) toolActions.appendChild(createConfigButton(item, assignTool));
   });
 
+  // hire / upgrade / craft buttons in index.html get their text from the config
+  const label = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+  const types = GAME_CONFIG.settlerTypes, recipes = GAME_CONFIG.recipes;
+  label('btn-hire-normal', `${types.normal.icon} ${types.normal.label} (${formatCost(types.normal.hireCost)})`);
+  label('btn-hire-big', `${types.big.icon} ${types.big.label} (${formatCost(types.big.hireCost)})`);
+  label('btn-upgrade', `${types.big.icon} Улучшить (${formatCost(types.big.upgradeCost)})`);
+  label('btn-upgrade-big', `${types.big.icon} Улучшить рабочего (${formatCost(types.big.upgradeCost)})`);
+  label('btn-craft-arrows', `${recipes.arrows.icon} ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
+  label('btn-craft-armor', `${recipes.armor.icon} ${recipes.armor.label} (${formatCost(recipes.armor.cost)})`);
+
   const weaponActions = document.getElementById('weapon-actions');
   Object.values(GAME_CONFIG.weapons).forEach(item => {
     if (item.id !== 'fist' && weaponActions) {
@@ -186,6 +196,19 @@ function createBuildingBlueprint(type, x, y) {
     blueprint.guards = [];
   }
   return blueprint;
+}
+
+// Take / give a cost ({ resourceId: amount }) from / to the stock
+function payCost(cost) {
+  applyWallet(spendResources(getWallet(), cost));
+}
+
+function addResources(amounts) {
+  let wallet = getWallet();
+  for (const [resource, amount] of Object.entries(amounts || {})) {
+    wallet = spendResources(wallet, { [resource]: -amount });
+  }
+  applyWallet(wallet);
 }
 
 function getWallet() {
