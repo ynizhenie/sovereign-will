@@ -376,7 +376,7 @@ canvas {
 /* ========================================== */
 /*            АККУРАТНОЕ МИНИ-МЕНЮ           */
 /* ========================================== */
-#main-menu {
+#main-menu, .menu-overlay {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -407,6 +407,28 @@ canvas {
   color: #fff;
   margin: 0;
   letter-spacing: 1px;
+}
+
+.menu-overlay[hidden] {
+  display: none;
+}
+
+.menu-button {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 15px;
+  font-weight: bold;
+  color: #eee;
+  background: #2a2d34;
+  border: 1px solid #3d414b;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu-button-primary {
+  color: #fff;
+  background: #27ae60;
+  border-color: #2ecc71;
 }
 
 #play-button {

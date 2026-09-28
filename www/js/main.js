@@ -45,3 +45,13 @@ const startGame = (e) => {
 
 playButton.addEventListener('click', startGame);
 playButton.addEventListener('touchend', startGame);
+
+// like the play button: touchend too, since a second tap within 300ms never becomes a click (see input.js)
+function onTap(element, action) {
+  const handler = (e) => { e.preventDefault(); action(); };
+  element.addEventListener('click', handler);
+  element.addEventListener('touchend', handler);
+}
+
+onTap(document.getElementById('resume-button'), () => setPaused(false));
+onTap(document.getElementById('exit-to-menu-button'), exitToMainMenu);

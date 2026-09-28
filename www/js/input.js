@@ -51,6 +51,9 @@ function getCanvasScreenCoords(clientX, clientY) {
 
 function updateInputPos(clientX, clientY) {
   const { screenX, screenY } = getCanvasScreenCoords(clientX, clientY);
+  // screen coords are for UI drawn over the canvas without the camera (e.g. the defeat screen)
+  mouse.screenX = screenX;
+  mouse.screenY = screenY;
   mouse.x = camera.x + (screenX - canvas.width / 2) / camera.zoom;
   mouse.y = camera.y + (screenY - canvas.height / 2) / camera.zoom;
 }

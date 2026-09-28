@@ -1,3 +1,11 @@
+// A fisher at the town hall takes one seed as bait for the next catch
+function takeFishingBait(s) {
+  if (s.tool === 'rod' && !s.bait && wheatSeeds > 0) {
+    wheatSeeds--;
+    s.bait = true;
+  }
+}
+
 function giveResourceToSettler(s, type, amount) {
   if (!s) return;
   if (!s.carrying) {
@@ -13,9 +21,20 @@ function giveResourceToSettler(s, type, amount) {
   }
 }
 
-function damageSettler(settler, amount) {
+// attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
+function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * 0.65 : amount;
   settler.hp -= damage;
+  if (attacker) {
+    settler.lastAttacker = attacker;
+    settler.lastAttackedTick = pathTick;
+  }
+}
+
+// The enemy that hit this settler in the last few seconds, if it's still alive
+function getRecentAttacker(settler) {
+  const recent = pathTick - (settler.lastAttackedTick || -Infinity) < 4 * 60;
+  return recent && enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
 }
 
 function hasAxeTool(tool) { return tool === 'axe' || tool === 'iron_axe'; }
@@ -138,13 +157,15 @@ function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
 }
 
 function handleCanvasClick() {
-  if (townHall.hp <= 0 || settlers.length === 0) {     
-    let btnX = canvas.width / 2 - 100;     
-    let btnY = canvas.height / 2 + 50;     
-    if (mouse.x >= btnX && mouse.x <= btnX + 200 && mouse.y >= btnY && mouse.y <= btnY + 45) {       
-      resetGame();       
-      return;     
-    }   
+  if (townHall.hp <= 0 || settlers.length === 0) {
+    // the defeat screen is drawn in screen space (see render()), so hit-test in screen coords:
+    // world coords only matched it with the camera centered at zoom 1
+    let btnX = canvas.width / 2 - 100;
+    let btnY = canvas.height / 2 + 50;
+    if (mouse.screenX >= btnX && mouse.screenX <= btnX + 200 && mouse.screenY >= btnY && mouse.screenY <= btnY + 45) {
+      resetGame();
+    }
+    return;
   }
 
   if (buildMode === 'possess') {
@@ -296,12 +317,24 @@ function ejectEntitiesFromTile(x, y) {
 }
 
 function togglePause() {
-  isPaused = !isPaused;
+  if (!gameStarted) return;
+  setPaused(!isPaused);
+}
+
+// Pausing opens the pause menu (Continue / Main menu)
+function setPaused(paused) {
+  isPaused = paused;
   const btn = document.getElementById('btn-pause-toggle');
-  
   btn.innerText = isPaused ? "▶️" : "⏸️";
   btn.title = isPaused ? "Продолжить [Space]" : "Пауза [Space]";
   btn.classList.toggle('paused', isPaused);
+  document.getElementById('pause-menu').hidden = !isPaused;
+}
+
+function exitToMainMenu() {
+  setPaused(false);
+  gameStarted = false;
+  document.getElementById('main-menu').style.display = '';
 }
 
 function assignTool(toolType) {
