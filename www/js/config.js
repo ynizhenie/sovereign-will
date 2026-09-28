@@ -12,21 +12,37 @@ const GAME_CONFIG = {
     wheatSeeds: { id: 'wheatSeeds', label: 'Семена', icon: '🌾', type: 'resource' },
     saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' }
   },
+  // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
+  // combatDamage / huntDamage: what an unarmed settler carrying it hits enemies / boars for.
   tools: {
-    axe: { id: 'axe', label: 'Топор', icon: '🪓', cost: { wood: 5, stone: 5 } },
-    pickaxe: { id: 'pickaxe', label: 'Кирка', icon: '⛏️', cost: { wood: 5, stone: 7 } },
-    iron_axe: { id: 'iron_axe', label: 'Железный топор', icon: '🔩', cost: {  wood: 5, iron: 5 } },
-    iron_pickaxe: { id: 'iron_pickaxe', label: 'Железная кирка', icon: '🔩', cost: {  wood: 5, iron: 7 } },
-    rod: { id: 'rod', label: 'Удочка', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 } }
+    axe: { id: 'axe', label: 'Топор', icon: '🪓', cost: { wood: 5, stone: 5 }, family: 'axe', combatDamage: 15, huntDamage: 16 },
+    pickaxe: { id: 'pickaxe', label: 'Кирка', icon: '⛏️', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10, huntDamage: 15 },
+    iron_axe: { id: 'iron_axe', label: 'Железный топор', icon: '🔩', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18, huntDamage: 22 },
+    iron_pickaxe: { id: 'iron_pickaxe', label: 'Железная кирка', icon: '🔩', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13, huntDamage: 21 },
+    rod: { id: 'rod', label: 'Удочка', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 }
   },
+  // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
+  // combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the settler
+  //   walks to an enemy before striking (bow: shooting distance), tentReach: same for enemy tents;
+  //   bows also: projectileSpeed, projectileLife (ticks).
+  // hunt: the same against boars (range, damage, cooldown).
+  // Fists (and a club when hunting) hit with the tool the settler carries (tools' combatDamage /
+  // huntDamage), bare hands otherwise. settlerTypes' damageMultiplier applies on top.
   weapons: {
-    fist: { id: 'fist', label: 'Кулак', icon: '✊', cost: {} },
-    club: { id: 'club', label: 'Дубина', icon: '🏏', cost: { wood: 4 } },
-    sword: { id: 'sword', label: 'Меч', icon: '🗡️', cost: { wood: 6, stone: 3 } },
-    spear: { id: 'spear', label: 'Копье', icon: '🍢', cost: { wood: 10, stone: 5 } },
-    iron_sword: { id: 'iron_sword', label: 'Железный меч', icon: '🔩', cost: { wood: 6, iron: 3 } },
-    iron_spear: { id: 'iron_spear', label: 'Железное копье', icon: '🔩', cost: { wood: 10, iron: 5 } },
-    bow: { id: 'bow', label: 'Лук', icon: '🏹', cost: { wood: 15, leather: 5 } }
+    fist: { id: 'fist', label: 'Кулак', icon: '✊', cost: {},
+      combat: { damage: 6, range: 28, cooldown: 0.7, approach: 22, tentReach: 25 }, hunt: { damage: 5, range: 28, cooldown: 0.6 } },
+    club: { id: 'club', label: 'Дубина', icon: '🏏', cost: { wood: 4 }, family: 'club',
+      combat: { damage: 10, range: 35, cooldown: 0.6, approach: 22, tentReach: 25 }, hunt: { range: 28, cooldown: 0.6 } },
+    sword: { id: 'sword', label: 'Меч', icon: '🗡️', cost: { wood: 6, stone: 3 }, family: 'sword',
+      combat: { damage: 20, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 }, hunt: { damage: 32, range: 42, cooldown: 0.7 } },
+    spear: { id: 'spear', label: 'Копье', icon: '🍢', cost: { wood: 10, stone: 5 }, family: 'spear',
+      combat: { damage: 25, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 }, hunt: { damage: 22, range: 65, cooldown: 0.9 } },
+    iron_sword: { id: 'iron_sword', label: 'Железный меч', icon: '🔩', cost: { wood: 6, iron: 3 }, family: 'sword',
+      combat: { damage: 30, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 }, hunt: { damage: 40, range: 42, cooldown: 0.7 } },
+    iron_spear: { id: 'iron_spear', label: 'Железное копье', icon: '🔩', cost: { wood: 10, iron: 5 }, family: 'spear',
+      combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 }, hunt: { damage: 28, range: 65, cooldown: 0.9 } },
+    bow: { id: 'bow', label: 'Лук', icon: '🏹', cost: { wood: 15, leather: 5 }, family: 'bow',
+      combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } }
   },
   buildings: {
     wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 } },
@@ -94,10 +110,10 @@ const GAME_CONFIG = {
     population: 5
   },
 
-  // kinds of settlers: stats, how many population slots they take, and what hiring / upgrading costs
+  // kinds of settlers: stats, how many population slots they take, damage multiplier, and what hiring / upgrading costs
   settlerTypes: {
-    normal: { id: 'normal', label: 'Рабочий', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, hireCost: { food: 15 } },
-    big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
+    normal: { id: 'normal', label: 'Рабочий', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, hireCost: { food: 15 } },
+    big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
   },
 
   // crafted at the town hall into the stock

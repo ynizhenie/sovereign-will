@@ -390,12 +390,13 @@ function fightEnemies(s, tick) {
     }
 
     let dist = distToClosestEn;
-    if (isBowWeapon(s.weapon) && dist < 140) {
+    // approach: how close to walk before striking (bows: shoot from under this distance)
+    const approach = getWeaponStats(s, 'combat').approach;
+    const inReach = isBowWeapon(s.weapon) ? dist < approach : dist <= approach;
+    if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
-    } else if (dist > (isSpearWeapon(s.weapon) ? 45 : 22)) {
-      moveEntityTowards(s, targetEnemy.x, targetEnemy.y, s.speed, false, dt);
     } else {
-      performAttack(s, targetEnemy.x, targetEnemy.y);
+      moveEntityTowards(s, targetEnemy.x, targetEnemy.y, s.speed, false, dt);
     }
     s.patrolTarget = null;
     return true;
@@ -416,7 +417,7 @@ function clearEnemyTents(s, tick) {
         if (d < minDist) { minDist = d; nearestTent = et; }
       });
       if (nearestTent) {
-        let attackDist = isBowWeapon(s.weapon) ? 140 : 25;
+        let attackDist = getWeaponStats(s, 'combat').tentReach;
         if (minDist > attackDist) {
           moveEntityTowards(s, nearestTent.x, nearestTent.y, s.speed, false, tick.dt);
         } else {
@@ -613,17 +614,16 @@ function huntBoar(s, boar, tick) {
     moveEntityTowards(s, s.patrolTarget.x, s.patrolTarget.y, s.speed * 0.5, false, dt);
     return;
   }
-  let attackDist = isBowWeapon(s.weapon) ? 140 : (isSpearWeapon(s.weapon) ? 65 : (isSwordWeapon(s.weapon) ? 42 : 28));
-  if (dist > attackDist) {
+  const hunt = getWeaponStats(s, 'hunt');
+  if (dist > hunt.range) {
     moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
   } else {
     if (isBowWeapon(s.weapon)) {
       performAttack(s, boar.x, boar.y);
     } else if ((boar.fleeTimer || 0) <= 0 && s.attackCooldown <= 0) {
       makeBoarFlee(boar, s.x, s.y);
-      let boarDamage = isSpearWeapon(s.weapon) ? (s.weapon === 'iron_spear' ? 28 : 22) : (isSwordWeapon(s.weapon) ? (s.weapon === 'iron_sword' ? 40 : 32) : (hasAxeTool(s.tool) ? (s.tool === 'iron_axe' ? 22 : 16) : (hasPickaxeTool(s.tool) ? (s.tool === 'iron_pickaxe' ? 21 : 15) : (s.tool === 'rod' ? 13 : 5))));
-      boar.hp -= boarDamage * (s.type === 'big' ? 1.8 : 1);
-      s.attackCooldown = isSwordWeapon(s.weapon) ? 0.7 : (isSpearWeapon(s.weapon) ? 0.9 : 0.6);
+      boar.hp -= hunt.damage * hunt.multiplier;
+      s.attackCooldown = hunt.cooldown;
       if (boar.hp <= 0) finishHarvest(s, boar, 'boar');
     }
   }
