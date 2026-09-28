@@ -79,75 +79,44 @@ function startNextWave() {
     et.summonsLeft = 2;
   });
 
-  const difficulty = Math.min(
-    Math.floor((waveNum - 1) / 5),
-    GAME_CONFIG.attackGroups.length - 1
-  );
+  // Уровень сложности повышается каждые 5 волн (начинается с 0)
+  const difficulty = Math.floor((waveNum - 1) / 5);
 
-  const maxTentsByDifficulty = Math.min(
-    8,
-    difficulty + 1
-  );
-
+  const maxTentsByDifficulty = Math.min(8, difficulty + 1);
   let tentCount = Math.min(
-    Math.max(
-      0,
-      maxTentsByDifficulty -
-        enemyTents.length -
-        enemyTentBlueprints.length
-    ),
+    Math.max(0, maxTentsByDifficulty - enemyTents.length - enemyTentBlueprints.length),
     1 + Math.floor(rand() * 2)
   );
 
   let normalEnemies = [];
 
-  const difficultyGroups =
-    GAME_CONFIG.attackGroups?.[difficulty] || [];
+  // Вычисляем множитель врагов. 
+  // Пример: +50% к размеру отряда за каждый уровень сложности (каждые 5 волн)
+  // Сложность 0 (1-5 волны): множитель 1.0 (оригинальные значения)
+  // Сложность 19 (96-100 волны): множитель 10.5 (как в вашем старом конфиге)
+  const multiplier = 1 + (difficulty * 0.5);
 
+  // Выбираем случайный базовый шаблон из конфига
+  const baseGroups = GAME_CONFIG.attackGroups || [];
   let group = null;
 
-  if (difficultyGroups.length > 0) {
-    const index = Math.floor(rand() * difficultyGroups.length);
-    group = difficultyGroups[index];
+  if (baseGroups.length > 0) {
+    const index = Math.floor(rand() * baseGroups.length);
+    group = baseGroups[index];
   }
 
   if (group) {
     const enemyTypes = [
-      {
-        key: 'club',
-        enemy: 'raider_club',
-        type: 'normal',
-        radius: 10,
-        buildsTents: true
-      },
-      {
-        key: 'raider',
-        enemy: 'raider',
-        type: 'normal',
-        radius: 10,
-        buildsTents: false
-      },
-      {
-        key: 'brute',
-        enemy: 'brute',
-        type: 'big',
-        radius: 18,
-        buildsTents: false
-      },
-      {
-        key: 'archer',
-        enemy: 'raider_archer',
-        type: 'archer',
-        radius: 11,
-        buildsTents: false
-      }
+      { key: 'club', enemy: 'raider_club', type: 'normal', radius: 10, buildsTents: true },
+      { key: 'raider', enemy: 'raider', type: 'normal', radius: 10, buildsTents: false },
+      { key: 'brute', enemy: 'brute', type: 'big', radius: 18, buildsTents: false },
+      { key: 'archer', enemy: 'raider_archer', type: 'archer', radius: 11, buildsTents: false }
     ];
 
     enemyTypes.forEach(entry => {
-      const count = Math.max(
-        0,
-        Math.floor(Number(group[entry.key] || 0))
-      );
+      // Берем базовое количество и умножаем на множитель сложности
+      const baseCount = Number(group[entry.key] || 0);
+      const count = Math.max(0, Math.floor(baseCount * multiplier));
 
       for (let i = 0; i < count; i++) {
         const enemy = createConfiguredEnemy(
@@ -168,14 +137,10 @@ function startNextWave() {
     });
   }
 
-  tentCount = Math.min(
-    tentCount,
-    normalEnemies.length
-  );
+  tentCount = Math.min(tentCount, normalEnemies.length);
 
   for (let t = 0; t < tentCount; t++) {
     let builder = normalEnemies[t];
-
     let site = getNearbyEnemyTentSite(builder);
 
     if (site) {
