@@ -26,7 +26,7 @@ function drawHarvestProgress(resource, width = 24) {
 }
 
 // Rock with ore veins, shared by ore tiles and ore spawners so they read as the same material.
-// half: half the square's size (rock tiles are 14, minable ore 12)
+// half: half the square's size (a full rock tile is 14)
 const ORE_COLORS = {
   iron: { body: '#aab7c3', shine: '#dfe6ed' },
   coal: { body: '#050608', shine: '#6b7785' }
@@ -185,14 +185,14 @@ function render() {
     ctx.beginPath(); ctx.arc(pe.x + 3, pe.y + 2, 2, 0, Math.PI * 2); ctx.fill();
   });
 
-  // minable ore: the spawner's veined rock on a slightly smaller square
+  // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)
   ironOres.forEach(ore => {
-    drawOreVeins(ore.x, ore.y, 'iron', 12);
+    drawOreVeins(ore.x, ore.y, 'iron', 14);
     drawHarvestProgress(ore);
   });
 
   coalOres.forEach(ore => {
-    drawOreVeins(ore.x, ore.y, 'coal', 12);
+    drawOreVeins(ore.x, ore.y, 'coal', 14);
     drawHarvestProgress(ore);
   });
 
