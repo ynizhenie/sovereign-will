@@ -50,11 +50,11 @@ function harvestResourceDirect(r, p) {
   if (sticks.includes(r)) {
     sticks.splice(sticks.indexOf(r), 1);
     giveResourceToSettler(p, 'wood', 1);
-    spawnResource('stick');
+    scheduleRespawn('stick');
   } else if (pebbles.includes(r)) {
     pebbles.splice(pebbles.indexOf(r), 1);
     giveResourceToSettler(p, 'stone', 1);
-    spawnResource('pebble');
+    scheduleRespawn('pebble');
   } else if (trees.includes(r)) {
     if (!hasAxeTool(p.tool) || r.isGrowing) return;
     r.hp -= p.tool === 'iron_axe' ? 1.5 : 1;
@@ -62,7 +62,7 @@ function harvestResourceDirect(r, p) {
       trees.splice(trees.indexOf(r), 1);
       giveResourceToSettler(p, 'wood', 3);
       if (rand() < 0.5) saplings++;
-      spawnResource('tree');
+      scheduleRespawn('tree');
     }
   } else if (cacti.includes(r)) {
     if (!hasAxeTool(p.tool)) return;
@@ -70,7 +70,7 @@ function harvestResourceDirect(r, p) {
     if (r.hp <= 0) {
       cacti.splice(cacti.indexOf(r), 1);
       giveResourceToSettler(p, 'wood', 1);
-      spawnResource('cactus', r.x, r.y);
+      scheduleRespawn('cactus', r.x, r.y);
     }
   } else if (boulders.includes(r)) {
     if (!hasPickaxeTool(p.tool)) return;
@@ -78,7 +78,7 @@ function harvestResourceDirect(r, p) {
     if (r.hp <= 0) {
       boulders.splice(boulders.indexOf(r), 1);
       giveResourceToSettler(p, 'stone', 3);
-      spawnResource('boulder');
+      scheduleRespawn('boulder');
     }
   } else if (ironOres.includes(r)) {
     if (!hasPickaxeTool(p.tool)) return;
@@ -86,7 +86,7 @@ function harvestResourceDirect(r, p) {
     if (r.hp <= 0) {
       ironOres.splice(ironOres.indexOf(r), 1);
       giveResourceToSettler(p, 'ironOre', 3);
-      respawnOre('iron');
+      scheduleRespawn('iron_ore');
     }
   } else if (coalOres.includes(r)) {
     if (!hasPickaxeTool(p.tool)) return;
@@ -94,7 +94,7 @@ function harvestResourceDirect(r, p) {
     if (r.hp <= 0) {
       coalOres.splice(coalOres.indexOf(r), 1);
       giveResourceToSettler(p, 'coal', 3);
-      respawnOre('coal');
+      scheduleRespawn('coal_ore');
     }
   } else if (naturalRocks.includes(r)) {
     if (!hasPickaxeTool(p.tool) || r.oreSpawner) return;
@@ -107,11 +107,11 @@ function harvestResourceDirect(r, p) {
   } else if (grassList.includes(r)) {
     grassList.splice(grassList.indexOf(r), 1);
     giveResourceToSettler(p, 'wheatSeeds', 1);
-    spawnResource('grass');
+    scheduleRespawn('grass');
   } else if (berryBushes.includes(r)) {
     berryBushes.splice(berryBushes.indexOf(r), 1);
     giveResourceToSettler(p, 'food', 2);
-    spawnResource('berry_bush');
+    scheduleRespawn('berry_bush');
   } else if (r.isCarcass) {
     if (r.collector && r.collector !== p) return;
     boars.splice(boars.indexOf(r), 1);

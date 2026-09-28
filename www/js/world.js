@@ -174,14 +174,15 @@ function placeOreSpawners(kind, count) {
   resetTileIndex();
 }
 
-function spawnResource(type, nearX = null, nearY = null) {
+// spread: side of the square (px) around nearX/nearY to pick a spot in
+function spawnResource(type, nearX = null, nearY = null, spread = 180) {
   let tx, ty, isValid = false, attempts = 0;
   while (!isValid && attempts < 100) {
     attempts++;
     let gx, gy;
     if (nearX !== null && nearY !== null) {
-      tx = nearX + (rand() - 0.5) * 180;
-      ty = nearY + (rand() - 0.5) * 180;
+      tx = nearX + (rand() - 0.5) * spread;
+      ty = nearY + (rand() - 0.5) * spread;
       gx = Math.max(BORDER_MARGIN, Math.min(COLS - BORDER_MARGIN - 1, Math.floor(tx / TILE_SIZE)));
       gy = Math.max(BORDER_MARGIN, Math.min(ROWS - BORDER_MARGIN - 1, Math.floor(ty / TILE_SIZE)));
     } else {
@@ -212,9 +213,100 @@ function spawnResource(type, nearX = null, nearY = null) {
   }
 }
 
-function spawnResourceCluster(type, count, centerX, centerY) {
+function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
   for (let i = 0; i < count; i++) {
-    spawnResource(type, centerX, centerY);
+    spawnResource(type, centerX, centerY, spread);
+  }
+}
+
+// ---- Forests
+// Trees grow in forests; grass, berry bushes and sticks favour them too (forestUndergrowthShare), both at
+// map generation and when they grow back. Forest centres are kept in `forests`.
+
+const FOREST_TYPES = ['tree', 'grass', 'berry_bush', 'stick'];
+
+function getForestSpread() {
+  return (getMapCount('forestRadius', 3) * 2 + 1) * TILE_SIZE;
+}
+
+function spawnForestAware(type) {
+  // trees always grow back in a forest, so forests don't thin out into a scatter over time
+  const share = type === 'tree' ? 1 : (GAME_CONFIG.map.forestUndergrowthShare ?? 0.7);
+  if (forests.length > 0 && rand() < share) {
+    const forest = forests[Math.floor(rand() * forests.length)];
+    spawnResource(type, forest.x, forest.y, getForestSpread());
+  } else {
+    spawnResource(type);
+  }
+}
+
+function placeForests() {
+  forests = [];
+  for (let n = 0; n < getMapCount('forests', 4); n++) {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const x = (BORDER_MARGIN + 3 + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
+      const y = (BORDER_MARGIN + 3 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
+      const valid = Math.hypot(x - townHall.x, y - townHall.y) > 180 &&
+        !isDesertTile(x, y) &&
+        !waterTiles.some(wt => Math.hypot(wt.x - x, wt.y - y) < 90) &&
+        forests.every(f => Math.hypot(f.x - x, f.y - y) > 6 * TILE_SIZE);
+      if (!valid) continue;
+      forests.push({ x, y });
+      spawnResourceCluster('tree', getMapCount('forestTrees', 9), x, y, getForestSpread());
+      break;
+    }
+  }
+}
+
+// ---- Boulder piles: a few boulders on touching tiles
+
+function placeBoulderPiles() {
+  for (let n = 0; n < getMapCount('boulderPiles', 2); n++) {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 2));
+      const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 2));
+      const free = (tx, ty) => tx >= BORDER_MARGIN && ty >= BORDER_MARGIN && tx < COLS - BORDER_MARGIN && ty < ROWS - BORDER_MARGIN &&
+        Math.hypot(tx * TILE_SIZE + 15 - townHall.x, ty * TILE_SIZE + 15 - townHall.y) > 180 &&
+        !isDesertTile(tx * TILE_SIZE + 15, ty * TILE_SIZE + 15) && !isTileOccupied(tx * TILE_SIZE + 15, ty * TILE_SIZE + 15);
+      if (!free(gx, gy)) continue;
+      const pile = [{ gx, gy }];
+      const size = getMapCount('boulderPileSize', 4);
+      for (let grow = 0; grow < size * 8 && pile.length < size; grow++) {
+        const from = pile[Math.floor(rand() * pile.length)];
+        const [dx, dy] = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(rand() * 4)];
+        const next = { gx: from.gx + dx, gy: from.gy + dy };
+        if (pile.some(t => t.gx === next.gx && t.gy === next.gy) || !free(next.gx, next.gy)) continue;
+        pile.push(next);
+      }
+      for (const t of pile) boulders.push({ x: t.gx * TILE_SIZE + 15, y: t.gy * TILE_SIZE + 15, hp: 4, priority: 0 });
+      break;
+    }
+  }
+}
+
+// ---- Delayed regrowth
+// A harvested (or destroyed) resource doesn't reappear at once: it's queued and grows back after
+// respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti).
+
+function scheduleRespawn(type, nearX = null, nearY = null) {
+  const isOre = type === 'iron_ore' || type === 'coal_ore';
+  const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
+  pendingRespawns.push({ type, nearX, nearY, timer: delay });
+}
+
+function updatePendingRespawns(dt) {
+  for (let i = pendingRespawns.length - 1; i >= 0; i--) {
+    const pending = pendingRespawns[i];
+    pending.timer -= dt;
+    if (pending.timer > 0) continue;
+    pendingRespawns.splice(i, 1);
+    if (pending.type === 'iron_ore') respawnOre('iron');
+    else if (pending.type === 'coal_ore') respawnOre('coal');
+    else if (pending.nearX !== null) spawnResource(pending.type, pending.nearX, pending.nearY);
+    else if (FOREST_TYPES.includes(pending.type)) spawnForestAware(pending.type);
+    else spawnResource(pending.type);
+    // trees, boulders and cacti block paths
+    if (pending.type === 'tree' || pending.type === 'boulder' || pending.type === 'cactus') invalidateAllPaths();
   }
 }
 
@@ -409,28 +501,14 @@ function generateMap() {
     }
   }
 
-  for (let i = 0; i < getMapCount('trees', 22); i++) spawnResource('tree');
+  placeForests();
+  for (let i = 0; i < getMapCount('trees', 8); i++) spawnResource('tree');  // lone trees outside forests
+  placeBoulderPiles();
   for (let i = 0; i < getMapCount('boulders', 15); i++) spawnResource('boulder');
-  for (let i = 0; i < getMapCount('grass', 16); i++) spawnResource('grass');
-  for (let i = 0; i < getMapCount('berryBushes', 8); i++) spawnResource('berry_bush');
-  for (let i = 0; i < getMapCount('sticks', 15); i++) spawnResource('stick');
+  for (let i = 0; i < getMapCount('grass', 16); i++) spawnForestAware('grass');
+  for (let i = 0; i < getMapCount('berryBushes', 8); i++) spawnForestAware('berry_bush');
+  for (let i = 0; i < getMapCount('sticks', 15); i++) spawnForestAware('stick');
   for (let i = 0; i < getMapCount('pebbles', 14); i++) spawnResource('pebble');
-
-  for (let c = 0; c < getMapCount('resourceClusters', 4); c++) {
-    let centerX = 0, centerY = 0, validCenter = false;
-    for (let attempt = 0; attempt < 40 && !validCenter; attempt++) {
-      centerX = (BORDER_MARGIN + 2 + rand() * (COLS - 2 * BORDER_MARGIN - 4)) * TILE_SIZE + 15;
-      centerY = (BORDER_MARGIN + 2 + rand() * (ROWS - 2 * BORDER_MARGIN - 4)) * TILE_SIZE + 15;
-      validCenter = Math.hypot(centerX - townHall.x, centerY - townHall.y) > 180 &&
-        !waterTiles.some(w => Math.hypot(w.x - centerX, w.y - centerY) < 120);
-    }
-    if (validCenter) {
-      spawnResourceCluster('tree', getMapCount('clusterTrees', 5), centerX, centerY);
-      spawnResourceCluster('grass', getMapCount('clusterGrass', 4), centerX, centerY);
-      spawnResourceCluster('berry_bush', getMapCount('clusterBerryBushes', 2), centerX, centerY);
-      spawnResourceCluster('pebble', getMapCount('clusterPebbles', 2), centerX, centerY);
-    }
-  }
 
   // at least one spawner of each kind, even if the config says 0
   for (const kind of Object.keys(ORE_KINDS)) {
@@ -446,7 +524,7 @@ function resetGame() {
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = [];
-  projectiles = []; farmPlots = []; boars = []; selectedSettler = null;
+  projectiles = []; farmPlots = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
   generateMap();
   resetTileIndex();
