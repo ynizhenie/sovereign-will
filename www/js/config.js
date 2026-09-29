@@ -10,7 +10,8 @@ const GAME_CONFIG = {
     arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', type: 'resource' },
     wheatSeeds: { id: 'wheatSeeds', label: 'Семена', icon: '🌾', type: 'resource' },
     saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' },
-    herbs: { id: 'herbs', label: 'Травы', icon: '🍃', type: 'resource' }
+    herbs: { id: 'herbs', label: 'Травы', icon: '🍃', type: 'resource' },
+    appleSaplings: { id: 'appleSaplings', label: 'Саженцы яблони', icon: '🍎', type: 'resource' }
   },
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
   // combatDamage / huntDamage: what an unarmed settler carrying it hits enemies / boars for.
@@ -62,7 +63,8 @@ const GAME_CONFIG = {
     smelter: { id: 'smelter', label: 'Плавильня', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160, smelter: true } },
     watchtower: { id: 'watchtower', label: 'Сторожевая башня', icon: '🗼', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
     wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
-    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
+    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
+    apple_sapling: { id: 'apple_sapling', label: 'Саженец яблони', icon: '🍎', cost: { appleSaplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
   },
   // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
   //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
@@ -146,6 +148,11 @@ const GAME_CONFIG = {
   // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
   // healPerHerb hp for one herb from the stock every healSeconds
   medic: { healPerHerb: 30, healSeconds: 1.2, range: 26 },
+
+  // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only
+  // fell one the player marked while it had no apples. Every growSeconds it bears apples, which workers
+  // with no tool pick (pickSeconds) for `yield`, with bonusChance of an apple sapling.
+  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { food: 3 }, bonusChance: { appleSaplings: 0.2 } },
 
   fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
 
