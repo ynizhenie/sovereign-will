@@ -482,6 +482,32 @@ window.sim = (() => {
     return { idleWorker: settlers[0].isIdle, busyWorker: settlers[1].isIdle };
   }
 
+  // An enemy archer shooting at the town hall until its quiver runs dry, with or without an enemy tent
+  // nearby to refill from. Counts its shots and tent visits, and whether it ends up clubbing the hall.
+  function archerQuiver({ seed = 'quiver-test', withTent, seconds = 90 }) {
+    start(seed);
+    townHall.hp = townHall.maxHp = 1e6; // this is about arrows, not about the hall falling
+    const far = { x: townHall.x - 400, y: townHall.y };
+    settlers = [makeSettler(1, far.x, far.y, { isPossessed: true })]; // someone to keep the game going
+    enemies = []; projectiles = []; enemyTents = []; enemyArrowStock = 0;
+    const archer = createConfiguredEnemy({ x: townHall.x + 200, y: townHall.y }, 'raider_archer');
+    enemies = [archer];
+    if (withTent) enemyTents.push({ x: townHall.x + 290, y: townHall.y, hp: 1e6, maxHp: 1e6, summonTimer: 0, summonsLeft: 0 });
+    const seen = new WeakSet();
+    let shots = 0, tentVisits = 0, wasAtTent = false, hallHpBeforeMelee = null;
+    run(seconds, { each: () => {
+      for (const p of projectiles) if (p.fromEnemy && !seen.has(p)) { seen.add(p); shots++; }
+      const atTent = enemyTents.some(t => Math.hypot(t.x - archer.x, t.y - archer.y) <= GAME_CONFIG.enemyTents.buildDistance);
+      if (atTent && !wasAtTent) tentVisits++;
+      wasAtTent = atTent;
+      if (archer.weapon !== 'bow' && hallHpBeforeMelee === null) hallHpBeforeMelee = townHall.hp;
+    } });
+    return {
+      shots, tentVisits, weapon: archer.weapon, stockLeft: enemyArrowStock,
+      meleeDamage: hallHpBeforeMelee === null ? 0 : hallHpBeforeMelee - townHall.hp
+    };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -505,6 +531,6 @@ window.sim = (() => {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,
-    boarHuntDamage, boarFlee
+    boarHuntDamage, boarFlee, archerQuiver
   };
 })();
