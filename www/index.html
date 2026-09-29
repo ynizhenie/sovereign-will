@@ -109,6 +109,7 @@
 
     <div class="tab-navigation">
       <button class="tab-btn active" onclick="switchTab(this, 'tab-build')">🏗️ Строительство</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-farming')">🌾 Фермерство</button>
       <button class="tab-btn" onclick="switchTab(this, 'tab-tools')">🛠️ Инструменты</button>
       <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')">⚔️ Оружие</button>
     </div>
@@ -121,6 +122,10 @@
         <div class="action-row">
           <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')">🔨 Снести</button>
         </div>
+      </div>
+
+      <div id="tab-farming" class="tab-pane">
+        <div class="btn-grid-2col" id="farming-actions"></div>
       </div>
 
       <div id="tab-tools" class="tab-pane">
