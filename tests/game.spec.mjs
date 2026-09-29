@@ -59,11 +59,10 @@ test('the defeat screen restart button works with the camera moved and zoomed (#
     settlers = [];
     camera.zoom = 2; camera.x = 300; camera.y = 900; clampCamera();
     render();
-    // the button's centre in canvas pixels -> page coordinates
+    // the button's centre (CSS pixels on the canvas) -> page coordinates
     const rect = canvas.getBoundingClientRect();
-    const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
-    const offX = (rect.width - canvas.width * scale) / 2, offY = (rect.height - canvas.height * scale) / 2;
-    return { x: rect.left + offX + (canvas.width / 2) * scale, y: rect.top + offY + (canvas.height / 2 + 72) * scale };
+    const btn = getRestartButton();
+    return { x: rect.left + btn.x + btn.width / 2, y: rect.top + btn.y + btn.height / 2 };
   });
   await page.mouse.click(button.x, button.y);
   expect(await page.evaluate(() => settlers.length)).toBe(2);
@@ -274,11 +273,14 @@ test('clicking an enemy with the Point tool marks and unmarks it (#35)', async (
     e.speed = 0;
     enemies = [e];
     isPaused = true;
-    camera.zoom = 1; camera.x = canvas.width / 2; camera.y = canvas.height / 2;
+    camera.zoom = 1; camera.x = townHall.x; camera.y = townHall.y; clampCamera();
+    // world -> canvas pixels -> page coordinates
     const rect = canvas.getBoundingClientRect();
-    const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
-    const offX = (rect.width - canvas.width * scale) / 2, offY = (rect.height - canvas.height * scale) / 2;
-    return { x: rect.left + offX + e.x * scale, y: rect.top + offY + e.y * scale };
+    const toPage = rect.width / canvas.width;
+    return {
+      x: rect.left + (canvas.width / 2 + (e.x - camera.x) * getViewScale()) * toPage,
+      y: rect.top + (canvas.height / 2 + (e.y - camera.y) * getViewScale()) * toPage
+    };
   });
   await page.mouse.click(at.x, at.y);
   expect(await page.evaluate(() => enemies[0].markedTarget)).toBe(true);
