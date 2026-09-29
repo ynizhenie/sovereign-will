@@ -31,11 +31,26 @@ const ctx = canvas.getContext('2d', {
 });
 const TILE_SIZE = 30;
 const BORDER_MARGIN = 2;
-// the world's size; the canvas itself follows the screen (see fitCanvasToScreen)
-const WORLD_WIDTH = 1200;
-const WORLD_HEIGHT = 1200;
-const COLS = WORLD_WIDTH / TILE_SIZE;
-const ROWS = WORLD_HEIGHT / TILE_SIZE;
+// the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
+// (see fitCanvasToScreen)
+const DEFAULT_MAP_TILES = 40;
+let COLS = DEFAULT_MAP_TILES;
+let ROWS = DEFAULT_MAP_TILES;
+let WORLD_WIDTH = COLS * TILE_SIZE;
+let WORLD_HEIGHT = ROWS * TILE_SIZE;
+let mapSettings = { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }; // set from the menu, used by resetGame
+
+function setWorldSize(cols, rows) {
+  COLS = cols; ROWS = rows;
+  WORLD_WIDTH = cols * TILE_SIZE; WORLD_HEIGHT = rows * TILE_SIZE;
+  townHall.x = WORLD_WIDTH / 2; townHall.y = WORLD_HEIGHT / 2;
+  camera.x = townHall.x; camera.y = townHall.y;
+}
+
+// how many times the default map's area this one is: counts on the map (forests, lakes...) scale by it
+function getMapAreaScale() {
+  return (COLS * ROWS) / (DEFAULT_MAP_TILES * DEFAULT_MAP_TILES);
+}
 
 const keys = {};
 let mouse = { x: 0, y: 0 };

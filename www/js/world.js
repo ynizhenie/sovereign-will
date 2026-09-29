@@ -379,7 +379,7 @@ function generateMap() {
   const lakeHeightRange = getMapRange('lakeHeight', 3, 8);
   const lakeDistRange = getMapRange('lakeMinDistance', 1, 3);
 
-  let numLakes = lakeRange.min + Math.floor(rand() * (lakeRange.max - lakeRange.min + 1));
+  let numLakes = Math.round((lakeRange.min + Math.floor(rand() * (lakeRange.max - lakeRange.min + 1))) * getMapAreaScale());
   const lakeCenters = [];
 
   for (let l = 0; l < numLakes; l++) {
@@ -449,7 +449,7 @@ function generateMap() {
   const desertRxRange = getMapRange('desertRadiusX', 3, 5);
   const desertRyRange = getMapRange('desertRadiusY', 2, 4);
 
-  let numDeserts = desertRange.min + Math.floor(rand() * (desertRange.max - desertRange.min + 1));
+  let numDeserts = Math.round((desertRange.min + Math.floor(rand() * (desertRange.max - desertRange.min + 1))) * getMapAreaScale());
   const desertCenters = [];
 
   for (let d = 0; d < numDeserts; d++) {
@@ -516,7 +516,7 @@ function generateMap() {
   }
 
   const cfg = GAME_CONFIG.map;
-  let numRockClusters = cfg.rockClusters.min + Math.floor(rand() * (cfg.rockClusters.max - cfg.rockClusters.min + 1));
+  let numRockClusters = Math.round((cfg.rockClusters.min + Math.floor(rand() * (cfg.rockClusters.max - cfg.rockClusters.min + 1))) * getMapAreaScale());
 
   for (let c = 0; c < numRockClusters; c++) {
     let rw = cfg.rockClusterWidth.min + Math.floor(rand() * (cfg.rockClusterWidth.max - cfg.rockClusterWidth.min + 1));
@@ -631,6 +631,7 @@ function resetGame() {
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
+  setWorldSize(mapSettings.cols, mapSettings.rows);
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;

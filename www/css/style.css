@@ -478,7 +478,45 @@ canvas {
   cursor: pointer;
 }
 
-.wave-option.active {
+.map-option {
+  flex: 1;
+  padding: 8px 0;
+  background: #252830;
+  border: 1px solid #353a46;
+  border-radius: 5px;
+  color: #8a91a0;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.map-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+#wave-custom {
+  align-self: center;
+}
+
+.map-custom[hidden], .menu-number[hidden] {
+  display: none;
+}
+
+.menu-number {
+  width: 70px;
+  padding: 6px;
+  background: #111318;
+  border: 1px solid #353a46;
+  border-radius: 5px;
+  color: #fff;
+  text-align: center;
+  font-size: 12px;
+}
+
+.wave-option.active, .map-option.active {
   background: #2e6da4;
   color: #fff;
   border-color: #46b8da;
