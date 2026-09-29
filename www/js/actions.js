@@ -225,6 +225,12 @@ function handleCanvasClick() {
     if (damaged && toggleBuildingRepair(damaged)) return;
   }
 
+  // Farming tab: paint (or clear) farm zone tiles
+  if (buildMode.startsWith('zone_')) {
+    if (!isBorderZone(gxIdx, gyIdx)) toggleFarmZone(gx, gy, buildMode.slice('zone_'.length));
+    return;
+  }
+
   if (buildMode !== 'interact' && buildMode !== 'possess' && buildMode !== 'demolish') {
     if (isBorderZone(gxIdx, gyIdx)) {
       return;
@@ -289,6 +295,24 @@ function handleCanvasClick() {
       return;
     }
   }
+}
+
+// Mark tile (x, y) as a farm zone for `crop` ('wheat' / 'sapling'), or unmark it: tapping a tile
+// already in that zone, or with crop 'clear'. Not on water, rock or buildings.
+function toggleFarmZone(x, y, crop) {
+  const existing = farmZones.find(z => z.x === x && z.y === y);
+  if (crop === 'clear' || (existing && existing.crop === crop)) {
+    if (existing) farmZones.splice(farmZones.indexOf(existing), 1);
+    return;
+  }
+  const blocked = waterTiles.some(w => w.x === x && w.y === y) || naturalRocks.some(r => r.x === x && r.y === y) ||
+    buildings.some(b => b.x === x && b.y === y) || Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15;
+  if (blocked) {
+    showNotification('❌ Здесь нельзя сажать', true);
+    return;
+  }
+  if (existing) existing.crop = crop;
+  else farmZones.push({ x, y, crop });
 }
 
 function processInteraction(clientX, clientY) {
