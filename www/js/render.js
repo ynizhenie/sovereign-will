@@ -53,6 +53,13 @@ const ORE_COLORS = {
   coal: { body: '#050608', shine: '#6b7785' }
 };
 
+// Quiver on the back (left edge x), one arrow shown for every 3 left
+function drawQuiver(x, arrows) {
+  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(x - 2, -6, 5, 11);
+  ctx.fillStyle = '#ecf0f1';
+  for (let i = 0; i < Math.min(4, Math.ceil(arrows / 3)); i++) ctx.fillRect(x - 2 + i * 1.3, -9, 1, 3);
+}
+
 // Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
 // Shared by settlers and enemies. Returns false for no weapon (fists).
 function drawHeldWeapon(weapon) {
@@ -485,6 +492,7 @@ function render() {
     ctx.translate(en.x, en.y);
     if (en.type === 'big') ctx.translate(en.radius - 11, 0); // hands at the edge of the larger body
     drawHeldWeapon(en.weapon);
+    if (en.arrows > 0) drawQuiver(-en.radius, en.arrows);
     ctx.restore();
 
     if (en.markedTarget) drawTargetMark(en);
