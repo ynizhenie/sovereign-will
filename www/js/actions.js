@@ -22,6 +22,44 @@ function giveResourceToSettler(s, type, amount) {
   }
 }
 
+// How many gathered loads this settler carries before heading home: its type's carryLoads, plus a
+// backpack's. Fishers bring each catch home (they pick up bait there).
+function getCarryCapacity(s) {
+  if (s.tool === 'rod') return 1;
+  const type = getDefinition('settlerTypes', s.type) || GAME_CONFIG.settlerTypes.normal;
+  return (type.carryLoads || 1) + (s.backpack ? GAME_CONFIG.gear.backpack.extraLoads : 0);
+}
+
+// Count one more gathered load on what the settler carries
+function addCarryLoad(s) {
+  if (s && s.carrying) s.carrying.loads = (s.carrying.loads || 0) + 1;
+}
+
+// Carrying gathered loads but room for more (smelter runs etc. have no loads: always full)
+function hasRoomToCarry(s) {
+  return !!s.carrying && s.carrying.loads !== undefined && s.carrying.loads < getCarryCapacity(s);
+}
+
+// Put a backpack on the selected worker, or on the first worker without one
+function equipBackpack() {
+  const backpack = GAME_CONFIG.gear.backpack;
+  const selected = getSelectedSettler() || getPossessed();
+  const target = selected && selected.role === 'worker' && !selected.backpack
+    ? selected
+    : settlers.find(s => s.role === 'worker' && !s.backpack && s.tool !== 'rod');
+  if (!target) {
+    showNotification('⚠️ Нет рабочего без рюкзака!', true);
+    return;
+  }
+  if (!canAfford(backpack.cost)) {
+    showCostError(backpack.cost, '❌ Не хватает ресурсов! Нужно');
+    return;
+  }
+  payCost(backpack.cost);
+  target.backpack = true;
+  showNotification(`${backpack.icon} ${backpack.label} выдан`, false);
+}
+
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
 function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * 0.65 : amount;
