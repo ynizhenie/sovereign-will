@@ -127,20 +127,21 @@ function drawOreSpawner(x, y, kind) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
-  ctx.translate(canvas.width / 2 - camera.x * camera.zoom, canvas.height / 2 - camera.y * camera.zoom);
-  ctx.scale(camera.zoom, camera.zoom);
+  const viewScale = getViewScale();
+  ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
+  ctx.scale(viewScale, viewScale);
 
   drawGrassGround();
 
   ctx.fillStyle = '#2d4a22';
-  ctx.fillRect(0, 0, canvas.width, BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(0, canvas.height - BORDER_MARGIN * TILE_SIZE, canvas.width, BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, canvas.height - 2 * BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(canvas.width - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, canvas.height - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, 0, WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 
   ctx.strokeStyle = 'rgba(231, 76, 60, 0.4)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, canvas.width - 2 * BORDER_MARGIN * TILE_SIZE, canvas.height - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 
   desertTiles.forEach(tile => {
     ctx.fillStyle = '#c9a66b';
@@ -153,11 +154,11 @@ function render() {
   if (buildMode !== 'interact' && buildMode !== 'possess') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += TILE_SIZE) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    for (let x = 0; x < WORLD_WIDTH; x += TILE_SIZE) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_HEIGHT); ctx.stroke();
     }
-    for (let y = 0; y < canvas.height; y += TILE_SIZE) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    for (let y = 0; y < WORLD_HEIGHT; y += TILE_SIZE) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_WIDTH, y); ctx.stroke();
     }
     let gxIdx = Math.floor(mouse.x / TILE_SIZE);
     let gyIdx = Math.floor(mouse.y / TILE_SIZE);
@@ -509,16 +510,20 @@ function render() {
   ctx.restore();
 
   if (gameStarted && (townHall.hp <= 0 || settlers.length === 0)) {
+    // drawn in CSS pixels, centred on the screen (restart button hit-test: getRestartButton)
     ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(screenPixelRatio, screenPixelRatio);
+    const cx = canvas.width / screenPixelRatio / 2, cy = canvas.height / screenPixelRatio / 2;
     ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('ПОРАЖЕНИЕ!', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillText('ПОРАЖЕНИЕ!', cx, cy - 20);
     ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
-    ctx.fillText(`Вы продержались ${waveNum - 1} волн`, canvas.width / 2, canvas.height / 2 + 15);
+    ctx.fillText(`Вы продержались ${waveNum - 1} волн`, cx, cy + 15);
 
-    let btnX = canvas.width / 2 - 100;
-    let btnY = canvas.height / 2 + 50;
-    ctx.fillStyle = '#27ae60'; ctx.fillRect(btnX, btnY, 200, 45);
+    const btn = getRestartButton();
+    ctx.fillStyle = '#27ae60'; ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif';
-    ctx.fillText('Начать заново', canvas.width / 2, btnY + 28);
+    ctx.fillText('Начать заново', cx, btn.y + 28);
+    ctx.restore();
   }
 }

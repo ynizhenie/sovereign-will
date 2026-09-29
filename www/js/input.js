@@ -49,31 +49,79 @@ function getCanvasScreenCoords(clientX, clientY) {
   return { screenX, screenY, renderWidth, renderHeight };
 }
 
+// ---- Screen and camera
+//
+// The canvas covers the whole game area at the screen's resolution (fitCanvasToScreen). At zoom 1 the
+// world covers the screen; zooming out to getMinZoom() shows all of it.
+let screenPixelRatio = 1;
+
+function fitCanvasToScreen() {
+  screenPixelRatio = Math.min(2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
+  const width = Math.max(1, Math.round(canvas.clientWidth * screenPixelRatio));
+  const height = Math.max(1, Math.round(canvas.clientHeight * screenPixelRatio));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  camera.zoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, camera.zoom));
+  clampCamera();
+}
+
+// canvas pixels per world unit at zoom 1: the world just covers the screen
+function getBaseScale() {
+  return Math.max(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+}
+
+// canvas pixels per world unit now
+function getViewScale() {
+  return getBaseScale() * camera.zoom;
+}
+
+const MAX_ZOOM = 2.4;
+
+// zoomed out this far, the whole world fits on the screen
+function getMinZoom() {
+  return Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT) / getBaseScale();
+}
+
+function setZoom(zoom) {
+  camera.zoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, zoom));
+}
+
+// the Restart button of the defeat screen, in CSS pixels
+function getRestartButton() {
+  const cx = canvas.width / screenPixelRatio / 2, cy = canvas.height / screenPixelRatio / 2;
+  return { x: cx - 100, y: cy + 50, width: 200, height: 45 };
+}
+
+window.addEventListener('resize', fitCanvasToScreen);
+
 function updateInputPos(clientX, clientY) {
   const { screenX, screenY } = getCanvasScreenCoords(clientX, clientY);
   // screen coords are for UI drawn over the canvas without the camera (e.g. the defeat screen)
   mouse.screenX = screenX;
   mouse.screenY = screenY;
-  mouse.x = camera.x + (screenX - canvas.width / 2) / camera.zoom;
-  mouse.y = camera.y + (screenY - canvas.height / 2) / camera.zoom;
+  mouse.x = camera.x + (screenX - canvas.width / 2) / getViewScale();
+  mouse.y = camera.y + (screenY - canvas.height / 2) / getViewScale();
 }
 
 function clampCamera() {
-  const halfWidth = canvas.width / (2 * camera.zoom);
-  const halfHeight = canvas.height / (2 * camera.zoom);
-  camera.x = halfWidth >= canvas.width / 2
-    ? canvas.width / 2
-    : Math.max(halfWidth, Math.min(canvas.width - halfWidth, camera.x));
-  camera.y = halfHeight >= canvas.height / 2
-    ? canvas.height / 2
-    : Math.max(halfHeight, Math.min(canvas.height - halfHeight, camera.y));
+  // half the view in world units; a view wider than the world stays centred on it
+  const halfWidth = canvas.width / (2 * getViewScale());
+  const halfHeight = canvas.height / (2 * getViewScale());
+  camera.x = halfWidth >= WORLD_WIDTH / 2
+    ? WORLD_WIDTH / 2
+    : Math.max(halfWidth, Math.min(WORLD_WIDTH - halfWidth, camera.x));
+  camera.y = halfHeight >= WORLD_HEIGHT / 2
+    ? WORLD_HEIGHT / 2
+    : Math.max(halfHeight, Math.min(WORLD_HEIGHT - halfHeight, camera.y));
 }
 
 canvas.addEventListener('mousemove', e => {
   if (cameraDragging) {
     const { renderWidth, renderHeight } = getCanvasScreenCoords(e.clientX, e.clientY);
-    camera.x -= (e.clientX - cameraDragPoint.x) * canvas.width / renderWidth / camera.zoom;
-    camera.y -= (e.clientY - cameraDragPoint.y) * canvas.height / renderHeight / camera.zoom;
+    camera.x -= (e.clientX - cameraDragPoint.x) * canvas.width / renderWidth / getViewScale();
+    camera.y -= (e.clientY - cameraDragPoint.y) * canvas.height / renderHeight / getViewScale();
     cameraDragPoint = { x: e.clientX, y: e.clientY };
     clampCamera();
   }
@@ -84,13 +132,13 @@ canvas.addEventListener('wheel', e => {
   e.preventDefault();
   const { screenX, screenY } = getCanvasScreenCoords(e.clientX, e.clientY);
   const worldBeforeZoom = {
-    x: camera.x + (screenX - canvas.width / 2) / camera.zoom,
-    y: camera.y + (screenY - canvas.height / 2) / camera.zoom
+    x: camera.x + (screenX - canvas.width / 2) / getViewScale(),
+    y: camera.y + (screenY - canvas.height / 2) / getViewScale()
   };
 
-  camera.zoom = Math.max(0.7, Math.min(2.4, camera.zoom * (e.deltaY < 0 ? 1.1 : 0.9)));
-  camera.x = worldBeforeZoom.x - (screenX - canvas.width / 2) / camera.zoom;
-  camera.y = worldBeforeZoom.y - (screenY - canvas.height / 2) / camera.zoom;
+  setZoom(camera.zoom * (e.deltaY < 0 ? 1.1 : 0.9));
+  camera.x = worldBeforeZoom.x - (screenX - canvas.width / 2) / getViewScale();
+  camera.y = worldBeforeZoom.y - (screenY - canvas.height / 2) / getViewScale();
   clampCamera();
   updateInputPos(e.clientX, e.clientY);
 }, { passive: false });
@@ -149,8 +197,8 @@ canvas.addEventListener('touchmove', e => {
     if (distMoved > 8) isTap = false;
 
     const { renderWidth, renderHeight } = getCanvasScreenCoords(touch.clientX, touch.clientY);
-    camera.x -= (touch.clientX - touchDragPoint.x) * canvas.width / renderWidth / camera.zoom;
-    camera.y -= (touch.clientY - touchDragPoint.y) * canvas.height / renderHeight / camera.zoom;
+    camera.x -= (touch.clientX - touchDragPoint.x) * canvas.width / renderWidth / getViewScale();
+    camera.y -= (touch.clientY - touchDragPoint.y) * canvas.height / renderHeight / getViewScale();
     touchDragPoint = { x: touch.clientX, y: touch.clientY };
 
     clampCamera();
@@ -170,13 +218,13 @@ canvas.addEventListener('touchmove', e => {
       const { screenX, screenY } = getCanvasScreenCoords(midX, midY);
 
       const worldBeforeZoom = {
-        x: camera.x + (screenX - canvas.width / 2) / camera.zoom,
-        y: camera.y + (screenY - canvas.height / 2) / camera.zoom
+        x: camera.x + (screenX - canvas.width / 2) / getViewScale(),
+        y: camera.y + (screenY - canvas.height / 2) / getViewScale()
       };
 
-      camera.zoom = Math.max(0.7, Math.min(2.4, touchStartZoom * factor));
-      camera.x = worldBeforeZoom.x - (screenX - canvas.width / 2) / camera.zoom;
-      camera.y = worldBeforeZoom.y - (screenY - canvas.height / 2) / camera.zoom;
+      setZoom(touchStartZoom * factor);
+      camera.x = worldBeforeZoom.x - (screenX - canvas.width / 2) / getViewScale();
+      camera.y = worldBeforeZoom.y - (screenY - canvas.height / 2) / getViewScale();
       clampCamera();
     }
   }
@@ -189,12 +237,12 @@ canvas.addEventListener('touchend', e => {
 });
 
 function zoomIn() {
-  camera.zoom = Math.min(2.4, camera.zoom * 1.2);
+  setZoom(camera.zoom * 1.2);
   clampCamera();
 }
 
 function zoomOut() {
-  camera.zoom = Math.max(0.7, camera.zoom / 1.2);
+  setZoom(camera.zoom / 1.2);
   clampCamera();
 }
 

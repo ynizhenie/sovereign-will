@@ -116,9 +116,9 @@ function handleCanvasClick() {
   if (townHall.hp <= 0 || settlers.length === 0) {
     // the defeat screen is drawn in screen space (see render()), so hit-test in screen coords:
     // world coords only matched it with the camera centered at zoom 1
-    let btnX = canvas.width / 2 - 100;
-    let btnY = canvas.height / 2 + 50;
-    if (mouse.screenX >= btnX && mouse.screenX <= btnX + 200 && mouse.screenY >= btnY && mouse.screenY <= btnY + 45) {
+    const btn = getRestartButton();
+    const x = mouse.screenX / screenPixelRatio, y = mouse.screenY / screenPixelRatio;
+    if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
       resetGame();
     }
     return;
