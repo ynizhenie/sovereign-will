@@ -528,6 +528,65 @@ window.sim = (() => {
     return { atStart, delivered, canPay, afterTool: stock.flint };
   }
 
+  // Three soldiers and two axe workers, a healing tent by the town hall, and one tough enemy tent a
+  // dozen tiles out that keeps summoning raiders. The soldiers should push through to the tent (fighting
+  // the summoned raiders on the way) instead of falling back, and the workers should keep working.
+  function tentAssault({ seed = 'tent-assault-test', seconds = 90 }) {
+    start(seed);
+    const hx = townHall.x, hy = townHall.y;
+    placeBuilding('tent', hx - 60, hy + 60);
+    const spot = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 11 && t.d <= 13)[0];
+    const p = tileCenter(spot.gx, spot.gy);
+    enemies = [];
+    enemyTents = [{ x: p.x, y: p.y, hp: 900, maxHp: 900, summonTimer: 0, summonsLeft: 4 }];
+    invalidateAllPaths();
+    settlers = [
+      makeSettler(1, hx - 40, hy, { weapon: 'sword', role: 'soldier' }),
+      makeSettler(2, hx + 40, hy, { weapon: 'sword', role: 'soldier' }),
+      makeSettler(3, hx, hy - 40, { weapon: 'spear', role: 'soldier' }),
+      makeSettler(4, hx, hy + 40, { tool: 'axe' }),
+      makeSettler(5, hx - 40, hy - 40, { tool: 'axe' })
+    ];
+    const soldiers = settlers.slice(0, 3), workers = settlers.slice(3);
+    const tent = enemyTents[0];
+    let reachedTent = new Set(), fellBack = 0, workersAtTent = 0, summoned = 0, destroyedAt = null;
+    const seenEnemies = new WeakSet();
+    run(seconds, { each: f => {
+      for (const en of enemies) if (!seenEnemies.has(en)) { seenEnemies.add(en); summoned++; }
+      if (destroyedAt === null && !enemyTents.includes(tent)) destroyedAt = f / 60;
+      if (destroyedAt !== null) return;
+      for (const s of soldiers) {
+        if (!settlers.includes(s)) continue;
+        if (Math.hypot(s.x - tent.x, s.y - tent.y) < 60) reachedTent.add(s);
+        // once at the tent, walking all the way back to the town hall counts as falling back
+        else if (reachedTent.has(s) && Math.hypot(s.x - hx, s.y - hy) < 90) { fellBack++; reachedTent.delete(s); }
+      }
+      for (const s of workers) if (Math.hypot(s.x - tent.x, s.y - tent.y) < 40) workersAtTent++;
+    } });
+    return { summoned, destroyedAt, fellBack, workersAtTent, soldiersAlive: soldiers.filter(s => settlers.includes(s)).length };
+  }
+
+  // A settler at a healing tent while an enemy stands far off and doesn't attack: it should heal up
+  // fully before leaving, not stop at 25%. Returns its hp share when it first walks away from the tent.
+  function healUp({ seed = 'heal-up-test', hpShare = 0.2 }) {
+    start(seed);
+    const hx = townHall.x, hy = townHall.y;
+    const tent = placeBuilding('tent', hx + 90, hy);
+    settlers = [makeSettler(1, hx + 60, hy, { weapon: 'sword', role: 'soldier', hp: 100 * hpShare })];
+    const far = reachableFromHall(isTileBlockedForSettler).sort((a, b) => b.d - a.d)[0];
+    const enemy = createConfiguredEnemy(tileCenter(far.gx, far.gy), 'raider');
+    enemy.speed = 0;
+    enemies = [enemy];
+    const s = settlers[0];
+    let atTent = false, leftWith = null;
+    run(20, { each: () => {
+      const d = Math.hypot(s.x - tent.x, s.y - tent.y);
+      if (d < 34) atTent = true;
+      else if (atTent && d > 45 && leftWith === null) leftWith = s.hp / s.maxHp;
+    } });
+    return { reachedTent: atTent, leftWith };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -551,6 +610,6 @@ window.sim = (() => {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,
-    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource
+    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource, tentAssault, healUp
   };
 })();
