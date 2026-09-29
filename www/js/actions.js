@@ -74,7 +74,8 @@ function harvestResourceDirect(r, p) {
     return;
   }
   if (boars.includes(r)) {
-    r.hp -= 10;
+    const hunt = getWeaponStats(p, 'hunt');
+    r.hp -= hunt.damage * hunt.multiplier;
     makeBoarFlee(r, p.x, p.y);
     if (r.hp <= 0) finishHarvest(p, r, 'boar');
     return;
