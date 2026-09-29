@@ -19,7 +19,6 @@ function createSettlerTick(dt) {
   markedResources.sort((a, b) => b.priority - a.priority);
 
   const defendersCount = settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
-  const workersCount = settlers.filter(s => s.role === 'worker' && s.weapon === 'fist').length;
 
   return {
     dt,
@@ -33,7 +32,10 @@ function createSettlerTick(dt) {
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
-    workersHelpTents: (defendersCount === 0 || defendersCount < workersCount)
+    // unarmed workers only help destroy enemy tents when there's nobody armed to do it
+    workersHelpTents: defendersCount === 0,
+    // what's left of the wave is down to a few enemies (tent-summoned ones don't count): go destroy the tents
+    tentAssault: enemyTents.length > 0 && enemies.filter(en => !en.summoned).length <= 5
   };
 }
 
@@ -265,14 +267,17 @@ function repairTent(s, tick) {
   return false;
 }
 
-// Heal at the nearest tent. While enemies are on the map only badly wounded settlers (< 25% hp)
-// leave the fight for this; the rest keep fighting, starting with whoever is attacking them.
+// Heal at the nearest tent. While enemies are on the map, or while it's destroying enemy tents, only a
+// badly wounded settler (< 25% hp) leaves for this; the rest keep fighting, starting with whoever is
+// attacking them. Once at the tent it heals up fully, unless it's attacked there.
 function healAtTent(s, tick) {
   const tents = tick.tents;
   const badlyWounded = s.hp < s.maxHp * 0.25;
-  if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed && (enemies.length === 0 || badlyWounded)) {
+  if (s.healing && (s.hp >= s.maxHp || tents.length === 0 || (getRecentAttacker(s) && !badlyWounded))) s.healing = false;
+  const calm = enemies.length === 0 && !(tick.tentAssault && joinsTentAssault(s, tick));
+  if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed && (calm || badlyWounded || s.healing)) {
     let nearbyThreat = enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 100);
-    if (!nearbyThreat || badlyWounded) {
+    if (!nearbyThreat || badlyWounded || s.healing) {
       let nearestTent = tents.reduce((closest, t) => {
         let d = Math.hypot(t.x - s.x, t.y - s.y);
         return d < closest.d ? { tent: t, d: d } : closest;
@@ -286,7 +291,8 @@ function healAtTent(s, tick) {
       } else {
         s.hp = Math.min(s.maxHp, s.hp + tick.dt * GAME_CONFIG.buildings.tent.healPerSecond);
         s.patrolTarget = null;
-        if (s.hp < s.maxHp) return true;
+        s.healing = s.hp < s.maxHp;
+        if (s.healing) return true;
       }
     }
   }
@@ -325,6 +331,17 @@ function fightEnemies(s, tick) {
   // ...but whoever is hitting this settler right now comes first of all
   const attacker = getRecentAttacker(s);
   if (attacker) targetEnemy = attacker;
+  // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents)
+  const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
+  if (assaulting && !attacker) {
+    targetEnemy = null;
+    let nearest = TENT_ASSAULT_FIGHT_DISTANCE;
+    enemies.forEach(en => {
+      const d = Math.hypot(en.x - s.x, en.y - s.y);
+      if (d < nearest) { nearest = d; targetEnemy = en; }
+    });
+    if (!targetEnemy) return false;
+  }
 
   if (isBowWeapon(s.weapon) && s.quiver) {
     let currentArrows = s.arrows || 0;
@@ -371,7 +388,9 @@ function fightEnemies(s, tick) {
   let isUnarmedOrRod = (s.weapon === 'fist');
   let isToolWorker = isUnarmedOrRod && (hasAxeTool(s.tool) || hasPickaxeTool(s.tool));
   let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
-  if (targetEnemy && (tick.isWaveActive || distToClosestEn < 260 || s.role !== 'worker')) {
+  // tent-summoned enemies alone don't call workers off their work, unless they come close
+  const waveThreat = tick.isWaveActive && !tick.tentAssault;
+  if (targetEnemy && (waveThreat || distToClosestEn < 260 || s.role !== 'worker')) {
     if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker) {
       let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTown > townHall.radius + 15) {
@@ -396,13 +415,18 @@ function fightEnemies(s, tick) {
   return false;
 }
 
+// Who goes to destroy enemy tents: anyone armed, and unarmed workers only when nobody is armed
+function joinsTentAssault(s, tick) {
+  return s.role !== 'worker' || s.weapon !== 'fist' || tick.workersHelpTents;
+}
+
+// Enemies closer than this to a settler on its way to the enemy tents get fought on the way
+const TENT_ASSAULT_FIGHT_DISTANCE = 150;
+
 // Once a wave is down to its last few enemies, go destroy enemy tents
 function clearEnemyTents(s, tick) {
-  if (enemies.length <= 5 && enemyTents.length > 0) {
-    let isSoldier = (s.role !== 'worker' || s.weapon !== 'fist');
-    let shouldAttackTents = isSoldier || tick.workersHelpTents;
-
-    if (shouldAttackTents) {
+  if (tick.tentAssault) {
+    if (joinsTentAssault(s, tick)) {
       let nearestTent = null, minDist = Infinity;
       enemyTents.forEach(et => {
         let d = Math.hypot(et.x - s.x, et.y - s.y);

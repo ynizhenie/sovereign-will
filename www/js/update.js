@@ -200,7 +200,9 @@ function update(dt) {
         x: Math.max(15, Math.min(canvas.width - 15, et.x + (rand() - 0.5) * 30)),
         y: Math.max(15, Math.min(canvas.height - 15, et.y + (rand() - 0.5) * 30))
       };
-      enemies.push(createConfiguredEnemy(spawnPos, tentConfig.summonEnemy));
+      const summoned = createConfiguredEnemy(spawnPos, tentConfig.summonEnemy);
+      summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
+      enemies.push(summoned);
     }
   });
 
