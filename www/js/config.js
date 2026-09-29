@@ -149,11 +149,6 @@ const GAME_CONFIG = {
   // healPerHerb hp for one herb from the stock every healSeconds
   medic: { healPerHerb: 30, healSeconds: 1.2, range: 26 },
 
-  // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only
-  // fell one the player marked while it had no apples. Every growSeconds it bears apples, which workers
-  // with no tool pick (pickSeconds) for `yield`, with bonusChance of an apple sapling.
-  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { food: 3 }, bonusChance: { appleSaplings: 0.2 } },
-
   fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
 
   // ---- Colony
@@ -181,6 +176,11 @@ const GAME_CONFIG = {
     shield: { id: 'shield', label: 'Щит', icon: '🔰', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
     armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 }
   },
+
+  // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only
+  // fell one the player marked while it had no apples. Every growSeconds it bears apples, which workers
+  // with no tool pick (pickSeconds) for `yield`, with bonusChance of an apple sapling.
+  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { food: 3 }, bonusChance: { appleSaplings: 0.2 } },
 
   // crafted at the town hall into the stock
   recipes: {
