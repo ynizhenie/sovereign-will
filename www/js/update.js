@@ -361,7 +361,8 @@ function update(dt) {
     // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
     // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
     const contactRadius = Math.min(en.radius, 13) + 2;
-    let touchingBuilding = buildings.find(b => collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
+    // spikes are walked over, not besieged
+    let touchingBuilding = buildings.find(b => b.type !== 'spikes' && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
     let blockedRes = null;
 
     if (touchingBuilding) {
@@ -371,8 +372,9 @@ function update(dt) {
           buildings.splice(buildings.indexOf(touchingBuilding), 1);
           invalidateAllPaths();
         }
-      } else if (en.type === 'big' || en.isBlockedPath || !isBuildingSingle(touchingBuilding)) {
-        // a lone wall can be walked around, unless it's what blocks the only way in
+      } else if (en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes)) {
+        // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
+        // way in over spikes squeezes past the walls beside them
         touchingBuilding.hp -= dt * enemyDef.siege.buildings;
         if (touchingBuilding.hp <= 0) {
           buildings.splice(buildings.indexOf(touchingBuilding), 1);
@@ -472,6 +474,7 @@ function update(dt) {
   }
 
   separateSettlersFromEnemies();
+  applySpikeTraps();
 
   settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {

@@ -442,6 +442,15 @@ function render() {
       ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#f39c12'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🏕️', b.x, b.y + 10);
 	  
+    } else if (b.type === 'spikes') {
+      // wooden base with iron points; a dot per use left
+      ctx.fillStyle = '#6d4c2f'; ctx.fillRect(b.x - 13, b.y - 13, 26, 26);
+      ctx.fillStyle = '#b0bec5';
+      for (const [px, py] of [[-7, -7], [5, -7], [-7, 5], [5, 5], [-1, -1]]) {
+        ctx.beginPath(); ctx.moveTo(b.x + px - 3, b.y + py + 3); ctx.lineTo(b.x + px, b.y + py - 4); ctx.lineTo(b.x + px + 3, b.y + py + 3); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = '#e74c3c';
+      for (let i = 0; i < Math.min(b.usesLeft || 0, 5); i++) ctx.fillRect(b.x - 12 + i * 5, b.y + 10, 3, 2);
     } else if (b.type === 'watchtower') {
       ctx.fillStyle = '#607d8b'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.fillStyle = '#90a4ae'; ctx.fillRect(b.x - 10, b.y - 19, 20, 8);
