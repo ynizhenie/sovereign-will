@@ -639,8 +639,8 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
 }
 
 function clampEntityToBounds(ent) {
-  ent.x = Math.max(ent.radius, Math.min(canvas.width - ent.radius, ent.x));
-  ent.y = Math.max(ent.radius, Math.min(canvas.height - ent.radius, ent.y));
+  ent.x = Math.max(ent.radius, Math.min(WORLD_WIDTH - ent.radius, ent.x));
+  ent.y = Math.max(ent.radius, Math.min(WORLD_HEIGHT - ent.radius, ent.y));
 }
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
@@ -674,7 +674,7 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true) {
     boar.targetX = boar.hideTarget.x;
     boar.targetY = boar.hideTarget.y;
   } else {
-    boar.targetX = Math.max(60, Math.min(canvas.width - 60, boar.x + dx / distance * fleeDistance));
-    boar.targetY = Math.max(60, Math.min(canvas.height - 60, boar.y + dy / distance * fleeDistance));
+    boar.targetX = Math.max(60, Math.min(WORLD_WIDTH - 60, boar.x + dx / distance * fleeDistance));
+    boar.targetY = Math.max(60, Math.min(WORLD_HEIGHT - 60, boar.y + dy / distance * fleeDistance));
   }
 }

@@ -114,8 +114,8 @@ function update(dt) {
       b.wanderInterval = 3 + rand() * 3;
       let ang = rand() * Math.PI * 2;
       let dist = 15 + rand() * 35;
-      b.targetX = Math.max(60, Math.min(canvas.width - 60, b.x + Math.cos(ang) * dist));
-      b.targetY = Math.max(60, Math.min(canvas.height - 60, b.y + Math.sin(ang) * dist));
+      b.targetX = Math.max(60, Math.min(WORLD_WIDTH - 60, b.x + Math.cos(ang) * dist));
+      b.targetY = Math.max(60, Math.min(WORLD_HEIGHT - 60, b.y + Math.sin(ang) * dist));
     }
     let dx = (b.targetX !== undefined ? b.targetX : b.x) - b.x;
     let dy = (b.targetY !== undefined ? b.targetY : b.y) - b.y;
@@ -197,8 +197,8 @@ function update(dt) {
       et.summonTimer = 0;
       et.summonsLeft--;
       let spawnPos = {
-        x: Math.max(15, Math.min(canvas.width - 15, et.x + (rand() - 0.5) * 30)),
-        y: Math.max(15, Math.min(canvas.height - 15, et.y + (rand() - 0.5) * 30))
+        x: Math.max(15, Math.min(WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
+        y: Math.max(15, Math.min(WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
       };
       const summoned = createConfiguredEnemy(spawnPos, tentConfig.summonEnemy);
       summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
