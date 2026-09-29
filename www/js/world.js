@@ -566,9 +566,8 @@ function generateMap() {
 
 function resetGame() {
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
-  const startWallet = Object.fromEntries(Object.keys(getWallet()).map(key => [key, 0]));
-  for (const [resource, amount] of Object.entries(GAME_CONFIG.start.resources)) startWallet[getWalletKey(resource)] = amount;
-  applyWallet(startWallet);
+  for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
+  addResources(GAME_CONFIG.start.resources);
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
