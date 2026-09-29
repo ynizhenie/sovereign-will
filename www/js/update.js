@@ -480,6 +480,7 @@ function update(dt) {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       refundEquipment(s);
+      addCorpse(s, 'settler', s.type);
       if (selectedSettler === s) selectedSettler = null;
     }
   });
@@ -488,10 +489,12 @@ function update(dt) {
     if (en.hp <= 0 && !en.rewardGranted) {
       grantEnemyReward(en);
       en.rewardGranted = true;
+      addCorpse(en, 'enemy', en.enemyKey);
     }
   });
   enemies = enemies.filter(en => en.hp > 0);
   enemyTentBlueprints = enemyTentBlueprints.filter(site => enemies.includes(site.builder));
+  updateCorpses(dt);
 
   updateUnitCounts();
   updateUI();
