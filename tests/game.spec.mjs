@@ -331,3 +331,19 @@ test('a resource added only in GAME_CONFIG is gathered, stocked and spent (#45)'
   expect(r.canPay).toBe(true);
   expect(r.afterTool).toBe(0);
 });
+
+test('soldiers push through to enemy tents past summoned raiders; workers keep working (#65)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'tentAssault', {});
+  expect(r.summoned).toBeGreaterThan(0);
+  expect(r.destroyedAt).not.toBeNull();
+  expect(r.fellBack).toBe(0);
+  expect(r.workersAtTent).toBe(0);
+});
+
+test('a settler healing at a tent heals up fully while not attacked (#65)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'healUp', { hpShare: 0.2 });
+  expect(r.reachedTent).toBe(true);
+  expect(r.leftWith).toBe(1);
+});
