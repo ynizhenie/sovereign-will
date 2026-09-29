@@ -50,9 +50,9 @@ function renderConfigHud() {
     });
   }
 
-  const buildActions = document.getElementById('build-actions');
   Object.values(GAME_CONFIG.buildings).forEach(item => {
-    if (buildActions) buildActions.appendChild(createConfigButton(item, setMode));
+    const actions = document.getElementById(`${item.tab || 'build'}-actions`);
+    if (actions) actions.appendChild(createConfigButton(item, setMode));
   });
 
   const toolActions = document.getElementById('tool-actions');

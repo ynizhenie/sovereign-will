@@ -20,7 +20,8 @@ const sim = (page, fn, arg) => page.evaluate(([fn, arg]) => window.sim[fn](arg),
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
-  await expect(page.locator('#build-actions button')).toHaveCount(8);
+  await expect(page.locator('#build-actions button')).toHaveCount(6);
+  await expect(page.locator('#farming-actions button')).toHaveCount(2);
   await expect(page.locator('#tool-actions button')).toHaveCount(5);
   await expect(page.locator('#weapon-actions button')).toHaveCount(6);
 
@@ -330,4 +331,18 @@ test('a resource added only in GAME_CONFIG is gathered, stocked and spent (#45)'
   expect(r.delivered).toBe(2);
   expect(r.canPay).toBe(true);
   expect(r.afterTool).toBe(0);
+});
+
+test('wheat and saplings are planted from the Farming tab (#64)', async ({ page }) => {
+  await openGame(page);
+  await expect(page.locator('#farming-actions button')).toHaveText(['🌾 Пшеница (1🌾)', '🌱 Саженец (1🌱)']);
+  await expect(page.locator('#build-actions #btn-wheat')).toHaveCount(0);
+  await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
+  // picking a crop keeps its placing mode, like the build tab does
+  const mode = await page.evaluate(() => {
+    switchTab(document.querySelector('.tab-btn[onclick*="tab-farming"]'), 'tab-farming');
+    setMode('wheat');
+    return buildMode;
+  });
+  expect(mode).toBe('wheat');
 });

@@ -44,6 +44,7 @@ const GAME_CONFIG = {
     bow: { id: 'bow', label: 'Лук', icon: '🏹', cost: { wood: 15, leather: 5 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } }
   },
+  // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'
   buildings: {
     wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 } },
     wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 } },
@@ -52,8 +53,8 @@ const GAME_CONFIG = {
     tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
     smelter: { id: 'smelter', label: 'Плавильня', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160, smelter: true } },
     watchtower: { id: 'watchtower', label: 'Сторожевая башня', icon: '🗼', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
-    wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 } },
-    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 } }
+    wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming' },
+    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming' }
   },
   // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
   //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
