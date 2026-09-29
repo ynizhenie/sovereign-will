@@ -7,11 +7,13 @@ function gameLoop(now) {
   lastTime = now;
 
   update(dt);
+  fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
   render();
 
   requestAnimationFrame(gameLoop);
 }
 
+fitCanvasToScreen();
 requestAnimationFrame(gameLoop);
 
 const mainMenu = document.getElementById('main-menu');

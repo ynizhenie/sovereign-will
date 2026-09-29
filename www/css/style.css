@@ -84,9 +84,11 @@ html, body {
 }
 
 canvas {
+  /* fills the game area; its pixel size follows it (fitCanvasToScreen in input.js) */
+  position: absolute;
+  inset: 0;
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain;
   display: block;
   cursor: crosshair;
 

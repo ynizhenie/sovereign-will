@@ -31,12 +31,15 @@ const ctx = canvas.getContext('2d', {
 });
 const TILE_SIZE = 30;
 const BORDER_MARGIN = 2;
-const COLS = canvas.width / TILE_SIZE;
-const ROWS = canvas.height / TILE_SIZE;
+// the world's size; the canvas itself follows the screen (see fitCanvasToScreen)
+const WORLD_WIDTH = 1200;
+const WORLD_HEIGHT = 1200;
+const COLS = WORLD_WIDTH / TILE_SIZE;
+const ROWS = WORLD_HEIGHT / TILE_SIZE;
 
 const keys = {};
 let mouse = { x: 0, y: 0 };
-let camera = { x: canvas.width / 2, y: canvas.height / 2, zoom: 1 };
+let camera = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, zoom: 1 };
 let cameraDragging = false;
 let cameraDragPoint = { x: 0, y: 0 };
 
@@ -53,7 +56,7 @@ let buildMode = 'interact';
 let isPaused = false;
 let selectedSettler = null;
 
-const townHall = { x: canvas.width / 2, y: canvas.height / 2, radius: 32, hp: 100, maxHp: 100, repairRequested: false };
+const townHall = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, radius: 32, hp: 100, maxHp: 100, repairRequested: false };
 
 const WORLD = {
   settlers: [],
