@@ -143,10 +143,16 @@ const GAME_CONFIG = {
     population: 5
   },
 
-  // kinds of settlers: stats, how many population slots they take, damage multiplier, and what hiring / upgrading costs
+  // kinds of settlers: stats, how many population slots they take, damage multiplier, and what hiring / upgrading costs.
+  // carryLoads: how many gathered loads (one tree, one boulder, one boar...) it carries before going home
   settlerTypes: {
-    normal: { id: 'normal', label: 'Рабочий', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, hireCost: { food: 15 } },
-    big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
+    normal: { id: 'normal', label: 'Рабочий', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
+    big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
+  },
+
+  // worn by a worker (Tools tab): extraLoads more loads carried; it gathers until full before going home
+  gear: {
+    backpack: { id: 'backpack', label: 'Рюкзак', icon: '🎒', cost: { leather: 5 }, extraLoads: 1 }
   },
 
   // crafted at the town hall into the stock

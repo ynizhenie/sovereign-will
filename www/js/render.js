@@ -513,6 +513,15 @@ function render() {
     ctx.fillStyle = s.isPossessed ? '#3498db' : (s.role === 'worker' ? '#2ecc71' : '#e67e22');
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
 
+    // a backpack on the left side, with a bar for how full it is
+    if (s.backpack) {
+      const bx = s.x - s.visualRadius - 3, by = s.y - 6;
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(bx, by, 6, 12);
+      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, 6, 12);
+      const loads = (s.carrying && s.carrying.loads) || 0;
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(bx + 1, by + 11 - 10 * Math.min(1, loads / getCarryCapacity(s)), 4, 10 * Math.min(1, loads / getCarryCapacity(s)));
+    }
+
     if (s.carrying) {
       let icon = s.carrying.type === 'bundle' ? '📦' : (s.carrying.type === 'food' ? '🍖' : (s.carrying.type === 'wood' ? '🪵' : (s.carrying.type === 'stone' ? '🪨' : (s.carrying.type === 'iron' ? '🔩' : (s.carrying.type === 'ironOre' ? '⛏️' : (s.carrying.type === 'coal' ? '⚫' : (s.carrying.type === 'leather' ? '🟫' : '🌾')))))));
       ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';

@@ -68,6 +68,8 @@ function renderConfigHud() {
   label('btn-upgrade', `${types.big.icon} Улучшить (${formatCost(types.big.upgradeCost)})`);
   label('btn-upgrade-big', `${types.big.icon} Улучшить рабочего (${formatCost(types.big.upgradeCost)})`);
   label('btn-craft-arrows', `${recipes.arrows.icon} ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
+  const backpack = GAME_CONFIG.gear.backpack;
+  label('btn-backpack', `${backpack.icon} ${backpack.label} (${formatCost(backpack.cost)})`);
   label('btn-craft-armor', `${recipes.armor.icon} ${recipes.armor.label} (${formatCost(recipes.armor.cost)})`);
 
   const weaponActions = document.getElementById('weapon-actions');
