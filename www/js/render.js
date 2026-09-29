@@ -319,8 +319,13 @@ function render() {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(t.x - 10, t.y + 8, 20, 3);
       ctx.fillStyle = '#2ecc71'; ctx.fillRect(t.x - 10, t.y + 8, ((t.growProgress || 0) / 20) * 20, 3);
     } else {
-      ctx.fillStyle = '#1e3d14'; ctx.beginPath(); ctx.arc(t.x, t.y, 14, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#2e5d20'; ctx.beginPath(); ctx.arc(t.x - 3, t.y - 3, 9, 0, Math.PI * 2); ctx.fill();
+      // apple trees: a lighter, rounder crown; red apples on it when ripe
+      ctx.fillStyle = t.apple ? '#27501a' : '#1e3d14'; ctx.beginPath(); ctx.arc(t.x, t.y, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = t.apple ? '#3f7a2a' : '#2e5d20'; ctx.beginPath(); ctx.arc(t.x - 3, t.y - 3, 9, 0, Math.PI * 2); ctx.fill();
+      if (t.apple && t.applesReady) {
+        ctx.fillStyle = '#e74c3c';
+        for (const [ax, ay] of [[-6, -5], [5, -7], [6, 4], [-4, 6], [0, -1]]) { ctx.beginPath(); ctx.arc(t.x + ax, t.y + ay, 2.2, 0, Math.PI * 2); ctx.fill(); }
+      }
       drawHarvestProgress(t);
     }
   });

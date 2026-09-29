@@ -38,6 +38,7 @@ function createSettlerTick(dt) {
     repairAssignments: new Map(),    // building -> repairers on it this tick (max 2)
     plantAssignments: new Set(),     // farm zone tiles a farmer is planting this tick
     patients: new Set(),             // settlers a medic is treating this tick
+    appleAssignments: new Set(),     // apple trees someone is picking this tick
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
@@ -552,8 +553,9 @@ function build(s, tick) {
               invalidateAllPaths();
             } else if (bestBp.type === 'wheat') {
               farmPlots.push({ x: bestBp.x, y: bestBp.y, growth: 0, priority: 0, harvestProgress: 0 });
-            } else if (bestBp.type === 'sapling') {
-              trees.push({ x: bestBp.x, y: bestBp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 });
+            } else if (bestBp.type === 'sapling' || bestBp.type === 'apple_sapling') {
+              const tree = { x: bestBp.x, y: bestBp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
+              trees.push(bestBp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
             } else {
               buildings.push(bestBp);
               ejectEntitiesFromTile(bestBp.x, bestBp.y);
@@ -636,6 +638,8 @@ function canSettlerHarvest(s, r, tick) {
   const def = getMapResourceDef(kind);
   if (!def) return false;
   // needs a tool: only settlers carrying one of that family (and trees must be grown)
+  // apple trees are only felled when the player marked one that had no apples
+  if (r.apple && !((r.priority || 0) > 0 && r.markIntent === 'chop')) return false;
   if (def.tool) return hasToolFamily(s.tool, def.tool) && !r.isGrowing;
 
   // gathered by hand: settlers without a tool, or anyone if the player marked it
@@ -843,6 +847,44 @@ function breakOutOfSealedBase(s, tick) {
   return true;
 }
 
+// ---- Apple trees
+
+// Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
+// one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)
+function pickApples(s, tick) {
+  if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.isPossessed || tick.isWaveActive) return false;
+  if (s.carrying && !hasRoomToCarry(s)) return false;
+  const reach = getSettlerReach(s);
+  let target = null, best = Infinity;
+  for (const t of trees) {
+    if (!t.apple || !t.applesReady || tick.appleAssignments.has(t)) continue;
+    const d = getReachDistanceToResource(reach, t) - (t.markIntent === 'apples' && t.priority > 0 ? 1000 : 0);
+    if (d < best) { best = d; target = t; }
+  }
+  if (!target || best === Infinity) return false;
+  tick.appleAssignments.add(target);
+  const spot = getResourceApproachPoint(s, target);
+  if (!spot) return false;
+  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) {
+    moveEntityTowards(s, spot.x, spot.y, s.speed, false, tick.dt);
+    s.pickProgress = 0;
+  } else {
+    s.pickProgress = (s.pickProgress || 0) + tick.dt;
+    const apples = GAME_CONFIG.appleTrees;
+    if (s.pickProgress >= apples.pickSeconds) {
+      s.pickProgress = 0;
+      for (const [item, amount] of Object.entries(apples.yield)) giveResourceToSettler(s, item, amount);
+      addCarryLoad(s);
+      for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) addResources({ [item]: 1 });
+      target.applesReady = false;
+      target.appleGrowth = 0;
+      if (target.markIntent === 'apples') { target.priority = 0; target.markIntent = null; }
+    }
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
 // ---- Farm zones
 
 // What's gathered by hand (grass, sticks, pebbles, bushes) lying on a farm zone tile: workers without a
@@ -928,6 +970,7 @@ const SETTLER_BEHAVIOURS = [
   clearEnemyTents,
   build,
   fish,
+  pickApples,
   harvest,
   tendFarmZones,
   deliverWhenNothingToDo,

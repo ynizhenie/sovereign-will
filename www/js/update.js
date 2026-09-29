@@ -52,6 +52,9 @@ function update(dt) {
         t.isGrowing = false;
         t.hp = 3;
       }
+    } else if (t.apple && !t.applesReady) {
+      t.appleGrowth += dt / GAME_CONFIG.appleTrees.growSeconds;
+      if (t.appleGrowth >= 1) t.applesReady = true;
     }
   });
 
