@@ -35,6 +35,13 @@ window.sim = (() => {
     };
   }
 
+  // Removes every gatherable resource, rock and water from the map
+  function clearResources() {
+    for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars,
+      naturalRocks, waterTiles, farmPlots]) list.length = 0;
+    invalidateAllPaths();
+  }
+
   function placeBuilding(type, x, y) {
     const b = createBuildingBlueprint(type, x, y);
     delete b.progress;
@@ -707,6 +714,8 @@ window.sim = (() => {
   }
 
   return {
+    // for scenarios in tests/scenarios/*.js
+    helpers: { tileCenter, makeSettler, placeBuilding, reachableFromHall, wallRing, clearResources },
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,
