@@ -265,6 +265,10 @@ function handleCanvasClick() {
     if (isBorderZone(gxIdx, gyIdx)) {
       return;
     }
+    if (farmZones.some(z => z.x === gx && z.y === gy)) {
+      showNotification('❌ Здесь зона фермы: сначала уберите зону', true);
+      return;
+    }
     if (!isBuildLocationAllowed(gx, gy)) {
       if (Math.hypot(gx - townHall.x, gy - townHall.y) < townHall.radius + 15) {
         showNotification("❌ Нельзя строить на клетке ратуши", true);
@@ -327,18 +331,30 @@ function handleCanvasClick() {
   }
 }
 
+// A farm zone goes only on grass ground (not sand, water, rock, a building or a blueprint) with nothing
+// on it that needs a tool (a grown tree, boulder, ore, cactus). What's gathered by hand (grass, sticks,
+// pebbles, bushes) is fine: workers clear it (see findZoneBlockers).
+function canBeFarmZone(x, y) {
+  if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return false;
+  const at = o => o.x === x && o.y === y;
+  if (isDesertTile(x, y) || beachTiles.some(at)) return false;
+  if (waterTiles.some(at) || buildings.some(at) || blueprints.some(at)) return false;
+  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
+    if (def.tool && WORLD[def.list].some(o => at(o) && !(kind === 'tree' && o.isGrowing))) return false;
+  }
+  return true;
+}
+
 // Mark tile (x, y) as a farm zone for `crop` ('wheat' / 'sapling'), or unmark it: tapping a tile
-// already in that zone, or with crop 'clear'. Not on water, rock or buildings.
+// already in that zone, or with crop 'clear'. See canBeFarmZone for where it can go.
 function toggleFarmZone(x, y, crop) {
   const existing = farmZones.find(z => z.x === x && z.y === y);
   if (crop === 'clear' || (existing && existing.crop === crop)) {
     if (existing) farmZones.splice(farmZones.indexOf(existing), 1);
     return;
   }
-  const blocked = waterTiles.some(w => w.x === x && w.y === y) || naturalRocks.some(r => r.x === x && r.y === y) ||
-    buildings.some(b => b.x === x && b.y === y) || Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15;
-  if (blocked) {
-    showNotification('❌ Здесь нельзя сажать', true);
+  if (!existing && !canBeFarmZone(x, y)) {
+    showNotification('❌ Зона — только на траве, где нет деревьев, камней и построек', true);
     return;
   }
   if (existing) existing.crop = crop;
