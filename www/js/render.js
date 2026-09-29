@@ -125,6 +125,33 @@ const ORE_COLORS = {
   coal: { body: '#050608', shine: '#6b7785' }
 };
 
+// How the held weapon or tool is posed right now: a rotation around the body and a push forward.
+// A strike (swingT): swords, clubs, fists and tools sweep an arc, spears thrust, bows recoil. Working
+// (chopping, mining, planting...): a steady chop in time with the game's ticks, so replays look the same.
+function getHeldItemPose(unit) {
+  const item = unit.weapon && unit.weapon !== 'fist' ? unit.weapon : (unit.tool && unit.tool !== 'none' ? unit.tool : 'fist');
+  if (unit.swingT > 0) {
+    const p = 1 - unit.swingT / (unit.swingLen || 0.3);
+    const arc = Math.sin(Math.PI * p);
+    if (isBowWeapon(item)) return { angle: 0, push: -3 * arc };
+    if (isSpearWeapon(item)) return { angle: 0, push: 8 * arc };
+    return { angle: -0.9 + 1.8 * p, push: 0 };
+  }
+  if (unit.working > 0) {
+    const beat = Math.sin(pathTick * 0.3);
+    if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
+    if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
+    return { angle: 0.7 * beat - 0.2, push: 0 };
+  }
+  return { angle: 0, push: 0 };
+}
+
+function applyHeldItemPose(unit) {
+  const pose = getHeldItemPose(unit);
+  ctx.rotate(pose.angle);
+  ctx.translate(pose.push, 0);
+}
+
 // Quiver on the back (left edge x), one arrow shown for every 3 left
 function drawQuiver(x, arrows) {
   ctx.fillStyle = '#8e5a2b'; ctx.fillRect(x - 2, -6, 5, 11);
@@ -575,6 +602,8 @@ function render() {
 
     ctx.save();
     ctx.translate(s.x, s.y);
+    ctx.save();
+    applyHeldItemPose(s);
     if (!drawHeldWeapon(s.weapon)) {
     if (s.tool === 'axe' || s.tool === 'iron_axe') {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
@@ -594,6 +623,7 @@ function render() {
       ctx.fillStyle = '#7f8c8d'; ctx.fillRect(19, -1, 3, 7);
     }
     }
+    ctx.restore(); // pose only moves the held item
     if (s.armor === 'iron' || s.hasArmor) {
 	  ctx.strokeStyle = '#95a5a6';
 	  ctx.lineWidth = 3;
@@ -634,7 +664,10 @@ function render() {
     ctx.save();
     ctx.translate(en.x, en.y);
     if (en.type === 'big') ctx.translate(en.radius - 11, 0); // hands at the edge of the larger body
+    ctx.save();
+    applyHeldItemPose(en);
     drawHeldWeapon(en.weapon);
+    ctx.restore();
     if (en.arrows > 0) drawQuiver(-en.radius, en.arrows);
     ctx.restore();
 

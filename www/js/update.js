@@ -353,6 +353,7 @@ function update(dt) {
       if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
         projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
+        startSwing(en, 0.3);
         en.attackCooldown = ranged.cooldown;
         if (quiver) en.arrows--;
       }
@@ -455,6 +456,7 @@ function update(dt) {
 
     const meleeDamage = meleeDef === enemyDef ? en.damage : meleeDef.damage;
     if (inMelee && minDist < attackRange) {
+      if (!(en.swingT > 0)) startSwing(en, 0.5); // keeps swinging while it hits
       if (en.type === 'big') {
         let splashRadius = enemyDef.splash.radius;
         let splashDamage = dt * en.damage * enemyDef.splash.share;
@@ -478,6 +480,8 @@ function update(dt) {
   }
 
   separateSettlersFromEnemies();
+  for (const unit of settlers) tickAnimation(unit, dt);
+  for (const unit of enemies) tickAnimation(unit, dt);
   applySpikeTraps();
 
   settlers.forEach(s => {

@@ -370,6 +370,7 @@ function treatWounded(s, tick) {
     moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
   } else {
     s.healTimer = (s.healTimer || 0) + tick.dt;
+    s.working = 0.1;
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;
       stock.herbs--;
@@ -550,6 +551,7 @@ function build(s, tick) {
           moveEntityTowards(s, bestBp.x, bestBp.y, s.speed, false, dt);
         } else {
           bestBp.progress += dt * 40;
+          s.working = 0.1;
           if (bestBp.progress >= bestBp.maxProgress) {
             if (bestBp.type === 'demolish_building') {
               let bIdx = buildings.indexOf(bestBp.targetBuilding);
@@ -610,6 +612,7 @@ function fish(s, tick) {
       moveEntityTowards(s, fishSpot.x, fishSpot.y, s.speed, false, dt);
     } else {
       fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
+      s.working = 0.1;
       if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
         for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
         addCarryLoad(s);
@@ -724,6 +727,7 @@ function huntBoar(s, boar, tick) {
       makeBoarFlee(boar, s.x, s.y);
       boar.hp -= hunt.damage * hunt.multiplier;
       s.attackCooldown = hunt.cooldown;
+      startSwing(s, Math.min(0.35, hunt.cooldown * 0.8));
       if (boar.hp <= 0) finishHarvest(s, boar, 'boar');
     }
   }
@@ -741,6 +745,7 @@ function workResource(s, assignedRes, tick) {
     return;
   }
   if (def.tool && (!hasToolFamily(s.tool, def.tool) || assignedRes.isGrowing)) return;
+  s.working = 0.1; // animated while at it (see getHeldItemPose)
   const work = def.work;
 
   if (work.pickup) {
@@ -879,6 +884,7 @@ function pickApples(s, tick) {
     s.pickProgress = 0;
   } else {
     s.pickProgress = (s.pickProgress || 0) + tick.dt;
+    s.working = 0.1;
     const apples = GAME_CONFIG.appleTrees;
     if (s.pickProgress >= apples.pickSeconds) {
       s.pickProgress = 0;
@@ -932,6 +938,7 @@ function tendFarmZones(s, tick) {
     s.plantProgress = 0;
   } else {
     s.plantProgress = (s.plantProgress || 0) + tick.dt;
+    s.working = 0.1;
     if (s.plantProgress >= farming.plantSeconds) {
       s.plantProgress = 0;
       const cropId = farming.crops[target.crop];
