@@ -357,7 +357,7 @@ window.sim = (() => {
     let catches = 0;
     const original = giveResourceToSettler;
     window.giveResourceToSettler = function (s, type, amount) {
-      if (type === 'food' && s === settlers[0]) catches++;
+      if (type in GAME_CONFIG.fishing.catch && s === settlers[0]) catches++;
       return original.apply(this, arguments);
     };
     try { run(seconds); } finally { window.giveResourceToSettler = original; }
