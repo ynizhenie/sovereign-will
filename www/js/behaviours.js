@@ -237,23 +237,33 @@ function equip(s, tick) {
   return false;
 }
 
-// Carry whatever the settler holds to the town hall and add it to the stock
+// Carry whatever the settler holds to the town hall and add it to the stock. With room for more loads
+// (a backpack, a big settler) it keeps gathering first, unless a wave is on; see deliverWhenNothingToDo.
 function deliverCarrying(s, tick) {
-  if (s.carrying) {
-    let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-    if (dist > townHall.radius + s.radius) {
-      moveSettlerToTownHall(s, s.speed, tick.dt);
-    } else {
-      let carriedItems = s.carrying.items || [s.carrying];
-      carriedItems.forEach(item => {
-        if (GAME_CONFIG.resources[item.type]) stock[item.type] += item.amount;
-      });
-      s.carrying = null;
-      takeFishingBait(s);
-    }
-    return true;
+  if (!s.carrying || (hasRoomToCarry(s) && !tick.isWaveActive)) return false;
+  goDeliver(s, tick);
+  return true;
+}
+
+// A part-filled load goes home too once there's nothing left to gather
+function deliverWhenNothingToDo(s, tick) {
+  if (!s.carrying) return false;
+  goDeliver(s, tick);
+  return true;
+}
+
+function goDeliver(s, tick) {
+  let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
+  if (dist > townHall.radius + s.radius) {
+    moveSettlerToTownHall(s, s.speed, tick.dt);
+  } else {
+    let carriedItems = s.carrying.items || [s.carrying];
+    carriedItems.forEach(item => {
+      if (GAME_CONFIG.resources[item.type]) stock[item.type] += item.amount;
+    });
+    s.carrying = null;
+    takeFishingBait(s);
   }
-  return false;
 }
 
 // ---- Tents and healing
@@ -549,6 +559,7 @@ function fish(s, tick) {
       fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
       if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
         for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
+        addCarryLoad(s);
         s.bait = false;
         fishSpot.fishTimer = 0;
       }
@@ -821,5 +832,6 @@ const SETTLER_BEHAVIOURS = [
   build,
   fish,
   harvest,
+  deliverWhenNothingToDo,
   patrol
 ];
