@@ -27,8 +27,8 @@ function drawGrassGround() {
 // ---- Terrain that joins up (#79)
 //
 // Water joins water, natural rock joins rock and ore: a tile fills out to the sides where a neighbour
-// of its kind is, and gets a rounded, outlined edge where there isn't one, so lakes and rock masses
-// read as shapes instead of a grid of squares. Shades and details vary per tile (tileVariantHash).
+// of its kind is, and gets an outlined edge where there isn't one (square, no rounding), so lakes and
+// rock masses read as shapes instead of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
 const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
 const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; // water no settler can reach
 const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
@@ -59,8 +59,9 @@ function joinedTilePath(x, y, open, inset, radius) {
 
 // Outline colour on the open sides, then the tile's own shade inside it
 function drawJoinedTile(x, y, open, edgeColor, fillColor) {
-  ctx.fillStyle = edgeColor; joinedTilePath(x, y, open, 1, 8); ctx.fill();
-  ctx.fillStyle = fillColor; joinedTilePath(x, y, open, 3, 6); ctx.fill();
+  // square corners, as the game's author asked; only the joining makes the shapes
+  ctx.fillStyle = edgeColor; joinedTilePath(x, y, open, 1, 0); ctx.fill();
+  ctx.fillStyle = fillColor; joinedTilePath(x, y, open, 3, 0); ctx.fill();
 }
 
 function drawWaterTile(w, reachable, tiles) {
@@ -227,6 +228,7 @@ function render() {
 
   const terrain = getTileIndex();
   desertTiles.forEach(drawDesertTile);
+  beachTiles.forEach(drawDesertTile);
 
   if (buildMode !== 'interact' && buildMode !== 'possess') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';

@@ -70,6 +70,7 @@ const WORLD = {
   waterTiles: [],
   desertTiles: [],
   desertRegion: null,
+  beachTiles: [],       // sand on part of each lake's shore; only drawn, see placeBeaches()
   sticks: [],
   pebbles: [],
   ironOres: [],

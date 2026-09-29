@@ -562,6 +562,48 @@ function generateMap() {
   }
 
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
+  placeBeaches();
+}
+
+// Sand on one stretch of each lake's shore (#79): the tiles touching the water on one side of the lake.
+// The side comes from the lake's own shape, not rand(), so the rest of the seeded map doesn't change.
+// Only drawn: for everything else (building, regrowth, cacti) a beach is ordinary ground.
+const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
+function placeBeaches() {
+  beachTiles = [];
+  const key = (x, y) => `${x},${y}`;
+  const water = new Set(waterTiles.map(w => key(w.x, w.y)));
+  const rock = new Set(naturalRocks.map(r => key(r.x, r.y)));
+  const beach = new Set();
+  const seen = new Set();
+  for (const first of waterTiles) {
+    if (seen.has(key(first.x, first.y))) continue;
+    // one lake: the water tiles joined to this one
+    const lake = [first];
+    seen.add(key(first.x, first.y));
+    for (let i = 0; i < lake.length; i++) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = lake[i].x + dx * TILE_SIZE, y = lake[i].y + dy * TILE_SIZE;
+        if (water.has(key(x, y)) && !seen.has(key(x, y))) { seen.add(key(x, y)); lake.push({ x, y }); }
+      }
+    }
+    const cx = lake.reduce((sum, w) => sum + w.x, 0) / lake.length;
+    const cy = lake.reduce((sum, w) => sum + w.y, 0) / lake.length;
+    const minX = Math.min(...lake.map(w => w.x)), minY = Math.min(...lake.map(w => w.y));
+    const side = (tileVariantHash(minX + lake.length, minY) % 360) * Math.PI / 180;
+    for (const w of lake) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const x = w.x + dx * TILE_SIZE, y = w.y + dy * TILE_SIZE;
+          const g = getGridPos(x, y);
+          if (water.has(key(x, y)) || rock.has(key(x, y)) || beach.has(key(x, y)) || isBorderZone(g.gx, g.gy)) continue;
+          let off = Math.abs(Math.atan2(y - cy, x - cx) - side) % (Math.PI * 2);
+          if (off > Math.PI) off = Math.PI * 2 - off;
+          if (off <= BEACH_SPREAD) { beach.add(key(x, y)); beachTiles.push({ x, y }); }
+        }
+      }
+    }
+  }
 }
 
 function resetGame() {
