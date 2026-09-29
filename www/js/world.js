@@ -566,6 +566,23 @@ function generateMap() {
 
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
   placeBeaches();
+  placeAppleTrees();
+}
+
+// A share of the map's grown trees are apple trees (GAME_CONFIG.appleTrees). Picked by a hash of the
+// tile, not rand(), so the rest of the seeded game stays the same.
+function placeAppleTrees() {
+  const share = GAME_CONFIG.appleTrees.share;
+  for (const t of trees) {
+    if (!t.isGrowing && tileVariantHash(t.x + 7, t.y + 13) % 1000 < share * 1000) makeAppleTree(t);
+  }
+}
+
+function makeAppleTree(tree) {
+  tree.apple = true;
+  tree.appleGrowth = 0;
+  tree.applesReady = false;
+  return tree;
 }
 
 // Sand on one stretch of each lake's shore (#79): the tiles touching the water on one side of the lake.
