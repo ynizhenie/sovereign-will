@@ -1,3 +1,29 @@
+// A few close shades of the base grass color, plus an occasional darker speckle, so the ground
+// isn't one flat repeating fill (#61). Picked per-tile from a coordinate hash, not rand(), so it
+// stays put across frames without disturbing the seeded world-gen RNG sequence.
+const GRASS_SHADES = ['#2d4a22', '#2f4d25', '#2a4620', '#31501f', '#294419', '#2e4b28'];
+
+function tileVariantHash(gx, gy) {
+  let h = Math.imul(gx, 374761393) + Math.imul(gy, 668265263);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+function drawGrassGround() {
+  for (let gy = 0; gy < ROWS; gy++) {
+    for (let gx = 0; gx < COLS; gx++) {
+      const h = tileVariantHash(gx, gy);
+      const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
+      ctx.fillStyle = GRASS_SHADES[h % GRASS_SHADES.length];
+      ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+      if (h % 7 === 0) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(x + 4 + ((h >>> 8) % (TILE_SIZE - 10)), y + 4 + ((h >>> 14) % (TILE_SIZE - 10)), 3, 3);
+      }
+    }
+  }
+}
+
 function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
   const def = getMapResourceDef(getMapResourceKind(resource));
@@ -97,8 +123,7 @@ function render() {
   ctx.translate(canvas.width / 2 - camera.x * camera.zoom, canvas.height / 2 - camera.y * camera.zoom);
   ctx.scale(camera.zoom, camera.zoom);
 
-  ctx.fillStyle = '#2d4a22';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawGrassGround();
 
   ctx.fillStyle = '#2d4a22';
   ctx.fillRect(0, 0, canvas.width, BORDER_MARGIN * TILE_SIZE);
