@@ -51,6 +51,9 @@ const GAME_CONFIG = {
   buildings: {
     wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 }, towerArrowsPass: true },
+    // trap: every unit stepping onto it takes `damage`; it breaks after `uses` steps. Settlers walk
+    // around it; enemies too, unless there's no other way (then it's cheaper for them than a wall)
+    spikes: { id: 'spikes', label: 'Шипы', icon: '🔺', cost: { wood: 6, iron: 2 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5 } }, arrowsPass: true },
     door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },

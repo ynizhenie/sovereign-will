@@ -32,7 +32,8 @@ function getTileIndex() {
     rockAndOre: keys([...naturalRocks, ...ironOres, ...coalOres]), // rock tiles that draw joined up
     solids: keys([...boulders, ...cacti, ...ironOres, ...coalOres]),
     buildings: keys(buildings),
-    walls: keys(buildings.filter(b => b.type !== 'door')),
+    walls: keys(buildings.filter(b => b.type !== 'door' && b.type !== 'spikes')),
+    spikes: keys(buildings.filter(b => b.type === 'spikes')),
     // what stops arrows (see blocksArrows / arrowsPass / towerArrowsPass in GAME_CONFIG)
     arrowBlockers: keys(Object.values(GAME_CONFIG.mapResources).filter(def => def.blocksArrows)
       .flatMap(def => WORLD[def.list].filter(o => !o.isGrowing))),
@@ -74,7 +75,7 @@ function computeTileBlockedForSettler(gx, gy) {
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
 
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.walls.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  return tiles.walls.has(k) || tiles.spikes.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -328,14 +329,18 @@ function findPathAStarPermissive(startX, startY, targetX, targetY) {
   endG.gx = Math.max(0, Math.min(COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(ROWS - 1, endG.gy));
   const tiles = getTileIndex();
-  const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || tiles.buildings.has(k);
-  return findGridPath(startG, endG, targetX, targetY, {
+  const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || (tiles.buildings.has(k) && !tiles.spikes.has(k));
+  const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: isTileBlockedForEnemyPermissive,
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
-    extraCost: (x, y) => (isBreakable(`${x},${y}`) ? 10 : 0)
+    // spikes hurt but can be walked over: cheaper than breaking through
+    extraCost: (x, y) => (isBreakable(`${x},${y}`) ? 10 : (tiles.spikes.has(`${x},${y}`) ? 3 : 0))
   });
+  // a way in over spikes only needs nothing broken: the enemy just walks it (see update())
+  if (result.path.length > 0 && !result.path.some(p => isBreakable(`${p.x},${p.y}`))) result.isBlockedPath = false;
+  return result;
 }
 
 function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
@@ -447,6 +452,37 @@ function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
 // Settlers and enemies never stand inside each other: push every overlapping pair apart, each by half
 // (or one by all of it when the other would be pushed into a wall). Runs once a tick after movement;
 // a few rounds, since pushing one pair apart can push a unit into its neighbour.
+// Whether an enemy's current path goes over a spike trap (see pathViaSpikes)
+function pathCrossesSpikes(en) {
+  if (!en.path || en.path.length === 0) return false;
+  const tiles = getTileIndex();
+  return en.path.some(p => tiles.spikes.has(`${p.x},${p.y}`));
+}
+
+// Spike traps: a unit stepping onto a spike tile takes its damage once per visit; each visit uses one
+// of the trap's uses, and it breaks when they run out. Runs once a tick after movement.
+function applySpikeTraps() {
+  const tiles = getTileIndex();
+  if (tiles.spikes.size === 0) return;
+  const spikesAt = new Map(buildings.filter(b => b.type === 'spikes').map(b => [`${b.x},${b.y}`, b]));
+  const step = (unit, hurt) => {
+    const g = getGridPos(unit.x, unit.y);
+    const key = `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`;
+    const trap = spikesAt.get(key);
+    if (!trap) { unit.spikeTile = null; return; }
+    if (unit.spikeTile === key || trap.usesLeft <= 0) return;
+    unit.spikeTile = key;
+    hurt(getDefinition('buildings', 'spikes').build.trap.damage);
+    trap.usesLeft--;
+    if (trap.usesLeft <= 0) {
+      buildings.splice(buildings.indexOf(trap), 1);
+      invalidateAllPaths();
+    }
+  };
+  for (const s of settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
+  for (const en of enemies) step(en, damage => { en.hp -= damage; });
+}
+
 function separateSettlersFromEnemies() {
   for (let round = 0; round < 4; round++) {
     if (!separateSettlersFromEnemiesOnce()) return;
@@ -500,6 +536,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
     entity.isBlockedPath = res.isBlockedPath || false;
+    if (isEnemy) entity.pathViaSpikes = pathCrossesSpikes(entity); // kept while the path is dropped and retried
     entity.pathTarget = { x: targetX, y: targetY };
     if (isEnemy) entity.pathTimer = 1.0;
 
