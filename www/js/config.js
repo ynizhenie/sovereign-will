@@ -116,8 +116,9 @@ const GAME_CONFIG = {
     grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { food: 4 }, work: { seconds: 2.5 } },
-    // boars are hunted rather than worked (see huntBoar); this is what one gives
-    boar: { list: 'boars', hp: 40, yield: { food: 6, leather: 2 }, clearsPath: true }
+    // boars are hunted rather than worked (see huntBoar); this is what one gives.
+    // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
+    boar: { list: 'boars', hp: 40, yield: { food: 6, leather: 2 }, clearsPath: true, wary: 100 }
   },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock

@@ -371,6 +371,34 @@ window.sim = (() => {
     return { count0, rightAfter, beforeMinDelay, afterMaxDelay: trees.length };
   }
 
+  // Clicking a boar directly deals the wielded weapon's hunt damage, not a fixed amount (#62)
+  function boarHuntDamage({ seed = 'boar-damage-test', weapon = 'fist', tool = 'none' } = {}) {
+    start(seed);
+    const hx = townHall.x, hy = townHall.y;
+    boars = [{ x: hx + 40, y: hy, hp: 999, maxHp: 999, priority: 0 }];
+    const hunter = makeSettler(1, hx, hy, { weapon, tool });
+    settlers = [hunter];
+    const before = boars[0].hp;
+    harvestResourceDirect(boars[0], hunter);
+    return before - boars[0].hp;
+  }
+
+  // A boar flees the moment a settler gets close, even without being attacked first (#62)
+  function boarFlee({ seed = 'boar-flee-test', seconds = 1 } = {}) {
+    start(seed);
+    // clear obstacles so the flee movement itself is never the thing under test here
+    for (const list of [trees, cacti, boulders, naturalRocks, ironOres, coalOres, waterTiles]) list.length = 0;
+    const hx = townHall.x, hy = townHall.y;
+    boars = [{ x: hx + 200, y: hy, hp: 40, maxHp: 40, priority: 0, wanderTimer: 0, wanderInterval: 999, targetX: hx + 200, targetY: hy }];
+    settlers = [makeSettler(1, hx + 220, hy)];
+    invalidateAllPaths();
+    const b = boars[0], s = settlers[0];
+    const startDist = Math.hypot(b.x - s.x, b.y - s.y);
+    let sawFlee = false;
+    run(seconds, { each: () => { if (b.fleeTimer > 0) sawFlee = true; } });
+    return { sawFlee, hid: !!b.hidden, movedAway: Math.hypot(b.x - s.x, b.y - s.y) > startDist };
+  }
+
   // Largest group of boulders on 4-connected tiles, per seed
   function largestBoulderPiles(seeds) {
     return seeds.map(seed => {
@@ -466,6 +494,6 @@ window.sim = (() => {
   return {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
-    markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares
+    markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, boarHuntDamage, boarFlee
   };
 })();
