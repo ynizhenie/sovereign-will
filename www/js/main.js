@@ -20,11 +20,23 @@ const mainMenu = document.getElementById('main-menu');
 const playButton = document.getElementById('play-button');
 const waveOptions = document.querySelectorAll('.wave-option');
 
+const waveCustom = document.getElementById('wave-custom');
+const mapOptions = document.querySelectorAll('.map-option');
+const mapCustom = document.querySelector('.map-custom');
+const clampInput = (input, fallback) => {
+    const value = Math.round(Number(input.value));
+    return Number.isFinite(value) ? Math.max(Number(input.min), Math.min(Number(input.max), value)) : fallback;
+};
+
+// wave interval: a preset, or "custom" with its own number of seconds
+const applyCustomWave = () => { waveInterval = clampInput(waveCustom, 90); waveTimer = waveInterval; };
 waveOptions.forEach(button => {
     const selectWave = (e) => {
         e.preventDefault();
-        waveInterval = Number(button.dataset.waveInterval);
-        waveTimer = waveInterval;
+        const custom = button.dataset.waveInterval === 'custom';
+        waveCustom.hidden = !custom;
+        if (custom) applyCustomWave();
+        else { waveInterval = Number(button.dataset.waveInterval); waveTimer = waveInterval; }
 
         waveOptions.forEach(btn => {
             btn.classList.remove('active');
@@ -36,6 +48,23 @@ waveOptions.forEach(button => {
     button.addEventListener('click', selectWave);
     button.addEventListener('touchend', selectWave);
 });
+waveCustom.addEventListener('change', applyCustomWave);
+
+// map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
+const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
+const applyCustomMap = () => { mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
+mapOptions.forEach(button => {
+    onTap(button, () => {
+        const custom = button.dataset.mapSize === 'custom';
+        mapCustom.hidden = !custom;
+        if (custom) applyCustomMap();
+        else { const size = Number(button.dataset.mapSize); mapSettings = { cols: size, rows: size }; }
+        mapOptions.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+    });
+});
+mapColsInput.addEventListener('change', applyCustomMap);
+mapRowsInput.addEventListener('change', applyCustomMap);
 
 const startGame = (e) => {
     if (e) e.preventDefault();
