@@ -35,6 +35,7 @@ function createSettlerTick(dt) {
     workerAssignments: new Map(),    // marked resource -> settlers on it this tick
     blueprintAssignments: new Map(), // blueprint -> builders on it this tick (max 3)
     repairAssignments: new Map(),    // building -> repairers on it this tick (max 2)
+    plantAssignments: new Set(),     // farm zone tiles a farmer is planting this tick
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
@@ -581,7 +582,7 @@ function canSettlerHarvest(s, r, tick) {
   if (r.isCarcass) return r.collector === s;
   if (kind === 'boar') {
     if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
-    if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool)) return false;
+    if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool) || hasToolFamily(s.tool, 'hoe')) return false;
     if (r.hidden || r.hideTarget) return false;
     let hasNothing = (s.tool === 'none' && s.weapon === 'fist');
     let hasRod = (s.tool === 'rod');
@@ -597,6 +598,7 @@ function canSettlerHarvest(s, r, tick) {
 
   // gathered by hand: settlers without a tool, or anyone if the player marked it
   if (kind === 'farm' && !(r.growth >= 100)) return false;
+  if (kind === 'farm' && hasToolFamily(s.tool, 'hoe')) return true; // farmers harvest ripe wheat
   let hasPriority = (r.priority || 0) > 0;
   return s.tool === 'none' || hasPriority;
 }
@@ -799,6 +801,44 @@ function breakOutOfSealedBase(s, tick) {
   return true;
 }
 
+// ---- Farm zones
+
+// Farmers (a worker with a hoe) plant the empty tiles of the player's farm zones, nearest first; one
+// farmer per tile. Planting takes GAME_CONFIG.farming.plantSeconds and costs the crop's building cost.
+function tendFarmZones(s, tick) {
+  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'hoe') || s.carrying || s.isPossessed || tick.isWaveActive) return false;
+  const farming = GAME_CONFIG.farming;
+  const reach = getSettlerReach(s);
+  let target = null, best = Infinity;
+  for (const zone of farmZones) {
+    if (tick.plantAssignments.has(zone) || isTileOccupied(zone.x, zone.y)) continue;
+    const crop = getDefinition('buildings', farming.crops[zone.crop]);
+    if (!crop || !canAfford(crop.cost || {})) continue;
+    const g = getGridPos(zone.x, zone.y);
+    const steps = getReachSteps(reach, g.gx, g.gy);
+    if (steps !== -1 && steps < best) { best = steps; target = zone; }
+  }
+  if (!target) { s.plantProgress = 0; return false; }
+  tick.plantAssignments.add(target);
+  if (Math.hypot(target.x - s.x, target.y - s.y) > 12) {
+    moveEntityTowards(s, target.x, target.y, s.speed, false, tick.dt);
+    s.plantProgress = 0;
+  } else {
+    s.plantProgress = (s.plantProgress || 0) + tick.dt;
+    if (s.plantProgress >= farming.plantSeconds) {
+      s.plantProgress = 0;
+      const cropId = farming.crops[target.crop];
+      payCost(getDefinition('buildings', cropId).cost || {});
+      if (cropId === 'wheat') farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
+      else trees.push({ x: target.x, y: target.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 });
+      ejectEntitiesFromTile(target.x, target.y);
+      resetTileIndex();
+    }
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
 // Nothing else to do: wander near the town hall (shown with an idle icon, see render())
 function patrol(s, tick) {
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
@@ -832,6 +872,7 @@ const SETTLER_BEHAVIOURS = [
   build,
   fish,
   harvest,
+  tendFarmZones,
   deliverWhenNothingToDo,
   patrol
 ];
