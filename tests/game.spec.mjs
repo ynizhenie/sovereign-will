@@ -2,20 +2,10 @@
 // Thresholds come from measurements after the pathfinding fixes (#1, #2); a failure here usually means
 // enemies or settlers got stuck again, or a change made the simulation much slower.
 import { test, expect } from '@playwright/test';
+import { openGame, sim } from './helpers.mjs';
 
 // Rock-heavy seeds: large natural rock masses with narrow corridors
 const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
-
-async function openGame(page) {
-  const errors = [];
-  page.on('pageerror', e => errors.push(e.message));
-  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto('/');
-  await page.addScriptTag({ path: 'tests/sim.js' });
-  return errors;
-}
-
-const sim = (page, fn, arg) => page.evaluate(([fn, arg]) => window.sim[fn](arg), [fn, arg]);
 
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
