@@ -236,13 +236,38 @@ function updateTowerArrowLoader(settler, tower, dt) {
   return true;
 }
 
+// Where a guard climbs down: the free tile next to the tower (then further out) that can be walked to from
+// the town hall, nearest the side it faces, so it never lands inside a wall or in a sealed pocket
+function findTowerExit(tower, settler) {
+  const start = getGridPos(tower.x, tower.y);
+  const hallReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+  const facing = Math.atan2(settler.y - tower.y, settler.x - tower.x) || 0;
+  for (let ring = 1; ring <= 4; ring++) {
+    let best = null, bestScore = Infinity;
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+        const gx = start.gx + dx, gy = start.gy + dy;
+        if (isTileBlockedForSettler(gx, gy) || getReachSteps(hallReach, gx, gy) === -1) continue;
+        let turn = Math.abs(Math.atan2(dy, dx) - facing) % (Math.PI * 2);
+        if (turn > Math.PI) turn = Math.PI * 2 - turn;
+        const score = turn + (dx !== 0 && dy !== 0 ? 0.5 : 0); // straight sides before corners
+        if (score < bestScore) { bestScore = score; best = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 }; }
+      }
+    }
+    if (best) return best;
+  }
+  return { x: tower.x + Math.cos(facing) * 34, y: tower.y + Math.sin(facing) * 34 }; // walled in: as before
+}
+
 function releaseTowerGuard(settler) {
   const tower = settler.towerAssignment;
   if (!tower) return;
   tower.guards = tower.guards.filter(guard => guard !== settler);
-  const angle = Math.atan2(settler.y - tower.y, settler.x - tower.x);
-  settler.x = tower.x + Math.cos(angle || 0) * 34;
-  settler.y = tower.y + Math.sin(angle || 0) * 34;
+  const spot = findTowerExit(tower, settler);
+  settler.x = spot.x;
+  settler.y = spot.y;
+  settler.path = null;
   settler.towerAssignment = null;
 }
 
