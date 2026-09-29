@@ -57,3 +57,8 @@ function onTap(element, action) {
 
 onTap(document.getElementById('resume-button'), () => setPaused(false));
 onTap(document.getElementById('exit-to-menu-button'), exitToMainMenu);
+
+// the small button next to the seed: a new random seed
+onTap(document.getElementById('seed-reroll'), () => {
+  document.getElementById('seed-input').value = createDefaultSeed();
+});
