@@ -19,7 +19,9 @@ const GAME_CONFIG = {
     pickaxe: { id: 'pickaxe', label: 'Кирка', icon: '⛏️', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10, huntDamage: 15 },
     iron_axe: { id: 'iron_axe', label: 'Железный топор', icon: '🔩', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18, huntDamage: 22 },
     iron_pickaxe: { id: 'iron_pickaxe', label: 'Железная кирка', icon: '🔩', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13, huntDamage: 21 },
-    rod: { id: 'rod', label: 'Удочка', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 }
+    rod: { id: 'rod', label: 'Удочка', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 },
+    // farmers: plant the farm zones (see farming) and harvest ripe wheat
+    hoe: { id: 'hoe', label: 'Мотыга', icon: '🌿', cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 }
   },
   // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
   // combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the settler
@@ -132,6 +134,10 @@ const GAME_CONFIG = {
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
   // (a possessed settler clicking water next to it gets a catch at once, without rod or bait)
+  // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
+  // which is the building of that id (its cost is the seed), taking plantSeconds per tile
+  farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling' } },
+
   fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
 
   // ---- Colony

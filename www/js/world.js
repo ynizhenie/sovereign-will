@@ -241,10 +241,9 @@ function addMapResource(kind, x, y) {
   return resource;
 }
 
+// Whether the tool belongs to that family (GAME_CONFIG.tools.*.family: axe, pickaxe, rod, hoe)
 function hasToolFamily(tool, family) {
-  if (family === 'axe') return hasAxeTool(tool);
-  if (family === 'pickaxe') return hasPickaxeTool(tool);
-  return false;
+  return getToolFamily(tool) === family;
 }
 
 // A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
@@ -615,7 +614,7 @@ function resetGame() {
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
-  projectiles = []; farmPlots = []; boars = []; selectedSettler = null; pendingRespawns = [];
+  projectiles = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
   generateMap();
   resetTileIndex();
