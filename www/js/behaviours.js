@@ -73,16 +73,17 @@ function loadTowerArrows(s, tick) {
   return false;
 }
 
-// Smelters take one settler at a time for each job: `supplier` brings ore/coal, `collector` takes the
-// iron. A claim lasts while its settler keeps at it (renewed every tick); anyone else skips the smelter.
-function claimSmelterJob(smelter, job, s) {
+// Some buildings take one settler at a time for each job: a smelter's `supplier` (brings ore/coal) and
+// `collector` (takes the iron), a campfire's `cook`. A claim lasts while its settler keeps at it
+// (renewed every tick); anyone else skips that building.
+function claimBuildingJob(smelter, job, s) {
   const claim = smelter[job];
   if (claim && claim.settler !== s && settlers.includes(claim.settler) && pathTick - claim.tick <= 1) return false;
   smelter[job] = { settler: s, tick: pathTick };
   return true;
 }
 
-function isSmelterJobFree(smelter, job, s) {
+function isBuildingJobFree(smelter, job, s) {
   const claim = smelter[job];
   return !claim || claim.settler === s || !settlers.includes(claim.settler) || pathTick - claim.tick > 1;
 }
@@ -90,9 +91,9 @@ function isSmelterJobFree(smelter, job, s) {
 // Pick up smelted iron and carry it home
 function collectSmelterIron(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
-    let smelterWithIron = buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isSmelterJobFree(b, 'collector', s));
+    let smelterWithIron = buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isBuildingJobFree(b, 'collector', s));
     if (smelterWithIron) {
-      claimSmelterJob(smelterWithIron, 'collector', s);
+      claimBuildingJob(smelterWithIron, 'collector', s);
       let dist = Math.hypot(smelterWithIron.x - s.x, smelterWithIron.y - s.y);
       if (dist > (smelterWithIron.radius || 15) + s.radius + 8) {
         moveEntityTowards(s, smelterWithIron.x, smelterWithIron.y, s.speed, false, tick.dt);
@@ -113,9 +114,9 @@ function supplySmelter(s, tick) {
     const limits = getSmelterLimits();
     for (const [resource, loaded, max] of [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]]) {
       if (stock[resource] <= 0) continue;
-      const smelter = buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isSmelterJobFree(b, 'supplier', s));
+      const smelter = buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
       if (!smelter) continue;
-      claimSmelterJob(smelter, 'supplier', s);
+      claimBuildingJob(smelter, 'supplier', s);
       let distToTH = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTH > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
@@ -139,7 +140,7 @@ function deliverToSmelter(s, tick) {
       s.carrying = null;
       return true;
     }
-    claimSmelterJob(targetSmelter, 'supplier', s);
+    claimBuildingJob(targetSmelter, 'supplier', s);
     let dist = Math.hypot(targetSmelter.x - s.x, targetSmelter.y - s.y);
     if (dist > (targetSmelter.radius || 15) + s.radius + 8) {
       moveEntityTowards(s, targetSmelter.x, targetSmelter.y, s.speed, false, tick.dt);
@@ -894,6 +895,47 @@ function pickApples(s, tick) {
   return true;
 }
 
+// ---- Cooking
+
+// When ready food runs low, a worker with no tool cooks raw food from the stock at a campfire, one cook
+// per campfire (GAME_CONFIG.cooking). Each piece takes `seconds`; fuel is burnt from the stock as needed.
+function cook(s, tick) {
+  if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
+  const cooking = GAME_CONFIG.cooking;
+  if (stock.food >= cooking.cookWhenFoodBelow) return false;
+  const raw = cooking.raw.find(r => stock[r] > 0);
+  if (!raw) return false;
+  const fire = buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && (b.fuelLeft > 0 || findFuel()))
+    .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+  if (!fire) return false;
+  claimBuildingJob(fire, 'cook', s);
+  if (Math.hypot(fire.x - s.x, fire.y - s.y) > 32) {
+    moveEntityTowards(s, fire.x, fire.y, s.speed, false, tick.dt);
+    s.cookProgress = 0;
+  } else {
+    s.cookProgress = (s.cookProgress || 0) + tick.dt;
+    fire.burning = 1; // drawn lit for a moment
+    if (s.cookProgress >= cooking.seconds) {
+      s.cookProgress = 0;
+      if (!(fire.fuelLeft > 0)) {
+        const fuel = findFuel();
+        stock[fuel]--;
+        fire.fuelLeft = cooking.fuel[fuel];
+      }
+      fire.fuelLeft--;
+      stock[raw]--;
+      stock.food += cooking.makes;
+    }
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
+// The fuel the stock has, coal before wood (see GAME_CONFIG.cooking.fuel)
+function findFuel() {
+  return Object.keys(GAME_CONFIG.cooking.fuel).find(f => stock[f] > 0) || null;
+}
+
 // ---- Farm zones
 
 // What's gathered by hand (grass, sticks, pebbles, bushes) lying on a farm zone tile: workers without a
@@ -979,6 +1021,7 @@ const SETTLER_BEHAVIOURS = [
   clearEnemyTents,
   build,
   fish,
+  cook,
   pickApples,
   harvest,
   tendFarmZones,

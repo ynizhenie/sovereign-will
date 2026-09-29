@@ -1,6 +1,10 @@
 const GAME_CONFIG = {
   resources: {
+    // food: ready to eat (berries, apples, and anything cooked); the raw kinds need a campfire (cooking)
     food: { id: 'food', label: 'Еда', icon: '🍞', type: 'resource' },
+    rawMeat: { id: 'rawMeat', label: 'Сырое мясо', icon: '🥩', type: 'resource' },
+    rawFish: { id: 'rawFish', label: 'Сырая рыба', icon: '🐟', type: 'resource' },
+    wheat: { id: 'wheat', label: 'Зерно', icon: '🌽', type: 'resource' },
     wood: { id: 'wood', label: 'Дерево', icon: '🪵', type: 'resource' },
     stone: { id: 'stone', label: 'Камень', icon: '🪨', type: 'resource' },
     coal: { id: 'coal', label: 'Уголь', icon: '⚫', type: 'resource' },
@@ -60,6 +64,7 @@ const GAME_CONFIG = {
     door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
+    campfire: { id: 'campfire', label: 'Костёр', icon: '🔥', cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
     smelter: { id: 'smelter', label: 'Плавильня', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
       // holds at most maxOre ore and maxCoal coal; one ore + one coal make one iron every `seconds`, up to
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
@@ -133,10 +138,10 @@ const GAME_CONFIG = {
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, bonusChance: { herbs: 0.25 }, medicYield: { herbs: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
-    farm: { list: 'farmPlots', yield: { food: 4 }, work: { seconds: 2.5 } },
+    farm: { list: 'farmPlots', yield: { wheat: 4 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
     // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
-    boar: { list: 'boars', hp: 40, yield: { food: 6, leather: 2 }, clearsPath: true,
+    boar: { list: 'boars', hp: 40, yield: { rawMeat: 6, leather: 2 }, clearsPath: true,
       // wary: backs off from a settler this close, at waryFleeSpeed (slower than settlers, so it can be
       // caught); fleeSpeed: its sprint once it's actually hit
       wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35 }
@@ -155,7 +160,12 @@ const GAME_CONFIG = {
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },
 
-  fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
+  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: { wheatSeeds: 1 } },
+
+  // campfires: when ready food is below cookWhenFoodBelow, a worker with no tool (one per campfire) cooks
+  // raw food from the stock there, one piece per `seconds` into `makes` food. Fuel from the stock: one
+  // unit burns for `fuel[resource]` pieces (coal first, then wood).
+  cooking: { cookWhenFoodBelow: 20, seconds: 1.5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 8, wood: 4 } },
 
   // ---- Colony
 
