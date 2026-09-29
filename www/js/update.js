@@ -27,7 +27,7 @@ function update(dt) {
   foodTimer -= dt;
   if (foodTimer <= 0) {
     let mealCost = settlers.reduce((sum, s) => sum + (s.type === 'big' ? 2 : 1), 0);
-    food = Math.max(0, food - mealCost);
+    stock.food = Math.max(0, stock.food - mealCost);
     foodTimer = 25;
   }
 

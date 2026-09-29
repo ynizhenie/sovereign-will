@@ -1,7 +1,7 @@
 // A fisher at the town hall takes one seed as bait for the next catch
 function takeFishingBait(s) {
   const bait = GAME_CONFIG.fishing.bait;
-  if (s.tool === 'rod' && !s.bait && canAfford(getWallet(), bait)) {
+  if (s.tool === 'rod' && !s.bait && canAfford(bait)) {
     payCost(bait);
     s.bait = true;
   }
@@ -101,18 +101,14 @@ function invalidateAllPaths() {
 
 function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
   // refund exactly what the item cost, as defined in GAME_CONFIG
-  let wallet = getWallet();
   for (const item of [getDefinition('weapons', settler.weapon), getDefinition('tools', settler.tool)]) {
-    for (const [resource, amount] of Object.entries((item && item.cost) || {})) {
-      wallet = spendResources(wallet, { [resource]: -amount });
-    }
+    addResources((item && item.cost) || {});
   }
-  applyWallet(wallet);
 
   if (includeArmor && settler.armor === 'iron') addResources(GAME_CONFIG.recipes.armor.cost);
   if (includeQuiver && settler.quiver) {
-    leather += 5;
-    arrowsStock += settler.arrows || 0;
+    stock.leather += 5;
+    stock.arrows += settler.arrows || 0;
   }
 }
 
@@ -312,8 +308,7 @@ function assignTool(toolType) {
   }
 
   const cost = item.cost || {};
-  const wallet = getWallet();
-  if (!canAfford(wallet, cost)) {
+  if (!canAfford(cost)) {
     showCostError(cost, '❌ Не хватает ресурсов! Нужны');
     return;
   }
@@ -336,7 +331,7 @@ function assignTool(toolType) {
     return;
   }
 
-  applyWallet(spendResources(wallet, cost));
+  payCost(cost);
   target.targetEquipment = { weapon: 'fist', tool: toolType, role: 'worker' };
   showNotification('✅ Выдан инструмент (' + item.label + ')', false);
 }
@@ -349,8 +344,7 @@ function craftWeapon(type) {
   }
 
   const cost = item.cost || {};
-  const wallet = getWallet();
-  if (!canAfford(wallet, cost)) {
+  if (!canAfford(cost)) {
     showCostError(cost, '❌ Не хватает ресурсов! Нужно');
     return;
   }
@@ -368,7 +362,7 @@ function craftWeapon(type) {
     return;
   }
 
-  applyWallet(spendResources(wallet, cost));
+  payCost(cost);
   target.targetEquipment = { weapon: type, tool: 'none', role: type === 'bow' ? 'archer' : 'soldier' };
   if (type === 'bow') {
     target.targetEquipment.quiver = true;
@@ -385,7 +379,7 @@ function craftArrows() {
     return;
   }
   const recipe = GAME_CONFIG.recipes.arrows;
-  if (!canAfford(getWallet(), recipe.cost)) {
+  if (!canAfford(recipe.cost)) {
     showCostError(recipe.cost, `❌ ${recipe.label}: нужно`);
     return;
   }
@@ -397,7 +391,7 @@ function craftArrows() {
 
 function craftArmor() {
   const recipe = GAME_CONFIG.recipes.armor;
-  if (canAfford(getWallet(), recipe.cost)) {
+  if (canAfford(recipe.cost)) {
     payCost(recipe.cost);
     addResources(recipe.produces);
     showNotification("✅ Железная броня создана и отправлена на склад Ратуши!", false);
@@ -418,12 +412,12 @@ function equipArmorToSelected() {
     showNotification("⚠️ У этого поселенца уже есть железная броня!", true);
     return;
   }
-  if (armorStock <= 0) {
+  if (stock.armor <= 0) {
     showNotification("❌ На складе Ратуши нет готовой брони! Сначала скрафтьте её.", true);
     return;
   }
 
-  armorStock--;
+  stock.armor--;
   target.armor = 'iron';
   target.hasArmor = true;
   const hpBonus = GAME_CONFIG.recipes.armor.hpBonus;
@@ -481,7 +475,7 @@ function spawnSettler(type = 'normal') {
     showNotification("⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)", true);
     return;
   }
-  if (!canAfford(getWallet(), settlerType.hireCost)) {
+  if (!canAfford(settlerType.hireCost)) {
     showCostError(settlerType.hireCost, `❌ ${settlerType.label}: нужно`);
     return;
   }
@@ -503,7 +497,7 @@ function upgradeToBig(target) {
     showNotification("⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)", true);
     return;
   }
-  if (!canAfford(getWallet(), big.upgradeCost)) {
+  if (!canAfford(big.upgradeCost)) {
     showCostError(big.upgradeCost, `❌ Улучшение в ${big.label}а: нужно`);
     return;
   }
@@ -527,12 +521,8 @@ function setMode(mode) {
   const item = getDefinition('buildings', mode);
   if (!item) return;
 
-  const wallet = getWallet();
-  if (!canAfford(wallet, item.cost || {})) {
-    const missing = Object.entries(item.cost || {})
-      .filter(([key, amount]) => Number(wallet[key] || 0) < Number(amount || 0))
-      .map(([key, amount]) => `${Number(amount) - Number(wallet[key] || 0)}${getResourceIcon(key)}`)
-      .join(', ');
+  if (!canAfford(item.cost || {})) {
+    const missing = getMissingCost(item.cost || {});
     showNotification('💡 ' + item.label + ' стоит ' + formatCost(item.cost || {}) + ' (у вас не хватает ' + missing + ')', true);
   }
 }

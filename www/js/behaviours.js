@@ -85,25 +85,25 @@ function supplySmelter(s, tick) {
     let smelterNeedsOre = buildings.find(b => b.type === 'smelter' && (b.oreLoaded || 0) < 10);
     let smelterNeedsCoal = buildings.find(b => b.type === 'smelter' && (b.coalLoaded || 0) < 10);
 
-    if (ironOreStock > 0 && smelterNeedsOre) {
+    if (stock.ironOre > 0 && smelterNeedsOre) {
       let distToTH = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTH > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
       } else {
-        let amountToTake = Math.min(ironOreStock, 2);
-        ironOreStock -= amountToTake;
+        let amountToTake = Math.min(stock.ironOre, 2);
+        stock.ironOre -= amountToTake;
         s.carrying = { type: 'smelterDelivery', resource: 'ironOre', amount: amountToTake, targetSmelter: smelterNeedsOre };
       }
       return true;
     }
 
-    if (coal > 0 && smelterNeedsCoal) {
+    if (stock.coal > 0 && smelterNeedsCoal) {
       let distToTH = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTH > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
       } else {
-        let amountToTake = Math.min(coal, 2);
-        coal -= amountToTake;
+        let amountToTake = Math.min(stock.coal, 2);
+        stock.coal -= amountToTake;
         s.carrying = { type: 'smelterDelivery', resource: 'coal', amount: amountToTake, targetSmelter: smelterNeedsCoal };
       }
       return true;
@@ -117,8 +117,7 @@ function deliverToSmelter(s, tick) {
   if (s.carrying && s.carrying.type === 'smelterDelivery') {
     let targetSmelter = s.carrying.targetSmelter;
     if (!buildings.includes(targetSmelter)) {
-      if (s.carrying.resource === 'ironOre') ironOreStock += s.carrying.amount;
-      if (s.carrying.resource === 'coal') coal += s.carrying.amount;
+      stock[s.carrying.resource] += s.carrying.amount; // smelter gone: back into the stock
       s.carrying = null;
       return true;
     }
@@ -158,7 +157,7 @@ function guardTower(s, tick) {
 function repairTownHall(s, tick) {
   if (townHall.repairRequested && townHall.hp < townHall.maxHp && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed) {
     const repair = GAME_CONFIG.repairs.townHall;
-    if (canAfford(getWallet(), repair.cost)) {
+    if (canAfford(repair.cost)) {
       let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (dist > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
@@ -181,7 +180,7 @@ function repairTower(s, tick) {
     const distanceToTower = Math.hypot(damagedTower.x - s.x, damagedTower.y - s.y);
     if (distanceToTower > 34) {
       moveEntityTowards(s, damagedTower.x, damagedTower.y, s.speed, false, tick.dt);
-    } else if (canAfford(getWallet(), GAME_CONFIG.repairs.watchtower.cost)) {
+    } else if (canAfford(GAME_CONFIG.repairs.watchtower.cost)) {
       const repair = GAME_CONFIG.repairs.watchtower;
       damagedTower.repairTimer = (damagedTower.repairTimer || 0) - tick.dt;
       if (damagedTower.repairTimer <= 0) {
@@ -233,14 +232,7 @@ function deliverCarrying(s, tick) {
     } else {
       let carriedItems = s.carrying.items || [s.carrying];
       carriedItems.forEach(item => {
-        if (item.type === 'wood') wood += item.amount;
-        if (item.type === 'stone') stone += item.amount;
-        if (item.type === 'iron') iron += item.amount;
-        if (item.type === 'ironOre') ironOreStock += item.amount;
-        if (item.type === 'coal') coal += item.amount;
-        if (item.type === 'leather') leather += item.amount;
-        if (item.type === 'food') food += item.amount;
-        if (item.type === 'wheatSeeds') wheatSeeds += item.amount;
+        if (GAME_CONFIG.resources[item.type]) stock[item.type] += item.amount;
       });
       s.carrying = null;
       takeFishingBait(s);
@@ -352,14 +344,14 @@ function fightEnemies(s, tick) {
       currentArrows = s.arrows;
     }
 
-    if (isNearTownHall && currentArrows < capacity && arrowsStock > 0) {
-      let loadAmount = Math.min(arrowsStock, capacity - currentArrows);
+    if (isNearTownHall && currentArrows < capacity && stock.arrows > 0) {
+      let loadAmount = Math.min(stock.arrows, capacity - currentArrows);
       s.arrows = currentArrows + loadAmount;
-      arrowsStock -= loadAmount;
+      stock.arrows -= loadAmount;
       currentArrows = s.arrows;
     }
 
-    if (currentArrows === 0 && arrowsStock > 0) {
+    if (currentArrows === 0 && stock.arrows > 0) {
       if (!isNearTownHall) {
         moveSettlerToTownHall(s, s.speed, dt);
         s.patrolTarget = null;
@@ -497,7 +489,7 @@ function fish(s, tick) {
   if (!canGather(s, tick) || s.role !== 'worker' || s.tool !== 'rod') return false;
   const dt = tick.dt;
   let fishSpot = tick.activeWaterSpots[tick.assignedFishersCount];
-  if (fishSpot && !s.bait && !canAfford(getWallet(), GAME_CONFIG.fishing.bait)) fishSpot = null;
+  if (fishSpot && !s.bait && !canAfford(GAME_CONFIG.fishing.bait)) fishSpot = null;
   if (fishSpot && !s.bait) {
     tick.assignedFishersCount++;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius) {
