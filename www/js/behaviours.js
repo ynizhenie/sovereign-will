@@ -36,6 +36,7 @@ function createSettlerTick(dt) {
     blueprintAssignments: new Map(), // blueprint -> builders on it this tick (max 3)
     repairAssignments: new Map(),    // building -> repairers on it this tick (max 2)
     plantAssignments: new Set(),     // farm zone tiles a farmer is planting this tick
+    patients: new Set(),             // settlers a medic is treating this tick
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
@@ -334,6 +335,33 @@ function playerControlled(s, tick) {
 
 // ---- Fighting
 
+// Medics (a worker with a medbag) heal the wounded while enemies are about: the nearest wounded settler,
+// soldiers before workers, one medic per patient, one herb from the stock per healPerHerb hp.
+function treatWounded(s, tick) {
+  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive || stock.herbs <= 0) return false;
+  const medic = GAME_CONFIG.medic;
+  let patient = null, best = Infinity;
+  for (const other of settlers) {
+    if (other === s || other.hp >= other.maxHp || other.towerAssignment || tick.patients.has(other)) continue;
+    const d = Math.hypot(other.x - s.x, other.y - s.y) + (other.role === 'worker' ? 10000 : 0); // soldiers first
+    if (d < best) { best = d; patient = other; }
+  }
+  if (!patient) { s.healTimer = 0; return false; }
+  tick.patients.add(patient);
+  if (Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
+    moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
+  } else {
+    s.healTimer = (s.healTimer || 0) + tick.dt;
+    if (s.healTimer >= medic.healSeconds) {
+      s.healTimer = 0;
+      stock.herbs--;
+      patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
+    }
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
 // Archers restock arrows from towers or the town hall; unarmed settlers shelter at the town hall
 // while there are defenders, unless they're being attacked themselves.
@@ -587,7 +615,7 @@ function canSettlerHarvest(s, r, tick) {
   if (r.isCarcass) return r.collector === s;
   if (kind === 'boar') {
     if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
-    if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool) || hasToolFamily(s.tool, 'hoe')) return false;
+    if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool) || hasToolFamily(s.tool, 'hoe') || hasToolFamily(s.tool, 'medic')) return false;
     if (r.hidden || r.hideTarget) return false;
     let hasNothing = (s.tool === 'none' && s.weapon === 'fist');
     let hasRod = (s.tool === 'rod');
@@ -595,6 +623,7 @@ function canSettlerHarvest(s, r, tick) {
   }
 
   if (kind === 'grass' && boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
+  if (kind === 'grass' && hasToolFamily(s.tool, 'medic')) return true; // medics gather grass for herbs
 
   const def = getMapResourceDef(kind);
   if (!def) return false;
@@ -871,6 +900,7 @@ const SETTLER_BEHAVIOURS = [
   repairTent,
   healAtTent,
   playerControlled,
+  treatWounded,
   fightEnemies,
   breakOutOfSealedBase,
   clearEnemyTents,
