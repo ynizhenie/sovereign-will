@@ -11,7 +11,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(page.locator('#build-actions button')).toHaveCount(7);
-  await expect(page.locator('#farming-actions button')).toHaveCount(2);
+  await expect(page.locator('#farming-actions button')).toHaveCount(3);
   await expect(page.locator('#tool-actions button')).toHaveCount(7);
   await expect(page.locator('#weapon-actions button')).toHaveCount(6);
 
@@ -327,7 +327,7 @@ test('a resource added only in GAME_CONFIG is gathered, stocked and spent (#45)'
 
 test('wheat and saplings are planted from the Farming tab (#64)', async ({ page }) => {
   await openGame(page);
-  await expect(page.locator('#farming-actions button')).toHaveText(['🌾 Пшеница (1🌾)', '🌱 Саженец (1🌱)']);
+  await expect(page.locator('#farming-actions button')).toHaveText(['🌾 Пшеница (1🌾)', '🌱 Саженец (1🌱)', '🍎 Саженец яблони (1🍎)']);
   await expect(page.locator('#build-actions #btn-wheat')).toHaveCount(0);
   await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
   // picking a crop in the Farming tab switches to placing it

@@ -333,6 +333,8 @@ function handleCanvasClick() {
 
     if (clickedRes) {
       clickedRes.priority = ((clickedRes.priority || 0) + 1) % 4;
+      // an apple tree marked while it has apples gets its apples picked, not felled (see pickApples)
+      if (clickedRes.apple) clickedRes.markIntent = clickedRes.applesReady ? 'apples' : 'chop';
       return;
     }
 
