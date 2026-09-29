@@ -75,7 +75,7 @@ test('hire, upgrade and craft buttons show their cost from the config (#45)', as
   await expect(page.locator('#btn-hire-big')).toHaveText('🧌 Богатырь (30🍞 15🪵)');
   await expect(page.locator('#btn-upgrade')).toHaveText('🧌 Улучшить (15🍞 15🪵)');
   await expect(page.locator('#btn-craft-arrows')).toHaveText('🏹 Стрелы (3🪵 1🪨 → 6)');
-  await expect(page.locator('#btn-craft-armor')).toHaveText('🛡️ Броня (8🔩)');
+  await expect(page.locator('#btn-armor')).toHaveText('🛡️ Броня (8🔩)');
   // change a price in the config and the button follows
   await page.evaluate(() => {
     GAME_CONFIG.settlerTypes.normal.hireCost = { food: 20, wood: 2 };
