@@ -24,6 +24,89 @@ function drawGrassGround() {
   }
 }
 
+// ---- Terrain that joins up (#79)
+//
+// Water joins water, natural rock joins rock and ore: a tile fills out to the sides where a neighbour
+// of its kind is, and gets a rounded, outlined edge where there isn't one, so lakes and rock masses
+// read as shapes instead of a grid of squares. Shades and details vary per tile (tileVariantHash).
+const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
+const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; // water no settler can reach
+const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
+const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
+
+// Which sides of tile (x, y) have no neighbour in `keys` (a Set of "x,y" tile centres)
+function openSides(keys, x, y) {
+  return {
+    n: !keys.has(`${x},${y - TILE_SIZE}`), s: !keys.has(`${x},${y + TILE_SIZE}`),
+    w: !keys.has(`${x - TILE_SIZE},${y}`), e: !keys.has(`${x + TILE_SIZE},${y}`)
+  };
+}
+
+// The tile's shape: full to its joined sides, pulled in by `inset` with rounded corners on open ones
+function joinedTilePath(x, y, open, inset, radius) {
+  const left = x - 15 + (open.w ? inset : 0), right = x + 15 - (open.e ? inset : 0);
+  const top = y - 15 + (open.n ? inset : 0), bottom = y + 15 - (open.s ? inset : 0);
+  const nw = open.n && open.w ? radius : 0, ne = open.n && open.e ? radius : 0;
+  const se = open.s && open.e ? radius : 0, sw = open.s && open.w ? radius : 0;
+  ctx.beginPath();
+  ctx.moveTo(left + nw, top);
+  ctx.arcTo(right, top, right, bottom, ne);
+  ctx.arcTo(right, bottom, left, bottom, se);
+  ctx.arcTo(left, bottom, left, top, sw);
+  ctx.arcTo(left, top, right, top, nw);
+  ctx.closePath();
+}
+
+// Outline colour on the open sides, then the tile's own shade inside it
+function drawJoinedTile(x, y, open, edgeColor, fillColor) {
+  ctx.fillStyle = edgeColor; joinedTilePath(x, y, open, 1, 8); ctx.fill();
+  ctx.fillStyle = fillColor; joinedTilePath(x, y, open, 3, 6); ctx.fill();
+}
+
+function drawWaterTile(w, reachable, tiles) {
+  const h = tileVariantHash(w.x, w.y);
+  const shades = reachable ? WATER_SHADES : DEEP_WATER_SHADES;
+  drawJoinedTile(w.x, w.y, openSides(tiles.water, w.x, w.y), reachable ? '#1f618d' : '#154360', shades[h % shades.length]);
+  // a short light ripple on some tiles
+  if (h % 3 === 0) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)'; ctx.lineWidth = 1.5;
+    const rx = w.x - 6 + ((h >>> 5) % 10), ry = w.y - 6 + ((h >>> 9) % 12);
+    ctx.beginPath(); ctx.arc(rx, ry + 4, 5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+  }
+}
+
+// Natural rock (and the rock under ore): joins every rock and ore tile around it
+function drawRockTile(x, y, tiles) {
+  const h = tileVariantHash(x, y);
+  drawJoinedTile(x, y, openSides(tiles.rockAndOre, x, y), '#1a252f', ROCK_SHADES[h % ROCK_SHADES.length]);
+  // a crack or a couple of speckles
+  if (h % 4 === 0) {
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)'; ctx.lineWidth = 1;
+    const cx = x - 7 + ((h >>> 6) % 12), cy = y - 7 + ((h >>> 11) % 12);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + 4, cy + 3); ctx.lineTo(cx + 3, cy + 8); ctx.stroke();
+  } else if (h % 4 === 1) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.fillRect(x - 8 + ((h >>> 6) % 14), y - 8 + ((h >>> 11) % 14), 3, 3);
+    ctx.fillRect(x - 4 + ((h >>> 16) % 10), y - 2 + ((h >>> 20) % 10), 2, 2);
+  }
+}
+
+function drawDesertTile(tile) {
+  const h = tileVariantHash(tile.x, tile.y);
+  ctx.fillStyle = DESERT_SHADES[h % DESERT_SHADES.length];
+  ctx.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
+  ctx.fillStyle = 'rgba(255, 236, 179, 0.25)';
+  if (h % 3 === 0) {
+    // a dune ripple
+    ctx.strokeStyle = 'rgba(120, 90, 40, 0.25)'; ctx.lineWidth = 1;
+    const ry = tile.y - 6 + ((h >>> 7) % 12);
+    ctx.beginPath(); ctx.moveTo(tile.x - 10, ry); ctx.quadraticCurveTo(tile.x, ry - 4, tile.x + 10, ry); ctx.stroke();
+  } else {
+    ctx.fillRect(tile.x - 10 + ((h >>> 5) % 16), tile.y - 8 + ((h >>> 9) % 14), 3, 2);
+    ctx.fillRect(tile.x - 6 + ((h >>> 13) % 14), tile.y - 4 + ((h >>> 17) % 14), 2, 2);
+  }
+}
+
 function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
   const def = getMapResourceDef(getMapResourceKind(resource));
@@ -106,8 +189,7 @@ function drawTargetMark(en) {
 function drawOreVeins(x, y, kind, half) {
   const c = ORE_COLORS[kind];
   const k = half / 14;
-  ctx.fillStyle = '#34495e'; ctx.fillRect(x - half, y - half, half * 2, half * 2);
-  ctx.strokeStyle = '#1a252f'; ctx.lineWidth = 2; ctx.strokeRect(x - half, y - half, half * 2, half * 2);
+  drawRockTile(x, y, getTileIndex());
   ctx.fillStyle = c.body;
   ctx.fillRect(x - 10 * k, y - 10 * k, 8 * k, 8 * k); ctx.fillRect(x + 1 * k, y - 5 * k, 9 * k, 9 * k); ctx.fillRect(x - 7 * k, y + 3 * k, 7 * k, 7 * k);
   ctx.fillStyle = c.shine;
@@ -143,13 +225,8 @@ function render() {
   ctx.lineWidth = 2;
   ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 
-  desertTiles.forEach(tile => {
-    ctx.fillStyle = '#c9a66b';
-    ctx.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
-    ctx.fillStyle = 'rgba(255, 236, 179, 0.25)';
-    ctx.fillRect(tile.x - 8, tile.y - 5, 3, 2);
-    ctx.fillRect(tile.x + 7, tile.y + 8, 2, 2);
-  });
+  const terrain = getTileIndex();
+  desertTiles.forEach(drawDesertTile);
 
   if (buildMode !== 'interact' && buildMode !== 'possess') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -173,11 +250,7 @@ function render() {
   }
 
   waterTiles.forEach(w => {
-    let reachable = isWaterReachable(w);
-    ctx.fillStyle = reachable ? '#2980b9' : '#1c5276'; 
-    ctx.fillRect(w.x - 15, w.y - 15, 30, 30);
-    ctx.fillStyle = reachable ? '#3498db' : '#2471a3'; 
-    ctx.fillRect(w.x - 12, w.y - 12, 24, 24);
+    drawWaterTile(w, isWaterReachable(w), terrain);
     if (w.isFishing) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
       ctx.strokeRect(w.x - 14, w.y - 14, 28, 28);
@@ -196,8 +269,7 @@ function render() {
     if (r.oreSpawner) {
       drawOreSpawner(r.x, r.y, r.oreSpawner);
     } else {
-      ctx.fillStyle = '#34495e'; ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
-      ctx.strokeStyle = '#1a252f'; ctx.lineWidth = 2; ctx.strokeRect(r.x - 14, r.y - 14, 28, 28);
+      drawRockTile(r.x, r.y, terrain);
     }
     drawHarvestProgress(r, 36);
   });
