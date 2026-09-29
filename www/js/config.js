@@ -10,7 +10,8 @@ const GAME_CONFIG = {
     arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', type: 'resource' },
     armor: { id: 'armor', label: 'Броня', icon: '🛡️', type: 'resource' },
     wheatSeeds: { id: 'wheatSeeds', label: 'Семена', icon: '🌾', type: 'resource' },
-    saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' }
+    saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' },
+    herbs: { id: 'herbs', label: 'Травы', icon: '🍃', type: 'resource' }
   },
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
   // combatDamage / huntDamage: what an unarmed settler carrying it hits enemies / boars for.
@@ -21,6 +22,8 @@ const GAME_CONFIG = {
     iron_pickaxe: { id: 'iron_pickaxe', label: 'Железная кирка', icon: '🔩', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13, huntDamage: 21 },
     rod: { id: 'rod', label: 'Удочка', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
+    // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
+    medbag: { id: 'medbag', label: 'Сумка медика', icon: '💼', cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4, huntDamage: 4 },
     hoe: { id: 'hoe', label: 'Мотыга', icon: '🌿', cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 }
   },
   // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
@@ -100,7 +103,7 @@ const GAME_CONFIG = {
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
   // gathered by hand, by settlers who have no tool (or anyone, if the player marks it).
   // markOnly: settlers only work it when the player marks it. hp: toughness. blocksArrows: arrows stop at it.
-  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra.
+  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra; medicYield: extra for a medic.
   // regrow: where it grows back after map.respawnDelay ('forest', 'anywhere', 'nearby' = around where
   // it was, 'spawner' = around an ore spawner, after map.oreRespawnDelay); none = gone for good.
   // forestShare: share of regrowth in a forest (default map.forestUndergrowthShare).
@@ -124,7 +127,7 @@ const GAME_CONFIG = {
       work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, hit: { default: 25 } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
-    grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
+    grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, bonusChance: { herbs: 0.25 }, medicYield: { herbs: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { food: 4 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
@@ -140,6 +143,10 @@ const GAME_CONFIG = {
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
   farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling' } },
+
+  // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
+  // healPerHerb hp for one herb from the stock every healSeconds
+  medic: { healPerHerb: 30, healSeconds: 1.2, range: 26 },
 
   fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
 
