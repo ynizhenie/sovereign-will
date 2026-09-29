@@ -645,8 +645,11 @@ function clampEntityToBounds(ent) {
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
-function makeBoarFlee(boar, sourceX, sourceY, seekHide = true) {
-  if ((boar.fleeTimer || 0) > 0) return;
+// Run from (sourceX, sourceY): a sprint to hide in grass when hit, or (wary) a slower back-off when a
+// settler just comes close. Never into the strip along the map edge, where it would get cornered.
+function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
+  // already running: only a hit turns a wary back-off into a sprint
+  if ((boar.fleeTimer || 0) > 0 && (wary || boar.sprinting)) return;
 
   let dx = boar.x - sourceX;
   let dy = boar.y - sourceY;
@@ -659,8 +662,10 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true) {
   }
 
   let fleeDistance = 80 + rand() * 60;
+  const def = GAME_CONFIG.mapResources.boar;
   boar.fleeTimer = 1.2;
-  boar.fleeSpeed = 1.35;
+  boar.fleeSpeed = wary ? def.waryFleeSpeed : def.fleeSpeed;
+  boar.sprinting = !wary;
   boar.hideTarget = null;
 
   let nearbyGrass = seekHide ? grassList.filter(grass => Math.hypot(grass.x - boar.x, grass.y - boar.y) <= 360) : [];
@@ -674,7 +679,8 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true) {
     boar.targetX = boar.hideTarget.x;
     boar.targetY = boar.hideTarget.y;
   } else {
-    boar.targetX = Math.max(60, Math.min(WORLD_WIDTH - 60, boar.x + dx / distance * fleeDistance));
-    boar.targetY = Math.max(60, Math.min(WORLD_HEIGHT - 60, boar.y + dy / distance * fleeDistance));
+    const edge = (BORDER_MARGIN + 1) * TILE_SIZE;
+    boar.targetX = Math.max(edge, Math.min(WORLD_WIDTH - edge, boar.x + dx / distance * fleeDistance));
+    boar.targetY = Math.max(edge, Math.min(WORLD_HEIGHT - edge, boar.y + dy / distance * fleeDistance));
   }
 }

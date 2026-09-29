@@ -76,7 +76,7 @@ function update(dt) {
         let d = Math.hypot(s.x - b.x, s.y - b.y);
         if (d < nearestDist) { nearestDist = d; nearest = s; }
       });
-      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false);
+      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
     }
 
     if (b.hideTarget) {
