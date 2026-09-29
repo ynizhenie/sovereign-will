@@ -345,6 +345,8 @@ test('wheat and saplings are planted from the Farming tab (#64)', async ({ page 
     return buildMode;
   });
   expect(mode).toBe('wheat');
+});
+
 test('soldiers push through to enemy tents past summoned raiders; workers keep working (#65)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'tentAssault', {});
