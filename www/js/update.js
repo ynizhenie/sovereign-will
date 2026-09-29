@@ -354,6 +354,10 @@ function update(dt) {
       }
     }
 
+    // a melee enemy close enough to strike stands and fights instead of walking into its target
+    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + meleeDef.reach;
+    const holdsGround = keepsAway || (inMelee && minDist < attackRange);
+
     // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
     // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
     const contactRadius = Math.min(en.radius, 13) + 2;
@@ -383,7 +387,7 @@ function update(dt) {
           en.x += (dx / dist) * (minDist - dist);
           en.y += (dy / dist) * (minDist - dist);
         }
-        if (!keepsAway) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
+        if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
       }
     } else {
       if (en.isBlockedPath) {
@@ -439,11 +443,10 @@ function update(dt) {
           }
         }
       } else {
-        if (!keepsAway) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
+        if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
       }
     }
 
-    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + meleeDef.reach;
     const meleeDamage = meleeDef === enemyDef ? en.damage : meleeDef.damage;
     if (inMelee && minDist < attackRange) {
       if (en.type === 'big') {
@@ -467,6 +470,8 @@ function update(dt) {
       }
     }
   }
+
+  separateSettlersFromEnemies();
 
   settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {

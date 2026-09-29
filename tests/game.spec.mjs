@@ -380,3 +380,10 @@ test('an archer steps aside for a clear shot instead of shooting into a rock (#2
   expect(r.hurt).toBe(true);
   expect(r.blockedShots).toBe(0);
 });
+
+test('soldiers and enemies fight without walking into each other (#15)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'meleeOverlap', {});
+  expect(r.settlersHurt && r.enemiesHurt).toBe(true);
+  expect(r.deepest).toBeLessThan(0.5);
+});
