@@ -602,7 +602,9 @@ function clampEntityToBounds(ent) {
   ent.y = Math.max(ent.radius, Math.min(canvas.height - ent.radius, ent.y));
 }
 
-function makeBoarFlee(boar, sourceX, sourceY) {
+// sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
+// (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
+function makeBoarFlee(boar, sourceX, sourceY, seekHide = true) {
   if ((boar.fleeTimer || 0) > 0) return;
 
   let dx = boar.x - sourceX;
@@ -620,8 +622,8 @@ function makeBoarFlee(boar, sourceX, sourceY) {
   boar.fleeSpeed = 1.35;
   boar.hideTarget = null;
 
-  let nearbyGrass = grassList.filter(grass => Math.hypot(grass.x - boar.x, grass.y - boar.y) <= 360);
-  let hideGrass = nearbyGrass.length > 0 ? nearbyGrass : grassList;
+  let nearbyGrass = seekHide ? grassList.filter(grass => Math.hypot(grass.x - boar.x, grass.y - boar.y) <= 360) : [];
+  let hideGrass = nearbyGrass.length > 0 ? nearbyGrass : (seekHide ? grassList : []);
   if (hideGrass.length > 0) {
     boar.hideTarget = hideGrass.reduce((nearest, grass) => {
       let nearestDistance = Math.hypot(nearest.x - boar.x, nearest.y - boar.y);
