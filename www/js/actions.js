@@ -122,6 +122,19 @@ function takeOffGear(s, id) {
   addResources(GAME_CONFIG.gear[id].cost);
 }
 
+// ---- Animation state (drawn by getHeldItemPose in render.js)
+
+// A strike: the held weapon or tool swings through once over `seconds`
+function startSwing(unit, seconds) {
+  unit.swingT = seconds;
+  unit.swingLen = seconds;
+}
+
+function tickAnimation(unit, dt) {
+  if (unit.swingT > 0) unit.swingT = Math.max(0, unit.swingT - dt);
+  if (unit.working > 0) unit.working = Math.max(0, unit.working - dt);
+}
+
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
 function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
