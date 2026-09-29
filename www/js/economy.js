@@ -145,6 +145,44 @@ function payBuildingCost(buildingType) {
   payCost(item.cost || {});
 }
 
+// Damaged, and either a watchtower (always kept up) or ordered by the player; tents mend themselves
+function needsRepair(building) {
+  if (!(building.hp < building.maxHp) || building.type === 'tent') return false;
+  return building.type === 'watchtower' || !!building.repairRequested;
+}
+
+// One repair step for a building: its own GAME_CONFIG.repairs entry, or a share of its build cost
+function getRepairStep(building) {
+  const own = GAME_CONFIG.repairs[building.type];
+  if (own) return own;
+  const share = GAME_CONFIG.repairs.buildings;
+  const item = getDefinition('buildings', building.type) || {};
+  const cost = {};
+  for (const [resource, amount] of Object.entries(item.cost || {})) cost[resource] = Math.ceil(amount * share.costShare);
+  return { cost, hp: building.maxHp * share.hpShare, interval: share.interval };
+}
+
+// Order (or cancel) repairs of a damaged building; tents mend themselves and watchtowers always are
+function toggleBuildingRepair(building) {
+  if (!(building.hp < building.maxHp) || building.type === 'tent' || building.type === 'watchtower') return false;
+  building.repairRequested = !building.repairRequested;
+  const item = getDefinition('buildings', building.type);
+  showNotification(building.repairRequested
+    ? `🛠️ Ремонт: ${item ? item.label : ''} (${formatCost(getRepairStep(building).cost)} за шаг)`
+    : '❌ Ремонт отменён', !building.repairRequested);
+  return true;
+}
+
+// Order repairs of every damaged building and the town hall
+function repairAllBuildings() {
+  let count = 0;
+  for (const b of buildings) {
+    if (b.hp < b.maxHp && b.type !== 'tent' && b.type !== 'watchtower') { b.repairRequested = true; count++; }
+  }
+  if (townHall.hp < townHall.maxHp) { townHall.repairRequested = true; count++; }
+  showNotification(count > 0 ? `🛠️ Ремонт заказан: ${count}` : '✅ Всё цело', count === 0);
+}
+
 function createBuildingBlueprint(type, x, y) {
   const item = getDefinition('buildings', type);
   const build = item && item.build ? item.build : {};
