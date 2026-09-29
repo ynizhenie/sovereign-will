@@ -70,6 +70,15 @@ function update(dt) {
 
     if (b.fleeTimer > 0) b.fleeTimer -= dt;
 
+    if ((b.fleeTimer || 0) <= 0 && !b.hideTarget) {
+      let nearest = null, nearestDist = Infinity;
+      settlers.forEach(s => {
+        let d = Math.hypot(s.x - b.x, s.y - b.y);
+        if (d < nearestDist) { nearestDist = d; nearest = s; }
+      });
+      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false);
+    }
+
     if (b.hideTarget) {
       if (!grassList.includes(b.hideTarget)) {
         b.hideTarget = null;
