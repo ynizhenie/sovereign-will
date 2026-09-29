@@ -137,6 +137,8 @@ function update(dt) {
     }
   });
 
+  buildings.forEach(b => { if (b.type === 'campfire' && b.burning > 0) b.burning = Math.max(0, b.burning - dt); });
+
   buildings.filter(b => b.type === 'smelter').forEach(smelter => {
     smelter.oreLoaded = smelter.oreLoaded || 0;
     smelter.coalLoaded = smelter.coalLoaded || 0;

@@ -22,10 +22,10 @@ Object.assign(window.sim, (() => {
       seedsSpent: 10 - stock.wheatSeeds, saplingsSpent: 5 - stock.saplings
     };
     // ripen the wheat: the farmer should harvest it and plant the tiles again
-    const food0 = stock.food;
+    const wheat0 = stock.wheat;
     for (const plot of farmPlots) plot.growth = 100;
-    run(30, { each: () => { pendingRespawns.length = 0; stock.food = Math.max(stock.food, food0); } });
-    return { ...planted, harvestedFood: stock.food > food0, replanted: farmPlots.length };
+    run(30, { each: () => { pendingRespawns.length = 0; } });
+    return { ...planted, harvestedFood: stock.wheat > wheat0, replanted: farmPlots.length };
   }
 
   // Painting and clearing zone tiles; nothing on water
