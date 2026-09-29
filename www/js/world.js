@@ -250,6 +250,9 @@ function hasToolFamily(tool, family) {
 function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
   for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount);
+  if (def.medicYield && settler && hasToolFamily(settler.tool, 'medic')) {
+    for (const [item, amount] of Object.entries(def.medicYield)) giveResourceToSettler(settler, item, amount);
+  }
   addCarryLoad(settler);
   for (const [item, chance] of Object.entries(def.bonusChance || {})) {
     if (rand() < chance) addResources({ [item]: 1 });

@@ -557,6 +557,10 @@ function render() {
       ctx.fillStyle = s.tool === 'iron_pickaxe' ? '#cfd8dc' : '#7f8c8d'; ctx.beginPath(); ctx.arc(18, 0, 7, -Math.PI/2, Math.PI/2); ctx.fill();
     } else if (s.tool === 'rod') {
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
+    } else if (s.tool === 'medbag') {
+      // a white bag with a red cross
+      ctx.fillStyle = '#ecf0f1'; ctx.fillRect(7, -4, 9, 8);
+      ctx.fillStyle = '#e74c3c'; ctx.fillRect(10.5, -3, 2, 6); ctx.fillRect(8.5, -1, 6, 2);
     } else if (s.tool === 'hoe') {
       // a long handle with a flat blade turned down at the end
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 15, 2);
