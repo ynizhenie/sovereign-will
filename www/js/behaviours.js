@@ -15,8 +15,10 @@ function createSettlerTick(dt) {
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
     for (const r of WORLD[def.list]) resourceKind.set(r, kind);
   }
-  const markedResources = allResources.filter(r => (r.priority || 0) > 0);
-  markedResources.sort((a, b) => b.priority - a.priority);
+  // player-marked resources, then anything blocking a door (worked as if marked with priority 1)
+  const doorBlockers = findDoorBlockers(allResources, resourceKind);
+  const markedResources = allResources.filter(r => (r.priority || 0) > 0 || doorBlockers.has(r));
+  markedResources.sort((a, b) => getWorkPriority(b) - getWorkPriority(a));
 
   const defendersCount = settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
 
@@ -27,6 +29,9 @@ function createSettlerTick(dt) {
     allResources,
     resourceKind,
     markedResources,
+    doorBlockers,
+    // every way out of the base through its doors is blocked: soldiers break the blockers
+    baseSealed: doorBlockers.size > 0 && isBaseSealed(),
     workerAssignments: new Map(),    // marked resource -> settlers on it this tick
     blueprintAssignments: new Map(), // blueprint -> builders on it this tick (max 3)
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
@@ -588,7 +593,7 @@ function pickResourceToHarvest(s, tick) {
   for (let r of tick.markedResources) {
     if (canSettlerHarvest(s, r, tick) && !skipped(r) && getReachDistanceToResource(settlerReach, r) < Infinity) {
       let currentWorkers = tick.workerAssignments.get(r) || 0;
-      if (currentWorkers < r.priority) {
+      if (currentWorkers < getWorkPriority(r)) {
         assignedRes = r;
         tick.workerAssignments.set(r, currentWorkers + 1);
         break;
@@ -711,6 +716,71 @@ function harvest(s, tick) {
   return true;
 }
 
+// ---- Doors
+
+// How many workers a priority resource takes at once: the player's mark, or 1 for a door blocker
+function getWorkPriority(r) {
+  return r.priority || 1;
+}
+
+// Resources that block the way through a door: on a tile next to a door (not diagonally), and solid
+// (trees, boulders, cacti, ore). Natural rock is left to the player to mark.
+function findDoorBlockers(allResources, resourceKind) {
+  const blockers = new Set();
+  const doors = buildings.filter(b => b.type === 'door');
+  if (doors.length === 0) return blockers;
+  const beside = new Set();
+  for (const door of doors) {
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) beside.add(`${door.x + dx * TILE_SIZE},${door.y + dy * TILE_SIZE}`);
+  }
+  const tiles = getTileIndex();
+  for (const r of allResources) {
+    const key = `${r.x},${r.y}`;
+    if (!beside.has(key) || !(tiles.trees.has(key) || tiles.solids.has(key))) continue;
+    const def = getMapResourceDef(resourceKind.get(r));
+    if (def && !def.markOnly) blockers.add(r);
+  }
+  return blockers;
+}
+
+// Whether no settler can walk from the town hall to the edge of the map (the base is walled in)
+const hallReachHolder = { x: 0, y: 0 };
+function isBaseSealed() {
+  hallReachHolder.x = townHall.x; hallReachHolder.y = townHall.y;
+  const reach = getSettlerReach(hallReachHolder);
+  for (let gx = 0; gx < COLS; gx++) {
+    if (reach[gx] !== -1 || reach[(ROWS - 1) * COLS + gx] !== -1) return false;
+  }
+  for (let gy = 0; gy < ROWS; gy++) {
+    if (reach[gy * COLS] !== -1 || reach[gy * COLS + COLS - 1] !== -1) return false;
+  }
+  return true;
+}
+
+// A walled-in base: soldiers break the nearest door blocker they can reach, one hp per strike
+function breakOutOfSealedBase(s, tick) {
+  if (!tick.baseSealed || s.role === 'worker' || s.isPossessed) return false;
+  const reach = getSettlerReach(s);
+  let target = null, best = Infinity;
+  for (const r of tick.doorBlockers) {
+    if (!WORLD[getMapResourceDef(tick.resourceKind.get(r)).list].includes(r)) continue; // already broken this tick
+    const d = getReachDistanceToResource(reach, r);
+    if (d < best) { best = d; target = r; }
+  }
+  if (!target) return false;
+  const approachPos = getResourceApproachPoint(s, target);
+  if (!approachPos) return false;
+  if (Math.hypot(approachPos.x - s.x, approachPos.y - s.y) > 10) {
+    moveEntityTowards(s, approachPos.x, approachPos.y, s.speed, false, tick.dt);
+  } else if (s.attackCooldown <= 0) {
+    target.hp -= 1;
+    s.attackCooldown = getWeaponStats(s, 'combat').cooldown;
+    if (target.hp <= 0) finishHarvest(s, target, tick.resourceKind.get(target));
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
 // Nothing else to do: wander near the town hall (shown with an idle icon, see render())
 function patrol(s, tick) {
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
@@ -739,6 +809,7 @@ const SETTLER_BEHAVIOURS = [
   healAtTent,
   playerControlled,
   fightEnemies,
+  breakOutOfSealedBase,
   clearEnemyTents,
   build,
   fish,
