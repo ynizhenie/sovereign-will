@@ -12,7 +12,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(page.locator('#build-actions button')).toHaveCount(7);
   await expect(page.locator('#farming-actions button')).toHaveCount(2);
-  await expect(page.locator('#tool-actions button')).toHaveCount(6);
+  await expect(page.locator('#tool-actions button')).toHaveCount(7);
   await expect(page.locator('#weapon-actions button')).toHaveCount(6);
 
   await page.fill('#seed-input', 'smoke-test');
