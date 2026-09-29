@@ -159,7 +159,7 @@ function performAttack(attacker, targetX, targetY) {
     });
 
     boars.forEach(b => {
-      if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - attacker.x, b.y - attacker.y) <= range + 12 && (b.fleeTimer || 0) <= 0) {
+      if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - attacker.x, b.y - attacker.y) <= range + 12 && !((b.fleeTimer || 0) > 0 && b.sprinting)) {
         b.hp -= dmg;
         makeBoarFlee(b, attacker.x, attacker.y);
         if (b.hp <= 0) finishHarvest(attacker, b, 'boar');
