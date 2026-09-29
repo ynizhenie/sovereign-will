@@ -80,6 +80,7 @@ const WORLD = {
   enemyTents: [],
   enemyTentBlueprints: [],
   projectiles: [],
+  enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
   forests: [],          // forest centres, see placeForests()
   pendingRespawns: []   // harvested resources waiting to grow back, see scheduleRespawn()
 };

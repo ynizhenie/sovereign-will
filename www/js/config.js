@@ -62,6 +62,9 @@ const GAME_CONFIG = {
   // siege: hp per second it takes off buildings, and off trees / boulders (cacti / ore for big) in its way.
   // ranged: range, keepAway (stops walking this close to its target), cooldown, arrowSpeed, arrowLife.
   // splash: radius, share of the damage dealt to everyone else around.
+  // quiver: arrows it spawns with; tentStock: arrows it adds to the shared stock in enemy tents;
+  //   refill: arrows taken from a tent at once; melee: the enemy it fights like when out of arrows
+  //   and no tent has any left.
   // reward: added to the stock when it dies. Waves spawn kinds in this order.
   enemies: {
     raider_club: { id: 'raider_club', label: 'Дикарь', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
@@ -72,7 +75,8 @@ const GAME_CONFIG = {
       type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
     raider_archer: { id: 'raider_archer', label: 'Лучник', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow',
       type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
-      ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 } }
+      ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } }
   },
 
   // enemy tents: builders put them up near the map edge; each summons extra enemies during a wave

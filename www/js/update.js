@@ -312,12 +312,39 @@ function update(dt) {
     }
 
     const ranged = enemyDef.ranged;
-    if (en.type === 'archer') {
+    // an archer with an empty quiver walks to the nearest enemy tent for more arrows,
+    // or fights like its melee enemy when the tents have none left
+    let shooting = en.type === 'archer';
+    let meleeDef = enemyDef;
+    let moveTarget = target;
+    const quiver = enemyDef.quiver;
+    if (quiver && en.arrows <= 0) {
+      const tent = enemyArrowStock > 0 ? findNearestEnemyTent(en) : null;
+      if (tent) {
+        if (Math.hypot(tent.x - en.x, tent.y - en.y) <= GAME_CONFIG.enemyTents.buildDistance) {
+          const taken = Math.min(quiver.refill, enemyArrowStock);
+          en.arrows += taken;
+          enemyArrowStock -= taken;
+        } else {
+          shooting = false;
+          moveTarget = tent;
+        }
+      } else {
+        shooting = false;
+        meleeDef = getDefinition('enemies', quiver.melee) || enemyDef;
+      }
+    }
+    en.weapon = meleeDef.weapon || 'sword';
+    const inMelee = !shooting && moveTarget === target;
+    const keepsAway = shooting && minDist < ranged.keepAway;
+
+    if (shooting) {
       en.attackCooldown = (en.attackCooldown || 0) - dt;
       if (minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
         projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
         en.attackCooldown = ranged.cooldown;
+        if (quiver) en.arrows--;
       }
     }
 
@@ -350,10 +377,7 @@ function update(dt) {
           en.x += (dx / dist) * (minDist - dist);
           en.y += (dy / dist) * (minDist - dist);
         }
-        if (en.type === 'archer' && minDist < ranged.keepAway) {
-        } else {
-          moveEntityTowards(en, target.x, target.y, en.speed, true, dt);
-        }
+        if (!keepsAway) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
       }
     } else {
       if (en.isBlockedPath) {
@@ -409,15 +433,13 @@ function update(dt) {
           }
         }
       } else {
-        if (en.type === 'archer' && minDist < ranged.keepAway) {
-        } else {
-          moveEntityTowards(en, target.x, target.y, en.speed, true, dt);
-        }
+        if (!keepsAway) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
       }
     }
 
-    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + enemyDef.reach;
-    if (en.type !== 'archer' && minDist < attackRange) {
+    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + meleeDef.reach;
+    const meleeDamage = meleeDef === enemyDef ? en.damage : meleeDef.damage;
+    if (inMelee && minDist < attackRange) {
       if (en.type === 'big') {
         let splashRadius = enemyDef.splash.radius;
         let splashDamage = dt * en.damage * enemyDef.splash.share;
@@ -434,8 +456,8 @@ function update(dt) {
           townHall.hp -= splashDamage;
         }
       } else {
-        if (target === townHall) townHall.hp -= dt * en.damage;
-        else damageSettler(target, dt * en.damage, en);
+        if (target === townHall) townHall.hp -= dt * meleeDamage;
+        else damageSettler(target, dt * meleeDamage, en);
       }
     }
   }
