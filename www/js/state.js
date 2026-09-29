@@ -40,9 +40,8 @@ let camera = { x: canvas.width / 2, y: canvas.height / 2, zoom: 1 };
 let cameraDragging = false;
 let cameraDragPoint = { x: 0, y: 0 };
 
-let wood = 30, stone = 20, coal = 0, ironOreStock = 0, iron = 0, leather = 0, arrowsStock = 0, food = 25, armorStock = 0;
-let wheatSeeds = 3;
-let saplings = 0;
+// The colony's stock: amount per resource id of GAME_CONFIG.resources (set from GAME_CONFIG.start by resetGame)
+const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
 let waveInterval = 90;
 let waveTimer = waveInterval;
 let gameStarted = false;

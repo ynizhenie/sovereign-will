@@ -164,7 +164,7 @@ function assignTowerArchers() {
 function findTowerForArrows(settler) {
   return buildings
     .filter(tower => tower.type === 'watchtower' &&
-      tower.arrows < tower.tower.arrowCapacity && arrowsStock > 0)
+      tower.arrows < tower.tower.arrowCapacity && stock.arrows > 0)
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }
 
@@ -189,9 +189,9 @@ function updateTowerArrowLoader(settler, tower, dt) {
     moveEntityTowards(settler, tower.x, tower.y, settler.speed, false, dt);
     return true;
   }
-  const amount = Math.min(arrowsStock, tower.tower.arrowCapacity - tower.arrows);
+  const amount = Math.min(stock.arrows, tower.tower.arrowCapacity - tower.arrows);
   tower.arrows += amount;
-  arrowsStock -= amount;
+  stock.arrows -= amount;
   return true;
 }
 

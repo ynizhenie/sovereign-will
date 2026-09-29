@@ -322,3 +322,12 @@ test('an enemy archer refills 6 arrows at a time from the tent stock, then clubs
   expect(r.stockLeft).toBe(0);
   expect(r.weapon).toBe('club');
 });
+
+test('a resource added only in GAME_CONFIG is gathered, stocked and spent (#45)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'configOnlyResource', {});
+  expect(r.atStart).toBe(0);
+  expect(r.delivered).toBe(2);
+  expect(r.canPay).toBe(true);
+  expect(r.afterTool).toBe(0);
+});
