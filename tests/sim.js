@@ -189,7 +189,7 @@ window.sim = (() => {
   // and then also doesn't move over the next 5s (so detours along rock walls don't count)
   function crowd({ seed, seconds = 30, count = 12, spread = false }) {
     start(seed);
-    wood = stone = food = 500; iron = 100;
+    stock.wood = stock.stone = stock.food = 500; stock.iron = 100;
     const tools = ['axe', 'pickaxe', 'none', 'axe', 'pickaxe'];
     const spots = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 3 && t.d <= (spread ? 40 : 6));
     settlers = [];
@@ -345,7 +345,7 @@ window.sim = (() => {
       .sort((a, b) => Math.hypot(a.x - townHall.x, a.y - townHall.y) - Math.hypot(b.x - townHall.x, b.y - townHall.y))[0];
     spot.isFishing = true;
     settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
-    wheatSeeds = seeds;
+    stock.wheatSeeds = seeds;
     let catches = 0;
     const original = giveResourceToSettler;
     window.giveResourceToSettler = function (s, type, amount) {
@@ -353,7 +353,7 @@ window.sim = (() => {
       return original.apply(this, arguments);
     };
     try { run(seconds); } finally { window.giveResourceToSettler = original; }
-    return { catches, seedsLeft: wheatSeeds };
+    return { catches, seedsLeft: stock.wheatSeeds };
   }
 
   // Chop a tree directly and watch the tree count: no instant regrowth, back after respawnDelay
@@ -508,6 +508,26 @@ window.sim = (() => {
     };
   }
 
+  // A resource that exists only in GAME_CONFIG: a worker picks up a pebble that yields it and brings it
+  // home, then it pays for a tool. Returns the stock of it after each step.
+  function configOnlyResource({ seed = 'config-resource-test' }) {
+    GAME_CONFIG.resources.flint = { id: 'flint', label: 'Кремень', icon: '🔸', type: 'resource' };
+    GAME_CONFIG.mapResources.pebble.yield = { flint: 2 };
+    GAME_CONFIG.tools.axe.cost = { flint: 2 };
+    start(seed);
+    for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars]) list.length = 0;
+    pebbles.push({ x: townHall.x + 3 * TILE_SIZE, y: townHall.y, hp: 1, priority: 0 });
+    settlers = [makeSettler(1, townHall.x - 60, townHall.y)];
+    invalidateAllPaths();
+    const atStart = stock.flint;
+    run(20);
+    const delivered = stock.flint;
+    window.showNotification = () => {};
+    const canPay = canAfford(GAME_CONFIG.tools.axe.cost);
+    assignTool('axe');
+    return { atStart, delivered, canPay, afterTool: stock.flint };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -515,12 +535,12 @@ window.sim = (() => {
     for (const [kind, field] of [['weapons', 'weapon'], ['tools', 'tool']]) {
       for (const [id, item] of Object.entries(GAME_CONFIG[kind])) {
         const s = { weapon: 'fist', tool: 'none', [field]: id };
-        const before = getWallet();
+        const before = { ...stock };
         refundEquipment(s);
-        const after = getWallet();
+        const after = { ...stock };
         const got = {};
-        for (const k in after) if (after[k] !== before[k]) got[getWalletKey(k)] = after[k] - before[k];
-        const want = Object.fromEntries(Object.entries(item.cost || {}).map(([k, v]) => [getWalletKey(k), v]));
+        for (const k in after) if (after[k] !== before[k]) got[k] = after[k] - before[k];
+        const want = { ...(item.cost || {}) };
         if (JSON.stringify(got) !== JSON.stringify(want)) bad.push({ id, got, want });
       }
     }
@@ -531,6 +551,6 @@ window.sim = (() => {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,
-    boarHuntDamage, boarFlee, archerQuiver
+    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource
   };
 })();

@@ -1,29 +1,15 @@
 function resourceHudId(resourceKey) {
-  const ids = {
-    ironOre: 'iron-ore-txt',
-    arrows: 'arrow-txt',
-    armor: 'armor-stock-txt',
-    wheatSeeds: 'wheat-seed-txt',
-    saplings: 'sapling-txt'
-  };
-  return ids[resourceKey] || `${resourceKey}-txt`;
+  return `resource-${resourceKey}-txt`;
 }
 
+// Shown in the HUD: the stock, plus for arrows the ones already loaded in towers and quivers
 function getResourceAmount(resourceKey) {
-  const amounts = {
-    wood,
-    stone,
-    coal,
-    ironOre: ironOreStock,
-    iron,
-    leather,
-    arrows: arrowsStock + buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) + settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0),
-    food,
-    armor: armorStock,
-    wheatSeeds,
-    saplings
-  };
-  return amounts[resourceKey] || 0;
+  let amount = stock[resourceKey] || 0;
+  if (resourceKey === 'arrows') {
+    amount += buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) +
+      settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0);
+  }
+  return amount;
 }
 
 function updateUnitCounts() {
@@ -144,44 +130,19 @@ function formatCost(cost = {}) {
     .join(' ');
 }
 
-function canAfford(wallet, cost = {}) {
-  return Object.entries(cost).every(([key, amount]) => Number(wallet[getWalletKey(key)] || wallet[key] || 0) >= Number(amount || 0));
-}
-
-function spendResources(wallet, cost = {}) {
-  const next = { ...wallet };
-  Object.entries(cost).forEach(([key, amount]) => {
-    const stateKey = getWalletKey(key);
-    next[stateKey] = Number(next[stateKey] || next[key] || 0) - Number(amount || 0);
-  });
-  return next;
-}
-
-function getWalletKey(resourceKey) {
-  const aliases = { ironOre: 'ironOreStock', armor: 'armorStock' };
-  return aliases[resourceKey] || resourceKey;
+function canAfford(cost = {}) {
+  return Object.entries(cost).every(([key, amount]) => Number(stock[key] || 0) >= Number(amount || 0));
 }
 
 function canBuild(buildingType) {
   const item = getDefinition('buildings', buildingType);
-  return item ? canAfford(getWallet(), item.cost || {}) : false;
+  return item ? canAfford(item.cost || {}) : false;
 }
 
 function payBuildingCost(buildingType) {
   const item = getDefinition('buildings', buildingType);
   if (!item) return;
-  const nextWallet = spendResources(getWallet(), item.cost || {});
-  wood = nextWallet.wood;
-  stone = nextWallet.stone;
-  coal = nextWallet.coal;
-  ironOreStock = nextWallet.ironOreStock;
-  iron = nextWallet.iron;
-  leather = nextWallet.leather;
-  food = nextWallet.food;
-  armorStock = nextWallet.armorStock;
-  wheatSeeds = nextWallet.wheatSeeds;
-  saplings = nextWallet.saplings;
-  arrowsStock = nextWallet.arrows;
+  payCost(item.cost || {});
 }
 
 function createBuildingBlueprint(type, x, y) {
@@ -199,42 +160,18 @@ function createBuildingBlueprint(type, x, y) {
 }
 
 // Take / give a cost ({ resourceId: amount }) from / to the stock
-function payCost(cost) {
-  applyWallet(spendResources(getWallet(), cost));
+function payCost(cost = {}) {
+  for (const [resource, amount] of Object.entries(cost)) stock[resource] = Number(stock[resource] || 0) - Number(amount || 0);
 }
 
-function addResources(amounts) {
-  let wallet = getWallet();
-  for (const [resource, amount] of Object.entries(amounts || {})) {
-    wallet = spendResources(wallet, { [resource]: -amount });
-  }
-  applyWallet(wallet);
+function addResources(amounts = {}) {
+  for (const [resource, amount] of Object.entries(amounts)) stock[resource] = Number(stock[resource] || 0) + Number(amount || 0);
 }
 
-function getWallet() {
-  return {
-    wood, stone, coal, ironOreStock, iron, leather, food, armorStock, wheatSeeds, saplings, arrows: arrowsStock
-  };
-}
-
-function applyWallet(wallet) {
-  wood = wallet.wood;
-  stone = wallet.stone;
-  coal = wallet.coal;
-  ironOreStock = wallet.ironOreStock;
-  iron = wallet.iron;
-  leather = wallet.leather;
-  food = wallet.food;
-  armorStock = wallet.armorStock;
-  wheatSeeds = wallet.wheatSeeds;
-  saplings = wallet.saplings;
-  arrowsStock = wallet.arrows;
-}
-
-function getMissingCost(cost, wallet = getWallet()) {
+function getMissingCost(cost) {
   return Object.entries(cost)
-    .filter(([key, amount]) => Number(wallet[getWalletKey(key)] || wallet[key] || 0) < Number(amount || 0))
-    .map(([key, amount]) => `${Number(amount) - Number(wallet[getWalletKey(key)] || wallet[key] || 0)}${getResourceIcon(key)}`)
+    .filter(([key, amount]) => Number(stock[key] || 0) < Number(amount || 0))
+    .map(([key, amount]) => `${Number(amount) - Number(stock[key] || 0)}${getResourceIcon(key)}`)
     .join(', ');
 }
 
