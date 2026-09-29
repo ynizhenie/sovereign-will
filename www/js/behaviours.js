@@ -937,7 +937,10 @@ function tendFarmZones(s, tick) {
       const cropId = farming.crops[target.crop];
       payCost(getDefinition('buildings', cropId).cost || {});
       if (cropId === 'wheat') farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
-      else trees.push({ x: target.x, y: target.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 });
+      else {
+        const tree = { x: target.x, y: target.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
+        trees.push(cropId === 'apple_sapling' ? makeAppleTree(tree) : tree);
+      }
       ejectEntitiesFromTile(target.x, target.y);
       resetTileIndex();
     }
