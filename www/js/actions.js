@@ -40,6 +40,35 @@ function hasRoomToCarry(s) {
   return !!s.carrying && s.carrying.loads !== undefined && s.carrying.loads < getCarryCapacity(s);
 }
 
+// A shield only helps a melee soldier: a worker or an archer doesn't fight with it
+function canUseShield(s) {
+  return s.role === 'soldier' && !isBowWeapon(s.weapon);
+}
+
+function hasWorkingShield(s) {
+  return !!s.shield && canUseShield(s);
+}
+
+// Give a shield to the selected melee soldier, or the first one without one
+function equipShield() {
+  const shield = GAME_CONFIG.gear.shield;
+  const selected = getSelectedSettler() || getPossessed();
+  const target = selected && canUseShield(selected) && !selected.shield
+    ? selected
+    : settlers.find(s => canUseShield(s) && !s.shield && !s.targetEquipment);
+  if (!target) {
+    showNotification('⚠️ Нет солдата без щита (лучникам щит не выдаётся)', true);
+    return;
+  }
+  if (!canAfford(shield.cost)) {
+    showCostError(shield.cost, '❌ Не хватает ресурсов! Нужно');
+    return;
+  }
+  payCost(shield.cost);
+  target.shield = true;
+  showNotification(`${shield.icon} ${shield.label} выдан`, false);
+}
+
 // Put a backpack on the selected worker, or on the first worker without one
 function equipBackpack() {
   const backpack = GAME_CONFIG.gear.backpack;
@@ -63,6 +92,7 @@ function equipBackpack() {
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
 function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * 0.65 : amount;
+  if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   settler.hp -= damage;
   if (attacker) {
     settler.lastAttacker = attacker;
