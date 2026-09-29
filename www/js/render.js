@@ -246,11 +246,12 @@ function render() {
   beachTiles.forEach(drawDesertTile);
 
   // farm zones: a tint and a frame in the crop's colour
+  const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
   farmZones.forEach(z => {
-    const wheat = z.crop === 'wheat';
-    ctx.fillStyle = wheat ? 'rgba(241, 196, 15, 0.14)' : 'rgba(46, 204, 113, 0.14)';
+    const rgb = ZONE_COLORS[z.crop] || ZONE_COLORS.sapling;
+    ctx.fillStyle = `rgba(${rgb}, 0.14)`;
     ctx.fillRect(z.x - 15, z.y - 15, TILE_SIZE, TILE_SIZE);
-    ctx.strokeStyle = wheat ? 'rgba(241, 196, 15, 0.55)' : 'rgba(46, 204, 113, 0.55)';
+    ctx.strokeStyle = `rgba(${rgb}, 0.55)`;
     ctx.lineWidth = 1; ctx.strokeRect(z.x - 13.5, z.y - 13.5, TILE_SIZE - 3, TILE_SIZE - 3);
   });
 
