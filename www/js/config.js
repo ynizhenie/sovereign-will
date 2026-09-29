@@ -112,7 +112,7 @@ const GAME_CONFIG = {
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
   // gathered by hand, by settlers who have no tool (or anyone, if the player marks it).
   // markOnly: settlers only work it when the player marks it. hp: toughness. blocksArrows: arrows stop at it.
-  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra; medicYield: extra for a medic.
+  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra.
   // regrow: where it grows back after map.respawnDelay ('forest', 'anywhere', 'nearby' = around where
   // it was, 'spawner' = around an ore spawner, after map.oreRespawnDelay); none = gone for good.
   // forestShare: share of regrowth in a forest (default map.forestUndergrowthShare).
@@ -136,7 +136,7 @@ const GAME_CONFIG = {
       work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, hit: { default: 25 } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
-    grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, bonusChance: { herbs: 0.25 }, medicYield: { herbs: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
+    grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { wheat: 4 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
@@ -151,7 +151,7 @@ const GAME_CONFIG = {
   // (a possessed settler clicking water next to it gets a catch at once, without rod or bait)
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
-  farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling' } },
+  farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
 
   // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
   // healPerHerb hp for one herb from the stock every healSeconds
@@ -196,7 +196,8 @@ const GAME_CONFIG = {
   // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only
   // fell one the player marked while it had no apples. Every growSeconds it bears apples, which workers
   // with no tool pick (pickSeconds) for `yield`, with bonusChance of an apple sapling.
-  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { food: 3 }, bonusChance: { appleSaplings: 0.2 } },
+  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { food: 3 }, bonusChance: { appleSaplings: 0.5 },
+    fellBonusChance: { appleSaplings: 0.5 } }, // felled: an apple sapling instead of an ordinary one
 
   // crafted at the town hall into the stock
   recipes: {
