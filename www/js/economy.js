@@ -193,6 +193,10 @@ function repairAllBuildings() {
   showNotification(count > 0 ? `🛠️ Ремонт заказан: ${count}` : '✅ Всё цело', count === 0);
 }
 
+function getSmelterLimits() {
+  return GAME_CONFIG.buildings.smelter.build.smelter;
+}
+
 function createBuildingBlueprint(type, x, y) {
   const item = getDefinition('buildings', type);
   const build = item && item.build ? item.build : {};

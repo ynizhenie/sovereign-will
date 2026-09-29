@@ -73,17 +73,33 @@ function loadTowerArrows(s, tick) {
   return false;
 }
 
+// Smelters take one settler at a time for each job: `supplier` brings ore/coal, `collector` takes the
+// iron. A claim lasts while its settler keeps at it (renewed every tick); anyone else skips the smelter.
+function claimSmelterJob(smelter, job, s) {
+  const claim = smelter[job];
+  if (claim && claim.settler !== s && settlers.includes(claim.settler) && pathTick - claim.tick <= 1) return false;
+  smelter[job] = { settler: s, tick: pathTick };
+  return true;
+}
+
+function isSmelterJobFree(smelter, job, s) {
+  const claim = smelter[job];
+  return !claim || claim.settler === s || !settlers.includes(claim.settler) || pathTick - claim.tick > 1;
+}
+
 // Pick up smelted iron and carry it home
 function collectSmelterIron(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
-    let smelterWithIron = buildings.find(b => b.type === 'smelter' && b.ironProduced > 0);
+    let smelterWithIron = buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isSmelterJobFree(b, 'collector', s));
     if (smelterWithIron) {
+      claimSmelterJob(smelterWithIron, 'collector', s);
       let dist = Math.hypot(smelterWithIron.x - s.x, smelterWithIron.y - s.y);
       if (dist > (smelterWithIron.radius || 15) + s.radius + 8) {
         moveEntityTowards(s, smelterWithIron.x, smelterWithIron.y, s.speed, false, tick.dt);
       } else {
         s.carrying = { type: 'iron', amount: smelterWithIron.ironProduced };
         smelterWithIron.ironProduced = 0;
+        smelterWithIron.collector = null;
       }
       return true;
     }
@@ -91,32 +107,22 @@ function collectSmelterIron(s, tick) {
   return false;
 }
 
-// Take ore or coal from the town hall for a smelter that needs it
+// Take ore or coal from the town hall for a smelter that has room for it (one supplier per smelter)
 function supplySmelter(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
-    let smelterNeedsOre = buildings.find(b => b.type === 'smelter' && (b.oreLoaded || 0) < 10);
-    let smelterNeedsCoal = buildings.find(b => b.type === 'smelter' && (b.coalLoaded || 0) < 10);
-
-    if (stock.ironOre > 0 && smelterNeedsOre) {
+    const limits = getSmelterLimits();
+    for (const [resource, loaded, max] of [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]]) {
+      if (stock[resource] <= 0) continue;
+      const smelter = buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isSmelterJobFree(b, 'supplier', s));
+      if (!smelter) continue;
+      claimSmelterJob(smelter, 'supplier', s);
       let distToTH = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTH > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
       } else {
-        let amountToTake = Math.min(stock.ironOre, 2);
-        stock.ironOre -= amountToTake;
-        s.carrying = { type: 'smelterDelivery', resource: 'ironOre', amount: amountToTake, targetSmelter: smelterNeedsOre };
-      }
-      return true;
-    }
-
-    if (stock.coal > 0 && smelterNeedsCoal) {
-      let distToTH = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-      if (distToTH > townHall.radius + s.radius + 4) {
-        moveSettlerToTownHall(s, s.speed, tick.dt);
-      } else {
-        let amountToTake = Math.min(stock.coal, 2);
-        stock.coal -= amountToTake;
-        s.carrying = { type: 'smelterDelivery', resource: 'coal', amount: amountToTake, targetSmelter: smelterNeedsCoal };
+        const amountToTake = Math.min(stock[resource], 2, max - (smelter[loaded] || 0));
+        stock[resource] -= amountToTake;
+        s.carrying = { type: 'smelterDelivery', resource, amount: amountToTake, targetSmelter: smelter };
       }
       return true;
     }
@@ -133,16 +139,19 @@ function deliverToSmelter(s, tick) {
       s.carrying = null;
       return true;
     }
+    claimSmelterJob(targetSmelter, 'supplier', s);
     let dist = Math.hypot(targetSmelter.x - s.x, targetSmelter.y - s.y);
     if (dist > (targetSmelter.radius || 15) + s.radius + 8) {
       moveEntityTowards(s, targetSmelter.x, targetSmelter.y, s.speed, false, tick.dt);
     } else {
-      if (s.carrying.resource === 'ironOre') {
-        targetSmelter.oreLoaded = (targetSmelter.oreLoaded || 0) + s.carrying.amount;
-      } else if (s.carrying.resource === 'coal') {
-        targetSmelter.coalLoaded = (targetSmelter.coalLoaded || 0) + s.carrying.amount;
-      }
+      // whatever doesn't fit (it filled up meanwhile) goes back into the stock
+      const limits = getSmelterLimits();
+      const [loaded, max] = s.carrying.resource === 'ironOre' ? ['oreLoaded', limits.maxOre] : ['coalLoaded', limits.maxCoal];
+      const fits = Math.min(s.carrying.amount, max - (targetSmelter[loaded] || 0));
+      targetSmelter[loaded] = (targetSmelter[loaded] || 0) + fits;
+      stock[s.carrying.resource] += s.carrying.amount - fits;
       s.carrying = null;
+      targetSmelter.supplier = null;
     }
     return true;
   }

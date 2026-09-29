@@ -142,9 +142,10 @@ function update(dt) {
     smelter.coalLoaded = smelter.coalLoaded || 0;
     smelter.ironProduced = smelter.ironProduced || 0;
 
-    if (smelter.oreLoaded > 0 && smelter.coalLoaded > 0) {
+    const limits = getSmelterLimits();
+    if (smelter.oreLoaded > 0 && smelter.coalLoaded > 0 && smelter.ironProduced < limits.maxIron) {
       smelter.smeltProgress = (smelter.smeltProgress || 0) + dt;
-      if (smelter.smeltProgress >= 4.0) {
+      if (smelter.smeltProgress >= limits.seconds) {
         smelter.oreLoaded--;
         smelter.coalLoaded--;
         smelter.ironProduced++;
