@@ -405,6 +405,18 @@ function render() {
 	  }
 }
 
+    // hp of a damaged building, and a wrench while its repair is ordered
+    if (b.hp < b.maxHp) {
+      const barY = b.type === 'watchtower' ? b.y - 32 : b.y - 20;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, barY, 24, 3);
+      ctx.fillStyle = b.hp / b.maxHp > 0.5 ? '#f1c40f' : '#e74c3c';
+      ctx.fillRect(b.x - 12, barY, Math.max(0, b.hp / b.maxHp) * 24, 3);
+      if (needsRepair(b)) {
+        ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('🛠️', b.x + 16, barY + 4);
+      }
+    }
+
     if (b.isDemolishing) {
       ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
       ctx.fillRect(b.x - 14, b.y - 14, 28, 28);

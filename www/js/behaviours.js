@@ -29,6 +29,7 @@ function createSettlerTick(dt) {
     markedResources,
     workerAssignments: new Map(),    // marked resource -> settlers on it this tick
     blueprintAssignments: new Map(), // blueprint -> builders on it this tick (max 3)
+    repairAssignments: new Map(),    // building -> repairers on it this tick (max 2)
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
@@ -175,26 +176,32 @@ function repairTownHall(s, tick) {
   return false;
 }
 
-// Repair a damaged watchtower (cost, hp and pace: GAME_CONFIG.repairs.watchtower)
-function repairTower(s, tick) {
-  const damagedTower = buildings.find(building => building.type === 'watchtower' && building.hp < building.maxHp);
-  if (damagedTower && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed && !s.towerAssignment) {
-    const distanceToTower = Math.hypot(damagedTower.x - s.x, damagedTower.y - s.y);
-    if (distanceToTower > 34) {
-      moveEntityTowards(s, damagedTower.x, damagedTower.y, s.speed, false, tick.dt);
-    } else if (canAfford(GAME_CONFIG.repairs.watchtower.cost)) {
-      const repair = GAME_CONFIG.repairs.watchtower;
-      damagedTower.repairTimer = (damagedTower.repairTimer || 0) - tick.dt;
-      if (damagedTower.repairTimer <= 0) {
-        payCost(repair.cost);
-        damagedTower.hp = Math.min(damagedTower.maxHp, damagedTower.hp + repair.hp);
-        damagedTower.repairTimer = repair.interval;
-      }
-    }
-    s.patrolTarget = null;
-    return true;
+// Repair the nearest damaged building that needs it (see needsRepair), at most 2 workers on each.
+// Cost, hp and pace per step: getRepairStep()
+function repairBuilding(s, tick) {
+  if (s.role !== 'worker' || s.carrying || s.targetEquipment || s.isPossessed || s.towerAssignment) return false;
+  let target = null, best = Infinity;
+  for (const b of buildings) {
+    if (!needsRepair(b) || (tick.repairAssignments.get(b) || 0) >= 2 || !canAfford(getRepairStep(b).cost)) continue;
+    const d = Math.hypot(b.x - s.x, b.y - s.y);
+    if (d < best) { best = d; target = b; }
   }
-  return false;
+  if (!target) return false;
+  tick.repairAssignments.set(target, (tick.repairAssignments.get(target) || 0) + 1);
+  if (best > 34) {
+    moveEntityTowards(s, target.x, target.y, s.speed, false, tick.dt);
+  } else {
+    const step = getRepairStep(target);
+    target.repairTimer = (target.repairTimer || 0) - tick.dt;
+    if (target.repairTimer <= 0) {
+      payCost(step.cost);
+      target.hp = Math.min(target.maxHp, target.hp + step.hp);
+      target.repairTimer = step.interval;
+      if (target.hp >= target.maxHp) target.repairRequested = false;
+    }
+  }
+  s.patrolTarget = null;
+  return true;
 }
 
 // ---- Equipment and hauling
@@ -732,7 +739,7 @@ const SETTLER_BEHAVIOURS = [
   deliverToSmelter,
   guardTower,
   repairTownHall,
-  repairTower,
+  repairBuilding,
   equip,
   deliverCarrying,
   repairTent,

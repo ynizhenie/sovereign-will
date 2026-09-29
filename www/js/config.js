@@ -152,10 +152,14 @@ const GAME_CONFIG = {
     armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, produces: { armor: 1 }, hpBonus: 50 }
   },
 
-  // what one repair step costs and restores (watchtower: one step per `interval` seconds)
+  // what one repair step costs and restores (buildings: one step per `interval` seconds per worker).
+  // Watchtowers are repaired whenever damaged; other buildings when the player orders it (tap it, or
+  // Repair all). Buildings without their own entry use `buildings`: costShare of what the building
+  // cost (rounded up) for hpShare of its hp. Tents mend themselves for free (tent.repairPerSecond).
   repairs: {
     townHall: { cost: { wood: 15, stone: 15 }, hp: 35 },
-    watchtower: { cost: { wood: 10, stone: 10 }, hp: 35, interval: 1 }
+    watchtower: { cost: { wood: 10, stone: 10 }, hp: 35, interval: 1 },
+    buildings: { costShare: 0.2, hpShare: 0.25, interval: 1 }
   },
 
 
