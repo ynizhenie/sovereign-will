@@ -31,7 +31,15 @@ function getTileIndex() {
     ores: keys([...ironOres, ...coalOres]),
     solids: keys([...boulders, ...cacti, ...ironOres, ...coalOres]),
     buildings: keys(buildings),
-    walls: keys(buildings.filter(b => b.type !== 'door'))
+    walls: keys(buildings.filter(b => b.type !== 'door')),
+    // what stops arrows (see blocksArrows / arrowsPass / towerArrowsPass in GAME_CONFIG)
+    arrowBlockers: keys(Object.values(GAME_CONFIG.mapResources).filter(def => def.blocksArrows)
+      .flatMap(def => WORLD[def.list].filter(o => !o.isGrowing))),
+    arrowBuildings: keys(buildings.filter(b => !(getDefinition('buildings', b.type) || {}).arrowsPass)),
+    towerArrowBuildings: keys(buildings.filter(b => {
+      const def = getDefinition('buildings', b.type) || {};
+      return !def.arrowsPass && !def.towerArrowsPass;
+    }))
   };
   return tileIndex;
 }

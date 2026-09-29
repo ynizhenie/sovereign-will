@@ -29,6 +29,47 @@ function collidesWithTiles(x, y, radius, kinds) {
   return false;
 }
 
+// Whether an arrow is stopped on tile (gx, gy). fromTower: shot from a watchtower, over walls and doors.
+function isArrowBlockedTile(gx, gy, fromTower) {
+  const tiles = getTileIndex();
+  const key = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`;
+  return tiles.arrowBlockers.has(key) || (fromTower ? tiles.towerArrowBuildings : tiles.arrowBuildings).has(key);
+}
+
+function isArrowBlockedAt(x, y, fromTower) {
+  const g = getGridPos(x, y);
+  return isArrowBlockedTile(g.gx, g.gy, fromTower);
+}
+
+// Whether an arrow from (x1, y1) would fly to (x2, y2) unstopped. Walks every tile the line touches
+// (not just points along it), so an arrow never clips a corner the check missed. The shooter's own
+// tile doesn't count.
+function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
+  let gx = Math.floor(x1 / TILE_SIZE), gy = Math.floor(y1 / TILE_SIZE);
+  const endGx = Math.floor(x2 / TILE_SIZE), endGy = Math.floor(y2 / TILE_SIZE);
+  const dx = x2 - x1, dy = y2 - y1;
+  const stepX = Math.sign(dx), stepY = Math.sign(dy);
+  // how far along the line (0..1) the next vertical / horizontal tile border is, and one tile's worth
+  let nextX = stepX ? ((stepX > 0 ? gx + 1 : gx) * TILE_SIZE - x1) / dx : Infinity;
+  let nextY = stepY ? ((stepY > 0 ? gy + 1 : gy) * TILE_SIZE - y1) / dy : Infinity;
+  const tileX = stepX ? TILE_SIZE / Math.abs(dx) : Infinity;
+  const tileY = stepY ? TILE_SIZE / Math.abs(dy) : Infinity;
+  while (gx !== endGx || gy !== endGy) {
+    if (Math.abs(nextX - nextY) < 1e-9) {
+      // exactly through a corner: both side tiles count
+      if (isArrowBlockedTile(gx + stepX, gy, fromTower) || isArrowBlockedTile(gx, gy + stepY, fromTower)) return false;
+      gx += stepX; gy += stepY; nextX += tileX; nextY += tileY;
+    } else if (nextX < nextY) {
+      gx += stepX; nextX += tileX;
+    } else {
+      gy += stepY; nextY += tileY;
+    }
+    if (nextX > 1 + tileX && nextY > 1 + tileY) break; // safety: past the end
+    if (isArrowBlockedTile(gx, gy, fromTower)) return false;
+  }
+  return true;
+}
+
 const WALL_COLLISION_KINDS = [['walls', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
 
 function collidesWithWall(x, y, radius) {
@@ -225,7 +266,8 @@ function updateTowerGuard(settler, tower, dt) {
   if (settler.arrows <= 0) return;
 
   const target = enemies
-    .filter(enemy => Math.hypot(enemy.x - tower.x, enemy.y - tower.y) <= tower.tower.range)
+    .filter(enemy => Math.hypot(enemy.x - tower.x, enemy.y - tower.y) <= tower.tower.range &&
+      hasLineOfFire(tower.x, tower.y, enemy.x, enemy.y, true))
     .sort((a, b) => Math.hypot(a.x - tower.x, a.y - tower.y) - Math.hypot(b.x - tower.x, b.y - tower.y))[0];
   if (!target || (settler.towerAttackCooldown || 0) > 0) return;
 
