@@ -561,6 +561,12 @@ function render() {
 	  ctx.arc(0, 0, s.visualRadius + 2, 0, Math.PI * 2);
 	  ctx.stroke();
 	}
+    if (s.shield) {
+      // a round wooden shield with an iron rim and boss on the left arm
+      ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
     if (s.quiver) {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 3, -5, 4, 10);
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1;

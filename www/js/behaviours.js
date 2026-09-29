@@ -231,6 +231,11 @@ function equip(s, tick) {
         s.arrows = 0;
       }
       if (equipment.quiver !== undefined) s.quiver = equipment.quiver;
+      // no longer a melee soldier (disarmed, or given a bow): the shield goes back to the stock
+      if (s.shield && !canUseShield(s)) {
+        addResources(GAME_CONFIG.gear.shield.cost);
+        s.shield = false;
+      }
       s.targetEquipment = null;
     }
     return true;
