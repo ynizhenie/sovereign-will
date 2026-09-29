@@ -223,6 +223,22 @@ test('each catch uses one seed as bait, and fishing stops without seeds (#18)', 
   expect(noSeeds.catches).toBe(0);
 });
 
+test('a boar takes the wielded weapon\'s hunt damage, not a fixed amount (#62)', async ({ page }) => {
+  await openGame(page);
+  const fistDmg = await sim(page, 'boarHuntDamage', { weapon: 'fist' });
+  const swordDmg = await sim(page, 'boarHuntDamage', { weapon: 'sword' });
+  expect(fistDmg).toBe(5);
+  expect(swordDmg).toBe(32);
+});
+
+test('a boar flees a settler that gets close, even before being attacked (#62)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'boarFlee');
+  expect(r.sawFlee).toBe(true);
+  expect(r.hid).toBe(false);
+  expect(r.movedAway).toBe(true);
+});
+
 test('harvested resources grow back after a delay, not at once (#11)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'treeRegrowth');
