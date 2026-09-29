@@ -26,9 +26,9 @@ function drawGrassGround() {
 
 // ---- Terrain that joins up (#79)
 //
-// Water joins water, natural rock joins rock and ore: a tile fills out to the sides where a neighbour
-// of its kind is, and gets an outlined edge where there isn't one (square, no rounding), so lakes and
-// rock masses read as shapes instead of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
+// Water joins water, natural rock joins rock and ore: every tile covers its whole square, and gets an
+// outline only on sides with no neighbour of its kind, so lakes and rock masses read as shapes instead
+// of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
 const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
 const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; // water no settler can reach
 const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
@@ -42,26 +42,14 @@ function openSides(keys, x, y) {
   };
 }
 
-// The tile's shape: full to its joined sides, pulled in by `inset` with rounded corners on open ones
-function joinedTilePath(x, y, open, inset, radius) {
-  const left = x - 15 + (open.w ? inset : 0), right = x + 15 - (open.e ? inset : 0);
-  const top = y - 15 + (open.n ? inset : 0), bottom = y + 15 - (open.s ? inset : 0);
-  const nw = open.n && open.w ? radius : 0, ne = open.n && open.e ? radius : 0;
-  const se = open.s && open.e ? radius : 0, sw = open.s && open.w ? radius : 0;
-  ctx.beginPath();
-  ctx.moveTo(left + nw, top);
-  ctx.arcTo(right, top, right, bottom, ne);
-  ctx.arcTo(right, bottom, left, bottom, se);
-  ctx.arcTo(left, bottom, left, top, sw);
-  ctx.arcTo(left, top, right, top, nw);
-  ctx.closePath();
-}
-
-// Outline colour on the open sides, then the tile's own shade inside it
+// The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind
 function drawJoinedTile(x, y, open, edgeColor, fillColor) {
-  // square corners, as the game's author asked; only the joining makes the shapes
-  ctx.fillStyle = edgeColor; joinedTilePath(x, y, open, 1, 0); ctx.fill();
-  ctx.fillStyle = fillColor; joinedTilePath(x, y, open, 3, 0); ctx.fill();
+  ctx.fillStyle = fillColor; ctx.fillRect(x - 15, y - 15, TILE_SIZE, TILE_SIZE);
+  ctx.fillStyle = edgeColor;
+  if (open.n) ctx.fillRect(x - 15, y - 15, TILE_SIZE, 2);
+  if (open.s) ctx.fillRect(x - 15, y + 13, TILE_SIZE, 2);
+  if (open.w) ctx.fillRect(x - 15, y - 15, 2, TILE_SIZE);
+  if (open.e) ctx.fillRect(x + 13, y - 15, 2, TILE_SIZE);
 }
 
 function drawWaterTile(w, reachable, tiles) {
