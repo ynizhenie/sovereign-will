@@ -223,6 +223,12 @@ test('each catch uses one seed as bait, and fishing stops without seeds (#18)', 
   expect(noSeeds.catches).toBe(0);
 });
 
+test('the ground uses more than one grass shade, not one flat repeating fill (#61)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'grassTileVariety');
+  expect(r.shadeCount).toBe(r.totalShades);
+});
+
 test('harvested resources grow back after a delay, not at once (#11)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'treeRegrowth');

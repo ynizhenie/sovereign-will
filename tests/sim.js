@@ -371,6 +371,16 @@ window.sim = (() => {
     return { count0, rightAfter, beforeMinDelay, afterMaxDelay: trees.length };
   }
 
+  // The ground uses more than one shade of grass, not one flat repeating fill (#61)
+  function grassTileVariety() {
+    start('grass-variety-test');
+    const shades = new Set();
+    for (let gy = 0; gy < ROWS; gy++) {
+      for (let gx = 0; gx < COLS; gx++) shades.add(GRASS_SHADES[tileVariantHash(gx, gy) % GRASS_SHADES.length]);
+    }
+    return { shadeCount: shades.size, totalShades: GRASS_SHADES.length };
+  }
+
   // Largest group of boulders on 4-connected tiles, per seed
   function largestBoulderPiles(seeds) {
     return seeds.map(seed => {
@@ -466,6 +476,6 @@ window.sim = (() => {
   return {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
-    markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares
+    markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety
   };
 })();
