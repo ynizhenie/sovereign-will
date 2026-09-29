@@ -509,3 +509,24 @@ canvas {
 #seed-input:focus {
   border-color: #46b8da;
 }
+
+.seed-row {
+  display: flex;
+  gap: 6px;
+}
+
+/* small unlabeled button next to the seed: a new random seed */
+#seed-reroll {
+  flex: 0 0 auto;
+  width: 34px;
+  background: #111318;
+  border: 1px solid #353a46;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#seed-reroll:active {
+  border-color: #46b8da;
+}
