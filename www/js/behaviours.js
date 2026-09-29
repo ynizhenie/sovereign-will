@@ -652,7 +652,7 @@ function huntBoar(s, boar, tick) {
   } else {
     if (isBowWeapon(s.weapon)) {
       performAttack(s, boar.x, boar.y);
-    } else if ((boar.fleeTimer || 0) <= 0 && s.attackCooldown <= 0) {
+    } else if (!((boar.fleeTimer || 0) > 0 && boar.sprinting) && s.attackCooldown <= 0) { // not mid-sprint
       makeBoarFlee(boar, s.x, s.y);
       boar.hp -= hunt.damage * hunt.multiplier;
       s.attackCooldown = hunt.cooldown;

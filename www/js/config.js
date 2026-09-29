@@ -124,7 +124,10 @@ const GAME_CONFIG = {
     farm: { list: 'farmPlots', yield: { food: 4 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
     // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
-    boar: { list: 'boars', hp: 40, yield: { food: 6, leather: 2 }, clearsPath: true, wary: 100 }
+    boar: { list: 'boars', hp: 40, yield: { food: 6, leather: 2 }, clearsPath: true,
+      // wary: backs off from a settler this close, at waryFleeSpeed (slower than settlers, so it can be
+      // caught); fleeSpeed: its sprint once it's actually hit
+      wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35 }
   },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
