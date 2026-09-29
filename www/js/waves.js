@@ -54,6 +54,18 @@ function findNearestEnemyTent(origin) {
   return nearest;
 }
 
+// ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
+// later mechanic (e.g. raising the dead) can use one up by removing it from `corpses`.
+function addCorpse(unit, side, kind) {
+  corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0 });
+}
+
+function updateCorpses(dt) {
+  const lifetime = GAME_CONFIG.corpses.seconds;
+  for (const corpse of corpses) corpse.age += dt;
+  corpses = corpses.filter(corpse => corpse.age < lifetime);
+}
+
 function grantEnemyReward(enemy) {
   addResources(enemy.reward);
 }
