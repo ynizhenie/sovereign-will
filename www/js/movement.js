@@ -443,6 +443,39 @@ function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
   return true;
 }
 
+// Settlers and enemies never stand inside each other: push every overlapping pair apart, each by half
+// (or one by all of it when the other would be pushed into a wall). Runs once a tick after movement;
+// a few rounds, since pushing one pair apart can push a unit into its neighbour.
+function separateSettlersFromEnemies() {
+  for (let round = 0; round < 4; round++) {
+    if (!separateSettlersFromEnemiesOnce()) return;
+  }
+}
+
+function separateSettlersFromEnemiesOnce() {
+  let moved = false;
+  for (const s of settlers) {
+    if (s.towerAssignment) continue; // up in a watchtower
+    const sRadius = s.visualRadius || s.radius;
+    for (const en of enemies) {
+      let dx = s.x - en.x, dy = s.y - en.y;
+      let dist = Math.hypot(dx, dy);
+      const overlap = sRadius + en.radius - dist;
+      if (overlap <= 0) continue;
+      if (dist === 0) { dx = 1; dy = 0; dist = 1; }
+      const nx = dx / dist, ny = dy / dist;
+      const canMove = (unit, share, sign) => !collidesWithWall(unit.x + sign * nx * overlap * share, unit.y + sign * ny * overlap * share, Math.min(unit.radius, 13));
+      let settlerShare = 0.5, enemyShare = 0.5;
+      if (!canMove(s, 0.5, 1)) { settlerShare = 0; enemyShare = canMove(en, 1, -1) ? 1 : 0; }
+      else if (!canMove(en, 0.5, -1)) { enemyShare = 0; settlerShare = canMove(s, 1, 1) ? 1 : 0; }
+      s.x += nx * overlap * settlerShare; s.y += ny * overlap * settlerShare;
+      en.x -= nx * overlap * enemyShare; en.y -= ny * overlap * enemyShare;
+      moved = true;
+    }
+  }
+  return moved;
+}
+
 function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   let threshold = isEnemy ? 50 : 25;
   // terrain collision body; big units are drawn larger but must still fit one-tile gaps (30px)

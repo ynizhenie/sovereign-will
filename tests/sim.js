@@ -658,6 +658,35 @@ window.sim = (() => {
     return { hurt: hits > 0, blockedShots: shots - hits, inFlight: projectiles.length };
   }
 
+  // Soldiers meet a group of raiders and a brute near the town hall. Returns the deepest a settler and
+  // an enemy ever got inside each other (px), and whether blows were exchanged at all.
+  function meleeOverlap({ seed = 'overlap-test', seconds = 20 }) {
+    start(seed);
+    const hx = townHall.x, hy = townHall.y;
+    settlers = [
+      makeSettler(1, hx - 50, hy, { weapon: 'sword', role: 'soldier', hp: 1000, maxHp: 1000 }),
+      makeSettler(2, hx + 50, hy, { weapon: 'spear', role: 'soldier', hp: 1000, maxHp: 1000 }),
+      makeSettler(3, hx, hy - 50, { weapon: 'club', role: 'soldier', hp: 1000, maxHp: 1000 }),
+      makeSettler(4, hx, hy + 50, { weapon: 'sword', role: 'soldier', hp: 1000, maxHp: 1000 })
+    ];
+    const spots = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 6 && t.d <= 8).slice(0, 7);
+    enemies = spots.map((t, i) => createConfiguredEnemy(tileCenter(t.gx, t.gy), i === 0 ? 'brute' : 'raider'));
+    for (const en of enemies) en.hp = en.maxHp = 1000; // a long brawl, not a quick win
+    let deepest = 0;
+    run(seconds, { each: () => {
+      for (const s of settlers) {
+        if (s.towerAssignment) continue;
+        for (const en of enemies) {
+          const overlap = (s.visualRadius || s.radius) + en.radius - Math.hypot(s.x - en.x, s.y - en.y);
+          if (overlap > deepest) deepest = overlap;
+        }
+      }
+    } });
+    const settlersHurt = settlers.some(s => s.hp < s.maxHp);
+    const enemiesHurt = enemies.some(en => en.hp < en.maxHp);
+    return { deepest: Math.round(deepest * 100) / 100, settlersHurt, enemiesHurt };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -681,6 +710,6 @@ window.sim = (() => {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,
-    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource, tentAssault, healUp, arrowObstacles, archerAroundObstacle
+    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource, tentAssault, healUp, arrowObstacles, archerAroundObstacle, meleeOverlap
   };
 })();
