@@ -182,6 +182,11 @@ function handleCanvasClick() {
     }
   }
 
+  if (buildMode === 'interact') {
+    const damaged = buildings.find(b => b.x === gx && b.y === gy && b.hp < b.maxHp);
+    if (damaged && toggleBuildingRepair(damaged)) return;
+  }
+
   if (buildMode !== 'interact' && buildMode !== 'possess' && buildMode !== 'demolish') {
     if (isBorderZone(gxIdx, gyIdx)) {
       return;
