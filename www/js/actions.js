@@ -49,49 +49,82 @@ function hasWorkingShield(s) {
   return !!s.shield && canUseShield(s);
 }
 
-// Give a shield to the selected melee soldier, or the first one without one
-function equipShield() {
-  const shield = GAME_CONFIG.gear.shield;
-  const selected = getSelectedSettler() || getPossessed();
-  const target = selected && canUseShield(selected) && !selected.shield
-    ? selected
-    : settlers.find(s => canUseShield(s) && !s.shield && !s.targetEquipment);
-  if (!target) {
-    showNotification('⚠️ Нет солдата без щита (лучникам щит не выдаётся)', true);
-    return;
-  }
-  if (!canAfford(shield.cost)) {
-    showCostError(shield.cost, '❌ Не хватает ресурсов! Нужно');
-    return;
-  }
-  payCost(shield.cost);
-  target.shield = true;
-  showNotification(`${shield.icon} ${shield.label} выдан`, false);
+// ---- Gear (GAME_CONFIG.gear): ordered with its button, put on / taken off at the town hall
+
+// Who can wear each piece, and who gets it first when nobody who can is selected
+const GEAR_RULES = {
+  backpack: { canWear: s => s.role !== 'archer', first: s => s.role === 'worker' && s.tool !== 'rod' },
+  armor: { canWear: () => true, first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
+  shield: { canWear: canUseShield, first: () => true }
+};
+
+function hasGear(s, id) {
+  return id === 'armor' ? s.armor === 'iron' : !!s[id];
 }
 
-// Put a backpack on the selected worker, or on the first worker without one
-function equipBackpack() {
-  const backpack = GAME_CONFIG.gear.backpack;
+// Pay for a piece of gear and send a settler to pick it up at the town hall: the selected one if it can
+// wear it, otherwise the first one the rules prefer, otherwise anyone who can
+function orderGear(id) {
+  const item = GAME_CONFIG.gear[id], rules = GEAR_RULES[id];
+  const free = s => rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment;
   const selected = getSelectedSettler() || getPossessed();
-  const target = selected && selected.role === 'worker' && !selected.backpack
-    ? selected
-    : settlers.find(s => s.role === 'worker' && !s.backpack && s.tool !== 'rod');
+  const target = (selected && free(selected) ? selected : null) ||
+    settlers.find(s => free(s) && rules.first(s)) || settlers.find(free);
   if (!target) {
-    showNotification('⚠️ Нет рабочего без рюкзака!', true);
+    showNotification(`⚠️ Некому выдать: ${item.label}`, true);
     return;
   }
-  if (!canAfford(backpack.cost)) {
-    showCostError(backpack.cost, '❌ Не хватает ресурсов! Нужно');
+  if (!canAfford(item.cost)) {
+    showCostError(item.cost, '❌ Не хватает ресурсов! Нужно');
     return;
   }
-  payCost(backpack.cost);
-  target.backpack = true;
-  showNotification(`${backpack.icon} ${backpack.label} выдан`, false);
+  payCost(item.cost);
+  target.targetEquipment = { gear: id };
+  showNotification(`✅ ${item.icon} ${item.label}: житель идёт за ним на базу`, false);
+}
+
+// Send the selected settler wearing it (or the first one) to the town hall to hand it back
+function orderGearOff(id) {
+  const item = GAME_CONFIG.gear[id];
+  const selected = getSelectedSettler() || getPossessed();
+  const target = selected && hasGear(selected, id) && !selected.targetEquipment
+    ? selected
+    : settlers.find(s => hasGear(s, id) && !s.targetEquipment);
+  if (!target) {
+    showNotification(`⚠️ Ни у кого нет: ${item.label}`, true);
+    return;
+  }
+  target.targetEquipment = { gearOff: id };
+  showNotification(`✅ ${item.icon} ${item.label}: житель несёт его на базу`, false);
+}
+
+// At the town hall (see equip()): put a piece on, or take it off and put its cost back in the stock
+function putOnGear(s, id) {
+  if (id === 'armor') {
+    s.armor = 'iron';
+    const bonus = GAME_CONFIG.gear.armor.hpBonus;
+    s.maxHp = (s.maxHp || 100) + bonus;
+    s.hp += bonus;
+  } else {
+    s[id] = true;
+  }
+}
+
+function takeOffGear(s, id) {
+  if (!hasGear(s, id)) return;
+  if (id === 'armor') {
+    s.armor = null;
+    s.maxHp -= GAME_CONFIG.gear.armor.hpBonus;
+    s.hp = Math.min(s.hp, s.maxHp);
+  } else {
+    s[id] = false;
+  }
+  addResources(GAME_CONFIG.gear[id].cost);
 }
 
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
 function damageSettler(settler, amount, attacker = null) {
-  let damage = settler.armor === 'iron' ? amount * 0.65 : amount;
+  let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   settler.hp -= damage;
   if (attacker) {
@@ -173,7 +206,7 @@ function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
     addResources((item && item.cost) || {});
   }
 
-  if (includeArmor && settler.armor === 'iron') addResources(GAME_CONFIG.recipes.armor.cost);
+  if (includeArmor && settler.armor === 'iron') takeOffGear(settler, 'armor');
   if (includeQuiver && settler.quiver) {
     stock.leather += 5;
     stock.arrows += settler.arrows || 0;
@@ -502,45 +535,6 @@ function craftArrows() {
   showNotification(`✅ Создано ${recipe.produces.arrows} стрел. Они хранятся в ратуше`, false);
 }
 
-function craftArmor() {
-  const recipe = GAME_CONFIG.recipes.armor;
-  if (canAfford(recipe.cost)) {
-    payCost(recipe.cost);
-    addResources(recipe.produces);
-    showNotification("✅ Железная броня создана и отправлена на склад Ратуши!", false);
-    updateUI();
-  } else {
-    showCostError(recipe.cost, `❌ ${recipe.label}: нужно`);
-  }
-}
-
-function equipArmorToSelected() {
-  let target = getSelectedSettler() || getPossessed();
-  
-  if (!target) {
-    showNotification("⚠️ Сначала выберите поселенца или вселитесь в него!", true);
-    return;
-  }
-  if (target.armor === 'iron') {
-    showNotification("⚠️ У этого поселенца уже есть железная броня!", true);
-    return;
-  }
-  if (stock.armor <= 0) {
-    showNotification("❌ На складе Ратуши нет готовой брони! Сначала скрафтьте её.", true);
-    return;
-  }
-
-  stock.armor--;
-  target.armor = 'iron';
-  target.hasArmor = true;
-  const hpBonus = GAME_CONFIG.recipes.armor.hpBonus;
-  target.maxHp = (target.maxHp || 100) + hpBonus;
-  target.hp += hpBonus;
-
-  showNotification("🛡️ Броня успешно надета на поселенца!", false);
-  updateUI();
-}
-
 function disarmSettler(type = 'all') {
   let target = getSelectedSettler() || getPossessed();
 
@@ -566,12 +560,12 @@ function disarmSettler(type = 'all') {
       weapon: isDisarmingWeapon ? 'fist' : (target.weapon || 'fist'),
       tool: isDisarmingTool ? 'none' : (target.tool || 'none'),
       role: isDisarmingWeapon ? 'worker' : (target.role || 'worker'),
-      armor: isDisarmingWeapon ? 'none' : (target.armor || 'none'),
+      armor: target.armor || 'none', // armour has its own button now (orderGearOff)
       quiver: isDisarmingWeapon ? false : (target.quiver || false)
     };
 
     const notificationText = type === 'tool' ? "✅ Инструмент разобран" :
-                             type === 'weapon' ? "✅ Оружие и броня разобраны" : "✅ Предмет разобран";
+                             type === 'weapon' ? "✅ Оружие разобрано" : "✅ Предмет разобран";
     showNotification(notificationText, false);
   } else {
     const errorText = type === 'tool' ? "⚠️ Нет поселенца с инструментом!" :

@@ -222,6 +222,13 @@ function equip(s, tick) {
       moveSettlerToTownHall(s, s.speed, tick.dt);
     } else {
       let equipment = s.targetEquipment;
+      // gear only: put it on / hand it back, and nothing else changes
+      if (equipment.gear || equipment.gearOff) {
+        if (equipment.gear) putOnGear(s, equipment.gear);
+        else takeOffGear(s, equipment.gearOff);
+        s.targetEquipment = null;
+        return true;
+      }
       if (!equipment.armorOnly) refundEquipment(s, equipment.armor === 'none', equipment.quiver === false);
       if (equipment.weapon !== undefined) s.weapon = equipment.weapon;
       if (equipment.tool !== undefined) s.tool = equipment.tool;

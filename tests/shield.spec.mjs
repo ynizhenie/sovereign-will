@@ -33,6 +33,7 @@ test('the shield button equips a melee soldier; disarming gives the shield back 
     stock.wood = 10; stock.iron = 5;
     selectedSettler = null;
     document.getElementById('btn-shield').click();
+    window.sim.run(5); // walks to the town hall for it
     const out = { archer: !!settlers[0].shield, soldier: !!settlers[1].shield, wood: stock.wood, iron: stock.iron,
       label: document.getElementById('btn-shield').innerText };
     selectedSettler = settlers[1];
@@ -40,5 +41,5 @@ test('the shield button equips a melee soldier; disarming gives the shield back 
     window.sim.run(5);
     return { ...out, afterDisarm: !!settlers[1].shield, ironBack: stock.iron };
   });
-  expect(r).toMatchObject({ archer: false, soldier: true, wood: 4, iron: 3, label: '🛡️ Щит (6🪵 2🔩)', afterDisarm: false, ironBack: 5 });
+  expect(r).toMatchObject({ archer: false, soldier: true, wood: 4, iron: 3, label: '🔰 Щит (6🪵 2🔩)', afterDisarm: false, ironBack: 5 });
 });
