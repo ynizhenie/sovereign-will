@@ -457,10 +457,17 @@ function render() {
       ctx.fillStyle = '#e74c3c';
       for (let i = 0; i < Math.min(b.usesLeft || 0, 5); i++) ctx.fillRect(b.x - 12 + i * 5, b.y + 10, 3, 2);
     } else if (b.type === 'watchtower') {
-      ctx.fillStyle = '#607d8b'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.fillStyle = '#90a4ae'; ctx.fillRect(b.x - 10, b.y - 19, 20, 8);
-      ctx.strokeStyle = '#263238'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.fillStyle = '#eceff1'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🗼', b.x, b.y + 7);
+      // a wooden lookout seen from above: four posts with cross braces, and a plank platform with a
+      // railing, where its archer stands (drawn with the settlers)
+      ctx.fillStyle = '#5d3a1a';
+      for (const [px, py] of [[-13, -13], [9, -13], [-13, 9], [9, 9]]) ctx.fillRect(b.x + px, b.y + py, 4, 4);
+      ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(b.x - 11, b.y - 11); ctx.lineTo(b.x + 11, b.y + 11); ctx.moveTo(b.x + 11, b.y - 11); ctx.lineTo(b.x - 11, b.y + 11); ctx.stroke();
+      ctx.fillStyle = '#a47148'; ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
+      ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 1;
+      for (let i = -5; i <= 5; i += 5) { ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + i); ctx.lineTo(b.x + 10, b.y + i); ctx.stroke(); }
+      ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
+      ctx.textAlign = 'center';
       ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; ctx.fillText(`🏹 ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22);
       ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
       ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / b.tower.arrowCapacity), 1);
@@ -487,7 +494,7 @@ function render() {
 	  }
 	  if (b.smeltProgress > 0) {
 		ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(b.x - 14, b.y - 19, 28, 4);
-		ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 13, b.y - 18, 26 * Math.min(1, b.smeltProgress / 4), 2);
+		ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 13, b.y - 18, 26 * Math.min(1, b.smeltProgress / getSmelterLimits().seconds), 2);
 	  }
 }
 
