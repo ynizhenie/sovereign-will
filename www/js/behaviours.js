@@ -17,7 +17,8 @@ function createSettlerTick(dt) {
   }
   // player-marked resources, then anything blocking a door (worked as if marked with priority 1)
   const doorBlockers = findDoorBlockers(allResources, resourceKind);
-  const markedResources = allResources.filter(r => (r.priority || 0) > 0 || doorBlockers.has(r));
+  const zoneBlockers = findZoneBlockers(allResources, resourceKind);
+  const markedResources = allResources.filter(r => (r.priority || 0) > 0 || doorBlockers.has(r) || zoneBlockers.has(r));
   markedResources.sort((a, b) => getWorkPriority(b) - getWorkPriority(a));
 
   const defendersCount = settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
@@ -807,6 +808,20 @@ function breakOutOfSealedBase(s, tick) {
 }
 
 // ---- Farm zones
+
+// What's gathered by hand (grass, sticks, pebbles, bushes) lying on a farm zone tile: workers without a
+// tool take it home first (worked as if marked with priority 1), so the tile can be planted
+function findZoneBlockers(allResources, resourceKind) {
+  const blockers = new Set();
+  if (farmZones.length === 0) return blockers;
+  const zoneTiles = new Set(farmZones.map(z => `${z.x},${z.y}`));
+  for (const r of allResources) {
+    const kind = resourceKind.get(r);
+    const def = getMapResourceDef(kind);
+    if (def && !def.tool && kind !== 'farm' && kind !== 'boar' && zoneTiles.has(`${r.x},${r.y}`)) blockers.add(r);
+  }
+  return blockers;
+}
 
 // Farmers (a worker with a hoe) plant the empty tiles of the player's farm zones, nearest first; one
 // farmer per tile. Planting takes GAME_CONFIG.farming.plantSeconds and costs the crop's building cost.

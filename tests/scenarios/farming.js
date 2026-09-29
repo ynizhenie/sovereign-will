@@ -1,6 +1,8 @@
 // Farm zones and farmers (#29)
 Object.assign(window.sim, (() => {
-  const { start, run, helpers: { makeSettler, clearResources } } = window.sim;
+  const { start, run, helpers: { tileCenter, makeSettler, clearResources } } = window.sim;
+  // tile centres east of the town hall: dx tiles right, dy tiles down
+  const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
 
   // Three wheat and two sapling zone tiles east of the town hall; `farmer`: a worker with a hoe (else a
   // worker with no tool). Returns what got planted and, after the wheat ripens, what the farmer did.
@@ -8,7 +10,7 @@ Object.assign(window.sim, (() => {
     start(seed);
     clearResources();
     window.showNotification = () => {};
-    const row = i => ({ x: townHall.x + (3 + i) * TILE_SIZE, y: townHall.y + 2 * TILE_SIZE });
+    const row = i => nearHall(3 + i, 2);
     for (let i = 0; i < 3; i++) toggleFarmZone(row(i).x, row(i).y, 'wheat');
     for (let i = 3; i < 5; i++) toggleFarmZone(row(i).x, row(i).y, 'sapling');
     stock.wheatSeeds = 10; stock.saplings = 5;
@@ -30,7 +32,7 @@ Object.assign(window.sim, (() => {
   function farmZonePainting({ seed = 'farm-paint-test' }) {
     start(seed);
     window.showNotification = () => {};
-    const x = townHall.x + 3 * TILE_SIZE, y = townHall.y;
+    const { x, y } = nearHall(3, 0);
     toggleFarmZone(x, y, 'wheat');
     const afterWheat = farmZones.map(z => z.crop);
     toggleFarmZone(x, y, 'sapling');

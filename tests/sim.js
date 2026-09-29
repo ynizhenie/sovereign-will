@@ -35,10 +35,11 @@ window.sim = (() => {
     };
   }
 
-  // Removes every gatherable resource, rock and water from the map
+  // Leaves plain grass: removes every gatherable resource, rock, water and sand from the map
   function clearResources() {
     for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars,
-      naturalRocks, waterTiles, farmPlots]) list.length = 0;
+      naturalRocks, waterTiles, farmPlots, desertTiles, beachTiles]) list.length = 0;
+    desertRegion = null;
     invalidateAllPaths();
   }
 
