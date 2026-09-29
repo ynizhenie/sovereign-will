@@ -29,6 +29,7 @@ function getTileIndex() {
     cacti: keys(cacti),
     boulders: keys(boulders),
     ores: keys([...ironOres, ...coalOres]),
+    rockAndOre: keys([...naturalRocks, ...ironOres, ...coalOres]), // rock tiles that draw joined up
     solids: keys([...boulders, ...cacti, ...ironOres, ...coalOres]),
     buildings: keys(buildings),
     walls: keys(buildings.filter(b => b.type !== 'door')),
