@@ -16,7 +16,7 @@ function getTileIndex() {
   const keys = list => new Set(list.map(o => `${o.x},${o.y}`));
   // changes whenever anything that blocks a tile appears, disappears or moves; used to invalidate
   // cached reachability without every harvest/build site having to remember to do it
-  let signature = 0;
+  let signature = COLS * 1000 + ROWS; // a new map size invalidates everything cached by signature
   for (const list of [naturalRocks, waterTiles, trees, cacti, boulders, ironOres, coalOres, buildings]) {
     signature = (signature * 31 + list.length) | 0;
     for (const o of list) signature = (signature * 31 + o.x * 1601 + o.y + (o.isGrowing ? 7 : 0)) | 0;
@@ -52,7 +52,7 @@ let settlerBlockedGrid = { signature: null, grid: null };
 
 function getSettlerBlockedGrid() {
   const signature = getTileIndex().signature;
-  if (settlerBlockedGrid.signature !== signature) {
+  if (settlerBlockedGrid.signature !== signature || settlerBlockedGrid.grid.length !== COLS * ROWS) {
     const grid = new Uint8Array(COLS * ROWS);
     for (let gy = 0; gy < ROWS; gy++) {
       for (let gx = 0; gx < COLS; gx++) grid[gy * COLS + gx] = computeTileBlockedForSettler(gx, gy) ? 1 : 0;
