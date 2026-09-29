@@ -142,6 +142,7 @@ function performAttack(attacker, targetX, targetY) {
     });
     attacker.arrows--;
     attacker.attackCooldown = stats.cooldown;
+    startSwing(attacker, 0.3);
   } else {
     let range = stats.range;
     let dmg = stats.damage * stats.multiplier;
@@ -167,6 +168,7 @@ function performAttack(attacker, targetX, targetY) {
     });
 
     attacker.attackCooldown = stats.cooldown;
+    startSwing(attacker, Math.min(0.35, stats.cooldown * 0.8));
   }
 }
 
