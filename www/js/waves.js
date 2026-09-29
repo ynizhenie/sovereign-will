@@ -26,17 +26,32 @@ function getEnemyDef(enemy) {
 function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return null;
-  return {
+  const enemy = {
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
     hp: definition.hp, maxHp: definition.hp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
   };
+  if (definition.quiver) {
+    enemy.arrows = definition.quiver.arrows;
+    enemyArrowStock += definition.quiver.tentStock;
+  }
+  return enemy;
 }
 
 function createNormalEnemy(pos, enemyKey = 'raider') {
   return createConfiguredEnemy(pos, getDefinition('enemies', enemyKey) ? enemyKey : 'raider');
+}
+
+function findNearestEnemyTent(origin) {
+  let nearest = null;
+  let nearestDist = Infinity;
+  enemyTents.forEach(tent => {
+    const dist = Math.hypot(tent.x - origin.x, tent.y - origin.y);
+    if (dist < nearestDist) { nearest = tent; nearestDist = dist; }
+  });
+  return nearest;
 }
 
 function grantEnemyReward(enemy) {

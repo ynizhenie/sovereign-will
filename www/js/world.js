@@ -572,7 +572,7 @@ function resetGame() {
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
-  settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = [];
+  settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
   projectiles = []; farmPlots = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
   generateMap();
