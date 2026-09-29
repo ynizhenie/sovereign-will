@@ -8,7 +8,6 @@ const GAME_CONFIG = {
     iron: { id: 'iron', label: 'Железо', icon: '🔩', type: 'resource' },
     leather: { id: 'leather', label: 'Кожа', icon: '🟫', type: 'resource' },
     arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', type: 'resource' },
-    armor: { id: 'armor', label: 'Броня', icon: '🛡️', type: 'resource' },
     wheatSeeds: { id: 'wheatSeeds', label: 'Семена', icon: '🌾', type: 'resource' },
     saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' }
   },
@@ -147,7 +146,7 @@ const GAME_CONFIG = {
 
   start: {
     // stock at the start of a game (ids from `resources`)
-    resources: { wood: 30, stone: 20, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, armor: 0, food: 25, wheatSeeds: 3, saplings: 0 },
+    resources: { wood: 30, stone: 20, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0 },
     // population limit before tents (each tent adds buildings.tent.population)
     population: 5
   },
@@ -159,17 +158,19 @@ const GAME_CONFIG = {
     big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
   },
 
-  // worn gear. backpack (Tools tab): a worker carries extraLoads more loads, and gathers until it's full
+  // worn gear, paid for with its button and picked up at the town hall (the settler walks there to
+  // put it on, and to take it off: the cost comes back). backpack: a worker carries extraLoads more
+  // loads (never an archer: the quiver is on its back). armor: +hpBonus, damageReduction off every hit,
+  // melee soldiers first. shield: melee soldiers only, damageReduction off every hit, on top of armour.
   gear: {
     backpack: { id: 'backpack', label: 'Рюкзак', icon: '🎒', cost: { leather: 5 }, extraLoads: 1 },
-    // melee soldiers only (a bow takes both hands): takes damageReduction off every hit, on top of armour
-    shield: { id: 'shield', label: 'Щит', icon: '🛡️', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 }
+    shield: { id: 'shield', label: 'Щит', icon: '🔰', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
+    armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 }
   },
 
   // crafted at the town hall into the stock
   recipes: {
-    arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } },
-    armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, produces: { armor: 1 }, hpBonus: 50 }
+    arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } }
   },
 
   // what one repair step costs and restores (buildings: one step per `interval` seconds per worker).

@@ -68,11 +68,8 @@ function renderConfigHud() {
   label('btn-upgrade', `${types.big.icon} Улучшить (${formatCost(types.big.upgradeCost)})`);
   label('btn-upgrade-big', `${types.big.icon} Улучшить рабочего (${formatCost(types.big.upgradeCost)})`);
   label('btn-craft-arrows', `${recipes.arrows.icon} ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
-  const backpack = GAME_CONFIG.gear.backpack;
-  label('btn-backpack', `${backpack.icon} ${backpack.label} (${formatCost(backpack.cost)})`);
-  const shield = GAME_CONFIG.gear.shield;
-  label('btn-shield', `${shield.icon} ${shield.label} (${formatCost(shield.cost)})`);
-  label('btn-craft-armor', `${recipes.armor.icon} ${recipes.armor.label} (${formatCost(recipes.armor.cost)})`);
+  for (const item of Object.values(GAME_CONFIG.gear)) label(`btn-${item.id}`, `${item.icon} ${item.label} (${formatCost(item.cost)})`);
+
 
   const weaponActions = document.getElementById('weapon-actions');
   Object.values(GAME_CONFIG.weapons).forEach(item => {
