@@ -66,6 +66,7 @@ const WORLD = {
   grassList: [],
   berryBushes: [],
   farmPlots: [],
+  farmZones: [],        // { x, y, crop } tiles the player marked for farmers to plant, see tendFarmZones()
   naturalRocks: [],
   waterTiles: [],
   desertTiles: [],
