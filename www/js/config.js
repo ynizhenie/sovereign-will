@@ -147,6 +147,9 @@ const GAME_CONFIG = {
   // healPerHerb hp for one herb from the stock every healSeconds
   medic: { healPerHerb: 30, healSeconds: 1.2, range: 26 },
 
+  // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
+  corpses: { seconds: 60 },
+
   fishing: { seconds: 3, catch: { food: 2 }, bait: { wheatSeeds: 1 } },
 
   // ---- Colony
