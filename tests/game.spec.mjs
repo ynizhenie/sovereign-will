@@ -362,3 +362,21 @@ test('a settler healing at a tent heals up fully while not attacked (#65)', asyn
   expect(r.reachedTent).toBe(true);
   expect(r.leftWith).toBe(1);
 });
+
+test('arrows stop at trees, rocks, bushes and buildings, and fly over grass, sticks, pebbles, water and crops (#23)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'arrowObstacles', {});
+  const blocks = ['tree', 'boulder', 'rock', 'bush', 'tent'];
+  const passes = ['grass', 'stick', 'pebble', 'water', 'wheat', 'sapling'];
+  const overFromTower = ['wall', 'door'];
+  for (const kind of blocks) expect([kind, r[kind]]).toEqual([kind, { ground: { clear: false, hit: false }, tower: { clear: false, hit: false } }]);
+  for (const kind of passes) expect([kind, r[kind]]).toEqual([kind, { ground: { clear: true, hit: true }, tower: { clear: true, hit: true } }]);
+  for (const kind of overFromTower) expect([kind, r[kind]]).toEqual([kind, { ground: { clear: false, hit: false }, tower: { clear: true, hit: true } }]);
+});
+
+test('an archer steps aside for a clear shot instead of shooting into a rock (#23)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'archerAroundObstacle', {});
+  expect(r.hurt).toBe(true);
+  expect(r.blockedShots).toBe(0);
+});
