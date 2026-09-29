@@ -403,7 +403,10 @@ function fightEnemies(s, tick) {
     let dist = distToClosestEn;
     // approach: how close to walk before striking (bows: shoot from under this distance)
     const approach = getWeaponStats(s, 'combat').approach;
-    const inReach = isBowWeapon(s.weapon) ? dist < approach : dist <= approach;
+    // bows need a clear line of fire too, or they walk closer
+    const inReach = isBowWeapon(s.weapon)
+      ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
+      : dist <= approach;
     if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
     } else {
@@ -434,7 +437,8 @@ function clearEnemyTents(s, tick) {
       });
       if (nearestTent) {
         let attackDist = getWeaponStats(s, 'combat').tentReach;
-        if (minDist > attackDist) {
+        const blockedShot = isBowWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, nearestTent.x, nearestTent.y);
+        if (minDist > attackDist || blockedShot) {
           moveEntityTowards(s, nearestTent.x, nearestTent.y, s.speed, false, tick.dt);
         } else {
           performAttack(s, nearestTent.x, nearestTent.y);

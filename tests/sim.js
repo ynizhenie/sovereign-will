@@ -587,6 +587,77 @@ window.sim = (() => {
     return { reachedTent: atTent, leftWith };
   }
 
+  // An empty map; one obstacle of each kind in turn on the tile between a shooter and a target 4 tiles
+  // away. For each kind: whether the line of fire is clear (from the ground and from a tower), and
+  // whether an arrow actually fired along that line hits the target.
+  function arrowObstacles({ seed = 'arrow-test' }) {
+    start(seed);
+    const clearMap = () => {
+      for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars,
+        naturalRocks, waterTiles, farmPlots]) list.length = 0;
+      buildings = []; blueprints = []; enemyTents = []; projectiles = [];
+    };
+    const g = getGridPos(townHall.x, townHall.y);
+    const from = tileCenter(g.gx + 3, g.gy), mid = tileCenter(g.gx + 5, g.gy), to = tileCenter(g.gx + 7, g.gy);
+    const place = {
+      tree: () => trees.push({ ...mid, hp: 3, isGrowing: false, growProgress: 0 }),
+      boulder: () => boulders.push({ ...mid, hp: 4 }),
+      rock: () => naturalRocks.push({ ...mid, hp: 100 }),
+      bush: () => berryBushes.push({ ...mid, hp: 1 }),
+      wall: () => placeBuilding('wall_stone', mid.x, mid.y),
+      door: () => placeBuilding('door', mid.x, mid.y),
+      tent: () => placeBuilding('tent', mid.x, mid.y),
+      grass: () => grassList.push({ ...mid, hp: 1 }),
+      stick: () => sticks.push({ ...mid, hp: 1 }),
+      pebble: () => pebbles.push({ ...mid, hp: 1 }),
+      water: () => waterTiles.push({ ...mid }),
+      wheat: () => placeBuilding('wheat', mid.x, mid.y),
+      sapling: () => placeBuilding('sapling', mid.x, mid.y)
+    };
+    const out = {};
+    for (const [kind, put] of Object.entries(place)) {
+      const result = {};
+      for (const fromTower of [false, true]) {
+        clearMap(); put(); resetTileIndex();
+        settlers = [makeSettler(1, townHall.x - 200, townHall.y, { isPossessed: true })];
+        const enemy = createConfiguredEnemy(to, 'raider');
+        enemy.speed = 0; enemy.damage = 0;
+        enemies = [enemy];
+        const clear = hasLineOfFire(from.x, from.y, to.x, to.y, fromTower);
+        projectiles.push({ x: from.x, y: from.y, vx: 4.5, vy: 0, damage: 10, life: 80, fromEnemy: false, fromTower });
+        run(1);
+        result[fromTower ? 'tower' : 'ground'] = { clear, hit: enemy.hp < enemy.maxHp };
+      }
+      out[kind] = result;
+    }
+    return out;
+  }
+
+  // A settler archer and a standing enemy with a boulder on the straight line between them: the archer
+  // must step aside to get a clear shot, and every arrow it fires must land.
+  function archerAroundObstacle({ seed = 'arrow-ai-test', seconds = 20 }) {
+    start(seed);
+    for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars,
+      naturalRocks, waterTiles, farmPlots]) list.length = 0;
+    const g = getGridPos(townHall.x, townHall.y);
+    const from = tileCenter(g.gx + 3, g.gy), to = tileCenter(g.gx + 7, g.gy);
+    boulders.push({ ...tileCenter(g.gx + 5, g.gy), hp: 1e6 });
+    invalidateAllPaths();
+    settlers = [makeSettler(1, from.x, from.y, { weapon: 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 })];
+    const enemy = createConfiguredEnemy(to, 'raider');
+    enemy.speed = 0; enemy.damage = 0; enemy.hp = enemy.maxHp = 1e6;
+    enemies = [enemy];
+    // every arrow shot should land: count shots, and hits from the enemy's hp
+    let shots = 0;
+    const seen = new WeakSet();
+    run(seconds, { each: () => {
+      for (const p of projectiles) if (!seen.has(p) && !p.fromEnemy) { seen.add(p); shots++; }
+    } });
+    const perArrow = getWeaponStats(settlers[0], 'combat').damage;
+    const hits = Math.round((enemy.maxHp - enemy.hp) / perArrow);
+    return { hurt: hits > 0, blockedShots: shots - hits, inFlight: projectiles.length };
+  }
+
   // Items whose disarm refund differs from their GAME_CONFIG cost
   function refundMismatches() {
     start('refund-test');
@@ -610,6 +681,6 @@ window.sim = (() => {
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,
-    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource, tentAssault, healUp
+    boarHuntDamage, boarFlee, archerQuiver, configOnlyResource, tentAssault, healUp, arrowObstacles, archerAroundObstacle
   };
 })();

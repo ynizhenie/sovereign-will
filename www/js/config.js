@@ -44,17 +44,18 @@ const GAME_CONFIG = {
     bow: { id: 'bow', label: 'Лук', icon: '🏹', cost: { wood: 15, leather: 5 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } }
   },
-  // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'
+  // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'.
+  // Arrows stop at buildings, except arrowsPass ones; towerArrowsPass ones only stop arrows shot from the ground.
   buildings: {
-    wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 } },
-    wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 } },
-    door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 } },
+    wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
+    wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 }, towerArrowsPass: true },
+    door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
     smelter: { id: 'smelter', label: 'Плавильня', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160, smelter: true } },
     watchtower: { id: 'watchtower', label: 'Сторожевая башня', icon: '🗼', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
-    wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming' },
-    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming' }
+    wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
+    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
   },
   // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
   //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
@@ -93,7 +94,7 @@ const GAME_CONFIG = {
   //
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
   // gathered by hand, by settlers who have no tool (or anyone, if the player marks it).
-  // markOnly: settlers only work it when the player marks it. hp: toughness.
+  // markOnly: settlers only work it when the player marks it. hp: toughness. blocksArrows: arrows stop at it.
   // yield: what finishing it gives; bonusChance: { resource: chance } of one extra.
   // regrow: where it grows back after map.respawnDelay ('forest', 'anywhere', 'nearby' = around where
   // it was, 'spawner' = around an ore spawner, after map.oreRespawnDelay); none = gone for good.
@@ -104,22 +105,22 @@ const GAME_CONFIG = {
   //   chop — loses hp per second by settler type, times toolBonus; drain — loses hp per second by tool.
   // hit (possessed settler): hp per hit by tool (default otherwise); none — taken at once.
   mapResources: {
-    tree: { list: 'trees', tool: 'axe', hp: 3, yield: { wood: 3 }, bonusChance: { saplings: 0.5 }, regrow: 'forest', forestShare: 1,
+    tree: { list: 'trees', blocksArrows: true, tool: 'axe', hp: 3, yield: { wood: 3 }, bonusChance: { saplings: 0.5 }, regrow: 'forest', forestShare: 1,
       work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } }, hit: { default: 1, iron_axe: 1.5 } },
-    cactus: { list: 'cacti', tool: 'axe', hp: 2, yield: { wood: 1 }, regrow: 'nearby',
+    cactus: { list: 'cacti', blocksArrows: true, tool: 'axe', hp: 2, yield: { wood: 1 }, regrow: 'nearby',
       work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } }, hit: { default: 1, iron_axe: 1.5 } },
-    boulder: { list: 'boulders', tool: 'pickaxe', hp: 4, yield: { stone: 3 }, regrow: 'anywhere',
+    boulder: { list: 'boulders', blocksArrows: true, tool: 'pickaxe', hp: 4, yield: { stone: 3 }, regrow: 'anywhere',
       work: { chop: { normal: 1.5, big: 2.5 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
-    iron_ore: { list: 'ironOres', tool: 'pickaxe', hp: 5, yield: { ironOre: 3 }, regrow: 'spawner',
+    iron_ore: { list: 'ironOres', blocksArrows: true, tool: 'pickaxe', hp: 5, yield: { ironOre: 3 }, regrow: 'spawner',
       work: { seconds: { pickaxe: 3.0, iron_pickaxe: 2.0 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
-    coal_ore: { list: 'coalOres', tool: 'pickaxe', hp: 5, yield: { coal: 3 }, regrow: 'spawner',
+    coal_ore: { list: 'coalOres', blocksArrows: true, tool: 'pickaxe', hp: 5, yield: { coal: 3 }, regrow: 'spawner',
       work: { seconds: { pickaxe: 2.5, iron_pickaxe: 1.7 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
-    natural_rock: { list: 'naturalRocks', tool: 'pickaxe', markOnly: true, hp: 100, yield: { stone: 15 }, clearsPath: true,
+    natural_rock: { list: 'naturalRocks', blocksArrows: true, tool: 'pickaxe', markOnly: true, hp: 100, yield: { stone: 15 }, clearsPath: true,
       work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, hit: { default: 25 } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { wheatSeeds: 1 }, regrow: 'forest', work: { seconds: 1.5 } },
-    berry_bush: { list: 'berryBushes', hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
+    berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { food: 4 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
     // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).

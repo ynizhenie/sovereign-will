@@ -208,56 +208,58 @@ function update(dt) {
 
   for (let i = projectiles.length - 1; i >= 0; i--) {
     let proj = projectiles[i];
+    if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
     proj.x += proj.vx; proj.y += proj.vy; proj.life--;
+    let hit = false;
 
     if (proj.fromEnemy) {
       if (Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
         townHall.hp -= proj.damage;
-        projectiles.splice(i, 1);
-        continue;
+        hit = true;
       }
       for (let s of settlers) {
+        if (hit) break;
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
           damageSettler(s, proj.damage, proj.owner);
-          projectiles.splice(i, 1);
-          break;
+          hit = true;
         }
       }
     } else {
-      for (let j = enemies.length - 1; j >= 0; j--) {
+      for (let j = enemies.length - 1; j >= 0 && !hit; j--) {
         let en = enemies[j];
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           en.hp -= proj.damage;
-          projectiles.splice(i, 1);
-          break;
+          hit = true;
         }
       }
-      for (let j = enemyTents.length - 1; j >= 0; j--) {
+      for (let j = enemyTents.length - 1; j >= 0 && !hit; j--) {
         let et = enemyTents[j];
         if (Math.hypot(et.x - proj.x, et.y - proj.y) < 18) {
           et.hp -= proj.damage;
-          projectiles.splice(i, 1);
-          break;
+          hit = true;
         }
       }
-      for (let j = boars.length - 1; j >= 0; j--) {
+      for (let j = boars.length - 1; j >= 0 && !hit; j--) {
         let b = boars[j];
         if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - proj.x, b.y - proj.y) < 12) {
           b.hp -= proj.damage;
           makeBoarFlee(b, proj.owner ? proj.owner.x : proj.x, proj.owner ? proj.owner.y : proj.y);
-          projectiles.splice(i, 1);
+          hit = true;
           if (b.hp <= 0) {
             b.isCarcass = true;
             b.collector = proj.owner || null;
             b.fleeTimer = 0;
             b.hideTarget = null;
           }
-          break;
         }
       }
     }
-    if (proj.life <= 0) projectiles.splice(i, 1);
+    // gone: it hit something, flew its full range, or struck an obstacle past its shooter's own tile
+    const tile = getGridPos(proj.x, proj.y);
+    const leftStartTile = tile.gx !== proj.startTile.gx || tile.gy !== proj.startTile.gy;
+    if (hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower))) projectiles.splice(i, 1);
   }
+
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     let en = enemies[i];
@@ -338,11 +340,13 @@ function update(dt) {
     }
     en.weapon = meleeDef.weapon || 'sword';
     const inMelee = !shooting && moveTarget === target;
-    const keepsAway = shooting && minDist < ranged.keepAway;
+    // an archer with no clear shot walks closer instead of standing off
+    const clearShot = shooting && hasLineOfFire(en.x, en.y, target.x, target.y);
+    const keepsAway = clearShot && minDist < ranged.keepAway;
 
     if (shooting) {
       en.attackCooldown = (en.attackCooldown || 0) - dt;
-      if (minDist < ranged.range && en.attackCooldown <= 0) {
+      if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
         projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
         en.attackCooldown = ranged.cooldown;
