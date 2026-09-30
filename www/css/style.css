@@ -216,13 +216,35 @@ canvas {
   border-color: #46b8da;
   background: rgba(46, 109, 164, 0.35);
 }
+.resource-details {
+  /* an open group drops down over what's below, so the panel doesn't change size */
+  position: relative;
+  height: 0;
+  z-index: 30;
+}
 .resource-group-members {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2px;
+  padding: 4px;
+  background: #1b1d22;
+  border: 1px solid #46b8da;
+  border-radius: 6px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 3px;
   font-size: 10px;
   margin-top: 3px;
 }
+.gear-actions {
+  /* armour / shield, backpack / watering can: a block of their own under the main buttons */
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #353a46;
+}
+
 .resource-group-members[hidden] {
   display: none;
 }

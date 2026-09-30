@@ -161,11 +161,14 @@
       <div id="tab-tools" class="tab-pane">
         <div class="btn-grid-2col" id="tool-actions"></div>
 
-        <div class="action-row">
+        <div class="btn-grid-2col gear-actions">
           <button class="btn" id="btn-backpack" onclick="orderGear('backpack')"></button>
-          <button class="btn btn-disarm" onclick="orderGearOff('backpack')" data-i18n="btn.backpackOff">❌ Take off backpack</button>
           <button class="btn" id="btn-wateringCan" onclick="orderGear('wateringCan')"></button>
-          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')" data-i18n="btn.wateringCanOff">❌ Take off watering can</button>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-disarm" onclick="orderGearOff('backpack')" data-i18n="btn.backpackOff">❌ Take backpack apart</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')" data-i18n="btn.wateringCanOff">❌ Take watering can apart</button>
           <button class="btn btn-disarm" onclick="disarmSettler('tool')" data-i18n="btn.disarmTool">❌ Take tool away</button>
         </div>
       </div>
@@ -174,12 +177,15 @@
         <div class="btn-grid-2col" id="weapon-actions"></div>
         <div class="btn-grid-2col" id="special-actions">
           <button class="btn" id="btn-craft-arrows" onclick="craftArrows()"></button>
+        </div>
+
+        <div class="btn-grid-2col gear-actions">
           <button class="btn" id="btn-armor" onclick="orderGear('armor')"></button>
           <button class="btn" id="btn-shield" onclick="orderGear('shield')"></button>
         </div>
 
         <div class="action-row">
-          <button class="btn btn-disarm" onclick="orderGearOff('armor')" data-i18n="btn.armorOff">❌ Take off armour</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('armor')" data-i18n="btn.armorOff">❌ Take armour apart</button>
           <button class="btn btn-disarm" onclick="disarmSettler('weapon')" data-i18n="btn.disarmWeapon">❌ Take weapon away</button>
         </div>
       </div>
