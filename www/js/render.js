@@ -527,6 +527,11 @@ function render() {
       ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + 8); ctx.lineTo(b.x + 10, b.y - 2); ctx.moveTo(b.x + 10, b.y + 8); ctx.lineTo(b.x - 10, b.y - 2); ctx.stroke();
       ctx.fillStyle = '#7f8c8d';
       for (const [sx, sy] of [[-12, 10], [-5, 12], [3, 12], [11, 10]]) { ctx.beginPath(); ctx.arc(b.x + sx, b.y + sy, 2.5, 0, Math.PI * 2); ctx.fill(); }
+      // fuel left (orange) and the piece cooking now (yellow)
+      const perFuel = Math.max(...Object.values(GAME_CONFIG.cooking.fuel));
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3); ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
+      ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, (b.fuelLeft || 0) / perFuel), 3);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress || 0), 3);
       if (b.burning > 0) {
         ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(b.x - 6, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 16, b.x + 6, b.y + 4); ctx.fill();
         ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
