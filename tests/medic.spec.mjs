@@ -12,7 +12,7 @@ test('during an attack a medic heals the wounded, soldiers first, one herb per 3
 test('without herbs a medic can not heal (#28)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'medicUnderAttack', { herbs: 0, seconds: 6 });
-  expect(r).toEqual({ soldierHp: 20, workerHp: 50, herbsLeft: 0 });
+  expect(r).toEqual({ soldierHp: 20, workerHp: 50, herbsLeft: 0, inBag: 0 });
 });
 
 test('when not busy a medic gathers grass and brings herbs home (#28)', async ({ page }) => {

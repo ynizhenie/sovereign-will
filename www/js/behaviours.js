@@ -360,8 +360,9 @@ function playerControlled(s, tick) {
 // Medics (a worker with a medbag) heal the wounded while enemies are about: the nearest wounded settler,
 // soldiers before workers, one medic per patient, one herb from the stock per healPerHerb hp.
 function treatWounded(s, tick) {
-  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive || stock.herbs <= 0) return false;
+  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive) return false;
   const medic = GAME_CONFIG.medic;
+  if (!(s.bagHerbs > 0) && stock.herbs <= 0) return false;
   let patient = null, best = Infinity;
   for (const other of settlers) {
     if (other === s || other.hp >= other.maxHp || other.towerAssignment || tick.patients.has(other)) continue;
@@ -369,6 +370,18 @@ function treatWounded(s, tick) {
     if (d < best) { best = d; patient = other; }
   }
   if (!patient) { s.healTimer = 0; return false; }
+  s.patrolTarget = null;
+  // an empty bag gets filled at the town hall first
+  if (!(s.bagHerbs > 0)) {
+    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius + 4) {
+      moveSettlerToTownHall(s, s.speed, tick.dt);
+    } else {
+      const take = Math.min(stock.herbs, medic.bagSize);
+      stock.herbs -= take;
+      s.bagHerbs = take;
+    }
+    return true;
+  }
   tick.patients.add(patient);
   if (Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
     moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
@@ -378,7 +391,7 @@ function treatWounded(s, tick) {
     faceTowards(s, patient.x, patient.y);
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;
-      stock.herbs--;
+      s.bagHerbs--;
       patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
     }
   }

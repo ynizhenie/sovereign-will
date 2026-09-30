@@ -254,6 +254,8 @@ function invalidateAllPaths() {
 }
 
 function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
+  // a medic's herbs go back with the bag
+  if (settler.bagHerbs > 0) { stock.herbs += settler.bagHerbs; settler.bagHerbs = 0; }
   // refund exactly what the item cost, as defined in GAME_CONFIG
   for (const item of [getDefinition('weapons', settler.weapon), getDefinition('tools', settler.tool)]) {
     addResources((item && item.cost) || {});

@@ -632,7 +632,9 @@ function render() {
   });
 
   settlers.forEach(s => {
-    ctx.fillStyle = s.isPossessed ? '#3498db' : (s.role === 'worker' ? '#2ecc71' : '#e67e22');
+    // medics count as fighters for their colour
+    const fighter = s.role !== 'worker' || hasToolFamily(s.tool, 'medic');
+    ctx.fillStyle = s.isPossessed ? '#3498db' : (fighter ? '#e67e22' : '#2ecc71');
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
     drawBodyBlood(s, s.visualRadius);
 
@@ -665,9 +667,12 @@ function render() {
     } else if (s.tool === 'rod') {
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
     } else if (s.tool === 'medbag') {
-      // a white bag with a red cross
-      ctx.fillStyle = '#ecf0f1'; ctx.fillRect(7, -4, 9, 8);
-      ctx.fillStyle = '#e74c3c'; ctx.fillRect(10.5, -3, 2, 6); ctx.fillRect(8.5, -1, 6, 2);
+      // a leather bag with a small green cross; the green inside rises with the herbs it holds
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(7, -5, 10, 10);
+      const full = Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize);
+      ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
+      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
+      ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
     } else if (s.tool === 'hoe') {
       // a long handle with a flat blade turned down at the end
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 15, 2);
