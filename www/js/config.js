@@ -157,6 +157,10 @@ const GAME_CONFIG = {
   // healPerHerb hp for one herb from the stock every healSeconds
   medic: { healPerHerb: 30, healSeconds: 1.2, range: 26 },
 
+  // blood on a hurt unit, under it, and on the melee weapon that hit it: it starts to fade after
+  // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less
+  blood: { fadeAfter: 10, fadeSeconds: 3, woundedShare: 0.25, maxSplats: 150 },
+
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },
 
