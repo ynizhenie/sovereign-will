@@ -105,19 +105,14 @@ function getOreSpotsAround(spawner, radius) {
       if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS || isBorderZone(gx, gy)) continue;
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
       if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
-      const rock = naturalRocks.find(r => r.x === x && r.y === y);
-      if (rock) {
-        if (!rock.oreSpawner) spots.push({ x, y, rock });
-      } else if (!isDesertTile(x, y) && !isTileOccupied(x, y)) {
-        spots.push({ x, y, rock: null });
-      }
+      // free ground only: ore never replaces natural rock
+      if (!isDesertTile(x, y) && !isTileOccupied(x, y)) spots.push({ x, y });
     }
   }
   return spots;
 }
 
 function placeOre(kind, spot) {
-  if (spot.rock) naturalRocks.splice(naturalRocks.indexOf(spot.rock), 1);
   addMapResource(ORE_KINDS[kind].resource, spot.x, spot.y);
 }
 
@@ -185,14 +180,16 @@ function placeOreSpawners(kind, count) {
 }
 
 // spread: side of the square (px) around nearX/nearY to pick a spot in
-function spawnResource(type, nearX = null, nearY = null, spread = 180) {
+// pickPoint: optional () => { x, y } to try instead of a square around (nearX, nearY) (forest shapes)
+function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null) {
   let tx, ty, isValid = false, attempts = 0;
   while (!isValid && attempts < 100) {
     attempts++;
     let gx, gy;
-    if (nearX !== null && nearY !== null) {
-      tx = nearX + (rand() - 0.5) * spread;
-      ty = nearY + (rand() - 0.5) * spread;
+    if (pickPoint || (nearX !== null && nearY !== null)) {
+      const point = pickPoint ? pickPoint() : { x: nearX + (rand() - 0.5) * spread, y: nearY + (rand() - 0.5) * spread };
+      tx = point.x;
+      ty = point.y;
       gx = Math.max(BORDER_MARGIN, Math.min(COLS - BORDER_MARGIN - 1, Math.floor(tx / TILE_SIZE)));
       gy = Math.max(BORDER_MARGIN, Math.min(ROWS - BORDER_MARGIN - 1, Math.floor(ty / TILE_SIZE)));
     } else {
@@ -281,10 +278,30 @@ function spawnForestAware(type) {
   const share = getMapResourceDef(type).forestShare ?? GAME_CONFIG.map.forestUndergrowthShare ?? 0.7;
   if (forests.length > 0 && rand() < share) {
     const forest = forests[Math.floor(rand() * forests.length)];
-    spawnResource(type, forest.x, forest.y, getForestSpread());
+    spawnResource(type, forest.x, forest.y, getForestSpread(), () => pickForestPoint(forest));
   } else {
     spawnResource(type);
   }
+}
+
+// A forest is a few overlapping round lobes around its centre, so it grows into an uneven blob rather
+// than a square
+function makeForestLobes(x, y) {
+  const reach = getForestSpread() / 2;
+  const lobes = [{ x, y, r: reach * 0.8 }];
+  const extra = 2 + Math.floor(rand() * 3);
+  for (let i = 0; i < extra; i++) {
+    const angle = rand() * Math.PI * 2, dist = reach * (0.5 + rand() * 0.6);
+    lobes.push({ x: x + Math.cos(angle) * dist, y: y + Math.sin(angle) * dist, r: reach * (0.45 + rand() * 0.35) });
+  }
+  return lobes;
+}
+
+// A random point in one of the forest's lobes
+function pickForestPoint(forest) {
+  const lobe = forest.lobes[Math.floor(rand() * forest.lobes.length)];
+  const angle = rand() * Math.PI * 2, dist = lobe.r * Math.sqrt(rand());
+  return { x: lobe.x + Math.cos(angle) * dist, y: lobe.y + Math.sin(angle) * dist };
 }
 
 function placeForests() {
@@ -298,8 +315,9 @@ function placeForests() {
         !waterTiles.some(wt => Math.hypot(wt.x - x, wt.y - y) < 90) &&
         forests.every(f => Math.hypot(f.x - x, f.y - y) > 6 * TILE_SIZE);
       if (!valid) continue;
-      forests.push({ x, y });
-      spawnResourceCluster('tree', getMapCount('forestTrees', 9), x, y, getForestSpread());
+      const forest = { x, y, lobes: makeForestLobes(x, y) };
+      forests.push(forest);
+      for (let i = 0; i < getMapCount('forestTrees', 9); i++) spawnResource('tree', x, y, getForestSpread(), () => pickForestPoint(forest));
       break;
     }
   }

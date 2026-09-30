@@ -7,6 +7,7 @@ Object.assign(window.sim, (() => {
   function orderGearFor({ seed = 'gear-test', id, only }) {
     start(seed);
     window.showNotification = () => {};
+    boars.length = 0; // a hunt would bring leather in and blur what was paid
     const hx = townHall.x, hy = townHall.y;
     const all = {
       archer: makeSettler(1, hx - 150, hy, { weapon: 'bow', role: 'archer', quiver: true, isPossessed: false }),
