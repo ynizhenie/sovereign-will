@@ -187,16 +187,49 @@ canvas {
 
 .resources-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 3px;
   font-size: 10px;
 }
-.resources-grid div {
+.resources-grid div, .resource-group-members div {
   background: rgba(0, 0, 0, 0.35);
   padding: 3px 2px;
   border-radius: 4px;
   text-align: center;
   white-space: nowrap;
+  /* never wider than its column: long labels end in … instead of stretching the panel */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#resources-hud .population-tile {
+  grid-column: span 2;
+}
+
+/* a group tile opens a row of its members under the resource tiles */
+.resources-grid .resource-group {
+  cursor: pointer;
+  border: 1px solid #353a46;
+}
+.resources-grid .resource-group.open {
+  border-color: #46b8da;
+  background: rgba(46, 109, 164, 0.35);
+}
+.resource-group-members {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  font-size: 10px;
+  margin-top: 3px;
+}
+.resource-group-members[hidden] {
+  display: none;
+}
+
+#btn-deselect {
+  padding: 4px 12px !important;
+  font-size: 15px !important;
 }
 
 .tab-navigation {
@@ -370,8 +403,11 @@ canvas {
     display: none;
   }
 
-  .resources-grid {
-    grid-template-columns: repeat(13, 1fr);
+  .resources-grid, .resource-group-members {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  #resources-hud .population-tile {
+    grid-column: span 2;
   }
 }
 

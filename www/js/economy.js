@@ -12,6 +12,17 @@ function getResourceAmount(resourceKey) {
   return amount;
 }
 
+// Open a resource group's row (closing any other), or close it if it's open
+function toggleResourceGroup(groupId) {
+  for (const group of GAME_CONFIG.resourceGroups) {
+    const row = document.getElementById(`group-${group.id}-members`);
+    const tile = document.getElementById(`group-${group.id}`);
+    if (!row) continue;
+    row.hidden = group.id === groupId ? !row.hidden : true;
+    if (tile) tile.classList.toggle('open', !row.hidden);
+  }
+}
+
 function updateUnitCounts() {
   const workers = settlers.filter(s => s.role === 'worker').length;
   const warriors = settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
@@ -40,14 +51,40 @@ function renderConfigHud() {
     resourcesHud.appendChild(base);
 
     const population = document.createElement('div');
+    population.className = 'population-tile';
     population.innerHTML = `👨‍🌾 Жители: <b id="pop-txt" style="color: #2ecc71;">2/5</b> <span style="font-size: 0.9em; opacity: 0.85;">(👨‍🌾 <b id="workers-cnt">0</b> | ⚔️ <b id="warriors-cnt">0</b>)</span>`;
     resourcesHud.appendChild(population);
 
-    Object.values(GAME_CONFIG.resources).forEach(resource => {
+    // resources by group (GAME_CONFIG.resourceGroups): a tile with the group's total; tapping it opens a
+    // row with each resource in it, underneath the tiles
+    const resourceTile = (resource, parent) => {
       const item = document.createElement('div');
       item.innerHTML = `${resource.icon || ''} ${resource.label}: <b id="${resourceHudId(resource.id)}">0</b>`;
-      resourcesHud.appendChild(item);
-    });
+      parent.appendChild(item);
+    };
+    const details = document.createElement('div');
+    details.id = 'resource-details';
+    details.className = 'resource-details';
+    const grouped = new Set();
+    for (const group of GAME_CONFIG.resourceGroups) {
+      const members = group.members.filter(id => GAME_CONFIG.resources[id]);
+      members.forEach(id => grouped.add(id));
+      if (members.length === 1) { resourceTile(GAME_CONFIG.resources[members[0]], resourcesHud); continue; }
+      const tile = document.createElement('div');
+      tile.className = 'resource-group';
+      tile.id = `group-${group.id}`;
+      tile.innerHTML = `${group.icon} ${group.label}: <b id="group-${group.id}-txt">0</b> ▾`;
+      resourcesHud.appendChild(tile);
+      const row = document.createElement('div');
+      row.className = 'resource-group-members';
+      row.id = `group-${group.id}-members`;
+      row.hidden = true;
+      members.forEach(id => resourceTile(GAME_CONFIG.resources[id], row));
+      details.appendChild(row);
+      tile.addEventListener('click', () => toggleResourceGroup(group.id));
+    }
+    Object.values(GAME_CONFIG.resources).filter(r => !grouped.has(r.id)).forEach(r => resourceTile(r, resourcesHud));
+    resourcesHud.after(details);
   }
 
   Object.values(GAME_CONFIG.buildings).forEach(item => {
