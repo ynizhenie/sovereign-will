@@ -57,7 +57,13 @@ function findNearestEnemyTent(origin) {
 // ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
 // later mechanic (e.g. raising the dead) can use one up by removing it from `corpses`.
 function addCorpse(unit, side, kind) {
-  corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0 });
+  const big = unit.type === 'big';
+  corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
+}
+
+// Worms show up on a corpse that has lain for GAME_CONFIG.worms.after of its time, until a fisher takes them
+function corpseHasWorms(corpse) {
+  return !corpse.wormsTaken && corpse.age >= GAME_CONFIG.corpses.seconds * GAME_CONFIG.worms.after;
 }
 
 function updateCorpses(dt) {
