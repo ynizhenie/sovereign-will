@@ -146,10 +146,31 @@ function getHeldItemPose(unit) {
   return { angle: 0, push: 0 };
 }
 
+// The held item points where the unit faces (faceTowards), posed on top of that
 function applyHeldItemPose(unit) {
   const pose = getHeldItemPose(unit);
-  ctx.rotate(pose.angle);
+  ctx.rotate((unit.facing || 0) + pose.angle);
   ctx.translate(pose.push, 0);
+}
+
+// Blood on the blade of the held item, fading (see bleed)
+function drawWeaponBlood(unit) {
+  const alpha = bloodAlpha(unit.weaponBloodAge);
+  if (alpha <= 0) return;
+  ctx.fillStyle = `rgba(120, 0, 0, ${0.85 * alpha})`;
+  ctx.fillRect(14, -2, 7, 4);
+}
+
+// Blood on a hurt unit's body: a few blotches at spots fixed per unit; stays while badly wounded
+function drawBodyBlood(unit, radius) {
+  const alpha = bodyBloodAlpha(unit);
+  if (alpha <= 0) return;
+  ctx.fillStyle = `rgba(110, 0, 0, ${0.8 * alpha})`;
+  const h = tileVariantHash(Math.round(unit.id || unit.maxHp || 1), 7);
+  for (let i = 0; i < 3; i++) {
+    const a = ((h >>> (i * 5)) % 360) * Math.PI / 180, d = radius * 0.45;
+    ctx.beginPath(); ctx.arc(unit.x + Math.cos(a) * d, unit.y + Math.sin(a) * d, 2.2 + i * 0.6, 0, Math.PI * 2); ctx.fill();
+  }
 }
 
 // Quiver on the back (left edge x), one arrow shown for every 3 left
@@ -568,6 +589,12 @@ function render() {
     }
   });
 
+  // blood on the ground
+  bloodSplats.forEach(b => {
+    ctx.fillStyle = `rgba(100, 0, 0, ${0.55 * bloodAlpha(b.age)})`;
+    ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r * 1.3, b.r, 0, 0, Math.PI * 2); ctx.fill();
+  });
+
   // corpses: grey, fading out over their last 10 seconds
   corpses.forEach(c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
@@ -595,6 +622,7 @@ function render() {
   settlers.forEach(s => {
     ctx.fillStyle = s.isPossessed ? '#3498db' : (s.role === 'worker' ? '#2ecc71' : '#e67e22');
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
+    drawBodyBlood(s, s.visualRadius);
 
     // a backpack on the left side, with a bar for how full it is
     if (s.backpack) {
@@ -634,6 +662,7 @@ function render() {
       ctx.fillStyle = '#7f8c8d'; ctx.fillRect(19, -1, 3, 7);
     }
     }
+    drawWeaponBlood(s);
     ctx.restore(); // pose only moves the held item
     if (s.armor === 'iron' || s.hasArmor) {
 	  ctx.strokeStyle = '#95a5a6';
@@ -671,6 +700,7 @@ function render() {
     ctx.fillStyle = en.type === 'big' ? '#a93226' : '#e74c3c';
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#7b241c'; ctx.lineWidth = 2; ctx.stroke();
+    drawBodyBlood(en, en.radius);
 
     ctx.save();
     ctx.translate(en.x, en.y);
@@ -678,6 +708,7 @@ function render() {
     ctx.save();
     applyHeldItemPose(en);
     drawHeldWeapon(en.weapon);
+    drawWeaponBlood(en);
     ctx.restore();
     if (en.arrows > 0) drawQuiver(-en.radius, en.arrows);
     ctx.restore();

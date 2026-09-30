@@ -124,6 +124,7 @@ function collidesWithWater(x, y, radius) {
 
 function performAttack(attacker, targetX, targetY) {
   if (attacker.attackCooldown > 0) return;
+  faceTowards(attacker, targetX, targetY);
 
   const stats = getWeaponStats(attacker, 'combat');
 
@@ -150,6 +151,7 @@ function performAttack(attacker, targetX, targetY) {
     enemies.forEach(en => {
       if (Math.hypot(en.x - attacker.x, en.y - attacker.y) <= range + en.radius) {
         en.hp -= dmg;
+        bleed(en, attacker);
       }
     });
 
@@ -299,6 +301,7 @@ function updateTowerGuard(settler, tower, dt) {
   if (!target || (settler.towerAttackCooldown || 0) > 0) return;
 
   const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
+  faceTowards(settler, target.x, target.y);
   projectiles.push({
     x: tower.x,
     y: tower.y,
