@@ -5,6 +5,10 @@ function updateUI() {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
     if (resourceElement) resourceElement.innerText = Math.floor(getResourceAmount(resourceKey));
   });
+  for (const group of GAME_CONFIG.resourceGroups) {
+    const total = document.getElementById(`group-${group.id}-txt`);
+    if (total) total.innerText = Math.floor(group.members.reduce((sum, id) => sum + getResourceAmount(id), 0));
+  }
   document.getElementById('pop-txt').innerText = `${getCurrentPop()}/${getMaxPop()}`;
   document.getElementById('base-hp-txt').innerText = `${Math.max(0, Math.ceil(townHall.hp))}/${townHall.maxHp}`;
 
