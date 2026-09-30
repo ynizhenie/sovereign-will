@@ -651,7 +651,7 @@ function resetGame() {
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
-  projectiles = []; corpses = []; bloodSplats = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
+  projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
   generateMap();
   resetTileIndex();

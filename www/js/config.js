@@ -21,7 +21,7 @@ const GAME_CONFIG = {
   // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
   // of one shows as that resource; resources in no group get their own tile.
   resourceGroups: [
-    { id: 'food', members: ['food'] },
+    { id: 'food', members: ['food'], kinds: 'foodKinds' }, // Food, opening onto what it's made of
     { id: 'raw', icon: '🥩', members: ['rawMeat', 'rawFish', 'wheat'] },
     { id: 'plants', icon: '🌱', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
     { id: 'materials', icon: '🪵', members: ['wood', 'stone', 'coal', 'ironOre', 'iron', 'leather'] },
@@ -148,7 +148,7 @@ const GAME_CONFIG = {
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },
-    berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
+    berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { berries: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { wheat: 4, wheatSeeds: 1 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
     // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
@@ -186,7 +186,16 @@ const GAME_CONFIG = {
   // campfires: while there's raw food in the stock, a worker with no tool (one per campfire) cooks it.
   // It carries fuel from the town hall to the fire (one unit lasts `fuel[resource]` pieces, coal first),
   // fetches up to `batch` raw pieces, cooks each in `seconds` into `makes` food, and carries the food home.
-  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 } },
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 },
+    dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
+
+  // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows
+  // what it's made of. Food that comes in without a kind (start, loot) counts as provisions, and food
+  // spent or eaten comes off in this order.
+  foodKinds: {
+    provisions: { id: 'provisions', icon: '🥫' }, berries: { id: 'berries', icon: '🫐' }, apples: { id: 'apples', icon: '🍎' },
+    bread: { id: 'bread', icon: '🥖' }, cookedFish: { id: 'cookedFish', icon: '🍤' }, cookedMeat: { id: 'cookedMeat', icon: '🍖' }
+  },
 
   // ---- Colony
 
@@ -212,14 +221,15 @@ const GAME_CONFIG = {
     backpack: { id: 'backpack', icon: '🎒', cost: { leather: 5 }, extraLoads: 1 },
     shield: { id: 'shield', icon: '🔰', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
     armor: { id: 'armor', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
-    // farmers (hoe): fills at water for `charges` crops; a watered crop grows growthFactor times as fast
-    wateringCan: { id: 'wateringCan', icon: '🚿', cost: { wood: 3, iron: 1 }, charges: 3, growthFactor: 2 }
+    // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows
+    // growthFactor times as fast
+    wateringCan: { id: 'wateringCan', icon: '🚿', cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 }
   },
 
   // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only
   // fell one the player marked while it had no apples. Every growSeconds it bears apples, which workers
   // with no tool pick (pickSeconds) for `yield`, with bonusChance of an apple sapling.
-  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { food: 3 }, bonusChance: { appleSaplings: 0.5 },
+  appleTrees: { share: 0.1, growSeconds: 45, pickSeconds: 2, yield: { apples: 3 }, bonusChance: { appleSaplings: 0.5 },
     fellBonusChance: { appleSaplings: 0.5 } }, // felled: an apple sapling instead of an ordinary one
 
   // crafted at the town hall into the stock
@@ -237,12 +247,12 @@ const GAME_CONFIG = {
 
 
 attackGroups: [
-  // Базовые шаблоны отрядов (соответствуют стартовой сложности)
-  { club: 4, raider: 4, brute: 0, archer: 0 }, // Толпа ближнего боя
-  { club: 4, raider: 2, brute: 1, archer: 1 }, // Толпа с поддержкой
-  { club: 3, raider: 2, brute: 0, archer: 3 }, // Упор на лучников
-  { club: 3, raider: 2, brute: 2, archer: 1 }, // Упор на брутов
-  { club: 2, raider: 2, brute: 2, archer: 2 }  // Сбалансированный смешанный отряд
+  // base squad templates (for the starting difficulty)
+  { club: 4, raider: 4, brute: 0, archer: 0 }, // melee crowd
+  { club: 4, raider: 2, brute: 1, archer: 1 }, // crowd with support
+  { club: 3, raider: 2, brute: 0, archer: 3 }, // archer-heavy
+  { club: 3, raider: 2, brute: 2, archer: 1 }, // brute-heavy
+  { club: 2, raider: 2, brute: 2, archer: 2 }  // balanced mixed squad
 ],
 
   map: {

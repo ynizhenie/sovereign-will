@@ -26,7 +26,8 @@ const LANGUAGES = {
       enemies: { raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer' },
       settlerTypes: { normal: 'Worker', big: 'Giant' },
       gear: { backpack: 'Backpack', shield: 'Shield', armor: 'Armour', wateringCan: 'Watering can' },
-      recipes: { arrows: 'Arrows' }
+      recipes: { arrows: 'Arrows' },
+      foodKinds: { provisions: 'Provisions', berries: 'Berries', apples: 'Apples', bread: 'Bread', cookedFish: 'Cooked fish', cookedMeat: 'Cooked meat' }
     },
     text: {
       'menu.play': 'PLAY', 'menu.waveInterval': 'Wave interval (s):', 'menu.custom': 'Custom', 'menu.mapSize': 'Map size:',
@@ -81,7 +82,8 @@ const LANGUAGES = {
       enemies: { raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник' },
       settlerTypes: { normal: 'Робітник', big: 'Богатир' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лійка' },
-      recipes: { arrows: 'Стріли' }
+      recipes: { arrows: 'Стріли' },
+      foodKinds: { provisions: 'Припаси', berries: 'Ягоди', apples: 'Яблука', bread: 'Хліб', cookedFish: 'Смажена риба', cookedMeat: 'Смажене м\'ясо' }
     },
     text: {
       'menu.play': 'ГРАТИ', 'menu.waveInterval': 'Інтервал хвиль (с):', 'menu.custom': 'Свій', 'menu.mapSize': 'Розмір мапи:',
@@ -136,7 +138,8 @@ const LANGUAGES = {
       enemies: { raider_club: 'Дикарь', raider: 'Разбойник', brute: 'Громила', raider_archer: 'Лучник' },
       settlerTypes: { normal: 'Рабочий', big: 'Богатырь' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лейка' },
-      recipes: { arrows: 'Стрелы' }
+      recipes: { arrows: 'Стрелы' },
+      foodKinds: { provisions: 'Припасы', berries: 'Ягоды', apples: 'Яблоки', bread: 'Хлеб', cookedFish: 'Жареная рыба', cookedMeat: 'Жареное мясо' }
     },
     text: {
       'menu.play': 'ИГРАТЬ', 'menu.waveInterval': 'Интервал волн (сек):', 'menu.custom': 'Своё', 'menu.mapSize': 'Размер карты:',

@@ -139,6 +139,7 @@ function startSwing(unit, seconds) {
 function tickAnimation(unit, dt) {
   if (unit.swingT > 0) unit.swingT = Math.max(0, unit.swingT - dt);
   if (unit.working > 0) unit.working = Math.max(0, unit.working - dt);
+  if (unit.usingCan > 0) unit.usingCan = Math.max(0, unit.usingCan - dt);
   if (unit.bloodAge !== undefined) unit.bloodAge += dt;
   if (unit.weaponBloodAge !== undefined) unit.weaponBloodAge += dt;
 }
