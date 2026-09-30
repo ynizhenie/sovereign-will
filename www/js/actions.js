@@ -502,6 +502,7 @@ function exitToMainMenu() {
   setPaused(false);
   gameStarted = false;
   document.getElementById('main-menu').style.display = '';
+  showMenuScreen('home');
 }
 
 function assignTool(toolType) {

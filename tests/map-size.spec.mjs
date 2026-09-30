@@ -41,6 +41,7 @@ test('the menu sets map size and a custom wave interval for the next game (#21)'
   expect(r.waveTimer).toBeGreaterThan(230); // counting down from 240 in real time
   // out-of-range input is clamped
   await page.evaluate(() => exitToMainMenu());
+  await page.click('#mode-endless');
   await page.fill('#map-cols', '500');
   await page.locator('#map-cols').dispatchEvent('change');
   await page.click('.map-option[data-map-size="60"]');
