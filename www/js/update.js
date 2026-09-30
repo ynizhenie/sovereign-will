@@ -362,7 +362,8 @@ function update(dt) {
     }
 
     // a melee enemy close enough to strike stands and fights instead of walking into its target
-    let attackRange = (target === townHall ? townHall.radius : target.radius) + en.radius + meleeDef.reach;
+    // the drawn size of a settler: a big one is pushed off further (see separateSettlersFromEnemies)
+    let attackRange = (target === townHall ? townHall.radius : (target.visualRadius || target.radius)) + en.radius + meleeDef.reach;
     const holdsGround = keepsAway || (inMelee && minDist < attackRange);
 
     // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
