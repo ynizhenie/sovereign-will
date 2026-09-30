@@ -1,3 +1,4 @@
+applyPageTexts();
 renderConfigHud();
 
 let lastTime = performance.now();
@@ -91,3 +92,17 @@ onTap(document.getElementById('exit-to-menu-button'), exitToMainMenu);
 onTap(document.getElementById('seed-reroll'), () => {
   document.getElementById('seed-input').value = createDefaultSeed();
 });
+
+// language buttons in the main menu (see i18n.js)
+const languageOptions = document.getElementById('language-options');
+for (const [code, language] of Object.entries(LANGUAGES)) {
+  const button = document.createElement('button');
+  button.className = 'wave-option' + (code === currentLanguage ? ' active' : '');
+  button.dataset.language = code;
+  button.textContent = language.label;
+  languageOptions.appendChild(button);
+  onTap(button, () => {
+    setLanguage(code);
+    languageOptions.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.language === code));
+  });
+}

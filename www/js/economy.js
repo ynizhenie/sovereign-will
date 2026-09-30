@@ -43,16 +43,28 @@ function createConfigButton(item, action) {
   return button;
 }
 
+// Rebuild the generated HUD and buttons, e.g. after a language change (setLanguage)
+function rebuildConfigHud() {
+  for (const id of ['resources-hud', 'build-actions', 'farming-actions', 'tool-actions', 'weapon-actions']) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  }
+  const details = document.getElementById('resource-details');
+  if (details) details.remove();
+  renderConfigHud();
+  if (typeof updateUI === 'function' && gameStarted) updateUI();
+}
+
 function renderConfigHud() {
   const resourcesHud = document.getElementById('resources-hud');
   if (resourcesHud) {
     const base = document.createElement('div');
-    base.innerHTML = `🏛️ База: <b id="base-hp-txt" style="color: #e74c3c;">100/100</b>`;
+    base.innerHTML = `🏛️ ${t('hud.base')}: <b id="base-hp-txt" style="color: #e74c3c;">100/100</b>`;
     resourcesHud.appendChild(base);
 
     const population = document.createElement('div');
     population.className = 'population-tile';
-    population.innerHTML = `👨‍🌾 Жители: <b id="pop-txt" style="color: #2ecc71;">2/5</b> <span style="font-size: 0.9em; opacity: 0.85;">(👨‍🌾 <b id="workers-cnt">0</b> | ⚔️ <b id="warriors-cnt">0</b>)</span>`;
+    population.innerHTML = `👨‍🌾 ${t('hud.people')}: <b id="pop-txt" style="color: #2ecc71;">2/5</b> <span style="font-size: 0.9em; opacity: 0.85;">(👨‍🌾 <b id="workers-cnt">0</b> | ⚔️ <b id="warriors-cnt">0</b>)</span>`;
     resourcesHud.appendChild(population);
 
     // resources by group (GAME_CONFIG.resourceGroups): a tile with the group's total; tapping it opens a
@@ -102,8 +114,8 @@ function renderConfigHud() {
   const types = GAME_CONFIG.settlerTypes, recipes = GAME_CONFIG.recipes;
   label('btn-hire-normal', `${types.normal.icon} ${types.normal.label} (${formatCost(types.normal.hireCost)})`);
   label('btn-hire-big', `${types.big.icon} ${types.big.label} (${formatCost(types.big.hireCost)})`);
-  label('btn-upgrade', `${types.big.icon} Улучшить (${formatCost(types.big.upgradeCost)})`);
-  label('btn-upgrade-big', `${types.big.icon} Улучшить рабочего (${formatCost(types.big.upgradeCost)})`);
+  label('btn-upgrade', t('btn.upgrade', { icon: types.big.icon, cost: formatCost(types.big.upgradeCost) }));
+  label('btn-upgrade-big', t('btn.upgradeWorker', { icon: types.big.icon, cost: formatCost(types.big.upgradeCost) }));
   label('btn-craft-arrows', `${recipes.arrows.icon} ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
   for (const item of Object.values(GAME_CONFIG.gear)) label(`btn-${item.id}`, `${item.icon} ${item.label} (${formatCost(item.cost)})`);
 
@@ -215,8 +227,8 @@ function toggleBuildingRepair(building) {
   building.repairRequested = !building.repairRequested;
   const item = getDefinition('buildings', building.type);
   showNotification(building.repairRequested
-    ? `🛠️ Ремонт: ${item ? item.label : ''} (${formatCost(getRepairStep(building).cost)} за шаг)`
-    : '❌ Ремонт отменён', !building.repairRequested);
+    ? t('repair.ordered', { name: item ? item.label : '', cost: formatCost(getRepairStep(building).cost) })
+    : t('repair.cancelled'), !building.repairRequested);
   return true;
 }
 
@@ -227,7 +239,7 @@ function repairAllBuildings() {
     if (b.hp < b.maxHp && b.type !== 'tent') { b.repairRequested = true; count++; }
   }
   if (townHall.hp < townHall.maxHp) { townHall.repairRequested = true; count++; }
-  showNotification(count > 0 ? `🛠️ Ремонт заказан: ${count}` : '✅ Всё цело', count === 0);
+  showNotification(count > 0 ? t('repair.allOrdered', { count }) : t('repair.nothing'), count === 0);
 }
 
 function getSmelterLimits() {
@@ -266,7 +278,7 @@ function getMissingCost(cost) {
 }
 
 function showCostError(cost, prefix) {
-  showNotification(`${prefix} ${formatCost(cost)} (не хватает ${getMissingCost(cost)})`, true);
+  showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost) }), true);
 }
 
 function createDefaultSeed() {

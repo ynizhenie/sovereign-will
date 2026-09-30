@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -13,28 +13,28 @@
     <div class="main-menu-content">
         <h1>Sovereign Will</h1>
 
-        <button id="play-button">ИГРАТЬ</button>
+        <button id="play-button" data-i18n="menu.play">PLAY</button>
 
         <div class="wave-settings">
-            <div>Интервал волн (сек):</div>
+            <div data-i18n="menu.waveInterval">Wave interval (s):</div>
 
             <div class="wave-options">
                 <button class="wave-option active" data-wave-interval="90">90</button>
                 <button class="wave-option" data-wave-interval="120">120</button>
                 <button class="wave-option" data-wave-interval="180">180</button>
-                <button class="wave-option" data-wave-interval="custom">Своё</button>
+                <button class="wave-option" data-wave-interval="custom" data-i18n="menu.custom">Custom</button>
             </div>
             <input id="wave-custom" class="menu-number" type="number" min="20" max="600" step="10" value="150" hidden />
         </div>
 
         <div class="wave-settings">
-            <div>Размер карты:</div>
+            <div data-i18n="menu.mapSize">Map size:</div>
 
             <div class="wave-options">
-                <button class="map-option" data-map-size="30">Малая</button>
-                <button class="map-option active" data-map-size="40">Средняя</button>
-                <button class="map-option" data-map-size="60">Большая</button>
-                <button class="map-option" data-map-size="custom">Своя</button>
+                <button class="map-option" data-map-size="30" data-i18n="menu.mapSmall">Small</button>
+                <button class="map-option active" data-map-size="40" data-i18n="menu.mapMedium">Medium</button>
+                <button class="map-option" data-map-size="60" data-i18n="menu.mapLarge">Large</button>
+                <button class="map-option" data-map-size="custom" data-i18n="menu.mapCustom">Custom</button>
             </div>
             <div class="map-custom" hidden>
                 <input id="map-cols" class="menu-number" type="number" min="20" max="100" value="50" /> ×
@@ -42,11 +42,16 @@
             </div>
         </div>
 
+        <div class="wave-settings">
+            <div data-i18n="menu.language">Language:</div>
+            <div class="wave-options" id="language-options"></div>
+        </div>
+
         <div class="seed-settings">
-            <label for="seed-input">Сид мира</label>
+            <label for="seed-input" data-i18n="menu.seed">World seed</label>
             <div class="seed-row">
                 <input id="seed-input" type="text" value="default-world-seed" />
-                <button id="seed-reroll" type="button" title="Новый случайный сид" aria-label="Новый случайный сид">🔄</button>
+                <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed">🔄</button>
             </div>
         </div>
     </div>
@@ -54,9 +59,9 @@
 
 <div id="pause-menu" class="menu-overlay" hidden>
     <div class="main-menu-content">
-        <h1>Пауза</h1>
-        <button id="resume-button" class="menu-button menu-button-primary">Продолжить</button>
-        <button id="exit-to-menu-button" class="menu-button">Выйти в главное меню</button>
+        <h1 data-i18n="pause.title">Paused</h1>
+        <button id="resume-button" class="menu-button menu-button-primary" data-i18n="pause.continue">Continue</button>
+        <button id="exit-to-menu-button" class="menu-button" data-i18n="pause.exit">Exit to main menu</button>
     </div>
 </div>
 
@@ -64,10 +69,10 @@
 
   <div id="top-bar">
     <div class="top-wave">
-      🌊 Волна <span id="wave-num">1</span> (<span id="wave-timer">90</span>с)
+      🌊 <span data-i18n="top.wave">Wave</span> <span id="wave-num">1</span> (<span id="wave-timer">90</span><span data-i18n="top.seconds">s</span>)
     </div>
 
-    <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" title="Пауза">⏸️</button>
+    <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" data-i18n-title="pause.pauseHint" title="Pause [Space]">⏸️</button>
 
     <div class="top-actions">
       <button class="btn btn-unpossess" onclick="switchPossession()">👁️</button>
@@ -82,10 +87,10 @@
     </div>
 
     <div id="zoom-controls">
-      <button class="btn-zoom" onclick="zoomIn()" title="Приблизить">
+      <button class="btn-zoom" onclick="zoomIn()" data-i18n-title="top.zoomIn" title="Zoom in">
         ➕
       </button>
-      <button class="btn-zoom" onclick="zoomOut()" title="Отдалить">
+      <button class="btn-zoom" onclick="zoomOut()" data-i18n-title="top.zoomOut" title="Zoom out">
         ➖
       </button>
     </div>
@@ -103,7 +108,7 @@
 
     <button class="btn active" id="btn-interact" onclick="setMode('interact')">
       <span class="fab-icon">👆</span>
-      <span class="fab-label">Указать</span>
+      <span class="fab-label" data-i18n="top.point">Point</span>
     </button>
   </div>
 
@@ -111,7 +116,7 @@
 
     <div id="selected-bar" class="selected-unit-box">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 11px; color: #aaa;">Выбран: <b id="selected-settler-txt" style="color: #f1c40f;">Никто</b></span>
+        <span style="font-size: 11px; color: #aaa;"><span data-i18n="hud.selected">Selected:</span> <b id="selected-settler-txt" style="color: #f1c40f;">Nobody</b></span>
         <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()">❌</button>
       </div>
       <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()"></button>
@@ -126,10 +131,10 @@
     </div>
 
     <div class="tab-navigation">
-      <button class="tab-btn active" onclick="switchTab(this, 'tab-build')">🏗️ Строительство</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-farming')">🌾 Фермерство</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-tools')">🛠️ Инструменты</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')">⚔️ Оружие</button>
+      <button class="tab-btn active" onclick="switchTab(this, 'tab-build')" data-i18n="tab.build">🏗️ Building</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-farming')" data-i18n="tab.farming">🌾 Farming</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-tools')" data-i18n="tab.tools">🛠️ Tools</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')" data-i18n="tab.weapons">⚔️ Weapons</button>
     </div>
 
     <div class="tab-content-container">
@@ -138,20 +143,20 @@
         <div class="btn-grid-2col" id="build-actions"></div>
 
         <div class="action-row">
-          <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')">🔨 Снести</button>
-          <button class="btn" id="btn-repair-all" onclick="repairAllBuildings()">🛠️ Починить всё</button>
+          <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')" data-i18n="btn.demolish">🔨 Demolish</button>
+          <button class="btn" id="btn-repair-all" onclick="repairAllBuildings()" data-i18n="btn.repairAll">🛠️ Repair all</button>
         </div>
       </div>
 
       <div id="tab-farming" class="tab-pane">
         <div class="btn-grid-2col" id="farming-actions"></div>
         <div class="action-row">
-          <button class="btn" id="btn-zone_wheat" onclick="setMode('zone_wheat')">🟨 Зона пшеницы</button>
-          <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')">🟩 Зона саженцев</button>
-          <button class="btn" id="btn-zone_apple" onclick="setMode('zone_apple')">🟥 Зона яблонь</button>
-          <button class="btn" id="btn-zone_clear" onclick="setMode('zone_clear')">✖ Убрать зону</button>
+          <button class="btn" id="btn-zone_wheat" onclick="setMode('zone_wheat')" data-i18n="btn.zoneWheat">🟨 Wheat zone</button>
+          <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')" data-i18n="btn.zoneSapling">🟩 Sapling zone</button>
+          <button class="btn" id="btn-zone_apple" onclick="setMode('zone_apple')" data-i18n="btn.zoneApple">🟥 Apple zone</button>
+          <button class="btn" id="btn-zone_clear" onclick="setMode('zone_clear')" data-i18n="btn.zoneClear">✖ Remove zone</button>
           <button class="btn" id="btn-wateringCan" onclick="orderGear('wateringCan')"></button>
-          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')">❌ Снять лейку</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')" data-i18n="btn.wateringCanOff">❌ Take off watering can</button>
         </div>
       </div>
 
@@ -160,8 +165,8 @@
 
         <div class="action-row">
           <button class="btn" id="btn-backpack" onclick="orderGear('backpack')"></button>
-          <button class="btn btn-disarm" onclick="orderGearOff('backpack')">❌ Снять рюкзак</button>
-          <button class="btn btn-disarm" onclick="disarmSettler('tool')">❌ Разобрать инструмент</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('backpack')" data-i18n="btn.backpackOff">❌ Take off backpack</button>
+          <button class="btn btn-disarm" onclick="disarmSettler('tool')" data-i18n="btn.disarmTool">❌ Take tool away</button>
         </div>
       </div>
 
@@ -174,8 +179,8 @@
         </div>
 
         <div class="action-row">
-          <button class="btn btn-disarm" onclick="orderGearOff('armor')">❌ Снять броню</button>
-          <button class="btn btn-disarm" onclick="disarmSettler('weapon')">❌ Разобрать оружие</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('armor')" data-i18n="btn.armorOff">❌ Take off armour</button>
+          <button class="btn btn-disarm" onclick="disarmSettler('weapon')" data-i18n="btn.disarmWeapon">❌ Take weapon away</button>
         </div>
       </div>
 
@@ -186,6 +191,7 @@
 
 <script src="js/tabs.js"></script>
 <script src="js/config.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/economy.js"></script>
 <script src="js/state.js"></script>
 <script src="js/world.js"></script>
