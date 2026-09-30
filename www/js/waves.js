@@ -28,7 +28,7 @@ function createConfiguredEnemy(pos, enemyKey, type, radius) {
   if (!definition) return null;
   const enemy = {
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
-    hp: definition.hp, maxHp: definition.hp,
+    hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
@@ -130,7 +130,7 @@ function startNextWave() {
     // every enemy kind with a waveKey, in config order
     Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey).forEach(def => {
       const baseCount = Number(group[def.waveKey] || 0);
-      const count = Math.max(0, Math.floor(baseCount * multiplier));
+      const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount));
 
       for (let i = 0; i < count; i++) {
         const enemy = createConfiguredEnemy(getRandomBorderPos(), def.id);

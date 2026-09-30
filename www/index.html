@@ -10,10 +10,30 @@
 <body>
 
 <div id="main-menu">
-    <div class="main-menu-content">
+    <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless setup, Settings -->
+    <div class="main-menu-content" data-screen="home">
         <h1>Sovereign Will</h1>
+        <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
+        <button id="mode-battles" class="menu-button" disabled><span data-i18n="menu.battles">Battles</span> · <small data-i18n="menu.soon">soon</small></button>
+        <button id="mode-editor" class="menu-button" disabled><span data-i18n="menu.editor">Map editor</span> · <small data-i18n="menu.soon">soon</small></button>
+        <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
+        <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
+    </div>
+
+    <div class="main-menu-content" data-screen="endless" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">← Back</button>
+        <h1 data-i18n="menu.endless">Endless</h1>
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
+
+        <div class="wave-settings">
+            <div data-i18n="menu.difficulty">Difficulty:</div>
+            <div class="wave-options" id="difficulty-options">
+                <button class="difficulty-option" data-difficulty="easy" data-i18n="menu.easy">Easy</button>
+                <button class="difficulty-option active" data-difficulty="normal" data-i18n="menu.normal">Normal</button>
+                <button class="difficulty-option" data-difficulty="hard" data-i18n="menu.hard">Hard</button>
+            </div>
+        </div>
 
         <div class="wave-settings">
             <div data-i18n="menu.waveInterval">Wave interval (s):</div>
@@ -42,16 +62,31 @@
             </div>
         </div>
 
-        <div class="wave-settings">
-            <div data-i18n="menu.language">Language:</div>
-            <div class="wave-options" id="language-options"></div>
-        </div>
-
         <div class="seed-settings">
             <label for="seed-input" data-i18n="menu.seed">World seed</label>
             <div class="seed-row">
                 <input id="seed-input" type="text" value="default-world-seed" />
                 <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed">🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-menu-content" data-screen="settings" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">← Back</button>
+        <h1 data-i18n="menu.settings">Settings</h1>
+
+        <div class="wave-settings">
+            <div data-i18n="menu.language">Language:</div>
+            <div class="wave-options" id="language-options"></div>
+        </div>
+
+        <div class="wave-settings">
+            <div data-i18n="menu.fps">Frame rate:</div>
+            <div class="wave-options" id="fps-options">
+                <button class="fps-option" data-fps="30">30</button>
+                <button class="fps-option" data-fps="60">60</button>
+                <button class="fps-option" data-fps="display" data-i18n="menu.fpsDisplay">Screen</button>
+                <button class="fps-option" data-fps="unlimited" data-i18n="menu.fpsUnlimited">No limit</button>
             </div>
         </div>
     </div>

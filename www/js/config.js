@@ -121,6 +121,13 @@ const GAME_CONFIG = {
     summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
   },
 
+  // the Endless mode's difficulty (main menu): enemies per wave and enemy hp are multiplied by these
+  difficulty: {
+    easy: { enemyCount: 0.7, enemyHp: 0.8 },
+    normal: { enemyCount: 1, enemyHp: 1 },
+    hard: { enemyCount: 1.4, enemyHp: 1.3 }
+  },
+
   // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves; each wave
   // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
   waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 } },

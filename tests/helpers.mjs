@@ -20,6 +20,7 @@ export async function openGame(page) {
   // the tests check Russian texts; the game itself starts in English (see i18n.js)
   await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-language', 'ru'); } catch (e) { /* none */ } });
   await page.goto('/');
+  await page.evaluate(() => showMenuScreen('endless')); // the play button and game setup live there
   await page.addScriptTag({ path: 'tests/sim.js' });
   const files = existsSync(SCENARIOS) ? readdirSync(SCENARIOS).filter(f => f.endsWith('.js')).sort() : [];
   for (const file of files) await page.addScriptTag({ path: `${SCENARIOS}/${file}` });

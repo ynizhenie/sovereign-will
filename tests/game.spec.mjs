@@ -45,6 +45,7 @@ test('pause opens a menu with Continue and Main menu (#19)', async ({ page }) =>
   // Space in the main menu doesn't pause a game that isn't running; a new game starts unpaused
   await page.keyboard.press('Space');
   await expect(page.locator('#pause-menu')).toBeHidden();
+  await page.click('#mode-endless'); // back to the modes screen first (#39)
   await page.click('#play-button');
   await expect(page.locator('#main-menu')).toBeHidden();
   expect(await page.evaluate(() => [gameStarted, isPaused])).toEqual([true, false]);
