@@ -20,7 +20,7 @@ Object.assign(window.sim, (() => {
       foodTimer = 999;
       maxCooks = Math.max(maxCooks, settlers.filter(s => s.carrying && s.carrying.forFire).length);
       for (const s of settlers) {
-        if (s.carrying && s.carrying.type === 'food') carriedFood = true;
+        if (s.carrying && isFoodKind(s.carrying.type)) carriedFood = true; // a dish, e.g. cooked meat
         if (s.carrying && s.carrying.forFire && GAME_CONFIG.cooking.fuel[s.carrying.type] && !seen.has(s.carrying)) { seen.add(s.carrying); fuelTrips++; }
       }
     } });

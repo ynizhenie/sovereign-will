@@ -5,6 +5,11 @@ function updateUI() {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
     if (resourceElement) resourceElement.innerText = Math.floor(getResourceAmount(resourceKey));
   });
+  syncFoodMix();
+  for (const kind of Object.keys(GAME_CONFIG.foodKinds)) {
+    const el = document.getElementById(`food-kind-${kind}-txt`);
+    if (el) el.innerText = Math.floor(foodMix[kind] || 0);
+  }
   for (const group of GAME_CONFIG.resourceGroups) {
     const total = document.getElementById(`group-${group.id}-txt`);
     if (total) total.innerText = Math.floor(group.members.reduce((sum, id) => sum + getResourceAmount(id), 0));

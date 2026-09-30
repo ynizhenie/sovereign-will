@@ -31,5 +31,5 @@ test('boars give raw meat, fishing raw fish, farms grain; berries stay ready foo
     boar: GAME_CONFIG.mapResources.boar.yield, farm: GAME_CONFIG.mapResources.farm.yield,
     fish: GAME_CONFIG.fishing.catch, berry: GAME_CONFIG.mapResources.berry_bush.yield
   }));
-  expect(y).toEqual({ boar: { rawMeat: 6, leather: 2 }, farm: { wheat: 4, wheatSeeds: 1 }, fish: { rawFish: 2 }, berry: { food: 2 } });
+  expect(y).toEqual({ boar: { rawMeat: 6, leather: 2 }, farm: { wheat: 4, wheatSeeds: 1 }, fish: { rawFish: 2 }, berry: { berries: 2 } });
 });

@@ -23,6 +23,33 @@ function toggleResourceGroup(groupId) {
   }
 }
 
+// ---- Food kinds (GAME_CONFIG.foodKinds): all Food, remembered by kind for the HUD
+
+function isFoodKind(type) {
+  return !!GAME_CONFIG.foodKinds[type];
+}
+
+// Ready food of a kind into the stock
+function addFood(kind, amount) {
+  syncFoodMix();
+  stock.food += amount;
+  foodMix[kind] = (foodMix[kind] || 0) + amount;
+}
+
+// Keep the kinds adding up to stock.food: food added without a kind counts as provisions, and food spent
+// or eaten comes off the kinds in GAME_CONFIG.foodKinds order
+function syncFoodMix() {
+  const kinds = Object.keys(GAME_CONFIG.foodKinds);
+  let diff = stock.food - kinds.reduce((sum, k) => sum + (foodMix[k] || 0), 0);
+  if (diff > 0) foodMix.provisions = (foodMix.provisions || 0) + diff;
+  for (const kind of kinds) {
+    if (diff >= 0) break;
+    const take = Math.min(foodMix[kind] || 0, -diff);
+    foodMix[kind] = (foodMix[kind] || 0) - take;
+    diff += take;
+  }
+}
+
 function updateUnitCounts() {
   const workers = settlers.filter(s => s.role === 'worker').length;
   const warriors = settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
@@ -81,6 +108,27 @@ function renderConfigHud() {
     for (const group of GAME_CONFIG.resourceGroups) {
       const members = group.members.filter(id => GAME_CONFIG.resources[id]);
       members.forEach(id => grouped.add(id));
+      if (group.kinds) {
+        // one resource opening onto its kinds (Food: berries, bread...)
+        const resource = GAME_CONFIG.resources[members[0]];
+        const tile = document.createElement('div');
+        tile.className = 'resource-group';
+        tile.id = `group-${group.id}`;
+        tile.innerHTML = `${resource.icon || ''} ${resource.label}: <b id="${resourceHudId(resource.id)}">0</b> ▾`;
+        resourcesHud.appendChild(tile);
+        const row = document.createElement('div');
+        row.className = 'resource-group-members';
+        row.id = `group-${group.id}-members`;
+        row.hidden = true;
+        for (const kind of Object.values(GAME_CONFIG[group.kinds])) {
+          const item = document.createElement('div');
+          item.innerHTML = `${kind.icon} ${kind.label}: <b id="food-kind-${kind.id}-txt">0</b>`;
+          row.appendChild(item);
+        }
+        details.appendChild(row);
+        tile.addEventListener('click', () => toggleResourceGroup(group.id));
+        continue;
+      }
       if (members.length === 1) { resourceTile(GAME_CONFIG.resources[members[0]], resourcesHud); continue; }
       const tile = document.createElement('div');
       tile.className = 'resource-group';
