@@ -21,7 +21,7 @@ function update(dt) {
   const before = waveTimer;
   waveTimer -= dt;
   // one warning, 15 s before the wave (holds of the timer in tests keep it above)
-  if (before > WAVE_WARNING_SECONDS && waveTimer <= WAVE_WARNING_SECONDS) showNotification(`⚠️ Волна врагов через ${WAVE_WARNING_SECONDS} секунд!`, true);
+  if (before > WAVE_WARNING_SECONDS && waveTimer <= WAVE_WARNING_SECONDS) showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
   if (waveTimer <= 0) {
     startNextWave();
     waveTimer = waveInterval;

@@ -356,7 +356,7 @@ function render() {
   if (townHall.hp < townHall.maxHp) {
     ctx.fillStyle = townHall.repairRequested ? '#f1c40f' : '#e74c3c';
     ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(townHall.repairRequested ? '🛠️ Ремонт (15🪵 15🪨)' : '⚠️ Нужен ремонт', townHall.x, townHall.y - 52);
+    ctx.fillText(townHall.repairRequested ? t('repair.hall', { cost: formatCost(GAME_CONFIG.repairs.townHall.cost) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
   }
 
   trees.forEach(t => {
@@ -752,14 +752,14 @@ function render() {
     ctx.scale(screenPixelRatio, screenPixelRatio);
     const cx = canvas.width / screenPixelRatio / 2, cy = canvas.height / screenPixelRatio / 2;
     ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('ПОРАЖЕНИЕ!', cx, cy - 20);
+    ctx.fillText(t('defeat.title'), cx, cy - 20);
     ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
-    ctx.fillText(`Вы продержались ${waveNum - 1} волн`, cx, cy + 15);
+    ctx.fillText(t('defeat.survived', { waves: waveNum - 1 }), cx, cy + 15);
 
     const btn = getRestartButton();
     ctx.fillStyle = '#27ae60'; ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif';
-    ctx.fillText('Начать заново', cx, btn.y + 28);
+    ctx.fillText(t('defeat.restart'), cx, btn.y + 28);
     ctx.restore();
   }
 }
