@@ -20,7 +20,10 @@ test('the game starts in English (#41)', async ({ page }) => {
 
 test('picking Ukrainian in the menu switches every text, and is remembered (#41)', async ({ page }) => {
   await openFresh(page);
+  await page.click('#open-settings');
   await page.click('#language-options button[data-language="uk"]');
+  await page.click('#main-menu [data-screen="settings"] [data-back]');
+  await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
   await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Робітник (15🍞)');
   await expect(page.locator('#btn-wall_wood')).toHaveText('🪵 Дерев\'яна стіна (5🪵)');
@@ -32,7 +35,8 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   expect(toast).toBe('✅ Усе ціле');
   // remembered on the device
   await page.reload();
-  await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
+  await expect(page.locator('#mode-endless')).toHaveText('Нескінченний');
+  await page.click('#open-settings');
   await expect(page.locator('#language-options button.active')).toHaveText('Українська');
 });
 
