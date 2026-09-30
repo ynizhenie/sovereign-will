@@ -903,37 +903,76 @@ function pickApples(s, tick) {
 
 // ---- Cooking
 
-// When ready food runs low, a worker with no tool cooks raw food from the stock at a campfire, one cook
-// per campfire (GAME_CONFIG.cooking). Each piece takes `seconds`; fuel is burnt from the stock as needed.
+// Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a worker with no tool looks
+// after a campfire, one per fire. It fetches fuel from the town hall when the fire is out, then a batch of
+// raw food, cooks it piece by piece and takes the food home. What it carries is ordinary stock (wood,
+// raw meat...) marked with the fire it's for, so if it's called away (a wave) it just goes back in stock.
 function cook(s, tick) {
-  if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
+  if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.isPossessed || tick.isWaveActive) return false;
   const cooking = GAME_CONFIG.cooking;
-  if (stock.food >= cooking.cookWhenFoodBelow) return false;
-  const raw = cooking.raw.find(r => stock[r] > 0);
-  if (!raw) return false;
-  const fire = buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && (b.fuelLeft > 0 || findFuel()))
-    .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
-  if (!fire) return false;
+  const job = s.carrying && s.carrying.forFire;
+  if (s.carrying && !job) return false; // carrying something else: deliver that first
+  let fire = job && buildings.includes(job) ? job : null;
+  if (!fire) {
+    if (s.carrying) return false; // its fire is gone: deliverCarrying puts it back in the stock
+    if (!cooking.raw.some(r => stock[r] > 0)) return false;
+    fire = buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && (b.fuelLeft > 0 || findFuel()))
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (!fire) return false;
+  }
   claimBuildingJob(fire, 'cook', s);
+  s.patrolTarget = null;
+
+  // empty-handed: fetch fuel if the fire is out, otherwise a batch of raw food (no more than the fuel cooks)
+  if (!s.carrying) {
+    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius + 4) {
+      moveSettlerToTownHall(s, s.speed, tick.dt);
+      return true;
+    }
+    if (!(fire.fuelLeft > 0)) {
+      const fuel = findFuel();
+      if (!fuel) return false;
+      stock[fuel]--;
+      s.carrying = { type: fuel, amount: 1, forFire: fire };
+    } else {
+      const raw = cooking.raw.find(r => stock[r] > 0);
+      if (!raw) return false;
+      const amount = Math.min(stock[raw], cooking.batch, fire.fuelLeft);
+      stock[raw] -= amount;
+      s.carrying = { type: raw, amount, forFire: fire };
+    }
+    return true;
+  }
+
+  // at the fire: put the fuel on, or cook what it brought one piece at a time
   if (Math.hypot(fire.x - s.x, fire.y - s.y) > 32) {
     moveEntityTowards(s, fire.x, fire.y, s.speed, false, tick.dt);
-    s.cookProgress = 0;
-  } else {
-    s.cookProgress = (s.cookProgress || 0) + tick.dt;
-    fire.burning = 1; // drawn lit for a moment
-    if (s.cookProgress >= cooking.seconds) {
-      s.cookProgress = 0;
-      if (!(fire.fuelLeft > 0)) {
-        const fuel = findFuel();
-        stock[fuel]--;
-        fire.fuelLeft = cooking.fuel[fuel];
-      }
-      fire.fuelLeft--;
-      stock[raw]--;
-      stock.food += cooking.makes;
+    return true;
+  }
+  const load = s.carrying;
+  if (cooking.fuel[load.type]) {
+    fire.fuelLeft = (fire.fuelLeft || 0) + cooking.fuel[load.type] * load.amount;
+    s.carrying = null;
+    return true;
+  }
+  if (!(fire.fuelLeft > 0)) {
+    // out of fuel mid-batch: take the raw food back, fetch fuel next
+    delete load.forFire;
+    return false;
+  }
+  s.working = 0.1;
+  fire.burning = 1; // drawn lit for a moment
+  fire.cookProgress = (fire.cookProgress || 0) + tick.dt / cooking.seconds;
+  if (fire.cookProgress >= 1) {
+    fire.cookProgress = 0;
+    fire.fuelLeft--;
+    load.amount--;
+    s.cooked = (s.cooked || 0) + cooking.makes;
+    if (load.amount <= 0) {
+      s.carrying = { type: 'food', amount: s.cooked }; // home with it (deliverCarrying)
+      s.cooked = 0;
     }
   }
-  s.patrolTarget = null;
   return true;
 }
 
@@ -1021,6 +1060,7 @@ const SETTLER_BEHAVIOURS = [
   repairTownHall,
   repairBuilding,
   equip,
+  cook,
   deliverCarrying,
   repairTent,
   healAtTent,
@@ -1031,7 +1071,6 @@ const SETTLER_BEHAVIOURS = [
   clearEnemyTents,
   build,
   fish,
-  cook,
   pickApples,
   harvest,
   tendFarmZones,
