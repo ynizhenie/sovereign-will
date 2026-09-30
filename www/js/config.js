@@ -154,8 +154,9 @@ const GAME_CONFIG = {
   farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
 
   // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
-  // healPerHerb hp for one herb from the stock every healSeconds
-  medic: { healPerHerb: 30, healSeconds: 1.2, range: 26 },
+  // healPerHerb hp for one herb every healSeconds. Herbs come from the bag, filled at the town hall with
+  // up to bagSize from the stock.
+  medic: { healPerHerb: 30, healSeconds: 1.2, range: 26, bagSize: 5 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },
@@ -205,12 +206,10 @@ const GAME_CONFIG = {
   },
 
   // what one repair step costs and restores (buildings: one step per `interval` seconds per worker).
-  // Watchtowers are repaired whenever damaged; other buildings when the player orders it (tap it, or
-  // Repair all). Buildings without their own entry use `buildings`: costShare of what the building
+  // Buildings are repaired when the player orders it (tap it, or Repair all). Buildings without their own entry use `buildings`: costShare of what the building
   // cost (rounded up) for hpShare of its hp. Tents mend themselves for free (tent.repairPerSecond).
   repairs: {
     townHall: { cost: { wood: 15, stone: 15 }, hp: 35 },
-    watchtower: { cost: { wood: 10, stone: 10 }, hp: 35, interval: 1 },
     buildings: { costShare: 0.2, hpShare: 0.25, interval: 1 }
   },
 
