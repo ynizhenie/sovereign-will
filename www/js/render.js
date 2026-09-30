@@ -173,6 +173,18 @@ function drawBodyBlood(unit, radius) {
   }
 }
 
+// A watering can: a tin body, a handle on top and a long spout forward; `scale` for carrying it small
+function drawWateringCan(x, y, scale) {
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.fillStyle = '#7fa7c9'; ctx.fillRect(-5, -4, 10, 8);
+  ctx.strokeStyle = '#4f7a9e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(0, -4, 3.5, Math.PI, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5, 1); ctx.lineTo(11, -4); ctx.stroke();
+  ctx.fillStyle = '#4f7a9e'; ctx.fillRect(10, -6, 3, 3);
+  ctx.restore();
+}
+
 // Quiver on the back (left edge x), one arrow shown for every 3 left
 function drawQuiver(x, arrows) {
   ctx.fillStyle = '#8e5a2b'; ctx.fillRect(x - 2, -6, 5, 11);
@@ -650,7 +662,9 @@ function render() {
     }
 
     if (s.carrying) {
-      let icon = s.carrying.type === 'bundle' ? '📦' : (s.carrying.type === 'food' ? '🍖' : (s.carrying.type === 'wood' ? '🪵' : (s.carrying.type === 'stone' ? '🪨' : (s.carrying.type === 'iron' ? '🔩' : (s.carrying.type === 'ironOre' ? '⛏️' : (s.carrying.type === 'coal' ? '⚫' : (s.carrying.type === 'leather' ? '🟫' : '🌾')))))));
+      const type = s.carrying.type;
+      const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
+      let icon = type === 'bundle' ? '📦' : (known ? known.icon : '🌾');
       ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(icon, s.x, s.y - s.visualRadius - 5);
     }
@@ -675,6 +689,8 @@ function render() {
       ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
       ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
       ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
+    } else if (s.tool === 'hoe' && s.wateringCan && s.usingCan > 0) {
+      drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
     } else if (s.tool === 'hoe') {
       // a long handle with a flat blade turned down at the end
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 15, 2);
@@ -690,6 +706,15 @@ function render() {
 	  ctx.arc(0, 0, s.visualRadius + 2, 0, Math.PI * 2);
 	  ctx.stroke();
 	}
+    // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
+    if (s.tool === 'hoe' && s.wateringCan) {
+      if (s.usingCan > 0) {
+        ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 2, -8, 2, 15);
+        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-s.visualRadius - 4, -9, 6, 3);
+      } else {
+        drawWateringCan(-s.visualRadius, 4, 0.7);
+      }
+    }
     if (s.shield) {
       // a round wooden shield with an iron rim and boss on the left arm
       ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
