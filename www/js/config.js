@@ -162,10 +162,10 @@ const GAME_CONFIG = {
 
   fishing: { seconds: 3, catch: { rawFish: 2 }, bait: { wheatSeeds: 1 } },
 
-  // campfires: when ready food is below cookWhenFoodBelow, a worker with no tool (one per campfire) cooks
-  // raw food from the stock there, one piece per `seconds` into `makes` food. Fuel from the stock: one
-  // unit burns for `fuel[resource]` pieces (coal first, then wood).
-  cooking: { cookWhenFoodBelow: 20, seconds: 1.5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 8, wood: 4 } },
+  // campfires: while there's raw food in the stock, a worker with no tool (one per campfire) cooks it.
+  // It carries fuel from the town hall to the fire (one unit lasts `fuel[resource]` pieces, coal first),
+  // fetches up to `batch` raw pieces, cooks each in `seconds` into `makes` food, and carries the food home.
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 } },
 
   // ---- Colony
 
