@@ -289,6 +289,7 @@ function goDeliver(s, tick) {
     let carriedItems = s.carrying.items || [s.carrying];
     carriedItems.forEach(item => {
       if (GAME_CONFIG.resources[item.type]) stock[item.type] += item.amount;
+      else if (isFoodKind(item.type)) addFood(item.type, item.amount);
     });
     s.carrying = null;
     takeFishingBait(s);
@@ -999,7 +1000,7 @@ function cook(s, tick) {
     load.amount--;
     s.cooked = (s.cooked || 0) + cooking.makes;
     if (load.amount <= 0) {
-      s.carrying = { type: 'food', amount: s.cooked }; // home with it (deliverCarrying)
+      s.carrying = { type: cooking.dish[load.type] || 'provisions', amount: s.cooked }; // home with it (deliverCarrying)
       s.cooked = 0;
     }
   }
@@ -1046,6 +1047,7 @@ function waterCrops(s, tick) {
     .filter(c => !c.watered && !tick.wateringAssignments.has(c));
   if (thirsty.length === 0) return false;
   s.patrolTarget = null;
+  s.usingCan = 0.3; // the can in hand, the hoe on its back (see render)
   if (!(s.waterCharges > 0)) {
     const water = waterTiles.filter(w => isWaterReachable(w))
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];

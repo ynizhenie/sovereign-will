@@ -11,7 +11,7 @@ test('a farmer with a watering can fills up at water and waters crops, which the
   const withCan = await sim(page, 'watering', { can: true });
   const without = await sim(page, 'watering', { can: false });
   expect(without.watered).toBe(0);
-  expect(withCan.watered).toBe(4); // two trips to the water: 3 per fill
+  expect(withCan.watered).toBe(4); // one trip to the water: 5 per fill
   expect(Math.max(...withCan.growth)).toBeGreaterThan(Math.max(...without.growth));
 });
 
