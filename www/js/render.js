@@ -580,6 +580,13 @@ function render() {
     for (const ex of [-4, 4]) {
       ctx.beginPath(); ctx.moveTo(c.x + ex - 2, c.y - 4); ctx.lineTo(c.x + ex + 2, c.y); ctx.moveTo(c.x + ex + 2, c.y - 4); ctx.lineTo(c.x + ex - 2, c.y); ctx.stroke();
     }
+    if (corpseHasWorms(c)) {
+      // worms: a few pink squiggles on it
+      ctx.strokeStyle = '#e91e63'; ctx.lineWidth = 1.5;
+      for (const [wx, wy] of [[-5, 4], [3, 6], [5, -3]]) {
+        ctx.beginPath(); ctx.moveTo(c.x + wx - 3, c.y + wy); ctx.quadraticCurveTo(c.x + wx, c.y + wy - 3, c.x + wx + 3, c.y + wy); ctx.stroke();
+      }
+    }
     ctx.globalAlpha = 1;
   });
 

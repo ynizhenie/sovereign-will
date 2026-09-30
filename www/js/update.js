@@ -42,12 +42,12 @@ function update(dt) {
   }
 
   farmPlots.forEach(f => {
-    if (f.growth < 100) f.growth += dt * 5;
+    if (f.growth < 100) f.growth += dt * 5 * (f.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1);
   });
 
   trees.forEach(t => {
     if (t.isGrowing) {
-      t.growProgress = (t.growProgress || 0) + dt;
+      t.growProgress = (t.growProgress || 0) + dt * (t.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1);
       if (t.growProgress >= 20) {
         t.isGrowing = false;
         t.hp = 3;
