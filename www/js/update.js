@@ -235,6 +235,7 @@ function update(dt) {
         let en = enemies[j];
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           en.hp -= proj.damage;
+          bleed(en, proj.owner);
           hit = true;
         }
       }
@@ -356,6 +357,7 @@ function update(dt) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
         projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
         startSwing(en, 0.3);
+        faceTowards(en, target.x, target.y);
         en.attackCooldown = ranged.cooldown;
         if (quiver) en.arrows--;
       }
@@ -457,6 +459,7 @@ function update(dt) {
     }
 
     const meleeDamage = meleeDef === enemyDef ? en.damage : meleeDef.damage;
+    if (inMelee && minDist < attackRange) faceTowards(en, target.x, target.y);
     if (inMelee && minDist < attackRange) {
       if (!(en.swingT > 0)) startSwing(en, 0.5); // keeps swinging while it hits
       if (en.type === 'big') {
@@ -483,6 +486,8 @@ function update(dt) {
 
   separateSettlersFromEnemies();
   for (const unit of settlers) tickAnimation(unit, dt);
+  for (const splat of bloodSplats) splat.age += dt;
+  bloodSplats = bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
   for (const unit of enemies) tickAnimation(unit, dt);
   applySpikeTraps();
 
