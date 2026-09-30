@@ -50,6 +50,23 @@ function syncFoodMix() {
   }
 }
 
+// The [category, id] pairs a `held` HUD group counts (see GAME_CONFIG.resourceGroups)
+function getHeldItems(group) {
+  const items = [];
+  for (const [category, ids] of Object.entries(group.held)) {
+    const all = Object.keys(GAME_CONFIG[category]).filter(id => id !== 'fist');
+    for (const id of ids === 'all' ? all : ids) items.push([category, id]);
+  }
+  return items;
+}
+
+// How many settlers hold that tool, weapon or piece of gear
+function countHeld(category, id) {
+  if (category === 'tools') return settlers.filter(s => s.tool === id).length;
+  if (category === 'weapons') return settlers.filter(s => s.weapon === id).length;
+  return settlers.filter(s => hasGear(s, id)).length;
+}
+
 function updateUnitCounts() {
   const workers = settlers.filter(s => s.role === 'worker').length;
   const warriors = settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
@@ -130,6 +147,26 @@ function renderConfigHud() {
         continue;
       }
       if (members.length === 1) { resourceTile(GAME_CONFIG.resources[members[0]], resourcesHud); continue; }
+      if (group.held) {
+        const tile = document.createElement('div');
+        tile.className = 'resource-group';
+        tile.id = `group-${group.id}`;
+        tile.innerHTML = `${group.icon} ${group.label}: <b id="group-${group.id}-txt">0</b> ▾`;
+        resourcesHud.appendChild(tile);
+        const row = document.createElement('div');
+        row.className = 'resource-group-members';
+        row.id = `group-${group.id}-members`;
+        row.hidden = true;
+        for (const [category, id] of getHeldItems(group)) {
+          const item = GAME_CONFIG[category][id];
+          const cell = document.createElement('div');
+          cell.innerHTML = `${item.icon || ''} ${item.label}: <b id="held-${category}-${id}-txt">0</b>`;
+          row.appendChild(cell);
+        }
+        details.appendChild(row);
+        tile.addEventListener('click', () => toggleResourceGroup(group.id));
+        continue;
+      }
       const tile = document.createElement('div');
       tile.className = 'resource-group';
       tile.id = `group-${group.id}`;

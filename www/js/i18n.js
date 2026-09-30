@@ -16,7 +16,7 @@ const LANGUAGES = {
         ironOre: 'Ore', iron: 'Iron', leather: 'Leather', arrows: 'Arrows', wheatSeeds: 'Seeds', saplings: 'Saplings',
         herbs: 'Herbs', worms: 'Worms', appleSaplings: 'Apple saplings'
       },
-      resourceGroups: { raw: 'Raw food', plants: 'Plants', materials: 'Materials', supplies: 'Supplies' },
+      resourceGroups: { raw: 'Raw food', plants: 'Plants', materials: 'Materials', supplies: 'Supplies', toolsHeld: 'Tools', weaponsHeld: 'Weapons' },
       tools: { axe: 'Axe', pickaxe: 'Pickaxe', iron_axe: 'Iron axe', iron_pickaxe: 'Iron pickaxe', rod: 'Fishing rod', medbag: 'Medic bag', hoe: 'Hoe' },
       weapons: { fist: 'Fist', club: 'Club', sword: 'Sword', spear: 'Spear', iron_sword: 'Iron sword', iron_spear: 'Iron spear', bow: 'Bow' },
       buildings: {
@@ -40,8 +40,8 @@ const LANGUAGES = {
       'hud.ironArmor': 'Iron armour', 'hud.quiver': 'Quiver {n}/12',
       'tab.build': '🏗️ Building', 'tab.farming': '🌾 Farming', 'tab.tools': '🛠️ Tools', 'tab.weapons': '⚔️ Weapons',
       'btn.demolish': '🔨 Demolish', 'btn.repairAll': '🛠️ Repair all', 'btn.zoneWheat': '🟨 Wheat zone', 'btn.zoneSapling': '🟩 Sapling zone',
-      'btn.zoneApple': '🟥 Apple zone', 'btn.zoneClear': '✖ Remove zone', 'btn.wateringCanOff': '❌ Take off watering can',
-      'btn.backpackOff': '❌ Take off backpack', 'btn.disarmTool': '❌ Take tool away', 'btn.armorOff': '❌ Take off armour',
+      'btn.zoneApple': '🟥 Apple zone', 'btn.zoneClear': '✖ Remove zone', 'btn.wateringCanOff': '❌ Take watering can apart',
+      'btn.backpackOff': '❌ Take backpack apart', 'btn.disarmTool': '❌ Take tool away', 'btn.armorOff': '❌ Take armour apart',
       'btn.disarmWeapon': '❌ Take weapon away', 'btn.upgrade': '{icon} Upgrade ({cost})', 'btn.upgradeWorker': '{icon} Upgrade worker ({cost})',
       'repair.ordered': '🛠️ Repair: {name} ({cost} per step)', 'repair.cancelled': '❌ Repair cancelled',
       'repair.allOrdered': '🛠️ Repairs ordered: {count}', 'repair.nothing': '✅ Nothing is damaged',
@@ -72,7 +72,7 @@ const LANGUAGES = {
         ironOre: 'Руда', iron: 'Залізо', leather: 'Шкіра', arrows: 'Стріли', wheatSeeds: 'Насіння', saplings: 'Саджанці',
         herbs: 'Трави', worms: 'Черв\'яки', appleSaplings: 'Саджанці яблуні'
       },
-      resourceGroups: { raw: 'Сира їжа', plants: 'Рослини', materials: 'Матеріали', supplies: 'Припаси' },
+      resourceGroups: { raw: 'Сира їжа', plants: 'Рослини', materials: 'Матеріали', supplies: 'Припаси', toolsHeld: 'Інструменти', weaponsHeld: 'Зброя' },
       tools: { axe: 'Сокира', pickaxe: 'Кайло', iron_axe: 'Залізна сокира', iron_pickaxe: 'Залізне кайло', rod: 'Вудка', medbag: 'Сумка медика', hoe: 'Мотика' },
       weapons: { fist: 'Кулак', club: 'Кийок', sword: 'Меч', spear: 'Спис', iron_sword: 'Залізний меч', iron_spear: 'Залізний спис', bow: 'Лук' },
       buildings: {
@@ -96,8 +96,8 @@ const LANGUAGES = {
       'hud.ironArmor': 'Залізна броня', 'hud.quiver': 'Сагайдак {n}/12',
       'tab.build': '🏗️ Будівництво', 'tab.farming': '🌾 Фермерство', 'tab.tools': '🛠️ Інструменти', 'tab.weapons': '⚔️ Зброя',
       'btn.demolish': '🔨 Знести', 'btn.repairAll': '🛠️ Полагодити все', 'btn.zoneWheat': '🟨 Зона пшениці', 'btn.zoneSapling': '🟩 Зона саджанців',
-      'btn.zoneApple': '🟥 Зона яблунь', 'btn.zoneClear': '✖ Прибрати зону', 'btn.wateringCanOff': '❌ Зняти лійку',
-      'btn.backpackOff': '❌ Зняти рюкзак', 'btn.disarmTool': '❌ Забрати інструмент', 'btn.armorOff': '❌ Зняти броню',
+      'btn.zoneApple': '🟥 Зона яблунь', 'btn.zoneClear': '✖ Прибрати зону', 'btn.wateringCanOff': '❌ Розібрати лійку',
+      'btn.backpackOff': '❌ Розібрати рюкзак', 'btn.disarmTool': '❌ Забрати інструмент', 'btn.armorOff': '❌ Розібрати броню',
       'btn.disarmWeapon': '❌ Забрати зброю', 'btn.upgrade': '{icon} Покращити ({cost})', 'btn.upgradeWorker': '{icon} Покращити робітника ({cost})',
       'repair.ordered': '🛠️ Ремонт: {name} ({cost} за крок)', 'repair.cancelled': '❌ Ремонт скасовано',
       'repair.allOrdered': '🛠️ Ремонт замовлено: {count}', 'repair.nothing': '✅ Усе ціле',
@@ -128,7 +128,7 @@ const LANGUAGES = {
         ironOre: 'Руда', iron: 'Железо', leather: 'Кожа', arrows: 'Стрелы', wheatSeeds: 'Семена', saplings: 'Саженцы',
         herbs: 'Травы', worms: 'Червяки', appleSaplings: 'Саженцы яблони'
       },
-      resourceGroups: { raw: 'Сырая еда', plants: 'Растения', materials: 'Материалы', supplies: 'Снабжение' },
+      resourceGroups: { raw: 'Сырая еда', plants: 'Растения', materials: 'Материалы', supplies: 'Снабжение', toolsHeld: 'Инструменты', weaponsHeld: 'Оружие' },
       tools: { axe: 'Топор', pickaxe: 'Кирка', iron_axe: 'Железный топор', iron_pickaxe: 'Железная кирка', rod: 'Удочка', medbag: 'Сумка медика', hoe: 'Мотыга' },
       weapons: { fist: 'Кулак', club: 'Дубина', sword: 'Меч', spear: 'Копье', iron_sword: 'Железный меч', iron_spear: 'Железное копье', bow: 'Лук' },
       buildings: {
@@ -152,8 +152,8 @@ const LANGUAGES = {
       'hud.ironArmor': 'Железная броня', 'hud.quiver': 'Колчан {n}/12',
       'tab.build': '🏗️ Строительство', 'tab.farming': '🌾 Фермерство', 'tab.tools': '🛠️ Инструменты', 'tab.weapons': '⚔️ Оружие',
       'btn.demolish': '🔨 Снести', 'btn.repairAll': '🛠️ Починить всё', 'btn.zoneWheat': '🟨 Зона пшеницы', 'btn.zoneSapling': '🟩 Зона саженцев',
-      'btn.zoneApple': '🟥 Зона яблонь', 'btn.zoneClear': '✖ Убрать зону', 'btn.wateringCanOff': '❌ Снять лейку',
-      'btn.backpackOff': '❌ Снять рюкзак', 'btn.disarmTool': '❌ Разобрать инструмент', 'btn.armorOff': '❌ Снять броню',
+      'btn.zoneApple': '🟥 Зона яблонь', 'btn.zoneClear': '✖ Убрать зону', 'btn.wateringCanOff': '❌ Разобрать лейку',
+      'btn.backpackOff': '❌ Разобрать рюкзак', 'btn.disarmTool': '❌ Разобрать инструмент', 'btn.armorOff': '❌ Разобрать броню',
       'btn.disarmWeapon': '❌ Разобрать оружие', 'btn.upgrade': '{icon} Улучшить ({cost})', 'btn.upgradeWorker': '{icon} Улучшить рабочего ({cost})',
       'repair.ordered': '🛠️ Ремонт: {name} ({cost} за шаг)', 'repair.cancelled': '❌ Ремонт отменён',
       'repair.allOrdered': '🛠️ Ремонт заказан: {count}', 'repair.nothing': '✅ Всё цело',

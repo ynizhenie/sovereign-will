@@ -32,7 +32,10 @@ function update(dt) {
   foodTimer -= dt;
   if (foodTimer <= 0) {
     let mealCost = settlers.reduce((sum, s) => sum + (s.type === 'big' ? 2 : 1), 0);
+    // short of food, the colony eats worms
+    const short = Math.max(0, mealCost - stock.food);
     stock.food = Math.max(0, stock.food - mealCost);
+    stock.worms = Math.max(0, (stock.worms || 0) - short);
     foodTimer = 25;
   }
 

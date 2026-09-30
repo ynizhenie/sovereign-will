@@ -10,7 +10,18 @@ function updateUI() {
     const el = document.getElementById(`food-kind-${kind}-txt`);
     if (el) el.innerText = Math.floor(foodMix[kind] || 0);
   }
-  for (const group of GAME_CONFIG.resourceGroups) {
+  for (const group of GAME_CONFIG.resourceGroups.filter(g => g.held)) {
+    let total = 0;
+    for (const [category, id] of getHeldItems(group)) {
+      const count = countHeld(category, id);
+      total += count;
+      const el = document.getElementById(`held-${category}-${id}-txt`);
+      if (el) el.innerText = count;
+    }
+    const totalEl = document.getElementById(`group-${group.id}-txt`);
+    if (totalEl) totalEl.innerText = total;
+  }
+  for (const group of GAME_CONFIG.resourceGroups.filter(g => !g.held)) {
     const total = document.getElementById(`group-${group.id}-txt`);
     if (total) total.innerText = Math.floor(group.members.reduce((sum, id) => sum + getResourceAmount(id), 0));
   }
