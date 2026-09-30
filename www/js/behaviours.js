@@ -372,6 +372,7 @@ function treatWounded(s, tick) {
   } else {
     s.healTimer = (s.healTimer || 0) + tick.dt;
     s.working = 0.1;
+    faceTowards(s, patient.x, patient.y);
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;
       stock.herbs--;
@@ -559,6 +560,7 @@ function build(s, tick) {
         } else {
           bestBp.progress += dt * 40;
           s.working = 0.1;
+          faceTowards(s, bestBp.x, bestBp.y);
           if (bestBp.progress >= bestBp.maxProgress) {
             if (bestBp.type === 'demolish_building') {
               let bIdx = buildings.indexOf(bestBp.targetBuilding);
@@ -620,6 +622,7 @@ function fish(s, tick) {
     } else {
       fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
       s.working = 0.1;
+      faceTowards(s, fishSpot.x, fishSpot.y);
       if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
         for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
         addCarryLoad(s);
@@ -735,6 +738,7 @@ function huntBoar(s, boar, tick) {
       boar.hp -= hunt.damage * hunt.multiplier;
       s.attackCooldown = hunt.cooldown;
       startSwing(s, Math.min(0.35, hunt.cooldown * 0.8));
+      faceTowards(s, boar.x, boar.y);
       if (boar.hp <= 0) finishHarvest(s, boar, 'boar');
     }
   }
@@ -753,6 +757,7 @@ function workResource(s, assignedRes, tick) {
   }
   if (def.tool && (!hasToolFamily(s.tool, def.tool) || assignedRes.isGrowing)) return;
   s.working = 0.1; // animated while at it (see getHeldItemPose)
+  faceTowards(s, assignedRes.x, assignedRes.y);
   const work = def.work;
 
   if (work.pickup) {
@@ -892,6 +897,7 @@ function pickApples(s, tick) {
   } else {
     s.pickProgress = (s.pickProgress || 0) + tick.dt;
     s.working = 0.1;
+    faceTowards(s, target.x, target.y);
     const apples = GAME_CONFIG.appleTrees;
     if (s.pickProgress >= apples.pickSeconds) {
       s.pickProgress = 0;
@@ -926,6 +932,8 @@ function cook(s, tick) {
     s.cookProgress = 0;
   } else {
     s.cookProgress = (s.cookProgress || 0) + tick.dt;
+    s.working = 0.1;
+    faceTowards(s, fire.x, fire.y);
     fire.burning = 1; // drawn lit for a moment
     if (s.cookProgress >= cooking.seconds) {
       s.cookProgress = 0;
@@ -987,6 +995,7 @@ function tendFarmZones(s, tick) {
   } else {
     s.plantProgress = (s.plantProgress || 0) + tick.dt;
     s.working = 0.1;
+    faceTowards(s, target.x, target.y);
     if (s.plantProgress >= farming.plantSeconds) {
       s.plantProgress = 0;
       const cropId = farming.crops[target.crop];
