@@ -1,17 +1,50 @@
 applyPageTexts();
 renderConfigHud();
 
+// The game runs in fixed steps of 1/60 s whatever the frame rate, so it plays at the same speed on a
+// 30 Hz phone and a 144 Hz monitor (much of the movement is per step). Frames are drawn as often as the
+// frame-rate setting allows: 30, 60, every screen refresh, or as fast as the browser will go.
+const STEP = 1 / 60;
+const MAX_STEPS_PER_FRAME = 6; // after a long hitch, catch up at most this much instead of freezing
 let lastTime = performance.now();
+let stepTime = 0;
+let lastDrawn = 0;
+let frameRateSetting = loadSetting('fps', 'display');
+
+function loadSetting(name, fallback) {
+  try { return localStorage.getItem(`sovereign-will-${name}`) || fallback; } catch (e) { return fallback; }
+}
+
+function saveSetting(name, value) {
+  try { localStorage.setItem(`sovereign-will-${name}`, value); } catch (e) { /* not remembered */ }
+}
+
 function gameLoop(now) {
-  let dt = (now - lastTime) / 1000;
-  if (dt > 0.1) dt = 0.1;
+  stepTime += Math.min(0.25, (now - lastTime) / 1000);
   lastTime = now;
+  let steps = 0;
+  while (stepTime >= STEP && steps < MAX_STEPS_PER_FRAME) {
+    update(STEP);
+    stepTime -= STEP;
+    steps++;
+  }
+  if (steps === MAX_STEPS_PER_FRAME) stepTime = 0;
 
-  update(dt);
-  fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
-  render();
+  const limit = Number(frameRateSetting);
+  if (!limit || now - lastDrawn >= 1000 / limit - 2) {
+    lastDrawn = now;
+    fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
+    render();
+  }
+  scheduleFrame();
+}
 
-  requestAnimationFrame(gameLoop);
+// every screen refresh, or (no limit) as soon as the browser can, via a message
+const frameChannel = new MessageChannel();
+frameChannel.port1.onmessage = () => gameLoop(performance.now());
+function scheduleFrame() {
+  if (frameRateSetting === 'unlimited') frameChannel.port2.postMessage(0);
+  else requestAnimationFrame(gameLoop);
 }
 
 fitCanvasToScreen();
@@ -66,6 +99,40 @@ mapOptions.forEach(button => {
 });
 mapColsInput.addEventListener('change', applyCustomMap);
 mapRowsInput.addEventListener('change', applyCustomMap);
+
+// ---- Main menu screens: home (modes), endless (setup), settings
+
+function showMenuScreen(name) {
+  document.querySelectorAll('#main-menu [data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
+}
+
+onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
+onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
+document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => showMenuScreen('home')));
+
+// Exit closes the app on Android; a browser tab can't close itself, so there it isn't shown
+const nativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+  window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+const exitButton = document.getElementById('exit-app');
+exitButton.hidden = !nativeApp;
+onTap(exitButton, () => { if (nativeApp) nativeApp.exitApp(); });
+
+// difficulty (Endless)
+const difficultyOptions = document.querySelectorAll('.difficulty-option');
+difficultyOptions.forEach(button => onTap(button, () => {
+  gameDifficulty = button.dataset.difficulty;
+  difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
+}));
+
+// frame rate (Settings), remembered on the device
+const fpsOptions = document.querySelectorAll('.fps-option');
+const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === frameRateSetting));
+markFps();
+fpsOptions.forEach(button => onTap(button, () => {
+  frameRateSetting = button.dataset.fps;
+  saveSetting('fps', frameRateSetting);
+  markFps();
+}));
 
 const startGame = (e) => {
     if (e) e.preventDefault();
