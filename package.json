@@ -1,6 +1,6 @@
 {
   "name": "sovereign-will",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "description": "Sovereign Will: canvas strategy/survival game, packaged for Android with Capacitor",
   "scripts": {
