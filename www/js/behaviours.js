@@ -382,6 +382,9 @@ function treatWounded(s, tick) {
   return true;
 }
 
+// a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
+const NORMAL_BODIES = 21;
+
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
 // Archers restock arrows from towers or the town hall; unarmed settlers shelter at the town hall
 // while there are defenders, unless they're being attacked themselves.
@@ -479,10 +482,13 @@ function fightEnemies(s, tick) {
     let dist = distToClosestEn;
     // approach: how close to walk before striking (bows: shoot from under this distance)
     const approach = getWeaponStats(s, 'combat').approach;
-    // bows need a clear line of fire too, or they walk closer
+    // bows need a clear line of fire too, or they walk closer. Melee approach is set for a normal settler
+    // against a normal enemy (bodies 21 px apart): bigger bodies keep their centres further apart (see
+    // separateSettlersFromEnemies), so a big settler or a brute counts as in reach that much sooner
+    const extraBody = Math.max(0, (s.visualRadius || s.radius) + targetEnemy.radius - NORMAL_BODIES);
     const inReach = isBowWeapon(s.weapon)
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
-      : dist <= approach;
+      : dist <= approach + extraBody;
     if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
     } else {
