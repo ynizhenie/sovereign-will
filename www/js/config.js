@@ -19,13 +19,19 @@ const GAME_CONFIG = {
     appleSaplings: { id: 'appleSaplings', icon: '🍎', type: 'resource' }
   },
   // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
-  // of one shows as that resource; resources in no group get their own tile.
+  // of one shows as that resource; resources in no group get their own tile. `held` groups count what
+  // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
   resourceGroups: [
     { id: 'food', members: ['food'], kinds: 'foodKinds' }, // Food, opening onto what it's made of
-    { id: 'raw', icon: '🥩', members: ['rawMeat', 'rawFish', 'wheat'] },
+    { id: 'wood', members: ['wood'] },
+    { id: 'stone', members: ['stone'] },
+    { id: 'raw', icon: '🥩', members: ['rawMeat', 'rawFish', 'wheat', 'worms'] },
     { id: 'plants', icon: '🌱', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
-    { id: 'materials', icon: '🪵', members: ['wood', 'stone', 'coal', 'ironOre', 'iron', 'leather'] },
-    { id: 'supplies', icon: '🏹', members: ['arrows', 'worms'] }
+    { id: 'materials', icon: '🪨', members: ['coal', 'ironOre', 'iron', 'leather'] },
+    { id: 'supplies', members: ['arrows'] },
+    // not stock: how many settlers hold each tool / weapon / piece of gear
+    { id: 'toolsHeld', icon: '🛠️', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan'] } },
+    { id: 'weaponsHeld', icon: '⚔️', members: [], held: { weapons: 'all', gear: ['armor', 'shield'] } }
   ],
 
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
