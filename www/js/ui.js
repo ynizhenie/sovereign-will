@@ -15,11 +15,12 @@ function updateUI() {
   let btnUpgrade = document.getElementById('btn-upgrade-big');
 
   if (getSelectedSettler()) {
-    let name = selectedSettler.type === 'big' ? '🧌 Богатырь' : '👨‍🌾 Рабочий';
+    const type = GAME_CONFIG.settlerTypes[selectedSettler.type] || GAME_CONFIG.settlerTypes.normal;
+    let name = `${type.icon} ${type.label}`;
     let wName = getDefinition('weapons', selectedSettler.weapon)?.label || selectedSettler.weapon;
     let tName = selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selectedSettler.tool)?.label || selectedSettler.tool);
-    let aName = selectedSettler.armor === 'iron' ? ' / Железная броня' : '';
-    let qName = selectedSettler.quiver ? ` / Колчан ${selectedSettler.arrows || 0}/12` : '';
+    let aName = selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
+    let qName = selectedSettler.quiver ? ` / ${t('hud.quiver', { n: selectedSettler.arrows || 0 })}` : '';
     document.getElementById('selected-settler-txt').innerText = `${name} (${wName}${tName}${aName}${qName})`;
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
@@ -27,7 +28,7 @@ function updateUI() {
     }
   } else {
     selectedSettler = null;
-    document.getElementById('selected-settler-txt').innerText = 'Никто';
+    document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
     document.getElementById('btn-deselect').style.display = 'none';
     if (btnUpgrade) {
       btnUpgrade.style.display = 'none';

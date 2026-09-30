@@ -77,16 +77,16 @@ function orderGear(id) {
   const target = (selected && free(selected) ? selected : null) ||
     settlers.find(s => free(s) && rules.first(s)) || settlers.find(free);
   if (!target) {
-    showNotification(`⚠️ Некому выдать: ${item.label}`, true);
+    showNotification(t('gear.nobody', { name: item.label }), true);
     return;
   }
   if (!canAfford(item.cost)) {
-    showCostError(item.cost, '❌ Не хватает ресурсов! Нужно');
+    showCostError(item.cost, t('cost.notEnough'));
     return;
   }
   payCost(item.cost);
   target.targetEquipment = { gear: id };
-  showNotification(`✅ ${item.icon} ${item.label}: житель идёт за ним на базу`, false);
+  showNotification(t('gear.fetching', { icon: item.icon, name: item.label }), false);
 }
 
 // Send the selected settler wearing it (or the first one) to the town hall to hand it back
@@ -97,11 +97,11 @@ function orderGearOff(id) {
     ? selected
     : settlers.find(s => hasGear(s, id) && !s.targetEquipment);
   if (!target) {
-    showNotification(`⚠️ Ни у кого нет: ${item.label}`, true);
+    showNotification(t('gear.noneHas', { name: item.label }), true);
     return;
   }
   target.targetEquipment = { gearOff: id };
-  showNotification(`✅ ${item.icon} ${item.label}: житель несёт его на базу`, false);
+  showNotification(t('gear.returning', { icon: item.icon, name: item.label }), false);
 }
 
 // At the town hall (see equip()): put a piece on, or take it off and put its cost back in the stock
@@ -354,14 +354,14 @@ function handleCanvasClick() {
       return;
     }
     if (farmZones.some(z => z.x === gx && z.y === gy)) {
-      showNotification('❌ Здесь зона фермы: сначала уберите зону', true);
+      showNotification(t('build.zoneHere'), true);
       return;
     }
     if (!isBuildLocationAllowed(gx, gy)) {
       if (Math.hypot(gx - townHall.x, gy - townHall.y) < townHall.radius + 15) {
-        showNotification("❌ Нельзя строить на клетке ратуши", true);
+        showNotification(t('build.onHall'), true);
       } else {
-        showNotification("❌ Эта клетка занята", true);
+        showNotification(t('build.occupied'), true);
       }
       return;
     }
@@ -396,7 +396,7 @@ function handleCanvasClick() {
   } else if (getDefinition('buildings', buildMode)) {
     const building = getDefinition('buildings', buildMode);
     if (!canBuild(buildMode)) {
-      showCostError(building.cost || {}, `❌ ${building.label}: не хватает`);
+      showCostError(building.cost || {}, t('cost.needs', { name: building.label }));
     } else if (isBuildLocationAllowed(gx, gy)) {
       blueprints.push(createBuildingBlueprint(buildMode, gx, gy));
       payBuildingCost(buildMode);
@@ -444,7 +444,7 @@ function toggleFarmZone(x, y, crop) {
     return;
   }
   if (!existing && !canBeFarmZone(x, y)) {
-    showNotification('❌ Зона — только на траве, где нет деревьев, камней и построек', true);
+    showNotification(t('zone.badTile'), true);
     return;
   }
   if (existing) existing.crop = crop;
@@ -492,7 +492,7 @@ function setPaused(paused) {
   isPaused = paused;
   const btn = document.getElementById('btn-pause-toggle');
   btn.innerText = isPaused ? "▶️" : "⏸️";
-  btn.title = isPaused ? "Продолжить [Space]" : "Пауза [Space]";
+  btn.title = isPaused ? t('pause.resumeHint') : t('pause.pauseHint');
   btn.classList.toggle('paused', isPaused);
   document.getElementById('pause-menu').hidden = !isPaused;
 }
@@ -506,13 +506,13 @@ function exitToMainMenu() {
 function assignTool(toolType) {
   const item = getDefinition('tools', toolType);
   if (!item) {
-    showNotification('⚠️ Неизвестный инструмент: ' + toolType, true);
+    showNotification(t('tool.unknown', { id: toolType }), true);
     return;
   }
 
   const cost = item.cost || {};
   if (!canAfford(cost)) {
-    showCostError(cost, '❌ Не хватает ресурсов! Нужны');
+    showCostError(cost, t('cost.notEnough'));
     return;
   }
 
@@ -530,25 +530,25 @@ function assignTool(toolType) {
   }
 
   if (!target) {
-    showNotification('⚠️ Нет свободного поселенца для вручения инструмента!', true);
+    showNotification(t('tool.nobody'), true);
     return;
   }
 
   payCost(cost);
   target.targetEquipment = { weapon: 'fist', tool: toolType, role: 'worker' };
-  showNotification('✅ Выдан инструмент (' + item.label + ')', false);
+  showNotification(t('tool.given', { name: item.label }), false);
 }
 
 function craftWeapon(type) {
   const item = getDefinition('weapons', type);
   if (!item) {
-    showNotification('⚠️ Неизвестное оружие: ' + type, true);
+    showNotification(t('weapon.unknown', { id: type }), true);
     return;
   }
 
   const cost = item.cost || {};
   if (!canAfford(cost)) {
-    showCostError(cost, '❌ Не хватает ресурсов! Нужно');
+    showCostError(cost, t('cost.notEnough'));
     return;
   }
 
@@ -561,7 +561,7 @@ function craftWeapon(type) {
   }
 
   if (!target) {
-    showNotification('⚠️ Нет свободного поселенца для выдачи оружия!', true);
+    showNotification(t('weapon.nobody'), true);
     return;
   }
 
@@ -571,25 +571,25 @@ function craftWeapon(type) {
     target.targetEquipment.quiver = true;
     target.targetEquipment.quiverOnly = true;
   }
-  showNotification('✅ Создано оружие (' + item.label + ')', false);
+  showNotification(t('weapon.made', { name: item.label }), false);
 }
 
 function craftArrows() {
   let target = getSelectedSettler() || getPossessed();
   if (!target) target = settlers.find(s => s.weapon === 'bow' && s.quiver);
   if (!target || target.weapon !== 'bow' || !target.quiver) {
-    showNotification("⚠️ Сначала нужен лучник с колчаном", true);
+    showNotification(t('arrows.needArcher'), true);
     return;
   }
   const recipe = GAME_CONFIG.recipes.arrows;
   if (!canAfford(recipe.cost)) {
-    showCostError(recipe.cost, `❌ ${recipe.label}: нужно`);
+    showCostError(recipe.cost, t('cost.needs', { name: recipe.label }));
     return;
   }
 
   payCost(recipe.cost);
   addResources(recipe.produces);
-  showNotification(`✅ Создано ${recipe.produces.arrows} стрел. Они хранятся в ратуше`, false);
+  showNotification(t('arrows.made', { count: recipe.produces.arrows }), false);
 }
 
 function disarmSettler(type = 'all') {
@@ -621,12 +621,10 @@ function disarmSettler(type = 'all') {
       quiver: isDisarmingWeapon ? false : (target.quiver || false)
     };
 
-    const notificationText = type === 'tool' ? "✅ Инструмент разобран" :
-                             type === 'weapon' ? "✅ Оружие разобрано" : "✅ Предмет разобран";
+    const notificationText = t(type === 'tool' ? 'disarm.tool' : type === 'weapon' ? 'disarm.weapon' : 'disarm.item');
     showNotification(notificationText, false);
   } else {
-    const errorText = type === 'tool' ? "⚠️ Нет поселенца с инструментом!" :
-                      type === 'weapon' ? "⚠️ Нет поселенца с оружием или броней!" : "⚠️ Нет поселенца с предметом для разбора!";
+    const errorText = t(type === 'tool' ? 'disarm.noTool' : type === 'weapon' ? 'disarm.noWeapon' : 'disarm.noItem');
     showNotification(errorText, true);
   }
 }
@@ -636,16 +634,16 @@ function spawnSettler(type = 'normal') {
   if (!settlerType) return;
 
   if (getCurrentPop() + settlerType.population > getMaxPop()) {
-    showNotification("⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)", true);
+    showNotification(t('pop.limit'), true);
     return;
   }
   if (!canAfford(settlerType.hireCost)) {
-    showCostError(settlerType.hireCost, `❌ ${settlerType.label}: нужно`);
+    showCostError(settlerType.hireCost, t('cost.needs', { name: settlerType.label }));
     return;
   }
   payCost(settlerType.hireCost);
   settlers.push(createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false }));
-  showNotification(`✅ Нанят: ${settlerType.label}!`, false);
+  showNotification(t('hire.done', { name: settlerType.label }), false);
 }
 
 function upgradeToBig(target) {
@@ -654,15 +652,15 @@ function upgradeToBig(target) {
   if (!target || target.type !== 'normal') target = settlers.find(s => s.type === 'normal');
 
   if (!target || target.type !== 'normal') {
-    showNotification("❌ Нет подходящего обычного поселенца для улучшения!", true);
+    showNotification(t('upgrade.noone'), true);
     return;
   }
   if (getCurrentPop() + big.population - normal.population > getMaxPop()) {
-    showNotification("⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)", true);
+    showNotification(t('pop.limit'), true);
     return;
   }
   if (!canAfford(big.upgradeCost)) {
-    showCostError(big.upgradeCost, `❌ Улучшение в ${big.label}а: нужно`);
+    showCostError(big.upgradeCost, t('upgrade.needs', { name: big.label }));
     return;
   }
 
@@ -674,7 +672,7 @@ function upgradeToBig(target) {
   target.speed = big.speed;
   target.radius = big.radius;
   target.visualRadius = big.visualRadius;
-  showNotification(`✅ Поселенец улучшен: ${big.label}!`, false);
+  showNotification(t('upgrade.done', { name: big.label }), false);
 }
 
 function setMode(mode) {
@@ -687,7 +685,7 @@ function setMode(mode) {
 
   if (!canAfford(item.cost || {})) {
     const missing = getMissingCost(item.cost || {});
-    showNotification('💡 ' + item.label + ' стоит ' + formatCost(item.cost || {}) + ' (у вас не хватает ' + missing + ')', true);
+    showNotification(t('build.costs', { name: item.label, cost: formatCost(item.cost || {}), missing }), true);
   }
 }
 
