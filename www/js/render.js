@@ -268,7 +268,7 @@ function render() {
 
   // farm zones: a tint and a frame in the crop's colour
   const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
-  farmZones.forEach(z => {
+  if (activeTab === 'tab-farming') farmZones.forEach(z => {
     const rgb = ZONE_COLORS[z.crop] || ZONE_COLORS.sapling;
     ctx.fillStyle = `rgba(${rgb}, 0.14)`;
     ctx.fillRect(z.x - 15, z.y - 15, TILE_SIZE, TILE_SIZE);
@@ -450,10 +450,12 @@ function render() {
 
   getHarvestableResources().forEach(r => {
     if (r.priority > 0) {
+      // a square around the tile, the priority in its corner: clear of the progress bar above it
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(r.x, r.y, 18, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(`🎯 x${r.priority}`, r.x, r.y - 18);
+      ctx.strokeRect(r.x - 15, r.y - 15, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(r.x + 5, r.y + 5, 10, 10);
+      ctx.fillStyle = '#1b1b1b'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`${r.priority}`, r.x + 10, r.y + 13);
     }
   });
 
