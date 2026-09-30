@@ -17,6 +17,8 @@ export async function openGame(page) {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  // the tests check Russian texts; the game itself starts in English (see i18n.js)
+  await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-language', 'ru'); } catch (e) { /* none */ } });
   await page.goto('/');
   await page.addScriptTag({ path: 'tests/sim.js' });
   const files = existsSync(SCENARIOS) ? readdirSync(SCENARIOS).filter(f => f.endsWith('.js')).sort() : [];

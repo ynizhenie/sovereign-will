@@ -1,45 +1,45 @@
 const GAME_CONFIG = {
   resources: {
     // food: ready to eat (berries, apples, and anything cooked); the raw kinds need a campfire (cooking)
-    food: { id: 'food', label: 'Еда', icon: '🍞', type: 'resource' },
-    rawMeat: { id: 'rawMeat', label: 'Сырое мясо', icon: '🥩', type: 'resource' },
-    rawFish: { id: 'rawFish', label: 'Сырая рыба', icon: '🐟', type: 'resource' },
-    wheat: { id: 'wheat', label: 'Зерно', icon: '🌽', type: 'resource' },
-    wood: { id: 'wood', label: 'Дерево', icon: '🪵', type: 'resource' },
-    stone: { id: 'stone', label: 'Камень', icon: '🪨', type: 'resource' },
-    coal: { id: 'coal', label: 'Уголь', icon: '⚫', type: 'resource' },
-    ironOre: { id: 'ironOre', label: 'Руда', icon: '⛏️', type: 'resource' },
-    iron: { id: 'iron', label: 'Железо', icon: '🔩', type: 'resource' },
-    leather: { id: 'leather', label: 'Кожа', icon: '🟫', type: 'resource' },
-    arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', type: 'resource' },
-    wheatSeeds: { id: 'wheatSeeds', label: 'Семена', icon: '🌾', type: 'resource' },
-    saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' },
-    herbs: { id: 'herbs', label: 'Травы', icon: '🍃', type: 'resource' },
-    worms: { id: 'worms', label: 'Червяки', icon: '🪱', type: 'resource' },
-    appleSaplings: { id: 'appleSaplings', label: 'Саженцы яблони', icon: '🍎', type: 'resource' }
+    food: { id: 'food', icon: '🍞', type: 'resource' },
+    rawMeat: { id: 'rawMeat', icon: '🥩', type: 'resource' },
+    rawFish: { id: 'rawFish', icon: '🐟', type: 'resource' },
+    wheat: { id: 'wheat', icon: '🌽', type: 'resource' },
+    wood: { id: 'wood', icon: '🪵', type: 'resource' },
+    stone: { id: 'stone', icon: '🪨', type: 'resource' },
+    coal: { id: 'coal', icon: '⚫', type: 'resource' },
+    ironOre: { id: 'ironOre', icon: '⛏️', type: 'resource' },
+    iron: { id: 'iron', icon: '🔩', type: 'resource' },
+    leather: { id: 'leather', icon: '🟫', type: 'resource' },
+    arrows: { id: 'arrows', icon: '🏹', type: 'resource' },
+    wheatSeeds: { id: 'wheatSeeds', icon: '🌾', type: 'resource' },
+    saplings: { id: 'saplings', icon: '🌱', type: 'resource' },
+    herbs: { id: 'herbs', icon: '🍃', type: 'resource' },
+    worms: { id: 'worms', icon: '🪱', type: 'resource' },
+    appleSaplings: { id: 'appleSaplings', icon: '🍎', type: 'resource' }
   },
   // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
   // of one shows as that resource; resources in no group get their own tile.
   resourceGroups: [
     { id: 'food', members: ['food'] },
-    { id: 'raw', label: 'Сырая еда', icon: '🥩', members: ['rawMeat', 'rawFish', 'wheat'] },
-    { id: 'plants', label: 'Растения', icon: '🌱', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
-    { id: 'materials', label: 'Материалы', icon: '🪵', members: ['wood', 'stone', 'coal', 'ironOre', 'iron', 'leather'] },
-    { id: 'supplies', label: 'Снабжение', icon: '🏹', members: ['arrows', 'worms'] }
+    { id: 'raw', icon: '🥩', members: ['rawMeat', 'rawFish', 'wheat'] },
+    { id: 'plants', icon: '🌱', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
+    { id: 'materials', icon: '🪵', members: ['wood', 'stone', 'coal', 'ironOre', 'iron', 'leather'] },
+    { id: 'supplies', icon: '🏹', members: ['arrows', 'worms'] }
   ],
 
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
   // combatDamage / huntDamage: what an unarmed settler carrying it hits enemies / boars for.
   tools: {
-    axe: { id: 'axe', label: 'Топор', icon: '🪓', cost: { wood: 5, stone: 5 }, family: 'axe', combatDamage: 15, huntDamage: 16 },
-    pickaxe: { id: 'pickaxe', label: 'Кирка', icon: '⛏️', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10, huntDamage: 15 },
-    iron_axe: { id: 'iron_axe', label: 'Железный топор', icon: '🔩', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18, huntDamage: 22 },
-    iron_pickaxe: { id: 'iron_pickaxe', label: 'Железная кирка', icon: '🔩', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13, huntDamage: 21 },
-    rod: { id: 'rod', label: 'Удочка', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 },
+    axe: { id: 'axe', icon: '🪓', cost: { wood: 5, stone: 5 }, family: 'axe', combatDamage: 15, huntDamage: 16 },
+    pickaxe: { id: 'pickaxe', icon: '⛏️', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10, huntDamage: 15 },
+    iron_axe: { id: 'iron_axe', icon: '🔩', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18, huntDamage: 22 },
+    iron_pickaxe: { id: 'iron_pickaxe', icon: '🔩', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13, huntDamage: 21 },
+    rod: { id: 'rod', icon: '🎣', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
     // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
-    medbag: { id: 'medbag', label: 'Сумка медика', icon: '💼', cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4, huntDamage: 4 },
-    hoe: { id: 'hoe', label: 'Мотыга', icon: '🌿', cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 }
+    medbag: { id: 'medbag', icon: '💼', cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4, huntDamage: 4 },
+    hoe: { id: 'hoe', icon: '🌿', cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 }
   },
   // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
   // combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the settler
@@ -49,41 +49,41 @@ const GAME_CONFIG = {
   // Fists (and a club when hunting) hit with the tool the settler carries (tools' combatDamage /
   // huntDamage), bare hands otherwise. settlerTypes' damageMultiplier applies on top.
   weapons: {
-    fist: { id: 'fist', label: 'Кулак', icon: '✊', cost: {},
+    fist: { id: 'fist', icon: '✊', cost: {},
       combat: { damage: 6, range: 28, cooldown: 0.7, approach: 22, tentReach: 25 }, hunt: { damage: 5, range: 28, cooldown: 0.6 } },
-    club: { id: 'club', label: 'Дубина', icon: '🏏', cost: { wood: 4 }, family: 'club',
+    club: { id: 'club', icon: '🏏', cost: { wood: 4 }, family: 'club',
       combat: { damage: 10, range: 35, cooldown: 0.6, approach: 22, tentReach: 25 }, hunt: { range: 28, cooldown: 0.6 } },
-    sword: { id: 'sword', label: 'Меч', icon: '🗡️', cost: { wood: 6, stone: 3 }, family: 'sword',
+    sword: { id: 'sword', icon: '🗡️', cost: { wood: 6, stone: 3 }, family: 'sword',
       combat: { damage: 20, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 }, hunt: { damage: 32, range: 42, cooldown: 0.7 } },
-    spear: { id: 'spear', label: 'Копье', icon: '🍢', cost: { wood: 10, stone: 5 }, family: 'spear',
+    spear: { id: 'spear', icon: '🍢', cost: { wood: 10, stone: 5 }, family: 'spear',
       combat: { damage: 25, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 }, hunt: { damage: 22, range: 65, cooldown: 0.9 } },
-    iron_sword: { id: 'iron_sword', label: 'Железный меч', icon: '🔩', cost: { wood: 6, iron: 3 }, family: 'sword',
+    iron_sword: { id: 'iron_sword', icon: '🔩', cost: { wood: 6, iron: 3 }, family: 'sword',
       combat: { damage: 30, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 }, hunt: { damage: 40, range: 42, cooldown: 0.7 } },
-    iron_spear: { id: 'iron_spear', label: 'Железное копье', icon: '🔩', cost: { wood: 10, iron: 5 }, family: 'spear',
+    iron_spear: { id: 'iron_spear', icon: '🔩', cost: { wood: 10, iron: 5 }, family: 'spear',
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 }, hunt: { damage: 28, range: 65, cooldown: 0.9 } },
-    bow: { id: 'bow', label: 'Лук', icon: '🏹', cost: { wood: 15, leather: 5 }, family: 'bow',
+    bow: { id: 'bow', icon: '🏹', cost: { wood: 15, leather: 5 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } }
   },
   // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'.
   // Arrows stop at buildings, except arrowsPass ones; towerArrowsPass ones only stop arrows shot from the ground.
   buildings: {
-    wall_wood: { id: 'wall_wood', label: 'Деревянная стена', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
-    wall_stone: { id: 'wall_stone', label: 'Каменная стена', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 }, towerArrowsPass: true },
+    wall_wood: { id: 'wall_wood', icon: '🪵', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
+    wall_stone: { id: 'wall_stone', icon: '🪨', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 }, towerArrowsPass: true },
     // trap: every unit stepping onto it takes `damage`; it breaks after `uses` steps. Settlers walk
     // around it; enemies too, unless there's no other way (then it's cheaper for them than a wall)
-    spikes: { id: 'spikes', label: 'Шипы', icon: '🔺', cost: { wood: 6, iron: 2 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5 } }, arrowsPass: true },
-    door: { id: 'door', label: 'Дверь', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
+    spikes: { id: 'spikes', icon: '🔺', cost: { wood: 6, iron: 2 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5 } }, arrowsPass: true },
+    door: { id: 'door', icon: '🚪', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
-    tent: { id: 'tent', label: 'Палатка', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
-    campfire: { id: 'campfire', label: 'Костёр', icon: '🔥', cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
-    smelter: { id: 'smelter', label: 'Плавильня', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
+    tent: { id: 'tent', icon: '🏕️', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
+    campfire: { id: 'campfire', icon: '🔥', cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
+    smelter: { id: 'smelter', icon: '🔥', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
       // holds at most maxOre ore and maxCoal coal; one ore + one coal make one iron every `seconds`, up to
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
-    watchtower: { id: 'watchtower', label: 'Сторожевая башня', icon: '🗼', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
-    wheat: { id: 'wheat', label: 'Пшеница', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
-    sapling: { id: 'sapling', label: 'Саженец', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
-    apple_sapling: { id: 'apple_sapling', label: 'Саженец яблони', icon: '🍎', cost: { appleSaplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
+    watchtower: { id: 'watchtower', icon: '🗼', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
+    wheat: { id: 'wheat', icon: '🌾', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
+    sapling: { id: 'sapling', icon: '🌱', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
+    apple_sapling: { id: 'apple_sapling', icon: '🍎', cost: { appleSaplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
   },
   // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
   //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
@@ -97,13 +97,13 @@ const GAME_CONFIG = {
   //   and no tent has any left.
   // reward: added to the stock when it dies. Waves spawn kinds in this order.
   enemies: {
-    raider_club: { id: 'raider_club', label: 'Дикарь', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
+    raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
-    raider: { id: 'raider', label: 'Разбойник', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',
+    raider: { id: 'raider', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
-    brute: { id: 'brute', label: 'Громила', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear',
+    brute: { id: 'brute', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear',
       type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
-    raider_archer: { id: 'raider_archer', label: 'Лучник', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow',
+    raider_archer: { id: 'raider_archer', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow',
       type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } }
@@ -200,8 +200,8 @@ const GAME_CONFIG = {
   // kinds of settlers: stats, how many population slots they take, damage multiplier, and what hiring / upgrading costs.
   // carryLoads: how many gathered loads (one tree, one boulder, one boar...) it carries before going home
   settlerTypes: {
-    normal: { id: 'normal', label: 'Рабочий', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
-    big: { id: 'big', label: 'Богатырь', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
+    normal: { id: 'normal', icon: '👨‍🌾', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
+    big: { id: 'big', icon: '🧌', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
   },
 
   // worn gear, paid for with its button and picked up at the town hall (the settler walks there to
@@ -209,11 +209,11 @@ const GAME_CONFIG = {
   // loads (never an archer: the quiver is on its back). armor: +hpBonus, damageReduction off every hit,
   // melee soldiers first. shield: melee soldiers only, damageReduction off every hit, on top of armour.
   gear: {
-    backpack: { id: 'backpack', label: 'Рюкзак', icon: '🎒', cost: { leather: 5 }, extraLoads: 1 },
-    shield: { id: 'shield', label: 'Щит', icon: '🔰', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
-    armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
+    backpack: { id: 'backpack', icon: '🎒', cost: { leather: 5 }, extraLoads: 1 },
+    shield: { id: 'shield', icon: '🔰', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
+    armor: { id: 'armor', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
     // farmers (hoe): fills at water for `charges` crops; a watered crop grows growthFactor times as fast
-    wateringCan: { id: 'wateringCan', label: 'Лейка', icon: '🚿', cost: { wood: 3, iron: 1 }, charges: 3, growthFactor: 2 }
+    wateringCan: { id: 'wateringCan', icon: '🚿', cost: { wood: 3, iron: 1 }, charges: 3, growthFactor: 2 }
   },
 
   // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only
@@ -224,7 +224,7 @@ const GAME_CONFIG = {
 
   // crafted at the town hall into the stock
   recipes: {
-    arrows: { id: 'arrows', label: 'Стрелы', icon: '🏹', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } }
+    arrows: { id: 'arrows', icon: '🏹', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } }
   },
 
   // what one repair step costs and restores (buildings: one step per `interval` seconds per worker).
