@@ -15,6 +15,7 @@ const GAME_CONFIG = {
     wheatSeeds: { id: 'wheatSeeds', label: 'Семена', icon: '🌾', type: 'resource' },
     saplings: { id: 'saplings', label: 'Саженцы', icon: '🌱', type: 'resource' },
     herbs: { id: 'herbs', label: 'Травы', icon: '🍃', type: 'resource' },
+    worms: { id: 'worms', label: 'Червяки', icon: '🪱', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', label: 'Саженцы яблони', icon: '🍎', type: 'resource' }
   },
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
@@ -138,7 +139,7 @@ const GAME_CONFIG = {
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { food: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
-    farm: { list: 'farmPlots', yield: { wheat: 4 }, work: { seconds: 2.5 } },
+    farm: { list: 'farmPlots', yield: { wheat: 4, wheatSeeds: 1 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
     // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
     boar: { list: 'boars', hp: 40, yield: { rawMeat: 6, leather: 2 }, clearsPath: true,
@@ -164,7 +165,12 @@ const GAME_CONFIG = {
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },
 
-  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: { wheatSeeds: 1 } },
+  // bait: the first of these the stock can pay for, per catch (worms first)
+  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { wheat: 1 }] },
+
+  // worms turn up on a corpse once it has lain for `after` of its time; fishers pick them (1, or 2 off a
+  // big body) and carry them home as bait
+  worms: { after: 0.5, perCorpse: 1, perBigCorpse: 2 },
 
   // campfires: while there's raw food in the stock, a worker with no tool (one per campfire) cooks it.
   // It carries fuel from the town hall to the fire (one unit lasts `fuel[resource]` pieces, coal first),
@@ -194,7 +200,9 @@ const GAME_CONFIG = {
   gear: {
     backpack: { id: 'backpack', label: 'Рюкзак', icon: '🎒', cost: { leather: 5 }, extraLoads: 1 },
     shield: { id: 'shield', label: 'Щит', icon: '🔰', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
-    armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 }
+    armor: { id: 'armor', label: 'Броня', icon: '🛡️', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
+    // farmers (hoe): fills at water for `charges` crops; a watered crop grows growthFactor times as fast
+    wateringCan: { id: 'wateringCan', label: 'Лейка', icon: '🚿', cost: { wood: 3, iron: 1 }, charges: 3, growthFactor: 2 }
   },
 
   // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only

@@ -39,6 +39,9 @@ function createSettlerTick(dt) {
     plantAssignments: new Set(),     // farm zone tiles a farmer is planting this tick
     patients: new Set(),             // settlers a medic is treating this tick
     appleAssignments: new Set(),     // apple trees someone is picking this tick
+    wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
+    wateringAssignments: new Set(),  // crops a farmer is watering this tick
+    idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
@@ -603,7 +606,7 @@ function fish(s, tick) {
   if (!canGather(s, tick) || s.role !== 'worker' || s.tool !== 'rod') return false;
   const dt = tick.dt;
   let fishSpot = tick.activeWaterSpots[tick.assignedFishersCount];
-  if (fishSpot && !s.bait && !canAfford(GAME_CONFIG.fishing.bait)) fishSpot = null;
+  if (fishSpot && !s.bait && !getFishingBait()) fishSpot = null;
   if (fishSpot && !s.bait) {
     tick.assignedFishersCount++;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius) {
@@ -656,6 +659,7 @@ function canSettlerHarvest(s, r, tick) {
 
   if (kind === 'grass' && boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
   if (kind === 'grass' && hasToolFamily(s.tool, 'medic')) return true; // medics gather grass for herbs
+  if (kind === 'grass' && tick.idleFarmer === s) return true; // so does a farmer with nothing else to do
 
   const def = getMapResourceDef(kind);
   if (!def) return false;
@@ -994,6 +998,70 @@ function findFuel() {
   return Object.keys(GAME_CONFIG.cooking.fuel).find(f => stock[f] > 0) || null;
 }
 
+// ---- Worms
+
+// Fishers pick worms off corpses that have them (see corpseHasWorms) and carry them home as bait
+function collectWorms(s, tick) {
+  if (s.role !== 'worker' || s.tool !== 'rod' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
+  let target = null, best = Infinity;
+  for (const c of corpses) {
+    if (!corpseHasWorms(c) || tick.wormAssignments.has(c)) continue;
+    const d = Math.hypot(c.x - s.x, c.y - s.y);
+    if (d < best) { best = d; target = c; }
+  }
+  if (!target) return false;
+  tick.wormAssignments.add(target);
+  if (best > 16) {
+    moveEntityTowards(s, target.x, target.y, s.speed, false, tick.dt);
+  } else {
+    const worms = GAME_CONFIG.worms;
+    target.wormsTaken = true;
+    giveResourceToSettler(s, 'worms', target.big ? worms.perBigCorpse : worms.perCorpse);
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
+// ---- Watering
+
+// A farmer with a watering can waters growing crops (wheat plots, saplings) that aren't watered yet,
+// filling up at the nearest water it can reach; a watered crop grows faster (GAME_CONFIG.gear.wateringCan)
+function waterCrops(s, tick) {
+  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'hoe') || !s.wateringCan || s.carrying || s.isPossessed || tick.isWaveActive) return false;
+  const can = GAME_CONFIG.gear.wateringCan;
+  const thirsty = [...farmPlots.filter(f => f.growth < 100), ...trees.filter(t => t.isGrowing)]
+    .filter(c => !c.watered && !tick.wateringAssignments.has(c));
+  if (thirsty.length === 0) return false;
+  s.patrolTarget = null;
+  if (!(s.waterCharges > 0)) {
+    const water = waterTiles.filter(w => isWaterReachable(w))
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (!water) return false;
+    if (Math.hypot(water.x - s.x, water.y - s.y) > 32) moveEntityTowards(s, water.x, water.y, s.speed, false, tick.dt);
+    else s.waterCharges = can.charges;
+    return true;
+  }
+  const crop = thirsty.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+  tick.wateringAssignments.add(crop);
+  if (Math.hypot(crop.x - s.x, crop.y - s.y) > 24) {
+    moveEntityTowards(s, crop.x, crop.y, s.speed, false, tick.dt);
+  } else {
+    crop.watered = true;
+    s.waterCharges--;
+    s.working = 0.1;
+  }
+  return true;
+}
+
+// A farmer with nothing to plant or harvest gathers grass (see canSettlerHarvest)
+function farmerGathersGrass(s, tick) {
+  if (!hasToolFamily(s.tool, 'hoe')) return false;
+  tick.idleFarmer = s;
+  const busy = harvest(s, tick);
+  tick.idleFarmer = null;
+  return busy;
+}
+
 // ---- Farm zones
 
 // What's gathered by hand (grass, sticks, pebbles, bushes) lying on a farm zone tile: workers without a
@@ -1084,10 +1152,13 @@ const SETTLER_BEHAVIOURS = [
   breakOutOfSealedBase,
   clearEnemyTents,
   build,
+  collectWorms,
   fish,
   pickApples,
   harvest,
   tendFarmZones,
+  waterCrops,
+  farmerGathersGrass,
   deliverWhenNothingToDo,
   patrol
 ];
