@@ -1,7 +1,12 @@
 // A fisher at the town hall takes one seed as bait for the next catch
+// The bait a fisher would take now: the first of GAME_CONFIG.fishing.bait the stock has (worms first)
+function getFishingBait() {
+  return GAME_CONFIG.fishing.bait.find(bait => canAfford(bait)) || null;
+}
+
 function takeFishingBait(s) {
-  const bait = GAME_CONFIG.fishing.bait;
-  if (s.tool === 'rod' && !s.bait && canAfford(bait)) {
+  const bait = getFishingBait();
+  if (s.tool === 'rod' && !s.bait && bait) {
     payCost(bait);
     s.bait = true;
   }
@@ -55,7 +60,8 @@ function hasWorkingShield(s) {
 const GEAR_RULES = {
   backpack: { canWear: s => s.role !== 'archer', first: s => s.role === 'worker' && s.tool !== 'rod' },
   armor: { canWear: () => true, first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
-  shield: { canWear: canUseShield, first: () => true }
+  shield: { canWear: canUseShield, first: () => true },
+  wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true }
 };
 
 function hasGear(s, id) {
