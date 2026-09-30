@@ -18,6 +18,16 @@ const GAME_CONFIG = {
     worms: { id: 'worms', label: 'Червяки', icon: '🪱', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', label: 'Саженцы яблони', icon: '🍎', type: 'resource' }
   },
+  // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
+  // of one shows as that resource; resources in no group get their own tile.
+  resourceGroups: [
+    { id: 'food', members: ['food'] },
+    { id: 'raw', label: 'Сырая еда', icon: '🥩', members: ['rawMeat', 'rawFish', 'wheat'] },
+    { id: 'plants', label: 'Растения', icon: '🌱', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
+    { id: 'materials', label: 'Материалы', icon: '🪵', members: ['wood', 'stone', 'coal', 'ironOre', 'iron', 'leather'] },
+    { id: 'supplies', label: 'Снабжение', icon: '🏹', members: ['arrows', 'worms'] }
+  ],
+
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
   // combatDamage / huntDamage: what an unarmed settler carrying it hits enemies / boars for.
   tools: {
