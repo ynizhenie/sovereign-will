@@ -133,6 +133,39 @@ function startSwing(unit, seconds) {
 function tickAnimation(unit, dt) {
   if (unit.swingT > 0) unit.swingT = Math.max(0, unit.swingT - dt);
   if (unit.working > 0) unit.working = Math.max(0, unit.working - dt);
+  if (unit.bloodAge !== undefined) unit.bloodAge += dt;
+  if (unit.weaponBloodAge !== undefined) unit.weaponBloodAge += dt;
+}
+
+// Point the held weapon or tool at (x, y): what the unit strikes or works on (drawn by applyHeldItemPose)
+function faceTowards(unit, x, y) {
+  if (x !== unit.x || y !== unit.y) unit.facing = Math.atan2(y - unit.y, x - unit.x);
+}
+
+// A unit was hurt: blood on it, a splat under it (at most every half second per unit) and on the melee
+// weapon that did it (GAME_CONFIG.blood)
+function bleed(unit, attacker) {
+  unit.bloodAge = 0;
+  if (attacker && !isBowWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
+  if (pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
+  unit.lastBleedTick = pathTick;
+  const h = tileVariantHash(pathTick, bloodSplats.length);
+  bloodSplats.push({ x: unit.x + (h % 11) - 5, y: unit.y + ((h >>> 8) % 11) - 5, r: 3 + (h >>> 16) % 4, age: 0 });
+  if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
+}
+
+// How visible the blood on a unit's body is: it doesn't dry while the unit is badly wounded
+function bodyBloodAlpha(unit) {
+  if (unit.bloodAge === undefined) return 0;
+  return bloodAlpha(unit.bloodAge, unit.hp <= unit.maxHp * GAME_CONFIG.blood.woundedShare);
+}
+
+// How visible blood of this age is (1..0); `wounded` blood on a badly hurt unit never fades
+function bloodAlpha(age, wounded = false) {
+  if (age === undefined) return 0;
+  const blood = GAME_CONFIG.blood;
+  if (wounded || age <= blood.fadeAfter) return 1;
+  return Math.max(0, 1 - (age - blood.fadeAfter) / blood.fadeSeconds);
 }
 
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
@@ -140,6 +173,7 @@ function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   settler.hp -= damage;
+  if (damage > 0) bleed(settler, attacker);
   if (attacker) {
     settler.lastAttacker = attacker;
     settler.lastAttackedTick = pathTick;

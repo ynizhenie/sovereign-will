@@ -480,7 +480,7 @@ function applySpikeTraps() {
     }
   };
   for (const s of settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
-  for (const en of enemies) step(en, damage => { en.hp -= damage; });
+  for (const en of enemies) step(en, damage => { en.hp -= damage; bleed(en, null); });
 }
 
 function separateSettlersFromEnemies() {
