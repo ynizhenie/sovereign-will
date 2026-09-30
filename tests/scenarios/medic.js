@@ -17,7 +17,7 @@ Object.assign(window.sim, (() => {
     enemies = [enemy];
     stock.herbs = herbs;
     run(seconds, { each: () => { keys.w = keys.a = keys.s = keys.d = false; } });
-    return { soldierHp: soldier.hp, workerHp: worker.hp, herbsLeft: stock.herbs };
+    return { soldierHp: soldier.hp, workerHp: worker.hp, herbsLeft: stock.herbs + (medic.bagHerbs || 0), inBag: medic.bagHerbs || 0 };
   }
 
   // No attack: a medic with grass around gathers it and brings herbs home

@@ -155,10 +155,10 @@ function payBuildingCost(buildingType) {
   payCost(item.cost || {});
 }
 
-// Damaged, and either a watchtower (always kept up) or ordered by the player; tents mend themselves
+// Damaged and ordered by the player; tents mend themselves
 function needsRepair(building) {
   if (!(building.hp < building.maxHp) || building.type === 'tent') return false;
-  return building.type === 'watchtower' || !!building.repairRequested;
+  return !!building.repairRequested;
 }
 
 // One repair step for a building: its own GAME_CONFIG.repairs entry, or a share of its build cost
@@ -172,9 +172,9 @@ function getRepairStep(building) {
   return { cost, hp: building.maxHp * share.hpShare, interval: share.interval };
 }
 
-// Order (or cancel) repairs of a damaged building; tents mend themselves and watchtowers always are
+// Order (or cancel) repairs of a damaged building; tents mend themselves
 function toggleBuildingRepair(building) {
-  if (!(building.hp < building.maxHp) || building.type === 'tent' || building.type === 'watchtower') return false;
+  if (!(building.hp < building.maxHp) || building.type === 'tent') return false;
   building.repairRequested = !building.repairRequested;
   const item = getDefinition('buildings', building.type);
   showNotification(building.repairRequested
@@ -187,7 +187,7 @@ function toggleBuildingRepair(building) {
 function repairAllBuildings() {
   let count = 0;
   for (const b of buildings) {
-    if (b.hp < b.maxHp && b.type !== 'tent' && b.type !== 'watchtower') { b.repairRequested = true; count++; }
+    if (b.hp < b.maxHp && b.type !== 'tent') { b.repairRequested = true; count++; }
   }
   if (townHall.hp < townHall.maxHp) { townHall.repairRequested = true; count++; }
   showNotification(count > 0 ? `🛠️ Ремонт заказан: ${count}` : '✅ Всё цело', count === 0);
