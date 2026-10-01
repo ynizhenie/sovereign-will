@@ -643,16 +643,35 @@ function placeBeaches() {
 }
 
 // map: a saved map (editor.js) to play instead of generating one; Endless plays the one chosen in its menu
+// A building is gone (broken by enemies or demolished); a warehouse spills what it held (#36)
+function removeBuilding(building) {
+  const index = buildings.indexOf(building);
+  if (index === -1) return;
+  buildings.splice(index, 1);
+  if (building.contents) dropStorageContents(building);
+  invalidateAllPaths();
+}
+
+// One pile per resource on the storage's tile, picked up by workers (collectPiles)
+function dropStorageContents(storage) {
+  Object.entries(storage.contents).forEach(([type, amount], i) => {
+    if (amount <= 0) return;
+    const angle = i * 2.4;
+    resourcePiles.push({ x: storage.x + Math.cos(angle) * 6 * Math.min(1, i), y: storage.y + Math.sin(angle) * 6 * Math.min(1, i), type, amount });
+  });
+  storage.contents = {};
+}
+
 function resetGame(map = gameMode === 'endless' ? customMap : null) {
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
-  for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
+  townHall.contents = {}; buildings = []; // the old game's warehouses go with their contents
   addResources(GAME_CONFIG.start.resources);
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   setWorldSize((map || mapSettings).cols, (map || mapSettings).rows);
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
-  projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; dung = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
+  projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; dung = []; resourcePiles = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
   if (map) loadCustomMap(map);
   else generateMap();

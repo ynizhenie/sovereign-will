@@ -197,6 +197,7 @@ window.sim = (() => {
   // and then also doesn't move over the next 5s (so detours along rock walls don't count)
   function crowd({ seed, seconds = 30, count = 12, spread = false }) {
     start(seed);
+    GAME_CONFIG.storage.townHall = 1e6; // plenty of everything, and room for it (#36)
     stock.wood = stock.stone = stock.food = 500; stock.iron = 100;
     const tools = ['axe', 'pickaxe', 'none', 'axe', 'pickaxe'];
     const spots = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 3 && t.d <= (spread ? 40 : 6));

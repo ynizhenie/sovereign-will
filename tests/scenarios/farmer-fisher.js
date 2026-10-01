@@ -44,12 +44,13 @@ Object.assign(window.sim, (() => {
     Object.assign(stock, { worms: 0, wheatSeeds: 0, wheat: 0 });
     const fresh = corpses[2];
     let wormsSeen = 0;
-    const original = payCost;
+    // bait is taken out of a storage (#36)
+    const original = takeFrom;
     let wormsSpent = 0;
-    window.payCost = cost => { if (cost.worms) wormsSpent += cost.worms; return original(cost); };
+    window.takeFrom = (storage, id, amount) => { const got = original(storage, id, amount); if (id === 'worms') wormsSpent += got; return got; };
     try {
       run(seconds, { each: () => { wormsSeen = Math.max(wormsSeen, stock.worms + wormsSpent); fresh.age = Math.min(fresh.age, 1); } });
-    } finally { window.payCost = original; }
+    } finally { window.takeFrom = original; }
     return { wormsGathered: wormsSeen, freshUntouched: !fresh.wormsTaken, caughtFish: stock.rawFish > 0, wormsSpent };
   }
 

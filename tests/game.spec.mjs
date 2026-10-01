@@ -10,7 +10,7 @@ const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
-  await expect(page.locator('#build-actions button')).toHaveCount(8);
+  await expect(page.locator('#build-actions button')).toHaveCount(9);
   await expect(page.locator('#farming-actions button')).toHaveCount(3);
   await expect(page.locator('#tool-actions button')).toHaveCount(7);
   await expect(page.locator('#weapon-actions button')).toHaveCount(6);
