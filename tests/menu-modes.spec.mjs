@@ -68,5 +68,5 @@ test('the frame-rate setting is remembered (#39)', async ({ page }) => {
   await page.click('.fps-option[data-fps="30"]');
   await page.reload();
   await page.click('#open-settings');
-  await expect(page.locator('.fps-option.active')).toHaveAttribute('data-fps', '30');
+  await expect(page.locator('.fps-option[data-fps].active')).toHaveAttribute('data-fps', '30');
 });

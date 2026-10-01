@@ -86,7 +86,14 @@
                 <button class="fps-option" data-fps="30">30</button>
                 <button class="fps-option" data-fps="60">60</button>
                 <button class="fps-option" data-fps="display" data-i18n="menu.fpsDisplay">Screen</button>
-                <button class="fps-option" data-fps="unlimited" data-i18n="menu.fpsUnlimited">No limit</button>
+            </div>
+        </div>
+
+        <div class="wave-settings">
+            <div data-i18n="menu.showFps">Show FPS:</div>
+            <div class="wave-options" id="show-fps-options">
+                <button class="fps-option" data-show-fps="off" data-i18n="menu.off">Off</button>
+                <button class="fps-option" data-show-fps="on" data-i18n="menu.on">On</button>
             </div>
         </div>
     </div>
@@ -116,6 +123,7 @@
 
   <div id="main-area">
     <div id="toast-notification"></div>
+    <div id="fps-counter" hidden></div>
 
     <div style="position: absolute; top: 8px; left: 10px; z-index: 5; font-size: 10px; color: rgba(255, 255, 255, 0.35); pointer-events: none; user-select: none; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);">
       <span id="hud-seed">-</span>

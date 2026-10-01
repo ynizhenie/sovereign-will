@@ -408,7 +408,7 @@ window.sim = (() => {
     for (const list of [trees, cacti, boulders, naturalRocks, ironOres, coalOres, waterTiles]) list.length = 0;
     const hx = townHall.x, hy = townHall.y;
     boars = [{ x: hx + 200, y: hy, hp: 40, maxHp: 40, priority: 0, wanderTimer: 0, wanderInterval: 999, targetX: hx + 200, targetY: hy }];
-    settlers = [makeSettler(1, hx + 220, hy)];
+    settlers = [makeSettler(1, hx + 220, hy, { isPossessed: true })]; // stands still: only the boar moves
     invalidateAllPaths();
     const b = boars[0], s = settlers[0];
     const startDist = Math.hypot(b.x - s.x, b.y - s.y);
