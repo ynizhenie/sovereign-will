@@ -186,6 +186,13 @@ const GAME_CONFIG = {
   // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less
   blood: { fadeAfter: 10, fadeSeconds: 3, woundedShare: 0.25, maxSplats: 150 },
 
+  // stepping in blood or dung leaves `steps` footprints, one every stepGap px walked (#124)
+  smears: { steps: 6, stepGap: 12 },
+
+  // every mealsBefore colony meals a settler goes off to relieve itself: at least awayFromBuildings tiles
+  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds (#124)
+  relief: { mealsBefore: 3, seconds: 2, awayFromBuildings: 4, dungSeconds: 120 },
+
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },
 
