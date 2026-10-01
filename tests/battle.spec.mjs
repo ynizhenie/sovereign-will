@@ -40,7 +40,7 @@ test('any preset can fight on either side (#38)', async ({ page }) => {
       red: { weapon: enemies[0].weapon, hp: enemies[0].maxHp, big: enemies[0].type === 'big' }
     };
   });
-  expect(r.green).toEqual({ role: 'archer', weapon: 'bow', hp: 60, arrows: true });
+  expect(r.green).toEqual({ role: 'archer', weapon: 'bow', hp: 100, arrows: true }); // a normal body (#136)
   expect(r.red).toEqual({ weapon: 'spear', hp: 250, big: true });
 });
 
