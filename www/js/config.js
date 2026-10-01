@@ -148,20 +148,19 @@ const GAME_CONFIG = {
   //
   // work (settlers): pickup — taken at once; seconds — takes that long (per tool if an object);
   //   chop — loses hp per second by settler type, times toolBonus; drain — loses hp per second by tool.
-  // hit (possessed settler): hp per hit by tool (default otherwise); none — taken at once.
   mapResources: {
     tree: { list: 'trees', blocksArrows: true, tool: 'axe', hp: 3, yield: { wood: 3 }, bonusChance: { saplings: 0.5 }, regrow: 'forest', forestShare: 1,
-      work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } }, hit: { default: 1, iron_axe: 1.5 } },
+      work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } } },
     cactus: { list: 'cacti', blocksArrows: true, tool: 'axe', hp: 2, yield: { wood: 1 }, regrow: 'nearby',
-      work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } }, hit: { default: 1, iron_axe: 1.5 } },
+      work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } } },
     boulder: { list: 'boulders', blocksArrows: true, tool: 'pickaxe', hp: 4, yield: { stone: 3 }, regrow: 'anywhere',
-      work: { chop: { normal: 1.5, big: 2.5 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
+      work: { chop: { normal: 1.5, big: 2.5 } } },
     iron_ore: { list: 'ironOres', blocksArrows: true, tool: 'pickaxe', hp: 5, yield: { ironOre: 3 }, regrow: 'spawner',
-      work: { seconds: { pickaxe: 3.0, iron_pickaxe: 2.0 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
+      work: { seconds: { pickaxe: 3.0, iron_pickaxe: 2.0 } } },
     coal_ore: { list: 'coalOres', blocksArrows: true, tool: 'pickaxe', hp: 5, yield: { coal: 3 }, regrow: 'spawner',
-      work: { seconds: { pickaxe: 2.5, iron_pickaxe: 1.7 } }, hit: { default: 1, iron_pickaxe: 1.5 } },
+      work: { seconds: { pickaxe: 2.5, iron_pickaxe: 1.7 } } },
     natural_rock: { list: 'naturalRocks', blocksArrows: true, tool: 'pickaxe', markOnly: true, hp: 100, yield: { stone: 15 }, clearsPath: true,
-      work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, hit: { default: 25 } },
+      work: { drain: { pickaxe: 25, iron_pickaxe: 38 } } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },
@@ -176,7 +175,6 @@ const GAME_CONFIG = {
   },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
-  // (a possessed settler clicking water next to it gets a catch at once, without rod or bait)
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
   farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },

@@ -238,33 +238,54 @@ function getWeaponStats(s, use) {
   return { ...stats, damage, multiplier: settlerType ? settlerType.damageMultiplier : 1 };
 }
 
-// The possessed settler works a resource with a click: a hit (GAME_CONFIG.mapResources `hit`), or taken at once
-function harvestResourceDirect(r, p) {
-  if (!p || p.carrying || r.hidden || r.hideTarget) return;
+// A tap while possessing a settler is an order for it (carried out by followOrder() in behaviours.js):
+// an enemy or tent — attack it; a boar — hunt it; a resource — gather it, if the settler has the right
+// tool; an apple tree with apples — pick them; water — fish (needs a rod); a blueprint — build; a damaged
+// building — repair; the town hall — hand in what it carries (or repair the hall). An archer shoots
+// wherever else the tap lands. Returns false if the tap wasn't on anything for it.
+function orderPossessed(p, x, y) {
+  const near = (o, r) => Math.hypot(x - o.x, y - o.y) < r;
+  const order = (kind, target) => { p.order = { kind, target }; p.path = null; return true; };
+  const refuse = key => { showNotification(t(key), true); return true; };
 
-  if (r.isCarcass) {
-    if (r.collector && r.collector !== p) return;
-    finishHarvest(p, r, 'boar');
-    return;
+  const enemy = enemies.find(en => near(en, en.radius + 15)) || enemyTents.find(et => near(et, 25));
+  if (enemy) return order('attack', enemy);
+  const boar = boars.find(b => near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p));
+  if (boar) return order('hunt', boar);
+
+  if (near(townHall, townHall.radius + 10)) {
+    if (p.carrying) return order('deliver', townHall);
+    if (townHall.hp < townHall.maxHp) return order('repairHall', townHall);
   }
-  if (boars.includes(r)) {
-    const hunt = getWeaponStats(p, 'hunt');
-    r.hp -= hunt.damage * hunt.multiplier;
-    makeBoarFlee(r, p.x, p.y);
-    if (r.hp <= 0) finishHarvest(p, r, 'boar');
-    return;
+  const blueprint = blueprints.find(bp => near(bp, 18));
+  if (blueprint) return order('build', blueprint);
+  const damaged = buildings.find(b => near(b, 18) && b.hp < b.maxHp);
+  if (damaged) return canAfford(getRepairStep(damaged).cost) ? order('repair', damaged) : refuse('possess.noRepairCost');
+
+  const resource = getHarvestableResources().find(r => near(r, 25));
+  if (resource) {
+    const handsFull = p.carrying && !hasRoomToCarry(p);
+    if (resource.apple && resource.applesReady && !hasAxeTool(p.tool)) return handsFull ? refuse('possess.handsFull') : order('apples', resource);
+    const kind = getMapResourceKind(resource);
+    const def = getMapResourceDef(kind);
+    if (def.tool && (!hasToolFamily(p.tool, def.tool) || resource.isGrowing)) return refuse(`possess.needs.${def.tool}`);
+    if (kind === 'farm' && !(resource.growth >= 100)) return refuse('possess.notRipe');
+    return handsFull ? refuse('possess.handsFull') : order('harvest', resource);
   }
 
-  const kind = getMapResourceKind(r);
-  if (!kind) return;
-  const def = getMapResourceDef(kind);
-  if (kind === 'farm' && !(r.growth >= 100)) return;
-  if (def.tool && (!hasToolFamily(p.tool, def.tool) || r.isGrowing || r.oreSpawner)) return;
-  if (def.hit) {
-    r.hp -= def.hit[p.tool] ?? def.hit.default;
-    if (r.hp > 0) return;
+  const water = waterTiles.find(w => near(w, 20));
+  if (water) {
+    if (p.tool !== 'rod') return refuse('possess.needsRod');
+    if (!p.bait && !getFishingBait()) return refuse('possess.noBait');
+    return p.carrying && !hasRoomToCarry(p) ? refuse('possess.handsFull') : order('fish', water);
   }
-  finishHarvest(p, r, kind);
+
+  if (isBowWeapon(p.weapon)) {
+    p.order = null;
+    performAttack(p, x, y);
+    return true;
+  }
+  return false;
 }
 
 function invalidateAllPaths() {
@@ -313,31 +334,7 @@ function handleCanvasClick() {
   }
 
   const p = getPossessed();
-
-  if (p) {
-    let nearEnemy = enemies.find(en => Math.hypot(mouse.x - en.x, mouse.y - en.y) < en.radius + 15);
-    let nearTent = enemyTents.find(et => Math.hypot(mouse.x - et.x, mouse.y - et.y) < 25);
-    let nearBoar = boars.find(b => !b.isCarcass && Math.hypot(mouse.x - b.x, mouse.y - b.y) < 25);
-    if (nearEnemy || nearTent || nearBoar || p.weapon === 'bow') {
-      performAttack(p, mouse.x, mouse.y);
-      return;
-    }
-
-    let allResources = getHarvestableResources();
-    let clickedRes = allResources.find(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 25);
-    if (clickedRes) {
-      if (Math.hypot(p.x - clickedRes.x, p.y - clickedRes.y) < 50) {
-        harvestResourceDirect(clickedRes, p);
-      }
-      return;
-    }
-
-    let clickedWater = waterTiles.find(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 20);
-    if (clickedWater && Math.hypot(p.x - clickedWater.x, p.y - clickedWater.y) < 50) {
-      for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(p, item, amount);
-      return;
-    }
-  }
+  if (p && orderPossessed(p, mouse.x, mouse.y)) return;
 
   if (buildMode === 'interact') {
     let clickedSettler = settlers.find(s => Math.hypot(mouse.x - s.x, mouse.y - s.y) < s.visualRadius + 8);
