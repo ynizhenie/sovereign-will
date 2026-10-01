@@ -294,7 +294,7 @@ window.sim = (() => {
     return problems;
   }
 
-  // Mine every ore once (directly, like a possessed settler) and check where they come back.
+  // Mine every ore at once and check where they come back.
   // Ore grows back after oreRespawnDelay, so this waits it out (nobody else here can mine).
   function oreRespawn(seed) {
     start(seed);
@@ -304,7 +304,7 @@ window.sim = (() => {
     const miner = makeSettler(1, 0, 0, { tool: 'pickaxe' });
     const before = { iron: ironOres.length, coal: coalOres.length };
     for (const list of [ironOres, coalOres]) {
-      for (const ore of [...list]) { while (list.includes(ore)) { miner.carrying = null; harvestResourceDirect(ore, miner); } }
+      for (const ore of [...list]) { miner.carrying = null; finishHarvest(miner, ore, getMapResourceKind(ore)); }
     }
     const rightAfter = { iron: ironOres.length, coal: coalOres.length };
     run(GAME_CONFIG.map.oreRespawnDelay.max + 1);
@@ -314,10 +314,12 @@ window.sim = (() => {
       const nearSpawner = o => spawners.some(sp => Math.max(Math.abs(sp.x - o.x), Math.abs(sp.y - o.y)) <= radius * TILE_SIZE);
       result[kind] = { before: before[kind], rightAfter: rightAfter[kind], after: list.length, allNearSpawner: list.every(nearSpawner) };
     }
-    // spawners themselves can't be mined or marked
+    // spawners themselves can't be mined or marked: a possessed miner told to mine one doesn't
     const spawner = getOreSpawners('iron')[0];
-    const spawnerMiner = makeSettler(2, 0, 0, { tool: 'iron_pickaxe' });
-    for (let i = 0; i < 20; i++) { spawnerMiner.carrying = null; harvestResourceDirect(spawner, spawnerMiner); }
+    const spawnerMiner = makeSettler(2, spawner.x + 25, spawner.y, { tool: 'iron_pickaxe', isPossessed: true });
+    settlers = [spawnerMiner];
+    orderPossessed(spawnerMiner, spawner.x, spawner.y);
+    run(5);
     result.spawnerSurvivesMining = naturalRocks.includes(spawner);
     result.spawnerHarvestable = getHarvestableResources().includes(spawner);
     return result;
@@ -364,14 +366,14 @@ window.sim = (() => {
     return { catches, seedsLeft: stock.wheatSeeds };
   }
 
-  // Chop a tree directly and watch the tree count: no instant regrowth, back after respawnDelay
+  // Fell a tree at once and watch the tree count: no instant regrowth, back after respawnDelay
   function treeRegrowth({ seed = 'regrowth-test' } = {}) {
     start(seed);
     settlers = [];
     const count0 = trees.length;
     const tree = trees.find(t => !t.isGrowing);
     const lumberjack = makeSettler(1, tree.x, tree.y, { tool: 'axe' });
-    while (trees.includes(tree)) { lumberjack.carrying = null; harvestResourceDirect(tree, lumberjack); }
+    finishHarvest(lumberjack, tree, 'tree');
     const rightAfter = trees.length;
     run(GAME_CONFIG.map.respawnDelay.min - 1);
     const beforeMinDelay = trees.length;
@@ -389,16 +391,18 @@ window.sim = (() => {
     return { shadeCount: shades.size, totalShades: GRASS_SHADES.length };
   }
 
-  // Clicking a boar directly deals the wielded weapon's hunt damage, not a fixed amount (#62)
+  // A possessed settler told to hunt a boar deals the wielded weapon's hunt damage, not a fixed amount (#62).
+  // Returns the damage of the first hit.
   function boarHuntDamage({ seed = 'boar-damage-test', weapon = 'fist', tool = 'none' } = {}) {
     start(seed);
     const hx = townHall.x, hy = townHall.y;
     boars = [{ x: hx + 40, y: hy, hp: 999, maxHp: 999, priority: 0 }];
-    const hunter = makeSettler(1, hx, hy, { weapon, tool });
+    const hunter = makeSettler(1, hx, hy, { weapon, tool, isPossessed: true });
     settlers = [hunter];
-    const before = boars[0].hp;
-    harvestResourceDirect(boars[0], hunter);
-    return before - boars[0].hp;
+    const boar = boars[0];
+    orderPossessed(hunter, boar.x, boar.y);
+    for (let f = 0; f < 5 * 60 && boar.hp === boar.maxHp; f++) update(TICK);
+    return boar.maxHp - boar.hp;
   }
 
   // A boar flees the moment a settler gets close, even without being attacked first (#62)

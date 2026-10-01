@@ -59,6 +59,8 @@ function getMapAreaScale() {
 }
 
 const keys = {};
+// the on-screen joystick for the possessed settler: x, y in -1..1 (see input.js)
+const joystick = { x: 0, y: 0 };
 let mouse = { x: 0, y: 0 };
 let camera = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, zoom: 1 };
 let cameraDragging = false;

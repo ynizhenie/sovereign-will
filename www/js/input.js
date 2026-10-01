@@ -7,22 +7,37 @@ window.addEventListener('keydown', e => {
 
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-function bindMobileTouchKey(btnId, keyName) {
-  const btn = document.getElementById(btnId);
-  if (!btn) return;
-
-  const press = (e) => { e.preventDefault(); keys[keyName] = true; };
-  const release = (e) => { e.preventDefault(); keys[keyName] = false; };
-
-  btn.addEventListener('touchstart', press, { passive: false });
-  btn.addEventListener('touchend', release, { passive: false });
-  btn.addEventListener('touchcancel', release, { passive: false });
-}
-
-bindMobileTouchKey('btn-w', 'w');
-bindMobileTouchKey('btn-a', 'a');
-bindMobileTouchKey('btn-s', 's');
-bindMobileTouchKey('btn-d', 'd');
+// The joystick for the possessed settler: drag the knob, how far from the centre sets the speed
+const JOYSTICK_REACH = 45;
+(function bindJoystick() {
+  const base = document.getElementById('mobile-joystick');
+  const knob = base.querySelector('.joystick-knob');
+  let pointerId = null;
+  const moveKnob = (clientX, clientY) => {
+    const rect = base.getBoundingClientRect();
+    let dx = clientX - (rect.left + rect.width / 2), dy = clientY - (rect.top + rect.height / 2);
+    const dist = Math.hypot(dx, dy);
+    if (dist > JOYSTICK_REACH) { dx *= JOYSTICK_REACH / dist; dy *= JOYSTICK_REACH / dist; }
+    joystick.x = dx / JOYSTICK_REACH;
+    joystick.y = dy / JOYSTICK_REACH;
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+  const release = e => {
+    if (e.pointerId !== pointerId) return;
+    pointerId = null;
+    joystick.x = joystick.y = 0;
+    knob.style.transform = '';
+  };
+  base.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    pointerId = e.pointerId;
+    base.setPointerCapture(e.pointerId);
+    moveKnob(e.clientX, e.clientY);
+  });
+  base.addEventListener('pointermove', e => { if (e.pointerId === pointerId) moveKnob(e.clientX, e.clientY); });
+  base.addEventListener('pointerup', release);
+  base.addEventListener('pointercancel', release);
+})();
 
 function getCanvasScreenCoords(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
@@ -262,7 +277,7 @@ document.addEventListener('touchend', function(e) {
 document.addEventListener("touchstart", function() {}, true);
 
 window.addEventListener('DOMContentLoaded', () => {
-  const uiElements = ['top-bar', 'zoom-controls', 'bottom-panel', 'btn-interact', 'mobile-dpad'];
+  const uiElements = ['top-bar', 'zoom-controls', 'bottom-panel', 'btn-interact', 'mobile-joystick'];
   
   uiElements.forEach(id => {
     const el = document.getElementById(id);

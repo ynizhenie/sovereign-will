@@ -213,17 +213,22 @@ function repairBuilding(s, tick) {
   if (best > 34) {
     moveEntityTowards(s, target.x, target.y, s.speed, false, tick.dt);
   } else {
-    const step = getRepairStep(target);
-    target.repairTimer = (target.repairTimer || 0) - tick.dt;
-    if (target.repairTimer <= 0) {
-      payCost(step.cost);
-      target.hp = Math.min(target.maxHp, target.hp + step.hp);
-      target.repairTimer = step.interval;
-      if (target.hp >= target.maxHp) target.repairRequested = false;
-    }
+    repairStep(target, tick.dt);
   }
   s.patrolTarget = null;
   return true;
+}
+
+// One repair step's worth of time at a building: pays getRepairStep's cost every interval
+function repairStep(b, dt) {
+  const step = getRepairStep(b);
+  b.repairTimer = (b.repairTimer || 0) - dt;
+  if (b.repairTimer <= 0) {
+    payCost(step.cost);
+    b.hp = Math.min(b.maxHp, b.hp + step.hp);
+    b.repairTimer = step.interval;
+    if (b.hp >= b.maxHp) b.repairRequested = false;
+  }
 }
 
 // ---- Equipment and hauling
@@ -351,9 +356,89 @@ function healAtTent(s, tick) {
   return false;
 }
 
-// The possessed settler is moved by the player (see update()); none of the behaviours below apply
+// ---- The possessed settler (#16)
+// Its AI is off: it doesn't work, heal or even hit back by itself. The player moves it (see update())
+// and taps things to give it an order (see orderPossessed()): it walks there and does what it can with
+// what it has in hand. Moving it by hand cancels the order. Gear the player picked is still fetched.
 function playerControlled(s, tick) {
-  return !!s.isPossessed;
+  if (!s.isPossessed) return false;
+  if (s.targetEquipment) return equip(s, tick);
+  if (s.order && !followOrder(s, tick)) s.order = null;
+  return true;
+}
+
+// One tick of the possessed settler's order; false once it's done or can't be carried on
+function followOrder(s, tick) {
+  const { kind, target } = s.order;
+  const dt = tick.dt;
+  const walkTo = (x, y) => moveEntityTowards(s, x, y, s.speed, false, dt);
+  switch (kind) {
+    case 'attack': {
+      if (!enemies.includes(target) && !enemyTents.includes(target)) return false;
+      if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
+      const combat = getWeaponStats(s, 'combat');
+      const reach = enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
+      if (Math.hypot(target.x - s.x, target.y - s.y) > reach) walkTo(target.x, target.y);
+      else performAttack(s, target.x, target.y);
+      return true;
+    }
+    case 'hunt':
+      if (!boars.includes(target) || target.hidden || target.hideTarget) return false;
+      if (target.isCarcass && s.carrying && !hasRoomToCarry(s)) return false;
+      huntBoar(s, target, tick);
+      return true;
+    case 'harvest': {
+      const kind = tick.resourceKind.get(target);
+      if (!kind || !WORLD[getMapResourceDef(kind).list].includes(target)) return false;
+      if (s.carrying && !hasRoomToCarry(s)) return false;
+      const spot = getResourceApproachPoint(s, target);
+      if (!spot) return false;
+      if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) walkTo(spot.x, spot.y);
+      else workResource(s, target, tick);
+      return true;
+    }
+    case 'apples':
+      if (!trees.includes(target) || !target.applesReady) return false;
+      if (s.carrying && !hasRoomToCarry(s)) return false;
+      return pickApplesFrom(s, target, dt);
+    case 'fish':
+      if (s.tool !== 'rod' || (s.carrying && !hasRoomToCarry(s))) return false;
+      if (!s.bait) {
+        // bait first, from the town hall
+        if (!getFishingBait()) return false;
+        if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius) moveSettlerToTownHall(s, s.speed, dt);
+        else takeFishingBait(s);
+        return true;
+      }
+      fishAt(s, target, dt);
+      return true;
+    case 'deliver':
+      if (!s.carrying) return false;
+      goDeliver(s, tick);
+      return true;
+    case 'build':
+      if (!blueprints.includes(target)) return false;
+      if (Math.hypot(target.x - s.x, target.y - s.y) > 30) walkTo(target.x, target.y);
+      else workBlueprint(s, target, dt);
+      return true;
+    case 'repair':
+      if (!buildings.includes(target) || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
+      if (Math.hypot(target.x - s.x, target.y - s.y) > 34) walkTo(target.x, target.y);
+      else repairStep(target, dt);
+      return true;
+    case 'repairHall': {
+      const repair = GAME_CONFIG.repairs.townHall;
+      if (townHall.hp >= townHall.maxHp || !canAfford(repair.cost)) return false;
+      if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius + 4) {
+        moveSettlerToTownHall(s, s.speed, dt);
+      } else {
+        payCost(repair.cost);
+        townHall.hp = Math.min(townHall.maxHp, townHall.hp + repair.hp);
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 // ---- Fighting
@@ -622,31 +707,7 @@ function build(s, tick) {
         if (dist > 30) {
           moveEntityTowards(s, bestBp.x, bestBp.y, s.speed, false, dt);
         } else {
-          bestBp.progress += dt * 40;
-          s.working = 0.1;
-          faceTowards(s, bestBp.x, bestBp.y);
-          if (bestBp.progress >= bestBp.maxProgress) {
-            if (bestBp.type === 'demolish_building') {
-              let bIdx = buildings.indexOf(bestBp.targetBuilding);
-              if (bIdx !== -1) {
-                let b = buildings[bIdx];
-                const definition = getDefinition('buildings', b.type);
-                addResources(definition && definition.demolishRefund);
-                buildings.splice(bIdx, 1);
-              }
-              invalidateAllPaths();
-            } else if (bestBp.type === 'wheat') {
-              farmPlots.push({ x: bestBp.x, y: bestBp.y, growth: 0, priority: 0, harvestProgress: 0 });
-            } else if (bestBp.type === 'sapling' || bestBp.type === 'apple_sapling') {
-              const tree = { x: bestBp.x, y: bestBp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
-              trees.push(bestBp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
-            } else {
-              buildings.push(bestBp);
-              ejectEntitiesFromTile(bestBp.x, bestBp.y);
-              invalidateAllPaths();
-            }
-            blueprints.splice(blueprints.indexOf(bestBp), 1);
-          }
+          workBlueprint(s, bestBp, dt);
         }
         s.patrolTarget = null;
         return true;
@@ -654,6 +715,35 @@ function build(s, tick) {
     }
   }
   return false;
+}
+
+// Work on a blueprint the settler is standing at; finished, it becomes what it was for
+function workBlueprint(s, bp, dt) {
+  bp.progress += dt * 40;
+  s.working = 0.1;
+  faceTowards(s, bp.x, bp.y);
+  if (bp.progress >= bp.maxProgress) {
+    if (bp.type === 'demolish_building') {
+      let bIdx = buildings.indexOf(bp.targetBuilding);
+      if (bIdx !== -1) {
+        let b = buildings[bIdx];
+        const definition = getDefinition('buildings', b.type);
+        addResources(definition && definition.demolishRefund);
+        buildings.splice(bIdx, 1);
+      }
+      invalidateAllPaths();
+    } else if (bp.type === 'wheat') {
+      farmPlots.push({ x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0 });
+    } else if (bp.type === 'sapling' || bp.type === 'apple_sapling') {
+      const tree = { x: bp.x, y: bp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
+      trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
+    } else {
+      buildings.push(bp);
+      ejectEntitiesFromTile(bp.x, bp.y);
+      invalidateAllPaths();
+    }
+    blueprints.splice(blueprints.indexOf(bp), 1);
+  }
 }
 
 // Workers gather any time; soldiers only between waves (hunting boars, picking up carcasses)
@@ -680,24 +770,29 @@ function fish(s, tick) {
   }
   if (fishSpot) {
     tick.assignedFishersCount++;
-    let dist = Math.hypot(fishSpot.x - s.x, fishSpot.y - s.y);
-    if (dist > 32) {
-      moveEntityTowards(s, fishSpot.x, fishSpot.y, s.speed, false, dt);
-    } else {
-      fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
-      s.working = 0.1;
-      faceTowards(s, fishSpot.x, fishSpot.y);
-      if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
-        for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
-        addCarryLoad(s);
-        s.bait = false;
-        fishSpot.fishTimer = 0;
-      }
-    }
-    s.patrolTarget = null;
+    fishAt(s, fishSpot, dt);
     return true;
   }
   return false;
+}
+
+// Walk to a fishing spot and fish there (the settler has bait)
+function fishAt(s, fishSpot, dt) {
+  let dist = Math.hypot(fishSpot.x - s.x, fishSpot.y - s.y);
+  if (dist > 32) {
+    moveEntityTowards(s, fishSpot.x, fishSpot.y, s.speed, false, dt);
+  } else {
+    fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
+    s.working = 0.1;
+    faceTowards(s, fishSpot.x, fishSpot.y);
+    if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
+      for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
+      addCarryLoad(s);
+      s.bait = false;
+      fishSpot.fishTimer = 0;
+    }
+  }
+  s.patrolTarget = null;
 }
 
 // Can this settler work this resource with what it has in hand?
@@ -954,13 +1049,18 @@ function pickApples(s, tick) {
   }
   if (!target || best === Infinity) return false;
   tick.appleAssignments.add(target);
+  return pickApplesFrom(s, target, tick.dt);
+}
+
+// Walk up to an apple tree and pick its apples; false if there's nowhere to stand next to it
+function pickApplesFrom(s, target, dt) {
   const spot = getResourceApproachPoint(s, target);
   if (!spot) return false;
   if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) {
-    moveEntityTowards(s, spot.x, spot.y, s.speed, false, tick.dt);
+    moveEntityTowards(s, spot.x, spot.y, s.speed, false, dt);
     s.pickProgress = 0;
   } else {
-    s.pickProgress = (s.pickProgress || 0) + tick.dt;
+    s.pickProgress = (s.pickProgress || 0) + dt;
     s.working = 0.1;
     faceTowards(s, target.x, target.y);
     const apples = GAME_CONFIG.appleTrees;
@@ -1197,6 +1297,7 @@ function patrol(s, tick) {
 
 // Order = priority: the first behaviour that takes a settler's tick wins.
 const SETTLER_BEHAVIOURS = [
+  playerControlled,
   loadTowerArrows,
   collectSmelterIron,
   supplySmelter,
@@ -1209,7 +1310,6 @@ const SETTLER_BEHAVIOURS = [
   deliverCarrying,
   repairTent,
   healAtTent,
-  playerControlled,
   treatWounded,
   fightEnemies,
   breakOutOfSealedBase,
