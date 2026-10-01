@@ -263,6 +263,11 @@ function getMapRange(key, fallbackMin, fallbackMax) {
   return { min, max };
 }
 
+function getResourceIconName(resourceKey) {
+  const known = GAME_CONFIG.resources[resourceKey] || GAME_CONFIG.foodKinds[resourceKey];
+  return known ? known.icon : 'bundle';
+}
+
 function getResourceIcon(resourceKey) {
   const resource = GAME_CONFIG.resources[resourceKey];
   return resource ? `[[${resource.icon}]]` : resourceKey;
@@ -278,15 +283,20 @@ function canAfford(cost = {}) {
   return Object.entries(cost).every(([key, amount]) => Number(stock[key] || 0) >= Number(amount || 0));
 }
 
-function canBuild(buildingType) {
-  const item = getDefinition('buildings', buildingType);
-  return item ? canAfford(item.cost || {}) : false;
+// Building materials promised to blueprints and not brought to them yet (#36): builders fetch them from
+// storage (see build), so another building can't count on them
+function getReservedForBlueprints(id) {
+  let reserved = 0;
+  for (const bp of blueprints) reserved += (bp.needs && bp.needs[id]) || 0;
+  for (const s of settlers) if (s.carrying && s.carrying.forBlueprint && s.carrying.type === id) reserved -= s.carrying.amount;
+  return Math.max(0, reserved);
 }
 
-function payBuildingCost(buildingType) {
+const getFreeStock = id => Number(stock[id] || 0) - getReservedForBlueprints(id);
+
+function canBuild(buildingType) {
   const item = getDefinition('buildings', buildingType);
-  if (!item) return;
-  payCost(item.cost || {});
+  return item ? Object.entries(item.cost || {}).every(([id, amount]) => getFreeStock(id) >= amount) : false;
 }
 
 // Damaged and ordered by the player; tents mend themselves
@@ -338,6 +348,7 @@ function createBuildingBlueprint(type, x, y) {
   if (build.hp) blueprint.hp = build.hp, blueprint.maxHp = build.hp;
   if (build.smelter) blueprint.smeltProgress = 0;
   if (build.trap) blueprint.usesLeft = build.trap.uses;
+  if (build.storage) blueprint.contents = {};
   if (build.tower) {
     blueprint.tower = { ...build.tower };
     blueprint.arrows = 0;
@@ -355,15 +366,16 @@ function addResources(amounts = {}) {
   for (const [resource, amount] of Object.entries(amounts)) stock[resource] = Number(stock[resource] || 0) + Number(amount || 0);
 }
 
-function getMissingCost(cost) {
+// have: how much of a resource counts as there (the whole stock, or for buildings what's not promised)
+function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
   return Object.entries(cost)
-    .filter(([key, amount]) => Number(stock[key] || 0) < Number(amount || 0))
-    .map(([key, amount]) => `${Number(amount) - Number(stock[key] || 0)}${getResourceIcon(key)}`)
+    .filter(([key, amount]) => have(key) < Number(amount || 0))
+    .map(([key, amount]) => `${Number(amount) - have(key)}${getResourceIcon(key)}`)
     .join(', ');
 }
 
-function showCostError(cost, prefix) {
-  showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost) }), true);
+function showCostError(cost, prefix, have) {
+  showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost, have) }), true);
 }
 
 function createDefaultSeed() {

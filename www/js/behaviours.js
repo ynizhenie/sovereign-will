@@ -41,6 +41,9 @@ function createSettlerTick(dt) {
     appleAssignments: new Set(),     // apple trees someone is picking this tick
     wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
+    pileAssignments: new Set(),      // dropped piles someone is picking up this tick
+    // every storage is full: nobody gathers, they rest (#36)
+    storageFull: getStorages().every(storage => getStorageRoom(storage) <= 0),
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
@@ -62,18 +65,22 @@ function prepareSettler(s, dt) {
 
 // ---- Logistics
 
-// Idle unarmed workers keep watchtowers stocked with arrows
+// Idle unarmed workers keep watchtowers stocked with arrows, fetched from a storage (#36)
 function loadTowerArrows(s, tick) {
-  if (!s.isPossessed && s.role === 'worker' && s.weapon === 'fist' && s.tool === 'none' &&
-      !s.carrying && !s.targetEquipment) {
-    const towerForArrows = findTowerForArrows(s);
-    if (towerForArrows) {
-      updateTowerArrowLoader(s, towerForArrows, tick.dt);
-      s.patrolTarget = null;
-      return true;
-    }
+  if (s.isPossessed || s.role !== 'worker' || s.weapon !== 'fist' || s.tool !== 'none' || s.targetEquipment) return false;
+  const load = s.carrying && s.carrying.forTower;
+  if (s.carrying && !load) return false;
+  if (load && !buildings.includes(load)) { delete s.carrying.forTower; return false; } // tower gone: back to storage
+  const tower = load || findTowerForArrows(s);
+  if (!tower) return false;
+  s.patrolTarget = null;
+  if (!s.carrying) {
+    return fetchFromStorage(s, 'arrows', tick.dt, storage => {
+      s.carrying = { type: 'arrows', amount: takeFrom(storage, 'arrows', tower.tower.arrowCapacity - tower.arrows), forTower: tower };
+    });
   }
-  return false;
+  updateTowerArrowLoader(s, tower, tick.dt);
+  return true;
 }
 
 // Some buildings take one settler at a time for each job: a smelter's `supplier` (brings ore/coal) and
@@ -120,15 +127,10 @@ function supplySmelter(s, tick) {
       const smelter = buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
       if (!smelter) continue;
       claimBuildingJob(smelter, 'supplier', s);
-      let distToTH = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-      if (distToTH > townHall.radius + s.radius + 4) {
-        moveSettlerToTownHall(s, s.speed, tick.dt);
-      } else {
-        const amountToTake = Math.min(stock[resource], 2, max - (smelter[loaded] || 0));
-        stock[resource] -= amountToTake;
+      return fetchFromStorage(s, resource, tick.dt, storage => {
+        const amountToTake = takeFrom(storage, resource, Math.min(2, max - (smelter[loaded] || 0)));
         s.carrying = { type: 'smelterDelivery', resource, amount: amountToTake, targetSmelter: smelter };
-      }
-      return true;
+      });
     }
   }
   return false;
@@ -286,19 +288,122 @@ function deliverWhenNothingToDo(s, tick) {
   return true;
 }
 
+// To the nearest storage with room (#36): what fits goes in, the rest is taken on to the next one.
+// With every storage full it waits near the town hall.
 function goDeliver(s, tick) {
-  let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-  if (dist > townHall.radius + s.radius) {
-    moveSettlerToTownHall(s, s.speed, tick.dt);
-  } else {
-    let carriedItems = s.carrying.items || [s.carrying];
-    carriedItems.forEach(item => {
-      if (GAME_CONFIG.resources[item.type]) stock[item.type] += item.amount;
-      else if (isFoodKind(item.type)) addFood(item.type, item.amount);
-    });
+  const storage = findStorage(s, st => getStorageRoom(st) > 0);
+  if (!storage) { patrol(s, tick); return; }
+  if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return; }
+  const items = s.carrying.items || [s.carrying];
+  for (const item of items) item.amount -= storeItem(storage, item.type, item.amount);
+  const left = items.filter(item => item.amount > 0);
+  if (left.length === 0) {
     s.carrying = null;
-    takeFishingBait(s);
+    takeFishingBait(s, storage);
+  } else if (s.carrying.items) {
+    s.carrying.items = left;
   }
+}
+
+// ---- Storage (#36): the town hall and warehouses (see getStorages in state.js)
+
+// The nearest storage passing `test`, or null
+function findStorage(s, test) {
+  let best = null, bestDist = Infinity;
+  for (const storage of getStorages()) {
+    if (!test(storage)) continue;
+    const d = Math.hypot(storage.x - s.x, storage.y - s.y);
+    if (d < bestDist) { bestDist = d; best = storage; }
+  }
+  return best;
+}
+
+function isAtStorage(s, storage) {
+  const d = Math.hypot(storage.x - s.x, storage.y - s.y);
+  return storage === townHall ? d <= townHall.radius + s.radius + 4 : d <= 34;
+}
+
+function walkToStorage(s, storage, dt) {
+  if (storage === townHall) moveSettlerToTownHall(s, s.speed, dt);
+  else moveEntityTowards(s, storage.x, storage.y, s.speed, false, dt);
+  s.patrolTarget = null;
+}
+
+// Walk to the nearest storage holding some `id`; once there, take(storage). False if none holds any.
+function fetchFromStorage(s, id, dt, take) {
+  const storage = findStorage(s, st => (st.contents[id] || 0) > 0);
+  if (!storage) return false;
+  if (isAtStorage(s, storage)) take(storage);
+  else walkToStorage(s, storage, dt);
+  return true;
+}
+
+// Put a carried item into a storage, as much as fits; returns how much went in. Ready food goes in as
+// food, keeping its kind (foodMix).
+function storeItem(storage, type, amount) {
+  if (GAME_CONFIG.resources[type]) return storeIn(storage, type, amount);
+  if (isFoodKind(type)) {
+    syncFoodMix();
+    const stored = storeIn(storage, 'food', amount);
+    foodMix[type] = (foodMix[type] || 0) + stored;
+    return stored;
+  }
+  return amount; // not something the colony keeps
+}
+
+// Every storage full: nobody gathers, since there's nowhere to put it; they rest by the town hall
+function restWhenStorageFull(s, tick) {
+  if (!tick.storageFull || s.role !== 'worker') return false;
+  return patrol(s, tick);
+}
+
+// What a destroyed warehouse spilled (resourcePiles): workers take up to pileTake at a time home
+function collectPiles(s, tick) {
+  if (s.role !== 'worker' || s.carrying || tick.isWaveActive || resourcePiles.length === 0) return false;
+  let pile = null, best = Infinity;
+  for (const p of resourcePiles) {
+    if (tick.pileAssignments.has(p)) continue;
+    const d = Math.hypot(p.x - s.x, p.y - s.y);
+    if (d < best) { best = d; pile = p; }
+  }
+  if (!pile) return false;
+  tick.pileAssignments.add(pile);
+  s.patrolTarget = null;
+  if (best > 16) {
+    moveEntityTowards(s, pile.x, pile.y, s.speed, false, tick.dt);
+    return true;
+  }
+  const take = Math.min(pile.amount, GAME_CONFIG.storage.pileTake);
+  giveResourceToSettler(s, pile.type, take);
+  s.carrying.loads = getCarryCapacity(s); // a full load: straight home
+  pile.amount -= take;
+  if (pile.amount <= 0) resourcePiles.splice(resourcePiles.indexOf(pile), 1);
+  return true;
+}
+
+// Building materials a builder carries (forBlueprint) go to their blueprint (see build)
+function deliverMaterials(s, tick) {
+  const bp = s.carrying && s.carrying.forBlueprint;
+  if (!bp) return false;
+  if (!blueprints.includes(bp)) { delete s.carrying.forBlueprint; return false; } // gone: back to storage
+  if (Math.hypot(bp.x - s.x, bp.y - s.y) > 30) {
+    moveEntityTowards(s, bp.x, bp.y, s.speed, false, tick.dt);
+  } else {
+    bp.needs[s.carrying.type] = Math.max(0, (bp.needs[s.carrying.type] || 0) - s.carrying.amount);
+    if (bp.needs[s.carrying.type] <= 0) delete bp.needs[s.carrying.type];
+    s.carrying = null;
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
+// What a blueprint still needs brought, after what's on its way already: [id, amount] or null
+function getMissingMaterial(bp) {
+  for (const [id, amount] of Object.entries(bp.needs || {})) {
+    const coming = settlers.reduce((sum, o) => sum + (o.carrying && o.carrying.forBlueprint === bp && o.carrying.type === id ? o.carrying.amount : 0), 0);
+    if (amount - coming > 0) return [id, amount - coming];
+  }
+  return null;
 }
 
 // ---- Tents and healing
@@ -404,11 +509,8 @@ function followOrder(s, tick) {
     case 'fish':
       if (s.tool !== 'rod' || (s.carrying && !hasRoomToCarry(s))) return false;
       if (!s.bait) {
-        // bait first, from the town hall
-        if (!getFishingBait()) return false;
-        if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius) moveSettlerToTownHall(s, s.speed, dt);
-        else takeFishingBait(s);
-        return true;
+        // bait first, from a storage
+        return fetchBait(s, dt);
       }
       fishAt(s, target, dt);
       return true;
@@ -416,11 +518,21 @@ function followOrder(s, tick) {
       if (!s.carrying) return false;
       goDeliver(s, tick);
       return true;
-    case 'build':
+    case 'build': {
       if (!blueprints.includes(target)) return false;
+      // its materials first, from storage (#36)
+      if (s.carrying && s.carrying.forBlueprint === target) return deliverMaterials(s, tick);
+      const missing = getMissingMaterial(target);
+      if (missing) {
+        if (s.carrying) return false;
+        return fetchFromStorage(s, missing[0], dt, storage => {
+          s.carrying = { type: missing[0], amount: takeFrom(storage, missing[0], Math.min(missing[1], GAME_CONFIG.storage.carryMaterials)), forBlueprint: target };
+        });
+      }
       if (Math.hypot(target.x - s.x, target.y - s.y) > 30) walkTo(target.x, target.y);
-      else workBlueprint(s, target, dt);
+      else if (Object.keys(target.needs || {}).length === 0) workBlueprint(s, target, dt);
       return true;
+    }
     case 'repair':
       if (!buildings.includes(target) || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
       if (Math.hypot(target.x - s.x, target.y - s.y) > 34) walkTo(target.x, target.y);
@@ -457,16 +569,9 @@ function treatWounded(s, tick) {
   }
   if (!patient) { s.healTimer = 0; return false; }
   s.patrolTarget = null;
-  // an empty bag gets filled at the town hall first
+  // an empty bag gets filled at a storage with herbs first
   if (!(s.bagHerbs > 0)) {
-    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius + 4) {
-      moveSettlerToTownHall(s, s.speed, tick.dt);
-    } else {
-      const take = Math.min(stock.herbs, medic.bagSize);
-      stock.herbs -= take;
-      s.bagHerbs = take;
-    }
-    return true;
+    return fetchFromStorage(s, 'herbs', tick.dt, storage => { s.bagHerbs = takeFrom(storage, 'herbs', medic.bagSize); });
   }
   tick.patients.add(patient);
   if (Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
@@ -638,8 +743,9 @@ function fightEnemies(s, tick) {
     let currentArrows = s.arrows || 0;
     let capacity = s.quiverCapacity || 12;
     let nearbyTower = findNearestArrowTower(s);
-    let townDistance = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-    let isNearTownHall = townDistance <= townHall.radius + s.radius;
+    // arrows in the storage nearest it that has any (#36)
+    const arrowStore = findStorage(s, st => (st.contents.arrows || 0) > 0);
+    const atArrowStore = !!arrowStore && isAtStorage(s, arrowStore);
     let towerDistance = nearbyTower ? Math.hypot(nearbyTower.x - s.x, nearbyTower.y - s.y) : Infinity;
 
     if (nearbyTower && currentArrows < capacity) {
@@ -652,19 +758,14 @@ function fightEnemies(s, tick) {
       currentArrows = s.arrows;
     }
 
-    if (isNearTownHall && currentArrows < capacity && stock.arrows > 0) {
-      let loadAmount = Math.min(stock.arrows, capacity - currentArrows);
-      s.arrows = currentArrows + loadAmount;
-      stock.arrows -= loadAmount;
+    if (atArrowStore && currentArrows < capacity) {
+      s.arrows = currentArrows + takeFrom(arrowStore, 'arrows', capacity - currentArrows);
       currentArrows = s.arrows;
     }
 
-    if (currentArrows === 0 && stock.arrows > 0) {
-      if (!isNearTownHall) {
-        moveSettlerToTownHall(s, s.speed, dt);
-        s.patrolTarget = null;
-        return true;
-      }
+    if (currentArrows === 0 && arrowStore && !atArrowStore) {
+      walkToStorage(s, arrowStore, dt);
+      return true;
     }
   }
 
@@ -813,6 +914,18 @@ function build(s, tick) {
 
       if (bestBp) {
         tick.blueprintAssignments.set(bestBp, (tick.blueprintAssignments.get(bestBp) || 0) + 1);
+        // materials first, fetched from storage (#36); none to be had: nothing to do on it for now
+        const missing = getMissingMaterial(bestBp);
+        if (missing) {
+          const [id, amount] = missing;
+          const fetching = fetchFromStorage(s, id, dt, storage => {
+            const got = takeFrom(storage, id, Math.min(amount, GAME_CONFIG.storage.carryMaterials));
+            s.carrying = { type: id, amount: got, forBlueprint: bestBp };
+          });
+          s.patrolTarget = null;
+          return fetching;
+        }
+        if (Object.keys(bestBp.needs || {}).length > 0) return false; // the rest is on its way
         let dist = Math.hypot(bestBp.x - s.x, bestBp.y - s.y);
         if (dist > 30) {
           moveEntityTowards(s, bestBp.x, bestBp.y, s.speed, false, dt);
@@ -834,14 +947,12 @@ function workBlueprint(s, bp, dt) {
   faceTowards(s, bp.x, bp.y);
   if (bp.progress >= bp.maxProgress) {
     if (bp.type === 'demolish_building') {
-      let bIdx = buildings.indexOf(bp.targetBuilding);
-      if (bIdx !== -1) {
-        let b = buildings[bIdx];
+      const b = bp.targetBuilding;
+      if (buildings.includes(b)) {
         const definition = getDefinition('buildings', b.type);
+        removeBuilding(b); // first: the refund mustn't go into a warehouse being taken down
         addResources(definition && definition.demolishRefund);
-        buildings.splice(bIdx, 1);
       }
-      invalidateAllPaths();
     } else if (bp.type === 'wheat') {
       farmPlots.push({ x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0 });
     } else if (bp.type === 'sapling' || bp.type === 'apple_sapling') {
@@ -870,11 +981,7 @@ function fish(s, tick) {
   if (fishSpot && !s.bait && !getFishingBait()) fishSpot = null;
   if (fishSpot && !s.bait) {
     tick.assignedFishersCount++;
-    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius) {
-      moveSettlerToTownHall(s, s.speed, dt);
-    } else {
-      takeFishingBait(s);
-    }
+    fetchBait(s, dt);
     s.patrolTarget = null;
     return true;
   }
@@ -1213,25 +1320,16 @@ function cook(s, tick) {
   claimBuildingJob(fire, 'cook', s);
   s.patrolTarget = null;
 
-  // empty-handed: fetch fuel if the fire is out, otherwise a batch of raw food (no more than the fuel cooks)
+  // empty-handed: fetch fuel if the fire is out, otherwise a batch of raw food (no more than the fuel
+  // cooks), from a storage that has it
   if (!s.carrying) {
-    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius + 4) {
-      moveSettlerToTownHall(s, s.speed, tick.dt);
-      return true;
-    }
-    if (!(fire.fuelLeft > 0)) {
-      const fuel = findFuel();
-      if (!fuel) return false;
-      stock[fuel]--;
-      s.carrying = { type: fuel, amount: 1, forFire: fire };
-    } else {
-      const raw = cooking.raw.find(r => stock[r] > 0);
-      if (!raw) return false;
-      const amount = Math.min(stock[raw], cooking.batch, fire.fuelLeft);
-      stock[raw] -= amount;
-      s.carrying = { type: raw, amount, forFire: fire };
-    }
-    return true;
+    const needsFuel = !(fire.fuelLeft > 0);
+    const want = needsFuel ? findFuel() : cooking.raw.find(r => stock[r] > 0);
+    if (!want) return false;
+    return fetchFromStorage(s, want, tick.dt, storage => {
+      const amount = takeFrom(storage, want, needsFuel ? 1 : Math.min(cooking.batch, fire.fuelLeft));
+      s.carrying = { type: want, amount, forFire: fire };
+    });
   }
 
   // at the fire: put the fuel on, or cook what it brought one piece at a time
@@ -1426,6 +1524,7 @@ const SETTLER_BEHAVIOURS = [
   repairBuilding,
   equip,
   cook,
+  deliverMaterials,
   deliverCarrying,
   repairTent,
   healAtTent,
@@ -1436,6 +1535,8 @@ const SETTLER_BEHAVIOURS = [
   clearEnemyTents,
   relieve,
   build,
+  restWhenStorageFull,
+  collectPiles,
   collectWorms,
   fish,
   pickApples,

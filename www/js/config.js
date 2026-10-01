@@ -87,6 +87,8 @@ const GAME_CONFIG = {
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
     watchtower: { id: 'watchtower', icon: 'watchtower', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
+    // storage: how much it holds in all (#36, see GAME_CONFIG.storage)
+    warehouse: { id: 'warehouse', icon: 'warehouse', cost: { wood: 20, stone: 10 }, demolishRefund: { wood: 10, stone: 5 }, build: { maxProgress: 120, hp: 250, storage: 100 } },
     wheat: { id: 'wheat', icon: 'wheat', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
     sapling: { id: 'sapling', icon: 'saplings', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
     apple_sapling: { id: 'apple_sapling', icon: 'appleSaplings', cost: { appleSaplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
@@ -226,6 +228,12 @@ const GAME_CONFIG = {
   },
 
   // ---- Colony
+
+  // where resources lie (#36): the town hall holds townHall in all, each warehouse its build.storage.
+  // A destroyed warehouse leaves one pile per resource on its tile; a worker takes up to pileTake
+  // from a pile at a time.
+  // carryMaterials: how much of a building's cost a builder brings from storage at a time.
+  storage: { townHall: 200, pileTake: 5, carryMaterials: 10 },
 
   start: {
     // stock at the start of a game (ids from `resources`)
