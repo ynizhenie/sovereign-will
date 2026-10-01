@@ -106,7 +106,7 @@ function update(dt) {
         }
         let hideDx = (b.hideTarget.x - b.x) / hideDistance;
         let hideDy = (b.hideTarget.y - b.y) / hideDistance;
-        let hideSpeed = b.fleeSpeed || 1.35;
+        let hideSpeed = (b.fleeSpeed || 1.35) * GAME_CONFIG.movementScale;
         if (!collidesWithWall(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12) &&
             !collidesWithWater(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12)) {
           b.x += hideDx * hideSpeed;
@@ -132,7 +132,7 @@ function update(dt) {
     let dy = (b.targetY !== undefined ? b.targetY : b.y) - b.y;
     let dist = Math.hypot(dx, dy);
     if (dist > 2) {
-      let speed = b.fleeTimer > 0 ? (b.fleeSpeed || 0.65) : 0.3;
+      let speed = (b.fleeTimer > 0 ? (b.fleeSpeed || 0.65) : 0.3) * GAME_CONFIG.movementScale;
       let vx = (dx / dist) * speed;
       let vy = (dy / dist) * speed;
       if (!collidesWithWall(b.x + vx, b.y + vy, 12) && !collidesWithWater(b.x + vx, b.y + vy, 12)) {
@@ -174,8 +174,8 @@ function update(dt) {
     if (keys['a'] || keys['ф']) dx -= 1;
     if (keys['d'] || keys['в']) dx += 1;
     if (dx !== 0 || dy !== 0) {
-      let vx = dx * p.speed;
-      let vy = dy * p.speed;
+      let vx = dx * p.speed * GAME_CONFIG.movementScale;
+      let vy = dy * p.speed * GAME_CONFIG.movementScale;
       if (!collidesWithWall(p.x + vx, p.y, p.radius)) p.x += vx;
       if (!collidesWithWall(p.x, p.y + vy, p.radius)) p.y += vy;
     }

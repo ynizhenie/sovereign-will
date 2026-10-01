@@ -3,13 +3,14 @@ renderConfigHud();
 
 // The game runs in fixed steps of 1/60 s whatever the frame rate, so it plays at the same speed on a
 // 30 Hz phone and a 144 Hz monitor (much of the movement is per step). Frames are drawn as often as the
-// frame-rate setting allows: 30, 60, every screen refresh, or as fast as the browser will go.
+// frame-rate setting allows: 30, 60, or every screen refresh (a browser can't show more than that).
 const STEP = 1 / 60;
 const MAX_STEPS_PER_FRAME = 6; // after a long hitch, catch up at most this much instead of freezing
 let lastTime = performance.now();
 let stepTime = 0;
 let lastDrawn = 0;
 let frameRateSetting = loadSetting('fps', 'display');
+if (frameRateSetting === 'unlimited') frameRateSetting = 'display'; // the old "no limit" (see #123)
 
 function loadSetting(name, fallback) {
   try { return localStorage.getItem(`sovereign-will-${name}`) || fallback; } catch (e) { return fallback; }
@@ -35,16 +36,21 @@ function gameLoop(now) {
     lastDrawn = now;
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     render();
+    countFrame(now);
   }
-  scheduleFrame();
+  requestAnimationFrame(gameLoop);
 }
 
-// every screen refresh, or (no limit) as soon as the browser can, via a message
-const frameChannel = new MessageChannel();
-frameChannel.port1.onmessage = () => gameLoop(performance.now());
-function scheduleFrame() {
-  if (frameRateSetting === 'unlimited') frameChannel.port2.postMessage(0);
-  else requestAnimationFrame(gameLoop);
+// ---- FPS counter (Settings): frames drawn over the last second
+const fpsCounter = document.getElementById('fps-counter');
+let framesThisSecond = 0, secondStart = 0;
+function countFrame(now) {
+  framesThisSecond++;
+  if (now - secondStart >= 1000) {
+    if (!fpsCounter.hidden) fpsCounter.textContent = `${Math.round(framesThisSecond * 1000 / (now - secondStart))} FPS`;
+    framesThisSecond = 0;
+    secondStart = now;
+  }
 }
 
 fitCanvasToScreen();
@@ -125,13 +131,25 @@ difficultyOptions.forEach(button => onTap(button, () => {
 }));
 
 // frame rate (Settings), remembered on the device
-const fpsOptions = document.querySelectorAll('.fps-option');
+const fpsOptions = document.querySelectorAll('.fps-option[data-fps]');
 const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === frameRateSetting));
 markFps();
-fpsOptions.forEach(button => onTap(button, () => {
+fpsOptions.forEach(button => button.dataset.fps && onTap(button, () => {
   frameRateSetting = button.dataset.fps;
   saveSetting('fps', frameRateSetting);
   markFps();
+}));
+
+// FPS counter on / off (Settings), remembered on the device
+const showFpsOptions = document.querySelectorAll('[data-show-fps]');
+const applyShowFps = value => {
+  fpsCounter.hidden = value !== 'on';
+  showFpsOptions.forEach(b => b.classList.toggle('active', b.dataset.showFps === value));
+};
+applyShowFps(loadSetting('showFps', 'off'));
+showFpsOptions.forEach(button => onTap(button, () => {
+  saveSetting('showFps', button.dataset.showFps);
+  applyShowFps(button.dataset.showFps);
 }));
 
 const startGame = (e) => {

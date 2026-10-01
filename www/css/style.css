@@ -595,6 +595,20 @@ canvas {
   cursor: default;
 }
 
+#fps-counter {
+  position: absolute;
+  top: 22px;
+  left: 10px;
+  z-index: 6;
+  font: bold 11px monospace;
+  color: #2ecc71;
+  text-shadow: 1px 1px 2px #000;
+  pointer-events: none;
+}
+#fps-counter[hidden] {
+  display: none;
+}
+
 .menu-back {
   align-self: flex-start;
   background: none;
