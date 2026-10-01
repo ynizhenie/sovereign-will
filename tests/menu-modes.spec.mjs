@@ -35,9 +35,9 @@ test('difficulty changes how many enemies come and their hp (#39)', async ({ pag
     const raider = enemies.find(e => e.enemyKey === 'raider');
     return { level, enemies: enemies.length, raiderHp: raider ? raider.maxHp : null };
   }));
-  expect(r[1].raiderHp).toBe(70);
-  expect(r[0].raiderHp).toBeLessThan(70);
-  expect(r[2].raiderHp).toBeGreaterThan(70);
+  expect(r[1].raiderHp).toBe(100); // a normal settler's (#136)
+  expect(r[0].raiderHp).toBeLessThan(100);
+  expect(r[2].raiderHp).toBeGreaterThan(100);
   expect(r[0].enemies).toBeLessThan(r[1].enemies);
   expect(r[2].enemies).toBeGreaterThan(r[1].enemies);
 });
