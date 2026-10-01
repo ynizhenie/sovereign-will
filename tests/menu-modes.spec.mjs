@@ -12,7 +12,7 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   const home = page.locator('[data-screen="home"]');
   await expect(home).toBeVisible();
   await expect(page.locator('#mode-battles')).toBeEnabled(); // #38
-  await expect(page.locator('#mode-editor')).toBeDisabled();
+  await expect(page.locator('#mode-editor')).toBeEnabled(); // #37
   await expect(page.locator('#exit-app')).toBeHidden(); // a browser tab can't close itself
   await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toBeVisible();

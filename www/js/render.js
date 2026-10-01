@@ -785,7 +785,7 @@ function render() {
   ctx.restore();
 
   if (gameMode === 'battle') drawBattleResult();
-  if (gameStarted && gameMode !== 'battle' && (townHall.hp <= 0 || settlers.length === 0)) {
+  if (gameStarted && gameMode === 'endless' && (townHall.hp <= 0 || settlers.length === 0)) {
     // drawn in CSS pixels, centred on the screen (restart button hit-test: getRestartButton)
     ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save();
