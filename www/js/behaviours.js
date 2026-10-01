@@ -488,7 +488,8 @@ function fightEnemies(s, tick) {
   // tent-summoned enemies alone don't call workers off their work, unless they come close
   const waveThreat = tick.isWaveActive && !tick.tentAssault;
   if (targetEnemy && (waveThreat || distToClosestEn < 260 || s.role !== 'worker')) {
-    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker) {
+    // (in battle mode there's no town hall to shelter at: the unarmed fight too)
+    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && gameMode !== 'battle') {
       let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTown > townHall.radius + 15) {
         moveSettlerToTownHall(s, s.speed, dt);
@@ -1136,6 +1137,7 @@ function tendFarmZones(s, tick) {
 
 // Nothing else to do: wander near the town hall (shown with an idle icon, see render())
 function patrol(s, tick) {
+  if (gameMode === 'battle') return true; // nothing to wander around: stand
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
     let ang = rand() * Math.PI * 2;
     let dist = 30 + rand() * 120;

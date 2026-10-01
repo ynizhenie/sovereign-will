@@ -14,7 +14,7 @@
     <div class="main-menu-content" data-screen="home">
         <h1>Sovereign Will</h1>
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
-        <button id="mode-battles" class="menu-button" disabled><span data-i18n="menu.battles">Battles</span> · <small data-i18n="menu.soon">soon</small></button>
+        <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
         <button id="mode-editor" class="menu-button" disabled><span data-i18n="menu.editor">Map editor</span> · <small data-i18n="menu.soon">soon</small></button>
         <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
@@ -147,6 +147,17 @@
     </button>
   </div>
 
+  <!-- battle mode (battle.js): presets to place, Fight, Clear, back to the menu -->
+  <div id="battle-panel">
+    <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: green on the left, red on the right</div>
+    <div id="battle-presets" class="battle-presets"></div>
+    <div class="action-row">
+      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">⚔️ Fight!</button>
+      <button class="btn" id="battle-clear" data-i18n="battle.clear">🧹 Clear</button>
+      <button class="btn btn-disarm" id="battle-menu" data-i18n="battle.menu">☰ Menu</button>
+    </div>
+  </div>
+
   <div id="bottom-panel">
 
     <div id="selected-bar" class="selected-unit-box">
@@ -246,6 +257,7 @@
 <script src="js/update.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>
+<script src="js/battle.js"></script>
 
 </body>
 </html>
