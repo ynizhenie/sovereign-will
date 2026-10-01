@@ -528,7 +528,7 @@ canvas {
   cursor: pointer;
 }
 
-.map-option {
+.map-option, .map-source-option, .editor-size-option {
   flex: 1;
   padding: 8px 0;
   background: #252830;
@@ -612,7 +612,8 @@ canvas {
   padding: 0;
 }
 
-.wave-option.active, .map-option.active, .difficulty-option.active, .fps-option.active {
+.wave-option.active, .map-option.active, .map-source-option.active, .editor-size-option.active,
+.difficulty-option.active, .fps-option.active {
   background: #2e6da4;
   color: #fff;
   border-color: #46b8da;
@@ -703,6 +704,31 @@ body.battle-mode #hud-seed { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* map editor (#37): its own panel, like battle mode */
+#editor-panel {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #16171a;
+  border-top: 1px solid #2a2d34;
+}
+body.editor-mode #editor-panel { display: flex; }
+body.editor-mode #bottom-panel,
+body.editor-mode .top-wave,
+body.editor-mode #btn-pause-toggle,
+body.editor-mode .top-actions,
+body.editor-mode #btn-interact,
+body.editor-mode #hud-seed { display: none; }
+#editor-panel .action-row { align-items: center; }
+#editor-panel #editor-name { flex: 1; min-width: 0; }
+#editor-tools { grid-auto-rows: minmax(30px, auto); }
+.editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
+.editor-brush .fps-option { padding: 6px 10px; }
+.map-list-empty { font-size: 12px; color: #8a91a0; font-weight: normal; text-transform: none; }
+#main-menu.custom-map .random-map-only,
+#main-menu:not(.custom-map) .custom-map-only { display: none; }
 
 /* map generator screen (#20) */
 .menu-gear {

@@ -15,7 +15,7 @@
         <h1>Sovereign Will</h1>
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
         <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
-        <button id="mode-editor" class="menu-button" disabled><span data-i18n="menu.editor">Map editor</span> · <small data-i18n="menu.soon">soon</small></button>
+        <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>
         <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
     </div>
@@ -23,7 +23,7 @@
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">← Back</button>
         <h1 data-i18n="menu.endless">Endless</h1>
-        <button id="open-generator" class="menu-gear" data-i18n-title="menu.generator" title="Map generator">⚙️</button>
+        <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" title="Map generator">⚙️</button>
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
 
@@ -49,6 +49,15 @@
         </div>
 
         <div class="wave-settings">
+            <div data-i18n="menu.map">Map:</div>
+            <div class="wave-options">
+                <button class="map-source-option active" data-map-source="random" data-i18n="menu.randomMap">Random</button>
+                <button class="map-source-option" data-map-source="custom" data-i18n="menu.customMap">Custom map</button>
+            </div>
+            <div id="custom-map-list" class="preset-list custom-map-only"></div>
+        </div>
+
+        <div class="wave-settings random-map-only">
             <div data-i18n="menu.mapSize">Map size:</div>
 
             <div class="wave-options">
@@ -69,6 +78,27 @@
                 <input id="seed-input" type="text" value="default-world-seed" />
                 <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed">🔄</button>
             </div>
+        </div>
+    </div>
+
+    <div class="main-menu-content" data-screen="editor" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">← Back</button>
+        <h1 data-i18n="menu.editor">Map editor</h1>
+        <div class="wave-settings">
+            <div data-i18n="editor.newMap">New map:</div>
+            <div class="wave-options">
+                <button class="editor-size-option" data-editor-size="30" data-i18n="menu.mapSmall">Small</button>
+                <button class="editor-size-option active" data-editor-size="40" data-i18n="menu.mapMedium">Medium</button>
+                <button class="editor-size-option" data-editor-size="60" data-i18n="menu.mapLarge">Large</button>
+            </div>
+            <div class="wave-options">
+                <button id="editor-new-empty" class="fps-option" data-i18n="editor.empty">Empty</button>
+                <button id="editor-new-generated" class="fps-option" data-i18n="editor.generated">From the generator</button>
+            </div>
+        </div>
+        <div class="wave-settings">
+            <div data-i18n="editor.savedMaps">Saved maps:</div>
+            <div id="editor-map-list" class="preset-list"></div>
         </div>
     </div>
 
@@ -169,6 +199,20 @@
       <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">⚔️ Fight!</button>
       <button class="btn" id="battle-clear" data-i18n="battle.clear">🧹 Clear</button>
       <button class="btn btn-disarm" id="battle-menu" data-i18n="battle.menu">☰ Menu</button>
+    </div>
+  </div>
+
+  <div id="editor-panel">
+    <div class="battle-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
+    <div id="editor-tools" class="battle-presets"></div>
+    <div class="action-row">
+      <span class="editor-brush"><span data-i18n="editor.brush">Brush:</span>
+        <button class="fps-option active" data-brush="1">1</button><button class="fps-option" data-brush="3">3×3</button></span>
+      <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
+    </div>
+    <div class="action-row">
+      <button class="btn btn-armor" id="editor-save" data-i18n="editor.save">💾 Save</button>
+      <button class="btn btn-disarm" id="editor-menu" data-i18n="battle.menu">☰ Menu</button>
     </div>
   </div>
 
@@ -273,6 +317,7 @@
 <script src="js/main.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/generator.js"></script>
+<script src="js/editor.js"></script>
 
 </body>
 </html>
