@@ -36,6 +36,11 @@ function update(dt) {
     const short = Math.max(0, mealCost - stock.food);
     stock.food = Math.max(0, stock.food - mealCost);
     stock.worms = Math.max(0, (stock.worms || 0) - short);
+    // a few meals in, a settler needs to go (see relieve)
+    for (const s of settlers) {
+      s.meals = (s.meals || 0) + 1;
+      if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
+    }
     foodTimer = 25;
   }
 
@@ -497,6 +502,10 @@ function update(dt) {
   for (const unit of settlers) tickAnimation(unit, dt);
   for (const splat of bloodSplats) splat.age += dt;
   bloodSplats = bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
+  for (const pile of dung) pile.age += dt;
+  dung = dung.filter(pile => pile.age < GAME_CONFIG.relief.dungSeconds);
+  for (const unit of settlers) trackFootprints(unit);
+  for (const unit of enemies) trackFootprints(unit);
   for (const unit of enemies) tickAnimation(unit, dt);
   applySpikeTraps();
 
