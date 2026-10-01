@@ -23,6 +23,7 @@
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">← Back</button>
         <h1 data-i18n="menu.endless">Endless</h1>
+        <button id="open-generator" class="menu-gear" data-i18n-title="menu.generator" title="Map generator">⚙️</button>
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
 
@@ -69,6 +70,18 @@
                 <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed">🔄</button>
             </div>
         </div>
+    </div>
+
+    <div class="main-menu-content generator-screen" data-screen="generator" hidden>
+        <button class="menu-back" data-back-to="endless" data-i18n="menu.back">← Back</button>
+        <h1 data-i18n="menu.generator">Map generator</h1>
+        <div class="preset-row">
+            <button id="preset-standard" class="fps-option" data-i18n="gen.standard">Standard</button>
+            <input id="preset-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="gen.presetName" placeholder="Preset name" />
+            <button id="preset-save" class="fps-option" data-i18n="gen.save">Save</button>
+        </div>
+        <div id="preset-list" class="preset-list"></div>
+        <div id="generator-fields" class="generator-fields"></div>
     </div>
 
     <div class="main-menu-content" data-screen="settings" hidden>
@@ -246,6 +259,7 @@
 <script src="js/update.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>
+<script src="js/generator.js"></script>
 
 </body>
 </html>
