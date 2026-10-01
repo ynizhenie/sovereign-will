@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { iconText } from './helpers.mjs';
 
 // These open the game themselves: helpers.openGame switches it to Russian for the other tests
 async function openFresh(page) {
@@ -11,8 +12,8 @@ async function openFresh(page) {
 test('the game starts in English (#41)', async ({ page }) => {
   const errors = await openFresh(page);
   await expect(page.locator('#play-button')).toHaveText('PLAY');
-  await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Worker (15🍞)');
-  await expect(page.locator('.tab-btn').first()).toHaveText('🏗️ Building');
+  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Worker (15[[food]])']);
+  await expect.poll(() => iconText(page, '.tab-btn:first-child')).toEqual(['[[build]] Building']);
   await expect(page.locator('#language-options button.active')).toHaveText('English');
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('en');
   expect(errors).toEqual([]);
@@ -25,14 +26,14 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await page.click('#main-menu [data-screen="settings"] [data-back]');
   await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
-  await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Робітник (15🍞)');
-  await expect(page.locator('#btn-wall_wood')).toHaveText('🪵 Дерев\'яна стіна (5🪵)');
-  await expect(page.locator('.tab-btn').nth(1)).toHaveText('🌾 Фермерство');
+  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Робітник (15[[food]])']);
+  await expect.poll(() => iconText(page, '#btn-wall_wood')).toEqual(['[[wall_wood]] Дерев\'яна стіна (5[[wood]])']);
+  await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[wheat]] Фермерство']);
   await expect(page.locator('#seed-reroll')).toHaveAttribute('title', 'Новий випадковий сід');
   await page.click('#play-button');
   await expect(page.locator('#group-materials')).toContainText('Матеріали');
-  const toast = await page.evaluate(() => { repairAllBuildings(); return document.getElementById('toast-notification').innerText; });
-  expect(toast).toBe('✅ Усе ціле');
+  await page.evaluate(() => repairAllBuildings());
+  await expect.poll(() => iconText(page, '#toast-notification')).toEqual(['[[ok]] Усе ціле']);
   // remembered on the device
   await page.reload();
   await expect(page.locator('#mode-endless')).toHaveText('Нескінченний');

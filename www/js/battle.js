@@ -196,7 +196,7 @@ function renderBattlePanel() {
     button.dataset.preset = preset.id;
     const body = presetBody(preset);
     const weapon = getDefinition('weapons', body.weapon);
-    button.textContent = `${weapon ? weapon.icon : ''} ${t(`preset.${preset.id}`)}`;
+    setRichText(button, `${weapon ? `[[${weapon.icon}]]` : ''} ${t(`preset.${preset.id}`)}`);
     button.addEventListener('click', () => { battle.preset = preset.id; renderBattlePanel(); });
     presets.appendChild(button);
   }

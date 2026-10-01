@@ -23,7 +23,7 @@
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">← Back</button>
         <h1 data-i18n="menu.endless">Endless</h1>
-        <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" title="Map generator">⚙️</button>
+        <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" title="Map generator"><i class="ic ic-gear"></i></button>
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
 
@@ -76,7 +76,7 @@
             <label for="seed-input" data-i18n="menu.seed">World seed</label>
             <div class="seed-row">
                 <input id="seed-input" type="text" value="default-world-seed" />
-                <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed">🔄</button>
+                <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
             </div>
         </div>
     </div>
@@ -154,13 +154,13 @@
 
   <div id="top-bar">
     <div class="top-wave">
-      🌊 <span data-i18n="top.wave">Wave</span> <span id="wave-num">1</span> (<span id="wave-timer">90</span><span data-i18n="top.seconds">s</span>)
+      <i class="ic ic-water"></i> <span data-i18n="top.wave">Wave</span> <span id="wave-num">1</span> (<span id="wave-timer">90</span><span data-i18n="top.seconds">s</span>)
     </div>
 
-    <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" data-i18n-title="pause.pauseHint" title="Pause [Space]">⏸️</button>
+    <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" data-i18n-title="pause.pauseHint" title="Pause [Space]"><i class="ic ic-pause"></i></button>
 
     <div class="top-actions">
-      <button class="btn btn-unpossess" onclick="switchPossession()">👁️</button>
+      <button class="btn btn-unpossess" onclick="switchPossession()"><i class="ic ic-eye"></i></button>
     </div>
   </div>
 
@@ -174,10 +174,10 @@
 
     <div id="zoom-controls">
       <button class="btn-zoom" onclick="zoomIn()" data-i18n-title="top.zoomIn" title="Zoom in">
-        ➕
+        <i class="ic ic-plus"></i>
       </button>
       <button class="btn-zoom" onclick="zoomOut()" data-i18n-title="top.zoomOut" title="Zoom out">
-        ➖
+        <i class="ic ic-minus"></i>
       </button>
     </div>
 
@@ -186,7 +186,7 @@
     <div id="mobile-joystick"><div class="joystick-knob"></div></div>
 
     <button class="btn active" id="btn-interact" onclick="setMode('interact')">
-      <span class="fab-icon">👆</span>
+      <span class="fab-icon"><i class="ic ic-point"></i></span>
       <span class="fab-label" data-i18n="top.point">Point</span>
     </button>
   </div>
@@ -196,9 +196,9 @@
     <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: green on the left, red on the right</div>
     <div id="battle-presets" class="battle-presets"></div>
     <div class="action-row">
-      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">⚔️ Fight!</button>
-      <button class="btn" id="battle-clear" data-i18n="battle.clear">🧹 Clear</button>
-      <button class="btn btn-disarm" id="battle-menu" data-i18n="battle.menu">☰ Menu</button>
+      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
+      <button class="btn" id="battle-clear" data-i18n="battle.clear">[[broom]] Clear</button>
+      <button class="btn btn-disarm" id="battle-menu" data-i18n="battle.menu">[[menu]] Menu</button>
     </div>
   </div>
 
@@ -211,8 +211,8 @@
       <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
     </div>
     <div class="action-row">
-      <button class="btn btn-armor" id="editor-save" data-i18n="editor.save">💾 Save</button>
-      <button class="btn btn-disarm" id="editor-menu" data-i18n="battle.menu">☰ Menu</button>
+      <button class="btn btn-armor" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
+      <button class="btn btn-disarm" id="editor-menu" data-i18n="battle.menu">[[menu]] Menu</button>
     </div>
   </div>
 
@@ -221,7 +221,7 @@
     <div id="selected-bar" class="selected-unit-box">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 11px; color: #aaa;"><span data-i18n="hud.selected">Selected:</span> <b id="selected-settler-txt" style="color: #f1c40f;">Nobody</b></span>
-        <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()">❌</button>
+        <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()"><i class="ic ic-no"></i></button>
       </div>
       <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()"></button>
     </div>
@@ -235,10 +235,10 @@
     </div>
 
     <div class="tab-navigation">
-      <button class="tab-btn active" onclick="switchTab(this, 'tab-build')" data-i18n="tab.build">🏗️ Building</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-farming')" data-i18n="tab.farming">🌾 Farming</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-tools')" data-i18n="tab.tools">🛠️ Tools</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')" data-i18n="tab.weapons">⚔️ Weapons</button>
+      <button class="tab-btn active" onclick="switchTab(this, 'tab-build')" data-i18n="tab.build">[[build]] Building</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-farming')" data-i18n="tab.farming">[[wheat]] Farming</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-tools')" data-i18n="tab.tools">[[tools]] Tools</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')" data-i18n="tab.weapons">[[swords]] Weapons</button>
     </div>
 
     <div class="tab-content-container">
@@ -247,18 +247,18 @@
         <div class="btn-grid-2col" id="build-actions"></div>
 
         <div class="action-row">
-          <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')" data-i18n="btn.demolish">🔨 Demolish</button>
-          <button class="btn" id="btn-repair-all" onclick="repairAllBuildings()" data-i18n="btn.repairAll">🛠️ Repair all</button>
+          <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')" data-i18n="btn.demolish">[[hammer]] Demolish</button>
+          <button class="btn" id="btn-repair-all" onclick="repairAllBuildings()" data-i18n="btn.repairAll">[[tools]] Repair all</button>
         </div>
       </div>
 
       <div id="tab-farming" class="tab-pane">
         <div class="btn-grid-2col" id="farming-actions"></div>
         <div class="action-row">
-          <button class="btn" id="btn-zone_wheat" onclick="setMode('zone_wheat')" data-i18n="btn.zoneWheat">🟨 Wheat zone</button>
-          <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')" data-i18n="btn.zoneSapling">🟩 Sapling zone</button>
-          <button class="btn" id="btn-zone_apple" onclick="setMode('zone_apple')" data-i18n="btn.zoneApple">🟥 Apple zone</button>
-          <button class="btn" id="btn-zone_clear" onclick="setMode('zone_clear')" data-i18n="btn.zoneClear">✖ Remove zone</button>
+          <button class="btn" id="btn-zone_wheat" onclick="setMode('zone_wheat')" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
+          <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
+          <button class="btn" id="btn-zone_apple" onclick="setMode('zone_apple')" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
+          <button class="btn" id="btn-zone_clear" onclick="setMode('zone_clear')" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
         </div>
       </div>
 
@@ -271,9 +271,9 @@
         </div>
 
         <div class="action-row">
-          <button class="btn btn-disarm" onclick="orderGearOff('backpack')" data-i18n="btn.backpackOff">❌ Take backpack apart</button>
-          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')" data-i18n="btn.wateringCanOff">❌ Take watering can apart</button>
-          <button class="btn btn-disarm" onclick="disarmSettler('tool')" data-i18n="btn.disarmTool">❌ Take tool away</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('backpack')" data-i18n="btn.backpackOff">[[no]] Take backpack apart</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')" data-i18n="btn.wateringCanOff">[[no]] Take watering can apart</button>
+          <button class="btn btn-disarm" onclick="disarmSettler('tool')" data-i18n="btn.disarmTool">[[no]] Take tool away</button>
         </div>
       </div>
 
@@ -289,8 +289,8 @@
         </div>
 
         <div class="action-row">
-          <button class="btn btn-disarm" onclick="orderGearOff('armor')" data-i18n="btn.armorOff">❌ Take armour apart</button>
-          <button class="btn btn-disarm" onclick="disarmSettler('weapon')" data-i18n="btn.disarmWeapon">❌ Take weapon away</button>
+          <button class="btn btn-disarm" onclick="orderGearOff('armor')" data-i18n="btn.armorOff">[[no]] Take armour apart</button>
+          <button class="btn btn-disarm" onclick="disarmSettler('weapon')" data-i18n="btn.disarmWeapon">[[no]] Take weapon away</button>
         </div>
       </div>
 
@@ -301,6 +301,7 @@
 
 <script src="js/tabs.js"></script>
 <script src="js/config.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/economy.js"></script>
 <script src="js/state.js"></script>

@@ -315,8 +315,7 @@ function render() {
     if (w.isFishing) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
       ctx.strokeRect(w.x - 14, w.y - 14, 28, 28);
-      ctx.fillStyle = '#f1c40f'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('🎣', w.x, w.y + 6);
+      drawIcon(ctx, 'rod', w.x, w.y, 18);
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(w.x - 14, w.y - 22, 28, 4);
       ctx.fillStyle = '#f1c40f';
@@ -369,7 +368,7 @@ function render() {
   if (townHall.hp < townHall.maxHp) {
     ctx.fillStyle = townHall.repairRequested ? '#f1c40f' : '#e74c3c';
     ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(townHall.repairRequested ? t('repair.hall', { cost: formatCost(GAME_CONFIG.repairs.townHall.cost) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
+    fillRichText(ctx, townHall.repairRequested ? t('repair.hall', { cost: formatCost(GAME_CONFIG.repairs.townHall.cost) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
   }
 
   trees.forEach(t => {
@@ -440,8 +439,7 @@ function render() {
     if (b.hidden) ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#a0522d'; ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('🐗', b.x, b.y + 4);
+    drawIcon(ctx, 'boar', b.x, b.y, 17);
     if (b.hp < b.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
       ctx.fillStyle = '#e74c3c'; ctx.fillRect(b.x - 12, b.y - 16, (b.hp / b.maxHp) * 24, 3);
@@ -487,8 +485,7 @@ function render() {
     ctx.restore();
 
     if (bp.type === 'demolish_building') {
-      ctx.fillStyle = '#e74c3c'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('🔨', bp.x, bp.y + 5);
+      drawIcon(ctx, 'hammer', bp.x, bp.y, 16);
       ctx.fillStyle = '#e74c3c'; ctx.fillRect(bp.x - 12, bp.y + 16, (bp.progress / bp.maxProgress) * 24, 3);
     } else {
       ctx.fillStyle = '#fff'; ctx.fillRect(bp.x - 12, bp.y + 16, (bp.progress / bp.maxProgress) * 24, 3);
@@ -505,11 +502,12 @@ function render() {
     } else if (b.type === 'door') {
       ctx.fillStyle = '#a0522d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.fillStyle = '#f39c12'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🚪', b.x, b.y + 4);
+      drawIcon(ctx, 'door', b.x, b.y, 16);
     } else if (b.type === 'tent') {
       ctx.fillStyle = '#d35400'; ctx.beginPath();
       ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#f39c12'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🏕️', b.x, b.y + 10);
+      ctx.fillStyle = '#4a2511'; ctx.beginPath();
+      ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + 5, b.y + 14); ctx.lineTo(b.x - 5, b.y + 14); ctx.closePath(); ctx.fill();
 	  
     } else if (b.type === 'spikes') {
       // wooden base with iron points; a dot per use left
@@ -532,7 +530,7 @@ function render() {
       for (let i = -5; i <= 5; i += 5) { ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + i); ctx.lineTo(b.x + 10, b.y + i); ctx.stroke(); }
       ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; ctx.fillText(`🏹 ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22);
+      ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22);
       ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
       ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / b.tower.arrowCapacity), 1);
 
@@ -554,8 +552,7 @@ function render() {
     } else if (b.type === 'smelter') {
 	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
 	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-	  ctx.fillStyle = '#f1c40f'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-	  ctx.fillText('🔥', b.x, b.y + 3);
+	  drawIcon(ctx, 'fire', b.x, b.y, 13);
 	  if ((b.oreLoaded || 0) > 0) {
 		ctx.fillStyle = '#34495e'; ctx.fillRect(b.x - 13, b.y - 13, 12, 10);
 		ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
@@ -569,7 +566,7 @@ function render() {
 	  if ((b.coalLoaded || 0) > 0) {
 		ctx.fillStyle = '#1e272e'; ctx.fillRect(b.x - 11, b.y + 5, 22, 8);
 		ctx.fillStyle = '#ffffff'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
-		ctx.fillText(`⬛${b.coalLoaded}`, b.x, b.y + 11);
+		fillRichText(ctx, `[[coal]]${b.coalLoaded}`, b.x, b.y + 11);
 	  }
 	  if (b.smeltProgress > 0) {
 		ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(b.x - 14, b.y - 19, 28, 4);
@@ -584,8 +581,7 @@ function render() {
       ctx.fillStyle = b.hp / b.maxHp > 0.5 ? '#f1c40f' : '#e74c3c';
       ctx.fillRect(b.x - 12, barY, Math.max(0, b.hp / b.maxHp) * 24, 3);
       if (needsRepair(b)) {
-        ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('🛠️', b.x + 16, barY + 4);
+        drawIcon(ctx, 'tools', b.x + 16, barY + 1, 10);
       }
     }
 
@@ -601,7 +597,8 @@ function render() {
     ctx.fillStyle = '#641e16'; ctx.beginPath();
     ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#e74c3c'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('⛺', et.x, et.y + 8);
+    ctx.fillStyle = '#1e272e'; ctx.beginPath();
+    ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
 
     if (et.hp < et.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(et.x - 14, et.y - 20, 28, 4);
@@ -678,9 +675,8 @@ function render() {
     if (s.carrying) {
       const type = s.carrying.type;
       const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
-      let icon = type === 'bundle' ? '📦' : (known ? known.icon : '🌾');
-      ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(icon, s.x, s.y - s.visualRadius - 5);
+      const icon = type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat');
+      drawIcon(ctx, icon, s.x, s.y - s.visualRadius - 9, 13);
     }
 
     ctx.save();

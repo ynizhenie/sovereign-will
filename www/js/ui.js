@@ -32,12 +32,12 @@ function updateUI() {
 
   if (getSelectedSettler()) {
     const type = GAME_CONFIG.settlerTypes[selectedSettler.type] || GAME_CONFIG.settlerTypes.normal;
-    let name = `${type.icon} ${type.label}`;
+    let name = `[[${type.icon}]] ${type.label}`;
     let wName = getDefinition('weapons', selectedSettler.weapon)?.label || selectedSettler.weapon;
     let tName = selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selectedSettler.tool)?.label || selectedSettler.tool);
     let aName = selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
     let qName = selectedSettler.quiver ? ` / ${t('hud.quiver', { n: selectedSettler.arrows || 0 })}` : '';
-    document.getElementById('selected-settler-txt').innerText = `${name} (${wName}${tName}${aName}${qName})`;
+    setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName})`);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
       btnUpgrade.style.display = selectedSettler.type === 'normal' ? 'block' : 'none';
