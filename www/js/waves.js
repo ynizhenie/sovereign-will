@@ -135,6 +135,7 @@ function startNextWave() {
       for (let i = 0; i < count; i++) {
         const enemy = createConfiguredEnemy(getRandomBorderPos(), def.id);
         if (!enemy) continue;
+        enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
 
         enemies.push(enemy);
 
