@@ -105,7 +105,8 @@ const WORLD = {
   enemyTentBlueprints: [],
   projectiles: [],
   foodMix: {},          // how much of stock.food is each GAME_CONFIG.foodKinds kind, see addFood()
-  bloodSplats: [],      // { x, y, r, age } blood on the ground, see bleed()
+  bloodSplats: [],      // { x, y, r, age, kind } blood on the ground (bleed) and footprints (trackFootprints)
+  dung: [],             // { x, y, age, by, byLeft } see relieve()
   corpses: [],          // { x, y, radius, side: 'settler' | 'enemy', kind, age }, see addCorpse()
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
   forests: [],          // forest centres, see placeForests()
