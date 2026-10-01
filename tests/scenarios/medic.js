@@ -35,6 +35,7 @@ Object.assign(window.sim, (() => {
   // The medbag goes to a settler with nothing in hand, not to a soldier or a woodcutter
   function medbagGoesToEmptyHanded({ seed = 'medbag-test' }) {
     start(seed);
+    clearResources(); // nothing to gather or hunt on the way: only the bag's cost changes the stock
     window.showNotification = () => {};
     const hx = townHall.x, hy = townHall.y;
     settlers = [

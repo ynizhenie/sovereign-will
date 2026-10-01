@@ -121,6 +121,10 @@ const GAME_CONFIG = {
     summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
   },
 
+  // how far everyone moves per game step, times their own speed (settlers, enemies, boars). 2 is the pace
+  // the game was tuned at on a 120 Hz screen, before updates became a fixed 60 per second (#123)
+  movementScale: 2,
+
   // the Endless mode's difficulty (main menu): enemies per wave and enemy hp are multiplied by these
   difficulty: {
     easy: { enemyCount: 0.7, enemyHp: 0.8 },

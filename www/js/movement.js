@@ -514,6 +514,7 @@ function separateSettlersFromEnemiesOnce() {
 }
 
 function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
+  speed *= GAME_CONFIG.movementScale;
   let threshold = isEnemy ? 50 : 25;
   // terrain collision body; big units are drawn larger but must still fit one-tile gaps (30px)
   const bodyRadius = Math.min(entity.radius, 13);
