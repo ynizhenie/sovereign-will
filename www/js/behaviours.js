@@ -167,7 +167,7 @@ function deliverToSmelter(s, tick) {
 // Archers assigned to a watchtower stay in it until the fight comes close to the town hall
 function guardTower(s, tick) {
   if (s.towerAssignment) {
-    if (enemies.length < s.towerAssignment.tower.minEnemies || enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260)) {
+    if (!isTowerDutyOn(s.towerAssignment) || enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260)) {
       releaseTowerGuard(s);
     } else {
       updateTowerGuard(s, s.towerAssignment, tick.dt);
@@ -403,6 +403,88 @@ function treatWounded(s, tick) {
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
 const NORMAL_BODIES = 21;
 
+// ---- Pre-wave deployment (#14)
+
+// From deploySeconds before a wave until its enemies are beaten, not in battle mode
+function isDefenseAlert() {
+  if (gameMode === 'battle' || !gameStarted) return false;
+  return waveTimer <= GAME_CONFIG.defense.deploySeconds || enemies.some(en => en.fromWave);
+}
+
+// How far the base reaches from the town hall: its farthest building, at least minRadius tiles
+function getBaseRadius() {
+  const far = buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
+  return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+}
+
+let defensePlan = null;
+
+// Squads and their posts, rebuilt when the soldiers or the buildings change: squads of squadSize melee
+// soldiers (plus an archer each while there are any), posts at the doors first, the rest spread evenly
+// around the town hall at the base's radius, each on a tile a settler can stand on
+function getDefensePlan() {
+  const melee = settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
+  const archers = settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
+  const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + buildings.length;
+  if (defensePlan && defensePlan.key === key) return defensePlan;
+  const size = GAME_CONFIG.defense.squadSize;
+  const count = melee.length ? Math.ceil(melee.length / size) : (archers.length ? 1 : 0);
+  const radius = getBaseRadius();
+  const hallReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+  const standable = (x, y) => {
+    const g = getGridPos(x, y);
+    for (let ring = 0; ring <= 3; ring++) {
+      for (let dy = -ring; dy <= ring; dy++) {
+        for (let dx = -ring; dx <= ring; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+          if (getReachSteps(hallReach, g.gx + dx, g.gy + dy) >= 0) return { x: (g.gx + dx) * TILE_SIZE + 15, y: (g.gy + dy) * TILE_SIZE + 15 };
+        }
+      }
+    }
+    return { x, y };
+  };
+  const posts = [];
+  for (const door of buildings.filter(b => b.type === 'door')) {
+    if (posts.length >= count) break;
+    // just inside the door, on the town hall's side
+    const angle = Math.atan2(door.y - townHall.y, door.x - townHall.x);
+    posts.push(standable(door.x - Math.cos(angle) * TILE_SIZE, door.y - Math.sin(angle) * TILE_SIZE));
+  }
+  const ring = count - posts.length;
+  for (let i = 0; i < ring; i++) {
+    const angle = (i / ring) * Math.PI * 2 - Math.PI / 2;
+    posts.push(standable(townHall.x + Math.cos(angle) * radius, townHall.y + Math.sin(angle) * radius));
+  }
+  const squadOf = new Map();
+  melee.forEach((s, i) => squadOf.set(s, { post: posts[Math.floor(i / size)], slot: i % size }));
+  archers.forEach((s, i) => squadOf.set(s, { post: posts[i % posts.length], slot: size + Math.floor(i / posts.length) }));
+  defensePlan = { key, posts, squadOf };
+  return defensePlan;
+}
+
+// A soldier in a squad holds its post until an enemy comes near the post or hits it; then it fights that
+// enemy (fightEnemies) and comes back afterwards
+function holdPost(s, tick) {
+  if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
+  const place = getDefensePlan().squadOf.get(s);
+  if (!place || !place.post) return false;
+  if (getRecentAttacker(s)) return false;
+  const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
+  let nearest = null, best = engage;
+  for (const en of enemies) {
+    const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
+    if (d < best) { best = d; nearest = en; }
+  }
+  if (nearest) { s.postTarget = nearest; return false; }
+  s.postTarget = null;
+  // squad members stand around the post
+  const angle = place.slot * 2.1;
+  const spot = { x: place.post.x + Math.cos(angle) * 14 * Math.min(1, place.slot), y: place.post.y + Math.sin(angle) * 14 * Math.min(1, place.slot) };
+  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 8) moveEntityTowards(s, spot.x, spot.y, s.speed, false, tick.dt);
+  s.patrolTarget = null;
+  return true;
+}
+
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
 // Archers restock arrows from towers or the town hall; unarmed settlers shelter at the town hall
 // while there are defenders, unless they're being attacked themselves.
@@ -427,6 +509,8 @@ function fightEnemies(s, tick) {
   }
   // ...but whoever is hitting this settler right now comes first of all
   const attacker = getRecentAttacker(s);
+  // a squad soldier goes for the enemy that came near its post (see holdPost)
+  if (!attacker && s.postTarget && enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
   if (attacker) targetEnemy = attacker;
   // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents)
   const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
@@ -486,8 +570,9 @@ function fightEnemies(s, tick) {
   let isToolWorker = isUnarmedOrRod && (hasAxeTool(s.tool) || hasPickaxeTool(s.tool));
   let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
   // tent-summoned enemies alone don't call workers off their work, unless they come close
-  const waveThreat = tick.isWaveActive && !tick.tentAssault;
-  if (targetEnemy && (waveThreat || distToClosestEn < 260 || s.role !== 'worker')) {
+  // workers keep working through a wave and only react to an enemy close by (#14)
+  const alarm = tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
+  if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker')) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)
     if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && gameMode !== 'battle') {
       let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
@@ -754,8 +839,11 @@ function pickResourceToHarvest(s, tick) {
     }
   }
 
-  if (!assignedRes && !tick.isWaveActive) {
-    let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) && !getMapResourceDef(tick.resourceKind.get(r)).markOnly);
+  if (!assignedRes) {
+    // from the warning until the wave is beaten, nothing beyond the base's farthest building (#14)
+    const alert = isDefenseAlert(), radius = alert ? getBaseRadius() + TILE_SIZE : Infinity;
+    let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) &&
+      !getMapResourceDef(tick.resourceKind.get(r)).markOnly && Math.hypot(r.x - townHall.x, r.y - townHall.y) <= radius);
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
     let minDist = Infinity;
     availableRes.forEach(r => {
@@ -1211,6 +1299,7 @@ const SETTLER_BEHAVIOURS = [
   healAtTent,
   playerControlled,
   treatWounded,
+  holdPost,
   fightEnemies,
   breakOutOfSealedBase,
   clearEnemyTents,

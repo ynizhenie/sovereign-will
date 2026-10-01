@@ -192,18 +192,23 @@ function assignTowerArchers() {
     }
     const canGuard = !settler.isPossessed && settler.role === 'archer' &&
       settler.weapon === 'bow' && settler.quiver && !settler.carrying && !settler.targetEquipment;
-    const towerDutyActive = settler.towerAssignment && enemies.length >= settler.towerAssignment.tower.minEnemies;
+    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment);
     if ((!towerDutyActive || townHallThreatened || !canGuard) && settler.towerAssignment) {
       releaseTowerGuard(settler);
     }
     if (townHallThreatened || !canGuard || settler.towerAssignment) return;
 
-    const tower = towers.find(candidate => enemies.length >= candidate.tower.minEnemies && candidate.guards.length < candidate.tower.capacity);
+    const tower = towers.find(candidate => isTowerDutyOn(candidate) && candidate.guards.length < candidate.tower.capacity);
     if (tower) {
       tower.guards.push(settler);
       settler.towerAssignment = tower;
     }
   });
+}
+
+// A tower is manned when enough enemies are about, or ahead of a wave if it has arrows (#14)
+function isTowerDutyOn(tower) {
+  return enemies.length >= tower.tower.minEnemies || (isDefenseAlert() && (tower.arrows || 0) > 0);
 }
 
 function findTowerForArrows(settler) {
