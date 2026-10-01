@@ -275,6 +275,7 @@ function render() {
   ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 
   const terrain = getTileIndex();
+  if (gameMode === 'battle') drawBattleOverlay();
   desertTiles.forEach(drawDesertTile);
   beachTiles.forEach(drawDesertTile);
 
@@ -648,7 +649,8 @@ function render() {
   settlers.forEach(s => {
     // medics count as fighters for their colour
     const fighter = s.role !== 'worker' || hasToolFamily(s.tool, 'medic');
-    ctx.fillStyle = s.isPossessed ? '#3498db' : (fighter ? '#e67e22' : '#2ecc71');
+    // in battle mode every settler is the green side
+    ctx.fillStyle = gameMode === 'battle' ? '#27ae60' : s.isPossessed ? '#3498db' : (fighter ? '#e67e22' : '#2ecc71');
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
     drawBodyBlood(s, s.visualRadius);
 
@@ -770,7 +772,8 @@ function render() {
 
   ctx.restore();
 
-  if (gameStarted && (townHall.hp <= 0 || settlers.length === 0)) {
+  if (gameMode === 'battle') drawBattleResult();
+  if (gameStarted && gameMode !== 'battle' && (townHall.hp <= 0 || settlers.length === 0)) {
     // drawn in CSS pixels, centred on the screen (restart button hit-test: getRestartButton)
     ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save();

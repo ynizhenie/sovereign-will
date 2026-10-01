@@ -2,6 +2,11 @@ const WAVE_WARNING_SECONDS = 15;
 
 function update(dt) {
   if (!gameStarted || isPaused) return;
+  // battle mode: units stand still while being placed, and the result shows for a moment
+  if (gameMode === 'battle') {
+    updateBattle(dt);
+    if (battle.phase !== 'fight') return;
+  }
   resetTileIndex();
   pathTick++;
 

@@ -658,3 +658,42 @@ canvas {
 #seed-reroll:active {
   border-color: #46b8da;
 }
+
+/* battle mode (#38): its own panel instead of the colony's */
+#battle-panel {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #16171a;
+  border-top: 1px solid #2a2d34;
+}
+body.battle-mode #battle-panel { display: flex; }
+body.battle-mode #bottom-panel,
+body.battle-mode .top-wave,
+body.battle-mode #btn-pause-toggle,
+body.battle-mode .top-actions,
+body.battle-mode #btn-interact,
+body.battle-mode #hud-seed { display: none; }
+#battle-panel[data-phase="fight"] .battle-presets,
+#battle-panel[data-phase="fight"] #battle-fight,
+#battle-panel[data-phase="fight"] #battle-clear { opacity: 0.4; pointer-events: none; }
+.battle-hint {
+  font-size: 11px;
+  color: #8a91a0;
+  text-align: center;
+}
+.battle-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.battle-presets .btn {
+  font-size: 11px;
+  padding: 6px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

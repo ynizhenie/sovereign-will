@@ -60,6 +60,7 @@ const LANGUAGES = {
       'disarm.noTool': '⚠️ No settler with a tool!', 'disarm.noWeapon': '⚠️ No settler with a weapon or armour!', 'disarm.noItem': '⚠️ No settler with anything to take away!',
       'pop.limit': '⚠️ Too many settlers! Build a tent (🏕️)', 'hire.done': '✅ Hired: {name}!',
       'upgrade.noone': '❌ No ordinary settler to upgrade!', 'upgrade.needs': '❌ Upgrade to {name}: needs', 'upgrade.done': '✅ Settler upgraded: {name}!',
+      'battle.hint': 'Tap to place, tap again to remove: green on the left, red on the right', 'battle.fight': '⚔️ Fight!', 'battle.clear': '🧹 Clear', 'battle.menu': '☰ Menu', 'battle.needBoth': '⚠️ Place units on both sides first', 'battle.greenWins': 'Green wins!', 'battle.redWins': 'Red wins!', 'battle.drawWins': 'Draw!', 'preset.fist': 'Unarmed', 'preset.club': 'Club', 'preset.sword': 'Sword', 'preset.spear': 'Spear', 'preset.iron_sword': 'Iron sword', 'preset.iron_spear': 'Iron spear', 'preset.bow': 'Archer', 'preset.big_club': 'Giant, club', 'preset.big_spear': 'Giant, spear', 'preset.raider_club': 'Savage', 'preset.raider': 'Raider', 'preset.brute': 'Brute', 'preset.raider_archer': 'Enemy archer',
       'defeat.title': 'DEFEAT!', 'defeat.survived': 'You held out for {waves} waves', 'defeat.restart': 'Start again'
     }
   },
@@ -116,6 +117,7 @@ const LANGUAGES = {
       'disarm.noTool': '⚠️ Немає жителя з інструментом!', 'disarm.noWeapon': '⚠️ Немає жителя зі зброєю чи бронею!', 'disarm.noItem': '⚠️ Немає жителя з предметом, який можна забрати!',
       'pop.limit': '⚠️ Перевищено ліміт жителів! Збудуйте намет (🏕️)', 'hire.done': '✅ Найнято: {name}!',
       'upgrade.noone': '❌ Немає звичайного жителя для покращення!', 'upgrade.needs': '❌ Покращення до {name}: потрібно', 'upgrade.done': '✅ Жителя покращено: {name}!',
+      'battle.hint': 'Тап — поставити, ще тап — прибрати: зліва зелені, справа червоні', 'battle.fight': '⚔️ У бій!', 'battle.clear': '🧹 Очистити', 'battle.menu': '☰ Меню', 'battle.needBoth': '⚠️ Спершу поставте юнітів з обох боків', 'battle.greenWins': 'Перемогли зелені!', 'battle.redWins': 'Перемогли червоні!', 'battle.drawWins': 'Нічия!', 'preset.fist': 'Без зброї', 'preset.club': 'Кийок', 'preset.sword': 'Меч', 'preset.spear': 'Спис', 'preset.iron_sword': 'Залізний меч', 'preset.iron_spear': 'Залізний спис', 'preset.bow': 'Лучник', 'preset.big_club': 'Богатир, кийок', 'preset.big_spear': 'Богатир, спис', 'preset.raider_club': 'Дикун', 'preset.raider': 'Розбійник', 'preset.brute': 'Громило', 'preset.raider_archer': 'Ворожий лучник',
       'defeat.title': 'ПОРАЗКА!', 'defeat.survived': 'Ви протрималися {waves} хвиль', 'defeat.restart': 'Почати знову'
     }
   },
@@ -172,6 +174,7 @@ const LANGUAGES = {
       'disarm.noTool': '⚠️ Нет поселенца с инструментом!', 'disarm.noWeapon': '⚠️ Нет поселенца с оружием или броней!', 'disarm.noItem': '⚠️ Нет поселенца с предметом для разбора!',
       'pop.limit': '⚠️ Превышен лимит поселенцев! Постройте палатку (🏕️)', 'hire.done': '✅ Нанят: {name}!',
       'upgrade.noone': '❌ Нет подходящего обычного поселенца для улучшения!', 'upgrade.needs': '❌ Улучшение в {name}: нужно', 'upgrade.done': '✅ Поселенец улучшен: {name}!',
+      'battle.hint': 'Тап — поставить, ещё тап — убрать: слева зелёные, справа красные', 'battle.fight': '⚔️ В бой!', 'battle.clear': '🧹 Очистить', 'battle.menu': '☰ Меню', 'battle.needBoth': '⚠️ Сначала поставьте юнитов с обеих сторон', 'battle.greenWins': 'Победили зелёные!', 'battle.redWins': 'Победили красные!', 'battle.drawWins': 'Ничья!', 'preset.fist': 'Без оружия', 'preset.club': 'Дубина', 'preset.sword': 'Меч', 'preset.spear': 'Копьё', 'preset.iron_sword': 'Железный меч', 'preset.iron_spear': 'Железное копьё', 'preset.bow': 'Лучник', 'preset.big_club': 'Богатырь, дубина', 'preset.big_spear': 'Богатырь, копьё', 'preset.raider_club': 'Дикарь', 'preset.raider': 'Разбойник', 'preset.brute': 'Громила', 'preset.raider_archer': 'Вражеский лучник',
       'defeat.title': 'ПОРАЖЕНИЕ!', 'defeat.survived': 'Вы продержались {waves} волн', 'defeat.restart': 'Начать заново'
     }
   }

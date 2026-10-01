@@ -40,6 +40,7 @@ let WORLD_WIDTH = COLS * TILE_SIZE;
 let WORLD_HEIGHT = ROWS * TILE_SIZE;
 let mapSettings = { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }; // set from the menu, used by resetGame
 let gameDifficulty = 'normal'; // GAME_CONFIG.difficulty key, set from the menu
+let gameMode = 'endless';      // endless / battle (battle.js)
 
 function getDifficulty() {
   return GAME_CONFIG.difficulty[gameDifficulty] || GAME_CONFIG.difficulty.normal;
