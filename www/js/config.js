@@ -125,6 +125,13 @@ const GAME_CONFIG = {
   // the game was tuned at on a 120 Hz screen, before updates became a fixed 60 per second (#123)
   movementScale: 2,
 
+  // before a wave (#14): deploySeconds ahead, soldiers form squads of squadSize melee (plus an archer if
+  // there are any) at posts around the base, no farther out than its farthest building (at least
+  // minRadius tiles), doors first. A squad holds its post until an enemy comes within engageTiles of it.
+  // From the warning until the wave is beaten, workers stay within that radius unless the player marked
+  // something farther, and only shelter when an enemy comes within workerAlarm px.
+  defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160 },
+
   // the Endless mode's difficulty (main menu): enemies per wave and enemy hp are multiplied by these
   difficulty: {
     easy: { enemyCount: 0.7, enemyHp: 0.8 },
