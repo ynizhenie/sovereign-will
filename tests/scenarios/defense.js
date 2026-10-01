@@ -80,5 +80,42 @@ Object.assign(window.sim, (() => {
     return { nearChopped: !trees.includes(near), farStanding: trees.includes(far), withinBase: farthest <= getBaseRadius() + 2 * TILE_SIZE };
   }
 
-  return { deployment, holdAndEngage, archersManTowers, workersStayClose };
+  // One squad posted at the top of the base; a wave raider gets to a wall at the bottom, far from the post (#131)
+  function baseBreach({ seed = 'breach-test' }) {
+    start(seed);
+    clearResources();
+    const wall = placeBuilding('wall_wood', nearHall(0, 4).x, nearHall(0, 4).y);
+    invalidateAllPaths();
+    settlers = [0, 1, 2].map(i => makeSettler(i + 1, townHall.x - 20 + i * 20, townHall.y - 50, { weapon: 'sword', role: 'soldier', hp: 1e4, maxHp: 1e4 }));
+    defensePlan = null;
+    const post = getDefensePlan().posts[0];
+    const en = createConfiguredEnemy(nearHall(1, 5), 'raider');
+    en.fromWave = true; en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1e4;
+    enemies = [en];
+    const farFromPost = Math.hypot(en.x - post.x, en.y - post.y) > GAME_CONFIG.defense.engageTiles * TILE_SIZE;
+    run(10, { each: () => { waveTimer = 50; } });
+    return { farFromPost, wallStands: buildings.includes(wall), engaged: en.hp < en.maxHp };
+  }
+
+  // Workers out gathering far from the base when the pre-wave alert starts, an apple tree with apples
+  // out there too: they come back inside the base and leave the apples (#131)
+  function workersComeBack({ seed = 'come-back-test', seconds = 12 }) {
+    start(seed);
+    clearResources();
+    const apple = makeAppleTree({ ...nearHall(12, 8), hp: 3, isGrowing: false, growProgress: 0, priority: 0 });
+    apple.applesReady = true;
+    trees.push(apple);
+    invalidateAllPaths();
+    settlers = [makeSettler(1, nearHall(11, 8).x, nearHall(11, 8).y), makeSettler(2, nearHall(-12, -6).x, nearHall(-12, -6).y),
+      makeSettler(3, nearHall(1, 1).x, nearHall(1, 1).y)];
+    for (const s of settlers) s.needsRelief = s.id === 3;
+    let leftBase = false;
+    run(seconds, { holdWaves: false, each: f => {
+      waveTimer = 8; apple.appleGrowth = 0;
+      if (f > 6 * 60 && settlers.some(s => !isInSafeArea(s.x, s.y))) leftBase = true;
+    } });
+    return { allInside: settlers.every(s => isInSafeArea(s.x, s.y)), leftBase, applesLeft: apple.applesReady };
+  }
+
+  return { deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack };
 })());

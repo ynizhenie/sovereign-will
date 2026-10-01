@@ -502,6 +502,23 @@ function getBaseRadius() {
   return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
 }
 
+// From the warning until the wave is beaten, settlers go no farther from the town hall than the base's
+// farthest building (plus a tile) on their own; only what the player marked takes them farther
+function getSafeRadius() {
+  return isDefenseAlert() ? getBaseRadius() + TILE_SIZE : Infinity;
+}
+
+function isInSafeArea(x, y) {
+  return Math.hypot(x - townHall.x, y - townHall.y) <= getSafeRadius();
+}
+
+// An enemy inside the base, or next to one of its buildings or the town hall
+function isInsideBase(en) {
+  const near = 2 * TILE_SIZE;
+  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + TILE_SIZE + townHall.radius ||
+    buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
+}
+
 let defensePlan = null;
 
 // Squads and their posts, rebuilt when the soldiers or the buildings change: squads of squadSize melee
@@ -547,8 +564,8 @@ function getDefensePlan() {
   return defensePlan;
 }
 
-// A soldier in a squad holds its post until an enemy comes near the post or hits it; then it fights that
-// enemy (fightEnemies) and comes back afterwards
+// A soldier in a squad holds its post until an enemy comes near the post, gets into the base (or next
+// to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards
 function holdPost(s, tick) {
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
   const place = getDefensePlan().squadOf.get(s);
@@ -559,6 +576,14 @@ function holdPost(s, tick) {
   for (const en of enemies) {
     const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
     if (d < best) { best = d; nearest = en; }
+  }
+  // nothing near the post: the nearest enemy that got into the base, wherever that is
+  if (!nearest) {
+    best = Infinity;
+    for (const en of enemies) {
+      const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
+      if (d < best && isInsideBase(en)) { best = d; nearest = en; }
+    }
   }
   if (nearest) { s.postTarget = nearest; return false; }
   s.postTarget = null;
@@ -727,7 +752,7 @@ function clearEnemyTents(s, tick) {
 // A settler that needs to go (see the meals in update) walks off to a quiet spot away from the buildings,
 // near grass if there's some, waits a moment and leaves dung there
 function relieve(s, tick) {
-  if (!s.needsRelief || s.isPossessed || tick.isWaveActive || s.towerAssignment) return false;
+  if (!s.needsRelief || s.isPossessed || isDefenseAlert() || tick.isWaveActive || s.towerAssignment) return false;
   const relief = GAME_CONFIG.relief;
   if (!s.reliefSpot) s.reliefSpot = findReliefSpot(s);
   const spot = s.reliefSpot;
@@ -936,9 +961,8 @@ function pickResourceToHarvest(s, tick) {
 
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building (#14)
-    const alert = isDefenseAlert(), radius = alert ? getBaseRadius() + TILE_SIZE : Infinity;
     let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) &&
-      !getMapResourceDef(tick.resourceKind.get(r)).markOnly && Math.hypot(r.x - townHall.x, r.y - townHall.y) <= radius);
+      !getMapResourceDef(tick.resourceKind.get(r)).markOnly && isInSafeArea(r.x, r.y));
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
     let minDist = Infinity;
     availableRes.forEach(r => {
@@ -1132,6 +1156,7 @@ function pickApples(s, tick) {
   let target = null, best = Infinity;
   for (const t of trees) {
     if (!t.apple || !t.applesReady || tick.appleAssignments.has(t)) continue;
+    if (!(t.markIntent === 'apples' && t.priority > 0) && !isInSafeArea(t.x, t.y)) continue;
     const d = getReachDistanceToResource(reach, t) - (t.markIntent === 'apples' && t.priority > 0 ? 1000 : 0);
     if (d < best) { best = d; target = t; }
   }
@@ -1254,7 +1279,7 @@ function collectWorms(s, tick) {
   if (s.role !== 'worker' || s.tool !== 'rod' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
   let target = null, best = Infinity;
   for (const c of corpses) {
-    if (!corpseHasWorms(c) || tick.wormAssignments.has(c)) continue;
+    if (!corpseHasWorms(c) || tick.wormAssignments.has(c) || !isInSafeArea(c.x, c.y)) continue;
     const d = Math.hypot(c.x - s.x, c.y - s.y);
     if (d < best) { best = d; target = c; }
   }
@@ -1372,6 +1397,12 @@ function tendFarmZones(s, tick) {
 // Nothing else to do: wander near the town hall (shown with an idle icon, see render())
 function patrol(s, tick) {
   if (gameMode === 'battle') return true; // nothing to wander around: stand
+  // caught outside the base when the alert starts: straight back, not a stroll
+  if (!isInSafeArea(s.x, s.y)) {
+    s.patrolTarget = null;
+    moveSettlerToTownHall(s, s.speed, tick.dt);
+    return true;
+  }
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
     let ang = rand() * Math.PI * 2;
     let dist = 30 + rand() * 120;
