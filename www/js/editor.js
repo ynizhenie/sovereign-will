@@ -10,24 +10,24 @@ const MAP_STORAGE_KEY = 'sovereign-will-maps';
 
 // What can be put on a tile. kind: a GAME_CONFIG.mapResources entry; building: a GAME_CONFIG.buildings one.
 const EDITOR_TOOLS = [
-  { id: 'erase', icon: '🧽' },
-  { id: 'water', icon: '🌊' },
-  { id: 'rock', icon: '⛰️' },
-  { id: 'sand', icon: '🏜️' },
-  { id: 'town_hall', icon: '🏛️' },
-  { id: 'tree', icon: '🌲', kind: 'tree' },
-  { id: 'apple_tree', icon: '🍎', kind: 'tree' },
-  { id: 'cactus', icon: '🌵', kind: 'cactus' },
-  { id: 'boulder', icon: '🪨', kind: 'boulder' },
-  { id: 'grass', icon: '🌿', kind: 'grass' },
-  { id: 'berry_bush', icon: '🫐', kind: 'berry_bush' },
-  { id: 'stick', icon: '🥢', kind: 'stick' },
-  { id: 'pebble', icon: '🔘', kind: 'pebble' },
-  { id: 'iron_ore', icon: '🟤', kind: 'iron_ore' },
-  { id: 'coal_ore', icon: '⚫', kind: 'coal_ore' },
-  { id: 'iron_spawner', icon: '🟫', spawner: 'iron' },
-  { id: 'coal_spawner', icon: '⬛', spawner: 'coal' },
-  { id: 'boar', icon: '🐗' },
+  { id: 'erase', icon: 'eraser' },
+  { id: 'water', icon: 'water' },
+  { id: 'rock', icon: 'rock' },
+  { id: 'sand', icon: 'sand' },
+  { id: 'town_hall', icon: 'hall' },
+  { id: 'tree', icon: 'tree', kind: 'tree' },
+  { id: 'apple_tree', icon: 'apple_tree', kind: 'tree' },
+  { id: 'cactus', icon: 'cactus', kind: 'cactus' },
+  { id: 'boulder', icon: 'boulder', kind: 'boulder' },
+  { id: 'grass', icon: 'grass', kind: 'grass' },
+  { id: 'berry_bush', icon: 'berry_bush', kind: 'berry_bush' },
+  { id: 'stick', icon: 'stick', kind: 'stick' },
+  { id: 'pebble', icon: 'pebble', kind: 'pebble' },
+  { id: 'iron_ore', icon: 'iron_ore', kind: 'iron_ore' },
+  { id: 'coal_ore', icon: 'coal_ore', kind: 'coal_ore' },
+  { id: 'iron_spawner', icon: 'iron_spawner', spawner: 'iron' },
+  { id: 'coal_spawner', icon: 'coal_spawner', spawner: 'coal' },
+  { id: 'boar', icon: 'boar' },
   // buildings, except crops (those are planted in farm zones)
   ...Object.values(GAME_CONFIG.buildings)
     .filter(b => !Object.values(GAME_CONFIG.farming.crops).includes(b.id))
@@ -249,7 +249,7 @@ function renderEditorPanel() {
     button.className = 'btn' + (editor.tool === tool.id ? ' active' : '');
     button.dataset.tool = tool.id;
     const label = tool.building ? getDefinition('buildings', tool.building).label : t(`editor.tool.${tool.id}`);
-    button.textContent = `${tool.icon} ${label}`;
+    setRichText(button, `[[${tool.icon}]] ${label}`);
     onTap(button, () => { editor.tool = tool.id; renderEditorPanel(); });
     tools.appendChild(button);
   }
@@ -285,7 +285,7 @@ function renderSavedMapList(list, { open, remove, selected }) {
     if (remove) {
       const del = document.createElement('button');
       del.className = 'fps-option';
-      del.textContent = '✖';
+      del.innerHTML = iconHtml('close');
       del.dataset.deleteMap = name;
       onTap(del, () => remove(name));
       item.appendChild(del);

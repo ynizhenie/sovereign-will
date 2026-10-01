@@ -14,7 +14,7 @@ test('one warning 15 s before a wave (#106)', async ({ page }) => {
     } finally { window.showNotification = original; }
     return seen.filter(m => m.includes('Волна'));
   });
-  expect(notes).toEqual(['⚠️ Волна врагов через 15 секунд!']);
+  expect(notes).toEqual(['[[warn]] Волна врагов через 15 секунд!']);
 });
 
 test('a medic fills its bag with herbs at the town hall and gives them back with the bag (#106)', async ({ page }) => {

@@ -510,7 +510,7 @@ function togglePause() {
 function setPaused(paused) {
   isPaused = paused;
   const btn = document.getElementById('btn-pause-toggle');
-  btn.innerText = isPaused ? "▶️" : "⏸️";
+  btn.innerHTML = iconHtml(isPaused ? 'play' : 'pause');
   btn.title = isPaused ? t('pause.resumeHint') : t('pause.pauseHint');
   btn.classList.toggle('paused', isPaused);
   document.getElementById('pause-menu').hidden = !isPaused;

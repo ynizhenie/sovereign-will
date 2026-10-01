@@ -29,3 +29,10 @@ export async function openGame(page) {
 
 // Run window.sim[fn](arg) in the page and return its result
 export const sim = (page, fn, arg) => page.evaluate(([fn, arg]) => window.sim[fn](arg), [fn, arg]);
+
+// The text of each element matching `selector`, with its drawn icons (www/js/icons.js) as [[name]]
+export const iconText = (page, selector) => page.$$eval(selector, els => els.map(el => {
+  const copy = el.cloneNode(true);
+  copy.querySelectorAll('i.ic').forEach(i => i.replaceWith(`[[${[...i.classList].find(c => c.startsWith('ic-')).slice(3)}]]`));
+  return copy.textContent.replace(/\s+/g, ' ').trim();
+}));

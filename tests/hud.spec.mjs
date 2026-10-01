@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.mjs';
+import { openGame, iconText } from './helpers.mjs';
 
 test('resources are grouped: a group tile shows its total and opens a row with each resource (#106)', async ({ page }) => {
   await openGame(page);
@@ -9,7 +9,7 @@ test('resources are grouped: a group tile shows its total and opens a row with e
   await expect(page.locator('#group-raw-members')).toBeHidden();
   await page.click('#group-raw');
   await expect(page.locator('#group-raw-members')).toBeVisible();
-  await expect(page.locator('#group-raw-members div')).toHaveText(['🥩 Сырое мясо: 6', '🐟 Сырая рыба: 2', '🌽 Зерно: 4', '🪱 Червяки: 0']);
+  await expect.poll(() => iconText(page, '#group-raw-members div')).toEqual(['[[rawMeat]] Сырое мясо: 6', '[[rawFish]] Сырая рыба: 2', '[[wheat]] Зерно: 4', '[[worms]] Червяки: 0']);
   // another group closes the first; tapping it again closes it
   await page.click('#group-materials');
   await expect(page.locator('#group-raw-members')).toBeHidden();
