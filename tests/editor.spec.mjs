@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame, sim } from './helpers.mjs';
+import { openGame, sim, iconText } from './helpers.mjs';
 
 test('a map made in the editor is saved and played in Endless as a custom map (#37)', async ({ page }) => {
   await openGame(page);
@@ -26,7 +26,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#editor-new-empty').click();
   await expect(page.locator('#editor-panel')).toBeVisible();
   await expect(page.locator('#bottom-panel')).toBeHidden();
-  await expect(page.locator('#editor-tools [data-tool="water"]')).toHaveText('🌊 Вода');
+  await expect.poll(() => iconText(page, '#editor-tools [data-tool="water"]')).toEqual(['[[water]] Вода']);
   await expect(page.locator('#editor-tools [data-tool="wall_stone"]')).toContainText('Каменная стена');
 
   // a tap on the map with the Water tool puts water there
@@ -42,10 +42,10 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   expect(await page.evaluate(() => waterTiles.length)).toBe(1);
 
   await page.locator('#editor-save').click();
-  await expect(page.locator('#toast-notification')).toHaveText('⚠️ Сначала назовите карту');
+  await expect.poll(() => iconText(page, '#toast-notification')).toEqual(['[[warn]] Сначала назовите карту']);
   await page.locator('#editor-name').fill('Озерцо');
   await page.locator('#editor-save').click();
-  await expect(page.locator('#toast-notification')).toHaveText('✅ Карта сохранена: Озерцо');
+  await expect.poll(() => iconText(page, '#toast-notification')).toEqual(['[[ok]] Карта сохранена: Озерцо']);
 
   await page.locator('#editor-menu').click();
   await expect(page.locator('#main-menu')).toBeVisible();

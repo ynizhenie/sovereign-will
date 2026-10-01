@@ -105,7 +105,7 @@ function renderPresetList() {
     onTap(load, () => applyMapSettings(loadPresets()[name]));
     const remove = document.createElement('button');
     remove.className = 'fps-option';
-    remove.textContent = '✖';
+    remove.innerHTML = iconHtml('close');
     remove.dataset.deletePreset = name;
     onTap(remove, () => { const presets = loadPresets(); delete presets[name]; savePresets(presets); renderPresetList(); });
     item.append(load, remove);
