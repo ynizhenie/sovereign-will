@@ -67,8 +67,6 @@ let camera = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, zoom: 1 };
 let cameraDragging = false;
 let cameraDragPoint = { x: 0, y: 0 };
 
-// The colony's stock: amount per resource id of GAME_CONFIG.resources (set from GAME_CONFIG.start by resetGame)
-const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
 let waveInterval = 90;
 let waveTimer = waveInterval;
 let gameStarted = false;
@@ -112,6 +110,7 @@ const WORLD = {
   foodMix: {},          // how much of stock.food is each GAME_CONFIG.foodKinds kind, see addFood()
   bloodSplats: [],      // { x, y, r, age, kind } blood on the ground (bleed) and footprints (trackFootprints)
   dung: [],             // { x, y, age, by, byLeft } see relieve()
+  resourcePiles: [],    // { x, y, type, amount } what a destroyed warehouse spilled, see dropStorageContents()
   corpses: [],          // { x, y, radius, side: 'settler' | 'enemy', kind, age }, see addCorpse()
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
   forests: [],          // forest centres, see placeForests()
@@ -127,6 +126,87 @@ for (const key of WORLD_ALIASES) {
     set(value) { WORLD[key] = value; }
   });
 }
+
+// ---- Storage (#36)
+// Resources lie in the town hall and in warehouses (`contents`, resource id -> amount), each holding
+// up to its capacity (GAME_CONFIG.storage) in all. Settlers bring what they gather to the nearest one
+// with room and fetch what they need from one that holds it (storeIn / takeFrom).
+// `stock` is the colony's total of each resource: what the HUD shows and costs are checked against.
+// Reading it adds the storages up; changing it puts resources in (the town hall first, then
+// warehouses; past every capacity into the hall all the same) or takes them out (the hall first).
+townHall.contents = {};
+
+function getStorages() {
+  return [townHall, ...buildings.filter(b => b.contents)];
+}
+
+function getStorageCapacity(storage) {
+  if (storage === townHall) return GAME_CONFIG.storage.townHall;
+  const def = getDefinition('buildings', storage.type);
+  return (def && def.build && def.build.storage) || 0;
+}
+
+function getStoredTotal(storage) {
+  let total = 0;
+  for (const amount of Object.values(storage.contents)) total += amount;
+  return total;
+}
+
+function getStorageRoom(storage) {
+  return Math.max(0, getStorageCapacity(storage) - getStoredTotal(storage));
+}
+
+// Put up to `amount` into this storage (as much as it has room for); returns how much went in
+function storeIn(storage, id, amount) {
+  const fits = Math.min(amount, getStorageRoom(storage));
+  if (fits > 0) storage.contents[id] = (storage.contents[id] || 0) + fits;
+  return fits;
+}
+
+// Take up to `amount` out of this storage; returns how much it had
+function takeFrom(storage, id, amount) {
+  const got = Math.min(amount, storage.contents[id] || 0);
+  if (got > 0) {
+    storage.contents[id] -= got;
+    if (storage.contents[id] <= 1e-9) delete storage.contents[id];
+  }
+  return got;
+}
+
+function depositAnywhere(id, amount) {
+  for (const storage of getStorages()) {
+    amount -= storeIn(storage, id, amount);
+    if (amount <= 0) return;
+  }
+  townHall.contents[id] = (townHall.contents[id] || 0) + amount;
+}
+
+function withdrawAnywhere(id, amount) {
+  for (const storage of getStorages()) {
+    amount -= takeFrom(storage, id, amount);
+    if (amount <= 0) return;
+  }
+}
+
+function getStockTotal(id) {
+  let total = 0;
+  for (const storage of getStorages()) total += storage.contents[id] || 0;
+  return total;
+}
+
+const stock = new Proxy({}, {
+  get: (_, id) => (typeof id === 'string' ? getStockTotal(id) : undefined),
+  set: (_, id, value) => {
+    const delta = Number(value) - getStockTotal(id);
+    if (delta > 0) depositAnywhere(id, delta);
+    else if (delta < 0) withdrawAnywhere(id, -delta);
+    return true;
+  },
+  has: (_, id) => id in GAME_CONFIG.resources,
+  ownKeys: () => Object.keys(GAME_CONFIG.resources),
+  getOwnPropertyDescriptor: (_, id) => (id in GAME_CONFIG.resources
+    ? { value: getStockTotal(id), writable: true, enumerable: true, configurable: true } : undefined)
+});
 
 function showNotification(msg, isWarning = true) {
   const toastDiv = document.getElementById('toast-notification');

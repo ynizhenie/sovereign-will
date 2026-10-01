@@ -1,4 +1,5 @@
 const WAVE_WARNING_SECONDS = 15;
+let storageWasFull = false; // to warn once when every storage fills up (#36)
 
 function update(dt) {
   if (!gameStarted || isPaused || gameMode === 'editor') return;
@@ -198,6 +199,8 @@ function update(dt) {
 
   // settler AI: see behaviours.js
   const settlerTick = createSettlerTick(dt);
+  if (settlerTick.storageFull && !storageWasFull && gameMode === 'endless') showNotification(t('storage.full'), true);
+  storageWasFull = settlerTick.storageFull;
   assignTowerArchers();
 
   settlers.forEach(s => {
@@ -205,7 +208,7 @@ function update(dt) {
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (behaviour(s, settlerTick)) {
-        s.isIdle = behaviour === patrol;
+        s.isIdle = behaviour === patrol || behaviour === restWhenStorageFull;
         return;
       }
     }
@@ -404,18 +407,12 @@ function update(dt) {
     if (touchingBuilding) {
       if (touchingBuilding.type === 'tent') {
         touchingBuilding.hp -= dt * enemyDef.siege.buildings;
-        if (touchingBuilding.hp <= 0) {
-          buildings.splice(buildings.indexOf(touchingBuilding), 1);
-          invalidateAllPaths();
-        }
+        if (touchingBuilding.hp <= 0) removeBuilding(touchingBuilding);
       } else if (en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes)) {
         // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
         // way in over spikes squeezes past the walls beside them
         touchingBuilding.hp -= dt * enemyDef.siege.buildings;
-        if (touchingBuilding.hp <= 0) {
-          buildings.splice(buildings.indexOf(touchingBuilding), 1);
-          invalidateAllPaths();
-        }
+        if (touchingBuilding.hp <= 0) removeBuilding(touchingBuilding);
       } else {
         let dx = en.x - touchingBuilding.x;
         let dy = en.y - touchingBuilding.y;
