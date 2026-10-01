@@ -11,7 +11,7 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   const errors = await openFresh(page);
   const home = page.locator('[data-screen="home"]');
   await expect(home).toBeVisible();
-  await expect(page.locator('#mode-battles')).toBeDisabled();
+  await expect(page.locator('#mode-battles')).toBeEnabled(); // #38
   await expect(page.locator('#mode-editor')).toBeDisabled();
   await expect(page.locator('#exit-app')).toBeHidden(); // a browser tab can't close itself
   await page.click('#mode-endless');
