@@ -649,7 +649,7 @@ function resetGame(map = gameMode === 'endless' ? customMap : null) {
   addResources(GAME_CONFIG.start.resources);
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   setWorldSize((map || mapSettings).cols, (map || mapSettings).rows);
-  townHall.hp = townHall.maxHp;
+  townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable (#135)
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
   projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; dung = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];

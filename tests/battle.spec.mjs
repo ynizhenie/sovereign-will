@@ -90,3 +90,15 @@ test('in a battle the unarmed fight instead of running off to shelter (#38)', as
   });
   expect(r).toEqual({ insideField: true, nearFight: true });
 });
+
+test('after a battle, Endless starts with a normal town hall (#135)', async ({ page }) => {
+  await openGame(page);
+  const r = await page.evaluate(() => {
+    startBattleMode();
+    leaveBattleMode();
+    showMenuScreen('endless');
+    document.getElementById('play-button').click();
+    return { hp: townHall.hp, maxHp: townHall.maxHp, inWorld: townHall.x > 0 && townHall.x < WORLD_WIDTH };
+  });
+  expect(r).toEqual({ hp: 100, maxHp: 100, inWorld: true });
+});

@@ -80,7 +80,8 @@ let buildMode = 'interact';
 let isPaused = false;
 let selectedSettler = null;
 
-const townHall = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, radius: 32, hp: 100, maxHp: 100, repairRequested: false };
+const TOWN_HALL_HP = 100;
+const townHall = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
 
 const WORLD = {
   settlers: [],
