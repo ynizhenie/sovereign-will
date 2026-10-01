@@ -161,6 +161,25 @@ function bleed(unit, attacker) {
   if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
 }
 
+// Stepping in a pool of blood or in dung: the unit then leaves footprints for a few steps. Footprints
+// themselves don't smear further. Whoever left the dung can't step in it until it has walked off first.
+function trackFootprints(unit) {
+  for (const pile of dung) {
+    if (pile.by === unit && !pile.byLeft && Math.hypot(unit.x - pile.x, unit.y - pile.y) > 20) pile.byLeft = true;
+  }
+  if (!unit.smear || unit.smear.steps <= 0) {
+    const pool = bloodSplats.find(b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4);
+    const pile = dung.find(p => (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9);
+    if (pool || pile) unit.smear = { color: pile ? 'dung' : 'blood', steps: GAME_CONFIG.smears.steps, x: unit.x, y: unit.y };
+    return;
+  }
+  if (Math.hypot(unit.x - unit.smear.x, unit.y - unit.smear.y) < GAME_CONFIG.smears.stepGap) return;
+  unit.smear.x = unit.x; unit.smear.y = unit.y;
+  unit.smear.steps--;
+  bloodSplats.push({ x: unit.x, y: unit.y, r: 2.2, age: 0, kind: 'trail', color: unit.smear.color });
+  if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
+}
+
 // How visible the blood on a unit's body is: it doesn't dry while the unit is badly wounded
 function bodyBloodAlpha(unit) {
   if (unit.bloodAge === undefined) return 0;

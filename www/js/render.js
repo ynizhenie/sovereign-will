@@ -608,10 +608,22 @@ function render() {
     }
   });
 
-  // blood on the ground
+  // blood on the ground, and footprints out of blood or dung
   bloodSplats.forEach(b => {
-    ctx.fillStyle = `rgba(100, 0, 0, ${0.55 * bloodAlpha(b.age)})`;
+    const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
+    ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
     ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r * 1.3, b.r, 0, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // dung: a small brown pile, fading over its last 10 s
+  dung.forEach(p => {
+    ctx.globalAlpha = Math.max(0, Math.min(1, (GAME_CONFIG.relief.dungSeconds - p.age) / 10));
+    ctx.fillStyle = '#5c3d16';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6e4a1c';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y - 1, 4, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(p.x + 0.5, p.y - 3.5, 2, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
   });
 
   // corpses: grey, fading out over their last 10 seconds

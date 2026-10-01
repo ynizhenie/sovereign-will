@@ -551,6 +551,52 @@ function clearEnemyTents(s, tick) {
   return false;
 }
 
+// ---- Relief (#124)
+
+// A settler that needs to go (see the meals in update) walks off to a quiet spot away from the buildings,
+// near grass if there's some, waits a moment and leaves dung there
+function relieve(s, tick) {
+  if (!s.needsRelief || s.isPossessed || tick.isWaveActive || s.towerAssignment) return false;
+  const relief = GAME_CONFIG.relief;
+  if (!s.reliefSpot) s.reliefSpot = findReliefSpot(s);
+  const spot = s.reliefSpot;
+  s.patrolTarget = null;
+  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 12) {
+    moveEntityTowards(s, spot.x, spot.y, s.speed, false, tick.dt);
+    s.reliefTimer = 0;
+    return true;
+  }
+  s.reliefTimer = (s.reliefTimer || 0) + tick.dt;
+  if (s.reliefTimer >= relief.seconds) {
+    dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false });
+    s.needsRelief = false; s.meals = 0; s.reliefSpot = null; s.reliefTimer = 0;
+  }
+  return true;
+}
+
+// The nearest spot the settler can walk to that's far enough from every building (and the town hall):
+// grass first, then any free tile; where it stands if there's none
+function findReliefSpot(s) {
+  const minDist = GAME_CONFIG.relief.awayFromBuildings * TILE_SIZE;
+  const away = p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist + townHall.radius &&
+    buildings.every(b => Math.hypot(p.x - b.x, p.y - b.y) >= minDist);
+  const reach = getSettlerReach(s);
+  const reachable = p => { const g = getGridPos(p.x, p.y); return getReachSteps(reach, g.gx, g.gy) !== -1; };
+  const nearest = list => list.filter(p => away(p) && reachable(p))
+    .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+  // beside a grass tuft, not on it
+  const byGrass = nearest(grassList.map(g => ({ x: g.x + TILE_SIZE, y: g.y })).filter(p => !isTileOccupied(p.x, p.y)));
+  if (byGrass) return byGrass;
+  const tiles = [];
+  for (let gy = BORDER_MARGIN; gy < ROWS - BORDER_MARGIN; gy += 2) {
+    for (let gx = BORDER_MARGIN; gx < COLS - BORDER_MARGIN; gx += 2) {
+      const p = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+      if (!isTileOccupied(p.x, p.y)) tiles.push(p);
+    }
+  }
+  return nearest(tiles) || { x: s.x, y: s.y };
+}
+
 // ---- Work
 
 // Build (or demolish) the nearest blueprint that has fewer than 3 builders
@@ -1166,6 +1212,7 @@ const SETTLER_BEHAVIOURS = [
   fightEnemies,
   breakOutOfSealedBase,
   clearEnemyTents,
+  relieve,
   build,
   collectWorms,
   fish,
