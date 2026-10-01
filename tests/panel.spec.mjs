@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.mjs';
+import { openGame, iconText } from './helpers.mjs';
 
 test('opening a resource group does not change the panel size (#119)', async ({ page }) => {
   await openGame(page);
@@ -16,8 +16,9 @@ test('opening a resource group does not change the panel size (#119)', async ({ 
 test('wood and stone always show; worms are raw food and get eaten when food runs out (#119)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await expect(page.locator('#resources-hud > div', { hasText: '🪵 Дерево:' })).toHaveCount(1);
-  await expect(page.locator('#resources-hud > div', { hasText: '🪨 Камень:' })).toHaveCount(1);
+  const tiles = await iconText(page, '#resources-hud > div');
+  expect(tiles.filter(text => text.startsWith('[[wood]] Дерево:'))).toHaveLength(1);
+  expect(tiles.filter(text => text.startsWith('[[stone]] Камень:'))).toHaveLength(1);
   const r = await page.evaluate(() => {
     stock.food = 1; stock.worms = 5;
     foodTimer = 0.001;
@@ -50,6 +51,6 @@ test('armour/shield and backpack/watering can sit in their own block; removing s
   await openGame(page);
   await expect(page.locator('#tab-weapons .gear-actions button')).toHaveCount(2);
   await expect(page.locator('#tab-tools .gear-actions button')).toHaveCount(2);
-  await expect(page.locator('#tab-tools .action-row button').first()).toHaveText('❌ Разобрать рюкзак');
-  await expect(page.locator('#tab-weapons .action-row button').first()).toHaveText('❌ Разобрать броню');
+  expect((await iconText(page, '#tab-tools .action-row button'))[0]).toBe('[[no]] Разобрать рюкзак');
+  expect((await iconText(page, '#tab-weapons .action-row button'))[0]).toBe('[[no]] Разобрать броню');
 });

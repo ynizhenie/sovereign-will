@@ -523,7 +523,7 @@ window.sim = (() => {
   // A resource that exists only in GAME_CONFIG: a worker picks up a pebble that yields it and brings it
   // home, then it pays for a tool. Returns the stock of it after each step.
   function configOnlyResource({ seed = 'config-resource-test' }) {
-    GAME_CONFIG.resources.flint = { id: 'flint', label: 'Кремень', icon: '🔸', type: 'resource' };
+    GAME_CONFIG.resources.flint = { id: 'flint', label: 'Кремень', icon: 'pebble', type: 'resource' };
     GAME_CONFIG.mapResources.pebble.yield = { flint: 2 };
     GAME_CONFIG.tools.axe.cost = { flint: 2 };
     start(seed);

@@ -82,7 +82,7 @@ function createConfigButton(item, action) {
   const button = document.createElement('button');
   button.className = 'btn';
   button.id = `btn-${item.id}`;
-  button.innerText = `${item.icon || ''} ${item.label} (${formatCost(item.cost || {})})`;
+  setRichText(button, `${item.icon ? `[[${item.icon}]]` : ''} ${item.label} (${formatCost(item.cost || {})})`);
   button.addEventListener('click', () => action(item.id));
   return button;
 }
@@ -103,19 +103,19 @@ function renderConfigHud() {
   const resourcesHud = document.getElementById('resources-hud');
   if (resourcesHud) {
     const base = document.createElement('div');
-    base.innerHTML = `🏛️ ${t('hud.base')}: <b id="base-hp-txt" style="color: #e74c3c;">100/100</b>`;
+    base.innerHTML = `${iconHtml('hall')} ${escapeHtml(t('hud.base'))}: <b id="base-hp-txt" style="color: #e74c3c;">100/100</b>`;
     resourcesHud.appendChild(base);
 
     const population = document.createElement('div');
     population.className = 'population-tile';
-    population.innerHTML = `👨‍🌾 ${t('hud.people')}: <b id="pop-txt" style="color: #2ecc71;">2/5</b> <span style="font-size: 0.9em; opacity: 0.85;">(👨‍🌾 <b id="workers-cnt">0</b> | ⚔️ <b id="warriors-cnt">0</b>)</span>`;
+    population.innerHTML = `${iconHtml('worker')} ${escapeHtml(t('hud.people'))}: <b id="pop-txt" style="color: #2ecc71;">2/5</b> <span style="font-size: 0.9em; opacity: 0.85;">(${iconHtml('worker')} <b id="workers-cnt">0</b> | ${iconHtml('swords')} <b id="warriors-cnt">0</b>)</span>`;
     resourcesHud.appendChild(population);
 
     // resources by group (GAME_CONFIG.resourceGroups): a tile with the group's total; tapping it opens a
     // row with each resource in it, underneath the tiles
     const resourceTile = (resource, parent) => {
       const item = document.createElement('div');
-      item.innerHTML = `${resource.icon || ''} ${resource.label}: <b id="${resourceHudId(resource.id)}">0</b>`;
+      item.innerHTML = `${resource.icon ? iconHtml(resource.icon) : ''} ${escapeHtml(resource.label)}: <b id="${resourceHudId(resource.id)}">0</b>`;
       parent.appendChild(item);
     };
     const details = document.createElement('div');
@@ -131,7 +131,7 @@ function renderConfigHud() {
         const tile = document.createElement('div');
         tile.className = 'resource-group';
         tile.id = `group-${group.id}`;
-        tile.innerHTML = `${resource.icon || ''} ${resource.label}: <b id="${resourceHudId(resource.id)}">0</b> ▾`;
+        tile.innerHTML = `${resource.icon ? iconHtml(resource.icon) : ''} ${escapeHtml(resource.label)}: <b id="${resourceHudId(resource.id)}">0</b> ▾`;
         resourcesHud.appendChild(tile);
         const row = document.createElement('div');
         row.className = 'resource-group-members';
@@ -139,7 +139,7 @@ function renderConfigHud() {
         row.hidden = true;
         for (const kind of Object.values(GAME_CONFIG[group.kinds])) {
           const item = document.createElement('div');
-          item.innerHTML = `${kind.icon} ${kind.label}: <b id="food-kind-${kind.id}-txt">0</b>`;
+          item.innerHTML = `${iconHtml(kind.icon)} ${escapeHtml(kind.label)}: <b id="food-kind-${kind.id}-txt">0</b>`;
           row.appendChild(item);
         }
         details.appendChild(row);
@@ -151,7 +151,7 @@ function renderConfigHud() {
         const tile = document.createElement('div');
         tile.className = 'resource-group';
         tile.id = `group-${group.id}`;
-        tile.innerHTML = `${group.icon} ${group.label}: <b id="group-${group.id}-txt">0</b> ▾`;
+        tile.innerHTML = `${iconHtml(group.icon)} ${escapeHtml(group.label)}: <b id="group-${group.id}-txt">0</b> ▾`;
         resourcesHud.appendChild(tile);
         const row = document.createElement('div');
         row.className = 'resource-group-members';
@@ -160,7 +160,7 @@ function renderConfigHud() {
         for (const [category, id] of getHeldItems(group)) {
           const item = GAME_CONFIG[category][id];
           const cell = document.createElement('div');
-          cell.innerHTML = `${item.icon || ''} ${item.label}: <b id="held-${category}-${id}-txt">0</b>`;
+          cell.innerHTML = `${item.icon ? iconHtml(item.icon) : ''} ${escapeHtml(item.label)}: <b id="held-${category}-${id}-txt">0</b>`;
           row.appendChild(cell);
         }
         details.appendChild(row);
@@ -170,7 +170,7 @@ function renderConfigHud() {
       const tile = document.createElement('div');
       tile.className = 'resource-group';
       tile.id = `group-${group.id}`;
-      tile.innerHTML = `${group.icon} ${group.label}: <b id="group-${group.id}-txt">0</b> ▾`;
+      tile.innerHTML = `${iconHtml(group.icon)} ${escapeHtml(group.label)}: <b id="group-${group.id}-txt">0</b> ▾`;
       resourcesHud.appendChild(tile);
       const row = document.createElement('div');
       row.className = 'resource-group-members';
@@ -195,14 +195,14 @@ function renderConfigHud() {
   });
 
   // hire / upgrade / craft buttons in index.html get their text from the config
-  const label = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+  const label = (id, text) => { const el = document.getElementById(id); if (el) setRichText(el, text); };
   const types = GAME_CONFIG.settlerTypes, recipes = GAME_CONFIG.recipes;
-  label('btn-hire-normal', `${types.normal.icon} ${types.normal.label} (${formatCost(types.normal.hireCost)})`);
-  label('btn-hire-big', `${types.big.icon} ${types.big.label} (${formatCost(types.big.hireCost)})`);
+  label('btn-hire-normal', `[[${types.normal.icon}]] ${types.normal.label} (${formatCost(types.normal.hireCost)})`);
+  label('btn-hire-big', `[[${types.big.icon}]] ${types.big.label} (${formatCost(types.big.hireCost)})`);
   label('btn-upgrade', t('btn.upgrade', { icon: types.big.icon, cost: formatCost(types.big.upgradeCost) }));
   label('btn-upgrade-big', t('btn.upgradeWorker', { icon: types.big.icon, cost: formatCost(types.big.upgradeCost) }));
-  label('btn-craft-arrows', `${recipes.arrows.icon} ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
-  for (const item of Object.values(GAME_CONFIG.gear)) label(`btn-${item.id}`, `${item.icon} ${item.label} (${formatCost(item.cost)})`);
+  label('btn-craft-arrows', `[[${recipes.arrows.icon}]] ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
+  for (const item of Object.values(GAME_CONFIG.gear)) label(`btn-${item.id}`, `[[${item.icon}]] ${item.label} (${formatCost(item.cost)})`);
 
 
   const weaponActions = document.getElementById('weapon-actions');
@@ -265,7 +265,7 @@ function getMapRange(key, fallbackMin, fallbackMax) {
 
 function getResourceIcon(resourceKey) {
   const resource = GAME_CONFIG.resources[resourceKey];
-  return resource ? resource.icon : resourceKey;
+  return resource ? `[[${resource.icon}]]` : resourceKey;
 }
 
 function formatCost(cost = {}) {

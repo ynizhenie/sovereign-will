@@ -2,7 +2,7 @@
 // Thresholds come from measurements after the pathfinding fixes (#1, #2); a failure here usually means
 // enemies or settlers got stuck again, or a change made the simulation much slower.
 import { test, expect } from '@playwright/test';
-import { openGame, sim } from './helpers.mjs';
+import { openGame, sim, iconText } from './helpers.mjs';
 
 // Rock-heavy seeds: large natural rock masses with narrow corridors
 const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
@@ -72,11 +72,11 @@ test('the defeat screen restart button works with the camera moved and zoomed (#
 
 test('hire, upgrade and craft buttons show their cost from the config (#45)', async ({ page }) => {
   await openGame(page);
-  await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Рабочий (15🍞)');
-  await expect(page.locator('#btn-hire-big')).toHaveText('🧌 Богатырь (30🍞 15🪵)');
-  await expect(page.locator('#btn-upgrade')).toHaveText('🧌 Улучшить (15🍞 15🪵)');
-  await expect(page.locator('#btn-craft-arrows')).toHaveText('🏹 Стрелы (3🪵 1🪨 → 6)');
-  await expect(page.locator('#btn-armor')).toHaveText('🛡️ Броня (8🔩)');
+  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Рабочий (15[[food]])']);
+  await expect.poll(() => iconText(page, '#btn-hire-big')).toEqual(['[[giant]] Богатырь (30[[food]] 15[[wood]])']);
+  await expect.poll(() => iconText(page, '#btn-upgrade')).toEqual(['[[giant]] Улучшить (15[[food]] 15[[wood]])']);
+  await expect.poll(() => iconText(page, '#btn-craft-arrows')).toEqual(['[[arrows]] Стрелы (3[[wood]] 1[[stone]] → 6)']);
+  await expect.poll(() => iconText(page, '#btn-armor')).toEqual(['[[armor]] Броня (8[[iron]])']);
   // change a price in the config and the button follows
   await page.evaluate(() => {
     GAME_CONFIG.settlerTypes.normal.hireCost = { food: 20, wood: 2 };
@@ -86,7 +86,7 @@ test('hire, upgrade and craft buttons show their cost from the config (#45)', as
     document.getElementById('resources-hud').innerHTML = '';
     renderConfigHud();
   });
-  await expect(page.locator('#btn-hire-normal')).toHaveText('👨‍🌾 Рабочий (20🍞 2🪵)');
+  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Рабочий (20[[food]] 2[[wood]])']);
 });
 
 test('the same seed generates the same map', async ({ page }) => {
@@ -329,7 +329,7 @@ test('a resource added only in GAME_CONFIG is gathered, stocked and spent (#45)'
 
 test('wheat and saplings are planted from the Farming tab (#64)', async ({ page }) => {
   await openGame(page);
-  await expect(page.locator('#farming-actions button')).toHaveText(['🌾 Пшеница (1🌾)', '🌱 Саженец (1🌱)', '🍎 Саженец яблони (1🍎)']);
+  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[wheat]] Пшеница (1[[wheatSeeds]])', '[[saplings]] Саженец (1[[saplings]])', '[[appleSaplings]] Саженец яблони (1[[appleSaplings]])']);
   await expect(page.locator('#build-actions #btn-wheat')).toHaveCount(0);
   await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
   // picking a crop in the Farming tab switches to placing it

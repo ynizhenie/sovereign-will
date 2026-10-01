@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.mjs';
+import { openGame, iconText } from './helpers.mjs';
 
 test('a shield cuts the damage a melee soldier takes, on top of armour (#27)', async ({ page }) => {
   await openGame(page);
@@ -34,12 +34,12 @@ test('the shield button equips a melee soldier; disarming gives the shield back 
     selectedSettler = null;
     document.getElementById('btn-shield').click();
     window.sim.run(5); // walks to the town hall for it
-    const out = { archer: !!settlers[0].shield, soldier: !!settlers[1].shield, wood: stock.wood, iron: stock.iron,
-      label: document.getElementById('btn-shield').innerText };
+    const out = { archer: !!settlers[0].shield, soldier: !!settlers[1].shield, wood: stock.wood, iron: stock.iron };
     selectedSettler = settlers[1];
     disarmSettler('weapon');
     window.sim.run(5);
     return { ...out, afterDisarm: !!settlers[1].shield, ironBack: stock.iron };
   });
-  expect(r).toMatchObject({ archer: false, soldier: true, wood: 4, iron: 3, label: '🔰 Щит (6🪵 2🔩)', afterDisarm: false, ironBack: 5 });
+  expect(r).toMatchObject({ archer: false, soldier: true, wood: 4, iron: 3, afterDisarm: false, ironBack: 5 });
+  await expect.poll(() => iconText(page, '#btn-shield')).toEqual(['[[shield]] Щит (6[[wood]] 2[[iron]])']);
 });

@@ -20,7 +20,7 @@ test('without the right tool a tapped resource is refused (#16)', async ({ page 
   const r = await sim(page, 'possessChopAndDeliver', { tool: 'pickaxe' });
   expect(r.ordered).toBe(false);
   expect(r.treeGone).toBe(false);
-  expect(r.notes).toContain('❌ Нужен топор');
+  expect(r.notes).toContain('[[no]] Нужен топор');
 });
 
 test('tapping an enemy sends the possessed soldier to fight it to the end (#16)', async ({ page }) => {
