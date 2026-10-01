@@ -672,3 +672,66 @@ canvas {
 #seed-reroll:active {
   border-color: #46b8da;
 }
+
+/* map generator screen (#20) */
+.menu-gear {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #252830;
+  border: 1px solid #353a46;
+  border-radius: 6px;
+  font-size: 16px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.main-menu-content {
+  position: relative;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.generator-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  font-size: 12px;
+}
+.generator-fields h2 {
+  font-size: 12px;
+  color: #8a91a0;
+  text-transform: uppercase;
+  margin: 8px 0 2px;
+}
+.generator-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.generator-field input {
+  width: 52px;
+  padding: 4px;
+  background: #111318;
+  border: 1px solid #353a46;
+  border-radius: 4px;
+  color: #fff;
+  text-align: center;
+}
+.preset-row {
+  display: flex;
+  gap: 6px;
+}
+.preset-row input {
+  flex: 1;
+  width: auto;
+}
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.preset-list span {
+  display: inline-flex;
+  gap: 2px;
+}
