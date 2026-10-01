@@ -1,7 +1,7 @@
 const WAVE_WARNING_SECONDS = 15;
 
 function update(dt) {
-  if (!gameStarted || isPaused) return;
+  if (!gameStarted || isPaused || gameMode === 'editor') return;
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (gameMode === 'battle') {
     updateBattle(dt);

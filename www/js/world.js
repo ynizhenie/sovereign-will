@@ -642,18 +642,20 @@ function placeBeaches() {
   }
 }
 
-function resetGame() {
+// map: a saved map (editor.js) to play instead of generating one; Endless plays the one chosen in its menu
+function resetGame(map = gameMode === 'endless' ? customMap : null) {
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
-  setWorldSize(mapSettings.cols, mapSettings.rows);
+  setWorldSize((map || mapSettings).cols, (map || mapSettings).rows);
   townHall.hp = townHall.maxHp;
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
   projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; dung = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
-  generateMap();
+  if (map) loadCustomMap(map);
+  else generateMap();
   resetTileIndex();
   updateSeedHud();
 
