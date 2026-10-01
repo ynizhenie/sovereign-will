@@ -21,7 +21,7 @@ const LANGUAGES = {
       weapons: { fist: 'Fist', club: 'Club', sword: 'Sword', spear: 'Spear', iron_sword: 'Iron sword', iron_spear: 'Iron spear', bow: 'Bow' },
       buildings: {
         wall_wood: 'Wooden wall', wall_stone: 'Stone wall', spikes: 'Spikes', door: 'Door', tent: 'Tent', campfire: 'Campfire',
-        smelter: 'Smelter', watchtower: 'Watchtower', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
+        smelter: 'Smelter', watchtower: 'Watchtower', warehouse: 'Warehouse', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
       },
       enemies: { raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer' },
       settlerTypes: { normal: 'Worker', big: 'Giant' },
@@ -36,7 +36,7 @@ const LANGUAGES = {
       'pause.title': 'Paused', 'pause.continue': 'Continue', 'pause.exit': 'Exit to main menu',
       'pause.resumeHint': 'Continue [Space]', 'pause.pauseHint': 'Pause [Space]',
       'top.wave': 'Wave', 'top.seconds': 's', 'top.zoomIn': 'Zoom in', 'top.zoomOut': 'Zoom out', 'top.point': 'Point',
-      'hud.selected': 'Selected:', 'hud.nobody': 'Nobody', 'hud.base': 'Base', 'hud.people': 'Settlers',
+      'hud.selected': 'Selected:', 'hud.nobody': 'Nobody', 'hud.base': 'Base', 'storage.hall': 'Town hall', 'storage.fill': 'Filled: {n}/{max}', 'storage.empty': 'Empty', 'storage.full': '[[warn]] Storage is full: build a warehouse', 'hud.people': 'Settlers',
       'hud.ironArmor': 'Iron armour', 'hud.quiver': 'Quiver {n}/12',
       'tab.build': '[[build]] Building', 'tab.farming': '[[wheat]] Farming', 'tab.tools': '[[tools]] Tools', 'tab.weapons': '[[swords]] Weapons',
       'btn.demolish': '[[hammer]] Demolish', 'btn.repairAll': '[[tools]] Repair all', 'btn.zoneWheat': '[[zone_wheat]] Wheat zone', 'btn.zoneSapling': '[[zone_sapling]] Sapling zone',
@@ -92,7 +92,7 @@ const LANGUAGES = {
       weapons: { fist: 'Кулак', club: 'Кийок', sword: 'Меч', spear: 'Спис', iron_sword: 'Залізний меч', iron_spear: 'Залізний спис', bow: 'Лук' },
       buildings: {
         wall_wood: 'Дерев\'яна стіна', wall_stone: 'Кам\'яна стіна', spikes: 'Шипи', door: 'Двері', tent: 'Намет', campfire: 'Багаття',
-        smelter: 'Плавильня', watchtower: 'Сторожова вежа', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
+        smelter: 'Плавильня', watchtower: 'Сторожова вежа', warehouse: 'Склад', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
       },
       enemies: { raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник' },
       settlerTypes: { normal: 'Робітник', big: 'Богатир' },
@@ -107,7 +107,7 @@ const LANGUAGES = {
       'pause.title': 'Пауза', 'pause.continue': 'Продовжити', 'pause.exit': 'Вийти в головне меню',
       'pause.resumeHint': 'Продовжити [Space]', 'pause.pauseHint': 'Пауза [Space]',
       'top.wave': 'Хвиля', 'top.seconds': 'с', 'top.zoomIn': 'Наблизити', 'top.zoomOut': 'Віддалити', 'top.point': 'Вказати',
-      'hud.selected': 'Обрано:', 'hud.nobody': 'Ніхто', 'hud.base': 'База', 'hud.people': 'Жителі',
+      'hud.selected': 'Обрано:', 'hud.nobody': 'Ніхто', 'hud.base': 'База', 'storage.hall': 'Ратуша', 'storage.fill': 'Заповнено: {n}/{max}', 'storage.empty': 'Порожньо', 'storage.full': '[[warn]] Сховища заповнені: збудуйте склад', 'hud.people': 'Жителі',
       'hud.ironArmor': 'Залізна броня', 'hud.quiver': 'Сагайдак {n}/12',
       'tab.build': '[[build]] Будівництво', 'tab.farming': '[[wheat]] Фермерство', 'tab.tools': '[[tools]] Інструменти', 'tab.weapons': '[[swords]] Зброя',
       'btn.demolish': '[[hammer]] Знести', 'btn.repairAll': '[[tools]] Полагодити все', 'btn.zoneWheat': '[[zone_wheat]] Зона пшениці', 'btn.zoneSapling': '[[zone_sapling]] Зона саджанців',
@@ -163,7 +163,7 @@ const LANGUAGES = {
       weapons: { fist: 'Кулак', club: 'Дубина', sword: 'Меч', spear: 'Копье', iron_sword: 'Железный меч', iron_spear: 'Железное копье', bow: 'Лук' },
       buildings: {
         wall_wood: 'Деревянная стена', wall_stone: 'Каменная стена', spikes: 'Шипы', door: 'Дверь', tent: 'Палатка', campfire: 'Костёр',
-        smelter: 'Плавильня', watchtower: 'Сторожевая башня', wheat: 'Пшеница', sapling: 'Саженец', apple_sapling: 'Саженец яблони'
+        smelter: 'Плавильня', watchtower: 'Сторожевая башня', warehouse: 'Склад', wheat: 'Пшеница', sapling: 'Саженец', apple_sapling: 'Саженец яблони'
       },
       enemies: { raider_club: 'Дикарь', raider: 'Разбойник', brute: 'Громила', raider_archer: 'Лучник' },
       settlerTypes: { normal: 'Рабочий', big: 'Богатырь' },
@@ -178,7 +178,7 @@ const LANGUAGES = {
       'pause.title': 'Пауза', 'pause.continue': 'Продолжить', 'pause.exit': 'Выйти в главное меню',
       'pause.resumeHint': 'Продолжить [Space]', 'pause.pauseHint': 'Пауза [Space]',
       'top.wave': 'Волна', 'top.seconds': 'с', 'top.zoomIn': 'Приблизить', 'top.zoomOut': 'Отдалить', 'top.point': 'Указать',
-      'hud.selected': 'Выбран:', 'hud.nobody': 'Никто', 'hud.base': 'База', 'hud.people': 'Жители',
+      'hud.selected': 'Выбран:', 'hud.nobody': 'Никто', 'hud.base': 'База', 'storage.hall': 'Ратуша', 'storage.fill': 'Заполнено: {n}/{max}', 'storage.empty': 'Пусто', 'storage.full': '[[warn]] Хранилища заполнены: постройте склад', 'hud.people': 'Жители',
       'hud.ironArmor': 'Железная броня', 'hud.quiver': 'Колчан {n}/12',
       'tab.build': '[[build]] Строительство', 'tab.farming': '[[wheat]] Фермерство', 'tab.tools': '[[tools]] Инструменты', 'tab.weapons': '[[swords]] Оружие',
       'btn.demolish': '[[hammer]] Снести', 'btn.repairAll': '[[tools]] Починить всё', 'btn.zoneWheat': '[[zone_wheat]] Зона пшеницы', 'btn.zoneSapling': '[[zone_sapling]] Зона саженцев',

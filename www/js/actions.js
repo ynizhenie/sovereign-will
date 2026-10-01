@@ -4,12 +4,26 @@ function getFishingBait() {
   return GAME_CONFIG.fishing.bait.find(bait => canAfford(bait)) || null;
 }
 
-function takeFishingBait(s) {
-  const bait = getFishingBait();
-  if (s.tool === 'rod' && !s.bait && bait) {
-    payCost(bait);
-    s.bait = true;
-  }
+// A fisher at a storage takes one bait from it, if it has any (worms first)
+function takeFishingBait(s, storage) {
+  if (s.tool !== 'rod' || s.bait) return;
+  const bait = GAME_CONFIG.fishing.bait.find(b => hasInStorage(storage, b));
+  if (!bait) return;
+  for (const [id, amount] of Object.entries(bait)) takeFrom(storage, id, amount);
+  s.bait = true;
+}
+
+function hasInStorage(storage, amounts) {
+  return Object.entries(amounts).every(([id, amount]) => (storage.contents[id] || 0) >= amount);
+}
+
+// Walk to the nearest storage with bait and take one; false if no storage has any
+function fetchBait(s, dt) {
+  const storage = findStorage(s, st => GAME_CONFIG.fishing.bait.some(b => hasInStorage(st, b)));
+  if (!storage) return false;
+  if (isAtStorage(s, storage)) takeFishingBait(s, storage);
+  else walkToStorage(s, storage, dt);
+  return true;
 }
 
 function giveResourceToSettler(s, type, amount) {
@@ -253,6 +267,9 @@ function orderPossessed(p, x, y) {
   const boar = boars.find(b => near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p));
   if (boar) return order('hunt', boar);
 
+  // a storage: hand in what it carries (#36)
+  const warehouse = buildings.find(b => b.contents && near(b, 18));
+  if (warehouse && p.carrying) return order('deliver', warehouse);
   if (near(townHall, townHall.radius + 10)) {
     if (p.carrying) return order('deliver', townHall);
     if (townHall.hp < townHall.maxHp) return order('repairHall', townHall);
@@ -355,11 +372,15 @@ function handleCanvasClick() {
       townHall.repairRequested = !townHall.repairRequested;
       return;
     }
+    if (buildMode === 'interact') { showStoragePopup(townHall); return; }
   }
 
   if (buildMode === 'interact') {
     const damaged = buildings.find(b => b.x === gx && b.y === gy && b.hp < b.maxHp);
     if (damaged && toggleBuildingRepair(damaged)) return;
+    // what a warehouse holds (#36)
+    const warehouse = buildings.find(b => b.x === gx && b.y === gy && b.contents);
+    if (warehouse) { showStoragePopup(warehouse); return; }
   }
 
   // Farming tab: paint (or clear) farm zone tiles
@@ -415,10 +436,12 @@ function handleCanvasClick() {
   } else if (getDefinition('buildings', buildMode)) {
     const building = getDefinition('buildings', buildMode);
     if (!canBuild(buildMode)) {
-      showCostError(building.cost || {}, t('cost.needs', { name: building.label }));
+      showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
     } else if (isBuildLocationAllowed(gx, gy)) {
-      blueprints.push(createBuildingBlueprint(buildMode, gx, gy));
-      payBuildingCost(buildMode);
+      // its cost stays in storage until builders bring it (#36)
+      const bp = createBuildingBlueprint(buildMode, gx, gy);
+      bp.needs = { ...(building.cost || {}) };
+      blueprints.push(bp);
     }
   } else if (buildMode === 'demolish') {
     let targetBuilding = buildings.find(b => Math.abs(b.x - gx) < 15 && Math.abs(b.y - gy) < 15);
@@ -433,6 +456,11 @@ function handleCanvasClick() {
     if (targetBp) {
       if (targetBp.type === 'demolish_building' && targetBp.targetBuilding) {
         targetBp.targetBuilding.isDemolishing = false;
+      }
+      // materials already brought go back to storage
+      const building = getDefinition('buildings', targetBp.type);
+      if (building && targetBp.needs) {
+        addResources(Object.fromEntries(Object.entries(building.cost || {}).map(([id, amount]) => [id, amount - (targetBp.needs[id] || 0)])));
       }
       blueprints.splice(blueprints.indexOf(targetBp), 1);
       return;

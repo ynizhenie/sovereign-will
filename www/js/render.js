@@ -481,8 +481,21 @@ function render() {
     else if (bp.type === 'smelter') ctx.fillStyle = '#c0392b';
     else if (bp.type === 'watchtower') ctx.fillStyle = '#607d8b';
     else if (bp.type === 'sapling') ctx.fillStyle = '#2ecc71';
+    else if (bp.type === 'warehouse') ctx.fillStyle = '#a47148';
     ctx.fillRect(bp.x - 14, bp.y - 14, 28, 28);
     ctx.restore();
+
+    // materials still to be brought from storage (#36): an orange bar of what's here
+    const cost = (getDefinition('buildings', bp.type) || {}).cost;
+    if (bp.needs && cost) {
+      const total = Object.values(cost).reduce((a, b) => a + b, 0);
+      const missing = Object.values(bp.needs).reduce((a, b) => a + b, 0);
+      if (missing > 0 && total > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bp.x - 12, bp.y + 11, 24, 3);
+        ctx.fillStyle = '#e67e22'; ctx.fillRect(bp.x - 12, bp.y + 11, 24 * (1 - missing / total), 3);
+        drawIcon(ctx, getResourceIconName(Object.keys(bp.needs)[0]), bp.x, bp.y, 14);
+      }
+    }
 
     if (bp.type === 'demolish_building') {
       drawIcon(ctx, 'hammer', bp.x, bp.y, 16);
@@ -549,6 +562,12 @@ function render() {
         ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(b.x - 6, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 16, b.x + 6, b.y + 4); ctx.fill();
         ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
       }
+    } else if (b.type === 'warehouse') {
+      // a wooden shed, and how full it is (#36)
+      drawIcon(ctx, 'warehouse', b.x, b.y, 28);
+      const fill = getStoredTotal(b) / Math.max(1, getStorageCapacity(b));
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y + 15, 24, 3);
+      ctx.fillStyle = fill >= 1 ? '#e74c3c' : '#f1c40f'; ctx.fillRect(b.x - 12, b.y + 15, 24 * Math.min(1, fill), 3);
     } else if (b.type === 'smelter') {
 	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
 	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
@@ -607,6 +626,14 @@ function render() {
   });
 
   // blood on the ground, and footprints out of blood or dung
+  // what a destroyed warehouse spilled (#36)
+  resourcePiles.forEach(p => {
+    drawIcon(ctx, 'pile', p.x, p.y + 3, 20);
+    drawIcon(ctx, getResourceIconName(p.type), p.x, p.y - 2, 12);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${Math.round(p.amount)}`, p.x + 10, p.y + 12);
+  });
+
   bloodSplats.forEach(b => {
     const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
     ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
