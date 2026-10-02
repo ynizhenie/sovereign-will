@@ -687,12 +687,16 @@ body.battle-mode #btn-interact,
 body.battle-mode #hud-seed { display: none; }
 #battle-panel[data-phase="fight"] .battle-presets,
 #battle-panel[data-phase="fight"] .battle-row,
-#battle-panel[data-phase="fight"] #battle-fight,
-#battle-panel[data-phase="fight"] #battle-clear-green,
-#battle-panel[data-phase="fight"] #battle-clear-red { opacity: 0.4; pointer-events: none; }
+body[data-battle-phase="fight"] .battle-top .btn { opacity: 0.4; pointer-events: none; }
+/* the battle's Clear and Fight buttons in the top bar (#153) */
+.battle-top { display: none; gap: 4px; }
+body.battle-mode .battle-top { display: flex; }
+.battle-top .btn { padding: 5px 6px; font-size: 11px; white-space: nowrap; }
+/* the panel keeps its height whatever the category (#153) */
+#battle-presets, #editor-tools { height: 150px; max-height: none; align-content: start; }
 .battle-row { display: flex; gap: 4px; }
 .battle-row .fps-option { flex: 1; padding: 6px 0; }
-#battle-panel:not([data-category="own"]) .battle-gear { display: none; }
+#battle-panel:not([data-category="own"]) .battle-gear { visibility: hidden; }
 .battle-hint {
   font-size: 11px;
   color: #8a91a0;
