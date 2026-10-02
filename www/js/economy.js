@@ -248,6 +248,9 @@ function createWorldSeed(seedInput = 'default-world-seed') {
       state = (state * 1664525 + 1013904223) >>> 0;
       return state / 4294967296;
     },
+    // where the sequence is, to carry on from it after loading a save (#156)
+    getState() { return state; },
+    setState(value) { state = value >>> 0; },
     nextInt(max = 1) { return Math.floor(this.random() * max); },
     nextRange(min, max) { return min + this.random() * (max - min); }
   };
