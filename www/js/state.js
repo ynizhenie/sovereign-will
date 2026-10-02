@@ -44,6 +44,8 @@ let gameMode = 'endless';      // endless / battle (battle.js) / editor (editor.
 let customMap = null;          // a saved map (editor.js) Endless plays instead of a generated one
 // the two sides (#43, factions.js): GAME_CONFIG.factions ids and the colours their units are drawn in
 const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };
+function getPlayerFaction() { return GAME_CONFIG.factions[sides.player.faction]; }
+function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.faction]; }
 
 function getDifficulty() {
   return GAME_CONFIG.difficulty[gameDifficulty] || GAME_CONFIG.difficulty.normal;

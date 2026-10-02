@@ -4,9 +4,6 @@
 
 const FACTION_STORAGE_KEY = 'sovereign-will-factions';
 
-function getPlayerFaction() { return GAME_CONFIG.factions[sides.player.faction]; }
-function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.faction]; }
-
 // In battle mode the sides stay green and red, as the field is marked
 function getSettlerColor() {
   return gameMode === 'battle' ? '#27ae60' : sides.player.color;

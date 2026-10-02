@@ -17,7 +17,9 @@ test('resources are grouped: a group tile shows its total and opens a row with e
   await page.click('#group-materials');
   await expect(page.locator('#group-materials-members')).toBeHidden();
   // every resource has exactly one tile, grouped or not
-  const tiles = await page.evaluate(() => Object.keys(GAME_CONFIG.resources).map(id => document.querySelectorAll(`#${resourceHudId(id)}`).length));
+  // (a faction's own resources only show for it: no bones for the humans, #43)
+  const tiles = await page.evaluate(() => Object.values(GAME_CONFIG.resources).filter(r => !r.factions || r.factions.includes(sides.player.faction))
+    .map(r => document.querySelectorAll(`#${resourceHudId(r.id)}`).length));
   expect(tiles.every(n => n === 1)).toBe(true);
   // the panel never gets wider than a phone
   await page.setViewportSize({ width: 360, height: 800 });

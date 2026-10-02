@@ -14,18 +14,18 @@ const LANGUAGES = {
       resources: {
         food: 'Food', rawMeat: 'Raw meat', rawFish: 'Raw fish', wheat: 'Grain', wood: 'Wood', stone: 'Stone', coal: 'Coal',
         ironOre: 'Ore', iron: 'Iron', leather: 'Leather', arrows: 'Arrows', wheatSeeds: 'Seeds', saplings: 'Saplings',
-        herbs: 'Herbs', worms: 'Worms', appleSaplings: 'Apple saplings'
+        herbs: 'Herbs', worms: 'Worms', bones: 'Bones', appleSaplings: 'Apple saplings'
       },
       resourceGroups: { raw: 'Raw food', plants: 'Plants', materials: 'Materials', supplies: 'Supplies', toolsHeld: 'Tools', weaponsHeld: 'Weapons' },
       tools: { axe: 'Axe', pickaxe: 'Pickaxe', iron_axe: 'Iron axe', iron_pickaxe: 'Iron pickaxe', rod: 'Fishing rod', medbag: 'Medic bag', hoe: 'Hoe' },
       weapons: { fist: 'Fist', club: 'Club', sword: 'Sword', spear: 'Spear', iron_sword: 'Iron sword', iron_spear: 'Iron spear', bow: 'Bow' },
       buildings: {
         wall_wood: 'Wooden wall', wall_stone: 'Stone wall', spikes: 'Spikes', door: 'Door', tent: 'Tent', campfire: 'Campfire',
-        smelter: 'Smelter', watchtower: 'Watchtower', warehouse: 'Warehouse', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
+        smelter: 'Smelter', watchtower: 'Watchtower', warehouse: 'Warehouse', grave: 'Grave', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
       },
-      enemies: { raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer' },
+      enemies: { raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer', undead_zombie: 'Zombie', undead_big_zombie: 'Big zombie', undead_skeleton: 'Skeleton', undead_necromancer: 'Necromancer' },
       factions: { humans: 'Humans', demons: 'Demons', undead: 'Undead' },
-      settlerTypes: { normal: 'Worker', big: 'Giant' },
+      settlerTypes: { normal: 'Worker', big: 'Giant', zombie: 'Zombie', big_zombie: 'Big zombie', skeleton: 'Skeleton', necromancer: 'Necromancer' },
       gear: { backpack: 'Backpack', shield: 'Shield', armor: 'Armour', wateringCan: 'Watering can' },
       recipes: { arrows: 'Arrows' },
       foodKinds: { provisions: 'Provisions', berries: 'Berries', apples: 'Apples', bread: 'Bread', cookedFish: 'Cooked fish', cookedMeat: 'Cooked meat' }
@@ -88,18 +88,18 @@ const LANGUAGES = {
       resources: {
         food: 'Їжа', rawMeat: 'Сире м\'ясо', rawFish: 'Сира риба', wheat: 'Зерно', wood: 'Дерево', stone: 'Камінь', coal: 'Вугілля',
         ironOre: 'Руда', iron: 'Залізо', leather: 'Шкіра', arrows: 'Стріли', wheatSeeds: 'Насіння', saplings: 'Саджанці',
-        herbs: 'Трави', worms: 'Черв\'яки', appleSaplings: 'Саджанці яблуні'
+        herbs: 'Трави', worms: 'Черв\'яки', bones: 'Кістки', appleSaplings: 'Саджанці яблуні'
       },
       resourceGroups: { raw: 'Сира їжа', plants: 'Рослини', materials: 'Матеріали', supplies: 'Припаси', toolsHeld: 'Інструменти', weaponsHeld: 'Зброя' },
       tools: { axe: 'Сокира', pickaxe: 'Кайло', iron_axe: 'Залізна сокира', iron_pickaxe: 'Залізне кайло', rod: 'Вудка', medbag: 'Сумка медика', hoe: 'Мотика' },
       weapons: { fist: 'Кулак', club: 'Кийок', sword: 'Меч', spear: 'Спис', iron_sword: 'Залізний меч', iron_spear: 'Залізний спис', bow: 'Лук' },
       buildings: {
         wall_wood: 'Дерев\'яна стіна', wall_stone: 'Кам\'яна стіна', spikes: 'Шипи', door: 'Двері', tent: 'Намет', campfire: 'Багаття',
-        smelter: 'Плавильня', watchtower: 'Сторожова вежа', warehouse: 'Склад', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
+        smelter: 'Плавильня', watchtower: 'Сторожова вежа', warehouse: 'Склад', grave: 'Могила', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
       },
-      enemies: { raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник' },
+      enemies: { raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник', undead_zombie: 'Зомбі', undead_big_zombie: 'Великий зомбі', undead_skeleton: 'Скелет', undead_necromancer: 'Некромант' },
       factions: { humans: 'Люди', demons: 'Демони', undead: 'Нежить' },
-      settlerTypes: { normal: 'Робітник', big: 'Богатир' },
+      settlerTypes: { normal: 'Робітник', big: 'Богатир', zombie: 'Зомбі', big_zombie: 'Великий зомбі', skeleton: 'Скелет', necromancer: 'Некромант' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лійка' },
       recipes: { arrows: 'Стріли' },
       foodKinds: { provisions: 'Припаси', berries: 'Ягоди', apples: 'Яблука', bread: 'Хліб', cookedFish: 'Смажена риба', cookedMeat: 'Смажене м\'ясо' }
@@ -162,18 +162,18 @@ const LANGUAGES = {
       resources: {
         food: 'Еда', rawMeat: 'Сырое мясо', rawFish: 'Сырая рыба', wheat: 'Зерно', wood: 'Дерево', stone: 'Камень', coal: 'Уголь',
         ironOre: 'Руда', iron: 'Железо', leather: 'Кожа', arrows: 'Стрелы', wheatSeeds: 'Семена', saplings: 'Саженцы',
-        herbs: 'Травы', worms: 'Червяки', appleSaplings: 'Саженцы яблони'
+        herbs: 'Травы', worms: 'Червяки', bones: 'Кости', appleSaplings: 'Саженцы яблони'
       },
       resourceGroups: { raw: 'Сырая еда', plants: 'Растения', materials: 'Материалы', supplies: 'Снабжение', toolsHeld: 'Инструменты', weaponsHeld: 'Оружие' },
       tools: { axe: 'Топор', pickaxe: 'Кирка', iron_axe: 'Железный топор', iron_pickaxe: 'Железная кирка', rod: 'Удочка', medbag: 'Сумка медика', hoe: 'Мотыга' },
       weapons: { fist: 'Кулак', club: 'Дубина', sword: 'Меч', spear: 'Копье', iron_sword: 'Железный меч', iron_spear: 'Железное копье', bow: 'Лук' },
       buildings: {
         wall_wood: 'Деревянная стена', wall_stone: 'Каменная стена', spikes: 'Шипы', door: 'Дверь', tent: 'Палатка', campfire: 'Костёр',
-        smelter: 'Плавильня', watchtower: 'Сторожевая башня', warehouse: 'Склад', wheat: 'Пшеница', sapling: 'Саженец', apple_sapling: 'Саженец яблони'
+        smelter: 'Плавильня', watchtower: 'Сторожевая башня', warehouse: 'Склад', grave: 'Могила', wheat: 'Пшеница', sapling: 'Саженец', apple_sapling: 'Саженец яблони'
       },
-      enemies: { raider_club: 'Дикарь', raider: 'Разбойник', brute: 'Громила', raider_archer: 'Лучник' },
+      enemies: { raider_club: 'Дикарь', raider: 'Разбойник', brute: 'Громила', raider_archer: 'Лучник', undead_zombie: 'Зомби', undead_big_zombie: 'Большой зомби', undead_skeleton: 'Скелет', undead_necromancer: 'Некромант' },
       factions: { humans: 'Люди', demons: 'Демоны', undead: 'Нежить' },
-      settlerTypes: { normal: 'Рабочий', big: 'Богатырь' },
+      settlerTypes: { normal: 'Рабочий', big: 'Богатырь', zombie: 'Зомби', big_zombie: 'Большой зомби', skeleton: 'Скелет', necromancer: 'Некромант' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лейка' },
       recipes: { arrows: 'Стрелы' },
       foodKinds: { provisions: 'Припасы', berries: 'Ягоды', apples: 'Яблоки', bread: 'Хлеб', cookedFish: 'Жареная рыба', cookedMeat: 'Жареное мясо' }

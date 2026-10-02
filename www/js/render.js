@@ -212,6 +212,13 @@ function drawHeldWeapon(weapon) {
   return true;
 }
 
+// A necromancer's staff, a pale purple orb at its top (#43)
+function drawStaff() {
+  ctx.fillStyle = '#6d4520'; ctx.fillRect(4, -1, 20, 3);
+  ctx.fillStyle = '#bb8fce'; ctx.beginPath(); ctx.arc(25, 0, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e8daef'; ctx.beginPath(); ctx.arc(24, -1, 1.5, 0, Math.PI * 2); ctx.fill();
+}
+
 // Idle settler: a small thought bubble with "zZ" above the head
 function drawIdleIcon(x, y) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
@@ -356,9 +363,16 @@ function render() {
     drawHarvestProgress(ore);
   });
 
-  ctx.fillStyle = '#8b5a2b';
-  ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 4; ctx.stroke();
+  if (getPlayerFaction().hall === 'graveyard') {
+    // the undead's graveyard (#43): a dark fenced plot with tombstones
+    ctx.fillStyle = '#2c2c34'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 4; ctx.stroke();
+    drawIcon(ctx, 'graveyard', townHall.x, townHall.y, townHall.radius * 1.4);
+  } else {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 4; ctx.stroke();
+  }
   
   ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(townHall.x - 30, townHall.y - 45, 60, 8);
   ctx.fillStyle = townHall.hp > 40 ? '#2ecc71' : '#e74c3c';
@@ -516,6 +530,8 @@ function render() {
       ctx.fillStyle = '#a0522d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'door', b.x, b.y, 16);
+    } else if (b.type === 'grave') {
+      drawIcon(ctx, 'grave', b.x, b.y, 28);
     } else if (b.type === 'tent') {
       ctx.fillStyle = '#d35400'; ctx.beginPath();
       ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
@@ -609,11 +625,18 @@ function render() {
   });
 
   enemyTents.forEach(et => {
-    ctx.fillStyle = '#641e16'; ctx.beginPath();
-    ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#1e272e'; ctx.beginPath();
-    ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
+    if (getEnemyFaction().spawner === 'grave') {
+      // the undead's spawners are graves (#43), ringed in the enemy's colour
+      ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
+      drawIcon(ctx, 'grave', et.x, et.y, 28);
+    } else {
+      ctx.fillStyle = '#641e16'; ctx.beginPath();
+      ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#1e272e'; ctx.beginPath();
+      ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
+    }
 
     if (et.hp < et.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(et.x - 14, et.y - 20, 28, 4);
@@ -697,7 +720,9 @@ function render() {
     ctx.translate(s.x, s.y);
     ctx.save();
     applyHeldItemPose(s);
-    if (!drawHeldWeapon(s.weapon)) {
+    if ((getDefinition('settlerTypes', s.type) || {}).necromancer && s.weapon === 'fist') {
+      drawStaff();
+    } else if (!drawHeldWeapon(s.weapon)) {
     if (s.tool === 'axe' || s.tool === 'iron_axe') {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
       ctx.fillStyle = s.tool === 'iron_axe' ? '#cfd8dc' : '#7f8c8d'; ctx.fillRect(16, -5, 5, 10);
@@ -775,7 +800,8 @@ function render() {
     if (en.type === 'big') ctx.translate(en.radius - 11, 0); // hands at the edge of the larger body
     ctx.save();
     applyHeldItemPose(en);
-    drawHeldWeapon(en.weapon);
+    if (getEnemyDef(en).necromancer) drawStaff();
+    else drawHeldWeapon(en.weapon);
     drawWeaponBlood(en);
     ctx.restore();
     if (en.arrows > 0) drawQuiver(-en.radius, en.arrows);
