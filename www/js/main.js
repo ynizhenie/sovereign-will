@@ -170,6 +170,51 @@ function onTap(element, action) {
   element.addEventListener('touchend', handler);
 }
 
+// A list of saved things (maps, generator presets), one per row (#143): tap a name to pick it; its delete
+// button asks right there whether to delete it. items: [{ id, label }]; attr names the data attributes the
+// rows carry (data-<attr>, data-delete-<attr>).
+function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyText }) {
+  list.innerHTML = '';
+  list.classList.add('item-list');
+  if (items.length === 0 && emptyText) {
+    const empty = document.createElement('div');
+    empty.className = 'item-list-empty';
+    empty.textContent = emptyText;
+    list.appendChild(empty);
+    return;
+  }
+  const button = (className, html, dataName, id, action) => {
+    const b = document.createElement('button');
+    b.className = className;
+    b.innerHTML = html;
+    if (dataName) b.dataset[dataName] = id;
+    onTap(b, action);
+    return b;
+  };
+  for (const { id, label } of items) {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    const showItem = () => {
+      row.innerHTML = '';
+      row.append(
+        button('item-name' + (selected === id ? ' active' : ''), escapeHtml(label), attr, id, () => onPick(id)),
+        button('item-delete', iconHtml('close'), 'delete' + attr[0].toUpperCase() + attr.slice(1), id, askToDelete)
+      );
+    };
+    const askToDelete = () => {
+      row.innerHTML = '';
+      const question = document.createElement('span');
+      question.className = 'item-question';
+      question.textContent = t('list.deleteQuestion', { name: label });
+      row.append(question,
+        button('item-confirm', escapeHtml(t('list.yes')), 'confirmDelete', id, () => onDelete(id)),
+        button('item-cancel', escapeHtml(t('list.no')), 'cancelDelete', id, showItem));
+    };
+    showItem();
+    list.appendChild(row);
+  }
+}
+
 onTap(document.getElementById('resume-button'), () => setPaused(false));
 // out of the pause menu: each mode leaves its own way (#145)
 onTap(document.getElementById('exit-to-menu-button'), () => {

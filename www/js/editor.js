@@ -3,39 +3,46 @@
 // seed and generator settings of the Endless screen); a saved one can be opened again and changed.
 //
 // In the editor the world is the ordinary game world with the clock stopped: a tool puts its thing on
-// the tapped tile (the brush can cover 3×3), replacing what was there. Saved maps are plain data
-// (serializeMap), keyed by name in localStorage; loadCustomMap() builds the world from one.
+// the tapped tile (the brush can cover 3×3), replacing what was there; on a tile that already has that
+// thing it clears it instead. Rows and columns can be added or taken away at any edge. Saved maps are
+// plain data (serializeMap), keyed by name in localStorage; loadCustomMap() builds the world from one.
 
 const MAP_STORAGE_KEY = 'sovereign-will-maps';
 
-// What can be put on a tile. kind: a GAME_CONFIG.mapResources entry; building: a GAME_CONFIG.buildings one.
+// What can be put on a tile, by palette category (the eraser has its own button). kind: a
+// GAME_CONFIG.mapResources entry; building: a GAME_CONFIG.buildings one.
+const EDITOR_CATEGORIES = ['terrain', 'nature', 'ore', 'buildings'];
 const EDITOR_TOOLS = [
   { id: 'erase', icon: 'eraser' },
-  { id: 'water', icon: 'water' },
-  { id: 'rock', icon: 'rock' },
-  { id: 'sand', icon: 'sand' },
-  { id: 'town_hall', icon: 'hall' },
-  { id: 'tree', icon: 'tree', kind: 'tree' },
-  { id: 'apple_tree', icon: 'apple_tree', kind: 'tree' },
-  { id: 'cactus', icon: 'cactus', kind: 'cactus' },
-  { id: 'boulder', icon: 'boulder', kind: 'boulder' },
-  { id: 'grass', icon: 'grass', kind: 'grass' },
-  { id: 'berry_bush', icon: 'berry_bush', kind: 'berry_bush' },
-  { id: 'stick', icon: 'stick', kind: 'stick' },
-  { id: 'pebble', icon: 'pebble', kind: 'pebble' },
-  { id: 'iron_ore', icon: 'iron_ore', kind: 'iron_ore' },
-  { id: 'coal_ore', icon: 'coal_ore', kind: 'coal_ore' },
-  { id: 'iron_spawner', icon: 'iron_spawner', spawner: 'iron' },
-  { id: 'coal_spawner', icon: 'coal_spawner', spawner: 'coal' },
-  { id: 'boar', icon: 'boar' },
+  { id: 'water', icon: 'water', category: 'terrain' },
+  { id: 'rock', icon: 'rock', category: 'terrain' },
+  { id: 'sand', icon: 'sand', category: 'terrain' },
+  { id: 'tree', icon: 'tree', kind: 'tree', category: 'nature' },
+  { id: 'apple_tree', icon: 'apple_tree', kind: 'tree', category: 'nature' },
+  { id: 'cactus', icon: 'cactus', kind: 'cactus', category: 'nature' },
+  { id: 'boulder', icon: 'boulder', kind: 'boulder', category: 'nature' },
+  { id: 'grass', icon: 'grass', kind: 'grass', category: 'nature' },
+  { id: 'berry_bush', icon: 'berry_bush', kind: 'berry_bush', category: 'nature' },
+  { id: 'stick', icon: 'stick', kind: 'stick', category: 'nature' },
+  { id: 'pebble', icon: 'pebble', kind: 'pebble', category: 'nature' },
+  { id: 'boar', icon: 'boar', category: 'nature' },
+  { id: 'iron_ore', icon: 'iron_ore', kind: 'iron_ore', category: 'ore' },
+  { id: 'coal_ore', icon: 'coal_ore', kind: 'coal_ore', category: 'ore' },
+  { id: 'iron_spawner', icon: 'iron_spawner', spawner: 'iron', category: 'ore' },
+  { id: 'coal_spawner', icon: 'coal_spawner', spawner: 'coal', category: 'ore' },
+  { id: 'town_hall', icon: 'hall', category: 'buildings' },
   // buildings, except crops (those are planted in farm zones)
   ...Object.values(GAME_CONFIG.buildings)
     .filter(b => !Object.values(GAME_CONFIG.farming.crops).includes(b.id))
-    .map(b => ({ id: b.id, icon: b.icon, building: b.id }))
+    .map(b => ({ id: b.id, icon: b.icon, building: b.id, category: 'buildings' }))
 ];
+
+// how small and big a map can be made (the same as the Endless custom size)
+const EDITOR_MIN_TILES = 20, EDITOR_MAX_TILES = 100;
 
 const editor = {
   tool: 'tree',
+  category: 'nature',
   brush: 1,     // 1 or 3: a 3×3 brush covers the tapped tile and the ones around it
   name: ''      // the name it was opened or last saved as
 };
@@ -130,10 +137,33 @@ function hasSomethingOn(x, y) {
   return isTileOccupied(x, y) && Math.hypot(x - townHall.x, y - townHall.y) >= townHall.radius + 15;
 }
 
-// The tool on one tile
-function applyEditorTool(tool, gx, gy) {
+// Does the tile already have what this tool puts there?
+function tileHasTool(tool, gx, gy) {
+  const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+  const at = list => WORLD[list].find(o => o.x === x && o.y === y);
+  if (tool.id === 'water') return !!at('waterTiles');
+  if (tool.id === 'sand') return !!at('desertTiles');
+  if (tool.id === 'rock') { const r = at('naturalRocks'); return !!r && !r.oreSpawner; }
+  if (tool.spawner) { const r = at('naturalRocks'); return !!r && r.oreSpawner === tool.spawner; }
+  if (tool.id === 'boar') return !!at('boars');
+  if (tool.building) { const b = at('buildings'); return !!b && b.type === tool.building; }
+  if (tool.kind) {
+    const r = at(getMapResourceDef(tool.kind).list);
+    return !!r && (tool.kind !== 'tree' || !!r.apple === (tool.id === 'apple_tree'));
+  }
+  return false;
+}
+
+// The tool on one tile; clearing: take that thing away instead (a second tap with the same tool)
+function applyEditorTool(tool, gx, gy, clearing) {
   if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) return;
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+  if (clearing) {
+    if (!tileHasTool(tool, gx, gy)) return;
+    if (tool.id === 'sand') desertTiles = desertTiles.filter(d => d.x !== x || d.y !== y);
+    else clearEditorTile(x, y);
+    return;
+  }
   if (tool.id === 'erase') {
     if (hasSomethingOn(x, y)) clearEditorTile(x, y);
     else desertTiles = desertTiles.filter(d => d.x !== x || d.y !== y);
@@ -188,9 +218,43 @@ function editorTap(x, y) {
   else {
     const g = getGridPos(x, y);
     const r = editor.brush === 3 ? 1 : 0;
-    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) applyEditorTool(tool, g.gx + dx, g.gy + dy);
+    // the tapped tile already has it: this tap clears it (and the same around it, with the big brush)
+    const clearing = tileHasTool(tool, g.gx, g.gy);
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) applyEditorTool(tool, g.gx + dx, g.gy + dy, clearing);
   }
   resetTileIndex();
+}
+
+// ---- Map size
+
+const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
+  'naturalRocks', 'waterTiles', 'desertTiles', 'beachTiles', 'boars', 'buildings'];
+
+// Add (delta 1) or take away (delta -1) a whole row or column of tiles at one edge: top, bottom, left,
+// right. What would end up off the map or on the new border goes; the town hall must stay clear of it.
+function resizeEditorMap(side, delta) {
+  const horizontal = side === 'left' || side === 'right';
+  const cols = COLS + (horizontal ? delta : 0), rows = ROWS + (horizontal ? 0 : delta);
+  if (Math.min(cols, rows) < EDITOR_MIN_TILES || Math.max(cols, rows) > EDITOR_MAX_TILES) return;
+  const shiftX = side === 'left' ? delta * TILE_SIZE : 0, shiftY = side === 'top' ? delta * TILE_SIZE : 0;
+  const inBorder = (gx, gy) => gx < BORDER_MARGIN || gy < BORDER_MARGIN || gx >= cols - BORDER_MARGIN || gy >= rows - BORDER_MARGIN;
+  const hall = getGridPos(townHall.x + shiftX - 1, townHall.y + shiftY - 1);
+  if (inBorder(hall.gx, hall.gy) || inBorder(hall.gx + 1, hall.gy + 1)) { showNotification(t('editor.hallInTheWay'), true); return; }
+  for (const list of EDITOR_LISTS) {
+    WORLD[list] = WORLD[list].filter(o => {
+      o.x += shiftX; o.y += shiftY;
+      const g = getGridPos(o.x, o.y);
+      return !inBorder(g.gx, g.gy);
+    });
+  }
+  townHall.x += shiftX; townHall.y += shiftY;
+  COLS = cols; ROWS = rows;
+  WORLD_WIDTH = cols * TILE_SIZE; WORLD_HEIGHT = rows * TILE_SIZE;
+  camera.x += shiftX; camera.y += shiftY;
+  clampCamera();
+  resetTileIndex();
+  invalidateAllPaths();
+  renderEditorPanel();
 }
 
 // ---- Opening and leaving the editor
@@ -244,7 +308,7 @@ function saveEditorMap() {
 function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
   tools.innerHTML = '';
-  for (const tool of EDITOR_TOOLS) {
+  for (const tool of EDITOR_TOOLS.filter(tl => tl.category === editor.category)) {
     const button = document.createElement('button');
     button.className = 'btn' + (editor.tool === tool.id ? ' active' : '');
     button.dataset.tool = tool.id;
@@ -254,6 +318,9 @@ function renderEditorPanel() {
     tools.appendChild(button);
   }
   document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('active', Number(b.dataset.brush) === editor.brush));
+  document.querySelectorAll('[data-editor-category]').forEach(b => b.classList.toggle('active', b.dataset.editorCategory === editor.category));
+  document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
+  document.getElementById('editor-size').textContent = `${COLS}×${ROWS}`;
 }
 
 // The editor's menu screen: new map (size, empty or generated) and the saved maps to open or delete
@@ -264,34 +331,15 @@ function renderEditorMapList() {
   });
 }
 
+// The saved maps, one per row: its name and size; in the editor's menu also a delete button (asks first)
 function renderSavedMapList(list, { open, remove, selected }) {
-  list.innerHTML = '';
   const maps = loadSavedMaps();
-  if (Object.keys(maps).length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'map-list-empty';
-    empty.textContent = t('editor.noMaps');
-    list.appendChild(empty);
-    return;
-  }
-  for (const [name, map] of Object.entries(maps)) {
-    const item = document.createElement('span');
-    const pick = document.createElement('button');
-    pick.className = 'fps-option' + (selected === name ? ' active' : '');
-    pick.textContent = `${name} · ${map.cols}×${map.rows}`;
-    pick.dataset.map = name;
-    onTap(pick, () => open(map));
-    item.appendChild(pick);
-    if (remove) {
-      const del = document.createElement('button');
-      del.className = 'fps-option';
-      del.innerHTML = iconHtml('close');
-      del.dataset.deleteMap = name;
-      onTap(del, () => remove(name));
-      item.appendChild(del);
-    }
-    list.appendChild(item);
-  }
+  renderItemList(list, Object.values(maps).map(map => ({ id: map.name, label: `${map.name} · ${map.cols}×${map.rows}` })), {
+    attr: 'map', selected, emptyText: t('editor.noMaps'),
+    onPick: name => open(maps[name]),
+    onDelete: remove
+  });
+  list.classList.toggle('no-delete', !remove);
 }
 
 // Endless: random (generated) map, or one of the saved maps
@@ -328,5 +376,16 @@ onTap(document.getElementById('editor-new-empty'), () => startEditor({ cols: edi
 onTap(document.getElementById('editor-new-generated'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: true }));
 onTap(document.getElementById('editor-save'), saveEditorMap);
 document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));
+document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
+  editor.category = button.dataset.editorCategory;
+  if (editor.tool !== 'erase') editor.tool = EDITOR_TOOLS.find(tl => tl.category === editor.category).id;
+  renderEditorPanel();
+}));
+onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; renderEditorPanel(); });
+onTap(document.getElementById('editor-resize'), () => { document.getElementById('editor-resize-panel').hidden ^= true; });
+document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
+  const [side, delta] = button.dataset.resize.split(':');
+  resizeEditorMap(side, Number(delta));
+}));
 document.querySelectorAll('[data-map-source]').forEach(button => onTap(button, () => setMapSource(button.dataset.mapSource)));
 onTap(document.getElementById('mode-endless'), renderCustomMapList); // maps may have changed in the editor

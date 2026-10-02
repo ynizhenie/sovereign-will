@@ -728,12 +728,27 @@ body.editor-mode .top-wave,
 body.editor-mode .top-actions,
 body.editor-mode #btn-interact,
 body.editor-mode #hud-seed { display: none; }
-#editor-panel .action-row { align-items: center; }
-#editor-panel #editor-name { flex: 1; min-width: 0; }
 #editor-tools { grid-auto-rows: minmax(30px, auto); }
+.editor-toolbar { display: flex; align-items: center; gap: 6px; }
+.editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
+.editor-toolbar #editor-name { flex: 1; min-width: 0; }
 .editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
-.editor-brush .fps-option { padding: 6px 10px; }
-.map-list-empty { font-size: 12px; color: #8a91a0; font-weight: normal; text-transform: none; }
+.editor-resize { display: grid; grid-template-columns: auto 34px 34px auto 34px 34px; gap: 4px 6px; align-items: center; font-size: 11px; color: #8a91a0; }
+.editor-resize[hidden] { display: none; }
+.editor-resize .fps-option { padding: 4px 0; }
+
+/* lists of saved maps and presets (#143): a row each, with its own delete that asks first */
+.item-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; flex-shrink: 0; }
+.item-row { display: flex; align-items: center; gap: 4px; }
+.item-row .item-name { flex: 1; min-width: 0; text-align: left; padding: 7px 10px; background: #252830; border: 1px solid #353a46;
+  border-radius: 5px; color: #ddd; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.item-row .item-name.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.item-row .item-delete, .item-row .item-confirm, .item-row .item-cancel { padding: 7px 10px; background: #252830; border: 1px solid #353a46;
+  border-radius: 5px; color: #ddd; font-size: 12px; font-weight: bold; cursor: pointer; }
+.item-row .item-confirm { background: #c0392b; border-color: #e74c3c; color: #fff; }
+.item-row .item-question { flex: 1; font-size: 12px; text-align: left; color: #f1c40f; text-transform: none; }
+.item-list.no-delete .item-delete { display: none; }
+.item-list-empty { font-size: 12px; color: #8a91a0; font-weight: normal; text-transform: none; }
 #main-menu.custom-map .random-map-only,
 #main-menu:not(.custom-map) .custom-map-only { display: none; }
 
@@ -757,10 +772,11 @@ body.editor-mode #hud-seed { display: none; }
 .generator-fields {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   text-align: left;
-  font-size: 12px;
+  font-size: 11px;
 }
+.generator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
 .generator-fields h2 {
   font-size: 12px;
   color: #8a91a0;
@@ -769,12 +785,13 @@ body.editor-mode #hud-seed { display: none; }
 }
 .generator-field {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
+  color: #b5bac5;
 }
+.generator-field > span:last-child { display: flex; align-items: center; gap: 3px; color: #8a91a0; }
 .generator-field input {
-  width: 52px;
+  width: 46px;
   padding: 4px;
   background: #111318;
   border: 1px solid #353a46;
@@ -789,13 +806,4 @@ body.editor-mode #hud-seed { display: none; }
 .preset-row input {
   flex: 1;
   width: auto;
-}
-.preset-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.preset-list span {
-  display: inline-flex;
-  gap: 2px;
 }
