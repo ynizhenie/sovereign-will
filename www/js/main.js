@@ -171,7 +171,12 @@ function onTap(element, action) {
 }
 
 onTap(document.getElementById('resume-button'), () => setPaused(false));
-onTap(document.getElementById('exit-to-menu-button'), exitToMainMenu);
+// out of the pause menu: each mode leaves its own way (#145)
+onTap(document.getElementById('exit-to-menu-button'), () => {
+  if (gameMode === 'battle') leaveBattleMode();
+  else if (gameMode === 'editor') leaveEditor();
+  else exitToMainMenu();
+});
 
 // the small button next to the seed: a new random seed
 onTap(document.getElementById('seed-reroll'), () => {

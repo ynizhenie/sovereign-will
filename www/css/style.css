@@ -438,6 +438,10 @@ canvas {
   background: rgba(10, 11, 14, 0.92);
   color: #eee;
 }
+/* the main menu hides the game: its own scene behind it instead (#145, menu-scene.js) */
+#main-menu { background: #2d4a22; overflow-y: auto; }
+#menu-scene { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#main-menu .main-menu-content { position: relative; z-index: 1; }
 
 .main-menu-content {
   width: 90%;
@@ -678,7 +682,6 @@ canvas {
 body.battle-mode #battle-panel { display: flex; }
 body.battle-mode #bottom-panel,
 body.battle-mode .top-wave,
-body.battle-mode #btn-pause-toggle,
 body.battle-mode .top-actions,
 body.battle-mode #btn-interact,
 body.battle-mode #hud-seed { display: none; }
@@ -722,7 +725,6 @@ body.battle-mode #hud-seed { display: none; }
 body.editor-mode #editor-panel { display: flex; }
 body.editor-mode #bottom-panel,
 body.editor-mode .top-wave,
-body.editor-mode #btn-pause-toggle,
 body.editor-mode .top-actions,
 body.editor-mode #btn-interact,
 body.editor-mode #hud-seed { display: none; }

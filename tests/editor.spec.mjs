@@ -47,14 +47,16 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#editor-save').click();
   await expect.poll(() => iconText(page, '#toast-notification')).toEqual(['[[ok]] Карта сохранена: Озерцо']);
 
-  await page.locator('#editor-menu').click();
+  await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
+  await page.locator('#exit-to-menu-button').click();
   await expect(page.locator('#main-menu')).toBeVisible();
   await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveText('Озерцо · 30×30');
 
   // open it again: the water is still there
   await page.locator('#editor-map-list [data-map="Озерцо"]').click();
   expect(await page.evaluate(() => [waterTiles.length, COLS])).toEqual([1, 30]);
-  await page.locator('#editor-menu').click();
+  await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
+  await page.locator('#exit-to-menu-button').click();
 
   // Endless: Custom map lists it, and hides the map size and generator
   await page.locator('[data-screen="editor"] [data-back]').click();
