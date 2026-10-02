@@ -3,7 +3,8 @@
 // a few seconds later, the same line-up comes back to adjust.
 //
 // Green units are settlers and red ones enemies, driven by the usual AI. Any preset can go on either side:
-// enemies are built like settlers (#136), so a preset is the same fighter on both sides: weapon, body, hp.
+// on the red side a settler preset becomes an enemy with that weapon and hp, and on the green side an
+// enemy preset becomes a soldier with that enemy's weapon and hp.
 
 // Presets: a weapon, a body (big or not) and hp. `enemy` names the enemy kind a red unit is made from.
 const BATTLE_PRESETS = [
@@ -42,7 +43,7 @@ function getBattlePreset(id) {
 function presetBody(preset) {
   if (preset.enemyPreset) {
     const def = GAME_CONFIG.enemies[preset.enemyPreset];
-    return { weapon: def.weapon, big: def.body === 'big', hp: GAME_CONFIG.settlerTypes[def.body].hp, enemyKey: preset.enemyPreset };
+    return { weapon: def.weapon || 'sword', big: def.type === 'big', hp: def.hp, enemyKey: preset.enemyPreset };
   }
   return { weapon: preset.weapon, big: !!preset.big, hp: preset.hp, enemyKey: preset.enemy };
 }
@@ -65,9 +66,14 @@ function makeBattleUnit(entry) {
     settlers.push(s);
   } else {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, body.enemyKey);
+    const weapon = getDefinition('weapons', body.weapon);
+    en.weapon = body.weapon;
     en.hp = en.maxHp = body.hp;
-    if (body.big) { en.type = 'big'; en.body = 'big'; en.radius = GAME_CONFIG.settlerTypes.big.visualRadius; }
-    armEnemy(en, body.weapon);
+    if (body.big) { en.type = 'big'; en.radius = Math.max(en.radius, 18); }
+    // a settler weapon on the red side: its strike as damage per second, like the enemies' own
+    if (!getBattlePreset(entry.presetId).enemyPreset && weapon && weapon.combat && weapon.combat.cooldown && !isBowWeapon(body.weapon)) {
+      en.damage = weapon.combat.damage / weapon.combat.cooldown * (body.big ? GAME_CONFIG.settlerTypes.big.damageMultiplier : 1);
+    }
     en.battleEntry = entry;
     enemies.push(en);
   }
