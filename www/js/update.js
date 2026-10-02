@@ -387,7 +387,8 @@ function update(dt) {
       en.attackCooldown = (en.attackCooldown || 0) - dt;
       if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
-        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
+        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en,
+          fire: !!(getDefinition('weapons', en.weapon) || {}).fire });
         startSwing(en, 0.3);
         faceTowards(en, target.x, target.y);
         en.attackCooldown = ranged.cooldown;

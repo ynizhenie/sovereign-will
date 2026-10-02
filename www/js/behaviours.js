@@ -41,7 +41,7 @@ function createSettlerTick(dt) {
     appleAssignments: new Set(),     // apple trees someone is picking this tick
     wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
-    raiseAssignments: new Set(),     // corpses a necromancer is raising this tick
+    raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
@@ -418,6 +418,53 @@ function playerControlled(s, tick) {
   if (!s.isPossessed) return false;
   if (s.targetEquipment) return equip(s, tick);
   if (s.order && !followOrder(s, tick)) s.order = null;
+  return true;
+}
+
+// ---- Demons (#43)
+
+// A settler the player sent into a sacrificial circle walks there and dies in it; everyone else is
+// healed to full (see the circle tap in handleCanvasClick)
+function goToSacrifice(s, tick) {
+  const circle = s.sacrificeAt;
+  if (!circle) return false;
+  if (!buildings.includes(circle)) { s.sacrificeAt = null; return false; }
+  s.patrolTarget = null;
+  if (Math.hypot(circle.x - s.x, circle.y - s.y) > 30) {
+    moveEntityTowards(s, circle.x, circle.y, s.speed, false, tick.dt);
+    return true;
+  }
+  s.sacrificeAt = null;
+  s.hp = 0;
+  for (const other of settlers) if (other !== s) other.hp = other.maxHp;
+  showNotification(t('sacrifice.done'), false);
+  return true;
+}
+
+// Demons heal by eating a corpse, when nothing is attacking (eatCorpseSeconds per corpse: back to full)
+function eatCorpse(s, tick) {
+  if (!(getDefinition('settlerTypes', s.type) || {}).eatsCorpses || s.hp >= s.maxHp || tick.isWaveActive || s.carrying) return false;
+  let corpse = null, best = Infinity;
+  for (const c of corpses) {
+    const d = Math.hypot(c.x - s.x, c.y - s.y);
+    if (d < best && !tick.raiseAssignments.has(c)) { best = d; corpse = c; }
+  }
+  if (!corpse) return false;
+  tick.raiseAssignments.add(corpse);
+  s.patrolTarget = null;
+  if (best > 16) {
+    moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, tick.dt);
+    s.eatTimer = 0;
+    return true;
+  }
+  s.working = 0.1;
+  faceTowards(s, corpse.x, corpse.y);
+  s.eatTimer = (s.eatTimer || 0) + tick.dt;
+  if (s.eatTimer >= GAME_CONFIG.eatCorpseSeconds) {
+    s.eatTimer = 0;
+    s.hp = s.maxHp;
+    corpses.splice(corpses.indexOf(corpse), 1);
+  }
   return true;
 }
 
@@ -1454,6 +1501,7 @@ function patrol(s, tick) {
 // Order = priority: the first behaviour that takes a settler's tick wins.
 const SETTLER_BEHAVIOURS = [
   playerControlled,
+  goToSacrifice,
   loadTowerArrows,
   collectSmelterIron,
   supplySmelter,
@@ -1466,6 +1514,7 @@ const SETTLER_BEHAVIOURS = [
   deliverMaterials,
   deliverCarrying,
   repairTent,
+  eatCorpse,
   healAtTent,
   treatWounded,
   necromancy,

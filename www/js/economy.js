@@ -228,7 +228,7 @@ function renderConfigHud() {
 
   const weaponActions = document.getElementById('weapon-actions');
   Object.values(GAME_CONFIG.weapons).forEach(item => {
-    if (item.id !== 'fist' && weaponActions) {
+    if (item.id !== 'fist' && !item.hidden && weaponActions) {
       weaponActions.appendChild(createConfigButton(item, craftWeapon));
     }
   });

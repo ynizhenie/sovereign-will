@@ -139,7 +139,8 @@ function performAttack(attacker, targetX, targetY) {
       damage: stats.damage * stats.multiplier,
       life: stats.projectileLife, 
       fromEnemy: false, 
-      owner: attacker 
+      owner: attacker,
+      fire: !!(getDefinition('weapons', attacker.weapon) || {}).fire
     });
     attacker.arrows--;
     attacker.attackCooldown = stats.cooldown;
