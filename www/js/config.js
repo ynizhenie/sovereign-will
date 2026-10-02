@@ -192,7 +192,10 @@ const GAME_CONFIG = {
   // minRadius tiles), doors first. A squad holds its post until an enemy comes within engageTiles of it.
   // From the warning until the wave is beaten, workers stay within that radius unless the player marked
   // something farther, and only shelter when an enemy comes within workerAlarm px.
-  defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160 },
+  // With fewer melee soldiers than two squads they stand one to a post round the base. An enemy within
+  // nearBaseTiles of the base's edge or of a building is gone for by the nearest squad, wherever its post
+  // is. markedSquad: how many soldiers go for each enemy the player points at (the rest keep their posts).
+  defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3 },
 
   // the Endless mode's difficulty (main menu): enemies per wave and enemy hp are multiplied by these
   difficulty: {

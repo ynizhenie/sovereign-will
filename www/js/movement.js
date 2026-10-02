@@ -323,23 +323,52 @@ function findGridPath(startG, endG, targetX, targetY, options) {
   return { path, isBlockedPath: options.isBlockedPath };
 }
 
-function findPathAStarPermissive(startX, startY, targetX, targetY) {
+// Enemies' way to their target (#155): one search that weighs going round against breaking through, in
+// tiles of walking: breaking a building costs `building`, a tree or boulder `nature`, walking over spikes
+// `spikes`. Rock and water can't be crossed at all.
+const ENEMY_PATH_COST = { building: 12, nature: 25, spikes: 2 };
+
+// A path's length in tiles (diagonal steps count 1.41)
+function pathCost(path) {
+  let cost = 0;
+  for (let i = 1; i < path.length - 1; i++) cost += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y) / TILE_SIZE;
+  return cost;
+}
+
+// natureBlocks: trees and boulders are walked round, not chopped through (only buildings and spikes
+// are taken straight, when the way round is long)
+function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false) {
   const startG = getGridPos(startX, startY);
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(ROWS - 1, endG.gy));
   const tiles = getTileIndex();
-  const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || (tiles.buildings.has(k) && !tiles.spikes.has(k));
+  const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k);
+  const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
+  const PATH_COST = ENEMY_PATH_COST;
   const result = findGridPath(startG, endG, targetX, targetY, {
-    isBlocked: isTileBlockedForEnemyPermissive,
+    isBlocked: natureBlocks
+      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy) || tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
+      : isTileBlockedForEnemyPermissive,
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
-    // spikes hurt but can be walked over: cheaper than breaking through
-    extraCost: (x, y) => (isBreakable(`${x},${y}`) ? 10 : (tiles.spikes.has(`${x},${y}`) ? 3 : 0))
+    // what a tile costs on top of walking it: a building is broken through rather than walked a long way
+    // round (to a far door), spikes are walked over, trees and boulders mostly walked round (#155)
+    extraCost: (x, y) => {
+      const k = `${x},${y}`;
+      if (isBuilding(k)) return PATH_COST.building;
+      if (tiles.trees.has(k) || tiles.boulders.has(k)) return PATH_COST.nature;
+      return tiles.spikes.has(k) ? PATH_COST.spikes : 0;
+    }
   });
   // a way in over spikes only needs nothing broken: the enemy just walks it (see update())
   if (result.path.length > 0 && !result.path.some(p => isBreakable(`${p.x},${p.y}`))) result.isBlockedPath = false;
+  // what it costs in tiles of walking, breaking and spikes included
+  result.cost = pathCost(result.path) + result.path.slice(0, -1).reduce((sum, p) => {
+    const k = `${p.x},${p.y}`;
+    return sum + (isBuilding(k) ? PATH_COST.building : (tiles.trees.has(k) || tiles.boulders.has(k)) ? PATH_COST.nature : tiles.spikes.has(k) ? PATH_COST.spikes : 0);
+  }, 0);
   return result;
 }
 
@@ -378,6 +407,12 @@ function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
     isBlockedPath: false
   });
   if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
+  // a long way round (to a far door, round a wall of spikes): breaking through, or walking the spikes,
+  // may be quicker; whichever costs less (#155)
+  if (isEnemy && pathCost(result.path) > 1.5 * Math.hypot(endG.gx - startG.gx, endG.gy - startG.gy) + 4) {
+    const through = findPathAStarPermissive(startX, startY, targetX, targetY, true);
+    if (through.path.length > 0 && through.cost < pathCost(result.path)) return through;
+  }
   return result;
 }
 
