@@ -131,6 +131,30 @@ function getNearbyEnemyTentSite(origin) {
   return null;
 }
 
+// Where a wave's enemy appears: the map's edge, or for the demons one of their portals (#43)
+function getWaveSpawnPos() {
+  if (!getEnemyFaction().portalSpawns || enemyTents.length === 0) return getRandomBorderPos();
+  const portal = enemyTents[Math.floor(rand() * enemyTents.length)];
+  return { x: portal.x + (rand() - 0.5) * 40, y: portal.y + (rand() - 0.5) * 40 };
+}
+
+// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall (#43)
+function openDemonPortal() {
+  const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
+  const minDist = getEnemyFaction().minPortalTiles * TILE_SIZE;
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const gx = BORDER_MARGIN + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN));
+    const gy = BORDER_MARGIN + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN));
+    const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+    if (Math.hypot(x - townHall.x, y - townHall.y) < minDist || isTileOccupied(x, y) || getReachSteps(reach, gx, gy) < 0) continue;
+    if (enemyTents.some(t => Math.hypot(t.x - x, t.y - y) < 4 * TILE_SIZE)) continue;
+    const tents = GAME_CONFIG.enemyTents;
+    enemyTents.push({ x, y, hp: tents.hp, maxHp: tents.hp, summonTimer: 0, summonsLeft: tents.summonsPerWave, portal: true });
+    return true;
+  }
+  return false;
+}
+
 function startNextWave() {
   const scaling = GAME_CONFIG.waveScaling;
   enemyTents.forEach(et => {
@@ -146,6 +170,12 @@ function startNextWave() {
     Math.max(0, maxTentsByDifficulty - enemyTents.length - enemyTentBlueprints.length),
     scaling.newTents.min + Math.floor(rand() * (scaling.newTents.max - scaling.newTents.min + 1))
   );
+
+  // the demons' portals open first, so the wave can come out of them
+  if (getEnemyFaction().portalSpawns) {
+    for (let i = 0; i < Math.max(1, tentCount); i++) openDemonPortal();
+    invalidateAllPaths();
+  }
 
   let normalEnemies = [];
 
@@ -165,11 +195,11 @@ function startNextWave() {
     // every enemy kind of the enemy's faction with a waveKey, in config order (#43)
     const kinds = getEnemyFaction().enemies;
     Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && kinds.includes(def.id)).forEach(def => {
-      const baseCount = Number(group[def.waveKey] || 0);
+      const baseCount = [].concat(def.waveKey).reduce((sum, key) => sum + Number(group[key] || 0), 0);
       const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1)));
 
       for (let i = 0; i < count; i++) {
-        const enemy = createConfiguredEnemy(getRandomBorderPos(), def.id);
+        const enemy = createConfiguredEnemy(getWaveSpawnPos(), def.id);
         if (!enemy) continue;
         enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
 
@@ -182,6 +212,8 @@ function startNextWave() {
     });
   }
 
+  // portals (the demons, #43) have opened by themselves already; tents need builders
+  if (getEnemyFaction().portalSpawns) normalEnemies = [];
   tentCount = Math.min(tentCount, normalEnemies.length);
 
   for (let t = 0; t < tentCount; t++) {

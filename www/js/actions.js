@@ -320,6 +320,16 @@ function handleCanvasClick() {
   if (buildMode === 'interact') {
     const damaged = buildings.find(b => b.x === gx && b.y === gy && b.hp < b.maxHp);
     if (damaged && toggleBuildingRepair(damaged)) return;
+    // the demons' sacrificial circle (#43): the selected settler goes into it
+    const circle = buildings.find(b => b.x === gx && b.y === gy && (getDefinition('buildings', b.type) || {}).sacrifice);
+    if (circle) {
+      const victim = getSelectedSettler();
+      if (!victim) { showNotification(t('sacrifice.pick'), true); return; }
+      victim.sacrificeAt = circle;
+      selectedSettler = null;
+      showNotification(t('sacrifice.going', { name: GAME_CONFIG.settlerTypes[victim.type].label }), false);
+      return;
+    }
   }
 
   // Farming tab: paint (or clear) farm zone tiles
