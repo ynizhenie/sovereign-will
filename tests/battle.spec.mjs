@@ -20,28 +20,58 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
     battleTap(left.x, left.y); // again: taken away
     return {
       field: { trees: trees.length, water: waterTiles.length, rock: naturalRocks.length, boars: boars.length },
-      placed, afterRemove: settlers.length, presets: document.querySelectorAll('#battle-presets button').length
+      placed, afterRemove: settlers.length
     };
   });
   expect(r.field).toEqual({ trees: 0, water: 0, rock: 0, boars: 0 });
   expect(r.placed).toEqual({ settlers: 1, enemies: 1, green: 'sword', red: 'big' });
   expect(r.afterRemove).toBe(0);
-  expect(r.presets).toBeGreaterThanOrEqual(10);
 });
 
-test('any preset can fight on either side (#38)', async ({ page }) => {
+test('the panel has categories: your units, enemies, buildings; armour and shield only for yours (#142)', async ({ page }) => {
+  await openBattle(page);
+  const count = () => page.locator('#battle-presets button').count();
+  expect(await count()).toBe(9);
+  await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
+  await page.click('[data-battle-category="enemy"]');
+  expect(await count()).toBe(4);
+  await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
+  await page.click('[data-battle-category="buildings"]');
+  expect(await count()).toBe(5);
+});
+
+test('your units only on the green side, enemies only on the red; armour, shield and buildings (#142)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
+    window.showNotification = () => {};
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
-    battle.preset = 'raider_archer'; battleTap(at(8, 8).x, at(8, 8).y); // an enemy kind on the green side
-    battle.preset = 'big_spear'; battleTap(at(30, 8).x, at(30, 8).y);   // a giant on the red side
-    return {
-      green: { role: settlers[0].role, weapon: settlers[0].weapon, hp: settlers[0].maxHp, arrows: settlers[0].arrows > 0 },
-      red: { weapon: enemies[0].weapon, hp: enemies[0].maxHp, big: enemies[0].type === 'big' }
+    battle.preset = 'raider_archer'; battleTap(at(8, 8).x, at(8, 8).y);  // an enemy on the green side: refused
+    battle.preset = 'big_spear'; battleTap(at(30, 8).x, at(30, 8).y);    // a giant on the red side: refused
+    const refused = settlers.length + enemies.length === 0;
+    battle.armor = true; battle.shield = true;
+    battle.preset = 'sword'; battleTap(at(8, 8).x, at(8, 8).y);
+    battle.preset = 'bow'; battleTap(at(8, 10).x, at(8, 10).y);           // an archer gets no shield
+    battle.preset = 'raider'; battleTap(at(30, 8).x, at(30, 8).y);
+    battle.category = 'buildings'; battle.building = 'wall_stone';
+    battleTap(at(12, 8).x, at(12, 8).y); battleTap(at(26, 8).x, at(26, 8).y);
+    const sword = settlers.find(s => s.weapon === 'sword'), bow = settlers.find(s => s.weapon === 'bow');
+    const out = {
+      refused,
+      sword: { armor: sword.armor, shield: !!sword.shield, hp: sword.maxHp }, bowShield: !!bow.shield,
+      raider: { weapon: enemies[0].weapon, hp: enemies[0].maxHp },
+      walls: buildings.filter(b => b.type === 'wall_stone').length
     };
+    clearBattleSide('green');
+    out.afterClearGreen = { settlers: settlers.length, enemies: enemies.length, walls: buildings.length };
+    return out;
   });
-  expect(r.green).toEqual({ role: 'archer', weapon: 'bow', hp: 60, arrows: true });
-  expect(r.red).toEqual({ weapon: 'spear', hp: 250, big: true });
+  expect(r).toEqual({
+    refused: true,
+    sword: { armor: 'iron', shield: true, hp: 150 }, bowShield: false,
+    raider: { weapon: 'sword', hp: 70 },
+    walls: 2,
+    afterClearGreen: { settlers: 0, enemies: 1, walls: 1 }
+  });
 });
 
 test('Fight runs until one side is left, shows the winner, then brings the line-up back (#38)', async ({ page }) => {
