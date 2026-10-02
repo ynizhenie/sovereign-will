@@ -10,6 +10,7 @@
 <body>
 
 <div id="main-menu">
+    <canvas id="menu-scene"></canvas>
     <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless setup, Settings -->
     <div class="main-menu-content" data-screen="home">
         <h1>Sovereign Will</h1>
@@ -210,7 +211,6 @@
     </div>
     <div class="action-row">
       <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-      <button class="btn btn-disarm" id="battle-menu" data-i18n="battle.menu">[[menu]] Menu</button>
     </div>
   </div>
 
@@ -224,7 +224,6 @@
     </div>
     <div class="action-row">
       <button class="btn btn-armor" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
-      <button class="btn btn-disarm" id="editor-menu" data-i18n="battle.menu">[[menu]] Menu</button>
     </div>
   </div>
 
@@ -331,6 +330,7 @@
 <script src="js/battle.js"></script>
 <script src="js/generator.js"></script>
 <script src="js/editor.js"></script>
+<script src="js/menu-scene.js"></script>
 
 </body>
 </html>
