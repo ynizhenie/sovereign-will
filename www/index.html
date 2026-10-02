@@ -193,11 +193,23 @@
 
   <!-- battle mode (battle.js): presets to place, Fight, Clear, back to the menu -->
   <div id="battle-panel">
-    <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: green on the left, red on the right</div>
+    <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: yours on the left, enemies on the right</div>
+    <div class="battle-row">
+      <button class="fps-option" data-battle-category="own" data-i18n="battle.cat.own">Yours</button>
+      <button class="fps-option" data-battle-category="enemy" data-i18n="battle.cat.enemy">Enemies</button>
+      <button class="fps-option" data-battle-category="buildings" data-i18n="battle.cat.buildings">Buildings</button>
+    </div>
+    <div class="battle-row battle-gear">
+      <button class="fps-option" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
+      <button class="fps-option" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
+    </div>
     <div id="battle-presets" class="battle-presets"></div>
     <div class="action-row">
+      <button class="btn" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
+      <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
+    </div>
+    <div class="action-row">
       <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-      <button class="btn" id="battle-clear" data-i18n="battle.clear">[[broom]] Clear</button>
       <button class="btn btn-disarm" id="battle-menu" data-i18n="battle.menu">[[menu]] Menu</button>
     </div>
   </div>

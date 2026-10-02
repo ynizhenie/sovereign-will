@@ -683,8 +683,13 @@ body.battle-mode .top-actions,
 body.battle-mode #btn-interact,
 body.battle-mode #hud-seed { display: none; }
 #battle-panel[data-phase="fight"] .battle-presets,
+#battle-panel[data-phase="fight"] .battle-row,
 #battle-panel[data-phase="fight"] #battle-fight,
-#battle-panel[data-phase="fight"] #battle-clear { opacity: 0.4; pointer-events: none; }
+#battle-panel[data-phase="fight"] #battle-clear-green,
+#battle-panel[data-phase="fight"] #battle-clear-red { opacity: 0.4; pointer-events: none; }
+.battle-row { display: flex; gap: 4px; }
+.battle-row .fps-option { flex: 1; padding: 6px 0; }
+#battle-panel:not([data-category="own"]) .battle-gear { display: none; }
 .battle-hint {
   font-size: 11px;
   color: #8a91a0;

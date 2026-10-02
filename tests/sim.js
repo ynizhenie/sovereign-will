@@ -684,7 +684,7 @@ window.sim = (() => {
     const spots = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 6 && t.d <= 8).slice(0, 7);
     enemies = spots.map((t, i) => createConfiguredEnemy(tileCenter(t.gx, t.gy), i === 0 ? 'brute' : 'raider'));
     for (const en of enemies) en.hp = en.maxHp = 1000; // a long brawl, not a quick win
-    const fighters = [...enemies], defenders = [...settlers]; // the dead leave the lists
+    const fighters = [...enemies]; // the dead leave `enemies`
     let deepest = 0;
     run(seconds, { each: () => {
       for (const s of settlers) {
@@ -695,7 +695,7 @@ window.sim = (() => {
         }
       }
     } });
-    const settlersHurt = defenders.some(s => s.hp < s.maxHp);
+    const settlersHurt = settlers.some(s => s.hp < s.maxHp);
     const enemiesHurt = fighters.some(en => en.hp < en.maxHp);
     return { deepest: Math.round(deepest * 100) / 100, settlersHurt, enemiesHurt };
   }

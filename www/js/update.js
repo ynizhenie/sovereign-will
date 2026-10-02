@@ -318,7 +318,6 @@ function update(dt) {
     }
 
     const enemyDef = getEnemyDef(en);
-    en.attackCooldown = (en.attackCooldown || 0) - dt;
     let target = townHall;
     let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let closestSettler = null;
@@ -346,6 +345,7 @@ function update(dt) {
       minDist = Math.hypot(en.x - closestSettler.x, en.y - closestSettler.y);
     }
 
+    const ranged = enemyDef.ranged;
     // an archer with an empty quiver walks to the nearest enemy tent for more arrows,
     // or fights like its melee enemy when the tents have none left
     let shooting = en.type === 'archer';
@@ -368,30 +368,27 @@ function update(dt) {
         meleeDef = getDefinition('enemies', quiver.melee) || enemyDef;
       }
     }
-    // out of arrows with none to fetch: the melee enemy's weapon, at that weapon's damage
-    const weapon = meleeDef === enemyDef ? enemyDef.weapon : meleeDef.weapon;
-    en.weapon = weapon || 'fist';
-    const stats = getEnemyWeaponStats(en, en.weapon);
-    const hitDamage = meleeDef === enemyDef ? en.damage : stats.damage * stats.multiplier;
+    en.weapon = meleeDef.weapon || 'sword';
     const inMelee = !shooting && moveTarget === target;
-    // an archer with no clear shot walks closer instead of standing off; with one, it stops in range
+    // an archer with no clear shot walks closer instead of standing off
     const clearShot = shooting && hasLineOfFire(en.x, en.y, target.x, target.y);
-    const keepsAway = clearShot && minDist < stats.approach;
+    const keepsAway = clearShot && minDist < ranged.keepAway;
 
-    if (shooting && clearShot && minDist < stats.approach && en.attackCooldown <= 0) {
-      let angle = Math.atan2(target.y - en.y, target.x - en.x);
-      projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * stats.projectileSpeed, vy: Math.sin(angle) * stats.projectileSpeed, damage: en.damage, life: stats.projectileLife, fromEnemy: true, owner: en });
-      startSwing(en, 0.3);
-      faceTowards(en, target.x, target.y);
-      en.attackCooldown = stats.cooldown;
-      if (quiver) en.arrows--;
+    if (shooting) {
+      en.attackCooldown = (en.attackCooldown || 0) - dt;
+      if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
+        let angle = Math.atan2(target.y - en.y, target.x - en.x);
+        projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en });
+        startSwing(en, 0.3);
+        faceTowards(en, target.x, target.y);
+        en.attackCooldown = ranged.cooldown;
+        if (quiver) en.arrows--;
+      }
     }
 
-    // a melee enemy close enough to strike stands and fights instead of walking into its target: as close
-    // as a settler with that weapon walks up before striking (approach), bigger bodies counting as closer
-    // sooner (see fightEnemies); the drawn size of a settler, since a big one is pushed off further
-    const targetRadius = target === townHall ? townHall.radius : (target.visualRadius || target.radius);
-    let attackRange = stats.approach + Math.max(0, en.radius + targetRadius - NORMAL_BODIES);
+    // a melee enemy close enough to strike stands and fights instead of walking into its target
+    // the drawn size of a settler: a big one is pushed off further (see separateSettlersFromEnemies)
+    let attackRange = (target === townHall ? townHall.radius : (target.visualRadius || target.radius)) + en.radius + meleeDef.reach;
     const holdsGround = keepsAway || (inMelee && minDist < attackRange);
 
     // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
@@ -479,14 +476,28 @@ function update(dt) {
       }
     }
 
-    // strikes like a settler with that weapon: its damage per hit, one hit per cooldown
+    const meleeDamage = meleeDef === enemyDef ? en.damage : meleeDef.damage;
+    if (inMelee && minDist < attackRange) faceTowards(en, target.x, target.y);
     if (inMelee && minDist < attackRange) {
-      faceTowards(en, target.x, target.y);
-      if (en.attackCooldown <= 0) {
-        if (target === townHall) townHall.hp -= hitDamage;
-        else damageSettler(target, hitDamage, en);
-        en.attackCooldown = stats.cooldown;
-        startSwing(en, Math.min(0.35, stats.cooldown * 0.8));
+      if (!(en.swingT > 0)) startSwing(en, 0.5); // keeps swinging while it hits
+      if (en.type === 'big') {
+        let splashRadius = enemyDef.splash.radius;
+        let splashDamage = dt * en.damage * enemyDef.splash.share;
+        if (target === townHall) townHall.hp -= dt * en.damage;
+        else damageSettler(target, dt * en.damage, en);
+
+        settlers.forEach(s => {
+          if (s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius) {
+            damageSettler(s, splashDamage, en);
+          }
+        });
+
+        if (target !== townHall && Math.hypot(en.x - townHall.x, en.y - townHall.y) < splashRadius + townHall.radius) {
+          townHall.hp -= splashDamage;
+        }
+      } else {
+        if (target === townHall) townHall.hp -= dt * meleeDamage;
+        else damageSettler(target, dt * meleeDamage, en);
       }
     }
   }

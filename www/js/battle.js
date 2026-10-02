@@ -1,33 +1,41 @@
-// Battle mode (#38): an empty grass field split down the middle. The player places units from presets,
-// green on the left and red on the right, presses Fight, and they battle it out; the winner is shown and,
-// a few seconds later, the same line-up comes back to adjust.
-//
-// Green units are settlers and red ones enemies, driven by the usual AI. Any preset can go on either side:
-// enemies are built like settlers (#136), so a preset is the same fighter on both sides: weapon, body, hp.
+// Battle mode (#38): an empty grass field split down the middle. The player places the colony's units on
+// the green side (left) and enemies on the red side (right), and buildings anywhere, presses Fight, and
+// they battle it out; the winner is shown and, a few seconds later, the same line-up comes back to adjust.
+// Green units are settlers and red ones enemies, driven by the usual AI (#142).
 
-// Presets: a weapon, a body (big or not) and hp. `enemy` names the enemy kind a red unit is made from.
+// The panel's categories: the colony's units (green side), enemies (red side), buildings (either side)
+const BATTLE_CATEGORIES = ['own', 'enemy', 'buildings'];
+
+// Colony units: a weapon, a body (big or not) and hp; armour and a shield come from the panel's toggles.
+// Enemies: an enemy kind from GAME_CONFIG.enemies, with its own stats.
 const BATTLE_PRESETS = [
-  { id: 'fist', weapon: 'fist', hp: 100, enemy: 'raider_club' },
-  { id: 'club', weapon: 'club', hp: 100, enemy: 'raider_club' },
-  { id: 'sword', weapon: 'sword', hp: 100, enemy: 'raider' },
-  { id: 'spear', weapon: 'spear', hp: 100, enemy: 'raider' },
-  { id: 'iron_sword', weapon: 'iron_sword', hp: 100, enemy: 'raider' },
-  { id: 'iron_spear', weapon: 'iron_spear', hp: 100, enemy: 'raider' },
-  { id: 'bow', weapon: 'bow', hp: 100, enemy: 'raider_archer' },
-  { id: 'big_club', weapon: 'club', hp: 250, big: true, enemy: 'brute' },
-  { id: 'big_spear', weapon: 'spear', hp: 250, big: true, enemy: 'brute' },
-  { id: 'raider_club', enemyPreset: 'raider_club' },
-  { id: 'raider', enemyPreset: 'raider' },
-  { id: 'brute', enemyPreset: 'brute' },
-  { id: 'raider_archer', enemyPreset: 'raider_archer' }
+  { id: 'fist', weapon: 'fist', hp: 100 },
+  { id: 'club', weapon: 'club', hp: 100 },
+  { id: 'sword', weapon: 'sword', hp: 100 },
+  { id: 'spear', weapon: 'spear', hp: 100 },
+  { id: 'iron_sword', weapon: 'iron_sword', hp: 100 },
+  { id: 'iron_spear', weapon: 'iron_spear', hp: 100 },
+  { id: 'bow', weapon: 'bow', hp: 100 },
+  { id: 'big_club', weapon: 'club', hp: 250, big: true },
+  { id: 'big_spear', weapon: 'spear', hp: 250, big: true },
+  { id: 'raider_club', enemy: 'raider_club' },
+  { id: 'raider', enemy: 'raider' },
+  { id: 'brute', enemy: 'brute' },
+  { id: 'raider_archer', enemy: 'raider_archer' }
 ];
+
+const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'spikes', 'watchtower'];
 
 const BATTLE_RESULT_SECONDS = 4;
 
 const battle = {
   phase: 'off',       // off / setup / fight / result
-  preset: 'sword',    // the preset the next tap places
-  lineup: [],         // { presetId, x, y }: what's placed, kept between fights
+  category: 'own',    // the panel's category
+  preset: 'sword',    // the unit preset the next tap places
+  building: 'wall_wood',
+  armor: false,       // colony units placed next get armour / a shield (melee only)
+  shield: false,
+  lineup: [],         // { presetId, x, y, armor, shield } or { building, x, y }: what's placed, kept between fights
   winner: null,       // green / red / draw
   resultTimer: 0,
   nextId: 1,
@@ -38,39 +46,28 @@ function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);
 }
 
-// What a preset is as a fighter: weapon, big or not, hp (an enemy preset brings its kind's own)
-function presetBody(preset) {
-  if (preset.enemyPreset) {
-    const def = GAME_CONFIG.enemies[preset.enemyPreset];
-    return { weapon: def.weapon, big: def.body === 'big', hp: GAME_CONFIG.settlerTypes[def.body].hp, enemyKey: preset.enemyPreset };
-  }
-  return { weapon: preset.weapon, big: !!preset.big, hp: preset.hp, enemyKey: preset.enemy };
-}
-
 // The midline: left of it is green, right of it red
 function battleSide(x) {
   return x < WORLD_WIDTH / 2 ? 'green' : 'red';
 }
 
 function makeBattleUnit(entry) {
-  const body = presetBody(getBattlePreset(entry.presetId));
-  if (battleSide(entry.x) === 'green') {
-    const type = body.big ? 'big' : 'normal';
-    const archer = isBowWeapon(body.weapon);
-    const s = createSettler(type, battle.nextId++, entry.x, entry.y);
-    Object.assign(s, {
-      hp: body.hp, maxHp: body.hp, weapon: body.weapon, tool: 'none',
-      role: archer ? 'archer' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
-    });
-    settlers.push(s);
-  } else {
-    const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, body.enemyKey);
-    en.hp = en.maxHp = body.hp;
-    if (body.big) { en.type = 'big'; en.body = 'big'; en.radius = GAME_CONFIG.settlerTypes.big.visualRadius; }
-    armEnemy(en, body.weapon);
+  const preset = getBattlePreset(entry.presetId);
+  if (preset.enemy) {
+    const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
     enemies.push(en);
+    return;
   }
+  const archer = isBowWeapon(preset.weapon);
+  const s = createSettler(preset.big ? 'big' : 'normal', battle.nextId++, entry.x, entry.y);
+  Object.assign(s, {
+    hp: preset.hp, maxHp: preset.hp, weapon: preset.weapon, tool: 'none',
+    role: archer ? 'archer' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
+  });
+  if (entry.armor) putOnGear(s, 'armor');
+  if (entry.shield && canUseShield(s)) s.shield = true;
+  settlers.push(s);
 }
 
 // An empty field: grass only, the town hall out of the way, no waves, no animals
@@ -91,8 +88,18 @@ function setUpBattleField() {
 
 // The line-up as placed: units standing still until Fight
 function resetBattleUnits() {
-  settlers = []; enemies = []; projectiles = []; corpses = []; bloodSplats = []; dung = [];
-  for (const entry of battle.lineup) makeBattleUnit(entry);
+  settlers = []; enemies = []; projectiles = []; corpses = []; bloodSplats = []; dung = []; buildings = [];
+  for (const entry of battle.lineup) {
+    if (entry.building) {
+      const b = createBuildingBlueprint(entry.building, entry.x, entry.y);
+      delete b.progress;
+      delete b.maxProgress;
+      buildings.push(b);
+    } else {
+      makeBattleUnit(entry);
+    }
+  }
+  invalidateAllPaths();
 }
 
 function startBattleMode() {
@@ -116,15 +123,32 @@ function leaveBattleMode() {
   exitToMainMenu();
 }
 
-// A tap during setup: place the chosen preset on an empty tile, or take away the unit standing there
+// A tap during setup: place what's chosen on an empty tile (colony units on the green side, enemies on
+// the red one, buildings anywhere), or take away what stands there
 function battleTap(x, y) {
   if (battle.phase !== 'setup') return;
   const g = getGridPos(x, y);
   if (isBorderZone(g.gx, g.gy)) return;
   const cx = g.gx * TILE_SIZE + 15, cy = g.gy * TILE_SIZE + 15;
   const existing = battle.lineup.find(e => e.x === cx && e.y === cy);
-  if (existing) battle.lineup.splice(battle.lineup.indexOf(existing), 1);
-  else battle.lineup.push({ presetId: battle.preset, x: cx, y: cy });
+  if (existing) {
+    battle.lineup.splice(battle.lineup.indexOf(existing), 1);
+  } else if (battle.category === 'buildings') {
+    battle.lineup.push({ building: battle.building, x: cx, y: cy });
+  } else {
+    const preset = getBattlePreset(battle.preset);
+    const side = preset.enemy ? 'red' : 'green';
+    if (battleSide(cx) !== side) { showNotification(t(`battle.only.${side}`), true); return; }
+    battle.lineup.push(preset.enemy ? { presetId: preset.id, x: cx, y: cy }
+      : { presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield });
+  }
+  resetBattleUnits();
+}
+
+// Take away everything placed on one side
+function clearBattleSide(side) {
+  if (battle.phase !== 'setup') return;
+  battle.lineup = battle.lineup.filter(e => battleSide(e.x) !== side);
   resetBattleUnits();
 }
 
@@ -182,23 +206,48 @@ function drawBattleResult() {
 
 function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
+  document.querySelectorAll('[data-battle-category]').forEach(b => b.classList.toggle('active', b.dataset.battleCategory === battle.category));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[b.dataset.battleGear]));
+  panel.dataset.category = battle.category;
   const presets = document.getElementById('battle-presets');
   presets.innerHTML = '';
-  for (const preset of BATTLE_PRESETS) {
+  const add = (id, active, label, pick) => {
     const button = document.createElement('button');
-    button.className = 'btn' + (battle.preset === preset.id ? ' active' : '');
-    button.dataset.preset = preset.id;
-    const body = presetBody(preset);
-    const weapon = getDefinition('weapons', body.weapon);
-    setRichText(button, `${weapon ? `[[${weapon.icon}]]` : ''} ${t(`preset.${preset.id}`)}`);
-    button.addEventListener('click', () => { battle.preset = preset.id; renderBattlePanel(); });
+    button.className = 'btn' + (active ? ' active' : '');
+    button.dataset.preset = id;
+    setRichText(button, label);
+    onTap(button, () => { pick(); renderBattlePanel(); });
     presets.appendChild(button);
+  };
+  if (battle.category === 'buildings') {
+    for (const id of BATTLE_BUILDINGS) {
+      const def = getDefinition('buildings', id);
+      add(id, battle.building === id, `[[${def.icon}]] ${def.label}`, () => { battle.building = id; });
+    }
+  } else {
+    for (const preset of BATTLE_PRESETS.filter(p => !!p.enemy === (battle.category === 'enemy'))) {
+      const weapon = getDefinition('weapons', preset.enemy ? GAME_CONFIG.enemies[preset.enemy].weapon : preset.weapon);
+      add(preset.id, battle.preset === preset.id, `${weapon ? `[[${weapon.icon}]]` : ''} ${t(`preset.${preset.id}`)}`, () => { battle.preset = preset.id; });
+    }
   }
   panel.dataset.phase = battle.phase;
+}
+
+// Switching category picks that category's first unit (so a tap never places from another category)
+function setBattleCategory(category) {
+  battle.category = category;
+  if (category !== 'buildings') {
+    const current = getBattlePreset(battle.preset);
+    if (!!current.enemy !== (category === 'enemy')) battle.preset = BATTLE_PRESETS.find(p => !!p.enemy === (category === 'enemy')).id;
+  }
+  renderBattlePanel();
 }
 
 document.getElementById('mode-battles').disabled = false;
 onTap(document.getElementById('mode-battles'), startBattleMode);
 onTap(document.getElementById('battle-fight'), startBattleFight);
-onTap(document.getElementById('battle-clear'), () => { if (battle.phase === 'setup') { battle.lineup = []; resetBattleUnits(); } });
+onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
+onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
 onTap(document.getElementById('battle-menu'), leaveBattleMode);
+document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => setBattleCategory(b.dataset.battleCategory)));
+document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { battle[b.dataset.battleGear] = !battle[b.dataset.battleGear]; renderBattlePanel(); }));
