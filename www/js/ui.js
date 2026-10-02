@@ -1,5 +1,4 @@
 function updateUI() {
-  if (openStorage) renderStoragePopup();
   document.getElementById('wave-num').innerText = waveNum;
   document.getElementById('wave-timer').innerText = Math.ceil(waveTimer);
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
@@ -54,28 +53,3 @@ function updateUI() {
 
 }
 
-// ---- What a storage holds (#36): tap the town hall or a warehouse in the Point mode
-
-let openStorage = null;
-
-function showStoragePopup(storage) {
-  openStorage = storage;
-  document.getElementById('storage-popup').hidden = false;
-  renderStoragePopup();
-}
-
-function hideStoragePopup() {
-  openStorage = null;
-  document.getElementById('storage-popup').hidden = true;
-}
-
-function renderStoragePopup() {
-  if (openStorage !== townHall && !buildings.includes(openStorage)) { hideStoragePopup(); return; }
-  const title = openStorage === townHall ? `[[hall]] ${t('storage.hall')}` : `[[warehouse]] ${getDefinition('buildings', 'warehouse').label}`;
-  setRichText(document.getElementById('storage-title'), title);
-  document.getElementById('storage-fill').textContent =
-    t('storage.fill', { n: Math.floor(getStoredTotal(openStorage)), max: getStorageCapacity(openStorage) });
-  const items = Object.entries(openStorage.contents).filter(([, amount]) => amount >= 1)
-    .map(([id, amount]) => `<div>${iconHtml(getResourceIconName(id))} ${escapeHtml(getDefinition('resources', id)?.label || id)}: <b>${Math.floor(amount)}</b></div>`);
-  document.getElementById('storage-items').innerHTML = items.length ? items.join('') : `<div class="storage-empty">${escapeHtml(t('storage.empty'))}</div>`;
-}

@@ -1,5 +1,4 @@
 const WAVE_WARNING_SECONDS = 15;
-let storageWasFull = false; // to warn once when every storage fills up (#36)
 
 function update(dt) {
   if (!gameStarted || isPaused || gameMode === 'editor') return;
@@ -199,8 +198,6 @@ function update(dt) {
 
   // settler AI: see behaviours.js
   const settlerTick = createSettlerTick(dt);
-  if (settlerTick.storageFull && !storageWasFull && gameMode === 'endless') showNotification(t('storage.full'), true);
-  storageWasFull = settlerTick.storageFull;
   assignTowerArchers();
 
   settlers.forEach(s => {
@@ -208,7 +205,7 @@ function update(dt) {
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (behaviour(s, settlerTick)) {
-        s.isIdle = behaviour === patrol || behaviour === restWhenStorageFull;
+        s.isIdle = behaviour === patrol;
         return;
       }
     }

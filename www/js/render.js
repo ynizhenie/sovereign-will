@@ -563,11 +563,7 @@ function render() {
         ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
       }
     } else if (b.type === 'warehouse') {
-      // a wooden shed, and how full it is (#36)
-      drawIcon(ctx, 'warehouse', b.x, b.y, 28);
-      const fill = getStoredTotal(b) / Math.max(1, getStorageCapacity(b));
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y + 15, 24, 3);
-      ctx.fillStyle = fill >= 1 ? '#e74c3c' : '#f1c40f'; ctx.fillRect(b.x - 12, b.y + 15, 24 * Math.min(1, fill), 3);
+      drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed (#36)
     } else if (b.type === 'smelter') {
 	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
 	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
@@ -626,14 +622,6 @@ function render() {
   });
 
   // blood on the ground, and footprints out of blood or dung
-  // what a destroyed warehouse spilled (#36)
-  resourcePiles.forEach(p => {
-    drawIcon(ctx, 'pile', p.x, p.y + 3, 20);
-    drawIcon(ctx, getResourceIconName(p.type), p.x, p.y - 2, 12);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(`${Math.round(p.amount)}`, p.x + 10, p.y + 12);
-  });
-
   bloodSplats.forEach(b => {
     const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
     ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
