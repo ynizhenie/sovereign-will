@@ -145,29 +145,27 @@ function performAttack(attacker, targetX, targetY) {
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, 0.3);
   } else {
-    let range = stats.range;
-    let dmg = stats.damage * stats.multiplier;
-    
-    enemies.forEach(en => {
-      if (Math.hypot(en.x - attacker.x, en.y - attacker.y) <= range + en.radius) {
-        en.hp -= dmg;
-        bleed(en, attacker);
-      }
-    });
-
-    enemyTents.forEach(et => {
-      if (Math.hypot(et.x - attacker.x, et.y - attacker.y) <= range + 15) {
-        et.hp -= dmg;
-      }
-    });
-
-    boars.forEach(b => {
-      if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - attacker.x, b.y - attacker.y) <= range + 12 && !((b.fleeTimer || 0) > 0 && b.sprinting)) {
-        b.hp -= dmg;
-        makeBoarFlee(b, attacker.x, attacker.y);
-        if (b.hp <= 0) finishHarvest(attacker, b, 'boar');
-      }
-    });
+    const range = stats.range;
+    const dmg = stats.damage * stats.multiplier;
+    const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
+    // everything within reach of the blow, and what hitting it does
+    const struck = [
+      ...enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { en.hp -= dmg; bleed(en, attacker); } })),
+      ...enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      ...boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
+        .map(b => ({ at: b, hit: () => {
+          b.hp -= dmg;
+          makeBoarFlee(b, attacker.x, attacker.y);
+          if (b.hp <= 0) finishHarvest(attacker, b, 'boar');
+        } }))
+    ];
+    // a big settler's blow hits everything around it; anyone else hits one: the one aimed at (#144)
+    if (attacker.type === 'big') struck.forEach(target => target.hit());
+    else if (struck.length > 0) {
+      const aimed = struck.reduce((best, target) =>
+        Math.hypot(target.at.x - targetX, target.at.y - targetY) < Math.hypot(best.at.x - targetX, best.at.y - targetY) ? target : best);
+      aimed.hit();
+    }
 
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, Math.min(0.35, stats.cooldown * 0.8));
