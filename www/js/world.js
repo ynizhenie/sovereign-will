@@ -30,7 +30,7 @@ function createSettler(typeKey, id, x, y, extra = {}) {
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
   };
-  if (t.archer) Object.assign(s, { weapon: 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
+  if (t.archer) Object.assign(s, { weapon: t.archerWeapon || 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
   if (t.necromancer) s.raisesLeft = t.necromancer.raises;
   return s;
 }

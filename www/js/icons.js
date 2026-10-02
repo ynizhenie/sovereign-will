@@ -404,6 +404,36 @@ const ICONS = {
   },
   staff: c => { icLine(c, '#8e5a2b', 3, [[8, 28], [22, 8]]); icCircle(c, '#bb8fce', 23, 7, 4.5); icCircle(c, '#e8daef', 22, 6, 1.5); },
 
+  // ---- The demons (#43)
+  imp: c => {
+    icFill(c, '#2c2c34', [[8, 8], [11, 2], [13, 9]]); icFill(c, '#2c2c34', [[24, 8], [21, 2], [19, 9]]);
+    icPerson(c, '#e8572a', 0.75);
+    icCircle(c, '#f9e79f', 12.5, 16, 1.8); icCircle(c, '#f9e79f', 19.5, 16, 1.8);
+  },
+  demon: c => {
+    icFill(c, '#2c2c34', [[4, 9], [6, 1], [11, 7]]); icFill(c, '#2c2c34', [[28, 9], [26, 1], [21, 7]]);
+    icPerson(c, '#c0392b', 1.05);
+    icCircle(c, '#f9e79f', 11, 15, 2.2); icCircle(c, '#f9e79f', 21, 15, 2.2);
+  },
+  fire_imp: c => { ICONS.imp(c); icFlame(c, 26, 30, 0.45); },
+  fireball: c => { icCircle(c, '#e67e22', 18, 18, 9); icCircle(c, '#f1c40f', 18, 18, 5); icFill(c, '#e67e22', [[11, 12], [3, 6], [13, 20]]); },
+  hellgate: c => {
+    icRect(c, '#3d1f1f', 3, 8, 26, 21);
+    c.fillStyle = '#1e0f0f'; c.beginPath(); c.moveTo(9, 29); c.lineTo(9, 17); c.arc(16, 17, 7, Math.PI, 0); c.lineTo(23, 29); c.closePath(); c.fill();
+    icFlame(c, 16, 29, 0.6);
+    icFill(c, '#2c2c34', [[3, 8], [6, 1], [10, 8]]); icFill(c, '#2c2c34', [[29, 8], [26, 1], [22, 8]]);
+  },
+  sacrifice_circle: c => {
+    icRing(c, '#c0392b', 2.5, 16, 16, 12); icRing(c, '#7b241c', 1.5, 16, 16, 8);
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+      icCircle(c, '#f39c12', 16 + Math.cos(a) * 12, 16 + Math.sin(a) * 12, 2);
+    }
+  },
+  portal: c => {
+    icEllipse(c, '#4a235a', 16, 16, 11, 14); icEllipse(c, '#8e44ad', 16, 16, 8, 11); icEllipse(c, '#e8daef', 16, 16, 3.5, 6);
+  },
+
   // ---- Tools and weapons (the same colours as in settlers' hands)
   axe: c => icAxe(c, '#95a5a6', '#dfe6e9'),
   iron_axe: c => icAxe(c, '#b0bec5', '#ffffff'),
