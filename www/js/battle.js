@@ -231,6 +231,7 @@ function renderBattlePanel() {
     }
   }
   panel.dataset.phase = battle.phase;
+  document.body.dataset.battlePhase = battle.phase;
 }
 
 // Switching category picks that category's first unit (so a tap never places from another category)

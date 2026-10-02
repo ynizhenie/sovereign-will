@@ -166,10 +166,19 @@
       <i class="ic ic-water"></i> <span data-i18n="top.wave">Wave</span> <span id="wave-num">1</span> (<span id="wave-timer">90</span><span data-i18n="top.seconds">s</span>)
     </div>
 
+    <div class="battle-top">
+      <button class="btn" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
+      <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
+    </div>
+
     <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" data-i18n-title="pause.pauseHint" title="Pause [Space]"><i class="ic ic-pause"></i></button>
 
     <div class="top-actions">
       <button class="btn btn-unpossess" onclick="switchPossession()"><i class="ic ic-eye"></i></button>
+    </div>
+
+    <div class="battle-top">
+      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
     </div>
   </div>
 
@@ -213,13 +222,6 @@
       <button class="fps-option" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
     </div>
     <div id="battle-presets" class="battle-presets"></div>
-    <div class="action-row">
-      <button class="btn" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
-      <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
-    </div>
-    <div class="action-row">
-      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-    </div>
   </div>
 
   <div id="editor-panel">
