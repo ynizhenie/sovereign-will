@@ -89,7 +89,7 @@ function createConfigButton(item, action) {
 
 // Rebuild the generated HUD and buttons, e.g. after a language change (setLanguage)
 function rebuildConfigHud() {
-  for (const id of ['resources-hud', 'build-actions', 'farming-actions', 'tool-actions', 'weapon-actions']) {
+  for (const id of ['resources-hud', 'build-actions', 'farming-actions', 'tool-actions', 'weapon-actions', 'recruit-row']) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   }
@@ -99,7 +99,12 @@ function rebuildConfigHud() {
   if (typeof updateUI === 'function' && gameStarted) updateUI();
 }
 
+let renderedFaction = null; // whose units and buildings the HUD shows (#43)
+
 function renderConfigHud() {
+  // only what the player's faction has (#43): its resources, buildings, units to hire and upgrade
+  renderedFaction = sides.player.faction;
+  const ours = item => !item.factions || item.factions.includes(sides.player.faction);
   const resourcesHud = document.getElementById('resources-hud');
   if (resourcesHud) {
     const base = document.createElement('div');
@@ -180,11 +185,11 @@ function renderConfigHud() {
       details.appendChild(row);
       tile.addEventListener('click', () => toggleResourceGroup(group.id));
     }
-    Object.values(GAME_CONFIG.resources).filter(r => !grouped.has(r.id)).forEach(r => resourceTile(r, resourcesHud));
+    Object.values(GAME_CONFIG.resources).filter(r => !grouped.has(r.id) && ours(r)).forEach(r => resourceTile(r, resourcesHud));
     resourcesHud.after(details);
   }
 
-  Object.values(GAME_CONFIG.buildings).forEach(item => {
+  Object.values(GAME_CONFIG.buildings).filter(ours).forEach(item => {
     const actions = document.getElementById(`${item.tab || 'build'}-actions`);
     if (actions) actions.appendChild(createConfigButton(item, setMode));
   });
@@ -194,13 +199,29 @@ function renderConfigHud() {
     if (toolActions) toolActions.appendChild(createConfigButton(item, assignTool));
   });
 
-  // hire / upgrade / craft buttons in index.html get their text from the config
+  const recruit = document.getElementById('recruit-row');
+  for (const type of getPlayerFaction().units) {
+    const unit = GAME_CONFIG.settlerTypes[type];
+    const button = document.createElement('button');
+    button.className = 'btn';
+    button.id = `btn-hire-${type}`;
+    setRichText(button, `[[${unit.icon}]] ${unit.label} (${formatCost(unit.hireCost)})`);
+    onTap(button, () => spawnSettler(type));
+    recruit.appendChild(button);
+  }
+  // craft / gear buttons in index.html get their text from the config
   const label = (id, text) => { const el = document.getElementById(id); if (el) setRichText(el, text); };
-  const types = GAME_CONFIG.settlerTypes, recipes = GAME_CONFIG.recipes;
-  label('btn-hire-normal', `[[${types.normal.icon}]] ${types.normal.label} (${formatCost(types.normal.hireCost)})`);
-  label('btn-hire-big', `[[${types.big.icon}]] ${types.big.label} (${formatCost(types.big.hireCost)})`);
-  label('btn-upgrade', t('btn.upgrade', { icon: types.big.icon, cost: formatCost(types.big.upgradeCost) }));
-  label('btn-upgrade-big', t('btn.upgradeWorker', { icon: types.big.icon, cost: formatCost(types.big.upgradeCost) }));
+  const recipes = GAME_CONFIG.recipes;
+  const upgrade = getUpgrade();
+  if (upgrade) {
+    const button = document.createElement('button');
+    button.className = 'btn btn-armor';
+    button.id = 'btn-upgrade';
+    setRichText(button, t('btn.upgrade', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) }));
+    onTap(button, () => upgradeToBig());
+    recruit.appendChild(button);
+    label('btn-upgrade-big', t('btn.upgradeWorker', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) }));
+  }
   label('btn-craft-arrows', `[[${recipes.arrows.icon}]] ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
   for (const item of Object.values(GAME_CONFIG.gear)) label(`btn-${item.id}`, `[[${item.icon}]] ${item.label} (${formatCost(item.cost)})`);
 
@@ -301,7 +322,7 @@ function canBuild(buildingType) {
 
 // Damaged and ordered by the player; tents mend themselves
 function needsRepair(building) {
-  if (!(building.hp < building.maxHp) || building.type === 'tent') return false;
+  if (!(building.hp < building.maxHp) || isShelter(building)) return false;
   return !!building.repairRequested;
 }
 
@@ -318,7 +339,7 @@ function getRepairStep(building) {
 
 // Order (or cancel) repairs of a damaged building; tents mend themselves
 function toggleBuildingRepair(building) {
-  if (!(building.hp < building.maxHp) || building.type === 'tent') return false;
+  if (!(building.hp < building.maxHp) || isShelter(building)) return false;
   building.repairRequested = !building.repairRequested;
   const item = getDefinition('buildings', building.type);
   showNotification(building.repairRequested
@@ -331,7 +352,7 @@ function toggleBuildingRepair(building) {
 function repairAllBuildings() {
   let count = 0;
   for (const b of buildings) {
-    if (b.hp < b.maxHp && b.type !== 'tent') { b.repairRequested = true; count++; }
+    if (b.hp < b.maxHp && !isShelter(b)) { b.repairRequested = true; count++; }
   }
   if (townHall.hp < townHall.maxHp) { townHall.repairRequested = true; count++; }
   showNotification(count > 0 ? t('repair.allOrdered', { count }) : t('repair.nothing'), count === 0);

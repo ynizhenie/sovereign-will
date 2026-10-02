@@ -2,23 +2,37 @@ function isBorderZone(gx, gy) {
   return gx < BORDER_MARGIN || gx >= COLS - BORDER_MARGIN || gy < BORDER_MARGIN || gy >= ROWS - BORDER_MARGIN;
 }
 
+// The start's limit, plus what each tent (or grave) adds
 function getMaxPop() {
-  let tentsCount = buildings.filter(b => b.type === 'tent').length;
-  return GAME_CONFIG.start.population + tentsCount * GAME_CONFIG.buildings.tent.population;
+  return buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
+}
+
+// A shelter: a building settlers heal at (the humans' tent, the undead's grave, #43)
+function isShelter(building) {
+  return !!(getDefinition('buildings', building.type) || {}).healPerSecond;
+}
+
+// A big body: a giant or a big zombie (settlerTypes with big), or a big enemy
+function isBigBody(unit) {
+  return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
 }
 
 function getCurrentPop() {
   return settlers.reduce((sum, s) => sum + GAME_CONFIG.settlerTypes[s.type].population, 0);
 }
 
-// A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker
+// A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind (skeletons)
+// comes with its bow and a full quiver, a necromancer with its raises
 function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
-  return {
+  const s = {
     id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
   };
+  if (t.archer) Object.assign(s, { weapon: 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
+  if (t.necromancer) s.raisesLeft = t.necromancer.raises;
+  return s;
 }
 
 function isBuildingSingle(building) {
@@ -655,6 +669,8 @@ function resetGame(map = gameMode === 'endless' ? customMap : null) {
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);
+  addResources(getPlayerFaction().startResources);
+  if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings (#43)
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   setWorldSize((map || mapSettings).cols, (map || mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable (#135)
@@ -668,8 +684,8 @@ function resetGame(map = gameMode === 'endless' ? customMap : null) {
   updateSeedHud();
 
   settlers.push(
-    createSettler('normal', 101, townHall.x - 45, townHall.y),
-    createSettler('normal', 102, townHall.x + 45, townHall.y)
+    createSettler(getPlayerFaction().startUnits, 101, townHall.x - 45, townHall.y),
+    createSettler(getPlayerFaction().startUnits, 102, townHall.x + 45, townHall.y)
   );
 
   updateUnitCounts();

@@ -26,7 +26,7 @@ function createSettlerTick(dt) {
   return {
     dt,
     isWaveActive: enemies.length > 0,
-    tents: buildings.filter(b => b.type === 'tent'),
+    tents: buildings.filter(isShelter), // tents or graves (#43)
     allResources,
     resourceKind,
     markedResources,
@@ -41,6 +41,7 @@ function createSettlerTick(dt) {
     appleAssignments: new Set(),     // apple trees someone is picking this tick
     wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
+    raiseAssignments: new Set(),     // corpses a necromancer is raising this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
@@ -359,7 +360,7 @@ function getMissingMaterial(bp) {
 // Workers mend a damaged tent unless enemies are right next to it
 function repairTent(s, tick) {
   if (s.role === 'worker' && !s.isPossessed) {
-    let damagedTent = buildings.find(b => b.type === 'tent' && b.hp < b.maxHp);
+    let damagedTent = buildings.find(b => isShelter(b) && b.hp < b.maxHp);
     if (damagedTent) {
       let tentThreatened = enemies.some(en => Math.hypot(en.x - damagedTent.x, en.y - damagedTent.y) < 120);
       if (!tentThreatened) {
@@ -367,7 +368,7 @@ function repairTent(s, tick) {
         if (distToTent > 32) {
           moveEntityTowards(s, damagedTent.x, damagedTent.y, s.speed, false, tick.dt);
         } else {
-          damagedTent.hp = Math.min(damagedTent.maxHp, damagedTent.hp + tick.dt * GAME_CONFIG.buildings.tent.repairPerSecond);
+          damagedTent.hp = Math.min(damagedTent.maxHp, damagedTent.hp + tick.dt * getDefinition('buildings', damagedTent.type).repairPerSecond);
         }
         s.patrolTarget = null;
         return true;
@@ -399,7 +400,7 @@ function healAtTent(s, tick) {
         s.patrolTarget = null;
         return true;
       } else {
-        s.hp = Math.min(s.maxHp, s.hp + tick.dt * GAME_CONFIG.buildings.tent.healPerSecond);
+        s.hp = Math.min(s.maxHp, s.hp + tick.dt * getDefinition('buildings', nearestTent.type).healPerSecond);
         s.patrolTarget = null;
         s.healing = s.hp < s.maxHp;
         if (s.healing) return true;
@@ -418,6 +419,77 @@ function playerControlled(s, tick) {
   if (s.targetEquipment) return equip(s, tick);
   if (s.order && !followOrder(s, tick)) s.order = null;
   return true;
+}
+
+// ---- Necromancers (#43)
+
+// The undead's necromancer: heals the wounded around it; raises corpses (any, a big one into a big
+// zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,
+// it gets them back at the nearest grave (or the graveyard)
+function necromancy(s, tick) {
+  const necro = (getDefinition('settlerTypes', s.type) || {}).necromancer;
+  if (!necro) return false;
+  const dt = tick.dt;
+  const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
+
+  let patient = null;
+  for (const other of settlers) {
+    if (other !== s && other.hp < other.maxHp && dist(other) < necro.range / 2 && (!patient || dist(other) < dist(patient))) patient = other;
+  }
+  if (patient) {
+    s.patrolTarget = null;
+    if (dist(patient) > necro.healRange) {
+      moveEntityTowards(s, patient.x, patient.y, s.speed, false, dt);
+    } else {
+      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      s.working = 0.1;
+      faceTowards(s, patient.x, patient.y);
+    }
+    return true;
+  }
+
+  let corpse = null;
+  const zombieType = c => (c.big ? 'big_zombie' : 'zombie');
+  if (s.raisesLeft > 0) {
+    for (const c of corpses) {
+      if (tick.raiseAssignments.has(c) || dist(c) > necro.range) continue;
+      if (getCurrentPop() + GAME_CONFIG.settlerTypes[zombieType(c)].population > getMaxPop()) continue;
+      if (!corpse || dist(c) < dist(corpse)) corpse = c;
+    }
+  }
+  if (corpse) {
+    tick.raiseAssignments.add(corpse);
+    s.patrolTarget = null;
+    if (dist(corpse) > 16) {
+      moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, dt);
+      s.raiseTimer = 0;
+      return true;
+    }
+    s.working = 0.1;
+    faceTowards(s, corpse.x, corpse.y);
+    s.raiseTimer = (s.raiseTimer || 0) + dt;
+    if (s.raiseTimer >= necro.raiseSeconds) {
+      s.raiseTimer = 0;
+      s.raisesLeft--;
+      corpses.splice(corpses.indexOf(corpse), 1);
+      settlers.push(createSettler(zombieType(corpse), Date.now() + rand(), corpse.x, corpse.y));
+    }
+    return true;
+  }
+
+  if (s.raisesLeft < necro.raises) {
+    const graves = buildings.filter(b => b.type === 'grave');
+    const grave = graves.length ? graves.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : townHall;
+    s.patrolTarget = null;
+    if (grave === townHall ? dist(townHall) > townHall.radius + s.radius + 4 : dist(grave) > 32) {
+      if (grave === townHall) moveSettlerToTownHall(s, s.speed, dt);
+      else moveEntityTowards(s, grave.x, grave.y, s.speed, false, dt);
+    } else {
+      s.raisesLeft = necro.raises;
+    }
+    return true;
+  }
+  return false;
 }
 
 // ---- Fighting
@@ -1396,6 +1468,7 @@ const SETTLER_BEHAVIOURS = [
   repairTent,
   healAtTent,
   treatWounded,
+  necromancy,
   holdPost,
   fightEnemies,
   breakOutOfSealedBase,

@@ -40,7 +40,7 @@ function updateUI() {
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName})`);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
-      btnUpgrade.style.display = selectedSettler.type === 'normal' ? 'block' : 'none';
+      btnUpgrade.style.display = getUpgrade() && selectedSettler.type === getUpgrade().from ? 'block' : 'none';
     }
   } else {
     selectedSettler = null;
