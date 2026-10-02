@@ -362,6 +362,48 @@ const ICONS = {
     icLine(c, '#4f7a9e', 2.5, [[21, 19], [27, 11]]); icRect(c, '#4f7a9e', 25, 8, 5, 4);
   },
 
+  // ---- The undead (#43)
+  bones: c => {
+    c.save(); c.translate(16, 16); c.rotate(-0.6);
+    icRound(c, '#ecf0f1', -10, -2.5, 20, 5, 2.5);
+    for (const x of [-11, 11]) { icCircle(c, '#ecf0f1', x, -3, 3.2); icCircle(c, '#ecf0f1', x, 3, 3.2); }
+    c.restore();
+  },
+  zombie: c => {
+    icPerson(c, '#7dcea0', 0.75);
+    icRect(c, '#1e272e', 11, 14, 3.5, 3.5); icRect(c, '#1e272e', 18, 15, 3.5, 2.5);
+    icLine(c, '#1e272e', 1.5, [[12, 22], [16, 21], [20, 23]]);
+  },
+  big_zombie: c => {
+    icPerson(c, '#58a77a', 1.05);
+    icRect(c, '#1e272e', 9, 12, 4.5, 4.5); icRect(c, '#1e272e', 19, 13, 4.5, 3);
+    icLine(c, '#1e272e', 2, [[10, 23], [16, 21], [22, 24]]);
+  },
+  skeleton: c => {
+    icCircle(c, '#ecf0f1', 16, 13, 10); icRect(c, '#ecf0f1', 11, 20, 10, 7);
+    icCircle(c, '#1e272e', 12, 13, 2.8); icCircle(c, '#1e272e', 20, 13, 2.8);
+    icFill(c, '#1e272e', [[16, 16], [14.5, 19], [17.5, 19]]);
+    for (const x of [13, 16, 19]) icLine(c, '#1e272e', 1, [[x, 21], [x, 26]]);
+  },
+  necromancer: c => {
+    icFill(c, '#4a235a', [[16, 3], [27, 29], [5, 29]]);
+    icCircle(c, '#1e272e', 16, 14, 4.5); icCircle(c, '#a569bd', 14.5, 14, 1); icCircle(c, '#a569bd', 17.5, 14, 1);
+    icLine(c, '#8e5a2b', 2, [[27, 29], [27, 6]]); icCircle(c, '#bb8fce', 27, 6, 3.2);
+  },
+  grave: c => {
+    icEllipse(c, '#5d4037', 16, 25, 13, 5);
+    c.fillStyle = '#95a5a6'; c.beginPath(); c.moveTo(9, 25); c.lineTo(9, 11); c.arc(16, 11, 7, Math.PI, 0); c.lineTo(23, 25); c.closePath(); c.fill();
+    icLine(c, '#5d6d7e', 1.8, [[16, 10], [16, 19]]); icLine(c, '#5d6d7e', 1.8, [[12.5, 13], [19.5, 13]]);
+  },
+  graveyard: c => {
+    icRect(c, '#2c2c34', 3, 6, 26, 22);
+    for (const x of [8, 16, 24]) {
+      c.fillStyle = '#95a5a6'; c.beginPath(); c.moveTo(x - 3.5, 22); c.lineTo(x - 3.5, 13); c.arc(x, 13, 3.5, Math.PI, 0); c.lineTo(x + 3.5, 22); c.closePath(); c.fill();
+    }
+    c.strokeStyle = '#7f8c8d'; c.lineWidth = 1.5; c.strokeRect(3, 6, 26, 22);
+  },
+  staff: c => { icLine(c, '#8e5a2b', 3, [[8, 28], [22, 8]]); icCircle(c, '#bb8fce', 23, 7, 4.5); icCircle(c, '#e8daef', 22, 6, 1.5); },
+
   // ---- Tools and weapons (the same colours as in settlers' hands)
   axe: c => icAxe(c, '#95a5a6', '#dfe6e9'),
   iron_axe: c => icAxe(c, '#b0bec5', '#ffffff'),

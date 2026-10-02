@@ -80,11 +80,7 @@ test('hire, upgrade and craft buttons show their cost from the config (#45)', as
   // change a price in the config and the button follows
   await page.evaluate(() => {
     GAME_CONFIG.settlerTypes.normal.hireCost = { food: 20, wood: 2 };
-    document.getElementById('build-actions').innerHTML = '';
-    document.getElementById('tool-actions').innerHTML = '';
-    document.getElementById('weapon-actions').innerHTML = '';
-    document.getElementById('resources-hud').innerHTML = '';
-    renderConfigHud();
+    rebuildConfigHud();
   });
   await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Рабочий (20[[food]] 2[[wood]])']);
 });

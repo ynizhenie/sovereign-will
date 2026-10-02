@@ -57,7 +57,7 @@ function findNearestEnemyTent(origin) {
 // ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
 // later mechanic (e.g. raising the dead) can use one up by removing it from `corpses`.
 function addCorpse(unit, side, kind) {
-  const big = unit.type === 'big';
+  const big = isBigBody(unit);
   corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
 }
 
@@ -70,6 +70,41 @@ function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of corpses) corpse.age += dt;
   corpses = corpses.filter(corpse => corpse.age < lifetime);
+}
+
+// An enemy necromancer (#43): heals the wounded enemies around it as it goes; with no settler close by
+// it walks to a corpse within range and raises it into a zombie (a big corpse: a big zombie), as many
+// times as it has raises. True while it's busy raising (it does nothing else then).
+function enemyNecromancy(en, necro, dt) {
+  if (en.raisesLeft === undefined) en.raisesLeft = necro.raises;
+  for (const other of enemies) {
+    if (other !== en && other.hp < other.maxHp && Math.hypot(other.x - en.x, other.y - en.y) < necro.healRange) {
+      other.hp = Math.min(other.maxHp, other.hp + necro.healPerSecond * dt);
+    }
+  }
+  if (en.raisesLeft <= 0 || settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 60)) return false;
+  let corpse = null, best = necro.range;
+  for (const c of corpses) {
+    const d = Math.hypot(c.x - en.x, c.y - en.y);
+    if (d < best && (!c.raisedBy || c.raisedBy === en)) { best = d; corpse = c; }
+  }
+  if (!corpse) return false;
+  corpse.raisedBy = en;
+  if (best > 16) {
+    moveEntityTowards(en, corpse.x, corpse.y, en.speed, true, dt);
+    return true;
+  }
+  faceTowards(en, corpse.x, corpse.y);
+  en.raiseTimer = (en.raiseTimer || 0) + dt;
+  if (en.raiseTimer >= necro.raiseSeconds) {
+    en.raiseTimer = 0;
+    en.raisesLeft--;
+    corpses.splice(corpses.indexOf(corpse), 1);
+    const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
+    zombie.fromWave = en.fromWave;
+    enemies.push(zombie);
+  }
+  return true;
 }
 
 function grantEnemyReward(enemy) {
@@ -131,7 +166,7 @@ function startNextWave() {
     const kinds = getEnemyFaction().enemies;
     Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && kinds.includes(def.id)).forEach(def => {
       const baseCount = Number(group[def.waveKey] || 0);
-      const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount));
+      const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1)));
 
       for (let i = 0; i < count; i++) {
         const enemy = createConfiguredEnemy(getRandomBorderPos(), def.id);

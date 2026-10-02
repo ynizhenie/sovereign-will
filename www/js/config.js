@@ -16,7 +16,9 @@ const GAME_CONFIG = {
     saplings: { id: 'saplings', icon: 'saplings', type: 'resource' },
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
-    appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' }
+    appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
+    // factions: only shown to these factions (#43)
+    bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] }
   },
   // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
   // of one shows as that resource; resources in no group get their own tile. `held` groups count what
@@ -80,7 +82,10 @@ const GAME_CONFIG = {
     spikes: { id: 'spikes', icon: 'spikes', cost: { wood: 6, iron: 2 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5 } }, arrowsPass: true },
     door: { id: 'door', icon: 'door', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
-    tent: { id: 'tent', icon: 'tent', cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
+    // factions: only these factions build it (#43); tents are the humans', graves the undead's
+    tent: { id: 'tent', icon: 'tent', factions: ['humans'], cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
+    // a grave: the undead's tent, also where necromancers get their raises back; it makes bones
+    grave: { id: 'grave', icon: 'grave', factions: ['undead'], cost: { stone: 10 }, demolishRefund: { stone: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 100 } },
     campfire: { id: 'campfire', icon: 'campfire', cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
     smelter: { id: 'smelter', icon: 'smelter', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
       // holds at most maxOre ore and maxCoal coal; one ore + one coal make one iron every `seconds`, up to
@@ -114,7 +119,21 @@ const GAME_CONFIG = {
     raider_archer: { id: 'raider_archer', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow',
       type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
-      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } }
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } },
+    // the undead (#43): slow zombies, big zombies, skeleton archers, and necromancers that raise the dead
+    // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
+    // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
+    undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
+    undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'fist',
+      type: 'big', radius: 18, waveKey: 'brute', reach: 20, siege: { buildings: 25, resources: 4 }, splash: { radius: 60, share: 0.5 } },
+    undead_skeleton: { id: 'undead_skeleton', hp: 45, speed: 0.9, damage: 25, reward: { food: 1 }, weapon: 'bow',
+      type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
+      ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
+    undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
+      necromancer: { raises: 5, range: 200, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } }
   },
 
   // ---- Factions (#43): who the colony is, and who the enemy is (chosen in the Endless menu).
@@ -122,9 +141,17 @@ const GAME_CONFIG = {
   // kinds of GAME_CONFIG.enemies its waves are made of; summonEnemy: what its spawners call up.
   // ready: playable yet (the others show as coming soon).
   factions: {
-    humans: { id: 'humans', color: '#e9c46a', enemies: ['raider_club', 'raider', 'brute', 'raider_archer'], summonEnemy: 'raider', ready: true },
+    // units: the settler types it hires (settlerTypes); upgrades: which turns into which; startUnits:
+    // the two it starts with; eats: needs food; hall / shelter / spawner: how its town hall, its tents and
+    // its enemy tents look (and what they're called); startResources: on top of start.resources;
+    // bonesPerSecond: bones its hall and each grave make by themselves
+    humans: { id: 'humans', color: '#e9c46a', ready: true, units: ['normal', 'big'], upgrades: { normal: 'big' }, startUnits: 'normal', eats: true,
+      enemies: ['raider_club', 'raider', 'brute', 'raider_archer'], summonEnemy: 'raider' },
     demons: { id: 'demons', color: '#e8572a', ready: false },
-    undead: { id: 'undead', color: '#9b59b6', ready: false }
+    undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie', 'skeleton', 'necromancer'],
+      upgrades: { zombie: 'big_zombie' }, startUnits: 'zombie', eats: false, hall: 'graveyard', shelter: 'grave', spawner: 'grave',
+      startResources: { bones: 30 }, bonesPerSecond: { hall: 0.25, grave: 0.1 },
+      enemies: ['undead_zombie', 'undead_big_zombie', 'undead_skeleton', 'undead_necromancer'], summonEnemy: 'undead_zombie' }
   },
   // the colours either side can pick from; the two sides never share one
   factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1'],
@@ -256,7 +283,14 @@ const GAME_CONFIG = {
   // carryLoads: how many gathered loads (one tree, one boulder, one boar...) it carries before going home
   settlerTypes: {
     normal: { id: 'normal', icon: 'worker', hp: 100, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
-    big: { id: 'big', icon: 'giant', hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } }
+    big: { id: 'big', icon: 'giant', big: true, hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } },
+    // the undead's (#43). archer: hired with a bow and a quiver. necromancer: see enemies.undead_necromancer;
+    // raised zombies take population like hired ones
+    zombie: { id: 'zombie', icon: 'zombie', hp: 100, speed: 0.85, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 10 } },
+    big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 25 }, upgradeCost: { bones: 15 } },
+    skeleton: { id: 'skeleton', icon: 'skeleton', archer: true, hp: 70, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 15, wood: 5 } },
+    necromancer: { id: 'necromancer', icon: 'necromancer', hp: 80, speed: 0.9, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 0.6, carryLoads: 1, hireCost: { bones: 30 },
+      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8 } }
   },
 
   // worn gear, paid for with its button and picked up at the town hall (the settler walks there to
