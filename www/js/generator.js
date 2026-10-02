@@ -35,10 +35,13 @@ function renderGeneratorFields() {
   const listed = new Set(GENERATOR_GROUPS.flatMap(([, keys]) => keys));
   const other = Object.keys(GAME_CONFIG.map).filter(key => !listed.has(key));
   for (const [group, keys] of [...GENERATOR_GROUPS, ...(other.length ? [['other', other]] : [])]) {
+    // each group: a heading, then its fields two to a row (#143)
     const heading = document.createElement('h2');
     heading.textContent = t(`gen.group.${group}`);
-    container.appendChild(heading);
-    for (const key of keys.filter(k => k in GAME_CONFIG.map)) container.appendChild(generatorField(key));
+    const grid = document.createElement('div');
+    grid.className = 'generator-grid';
+    for (const key of keys.filter(k => k in GAME_CONFIG.map)) grid.appendChild(generatorField(key));
+    container.append(heading, grid);
   }
 }
 
@@ -94,23 +97,11 @@ function applyMapSettings(settings) {
 }
 
 function renderPresetList() {
-  const list = document.getElementById('preset-list');
-  list.innerHTML = '';
-  for (const name of Object.keys(loadPresets())) {
-    const item = document.createElement('span');
-    const load = document.createElement('button');
-    load.className = 'fps-option';
-    load.textContent = name;
-    load.dataset.preset = name;
-    onTap(load, () => applyMapSettings(loadPresets()[name]));
-    const remove = document.createElement('button');
-    remove.className = 'fps-option';
-    remove.innerHTML = iconHtml('close');
-    remove.dataset.deletePreset = name;
-    onTap(remove, () => { const presets = loadPresets(); delete presets[name]; savePresets(presets); renderPresetList(); });
-    item.append(load, remove);
-    list.appendChild(item);
-  }
+  renderItemList(document.getElementById('preset-list'), Object.keys(loadPresets()).map(name => ({ id: name, label: name })), {
+    attr: 'preset',
+    onPick: name => applyMapSettings(loadPresets()[name]),
+    onDelete: name => { const presets = loadPresets(); delete presets[name]; savePresets(presets); renderPresetList(); }
+  });
 }
 
 onTap(document.getElementById('open-generator'), () => { renderGeneratorFields(); renderPresetList(); showMenuScreen('generator'); });
