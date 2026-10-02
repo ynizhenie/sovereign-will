@@ -135,7 +135,7 @@ function drawMenuScene() {
   c.fillStyle = '#8e5a2b'; c.fillRect(6, -1, 22, 3);
   c.fillStyle = '#ecf0f1'; c.beginPath(); c.moveTo(28, -3); c.lineTo(35, 0); c.lineTo(28, 3); c.fill();
   c.restore();
-  c.fillStyle = '#2ecc71'; c.beginPath(); c.arc(h.x, h.y, 11, 0, Math.PI * 2); c.fill();
+  c.fillStyle = sides.player.color; c.beginPath(); c.arc(h.x, h.y, 11, 0, Math.PI * 2); c.fill();
   c.strokeStyle = '#1e272e'; c.lineWidth = 2; c.stroke();
 }
 

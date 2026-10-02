@@ -28,6 +28,14 @@
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
 
+        <div class="wave-settings faction-settings">
+            <div data-i18n="menu.factions">Factions:</div>
+            <div class="faction-side"><span data-i18n="menu.you">You</span><div id="faction-player" class="faction-options"></div></div>
+            <div id="colors-player" class="color-options"></div>
+            <div class="faction-side"><span data-i18n="menu.enemy">Enemy</span><div id="faction-enemy" class="faction-options"></div></div>
+            <div id="colors-enemy" class="color-options"></div>
+        </div>
+
         <div class="wave-settings">
             <div data-i18n="menu.difficulty">Difficulty:</div>
             <div class="wave-options" id="difficulty-options">
@@ -338,9 +346,11 @@
 <script src="js/waves.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/behaviours.js"></script>
+<script src="js/orders.js"></script>
 <script src="js/update.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>
+<script src="js/factions.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/generator.js"></script>
 <script src="js/editor.js"></script>
