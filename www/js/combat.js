@@ -173,10 +173,11 @@ function performAttack(attacker, targetX, targetY) {
   }
 }
 
+// Archers climb the towers while there's tower duty (#155: they stay up when enemies reach the base, that's
+// when a tower is worth most), as long as they or the tower have arrows
 function assignTowerArchers() {
   const towers = buildings.filter(building => building.type === 'watchtower');
   const towerSet = new Set(towers);
-  const townHallThreatened = enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260);
   towers.forEach(tower => {
     tower.guards = (tower.guards || []).filter(guard => settlers.includes(guard));
   });
@@ -190,14 +191,15 @@ function assignTowerArchers() {
       settler.towerAssignment = null;
     }
     const canGuard = !settler.isPossessed && settler.role === 'archer' &&
-      settler.weapon === 'bow' && settler.quiver && !settler.carrying && !settler.targetEquipment;
-    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment);
-    if ((!towerDutyActive || townHallThreatened || !canGuard) && settler.towerAssignment) {
+      isBowWeapon(settler.weapon) && settler.quiver && !settler.carrying && !settler.targetEquipment;
+    const hasArrows = tower => (settler.arrows || 0) > 0 || (tower.arrows || 0) > 0;
+    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment) && hasArrows(settler.towerAssignment);
+    if ((!towerDutyActive || !canGuard) && settler.towerAssignment) {
       releaseTowerGuard(settler);
     }
-    if (townHallThreatened || !canGuard || settler.towerAssignment) return;
+    if (!canGuard || settler.towerAssignment) return;
 
-    const tower = towers.find(candidate => isTowerDutyOn(candidate) && candidate.guards.length < candidate.tower.capacity);
+    const tower = towers.find(candidate => isTowerDutyOn(candidate) && hasArrows(candidate) && candidate.guards.length < candidate.tower.capacity);
     if (tower) {
       tower.guards.push(settler);
       settler.towerAssignment = tower;
@@ -205,9 +207,9 @@ function assignTowerArchers() {
   });
 }
 
-// A tower is manned when enough enemies are about, or ahead of a wave if it has arrows (#14)
+// A tower is manned when enough enemies are about, or from the warning until the wave is beaten (#14, #155)
 function isTowerDutyOn(tower) {
-  return enemies.length >= tower.tower.minEnemies || (isDefenseAlert() && (tower.arrows || 0) > 0);
+  return enemies.length >= tower.tower.minEnemies || isDefenseAlert();
 }
 
 function findTowerForArrows(settler) {

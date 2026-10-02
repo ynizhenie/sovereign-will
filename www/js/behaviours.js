@@ -42,6 +42,7 @@ function createSettlerTick(dt) {
     wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
+    markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
@@ -167,7 +168,7 @@ function deliverToSmelter(s, tick) {
 // Archers assigned to a watchtower stay in it until the fight comes close to the town hall
 function guardTower(s, tick) {
   if (s.towerAssignment) {
-    if (!isTowerDutyOn(s.towerAssignment) || enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260)) {
+    if (!isTowerDutyOn(s.towerAssignment)) {
       releaseTowerGuard(s);
     } else {
       updateTowerGuard(s, s.towerAssignment, tick.dt);
@@ -605,9 +606,20 @@ function isInSafeArea(x, y) {
 
 // An enemy inside the base, or next to one of its buildings or the town hall
 function isInsideBase(en) {
-  const near = 2 * TILE_SIZE;
-  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + TILE_SIZE + townHall.radius ||
+  const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
+  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
     buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
+}
+
+// An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it (#155)
+function takeMarkedTarget(s, tick) {
+  let best = null;
+  for (const en of enemies) {
+    if (!en.markedTarget || (tick.markedAssignments.get(en) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
+    if (!best || Math.hypot(en.x - s.x, en.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = en;
+  }
+  if (best) tick.markedAssignments.set(best, (tick.markedAssignments.get(best) || 0) + 1);
+  return best;
 }
 
 let defensePlan = null;
@@ -621,7 +633,9 @@ function getDefensePlan() {
   const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + buildings.length;
   if (defensePlan && defensePlan.key === key) return defensePlan;
   const size = GAME_CONFIG.defense.squadSize;
-  const count = melee.length ? Math.ceil(melee.length / size) : (archers.length ? 1 : 0);
+  // too few for two squads: everyone on a post of their own round the base (#155)
+  const singles = melee.length < 2 * size;
+  const count = singles ? melee.length + archers.length : Math.ceil(melee.length / size);
   const radius = getBaseRadius();
   const hallReach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const standable = (x, y) => {
@@ -649,8 +663,12 @@ function getDefensePlan() {
     posts.push(standable(townHall.x + Math.cos(angle) * radius, townHall.y + Math.sin(angle) * radius));
   }
   const squadOf = new Map();
-  melee.forEach((s, i) => squadOf.set(s, { post: posts[Math.floor(i / size)], slot: i % size }));
-  archers.forEach((s, i) => squadOf.set(s, { post: posts[i % posts.length], slot: size + Math.floor(i / posts.length) }));
+  if (singles) {
+    [...melee, ...archers].forEach((s, i) => squadOf.set(s, { post: posts[i], slot: 0 }));
+  } else {
+    melee.forEach((s, i) => squadOf.set(s, { post: posts[Math.floor(i / size)], slot: i % size }));
+    archers.forEach((s, i) => squadOf.set(s, { post: posts[i % posts.length], slot: size + Math.floor(i / posts.length) }));
+  }
   defensePlan = { key, posts, squadOf };
   return defensePlan;
 }
@@ -662,6 +680,9 @@ function holdPost(s, tick) {
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
   if (getRecentAttacker(s)) return false;
+  // an enemy the player pointed at: a few soldiers leave their posts for it (#155)
+  const marked = takeMarkedTarget(s, tick);
+  if (marked) { s.postTarget = marked; return false; }
   const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
   let nearest = null, best = engage;
   for (const en of enemies) {
@@ -699,14 +720,11 @@ function fightEnemies(s, tick) {
     let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
   });
-  // enemies the player marked with the Point tool come first for anyone armed...
-  if (s.weapon !== 'fist') {
-    let nearestMarked = Infinity;
-    enemies.forEach(en => {
-      if (!en.markedTarget) return;
-      const d = Math.hypot(en.x - s.x, en.y - s.y);
-      if (d < nearestMarked) { nearestMarked = d; targetEnemy = en; }
-    });
+  // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
+  // squad soldier already got its own from holdPost)...
+  if (s.weapon !== 'fist' && !(s.postTarget && s.postTarget.markedTarget && enemies.includes(s.postTarget))) {
+    const marked = takeMarkedTarget(s, tick);
+    if (marked) targetEnemy = marked;
   }
   // ...but whoever is hitting this settler right now comes first of all
   const attacker = getRecentAttacker(s);
