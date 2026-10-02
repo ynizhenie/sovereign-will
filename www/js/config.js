@@ -70,7 +70,10 @@ const GAME_CONFIG = {
     iron_spear: { id: 'iron_spear', icon: 'iron_spear', cost: { wood: 10, iron: 5 }, family: 'spear',
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 }, hunt: { damage: 28, range: 65, cooldown: 0.9 } },
     bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 5 }, family: 'bow',
-      combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } }
+      combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } },
+    // the fire imps' fireballs (#43): shot like a bow (arrows are their charges), not made in the Weapons tab
+    hellfire: { id: 'hellfire', icon: 'fireball', cost: {}, family: 'bow', hidden: true, fire: true,
+      combat: { damage: 26, cooldown: 0.9, approach: 130, tentReach: 130, projectileSpeed: 4.5, projectileLife: 75 }, hunt: { range: 130 } }
   },
   // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'.
   // Arrows stop at buildings, except arrowsPass ones; towerArrowsPass ones only stop arrows shot from the ground.
@@ -85,6 +88,10 @@ const GAME_CONFIG = {
     // factions: only these factions build it (#43); tents are the humans', graves the undead's
     tent: { id: 'tent', icon: 'tent', factions: ['humans'], cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
     // a grave: the undead's tent, also where necromancers get their raises back; it makes bones
+    // the demons' (#43): a sacrificial circle adds population, and a settler sent into it heals everyone;
+    // portals come in pairs (the 1st with the 2nd, the 3rd with the 4th...) and settlers step through
+    sacrifice_circle: { id: 'sacrifice_circle', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, population: 3, sacrifice: true, build: { maxProgress: 80, hp: 150 } },
+    portal: { id: 'portal', icon: 'portal', factions: ['demons'], cost: { stone: 10, iron: 2 }, demolishRefund: { stone: 5 }, portal: true, build: { maxProgress: 100, hp: 120 } },
     grave: { id: 'grave', icon: 'grave', factions: ['undead'], cost: { stone: 10 }, demolishRefund: { stone: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 100 } },
     campfire: { id: 'campfire', icon: 'campfire', cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
     smelter: { id: 'smelter', icon: 'smelter', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
@@ -133,7 +140,17 @@ const GAME_CONFIG = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
     undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
-      necromancer: { raises: 5, range: 200, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } }
+      necromancer: { raises: 5, range: 200, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } },
+    // the demons (#43): quick imps, big demons that hit all around, fire imps that throw fireballs. They
+    // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
+    demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: ['club', 'raider'], reach: 6, siege: { buildings: 10, resources: 2 } },
+    demon_brute: { id: 'demon_brute', hp: 140, speed: 0.7, damage: 28, reward: { food: 2 }, weapon: 'club',
+      type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
+    demon_fire_imp: { id: 'demon_fire_imp', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'hellfire',
+      type: 'archer', radius: 10, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
+      ranged: { range: 170, keepAway: 140, cooldown: 1.4, arrowSpeed: 3.8, arrowLife: 75 },
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
   },
 
   // ---- Factions (#43): who the colony is, and who the enemy is (chosen in the Endless menu).
@@ -147,7 +164,11 @@ const GAME_CONFIG = {
     // bonesPerSecond: bones its hall and each grave make by themselves
     humans: { id: 'humans', color: '#e9c46a', ready: true, units: ['normal', 'big'], upgrades: { normal: 'big' }, startUnits: 'normal', eats: true,
       enemies: ['raider_club', 'raider', 'brute', 'raider_archer'], summonEnemy: 'raider' },
-    demons: { id: 'demons', color: '#e8572a', ready: false },
+    // portalSpawns: its spawners are portals that open anywhere (but not within minPortalTiles of the
+    // town hall) and its waves come out of them instead of the map's edge
+    demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon', 'fire_imp'], upgrades: { imp: 'demon' }, startUnits: 'imp', eats: true,
+      hall: 'hellgate', spawner: 'portal', portalSpawns: true, minPortalTiles: 8,
+      enemies: ['demon_imp', 'demon_brute', 'demon_fire_imp'], summonEnemy: 'demon_imp' },
     undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie', 'skeleton', 'necromancer'],
       upgrades: { zombie: 'big_zombie' }, startUnits: 'zombie', eats: false, hall: 'graveyard', shelter: 'grave', spawner: 'grave',
       startResources: { bones: 30 }, bonesPerSecond: { hall: 0.25, grave: 0.1 },
@@ -271,6 +292,8 @@ const GAME_CONFIG = {
 
   // builders bring a building's cost from the nearest storage, carryMaterials at a time (#36)
   storage: { carryMaterials: 10 },
+  // demons eating a corpse to heal (#43)
+  eatCorpseSeconds: 2,
 
   start: {
     // stock at the start of a game (ids from `resources`)
@@ -290,7 +313,12 @@ const GAME_CONFIG = {
     big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 25 }, upgradeCost: { bones: 15 } },
     skeleton: { id: 'skeleton', icon: 'skeleton', archer: true, hp: 70, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 15, wood: 5 } },
     necromancer: { id: 'necromancer', icon: 'necromancer', hp: 80, speed: 0.9, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 0.6, carryLoads: 1, hireCost: { bones: 30 },
-      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8 } }
+      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8 } },
+    // the demons' (#43). eatsCorpses: heals by eating a corpse (eatSeconds) when not fighting; archerWeapon:
+    // what an archer kind is hired with
+    imp: { id: 'imp', icon: 'imp', eatsCorpses: true, hp: 90, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
+    demon: { id: 'demon', icon: 'demon', big: true, eatsCorpses: true, hp: 260, speed: 0.75, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.9, carryLoads: 2, hireCost: { food: 30, stone: 10 }, upgradeCost: { food: 15, stone: 10 } },
+    fire_imp: { id: 'fire_imp', icon: 'fire_imp', archer: true, archerWeapon: 'hellfire', eatsCorpses: true, hp: 70, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 20, wood: 10 } }
   },
 
   // worn gear, paid for with its button and picked up at the town hall (the settler walks there to

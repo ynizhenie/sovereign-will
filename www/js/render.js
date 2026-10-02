@@ -206,10 +206,24 @@ function drawHeldWeapon(weapon) {
     ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(28, -3); ctx.lineTo(35, 0); ctx.lineTo(28, 3); ctx.fill();
   } else if (weapon === 'bow') {
     ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(10, 0, 10, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  } else if (weapon === 'hellfire') {
+    // a fireball in the hand (the demons' fire imps, #43)
+    ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(14, 0, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(14, 0, 2.5, 0, Math.PI * 2); ctx.fill();
   } else {
     return false;
   }
   return true;
+}
+
+// A demon's horns (#43): two dark points on top of the body
+function drawHorns(x, y, r) {
+  ctx.fillStyle = '#2c2c34';
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(x + side * r * 0.35, y - r * 0.8); ctx.lineTo(x + side * r * 0.75, y - r * 1.45); ctx.lineTo(x + side * r * 0.8, y - r * 0.55);
+    ctx.closePath(); ctx.fill();
+  }
 }
 
 // A necromancer's staff, a pale purple orb at its top (#43)
@@ -363,7 +377,12 @@ function render() {
     drawHarvestProgress(ore);
   });
 
-  if (getPlayerFaction().hall === 'graveyard') {
+  if (getPlayerFaction().hall === 'hellgate') {
+    // the demons' Hell Gate (#43): a dark stone gate with fire inside
+    ctx.fillStyle = '#3d1f1f'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4; ctx.stroke();
+    drawIcon(ctx, 'hellgate', townHall.x, townHall.y, townHall.radius * 1.4);
+  } else if (getPlayerFaction().hall === 'graveyard') {
     // the undead's graveyard (#43): a dark fenced plot with tombstones
     ctx.fillStyle = '#2c2c34'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 4; ctx.stroke();
@@ -530,8 +549,8 @@ function render() {
       ctx.fillStyle = '#a0522d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'door', b.x, b.y, 16);
-    } else if (b.type === 'grave') {
-      drawIcon(ctx, 'grave', b.x, b.y, 28);
+    } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
+      drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons' (#43)
     } else if (b.type === 'tent') {
       ctx.fillStyle = '#d35400'; ctx.beginPath();
       ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
@@ -625,11 +644,11 @@ function render() {
   });
 
   enemyTents.forEach(et => {
-    if (getEnemyFaction().spawner === 'grave') {
-      // the undead's spawners are graves (#43), ringed in the enemy's colour
+    if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
+      // the undead's spawners are graves, the demons' portals (#43), ringed in the enemy's colour
       ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
-      drawIcon(ctx, 'grave', et.x, et.y, 28);
+      drawIcon(ctx, getEnemyFaction().spawner, et.x, et.y, 28);
     } else {
       ctx.fillStyle = '#641e16'; ctx.beginPath();
       ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
@@ -698,6 +717,7 @@ function render() {
     ctx.fillStyle = getSettlerColor();
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
+    if (sides.player.faction === 'demons' && gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
     drawBodyBlood(s, s.visualRadius);
 
     // a backpack on the left side, with a bar for how full it is
@@ -793,6 +813,7 @@ function render() {
     ctx.fillStyle = getEnemyColor(en);
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = shadeColor(getEnemyColor(), -0.45); ctx.lineWidth = 2; ctx.stroke();
+    if (en.enemyKey.startsWith('demon_')) drawHorns(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
 
     ctx.save();
@@ -814,7 +835,9 @@ function render() {
   });
 
   projectiles.forEach(proj => {
-    ctx.fillStyle = proj.fromEnemy ? '#e74c3c' : (proj.fromTower ? '#95a5a6' : '#f1c40f');
+    // fireballs (#43) bigger and orange
+    if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
+    else ctx.fillStyle = proj.fromEnemy ? '#e74c3c' : (proj.fromTower ? '#95a5a6' : '#f1c40f');
     ctx.beginPath(); ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2); ctx.fill();
   });
 
