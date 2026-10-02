@@ -96,11 +96,12 @@ test('Fight runs until one side is left, shows the winner, then brings the line-
   expect(r).toMatchObject({ winner: 'green', phase: 'result', back: 'setup', lineup: { settlers: 3, enemies: 1 } });
 });
 
-test('Menu leaves battle mode and the Endless map size comes back (#38)', async ({ page }) => {
+test('the pause menu leaves battle mode and the Endless map size comes back (#38, #145)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => { mapSettings = { cols: 60, rows: 60 }; showMenuScreen('home'); });
   await page.click('#mode-battles');
-  await page.click('#battle-menu');
+  await page.click('#btn-pause-toggle'); // the Menu is the pause button at the top now (#145)
+  await page.click('#exit-to-menu-button');
   const r = await page.evaluate(() => ({ mode: gameMode, map: mapSettings, menu: getComputedStyle(document.getElementById('main-menu')).display !== 'none' }));
   expect(r).toEqual({ mode: 'endless', map: { cols: 60, rows: 60 }, menu: true });
   await expect(page.locator('#bottom-panel')).toBeAttached();

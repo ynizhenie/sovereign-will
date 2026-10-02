@@ -327,7 +327,6 @@ onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); sho
 onTap(document.getElementById('editor-new-empty'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: false }));
 onTap(document.getElementById('editor-new-generated'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: true }));
 onTap(document.getElementById('editor-save'), saveEditorMap);
-onTap(document.getElementById('editor-menu'), leaveEditor);
 document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));
 document.querySelectorAll('[data-map-source]').forEach(button => onTap(button, () => setMapSource(button.dataset.mapSource)));
 onTap(document.getElementById('mode-endless'), renderCustomMapList); // maps may have changed in the editor
