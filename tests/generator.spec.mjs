@@ -52,5 +52,6 @@ test('own presets are saved on the device, loaded and deleted (#20)', async ({ p
   await page.click('#preset-list [data-preset="Big forests"]');
   expect(await page.evaluate(() => GAME_CONFIG.map.forests.max)).toBe(9);
   await page.click('#preset-list [data-delete-preset="Big forests"]');
+  await page.click('#preset-list [data-confirm-delete="Big forests"]'); // asks first (#143)
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
 });

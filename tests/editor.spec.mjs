@@ -26,10 +26,13 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#editor-new-empty').click();
   await expect(page.locator('#editor-panel')).toBeVisible();
   await expect(page.locator('#bottom-panel')).toBeHidden();
+  await page.locator('[data-editor-category="terrain"]').click();
   await expect.poll(() => iconText(page, '#editor-tools [data-tool="water"]')).toEqual(['[[water]] Вода']);
+  await page.locator('[data-editor-category="buildings"]').click();
   await expect(page.locator('#editor-tools [data-tool="wall_stone"]')).toContainText('Каменная стена');
 
   // a tap on the map with the Water tool puts water there
+  await page.locator('[data-editor-category="terrain"]').click();
   await page.locator('#editor-tools [data-tool="water"]').click();
   // where a tile 4 to the left of the town hall is on the screen
   const spot = await page.evaluate(() => {
@@ -71,6 +74,26 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   // delete it in the editor
   await page.evaluate(() => exitToMainMenu());
   await page.locator('[data-screen="home"] #mode-editor').click();
+  // delete asks first: No keeps it, Yes deletes it (#143)
   await page.locator('#editor-map-list [data-delete-map="Озерцо"]').click();
+  await expect(page.locator('#editor-map-list')).toContainText('Удалить «Озерцо · 30×30»?');
+  await page.locator('#editor-map-list [data-cancel-delete="Озерцо"]').click();
+  await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveCount(1);
+  await page.locator('#editor-map-list [data-delete-map="Озерцо"]').click();
+  await page.locator('#editor-map-list [data-confirm-delete="Озерцо"]').click();
   await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
+});
+
+test('the same tool again clears the tile; another thing replaces it (#143)', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'toggleClear')).toEqual({ treeCleared: true, replaced: true, sandCleared: true, pondCleared: true });
+});
+
+test('rows and columns can be added and taken away at any edge (#143)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'resize');
+  expect(r.after).toEqual({ size: [31, 30], tree: [6, 4], hallMoved: [30, -30] });
+  expect(r.treeGone).toBe(true);
+  expect(r.minCols).toBe(20);
+  expect(r.refused).toBe(true);
 });

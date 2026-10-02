@@ -216,15 +216,29 @@
 
   <div id="editor-panel">
     <div class="battle-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
-    <div id="editor-tools" class="battle-presets"></div>
-    <div class="action-row">
+    <div class="editor-toolbar">
+      <button class="fps-option" id="editor-erase" data-i18n="editor.eraser">Eraser</button>
       <span class="editor-brush"><span data-i18n="editor.brush">Brush:</span>
         <button class="fps-option active" data-brush="1">1</button><button class="fps-option" data-brush="3">3×3</button></span>
+      <button class="fps-option" id="editor-resize"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></button>
+    </div>
+    <div id="editor-resize-panel" class="editor-resize" hidden>
+      <span data-i18n="editor.side.top">Top</span><button class="fps-option" data-resize="top:1">+</button><button class="fps-option" data-resize="top:-1">−</button>
+      <span data-i18n="editor.side.bottom">Bottom</span><button class="fps-option" data-resize="bottom:1">+</button><button class="fps-option" data-resize="bottom:-1">−</button>
+      <span data-i18n="editor.side.left">Left</span><button class="fps-option" data-resize="left:1">+</button><button class="fps-option" data-resize="left:-1">−</button>
+      <span data-i18n="editor.side.right">Right</span><button class="fps-option" data-resize="right:1">+</button><button class="fps-option" data-resize="right:-1">−</button>
+    </div>
+    <div class="editor-toolbar">
       <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
+      <button class="fps-option" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
     </div>
-    <div class="action-row">
-      <button class="btn btn-armor" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
+    <div class="battle-row">
+      <button class="fps-option" data-editor-category="terrain" data-i18n="editor.cat.terrain">Terrain</button>
+      <button class="fps-option" data-editor-category="nature" data-i18n="editor.cat.nature">Nature</button>
+      <button class="fps-option" data-editor-category="ore" data-i18n="editor.cat.ore">Ore</button>
+      <button class="fps-option" data-editor-category="buildings" data-i18n="editor.cat.buildings">Buildings</button>
     </div>
+    <div id="editor-tools" class="battle-presets"></div>
   </div>
 
   <div id="bottom-panel">
