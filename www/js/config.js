@@ -117,6 +117,18 @@ const GAME_CONFIG = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } }
   },
 
+  // ---- Factions (#43): who the colony is, and who the enemy is (chosen in the Endless menu).
+  // color: the faction's own (its units are drawn in it, unless another is picked). enemies: the enemy
+  // kinds of GAME_CONFIG.enemies its waves are made of; summonEnemy: what its spawners call up.
+  // ready: playable yet (the others show as coming soon).
+  factions: {
+    humans: { id: 'humans', color: '#e9c46a', enemies: ['raider_club', 'raider', 'brute', 'raider_archer'], summonEnemy: 'raider', ready: true },
+    demons: { id: 'demons', color: '#e8572a', ready: false },
+    undead: { id: 'undead', color: '#9b59b6', ready: false }
+  },
+  // the colours either side can pick from; the two sides never share one
+  factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1'],
+
   // enemy tents: builders put them up near the map edge; each summons extra enemies during a wave
   enemyTents: {
     hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,

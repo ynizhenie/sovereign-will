@@ -42,6 +42,8 @@ let mapSettings = { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }; // set f
 let gameDifficulty = 'normal'; // GAME_CONFIG.difficulty key, set from the menu
 let gameMode = 'endless';      // endless / battle (battle.js) / editor (editor.js)
 let customMap = null;          // a saved map (editor.js) Endless plays instead of a generated one
+// the two sides (#43, factions.js): GAME_CONFIG.factions ids and the colours their units are drawn in
+const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };
 
 function getDifficulty() {
   return GAME_CONFIG.difficulty[gameDifficulty] || GAME_CONFIG.difficulty.normal;

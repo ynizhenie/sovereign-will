@@ -671,11 +671,10 @@ function render() {
   });
 
   settlers.forEach(s => {
-    // medics count as fighters for their colour
-    const fighter = s.role !== 'worker' || hasToolFamily(s.tool, 'medic');
-    // in battle mode every settler is the green side
-    ctx.fillStyle = gameMode === 'battle' ? '#27ae60' : s.isPossessed ? '#3498db' : (fighter ? '#e67e22' : '#2ecc71');
+    // the whole body in the colony's colour (#43); the possessed one ringed in white
+    ctx.fillStyle = getSettlerColor();
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
+    if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
     drawBodyBlood(s, s.visualRadius);
 
     // a backpack on the left side, with a bar for how full it is
@@ -765,10 +764,10 @@ function render() {
   });
 
   enemies.forEach(en => {
-    // enemies are red (brutes darker), holding their weapon the same way settlers do
-    ctx.fillStyle = en.type === 'big' ? '#a93226' : '#e74c3c';
+    // enemies in the enemy's colour (#43; big ones darker), holding their weapon the way settlers do
+    ctx.fillStyle = getEnemyColor(en);
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#7b241c'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = shadeColor(getEnemyColor(), -0.45); ctx.lineWidth = 2; ctx.stroke();
     drawBodyBlood(en, en.radius);
 
     ctx.save();
