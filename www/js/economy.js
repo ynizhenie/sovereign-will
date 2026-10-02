@@ -348,7 +348,6 @@ function createBuildingBlueprint(type, x, y) {
   if (build.hp) blueprint.hp = build.hp, blueprint.maxHp = build.hp;
   if (build.smelter) blueprint.smeltProgress = 0;
   if (build.trap) blueprint.usesLeft = build.trap.uses;
-  if (build.storage) blueprint.contents = {};
   if (build.tower) {
     blueprint.tower = { ...build.tower };
     blueprint.arrows = 0;
