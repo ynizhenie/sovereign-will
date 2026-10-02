@@ -752,6 +752,10 @@ body.editor-mode #hud-seed { display: none; }
 #main-menu.custom-map .random-map-only,
 #main-menu:not(.custom-map) .custom-map-only { display: none; }
 
+/* saves (#156): only in Endless */
+body.battle-mode #save-game-button, body.editor-mode #save-game-button { display: none; }
+#save-settings[hidden] { display: none; }
+
 /* factions and their colours (#43) */
 .faction-settings { gap: 6px; }
 .faction-side { display: flex; align-items: center; gap: 6px; }
