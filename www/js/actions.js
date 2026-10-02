@@ -4,24 +4,20 @@ function getFishingBait() {
   return GAME_CONFIG.fishing.bait.find(bait => canAfford(bait)) || null;
 }
 
-// A fisher at a storage takes one bait from it, if it has any (worms first)
-function takeFishingBait(s, storage) {
-  if (s.tool !== 'rod' || s.bait) return;
-  const bait = GAME_CONFIG.fishing.bait.find(b => hasInStorage(storage, b));
-  if (!bait) return;
-  for (const [id, amount] of Object.entries(bait)) takeFrom(storage, id, amount);
-  s.bait = true;
+// A fisher at a storage takes one bait for the next catch
+function takeFishingBait(s) {
+  const bait = getFishingBait();
+  if (s.tool === 'rod' && !s.bait && bait) {
+    payCost(bait);
+    s.bait = true;
+  }
 }
 
-function hasInStorage(storage, amounts) {
-  return Object.entries(amounts).every(([id, amount]) => (storage.contents[id] || 0) >= amount);
-}
-
-// Walk to the nearest storage with bait and take one; false if no storage has any
+// Walk to the nearest storage and take one bait; false if the stock has none
 function fetchBait(s, dt) {
-  const storage = findStorage(s, st => GAME_CONFIG.fishing.bait.some(b => hasInStorage(st, b)));
-  if (!storage) return false;
-  if (isAtStorage(s, storage)) takeFishingBait(s, storage);
+  if (!getFishingBait()) return false;
+  const storage = findNearestStorage(s);
+  if (isAtStorage(s, storage)) takeFishingBait(s);
   else walkToStorage(s, storage, dt);
   return true;
 }
@@ -268,7 +264,7 @@ function orderPossessed(p, x, y) {
   if (boar) return order('hunt', boar);
 
   // a storage: hand in what it carries (#36)
-  const warehouse = buildings.find(b => b.contents && near(b, 18));
+  const warehouse = buildings.find(b => b.type === 'warehouse' && near(b, 18));
   if (warehouse && p.carrying) return order('deliver', warehouse);
   if (near(townHall, townHall.radius + 10)) {
     if (p.carrying) return order('deliver', townHall);
@@ -372,15 +368,11 @@ function handleCanvasClick() {
       townHall.repairRequested = !townHall.repairRequested;
       return;
     }
-    if (buildMode === 'interact') { showStoragePopup(townHall); return; }
   }
 
   if (buildMode === 'interact') {
     const damaged = buildings.find(b => b.x === gx && b.y === gy && b.hp < b.maxHp);
     if (damaged && toggleBuildingRepair(damaged)) return;
-    // what a warehouse holds (#36)
-    const warehouse = buildings.find(b => b.x === gx && b.y === gy && b.contents);
-    if (warehouse) { showStoragePopup(warehouse); return; }
   }
 
   // Farming tab: paint (or clear) farm zone tiles

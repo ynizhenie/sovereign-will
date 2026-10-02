@@ -1,40 +1,25 @@
 import { test, expect } from '@playwright/test';
-import { openGame, sim, iconText } from './helpers.mjs';
+import { openGame, sim } from './helpers.mjs';
 
-test('with the town hall full, gathered wood goes to a warehouse; the HUD counts both (#36)', async ({ page }) => {
+test('wood goes to the nearest storage, a warehouse here; the stock has no limit (#36, #141)', async ({ page }) => {
   await openGame(page);
-  const r = await sim(page, 'deliverToWarehouse');
-  expect(r.hall).toEqual({ stone: 200 });
-  expect(r.warehouse).toEqual({ wood: 3 });
-  expect(r.totalWood).toBe(3);
-  expect(r.capacity).toBe(100);
+  expect(await sim(page, 'deliverToWarehouse')).toEqual({ wood: 1003, atWarehouse: true, atHall: false });
 });
 
-test('with every storage full, workers rest instead of gathering, and the player is told once (#36)', async ({ page }) => {
-  await openGame(page);
-  expect(await sim(page, 'everythingFull')).toEqual({ treeStands: true, mostlyIdle: true, warnings: 1 });
-});
-
-test('builders fetch the materials from the storage that has them; promised materials are not spent twice (#36)', async ({ page }) => {
+test('builders fetch materials at the nearest storage; promised materials are not spent twice (#36, #141)', async ({ page }) => {
   await openGame(page);
   expect(await sim(page, 'buildFromWarehouse')).toEqual({
-    placed: 1, secondPlaced: false, woodRightAfter: 8, visitedWarehouse: true, built: true, warehouseWood: 3
+    placed: 1, secondPlaced: false, woodRightAfter: 8, atWarehouse: true, atHall: false, wood: 3, built: true
   });
 });
 
-test('a destroyed warehouse leaves a pile per resource, and workers carry it all to the town hall (#36)', async ({ page }) => {
+test('a broken warehouse takes no resources with it (#141)', async ({ page }) => {
   await openGame(page);
-  const r = await sim(page, 'warehouseDestroyed');
-  expect(r.piles).toEqual(['food:4', 'stone:7', 'wood:12']);
-  expect(r.onTile).toBe(true);
-  expect(r.pilesLeft).toBe(0);
-  expect(r.hall).toEqual({ wood: 12, stone: 7, food: 4 });
+  expect(await sim(page, 'warehouseDestroyed')).toEqual({ same: true, gone: true });
 });
 
-test('tapping a warehouse shows what it holds (#36)', async ({ page }) => {
+test('a warehouse costs 5 wood, and tapping it shows no storage window (#141)', async ({ page }) => {
   await openGame(page);
-  expect(await sim(page, 'storagePopup')).toEqual({ shown: true });
-  expect(await iconText(page, '#storage-title')).toEqual(['[[warehouse]] Склад']);
-  expect(await iconText(page, '#storage-fill')).toEqual(['Заполнено: 15/100']);
-  expect(await iconText(page, '#storage-items div')).toEqual(['[[wood]] Дерево: 12', '[[iron]] Железо: 3']);
+  expect(await page.evaluate(() => GAME_CONFIG.buildings.warehouse.cost)).toEqual({ wood: 5 });
+  await expect(page.locator('#storage-popup')).toHaveCount(0);
 });
