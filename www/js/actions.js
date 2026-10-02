@@ -248,59 +248,6 @@ function getWeaponStats(s, use) {
   return { ...stats, damage, multiplier: settlerType ? settlerType.damageMultiplier : 1 };
 }
 
-// A tap while possessing a settler is an order for it (carried out by followOrder() in behaviours.js):
-// an enemy or tent — attack it; a boar — hunt it; a resource — gather it, if the settler has the right
-// tool; an apple tree with apples — pick them; water — fish (needs a rod); a blueprint — build; a damaged
-// building — repair; the town hall — hand in what it carries (or repair the hall). An archer shoots
-// wherever else the tap lands. Returns false if the tap wasn't on anything for it.
-function orderPossessed(p, x, y) {
-  const near = (o, r) => Math.hypot(x - o.x, y - o.y) < r;
-  const order = (kind, target) => { p.order = { kind, target }; p.path = null; return true; };
-  const refuse = key => { showNotification(t(key), true); return true; };
-
-  const enemy = enemies.find(en => near(en, en.radius + 15)) || enemyTents.find(et => near(et, 25));
-  if (enemy) return order('attack', enemy);
-  const boar = boars.find(b => near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p));
-  if (boar) return order('hunt', boar);
-
-  // a storage: hand in what it carries (#36)
-  const warehouse = buildings.find(b => b.type === 'warehouse' && near(b, 18));
-  if (warehouse && p.carrying) return order('deliver', warehouse);
-  if (near(townHall, townHall.radius + 10)) {
-    if (p.carrying) return order('deliver', townHall);
-    if (townHall.hp < townHall.maxHp) return order('repairHall', townHall);
-  }
-  const blueprint = blueprints.find(bp => near(bp, 18));
-  if (blueprint) return order('build', blueprint);
-  const damaged = buildings.find(b => near(b, 18) && b.hp < b.maxHp);
-  if (damaged) return canAfford(getRepairStep(damaged).cost) ? order('repair', damaged) : refuse('possess.noRepairCost');
-
-  const resource = getHarvestableResources().find(r => near(r, 25));
-  if (resource) {
-    const handsFull = p.carrying && !hasRoomToCarry(p);
-    if (resource.apple && resource.applesReady && !hasAxeTool(p.tool)) return handsFull ? refuse('possess.handsFull') : order('apples', resource);
-    const kind = getMapResourceKind(resource);
-    const def = getMapResourceDef(kind);
-    if (def.tool && (!hasToolFamily(p.tool, def.tool) || resource.isGrowing)) return refuse(`possess.needs.${def.tool}`);
-    if (kind === 'farm' && !(resource.growth >= 100)) return refuse('possess.notRipe');
-    return handsFull ? refuse('possess.handsFull') : order('harvest', resource);
-  }
-
-  const water = waterTiles.find(w => near(w, 20));
-  if (water) {
-    if (p.tool !== 'rod') return refuse('possess.needsRod');
-    if (!p.bait && !getFishingBait()) return refuse('possess.noBait');
-    return p.carrying && !hasRoomToCarry(p) ? refuse('possess.handsFull') : order('fish', water);
-  }
-
-  if (isBowWeapon(p.weapon)) {
-    p.order = null;
-    performAttack(p, x, y);
-    return true;
-  }
-  return false;
-}
-
 function invalidateAllPaths() {
   resetTileIndex();
   settlers.forEach(s => { s.path = null; s.pathTarget = null; });

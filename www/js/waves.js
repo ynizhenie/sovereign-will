@@ -127,8 +127,9 @@ function startNextWave() {
   }
 
   if (group) {
-    // every enemy kind with a waveKey, in config order
-    Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey).forEach(def => {
+    // every enemy kind of the enemy's faction with a waveKey, in config order (#43)
+    const kinds = getEnemyFaction().enemies;
+    Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && kinds.includes(def.id)).forEach(def => {
       const baseCount = Number(group[def.waveKey] || 0);
       const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount));
 
