@@ -22,37 +22,22 @@ function getEnemyDef(enemy) {
   return getDefinition('enemies', enemy.enemyKey) || GAME_CONFIG.enemies.raider;
 }
 
-// A new enemy from GAME_CONFIG.enemies, with its body's hp, speed and size like a settler of that kind
-// (#136); type and radius come from the config unless given
+// A new enemy from GAME_CONFIG.enemies; type and radius come from the config unless given
 function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return null;
-  const body = getDefinition('settlerTypes', definition.body) || GAME_CONFIG.settlerTypes.normal;
-  const hp = body.hp * getDifficulty().enemyHp;
   const enemy = {
-    type: type || definition.type, enemyKey, body: body.id, x: pos.x, y: pos.y, radius: radius || body.visualRadius,
-    hp, maxHp: hp, speed: body.speed,
+    type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
+    hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp,
+    weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
   };
-  armEnemy(enemy, definition.weapon);
   if (definition.quiver) {
     enemy.arrows = definition.quiver.arrows;
     enemyArrowStock += definition.quiver.tentStock;
   }
   return enemy;
-}
-
-// Give an enemy a weapon: its damage per hit (or per arrow) is a settler's with that weapon and body
-function armEnemy(enemy, weapon) {
-  enemy.weapon = weapon || 'fist';
-  const stats = getEnemyWeaponStats(enemy, enemy.weapon);
-  enemy.damage = stats.damage * stats.multiplier;
-}
-
-// A weapon's stats in this enemy's hands, as getWeaponStats gives them for a settler (no tool)
-function getEnemyWeaponStats(enemy, weapon) {
-  return getWeaponStats({ weapon, tool: 'none', type: enemy.body || 'normal' }, 'combat');
 }
 
 function createNormalEnemy(pos, enemyKey = 'raider') {
