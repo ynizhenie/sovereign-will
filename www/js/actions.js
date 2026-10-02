@@ -507,10 +507,10 @@ function assignTool(toolType) {
 
   if (!target) {
     if (toolType === 'rod') {
-      target = settlers.find(s => s.type === 'normal' && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
-               settlers.find(s => s.type === 'normal' && s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
+      target = settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
+               settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
     } else {
-      target = settlers.find(s => s.type === 'normal' && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
+      target = settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
                settlers.find(s => s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) || 
                settlers.find(s => s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
     }
@@ -542,7 +542,7 @@ function craftWeapon(type) {
   let target = getSelectedSettler() || getPossessed();
 
   if (!target) {
-    target = settlers.find(s => s.type === 'big' && s.weapon === 'fist' && !s.targetEquipment) ||
+    target = settlers.find(s => isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
              settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
              settlers.find(s => s.weapon !== type && !s.targetEquipment);
   }
@@ -633,12 +633,20 @@ function spawnSettler(type = 'normal') {
   showNotification(t('hire.done', { name: settlerType.label }), false);
 }
 
-function upgradeToBig(target) {
-  const normal = GAME_CONFIG.settlerTypes.normal, big = GAME_CONFIG.settlerTypes.big;
-  if (!target) target = getSelectedSettler() || getPossessed();
-  if (!target || target.type !== 'normal') target = settlers.find(s => s.type === 'normal');
+// The faction's upgrade (#43): a worker into a giant, a zombie into a big zombie
+function getUpgrade() {
+  const [from, to] = Object.entries(getPlayerFaction().upgrades || {})[0] || [];
+  return from ? { from, to, normal: GAME_CONFIG.settlerTypes[from], big: GAME_CONFIG.settlerTypes[to] } : null;
+}
 
-  if (!target || target.type !== 'normal') {
+function upgradeToBig(target) {
+  const upgrade = getUpgrade();
+  if (!upgrade) return;
+  const { normal, big } = upgrade;
+  if (!target) target = getSelectedSettler() || getPossessed();
+  if (!target || target.type !== upgrade.from) target = settlers.find(s => s.type === upgrade.from);
+
+  if (!target || target.type !== upgrade.from) {
     showNotification(t('upgrade.noone'), true);
     return;
   }
@@ -653,7 +661,7 @@ function upgradeToBig(target) {
 
   payCost(big.upgradeCost);
 
-  target.type = 'big';
+  target.type = upgrade.to;
   target.maxHp = big.hp;
   target.hp = Math.min(target.hp + (big.hp - normal.hp), big.hp);
   target.speed = big.speed;

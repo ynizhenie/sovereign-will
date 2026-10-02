@@ -4,8 +4,9 @@ import { openGame } from './helpers.mjs';
 test('Endless: pick your faction and the enemy\'s, each with a colour the other side can\'t have (#43)', async ({ page }) => {
   await openGame(page);
   await expect(page.locator('#faction-player [data-faction="humans"]')).toHaveClass(/active/);
-  await expect(page.locator('#faction-player [data-faction="undead"]')).toBeDisabled();
-  await expect(page.locator('#faction-player [data-faction="undead"]')).toHaveText('Нежить · скоро');
+  await expect(page.locator('#faction-player [data-faction="undead"]')).toBeEnabled();
+  await expect(page.locator('#faction-player [data-faction="demons"]')).toBeDisabled();
+  await expect(page.locator('#faction-player [data-faction="demons"]')).toHaveText('Демоны · скоро');
   // the enemy's colour can't be yours, and the other way round
   await expect(page.locator('#colors-player [data-color="#e8572a"]')).toBeDisabled();
   await expect(page.locator('#colors-enemy [data-color="#e9c46a"]')).toBeDisabled();

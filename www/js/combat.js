@@ -160,7 +160,7 @@ function performAttack(attacker, targetX, targetY) {
         } }))
     ];
     // a big settler's blow hits everything around it; anyone else hits one: the one aimed at (#144)
-    if (attacker.type === 'big') struck.forEach(target => target.hit());
+    if (isBigBody(attacker)) struck.forEach(target => target.hit());
     else if (struck.length > 0) {
       const aimed = struck.reduce((best, target) =>
         Math.hypot(target.at.x - targetX, target.at.y - targetY) < Math.hypot(best.at.x - targetX, best.at.y - targetY) ? target : best);

@@ -34,9 +34,17 @@ function update(dt) {
 
   updatePendingRespawns(dt);
 
+  // the undead make bones by themselves: their graveyard and each grave (#43)
+  const bonesRate = getPlayerFaction().bonesPerSecond;
+  if (bonesRate && gameMode === 'endless') {
+    stock.bones += dt * (bonesRate.hall + buildings.filter(b => b.type === 'grave').length * bonesRate.grave);
+  }
+
+  // meals, for a faction that eats (the undead don't)
   foodTimer -= dt;
+  if (foodTimer <= 0 && !getPlayerFaction().eats) foodTimer = 25;
   if (foodTimer <= 0) {
-    let mealCost = settlers.reduce((sum, s) => sum + (s.type === 'big' ? 2 : 1), 0);
+    let mealCost = settlers.reduce((sum, s) => sum + (isBigBody(s) ? 2 : 1), 0);
     // short of food, the colony eats worms
     const short = Math.max(0, mealCost - stock.food);
     stock.food = Math.max(0, stock.food - mealCost);
@@ -318,6 +326,7 @@ function update(dt) {
     }
 
     const enemyDef = getEnemyDef(en);
+    if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) continue;
     let target = townHall;
     let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let closestSettler = null;
@@ -399,7 +408,7 @@ function update(dt) {
     let blockedRes = null;
 
     if (touchingBuilding) {
-      if (touchingBuilding.type === 'tent') {
+      if (isShelter(touchingBuilding)) {
         touchingBuilding.hp -= dt * enemyDef.siege.buildings;
         if (touchingBuilding.hp <= 0) removeBuilding(touchingBuilding);
       } else if (en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes)) {
