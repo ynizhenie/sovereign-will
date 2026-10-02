@@ -55,7 +55,7 @@ Object.assign(window.sim, (() => {
   }
 
   // Six soldiers at their posts; the player points at an enemy far from all of them: three go
-  function markedTarget({ seed = 'soldiers-marked' } = {}) {
+  function soldiersMarked({ seed = 'soldiers-marked' } = {}) {
     setUp(seed);
     settlers = soldiers(6);
     const en = createConfiguredEnemy(nearHall(-14, -10), 'raider');
@@ -88,5 +88,5 @@ Object.assign(window.sim, (() => {
     return { throughWall: crosses('walls'), overSpikes: crosses('spikes'), viaDoor: !!door && path.some(p => p.x === door.x && p.y === door.y) };
   }
 
-  return { soldiersSingles: singles, soldiersNearBase: nearBase, archerTower, markedTarget, wayIn };
+  return { soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
 })());
