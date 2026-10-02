@@ -28,6 +28,11 @@
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
 
+        <div class="wave-settings" id="save-settings" hidden>
+            <div data-i18n="save.list">Saved games:</div>
+            <div id="save-list"></div>
+        </div>
+
         <div class="wave-settings faction-settings">
             <div data-i18n="menu.factions">Factions:</div>
             <div class="faction-side"><span data-i18n="menu.you">You</span><div id="faction-player" class="faction-options"></div></div>
@@ -155,6 +160,7 @@
     <div class="main-menu-content">
         <h1 data-i18n="pause.title">Paused</h1>
         <button id="resume-button" class="menu-button menu-button-primary" data-i18n="pause.continue">Continue</button>
+        <button id="save-game-button" class="menu-button" data-i18n="save.button">Save game</button>
         <button id="exit-to-menu-button" class="menu-button" data-i18n="pause.exit">Exit to main menu</button>
     </div>
 </div>
@@ -353,6 +359,7 @@
 <script src="js/generator.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/menu-scene.js"></script>
+<script src="js/saves.js"></script>
 
 </body>
 </html>
