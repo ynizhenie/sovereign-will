@@ -38,6 +38,7 @@ test('the selected settler shows what it is doing, when it eats, and what it car
   await openGame(page);
   await page.click('#play-button');
   await page.evaluate(() => {
+    isPaused = true; // no tick in between: by the hall, it would hand the wood in at once
     const s = settlers[0];
     s.carrying = { type: 'wood', amount: 3 };
     s.activity = 'deliverCarrying';
