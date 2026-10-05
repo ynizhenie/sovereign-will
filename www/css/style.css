@@ -97,24 +97,20 @@ canvas {
   -webkit-user-select: none;
 }
 
-#zoom-controls {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 35;
+/* the seed in the top-right corner, where the zoom buttons were (#182) */
+.hud-seed-box {
+  position: absolute; top: 8px; right: 10px; z-index: 5; font-size: 10px; color: rgba(255, 255, 255, 0.35);
+  pointer-events: none; user-select: none; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-.btn, .btn-zoom, .tab-btn, .btn-pause-square {
+.btn, .tab-btn, .btn-pause-square {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
   transition: transform 0.08s ease, filter 0.08s ease;
 }
 
-.btn:active, .btn-zoom:active, .tab-btn:active {
+.btn:active, .tab-btn:active {
   transform: scale(0.92);
   filter: brightness(1.3);
 }
@@ -593,7 +589,7 @@ canvas {
 
 #fps-counter {
   position: absolute;
-  top: 22px;
+  top: 6px;
   left: 10px;
   z-index: 6;
   font: bold 11px monospace;
@@ -682,12 +678,19 @@ canvas {
 body.battle-mode #battle-panel { display: flex; }
 body.battle-mode #bottom-panel,
 body.battle-mode .top-wave,
-body.battle-mode .top-actions,
 body.battle-mode #btn-interact,
 body.battle-mode #hud-seed { display: none; }
 #battle-panel[data-phase="fight"] .battle-presets,
 #battle-panel[data-phase="fight"] .battle-row,
 body[data-battle-phase="fight"] .battle-top .btn { opacity: 0.4; pointer-events: none; }
+#battle-fight-bar { display: none; position: absolute; top: 52px; left: 50%; transform: translateX(-50%); z-index: 40; }
+body.battle-mode #battle-fight-bar { display: block; }
+#battle-fight-bar .btn { padding: 6px 14px; font-size: 13px; }
+#battle-cancel, body[data-battle-phase="fight"] #battle-fight { display: none; }
+body[data-battle-phase="fight"] #battle-cancel { display: inline-block; }
+body[data-battle-phase="result"] #battle-fight-bar { visibility: hidden; }
+/* the eye (possess) only while fighting (#166) */
+body.battle-mode:not([data-battle-phase="fight"]) .top-actions { visibility: hidden; }
 /* the battle's Clear and Fight buttons in the top bar (#153) */
 .battle-top { display: none; gap: 4px; }
 body.battle-mode .battle-top { display: flex; }
@@ -737,9 +740,9 @@ body.editor-mode #hud-seed { display: none; }
 .editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
 .editor-toolbar #editor-name { flex: 1; min-width: 0; }
 .editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
-.editor-resize { display: grid; grid-template-columns: auto 34px 34px auto 34px 34px; gap: 4px 6px; align-items: center; font-size: 11px; color: #8a91a0; }
+.editor-resize { display: grid; grid-template-columns: auto 26px 26px auto 26px 26px; gap: 3px 6px; align-items: center; font-size: 10px; color: #8a91a0; }
 .editor-resize[hidden] { display: none; }
-.editor-resize .fps-option { padding: 4px 0; }
+.editor-resize .fps-option { padding: 2px 0; font-size: 12px; line-height: 1.1; }
 
 /* lists of saved maps and presets (#143): a row each, with its own delete that asks first */
 .item-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; flex-shrink: 0; }
@@ -755,6 +758,16 @@ body.editor-mode #hud-seed { display: none; }
 .item-list-empty { font-size: 12px; color: #8a91a0; font-weight: normal; text-transform: none; }
 #main-menu.custom-map .random-map-only,
 #main-menu:not(.custom-map) .custom-map-only { display: none; }
+
+/* the selected settler's info (#180) */
+#selected-info { flex-basis: 100%; font-size: 11px; color: #ccc; margin-top: 2px; }
+#selected-info[hidden] { display: none; }
+
+/* sections of the panel's tabs (#181) */
+.panel-heading { font-size: 10px; color: #8a91a0; text-transform: uppercase; letter-spacing: 0.5px; margin: 6px 0 3px; text-align: left; }
+.panel-heading:first-child { margin-top: 0; }
+.panel-section[hidden] { display: none; }
+.tab-pane .gear-actions { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* tabs a faction doesn't have (#164) */
 .tab-btn[hidden], #tab-tools .btn[hidden], #tab-weapons .btn[hidden] { display: none; }

@@ -142,7 +142,7 @@ function performAttack(attacker, targetX, targetY) {
       owner: attacker,
       fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's (#165)
     });
-    attacker.arrows--;
+    if (gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles (#166)
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, 0.3);
   } else {
@@ -337,6 +337,6 @@ function updateTowerGuard(settler, tower, dt) {
     owner: settler,
     fromTower: true
   });
-  settler.arrows--;
+  if (gameMode !== 'battle') settler.arrows--;
   settler.towerAttackCooldown = tower.tower.cooldown;
 }

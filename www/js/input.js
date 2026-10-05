@@ -78,7 +78,7 @@ function fitCanvasToScreen() {
     canvas.width = width;
     canvas.height = height;
   }
-  camera.zoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, camera.zoom));
+  camera.zoom = Math.max(getMinZoom(), Math.min(getMaxZoom(), camera.zoom));
   clampCamera();
 }
 
@@ -92,7 +92,13 @@ function getViewScale() {
   return getBaseScale() * camera.zoom;
 }
 
+// zoomed in at most this far, or until a world unit is MAX_CSS_SCALE CSS pixels, whichever is closer:
+// on a big map the base scale is small, so a fixed factor didn't get close enough on a phone (#182)
 const MAX_ZOOM = 2.4;
+const MAX_CSS_SCALE = 3;
+function getMaxZoom() {
+  return Math.max(MAX_ZOOM, MAX_CSS_SCALE * screenPixelRatio / getBaseScale());
+}
 
 // zoomed out this far, the whole world fits on the screen
 function getMinZoom() {
@@ -100,7 +106,7 @@ function getMinZoom() {
 }
 
 function setZoom(zoom) {
-  camera.zoom = Math.max(getMinZoom(), Math.min(MAX_ZOOM, zoom));
+  camera.zoom = Math.max(getMinZoom(), Math.min(getMaxZoom(), zoom));
 }
 
 // the Restart button of the defeat screen, in CSS pixels
@@ -121,15 +127,12 @@ function updateInputPos(clientX, clientY) {
 }
 
 function clampCamera() {
-  // half the view in world units; a view wider than the world stays centred on it
+  // half the view in world units; a view wider than the world stays centred on it. Otherwise the view
+  // can go up to half of it past the map's edge (the camera's centre on the edge, #182)
   const halfWidth = canvas.width / (2 * getViewScale());
   const halfHeight = canvas.height / (2 * getViewScale());
-  camera.x = halfWidth >= WORLD_WIDTH / 2
-    ? WORLD_WIDTH / 2
-    : Math.max(halfWidth, Math.min(WORLD_WIDTH - halfWidth, camera.x));
-  camera.y = halfHeight >= WORLD_HEIGHT / 2
-    ? WORLD_HEIGHT / 2
-    : Math.max(halfHeight, Math.min(WORLD_HEIGHT - halfHeight, camera.y));
+  camera.x = halfWidth >= WORLD_WIDTH / 2 ? WORLD_WIDTH / 2 : Math.max(0, Math.min(WORLD_WIDTH, camera.x));
+  camera.y = halfHeight >= WORLD_HEIGHT / 2 ? WORLD_HEIGHT / 2 : Math.max(0, Math.min(WORLD_HEIGHT, camera.y));
 }
 
 canvas.addEventListener('mousemove', e => {
@@ -251,15 +254,6 @@ canvas.addEventListener('touchend', e => {
   }
 });
 
-function zoomIn() {
-  setZoom(camera.zoom * 1.2);
-  clampCamera();
-}
-
-function zoomOut() {
-  setZoom(camera.zoom / 1.2);
-  clampCamera();
-}
 
 window.addEventListener('dblclick', function(e) {
   e.preventDefault();
@@ -277,7 +271,7 @@ document.addEventListener('touchend', function(e) {
 document.addEventListener("touchstart", function() {}, true);
 
 window.addEventListener('DOMContentLoaded', () => {
-  const uiElements = ['top-bar', 'zoom-controls', 'bottom-panel', 'btn-interact', 'mobile-joystick'];
+  const uiElements = ['top-bar', 'bottom-panel', 'btn-interact', 'mobile-joystick'];
   
   uiElements.forEach(id => {
     const el = document.getElementById(id);
