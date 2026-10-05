@@ -17,8 +17,62 @@ function isBigBody(unit) {
   return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
 }
 
+// Raised zombies don't count (#164): they're temporary
 function getCurrentPop() {
-  return settlers.reduce((sum, s) => sum + GAME_CONFIG.settlerTypes[s.type].population, 0);
+  return settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
+}
+
+// A settler turns into another kind of its faction (a zombie given a bow into a skeleton, #164), keeping
+// its share of hp, its armour and everything it holds
+function changeSettlerType(s, type) {
+  const t = GAME_CONFIG.settlerTypes[type];
+  if (!t || s.type === type) return;
+  const share = s.hp / s.maxHp;
+  const bonus = s.armor === 'iron' ? GAME_CONFIG.gear.armor.hpBonus : 0;
+  Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, maxHp: t.hp + bonus });
+  s.hp = s.maxHp * share;
+}
+
+// Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the undead's
+// zombie into a skeleton, the demons' imp into a fire imp (#164, #165)
+function applyBowUnit(s) {
+  const forms = getPlayerFaction().bowUnits || {};
+  if (isBowWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);
+  const base = Object.keys(forms).find(k => forms[k] === s.type);
+  if (!isBowWeapon(s.weapon) && base) changeSettlerType(s, base);
+}
+
+// The necromancy a settler has from what it holds (the undead's staff, #164), or null
+function getNecromancy(s) {
+  return (getDefinition('tools', s.tool) || {}).necromancer || null;
+}
+
+// Blighted ground (#164): round the undead's graveyard and graves, and marked ground a necromancer
+// has blighted. Worked out once per tick; tile keys 'x,y'.
+let blightCache = { key: '', keys: new Set() };
+function getBlightKeys() {
+  const cacheKey = `${pathTick}|${sides.player.faction}|${gameMode}|${buildings.length}|${blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}`;
+  if (blightCache.key === cacheKey) return blightCache.keys;
+  const keys = new Set();
+  if (sides.player.faction === 'undead' && gameMode === 'endless') {
+    const b = GAME_CONFIG.blight;
+    const around = (x, y, r) => {
+      const g = getGridPos(x, y);
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (!isBorderZone(g.gx + dx, g.gy + dy)) keys.add(`${(g.gx + dx) * TILE_SIZE + 15},${(g.gy + dy) * TILE_SIZE + 15}`);
+      }
+    };
+    around(townHall.x - 1, townHall.y - 1, b.hallTiles);
+    for (const grave of buildings) if (grave.type === 'grave') around(grave.x, grave.y, b.graveTiles);
+    for (const z of blightZones) if (z.done) keys.add(`${z.x},${z.y}`);
+  }
+  blightCache = { key: cacheKey, keys };
+  return keys;
+}
+
+function isBlighted(x, y) {
+  const g = getGridPos(x, y);
+  return getBlightKeys().has(`${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`);
 }
 
 // A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind (skeletons)
@@ -31,7 +85,6 @@ function createSettler(typeKey, id, x, y, extra = {}) {
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
   };
   if (t.archer) Object.assign(s, { weapon: t.archerWeapon || 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
-  if (t.necromancer) s.raisesLeft = t.necromancer.raises;
   return s;
 }
 
@@ -670,13 +723,14 @@ function resetGame(map = gameMode === 'endless' ? customMap : null) {
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);
   addResources(getPlayerFaction().startResources);
+  if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food (#164)
   if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings (#43)
   waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
   setWorldSize((map || mapSettings).cols, (map || mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable (#135)
   townHall.repairRequested = false;
   settlers = []; blueprints = []; buildings = []; armorOrder = null; enemies = []; enemyTents = []; enemyTentBlueprints = []; enemyArrowStock = 0;
-  projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; dung = []; farmPlots = []; farmZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
+  projectiles = []; foodMix = {}; corpses = []; bloodSplats = []; dung = []; farmPlots = []; farmZones = []; blightZones = []; boars = []; selectedSettler = null; pendingRespawns = [];
   
   if (map) loadCustomMap(map);
   else generateMap();

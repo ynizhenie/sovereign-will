@@ -146,6 +146,7 @@ function renderConfigHud() {
     for (const group of GAME_CONFIG.resourceGroups) {
       const members = group.members.filter(id => GAME_CONFIG.resources[id]);
       members.forEach(id => grouped.add(id));
+      if (!ours(group)) continue; // the undead have no food groups (#164), nor its resources' tiles
       if (group.kinds) {
         // one resource opening onto its kinds (Food: berries, bread...)
         const resource = GAME_CONFIG.resources[members[0]];
@@ -211,7 +212,7 @@ function renderConfigHud() {
   });
 
   const toolActions = document.getElementById('tool-actions');
-  Object.values(GAME_CONFIG.tools).forEach(item => {
+  Object.values(GAME_CONFIG.tools).filter(ours).forEach(item => {
     if (toolActions) toolActions.appendChild(createConfigButton(item, assignTool));
   });
 
@@ -239,7 +240,14 @@ function renderConfigHud() {
     label('btn-upgrade-big', t('btn.upgradeWorker', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) }));
   }
   label('btn-craft-arrows', `[[${recipes.arrows.icon}]] ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
-  for (const item of Object.values(GAME_CONFIG.gear)) label(`btn-${item.id}`, `[[${item.icon}]] ${item.label} (${formatCost(item.cost)})`);
+  for (const item of Object.values(GAME_CONFIG.gear)) {
+    label(`btn-${item.id}`, `[[${item.icon}]] ${item.label} (${formatCost(item.cost)})`);
+    const button = document.getElementById(`btn-${item.id}`);
+    if (button) button.hidden = !ours(item);
+  }
+  // the undead blight the ground instead of farming (#164)
+  document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
+  document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
 
 
   const weaponActions = document.getElementById('weapon-actions');

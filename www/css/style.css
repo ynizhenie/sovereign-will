@@ -756,6 +756,9 @@ body.editor-mode #hud-seed { display: none; }
 #main-menu.custom-map .random-map-only,
 #main-menu:not(.custom-map) .custom-map-only { display: none; }
 
+/* tabs a faction doesn't have (#164) */
+.tab-btn[hidden], #tab-tools .btn[hidden], #tab-weapons .btn[hidden] { display: none; }
+
 /* saves (#156): only in Endless */
 body.battle-mode #save-game-button, body.editor-mode #save-game-button { display: none; }
 #save-settings[hidden] { display: none; }

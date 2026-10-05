@@ -140,7 +140,7 @@ function performAttack(attacker, targetX, targetY) {
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
-      fire: !!(getDefinition('weapons', attacker.weapon) || {}).fire
+      fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's (#165)
     });
     attacker.arrows--;
     attacker.attackCooldown = stats.cooldown;

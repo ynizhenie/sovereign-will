@@ -582,6 +582,8 @@ function takePortal(entity, targetX, targetY) {
 }
 
 function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
+  // the undead's blighted ground holds enemies back (#164)
+  if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
   if (!isEnemy && buildings.length) {
     const via = takePortal(entity, targetX, targetY);
     if (via === true) return;
