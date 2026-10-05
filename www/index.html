@@ -273,7 +273,8 @@
 
     <div class="tab-navigation">
       <button class="tab-btn active" onclick="switchTab(this, 'tab-build')" data-i18n="tab.build">[[build]] Building</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-farming')" data-i18n="tab.farming">[[wheat]] Farming</button>
+      <button class="tab-btn" id="tab-btn-farming" onclick="switchTab(this, 'tab-farming')" data-i18n="tab.farming">[[wheat]] Farming</button>
+      <button class="tab-btn" id="tab-btn-blight" onclick="switchTab(this, 'tab-blight')" data-i18n="tab.blight" hidden>[[rot]] Blight</button>
       <button class="tab-btn" onclick="switchTab(this, 'tab-tools')" data-i18n="tab.tools">[[tools]] Tools</button>
       <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')" data-i18n="tab.weapons">[[swords]] Weapons</button>
     </div>
@@ -296,6 +297,14 @@
           <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
           <button class="btn" id="btn-zone_apple" onclick="setMode('zone_apple')" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
           <button class="btn" id="btn-zone_clear" onclick="setMode('zone_clear')" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
+        </div>
+      </div>
+
+      <div id="tab-blight" class="tab-pane">
+        <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
+        <div class="action-row">
+          <button class="btn" id="btn-blight" onclick="setMode('blight')" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
+          <button class="btn" id="btn-blight_clear" onclick="setMode('blight_clear')" data-i18n="btn.blightClear">[[close]] Remove zone</button>
         </div>
       </div>
 

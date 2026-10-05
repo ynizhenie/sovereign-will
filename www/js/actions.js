@@ -332,6 +332,14 @@ function handleCanvasClick() {
     }
   }
 
+  // Blight tab (the undead, #164): mark (or unmark) ground for a necromancer to blight
+  if (buildMode === 'blight' || buildMode === 'blight_clear') {
+    const existing = blightZones.find(z => z.x === gx && z.y === gy);
+    if (buildMode === 'blight_clear') { if (existing) blightZones.splice(blightZones.indexOf(existing), 1); }
+    else if (!existing && !isBorderZone(gxIdx, gyIdx) && !isTileBlockedForSettler(gxIdx, gyIdx)) blightZones.push({ x: gx, y: gy, done: false });
+    return;
+  }
+
   // Farming tab: paint (or clear) farm zone tiles
   if (buildMode.startsWith('zone_')) {
     if (!isBorderZone(gxIdx, gyIdx)) toggleFarmZone(gx, gy, buildMode.slice('zone_'.length));

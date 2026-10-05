@@ -1,5 +1,42 @@
 const WAVE_WARNING_SECONDS = 15;
 
+// Raised zombies crumble when their time is up (#164, #175); the player's leave rot behind
+function updateTemporaryZombies(dt) {
+  // gone at once: no corpse, no reward, and nothing can heal them back (a necromancer would)
+  const crumbled = unit => unit.temporary !== undefined && (unit.temporary -= dt) <= 0;
+  const gone = settlers.filter(crumbled);
+  if (gone.length) {
+    settlers = settlers.filter(s => !gone.includes(s));
+    if (gone.includes(selectedSettler)) selectedSettler = null;
+    stock.rot += gone.length * GAME_CONFIG.temporaryZombie.rot;
+  }
+  enemies = enemies.filter(en => !crumbled(en));
+}
+
+// Burning arrows (#165): what they hit burns a few seconds
+function setBurning(unit) {
+  unit.burning = GAME_CONFIG.burning.seconds;
+}
+
+function updateBurning(dt) {
+  for (const unit of [...settlers, ...enemies]) {
+    if (!(unit.burning > 0)) continue;
+    unit.burning -= dt;
+    if (settlers.includes(unit)) damageSettler(unit, GAME_CONFIG.burning.dps * dt, null);
+    else unit.hp -= GAME_CONFIG.burning.dps * dt;
+  }
+}
+
+// A corpse on blighted ground rises as a temporary zombie after a while (#164)
+function raiseOnBlight(dt) {
+  if (sides.player.faction !== 'undead') return;
+  for (const corpse of [...corpses]) {
+    if (!isBlighted(corpse.x, corpse.y)) continue;
+    corpse.blightAge = (corpse.blightAge || 0) + dt;
+    if (corpse.blightAge >= GAME_CONFIG.blight.riseSeconds) raiseTemporaryZombie(corpse);
+  }
+}
+
 function update(dt) {
   if (!gameStarted || isPaused || gameMode === 'editor') return;
   // battle mode: units stand still while being placed, and the result shows for a moment
@@ -39,6 +76,14 @@ function update(dt) {
   if (bonesRate && gameMode === 'endless') {
     stock.bones += dt * (bonesRate.hall + buildings.filter(b => b.type === 'grave').length * bonesRate.grave);
   }
+  // and rot, from each grave (#164)
+  const rotRate = getPlayerFaction().rotPerSecond;
+  if (rotRate && gameMode === 'endless') {
+    stock.rot += dt * (rotRate.hall + buildings.filter(b => b.type === 'grave').length * rotRate.grave);
+  }
+  updateTemporaryZombies(dt);
+  updateBurning(dt);
+  raiseOnBlight(dt);
 
   // meals, for a faction that eats (the undead don't)
   foodTimer -= dt;
@@ -258,6 +303,7 @@ function update(dt) {
         if (hit) break;
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
           damageSettler(s, proj.damage, proj.owner);
+          if (proj.fire) setBurning(s);
           hit = true;
         }
       }
@@ -267,6 +313,7 @@ function update(dt) {
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           en.hp -= proj.damage;
           bleed(en, proj.owner);
+          if (proj.fire) setBurning(en);
           hit = true;
         }
       }
@@ -388,7 +435,7 @@ function update(dt) {
       if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
         projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en,
-          fire: !!(getDefinition('weapons', en.weapon) || {}).fire });
+          fire: !!getEnemyDef(en).fireArrows }); // burning arrows (#165)
         startSwing(en, 0.3);
         faceTowards(en, target.x, target.y);
         en.attackCooldown = ranged.cooldown;
@@ -527,16 +574,15 @@ function update(dt) {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       refundEquipment(s);
-      addCorpse(s, 'settler', s.type);
+      if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot (#164)
       if (selectedSettler === s) selectedSettler = null;
     }
   });
   settlers = settlers.filter(s => s.hp > 0);
   enemies.forEach(en => {
     if (en.hp <= 0 && !en.rewardGranted) {
-      grantEnemyReward(en);
       en.rewardGranted = true;
-      addCorpse(en, 'enemy', en.enemyKey);
+      if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); }
     }
   });
   enemies = enemies.filter(en => en.hp > 0);

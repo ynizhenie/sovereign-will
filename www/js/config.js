@@ -18,14 +18,17 @@ const GAME_CONFIG = {
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
     // factions: only shown to these factions (#43)
-    bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] }
+    bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] },
+    // the undead's other hiring resource (#164): food brought in turns into it (meat and fish into bones)
+    rot: { id: 'rot', icon: 'rot', type: 'resource', factions: ['undead'] }
   },
   // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
   // of one shows as that resource; resources in no group get their own tile. `held` groups count what
   // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
   resourceGroups: [
-    { id: 'food', members: ['food'], kinds: 'foodKinds' }, // Food, opening onto what it's made of
-    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'] }, // right after Food (#169)
+    // factions: only these factions see it (the undead have no food, #164)
+    { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'] }, // Food, opening onto what it's made of
+    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food (#169)
     { id: 'wood', members: ['wood'] },
     { id: 'stone', members: ['stone'] },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
@@ -46,8 +49,14 @@ const GAME_CONFIG = {
     rod: { id: 'rod', icon: 'rod', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
     // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
-    medbag: { id: 'medbag', icon: 'medbag', cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4, huntDamage: 4 },
-    hoe: { id: 'hoe', icon: 'hoe', cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 }
+    // factions: only these factions have it (#164: the undead don't farm or heal with herbs)
+    medbag: { id: 'medbag', icon: 'medbag', factions: ['humans', 'demons'], cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4, huntDamage: 4 },
+    hoe: { id: 'hoe', icon: 'hoe', factions: ['humans', 'demons'], cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 },
+    // the undead's necromancer's staff (#164): whoever holds it is a necromancer: heals the undead around,
+    // raises corpses into temporary zombies (raises before going back to a grave for more), blights
+    // the ground the player marks (blightSeconds a tile)
+    necro_staff: { id: 'necro_staff', icon: 'staff', factions: ['undead'], cost: { bones: 20, rot: 10 }, family: 'necro', combatDamage: 6, huntDamage: 6,
+      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2 } }
   },
   // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
   // combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the settler
@@ -72,8 +81,6 @@ const GAME_CONFIG = {
     bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 5 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } },
     // the fire imps' fireballs (#43): shot like a bow (arrows are their charges), not made in the Weapons tab
-    hellfire: { id: 'hellfire', icon: 'fireball', cost: {}, family: 'bow', hidden: true, fire: true,
-      combat: { damage: 26, cooldown: 0.9, approach: 130, tentReach: 130, projectileSpeed: 4.5, projectileLife: 75 }, hunt: { range: 130 } }
   },
   // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'.
   // Arrows stop at buildings, except arrowsPass ones; towerArrowsPass ones only stop arrows shot from the ground.
@@ -92,8 +99,8 @@ const GAME_CONFIG = {
     // portals come in pairs (the 1st with the 2nd, the 3rd with the 4th...) and settlers step through
     sacrifice_circle: { id: 'sacrifice_circle', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, population: 3, sacrifice: true, build: { maxProgress: 80, hp: 150 } },
     portal: { id: 'portal', icon: 'portal', factions: ['demons'], cost: { stone: 10, iron: 2 }, demolishRefund: { stone: 5 }, portal: true, build: { maxProgress: 100, hp: 120 } },
-    grave: { id: 'grave', icon: 'grave', factions: ['undead'], cost: { stone: 10 }, demolishRefund: { stone: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 100 } },
-    campfire: { id: 'campfire', icon: 'campfire', cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
+    grave: { id: 'grave', icon: 'grave', factions: ['undead'], cost: { stone: 10 }, demolishRefund: { stone: 5 }, population: 1, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 100 } },
+    campfire: { id: 'campfire', icon: 'campfire', factions: ['humans', 'demons'], cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
     smelter: { id: 'smelter', icon: 'smelter', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
       // holds at most maxOre ore and maxCoal coal; one ore + one coal make one iron every `seconds`, up to
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
@@ -147,7 +154,7 @@ const GAME_CONFIG = {
       type: 'normal', radius: 10, waveKey: ['club', 'raider'], reach: 6, siege: { buildings: 10, resources: 2 } },
     demon_brute: { id: 'demon_brute', hp: 140, speed: 0.7, damage: 28, reward: { food: 2 }, weapon: 'club',
       type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
-    demon_fire_imp: { id: 'demon_fire_imp', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'hellfire',
+    demon_fire_imp: { id: 'demon_fire_imp', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'bow', fireArrows: true,
       type: 'archer', radius: 10, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 170, keepAway: 140, cooldown: 1.4, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
@@ -166,12 +173,15 @@ const GAME_CONFIG = {
       enemies: ['raider_club', 'raider', 'brute', 'raider_archer'], summonEnemy: 'raider' },
     // portalSpawns: its spawners are portals that open anywhere (but not within minPortalTiles of the
     // town hall) and its waves come out of them instead of the map's edge
-    demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon', 'fire_imp'], upgrades: { imp: 'demon' }, startUnits: 'imp', eats: true,
+    // bowUnits: what a kind becomes when it's given a bow (and back when the bow is taken, #164, #165)
+    demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon'], upgrades: { imp: 'demon' }, bowUnits: { imp: 'fire_imp' }, startUnits: 'imp', eats: true,
       hall: 'hellgate', spawner: 'portal', portalSpawns: true, minPortalTiles: 8,
       enemies: ['demon_imp', 'demon_brute', 'demon_fire_imp'], summonEnemy: 'demon_imp' },
-    undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie', 'skeleton', 'necromancer'],
+    // rotPerSecond: rot its hall and graves make; foodInto: what food turns into when it's brought in
+    undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie'], bowUnits: { zombie: 'skeleton' },
       upgrades: { zombie: 'big_zombie' }, startUnits: 'zombie', eats: false, hall: 'graveyard', shelter: 'grave', spawner: 'grave',
-      startResources: { bones: 30 }, bonesPerSecond: { hall: 0.25, grave: 0.1 },
+      startResources: { bones: 30 }, bonesPerSecond: { hall: 0.25, grave: 0.1 }, rotPerSecond: { hall: 0, grave: 0.1 },
+      foodInto: { rawMeat: 'bones', rawFish: 'bones', default: 'rot' },
       enemies: ['undead_zombie', 'undead_big_zombie', 'undead_skeleton', 'undead_necromancer'], summonEnemy: 'undead_zombie' }
   },
   // the colours either side can pick from; the two sides never share one
@@ -297,6 +307,13 @@ const GAME_CONFIG = {
   storage: { carryMaterials: 10 },
   // demons eating a corpse to heal (#43)
   eatCorpseSeconds: 2,
+  // burning arrows (#165): what they hit burns for seconds, losing dps hp a second
+  burning: { seconds: 3, dps: 5 },
+  // the undead (#164): a raised zombie lasts lifeSeconds, then crumbles into rot; blight lies within
+  // hallTiles of the graveyard and graveTiles of each grave, and on marked ground a necromancer blighted;
+  // enemies on it go at slowFactor of their speed, and a corpse on it rises after riseSeconds
+  temporaryZombie: { lifeSeconds: 60, rot: 1 },
+  blight: { hallTiles: 3, graveTiles: 1, slowFactor: 0.6, riseSeconds: 4 },
 
   start: {
     // stock at the start of a game (ids from `resources`)
@@ -314,14 +331,14 @@ const GAME_CONFIG = {
     // raised zombies take population like hired ones
     zombie: { id: 'zombie', icon: 'zombie', hp: 100, speed: 0.85, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 10 } },
     big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 25 }, upgradeCost: { bones: 15 } },
-    skeleton: { id: 'skeleton', icon: 'skeleton', archer: true, hp: 70, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 15, wood: 5 } },
-    necromancer: { id: 'necromancer', icon: 'necromancer', hp: 80, speed: 0.9, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 0.6, carryLoads: 1, hireCost: { bones: 30 },
-      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8 } },
-    // the demons' (#43). eatsCorpses: heals by eating a corpse (eatSeconds) when not fighting; archerWeapon:
-    // what an archer kind is hired with
+    // a zombie given a bow (bowUnits, #164)
+    skeleton: { id: 'skeleton', icon: 'skeleton', hp: 70, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1 },
+    // the demons' (#43). eatsCorpses: heals by eating a corpse (eatSeconds) when not fighting.
+    // fireArrows: its arrows set what they hit burning (see GAME_CONFIG.burning)
     imp: { id: 'imp', icon: 'imp', eatsCorpses: true, hp: 90, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
     demon: { id: 'demon', icon: 'demon', big: true, eatsCorpses: true, hp: 260, speed: 0.75, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.9, carryLoads: 2, hireCost: { food: 30, stone: 10 }, upgradeCost: { food: 15, stone: 10 } },
-    fire_imp: { id: 'fire_imp', icon: 'fire_imp', archer: true, archerWeapon: 'hellfire', eatsCorpses: true, hp: 70, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 20, wood: 10 } }
+    // an imp given a bow (bowUnits, #165)
+    fire_imp: { id: 'fire_imp', icon: 'fire_imp', fireArrows: true, eatsCorpses: true, hp: 70, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1 }
   },
 
   // worn gear, paid for with its button and picked up at the town hall (the settler walks there to
@@ -334,7 +351,7 @@ const GAME_CONFIG = {
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
     // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows
     // growthFactor times as fast
-    wateringCan: { id: 'wateringCan', icon: 'wateringCan', cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 }
+    wateringCan: { id: 'wateringCan', icon: 'wateringCan', factions: ['humans', 'demons'], cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 }
   },
 
   // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only

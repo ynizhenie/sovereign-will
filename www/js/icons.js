@@ -365,6 +365,10 @@ const ICONS = {
     for (const x of [-11, 11]) { icCircle(c, '#ecf0f1', x, -3, 3.2); icCircle(c, '#ecf0f1', x, 3, 3.2); }
     c.restore();
   },
+  rot: c => {
+    icEllipse(c, '#4a3b1f', 16, 22, 12, 6); icEllipse(c, '#6b8e23', 13, 19, 7, 4.5); icEllipse(c, '#556b2f', 20, 17, 6, 4);
+    for (const [x, y] of [[10, 13], [17, 10], [23, 12]]) icCircle(c, '#9acd32', x, y, 1.6);
+  },
   zombie: c => {
     icPerson(c, '#7dcea0', 0.75);
     icRect(c, '#1e272e', 11, 14, 3.5, 3.5); icRect(c, '#1e272e', 18, 15, 3.5, 2.5);
