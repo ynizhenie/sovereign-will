@@ -209,7 +209,7 @@ function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   settler.hp -= damage;
-  if (damage > 0) bleed(settler, attacker);
+  if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); }
   if (attacker) {
     settler.lastAttacker = attacker;
     settler.lastAttackedTick = pathTick;
@@ -659,6 +659,7 @@ function spawnSettler(type = 'normal') {
   payCost(settlerType.hireCost);
   settlers.push(createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false }));
   showNotification(t('hire.done', { name: settlerType.label }), false);
+  playSound('hire');
 }
 
 // The faction's upgrade (#43): a worker into a giant, a zombie into a big zombie

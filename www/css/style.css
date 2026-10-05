@@ -434,9 +434,11 @@ canvas {
   background: rgba(10, 11, 14, 0.92);
   color: #eee;
 }
-/* the main menu hides the game: its own scene behind it instead (#145, menu-scene.js) */
+/* behind the main menu: a little world of the game's own (#193, menu-scene.js), the game's panels hidden */
 #main-menu { background: #2d4a22; overflow-y: auto; }
-#menu-scene { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+body.menu-world #main-menu { background: transparent; }
+body.menu-world #top-bar, body.menu-world #bottom-panel, body.menu-world .hud-seed-box, body.menu-world #btn-interact,
+body.menu-world #mobile-joystick, body.menu-world #defeat-overlay, body.menu-world #battle-fight-bar { display: none !important; }
 #main-menu .main-menu-content { position: relative; z-index: 1; }
 
 .main-menu-content {

@@ -57,6 +57,7 @@ function findNearestEnemyTent(origin) {
 // ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
 // later mechanic (e.g. raising the dead) can use one up by removing it from `corpses`.
 function addCorpse(unit, side, kind) {
+  playSound('death', unit, side === 'enemy');
   const big = isBigBody(unit);
   corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
 }
@@ -172,6 +173,7 @@ function getWaveArmyFactor() {
 }
 
 function startNextWave() {
+  if (gameMode === 'endless') playSound('horn');
   const scaling = GAME_CONFIG.waveScaling;
   enemyTents.forEach(et => {
     et.summonTimer = 0;

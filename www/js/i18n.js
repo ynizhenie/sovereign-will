@@ -33,7 +33,7 @@ const LANGUAGES = {
     text: {
       'menu.play': 'PLAY', 'menu.waveInterval': 'Wave interval (s):', 'menu.custom': 'Custom', 'menu.mapSize': 'Map size:',
       'menu.mapSmall': 'Small', 'menu.mapMedium': 'Medium', 'menu.mapLarge': 'Large', 'menu.mapCustom': 'Custom',
-      'menu.seed': 'World seed', 'menu.newSeed': 'New random seed', 'menu.language': 'Language:', 'menu.endless': 'Endless', 'menu.battles': 'Battles', 'menu.editor': 'Map editor', 'menu.settings': 'Settings', 'menu.exit': 'Exit', 'menu.back': '← Back', 'menu.difficulty': 'Difficulty:', 'menu.easy': 'Easy', 'menu.normal': 'Normal', 'menu.hard': 'Hard', 'menu.fps': 'Frame rate:', 'menu.fpsDisplay': 'Screen', 'menu.showFps': 'Show FPS:', 'menu.on': 'On', 'menu.off': 'Off',
+      'menu.seed': 'World seed', 'menu.newSeed': 'New random seed', 'menu.language': 'Language:', 'menu.endless': 'Endless', 'menu.battles': 'Battles', 'menu.editor': 'Map editor', 'menu.settings': 'Settings', 'menu.exit': 'Exit', 'menu.back': '← Back', 'menu.difficulty': 'Difficulty:', 'menu.easy': 'Easy', 'menu.normal': 'Normal', 'menu.hard': 'Hard', 'menu.fps': 'Frame rate:', 'menu.fpsDisplay': 'Screen', 'menu.showFps': 'Show FPS:', 'menu.sound': 'Sound:', 'menu.music': 'Music:', 'menu.on': 'On', 'menu.off': 'Off',
       'pause.title': 'Paused', 'pause.continue': 'Continue', 'pause.exit': 'Exit to main menu',
       'pause.resumeHint': 'Continue [Space]', 'pause.pauseHint': 'Pause [Space]',
       'top.wave': 'Wave', 'top.seconds': 's', 'top.zoomIn': 'Zoom in', 'top.zoomOut': 'Zoom out', 'top.point': 'Point',
@@ -113,7 +113,7 @@ const LANGUAGES = {
     text: {
       'menu.play': 'ГРАТИ', 'menu.waveInterval': 'Інтервал хвиль (с):', 'menu.custom': 'Свій', 'menu.mapSize': 'Розмір мапи:',
       'menu.mapSmall': 'Мала', 'menu.mapMedium': 'Середня', 'menu.mapLarge': 'Велика', 'menu.mapCustom': 'Своя',
-      'menu.seed': 'Сід світу', 'menu.newSeed': 'Новий випадковий сід', 'menu.language': 'Мова:', 'menu.endless': 'Нескінченний', 'menu.battles': 'Битви', 'menu.editor': 'Редактор мап', 'menu.settings': 'Налаштування', 'menu.exit': 'Вийти', 'menu.back': '← Назад', 'menu.difficulty': 'Складність:', 'menu.easy': 'Легка', 'menu.normal': 'Звичайна', 'menu.hard': 'Важка', 'menu.fps': 'Частота кадрів:', 'menu.fpsDisplay': 'Як екран', 'menu.showFps': 'Показувати FPS:', 'menu.on': 'Увімк.', 'menu.off': 'Вимк.',
+      'menu.seed': 'Сід світу', 'menu.newSeed': 'Новий випадковий сід', 'menu.language': 'Мова:', 'menu.endless': 'Нескінченний', 'menu.battles': 'Битви', 'menu.editor': 'Редактор мап', 'menu.settings': 'Налаштування', 'menu.exit': 'Вийти', 'menu.back': '← Назад', 'menu.difficulty': 'Складність:', 'menu.easy': 'Легка', 'menu.normal': 'Звичайна', 'menu.hard': 'Важка', 'menu.fps': 'Частота кадрів:', 'menu.fpsDisplay': 'Як екран', 'menu.showFps': 'Показувати FPS:', 'menu.sound': 'Звук:', 'menu.music': 'Музика:', 'menu.on': 'Увімк.', 'menu.off': 'Вимк.',
       'pause.title': 'Пауза', 'pause.continue': 'Продовжити', 'pause.exit': 'Вийти в головне меню',
       'pause.resumeHint': 'Продовжити [Space]', 'pause.pauseHint': 'Пауза [Space]',
       'top.wave': 'Хвиля', 'top.seconds': 'с', 'top.zoomIn': 'Наблизити', 'top.zoomOut': 'Віддалити', 'top.point': 'Вказати',
@@ -193,7 +193,7 @@ const LANGUAGES = {
     text: {
       'menu.play': 'ИГРАТЬ', 'menu.waveInterval': 'Интервал волн (сек):', 'menu.custom': 'Своё', 'menu.mapSize': 'Размер карты:',
       'menu.mapSmall': 'Малая', 'menu.mapMedium': 'Средняя', 'menu.mapLarge': 'Большая', 'menu.mapCustom': 'Своя',
-      'menu.seed': 'Сид мира', 'menu.newSeed': 'Новый случайный сид', 'menu.language': 'Язык:', 'menu.endless': 'Бесконечный', 'menu.battles': 'Битвы', 'menu.editor': 'Редактор карт', 'menu.settings': 'Настройки', 'menu.exit': 'Выйти', 'menu.back': '← Назад', 'menu.difficulty': 'Сложность:', 'menu.easy': 'Лёгкая', 'menu.normal': 'Обычная', 'menu.hard': 'Сложная', 'menu.fps': 'Частота кадров:', 'menu.fpsDisplay': 'Как экран', 'menu.showFps': 'Показывать FPS:', 'menu.on': 'Вкл.', 'menu.off': 'Выкл.',
+      'menu.seed': 'Сид мира', 'menu.newSeed': 'Новый случайный сид', 'menu.language': 'Язык:', 'menu.endless': 'Бесконечный', 'menu.battles': 'Битвы', 'menu.editor': 'Редактор карт', 'menu.settings': 'Настройки', 'menu.exit': 'Выйти', 'menu.back': '← Назад', 'menu.difficulty': 'Сложность:', 'menu.easy': 'Лёгкая', 'menu.normal': 'Обычная', 'menu.hard': 'Сложная', 'menu.fps': 'Частота кадров:', 'menu.fpsDisplay': 'Как экран', 'menu.showFps': 'Показывать FPS:', 'menu.sound': 'Звук:', 'menu.music': 'Музыка:', 'menu.on': 'Вкл.', 'menu.off': 'Выкл.',
       'pause.title': 'Пауза', 'pause.continue': 'Продолжить', 'pause.exit': 'Выйти в главное меню',
       'pause.resumeHint': 'Продолжить [Space]', 'pause.pauseHint': 'Пауза [Space]',
       'top.wave': 'Волна', 'top.seconds': 'с', 'top.zoomIn': 'Приблизить', 'top.zoomOut': 'Отдалить', 'top.point': 'Указать',

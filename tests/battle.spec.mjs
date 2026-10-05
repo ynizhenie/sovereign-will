@@ -149,8 +149,9 @@ test('the pause menu leaves battle mode and the Endless map size comes back (#38
   await page.click('#mode-battles');
   await page.click('#btn-pause-toggle'); // the Menu is the pause button at the top now (#145)
   await page.click('#exit-to-menu-button');
-  const r = await page.evaluate(() => ({ mode: gameMode, map: mapSettings, menu: getComputedStyle(document.getElementById('main-menu')).display !== 'none' }));
-  expect(r).toEqual({ mode: 'endless', map: { cols: 60, rows: 60 }, menu: true });
+  // out of the battle: Endless, or already the world behind the menu (#193)
+  const r = await page.evaluate(() => ({ outOfBattle: ['endless', 'menu'].includes(gameMode), map: mapSettings, menu: getComputedStyle(document.getElementById('main-menu')).display !== 'none' }));
+  expect(r).toEqual({ outOfBattle: true, map: { cols: 60, rows: 60 }, menu: true });
   await expect(page.locator('#bottom-panel')).toBeAttached();
 });
 
