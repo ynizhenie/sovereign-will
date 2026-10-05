@@ -657,9 +657,12 @@ function render() {
       for (let i = -5; i <= 5; i += 5) { ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + i); ctx.lineTo(b.x + 10, b.y + i); ctx.stroke(); }
       ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22);
-      ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
-      ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / b.tower.arrowCapacity), 1);
+      // no count in battles: arrows don't run out there (#166)
+      if (gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22); }
+      if (gameMode !== 'battle') {
+        ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
+        ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / b.tower.arrowCapacity), 1);
+      }
 
     } else if (b.type === 'campfire') {
       // crossed logs, a flame while someone cooks

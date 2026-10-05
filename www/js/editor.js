@@ -44,7 +44,8 @@ const editor = {
   tool: 'tree',
   category: 'nature',
   brush: 1,     // 1 or 3: a 3×3 brush covers the tapped tile and the ones around it
-  name: ''      // the name it was opened or last saved as
+  name: '',     // the name it was opened or last saved as
+  faction: sides.player.faction // whose map it is (#170): its buildings in the palette, its town hall; Endless plays it as them
 };
 
 // ---- Saved maps
@@ -66,7 +67,7 @@ function serializeMap(name) {
     resources[kind] = WORLD[def.list].filter(r => !r.oreSpawner).map(tile);
   }
   return {
-    name, cols: COLS, rows: ROWS,
+    name, cols: COLS, rows: ROWS, faction: editor.faction,
     hall: [townHall.x, townHall.y],
     water: waterTiles.map(tile),
     sand: desertTiles.map(tile),
@@ -264,6 +265,7 @@ function startEditor(source) {
   gameMode = 'editor';
   if (source.map) {
     editor.name = source.map.name;
+    editor.faction = source.map.faction || 'humans';
     resetGame(source.map);
   } else {
     // a generated map uses the Endless seed and generator settings, at the size picked here
@@ -308,7 +310,8 @@ function saveEditorMap() {
 function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
   tools.innerHTML = '';
-  for (const tool of EDITOR_TOOLS.filter(tl => tl.category === editor.category)) {
+  const forFaction = tl => !tl.building || !getDefinition('buildings', tl.building).factions || getDefinition('buildings', tl.building).factions.includes(editor.faction);
+  for (const tool of EDITOR_TOOLS.filter(tl => tl.category === editor.category && forFaction(tl))) {
     const button = document.createElement('button');
     button.className = 'btn' + (editor.tool === tool.id ? ' active' : '');
     button.dataset.tool = tool.id;
@@ -323,8 +326,23 @@ function renderEditorPanel() {
   document.getElementById('editor-size').textContent = `${COLS}×${ROWS}`;
 }
 
+// The editor menu's faction choice (#170)
+function renderEditorFaction() {
+  const row = document.getElementById('editor-faction');
+  row.innerHTML = '';
+  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
+    const button = document.createElement('button');
+    button.className = 'faction-option' + (editor.faction === faction.id ? ' active' : '');
+    button.dataset.faction = faction.id;
+    button.textContent = faction.label;
+    onTap(button, () => { editor.faction = faction.id; renderEditorFaction(); });
+    row.appendChild(button);
+  }
+}
+
 // The editor's menu screen: new map (size, empty or generated) and the saved maps to open or delete
 function renderEditorMapList() {
+  renderEditorFaction();
   renderSavedMapList(document.getElementById('editor-map-list'), {
     open: map => startEditor({ map }),
     remove: name => { const maps = loadSavedMaps(); delete maps[name]; storeSavedMaps(maps); renderEditorMapList(); }
@@ -350,6 +368,9 @@ function renderCustomMapList() {
   // the chosen map may have been deleted or changed in the editor since
   if (customMap) customMap = maps[customMap.name] || null;
   if (mapSource === 'custom' && !customMap) customMap = Object.values(maps)[0] || null;
+  // a custom map is played as the faction it was made for (#170)
+  if (mapSource === 'custom' && customMap && customMap.faction && sides.player.faction !== customMap.faction) setSideFaction('player', customMap.faction);
+  renderFactionPicker();
   renderSavedMapList(document.getElementById('custom-map-list'), {
     selected: customMap && customMap.name,
     open: map => { customMap = map; renderCustomMapList(); }

@@ -206,10 +206,22 @@ function renderConfigHud() {
     resourcesHud.after(details);
   }
 
+  // the Building tab in sections (#181), the Farming tab as it is
+  const buildSections = {};
+  const sectionFor = group => {
+    if (buildSections[group]) return buildSections[group];
+    const section = document.createElement('div');
+    section.className = 'panel-section';
+    section.innerHTML = `<div class="panel-heading">${escapeHtml(t(`panel.${group}`))}</div><div class="btn-grid-2col"></div>`;
+    document.getElementById('build-actions').appendChild(section);
+    return (buildSections[group] = section.lastChild);
+  };
+  for (const group of ['defense', 'homes', 'economy']) sectionFor(group);
   Object.values(GAME_CONFIG.buildings).filter(ours).forEach(item => {
-    const actions = document.getElementById(`${item.tab || 'build'}-actions`);
+    const actions = item.tab ? document.getElementById(`${item.tab}-actions`) : sectionFor(item.group || 'economy');
     if (actions) actions.appendChild(createConfigButton(item, setMode));
   });
+  for (const section of Object.values(buildSections)) section.parentNode.hidden = section.children.length === 0;
 
   const toolActions = document.getElementById('tool-actions');
   Object.values(GAME_CONFIG.tools).filter(ours).forEach(item => {
