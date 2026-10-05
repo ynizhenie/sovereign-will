@@ -127,12 +127,10 @@ function updateInputPos(clientX, clientY) {
 }
 
 function clampCamera() {
-  // half the view in world units; a view wider than the world stays centred on it. Otherwise the view
-  // can go up to half of it past the map's edge (the camera's centre on the edge, #182)
-  const halfWidth = canvas.width / (2 * getViewScale());
-  const halfHeight = canvas.height / (2 * getViewScale());
-  camera.x = halfWidth >= WORLD_WIDTH / 2 ? WORLD_WIDTH / 2 : Math.max(0, Math.min(WORLD_WIDTH, camera.x));
-  camera.y = halfHeight >= WORLD_HEIGHT / 2 ? WORLD_HEIGHT / 2 : Math.max(0, Math.min(WORLD_HEIGHT, camera.y));
+  // the camera's centre stays on the map, at any zoom: the view goes up to half of it past the map's
+  // edge, and zoomed all the way out it isn't pulled back to the middle (#182, #189)
+  camera.x = Math.max(0, Math.min(WORLD_WIDTH, camera.x));
+  camera.y = Math.max(0, Math.min(WORLD_HEIGHT, camera.y));
 }
 
 canvas.addEventListener('mousemove', e => {

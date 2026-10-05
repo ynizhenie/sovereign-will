@@ -93,6 +93,9 @@ function update(dt) {
     stock.rot += dt * (rotRate.hall + buildings.filter(b => b.type === 'grave').length * rotRate.grave);
   }
   updateTemporaryZombies(dt);
+  // blighted zones taken away fade (#186)
+  for (const z of blightZones) if (z.clearing !== undefined) z.clearing -= dt;
+  if (blightZones.some(z => z.clearing <= 0)) blightZones = blightZones.filter(z => !(z.clearing <= 0));
   updateBurning(dt);
   raiseOnBlight(dt);
 

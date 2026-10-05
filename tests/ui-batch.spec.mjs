@@ -83,22 +83,55 @@ test('a map is made for a faction, and Endless plays it as that faction (#170)',
   expect(r).toEqual({ tent: false, grave: true, saved: 'undead', played: 'undead', stillLocked: 'undead', humansDisabled: true });
 });
 
-test('the menu scene: on tiles, nothing behind the panel, taps change the faction and the target (#168)', async ({ page }) => {
+test('the menu scene: on tiles, laid out off the panel, taps change the faction and the target (#168, #187)', async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 700 });
   await page.goto('/');
   await page.waitForTimeout(300);
   const r = await page.evaluate(() => {
     const onTile = p => (p.x - 15) % TILE_SIZE === 0 && (p.y - 15) % TILE_SIZE === 0;
     const placed = [menuScene.warehouse, ...menuScene.trees, ...menuScene.stones, ...menuScene.grass];
-    for (let i = 0; i < 600; i++) updateMenuScene(1 / 30);
-    const units = [menuScene.hunter, ...menuScene.boars.filter(b => b.state !== 'carcass')];
+    // units never walk into a tree, a stone or the warehouse (#187)
+    let intoBlocked = false;
+    for (let i = 0; i < 1800; i++) {
+      updateMenuScene(1 / 30);
+      for (const u of [menuScene.hunter, ...menuScene.boars]) if (u.x > 0 && u.y > 0 && blockedAt(u.x, u.y)) intoBlocked = true;
+    }
     return {
       onTiles: placed.every(onTile),
-      clearOfPanel: [...placed, ...units].every(p => !inPanel(p)),
-      distinct: new Set(placed.map(p => `${p.x},${p.y}`)).size === placed.length
+      clearOfPanel: placed.every(p => !inPanel(p)),
+      distinct: new Set(placed.map(p => `${p.x},${p.y}`)).size === placed.length,
+      intoBlocked
     };
   });
-  expect(r).toEqual({ onTiles: true, clearOfPanel: true, distinct: true });
+  expect(r).toEqual({ onTiles: true, clearOfPanel: true, distinct: true, intoBlocked: false });
+
+  // another menu screen keeps the same scene (#187)
+  const same = await page.evaluate(async () => {
+    const before = JSON.stringify(menuScene.trees);
+    showMenuScreen('settings');
+    await new Promise(r => setTimeout(r, 200));
+    showMenuScreen('home');
+    await new Promise(r => setTimeout(r, 200));
+    return JSON.stringify(menuScene.trees) === before;
+  });
+  expect(same).toBe(true);
+
+  // the spear strikes from its reach, not body to body (#187)
+  const thrust = await page.evaluate(() => {
+    const h = menuScene.hunter, boar = menuScene.boars.find(b => b.state !== 'carcass');
+    menuScene.boars.forEach(b => { if (b !== boar) b.state = 'hide'; });
+    Object.assign(boar, { state: 'wander', hp: 3, timer: 99 });
+    Object.assign(h, { carrying: null, cooldown: 0, x: boar.x - 120, y: boar.y });
+    menuScene.target = boar;
+    let at = null;
+    for (let i = 0; i < 900 && at === null; i++) {
+      updateMenuHunter(1 / 30); // the boar stands still here
+      if (boar.hp < 3) at = Math.hypot(h.x - boar.x, h.y - boar.y);
+    }
+    return at;
+  });
+  expect(thrust).toBeGreaterThan(26);
+  expect(thrust).toBeLessThan(41);
 
   // a tap on the hunter: the next faction; a tap on a boar: the hunter's target
   const tap = await page.evaluate(() => {
