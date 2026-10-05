@@ -13,7 +13,7 @@ const MENU_SCENE = {
   hideSeconds: 4,       // a wounded boar stays hidden in the grass this long
   boarHits: 3,          // blows to kill one
   strikeReach: 26, strikeSeconds: 0.6,
-  butcherSeconds: 2,    // as GAME_CONFIG.butcherSeconds in Endless
+  butcherSeconds: 2,    // as the boar's butcherSeconds in Endless
   boars: 2, maxGrass: 7, trees: 6, stones: 4
 };
 

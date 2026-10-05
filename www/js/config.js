@@ -217,7 +217,11 @@ const GAME_CONFIG = {
 
   // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves; each wave
   // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
-  waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 } },
+  // (#179) the first wave is firstWave of that; and every wave is scaled by the player's army: 1 at
+  // army.base settlers, perUnit more (or less) for each one over (under) it, within min..max. A wave
+  // always has at least one enemy.
+  waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 },
+    firstWave: 0.5, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
   // ---- Things on the map to gather
   //
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
@@ -254,7 +258,10 @@ const GAME_CONFIG = {
     boar: { list: 'boars', hp: 40, yield: { rawMeat: 6, leather: 2 }, clearsPath: true,
       // wary: backs off from a settler this close, at waryFleeSpeed (slower than settlers, so it can be
       // caught); fleeSpeed: its sprint once it's actually hit
-      wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35 }
+      wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35,
+      // a kill is butchered where it lies for butcherSeconds; a hit bleeds it, and now and then (dungChance)
+      // the scared boar leaves dung (#172)
+      butcherSeconds: 2, dungChance: 0.12 }
   },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
@@ -274,9 +281,13 @@ const GAME_CONFIG = {
   // stepping in blood or dung leaves `steps` footprints, one every stepGap px walked (#124)
   smears: { steps: 6, stepGap: 12 },
 
-  // every mealsBefore colony meals a settler goes off to relieve itself: at least awayFromBuildings tiles
-  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds (#124)
-  relief: { mealsBefore: 3, seconds: 2, awayFromBuildings: 4, dungSeconds: 120 },
+  // every settler eats once every `seconds` on a clock of its own (#178): a big one eats 2 food, a short
+  // colony eats worms. A new settler's first meal comes after firstShare..1 of that, so they don't all
+  // eat together
+  meals: { seconds: 25, firstShare: 0.3 },
+  // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
+  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds (#124, #178)
+  relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },

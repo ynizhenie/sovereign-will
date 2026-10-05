@@ -155,9 +155,7 @@ function performAttack(attacker, targetX, targetY) {
       ...enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       ...boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
-          b.hp -= dmg;
-          makeBoarFlee(b, attacker.x, attacker.y);
-          if (b.hp <= 0) finishHarvest(attacker, b, 'boar');
+          woundBoar(b, dmg, attacker, attacker.x, attacker.y);
         } }))
     ];
     // a big settler's blow hits everything around it; anyone else hits one: the one aimed at (#144)

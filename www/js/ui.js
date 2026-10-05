@@ -74,5 +74,5 @@ function renderSettlerInfo(s) {
 
 // Seconds until this settler eats next
 function getHungerSeconds(s) {
-  return s.hunger !== undefined ? s.hunger : foodTimer;
+  return s.hunger !== undefined ? s.hunger : GAME_CONFIG.meals.seconds;
 }
