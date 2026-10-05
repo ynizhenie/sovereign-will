@@ -322,6 +322,7 @@ function update(dt) {
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           en.hp -= proj.damage;
           bleed(en, proj.owner);
+          playSound('arrowHit', en);
           if (proj.fire) setBurning(en);
           hit = true;
         }
@@ -436,6 +437,7 @@ function update(dt) {
       en.attackCooldown = (en.attackCooldown || 0) - dt;
       if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
         let angle = Math.atan2(target.y - en.y, target.x - en.x);
+        playSound('bow', en);
         projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en,
           fire: !!getEnemyDef(en).fireArrows }); // burning arrows (#165)
         startSwing(en, 0.3);

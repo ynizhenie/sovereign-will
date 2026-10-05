@@ -49,6 +49,7 @@ function updateDefeat(dt) {
     selectedSettler = null;
     setMode('interact');
     updateUI(); // the HUD as it ended (the hall at 0): nothing updates it after this
+    playSound('defeat');
     document.getElementById('defeat-survived').textContent = t('defeat.survived', { waves: waveNum - 1 });
     const zoom = Math.max(1, Math.min(getMaxZoom(), DEFEAT_CSS_SCALE * screenPixelRatio / getBaseScale()));
     defeatView = { from: { x: camera.x, y: camera.y, zoom: camera.zoom }, to: { x: townHall.x, y: townHall.y, zoom }, t: 0 };
@@ -69,6 +70,7 @@ function isCameraLocked() {
 
 function gameLoop(now) {
   if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu (#193)
+  if (typeof updateMusic === 'function') updateMusic(); // (#174)
   stepTime += Math.min(0.25, (now - lastTime) / 1000);
   lastTime = now;
   let steps = 0;

@@ -152,6 +152,7 @@ function takeStock(id, amount) {
 }
 
 function showNotification(msg, isWarning = true) {
+  if (isWarning && typeof playSound === 'function') playSound('error');
   const toastDiv = document.getElementById('toast-notification');
   if (toastDiv) {
     setRichText(toastDiv, msg);
