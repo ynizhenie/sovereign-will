@@ -52,3 +52,15 @@ test('a settler type can be limited to some kinds of orders (#133)', async ({ pa
   });
   expect(r).toEqual({ limited: null, free: 'harvest' });
 });
+
+test('soldiers are a shade off the workers, in any colour (#167)', async ({ page }) => {
+  await openGame(page);
+  const r = await page.evaluate(() => {
+    window.sim.start('soldier-shade');
+    return GAME_CONFIG.factionColors.map(color => {
+      sides.player.color = color;
+      return getSettlerColor({ role: 'worker' }) !== getSettlerColor({ role: 'soldier' }) && getSettlerColor({ role: 'worker' }) === color;
+    });
+  });
+  expect(r.every(Boolean)).toBe(true);
+});

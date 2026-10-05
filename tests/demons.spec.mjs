@@ -4,8 +4,8 @@ import { openGame, sim } from './helpers.mjs';
 test('the demons: imps to start, their own units, a sacrificial circle and portals instead of tents (#43)', async ({ page }) => {
   await openGame(page);
   expect(await sim(page, 'demonColony')).toEqual({
-    startUnits: ['imp', 'imp'], hire: ['btn-hire-imp', 'btn-hire-demon', 'btn-hire-fire_imp', 'btn-upgrade'],
-    tent: false, circle: true, portal: true, hellfireCraftable: false, fireImp: { weapon: 'hellfire', role: 'archer' }
+    startUnits: ['imp', 'imp'], hire: ['btn-hire-imp', 'btn-hire-demon', 'btn-upgrade'],
+    tent: false, circle: true, portal: true, fireImp: { type: 'fire_imp', weapon: 'bow', role: 'archer' }
   });
 });
 
@@ -45,4 +45,9 @@ test('demon enemies come out onto free tiles and get going; portals are no more 
 test('an enemy never comes out of a portal into a tree (#177)', async ({ page }) => {
   await openGame(page);
   expect(await sim(page, 'portalInThicket')).toEqual({ blocked: 0 });
+});
+
+test('a fire imp is an imp with a bow, and its arrows set what they hit burning (#165)', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'fireArrows')).toEqual({ burnt: true, keptBurning: true, arrowsLeft: 0 });
 });

@@ -17,13 +17,15 @@ Object.assign(window.sim, (() => {
     const startUnits = settlers.map(s => s.type);
     const hire = [...document.querySelectorAll('#recruit-row button')].map(b => b.id);
     const build = [...document.querySelectorAll('#build-actions button')].map(b => b.id);
-    const weapons = [...document.querySelectorAll('#weapon-actions button')].map(b => b.id);
-    stock.food = 100; stock.wood = 100;
-    spawnSettler('fire_imp');
-    const fireImp = settlers.find(s => s.type === 'fire_imp');
+    // an imp given a bow becomes a fire imp (#165)
+    stock.wood = 100; stock.leather = 20;
+    const imp = settlers[0];
+    selectedSettler = imp;
+    craftWeapon('bow');
+    run(5);
     return {
       startUnits, hire, tent: build.includes('btn-tent'), circle: build.includes('btn-sacrifice_circle'), portal: build.includes('btn-portal'),
-      hellfireCraftable: weapons.includes('btn-hellfire'), fireImp: { weapon: fireImp.weapon, role: fireImp.role }
+      fireImp: { type: imp.type, weapon: imp.weapon, role: imp.role }
     };
   }
 
@@ -96,7 +98,23 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { demonColony, eatsCorpse, sacrifice, portals, demonWave };
+  // A fire imp's arrow sets what it hits burning: the enemy keeps losing hp after the hit (#165)
+  function fireArrows({ seed = 'demon-fire' } = {}) {
+    asDemons(seed);
+    clearResources();
+    const fireImp = Object.assign(createSettler('fire_imp', 1, nearHall(2, 0).x, nearHall(2, 0).y), { weapon: 'bow', role: 'archer', quiver: true, arrows: 1 });
+    settlers = [fireImp];
+    const en = createConfiguredEnemy(nearHall(6, 0), 'raider');
+    en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1000;
+    enemies = [en];
+    run(3, { each: () => { waveTimer = 50; } });
+    const burnt = en.burning !== undefined;
+    const hpAfterHit = en.hp;
+    run(2, { each: () => { waveTimer = 50; } });
+    return { burnt, keptBurning: en.hp < hpAfterHit, arrowsLeft: fireImp.arrows };
+  }
+
+  return { demonColony, eatsCorpse, sacrifice, portals, demonWave, fireArrows };
 })());
 
 // Demon enemies out of portals (#177): each starts on a free tile and gets going; there are only as many

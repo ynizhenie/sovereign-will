@@ -211,10 +211,7 @@ function drawHeldWeapon(weapon) {
     ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(28, -3); ctx.lineTo(35, 0); ctx.lineTo(28, 3); ctx.fill();
   } else if (weapon === 'bow') {
     ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(10, 0, 10, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-  } else if (weapon === 'hellfire') {
-    // a fireball in the hand (the demons' fire imps, #43)
-    ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(14, 0, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(14, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+
   } else {
     return false;
   }
@@ -265,6 +262,15 @@ function drawArrow(proj) {
   ctx.fillStyle = proj.fromEnemy ? '#e74c3c' : '#ecf0f1';
   ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-12, 2.5); ctx.closePath(); ctx.fill();
   ctx.restore();
+}
+
+// Flames licking up a burning unit (#165)
+function drawBurning(x, y, r) {
+  const flicker = Math.sin(pathTick * 0.5) * 2;
+  ctx.fillStyle = 'rgba(230, 126, 34, 0.85)';
+  ctx.beginPath(); ctx.moveTo(x - r * 0.6, y); ctx.quadraticCurveTo(x, y - r * 1.6 - flicker, x + r * 0.6, y); ctx.fill();
+  ctx.fillStyle = 'rgba(241, 196, 15, 0.9)';
+  ctx.beginPath(); ctx.moveTo(x - r * 0.3, y); ctx.quadraticCurveTo(x, y - r - flicker, x + r * 0.3, y); ctx.fill();
 }
 
 // A demon portal in its side's colour (#177): a dark rim, the colour, a bright heart
@@ -360,6 +366,17 @@ function render() {
 
   // farm zones: a tint and a frame in the crop's colour
   const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
+  // the undead's blighted ground (#164), and ground marked for it (while the Blight tab is open)
+  for (const key of getBlightKeys()) {
+    const [bx, by] = key.split(',').map(Number);
+    ctx.fillStyle = 'rgba(74, 35, 90, 0.28)';
+    ctx.fillRect(bx - 15, by - 15, TILE_SIZE, TILE_SIZE);
+  }
+  if (activeTab === 'tab-blight') blightZones.forEach(z => {
+    if (z.done) return;
+    ctx.strokeStyle = 'rgba(187, 143, 206, 0.8)'; ctx.lineWidth = 1;
+    ctx.strokeRect(z.x - 13.5, z.y - 13.5, TILE_SIZE - 3, TILE_SIZE - 3);
+  });
   if (activeTab === 'tab-farming') farmZones.forEach(z => {
     const rgb = ZONE_COLORS[z.crop] || ZONE_COLORS.sapling;
     ctx.fillStyle = `rgba(${rgb}, 0.14)`;
@@ -779,8 +796,11 @@ function render() {
 
   settlers.forEach(s => {
     // the whole body in the colony's colour (#43); the possessed one ringed in white
-    ctx.fillStyle = getSettlerColor();
+    ctx.fillStyle = getSettlerColor(s);
+    if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while (#164)
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    if (s.burning > 0) drawBurning(s.x, s.y, s.visualRadius);
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
     if (sides.player.faction === 'demons' && gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
     drawBodyBlood(s, s.visualRadius);
@@ -805,7 +825,7 @@ function render() {
     ctx.translate(s.x, s.y);
     ctx.save();
     applyHeldItemPose(s);
-    if ((getDefinition('settlerTypes', s.type) || {}).necromancer && s.weapon === 'fist') {
+    if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
     } else if (!drawHeldWeapon(s.weapon)) {
     if (s.tool === 'axe' || s.tool === 'iron_axe') {
@@ -879,6 +899,7 @@ function render() {
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = shadeColor(getEnemyColor(), -0.45); ctx.lineWidth = 2; ctx.stroke();
     if (en.enemyKey.startsWith('demon_')) drawHorns(en.x, en.y, en.radius);
+    if (en.burning > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
 
     ctx.save();
