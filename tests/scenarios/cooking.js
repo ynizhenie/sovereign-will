@@ -18,7 +18,7 @@ Object.assign(window.sim, (() => {
     let maxCooks = 0, carriedFood = false, fuelTrips = 0;
     const seen = new WeakSet();
     run(seconds, { each: () => {
-      foodTimer = 999;
+      settlers.forEach(s => { s.hunger = 999; });
       maxCooks = Math.max(maxCooks, settlers.filter(s => s.carrying && s.carrying.forFire).length);
       for (const s of settlers) {
         if (s.carrying && isFoodKind(s.carrying.type)) carriedFood = true; // a dish, e.g. cooked meat

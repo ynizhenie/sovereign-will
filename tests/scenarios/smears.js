@@ -38,9 +38,9 @@ Object.assign(window.sim, (() => {
     const s = makeSettler(1, townHall.x + 50, townHall.y + 50);
     settlers = [s];
     stock.food = 100;
-    for (let meal = 0; meal < 3; meal++) { foodTimer = 0.001; update(1 / 60); }
+    for (let meal = 0; meal < GAME_CONFIG.relief.mealsBefore; meal++) { s.hunger = 0.001; update(1 / 60); }
     const needs = !!s.needsRelief;
-    run(seconds, { each: () => { pendingRespawns.length = 0; foodTimer = 999; } });
+    run(seconds, { each: () => { pendingRespawns.length = 0; s.hunger = 999; } });
     const pile = dung[0];
     const minDist = GAME_CONFIG.relief.awayFromBuildings * TILE_SIZE;
     return {
