@@ -300,6 +300,7 @@ function goDeliver(s, tick) {
     else if (isFoodKind(type)) addFood(type, item.amount);
   }
   s.carrying = null;
+  playSound('deliver', s);
   takeFishingBait(s);
 }
 
@@ -979,7 +980,9 @@ function workBlueprint(s, bp, dt) {
   bp.progress += dt * 40;
   s.working = 0.1;
   faceTowards(s, bp.x, bp.y);
+  playWorkSound(s, 'hammer', 0.45);
   if (bp.progress >= bp.maxProgress) {
+    playSound('built', bp);
     if (bp.type === 'demolish_building') {
       const b = bp.targetBuilding;
       if (buildings.includes(b)) {
@@ -1127,6 +1130,7 @@ function huntBoar(s, boar, tick) {
       s.working = 0.1;
       faceTowards(s, boar.x, boar.y);
       boar.butcher = (boar.butcher || 0) + dt / GAME_CONFIG.mapResources.boar.butcherSeconds;
+      playWorkSound(s, 'chop', 0.4);
       if (boar.butcher >= 1) finishHarvest(s, boar, 'boar');
     }
     s.patrolTarget = null;
@@ -1177,6 +1181,7 @@ function workResource(s, assignedRes, tick) {
   s.working = 0.1; // animated while at it (see getHeldItemPose)
   faceTowards(s, assignedRes.x, assignedRes.y);
   const work = def.work;
+  playWorkSound(s, def.tool === 'axe' ? 'chop' : def.tool === 'pickaxe' ? 'mine' : 'rustle', def.tool ? 0.5 : 0.7);
 
   if (work.pickup) {
     finishHarvest(s, assignedRes, kind);
