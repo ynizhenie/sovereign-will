@@ -270,7 +270,12 @@ function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
 }
 
 function handleCanvasClick() {
-  if (gameMode === 'battle') { battleTap(mouse.x, mouse.y); return; }
+  // battle mode: placing while setting up; in a fight, orders for a possessed unit (#166)
+  if (gameMode === 'battle') {
+    if (battle.phase === 'setup') battleTap(mouse.x, mouse.y);
+    else if (battle.phase === 'fight' && getPossessed()) orderPossessed(getPossessed(), mouse.x, mouse.y);
+    return;
+  }
   if (gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
   if (townHall.hp <= 0 || settlers.length === 0) {
     // the defeat screen is drawn in screen space (see render()), so hit-test in screen coords:
@@ -721,6 +726,7 @@ function unpossess() {
 
 function switchPossession() {
   if (settlers.length === 0) return;
+  if (gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on (#166)
 
   const currentPossessed = getPossessed();
 

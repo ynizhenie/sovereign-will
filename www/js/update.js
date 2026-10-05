@@ -259,6 +259,7 @@ function update(dt) {
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (behaviour(s, settlerTick)) {
         s.isIdle = behaviour === patrol;
+        s.activity = behaviour.name; // what it's doing, for the selected settler's info (#180)
         return;
       }
     }
@@ -439,7 +440,7 @@ function update(dt) {
         startSwing(en, 0.3);
         faceTowards(en, target.x, target.y);
         en.attackCooldown = ranged.cooldown;
-        if (quiver) en.arrows--;
+        if (quiver && gameMode !== 'battle') en.arrows--;
       }
     }
 

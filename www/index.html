@@ -105,6 +105,7 @@
                 <button class="editor-size-option active" data-editor-size="40" data-i18n="menu.mapMedium">Medium</button>
                 <button class="editor-size-option" data-editor-size="60" data-i18n="menu.mapLarge">Large</button>
             </div>
+            <div class="faction-side"><span data-i18n="menu.you">You</span><div id="editor-faction" class="faction-options"></div></div>
             <div class="wave-options">
                 <button id="editor-new-empty" class="fps-option" data-i18n="editor.empty">Empty</button>
                 <button id="editor-new-generated" class="fps-option" data-i18n="editor.generated">From the generator</button>
@@ -183,27 +184,22 @@
       <button class="btn btn-unpossess" onclick="switchPossession()"><i class="ic ic-eye"></i></button>
     </div>
 
-    <div class="battle-top">
-      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-    </div>
+  </div>
+
+  <!-- battle mode: Fight (and Cancel during a fight) in the middle under the pause button (#166) -->
+  <div id="battle-fight-bar">
+    <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
+    <button class="btn btn-disarm" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
   </div>
 
   <div id="main-area">
     <div id="toast-notification"></div>
     <div id="fps-counter" hidden></div>
 
-    <div style="position: absolute; top: 8px; left: 10px; z-index: 5; font-size: 10px; color: rgba(255, 255, 255, 0.35); pointer-events: none; user-select: none; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);">
+    <div class="hud-seed-box">
       <span id="hud-seed">-</span>
     </div>
 
-    <div id="zoom-controls">
-      <button class="btn-zoom" onclick="zoomIn()" data-i18n-title="top.zoomIn" title="Zoom in">
-        <i class="ic ic-plus"></i>
-      </button>
-      <button class="btn-zoom" onclick="zoomOut()" data-i18n-title="top.zoomOut" title="Zoom out">
-        <i class="ic ic-minus"></i>
-      </button>
-    </div>
 
     <canvas id="gameCanvas"></canvas>
 
@@ -219,10 +215,11 @@
   <div id="battle-panel">
     <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: yours on the left, enemies on the right</div>
     <div class="battle-row">
-      <button class="fps-option" data-battle-category="own" data-i18n="battle.cat.own">Yours</button>
+      <button class="fps-option" data-battle-category="own" data-i18n="battle.cat.own">Player</button>
       <button class="fps-option" data-battle-category="enemy" data-i18n="battle.cat.enemy">Enemies</button>
       <button class="fps-option" data-battle-category="buildings" data-i18n="battle.cat.buildings">Buildings</button>
     </div>
+    <div class="battle-row" id="battle-factions"></div>
     <div class="battle-row battle-gear">
       <button class="fps-option" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
       <button class="fps-option" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
@@ -265,6 +262,7 @@
         <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()"><i class="ic ic-no"></i></button>
       </div>
       <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()"></button>
+      <div id="selected-info" hidden></div>
     </div>
 
     <div class="resources-grid" id="resources-hud"></div>
@@ -282,7 +280,7 @@
     <div class="tab-content-container">
 
       <div id="tab-build" class="tab-pane active">
-        <div class="btn-grid-2col" id="build-actions"></div>
+        <div id="build-actions"></div>
 
         <div class="action-row">
           <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')" data-i18n="btn.demolish">[[hammer]] Demolish</button>
@@ -291,7 +289,9 @@
       </div>
 
       <div id="tab-farming" class="tab-pane">
+        <div class="panel-heading" data-i18n="panel.plant">Plant</div>
         <div class="btn-grid-2col" id="farming-actions"></div>
+        <div class="panel-heading" data-i18n="panel.zones">Farm zones</div>
         <div class="action-row">
           <button class="btn" id="btn-zone_wheat" onclick="setMode('zone_wheat')" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
           <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
@@ -309,8 +309,10 @@
       </div>
 
       <div id="tab-tools" class="tab-pane">
+        <div class="panel-heading" data-i18n="panel.tools">Tools</div>
         <div class="btn-grid-2col" id="tool-actions"></div>
 
+        <div class="panel-heading" data-i18n="panel.gear">Gear</div>
         <div class="btn-grid-2col gear-actions">
           <button class="btn" id="btn-backpack" onclick="orderGear('backpack')"></button>
           <button class="btn" id="btn-wateringCan" onclick="orderGear('wateringCan')"></button>
@@ -324,11 +326,14 @@
       </div>
 
       <div id="tab-weapons" class="tab-pane">
+        <div class="panel-heading" data-i18n="panel.weapons">Weapons</div>
         <div class="btn-grid-2col" id="weapon-actions"></div>
+        <div class="panel-heading" data-i18n="panel.arrows">Arrows</div>
         <div class="btn-grid-2col" id="special-actions">
           <button class="btn" id="btn-craft-arrows" onclick="craftArrows()"></button>
         </div>
 
+        <div class="panel-heading" data-i18n="panel.armour">Armour</div>
         <div class="btn-grid-2col gear-actions">
           <button class="btn" id="btn-armor" onclick="orderGear('armor')"></button>
           <button class="btn" id="btn-shield" onclick="orderGear('shield')"></button>

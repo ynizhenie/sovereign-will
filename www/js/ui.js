@@ -37,7 +37,10 @@ function updateUI() {
     let tName = selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selectedSettler.tool)?.label || selectedSettler.tool);
     let aName = selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
     let qName = selectedSettler.quiver ? ` / ${t('hud.quiver', { n: selectedSettler.arrows || 0 })}` : '';
-    setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName})`);
+    // the rest of what it wears (#180)
+    const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(selectedSettler, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
+    setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
+    renderSettlerInfo(selectedSettler);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
       btnUpgrade.style.display = getUpgrade() && selectedSettler.type === getUpgrade().from ? 'block' : 'none';
@@ -45,6 +48,7 @@ function updateUI() {
   } else {
     selectedSettler = null;
     document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
+    document.getElementById('selected-info').hidden = true;
     document.getElementById('btn-deselect').style.display = 'none';
     if (btnUpgrade) {
       btnUpgrade.style.display = 'none';
@@ -53,3 +57,22 @@ function updateUI() {
 
 }
 
+
+// The selected settler's info line (#180): what it's doing, when it's next hungry, what it carries
+function renderSettlerInfo(s) {
+  const activity = `activity.${s.activity || 'patrol'}`;
+  const parts = [t(activity) === activity ? t('activity.patrol') : t(activity)];
+  parts.push(getPlayerFaction().eats ? t('info.hungry', { seconds: Math.max(0, Math.ceil(getHungerSeconds(s))) }) : t('info.noHunger'));
+  if (s.temporary !== undefined) parts.push(t('info.crumbles', { seconds: Math.ceil(s.temporary) }));
+  const items = s.carrying ? (s.carrying.items || [s.carrying]) : [];
+  const carried = items.filter(item => item.amount > 0).map(item => `${Math.round(item.amount)}[[${getResourceIconName(item.type)}]]`).join(' ');
+  if (carried) parts.push(`${t('info.carries')} ${carried}`);
+  const info = document.getElementById('selected-info');
+  info.hidden = false;
+  setRichText(info, parts.join(' · '));
+}
+
+// Seconds until this settler eats next
+function getHungerSeconds(s) {
+  return s.hunger !== undefined ? s.hunger : foodTimer;
+}
