@@ -135,7 +135,15 @@ function getNearbyEnemyTentSite(origin) {
 function getWaveSpawnPos() {
   if (!getEnemyFaction().portalSpawns || enemyTents.length === 0) return getRandomBorderPos();
   const portal = enemyTents[Math.floor(rand() * enemyTents.length)];
-  return { x: portal.x + (rand() - 0.5) * 40, y: portal.y + (rand() - 0.5) * 40 };
+  // a free tile beside the portal, never inside a tree, a rock or the water (#177)
+  const g = getGridPos(portal.x, portal.y);
+  const free = [];
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if ((dx || dy) && !isTileBlockedForEnemyStrict(g.gx + dx, g.gy + dy)) free.push({ x: (g.gx + dx) * TILE_SIZE + 15, y: (g.gy + dy) * TILE_SIZE + 15 });
+    }
+  }
+  return free.length ? free[Math.floor(rand() * free.length)] : { x: portal.x, y: portal.y };
 }
 
 // A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall (#43)
@@ -172,8 +180,9 @@ function startNextWave() {
   );
 
   // the demons' portals open first, so the wave can come out of them
+  // as many as tents would be (#177), but always one to come out of
   if (getEnemyFaction().portalSpawns) {
-    for (let i = 0; i < Math.max(1, tentCount); i++) openDemonPortal();
+    for (let i = 0; i < (enemyTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
     invalidateAllPaths();
   }
 

@@ -1115,7 +1115,9 @@ function huntBoar(s, boar, tick) {
     moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
   } else {
     if (isBowWeapon(s.weapon)) {
-      performAttack(s, boar.x, boar.y);
+      // only with a clear shot: no arrows wasted on trees and stones in the way (#173)
+      if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y);
+      else moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else if (!((boar.fleeTimer || 0) > 0 && boar.sprinting) && s.attackCooldown <= 0) { // not mid-sprint
       makeBoarFlee(boar, s.x, s.y);
       boar.hp -= hunt.damage * hunt.multiplier;
@@ -1154,7 +1156,8 @@ function workResource(s, assignedRes, tick) {
     }
     if (assignedRes.harvestProgress >= duration) finishHarvest(s, assignedRes, kind);
   } else if (work.chop) {
-    assignedRes.hp -= dt * work.chop[s.type] * ((work.toolBonus && work.toolBonus[s.tool]) || 1);
+    // by body, not by kind: a zombie or an imp chops like a worker, a big zombie or a demon like a giant (#163)
+    assignedRes.hp -= dt * work.chop[isBigBody(s) ? 'big' : 'normal'] * ((work.toolBonus && work.toolBonus[s.tool]) || 1);
     if (assignedRes.hp <= 0) finishHarvest(s, assignedRes, kind);
   } else if (work.drain) {
     assignedRes.hp -= dt * work.drain[s.tool];
@@ -1288,6 +1291,8 @@ function pickApplesFrom(s, target, dt) {
     s.working = 0.1;
     faceTowards(s, target.x, target.y);
     const apples = GAME_CONFIG.appleTrees;
+    target.pickShare = s.pickProgress / apples.pickSeconds; // shown on the tree (#176)
+    target.pickTick = pathTick;
     if (s.pickProgress >= apples.pickSeconds) {
       s.pickProgress = 0;
       for (const [item, amount] of Object.entries(apples.yield)) giveResourceToSettler(s, item, amount);
@@ -1295,6 +1300,7 @@ function pickApplesFrom(s, target, dt) {
       for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) addResources({ [item]: 1 });
       target.applesReady = false;
       target.appleGrowth = 0;
+      target.pickShare = 0;
       if (target.markIntent === 'apples') { target.priority = 0; target.markIntent = null; }
     }
   }
@@ -1362,7 +1368,7 @@ function cook(s, tick) {
     load.amount--;
     s.cooked = (s.cooked || 0) + cooking.makes;
     if (load.amount <= 0) {
-      s.carrying = { type: cooking.dish[load.type] || 'provisions', amount: s.cooked }; // home with it (deliverCarrying)
+      s.carrying = { type: cooking.dish[load.type] || 'cookedMeat', amount: s.cooked }; // home with it (deliverCarrying)
       s.cooked = 0;
     }
   }

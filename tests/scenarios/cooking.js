@@ -14,6 +14,7 @@ Object.assign(window.sim, (() => {
     invalidateAllPaths();
     settlers = Array.from({ length: workers }, (_, i) => makeSettler(1 + i, townHall.x - 40 + i * 30, townHall.y + 60));
     Object.assign(stock, { food, rawMeat: 0, rawFish: 0, wheat: 0, wood: 0, coal: 0 }, raw, fuel);
+    foodMix = {}; syncFoodMix(); // not the start's random mix (#169)
     let maxCooks = 0, carriedFood = false, fuelTrips = 0;
     const seen = new WeakSet();
     run(seconds, { each: () => {

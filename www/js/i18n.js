@@ -28,7 +28,7 @@ const LANGUAGES = {
       settlerTypes: { normal: 'Worker', big: 'Giant', zombie: 'Zombie', big_zombie: 'Big zombie', skeleton: 'Skeleton', necromancer: 'Necromancer', imp: 'Imp', demon: 'Demon', fire_imp: 'Fire imp' },
       gear: { backpack: 'Backpack', shield: 'Shield', armor: 'Armour', wateringCan: 'Watering can' },
       recipes: { arrows: 'Arrows' },
-      foodKinds: { provisions: 'Provisions', berries: 'Berries', apples: 'Apples', bread: 'Bread', cookedFish: 'Cooked fish', cookedMeat: 'Cooked meat' }
+      foodKinds: { berries: 'Berries', apples: 'Apples', bread: 'Bread', cookedFish: 'Cooked fish', cookedMeat: 'Cooked meat' }
     },
     text: {
       'menu.play': 'PLAY', 'menu.waveInterval': 'Wave interval (s):', 'menu.custom': 'Custom', 'menu.mapSize': 'Map size:',
@@ -104,7 +104,7 @@ const LANGUAGES = {
       settlerTypes: { normal: 'Робітник', big: 'Богатир', zombie: 'Зомбі', big_zombie: 'Великий зомбі', skeleton: 'Скелет', necromancer: 'Некромант', imp: 'Чорт', demon: 'Демон', fire_imp: 'Вогняний чорт' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лійка' },
       recipes: { arrows: 'Стріли' },
-      foodKinds: { provisions: 'Припаси', berries: 'Ягоди', apples: 'Яблука', bread: 'Хліб', cookedFish: 'Смажена риба', cookedMeat: 'Смажене м\'ясо' }
+      foodKinds: { berries: 'Ягоди', apples: 'Яблука', bread: 'Хліб', cookedFish: 'Смажена риба', cookedMeat: 'Смажене м\'ясо' }
     },
     text: {
       'menu.play': 'ГРАТИ', 'menu.waveInterval': 'Інтервал хвиль (с):', 'menu.custom': 'Свій', 'menu.mapSize': 'Розмір мапи:',
@@ -180,7 +180,7 @@ const LANGUAGES = {
       settlerTypes: { normal: 'Рабочий', big: 'Богатырь', zombie: 'Зомби', big_zombie: 'Большой зомби', skeleton: 'Скелет', necromancer: 'Некромант', imp: 'Чёрт', demon: 'Демон', fire_imp: 'Огненный чёрт' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лейка' },
       recipes: { arrows: 'Стрелы' },
-      foodKinds: { provisions: 'Припасы', berries: 'Ягоды', apples: 'Яблоки', bread: 'Хлеб', cookedFish: 'Жареная рыба', cookedMeat: 'Жареное мясо' }
+      foodKinds: { berries: 'Ягоды', apples: 'Яблоки', bread: 'Хлеб', cookedFish: 'Жареная рыба', cookedMeat: 'Жареное мясо' }
     },
     text: {
       'menu.play': 'ИГРАТЬ', 'menu.waveInterval': 'Интервал волн (сек):', 'menu.custom': 'Своё', 'menu.mapSize': 'Размер карты:',
