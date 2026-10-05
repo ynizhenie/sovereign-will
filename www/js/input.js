@@ -109,17 +109,11 @@ function setZoom(zoom) {
   camera.zoom = Math.max(getMinZoom(), Math.min(getMaxZoom(), zoom));
 }
 
-// the Restart button of the defeat screen, in CSS pixels
-function getRestartButton() {
-  const cx = canvas.width / screenPixelRatio / 2, cy = canvas.height / screenPixelRatio / 2;
-  return { x: cx - 100, y: cy + 50, width: 200, height: 45 };
-}
-
 window.addEventListener('resize', fitCanvasToScreen);
 
 function updateInputPos(clientX, clientY) {
   const { screenX, screenY } = getCanvasScreenCoords(clientX, clientY);
-  // screen coords are for UI drawn over the canvas without the camera (e.g. the defeat screen)
+  // screen coords are for UI drawn over the canvas without the camera
   mouse.screenX = screenX;
   mouse.screenY = screenY;
   mouse.x = camera.x + (screenX - canvas.width / 2) / getViewScale();
@@ -134,7 +128,7 @@ function clampCamera() {
 }
 
 canvas.addEventListener('mousemove', e => {
-  if (cameraDragging) {
+  if (cameraDragging && !isCameraLocked()) {
     const { renderWidth, renderHeight } = getCanvasScreenCoords(e.clientX, e.clientY);
     camera.x -= (e.clientX - cameraDragPoint.x) * canvas.width / renderWidth / getViewScale();
     camera.y -= (e.clientY - cameraDragPoint.y) * canvas.height / renderHeight / getViewScale();
@@ -146,6 +140,7 @@ canvas.addEventListener('mousemove', e => {
 
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
+  if (isCameraLocked()) return;
   const { screenX, screenY } = getCanvasScreenCoords(e.clientX, e.clientY);
   const worldBeforeZoom = {
     x: camera.x + (screenX - canvas.width / 2) / getViewScale(),
@@ -206,6 +201,7 @@ canvas.addEventListener('touchstart', e => {
 
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
+  if (isCameraLocked()) return;
 
   if (e.touches.length === 1 && isTouchDragging) {
     const touch = e.touches[0];

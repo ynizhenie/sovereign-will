@@ -205,6 +205,18 @@
 
     <div id="mobile-joystick"><div class="joystick-knob"></div></div>
 
+    <!-- Endless lost (#191): over the game, which flies to the base; start again or leave -->
+    <div id="defeat-overlay" hidden>
+      <div class="defeat-box">
+        <div class="defeat-title" data-i18n="defeat.title">DEFEAT!</div>
+        <div class="defeat-survived" id="defeat-survived"></div>
+        <div class="defeat-buttons">
+          <button class="menu-button menu-button-primary" id="defeat-restart" data-i18n="defeat.restart">Start again</button>
+          <button class="menu-button" id="defeat-exit" data-i18n="pause.exit">Exit to main menu</button>
+        </div>
+      </div>
+    </div>
+
     <button class="btn active" id="btn-interact" onclick="setMode('interact')">
       <span class="fab-icon"><i class="ic ic-point"></i></span>
       <span class="fab-label" data-i18n="top.point">Point</span>

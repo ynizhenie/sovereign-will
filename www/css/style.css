@@ -864,3 +864,13 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   /* clear of the Point button on the right */
   .selected-unit-box.has-settler { left: 6px; transform: none; width: min(calc(100vw - 90px), 360px); }
 }
+
+/* the defeat screen (#191): over the game, which shows the base; the panel and possession go dead */
+#defeat-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; background: rgba(0, 0, 0, 0.25); }
+#defeat-overlay[hidden] { display: none; }
+.defeat-box { background: rgba(20, 21, 26, 0.92); border: 1px solid #c0392b; border-radius: 10px; padding: 14px 18px; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,0.6); max-width: 90%; }
+.defeat-title { color: #e74c3c; font: bold 32px sans-serif; }
+.defeat-survived { color: #fff; font-size: 16px; margin: 6px 0 12px; }
+.defeat-buttons { display: flex; flex-direction: column; gap: 8px; }
+.defeat-buttons .menu-button { margin: 0; }
+body.defeated #bottom-panel, body.defeated .btn-unpossess, body.defeated #btn-interact, body.defeated #mobile-joystick { pointer-events: none; opacity: 0.4; }

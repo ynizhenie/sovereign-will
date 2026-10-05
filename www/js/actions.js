@@ -277,16 +277,7 @@ function handleCanvasClick() {
     return;
   }
   if (gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
-  if (townHall.hp <= 0 || settlers.length === 0) {
-    // the defeat screen is drawn in screen space (see render()), so hit-test in screen coords:
-    // world coords only matched it with the camera centered at zoom 1
-    const btn = getRestartButton();
-    const x = mouse.screenX / screenPixelRatio, y = mouse.screenY / screenPixelRatio;
-    if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
-      resetGame();
-    }
-    return;
-  }
+  if (isDefeated()) return; // the defeat screen's own buttons (#191)
 
   if (buildMode === 'possess') {
     for (let s of settlers) {
@@ -739,7 +730,7 @@ function unpossess() {
 }
 
 function switchPossession() {
-  if (settlers.length === 0) return;
+  if (settlers.length === 0 || isDefeated()) return;
   if (gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on (#166)
 
   const currentPossessed = getPossessed();
