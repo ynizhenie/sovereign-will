@@ -52,21 +52,17 @@ test('pause opens a menu with Continue and Main menu (#19)', async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
-test('the defeat screen restart button works with the camera moved and zoomed (#47)', async ({ page }) => {
+test('the defeat screen restart button works with the camera moved and zoomed (#47, #191)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
   // lose the game with the camera away from the centre and zoomed in, as after possessing a settler
-  const button = await page.evaluate(() => {
+  await page.evaluate(() => {
     settlers = [];
     camera.zoom = 2; camera.x = 300; camera.y = 900; clampCamera();
-    render();
-    // the button's centre (CSS pixels on the canvas) -> page coordinates
-    const rect = canvas.getBoundingClientRect();
-    const btn = getRestartButton();
-    return { x: rect.left + btn.x + btn.width / 2, y: rect.top + btn.y + btn.height / 2 };
   });
-  await page.mouse.click(button.x, button.y);
+  await page.click('#defeat-restart');
   expect(await page.evaluate(() => settlers.length)).toBe(2);
+  await expect(page.locator('#defeat-overlay')).toBeHidden();
   expect(errors).toEqual([]);
 });
 

@@ -951,21 +951,6 @@ function render() {
   ctx.restore();
 
   if (gameMode === 'battle') drawBattleResult();
-  if (gameStarted && gameMode === 'endless' && (townHall.hp <= 0 || settlers.length === 0)) {
-    // drawn in CSS pixels, centred on the screen (restart button hit-test: getRestartButton)
-    ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.scale(screenPixelRatio, screenPixelRatio);
-    const cx = canvas.width / screenPixelRatio / 2, cy = canvas.height / screenPixelRatio / 2;
-    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(t('defeat.title'), cx, cy - 20);
-    ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
-    ctx.fillText(t('defeat.survived', { waves: waveNum - 1 }), cx, cy + 15);
-
-    const btn = getRestartButton();
-    ctx.fillStyle = '#27ae60'; ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif';
-    ctx.fillText(t('defeat.restart'), cx, btn.y + 28);
-    ctx.restore();
-  }
+  // lost (#191): the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
+  if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 }
