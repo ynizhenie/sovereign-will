@@ -68,6 +68,7 @@ function isCameraLocked() {
 }
 
 function gameLoop(now) {
+  if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu (#193)
   stepTime += Math.min(0.25, (now - lastTime) / 1000);
   lastTime = now;
   let steps = 0;

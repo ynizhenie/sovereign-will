@@ -822,7 +822,7 @@ function render() {
     ctx.globalAlpha = 1;
     if (s.burning > 0) drawBurning(s.x, s.y, s.visualRadius);
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
-    if (sides.player.faction === 'demons' && gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
+    if (getPlayerFaction().id === 'demons' && gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
     drawBodyBlood(s, s.visualRadius);
 
     // a backpack on the left side, with a bar for how full it is
