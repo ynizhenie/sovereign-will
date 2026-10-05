@@ -14,11 +14,11 @@ const LANGUAGES = {
       resources: {
         food: 'Food', rawMeat: 'Raw meat', rawFish: 'Raw fish', wheat: 'Grain', wood: 'Wood', stone: 'Stone', coal: 'Coal',
         ironOre: 'Ore', iron: 'Iron', leather: 'Leather', arrows: 'Arrows', wheatSeeds: 'Seeds', saplings: 'Saplings',
-        herbs: 'Herbs', worms: 'Worms', bones: 'Bones', appleSaplings: 'Apple saplings'
+        herbs: 'Herbs', worms: 'Worms', bones: 'Bones', rot: 'Rot', appleSaplings: 'Apple saplings'
       },
       resourceGroups: { raw: 'Raw food', plants: 'Plants', materials: 'Materials', supplies: 'Supplies', toolsHeld: 'Tools', weaponsHeld: 'Weapons' },
-      tools: { axe: 'Axe', pickaxe: 'Pickaxe', iron_axe: 'Iron axe', iron_pickaxe: 'Iron pickaxe', rod: 'Fishing rod', medbag: 'Medic bag', hoe: 'Hoe' },
-      weapons: { fist: 'Fist', club: 'Club', sword: 'Sword', spear: 'Spear', iron_sword: 'Iron sword', iron_spear: 'Iron spear', bow: 'Bow', hellfire: 'Hellfire' },
+      tools: { axe: 'Axe', pickaxe: 'Pickaxe', iron_axe: 'Iron axe', iron_pickaxe: 'Iron pickaxe', rod: 'Fishing rod', medbag: 'Medic bag', hoe: 'Hoe', necro_staff: 'Necromancer\'s staff' },
+      weapons: { fist: 'Fist', club: 'Club', sword: 'Sword', spear: 'Spear', iron_sword: 'Iron sword', iron_spear: 'Iron spear', bow: 'Bow' },
       buildings: {
         wall_wood: 'Wooden wall', wall_stone: 'Stone wall', spikes: 'Spikes', door: 'Door', tent: 'Tent', campfire: 'Campfire',
         smelter: 'Smelter', watchtower: 'Watchtower', warehouse: 'Warehouse', grave: 'Grave', sacrifice_circle: 'Sacrificial circle', portal: 'Portal', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
@@ -68,6 +68,7 @@ const LANGUAGES = {
       'menu.generator': 'Map generator', 'gen.standard': 'Standard', 'gen.save': 'Save', 'gen.presetName': 'Preset name', 'gen.group.water': 'Water', 'gen.group.desert': 'Desert', 'gen.group.forests': 'Forests', 'gen.group.resources': 'Resources', 'gen.group.ore': 'Ore', 'gen.group.rocks': 'Rock', 'gen.group.animals': 'Animals', 'gen.group.regrowth': 'Regrowth (s)', 'gen.group.other': 'Other', 'gen.lakes': 'Lakes', 'gen.lakeWidth': 'Lake width', 'gen.lakeHeight': 'Lake height', 'gen.lakeMinDistance': 'Gap between lakes', 'gen.deserts': 'Deserts', 'gen.desertRadiusX': 'Desert width', 'gen.desertRadiusY': 'Desert height', 'gen.desertCactus': 'Cacti per desert', 'gen.desertPebbles': 'Pebbles per desert', 'gen.forests': 'Forests', 'gen.forestTrees': 'Trees per forest', 'gen.forestRadius': 'Forest size', 'gen.forestUndergrowthShare': 'Undergrowth in forests (0-1)', 'gen.trees': 'Lone trees', 'gen.boulders': 'Boulders', 'gen.boulderPiles': 'Boulder piles', 'gen.boulderPileSize': 'Boulders per pile', 'gen.grass': 'Grass', 'gen.berryBushes': 'Berry bushes', 'gen.sticks': 'Sticks', 'gen.pebbles': 'Pebbles', 'gen.ironSpawners': 'Iron spawners', 'gen.coalSpawners': 'Coal spawners', 'gen.orePerSpawner': 'Ore per spawner', 'gen.oreSpawnerRadius': 'Ore spread (tiles)', 'gen.rockClusters': 'Rock masses', 'gen.rockClusterWidth': 'Rock mass width', 'gen.rockClusterHeight': 'Rock mass height', 'gen.boars': 'Boars', 'gen.respawnDelay': 'Resources grow back', 'gen.oreRespawnDelay': 'Ore grows back',
       'sacrifice.pick': '[[warn]] Select a settler first, then tap the circle', 'sacrifice.going': '[[sacrifice_circle]] {name} goes to the circle', 'sacrifice.done': '[[ok]] The sacrifice healed everyone',
       'save.button': 'Save game', 'save.list': 'Saved games:', 'save.name': 'Wave {wave} · {time}', 'save.done': '[[save]] Saved: {name}', 'save.failed': '[[no]] Couldn\'t save on this device',
+      'tab.blight': '[[rot]] Blight', 'blight.hint': 'Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise', 'btn.blightZone': '[[rot]] Blight zone', 'btn.blightClear': '[[close]] Remove zone',
       'menu.factions': 'Factions:', 'menu.you': 'You', 'menu.enemy': 'Enemy', 'menu.soon': 'soon',
       'menu.map': 'Map:', 'menu.randomMap': 'Random', 'menu.customMap': 'Custom map',
       'editor.eraser': '[[eraser]] Eraser', 'editor.sizeButton': 'Size', 'editor.side.top': 'Top', 'editor.side.bottom': 'Bottom', 'editor.side.left': 'Left', 'editor.side.right': 'Right', 'editor.hallInTheWay': '[[warn]] The town hall is in the way: move it first', 'editor.cat.terrain': 'Terrain', 'editor.cat.nature': 'Nature', 'editor.cat.ore': 'Ore', 'editor.cat.buildings': 'Buildings', 'list.deleteQuestion': 'Delete «{name}»?', 'list.yes': 'Yes', 'list.no': 'No',
@@ -90,11 +91,11 @@ const LANGUAGES = {
       resources: {
         food: 'Їжа', rawMeat: 'Сире м\'ясо', rawFish: 'Сира риба', wheat: 'Зерно', wood: 'Дерево', stone: 'Камінь', coal: 'Вугілля',
         ironOre: 'Руда', iron: 'Залізо', leather: 'Шкіра', arrows: 'Стріли', wheatSeeds: 'Насіння', saplings: 'Саджанці',
-        herbs: 'Трави', worms: 'Черв\'яки', bones: 'Кістки', appleSaplings: 'Саджанці яблуні'
+        herbs: 'Трави', worms: 'Черв\'яки', bones: 'Кістки', rot: 'Гниль', appleSaplings: 'Саджанці яблуні'
       },
       resourceGroups: { raw: 'Сира їжа', plants: 'Рослини', materials: 'Матеріали', supplies: 'Припаси', toolsHeld: 'Інструменти', weaponsHeld: 'Зброя' },
-      tools: { axe: 'Сокира', pickaxe: 'Кайло', iron_axe: 'Залізна сокира', iron_pickaxe: 'Залізне кайло', rod: 'Вудка', medbag: 'Сумка медика', hoe: 'Мотика' },
-      weapons: { fist: 'Кулак', club: 'Кийок', sword: 'Меч', spear: 'Спис', iron_sword: 'Залізний меч', iron_spear: 'Залізний спис', bow: 'Лук', hellfire: 'Пекельний вогонь' },
+      tools: { axe: 'Сокира', pickaxe: 'Кайло', iron_axe: 'Залізна сокира', iron_pickaxe: 'Залізне кайло', rod: 'Вудка', medbag: 'Сумка медика', hoe: 'Мотика', necro_staff: 'Посох некроманта' },
+      weapons: { fist: 'Кулак', club: 'Кийок', sword: 'Меч', spear: 'Спис', iron_sword: 'Залізний меч', iron_spear: 'Залізний спис', bow: 'Лук' },
       buildings: {
         wall_wood: 'Дерев\'яна стіна', wall_stone: 'Кам\'яна стіна', spikes: 'Шипи', door: 'Двері', tent: 'Намет', campfire: 'Багаття',
         smelter: 'Плавильня', watchtower: 'Сторожова вежа', warehouse: 'Склад', grave: 'Могила', sacrifice_circle: 'Жертовне коло', portal: 'Портал', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
@@ -144,6 +145,7 @@ const LANGUAGES = {
       'menu.generator': 'Генератор мап', 'gen.standard': 'Стандарт', 'gen.save': 'Зберегти', 'gen.presetName': 'Назва пресету', 'gen.group.water': 'Вода', 'gen.group.desert': 'Пустеля', 'gen.group.forests': 'Ліси', 'gen.group.resources': 'Ресурси', 'gen.group.ore': 'Руда', 'gen.group.rocks': 'Скелі', 'gen.group.animals': 'Тварини', 'gen.group.regrowth': 'Відростання (с)', 'gen.group.other': 'Інше', 'gen.lakes': 'Озера', 'gen.lakeWidth': 'Ширина озера', 'gen.lakeHeight': 'Висота озера', 'gen.lakeMinDistance': 'Відстань між озерами', 'gen.deserts': 'Пустелі', 'gen.desertRadiusX': 'Ширина пустелі', 'gen.desertRadiusY': 'Висота пустелі', 'gen.desertCactus': 'Кактусів у пустелі', 'gen.desertPebbles': 'Камінців у пустелі', 'gen.forests': 'Ліси', 'gen.forestTrees': 'Дерев у лісі', 'gen.forestRadius': 'Розмір лісу', 'gen.forestUndergrowthShare': 'Підлісок у лісах (0-1)', 'gen.trees': 'Окремі дерева', 'gen.boulders': 'Валуни', 'gen.boulderPiles': 'Купи валунів', 'gen.boulderPileSize': 'Валунів у купі', 'gen.grass': 'Трава', 'gen.berryBushes': 'Ягідні кущі', 'gen.sticks': 'Палиці', 'gen.pebbles': 'Камінці', 'gen.ironSpawners': 'Спавнери заліза', 'gen.coalSpawners': 'Спавнери вугілля', 'gen.orePerSpawner': 'Руди на спавнер', 'gen.oreSpawnerRadius': 'Розкид руди (клітинки)', 'gen.rockClusters': 'Скельні масиви', 'gen.rockClusterWidth': 'Ширина масиву', 'gen.rockClusterHeight': 'Висота масиву', 'gen.boars': 'Кабани', 'gen.respawnDelay': 'Ресурси відростають', 'gen.oreRespawnDelay': 'Руда відростає',
       'sacrifice.pick': '[[warn]] Спершу оберіть жителя, потім тапніть коло', 'sacrifice.going': '[[sacrifice_circle]] {name} іде до кола', 'sacrifice.done': '[[ok]] Жертва вилікувала всіх',
       'save.button': 'Зберегти гру', 'save.list': 'Збереження:', 'save.name': 'Хвиля {wave} · {time}', 'save.done': '[[save]] Збережено: {name}', 'save.failed': '[[no]] Не вдалося зберегти на пристрої',
+      'tab.blight': '[[rot]] Псування', 'blight.hint': 'Позначте землю, яку зіпсує некромант: вороги на ній повільніші, трупи встають', 'btn.blightZone': '[[rot]] Зона псування', 'btn.blightClear': '[[close]] Прибрати зону',
       'menu.factions': 'Фракції:', 'menu.you': 'Ви', 'menu.enemy': 'Ворог', 'menu.soon': 'незабаром',
       'menu.map': 'Мапа:', 'menu.randomMap': 'Випадкова', 'menu.customMap': 'Своя мапа',
       'editor.eraser': '[[eraser]] Гумка', 'editor.sizeButton': 'Розмір', 'editor.side.top': 'Зверху', 'editor.side.bottom': 'Знизу', 'editor.side.left': 'Зліва', 'editor.side.right': 'Справа', 'editor.hallInTheWay': '[[warn]] Заважає ратуша: спершу пересуньте її', 'editor.cat.terrain': 'Місцевість', 'editor.cat.nature': 'Природа', 'editor.cat.ore': 'Руда', 'editor.cat.buildings': 'Будівлі', 'list.deleteQuestion': 'Видалити «{name}»?', 'list.yes': 'Так', 'list.no': 'Ні',
@@ -166,11 +168,11 @@ const LANGUAGES = {
       resources: {
         food: 'Еда', rawMeat: 'Сырое мясо', rawFish: 'Сырая рыба', wheat: 'Зерно', wood: 'Дерево', stone: 'Камень', coal: 'Уголь',
         ironOre: 'Руда', iron: 'Железо', leather: 'Кожа', arrows: 'Стрелы', wheatSeeds: 'Семена', saplings: 'Саженцы',
-        herbs: 'Травы', worms: 'Червяки', bones: 'Кости', appleSaplings: 'Саженцы яблони'
+        herbs: 'Травы', worms: 'Червяки', bones: 'Кости', rot: 'Гниль', appleSaplings: 'Саженцы яблони'
       },
       resourceGroups: { raw: 'Сырая еда', plants: 'Растения', materials: 'Материалы', supplies: 'Снабжение', toolsHeld: 'Инструменты', weaponsHeld: 'Оружие' },
-      tools: { axe: 'Топор', pickaxe: 'Кирка', iron_axe: 'Железный топор', iron_pickaxe: 'Железная кирка', rod: 'Удочка', medbag: 'Сумка медика', hoe: 'Мотыга' },
-      weapons: { fist: 'Кулак', club: 'Дубина', sword: 'Меч', spear: 'Копье', iron_sword: 'Железный меч', iron_spear: 'Железное копье', bow: 'Лук', hellfire: 'Адский огонь' },
+      tools: { axe: 'Топор', pickaxe: 'Кирка', iron_axe: 'Железный топор', iron_pickaxe: 'Железная кирка', rod: 'Удочка', medbag: 'Сумка медика', hoe: 'Мотыга', necro_staff: 'Посох некроманта' },
+      weapons: { fist: 'Кулак', club: 'Дубина', sword: 'Меч', spear: 'Копье', iron_sword: 'Железный меч', iron_spear: 'Железное копье', bow: 'Лук' },
       buildings: {
         wall_wood: 'Деревянная стена', wall_stone: 'Каменная стена', spikes: 'Шипы', door: 'Дверь', tent: 'Палатка', campfire: 'Костёр',
         smelter: 'Плавильня', watchtower: 'Сторожевая башня', warehouse: 'Склад', grave: 'Могила', sacrifice_circle: 'Жертвенный круг', portal: 'Портал', wheat: 'Пшеница', sapling: 'Саженец', apple_sapling: 'Саженец яблони'
@@ -220,6 +222,7 @@ const LANGUAGES = {
       'menu.generator': 'Генератор карт', 'gen.standard': 'Стандарт', 'gen.save': 'Сохранить', 'gen.presetName': 'Название пресета', 'gen.group.water': 'Вода', 'gen.group.desert': 'Пустыня', 'gen.group.forests': 'Леса', 'gen.group.resources': 'Ресурсы', 'gen.group.ore': 'Руда', 'gen.group.rocks': 'Скалы', 'gen.group.animals': 'Животные', 'gen.group.regrowth': 'Отрастание (с)', 'gen.group.other': 'Прочее', 'gen.lakes': 'Озёра', 'gen.lakeWidth': 'Ширина озера', 'gen.lakeHeight': 'Высота озера', 'gen.lakeMinDistance': 'Расстояние между озёрами', 'gen.deserts': 'Пустыни', 'gen.desertRadiusX': 'Ширина пустыни', 'gen.desertRadiusY': 'Высота пустыни', 'gen.desertCactus': 'Кактусов в пустыне', 'gen.desertPebbles': 'Камешков в пустыне', 'gen.forests': 'Леса', 'gen.forestTrees': 'Деревьев в лесу', 'gen.forestRadius': 'Размер леса', 'gen.forestUndergrowthShare': 'Подлесок в лесах (0-1)', 'gen.trees': 'Одиночные деревья', 'gen.boulders': 'Валуны', 'gen.boulderPiles': 'Кучи валунов', 'gen.boulderPileSize': 'Валунов в куче', 'gen.grass': 'Трава', 'gen.berryBushes': 'Ягодные кусты', 'gen.sticks': 'Палки', 'gen.pebbles': 'Камешки', 'gen.ironSpawners': 'Спавнеры железа', 'gen.coalSpawners': 'Спавнеры угля', 'gen.orePerSpawner': 'Руды на спавнер', 'gen.oreSpawnerRadius': 'Разброс руды (клетки)', 'gen.rockClusters': 'Скальные массивы', 'gen.rockClusterWidth': 'Ширина массива', 'gen.rockClusterHeight': 'Высота массива', 'gen.boars': 'Кабаны', 'gen.respawnDelay': 'Ресурсы отрастают', 'gen.oreRespawnDelay': 'Руда отрастает',
       'sacrifice.pick': '[[warn]] Сначала выберите жителя, потом тапните круг', 'sacrifice.going': '[[sacrifice_circle]] {name} идёт к кругу', 'sacrifice.done': '[[ok]] Жертва исцелила всех',
       'save.button': 'Сохранить игру', 'save.list': 'Сохранения:', 'save.name': 'Волна {wave} · {time}', 'save.done': '[[save]] Сохранено: {name}', 'save.failed': '[[no]] Не удалось сохранить на устройстве',
+      'tab.blight': '[[rot]] Порча', 'blight.hint': 'Отметьте землю, которую испортит некромант: враги на ней медленнее, трупы встают', 'btn.blightZone': '[[rot]] Зона порчи', 'btn.blightClear': '[[close]] Убрать зону',
       'menu.factions': 'Фракции:', 'menu.you': 'Вы', 'menu.enemy': 'Враг', 'menu.soon': 'скоро',
       'menu.map': 'Карта:', 'menu.randomMap': 'Случайная', 'menu.customMap': 'Своя карта',
       'editor.eraser': '[[eraser]] Ластик', 'editor.sizeButton': 'Размер', 'editor.side.top': 'Сверху', 'editor.side.bottom': 'Снизу', 'editor.side.left': 'Слева', 'editor.side.right': 'Справа', 'editor.hallInTheWay': '[[warn]] Мешает ратуша: сначала передвиньте её', 'editor.cat.terrain': 'Местность', 'editor.cat.nature': 'Природа', 'editor.cat.ore': 'Руда', 'editor.cat.buildings': 'Постройки', 'list.deleteQuestion': 'Удалить «{name}»?', 'list.yes': 'Да', 'list.no': 'Нет',

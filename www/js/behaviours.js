@@ -43,6 +43,7 @@ function createSettlerTick(dt) {
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
+    blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
@@ -250,7 +251,7 @@ function equip(s, tick) {
         return true;
       }
       if (!equipment.armorOnly) refundEquipment(s, equipment.armor === 'none', equipment.quiver === false);
-      if (equipment.weapon !== undefined) s.weapon = equipment.weapon;
+      if (equipment.weapon !== undefined) { s.weapon = equipment.weapon; applyBowUnit(s); }
       if (equipment.tool !== undefined) s.tool = equipment.tool;
       if (equipment.role !== undefined) s.role = equipment.role;
       if (equipment.armor !== undefined) s.armor = equipment.armor === 'none' ? null : equipment.armor;
@@ -291,9 +292,12 @@ function deliverWhenNothingToDo(s, tick) {
 function goDeliver(s, tick) {
   const storage = findNearestStorage(s);
   if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return; }
+  const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot (#164)
   for (const item of s.carrying.items || [s.carrying]) {
-    if (GAME_CONFIG.resources[item.type]) stock[item.type] += item.amount;
-    else if (isFoodKind(item.type)) addFood(item.type, item.amount);
+    const isFood = isFoodKind(item.type) || ['food', 'rawMeat', 'rawFish', 'wheat'].includes(item.type);
+    const type = into && isFood ? (into[item.type] || into.default) : item.type;
+    if (GAME_CONFIG.resources[type]) stock[type] += item.amount;
+    else if (isFoodKind(type)) addFood(type, item.amount);
   }
   s.carrying = null;
   takeFishingBait(s);
@@ -475,8 +479,9 @@ function eatCorpse(s, tick) {
 // zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,
 // it gets them back at the nearest grave (or the graveyard)
 function necromancy(s, tick) {
-  const necro = (getDefinition('settlerTypes', s.type) || {}).necromancer;
+  const necro = getNecromancy(s);
   if (!necro) return false;
+  if (s.raisesLeft === undefined) s.raisesLeft = necro.raises;
   const dt = tick.dt;
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
 
@@ -501,7 +506,6 @@ function necromancy(s, tick) {
   if (s.raisesLeft > 0) {
     for (const c of corpses) {
       if (tick.raiseAssignments.has(c) || dist(c) > necro.range) continue;
-      if (getCurrentPop() + GAME_CONFIG.settlerTypes[zombieType(c)].population > getMaxPop()) continue;
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
     }
   }
@@ -519,8 +523,24 @@ function necromancy(s, tick) {
     if (s.raiseTimer >= necro.raiseSeconds) {
       s.raiseTimer = 0;
       s.raisesLeft--;
-      corpses.splice(corpses.indexOf(corpse), 1);
-      settlers.push(createSettler(zombieType(corpse), Date.now() + rand(), corpse.x, corpse.y));
+      raiseTemporaryZombie(corpse);
+    }
+    return true;
+  }
+
+  // marked ground to blight (#164)
+  const zone = blightZones.filter(z => !z.done && !tick.blightAssignments.has(z))
+    .sort((a, b) => dist(a) - dist(b))[0];
+  if (zone) {
+    tick.blightAssignments.add(zone);
+    s.patrolTarget = null;
+    if (dist(zone) > 16) {
+      moveEntityTowards(s, zone.x, zone.y, s.speed, false, dt);
+      s.blightTimer = 0;
+    } else {
+      s.working = 0.1;
+      s.blightTimer = (s.blightTimer || 0) + dt;
+      if (s.blightTimer >= necro.blightSeconds) { s.blightTimer = 0; zone.done = true; }
     }
     return true;
   }
@@ -538,6 +558,16 @@ function necromancy(s, tick) {
     return true;
   }
   return false;
+}
+
+// A corpse rises as a temporary zombie (#164): no room taken in the colony; it crumbles into rot after
+// GAME_CONFIG.temporaryZombie.lifeSeconds (see updateTemporaryZombies)
+function raiseTemporaryZombie(corpse) {
+  const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
+  zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
+  settlers.push(zombie);
+  corpses.splice(corpses.indexOf(corpse), 1);
+  return zombie;
 }
 
 // ---- Fighting

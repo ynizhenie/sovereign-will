@@ -102,6 +102,7 @@ function enemyNecromancy(en, necro, dt) {
     corpses.splice(corpses.indexOf(corpse), 1);
     const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
     zombie.fromWave = en.fromWave;
+    zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds; // as the player's (#175)
     enemies.push(zombie);
   }
   return true;
