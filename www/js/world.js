@@ -680,6 +680,7 @@ function resetGame(map = gameMode === 'endless' ? customMap : null) {
   
   if (map) loadCustomMap(map);
   else generateMap();
+  mixStartFood(); // after the map, so the seeded map stays the same
   resetTileIndex();
   updateSeedHud();
 

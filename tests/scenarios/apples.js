@@ -38,3 +38,26 @@ Object.assign(window.sim, (() => {
 
   return { appleOrchard, appleShare };
 })());
+
+// Picking apples shows on the tree like any other gathering (#176): a progress bar while it's picked
+Object.assign(window.sim, (() => {
+  const { start, run, helpers: { tileCenter, makeSettler, clearResources } } = window.sim;
+  function applePickBar({ seed = 'apple-bar' } = {}) {
+    start(seed);
+    clearResources();
+    const g = getGridPos(townHall.x, townHall.y);
+    const tree = makeAppleTree({ ...tileCenter(g.gx + 4, g.gy), hp: 3, isGrowing: false, growProgress: 0, priority: 0 });
+    tree.applesReady = true;
+    trees.push(tree);
+    invalidateAllPaths();
+    settlers = [makeSettler(1, townHall.x + 40, townHall.y)];
+    const bars = [];
+    const original = drawProgressBar;
+    window.drawProgressBar = (x, y, share) => { if (x === tree.x && y === tree.y) bars.push(Math.round(share * 100)); return original.apply(this, arguments); };
+    try {
+      run(12, { each: f => { tree.appleGrowth = 0; if (f % 10 === 0) render(); } });
+    } finally { window.drawProgressBar = original; }
+    return { shown: bars.some(b => b > 0 && b < 100), rising: bars.length > 1 && bars[bars.length - 1] >= bars[0], picked: !tree.applesReady };
+  }
+  return { applePickBar };
+})());

@@ -271,7 +271,17 @@ function findTowerExit(tower, settler) {
     }
     if (best) return best;
   }
-  return { x: tower.x + Math.cos(facing) * 34, y: tower.y + Math.sin(facing) * 34 }; // walled in: as before
+  // walled in from the town hall: any free tile next to it, rather than into a wall (#173)
+  for (let ring = 1; ring <= 4; ring++) {
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) === ring && !isTileBlockedForSettler(start.gx + dx, start.gy + dy)) {
+          return { x: (start.gx + dx) * TILE_SIZE + 15, y: (start.gy + dy) * TILE_SIZE + 15 };
+        }
+      }
+    }
+  }
+  return { x: tower.x, y: tower.y };
 }
 
 function releaseTowerGuard(settler) {
@@ -286,13 +296,17 @@ function releaseTowerGuard(settler) {
 }
 
 function updateTowerGuard(settler, tower, dt) {
-  const approachDistance = 30;
+  // up from a free tile beside it that can be walked to (not from the side a wall is on, #173)
   const distanceToTower = Math.hypot(tower.x - settler.x, tower.y - settler.y);
-  if (distanceToTower > approachDistance) {
-    const angle = Math.atan2(settler.y - tower.y, settler.x - tower.x);
-    moveEntityTowards(settler, tower.x + Math.cos(angle) * approachDistance, tower.y + Math.sin(angle) * approachDistance, settler.speed, false, dt);
-    return;
+  if (distanceToTower > 32) {
+    if (!settler.towerEntry || settler.towerEntry.tower !== tower) settler.towerEntry = { tower, ...findTowerExit(tower, settler) };
+    const entry = settler.towerEntry;
+    if (Math.hypot(entry.x - settler.x, entry.y - settler.y) > 8) {
+      moveEntityTowards(settler, entry.x, entry.y, settler.speed, false, dt);
+      return;
+    }
   }
+  settler.towerEntry = null;
 
   settler.x = tower.x;
   settler.y = tower.y;
