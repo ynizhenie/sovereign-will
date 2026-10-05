@@ -37,7 +37,54 @@ test('the panel has categories: your units, enemies, buildings; armour and shiel
   expect(await count()).toBe(4);
   await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
   await page.click('[data-battle-category="buildings"]');
-  expect(await count()).toBe(5);
+  expect(await count()).toBe(6); // walls, door, spikes, tower, and the humans' tent
+});
+
+test('every category has faction sub-tabs: each faction its own units and buildings (#166)', async ({ page }) => {
+  await openBattle(page);
+  const shown = async () => page.$$eval('#battle-presets button', bs => bs.map(b => b.dataset.preset));
+  const r = {};
+  for (const faction of ['humans', 'undead', 'demons']) {
+    await page.click(`[data-battle-faction="${faction}"]`);
+    r[faction] = {};
+    for (const category of ['own', 'enemy', 'buildings']) {
+      await page.click(`[data-battle-category="${category}"]`);
+      r[faction][category] = await shown();
+    }
+  }
+  expect(await page.locator('[data-battle-category="own"]').innerText()).toBe('Игрок');
+  expect(r.undead.own).toEqual(['zombie', 'zombie_club', 'zombie_sword', 'skeleton', 'necromancer', 'big_zombie']);
+  expect(r.undead.enemy).toEqual(['undead_zombie', 'undead_big_zombie', 'undead_skeleton', 'undead_necromancer']);
+  expect(r.undead.buildings).toContain('grave');
+  expect(r.demons.own).toEqual(['imp', 'imp_sword', 'imp_spear', 'fire_imp', 'demon', 'demon_spear']);
+  expect(r.demons.enemy).toEqual(['demon_imp', 'demon_brute', 'demon_fire_imp']);
+  expect(r.demons.buildings).toEqual(expect.arrayContaining(['sacrifice_circle', 'portal']));
+  expect(r.humans.buildings).not.toContain('grave');
+});
+
+test('a fight can be cancelled back to the line-up; a unit can be possessed in it; arrows never run out (#166)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'bow'; battleTap(at(12, 12).x, at(12, 12).y);
+    battle.preset = 'raider'; battleTap(at(25, 12).x, at(25, 12).y);
+    switchPossession();
+    const possessedInSetup = !!getPossessed();
+    startBattleFight();
+    enemies[0].hp = enemies[0].maxHp = 1e5; // a long fight (the line-up's own raider comes back on cancel)
+    switchPossession();
+    const possessedInFight = !!getPossessed();
+    const archer = settlers[0];
+    const arrows0 = archer.arrows;
+    settlers.forEach(s => { s.isPossessed = false; });
+    for (let f = 0; f < 240; f++) update(1 / 60);
+    const shot = projectiles.length > 0 || enemies[0].hp < enemies[0].maxHp;
+    const arrowsKept = archer.arrows === arrows0;
+    cancelBattleFight();
+    return { possessedInSetup, possessedInFight, shot, arrowsKept, phase: battle.phase,
+      backInPlace: settlers.length === 1 && settlers[0].x === at(12, 12).x && enemies[0].hp === enemies[0].maxHp && enemies[0].maxHp < 1e5 };
+  });
+  expect(r).toEqual({ possessedInSetup: false, possessedInFight: true, shot: true, arrowsKept: true, phase: 'setup', backInPlace: true });
 });
 
 test('your units only on the green side, enemies only on the red; armour, shield and buildings (#142)', async ({ page }) => {

@@ -29,8 +29,15 @@ function freeColor(wanted, other) {
   return GAME_CONFIG.factionColors.find(c => c !== other);
 }
 
+// The faction a custom map in Endless fixes for the player (#170), or null
+function getLockedPlayerFaction() {
+  return typeof mapSource !== 'undefined' && mapSource === 'custom' && customMap && customMap.faction ? customMap.faction : null;
+}
+
 function setSideFaction(side, faction) {
   if (!GAME_CONFIG.factions[faction] || !GAME_CONFIG.factions[faction].ready) return;
+  const locked = side === 'player' && getLockedPlayerFaction();
+  if (locked && faction !== locked) return;
   const other = side === 'player' ? sides.enemy : sides.player;
   sides[side].faction = faction;
   sides[side].color = freeColor(GAME_CONFIG.factions[faction].color, other.color);
@@ -70,7 +77,8 @@ function renderFactionPicker() {
       const button = document.createElement('button');
       button.className = 'faction-option' + (sides[side].faction === faction.id ? ' active' : '');
       button.dataset.faction = faction.id;
-      button.disabled = !faction.ready;
+      const locked = side === 'player' && getLockedPlayerFaction();
+      button.disabled = !faction.ready || (!!locked && faction.id !== locked);
       button.textContent = faction.ready ? faction.label : `${faction.label} · ${t('menu.soon')}`;
       onTap(button, () => setSideFaction(side, faction.id));
       row.appendChild(button);
