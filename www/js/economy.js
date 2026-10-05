@@ -30,18 +30,34 @@ function isFoodKind(type) {
 }
 
 // Ready food of a kind into the stock
+// The start's food as a random mix of kinds (#169)
+function mixStartFood() {
+  const kinds = Object.keys(GAME_CONFIG.foodKinds);
+  foodMix = {};
+  for (let i = 0; i < Math.floor(stock.food); i++) {
+    const kind = kinds[Math.floor(rand() * kinds.length)];
+    foodMix[kind] = (foodMix[kind] || 0) + 1;
+  }
+  syncFoodMix();
+}
+
 function addFood(kind, amount) {
   syncFoodMix();
   stock.food += amount;
   foodMix[kind] = (foodMix[kind] || 0) + amount;
 }
 
-// Keep the kinds adding up to stock.food: food added without a kind counts as provisions, and food spent
-// or eaten comes off the kinds in GAME_CONFIG.foodKinds order
+// Keep the kinds adding up to stock.food: food added without a kind goes, a piece at a time, to whichever
+// kind there's least of; food spent or eaten comes off the kinds in GAME_CONFIG.foodKinds order
 function syncFoodMix() {
   const kinds = Object.keys(GAME_CONFIG.foodKinds);
   let diff = stock.food - kinds.reduce((sum, k) => sum + (foodMix[k] || 0), 0);
-  if (diff > 0) foodMix.provisions = (foodMix.provisions || 0) + diff;
+  while (diff > 1e-9) {
+    const least = kinds.reduce((a, b) => ((foodMix[b] || 0) < (foodMix[a] || 0) ? b : a));
+    const piece = Math.min(1, diff);
+    foodMix[least] = (foodMix[least] || 0) + piece;
+    diff -= piece;
+  }
   for (const kind of kinds) {
     if (diff >= 0) break;
     const take = Math.min(foodMix[kind] || 0, -diff);

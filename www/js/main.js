@@ -20,12 +20,23 @@ function saveSetting(name, value) {
   try { localStorage.setItem(`sovereign-will-${name}`, value); } catch (e) { /* not remembered */ }
 }
 
+// Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
+function isDefeated() {
+  return gameStarted && gameMode === 'endless' && (townHall.hp <= 0 || settlers.length === 0);
+}
+
+// One step of the game, unless it's lost: then the world stops and no more waves come (#169)
+function stepGame(dt) {
+  if (isDefeated()) return;
+  update(dt);
+}
+
 function gameLoop(now) {
   stepTime += Math.min(0.25, (now - lastTime) / 1000);
   lastTime = now;
   let steps = 0;
   while (stepTime >= STEP && steps < MAX_STEPS_PER_FRAME) {
-    update(STEP);
+    stepGame(STEP);
     stepTime -= STEP;
     steps++;
   }

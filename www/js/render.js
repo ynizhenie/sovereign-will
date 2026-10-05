@@ -104,11 +104,16 @@ function getHarvestMaxHp(resource) {
 
 function drawHarvestProgress(resource, width = 24) {
   let maxHp = getHarvestMaxHp(resource);
-  let progress = Math.max(0, Math.min(1, (maxHp - Math.max(0, resource.hp)) / maxHp));
+  drawProgressBar(resource.x, resource.y, (maxHp - Math.max(0, resource.hp)) / maxHp, width);
+}
+
+// A small yellow bar above a thing being worked on, share 0..1 done
+function drawProgressBar(cx, cy, share, width = 24) {
+  const progress = Math.max(0, Math.min(1, share));
   if (progress <= 0) return;
 
-  let x = resource.x - width / 2;
-  let y = resource.y - 20;
+  let x = cx - width / 2;
+  let y = cy - 20;
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(x, y, width, 4);
   ctx.fillStyle = '#f1c40f';
@@ -248,6 +253,25 @@ function drawDamage(x, y, half, share) {
       ctx.closePath(); ctx.fill();
     }
   }
+}
+
+// An arrow in flight: a shaft along its way, a grey head, pale fletching (enemies' red)
+function drawArrow(proj) {
+  ctx.save();
+  ctx.translate(proj.x, proj.y);
+  ctx.rotate(Math.atan2(proj.vy, proj.vx));
+  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-9, -0.75, 13, 1.5);
+  ctx.fillStyle = '#bdc3c7'; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(3, -2.5); ctx.lineTo(3, 2.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = proj.fromEnemy ? '#e74c3c' : '#ecf0f1';
+  ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-12, 2.5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// A demon portal in its side's colour (#177): a dark rim, the colour, a bright heart
+function drawPortal(x, y, color) {
+  ctx.fillStyle = shadeColor(color, -0.55); ctx.beginPath(); ctx.ellipse(x, y, 10, 13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(x, y, 7.5, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = shadeColor(color, 0.65); ctx.beginPath(); ctx.ellipse(x, y, 3, 5.5, 0, 0, Math.PI * 2); ctx.fill();
 }
 
 // A demon's horns (#43): two dark points on top of the body
@@ -456,6 +480,8 @@ function render() {
         for (const [ax, ay] of [[-6, -5], [5, -7], [6, 4], [-4, 6], [0, -1]]) { ctx.beginPath(); ctx.arc(t.x + ax, t.y + ay, 2.2, 0, Math.PI * 2); ctx.fill(); }
       }
       drawHarvestProgress(t);
+      // apples being picked (#176): pickShare is kept up only while someone is at it
+      if (t.apple && t.pickShare > 0 && pathTick - t.pickTick < 3) drawProgressBar(t.x, t.y, t.pickShare);
     }
   });
 
@@ -485,7 +511,7 @@ function render() {
 
   berryBushes.forEach(b => {
     ctx.fillStyle = '#1e824c'; ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e74c3c';
+    ctx.fillStyle = '#5b6ee1'; // blue, as the Berries icon (#169)
     ctx.beginPath(); ctx.arc(b.x - 4, b.y - 3, 3, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(b.x + 4, b.y - 2, 3, 0, Math.PI * 2); ctx.fill();
     drawHarvestProgress(b, 22);
@@ -585,7 +611,8 @@ function render() {
       ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'door', b.x, b.y, 16);
     } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
-      drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons' (#43)
+      if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour (#177)
+      else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons' (#43)
     } else if (b.type === 'tent') {
       ctx.fillStyle = '#d35400'; ctx.beginPath();
       ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
@@ -685,7 +712,8 @@ function render() {
       // the undead's spawners are graves, the demons' portals (#43), ringed in the enemy's colour
       ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
-      drawIcon(ctx, getEnemyFaction().spawner, et.x, et.y, 28);
+      if (getEnemyFaction().spawner === 'portal') drawPortal(et.x, et.y, getEnemyColor());
+      else drawIcon(ctx, getEnemyFaction().spawner, et.x, et.y, 28);
     } else {
       ctx.fillStyle = '#641e16'; ctx.beginPath();
       ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
@@ -872,9 +900,9 @@ function render() {
   });
 
   projectiles.forEach(proj => {
-    // fireballs (#43) bigger and orange
+    // fireballs (#43) bigger and orange; everything else is an arrow, pointing where it flies (#173)
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
-    else ctx.fillStyle = proj.fromEnemy ? '#e74c3c' : (proj.fromTower ? '#95a5a6' : '#f1c40f');
+    else { drawArrow(proj); return; }
     ctx.beginPath(); ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2); ctx.fill();
   });
 

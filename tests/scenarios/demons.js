@@ -91,10 +91,63 @@ Object.assign(window.sim, (() => {
     const kinds = [...new Set(enemies.map(en => en.enemyKey))];
     return {
       portals: enemyTents.length, farFromBase: enemyTents.every(p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist),
-      byPortals: enemies.every(en => enemyTents.some(p => Math.hypot(p.x - en.x, p.y - en.y) < 40)),
+      byPortals: enemies.every(en => enemyTents.some(p => Math.hypot(p.x - en.x, p.y - en.y) < 2.5 * TILE_SIZE * Math.SQRT2)),
       demons: kinds.every(k => k.startsWith('demon_')), enemies: enemies.length
     };
   }
 
   return { demonColony, eatsCorpse, sacrifice, portals, demonWave };
+})());
+
+// Demon enemies out of portals (#177): each starts on a free tile and gets going; there are only as many
+// portals as there'd be tents
+Object.assign(window.sim, (() => {
+  const { start, run } = window.sim;
+  function demonPortals({ seed = 'demon-portal-spawn' } = {}) {
+    sides.enemy.faction = 'demons';
+    start(seed);
+    window.showNotification = () => {};
+    settlers = [settlers[0]];
+    const counts = [];
+    let onFreeTiles = true, allMoved = true;
+    for (let wave = 0; wave < 5; wave++) {
+      enemies = [];
+      startNextWave();
+      for (const en of enemies) {
+        const g = getGridPos(en.x, en.y);
+        if (isTileBlockedForEnemyStrict(g.gx, g.gy)) onFreeTiles = false;
+        en.start = { x: en.x, y: en.y };
+      }
+      run(3, { each: () => { waveTimer = 50; } });
+      if (enemies.some(en => Math.hypot(en.x - en.start.x, en.y - en.start.y) < 20)) allMoved = false;
+      counts.push(enemyTents.length);
+    }
+    return { onFreeTiles, allMoved, portals: counts };
+  }
+  return { demonPortals };
+})());
+
+Object.assign(window.sim, (() => {
+  const { start, helpers: { tileCenter, clearResources } } = window.sim;
+  // A portal in a thicket with one free tile beside it: every enemy comes out onto a free tile
+  function portalInThicket({ seed = 'portal-thicket' } = {}) {
+    sides.enemy.faction = 'demons';
+    start(seed);
+    clearResources();
+    const g = getGridPos(townHall.x, townHall.y);
+    const p = tileCenter(g.gx + 10, g.gy);
+    enemyTents = [{ ...p, hp: 60, maxHp: 60, portal: true }];
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      if ((dx || dy) && !(dx === -1 && dy === 0)) trees.push({ ...tileCenter(g.gx + 10 + dx, g.gy + dy), hp: 3, maxHp: 3, isGrowing: false, growProgress: 0, priority: 0 });
+    }
+    resetTileIndex();
+    let blocked = 0;
+    for (let i = 0; i < 30; i++) {
+      const at = getWaveSpawnPos();
+      const t = getGridPos(at.x, at.y);
+      if (isTileBlockedForEnemyStrict(t.gx, t.gy)) blocked++;
+    }
+    return { blocked };
+  }
+  return { portalInThicket };
 })());
