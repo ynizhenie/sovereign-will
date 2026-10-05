@@ -158,6 +158,17 @@ function applyHeldItemPose(unit) {
   ctx.translate(pose.push, 0);
 }
 
+// Nothing to do (#171): a settler puts what it holds on its back (not in a battle, where it waits to fight)
+function isResting(s) {
+  return s.activity === 'patrol' && !s.isPossessed && !(s.swingT > 0) && gameMode !== 'battle';
+}
+
+// The held item across the back: turned square to where the unit faces, behind it
+function applyBackPose(unit) {
+  ctx.rotate((unit.facing || 0) + Math.PI / 2);
+  ctx.translate(-15, unit.visualRadius * 0.7);
+}
+
 // Blood on the blade of the held item, fading (see bleed)
 function drawWeaponBlood(unit) {
   const alpha = bloodAlpha(unit.weaponBloodAge);
@@ -544,6 +555,8 @@ function render() {
       ctx.fillStyle = '#b85c4a';
       ctx.fillRect(b.x - 4, b.y + 1, 5, 3);
       ctx.strokeStyle = '#2b1b17'; ctx.lineWidth = 2; ctx.stroke();
+      drawBodyBlood(b, 9);
+      if (b.butcher > 0) drawProgressBar(b.x, b.y - 14, b.butcher, 24);
       ctx.restore();
       return;
     }
@@ -551,6 +564,7 @@ function render() {
     ctx.fillStyle = '#a0522d'; ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.stroke();
     drawIcon(ctx, 'boar', b.x, b.y, 17);
+    drawBodyBlood(b, 11);
     if (b.hp < b.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
       ctx.fillStyle = '#e74c3c'; ctx.fillRect(b.x - 12, b.y - 16, (b.hp / b.maxHp) * 24, 3);
@@ -827,7 +841,8 @@ function render() {
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.save();
-    applyHeldItemPose(s);
+    if (isResting(s)) applyBackPose(s);
+    else applyHeldItemPose(s);
     if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
     } else if (!drawHeldWeapon(s.weapon)) {

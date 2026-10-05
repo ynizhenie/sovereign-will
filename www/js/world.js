@@ -725,7 +725,7 @@ function resetGame(map = gameMode === 'endless' ? customMap : null) {
   addResources(getPlayerFaction().startResources);
   if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food (#164)
   if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings (#43)
-  waveTimer = waveInterval; foodTimer = 25; boarRespawnTimer = 25; waveNum = 1;
+  waveTimer = waveInterval; boarRespawnTimer = 25; waveNum = 1;
   setWorldSize((map || mapSettings).cols, (map || mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable (#135)
   townHall.repairRequested = false;

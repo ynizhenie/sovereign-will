@@ -94,7 +94,7 @@ function setUpBattleField() {
   forests = [];
   settlers = [];
   townHall.x = -10000; townHall.y = -10000; townHall.hp = townHall.maxHp = 1e9;
-  waveTimer = Infinity; foodTimer = Infinity; boarRespawnTimer = Infinity;
+  waveTimer = Infinity; boarRespawnTimer = Infinity;
   invalidateAllPaths();
   camera.x = WORLD_WIDTH / 2; camera.y = WORLD_HEIGHT / 2; setZoom(0); clampCamera();
 }

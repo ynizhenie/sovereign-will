@@ -21,8 +21,8 @@ test('wood and stone always show; worms are raw food and get eaten when food run
   expect(tiles.filter(text => text.startsWith('[[stone]] Камень:'))).toHaveLength(1);
   const r = await page.evaluate(() => {
     stock.food = 1; stock.worms = 5;
-    foodTimer = 0.001;
-    update(1 / 60); // one meal: 2 settlers, 1 food -> 1 worm
+    settlers.forEach(s => { s.hunger = 0.001; });
+    update(1 / 60); // one meal each: 2 settlers, 1 food -> 1 worm
     return { food: stock.food, worms: stock.worms, rawGroup: GAME_CONFIG.resourceGroups.find(g => g.id === 'raw').members.includes('worms') };
   });
   expect(r).toEqual({ food: 0, worms: 4, rawGroup: true });

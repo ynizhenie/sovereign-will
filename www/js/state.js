@@ -78,7 +78,6 @@ let cameraDragPoint = { x: 0, y: 0 };
 let waveInterval = 90;
 let waveTimer = waveInterval;
 let gameStarted = false;
-let foodTimer = 25;
 let boarRespawnTimer = 25;
 const BOAR_LIMIT = 5;
 let waveNum = 1;
