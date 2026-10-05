@@ -49,7 +49,7 @@ function eatMeal(s) {
 }
 
 function update(dt) {
-  if (!gameStarted || isPaused || gameMode === 'editor') return;
+  if ((!gameStarted && gameMode !== 'menu') || isPaused || gameMode === 'editor') return; // the menu's world runs too (#193)
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (gameMode === 'battle') {
     updateBattle(dt);

@@ -734,7 +734,9 @@ function removeBuilding(building) {
   invalidateAllPaths();
 }
 
-function resetGame(map = gameMode === 'endless' ? customMap : null) {
+function resetGame(map) {
+  if (gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu (#193)
+  if (map === undefined) map = gameMode === 'endless' ? customMap : null;
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);

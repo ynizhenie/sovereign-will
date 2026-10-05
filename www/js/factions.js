@@ -7,7 +7,7 @@ const FACTION_STORAGE_KEY = 'sovereign-will-factions';
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour (#167)
 function getSettlerColor(s) {
-  const color = gameMode === 'battle' ? '#27ae60' : sides.player.color;
+  const color = gameMode === 'battle' ? '#27ae60' : gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
 }
 
