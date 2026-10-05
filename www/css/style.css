@@ -845,3 +845,22 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   flex: 1;
   width: auto;
 }
+
+/* a selected settler's box keeps one size whatever it does or carries (#188): long lines end in … */
+.selected-unit-box.has-settler { width: min(94vw, 360px); box-sizing: border-box; }
+.selected-unit-box.has-settler > div:first-child { justify-content: space-between; }
+.selected-unit-box.has-settler > div:first-child > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selected-unit-box.has-settler #selected-info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 15px; line-height: 15px; }
+
+/* on a phone the bottom panel stays compact (#188): tighter tiles, the hire buttons in one row,
+   lower tabs and a shorter tab area */
+@media (max-width: 767px) {
+  #bottom-panel { padding: 4px 6px; gap: 3px; }
+  .resources-grid div, .resource-group-members div { padding: 2px 2px; line-height: 1.25; }
+  .recruit-row { flex-wrap: nowrap; margin-bottom: 0; }
+  .recruit-row .btn { padding: 4px 5px; font-size: 10px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .tab-btn { padding: 3px 0; font-size: 10.5px; }
+  .tab-content-container { height: 100px; max-height: 100px; }
+  /* clear of the Point button on the right */
+  .selected-unit-box.has-settler { left: 6px; transform: none; width: min(calc(100vw - 90px), 360px); }
+}

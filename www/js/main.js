@@ -167,6 +167,7 @@ const startGame = (e) => {
     if (e) e.preventDefault();
     applySeedFromUI();
     resetGame();
+    openTab('tab-build'); // a new game starts on the Building tab (#188)
     gameStarted = true;
     mainMenu.style.display = 'none';
 };

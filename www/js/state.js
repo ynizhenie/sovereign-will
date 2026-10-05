@@ -97,7 +97,7 @@ const WORLD = {
   berryBushes: [],
   farmPlots: [],
   farmZones: [],        // { x, y, crop } tiles the player marked for farmers to plant, see tendFarmZones()
-  blightZones: [],      // { x, y, done } tiles the player marked for blight, see necromancy() (#164)
+  blightZones: [],      // { x, y, done, clearing } tiles the player marked for blight, see necromancy() (#164, #186)
   naturalRocks: [],
   waterTiles: [],
   desertTiles: [],
