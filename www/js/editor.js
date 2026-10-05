@@ -277,7 +277,7 @@ function startEditor(source) {
     mapSettings = endlessSize;
   }
   settlers = []; enemies = []; corpses = [];
-  waveTimer = Infinity; foodTimer = Infinity; boarRespawnTimer = Infinity;
+  waveTimer = Infinity; boarRespawnTimer = Infinity;
   resetTileIndex();
   setZoom(0); clampCamera();
   gameStarted = true;

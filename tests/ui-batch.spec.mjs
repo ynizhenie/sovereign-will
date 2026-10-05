@@ -41,7 +41,7 @@ test('the selected settler shows what it is doing, when it eats, and what it car
     const s = settlers[0];
     s.carrying = { type: 'wood', amount: 3 };
     s.activity = 'deliverCarrying';
-    foodTimer = 12.2;
+    s.hunger = 12.2;
     selectedSettler = s;
     updateUI();
   });

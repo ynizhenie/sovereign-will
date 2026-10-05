@@ -37,6 +37,17 @@ function raiseOnBlight(dt) {
   }
 }
 
+// One settler's meal (#178): food from the stock (2 for a big one), worms when it runs short; a few
+// meals in, it needs to go (see relieve)
+function eatMeal(s) {
+  const cost = isBigBody(s) ? 2 : 1;
+  const short = Math.max(0, cost - stock.food);
+  stock.food = Math.max(0, stock.food - cost);
+  stock.worms = Math.max(0, (stock.worms || 0) - short);
+  s.meals = (s.meals || 0) + 1;
+  if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
+}
+
 function update(dt) {
   if (!gameStarted || isPaused || gameMode === 'editor') return;
   // battle mode: units stand still while being placed, and the result shows for a moment
@@ -85,21 +96,14 @@ function update(dt) {
   updateBurning(dt);
   raiseOnBlight(dt);
 
-  // meals, for a faction that eats (the undead don't)
-  foodTimer -= dt;
-  if (foodTimer <= 0 && !getPlayerFaction().eats) foodTimer = 25;
-  if (foodTimer <= 0) {
-    let mealCost = settlers.reduce((sum, s) => sum + (isBigBody(s) ? 2 : 1), 0);
-    // short of food, the colony eats worms
-    const short = Math.max(0, mealCost - stock.food);
-    stock.food = Math.max(0, stock.food - mealCost);
-    stock.worms = Math.max(0, (stock.worms || 0) - short);
-    // a few meals in, a settler needs to go (see relieve)
+  // meals, each settler on its own clock (#178), for a faction that eats (the undead don't)
+  if (gameMode === 'endless' && getPlayerFaction().eats) {
+    const meals = GAME_CONFIG.meals;
     for (const s of settlers) {
-      s.meals = (s.meals || 0) + 1;
-      if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
+      if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
+      s.hunger -= dt;
+      if (s.hunger <= 0) { s.hunger = meals.seconds; eatMeal(s); }
     }
-    foodTimer = 25;
   }
 
   if (boars.length < BOAR_LIMIT) {
@@ -130,6 +134,7 @@ function update(dt) {
   });
 
   boars.forEach(b => {
+    if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) return;
 
     if (b.hidden) {
@@ -328,15 +333,8 @@ function update(dt) {
       for (let j = boars.length - 1; j >= 0 && !hit; j--) {
         let b = boars[j];
         if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - proj.x, b.y - proj.y) < 12) {
-          b.hp -= proj.damage;
-          makeBoarFlee(b, proj.owner ? proj.owner.x : proj.x, proj.owner ? proj.owner.y : proj.y);
+          woundBoar(b, proj.damage, proj.owner || null, proj.owner ? proj.owner.x : proj.x, proj.owner ? proj.owner.y : proj.y);
           hit = true;
-          if (b.hp <= 0) {
-            b.isCarcass = true;
-            b.collector = proj.owner || null;
-            b.fleeTimer = 0;
-            b.hideTarget = null;
-          }
         }
       }
     }

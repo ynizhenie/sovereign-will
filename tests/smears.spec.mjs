@@ -17,7 +17,7 @@ test('whoever left the dung does not step in it before walking off (#124)', asyn
   expect(r.later).toBe(6);
 });
 
-test('after three meals a settler relieves itself near grass, away from the buildings (#124)', async ({ page }) => {
+test('after five meals a settler relieves itself near grass, away from the buildings (#124)', async ({ page }) => {
   await openGame(page);
   expect(await sim(page, 'relief', {})).toEqual({ needs: true, piles: 1, stillNeeds: false, meals: 0, awayFromBuildings: true, nearGrass: true });
 });

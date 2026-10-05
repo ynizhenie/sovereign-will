@@ -1122,7 +1122,12 @@ function huntBoar(s, boar, tick) {
     if (dist > 25) {
       moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else {
-      finishHarvest(s, boar, 'boar');
+      // butchered where it lies, the blade going (#172)
+      boar.collector = s;
+      s.working = 0.1;
+      faceTowards(s, boar.x, boar.y);
+      boar.butcher = (boar.butcher || 0) + dt / GAME_CONFIG.mapResources.boar.butcherSeconds;
+      if (boar.butcher >= 1) finishHarvest(s, boar, 'boar');
     }
     s.patrolTarget = null;
     return;
@@ -1149,12 +1154,10 @@ function huntBoar(s, boar, tick) {
       if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y);
       else moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else if (!((boar.fleeTimer || 0) > 0 && boar.sprinting) && s.attackCooldown <= 0) { // not mid-sprint
-      makeBoarFlee(boar, s.x, s.y);
-      boar.hp -= hunt.damage * hunt.multiplier;
+      woundBoar(boar, hunt.damage * hunt.multiplier, s, s.x, s.y);
       s.attackCooldown = hunt.cooldown;
       startSwing(s, Math.min(0.35, hunt.cooldown * 0.8));
       faceTowards(s, boar.x, boar.y);
-      if (boar.hp <= 0) finishHarvest(s, boar, 'boar');
     }
   }
   s.patrolTarget = null;
