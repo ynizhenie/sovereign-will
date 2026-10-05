@@ -25,9 +25,9 @@ const GAME_CONFIG = {
   // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
   resourceGroups: [
     { id: 'food', members: ['food'], kinds: 'foodKinds' }, // Food, opening onto what it's made of
+    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'] }, // right after Food (#169)
     { id: 'wood', members: ['wood'] },
     { id: 'stone', members: ['stone'] },
-    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'] },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
     { id: 'materials', icon: 'stone', members: ['coal', 'ironOre', 'iron', 'leather'] },
     { id: 'supplies', members: ['arrows'] },
@@ -284,10 +284,10 @@ const GAME_CONFIG = {
     dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
 
   // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows
-  // what it's made of. Food that comes in without a kind (start, loot) counts as provisions, and food
-  // spent or eaten comes off in this order.
+  // what it's made of. The start's food is a random mix of these; food that comes in without a kind
+  // (loot) goes to whichever kind there's least of; food spent or eaten comes off in this order (#169).
   foodKinds: {
-    provisions: { id: 'provisions', icon: 'provisions' }, berries: { id: 'berries', icon: 'berries' }, apples: { id: 'apples', icon: 'apples' },
+    berries: { id: 'berries', icon: 'berries' }, apples: { id: 'apples', icon: 'apples' },
     bread: { id: 'bread', icon: 'bread' }, cookedFish: { id: 'cookedFish', icon: 'cookedFish' }, cookedMeat: { id: 'cookedMeat', icon: 'cookedMeat' }
   },
 

@@ -311,10 +311,6 @@ const ICONS = {
   appleSaplings: c => { icSprout(c); icCircle(c, '#e74c3c', 23, 21, 3.5); },
 
   // ---- Food kinds
-  provisions: c => {
-    icRound(c, '#95a5a6', 7, 6, 18, 22, 3); icRect(c, '#c0392b', 7, 11, 18, 12);
-    icRect(c, '#f5b7b1', 11, 15, 10, 4); icEllipse(c, '#bdc3c7', 16, 6, 9, 2);
-  },
   berries: c => {
     for (const [x, y] of [[11, 18], [19, 19], [15, 12], [22, 12], [15, 24]]) { icCircle(c, '#3f51b5', x, y, 4.2); icCircle(c, '#7986cb', x - 1.3, y - 1.3, 1.2); }
     icLine(c, '#27ae60', 1.5, [[15, 8], [18, 3]]);

@@ -26,3 +26,8 @@ test('generated maps have a few apple trees, the same ones for the same seed (#3
   expect(apple / grown).toBeGreaterThan(0.04);
   expect(apple / grown).toBeLessThan(0.2);
 });
+
+test('picking apples shows a progress bar on the tree (#176)', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'applePickBar')).toEqual({ shown: true, rising: true, picked: true });
+});
