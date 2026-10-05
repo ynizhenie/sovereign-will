@@ -142,6 +142,7 @@ function performAttack(attacker, targetX, targetY) {
       owner: attacker,
       fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's (#165)
     });
+    playSound('bow', attacker);
     if (gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles (#166)
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, 0.3);
@@ -151,7 +152,7 @@ function performAttack(attacker, targetX, targetY) {
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { en.hp -= dmg; bleed(en, attacker); } })),
+      ...enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { en.hp -= dmg; bleed(en, attacker); playSound('hit', en); } })),
       ...enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       ...boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
@@ -168,6 +169,7 @@ function performAttack(attacker, targetX, targetY) {
 
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, Math.min(0.35, stats.cooldown * 0.8));
+    playSound('swing', attacker);
   }
 }
 
