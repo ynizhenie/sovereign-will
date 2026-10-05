@@ -1,10 +1,11 @@
-// Behind the main menu (#145, #153, #168): a little scene of its own instead of the game, working the way
-// Endless does, on a small field drawn a size up. A settler with a spear hunts boars: a boar it gets close
-// to backs off, a wounded one sprints for a tuft of grass and hides there for a while; one it kills it
-// butchers beside it and carries the meat to a warehouse. Everything stands on the tile grid as in the
-// game (the warehouse, grass, trees and stones), and nothing goes behind the menu's panel. Tapping the
-// settler changes its faction (and colour); tapping a boar makes it the one to hunt. Runs only while
-// the menu shows.
+// Behind the main menu (#145, #153, #168, #187): a little scene of its own instead of the game, working the
+// way Endless does, on a small field drawn a size up. A settler with a spear hunts boars: a boar it gets
+// close to backs off, a wounded one sprints for a tuft of grass and hides there for a while; one it kills
+// it butchers beside it and carries the meat to a warehouse. Everything stands on the tile grid as in the
+// game (the warehouse, grass, trees and stones); trees, stones and the warehouse can't be walked through,
+// so units find their way round them. Things are laid out away from the menu's panel, but units walk
+// behind it. Tapping the settler changes its faction (and colour); tapping a boar makes it the one to
+// hunt. Runs only while the menu shows.
 
 const MENU_SCENE = {
   scale: 1.6,           // the field is drawn this much bigger than the game's
@@ -12,8 +13,10 @@ const MENU_SCENE = {
   wary: 80,             // a calm boar backs off from the hunter this close
   hideSeconds: 4,       // a wounded boar stays hidden in the grass this long
   boarHits: 3,          // blows to kill one
-  strikeReach: 26, strikeSeconds: 0.6,
+  // the spear's reach (#187): the hunter stops this far from the boar's centre and strikes within strikeReach
+  spearStop: 30, strikeReach: 40, strikeSeconds: 0.6,
   butcherSeconds: 2,    // as the boar's butcherSeconds in Endless
+  bodyRadius: 6,        // how close a unit's centre gets to a tree, stone or the warehouse
   boars: 2, maxGrass: 7, trees: 6, stones: 4
 };
 
@@ -26,8 +29,9 @@ const menuScene = {
   trees: [],
   stones: [],
   warehouse: null,
+  blocked: new Set(),   // 'gx,gy' of the tiles nobody walks through
   target: null,         // the boar the player tapped
-  panel: null, panelKey: '', // the menu panel's rect this frame (field px)
+  panel: null,          // the menu panel's rect when the scene was laid out (field px)
   grassTimer: 0,
   last: 0
 };
@@ -35,42 +39,34 @@ const menuScene = {
 const randomIn = (min, max) => min + Math.random() * (max - min);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-// Where the menu's panel is, in field px (with a margin): nothing goes there
+// Where the menu's panel is, in field px (with a margin): nothing is laid out there
 function measureMenuPanel() {
   const panel = [...document.querySelectorAll('#main-menu .main-menu-content')].find(p => !p.hidden);
   if (!panel) return null;
   const r = panel.getBoundingClientRect(), k = MENU_SCENE.scale, m = 14;
   return { left: r.left / k - m, top: r.top / k - m, right: r.right / k + m, bottom: r.bottom / k + m };
 }
-const menuPanelRect = () => menuScene.panel;
 
-function inPanel(p, rect = menuPanelRect(), pad = 0) {
+function inPanel(p, rect = menuScene.panel, pad = 0) {
   return !!rect && p.x > rect.left - pad && p.x < rect.right + pad && p.y > rect.top - pad && p.y < rect.bottom + pad;
 }
 
-// A free tile centre on the field, a tile clear of the panel (so the hunter can stand by it) and off
-// everything standing
+const menuCols = () => Math.ceil(menuScene.width / TILE_SIZE);
+const menuRows = () => Math.ceil(menuScene.height / TILE_SIZE);
+const tileOf = p => ({ gx: Math.floor(p.x / TILE_SIZE), gy: Math.floor(p.y / TILE_SIZE) });
+
+// A free tile centre on the field, a tile clear of the panel and off everything standing
 function menuSceneTile(margin = 1) {
   const cols = Math.floor(menuScene.width / TILE_SIZE), rows = Math.floor(menuScene.height / TILE_SIZE);
   const taken = [...menuScene.grass, ...menuScene.trees, ...menuScene.stones, menuScene.warehouse].filter(Boolean);
-  const rect = menuPanelRect();
   for (let attempt = 0; attempt < 80; attempt++) {
     const p = {
       x: (margin + Math.floor(Math.random() * Math.max(1, cols - 2 * margin))) * TILE_SIZE + 15,
       y: (margin + Math.floor(Math.random() * Math.max(1, rows - 2 * margin))) * TILE_SIZE + 15
     };
-    if (!inPanel(p, rect, TILE_SIZE) && !taken.some(o => o.x === p.x && o.y === p.y)) return p;
+    if (!inPanel(p, menuScene.panel, TILE_SIZE) && !taken.some(o => o.x === p.x && o.y === p.y)) return p;
   }
   return { x: 15 + TILE_SIZE, y: 15 + TILE_SIZE };
-}
-
-// Out of the panel's way: a unit inside it is put back over its nearest edge
-function keepOutOfPanel(unit) {
-  const rect = menuPanelRect();
-  if (!inPanel(unit, rect)) return;
-  const out = [[rect.left - unit.x, 0], [rect.right - unit.x, 0], [0, rect.top - unit.y], [0, rect.bottom - unit.y]]
-    .sort((a, b) => Math.hypot(...a) - Math.hypot(...b))[0];
-  unit.x += out[0]; unit.y += out[1];
 }
 
 function newMenuBoar() {
@@ -81,6 +77,7 @@ function newMenuBoar() {
   return { x, y, hp: MENU_SCENE.boarHits, target: menuSceneTile(), state: 'wander', timer: randomIn(2, 5), hiddenIn: null };
 }
 
+// Laid out once per window size (#187: not again on every menu screen)
 function resizeMenuScene() {
   const ratio = window.devicePixelRatio || 1;
   menuScene.canvas.width = Math.round(window.innerWidth * ratio);
@@ -88,57 +85,76 @@ function resizeMenuScene() {
   menuScene.width = window.innerWidth / MENU_SCENE.scale;
   menuScene.height = window.innerHeight / MENU_SCENE.scale;
   menuScene.panel = measureMenuPanel();
-  menuScene.panelKey = JSON.stringify(menuScene.panel);
   menuScene.grass = []; menuScene.trees = []; menuScene.stones = []; menuScene.warehouse = null;
   menuScene.warehouse = menuSceneTile(2);
   for (let i = 0; i < MENU_SCENE.trees; i++) menuScene.trees.push(menuSceneTile());
   for (let i = 0; i < MENU_SCENE.stones; i++) menuScene.stones.push(menuSceneTile());
+  menuScene.blocked = new Set([...menuScene.trees, ...menuScene.stones, menuScene.warehouse].map(p => `${tileOf(p).gx},${tileOf(p).gy}`));
+  // nobody left standing in what was just put down
+  for (const unit of [menuScene.hunter, ...menuScene.boars]) {
+    unit.path = null;
+    if (blockedAt(unit.x, unit.y)) Object.assign(unit, menuSceneTile());
+  }
 }
 
-// Whether the straight way from a to b goes over the panel (sampled along it)
-function crossesPanel(a, b, rect) {
-  for (let i = 1; i < 20; i++) {
-    if (inPanel({ x: a.x + (b.x - a.x) * i / 20, y: a.y + (b.y - a.y) * i / 20 }, rect)) return true;
+// Whether a unit's centre here would be in a tree, a stone or the warehouse (#187)
+function blockedAt(x, y) {
+  const r = MENU_SCENE.bodyRadius;
+  for (const [dx, dy] of [[-r, -r], [r, -r], [-r, r], [r, r]]) {
+    if (menuScene.blocked.has(`${Math.floor((x + dx) / TILE_SIZE)},${Math.floor((y + dy) / TILE_SIZE)}`)) return true;
   }
   return false;
 }
 
-// Where to head for `target`: straight there, or the first corner of the shortest way round the panel
-function aroundPanel(unit, target) {
-  const rect = menuPanelRect();
-  if (!rect || !crossesPanel(unit, target, rect)) return target;
-  const pad = 6;
-  const nodes = [unit, target, ...[[rect.left, rect.top], [rect.right, rect.top], [rect.left, rect.bottom], [rect.right, rect.bottom]]
-    .map(([x, y]) => ({ x: x + (x === rect.left ? -pad : pad), y: y + (y === rect.top ? -pad : pad) }))];
-  // Dijkstra over the six points, from the unit
-  const cost = nodes.map((n, i) => (i === 0 ? 0 : Infinity)), first = [], done = new Set();
-  while (done.size < nodes.length) {
-    let i = -1;
-    nodes.forEach((n, j) => { if (!done.has(j) && (i < 0 || cost[j] < cost[i])) i = j; });
-    if (cost[i] === Infinity) break;
-    done.add(i);
-    nodes.forEach((n, j) => {
-      if (done.has(j) || crossesPanel(nodes[i], n, rect)) return;
-      const c = cost[i] + distance(nodes[i], n);
-      if (c < cost[j]) { cost[j] = c; first[j] = i === 0 ? n : first[i]; }
-    });
+// The tiles from `from` to `to` round what blocks the way (4-way, so no corners are cut); the goal tile
+// itself may be blocked (the warehouse), the way ends beside it then
+function findMenuPath(from, to) {
+  const cols = menuCols(), rows = menuRows();
+  const clamp = t => ({ gx: Math.max(0, Math.min(cols - 1, t.gx)), gy: Math.max(0, Math.min(rows - 1, t.gy)) });
+  const start = clamp(tileOf(from)), goal = clamp(tileOf(to));
+  const key = t => `${t.gx},${t.gy}`;
+  const came = new Map([[key(start), null]]);
+  const queue = [start];
+  for (let i = 0; i < queue.length; i++) {
+    const c = queue[i];
+    if (c.gx === goal.gx && c.gy === goal.gy) break;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const n = { gx: c.gx + dx, gy: c.gy + dy };
+      if (n.gx < 0 || n.gy < 0 || n.gx >= cols || n.gy >= rows || came.has(key(n))) continue;
+      if (menuScene.blocked.has(key(n)) && !(n.gx === goal.gx && n.gy === goal.gy)) continue;
+      came.set(key(n), c);
+      queue.push(n);
+    }
   }
-  return first[1] || target;
+  if (!came.has(key(goal))) return [];
+  const tiles = [];
+  for (let t = goal; t; t = came.get(key(t))) tiles.unshift(t);
+  return tiles.slice(1, -1).map(t => ({ x: t.gx * TILE_SIZE + 15, y: t.gy * TILE_SIZE + 15 }));
 }
 
-function moveToward(unit, target, speed, dt) {
-  const way = aroundPanel(unit, target);
-  if (way !== target) { stepToward(unit, way, speed, dt); return distance(unit, target); }
-  return stepToward(unit, target, speed, dt);
-}
-
+// One step, sliding along whatever blocks it
 function stepToward(unit, target, speed, dt) {
   const dx = target.x - unit.x, dy = target.y - unit.y, d = Math.hypot(dx, dy);
   if (d < 1) return 0;
   const step = Math.min(d, speed * dt);
-  unit.x += dx / d * step;
-  unit.y += dy / d * step;
+  const nx = unit.x + dx / d * step, ny = unit.y + dy / d * step;
+  // caught inside one (laid out on top of it): out it walks
+  if (!blockedAt(nx, ny) || blockedAt(unit.x, unit.y)) { unit.x = nx; unit.y = ny; }
+  else if (!blockedAt(nx, unit.y)) unit.x = nx;
+  else if (!blockedAt(unit.x, ny)) unit.y = ny;
   return d;
+}
+
+// Towards `target` along a way round trees, stones and the warehouse; the distance left to it
+function moveToward(unit, target, speed, dt) {
+  const goal = tileOf(target);
+  const goalKey = `${goal.gx},${goal.gy}`;
+  if (!unit.path || unit.path.goal !== goalKey || unit.path.age > 0.5) unit.path = { goal: goalKey, age: 0, tiles: findMenuPath(unit, target) };
+  unit.path.age += dt;
+  const tiles = unit.path.tiles;
+  while (tiles.length && distance(tiles[0], unit) < 4) tiles.shift();
+  if (tiles.length) { stepToward(unit, tiles[0], speed, dt); return distance(unit, target); }
+  return stepToward(unit, target, speed, dt);
 }
 
 function nearestGrass(from) {
@@ -164,16 +180,16 @@ function updateMenuBoars(dt) {
       const fromHunter = distance(boar, hunter);
       if (fromHunter < MENU_SCENE.wary && fromHunter > 1) {
         // wary: backs off, slower than the hunter, so it can be caught
-        boar.x += (boar.x - hunter.x) / fromHunter * MENU_SCENE.waryFleeSpeed * dt;
-        boar.y += (boar.y - hunter.y) / fromHunter * MENU_SCENE.waryFleeSpeed * dt;
-        boar.x = Math.max(10, Math.min(menuScene.width - 10, boar.x));
-        boar.y = Math.max(10, Math.min(menuScene.height - 10, boar.y));
+        const away = {
+          x: Math.max(10, Math.min(menuScene.width - 10, boar.x + (boar.x - hunter.x) / fromHunter * 30)),
+          y: Math.max(10, Math.min(menuScene.height - 10, boar.y + (boar.y - hunter.y) / fromHunter * 30))
+        };
+        stepToward(boar, away, MENU_SCENE.waryFleeSpeed, dt);
       } else {
         boar.timer -= dt;
         if (boar.timer <= 0 || moveToward(boar, boar.target, MENU_SCENE.boarSpeed, dt) < 4) { boar.target = menuSceneTile(); boar.timer = randomIn(3, 6); }
       }
     }
-    if (boar.state !== 'carcass') keepOutOfPanel(boar);
   }
 }
 
@@ -181,16 +197,18 @@ function updateMenuHunter(dt) {
   const { hunter, boars, warehouse } = menuScene;
   hunter.swing = Math.max(0, hunter.swing - dt);
   hunter.cooldown = Math.max(0, hunter.cooldown - dt);
+  // up to `stopAt` from the target, facing it; the distance to it
   const go = (target, speed = MENU_SCENE.hunterSpeed, stopAt = 0) => {
-    hunter.facing = Math.atan2(target.y - hunter.y, target.x - hunter.x);
     const d = distance(target, hunter);
-    if (d > stopAt) moveToward(hunter, { x: target.x - Math.cos(hunter.facing) * stopAt, y: target.y - Math.sin(hunter.facing) * stopAt }, speed, dt);
-    return d;
+    if (d > stopAt) moveToward(hunter, target, speed, dt);
+    const towards = hunter.path && hunter.path.tiles.length && d > stopAt ? hunter.path.tiles[0] : target;
+    hunter.facing = Math.atan2(towards.y - hunter.y, towards.x - hunter.x);
+    return distance(target, hunter);
   };
 
   // carrying meat: up to the warehouse, beside it
   if (hunter.carrying) {
-    if (go(warehouse, MENU_SCENE.hunterSpeed, 20) < 24) hunter.carrying = null;
+    if (go(warehouse, MENU_SCENE.hunterSpeed, 22) < 28) hunter.carrying = null;
   } else {
     const carcass = boars.find(b => b.state === 'carcass');
     if (carcass) {
@@ -208,13 +226,13 @@ function updateMenuHunter(dt) {
         }
       }
     } else {
-      // the boar the player picked, or the nearest it can see: up to it, and a blow
+      // the boar the player picked, or the nearest it can see: within the spear's reach, and a thrust
       const visible = b => b.state === 'wander' || b.state === 'sprint';
       if (menuScene.target && !boars.includes(menuScene.target)) menuScene.target = null;
       const prey = (menuScene.target && visible(menuScene.target) ? menuScene.target : null) ||
         boars.filter(visible).sort((a, b) => distance(a, hunter) - distance(b, hunter))[0];
       if (prey) {
-        if (go(prey) < MENU_SCENE.strikeReach && hunter.cooldown <= 0) {
+        if (go(prey, MENU_SCENE.hunterSpeed, MENU_SCENE.spearStop) < MENU_SCENE.strikeReach && hunter.cooldown <= 0) {
           hunter.swing = 0.3;
           hunter.cooldown = MENU_SCENE.strikeSeconds;
           prey.hp--;
@@ -228,7 +246,6 @@ function updateMenuHunter(dt) {
       }
     }
   }
-  keepOutOfPanel(hunter);
 }
 
 function updateMenuScene(dt) {
@@ -328,10 +345,8 @@ function menuSceneFrame(now) {
   const dt = Math.min(0.05, (now - (menuScene.last || now)) / 1000);
   menuScene.last = now;
   if (!showing) return;
-  // re-laid when the window or the panel (another menu screen) changes, so nothing stands behind it
-  menuScene.panel = measureMenuPanel();
   if (menuScene.canvas.width !== Math.round(window.innerWidth * (window.devicePixelRatio || 1)) ||
-    JSON.stringify(menuScene.panel) !== menuScene.panelKey) resizeMenuScene();
+    menuScene.canvas.height !== Math.round(window.innerHeight * (window.devicePixelRatio || 1))) resizeMenuScene();
   updateMenuScene(dt);
   drawMenuScene();
 }

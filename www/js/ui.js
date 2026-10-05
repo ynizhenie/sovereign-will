@@ -49,6 +49,7 @@ function updateUI() {
     selectedSettler = null;
     document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
     document.getElementById('selected-info').hidden = true;
+    document.getElementById('selected-bar').classList.remove('has-settler');
     document.getElementById('btn-deselect').style.display = 'none';
     if (btnUpgrade) {
       btnUpgrade.style.display = 'none';
@@ -69,6 +70,7 @@ function renderSettlerInfo(s) {
   if (carried) parts.push(`${t('info.carries')} ${carried}`);
   const info = document.getElementById('selected-info');
   info.hidden = false;
+  document.getElementById('selected-bar').classList.add('has-settler'); // a fixed size, whatever it carries (#188)
   setRichText(info, parts.join(' · '));
 }
 

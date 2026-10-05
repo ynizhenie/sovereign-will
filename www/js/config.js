@@ -27,6 +27,8 @@ const GAME_CONFIG = {
   // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
   resourceGroups: [
     // factions: only these factions see it (the undead have no food, #164)
+    { id: 'bones', members: ['bones'], factions: ['undead'] }, // the undead's own, first (#188)
+    { id: 'rot', members: ['rot'], factions: ['undead'] },
     { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'] }, // Food, opening onto what it's made of
     { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food (#169)
     { id: 'wood', members: ['wood'] },
@@ -322,10 +324,11 @@ const GAME_CONFIG = {
   // burning arrows (#165): what they hit burns for seconds, losing dps hp a second
   burning: { seconds: 3, dps: 5 },
   // the undead (#164): a raised zombie lasts lifeSeconds, then crumbles into rot; blight lies within
-  // hallTiles of the graveyard and graveTiles of each grave, and on marked ground a necromancer blighted;
-  // enemies on it go at slowFactor of their speed, and a corpse on it rises after riseSeconds
+  // hallTiles of the graveyard on every side and graveTiles of each grave (#186), and on marked ground a
+  // necromancer blighted; enemies on it go at slowFactor of their speed, and a corpse on it rises after
+  // riseSeconds. A blighted zone the player takes away fades over clearSeconds, blighted till then (#186).
   temporaryZombie: { lifeSeconds: 60, rot: 1 },
-  blight: { hallTiles: 3, graveTiles: 1, slowFactor: 0.6, riseSeconds: 4 },
+  blight: { hallTiles: 2, graveTiles: 1, slowFactor: 0.6, riseSeconds: 4, clearSeconds: 5 },
 
   start: {
     // stock at the start of a game (ids from `resources`)

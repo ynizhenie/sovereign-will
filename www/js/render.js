@@ -378,9 +378,12 @@ function render() {
   // farm zones: a tint and a frame in the crop's colour
   const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
   // the undead's blighted ground (#164), and ground marked for it (while the Blight tab is open)
-  for (const key of getBlightKeys()) {
+  const fading = new Map(blightZones.filter(z => z.clearing !== undefined).map(z => [`${z.x},${z.y}`, z.clearing / GAME_CONFIG.blight.clearSeconds]));
+  const blight = updateBlightCache();
+  for (const key of blight.keys) {
     const [bx, by] = key.split(',').map(Number);
-    ctx.fillStyle = 'rgba(74, 35, 90, 0.28)';
+    const share = blight.base.has(key) ? 1 : (fading.get(key) ?? 1);
+    ctx.fillStyle = `rgba(74, 35, 90, ${0.28 * Math.max(0, share)})`;
     ctx.fillRect(bx - 15, by - 15, TILE_SIZE, TILE_SIZE);
   }
   if (activeTab === 'tab-blight') blightZones.forEach(z => {

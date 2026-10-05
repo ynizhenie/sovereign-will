@@ -47,27 +47,43 @@ function getNecromancy(s) {
   return (getDefinition('tools', s.tool) || {}).necromancer || null;
 }
 
-// Blighted ground (#164): round the undead's graveyard and graves, and marked ground a necromancer
-// has blighted. Worked out once per tick; tile keys 'x,y'.
-let blightCache = { key: '', keys: new Set() };
-function getBlightKeys() {
+// Blighted ground (#164): round the undead's graveyard and graves (`base`), and marked ground a
+// necromancer has blighted. Worked out once per tick; tile keys 'x,y'.
+let blightCache = { key: '', keys: new Set(), base: new Set() };
+function updateBlightCache() {
   const cacheKey = `${pathTick}|${sides.player.faction}|${gameMode}|${buildings.length}|${blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}`;
-  if (blightCache.key === cacheKey) return blightCache.keys;
-  const keys = new Set();
+  if (blightCache.key === cacheKey) return blightCache;
+  const base = new Set();
   if (sides.player.faction === 'undead' && gameMode === 'endless') {
     const b = GAME_CONFIG.blight;
-    const around = (x, y, r) => {
-      const g = getGridPos(x, y);
-      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-        if (!isBorderZone(g.gx + dx, g.gy + dy)) keys.add(`${(g.gx + dx) * TILE_SIZE + 15},${(g.gy + dy) * TILE_SIZE + 15}`);
+    // the tiles from (gx0, gy0) to (gx1, gy1) and r more on every side
+    const around = (gx0, gy0, gx1, gy1, r) => {
+      for (let gy = gy0 - r; gy <= gy1 + r; gy++) for (let gx = gx0 - r; gx <= gx1 + r; gx++) {
+        if (!isBorderZone(gx, gy)) base.add(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`);
       }
     };
-    around(townHall.x - 1, townHall.y - 1, b.hallTiles);
-    for (const grave of buildings) if (grave.type === 'grave') around(grave.x, grave.y, b.graveTiles);
-    for (const z of blightZones) if (z.done) keys.add(`${z.x},${z.y}`);
+    // the graveyard stands on the 2×2 tiles round its centre, a tile corner (#186: as far on every side)
+    const hx = Math.round(townHall.x / TILE_SIZE), hy = Math.round(townHall.y / TILE_SIZE);
+    around(hx - 1, hy - 1, hx, hy, b.hallTiles);
+    for (const grave of buildings) {
+      if (grave.type !== 'grave') continue;
+      const g = getGridPos(grave.x, grave.y);
+      around(g.gx, g.gy, g.gx, g.gy, b.graveTiles);
+    }
   }
-  blightCache = { key: cacheKey, keys };
-  return keys;
+  const keys = new Set(base);
+  if (base.size) for (const z of blightZones) if (z.done) keys.add(`${z.x},${z.y}`);
+  blightCache = { key: cacheKey, keys, base };
+  return blightCache;
+}
+
+function getBlightKeys() {
+  return updateBlightCache().keys;
+}
+
+// A tile blighted round the graveyard or a grave, not by a necromancer (no zone can be marked there, #186)
+function isBaseBlighted(x, y) {
+  return updateBlightCache().base.has(`${x},${y}`);
 }
 
 function isBlighted(x, y) {
