@@ -595,4 +595,5 @@ function update(dt) {
 
   updateUnitCounts();
   updateUI();
+  refreshAffordability();
 }

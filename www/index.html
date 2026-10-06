@@ -9,10 +9,11 @@
 </head>
 <body>
 
-<div id="main-menu">
+<div id="main-menu" data-menu-screen="home">
+    <!-- the game's name, big, on top of the main menu's first screen -->
+    <div class="menu-title" id="menu-title"><span>Sovereign Will</span></div>
     <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless setup, Settings -->
     <div class="main-menu-content" data-screen="home">
-        <h1>Sovereign Will</h1>
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
         <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
         <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>

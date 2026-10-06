@@ -20,10 +20,15 @@ function isMenuWorld() {
   return gameMode === 'menu';
 }
 
-// The menu's panel on the screen (CSS px), or null
+// The menu's panel on the screen (CSS px), with the game's title over it when it shows, or null
 function menuPanelRect() {
   const panel = [...document.querySelectorAll('#main-menu .main-menu-content')].find(p => !p.hidden);
-  return panel ? panel.getBoundingClientRect() : null;
+  if (!panel) return null;
+  const r = panel.getBoundingClientRect();
+  const title = document.querySelector('#menu-title span'); // the letters, not the whole strip they're in
+  const tr = title && title.offsetParent ? title.getBoundingClientRect() : null;
+  if (!tr) return r;
+  return { left: Math.min(r.left, tr.left), top: Math.min(r.top, tr.top), right: Math.max(r.right, tr.right), bottom: Math.max(r.bottom, tr.bottom) };
 }
 
 // Make the world and show it behind the menu
