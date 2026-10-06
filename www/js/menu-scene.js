@@ -13,7 +13,8 @@ const MENU_WORLD = {
 
 const menuWorld = {
   faction: 'humans',    // whose the soldier is (see getPlayerFaction)
-  size: ''              // the screen it was made for: made again when that changes
+  size: '',             // the screen it was made for: made again when that changes
+  opened: false         // the game's opening done: the curtain lifted (style.css)
 };
 
 function isMenuWorld() {
@@ -101,10 +102,16 @@ function enterMenuWorld() {
   camera.x = centre.x; camera.y = centre.y;
   camera.zoom = MENU_WORLD.cssScale * spr / getBaseScale();
   menuWorld.size = `${canvas.width}x${canvas.height}`;
+  if (!menuWorld.opened) {
+    // the first time, as the page opens: the curtain lifts once the world has been drawn
+    menuWorld.opened = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('main-menu').classList.add('lifted')));
+  }
 }
 
 // Back to an ordinary (not running) Endless before a real game, a battle or the editor is set up
 function leaveMenuWorld() {
+  document.getElementById('main-menu').classList.add('lifted'); // never dark again
   gameMode = 'endless';
   document.body.classList.remove('menu-world');
 }
