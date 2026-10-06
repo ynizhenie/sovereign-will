@@ -181,3 +181,16 @@ test('after a battle, Endless starts with a normal town hall (#135)', async ({ p
   });
   expect(r).toEqual({ hp: 100, maxHp: 100, inWorld: true });
 });
+
+test('the line splitting the field shows while placing, not in the fight or the result', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    let drawn = 0;
+    window.drawBattleOverlay = () => { drawn++; };
+    const at = phase => { battle.phase = phase; drawn = 0; render(); return drawn; };
+    const result = { setup: at('setup'), fight: at('fight'), result: at('result') };
+    battle.phase = 'setup';
+    return result;
+  });
+  expect(r).toEqual({ setup: 1, fight: 0, result: 0 });
+});
