@@ -50,5 +50,63 @@ Object.assign(window.sim, (() => {
     return { mostly, enemyHurt: en.hp < en.maxHp };
   }
 
-  return { cookingWithTools, healUnderAttack };
+  // A campfire right in front of the base, as in the playtest; a free-handed worker cooks there, then has
+  // other work. Returns how long anyone stood still on a tile it can't walk (inside the campfire).
+  function campfireInFront({ seed = 'stuck-a', seconds = 120 }) {
+    start(seed);
+    window.showNotification = () => {};
+    const cf = nearHall(0, 2); placeBuilding('campfire', cf.x, cf.y);
+    for (const [dx, dy] of [[-2, 1], [-2, 2], [2, 1]]) { const p = nearHall(dx, dy); placeBuilding('spikes', p.x, p.y); }
+    const wh = nearHall(4, 3); placeBuilding('warehouse', wh.x, wh.y);
+    invalidateAllPaths();
+    settlers = ['axe', 'pickaxe', 'hoe', 'none', 'none'].map((t, i) => makeSettler(i + 1, townHall.x - 60 + i * 25, townHall.y + 70, { tool: t }));
+    settlers.push(makeSettler(9, townHall.x + 60, townHall.y + 70, { weapon: 'sword', role: 'soldier' }));
+    Object.assign(stock, { rawMeat: 20, wood: 40, food: 3 });
+    let insideFor = 0, longest = 0;
+    run(seconds, { each: () => {
+      settlers.forEach(s => { s.hunger = 999; });
+      const inside = settlers.some(s => { const g = getGridPos(s.x, s.y); return isTileBlockedForSettler(g.gx, g.gy); });
+      if (inside) { insideFor++; longest = Math.max(longest, insideFor); } else insideFor = 0;
+    } });
+    return { longestInsideSeconds: Math.round(longest / 60), food: Math.floor(stock.food) };
+  }
+
+  // A settler caught inside an obstacle (a wall put up where it stood): it walks out to its work
+  function walksOutOfObstacle({ seed = 'walk-out' }) {
+    start(seed);
+    clearResources();
+    const w = nearHall(4, 0);
+    placeBuilding('wall_wood', w.x, w.y);
+    invalidateAllPaths();
+    const s = makeSettler(1, w.x, w.y);
+    settlers = [s];
+    const goal = nearHall(8, 3);
+    for (let f = 0; f < 60 * 6; f++) moveEntityTowards(s, goal.x, goal.y, s.speed, false, 1 / 60);
+    return { moved: Math.round(Math.hypot(s.x - w.x, s.y - w.y)), reached: Math.hypot(s.x - goal.x, s.y - goal.y) < 12 };
+  }
+
+  // The same colony on another map, where a woodcutter stood halfway between the hall and a warehouse,
+  // turning from one to the other every few frames. Counts the 3-second stretches someone carrying a
+  // load walked a lot and got nowhere.
+  function deliveryJitter({ seed = 'stuck-e', seconds = 150 }) {
+    campfireInFront({ seed, seconds: 0 });
+    const tools = ['axe', 'pickaxe', 'hoe', 'none', 'none', 'pickaxe', 'axe'];
+    settlers = tools.map((t, i) => makeSettler(i + 1, townHall.x - 60 + i * 20, townHall.y + 70, { tool: t }));
+    settlers.push(makeSettler(9, townHall.x + 60, townHall.y + 70, { weapon: 'sword', role: 'soldier' }));
+    Object.assign(stock, { rawMeat: 20, wood: 40, food: 3 });
+    const hist = new Map(); let stuck = 0;
+    run(seconds, { each: f => {
+      settlers.forEach(s => { s.hunger = 999; });
+      for (const s of settlers) {
+        let h = hist.get(s); if (!h) hist.set(s, h = []);
+        h.push([s.x, s.y, s.activity]); if (h.length > 180) h.shift();
+        if (f % 60 || h.length < 180 || !h.every(e => e[2] === 'deliverCarrying')) continue;
+        let walked = 0; for (let i = 1; i < h.length; i++) walked += Math.hypot(h[i][0] - h[i - 1][0], h[i][1] - h[i - 1][1]);
+        if (walked > 25 && Math.hypot(h[179][0] - h[0][0], h[179][1] - h[0][1]) < 6) stuck++;
+      }
+    } });
+    return { stuck };
+  }
+
+  return { cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter };
 })());
