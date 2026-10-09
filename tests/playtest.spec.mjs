@@ -47,3 +47,10 @@ test('a settler carrying a load to a storage keeps to the one it chose, not turn
   const r = await sim(page, 'deliveryJitter', {});
   expect(r.stuck).toBe(0);
 });
+
+test('spikes against the hall: settlers carrying wood home do not step on them (playtest: settlers killed by their own spikes)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'ownSpikesAtHall', {});
+  expect(r.wood).toBeGreaterThan(0); // they did carry wood home
+  expect(r.hurt).toBe(0);
+});

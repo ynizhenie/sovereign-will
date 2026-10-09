@@ -108,5 +108,23 @@ Object.assign(window.sim, (() => {
     return { stuck };
   }
 
-  return { cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter };
+  // Spikes against the hall on its left, as in the playtest's screenshot; woodcutters on that side carry
+  // wood to the hall. Returns the damage the colony took from its own spikes.
+  function ownSpikesAtHall({ seed = 'own-spikes', seconds = 90 }) {
+    start(seed);
+    clearResources();
+    window.showNotification = () => {};
+    for (const [dx, dy] of [[-2, -1], [-2, 0], [-2, 1], [0, -2], [-1, -2]]) { const p = nearHall(dx, dy); placeBuilding('spikes', p.x, p.y); }
+    // trees out to the left and above, so the way home comes past the spikes
+    for (const [dx, dy] of [[-7, 0], [-7, 2], [-6, -3], [0, -7], [-3, -6]]) { const p = nearHall(dx, dy); trees.push({ x: p.x, y: p.y, hp: 40, maxHp: 40 }); }
+    invalidateAllPaths();
+    settlers = [1, 2, 3].map(i => makeSettler(i, townHall.x - 120, townHall.y - 20 * i, { tool: 'axe' }));
+    let hurt = 0;
+    const was = window.damageSettler; window.damageSettler = (s, amount, attacker) => { hurt += amount; was(s, amount, attacker); };
+    run(seconds, { each: () => settlers.forEach(s => { s.hunger = 999; s.hp = s.maxHp; }) });
+    window.damageSettler = was;
+    return { hurt, wood: stock.wood };
+  }
+
+  return { cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter, ownSpikesAtHall };
 })());

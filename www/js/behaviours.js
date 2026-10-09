@@ -1565,11 +1565,16 @@ function patrol(s, tick) {
     return true;
   }
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
-    let ang = rand() * Math.PI * 2;
-    let dist = 30 + rand() * 120;
-    let px = townHall.x + Math.cos(ang) * dist;
-    let py = townHall.y + Math.sin(ang) * dist;
-    s.patrolTarget = { x: px, y: py };
+    // a spot round the hall it can stand on (not on spikes, a wall, a tree...)
+    for (let tries = 0; tries < 8; tries++) {
+      let ang = rand() * Math.PI * 2;
+      let dist = 30 + rand() * 120;
+      let px = townHall.x + Math.cos(ang) * dist;
+      let py = townHall.y + Math.sin(ang) * dist;
+      s.patrolTarget = { x: px, y: py };
+      const g = getGridPos(px, py);
+      if (!isTileBlockedForSettler(g.gx, g.gy)) break;
+    }
   }
   moveEntityTowards(s, s.patrolTarget.x, s.patrolTarget.y, s.speed * 0.5, false, tick.dt);
   return true;
