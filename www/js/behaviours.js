@@ -1367,9 +1367,10 @@ function cook(s, tick) {
   const cooking = GAME_CONFIG.cooking;
   const job = s.carrying && s.carrying.forFire;
   // cooking is the free hands' job between waves; when the food runs low, everyone's (a playtest found
-  // raw meat piling up while every worker held a tool and nobody cooked)
+  // raw meat piling up while every worker held a tool and nobody cooked); "low" leaves room to hire with
+  // (a later playtest: food stuck at a few meals, 90 raw in stock, nobody could be hired)
   const freeHands = s.tool === 'none' && s.weapon === 'fist' && !tick.isWaveActive;
-  const runningLow = stock.food < settlers.length * cooking.lowFood;
+  const runningLow = stock.food < settlers.length * cooking.lowFood + cooking.hireReserve;
   if (!job && !freeHands && !runningLow) return false;
   if (s.carrying && !job) return false; // carrying something else: deliver that first
   let fire = job && buildings.includes(job) ? job : null;
