@@ -28,3 +28,22 @@ test('a badly hurt settler healing at a tent turns on an enemy hitting it there,
   expect(r.mostly).not.toBe('healAtTent');
   expect(r.enemyHurt).toBe(true);
 });
+
+test('a campfire in front of the base: nobody ends up standing inside it (playtest: settlers stuck in the fire)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'campfireInFront', {});
+  expect(r.longestInsideSeconds).toBeLessThan(2);
+  expect(r.food).toBeGreaterThan(0); // and the cooking still gets done
+});
+
+test('a settler caught inside an obstacle walks out of it to where it is going', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'walksOutOfObstacle', {});
+  expect(r.reached).toBe(true);
+});
+
+test('a settler carrying a load to a storage keeps to the one it chose, not turn between the hall and a warehouse (playtest jitter)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'deliveryJitter', {});
+  expect(r.stuck).toBe(0);
+});

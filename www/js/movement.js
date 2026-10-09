@@ -678,9 +678,14 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         dy = nextNode.y - entity.y;
         dist = Math.hypot(dx, dy);
       } else {
+        // there: onto the exact point, unless that's inside something it can't walk (a campfire it cooks
+        // at, a wall): it stays beside it then (a playtest found cooks put inside the fire, stuck there)
         if (!isEnemy) {
-          entity.x = targetX;
-          entity.y = targetY;
+          const t = getGridPos(targetX, targetY);
+          if (!isTileBlockedForSettler(t.gx, t.gy)) {
+            entity.x = targetX;
+            entity.y = targetY;
+          }
         }
         return;
       }
@@ -713,7 +718,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         entity.moveVy = 0;
         entity.path = null;
         entity.pathRetryTimer = 0.25;
-      } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius)) {
+      } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius) && !collidesWithWall(entity.x, entity.y, bodyRadius)) {
         // the push away from other settlers can shove a settler into a rock corner: try the plain
         // path direction first, then sidestep toward the next path node (not the final target, which
         // around a corner points straight back into the rock)
@@ -744,7 +749,8 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
       let directVx = (directDx / directDist) * speed;
       let directVy = (directDy / directDist) * speed;
 
-      if (!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius)) {
+      // (caught inside something already: it may walk out)
+      if (!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius) || collidesWithWall(entity.x, entity.y, bodyRadius)) {
         entity.x += directVx;
         entity.y += directVy;
       }

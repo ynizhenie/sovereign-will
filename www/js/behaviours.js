@@ -306,13 +306,19 @@ function goDeliver(s, tick) {
 
 // ---- Storages (#36, #141): the town hall and warehouses (see getStorages in state.js)
 
-// The town hall or the warehouse nearest the settler
+// The town hall or the warehouse nearest the settler. Once it heads for one it keeps to it while it keeps
+// asking (every tick on the way): halfway between two, the nearest flipped back and forth as it walked and
+// it went nowhere (a playtest). A second without asking, and it picks afresh.
+const storageChoice = new WeakMap(); // settler -> { storage, tick }; kept off the settler, so not in saves
 function findNearestStorage(s) {
+  const kept = storageChoice.get(s);
+  if (kept && pathTick - kept.tick <= 60 && getStorages().includes(kept.storage)) { kept.tick = pathTick; return kept.storage; }
   let best = townHall, bestDist = Infinity;
   for (const storage of getStorages()) {
     const d = Math.hypot(storage.x - s.x, storage.y - s.y);
     if (d < bestDist) { bestDist = d; best = storage; }
   }
+  storageChoice.set(s, { storage: best, tick: pathTick });
   return best;
 }
 
