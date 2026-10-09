@@ -401,6 +401,8 @@ function handleCanvasClick() {
       const bp = createBuildingBlueprint(buildMode, gx, gy);
       bp.needs = { ...(building.cost || {}) };
       blueprints.push(bp);
+      // placed: back to Point, unless Shift is held to place another (a playtest found it stayed on)
+      if (!shiftDown) setMode('interact');
     }
   } else if (buildMode === 'demolish') {
     let targetBuilding = buildings.find(b => Math.abs(b.x - gx) < 15 && Math.abs(b.y - gy) < 15);

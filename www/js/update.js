@@ -66,7 +66,8 @@ function update(dt) {
     camera.y = possessed.y;
     clampCamera();
 
-    if (joystickEl.style.display !== 'block') joystickEl.style.display = 'block';
+    const shown = isTouchScreen() ? 'block' : 'none';
+    if (joystickEl.style.display !== shown) joystickEl.style.display = shown;
   } else {
     if (joystickEl.style.display !== 'none') joystickEl.style.display = 'none';
   }

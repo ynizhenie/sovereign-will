@@ -60,3 +60,26 @@ test('a walking settler turns its weapon the way it walks, not keep it where it 
   const r = await sim(page, 'facingWhileWalking', {});
   expect(r.pointsEastShare).toBeGreaterThan(0.8);
 });
+
+test('a building placed: back to Point; with Shift held, the build mode stays for another (playtest)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    stock.wood = 100;
+    const place = (gx, gy) => { setMode('wall_wood'); mouse.x = gx * TILE_SIZE + 15; mouse.y = gy * TILE_SIZE + 15; };
+    const g = getGridPos(townHall.x, townHall.y);
+    place(g.gx + 4, g.gy + 4); handleCanvasClick(); const after = buildMode;
+    shiftDown = true; place(g.gx + 5, g.gy + 4); handleCanvasClick(); const withShift = buildMode; shiftDown = false;
+    return { after, withShift, placed: blueprints.length };
+  });
+  expect(r).toEqual({ after: 'interact', withShift: 'wall_wood', placed: 2 });
+});
+
+test('P pauses too, as Space does (playtest)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.keyboard.press('KeyP');
+  expect(await page.evaluate(() => isPaused)).toBe(true);
+  await page.keyboard.press('KeyP');
+  expect(await page.evaluate(() => isPaused)).toBe(false);
+});
