@@ -390,6 +390,10 @@ function repairTent(s, tick) {
 function healAtTent(s, tick) {
   const tents = tick.tents;
   const badlyWounded = s.hp < s.maxHp * 0.25;
+  // being hit right now: it turns on whoever hits it (fightEnemies) and heals once it has fought them off
+  // (a playtest saw badly hurt settlers stand healing at a tent while an enemy beat them to death)
+  const hitNow = !!getRecentAttacker(s) && pathTick - s.lastAttackedTick < 90;
+  if (hitNow) { s.healing = false; return false; }
   if (s.healing && (s.hp >= s.maxHp || tents.length === 0 || (getRecentAttacker(s) && !badlyWounded))) s.healing = false;
   const calm = enemies.length === 0 && !(tick.tentAssault && joinsTentAssault(s, tick));
   if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed && (calm || badlyWounded || s.healing)) {
@@ -1353,9 +1357,14 @@ function pickApplesFrom(s, target, dt) {
 // raw food, cooks it piece by piece and takes the food home. What it carries is ordinary stock (wood,
 // raw meat...) marked with the fire it's for, so if it's called away (a wave) it just goes back in stock.
 function cook(s, tick) {
-  if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.isPossessed || tick.isWaveActive) return false;
+  if (s.role !== 'worker' || s.isPossessed) return false;
   const cooking = GAME_CONFIG.cooking;
   const job = s.carrying && s.carrying.forFire;
+  // cooking is the free hands' job between waves; when the food runs low, everyone's (a playtest found
+  // raw meat piling up while every worker held a tool and nobody cooked)
+  const freeHands = s.tool === 'none' && s.weapon === 'fist' && !tick.isWaveActive;
+  const runningLow = stock.food < settlers.length * cooking.lowFood;
+  if (!job && !freeHands && !runningLow) return false;
   if (s.carrying && !job) return false; // carrying something else: deliver that first
   let fire = job && buildings.includes(job) ? job : null;
   if (!fire) {
