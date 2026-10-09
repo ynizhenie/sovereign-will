@@ -69,6 +69,7 @@ function makeBattleUnit(entry) {
   if (preset.enemy) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
+    en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     enemies.push(en);
     return;
   }
@@ -78,6 +79,7 @@ function makeBattleUnit(entry) {
     weapon: preset.weapon, tool: preset.tool || 'none',
     role: archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
   });
+  s.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI;
   if (entry.armor) putOnGear(s, 'armor');
   if (entry.shield && canUseShield(s)) s.shield = true;
   settlers.push(s);
