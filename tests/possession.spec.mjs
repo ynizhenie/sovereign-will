@@ -40,6 +40,8 @@ for (const by of ['keys', 'joystick']) {
   });
 }
 
+test.describe('on a touch screen', () => {
+  test.use({ hasTouch: true });
 test('the joystick shows while possessing and steers with a drag (#16)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => { window.sim.start('possess-joystick'); settlers[0].isPossessed = true; });
@@ -55,4 +57,12 @@ test('the joystick shows while possessing and steers with a drag (#16)', async (
   expect(await page.evaluate(() => ({ x: joystick.x, y: joystick.y }))).toEqual({ x: 0, y: 0 });
   await page.evaluate(() => { settlers.forEach(s => s.isPossessed = false); });
   await expect(stick).toBeHidden();
+});});
+
+
+test('on a computer (no touch screen) the joystick stays hidden while possessing; keys steer (playtest)', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => { window.sim.start('possess-no-stick'); settlers[0].isPossessed = true; });
+  await page.waitForTimeout(200);
+  await expect(page.locator('#mobile-joystick')).toBeHidden();
 });
