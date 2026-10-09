@@ -54,3 +54,9 @@ test('spikes against the hall: settlers carrying wood home do not step on them (
   expect(r.wood).toBeGreaterThan(0); // they did carry wood home
   expect(r.hurt).toBe(0);
 });
+
+test('a walking settler turns its weapon the way it walks, not keep it where it last struck (playtest: a weapon stuck in one pose)', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'facingWhileWalking', {});
+  expect(r.pointsEastShare).toBeGreaterThan(0.8);
+});
