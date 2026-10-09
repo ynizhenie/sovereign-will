@@ -147,6 +147,13 @@ function startSwing(unit, seconds) {
 }
 
 function tickAnimation(unit, dt) {
+  // walking (not striking or working): the held item turns the way it goes, not stay where it last struck
+  // (a playtest saw weapons "stuck in one pose" on walking settlers)
+  if (unit.lastX !== undefined) {
+    const dx = unit.x - unit.lastX, dy = unit.y - unit.lastY;
+    if (Math.hypot(dx, dy) > 0.3 && !(unit.swingT > 0) && !(unit.working > 0)) unit.facing = Math.atan2(dy, dx);
+  }
+  unit.lastX = unit.x; unit.lastY = unit.y;
   if (unit.swingT > 0) unit.swingT = Math.max(0, unit.swingT - dt);
   if (unit.working > 0) unit.working = Math.max(0, unit.working - dt);
   if (unit.usingCan > 0) unit.usingCan = Math.max(0, unit.usingCan - dt);

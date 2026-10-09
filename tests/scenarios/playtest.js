@@ -126,5 +126,22 @@ Object.assign(window.sim, (() => {
     return { hurt, wood: stock.wood };
   }
 
-  return { cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter, ownSpikesAtHall };
+  // A soldier that last struck north walks east to the hall's other side: which way its sword points
+  function facingWhileWalking({ seed = 'facing' }) {
+    start(seed);
+    clearResources();
+    const s = makeSettler(1, townHall.x - 150, townHall.y + 90, { weapon: 'sword', role: 'soldier' });
+    s.facing = -Math.PI / 2; // last struck north
+    settlers = [s];
+    const goal = { x: townHall.x + 150, y: townHall.y + 90 };
+    let east = 0, frames = 0;
+    for (let f = 0; f < 60 * 2; f++) {
+      moveEntityTowards(s, goal.x, goal.y, s.speed, false, 1 / 60);
+      tickAnimation(s, 1 / 60);
+      frames++; if (Math.abs(s.facing || 0) < 0.3) east++;
+    }
+    return { pointsEastShare: Math.round(east / frames * 100) / 100 };
+  }
+
+  return { cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter, ownSpikesAtHall, facingWhileWalking };
 })());
