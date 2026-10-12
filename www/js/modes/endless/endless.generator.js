@@ -10,6 +10,7 @@ import { showMenuScreen } from '../menu/index.js';
 // The settings as the game ships them: the Standard preset
 export const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));
 // Fields in groups; a GAME_CONFIG.map value missing here still gets a field, under "other"
+/** @type {[string, string[]][]} */
 export const GENERATOR_GROUPS = [
   ['water', ['lakes', 'lakeWidth', 'lakeHeight', 'lakeMinDistance']],
   ['desert', ['deserts', 'desertRadiusX', 'desertRadiusY', 'desertCactus', 'desertPebbles']],
@@ -37,7 +38,8 @@ export function renderGeneratorFields() {
   container.innerHTML = '';
   const listed = new Set(GENERATOR_GROUPS.flatMap(([, keys]) => keys));
   const other = Object.keys(GAME_CONFIG.map).filter(key => !listed.has(key));
-  for (const [group, keys] of [...GENERATOR_GROUPS, ...(other.length ? [['other', other]] : [])]) {
+  const groups = [...GENERATOR_GROUPS, ...(other.length ? [/** @type {[string, string[]]} */ (['other', other])] : [])];
+  for (const [group, keys] of groups) {
     // each group: a heading, then its fields two to a row
     const heading = document.createElement('h2');
     heading.textContent = t(`gen.group.${group}`);

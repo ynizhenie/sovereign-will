@@ -35,7 +35,9 @@ export function collectSmelterIron(s, tick) {
 export function supplySmelter(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
     const limits = getSmelterLimits();
-    for (const [resource, loaded, max] of [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]]) {
+    /** @type {[string, string, number][]} */
+    const loads = [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]];
+    for (const [resource, loaded, max] of loads) {
       if (stock[resource] <= 0) continue;
       const smelter = game.buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
       if (!smelter) continue;
@@ -154,6 +156,7 @@ export function build(s, tick) {
   if (game.blueprints.length > 0 && !s.carrying && s.role === 'worker') {
     let hasNearbyEnemy = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
     if (!hasNearbyEnemy) {
+      /** @type {import('../../../engine/world/types.js').Building | null} */
       let bestBp = null;
       let minDist = Infinity;
       game.blueprints.forEach(bp => {

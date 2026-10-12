@@ -144,6 +144,7 @@ export function isBuildingJobFree(smelter, job, s) {
 }
 
 // What a blueprint still needs brought, after what's on its way already: [id, amount] or null
+/** @returns {[string, number] | null} */
 export function getMissingMaterial(bp) {
   for (const [id, amount] of Object.entries(bp.needs || {})) {
     const coming = game.settlers.reduce((sum, o) => sum + (o.carrying && o.carrying.forBlueprint === bp && o.carrying.type === id ? o.carrying.amount : 0), 0);

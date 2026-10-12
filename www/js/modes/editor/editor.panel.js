@@ -72,7 +72,7 @@ export function initEditorPanel() {
     renderEditorPanel();
   }));
   onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; renderEditorPanel(); });
-  onTap(document.getElementById('editor-resize'), () => { document.getElementById('editor-resize-panel').hidden ^= true; });
+  onTap(document.getElementById('editor-resize'), () => { const panel = document.getElementById('editor-resize-panel'); panel.hidden = !panel.hidden; });
   document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
     const [side, delta] = button.dataset.resize.split(':');
     resizeEditorMap(side, Number(delta));

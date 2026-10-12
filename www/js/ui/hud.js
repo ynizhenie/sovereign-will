@@ -9,16 +9,16 @@ import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/in
 import { getResourceAmount, syncFoodMix } from '../domains/colony/storage/index.js';
 
 export function updateUI() {
-  document.getElementById('wave-num').innerText = game.waveNum;
-  document.getElementById('wave-timer').innerText = Math.ceil(game.waveTimer);
+  document.getElementById('wave-num').innerText = String(game.waveNum);
+  document.getElementById('wave-timer').innerText = String(Math.ceil(game.waveTimer));
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
-    if (resourceElement) resourceElement.innerText = Math.floor(getResourceAmount(resourceKey));
+    if (resourceElement) resourceElement.innerText = String(Math.floor(getResourceAmount(resourceKey)));
   });
   syncFoodMix();
   for (const kind of Object.keys(GAME_CONFIG.foodKinds)) {
     const el = document.getElementById(`food-kind-${kind}-txt`);
-    if (el) el.innerText = Math.floor(game.foodMix[kind] || 0);
+    if (el) el.innerText = String(Math.floor(game.foodMix[kind] || 0));
   }
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.held)) {
     let total = 0;
@@ -26,14 +26,16 @@ export function updateUI() {
       const count = countHeld(category, id);
       total += count;
       const el = document.getElementById(`held-${category}-${id}-txt`);
-      if (el) el.innerText = count;
+      if (el) el.innerText = String(count);
     }
     const totalEl = document.getElementById(`group-${group.id}-txt`);
-    if (totalEl) totalEl.innerText = total;
+    if (totalEl) totalEl.innerText = String(total);
   }
   for (const group of GAME_CONFIG.resourceGroups.filter(g => !g.held)) {
     const total = document.getElementById(`group-${group.id}-txt`);
-    if (total) total.innerText = Math.floor(group.members.reduce((sum, id) => sum + getResourceAmount(id), 0));
+    let sum = 0;
+    for (const id of group.members) sum += getResourceAmount(id);
+    if (total) total.innerText = String(Math.floor(sum));
   }
   document.getElementById('pop-txt').innerText = `${getCurrentPop()}/${getMaxPop()}`;
   document.getElementById('base-hp-txt').innerText = `${Math.max(0, Math.ceil(townHall.hp))}/${townHall.maxHp}`;

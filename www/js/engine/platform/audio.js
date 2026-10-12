@@ -45,6 +45,7 @@ export function setMusicOn(on) { audio.musicOn = on; saveSetting('music', on ? '
 
 // ---- Building blocks: a tone and a burst of noise, each with a quick attack and a fading tail
 
+/** @param {AudioNode} out @param {number} t @param {import('../world/types.js').Sound} sound */
 export function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.005, filter, q = 1 }) {
   const ctx = audio.ctx;
   const osc = ctx.createOscillator();
@@ -65,6 +66,7 @@ export function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.00
   osc.start(t); osc.stop(t + dur + 0.05);
 }
 
+/** @param {AudioNode} out @param {number} t @param {import('../world/types.js').Sound} sound */
 export function noise(out, t, { dur, gain, type = 'bandpass', freq = 1000, to, q = 1, attack = 0.003 }) {
   const ctx = audio.ctx;
   const src = ctx.createBufferSource();

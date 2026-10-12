@@ -209,7 +209,9 @@ export const ICONS = {
   },
   boulder: c => icRockLump(c, 16, 18, 1.6, '#95a5a6', '#707b7c'),
   grass: c => {
-    for (const [x, h, col] of [[10, 18, '#27ae60'], [16, 22, '#2ecc71'], [22, 17, '#27ae60'], [13, 14, '#58d68d'], [19, 15, '#58d68d']]) {
+    /** @type {[number, number, string][]} */
+    const blades = [[10, 18, '#27ae60'], [16, 22, '#2ecc71'], [22, 17, '#27ae60'], [13, 14, '#58d68d'], [19, 15, '#58d68d']];
+    for (const [x, h, col] of blades) {
       icLine(c, col, 2.5, [[x, 28], [x + (x < 16 ? -2 : 2), 28 - h]]);
     }
   },
@@ -562,7 +564,7 @@ export function setRichText(element, text) {
 // Text with [[icon]] marks on the canvas, in the current font, fillStyle and textAlign (left/center)
 export function fillRichText(context, text, x, y) {
   const parts = expandCostTokens(text).split(ICON_TOKEN); // text, icon name, text, icon name...
-  const size = parseFloat(/(\d+(\.\d+)?)px/.exec(context.font)?.[1] || 12) * 1.15;
+  const size = parseFloat(/(\d+(\.\d+)?)px/.exec(context.font)?.[1] || '12') * 1.15;
   const width = parts.reduce((sum, part, i) => sum + (i % 2 ? size : context.measureText(part).width), 0);
   const align = context.textAlign;
   let left = align === 'center' ? x - width / 2 : align === 'right' || align === 'end' ? x - width : x;

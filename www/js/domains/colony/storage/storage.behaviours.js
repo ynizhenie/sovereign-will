@@ -48,6 +48,7 @@ export const storageChoice = new WeakMap(); // settler -> { storage, tick }; kep
 export function findNearestStorage(s) {
   const kept = storageChoice.get(s);
   if (kept && game.pathTick - kept.tick <= 60 && getStorages().includes(kept.storage)) { kept.tick = game.pathTick; return kept.storage; }
+  /** @type {import('../../../engine/world/types.js').Building | import('../../../engine/world/types.js').TownHall} */
   let best = townHall, bestDist = Infinity;
   for (const storage of getStorages()) {
     const d = Math.hypot(storage.x - s.x, storage.y - s.y);

@@ -10,7 +10,8 @@
     "android:open": "npx cap open android",
     "android:build": "npx cap sync android && cd android && ./gradlew assembleDebug",
     "test": "npm run test:node && playwright test",
-    "test:node": "node --test 'tests/node/*.test.mjs'"
+    "test:node": "node --test 'tests/node/*.test.mjs'",
+    "typecheck": "tsc -p jsconfig.json"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

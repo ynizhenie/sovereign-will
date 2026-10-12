@@ -156,7 +156,7 @@ export function updateBurning(dt) {
   for (const unit of [...game.settlers, ...game.enemies]) {
     if (!(unit.burning > 0)) continue;
     unit.burning -= dt;
-    if (game.settlers.includes(unit)) damageSettler(unit, GAME_CONFIG.burning.dps * dt, null);
+    if (game.settlers.includes(/** @type {any} */ (unit))) damageSettler(/** @type {any} */ (unit), GAME_CONFIG.burning.dps * dt, null);
     else unit.hp -= GAME_CONFIG.burning.dps * dt;
   }
 }

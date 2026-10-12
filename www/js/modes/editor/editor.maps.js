@@ -84,6 +84,7 @@ export function makeBuilt(type, x, y) {
 }
 
 // The saved maps, one per row: its name and size; in the editor's menu also a delete button (asks first)
+/** @param {Element} list @param {{ open: (map: Object) => void, remove?: (name: string) => void, selected?: string }} options */
 export function renderSavedMapList(list, { open, remove, selected }) {
   const maps = loadSavedMaps();
   renderItemList(list, Object.values(maps).map(map => ({ id: map.name, label: `${map.name} · ${map.cols}×${map.rows}` })), {
