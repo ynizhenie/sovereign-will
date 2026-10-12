@@ -1,4 +1,3 @@
-function deselectSettler() { selectedSettler = null; }
 
 // Spike traps: a unit stepping onto a spike tile takes its damage once per visit; each visit uses one
 // of the trap's uses, and it breaks when they run out. Runs once a tick after movement.

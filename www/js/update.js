@@ -37,17 +37,6 @@ function raiseOnBlight(dt) {
   }
 }
 
-// One settler's meal (#178): food from the stock (2 for a big one), worms when it runs short; a few
-// meals in, it needs to go (see relieve)
-function eatMeal(s) {
-  const cost = isBigBody(s) ? 2 : 1;
-  const short = Math.max(0, cost - stock.food);
-  stock.food = Math.max(0, stock.food - cost);
-  stock.worms = Math.max(0, (stock.worms || 0) - short);
-  s.meals = (s.meals || 0) + 1;
-  if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
-}
-
 function update(dt) {
   if ((!gameStarted && gameMode !== 'menu') || isPaused || gameMode === 'editor') return; // the menu's world runs too (#193)
   // battle mode: units stand still while being placed, and the result shows for a moment
@@ -348,7 +337,6 @@ function update(dt) {
     const leftStartTile = tile.gx !== proj.startTile.gx || tile.gy !== proj.startTile.gy;
     if (hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower))) projectiles.splice(i, 1);
   }
-
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     let en = enemies[i];
