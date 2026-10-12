@@ -54,60 +54,10 @@ function isBlighted(x, y) {
   return getBlightKeys().has(`${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`);
 }
 
-function isBuildingSingle(building) {
-  if (!building) return true;
-  for (let other of buildings) {
-    if (other !== building) {
-      let dx = Math.abs(other.x - building.x);
-      let dy = Math.abs(other.y - building.y);
-      if (dx <= TILE_SIZE + 5 && dy <= TILE_SIZE + 5) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-function isTileOccupied(x, y) {
-  if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return true;
-  return trees.some(t => Math.hypot(t.x - x, t.y - y) < 20) ||
-         cacti.some(c => Math.hypot(c.x - x, c.y - y) < 20) ||
-         boulders.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         grassList.some(g => Math.hypot(g.x - x, g.y - y) < 20) ||
-         sticks.some(s => Math.hypot(s.x - x, s.y - y) < 20) ||
-         pebbles.some(p => Math.hypot(p.x - x, p.y - y) < 20) ||
-         ironOres.some(i => Math.hypot(i.x - x, i.y - y) < 22) ||
-         coalOres.some(c => Math.hypot(c.x - x, c.y - y) < 22) ||
-         buildings.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         blueprints.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         naturalRocks.some(r => Math.hypot(r.x - x, r.y - y) < 24) ||
-         waterTiles.some(w => Math.hypot(w.x - x, w.y - y) < 20) ||
-         farmPlots.some(f => Math.hypot(f.x - x, f.y - y) < 20) ||
-         berryBushes.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         boars.some(b => Math.hypot(b.x - x, b.y - y) < 20);
-}
-
-function isBuildLocationAllowed(x, y) {
-  return !isTileOccupied(x, y);
-}
-
 function isDesertTile(x, y) {
   if (desertTiles.some(tile => tile.x === x && tile.y === y)) return true;
   if (!desertRegion) return false;
   return Math.hypot((x - desertRegion.x) / (TILE_SIZE * desertRegion.rx), (y - desertRegion.y) / (TILE_SIZE * desertRegion.ry)) <= 1;
-}
-
-function getPlacedResources(includeGrowingTrees = true) {
-  return [
-    ...(includeGrowingTrees ? trees : trees.filter(tree => !tree.isGrowing)),
-    ...cacti, ...boulders, ...grassList, ...berryBushes,
-    ...sticks, ...pebbles, ...ironOres, ...coalOres, ...naturalRocks
-  ];
-}
-
-function getHarvestableResources() {
-  // ore spawners are natural rock that can't be mined
-  return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...farmPlots.filter(plot => plot.growth >= 100), ...boars];
 }
 
 // ---- Ore spawners
@@ -147,17 +97,6 @@ function getOreSpotsAround(spawner, radius) {
 
 function placeOre(kind, spot) {
   addMapResource(ORE_KINDS[kind].resource, spot.x, spot.y);
-}
-
-// A mined ore grows back around a random spawner of its kind
-function respawnOre(kind) {
-  const spawners = getOreSpawners(kind);
-  if (spawners.length === 0) return;
-  const spawner = spawners[Math.floor(rand() * spawners.length)];
-  const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
-  if (spots.length === 0) return;
-  placeOre(kind, spots[Math.floor(rand() * spots.length)]);
-  invalidateAllPaths();
 }
 
 // A spot is exposed when a settler starting at the town hall can stand next to it
@@ -249,44 +188,6 @@ function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint
   }
 }
 
-// ---- Map resources (GAME_CONFIG.mapResources)
-
-function getMapResourceDef(kind) {
-  return GAME_CONFIG.mapResources[kind] || null;
-}
-
-// Which GAME_CONFIG.mapResources entry an object on the map is, by the list it's in
-function getMapResourceKind(resource) {
-  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    if (WORLD[def.list].includes(resource)) return kind;
-  }
-  return null;
-}
-
-function addMapResource(kind, x, y) {
-  const def = GAME_CONFIG.mapResources[kind];
-  const resource = { x, y, hp: def.hp, maxHp: def.hp, priority: 0 };
-  if (def.list === 'trees') Object.assign(resource, { isGrowing: false, growProgress: 0 });
-  WORLD[def.list].push(resource);
-  return resource;
-}
-
-// A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
-function finishHarvest(settler, resource, kind) {
-  const def = GAME_CONFIG.mapResources[kind];
-  for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount);
-  addCarryLoad(settler);
-  const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
-  for (const [item, chance] of Object.entries(bonus || {})) {
-    if (rand() < chance) addResources({ [item]: 1 });
-  }
-  const list = WORLD[def.list];
-  const index = list.indexOf(resource);
-  if (index !== -1) list.splice(index, 1);
-  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y);
-  if (def.clearsPath) invalidateAllPaths();
-}
-
 function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
   for (let i = 0; i < count; i++) {
     spawnResource(type, centerX, centerY, spread);
@@ -374,32 +275,6 @@ function placeBoulderPiles() {
       for (const t of pile) addMapResource('boulder', t.gx * TILE_SIZE + 15, t.gy * TILE_SIZE + 15);
       break;
     }
-  }
-}
-
-// ---- Delayed regrowth
-// A harvested (or destroyed) resource doesn't reappear at once: it's queued and grows back after
-// respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti).
-
-function scheduleRespawn(type, nearX = null, nearY = null) {
-  const isOre = getMapResourceDef(type).regrow === 'spawner';
-  const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
-  pendingRespawns.push({ type, nearX, nearY, timer: delay });
-}
-
-function updatePendingRespawns(dt) {
-  for (let i = pendingRespawns.length - 1; i >= 0; i--) {
-    const pending = pendingRespawns[i];
-    pending.timer -= dt;
-    if (pending.timer > 0) continue;
-    pendingRespawns.splice(i, 1);
-    const def = getMapResourceDef(pending.type);
-    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type));
-    else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
-    else if (def.regrow === 'forest') spawnForestAware(pending.type);
-    else spawnResource(pending.type);
-    // things that need a tool to remove (trees, boulders, cacti, ore) block paths
-    if (def.tool) invalidateAllPaths();
   }
 }
 
@@ -613,22 +488,6 @@ function generateMap() {
   placeAppleTrees();
 }
 
-// A share of the map's grown trees are apple trees (GAME_CONFIG.appleTrees). Picked by a hash of the
-// tile, not rand(), so the rest of the seeded game stays the same.
-function placeAppleTrees() {
-  const share = GAME_CONFIG.appleTrees.share;
-  for (const t of trees) {
-    if (!t.isGrowing && tileVariantHash(t.x + 7, t.y + 13) % 1000 < share * 1000) makeAppleTree(t);
-  }
-}
-
-function makeAppleTree(tree) {
-  tree.apple = true;
-  tree.appleGrowth = 0;
-  tree.applesReady = false;
-  return tree;
-}
-
 // Sand on one stretch of each lake's shore (#79): the tiles touching the water on one side of the lake.
 // The side comes from the lake's own shape, not rand(), so the rest of the seeded map doesn't change.
 // Only drawn: for everything else (building, regrowth, cacti) a beach is ordinary ground.
@@ -669,15 +528,6 @@ function placeBeaches() {
       }
     }
   }
-}
-
-// map: a saved map (editor.js) to play instead of generating one; Endless plays the one chosen in its menu
-// A building is gone (broken by enemies or demolished)
-function removeBuilding(building) {
-  const index = buildings.indexOf(building);
-  if (index === -1) return;
-  buildings.splice(index, 1);
-  invalidateAllPaths();
 }
 
 function resetGame(map) {

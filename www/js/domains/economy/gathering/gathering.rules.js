@@ -1,0 +1,89 @@
+// Resources on the map: which can be gathered, adding one, what a finished one gives, and growing back
+
+function getPlacedResources(includeGrowingTrees = true) {
+  return [
+    ...(includeGrowingTrees ? trees : trees.filter(tree => !tree.isGrowing)),
+    ...cacti, ...boulders, ...grassList, ...berryBushes,
+    ...sticks, ...pebbles, ...ironOres, ...coalOres, ...naturalRocks
+  ];
+}
+
+function getHarvestableResources() {
+  // ore spawners are natural rock that can't be mined
+  return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...farmPlots.filter(plot => plot.growth >= 100), ...boars];
+}
+
+// ---- Map resources (GAME_CONFIG.mapResources)
+
+function getMapResourceDef(kind) {
+  return GAME_CONFIG.mapResources[kind] || null;
+}
+
+// Which GAME_CONFIG.mapResources entry an object on the map is, by the list it's in
+function getMapResourceKind(resource) {
+  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
+    if (WORLD[def.list].includes(resource)) return kind;
+  }
+  return null;
+}
+
+function addMapResource(kind, x, y) {
+  const def = GAME_CONFIG.mapResources[kind];
+  const resource = { x, y, hp: def.hp, maxHp: def.hp, priority: 0 };
+  if (def.list === 'trees') Object.assign(resource, { isGrowing: false, growProgress: 0 });
+  WORLD[def.list].push(resource);
+  return resource;
+}
+
+// A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
+function finishHarvest(settler, resource, kind) {
+  const def = GAME_CONFIG.mapResources[kind];
+  for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount);
+  addCarryLoad(settler);
+  const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
+  for (const [item, chance] of Object.entries(bonus || {})) {
+    if (rand() < chance) addResources({ [item]: 1 });
+  }
+  const list = WORLD[def.list];
+  const index = list.indexOf(resource);
+  if (index !== -1) list.splice(index, 1);
+  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y);
+  if (def.clearsPath) invalidateAllPaths();
+}
+
+// ---- Delayed regrowth
+// A harvested (or destroyed) resource doesn't reappear at once: it's queued and grows back after
+// respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti).
+
+function scheduleRespawn(type, nearX = null, nearY = null) {
+  const isOre = getMapResourceDef(type).regrow === 'spawner';
+  const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
+  pendingRespawns.push({ type, nearX, nearY, timer: delay });
+}
+
+function updatePendingRespawns(dt) {
+  for (let i = pendingRespawns.length - 1; i >= 0; i--) {
+    const pending = pendingRespawns[i];
+    pending.timer -= dt;
+    if (pending.timer > 0) continue;
+    pendingRespawns.splice(i, 1);
+    const def = getMapResourceDef(pending.type);
+    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type));
+    else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
+    else if (def.regrow === 'forest') spawnForestAware(pending.type);
+    else spawnResource(pending.type);
+    // things that need a tool to remove (trees, boulders, cacti, ore) block paths
+    if (def.tool) invalidateAllPaths();
+  }
+}
+
+// A mined ore grows back around a random spawner of its kind
+function respawnOre(kind) {
+  const spawners = getOreSpawners(kind);
+  if (spawners.length === 0) return;
+  const spawner = spawners[Math.floor(rand() * spawners.length)];
+  const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
+  if (spots.length === 0) return;
+  placeOre(kind, spots[Math.floor(rand() * spots.length)]);
+  invalidateAllPaths();
+}

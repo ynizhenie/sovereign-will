@@ -37,3 +37,19 @@ function getViewScale() {
 }
 
 window.addEventListener('resize', fitCanvasToScreen);
+
+// A small yellow bar above a thing being worked on, share 0..1 done
+function drawProgressBar(cx, cy, share, width = 24) {
+  const progress = Math.max(0, Math.min(1, share));
+  if (progress <= 0) return;
+
+  let x = cx - width / 2;
+  let y = cy - 20;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(x, y, width, 4);
+  ctx.fillStyle = '#f1c40f';
+  ctx.fillRect(x + 1, y + 1, (width - 2) * progress, 2);
+  ctx.strokeStyle = '#2c3e50';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, width, 4);
+}
