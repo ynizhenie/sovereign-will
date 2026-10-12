@@ -10,7 +10,6 @@ Object.assign(window.sim, (() => {
     sides.player.color = GAME_CONFIG.factions[faction].color;
     sides.enemy.color = GAME_CONFIG.factionColors.find(c => c !== sides.player.color);
     start(seed);
-    window.showNotification = () => {};
     const out = {};
     const def = GAME_CONFIG.factions[faction];
     for (const type of [def.startUnits, ...Object.values(def.upgrades || {})]) {
@@ -43,7 +42,6 @@ Object.assign(window.sim, (() => {
     const out = {};
     for (const [kind, tool, weapon] of cases) {
       start(seed);
-      window.showNotification = () => {};
       clearResources();
       const p = nearHall(4, 0);
       let thing = null;

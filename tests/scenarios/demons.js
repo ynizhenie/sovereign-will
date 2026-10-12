@@ -9,7 +9,6 @@ Object.assign(window.sim, (() => {
     sides.player.color = '#e8572a';
     sides.enemy.color = '#e9c46a';
     start(seed);
-    window.showNotification = () => {};
   }
 
   function demonColony({ seed = 'demon-colony' } = {}) {
@@ -124,7 +123,6 @@ Object.assign(window.sim, (() => {
   function demonPortals({ seed = 'demon-portal-spawn' } = {}) {
     sides.enemy.faction = 'demons';
     start(seed);
-    window.showNotification = () => {};
     settlers = [settlers[0]];
     const counts = [];
     let onFreeTiles = true, allMoved = true;

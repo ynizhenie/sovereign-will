@@ -8,7 +8,6 @@ Object.assign(window.sim, (() => {
   function zonePlacement({ seed = 'zone-rules-test' }) {
     start(seed);
     clearResources();
-    window.showNotification = () => {};
     const tile = i => nearHall(3 + i, 3);
     const cases = {
       grass: () => {},

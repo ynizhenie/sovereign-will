@@ -5,7 +5,6 @@ test('after a defeat the game stops: no more waves counted on the defeat screen 
   await openGame(page);
   const r = await page.evaluate(() => {
     window.sim.start('defeat-stop');
-    window.showNotification = () => {};
     settlers.forEach(s => { s.hp = 0; });
     stepGame(1 / 60); // the last settler dies
     const waves = waveNum;

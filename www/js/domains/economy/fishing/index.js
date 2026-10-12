@@ -1,0 +1,5 @@
+// The door of domains/economy/fishing/: what it gives to the rest of the game. Other folders import from
+// here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
+
+export { collectWorms, fetchBait, fish, fishAt } from './fishing.behaviours.js';
+export { corpseHasWorms, getFishingBait, takeFishingBait } from './fishing.rules.js';

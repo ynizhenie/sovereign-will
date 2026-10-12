@@ -197,10 +197,10 @@
       <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
     </div>
 
-    <button class="btn-pause-square" id="btn-pause-toggle" onclick="togglePause()" data-i18n-title="pause.pauseHint" title="Pause [Space]"><i class="ic ic-pause"></i></button>
+    <button class="btn-pause-square" id="btn-pause-toggle" data-action="togglePause" data-i18n-title="pause.pauseHint" title="Pause [Space]"><i class="ic ic-pause"></i></button>
 
     <div class="top-actions">
-      <button class="btn btn-unpossess" onclick="switchPossession()"><i class="ic ic-eye"></i></button>
+      <button class="btn btn-unpossess" data-action="switchPossession"><i class="ic ic-eye"></i></button>
     </div>
 
   </div>
@@ -236,7 +236,7 @@
       </div>
     </div>
 
-    <button class="btn active" id="btn-interact" onclick="setMode('interact')">
+    <button class="btn active" id="btn-interact" data-action="setMode" data-arg="interact">
       <span class="fab-icon"><i class="ic ic-point"></i></span>
       <span class="fab-label" data-i18n="top.point">Point</span>
     </button>
@@ -290,9 +290,9 @@
     <div id="selected-bar" class="selected-unit-box">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 11px; color: #aaa;"><span data-i18n="hud.selected">Selected:</span> <b id="selected-settler-txt" style="color: #f1c40f;">Nobody</b></span>
-        <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" onclick="deselectSettler()"><i class="ic ic-no"></i></button>
+        <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" data-action="deselectSettler"><i class="ic ic-no"></i></button>
       </div>
-      <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" onclick="upgradeToBig()"></button>
+      <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
       <div id="selected-info" hidden></div>
     </div>
 
@@ -301,11 +301,11 @@
     <div class="recruit-row" id="recruit-row"></div>
 
     <div class="tab-navigation">
-      <button class="tab-btn active" onclick="switchTab(this, 'tab-build')" data-i18n="tab.build">[[build]] Building</button>
-      <button class="tab-btn" id="tab-btn-farming" onclick="switchTab(this, 'tab-farming')" data-i18n="tab.farming">[[wheat]] Farming</button>
-      <button class="tab-btn" id="tab-btn-blight" onclick="switchTab(this, 'tab-blight')" data-i18n="tab.blight" hidden>[[rot]] Blight</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-tools')" data-i18n="tab.tools">[[tools]] Tools</button>
-      <button class="tab-btn" onclick="switchTab(this, 'tab-weapons')" data-i18n="tab.weapons">[[swords]] Weapons</button>
+      <button class="tab-btn active" data-action="switchTab" data-arg="tab-build" data-i18n="tab.build">[[build]] Building</button>
+      <button class="tab-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-i18n="tab.farming">[[wheat]] Farming</button>
+      <button class="tab-btn" id="tab-btn-blight" data-action="switchTab" data-arg="tab-blight" data-i18n="tab.blight" hidden>[[rot]] Blight</button>
+      <button class="tab-btn" data-action="switchTab" data-arg="tab-tools" data-i18n="tab.tools">[[tools]] Tools</button>
+      <button class="tab-btn" data-action="switchTab" data-arg="tab-weapons" data-i18n="tab.weapons">[[swords]] Weapons</button>
     </div>
 
     <div class="tab-content-container">
@@ -314,8 +314,8 @@
         <div id="build-actions"></div>
 
         <div class="action-row">
-          <button class="btn btn-demolish" id="btn-demolish" onclick="setMode('demolish')" data-i18n="btn.demolish">[[hammer]] Demolish</button>
-          <button class="btn" id="btn-repair-all" onclick="repairAllBuildings()" data-i18n="btn.repairAll">[[tools]] Repair all</button>
+          <button class="btn btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
+          <button class="btn" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
         </div>
       </div>
 
@@ -324,18 +324,18 @@
         <div class="btn-grid-2col" id="farming-actions"></div>
         <div class="panel-heading" data-i18n="panel.zones">Farm zones</div>
         <div class="action-row">
-          <button class="btn" id="btn-zone_wheat" onclick="setMode('zone_wheat')" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
-          <button class="btn" id="btn-zone_sapling" onclick="setMode('zone_sapling')" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
-          <button class="btn" id="btn-zone_apple" onclick="setMode('zone_apple')" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
-          <button class="btn" id="btn-zone_clear" onclick="setMode('zone_clear')" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
+          <button class="btn" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
+          <button class="btn" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
+          <button class="btn" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
+          <button class="btn" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
         </div>
       </div>
 
       <div id="tab-blight" class="tab-pane">
         <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
         <div class="action-row">
-          <button class="btn" id="btn-blight" onclick="setMode('blight')" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
-          <button class="btn" id="btn-blight_clear" onclick="setMode('blight_clear')" data-i18n="btn.blightClear">[[close]] Remove zone</button>
+          <button class="btn" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
+          <button class="btn" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
         </div>
       </div>
 
@@ -345,14 +345,14 @@
 
         <div class="panel-heading" data-i18n="panel.gear">Gear</div>
         <div class="btn-grid-2col gear-actions">
-          <button class="btn" id="btn-backpack" onclick="orderGear('backpack')"></button>
-          <button class="btn" id="btn-wateringCan" onclick="orderGear('wateringCan')"></button>
+          <button class="btn" id="btn-backpack" data-action="orderGear" data-arg="backpack"></button>
+          <button class="btn" id="btn-wateringCan" data-action="orderGear" data-arg="wateringCan"></button>
         </div>
 
         <div class="action-row">
-          <button class="btn btn-disarm" onclick="orderGearOff('backpack')" data-i18n="btn.backpackOff">[[no]] Take backpack apart</button>
-          <button class="btn btn-disarm" onclick="orderGearOff('wateringCan')" data-i18n="btn.wateringCanOff">[[no]] Take watering can apart</button>
-          <button class="btn btn-disarm" onclick="disarmSettler('tool')" data-i18n="btn.disarmTool">[[no]] Take tool away</button>
+          <button class="btn btn-disarm" data-action="orderGearOff" data-arg="backpack" data-i18n="btn.backpackOff">[[no]] Take backpack apart</button>
+          <button class="btn btn-disarm" data-action="orderGearOff" data-arg="wateringCan" data-i18n="btn.wateringCanOff">[[no]] Take watering can apart</button>
+          <button class="btn btn-disarm" data-action="disarmSettler" data-arg="tool" data-i18n="btn.disarmTool">[[no]] Take tool away</button>
         </div>
       </div>
 
@@ -361,18 +361,18 @@
         <div class="btn-grid-2col" id="weapon-actions"></div>
         <div class="panel-heading" data-i18n="panel.arrows">Arrows</div>
         <div class="btn-grid-2col" id="special-actions">
-          <button class="btn" id="btn-craft-arrows" onclick="craftArrows()"></button>
+          <button class="btn" id="btn-craft-arrows" data-action="craftArrows"></button>
         </div>
 
         <div class="panel-heading" data-i18n="panel.armour">Armour</div>
         <div class="btn-grid-2col gear-actions">
-          <button class="btn" id="btn-armor" onclick="orderGear('armor')"></button>
-          <button class="btn" id="btn-shield" onclick="orderGear('shield')"></button>
+          <button class="btn" id="btn-armor" data-action="orderGear" data-arg="armor"></button>
+          <button class="btn" id="btn-shield" data-action="orderGear" data-arg="shield"></button>
         </div>
 
         <div class="action-row">
-          <button class="btn btn-disarm" onclick="orderGearOff('armor')" data-i18n="btn.armorOff">[[no]] Take armour apart</button>
-          <button class="btn btn-disarm" onclick="disarmSettler('weapon')" data-i18n="btn.disarmWeapon">[[no]] Take weapon away</button>
+          <button class="btn btn-disarm" data-action="orderGearOff" data-arg="armor" data-i18n="btn.armorOff">[[no]] Take armour apart</button>
+          <button class="btn btn-disarm" data-action="disarmSettler" data-arg="weapon" data-i18n="btn.disarmWeapon">[[no]] Take weapon away</button>
         </div>
       </div>
 
@@ -381,31 +381,7 @@
   </div>
 </div>
 
-<script src="js/tabs.js"></script>
-<script src="js/config.js"></script>
-<script src="js/icons.js"></script>
-<script src="js/i18n.js"></script>
-<script src="js/economy.js"></script>
-<script src="js/state.js"></script>
-<script src="js/world.js"></script>
-<script src="js/movement.js"></script>
-<script src="js/input.js"></script>
-<script src="js/actions.js"></script>
-<script src="js/combat.js"></script>
-<script src="js/waves.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/behaviours.js"></script>
-<script src="js/orders.js"></script>
-<script src="js/update.js"></script>
-<script src="js/render.js"></script>
-<script src="js/main.js"></script>
-<script src="js/factions.js"></script>
-<script src="js/battle.js"></script>
-<script src="js/generator.js"></script>
-<script src="js/editor.js"></script>
-<script src="js/menu-scene.js"></script>
-<script src="js/saves.js"></script>
-<script src="js/sounds.js"></script>
+<script type="module" src="js/app/boot.js"></script>
 
 </body>
 </html>

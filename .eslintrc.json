@@ -1,13 +1,30 @@
 {
   "root": true,
-  "env": { "browser": true, "es2022": true },
-  "parserOptions": { "ecmaVersion": 2022, "sourceType": "script" },
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
   "extends": "eslint:recommended",
   "rules": {
-    "no-undef": "off",
+    "no-undef": "error",
     "no-unused-vars": "off",
     "no-redeclare": "error",
     "no-mixed-spaces-and-tabs": "off",
-    "no-empty": "warn"
-  }
+    "no-empty": "warn",
+    "doors": "error"
+  },
+  "overrides": [
+    {
+      "files": [
+        "www/js/app/debug.js"
+      ],
+      "rules": {
+        "doors": "off"
+      }
+    }
+  ]
 }

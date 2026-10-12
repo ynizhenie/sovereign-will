@@ -6,7 +6,7 @@ Object.assign(window.sim, (() => {
 
   // Make a small map by hand, save it, then play it in Endless. Returns what the played world has.
   function handMadeMap() {
-    localStorage.removeItem(MAP_STORAGE_KEY);
+    localStorage.removeItem('sovereign-will-maps');
     startEditor({ cols: 30, rows: 30, generate: false });
     const empty = trees.length + waterTiles.length + naturalRocks.length + buildings.length;
     use('water', 6, 6, 3);       // a 3×3 pond...
@@ -74,8 +74,8 @@ Object.assign(window.sim, (() => {
 
   // Rows and columns added and taken away at the edges; what's on the map moves with it (#143)
   function resize() {
-    const notes = [];
-    window.showNotification = text => notes.push(text);
+    const notes = recentNotifications; // the messages shown from here on
+    notes.length = 0;
     startEditor({ cols: 30, rows: 30, generate: false });
     use('tree', 5, 5);
     const hall0 = [townHall.x, townHall.y];

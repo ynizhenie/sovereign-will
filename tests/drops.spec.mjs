@@ -11,7 +11,7 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
       const before = { ...stock };
       let carried = {};
       for (let i = 0; i < n; i++) {
-        const r = make(); WORLD[GAME_CONFIG.mapResources[kind].list].push(r);
+        const r = make(); game[GAME_CONFIG.mapResources[kind].list].push(r);
         s.carrying = null;
         finishHarvest(s, r, kind);
         for (const item of s.carrying.items || [s.carrying]) carried[item.type] = (carried[item.type] || 0) + item.amount;
@@ -42,7 +42,6 @@ test('farmers plant apple trees in an apple zone (#103)', async ({ page }) => {
     const { makeSettler, clearResources, tileCenter } = window.sim.helpers;
     window.sim.start('apple-zone-test');
     clearResources();
-    window.showNotification = () => {};
     const g = getGridPos(townHall.x, townHall.y);
     const spots = [tileCenter(g.gx + 3, g.gy + 2), tileCenter(g.gx + 4, g.gy + 2)];
     for (const p of spots) toggleFarmZone(p.x, p.y, 'apple');

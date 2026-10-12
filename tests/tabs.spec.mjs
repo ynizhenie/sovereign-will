@@ -7,7 +7,7 @@ test('switching to any tab goes back to the Point mode (#80)', async ({ page }) 
   for (const tab of ['tab-build', 'tab-farming', 'tab-tools', 'tab-weapons']) {
     const mode = await page.evaluate(tab => {
       setMode('wall_wood');
-      switchTab(document.querySelector(`.tab-btn[onclick*="${tab}"]`), tab);
+      switchTab(document.querySelector(`.tab-btn[data-arg="${tab}"]`), tab);
       return buildMode;
     }, tab);
     expect([tab, mode]).toEqual([tab, 'interact']);

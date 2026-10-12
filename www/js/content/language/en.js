@@ -1,0 +1,83 @@
+// English: the default language
+
+export const enLanguage = {
+  en: {
+    label: 'English',
+    names: {
+      resources: {
+        food: 'Food', rawMeat: 'Raw meat', rawFish: 'Raw fish', wheat: 'Grain', wood: 'Wood', stone: 'Stone', coal: 'Coal',
+        ironOre: 'Ore', iron: 'Iron', leather: 'Leather', arrows: 'Arrows', wheatSeeds: 'Seeds', saplings: 'Saplings',
+        herbs: 'Herbs', worms: 'Worms', bones: 'Bones', rot: 'Rot', appleSaplings: 'Apple saplings'
+      },
+      resourceGroups: { raw: 'Raw food', plants: 'Plants', materials: 'Materials', supplies: 'Supplies', toolsHeld: 'Tools', weaponsHeld: 'Weapons' },
+      tools: { axe: 'Axe', pickaxe: 'Pickaxe', iron_axe: 'Iron axe', iron_pickaxe: 'Iron pickaxe', rod: 'Fishing rod', medbag: 'Medic bag', hoe: 'Hoe', necro_staff: 'Necromancer\'s staff' },
+      weapons: { fist: 'Fist', club: 'Club', sword: 'Sword', spear: 'Spear', iron_sword: 'Iron sword', iron_spear: 'Iron spear', bow: 'Bow' },
+      buildings: {
+        wall_wood: 'Wooden wall', wall_stone: 'Stone wall', spikes: 'Spikes', door: 'Door', tent: 'Tent', campfire: 'Campfire',
+        smelter: 'Smelter', watchtower: 'Watchtower', warehouse: 'Warehouse', grave: 'Grave', sacrifice_circle: 'Sacrificial circle', portal: 'Portal', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
+      },
+      enemies: { raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer', undead_zombie: 'Zombie', undead_big_zombie: 'Big zombie', undead_skeleton: 'Skeleton', undead_necromancer: 'Necromancer', demon_imp: 'Imp', demon_brute: 'Demon', demon_fire_imp: 'Fire imp' },
+      factions: { humans: 'Humans', demons: 'Demons', undead: 'Undead' },
+      settlerTypes: { normal: 'Worker', big: 'Giant', zombie: 'Zombie', big_zombie: 'Big zombie', skeleton: 'Skeleton', necromancer: 'Necromancer', imp: 'Imp', demon: 'Demon', fire_imp: 'Fire imp' },
+      gear: { backpack: 'Backpack', shield: 'Shield', armor: 'Armour', wateringCan: 'Watering can' },
+      recipes: { arrows: 'Arrows' },
+      foodKinds: { berries: 'Berries', apples: 'Apples', bread: 'Bread', cookedFish: 'Cooked fish', cookedMeat: 'Cooked meat' }
+    },
+    text: {
+      'menu.play': 'PLAY', 'menu.waveInterval': 'Wave interval (s):', 'menu.custom': 'Custom', 'menu.mapSize': 'Map size:',
+      'menu.mapSmall': 'Small', 'menu.mapMedium': 'Medium', 'menu.mapLarge': 'Large', 'menu.mapCustom': 'Custom',
+      'menu.seed': 'World seed', 'menu.newSeed': 'New random seed', 'menu.language': 'Language:', 'menu.endless': 'Endless', 'menu.battles': 'Battles', 'menu.editor': 'Map editor', 'menu.settings': 'Settings', 'menu.exit': 'Exit', 'menu.back': '← Back', 'menu.difficulty': 'Difficulty:', 'menu.easy': 'Easy', 'menu.normal': 'Normal', 'menu.hard': 'Hard', 'menu.fps': 'Frame rate:', 'menu.fpsDisplay': 'Screen', 'menu.showFps': 'Show FPS:', 'menu.sound': 'Sound:', 'menu.music': 'Music:', 'menu.on': 'On', 'menu.off': 'Off',
+      'pause.title': 'Paused', 'pause.continue': 'Continue', 'pause.exit': 'Exit to main menu',
+      'pause.resumeHint': 'Continue [Space]', 'pause.pauseHint': 'Pause [Space / P]',
+      'top.wave': 'Wave', 'top.seconds': 's', 'top.zoomIn': 'Zoom in', 'top.zoomOut': 'Zoom out', 'top.point': 'Point',
+      'hud.selected': 'Selected:', 'hud.nobody': 'Nobody', 'hud.base': 'Base', 'hud.people': 'Settlers',
+      'hud.ironArmor': 'Iron armour', 'hud.quiver': 'Quiver {n}/12',
+      'tab.build': '[[build]] Building', 'tab.farming': '[[wheat]] Farming', 'tab.tools': '[[tools]] Tools', 'tab.weapons': '[[swords]] Weapons',
+      'btn.demolish': '[[hammer]] Demolish', 'btn.repairAll': '[[tools]] Repair all', 'btn.zoneWheat': '[[zone_wheat]] Wheat zone', 'btn.zoneSapling': '[[zone_sapling]] Sapling zone',
+      'btn.zoneApple': '[[zone_apple]] Apple zone', 'btn.zoneClear': '[[close]] Remove zone', 'btn.wateringCanOff': '[[no]] Take watering can apart',
+      'btn.backpackOff': '[[no]] Take backpack apart', 'btn.disarmTool': '[[no]] Take tool away', 'btn.armorOff': '[[no]] Take armour apart',
+      'btn.disarmWeapon': '[[no]] Take weapon away', 'btn.upgrade': '[[{icon}]] Upgrade ({cost})', 'btn.upgradeWorker': '[[{icon}]] Upgrade worker ({cost})',
+      'repair.ordered': '[[tools]] Repair: {name} ({cost} per step)', 'repair.cancelled': '[[no]] Repair cancelled',
+      'repair.allOrdered': '[[tools]] Repairs ordered: {count}', 'repair.nothing': '[[ok]] Nothing is damaged',
+      'repair.hall': '[[tools]] Repairing ({cost})', 'repair.hallNeeded': '[[warn]] Needs repair',
+      'cost.missing': '{prefix} {cost} (missing {missing})', 'cost.notEnough': '[[no]] Not enough resources! Needs',
+      'cost.needs': '[[no]] {name}: needs', 'build.costs': '[[hint]] {name} costs {cost} (you are missing {missing})',
+      'wave.warning': '[[warn]] Enemy wave in {seconds} seconds!',
+      'gear.nobody': '[[warn]] Nobody to give it to: {name}', 'gear.fetching': '[[ok]] [[{icon}]] {name}: a settler is fetching it from the base',
+      'gear.noneHas': '[[warn]] Nobody has: {name}', 'gear.returning': '[[ok]] [[{icon}]] {name}: a settler is taking it back to the base',
+      'build.zoneHere': '[[no]] This is a farm zone: remove the zone first', 'build.onHall': '[[no]] You can\'t build on the town hall',
+      'possess.handsFull': '[[no]] Hands full: take it to the town hall first', 'possess.needs.axe': '[[no]] Needs an axe',
+      'possess.needs.pickaxe': '[[no]] Needs a pickaxe', 'possess.notRipe': '[[no]] Not ripe yet', 'possess.needsRod': '[[no]] Needs a fishing rod',
+      'possess.noBait': '[[no]] No bait in the stock (worms or seeds)', 'possess.noRepairCost': '[[no]] Not enough resources to repair',
+      'build.occupied': '[[no]] This tile is taken', 'zone.badTile': '[[no]] Zones only go on grass with no trees, stones or buildings',
+      'tool.unknown': '[[warn]] Unknown tool: {id}', 'tool.nobody': '[[warn]] No free settler to give the tool to!', 'tool.given': '[[ok]] Tool given ({name})',
+      'weapon.unknown': '[[warn]] Unknown weapon: {id}', 'weapon.nobody': '[[warn]] No free settler to give the weapon to!', 'weapon.made': '[[ok]] Weapon made ({name})',
+      'arrows.needArcher': '[[warn]] You need an archer with a quiver first', 'arrows.made': '[[ok]] {count} arrows made. They\'re kept in the town hall',
+      'disarm.tool': '[[ok]] Tool taken away', 'disarm.weapon': '[[ok]] Weapon taken away', 'disarm.item': '[[ok]] Item taken away',
+      'disarm.noTool': '[[warn]] No settler with a tool!', 'disarm.noWeapon': '[[warn]] No settler with a weapon or armour!', 'disarm.noItem': '[[warn]] No settler with anything to take away!',
+      'pop.limit': '[[warn]] Too many settlers! Build a tent ([[tent]])', 'hire.done': '[[ok]] Hired: {name}!',
+      'upgrade.noone': '[[no]] No ordinary settler to upgrade!', 'upgrade.needs': '[[no]] Upgrade to {name}: needs', 'upgrade.done': '[[ok]] Settler upgraded: {name}!',
+      'battle.hint': 'Tap to place, tap again to remove: yours on the left, enemies on the right', 'battle.cat.own': 'Player', 'battle.cancel': '[[close]] Cancel fight', 'battle.cat.enemy': 'Enemies', 'battle.cat.buildings': 'Buildings', 'battle.armor': '[[armor]] Armour', 'battle.shield': '[[shield]] Shield', 'battle.clearGreen': '[[broom]] Green', 'battle.clearRed': '[[broom]] Red', 'battle.only.green': '[[warn]] Your units go on the green side', 'battle.only.red': '[[warn]] Enemies go on the red side', 'battle.fight': '[[swords]] Fight!', 'battle.needBoth': '[[warn]] Place units on both sides first', 'battle.greenWins': 'Green wins!', 'battle.redWins': 'Red wins!', 'battle.drawWins': 'Draw!', 'preset.fist': 'Unarmed', 'preset.club': 'Club', 'preset.sword': 'Sword', 'preset.spear': 'Spear', 'preset.iron_sword': 'Iron sword', 'preset.iron_spear': 'Iron spear', 'preset.bow': 'Archer', 'preset.big_club': 'Giant, club', 'preset.big_spear': 'Giant, spear', 'preset.raider_club': 'Savage', 'preset.raider': 'Raider', 'preset.brute': 'Brute', 'preset.raider_archer': 'Enemy archer',
+      'menu.generator': 'Map generator', 'gen.standard': 'Standard', 'gen.save': 'Save', 'gen.presetName': 'Preset name', 'gen.group.water': 'Water', 'gen.group.desert': 'Desert', 'gen.group.forests': 'Forests', 'gen.group.resources': 'Resources', 'gen.group.ore': 'Ore', 'gen.group.rocks': 'Rock', 'gen.group.animals': 'Animals', 'gen.group.regrowth': 'Regrowth (s)', 'gen.group.other': 'Other', 'gen.lakes': 'Lakes', 'gen.lakeWidth': 'Lake width', 'gen.lakeHeight': 'Lake height', 'gen.lakeMinDistance': 'Gap between lakes', 'gen.deserts': 'Deserts', 'gen.desertRadiusX': 'Desert width', 'gen.desertRadiusY': 'Desert height', 'gen.desertCactus': 'Cacti per desert', 'gen.desertPebbles': 'Pebbles per desert', 'gen.forests': 'Forests', 'gen.forestTrees': 'Trees per forest', 'gen.forestRadius': 'Forest size', 'gen.forestUndergrowthShare': 'Undergrowth in forests (0-1)', 'gen.trees': 'Lone trees', 'gen.boulders': 'Boulders', 'gen.boulderPiles': 'Boulder piles', 'gen.boulderPileSize': 'Boulders per pile', 'gen.grass': 'Grass', 'gen.berryBushes': 'Berry bushes', 'gen.sticks': 'Sticks', 'gen.pebbles': 'Pebbles', 'gen.ironSpawners': 'Iron spawners', 'gen.coalSpawners': 'Coal spawners', 'gen.orePerSpawner': 'Ore per spawner', 'gen.oreSpawnerRadius': 'Ore spread (tiles)', 'gen.rockClusters': 'Rock masses', 'gen.rockClusterWidth': 'Rock mass width', 'gen.rockClusterHeight': 'Rock mass height', 'gen.boars': 'Boars', 'gen.respawnDelay': 'Resources grow back', 'gen.oreRespawnDelay': 'Ore grows back',
+      'sacrifice.pick': '[[warn]] Select a settler first, then tap the circle', 'sacrifice.going': '[[sacrifice_circle]] {name} goes to the circle', 'sacrifice.done': '[[ok]] The sacrifice healed everyone',
+      'save.button': 'Save game', 'save.list': 'Saved games:', 'save.name': 'Wave {wave} · {time}', 'save.done': '[[save]] Saved: {name}', 'save.failed': '[[no]] Couldn\'t save on this device',
+      'tab.blight': '[[rot]] Blight', 'blight.hint': 'Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise', 'btn.blightZone': '[[rot]] Blight zone', 'btn.blightClear': '[[close]] Remove zone', 'blight.already': 'This ground is blighted already',
+      'panel.defense': 'Defence', 'panel.homes': 'Homes', 'panel.economy': 'Workshops and stores', 'panel.plant': 'Plant', 'panel.zones': 'Farm zones', 'panel.tools': 'Tools', 'panel.gear': 'Gear', 'panel.weapons': 'Weapons', 'panel.arrows': 'Arrows', 'panel.armour': 'Armour',
+      'activity.playerControlled': 'Under your control', 'activity.goToSacrifice': 'Going to the circle', 'activity.loadTowerArrows': 'Carrying arrows to a tower', 'activity.collectSmelterIron': 'Fetching iron', 'activity.supplySmelter': 'Supplying the smelter', 'activity.deliverToSmelter': 'Supplying the smelter', 'activity.guardTower': 'On a tower', 'activity.repairTownHall': 'Repairing the town hall', 'activity.repairBuilding': 'Repairing', 'activity.equip': 'Fetching gear', 'activity.cook': 'Cooking', 'activity.deliverMaterials': 'Carrying materials to a build', 'activity.deliverCarrying': 'Carrying to storage', 'activity.repairTent': 'Mending a shelter', 'activity.eatCorpse': 'Eating a corpse', 'activity.healAtTent': 'Healing', 'activity.treatWounded': 'Treating the wounded', 'activity.necromancy': 'Necromancy', 'activity.holdPost': 'On guard', 'activity.fightEnemies': 'Fighting', 'activity.breakOutOfSealedBase': 'Breaking a way out', 'activity.clearEnemyTents': 'Attacking enemy tents', 'activity.relieve': 'Gone to relieve itself', 'activity.build': 'Building', 'activity.collectWorms': 'Collecting worms', 'activity.fish': 'Fishing', 'activity.pickApples': 'Picking apples', 'activity.harvest': 'Gathering', 'activity.tendFarmZones': 'Planting', 'activity.waterCrops': 'Watering', 'activity.farmerGathersGrass': 'Gathering grass', 'activity.deliverWhenNothingToDo': 'Carrying to storage', 'activity.patrol': 'Idle',
+      'info.hungry': 'hungry in {seconds} s', 'info.noHunger': 'never hungry', 'info.crumbles': 'crumbles in {seconds} s', 'info.carries': 'carries',
+      'menu.factions': 'Factions:', 'menu.you': 'You', 'menu.enemy': 'Enemy', 'menu.soon': 'soon',
+      'menu.map': 'Map:', 'menu.randomMap': 'Random', 'menu.customMap': 'Custom map',
+      'editor.eraser': '[[eraser]] Eraser', 'editor.sizeButton': 'Size', 'editor.side.top': 'Top', 'editor.side.bottom': 'Bottom', 'editor.side.left': 'Left', 'editor.side.right': 'Right', 'editor.hallInTheWay': '[[warn]] The town hall is in the way: move it first', 'editor.cat.terrain': 'Terrain', 'editor.cat.nature': 'Nature', 'editor.cat.ore': 'Ore', 'editor.cat.buildings': 'Buildings', 'list.deleteQuestion': 'Delete «{name}»?', 'list.yes': 'Yes', 'list.no': 'No',
+      'editor.newMap': 'New map:', 'editor.empty': 'Empty', 'editor.generated': 'From the generator', 'editor.savedMaps': 'Saved maps:',
+      'editor.noMaps': 'No saved maps yet: make one in the Map editor', 'editor.hint': 'Pick something, tap the map to put it there. Drag to look around',
+      'editor.brush': 'Brush:', 'editor.name': 'Map name', 'editor.save': '[[save]] Save', 'editor.needName': '[[warn]] Name the map first',
+      'editor.saveFailed': '[[no]] Couldn\'t save the map on this device', 'editor.saved': '[[ok]] Map saved: {name}',
+      'editor.tool.erase': 'Eraser', 'editor.tool.water': 'Water', 'editor.tool.rock': 'Rock', 'editor.tool.sand': 'Sand',
+      'editor.tool.town_hall': 'Town hall', 'editor.tool.tree': 'Tree', 'editor.tool.apple_tree': 'Apple tree', 'editor.tool.cactus': 'Cactus',
+      'editor.tool.boulder': 'Boulder', 'editor.tool.grass': 'Grass', 'editor.tool.berry_bush': 'Berry bush', 'editor.tool.stick': 'Stick',
+      'editor.tool.pebble': 'Pebble', 'editor.tool.iron_ore': 'Iron ore', 'editor.tool.coal_ore': 'Coal', 'editor.tool.iron_spawner': 'Iron source',
+      'editor.tool.coal_spawner': 'Coal source', 'editor.tool.boar': 'Boar',
+      'defeat.title': 'DEFEAT!', 'defeat.survived': 'You held out for {waves} waves', 'defeat.restart': 'Start again'
+    }
+  }
+};

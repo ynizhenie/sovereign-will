@@ -12,9 +12,9 @@ Object.assign(window.sim, (() => {
   // Blight round the graveyard reaches as far on every side; marking toggles; blighted ground takes no
   // mark; a blighted zone taken away fades
   function blightZonesFollowup({ seed = 'blight-186' }) {
-    const notes = [];
     asUndead(seed);
-    window.showNotification = text => notes.push(text);
+    const notes = recentNotifications; // the messages shown from here on
+    notes.length = 0;
     clearResources();
     const hx = Math.round(townHall.x / TILE_SIZE), hy = Math.round(townHall.y / TILE_SIZE);
     const blighted = (gx, gy) => isBlighted(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15);

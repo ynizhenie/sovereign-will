@@ -1,0 +1,58 @@
+// The demons: portals in pairs, and the enemy's portals a wave comes through
+
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { isTileOccupied } from '../../economy/building/index.js';
+import { getEnemyFaction } from '../index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
+
+// The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th...
+export function getPortalPairs() {
+  const portals = game.buildings.filter(b => b.type === 'portal');
+  const pairs = [];
+  for (let i = 0; i + 1 < portals.length; i += 2) pairs.push([portals[i], portals[i + 1]], [portals[i + 1], portals[i]]);
+  return pairs;
+}
+
+// A settler going somewhere a portal pair gets it to quicker: walks into the near portal and steps out of
+// the far one (next to it). Returns where to walk to instead, or null to go straight; true once stepped through.
+export const PORTAL_SAVING = 90; // px the way through must save to be worth it
+
+export function takePortal(entity, targetX, targetY) {
+  const direct = Math.hypot(targetX - entity.x, targetY - entity.y);
+  for (const [near, far] of getPortalPairs()) {
+    const toNear = Math.hypot(near.x - entity.x, near.y - entity.y);
+    if (toNear + Math.hypot(targetX - far.x, targetY - far.y) + PORTAL_SAVING >= direct) continue;
+    if (toNear > 30) return near;
+    // through: out onto a free tile beside the far portal, on the side of where it's going
+    const g = getGridPos(far.x, far.y);
+    const exits = [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]
+      .filter(([dx, dy]) => !isTileBlockedForSettler(g.gx + dx, g.gy + dy))
+      .sort((a, b) => Math.hypot(targetX - (far.x + a[0] * TILE_SIZE), targetY - (far.y + a[1] * TILE_SIZE)) -
+        Math.hypot(targetX - (far.x + b[0] * TILE_SIZE), targetY - (far.y + b[1] * TILE_SIZE)));
+    if (!exits.length) continue;
+    entity.x = far.x + exits[0][0] * TILE_SIZE;
+    entity.y = far.y + exits[0][1] * TILE_SIZE;
+    entity.path = null;
+    entity.pathTarget = null;
+    return true;
+  }
+  return null;
+}
+
+// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall
+export function openDemonPortal() {
+  const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
+  const minDist = getEnemyFaction().minPortalTiles * TILE_SIZE;
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const gx = BORDER_MARGIN + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN));
+    const gy = BORDER_MARGIN + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN));
+    const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+    if (Math.hypot(x - townHall.x, y - townHall.y) < minDist || isTileOccupied(x, y) || getReachSteps(reach, gx, gy) < 0) continue;
+    if (game.enemyTents.some(t => Math.hypot(t.x - x, t.y - y) < 4 * TILE_SIZE)) continue;
+    const tents = GAME_CONFIG.enemyTents;
+    game.enemyTents.push({ x, y, hp: tents.hp, maxHp: tents.hp, summonTimer: 0, summonsLeft: tents.summonsPerWave, portal: true });
+    return true;
+  }
+  return false;
+}

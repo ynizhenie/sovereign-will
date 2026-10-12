@@ -51,12 +51,16 @@ Object.assign(window.sim, (() => {
     trees.push(tree);
     invalidateAllPaths();
     settlers = [makeSettler(1, townHall.x + 40, townHall.y)];
+    // the bar's yellow part over the tree (drawProgressBar: 24 wide, its fill 22 at most, 20 above)
     const bars = [];
-    const original = drawProgressBar;
-    window.drawProgressBar = (x, y, share) => { if (x === tree.x && y === tree.y) bars.push(Math.round(share * 100)); return original.apply(this, arguments); };
+    const original = ctx.fillRect;
+    ctx.fillRect = function (x, y, w, h) {
+      if (this.fillStyle === '#f1c40f' && x === tree.x - 11 && y === tree.y - 19) bars.push(Math.round(w / 22 * 100));
+      return original.call(this, x, y, w, h);
+    };
     try {
       run(12, { each: f => { tree.appleGrowth = 0; if (f % 10 === 0) render(); } });
-    } finally { window.drawProgressBar = original; }
+    } finally { ctx.fillRect = original; }
     return { shown: bars.some(b => b > 0 && b < 100), rising: bars.length > 1 && bars[bars.length - 1] >= bars[0], picked: !tree.applesReady };
   }
   return { applePickBar };

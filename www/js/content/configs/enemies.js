@@ -1,0 +1,74 @@
+// Enemies, their tents, and how waves grow
+
+export const enemiesConfig = {
+  // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
+  //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
+  // waveKey: its name in attackGroups. buildsTents: can be sent to build an enemy tent.
+  // damage: per second in melee (per arrow for archers). reach: melee reach beyond touching.
+  // siege: hp per second it takes off buildings, and off trees / boulders (cacti / ore for big) in its way.
+  // ranged: range, keepAway (stops walking this close to its target), cooldown, arrowSpeed, arrowLife.
+  // splash: radius, share of the damage dealt to everyone else around.
+  // quiver: arrows it spawns with; tentStock: arrows it adds to the shared stock in enemy tents;
+  //   refill: arrows taken from a tent at once; melee: the enemy it fights like when out of arrows
+  //   and no tent has any left.
+  // reward: added to the stock when it dies. Waves spawn kinds in this order.
+  enemies: {
+    raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
+      type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
+    raider: { id: 'raider', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
+    brute: { id: 'brute', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear',
+      type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
+    raider_archer: { id: 'raider_archer', hp: 60, speed: 0.8, damage: 30, reward: { food: 1 }, weapon: 'bow',
+      type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
+      ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } },
+    // the undead: slow zombies, big zombies, skeleton archers, and necromancers that raise the dead
+    // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
+    // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
+    undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
+    undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'fist',
+      type: 'big', radius: 18, waveKey: 'brute', reach: 20, siege: { buildings: 25, resources: 4 }, splash: { radius: 60, share: 0.5 } },
+    undead_skeleton: { id: 'undead_skeleton', hp: 45, speed: 0.9, damage: 25, reward: { food: 1 }, weapon: 'bow',
+      type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
+      ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
+    undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
+      necromancer: { raises: 5, range: 200, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } },
+    // the demons: quick imps, big demons that hit all around, fire imps that throw fireballs. They
+    // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
+    demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: ['club', 'raider'], reach: 6, siege: { buildings: 10, resources: 2 } },
+    demon_brute: { id: 'demon_brute', hp: 140, speed: 0.7, damage: 28, reward: { food: 2 }, weapon: 'club',
+      type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
+    demon_fire_imp: { id: 'demon_fire_imp', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'bow', fireArrows: true,
+      type: 'archer', radius: 10, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
+      ranged: { range: 170, keepAway: 140, cooldown: 1.4, arrowSpeed: 3.8, arrowLife: 75 },
+      quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
+  },
+
+  // enemy tents: builders put them up near the map edge; each summons extra enemies during a wave
+  enemyTents: {
+    hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
+    summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
+  },
+
+  // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves; each wave
+  // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
+  // the first wave is firstWave of that; and every wave is scaled by the player's army: 1 at
+  // army.base settlers, perUnit more (or less) for each one over (under) it, within min..max. A wave
+  // always has at least one enemy.
+  waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 },
+    firstWave: 0.5, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
+
+  attackGroups: [
+    // base squad templates (for the starting difficulty)
+    { club: 4, raider: 4, brute: 0, archer: 0 }, // melee crowd
+    { club: 4, raider: 2, brute: 1, archer: 1 }, // crowd with support
+    { club: 3, raider: 2, brute: 0, archer: 3 }, // archer-heavy
+    { club: 3, raider: 2, brute: 2, archer: 1 }, // brute-heavy
+    { club: 2, raider: 2, brute: 2, archer: 2 }  // balanced mixed squad
+  ]
+};

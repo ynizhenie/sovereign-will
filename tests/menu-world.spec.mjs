@@ -52,7 +52,8 @@ test('a tapped boar is marked and hunted, butchered and its meat carried to the 
   expect(hunt.gone).toBe(true);
   expect(hunt.meat).toBeGreaterThan(0);
 
-  const soldier = await page.evaluate(() => ({ x: settlers[0].x, y: settlers[0].y, type: settlers[0].type }));
+  // the world stands still for the tap: otherwise the soldier walks on between reading where he is and the click
+  const soldier = await page.evaluate(() => { isPaused = true; return { x: settlers[0].x, y: settlers[0].y, type: settlers[0].type }; });
   await page.mouse.click(...Object.values(await toPage(page, soldier)));
   const after = await page.evaluate(() => ({ type: settlers[0].type, weapon: settlers[0].weapon, faction: getPlayerFaction().id, sides: sides.player.faction }));
   expect(after.type).not.toBe(soldier.type);
