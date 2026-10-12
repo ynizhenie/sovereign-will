@@ -112,6 +112,7 @@ export function getSmelterLimits() {
   return GAME_CONFIG.buildings.smelter.build.smelter;
 }
 
+/** @returns {import('../../../engine/world/types.js').Building} */
 export function createBuildingBlueprint(type, x, y) {
   const item = getDefinition('buildings', type);
   const build = item && item.build ? item.build : {};
