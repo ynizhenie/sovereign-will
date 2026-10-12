@@ -9,6 +9,7 @@ initInput();
 initSession();
 initMapInput();
 initWidgets();
+initPageActions();
 initEndlessSetup();
 initEndlessRules();
 initAudio();
