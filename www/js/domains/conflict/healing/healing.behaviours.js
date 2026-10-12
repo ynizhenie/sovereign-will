@@ -39,7 +39,6 @@ export function healAtTent(s, tick) {
   const tents = tick.tents;
   const badlyWounded = s.hp < s.maxHp * 0.25;
   // being hit right now: it turns on whoever hits it (fightEnemies) and heals once it has fought them off
-  // (a playtest saw badly hurt settlers stand healing at a tent while an enemy beat them to death)
   const hitNow = !!getRecentAttacker(s) && game.pathTick - s.lastAttackedTick < 90;
   if (hitNow) { s.healing = false; return false; }
   if (s.healing && (s.hp >= s.maxHp || tents.length === 0 || (getRecentAttacker(s) && !badlyWounded))) s.healing = false;

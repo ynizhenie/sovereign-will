@@ -11,10 +11,10 @@ export const equipmentConfig = {
     rod: { id: 'rod', icon: 'rod', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6, huntDamage: 13 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
     // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
-    // factions: only these factions have it (#164: the undead don't farm or heal with herbs)
+    // factions: only these factions have it (the undead don't farm or heal with herbs)
     medbag: { id: 'medbag', icon: 'medbag', factions: ['humans', 'demons'], cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4, huntDamage: 4 },
     hoe: { id: 'hoe', icon: 'hoe', factions: ['humans', 'demons'], cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 },
-    // the undead's necromancer's staff (#164): whoever holds it is a necromancer: heals the undead around,
+    // the undead's necromancer's staff: whoever holds it is a necromancer: heals the undead around,
     // raises corpses into temporary zombies (raises before going back to a grave for more), blights
     // the ground the player marks (blightSeconds a tile)
     necro_staff: { id: 'necro_staff', icon: 'staff', factions: ['undead'], cost: { bones: 20, rot: 10 }, family: 'necro', combatDamage: 6, huntDamage: 6,
@@ -43,7 +43,7 @@ export const equipmentConfig = {
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 }, hunt: { damage: 28, range: 65, cooldown: 0.9 } },
     bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 5 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 }, hunt: { range: 140 } },
-    // the fire imps' fireballs (#43): shot like a bow (arrows are their charges), not made in the Weapons tab
+    // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },
 
   // worn gear, paid for with its button and picked up at the town hall (the settler walks there to

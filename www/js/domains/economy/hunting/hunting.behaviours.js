@@ -18,7 +18,7 @@ export function huntBoar(s, boar, tick) {
     if (dist > 25) {
       moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else {
-      // butchered where it lies, the blade going (#172)
+      // butchered where it lies, the blade going
       boar.collector = s;
       s.working = 0.1;
       faceTowards(s, boar.x, boar.y);
@@ -47,7 +47,7 @@ export function huntBoar(s, boar, tick) {
     moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
   } else {
     if (isBowWeapon(s.weapon)) {
-      // only with a clear shot: no arrows wasted on trees and stones in the way (#173)
+      // only with a clear shot: no arrows wasted on trees and stones in the way
       if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y);
       else moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else if (!((boar.fleeTimer || 0) > 0 && boar.sprinting) && s.attackCooldown <= 0) { // not mid-sprint

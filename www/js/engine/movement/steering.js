@@ -61,7 +61,7 @@ export function stepsOntoSpikes(entity, vx, vy) {
 }
 
 export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
-  // the undead's blighted ground holds enemies back (#164)
+  // the undead's blighted ground holds enemies back
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
   if (!isEnemy && game.buildings.length) {
     const via = takePortal(entity, targetX, targetY);
@@ -158,7 +158,7 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
         dist = Math.hypot(dx, dy);
       } else {
         // there: onto the exact point, unless that's inside something it can't walk (a campfire it cooks
-        // at, a wall): it stays beside it then (a playtest found cooks put inside the fire, stuck there)
+        // at, a wall): it stays beside it then, never stuck inside
         if (!isEnemy) {
           const t = getGridPos(targetX, targetY);
           if (!isTileBlockedForSettler(t.gx, t.gy)) {

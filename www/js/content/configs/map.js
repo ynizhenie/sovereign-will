@@ -39,7 +39,7 @@ export const mapConfig = {
       // caught); fleeSpeed: its sprint once it's actually hit
       wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35,
       // a kill is butchered where it lies for butcherSeconds; a hit bleeds it, and now and then (dungChance)
-      // the scared boar leaves dung (#172)
+      // the scared boar leaves dung
       butcherSeconds: 2, dungChance: 0.12 }
   },
 

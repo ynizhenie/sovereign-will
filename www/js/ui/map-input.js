@@ -16,14 +16,14 @@ import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 
 export function handleCanvasClick() {
-  // battle mode: placing while setting up; in a fight, orders for a possessed unit (#166)
+  // battle mode: placing while setting up; in a fight, orders for a possessed unit
   if (game.gameMode === 'battle') {
     if (battle.phase === 'setup') battleTap(mouse.x, mouse.y);
     else if (battle.phase === 'fight' && getPossessed()) orderPossessed(getPossessed(), mouse.x, mouse.y);
     return;
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
-  if (isDefeated()) return; // the defeat screen's own buttons (#191)
+  if (isDefeated()) return; // the defeat screen's own buttons
 
   if (game.buildMode === 'possess') {
     for (let s of game.settlers) {
@@ -62,7 +62,7 @@ export function handleCanvasClick() {
   if (game.buildMode === 'interact') {
     const damaged = game.buildings.find(b => b.x === gx && b.y === gy && b.hp < b.maxHp);
     if (damaged && toggleBuildingRepair(damaged)) return;
-    // the demons' sacrificial circle (#43): the selected settler goes into it
+    // the demons' sacrificial circle: the selected settler goes into it
     const circle = game.buildings.find(b => b.x === gx && b.y === gy && (getDefinition('buildings', b.type) || {}).sacrifice);
     if (circle) {
       const victim = getSelectedSettler();
@@ -74,8 +74,8 @@ export function handleCanvasClick() {
     }
   }
 
-  // Blight tab (the undead, #164): mark ground for a necromancer to blight; the same tile again takes the
-  // mark away, as farm zones (#186)
+  // Blight tab (the undead): mark ground for a necromancer to blight; the same tile again takes the
+  // mark away, as farm zones
   if (game.buildMode === 'blight' || game.buildMode === 'blight_clear') {
     toggleBlightZone(gx, gy, gxIdx, gyIdx, game.buildMode === 'blight_clear');
     return;
@@ -136,11 +136,11 @@ export function handleCanvasClick() {
     if (!canBuild(game.buildMode)) {
       showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
     } else if (isBuildLocationAllowed(gx, gy)) {
-      // its cost stays in storage until builders bring it (#36)
+      // its cost stays in storage until builders bring it
       const bp = createBuildingBlueprint(game.buildMode, gx, gy);
       bp.needs = { ...(building.cost || {}) };
       game.blueprints.push(bp);
-      // placed: back to Point, unless Shift is held to place another (a playtest found it stayed on)
+      // placed: back to Point, unless Shift is held to place another
       if (!shiftDown) setMode('interact');
     }
   } else if (game.buildMode === 'demolish') {

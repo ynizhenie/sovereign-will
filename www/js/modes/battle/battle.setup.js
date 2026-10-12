@@ -1,8 +1,8 @@
-// Battle mode (#38): an empty grass field split down the middle. The player places units of any faction:
+// Battle mode: an empty grass field split down the middle. The player places units of any faction:
 // theirs on the green side (left), enemies on the red side (right), buildings anywhere; presses Fight, and
 // they battle it out; the winner is shown and, a few seconds later, the same line-up comes back to adjust.
 // A fight can be called off, and the player can possess one of theirs in it. Archers' arrows don't run
-// out. Green units are settlers and red ones enemies, driven by the usual AI (#142, #166).
+// out. Green units are settlers and red ones enemies, driven by the usual AI.
 
 import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
@@ -21,7 +21,7 @@ export const BATTLE_RESULT_SECONDS = 4;
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'own',    // the panel's category
-  faction: 'humans',  // the faction its units and buildings are shown for (#166)
+  faction: 'humans',  // the faction its units and buildings are shown for
   preset: 'sword',    // the unit preset the next tap places
   building: 'wall_wood',
   armor: false,       // colony units placed next get armour / a shield (melee only)

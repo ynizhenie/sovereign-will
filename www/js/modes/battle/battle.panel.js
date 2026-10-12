@@ -11,7 +11,7 @@ export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
   document.querySelectorAll('[data-battle-category]').forEach(b => b.classList.toggle('active', b.dataset.battleCategory === battle.category));
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[b.dataset.battleGear]));
-  // the faction sub-tabs (#166)
+  // the faction sub-tabs
   const factions = document.getElementById('battle-factions');
   factions.innerHTML = '';
   for (const f of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {

@@ -2,7 +2,7 @@
 // cooking, burning, the undead's zombies and blight
 
 export const mechanicsConfig = {
-  // before a wave (#14): deploySeconds ahead, soldiers form squads of squadSize melee (plus an archer if
+  // before a wave: deploySeconds ahead, soldiers form squads of squadSize melee (plus an archer if
   // there are any) at posts around the base, no farther out than its farthest building (at least
   // minRadius tiles), doors first. A squad holds its post until an enemy comes within engageTiles of it.
   // From the warning until the wave is beaten, workers stay within that radius unless the player marked
@@ -26,16 +26,16 @@ export const mechanicsConfig = {
   // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less
   blood: { fadeAfter: 10, fadeSeconds: 3, woundedShare: 0.25, maxSplats: 150 },
 
-  // stepping in blood or dung leaves `steps` footprints, one every stepGap px walked (#124)
+  // stepping in blood or dung leaves `steps` footprints, one every stepGap px walked
   smears: { steps: 6, stepGap: 12 },
 
-  // every settler eats once every `seconds` on a clock of its own (#178): a big one eats 2 food, a short
+  // every settler eats once every `seconds` on a clock of its own: a big one eats 2 food, a short
   // colony eats worms. A new settler's first meal comes after firstShare..1 of that, so they don't all
   // eat together
   meals: { seconds: 25, firstShare: 0.3 },
 
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
-  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds (#124, #178)
+  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
@@ -56,16 +56,16 @@ export const mechanicsConfig = {
   cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 }, lowFood: 2, hireReserve: 30,
     dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
 
-  // demons eating a corpse to heal (#43)
+  // demons eating a corpse to heal
   eatCorpseSeconds: 2,
 
-  // burning arrows (#165): what they hit burns for seconds, losing dps hp a second
+  // burning arrows: what they hit burns for seconds, losing dps hp a second
   burning: { seconds: 3, dps: 5 },
 
-  // the undead (#164): a raised zombie lasts lifeSeconds, then crumbles into rot; blight lies within
-  // hallTiles of the graveyard on every side and graveTiles of each grave (#186), and on marked ground a
+  // the undead: a raised zombie lasts lifeSeconds, then crumbles into rot; blight lies within
+  // hallTiles of the graveyard on every side and graveTiles of each grave, and on marked ground a
   // necromancer blighted; enemies on it go at slowFactor of their speed, and a corpse on it rises after
-  // riseSeconds. A blighted zone the player takes away fades over clearSeconds, blighted till then (#186).
+  // riseSeconds. A blighted zone the player takes away fades over clearSeconds, blighted till then.
   temporaryZombie: { lifeSeconds: 60, rot: 1 },
 
   blight: { hallTiles: 2, graveTiles: 1, slowFactor: 0.6, riseSeconds: 4, clearSeconds: 5 }

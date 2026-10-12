@@ -6,14 +6,14 @@ import { TILE_SIZE, game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { updateBlightCache } from './undead.rules.js';
 
-// A necromancer's staff, a pale purple orb at its top (#43)
+// A necromancer's staff, a pale purple orb at its top
 export function drawStaff() {
   ctx.fillStyle = '#6d4520'; ctx.fillRect(4, -1, 20, 3);
   ctx.fillStyle = '#bb8fce'; ctx.beginPath(); ctx.arc(25, 0, 4, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#e8daef'; ctx.beginPath(); ctx.arc(24, -1, 1.5, 0, Math.PI * 2); ctx.fill();
 }
 
-// The undead's blighted ground (#164), and ground marked for it (while the Blight tab is open)
+// The undead's blighted ground, and ground marked for it (while the Blight tab is open)
 export function drawBlight() {
   const fading = new Map(game.blightZones.filter(z => z.clearing !== undefined).map(z => [`${z.x},${z.y}`, z.clearing / GAME_CONFIG.blight.clearSeconds]));
   const blight = updateBlightCache();

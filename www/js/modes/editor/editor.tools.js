@@ -1,4 +1,4 @@
-// Map editor (#37): make a map by hand, tile by tile, save it on the device, and play it in Endless
+// Map editor: make a map by hand, tile by tile, save it on the device, and play it in Endless
 // ("Custom map" there, see renderCustomMapList). A new map starts empty or from the generator (the
 // seed and generator settings of the Endless screen); a saved one can be opened again and changed.
 //
@@ -56,7 +56,7 @@ export const editor = {
   category: 'nature',
   brush: 1,     // 1 or 3: a 3×3 brush covers the tapped tile and the ones around it
   name: '',     // the name it was opened or last saved as
-  faction: 'humans' // whose map it is (#170; the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
+  faction: 'humans' // whose map it is (the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
 };
 
 // ---- Editing

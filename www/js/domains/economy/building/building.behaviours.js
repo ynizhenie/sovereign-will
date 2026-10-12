@@ -166,7 +166,7 @@ export function build(s, tick) {
 
       if (bestBp) {
         tick.blueprintAssignments.set(bestBp, (tick.blueprintAssignments.get(bestBp) || 0) + 1);
-        // materials first, fetched from storage (#36); none to be had: nothing to do on it for now
+        // materials first, fetched from storage; none to be had: nothing to do on it for now
         const missing = getMissingMaterial(bestBp);
         if (missing) {
           const [id, amount] = missing;

@@ -206,7 +206,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
   return { path, isBlockedPath: options.isBlockedPath };
 }
 
-// Enemies' way to their target (#155): one search that weighs going round against breaking through, in
+// Enemies' way to their target: one search that weighs going round against breaking through, in
 // tiles of walking: breaking a building costs `building`, a tree or boulder `nature`, walking over spikes
 // `spikes`. Rock and water can't be crossed at all.
 export const ENEMY_PATH_COST = { building: 12, nature: 25, spikes: 2 };
@@ -237,7 +237,7 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
     allowCornerCutting: false,
     isBlockedPath: true,
     // what a tile costs on top of walking it: a building is broken through rather than walked a long way
-    // round (to a far door), spikes are walked over, trees and boulders mostly walked round (#155)
+    // round (to a far door), spikes are walked over, trees and boulders mostly walked round
     extraCost: (x, y) => {
       const k = `${x},${y}`;
       if (isBuilding(k)) return PATH_COST.building;
@@ -291,7 +291,7 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false)
   });
   if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
   // a long way round (to a far door, round a wall of spikes): breaking through, or walking the spikes,
-  // may be quicker; whichever costs less (#155)
+  // may be quicker; whichever costs less
   if (isEnemy && pathCost(result.path) > 1.5 * Math.hypot(endG.gx - startG.gx, endG.gy - startG.gy) + 4) {
     const through = findPathAStarPermissive(startX, startY, targetX, targetY, true);
     if (through.path.length > 0 && through.cost < pathCost(result.path)) return through;

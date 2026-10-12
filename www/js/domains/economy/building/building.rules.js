@@ -47,7 +47,7 @@ export function isBuildLocationAllowed(x, y) {
   return !isTileOccupied(x, y);
 }
 
-// map: a saved map (editor.js) to play instead of generating one; Endless plays the one chosen in its menu
+// map: a saved map (modes/editor) to play instead of generating one; Endless plays the one chosen in its menu
 // A building is gone (broken by enemies or demolished)
 export function removeBuilding(building) {
   const index = game.buildings.indexOf(building);
@@ -56,7 +56,7 @@ export function removeBuilding(building) {
   invalidateAllPaths();
 }
 
-// Building materials promised to blueprints and not brought to them yet (#36): builders fetch them from
+// Building materials promised to blueprints and not brought to them yet: builders fetch them from
 // storage (see build), so another building can't count on them
 export function getReservedForBlueprints(id) {
   let reserved = 0;

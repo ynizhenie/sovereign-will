@@ -53,10 +53,10 @@ export function rebuildConfigHud() {
   if (typeof updateUI === 'function' && game.gameStarted) { updateUI(); refreshAffordability(true); }
 }
 
-export let renderedFaction = null; // whose units and buildings the HUD shows (#43)
+export let renderedFaction = null; // whose units and buildings the HUD shows
 
 export function renderConfigHud() {
-  // only what the player's faction has (#43): its resources, buildings, units to hire and upgrade
+  // only what the player's faction has: its resources, buildings, units to hire and upgrade
   renderedFaction = sides.player.faction;
   const ours = item => !item.factions || item.factions.includes(sides.player.faction);
   const resourcesHud = document.getElementById('resources-hud');
@@ -84,7 +84,7 @@ export function renderConfigHud() {
     for (const group of GAME_CONFIG.resourceGroups) {
       const members = group.members.filter(id => GAME_CONFIG.resources[id]);
       members.forEach(id => grouped.add(id));
-      if (!ours(group)) continue; // the undead have no food groups (#164), nor its resources' tiles
+      if (!ours(group)) continue; // the undead have no food groups, nor its resources' tiles
       if (group.kinds) {
         // one resource opening onto its kinds (Food: berries, bread...)
         const resource = GAME_CONFIG.resources[members[0]];
@@ -144,7 +144,7 @@ export function renderConfigHud() {
     resourcesHud.after(details);
   }
 
-  // the Building tab in sections (#181), the Farming tab as it is
+  // the Building tab in sections, the Farming tab as it is
   const buildSections = {};
   const sectionFor = group => {
     if (buildSections[group]) return buildSections[group];
@@ -195,7 +195,7 @@ export function renderConfigHud() {
     const button = document.getElementById(`btn-${item.id}`);
     if (button) button.hidden = !ours(item);
   }
-  // the undead blight the ground instead of farming (#164)
+  // the undead blight the ground instead of farming
   document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
   document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
 

@@ -1,4 +1,4 @@
-// Behind the main menu (#145, #168, #193): a little Endless world, run and drawn by the game itself
+// Behind the main menu: a little Endless world, run and drawn by the game itself
 // (update() and render()), so everything in it behaves exactly as in the game. A soldier with a spear by
 // the town hall hunts boars, butchers them and carries the meat to the warehouse, rests with its spear on
 // its back; boars wander, back off, run for the grass. No waves come and nobody gets hungry. Tapping the
@@ -144,7 +144,7 @@ export function menuWorldTap(clientX, clientY) {
   }
 }
 
-// Each frame (main.js): the world runs while the main menu shows and no game is on; made again for a new
+// Each frame (app/main.js): the world runs while the main menu shows and no game is on; made again for a new
 // screen size
 export function syncMenuWorld() {
   const showing = getComputedStyle(document.getElementById('main-menu')).display !== 'none';

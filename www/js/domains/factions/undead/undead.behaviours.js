@@ -1,6 +1,6 @@
 // The colony's necromancer heals, raises and blights
 
-// ---- Necromancers (#43)
+// ---- Necromancers
 
 import { game, townHall } from '../../../engine/world/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
@@ -61,7 +61,7 @@ export function necromancy(s, tick) {
     return true;
   }
 
-  // marked ground to blight (#164)
+  // marked ground to blight
   const zone = game.blightZones.filter(z => !z.done && !tick.blightAssignments.has(z))
     .sort((a, b) => dist(a) - dist(b))[0];
   if (zone) {

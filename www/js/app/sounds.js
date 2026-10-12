@@ -1,4 +1,4 @@
-// Sounds and music (#174), all made with Web Audio: no sound files. playSound(name, at) for what happens in
+// Sounds and music, all made with Web Audio: no sound files. playSound(name, at) for what happens in
 // the game (at: where in the world, for its loudness and left-right; none for the interface); updateMusic()
 // every frame for the music: calm in the main menu, an ambient in Endless that turns into battle music
 // while a wave is on (until the last enemy and enemy tent are gone). Sound and music can each be turned
@@ -131,7 +131,7 @@ export function musicMix() {
   if (game.gameMode === 'battle') return battle.phase === 'fight' ? { battle: 1 } : { ambient: 0.8 };
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
-  // a wave is on until the last enemy and enemy tent are gone (#174)
+  // a wave is on until the last enemy and enemy tent are gone
   const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
   return fighting ? { battle: pause } : { ambient: pause };
 }

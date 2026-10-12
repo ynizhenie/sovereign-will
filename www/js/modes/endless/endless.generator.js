@@ -1,4 +1,4 @@
-// Map generator settings (#20): every GAME_CONFIG.map value on its own labelled field, a Standard preset
+// Map generator settings: every GAME_CONFIG.map value on its own labelled field, a Standard preset
 // and the player's own presets, saved on the device. The values go straight into GAME_CONFIG.map, which
 // the next new game (resetGame -> generateMap) reads.
 
@@ -40,7 +40,7 @@ export function renderGeneratorFields() {
   const listed = new Set(GENERATOR_GROUPS.flatMap(([, keys]) => keys));
   const other = Object.keys(GAME_CONFIG.map).filter(key => !listed.has(key));
   for (const [group, keys] of [...GENERATOR_GROUPS, ...(other.length ? [['other', other]] : [])]) {
-    // each group: a heading, then its fields two to a row (#143)
+    // each group: a heading, then its fields two to a row
     const heading = document.createElement('h2');
     heading.textContent = t(`gen.group.${group}`);
     const grid = document.createElement('div');

@@ -47,7 +47,7 @@ export function createSettlerTick(dt) {
   return {
     dt,
     isWaveActive: game.enemies.length > 0,
-    tents: game.buildings.filter(isShelter), // tents or graves (#43)
+    tents: game.buildings.filter(isShelter), // tents or graves
     allResources,
     resourceKind,
     markedResources,
@@ -84,7 +84,7 @@ export function prepareSettler(s, dt) {
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
 }
 
-// ---- The possessed settler (#16)
+// ---- The possessed settler
 // Its AI is off: it doesn't work, heal or even hit back by itself. The player moves it (see update())
 // and taps things to give it an order (see orderPossessed()): it walks there and does what it can with
 // what it has in hand. Moving it by hand cancels the order. Gear the player picked is still fetched.
@@ -95,7 +95,7 @@ export function playerControlled(s, tick) {
   return true;
 }
 
-// ---- Relief (#124)
+// ---- Relief
 
 // A settler that needs to go (see the meals in update) walks off to a quiet spot away from the buildings,
 // near grass if there's some, waits a moment and leaves dung there
@@ -214,7 +214,7 @@ export function tickSettlers(dt) {
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (behaviour(s, settlerTick)) {
         s.isIdle = behaviour === patrol;
-        s.activity = behaviour.name; // what it's doing, for the selected settler's info (#180)
+        s.activity = behaviour.name; // what it's doing, for the selected settler's info
         return;
       }
     }

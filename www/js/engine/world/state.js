@@ -9,12 +9,12 @@ export const BORDER_MARGIN = 2;
 export const DEFAULT_MAP_TILES = 40;
 
 export const game = {
-  gameMode: 'endless',      // endless / battle (battle.js) / editor (editor.js) / menu (the world behind the main menu, menu-scene.js)
+  gameMode: 'endless',      // endless / battle / editor (modes/) / menu (the world behind the main menu, modes/menu/menu.world.js)
   gameStarted: false,
   isPaused: false,
   gameDifficulty: 'normal', // GAME_CONFIG.difficulty key, set from the menu
   mapSettings: { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }, // set from the menu, used by resetGame
-  customMap: null,          // a saved map (editor.js) Endless plays instead of a generated one
+  customMap: null,          // a saved map (modes/editor) Endless plays instead of a generated one
   worldSeed: null,          // the world's seed and its random sequence (rng.js)
   // the map's size, in tiles and in world units (setWorldSize)
   COLS: DEFAULT_MAP_TILES,
@@ -40,7 +40,7 @@ export const game = {
   berryBushes: [],
   farmPlots: [],
   farmZones: [],        // { x, y, crop } tiles the player marked for farmers to plant, see tendFarmZones()
-  blightZones: [],      // { x, y, done, clearing } tiles the player marked for blight, see necromancy() (#164, #186)
+  blightZones: [],      // { x, y, done, clearing } tiles the player marked for blight, see necromancy()
   naturalRocks: [],
   waterTiles: [],
   desertTiles: [],

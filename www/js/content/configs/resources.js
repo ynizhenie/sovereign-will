@@ -19,9 +19,9 @@ export const resourcesConfig = {
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
-    // factions: only shown to these factions (#43)
+    // factions: only shown to these factions
     bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] },
-    // the undead's other hiring resource (#164): food brought in turns into it (meat and fish into bones)
+    // the undead's other hiring resource: food brought in turns into it (meat and fish into bones)
     rot: { id: 'rot', icon: 'rot', type: 'resource', factions: ['undead'] }
   },
 
@@ -29,11 +29,11 @@ export const resourcesConfig = {
   // of one shows as that resource; resources in no group get their own tile. `held` groups count what
   // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
   resourceGroups: [
-    // factions: only these factions see it (the undead have no food, #164)
-    { id: 'bones', members: ['bones'], factions: ['undead'] }, // the undead's own, first (#188)
+    // factions: only these factions see it (the undead have no food)
+    { id: 'bones', members: ['bones'], factions: ['undead'] }, // the undead's own, first
     { id: 'rot', members: ['rot'], factions: ['undead'] },
     { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'] }, // Food, opening onto what it's made of
-    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food (#169)
+    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food
     { id: 'wood', members: ['wood'] },
     { id: 'stone', members: ['stone'] },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
@@ -46,7 +46,7 @@ export const resourcesConfig = {
 
   // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows
   // what it's made of. The start's food is a random mix of these; food that comes in without a kind
-  // (loot) goes to whichever kind there's least of; food spent or eaten comes off in this order (#169).
+  // (loot) goes to whichever kind there's least of; food spent or eaten comes off in this order.
   foodKinds: {
     berries: { id: 'berries', icon: 'berries' }, apples: { id: 'apples', icon: 'apples' },
     bread: { id: 'bread', icon: 'bread' }, cookedFish: { id: 'cookedFish', icon: 'cookedFish' }, cookedMeat: { id: 'cookedMeat', icon: 'cookedMeat' }
@@ -54,7 +54,7 @@ export const resourcesConfig = {
 
   // ---- Colony
 
-  // builders bring a building's cost from the nearest storage, carryMaterials at a time (#36)
+  // builders bring a building's cost from the nearest storage, carryMaterials at a time
   storage: { carryMaterials: 10 },
 
   start: {

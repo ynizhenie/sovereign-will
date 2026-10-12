@@ -8,7 +8,7 @@ import { game, getGridPos, rand, townHall } from '../../../engine/world/index.js
 import { getReservedForBlueprints } from '../../economy/building/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 
-// ---- The colony's stock (#36, #141): amount per resource id of GAME_CONFIG.resources, shared by the
+// ---- The colony's stock: amount per resource id of GAME_CONFIG.resources, shared by the
 // whole colony (set from GAME_CONFIG.start by resetGame). The town hall and warehouses are where
 // settlers bring what they gather and fetch what they need: whichever is nearest.
 export const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
@@ -41,7 +41,7 @@ export function isFoodKind(type) {
 }
 
 // Ready food of a kind into the stock
-// The start's food as a random mix of kinds (#169)
+// The start's food as a random mix of kinds
 export function mixStartFood() {
   const kinds = Object.keys(GAME_CONFIG.foodKinds);
   game.foodMix = {};
@@ -154,8 +154,7 @@ export function getTownHallApproachPoint(settler) {
   }
   let approachDistance = townHall.radius + settler.radius - 1;
   // the side facing the settler, or the nearest side round from it that's free to stand on: spikes or a
-  // wall against the hall there and it would walk onto them (a playtest saw settlers killed by their own
-  // spikes beside the hall)
+  // wall against the hall there and it would walk onto them
   const angle = Math.atan2(dy, dx);
   for (let turn = 0; turn <= 12; turn++) {
     for (const sign of turn ? [1, -1] : [1]) {

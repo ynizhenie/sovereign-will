@@ -20,7 +20,7 @@ export const MAX_STEPS_PER_FRAME = 6; // after a long hitch, catch up at most th
 // and the frame-rate setting (30, 60, or 'display': every screen refresh)
 export const loop = { lastTime: performance.now(), stepTime: 0, lastDrawn: 0, frameRate: loadSetting('fps', 'display') };
 
-// One step of the game, unless it's lost: then the world stops and no more waves come (#169)
+// One step of the game, unless it's lost: then the world stops and no more waves come
 export function stepGame(dt) {
   updateDefeat(dt);
   if (isDefeated()) return;
@@ -28,8 +28,8 @@ export function stepGame(dt) {
 }
 
 export function gameLoop(now) {
-  if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu (#193)
-  if (typeof updateMusic === 'function') updateMusic(); // (#174)
+  if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu
+  if (typeof updateMusic === 'function') updateMusic();
   loop.stepTime += Math.min(0.25, (now - loop.lastTime) / 1000);
   loop.lastTime = now;
   let steps = 0;
@@ -68,7 +68,7 @@ export function countFrame(now) {
 export function initMain() {
   applyPageTexts();
   renderConfigHud();
-  if (loop.frameRate === 'unlimited') loop.frameRate = 'display'; // the old "no limit" (see #123)
+  if (loop.frameRate === 'unlimited') loop.frameRate = 'display'; // the old "no limit" setting
   fitCanvasToScreen();
   requestAnimationFrame(gameLoop);
 }

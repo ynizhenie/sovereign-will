@@ -7,7 +7,7 @@ import { ctx } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
-// isn't one flat repeating fill (#61). Picked per-tile from a coordinate hash, not rand(), so it
+// isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
 // stays put across frames without disturbing the seeded world-gen RNG sequence.
 export const GRASS_SHADES = ['#2d4a22', '#2f4d25', '#2a4620', '#31501f', '#294419', '#2e4b28'];
 
@@ -32,7 +32,7 @@ export function drawGrassGround() {
   }
 }
 
-// ---- Terrain that joins up (#79)
+// ---- Terrain that joins up
 //
 // Water joins water, natural rock joins rock and ore: every tile covers its whole square, and gets an
 // outline only on sides with no neighbour of its kind, so lakes and rock masses read as shapes instead

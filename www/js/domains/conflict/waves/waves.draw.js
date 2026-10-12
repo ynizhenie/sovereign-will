@@ -14,7 +14,7 @@ import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 export function drawEnemyTents() {
   game.enemyTents.forEach(et => {
     if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
-      // the undead's spawners are graves, the demons' portals (#43), ringed in the enemy's colour
+      // the undead's spawners are graves, the demons' portals, ringed in the enemy's colour
       ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
       if (getEnemyFaction().spawner === 'portal') drawPortal(et.x, et.y, getEnemyColor());
@@ -49,7 +49,7 @@ export function drawEnemyTentSites() {
 // Enemies: body, weapon, quiver, the target mark, health
 export function drawEnemies() {
   game.enemies.forEach(en => {
-    // enemies in the enemy's colour (#43; big ones darker), holding their weapon the way settlers do
+    // enemies in the enemy's colour (big ones darker), holding their weapon the way settlers do
     ctx.fillStyle = getEnemyColor(en);
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = shadeColor(getEnemyColor(), -0.45); ctx.lineWidth = 2; ctx.stroke();

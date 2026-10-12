@@ -32,7 +32,7 @@ export function getCanvasScreenCoords(clientX, clientY) {
 }
 
 // zoomed in at most this far, or until a world unit is MAX_CSS_SCALE CSS pixels, whichever is closer:
-// on a big map the base scale is small, so a fixed factor didn't get close enough on a phone (#182)
+// on a big map the base scale is small, so a fixed factor didn't get close enough on a phone
 export const MAX_ZOOM = 2.4;
 
 export const MAX_CSS_SCALE = 3;
@@ -61,7 +61,7 @@ export function updateInputPos(clientX, clientY) {
 
 export function clampCamera() {
   // the camera's centre stays on the map, at any zoom: the view goes up to half of it past the map's
-  // edge, and zoomed all the way out it isn't pulled back to the middle (#182, #189)
+  // edge, and zoomed all the way out it isn't pulled back to the middle
   camera.x = Math.max(0, Math.min(game.WORLD_WIDTH, camera.x));
   camera.y = Math.max(0, Math.min(game.WORLD_HEIGHT, camera.y));
 }

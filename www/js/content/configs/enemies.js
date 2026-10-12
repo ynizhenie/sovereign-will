@@ -23,7 +23,7 @@ export const enemiesConfig = {
       type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } },
-    // the undead (#43): slow zombies, big zombies, skeleton archers, and necromancers that raise the dead
+    // the undead: slow zombies, big zombies, skeleton archers, and necromancers that raise the dead
     // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
     // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
     undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
@@ -37,7 +37,7 @@ export const enemiesConfig = {
     undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
       necromancer: { raises: 5, range: 200, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } },
-    // the demons (#43): quick imps, big demons that hit all around, fire imps that throw fireballs. They
+    // the demons: quick imps, big demons that hit all around, fire imps that throw fireballs. They
     // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
     demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: ['club', 'raider'], reach: 6, siege: { buildings: 10, resources: 2 } },
@@ -57,7 +57,7 @@ export const enemiesConfig = {
 
   // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves; each wave
   // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
-  // (#179) the first wave is firstWave of that; and every wave is scaled by the player's army: 1 at
+  // the first wave is firstWave of that; and every wave is scaled by the player's army: 1 at
   // army.base settlers, perUnit more (or less) for each one over (under) it, within min..max. A wave
   // always has at least one enemy.
   waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 },

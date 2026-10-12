@@ -40,7 +40,7 @@ export const startGame = (e) => {
     if (e) e.preventDefault();
     applySeedFromUI();
     resetGame();
-    openTab('tab-build'); // a new game starts on the Building tab (#188)
+    openTab('tab-build'); // a new game starts on the Building tab
     game.gameStarted = true;
     mainMenu.style.display = 'none';
 };
@@ -53,7 +53,7 @@ export function renderCustomMapList() {
   // the chosen map may have been deleted or changed in the editor since
   if (game.customMap) game.customMap = maps[game.customMap.name] || null;
   if (mapSource === 'custom' && !game.customMap) game.customMap = Object.values(maps)[0] || null;
-  // a custom map is played as the faction it was made for (#170)
+  // a custom map is played as the faction it was made for
   if (mapSource === 'custom' && game.customMap && game.customMap.faction && sides.player.faction !== game.customMap.faction) setSideFaction('player', game.customMap.faction);
   renderFactionPicker();
   renderSavedMapList(document.getElementById('custom-map-list'), {

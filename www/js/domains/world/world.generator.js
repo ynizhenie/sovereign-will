@@ -470,7 +470,7 @@ export function generateMap() {
   placeAppleTrees();
 }
 
-// Sand on one stretch of each lake's shore (#79): the tiles touching the water on one side of the lake.
+// Sand on one stretch of each lake's shore: the tiles touching the water on one side of the lake.
 // The side comes from the lake's own shape, not rand(), so the rest of the seeded map doesn't change.
 // Only drawn: for everything else (building, regrowth, cacti) a beach is ordinary ground.
 export const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
