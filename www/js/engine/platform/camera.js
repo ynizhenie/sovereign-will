@@ -2,10 +2,6 @@
 
 let camera = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, zoom: 1 };
 
-let cameraDragging = false;
-
-let cameraDragPoint = { x: 0, y: 0 };
-
 function getCanvasScreenCoords(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const canvasAspect = canvas.width / canvas.height;
