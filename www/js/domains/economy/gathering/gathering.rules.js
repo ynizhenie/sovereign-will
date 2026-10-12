@@ -2,15 +2,15 @@
 
 function getPlacedResources(includeGrowingTrees = true) {
   return [
-    ...(includeGrowingTrees ? trees : trees.filter(tree => !tree.isGrowing)),
-    ...cacti, ...boulders, ...grassList, ...berryBushes,
-    ...sticks, ...pebbles, ...ironOres, ...coalOres, ...naturalRocks
+    ...(includeGrowingTrees ? game.trees : game.trees.filter(tree => !tree.isGrowing)),
+    ...game.cacti, ...game.boulders, ...game.grassList, ...game.berryBushes,
+    ...game.sticks, ...game.pebbles, ...game.ironOres, ...game.coalOres, ...game.naturalRocks
   ];
 }
 
 function getHarvestableResources() {
   // ore spawners are natural rock that can't be mined
-  return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...farmPlots.filter(plot => plot.growth >= 100), ...boars];
+  return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];
 }
 
 // ---- Map resources (GAME_CONFIG.mapResources)
@@ -22,7 +22,7 @@ function getMapResourceDef(kind) {
 // Which GAME_CONFIG.mapResources entry an object on the map is, by the list it's in
 function getMapResourceKind(resource) {
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    if (WORLD[def.list].includes(resource)) return kind;
+    if (game[def.list].includes(resource)) return kind;
   }
   return null;
 }
@@ -31,7 +31,7 @@ function addMapResource(kind, x, y) {
   const def = GAME_CONFIG.mapResources[kind];
   const resource = { x, y, hp: def.hp, maxHp: def.hp, priority: 0 };
   if (def.list === 'trees') Object.assign(resource, { isGrowing: false, growProgress: 0 });
-  WORLD[def.list].push(resource);
+  game[def.list].push(resource);
   return resource;
 }
 
@@ -44,7 +44,7 @@ function finishHarvest(settler, resource, kind) {
   for (const [item, chance] of Object.entries(bonus || {})) {
     if (rand() < chance) addResources({ [item]: 1 });
   }
-  const list = WORLD[def.list];
+  const list = game[def.list];
   const index = list.indexOf(resource);
   if (index !== -1) list.splice(index, 1);
   if (def.regrow) scheduleRespawn(kind, resource.x, resource.y);
@@ -58,15 +58,15 @@ function finishHarvest(settler, resource, kind) {
 function scheduleRespawn(type, nearX = null, nearY = null) {
   const isOre = getMapResourceDef(type).regrow === 'spawner';
   const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
-  pendingRespawns.push({ type, nearX, nearY, timer: delay });
+  game.pendingRespawns.push({ type, nearX, nearY, timer: delay });
 }
 
 function updatePendingRespawns(dt) {
-  for (let i = pendingRespawns.length - 1; i >= 0; i--) {
-    const pending = pendingRespawns[i];
+  for (let i = game.pendingRespawns.length - 1; i >= 0; i--) {
+    const pending = game.pendingRespawns[i];
     pending.timer -= dt;
     if (pending.timer > 0) continue;
-    pendingRespawns.splice(i, 1);
+    game.pendingRespawns.splice(i, 1);
     const def = getMapResourceDef(pending.type);
     if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type));
     else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);

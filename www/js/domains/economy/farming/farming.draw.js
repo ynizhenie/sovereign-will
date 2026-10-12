@@ -3,7 +3,7 @@
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
 function drawFarmZones() {
   const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
-  if (activeTab === 'tab-farming') farmZones.forEach(z => {
+  if (activeTab === 'tab-farming') game.farmZones.forEach(z => {
     const rgb = ZONE_COLORS[z.crop] || ZONE_COLORS.sapling;
     ctx.fillStyle = `rgba(${rgb}, 0.14)`;
     ctx.fillRect(z.x - 15, z.y - 15, TILE_SIZE, TILE_SIZE);
@@ -14,7 +14,7 @@ function drawFarmZones() {
 
 // Wheat plots: growing, ripe, being harvested
 function drawFarmPlots() {
-  farmPlots.forEach(f => {
+  game.farmPlots.forEach(f => {
     ctx.fillStyle = '#5c4033'; ctx.fillRect(f.x - 13, f.y - 13, 26, 26);
     if (f.growth < 100) {
       ctx.fillStyle = '#2ecc71'; ctx.fillRect(f.x - 6, f.y - 6, 12, 12);

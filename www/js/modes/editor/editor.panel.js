@@ -18,7 +18,7 @@ function renderEditorPanel() {
   document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('active', Number(b.dataset.brush) === editor.brush));
   document.querySelectorAll('[data-editor-category]').forEach(b => b.classList.toggle('active', b.dataset.editorCategory === editor.category));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
-  document.getElementById('editor-size').textContent = `${COLS}×${ROWS}`;
+  document.getElementById('editor-size').textContent = `${game.COLS}×${game.ROWS}`;
 }
 
 // The editor menu's faction choice (#170)

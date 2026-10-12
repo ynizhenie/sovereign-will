@@ -2,7 +2,7 @@
 
 // Boars (faded while hidden), and carcasses being butchered
 function drawBoars() {
-  boars.forEach(b => {
+  game.boars.forEach(b => {
     ctx.save();
     if (b.isCarcass) {
       ctx.fillStyle = '#633c2b';

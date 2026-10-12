@@ -1,6 +1,6 @@
 // Saving and loading Endless games (#156): from the pause menu, a save of the whole game on the device;
 // from the Endless menu, the saves to carry on from (or delete). A save holds the world (every list in
-// WORLD), the stock, the clocks, the factions and the random sequence, so a loaded game goes on exactly
+// WORLD_LISTS), the stock, the clocks, the factions and the random sequence, so a loaded game goes on exactly
 // as it would have.
 //
 // Things on the map point at each other (an archer at its tower, an order at its target, a builder's
@@ -21,7 +21,7 @@ function storeSaves(saves) {
 
 function serializeGame() {
   const refs = new Map([[townHall, '$hall']]);
-  for (const [list, value] of Object.entries(WORLD)) {
+  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) {
     if (Array.isArray(value)) value.forEach((o, i) => { if (o && typeof o === 'object') refs.set(o, `${list}:${i}`); });
   }
   // an object as plain data: what it points at as references, itself (the root) in full
@@ -31,24 +31,24 @@ function serializeGame() {
     return v;
   }));
   const world = {};
-  for (const [list, value] of Object.entries(WORLD)) world[list] = Array.isArray(value) ? value.map(encode) : encode(value);
+  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? value.map(encode) : encode(value);
   return {
     version: 1,
     world,
     stock: { ...stock },
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested },
-    cols: COLS, rows: ROWS,
-    clocks: { waveTimer, waveNum, waveInterval, boarRespawnTimer, pathTick },
+    cols: game.COLS, rows: game.ROWS,
+    clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
     sides: JSON.parse(JSON.stringify(sides)),
-    difficulty: gameDifficulty,
-    seed: { value: worldSeed.value, state: worldSeed.getState() },
+    difficulty: game.gameDifficulty,
+    seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
   };
 }
 
 // Put every { $ref } back as the object it names
 function resolveRefs(root) {
-  const lookup = ref => (ref === '$hall' ? townHall : WORLD[ref.slice(0, ref.indexOf(':'))][Number(ref.slice(ref.indexOf(':') + 1))]);
+  const lookup = ref => (ref === '$hall' ? townHall : game[ref.slice(0, ref.indexOf(':'))][Number(ref.slice(ref.indexOf(':') + 1))]);
   const seen = new Set();
   const walk = value => {
     if (!value || typeof value !== 'object' || seen.has(value)) return;
@@ -63,38 +63,38 @@ function resolveRefs(root) {
 }
 
 function loadGame(data) {
-  gameMode = 'endless';
+  game.gameMode = 'endless';
   Object.assign(sides.player, data.sides.player);
   Object.assign(sides.enemy, data.sides.enemy);
-  gameDifficulty = data.difficulty;
+  game.gameDifficulty = data.difficulty;
   setWorldSize(data.cols, data.rows);
-  worldSeed = createWorldSeed(data.seed.value);
-  worldSeed.setState(data.seed.state);
-  for (const [list, value] of Object.entries(data.world)) WORLD[list] = value;
-  for (const value of Object.values(WORLD)) resolveRefs(value);
+  game.worldSeed = createWorldSeed(data.seed.value);
+  game.worldSeed.setState(data.seed.state);
+  for (const [list, value] of Object.entries(data.world)) game[list] = value;
+  for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
   Object.assign(townHall, data.townHall);
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
-  ({ waveTimer, waveNum, waveInterval, boarRespawnTimer, pathTick } = data.clocks);
+  ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();
-  selectedSettler = null;
-  defensePlan = null;
+  game.selectedSettler = null;
+  game.defensePlan = null;
   resetTileIndex();
   Object.assign(camera, data.camera);
   clampCamera();
   updateSeedHud();
   updateUnitCounts();
-  gameStarted = true;
+  game.gameStarted = true;
   setPaused(false);
   document.getElementById('main-menu').style.display = 'none';
 }
 
 // From the pause menu: saved under the wave and the time, never over another save
 function saveCurrentGame() {
-  if (gameMode !== 'endless' || !gameStarted) return;
+  if (game.gameMode !== 'endless' || !game.gameStarted) return;
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const name = t('save.name', { wave: waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
+  const name = t('save.name', { wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
   const saves = loadSaves();
   let unique = name;
   for (let n = 2; saves[unique]; n++) unique = `${name} (${n})`;

@@ -2,7 +2,7 @@
 
 // Every enemy's tick, last first
 function tickEnemies(dt) {
-  for (let i = enemies.length - 1; i >= 0; i--) tickEnemy(enemies[i], dt);
+  for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt);
 }
 
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
@@ -12,7 +12,7 @@ function tickEnemy(en, dt) {
 
   if (en.buildTarget) {
     let site = en.buildTarget;
-    if (!enemyTentBlueprints.includes(site)) {
+    if (!game.enemyTentBlueprints.includes(site)) {
       en.buildTarget = null;
     } else {
       const tentConfig = GAME_CONFIG.enemyTents;
@@ -22,8 +22,8 @@ function tickEnemy(en, dt) {
       } else {
         site.progress += dt * tentConfig.buildRate;
         if (site.progress >= site.maxProgress) {
-          enemyTents.push({ x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp, summonTimer: 0, summonsLeft: tentConfig.summonsPerWave });
-          enemyTentBlueprints.splice(enemyTentBlueprints.indexOf(site), 1);
+          game.enemyTents.push({ x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp, summonTimer: 0, summonsLeft: tentConfig.summonsPerWave });
+          game.enemyTentBlueprints.splice(game.enemyTentBlueprints.indexOf(site), 1);
           en.buildTarget = null;
           invalidateAllPaths();
         }
@@ -38,13 +38,13 @@ function tickEnemy(en, dt) {
   let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
   let closestSettler = null;
 
-  settlers.forEach(s => {
+  game.settlers.forEach(s => {
     let d = Math.hypot(en.x - s.x, en.y - s.y);
     if (d < minDist) { minDist = d; closestSettler = s; }
   });
 
   let lockedTarget = en.attackTarget;
-  if (lockedTarget && !settlers.includes(lockedTarget)) lockedTarget = null;
+  if (lockedTarget && !game.settlers.includes(lockedTarget)) lockedTarget = null;
   if (lockedTarget) {
     let lockedDist = Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y);
     if (!closestSettler || lockedDist <= minDist + 40) {
@@ -69,12 +69,12 @@ function tickEnemy(en, dt) {
   let moveTarget = target;
   const quiver = enemyDef.quiver;
   if (quiver && en.arrows <= 0) {
-    const tent = enemyArrowStock > 0 ? findNearestEnemyTent(en) : null;
+    const tent = game.enemyArrowStock > 0 ? findNearestEnemyTent(en) : null;
     if (tent) {
       if (Math.hypot(tent.x - en.x, tent.y - en.y) <= GAME_CONFIG.enemyTents.buildDistance) {
-        const taken = Math.min(quiver.refill, enemyArrowStock);
+        const taken = Math.min(quiver.refill, game.enemyArrowStock);
         en.arrows += taken;
-        enemyArrowStock -= taken;
+        game.enemyArrowStock -= taken;
       } else {
         shooting = false;
         moveTarget = tent;
@@ -95,12 +95,12 @@ function tickEnemy(en, dt) {
     if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
       let angle = Math.atan2(target.y - en.y, target.x - en.x);
       playSound('bow', en);
-      projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en,
+      game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage, life: ranged.arrowLife, fromEnemy: true, owner: en,
         fire: !!getEnemyDef(en).fireArrows }); // burning arrows (#165)
       startSwing(en, 0.3);
       faceTowards(en, target.x, target.y);
       en.attackCooldown = ranged.cooldown;
-      if (quiver && gameMode !== 'battle') en.arrows--;
+      if (quiver && game.gameMode !== 'battle') en.arrows--;
     }
   }
 
@@ -113,7 +113,7 @@ function tickEnemy(en, dt) {
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
   // spikes are walked over, not besieged
-  let touchingBuilding = buildings.find(b => b.type !== 'spikes' && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
+  let touchingBuilding = game.buildings.find(b => b.type !== 'spikes' && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
   let blockedRes = null;
 
   if (touchingBuilding) {
@@ -139,15 +139,15 @@ function tickEnemy(en, dt) {
   } else {
     if (en.isBlockedPath) {
       let destroyableResources = [
-        ...trees.filter(t => !t.isGrowing),
-        ...boulders,
-        ...berryBushes,
-        ...grassList
+        ...game.trees.filter(t => !t.isGrowing),
+        ...game.boulders,
+        ...game.berryBushes,
+        ...game.grassList
       ];
       if (en.type === 'big') {
         // not naturalRocks: paths never go through rock, so a brute only ever grazed rock beside its
         // corridor and then spent ~25s chewing through 100 hp instead of walking on
-        destroyableResources.push(...cacti, ...ironOres, ...coalOres);
+        destroyableResources.push(...game.cacti, ...game.ironOres, ...game.coalOres);
       }
       for (let r of destroyableResources) {
         if (collidesWithBoxList(en.x, en.y, contactRadius, [r], 15)) {
@@ -158,32 +158,32 @@ function tickEnemy(en, dt) {
     }
 
     if (blockedRes) {
-      if (trees.includes(blockedRes)) {
+      if (game.trees.includes(blockedRes)) {
         blockedRes.hp -= dt * enemyDef.siege.resources;
         if (blockedRes.hp <= 0) {
-          trees.splice(trees.indexOf(blockedRes), 1);
+          game.trees.splice(game.trees.indexOf(blockedRes), 1);
           scheduleRespawn('tree');
           invalidateAllPaths();
         }
-      } else if (boulders.includes(blockedRes)) {
+      } else if (game.boulders.includes(blockedRes)) {
         blockedRes.hp -= dt * enemyDef.siege.resources;
         if (blockedRes.hp <= 0) {
-          boulders.splice(boulders.indexOf(blockedRes), 1);
+          game.boulders.splice(game.boulders.indexOf(blockedRes), 1);
           scheduleRespawn('boulder');
           invalidateAllPaths();
         }
-      } else if (berryBushes.includes(blockedRes)) {
-        berryBushes.splice(berryBushes.indexOf(blockedRes), 1);
+      } else if (game.berryBushes.includes(blockedRes)) {
+        game.berryBushes.splice(game.berryBushes.indexOf(blockedRes), 1);
         scheduleRespawn('berry_bush');
         invalidateAllPaths();
-      } else if (grassList.includes(blockedRes)) {
-        grassList.splice(grassList.indexOf(blockedRes), 1);
+      } else if (game.grassList.includes(blockedRes)) {
+        game.grassList.splice(game.grassList.indexOf(blockedRes), 1);
         scheduleRespawn('grass');
         invalidateAllPaths();
       } else if (en.type === 'big') {
         blockedRes.hp -= dt * enemyDef.siege.resources;
         if (blockedRes.hp <= 0) {
-          const resourceLists = [cacti, ironOres, coalOres, naturalRocks];
+          const resourceLists = [game.cacti, game.ironOres, game.coalOres, game.naturalRocks];
           const list = resourceLists.find(resources => resources.includes(blockedRes));
           if (list) list.splice(list.indexOf(blockedRes), 1);
           invalidateAllPaths();
@@ -204,7 +204,7 @@ function tickEnemy(en, dt) {
       if (target === townHall) townHall.hp -= dt * en.damage;
       else damageSettler(target, dt * en.damage, en);
 
-      settlers.forEach(s => {
+      game.settlers.forEach(s => {
         if (s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius) {
           damageSettler(s, splashDamage, en);
         }

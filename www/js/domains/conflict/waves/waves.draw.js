@@ -2,7 +2,7 @@
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 function drawEnemyTents() {
-  enemyTents.forEach(et => {
+  game.enemyTents.forEach(et => {
     if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
       // the undead's spawners are graves, the demons' portals (#43), ringed in the enemy's colour
       ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
@@ -26,7 +26,7 @@ function drawEnemyTents() {
 
 // Tent sites enemies are building
 function drawEnemyTentSites() {
-  enemyTentBlueprints.forEach(site => {
+  game.enemyTentBlueprints.forEach(site => {
     ctx.fillStyle = 'rgba(192, 57, 43, 0.35)';
     ctx.beginPath();
     ctx.moveTo(site.x, site.y - 14); ctx.lineTo(site.x + 14, site.y + 14); ctx.lineTo(site.x - 14, site.y + 14); ctx.closePath(); ctx.fill();
@@ -38,7 +38,7 @@ function drawEnemyTentSites() {
 
 // Enemies: body, weapon, quiver, the target mark, health
 function drawEnemies() {
-  enemies.forEach(en => {
+  game.enemies.forEach(en => {
     // enemies in the enemy's colour (#43; big ones darker), holding their weapon the way settlers do
     ctx.fillStyle = getEnemyColor(en);
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();

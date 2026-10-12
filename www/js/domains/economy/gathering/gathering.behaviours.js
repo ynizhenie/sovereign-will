@@ -23,7 +23,7 @@ function canSettlerHarvest(s, r, tick) {
     return !hasNothing && !hasRod;
   }
 
-  if (kind === 'grass' && boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
+  if (kind === 'grass' && game.boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
   if (kind === 'grass' && hasToolFamily(s.tool, 'medic')) return true; // medics gather grass for herbs
   if (kind === 'grass' && tick.idleFarmer === s) return true; // so does a farmer with nothing else to do
 
@@ -46,7 +46,7 @@ function canSettlerHarvest(s, r, tick) {
 function pickResourceToHarvest(s, tick) {
   const settlerReach = getSettlerReach(s);
   // resources this settler recently found no spot next to (see harvest())
-  const skipped = r => s.skippedResource === r && pathTick < s.skippedUntilTick;
+  const skipped = r => s.skippedResource === r && game.pathTick < s.skippedUntilTick;
   let assignedRes = null;
   for (let r of tick.markedResources) {
     if (canSettlerHarvest(s, r, tick) && !skipped(r) && getReachDistanceToResource(settlerReach, r) < Infinity) {
@@ -79,7 +79,7 @@ function workResource(s, assignedRes, tick) {
   const kind = tick.resourceKind.get(assignedRes);
   const def = getMapResourceDef(kind);
   // gone already: another settler finished it earlier this tick (the tick's resource lists are a snapshot)
-  if (!def || !WORLD[def.list].includes(assignedRes)) {
+  if (!def || !game[def.list].includes(assignedRes)) {
     s.patrolTarget = null;
     return;
   }
@@ -120,11 +120,11 @@ function harvest(s, tick) {
   if (!approachPos) {
     // nowhere to stand next to it: pick something else for a while instead of standing here
     s.skippedResource = assignedRes;
-    s.skippedUntilTick = pathTick + 5 * 60;
+    s.skippedUntilTick = game.pathTick + 5 * 60;
     s.patrolTarget = null;
     return true;
   }
-  if (boars.includes(assignedRes)) {
+  if (game.boars.includes(assignedRes)) {
     huntBoar(s, assignedRes, tick);
     return true;
   }

@@ -3,7 +3,7 @@
 
 function isBuildingSingle(building) {
   if (!building) return true;
-  for (let other of buildings) {
+  for (let other of game.buildings) {
     if (other !== building) {
       let dx = Math.abs(other.x - building.x);
       let dy = Math.abs(other.y - building.y);
@@ -17,21 +17,21 @@ function isBuildingSingle(building) {
 
 function isTileOccupied(x, y) {
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return true;
-  return trees.some(t => Math.hypot(t.x - x, t.y - y) < 20) ||
-         cacti.some(c => Math.hypot(c.x - x, c.y - y) < 20) ||
-         boulders.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         grassList.some(g => Math.hypot(g.x - x, g.y - y) < 20) ||
-         sticks.some(s => Math.hypot(s.x - x, s.y - y) < 20) ||
-         pebbles.some(p => Math.hypot(p.x - x, p.y - y) < 20) ||
-         ironOres.some(i => Math.hypot(i.x - x, i.y - y) < 22) ||
-         coalOres.some(c => Math.hypot(c.x - x, c.y - y) < 22) ||
-         buildings.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         blueprints.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         naturalRocks.some(r => Math.hypot(r.x - x, r.y - y) < 24) ||
-         waterTiles.some(w => Math.hypot(w.x - x, w.y - y) < 20) ||
-         farmPlots.some(f => Math.hypot(f.x - x, f.y - y) < 20) ||
-         berryBushes.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         boars.some(b => Math.hypot(b.x - x, b.y - y) < 20);
+  return game.trees.some(t => Math.hypot(t.x - x, t.y - y) < 20) ||
+         game.cacti.some(c => Math.hypot(c.x - x, c.y - y) < 20) ||
+         game.boulders.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
+         game.grassList.some(g => Math.hypot(g.x - x, g.y - y) < 20) ||
+         game.sticks.some(s => Math.hypot(s.x - x, s.y - y) < 20) ||
+         game.pebbles.some(p => Math.hypot(p.x - x, p.y - y) < 20) ||
+         game.ironOres.some(i => Math.hypot(i.x - x, i.y - y) < 22) ||
+         game.coalOres.some(c => Math.hypot(c.x - x, c.y - y) < 22) ||
+         game.buildings.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
+         game.blueprints.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
+         game.naturalRocks.some(r => Math.hypot(r.x - x, r.y - y) < 24) ||
+         game.waterTiles.some(w => Math.hypot(w.x - x, w.y - y) < 20) ||
+         game.farmPlots.some(f => Math.hypot(f.x - x, f.y - y) < 20) ||
+         game.berryBushes.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
+         game.boars.some(b => Math.hypot(b.x - x, b.y - y) < 20);
 }
 
 function isBuildLocationAllowed(x, y) {
@@ -41,9 +41,9 @@ function isBuildLocationAllowed(x, y) {
 // map: a saved map (editor.js) to play instead of generating one; Endless plays the one chosen in its menu
 // A building is gone (broken by enemies or demolished)
 function removeBuilding(building) {
-  const index = buildings.indexOf(building);
+  const index = game.buildings.indexOf(building);
   if (index === -1) return;
-  buildings.splice(index, 1);
+  game.buildings.splice(index, 1);
   invalidateAllPaths();
 }
 
@@ -51,8 +51,8 @@ function removeBuilding(building) {
 // storage (see build), so another building can't count on them
 function getReservedForBlueprints(id) {
   let reserved = 0;
-  for (const bp of blueprints) reserved += (bp.needs && bp.needs[id]) || 0;
-  for (const s of settlers) if (s.carrying && s.carrying.forBlueprint && s.carrying.type === id) reserved -= s.carrying.amount;
+  for (const bp of game.blueprints) reserved += (bp.needs && bp.needs[id]) || 0;
+  for (const s of game.settlers) if (s.carrying && s.carrying.forBlueprint && s.carrying.type === id) reserved -= s.carrying.amount;
   return Math.max(0, reserved);
 }
 
@@ -92,7 +92,7 @@ function toggleBuildingRepair(building) {
 // Order repairs of every damaged building and the town hall
 function repairAllBuildings() {
   let count = 0;
-  for (const b of buildings) {
+  for (const b of game.buildings) {
     if (b.hp < b.maxHp && !isShelter(b)) { b.repairRequested = true; count++; }
   }
   if (townHall.hp < townHall.maxHp) { townHall.repairRequested = true; count++; }
@@ -123,20 +123,20 @@ function createBuildingBlueprint(type, x, y) {
 // (renewed every tick); anyone else skips that building.
 function claimBuildingJob(smelter, job, s) {
   const claim = smelter[job];
-  if (claim && claim.settler !== s && settlers.includes(claim.settler) && pathTick - claim.tick <= 1) return false;
-  smelter[job] = { settler: s, tick: pathTick };
+  if (claim && claim.settler !== s && game.settlers.includes(claim.settler) && game.pathTick - claim.tick <= 1) return false;
+  smelter[job] = { settler: s, tick: game.pathTick };
   return true;
 }
 
 function isBuildingJobFree(smelter, job, s) {
   const claim = smelter[job];
-  return !claim || claim.settler === s || !settlers.includes(claim.settler) || pathTick - claim.tick > 1;
+  return !claim || claim.settler === s || !game.settlers.includes(claim.settler) || game.pathTick - claim.tick > 1;
 }
 
 // What a blueprint still needs brought, after what's on its way already: [id, amount] or null
 function getMissingMaterial(bp) {
   for (const [id, amount] of Object.entries(bp.needs || {})) {
-    const coming = settlers.reduce((sum, o) => sum + (o.carrying && o.carrying.forBlueprint === bp && o.carrying.type === id ? o.carrying.amount : 0), 0);
+    const coming = game.settlers.reduce((sum, o) => sum + (o.carrying && o.carrying.forBlueprint === bp && o.carrying.type === id ? o.carrying.amount : 0), 0);
     if (amount - coming > 0) return [id, amount - coming];
   }
   return null;
@@ -146,7 +146,7 @@ function getMissingMaterial(bp) {
 // (trees, boulders, cacti, ore). Natural rock is left to the player to mark.
 function findDoorBlockers(allResources, resourceKind) {
   const blockers = new Set();
-  const doors = buildings.filter(b => b.type === 'door');
+  const doors = game.buildings.filter(b => b.type === 'door');
   if (doors.length === 0) return blockers;
   const beside = new Set();
   for (const door of doors) {
@@ -167,18 +167,18 @@ const hallReachHolder = { x: 0, y: 0 };
 function isBaseSealed() {
   hallReachHolder.x = townHall.x; hallReachHolder.y = townHall.y;
   const reach = getSettlerReach(hallReachHolder);
-  for (let gx = 0; gx < COLS; gx++) {
-    if (reach[gx] !== -1 || reach[(ROWS - 1) * COLS + gx] !== -1) return false;
+  for (let gx = 0; gx < game.COLS; gx++) {
+    if (reach[gx] !== -1 || reach[(game.ROWS - 1) * game.COLS + gx] !== -1) return false;
   }
-  for (let gy = 0; gy < ROWS; gy++) {
-    if (reach[gy * COLS] !== -1 || reach[gy * COLS + COLS - 1] !== -1) return false;
+  for (let gy = 0; gy < game.ROWS; gy++) {
+    if (reach[gy * game.COLS] !== -1 || reach[gy * game.COLS + game.COLS - 1] !== -1) return false;
   }
   return true;
 }
 
 // Smelters turn ore and coal into iron
 function tickSmelters(dt) {
-  buildings.filter(b => b.type === 'smelter').forEach(smelter => {
+  game.buildings.filter(b => b.type === 'smelter').forEach(smelter => {
     smelter.oreLoaded = smelter.oreLoaded || 0;
     smelter.coalLoaded = smelter.coalLoaded || 0;
     smelter.ironProduced = smelter.ironProduced || 0;

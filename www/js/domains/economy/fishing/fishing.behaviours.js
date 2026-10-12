@@ -55,7 +55,7 @@ function fishAt(s, fishSpot, dt) {
 function collectWorms(s, tick) {
   if (s.role !== 'worker' || s.tool !== 'rod' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
   let target = null, best = Infinity;
-  for (const c of corpses) {
+  for (const c of game.corpses) {
     if (!corpseHasWorms(c) || tick.wormAssignments.has(c) || !isInSafeArea(c.x, c.y)) continue;
     const d = Math.hypot(c.x - s.x, c.y - s.y);
     if (d < best) { best = d; target = c; }

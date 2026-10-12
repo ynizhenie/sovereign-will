@@ -10,7 +10,7 @@ function woundBoar(boar, damage, attacker, fromX, fromY) {
   boar.hp -= damage;
   bleed(boar, attacker);
   playSound('boar', boar);
-  if (rand() < GAME_CONFIG.mapResources.boar.dungChance) dung.push({ x: boar.x, y: boar.y, age: 0, by: null, byLeft: true });
+  if (rand() < GAME_CONFIG.mapResources.boar.dungChance) game.dung.push({ x: boar.x, y: boar.y, age: 0, by: null, byLeft: true });
   if (boar.hp > 0) { makeBoarFlee(boar, fromX, fromY); return; }
   Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
@@ -36,8 +36,8 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
   boar.sprinting = !wary;
   boar.hideTarget = null;
 
-  let nearbyGrass = seekHide ? grassList.filter(grass => Math.hypot(grass.x - boar.x, grass.y - boar.y) <= 360) : [];
-  let hideGrass = nearbyGrass.length > 0 ? nearbyGrass : (seekHide ? grassList : []);
+  let nearbyGrass = seekHide ? game.grassList.filter(grass => Math.hypot(grass.x - boar.x, grass.y - boar.y) <= 360) : [];
+  let hideGrass = nearbyGrass.length > 0 ? nearbyGrass : (seekHide ? game.grassList : []);
   if (hideGrass.length > 0) {
     boar.hideTarget = hideGrass.reduce((nearest, grass) => {
       let nearestDistance = Math.hypot(nearest.x - boar.x, nearest.y - boar.y);
@@ -48,27 +48,27 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
     boar.targetY = boar.hideTarget.y;
   } else {
     const edge = (BORDER_MARGIN + 1) * TILE_SIZE;
-    boar.targetX = Math.max(edge, Math.min(WORLD_WIDTH - edge, boar.x + dx / distance * fleeDistance));
-    boar.targetY = Math.max(edge, Math.min(WORLD_HEIGHT - edge, boar.y + dy / distance * fleeDistance));
+    boar.targetX = Math.max(edge, Math.min(game.WORLD_WIDTH - edge, boar.x + dx / distance * fleeDistance));
+    boar.targetY = Math.max(edge, Math.min(game.WORLD_HEIGHT - edge, boar.y + dy / distance * fleeDistance));
   }
 }
 
 // A new boar every 25 s while there are fewer than BOAR_LIMIT
 function tickBoarRespawn(dt) {
-  if (boars.length < BOAR_LIMIT) {
-    boarRespawnTimer -= dt;
-    if (boarRespawnTimer <= 0) {
+  if (game.boars.length < BOAR_LIMIT) {
+    game.boarRespawnTimer -= dt;
+    if (game.boarRespawnTimer <= 0) {
       spawnResource('boar');
-      boarRespawnTimer = 25;
+      game.boarRespawnTimer = 25;
     }
   } else {
-    boarRespawnTimer = 25;
+    game.boarRespawnTimer = 25;
   }
 }
 
 // Boars: hide in the grass, run from settlers that come near, wander
 function tickBoars(dt) {
-  boars.forEach(b => {
+  game.boars.forEach(b => {
     if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) return;
 
@@ -86,7 +86,7 @@ function tickBoars(dt) {
 
     if ((b.fleeTimer || 0) <= 0 && !b.hideTarget) {
       let nearest = null, nearestDist = Infinity;
-      settlers.forEach(s => {
+      game.settlers.forEach(s => {
         let d = Math.hypot(s.x - b.x, s.y - b.y);
         if (d < nearestDist) { nearestDist = d; nearest = s; }
       });
@@ -94,7 +94,7 @@ function tickBoars(dt) {
     }
 
     if (b.hideTarget) {
-      if (!grassList.includes(b.hideTarget)) {
+      if (!game.grassList.includes(b.hideTarget)) {
         b.hideTarget = null;
       } else {
         let hideDistance = Math.hypot(b.hideTarget.x - b.x, b.hideTarget.y - b.y);
@@ -128,8 +128,8 @@ function tickBoars(dt) {
       b.wanderInterval = 3 + rand() * 3;
       let ang = rand() * Math.PI * 2;
       let dist = 15 + rand() * 35;
-      b.targetX = Math.max(60, Math.min(WORLD_WIDTH - 60, b.x + Math.cos(ang) * dist));
-      b.targetY = Math.max(60, Math.min(WORLD_HEIGHT - 60, b.y + Math.sin(ang) * dist));
+      b.targetX = Math.max(60, Math.min(game.WORLD_WIDTH - 60, b.x + Math.cos(ang) * dist));
+      b.targetY = Math.max(60, Math.min(game.WORLD_HEIGHT - 60, b.y + Math.sin(ang) * dist));
     }
     let dx = (b.targetX !== undefined ? b.targetX : b.x) - b.x;
     let dy = (b.targetY !== undefined ? b.targetY : b.y) - b.y;

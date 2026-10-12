@@ -42,7 +42,7 @@ function getHeldItemPose(unit) {
     return { angle: -0.9 + 1.8 * p, push: 0 };
   }
   if (unit.working > 0) {
-    const beat = Math.sin(pathTick * 0.3);
+    const beat = Math.sin(game.pathTick * 0.3);
     if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
     if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
     return { angle: 0.7 * beat - 0.2, push: 0 };
@@ -59,7 +59,7 @@ function applyHeldItemPose(unit) {
 
 // Nothing to do (#171): a settler puts what it holds on its back (not in a battle, where it waits to fight)
 function isResting(s) {
-  return s.activity === 'patrol' && !s.isPossessed && !(s.swingT > 0) && gameMode !== 'battle';
+  return s.activity === 'patrol' && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
 
 // The held item across the back: turned square to where the unit faces, behind it
@@ -120,7 +120,7 @@ function drawIdleIcon(x, y) {
 
 // Dung: a small brown pile, fading over its last 10 s
 function drawDung() {
-  dung.forEach(p => {
+  game.dung.forEach(p => {
     ctx.globalAlpha = Math.max(0, Math.min(1, (GAME_CONFIG.relief.dungSeconds - p.age) / 10));
     ctx.fillStyle = '#5c3d16';
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
@@ -133,7 +133,7 @@ function drawDung() {
 
 // Settlers: body, what they hold and carry, armour, shield, quiver, rings, health
 function drawSettlers() {
-  settlers.forEach(s => {
+  game.settlers.forEach(s => {
     // the whole body in the colony's colour (#43); the possessed one ringed in white
     ctx.fillStyle = getSettlerColor(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while (#164)
@@ -141,7 +141,7 @@ function drawSettlers() {
     ctx.globalAlpha = 1;
     if (s.burning > 0) drawBurning(s.x, s.y, s.visualRadius);
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
-    if (getPlayerFaction().id === 'demons' && gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
+    if (getPlayerFaction().id === 'demons' && game.gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
     drawBodyBlood(s, s.visualRadius);
 
     // a backpack on the left side, with a bar for how full it is
@@ -222,7 +222,7 @@ function drawSettlers() {
     }
     ctx.restore();
 
-    if (s === selectedSettler) {
+    if (s === game.selectedSettler) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius + 4, 0, Math.PI * 2); ctx.stroke();
     }

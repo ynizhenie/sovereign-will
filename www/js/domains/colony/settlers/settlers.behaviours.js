@@ -16,7 +16,7 @@ function createSettlerTick(dt) {
   // which GAME_CONFIG.mapResources kind each resource is, so canSettlerHarvest() doesn't scan every list
   const resourceKind = new Map();
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    for (const r of WORLD[def.list]) resourceKind.set(r, kind);
+    for (const r of game[def.list]) resourceKind.set(r, kind);
   }
   // player-marked resources, then anything blocking a door (worked as if marked with priority 1)
   const doorBlockers = findDoorBlockers(allResources, resourceKind);
@@ -24,12 +24,12 @@ function createSettlerTick(dt) {
   const markedResources = allResources.filter(r => (r.priority || 0) > 0 || doorBlockers.has(r) || zoneBlockers.has(r));
   markedResources.sort((a, b) => getWorkPriority(b) - getWorkPriority(a));
 
-  const defendersCount = settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
+  const defendersCount = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
 
   return {
     dt,
-    isWaveActive: enemies.length > 0,
-    tents: buildings.filter(isShelter), // tents or graves (#43)
+    isWaveActive: game.enemies.length > 0,
+    tents: game.buildings.filter(isShelter), // tents or graves (#43)
     allResources,
     resourceKind,
     markedResources,
@@ -48,13 +48,13 @@ function createSettlerTick(dt) {
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
-    activeWaterSpots: waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
+    activeWaterSpots: game.waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
     assignedFishersCount: 0,
     defendersCount,
     // unarmed workers only help destroy enemy tents when there's nobody armed to do it
     workersHelpTents: defendersCount === 0,
     // what's left of the wave is down to a few enemies (tent-summoned ones don't count): go destroy the tents
-    tentAssault: enemyTents.length > 0 && enemies.filter(en => !en.summoned).length <= 5
+    tentAssault: game.enemyTents.length > 0 && game.enemies.filter(en => !en.summoned).length <= 5
   };
 }
 
@@ -94,7 +94,7 @@ function relieve(s, tick) {
   }
   s.reliefTimer = (s.reliefTimer || 0) + tick.dt;
   if (s.reliefTimer >= relief.seconds) {
-    dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false });
+    game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false });
     s.needsRelief = false; s.meals = 0; s.reliefSpot = null; s.reliefTimer = 0;
   }
   return true;
@@ -105,17 +105,17 @@ function relieve(s, tick) {
 function findReliefSpot(s) {
   const minDist = GAME_CONFIG.relief.awayFromBuildings * TILE_SIZE;
   const away = p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist + townHall.radius &&
-    buildings.every(b => Math.hypot(p.x - b.x, p.y - b.y) >= minDist);
+    game.buildings.every(b => Math.hypot(p.x - b.x, p.y - b.y) >= minDist);
   const reach = getSettlerReach(s);
   const reachable = p => { const g = getGridPos(p.x, p.y); return getReachSteps(reach, g.gx, g.gy) !== -1; };
   const nearest = list => list.filter(p => away(p) && reachable(p))
     .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
   // beside a grass tuft, not on it
-  const byGrass = nearest(grassList.map(g => ({ x: g.x + TILE_SIZE, y: g.y })).filter(p => !isTileOccupied(p.x, p.y)));
+  const byGrass = nearest(game.grassList.map(g => ({ x: g.x + TILE_SIZE, y: g.y })).filter(p => !isTileOccupied(p.x, p.y)));
   if (byGrass) return byGrass;
   const tiles = [];
-  for (let gy = BORDER_MARGIN; gy < ROWS - BORDER_MARGIN; gy += 2) {
-    for (let gx = BORDER_MARGIN; gx < COLS - BORDER_MARGIN; gx += 2) {
+  for (let gy = BORDER_MARGIN; gy < game.ROWS - BORDER_MARGIN; gy += 2) {
+    for (let gx = BORDER_MARGIN; gx < game.COLS - BORDER_MARGIN; gx += 2) {
       const p = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
       if (!isTileOccupied(p.x, p.y)) tiles.push(p);
     }
@@ -125,7 +125,7 @@ function findReliefSpot(s) {
 
 // Nothing else to do: wander near the town hall (shown with an idle icon, see render())
 function patrol(s, tick) {
-  if (gameMode === 'battle') return true; // nothing to wander around: stand
+  if (game.gameMode === 'battle') return true; // nothing to wander around: stand
   // caught outside the base when the alert starts: straight back, not a stroll
   if (!isInSafeArea(s.x, s.y)) {
     s.patrolTarget = null;
@@ -190,7 +190,7 @@ function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
   assignTowerArchers();
 
-  settlers.forEach(s => {
+  game.settlers.forEach(s => {
     prepareSettler(s, dt);
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {

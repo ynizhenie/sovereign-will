@@ -51,7 +51,7 @@ function performAttack(attacker, targetX, targetY) {
   if (isBowWeapon(attacker.weapon)) {
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
-    projectiles.push({ 
+    game.projectiles.push({ 
       x: attacker.x, 
       y: attacker.y, 
       vx: Math.cos(angle) * stats.projectileSpeed, 
@@ -63,7 +63,7 @@ function performAttack(attacker, targetX, targetY) {
       fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's (#165)
     });
     playSound('bow', attacker);
-    if (gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles (#166)
+    if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles (#166)
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, 0.3);
   } else {
@@ -72,9 +72,9 @@ function performAttack(attacker, targetX, targetY) {
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { en.hp -= dmg; bleed(en, attacker); playSound('hit', en); } })),
-      ...enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
-      ...boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
+      ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { en.hp -= dmg; bleed(en, attacker); playSound('hit', en); } })),
+      ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
           woundBoar(b, dmg, attacker, attacker.x, attacker.y);
         } }))
@@ -98,30 +98,30 @@ function performAttack(attacker, targetX, targetY) {
 function bleed(unit, attacker) {
   unit.bloodAge = 0;
   if (attacker && !isBowWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
-  if (pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
-  unit.lastBleedTick = pathTick;
-  const h = tileVariantHash(pathTick, bloodSplats.length);
-  bloodSplats.push({ x: unit.x + (h % 11) - 5, y: unit.y + ((h >>> 8) % 11) - 5, r: 3 + (h >>> 16) % 4, age: 0 });
-  if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
+  if (game.pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
+  unit.lastBleedTick = game.pathTick;
+  const h = tileVariantHash(game.pathTick, game.bloodSplats.length);
+  game.bloodSplats.push({ x: unit.x + (h % 11) - 5, y: unit.y + ((h >>> 8) % 11) - 5, r: 3 + (h >>> 16) % 4, age: 0 });
+  if (game.bloodSplats.length > GAME_CONFIG.blood.maxSplats) game.bloodSplats.shift();
 }
 
 // Stepping in a pool of blood or in dung: the unit then leaves footprints for a few steps. Footprints
 // themselves don't smear further. Whoever left the dung can't step in it until it has walked off first.
 function trackFootprints(unit) {
-  for (const pile of dung) {
+  for (const pile of game.dung) {
     if (pile.by === unit && !pile.byLeft && Math.hypot(unit.x - pile.x, unit.y - pile.y) > 20) pile.byLeft = true;
   }
   if (!unit.smear || unit.smear.steps <= 0) {
-    const pool = bloodSplats.find(b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4);
-    const pile = dung.find(p => (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9);
+    const pool = game.bloodSplats.find(b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4);
+    const pile = game.dung.find(p => (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9);
     if (pool || pile) unit.smear = { color: pile ? 'dung' : 'blood', steps: GAME_CONFIG.smears.steps, x: unit.x, y: unit.y };
     return;
   }
   if (Math.hypot(unit.x - unit.smear.x, unit.y - unit.smear.y) < GAME_CONFIG.smears.stepGap) return;
   unit.smear.x = unit.x; unit.smear.y = unit.y;
   unit.smear.steps--;
-  bloodSplats.push({ x: unit.x, y: unit.y, r: 2.2, age: 0, kind: 'trail', color: unit.smear.color });
-  if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
+  game.bloodSplats.push({ x: unit.x, y: unit.y, r: 2.2, age: 0, kind: 'trail', color: unit.smear.color });
+  if (game.bloodSplats.length > GAME_CONFIG.blood.maxSplats) game.bloodSplats.shift();
 }
 
 // How visible the blood on a unit's body is: it doesn't dry while the unit is badly wounded
@@ -144,10 +144,10 @@ function setBurning(unit) {
 }
 
 function updateBurning(dt) {
-  for (const unit of [...settlers, ...enemies]) {
+  for (const unit of [...game.settlers, ...game.enemies]) {
     if (!(unit.burning > 0)) continue;
     unit.burning -= dt;
-    if (settlers.includes(unit)) damageSettler(unit, GAME_CONFIG.burning.dps * dt, null);
+    if (game.settlers.includes(unit)) damageSettler(unit, GAME_CONFIG.burning.dps * dt, null);
     else unit.hp -= GAME_CONFIG.burning.dps * dt;
   }
 }
@@ -157,7 +157,7 @@ function updateBurning(dt) {
 function applySpikeTraps() {
   const tiles = getTileIndex();
   if (tiles.spikes.size === 0) return;
-  const spikesAt = new Map(buildings.filter(b => b.type === 'spikes').map(b => [`${b.x},${b.y}`, b]));
+  const spikesAt = new Map(game.buildings.filter(b => b.type === 'spikes').map(b => [`${b.x},${b.y}`, b]));
   const step = (unit, hurt) => {
     const g = getGridPos(unit.x, unit.y);
     const key = `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`;
@@ -168,12 +168,12 @@ function applySpikeTraps() {
     hurt(getDefinition('buildings', 'spikes').build.trap.damage);
     trap.usesLeft--;
     if (trap.usesLeft <= 0) {
-      buildings.splice(buildings.indexOf(trap), 1);
+      game.buildings.splice(game.buildings.indexOf(trap), 1);
       invalidateAllPaths();
     }
   };
-  for (const s of settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
-  for (const en of enemies) step(en, damage => { en.hp -= damage; bleed(en, null); });
+  for (const s of game.settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
+  for (const en of game.enemies) step(en, damage => { en.hp -= damage; bleed(en, null); });
 }
 
 // ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
@@ -181,13 +181,13 @@ function applySpikeTraps() {
 function addCorpse(unit, side, kind) {
   playSound('death', unit, side === 'enemy');
   const big = isBigBody(unit);
-  corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
+  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
 }
 
 function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
-  for (const corpse of corpses) corpse.age += dt;
-  corpses = corpses.filter(corpse => corpse.age < lifetime);
+  for (const corpse of game.corpses) corpse.age += dt;
+  game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
 }
 
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
@@ -197,13 +197,13 @@ const NORMAL_BODIES = 21;
 
 // From deploySeconds before a wave until its enemies are beaten, not in battle mode
 function isDefenseAlert() {
-  if (gameMode === 'battle' || !gameStarted) return false;
-  return waveTimer <= GAME_CONFIG.defense.deploySeconds || enemies.some(en => en.fromWave);
+  if (game.gameMode === 'battle' || !game.gameStarted) return false;
+  return game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave);
 }
 
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
 function getBaseRadius() {
-  const far = buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
+  const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
   return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
 }
 
@@ -221,19 +221,17 @@ function isInSafeArea(x, y) {
 function isInsideBase(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
   return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
-    buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
+    game.buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
 }
-
-let defensePlan = null;
 
 // Squads and their posts, rebuilt when the soldiers or the buildings change: squads of squadSize melee
 // soldiers (plus an archer each while there are any), posts at the doors first, the rest spread evenly
 // around the town hall at the base's radius, each on a tile a settler can stand on
 function getDefensePlan() {
-  const melee = settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
-  const archers = settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
-  const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + buildings.length;
-  if (defensePlan && defensePlan.key === key) return defensePlan;
+  const melee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
+  const archers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
+  const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + game.buildings.length;
+  if (game.defensePlan && game.defensePlan.key === key) return game.defensePlan;
   const size = GAME_CONFIG.defense.squadSize;
   // too few for two squads: everyone on a post of their own round the base (#155)
   const singles = melee.length < 2 * size;
@@ -253,7 +251,7 @@ function getDefensePlan() {
     return { x, y };
   };
   const posts = [];
-  for (const door of buildings.filter(b => b.type === 'door')) {
+  for (const door of game.buildings.filter(b => b.type === 'door')) {
     if (posts.length >= count) break;
     // just inside the door, on the town hall's side
     const angle = Math.atan2(door.y - townHall.y, door.x - townHall.x);
@@ -271,14 +269,14 @@ function getDefensePlan() {
     melee.forEach((s, i) => squadOf.set(s, { post: posts[Math.floor(i / size)], slot: i % size }));
     archers.forEach((s, i) => squadOf.set(s, { post: posts[i % posts.length], slot: size + Math.floor(i / posts.length) }));
   }
-  defensePlan = { key, posts, squadOf };
-  return defensePlan;
+  game.defensePlan = { key, posts, squadOf };
+  return game.defensePlan;
 }
 
 // Arrows fly, hit what they reach (settlers and the town hall, or enemies, tents and boars), stop at obstacles
 function tickProjectiles() {
-  for (let i = projectiles.length - 1; i >= 0; i--) {
-    let proj = projectiles[i];
+  for (let i = game.projectiles.length - 1; i >= 0; i--) {
+    let proj = game.projectiles[i];
     if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
     proj.x += proj.vx; proj.y += proj.vy; proj.life--;
     let hit = false;
@@ -288,7 +286,7 @@ function tickProjectiles() {
         townHall.hp -= proj.damage;
         hit = true;
       }
-      for (let s of settlers) {
+      for (let s of game.settlers) {
         if (hit) break;
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
           damageSettler(s, proj.damage, proj.owner);
@@ -297,8 +295,8 @@ function tickProjectiles() {
         }
       }
     } else {
-      for (let j = enemies.length - 1; j >= 0 && !hit; j--) {
-        let en = enemies[j];
+      for (let j = game.enemies.length - 1; j >= 0 && !hit; j--) {
+        let en = game.enemies[j];
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           en.hp -= proj.damage;
           bleed(en, proj.owner);
@@ -307,15 +305,15 @@ function tickProjectiles() {
           hit = true;
         }
       }
-      for (let j = enemyTents.length - 1; j >= 0 && !hit; j--) {
-        let et = enemyTents[j];
+      for (let j = game.enemyTents.length - 1; j >= 0 && !hit; j--) {
+        let et = game.enemyTents[j];
         if (Math.hypot(et.x - proj.x, et.y - proj.y) < 18) {
           et.hp -= proj.damage;
           hit = true;
         }
       }
-      for (let j = boars.length - 1; j >= 0 && !hit; j--) {
-        let b = boars[j];
+      for (let j = game.boars.length - 1; j >= 0 && !hit; j--) {
+        let b = game.boars[j];
         if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - proj.x, b.y - proj.y) < 12) {
           woundBoar(b, proj.damage, proj.owner || null, proj.owner ? proj.owner.x : proj.x, proj.owner ? proj.owner.y : proj.y);
           hit = true;
@@ -325,20 +323,20 @@ function tickProjectiles() {
     // gone: it hit something, flew its full range, or struck an obstacle past its shooter's own tile
     const tile = getGridPos(proj.x, proj.y);
     const leftStartTile = tile.gx !== proj.startTile.gx || tile.gy !== proj.startTile.gy;
-    if (hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower))) projectiles.splice(i, 1);
+    if (hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower))) game.projectiles.splice(i, 1);
   }
 }
 
 // Blood on the ground dries; dung goes after a while
 function ageBloodAndDung(dt) {
-  for (const splat of bloodSplats) splat.age += dt;
-  bloodSplats = bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
-  for (const pile of dung) pile.age += dt;
-  dung = dung.filter(pile => pile.age < GAME_CONFIG.relief.dungSeconds);
+  for (const splat of game.bloodSplats) splat.age += dt;
+  game.bloodSplats = game.bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
+  for (const pile of game.dung) pile.age += dt;
+  game.dung = game.dung.filter(pile => pile.age < GAME_CONFIG.relief.dungSeconds);
 }
 
 // Units stepping in blood or dung leave footprints
 function trackAllFootprints() {
-  for (const unit of settlers) trackFootprints(unit);
-  for (const unit of enemies) trackFootprints(unit);
+  for (const unit of game.settlers) trackFootprints(unit);
+  for (const unit of game.enemies) trackFootprints(unit);
 }

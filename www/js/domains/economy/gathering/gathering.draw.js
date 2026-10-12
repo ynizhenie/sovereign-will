@@ -13,24 +13,24 @@ function drawHarvestProgress(resource, width = 24) {
 
 // Sticks and pebbles, and minable ore
 function drawSticksPebblesOre() {
-  sticks.forEach(st => {
+  game.sticks.forEach(st => {
     ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(st.x - 6, st.y - 4); ctx.lineTo(st.x + 6, st.y + 4); ctx.stroke();
   });
 
-  pebbles.forEach(pe => {
+  game.pebbles.forEach(pe => {
     ctx.fillStyle = '#bdc3c7';
     ctx.beginPath(); ctx.arc(pe.x - 2, pe.y, 3, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pe.x + 3, pe.y + 2, 2, 0, Math.PI * 2); ctx.fill();
   });
 
   // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)
-  ironOres.forEach(ore => {
+  game.ironOres.forEach(ore => {
     drawOreVeins(ore.x, ore.y, 'iron', 14);
     drawHarvestProgress(ore);
   });
 
-  coalOres.forEach(ore => {
+  game.coalOres.forEach(ore => {
     drawOreVeins(ore.x, ore.y, 'coal', 14);
     drawHarvestProgress(ore);
   });
@@ -38,7 +38,7 @@ function drawSticksPebblesOre() {
 
 // Trees: saplings growing, grown trees, apple trees with their apples
 function drawTrees() {
-  trees.forEach(t => {
+  game.trees.forEach(t => {
     if (t.isGrowing) {
       ctx.fillStyle = '#2ecc71';
       ctx.fillRect(t.x - 2, t.y - 6, 4, 12);
@@ -56,14 +56,14 @@ function drawTrees() {
       }
       drawHarvestProgress(t);
       // apples being picked (#176): pickShare is kept up only while someone is at it
-      if (t.apple && t.pickShare > 0 && pathTick - t.pickTick < 3) drawProgressBar(t.x, t.y, t.pickShare);
+      if (t.apple && t.pickShare > 0 && game.pathTick - t.pickTick < 3) drawProgressBar(t.x, t.y, t.pickShare);
     }
   });
 }
 
 // Cacti, boulders, grass and berry bushes
 function drawCactiBouldersGrassBushes() {
-  cacti.forEach(c => {
+  game.cacti.forEach(c => {
     ctx.fillStyle = '#2f8f46';
     ctx.fillRect(c.x - 4, c.y - 13, 8, 26);
     ctx.fillRect(c.x - 11, c.y - 5, 7, 5);
@@ -73,7 +73,7 @@ function drawCactiBouldersGrassBushes() {
     drawHarvestProgress(c);
   });
 
-  boulders.forEach(b => {
+  game.boulders.forEach(b => {
     // square like natural rock, but a smaller, lighter grey block so it reads as loose, minable stone
     ctx.fillStyle = '#7f8c8d'; ctx.fillRect(b.x - 11, b.y - 11, 22, 22);
     ctx.fillStyle = '#a4b0b5'; ctx.fillRect(b.x - 11, b.y - 11, 22, 5); ctx.fillRect(b.x - 11, b.y - 11, 5, 22);
@@ -81,13 +81,13 @@ function drawCactiBouldersGrassBushes() {
     drawHarvestProgress(b);
   });
 
-  grassList.forEach(g => {
+  game.grassList.forEach(g => {
     ctx.fillStyle = '#2ecc71';
     ctx.fillRect(g.x - 6, g.y - 8, 3, 16); ctx.fillRect(g.x - 1, g.y - 10, 3, 18); ctx.fillRect(g.x + 4, g.y - 6, 3, 14);
     drawHarvestProgress(g, 20);
   });
 
-  berryBushes.forEach(b => {
+  game.berryBushes.forEach(b => {
     ctx.fillStyle = '#1e824c'; ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5b6ee1'; // blue, as the Berries icon (#169)
     ctx.beginPath(); ctx.arc(b.x - 4, b.y - 3, 3, 0, Math.PI * 2); ctx.fill();

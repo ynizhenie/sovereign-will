@@ -3,7 +3,7 @@
 
 // Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
 function isDefeated() {
-  return gameStarted && gameMode === 'endless' && (townHall.hp <= 0 || settlers.length === 0);
+  return game.gameStarted && game.gameMode === 'endless' && (townHall.hp <= 0 || game.settlers.length === 0);
 }
 
 // ---- Defeat (#191): the bottom panel and possession go dead, the camera flies to the base, zooms in and
@@ -22,11 +22,11 @@ function updateDefeat(dt) {
   if (!lost) { defeatView = null; return; }
   if (!defeatView) {
     unpossess();
-    selectedSettler = null;
+    game.selectedSettler = null;
     setMode('interact');
     updateUI(); // the HUD as it ended (the hall at 0): nothing updates it after this
     playSound('defeat');
-    document.getElementById('defeat-survived').textContent = t('defeat.survived', { waves: waveNum - 1 });
+    document.getElementById('defeat-survived').textContent = t('defeat.survived', { waves: game.waveNum - 1 });
     const zoom = Math.max(1, Math.min(getMaxZoom(), DEFEAT_CSS_SCALE * screenPixelRatio / getBaseScale()));
     defeatView = { from: { x: camera.x, y: camera.y, zoom: camera.zoom }, to: { x: townHall.x, y: townHall.y, zoom }, t: 0 };
   }

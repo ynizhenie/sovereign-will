@@ -55,7 +55,7 @@ function clearEditorTile(x, y) {
   const here = o => Math.abs(o.x - x) < TILE_SIZE / 2 && Math.abs(o.y - y) < TILE_SIZE / 2;
   for (const list of ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
     'naturalRocks', 'waterTiles', 'boars', 'buildings']) {
-    WORLD[list] = WORLD[list].filter(o => !here(o));
+    game[list] = game[list].filter(o => !here(o));
   }
 }
 
@@ -66,7 +66,7 @@ function hasSomethingOn(x, y) {
 // Does the tile already have what this tool puts there?
 function tileHasTool(tool, gx, gy) {
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
-  const at = list => WORLD[list].find(o => o.x === x && o.y === y);
+  const at = list => game[list].find(o => o.x === x && o.y === y);
   if (tool.id === 'water') return !!at('waterTiles');
   if (tool.id === 'sand') return !!at('desertTiles');
   if (tool.id === 'rock') { const r = at('naturalRocks'); return !!r && !r.oreSpawner; }
@@ -82,33 +82,33 @@ function tileHasTool(tool, gx, gy) {
 
 // The tool on one tile; clearing: take that thing away instead (a second tap with the same tool)
 function applyEditorTool(tool, gx, gy, clearing) {
-  if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) return;
+  if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) return;
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
   if (clearing) {
     if (!tileHasTool(tool, gx, gy)) return;
-    if (tool.id === 'sand') desertTiles = desertTiles.filter(d => d.x !== x || d.y !== y);
+    if (tool.id === 'sand') game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
     else clearEditorTile(x, y);
     return;
   }
   if (tool.id === 'erase') {
     if (hasSomethingOn(x, y)) clearEditorTile(x, y);
-    else desertTiles = desertTiles.filter(d => d.x !== x || d.y !== y);
+    else game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
     return;
   }
   // the border is where enemies come from: nothing goes there
   if (isBorderZone(gx, gy)) return;
   if (tool.id === 'sand') {
-    waterTiles = waterTiles.filter(w => w.x !== x || w.y !== y);
-    naturalRocks = naturalRocks.filter(r => r.x !== x || r.y !== y);
-    if (!desertTiles.some(d => d.x === x && d.y === y)) desertTiles.push({ x, y });
+    game.waterTiles = game.waterTiles.filter(w => w.x !== x || w.y !== y);
+    game.naturalRocks = game.naturalRocks.filter(r => r.x !== x || r.y !== y);
+    if (!game.desertTiles.some(d => d.x === x && d.y === y)) game.desertTiles.push({ x, y });
     return;
   }
   // the town hall's own tiles stay free
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return;
   clearEditorTile(x, y);
   if (tool.id === 'water') {
-    desertTiles = desertTiles.filter(d => d.x !== x || d.y !== y);
-    waterTiles.push({ x, y, isFishing: false, fishTimer: 0 });
+    game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0 });
   } else if (tool.id === 'rock') {
     addMapResource('natural_rock', x, y);
   } else if (tool.spawner) {
@@ -116,7 +116,7 @@ function applyEditorTool(tool, gx, gy, clearing) {
   } else if (tool.id === 'boar') {
     placeBoar({ x, y });
   } else if (tool.building) {
-    buildings.push(makeBuilt(tool.building, x, y));
+    game.buildings.push(makeBuilt(tool.building, x, y));
   } else if (tool.kind) {
     const r = addMapResource(tool.kind, x, y);
     if (tool.id === 'apple_tree') makeAppleTree(r);
@@ -160,22 +160,22 @@ const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 
 // right. What would end up off the map or on the new border goes; the town hall must stay clear of it.
 function resizeEditorMap(side, delta) {
   const horizontal = side === 'left' || side === 'right';
-  const cols = COLS + (horizontal ? delta : 0), rows = ROWS + (horizontal ? 0 : delta);
+  const cols = game.COLS + (horizontal ? delta : 0), rows = game.ROWS + (horizontal ? 0 : delta);
   if (Math.min(cols, rows) < EDITOR_MIN_TILES || Math.max(cols, rows) > EDITOR_MAX_TILES) return;
   const shiftX = side === 'left' ? delta * TILE_SIZE : 0, shiftY = side === 'top' ? delta * TILE_SIZE : 0;
   const inBorder = (gx, gy) => gx < BORDER_MARGIN || gy < BORDER_MARGIN || gx >= cols - BORDER_MARGIN || gy >= rows - BORDER_MARGIN;
   const hall = getGridPos(townHall.x + shiftX - 1, townHall.y + shiftY - 1);
   if (inBorder(hall.gx, hall.gy) || inBorder(hall.gx + 1, hall.gy + 1)) { showNotification(t('editor.hallInTheWay'), true); return; }
   for (const list of EDITOR_LISTS) {
-    WORLD[list] = WORLD[list].filter(o => {
+    game[list] = game[list].filter(o => {
       o.x += shiftX; o.y += shiftY;
       const g = getGridPos(o.x, o.y);
       return !inBorder(g.gx, g.gy);
     });
   }
   townHall.x += shiftX; townHall.y += shiftY;
-  COLS = cols; ROWS = rows;
-  WORLD_WIDTH = cols * TILE_SIZE; WORLD_HEIGHT = rows * TILE_SIZE;
+  game.COLS = cols; game.ROWS = rows;
+  game.WORLD_WIDTH = cols * TILE_SIZE; game.WORLD_HEIGHT = rows * TILE_SIZE;
   camera.x += shiftX; camera.y += shiftY;
   clampCamera();
   resetTileIndex();
@@ -187,7 +187,7 @@ function resizeEditorMap(side, delta) {
 
 // source: { map } a saved map, or { cols, rows, generate } a new one (generate: from the generator, else empty)
 function startEditor(source) {
-  gameMode = 'editor';
+  game.gameMode = 'editor';
   if (source.map) {
     editor.name = source.map.name;
     editor.faction = source.map.faction || 'humans';
@@ -195,17 +195,17 @@ function startEditor(source) {
   } else {
     // a generated map uses the Endless seed and generator settings, at the size picked here
     editor.name = '';
-    const endlessSize = mapSettings;
-    mapSettings = { cols: source.cols, rows: source.rows };
+    const endlessSize = game.mapSettings;
+    game.mapSettings = { cols: source.cols, rows: source.rows };
     applySeedFromUI();
     resetGame(source.generate ? null : { cols: source.cols, rows: source.rows });
-    mapSettings = endlessSize;
+    game.mapSettings = endlessSize;
   }
-  settlers = []; enemies = []; corpses = [];
-  waveTimer = Infinity; boarRespawnTimer = Infinity;
+  game.settlers = []; game.enemies = []; game.corpses = [];
+  game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
   resetTileIndex();
   setZoom(0); clampCamera();
-  gameStarted = true;
+  game.gameStarted = true;
   document.getElementById('main-menu').style.display = 'none';
   document.body.classList.add('editor-mode');
   document.getElementById('editor-name').value = editor.name;
@@ -213,7 +213,7 @@ function startEditor(source) {
 }
 
 function leaveEditor() {
-  gameMode = 'endless';
+  game.gameMode = 'endless';
   document.body.classList.remove('editor-mode');
   exitToMainMenu();
   renderEditorMapList();

@@ -18,7 +18,7 @@ const menuWorld = {
 };
 
 function isMenuWorld() {
-  return gameMode === 'menu';
+  return game.gameMode === 'menu';
 }
 
 // The menu's panel on the screen (CSS px), with the game's title over it when it shows, or null
@@ -91,14 +91,14 @@ function enterMenuWorld() {
     boars: some(MENU_WORLD.boars),
     buildings: [['warehouse', ...warehouse]]
   };
-  gameMode = 'endless';
+  game.gameMode = 'endless';
   resetGame(map);
-  gameMode = 'menu';
+  game.gameMode = 'menu';
   // one soldier with a spear, of the menu's faction
   const soldier = createSettler(getPlayerFaction().startUnits, 1, hall[0] + 45, hall[1]);
   Object.assign(soldier, { weapon: 'spear', role: 'soldier' });
-  settlers = [soldier];
-  waveTimer = Infinity;
+  game.settlers = [soldier];
+  game.waveTimer = Infinity;
   camera.x = centre.x; camera.y = centre.y;
   camera.zoom = MENU_WORLD.cssScale * spr / getBaseScale();
   menuWorld.size = `${canvas.width}x${canvas.height}`;
@@ -112,7 +112,7 @@ function enterMenuWorld() {
 // Back to an ordinary (not running) Endless before a real game, a battle or the editor is set up
 function leaveMenuWorld() {
   document.getElementById('main-menu').classList.add('lifted'); // never dark again
-  gameMode = 'endless';
+  game.gameMode = 'endless';
   document.body.classList.remove('menu-world');
 }
 
@@ -120,7 +120,7 @@ function leaveMenuWorld() {
 function menuWorldTap(clientX, clientY) {
   if (!isMenuWorld()) return;
   updateInputPos(clientX, clientY);
-  const soldier = settlers[0];
+  const soldier = game.settlers[0];
   if (soldier && Math.hypot(mouse.x - soldier.x, mouse.y - soldier.y) < soldier.visualRadius + 12) {
     // the next ready faction: the soldier becomes one of theirs
     const ready = Object.values(GAME_CONFIG.factions).filter(f => f.ready).map(f => f.id);
@@ -129,10 +129,10 @@ function menuWorldTap(clientX, clientY) {
     Object.assign(soldier, { weapon: 'spear', role: 'soldier' });
     return;
   }
-  const boar = boars.find(b => !b.isCarcass && Math.hypot(mouse.x - b.x, mouse.y - b.y) < 22);
+  const boar = game.boars.find(b => !b.isCarcass && Math.hypot(mouse.x - b.x, mouse.y - b.y) < 22);
   if (boar) {
     // marked, as a tap marks it in the game: the one to hunt
-    boars.forEach(b => { b.priority = 0; });
+    game.boars.forEach(b => { b.priority = 0; });
     boar.priority = 1;
   }
 }
@@ -142,11 +142,11 @@ function menuWorldTap(clientX, clientY) {
 function syncMenuWorld() {
   const showing = getComputedStyle(document.getElementById('main-menu')).display !== 'none';
   if (isMenuWorld()) {
-    if (!showing || gameStarted) { leaveMenuWorld(); return; }
+    if (!showing || game.gameStarted) { leaveMenuWorld(); return; }
     fitCanvasToScreen();
     if (menuWorld.size !== `${canvas.width}x${canvas.height}`) enterMenuWorld();
-    waveTimer = Infinity;
-  } else if (showing && !gameStarted && gameMode === 'endless') {
+    game.waveTimer = Infinity;
+  } else if (showing && !game.gameStarted && game.gameMode === 'endless') {
     enterMenuWorld();
   } else {
     document.body.classList.remove('menu-world');

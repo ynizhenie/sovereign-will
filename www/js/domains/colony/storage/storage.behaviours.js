@@ -39,13 +39,13 @@ function goDeliver(s, tick) {
 const storageChoice = new WeakMap(); // settler -> { storage, tick }; kept off the settler, so not in saves
 function findNearestStorage(s) {
   const kept = storageChoice.get(s);
-  if (kept && pathTick - kept.tick <= 60 && getStorages().includes(kept.storage)) { kept.tick = pathTick; return kept.storage; }
+  if (kept && game.pathTick - kept.tick <= 60 && getStorages().includes(kept.storage)) { kept.tick = game.pathTick; return kept.storage; }
   let best = townHall, bestDist = Infinity;
   for (const storage of getStorages()) {
     const d = Math.hypot(storage.x - s.x, storage.y - s.y);
     if (d < bestDist) { bestDist = d; best = storage; }
   }
-  storageChoice.set(s, { storage: best, tick: pathTick });
+  storageChoice.set(s, { storage: best, tick: game.pathTick });
   return best;
 }
 

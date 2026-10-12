@@ -2,7 +2,7 @@
 
 // The demons' portals (#43): built in pairs, the 1st with the 2nd, the 3rd with the 4th...
 function getPortalPairs() {
-  const portals = buildings.filter(b => b.type === 'portal');
+  const portals = game.buildings.filter(b => b.type === 'portal');
   const pairs = [];
   for (let i = 0; i + 1 < portals.length; i += 2) pairs.push([portals[i], portals[i + 1]], [portals[i + 1], portals[i]]);
   return pairs;
@@ -39,13 +39,13 @@ function openDemonPortal() {
   const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const minDist = getEnemyFaction().minPortalTiles * TILE_SIZE;
   for (let attempt = 0; attempt < 200; attempt++) {
-    const gx = BORDER_MARGIN + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN));
-    const gy = BORDER_MARGIN + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN));
+    const gx = BORDER_MARGIN + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN));
+    const gy = BORDER_MARGIN + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN));
     const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
     if (Math.hypot(x - townHall.x, y - townHall.y) < minDist || isTileOccupied(x, y) || getReachSteps(reach, gx, gy) < 0) continue;
-    if (enemyTents.some(t => Math.hypot(t.x - x, t.y - y) < 4 * TILE_SIZE)) continue;
+    if (game.enemyTents.some(t => Math.hypot(t.x - x, t.y - y) < 4 * TILE_SIZE)) continue;
     const tents = GAME_CONFIG.enemyTents;
-    enemyTents.push({ x, y, hp: tents.hp, maxHp: tents.hp, summonTimer: 0, summonsLeft: tents.summonsPerWave, portal: true });
+    game.enemyTents.push({ x, y, hp: tents.hp, maxHp: tents.hp, summonTimer: 0, summonsLeft: tents.summonsPerWave, portal: true });
     return true;
   }
   return false;

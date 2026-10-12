@@ -34,7 +34,7 @@ function drawArrow(proj) {
 
 // Flames licking up a burning unit (#165)
 function drawBurning(x, y, r) {
-  const flicker = Math.sin(pathTick * 0.5) * 2;
+  const flicker = Math.sin(game.pathTick * 0.5) * 2;
   ctx.fillStyle = 'rgba(230, 126, 34, 0.85)';
   ctx.beginPath(); ctx.moveTo(x - r * 0.6, y); ctx.quadraticCurveTo(x, y - r * 1.6 - flicker, x + r * 0.6, y); ctx.fill();
   ctx.fillStyle = 'rgba(241, 196, 15, 0.9)';
@@ -56,7 +56,7 @@ function drawTargetMark(en) {
 
 // Blood on the ground, and footprints out of blood or dung
 function drawBloodOnGround() {
-  bloodSplats.forEach(b => {
+  game.bloodSplats.forEach(b => {
     const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
     ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
     ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r * 1.3, b.r, 0, 0, Math.PI * 2); ctx.fill();
@@ -65,7 +65,7 @@ function drawBloodOnGround() {
 
 // Corpses: grey, fading out over their last 10 seconds; worms on them
 function drawCorpses() {
-  corpses.forEach(c => {
+  game.corpses.forEach(c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
     ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
     ctx.fillStyle = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
@@ -89,7 +89,7 @@ function drawCorpses() {
 
 // Arrows and fireballs in flight
 function drawProjectiles() {
-  projectiles.forEach(proj => {
+  game.projectiles.forEach(proj => {
     // fireballs (#43) bigger and orange; everything else is an arrow, pointing where it flies (#173)
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
     else { drawArrow(proj); return; }

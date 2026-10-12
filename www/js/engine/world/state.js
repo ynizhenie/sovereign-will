@@ -1,37 +1,31 @@
-// The state of the game being played: its mode and timers, the town hall, and every list of things on the
-// map (WORLD, each list also reachable by its own name). Being gathered into one object (createGame).
+// The state of the game being played: one object, `game`. Its mode and clocks, the map's size, what's
+// selected, and every list of things on the map. Each field is also reachable by its own name on
+// window (for the tests and the console); the game's own code says game.x.
 
-let mapSettings = { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }; // set from the menu, used by resetGame
-
-let gameDifficulty = 'normal'; // GAME_CONFIG.difficulty key, set from the menu
-
-let gameMode = 'endless';      // endless / battle (battle.js) / editor (editor.js) / menu (the world behind the main menu, menu-scene.js)
-
-let customMap = null;          // a saved map (editor.js) Endless plays instead of a generated one
-
-let waveInterval = 90;
-
-let waveTimer = waveInterval;
-
-let gameStarted = false;
-
-let boarRespawnTimer = 25;
-
-const BOAR_LIMIT = 5;
-
-let waveNum = 1;
-
-let buildMode = 'interact';
-
-let isPaused = false;
-
-let selectedSettler = null;
-
-const TOWN_HALL_HP = 100;
-
-const townHall = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
-
-const WORLD = {
+const game = {
+  gameMode: 'endless',      // endless / battle (battle.js) / editor (editor.js) / menu (the world behind the main menu, menu-scene.js)
+  gameStarted: false,
+  isPaused: false,
+  gameDifficulty: 'normal', // GAME_CONFIG.difficulty key, set from the menu
+  mapSettings: { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }, // set from the menu, used by resetGame
+  customMap: null,          // a saved map (editor.js) Endless plays instead of a generated one
+  worldSeed: null,          // the world's seed and its random sequence (rng.js)
+  // the map's size, in tiles and in world units (setWorldSize)
+  COLS: DEFAULT_MAP_TILES,
+  ROWS: DEFAULT_MAP_TILES,
+  WORLD_WIDTH: DEFAULT_MAP_TILES * TILE_SIZE,
+  WORLD_HEIGHT: DEFAULT_MAP_TILES * TILE_SIZE,
+  // the clocks
+  waveInterval: 90,
+  waveTimer: 90,
+  waveNum: 1,
+  boarRespawnTimer: 25,
+  pathTick: 0,              // game ticks, for short-lived per-settler caches
+  // the player's choices and the soldiers' plan
+  buildMode: 'interact',
+  selectedSettler: null,
+  defensePlan: null,        // squads and their posts (getDefensePlan)
+  // the things on the map (WORLD_LISTS)
   settlers: [],
   trees: [],
   cacti: [],
@@ -67,13 +61,18 @@ const WORLD = {
   pendingRespawns: []   // harvested resources waiting to grow back, see scheduleRespawn()
 };
 
-const WORLD_ALIASES = Object.keys(WORLD);
+// the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns
+const WORLD_LISTS = Object.keys(game).slice(Object.keys(game).indexOf('settlers'));
 
-for (const key of WORLD_ALIASES) {
+const BOAR_LIMIT = 5;
+const TOWN_HALL_HP = 100;
+const townHall = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
+
+for (const key of Object.keys(game)) {
   Object.defineProperty(globalThis, key, {
     configurable: true,
     enumerable: true,
-    get() { return WORLD[key]; },
-    set(value) { WORLD[key] = value; }
+    get() { return game[key]; },
+    set(value) { game[key] = value; }
   });
 }

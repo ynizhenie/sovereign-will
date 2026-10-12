@@ -56,7 +56,7 @@ function stepsOntoSpikes(entity, vx, vy) {
 function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   // the undead's blighted ground holds enemies back (#164)
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
-  if (!isEnemy && buildings.length) {
+  if (!isEnemy && game.buildings.length) {
     const via = takePortal(entity, targetX, targetY);
     if (via === true) return;
     if (via) { targetX = via.x; targetY = via.y; }
@@ -237,10 +237,10 @@ function getResourceApproachPoint(entity, resource) {
   let minDistance = resRadius + entRadius + 1;
   // only consider spots the settler can actually walk to; a spot that's free but sealed off by rock
   // used to win on straight-line distance and leave the settler standing there forever
-  const reach = settlers.includes(entity) ? getSettlerReach(entity) : null;
+  const reach = game.settlers.includes(entity) ? getSettlerReach(entity) : null;
   // the spot rarely changes frame to frame; re-pick it twice a second or when the situation changes
   const cache = entity.approachCache;
-  if (reach && cache && cache.resource === resource && cache.reach === reach && pathTick - cache.tick < 30) return cache.point;
+  if (reach && cache && cache.resource === resource && cache.reach === reach && game.pathTick - cache.tick < 30) return cache.point;
 
   const approachDistances = [minDistance, minDistance + 3, minDistance + 6];
 
@@ -261,7 +261,7 @@ function getResourceApproachPoint(entity, resource) {
         if (steps === -1) continue;
         score += steps * TILE_SIZE;
         // spread settlers working the same resource around it instead of stacking them on one spot
-        if (settlers.some(other => other !== entity && Math.hypot(other.x - x, other.y - y) < entRadius * 2)) score += 1000;
+        if (game.settlers.some(other => other !== entity && Math.hypot(other.x - x, other.y - y) < entRadius * 2)) score += 1000;
       }
       if (score < bestScore) {
         bestScore = score;
@@ -270,7 +270,7 @@ function getResourceApproachPoint(entity, resource) {
     }
 
     if (best) {
-      if (reach) entity.approachCache = { resource, reach, tick: pathTick, point: best };
+      if (reach) entity.approachCache = { resource, reach, tick: game.pathTick, point: best };
       return best;
     }
   }

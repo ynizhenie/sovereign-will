@@ -1,8 +1,8 @@
 // The top bar and the resource tiles: the wave and its timer, the base, settlers, the stock, the seed
 
 function updateUI() {
-  document.getElementById('wave-num').innerText = waveNum;
-  document.getElementById('wave-timer').innerText = Math.ceil(waveTimer);
+  document.getElementById('wave-num').innerText = game.waveNum;
+  document.getElementById('wave-timer').innerText = Math.ceil(game.waveTimer);
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
     if (resourceElement) resourceElement.innerText = Math.floor(getResourceAmount(resourceKey));
@@ -10,7 +10,7 @@ function updateUI() {
   syncFoodMix();
   for (const kind of Object.keys(GAME_CONFIG.foodKinds)) {
     const el = document.getElementById(`food-kind-${kind}-txt`);
-    if (el) el.innerText = Math.floor(foodMix[kind] || 0);
+    if (el) el.innerText = Math.floor(game.foodMix[kind] || 0);
   }
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.held)) {
     let total = 0;
@@ -33,22 +33,22 @@ function updateUI() {
   let btnUpgrade = document.getElementById('btn-upgrade-big');
 
   if (getSelectedSettler()) {
-    const type = GAME_CONFIG.settlerTypes[selectedSettler.type] || GAME_CONFIG.settlerTypes.normal;
+    const type = GAME_CONFIG.settlerTypes[game.selectedSettler.type] || GAME_CONFIG.settlerTypes.normal;
     let name = `[[${type.icon}]] ${type.label}`;
-    let wName = getDefinition('weapons', selectedSettler.weapon)?.label || selectedSettler.weapon;
-    let tName = selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selectedSettler.tool)?.label || selectedSettler.tool);
-    let aName = selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
-    let qName = selectedSettler.quiver ? ` / ${t('hud.quiver', { n: selectedSettler.arrows || 0 })}` : '';
+    let wName = getDefinition('weapons', game.selectedSettler.weapon)?.label || game.selectedSettler.weapon;
+    let tName = game.selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', game.selectedSettler.tool)?.label || game.selectedSettler.tool);
+    let aName = game.selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
+    let qName = game.selectedSettler.quiver ? ` / ${t('hud.quiver', { n: game.selectedSettler.arrows || 0 })}` : '';
     // the rest of what it wears (#180)
-    const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(selectedSettler, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
+    const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(game.selectedSettler, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
-    renderSettlerInfo(selectedSettler);
+    renderSettlerInfo(game.selectedSettler);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
-      btnUpgrade.style.display = getUpgrade() && selectedSettler.type === getUpgrade().from ? 'block' : 'none';
+      btnUpgrade.style.display = getUpgrade() && game.selectedSettler.type === getUpgrade().from ? 'block' : 'none';
     }
   } else {
-    selectedSettler = null;
+    game.selectedSettler = null;
     document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
     document.getElementById('selected-info').hidden = true;
     document.getElementById('selected-bar').classList.remove('has-settler');
@@ -77,7 +77,7 @@ function toggleResourceGroup(groupId) {
 
 function updateSeedHud() {
   const seedElem = document.getElementById('hud-seed');
-  if (seedElem && worldSeed) {
-    seedElem.innerText = worldSeed.value;
+  if (seedElem && game.worldSeed) {
+    seedElem.innerText = game.worldSeed.value;
   }
 }

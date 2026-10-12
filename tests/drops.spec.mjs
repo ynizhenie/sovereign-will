@@ -11,7 +11,7 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
       const before = { ...stock };
       let carried = {};
       for (let i = 0; i < n; i++) {
-        const r = make(); WORLD[GAME_CONFIG.mapResources[kind].list].push(r);
+        const r = make(); game[GAME_CONFIG.mapResources[kind].list].push(r);
         s.carrying = null;
         finishHarvest(s, r, kind);
         for (const item of s.carrying.items || [s.carrying]) carried[item.type] = (carried[item.type] || 0) + item.amount;

@@ -23,7 +23,7 @@ const battle = {
 
 // The midline: left of it is green, right of it red
 function battleSide(x) {
-  return x < WORLD_WIDTH / 2 ? 'green' : 'red';
+  return x < game.WORLD_WIDTH / 2 ? 'green' : 'red';
 }
 
 function makeBattleUnit(entry) {
@@ -32,7 +32,7 @@ function makeBattleUnit(entry) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
-    enemies.push(en);
+    game.enemies.push(en);
     return;
   }
   const archer = isBowWeapon(preset.weapon);
@@ -44,34 +44,34 @@ function makeBattleUnit(entry) {
   s.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI;
   if (entry.armor) putOnGear(s, 'armor');
   if (entry.shield && canUseShield(s)) s.shield = true;
-  settlers.push(s);
+  game.settlers.push(s);
 }
 
 // An empty field: grass only, the town hall out of the way, no waves, no animals
 function setUpBattleField() {
-  battle.savedMapSettings = mapSettings;
-  mapSettings = { cols: 40, rows: 26 };
+  battle.savedMapSettings = game.mapSettings;
+  game.mapSettings = { cols: 40, rows: 26 };
   resetGame();
-  for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars,
-    naturalRocks, waterTiles, farmPlots, desertTiles, beachTiles]) list.length = 0;
-  desertRegion = null;
-  forests = [];
-  settlers = [];
+  for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.ironOres, game.coalOres, game.boars,
+    game.naturalRocks, game.waterTiles, game.farmPlots, game.desertTiles, game.beachTiles]) list.length = 0;
+  game.desertRegion = null;
+  game.forests = [];
+  game.settlers = [];
   townHall.x = -10000; townHall.y = -10000; townHall.hp = townHall.maxHp = 1e9;
-  waveTimer = Infinity; boarRespawnTimer = Infinity;
+  game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
   invalidateAllPaths();
-  camera.x = WORLD_WIDTH / 2; camera.y = WORLD_HEIGHT / 2; setZoom(0); clampCamera();
+  camera.x = game.WORLD_WIDTH / 2; camera.y = game.WORLD_HEIGHT / 2; setZoom(0); clampCamera();
 }
 
 // The line-up as placed: units standing still until Fight
 function resetBattleUnits() {
-  settlers = []; enemies = []; projectiles = []; corpses = []; bloodSplats = []; dung = []; buildings = [];
+  game.settlers = []; game.enemies = []; game.projectiles = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
   for (const entry of battle.lineup) {
     if (entry.building) {
       const b = createBuildingBlueprint(entry.building, entry.x, entry.y);
       delete b.progress;
       delete b.maxProgress;
-      buildings.push(b);
+      game.buildings.push(b);
     } else {
       makeBattleUnit(entry);
     }
@@ -80,23 +80,23 @@ function resetBattleUnits() {
 }
 
 function startBattleMode() {
-  gameMode = 'battle';
+  game.gameMode = 'battle';
   battle.phase = 'setup';
   battle.lineup = [];
   battle.winner = null;
   setUpBattleField();
   resetBattleUnits();
-  gameStarted = true;
+  game.gameStarted = true;
   document.getElementById('main-menu').style.display = 'none';
   document.body.classList.add('battle-mode');
   renderBattlePanel();
 }
 
 function leaveBattleMode() {
-  gameMode = 'endless';
+  game.gameMode = 'endless';
   battle.phase = 'off';
   document.body.classList.remove('battle-mode');
-  if (battle.savedMapSettings) mapSettings = battle.savedMapSettings; // the Endless choice comes back
+  if (battle.savedMapSettings) game.mapSettings = battle.savedMapSettings; // the Endless choice comes back
   exitToMainMenu();
 }
 

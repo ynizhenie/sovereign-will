@@ -15,12 +15,12 @@ const walkTo = (s, x, y, tick) => moveEntityTowards(s, x, y, s.speed, false, tic
 const ORDERS = [
   {
     kind: 'attack',
-    find: (p, near) => enemies.find(en => near(en, en.radius + 15)) || enemyTents.find(et => near(et, 25)),
+    find: (p, near) => game.enemies.find(en => near(en, en.radius + 15)) || game.enemyTents.find(et => near(et, 25)),
     step: (s, target, tick) => {
-      if (!enemies.includes(target) && !enemyTents.includes(target)) return false;
+      if (!game.enemies.includes(target) && !game.enemyTents.includes(target)) return false;
       if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
       const combat = getWeaponStats(s, 'combat');
-      const reach = enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
+      const reach = game.enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
       if (Math.hypot(target.x - s.x, target.y - s.y) > reach) walkTo(s, target.x, target.y, tick);
       else performAttack(s, target.x, target.y);
       return true;
@@ -28,9 +28,9 @@ const ORDERS = [
   },
   {
     kind: 'hunt',
-    find: (p, near) => boars.find(b => near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p)),
+    find: (p, near) => game.boars.find(b => near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p)),
     step: (s, target, tick) => {
-      if (!boars.includes(target) || target.hidden || target.hideTarget) return false;
+      if (!game.boars.includes(target) || target.hidden || target.hideTarget) return false;
       if (target.isCarcass && handsFull(s)) return false;
       huntBoar(s, target, tick);
       return true;
@@ -40,7 +40,7 @@ const ORDERS = [
     // hand in what it carries at a warehouse or the town hall (#36)
     kind: 'deliver',
     find: (p, near) => (!p.carrying ? null
-      : buildings.find(b => b.type === 'warehouse' && near(b, 18)) || (near(townHall, townHall.radius + 10) ? townHall : null)),
+      : game.buildings.find(b => b.type === 'warehouse' && near(b, 18)) || (near(townHall, townHall.radius + 10) ? townHall : null)),
     step: (s, target, tick) => {
       if (!s.carrying) return false;
       goDeliver(s, tick);
@@ -64,9 +64,9 @@ const ORDERS = [
   },
   {
     kind: 'build',
-    find: (p, near) => blueprints.find(bp => near(bp, 18)),
+    find: (p, near) => game.blueprints.find(bp => near(bp, 18)),
     step: (s, target, tick) => {
-      if (!blueprints.includes(target)) return false;
+      if (!game.blueprints.includes(target)) return false;
       // its materials first, from storage (#36)
       if (s.carrying && s.carrying.forBlueprint === target) return deliverMaterials(s, tick);
       const missing = getMissingMaterial(target);
@@ -84,10 +84,10 @@ const ORDERS = [
   },
   {
     kind: 'repair',
-    find: (p, near) => buildings.find(b => near(b, 18) && b.hp < b.maxHp),
+    find: (p, near) => game.buildings.find(b => near(b, 18) && b.hp < b.maxHp),
     check: (p, target) => (canAfford(getRepairStep(target).cost) ? null : 'possess.noRepairCost'),
     step: (s, target, tick) => {
-      if (!buildings.includes(target) || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
+      if (!game.buildings.includes(target) || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
       if (Math.hypot(target.x - s.x, target.y - s.y) > 34) walkTo(s, target.x, target.y, tick);
       else repairStep(target, tick.dt);
       return true;
@@ -96,10 +96,10 @@ const ORDERS = [
   {
     // an apple tree with apples, and no axe to fell it with: pick them
     kind: 'apples',
-    find: (p, near) => trees.find(tr => near(tr, 25) && tr.apple && tr.applesReady && !hasAxeTool(p.tool)),
+    find: (p, near) => game.trees.find(tr => near(tr, 25) && tr.apple && tr.applesReady && !hasAxeTool(p.tool)),
     check: p => (handsFull(p) ? 'possess.handsFull' : null),
     step: (s, target, tick) => {
-      if (!trees.includes(target) || !target.applesReady || handsFull(s)) return false;
+      if (!game.trees.includes(target) || !target.applesReady || handsFull(s)) return false;
       return pickApplesFrom(s, target, tick.dt);
     }
   },
@@ -115,7 +115,7 @@ const ORDERS = [
     },
     step: (s, target, tick) => {
       const kind = tick.resourceKind.get(target);
-      if (!kind || !WORLD[getMapResourceDef(kind).list].includes(target) || handsFull(s)) return false;
+      if (!kind || !game[getMapResourceDef(kind).list].includes(target) || handsFull(s)) return false;
       const spot = getResourceApproachPoint(s, target);
       if (!spot) return false;
       if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) walkTo(s, spot.x, spot.y, tick);
@@ -125,7 +125,7 @@ const ORDERS = [
   },
   {
     kind: 'fish',
-    find: (p, near) => waterTiles.find(w => near(w, 20)),
+    find: (p, near) => game.waterTiles.find(w => near(w, 20)),
     check: p => {
       if (p.tool !== 'rod') return 'possess.needsRod';
       if (!p.bait && !getFishingBait()) return 'possess.noBait';

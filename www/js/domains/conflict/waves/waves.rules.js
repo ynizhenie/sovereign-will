@@ -3,24 +3,24 @@
 const WAVE_WARNING_SECONDS = 15;
 
 function getDifficulty() {
-  return GAME_CONFIG.difficulty[gameDifficulty] || GAME_CONFIG.difficulty.normal;
+  return GAME_CONFIG.difficulty[game.gameDifficulty] || GAME_CONFIG.difficulty.normal;
 }
 
 function getRandomBorderPos() {
   let side = Math.floor(rand() * 4);
   let gx, gy;
   if (side === 0) {
-    gx = Math.floor(rand() * COLS);
+    gx = Math.floor(rand() * game.COLS);
     gy = Math.floor(rand() * BORDER_MARGIN);
   } else if (side === 1) {
-    gx = Math.floor(rand() * COLS);
-    gy = ROWS - 1 - Math.floor(rand() * BORDER_MARGIN);
+    gx = Math.floor(rand() * game.COLS);
+    gy = game.ROWS - 1 - Math.floor(rand() * BORDER_MARGIN);
   } else if (side === 2) {
     gx = Math.floor(rand() * BORDER_MARGIN);
-    gy = Math.floor(rand() * ROWS);
+    gy = Math.floor(rand() * game.ROWS);
   } else {
-    gx = COLS - 1 - Math.floor(rand() * BORDER_MARGIN);
-    gy = Math.floor(rand() * ROWS);
+    gx = game.COLS - 1 - Math.floor(rand() * BORDER_MARGIN);
+    gy = Math.floor(rand() * game.ROWS);
   }
   return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
 }
@@ -43,7 +43,7 @@ function createConfiguredEnemy(pos, enemyKey, type, radius) {
   };
   if (definition.quiver) {
     enemy.arrows = definition.quiver.arrows;
-    enemyArrowStock += definition.quiver.tentStock;
+    game.enemyArrowStock += definition.quiver.tentStock;
   }
   return enemy;
 }
@@ -55,7 +55,7 @@ function createNormalEnemy(pos, enemyKey = 'raider') {
 function findNearestEnemyTent(origin) {
   let nearest = null;
   let nearestDist = Infinity;
-  enemyTents.forEach(tent => {
+  game.enemyTents.forEach(tent => {
     const dist = Math.hypot(tent.x - origin.x, tent.y - origin.y);
     if (dist < nearestDist) { nearest = tent; nearestDist = dist; }
   });
@@ -69,15 +69,15 @@ function grantEnemyReward(enemy) {
 function getNearbyEnemyTentSite(origin) {
   let originG = getGridPos(origin.x, origin.y);
   for (let attempt = 0; attempt < 40; attempt++) {
-    let gx = Math.max(0, Math.min(COLS - 1, originG.gx + Math.floor(rand() * 9) - 4));
-    let gy = Math.max(0, Math.min(ROWS - 1, originG.gy + Math.floor(rand() * 9) - 4));
+    let gx = Math.max(0, Math.min(game.COLS - 1, originG.gx + Math.floor(rand() * 9) - 4));
+    let gy = Math.max(0, Math.min(game.ROWS - 1, originG.gy + Math.floor(rand() * 9) - 4));
     let x = gx * TILE_SIZE + 15;
     let y = gy * TILE_SIZE + 15;
     let occupied = isTileOccupied(x, y) ||
-      naturalRocks.some(r => r.x === x && r.y === y) ||
-      waterTiles.some(w => w.x === x && w.y === y) ||
-      enemyTents.some(t => t.x === x && t.y === y) ||
-      enemyTentBlueprints.some(t => t.x === x && t.y === y);
+      game.naturalRocks.some(r => r.x === x && r.y === y) ||
+      game.waterTiles.some(w => w.x === x && w.y === y) ||
+      game.enemyTents.some(t => t.x === x && t.y === y) ||
+      game.enemyTentBlueprints.some(t => t.x === x && t.y === y);
 
     if (isBorderZone(gx, gy) && !occupied && Math.hypot(x - origin.x, y - origin.y) <= 150) {
       return { x: x, y: y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null };
@@ -88,8 +88,8 @@ function getNearbyEnemyTentSite(origin) {
 
 // Where a wave's enemy appears: the map's edge, or for the demons one of their portals (#43)
 function getWaveSpawnPos() {
-  if (!getEnemyFaction().portalSpawns || enemyTents.length === 0) return getRandomBorderPos();
-  const portal = enemyTents[Math.floor(rand() * enemyTents.length)];
+  if (!getEnemyFaction().portalSpawns || game.enemyTents.length === 0) return getRandomBorderPos();
+  const portal = game.enemyTents[Math.floor(rand() * game.enemyTents.length)];
   // a free tile beside the portal, never inside a tree, a rock or the water (#177)
   const g = getGridPos(portal.x, portal.y);
   const free = [];
@@ -104,31 +104,31 @@ function getWaveSpawnPos() {
 // How much the player's army scales a wave (#179): 1 at army.base settlers, more for a bigger army
 function getWaveArmyFactor() {
   const army = GAME_CONFIG.waveScaling.army;
-  const units = settlers.filter(s => s.temporary === undefined).length;
+  const units = game.settlers.filter(s => s.temporary === undefined).length;
   return Math.max(army.min, Math.min(army.max, 1 + (units - army.base) * army.perUnit));
 }
 
 function startNextWave() {
-  if (gameMode === 'endless') playSound('horn');
+  if (game.gameMode === 'endless') playSound('horn');
   const scaling = GAME_CONFIG.waveScaling;
-  enemyTents.forEach(et => {
+  game.enemyTents.forEach(et => {
     et.summonTimer = 0;
     et.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
   });
 
   // difficulty goes up every wavesPerDifficulty waves (starting at 0)
-  const difficulty = Math.floor((waveNum - 1) / scaling.wavesPerDifficulty);
+  const difficulty = Math.floor((game.waveNum - 1) / scaling.wavesPerDifficulty);
 
   const maxTentsByDifficulty = Math.min(scaling.maxTents, difficulty + 1);
   let tentCount = Math.min(
-    Math.max(0, maxTentsByDifficulty - enemyTents.length - enemyTentBlueprints.length),
+    Math.max(0, maxTentsByDifficulty - game.enemyTents.length - game.enemyTentBlueprints.length),
     scaling.newTents.min + Math.floor(rand() * (scaling.newTents.max - scaling.newTents.min + 1))
   );
 
   // the demons' portals open first, so the wave can come out of them
   // as many as tents would be (#177), but always one to come out of
   if (getEnemyFaction().portalSpawns) {
-    for (let i = 0; i < (enemyTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
+    for (let i = 0; i < (game.enemyTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
     invalidateAllPaths();
   }
 
@@ -136,7 +136,7 @@ function startNextWave() {
 
   // squad size grows by growthPerDifficulty per difficulty level (+50%: wave 1-5 x1, 96-100 x10.5), with
   // the player's army (#179); the first wave is lighter
-  const multiplier = (1 + (difficulty * scaling.growthPerDifficulty)) * getWaveArmyFactor() * (waveNum === 1 ? scaling.firstWave : 1);
+  const multiplier = (1 + (difficulty * scaling.growthPerDifficulty)) * getWaveArmyFactor() * (game.waveNum === 1 ? scaling.firstWave : 1);
 
   // a random base squad from the config
   const baseGroups = GAME_CONFIG.attackGroups || [];
@@ -152,7 +152,7 @@ function startNextWave() {
     const enemy = createConfiguredEnemy(getWaveSpawnPos(), def.id);
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
-    enemies.push(enemy);
+    game.enemies.push(enemy);
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);
   };
@@ -180,60 +180,60 @@ function startNextWave() {
     if (site) {
       site.builder = builder;
       builder.buildTarget = site;
-      enemyTentBlueprints.push(site);
+      game.enemyTentBlueprints.push(site);
     }
   }
 
-  waveNum++;
+  game.waveNum++;
 }
 
 // The wave timer: a warning 15 s before, then the wave
 function tickWaveTimer(dt) {
-  const before = waveTimer;
-  waveTimer -= dt;
+  const before = game.waveTimer;
+  game.waveTimer -= dt;
   // one warning, 15 s before the wave (holds of the timer in tests keep it above)
-  if (before > WAVE_WARNING_SECONDS && waveTimer <= WAVE_WARNING_SECONDS) showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
-  if (waveTimer <= 0) {
+  if (before > WAVE_WARNING_SECONDS && game.waveTimer <= WAVE_WARNING_SECONDS) showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
+  if (game.waveTimer <= 0) {
     startNextWave();
-    waveTimer = waveInterval;
+    game.waveTimer = game.waveInterval;
   }
 }
 
 // Enemy tents: destroyed ones go; the rest summon enemies now and then
 function tickEnemyTents(dt) {
-  for (let i = enemyTents.length - 1; i >= 0; i--) {
-    let et = enemyTents[i];
+  for (let i = game.enemyTents.length - 1; i >= 0; i--) {
+    let et = game.enemyTents[i];
     if (et.hp <= 0) {
-      enemyTents.splice(i, 1);
+      game.enemyTents.splice(i, 1);
       invalidateAllPaths();
     }
   }
 
-  enemyTents.forEach(et => {
+  game.enemyTents.forEach(et => {
     et.summonTimer = (et.summonTimer || 0) + dt;
     const tentConfig = GAME_CONFIG.enemyTents;
-    if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && enemies.length < tentConfig.maxEnemies) {
+    if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && game.enemies.length < tentConfig.maxEnemies) {
       et.summonTimer = 0;
       et.summonsLeft--;
       let spawnPos = {
-        x: Math.max(15, Math.min(WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
-        y: Math.max(15, Math.min(WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
+        x: Math.max(15, Math.min(game.WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
+        y: Math.max(15, Math.min(game.WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
       };
       const summoned = createConfiguredEnemy(spawnPos, getEnemyFaction().summonEnemy || tentConfig.summonEnemy);
       summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
-      enemies.push(summoned);
+      game.enemies.push(summoned);
     }
   });
 }
 
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
 function removeDeadEnemies() {
-  enemies.forEach(en => {
+  game.enemies.forEach(en => {
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
       if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); }
     }
   });
-  enemies = enemies.filter(en => en.hp > 0);
-  enemyTentBlueprints = enemyTentBlueprints.filter(site => enemies.includes(site.builder));
+  game.enemies = game.enemies.filter(en => en.hp > 0);
+  game.enemyTentBlueprints = game.enemyTentBlueprints.filter(site => game.enemies.includes(site.builder));
 }

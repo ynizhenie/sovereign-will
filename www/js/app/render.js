@@ -11,7 +11,7 @@ function render() {
 
   const terrain = getTileIndex();
   drawMapBorder();
-  if (gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing
+  if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing
   drawSand();
   drawBlight();
   drawFarmZones();
@@ -38,7 +38,7 @@ function render() {
 
   ctx.restore();
 
-  if (gameMode === 'battle') drawBattleResult();
+  if (game.gameMode === 'battle') drawBattleResult();
   // lost (#191): the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 }
