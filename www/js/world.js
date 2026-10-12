@@ -1,7 +1,3 @@
-function isBorderZone(gx, gy) {
-  return gx < BORDER_MARGIN || gx >= COLS - BORDER_MARGIN || gy < BORDER_MARGIN || gy >= ROWS - BORDER_MARGIN;
-}
-
 // The start's limit, plus what each tent (or grave) adds
 function getMaxPop() {
   return buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
@@ -50,6 +46,7 @@ function getNecromancy(s) {
 // Blighted ground (#164): round the undead's graveyard and graves (`base`), and marked ground a
 // necromancer has blighted. Worked out once per tick; tile keys 'x,y'.
 let blightCache = { key: '', keys: new Set(), base: new Set() };
+
 function updateBlightCache() {
   const cacheKey = `${pathTick}|${sides.player.faction}|${gameMode}|${buildings.length}|${blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}`;
   if (blightCache.key === cacheKey) return blightCache;
@@ -688,6 +685,7 @@ function makeAppleTree(tree) {
 // The side comes from the lake's own shape, not rand(), so the rest of the seeded map doesn't change.
 // Only drawn: for everything else (building, regrowth, cacti) a beach is ordinary ground.
 const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
+
 function placeBeaches() {
   beachTiles = [];
   const key = (x, y) => `${x},${y}`;

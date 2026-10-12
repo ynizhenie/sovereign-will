@@ -261,35 +261,12 @@ function renderConfigHud() {
   document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
   document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
 
-
   const weaponActions = document.getElementById('weapon-actions');
   Object.values(GAME_CONFIG.weapons).forEach(item => {
     if (item.id !== 'fist' && !item.hidden && weaponActions) {
       weaponActions.appendChild(createConfigButton(item, craftWeapon));
     }
   });
-}
-
-
-function createWorldSeed(seedInput = 'default-world-seed') {
-  const seedValue = String(seedInput || 'default-world-seed');
-  let state = 2166136261;
-  for (let i = 0; i < seedValue.length; i++) {
-    state ^= seedValue.charCodeAt(i);
-    state = Math.imul(state, 16777619) >>> 0;
-  }
-  return {
-    value: seedValue,
-    random() {
-      state = (state * 1664525 + 1013904223) >>> 0;
-      return state / 4294967296;
-    },
-    // where the sequence is, to carry on from it after loading a save (#156)
-    getState() { return state; },
-    setState(value) { state = value >>> 0; },
-    nextInt(max = 1) { return Math.floor(this.random() * max); },
-    nextRange(min, max) { return min + this.random() * (max - min); }
-  };
 }
 
 function getDefinition(category, key) {
@@ -435,14 +412,4 @@ function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
 
 function showCostError(cost, prefix, have) {
   showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost, have) }), true);
-}
-
-function createDefaultSeed() {
-  const values = new Uint32Array(2);
-  if (globalThis.crypto && crypto.getRandomValues) crypto.getRandomValues(values);
-  else {
-    values[0] = Date.now() >>> 0;
-    values[1] = Math.floor(Math.random() * 4294967296);
-  }
-  return `lima-${Date.now().toString(36)}-${values[0].toString(36)}-${values[1].toString(36)}`;
 }
