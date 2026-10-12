@@ -9,7 +9,6 @@ Object.assign(window.sim, (() => {
   function farmZonesPlanted({ seed = 'farm-test', farmer = true, seconds = 20 }) {
     start(seed);
     clearResources();
-    window.showNotification = () => {};
     const row = i => nearHall(3 + i, 2);
     for (let i = 0; i < 3; i++) toggleFarmZone(row(i).x, row(i).y, 'wheat');
     for (let i = 3; i < 5; i++) toggleFarmZone(row(i).x, row(i).y, 'sapling');
@@ -31,7 +30,6 @@ Object.assign(window.sim, (() => {
   // Painting and clearing zone tiles; nothing on water
   function farmZonePainting({ seed = 'farm-paint-test' }) {
     start(seed);
-    window.showNotification = () => {};
     const { x, y } = nearHall(3, 0);
     toggleFarmZone(x, y, 'wheat');
     const afterWheat = farmZones.map(z => z.crop);

@@ -10,8 +10,8 @@ Object.assign(window.sim, (() => {
     start(seed);
     clearResources();
     invalidateAllPaths();
-    notes = [];
-    window.showNotification = text => notes.push(text);
+    notes = recentNotifications; // the messages shown from here on
+    notes.length = 0;
     buildMode = 'interact';
     const s = makeSettler(1, nearHall(2, 0).x, nearHall(2, 0).y, { isPossessed: true, ...extra });
     settlers = [s];

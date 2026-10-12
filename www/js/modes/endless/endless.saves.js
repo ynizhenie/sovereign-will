@@ -1,0 +1,128 @@
+// Saving and loading Endless games: from the pause menu, a save of the whole game on the device;
+// from the Endless menu, the saves to carry on from (or delete). A save holds the world (every list in
+// WORLD_LISTS), the stock, the clocks, the factions and the random sequence, so a loaded game goes on exactly
+// as it would have.
+//
+// Things on the map point at each other (an archer at its tower, an order at its target, a builder's
+// load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
+// loading puts the real object back in its place.
+
+import { rebuildConfigHud, renderItemList, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
+import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
+import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
+import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
+import { stock } from '../../domains/colony/storage/index.js';
+import { sides } from '../../domains/factions/index.js';
+import { setPaused } from '../../app/index.js';
+
+// caches, worked out again after loading rather than saved
+export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
+
+export function loadSaves() {
+  return loadData('saves', {});
+}
+
+export function storeSaves(saves) {
+  return saveData('saves', saves);
+}
+
+export function serializeGame() {
+  const refs = new Map([[townHall, '$hall']]);
+  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) {
+    if (Array.isArray(value)) value.forEach((o, i) => { if (o && typeof o === 'object') refs.set(o, `${list}:${i}`); });
+  }
+  // an object as plain data: what it points at as references, itself (the root) in full
+  const encode = value => JSON.parse(JSON.stringify(value, function (key, v) {
+    if (UNSAVED_FIELDS.has(key)) return undefined;
+    if (key !== '' && v && typeof v === 'object' && refs.has(v)) return { $ref: refs.get(v) };
+    return v;
+  }));
+  const world = {};
+  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? value.map(encode) : encode(value);
+  return {
+    version: 1,
+    world,
+    stock: { ...stock },
+    townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested },
+    cols: game.COLS, rows: game.ROWS,
+    clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
+    sides: JSON.parse(JSON.stringify(sides)),
+    difficulty: game.gameDifficulty,
+    seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
+    camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
+  };
+}
+
+// Put every { $ref } back as the object it names
+export function resolveRefs(root) {
+  const lookup = ref => (ref === '$hall' ? townHall : game[ref.slice(0, ref.indexOf(':'))][Number(ref.slice(ref.indexOf(':') + 1))]);
+  const seen = new Set();
+  const walk = value => {
+    if (!value || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    for (const key of Object.keys(value)) {
+      const v = value[key];
+      if (v && typeof v === 'object' && typeof v.$ref === 'string') value[key] = lookup(v.$ref);
+      else walk(v);
+    }
+  };
+  walk(root);
+}
+
+export function loadGame(data) {
+  game.gameMode = 'endless';
+  Object.assign(sides.player, data.sides.player);
+  Object.assign(sides.enemy, data.sides.enemy);
+  game.gameDifficulty = data.difficulty;
+  setWorldSize(data.cols, data.rows);
+  game.worldSeed = createWorldSeed(data.seed.value);
+  game.worldSeed.setState(data.seed.state);
+  for (const [list, value] of Object.entries(data.world)) game[list] = value;
+  for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
+  Object.assign(townHall, data.townHall);
+  for (const id of Object.keys(stock)) stock[id] = 0;
+  Object.assign(stock, data.stock);
+  ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
+  if (renderedFaction !== sides.player.faction) rebuildConfigHud();
+  game.selectedSettler = null;
+  game.defensePlan = null;
+  resetTileIndex();
+  Object.assign(camera, data.camera);
+  clampCamera();
+  updateSeedHud();
+  updateUnitCounts();
+  game.gameStarted = true;
+  setPaused(false);
+  document.getElementById('main-menu').style.display = 'none';
+}
+
+// From the pause menu: saved under the wave and the time, never over another save
+export function saveCurrentGame() {
+  if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const name = t('save.name', { wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
+  const saves = loadSaves();
+  let unique = name;
+  for (let n = 2; saves[unique]; n++) unique = `${name} (${n})`;
+  saves[unique] = { name: unique, savedAt: now.getTime(), data: serializeGame() };
+  if (!storeSaves(saves)) { showNotification(t('save.failed'), true); return; }
+  showNotification(t('save.done', { name: unique }), false);
+}
+
+// The Endless menu's list of saves, newest first
+export function renderSaveList() {
+  const saves = Object.values(loadSaves()).sort((a, b) => b.savedAt - a.savedAt);
+  document.getElementById('save-settings').hidden = saves.length === 0;
+  renderItemList(document.getElementById('save-list'), saves.map(s => ({ id: s.name, label: s.name })), {
+    attr: 'save',
+    onPick: name => loadGame(loadSaves()[name].data),
+    onDelete: name => { const all = loadSaves(); delete all[name]; storeSaves(all); renderSaveList(); }
+  });
+}
+
+// What this file sets up as the game starts (called by app/boot.js)
+export function initEndlessSaves() {
+  onTap(document.getElementById('save-game-button'), saveCurrentGame);
+  onTap(document.getElementById('mode-endless'), renderSaveList);
+}

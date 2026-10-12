@@ -1,0 +1,179 @@
+// The shapes of the game's data, for the editor (JSDoc): what a settler, an enemy, a building... carries.
+// Nothing runs here. Use one as  /** @type {import('../engine/world/types.js').Settler} */  (the path
+// from your file). Fields not listed are set by one mechanic for its own use.
+
+/**
+ * @typedef {{ x: number, y: number }} Point
+ */
+
+/**
+ * A colony unit (GAME_CONFIG.settlerTypes): created by createSettler, driven by SETTLER_BEHAVIOURS.
+ * @typedef {Object} Settler
+ * @property {number} id
+ * @property {number} x
+ * @property {number} y
+ * @property {string} type           GAME_CONFIG.settlerTypes key ('normal', 'big', 'zombie'...)
+ * @property {string} role           'worker', 'soldier' or 'archer'
+ * @property {string} weapon         GAME_CONFIG.weapons key, 'fist' for none
+ * @property {string} tool           GAME_CONFIG.tools key, 'none' for none
+ * @property {number} hp
+ * @property {number} maxHp
+ * @property {number} speed
+ * @property {number} radius         the collision body
+ * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
+ * @property {boolean} isPossessed   steered by the player (its AI is off)
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building } | null} carrying
+ * @property {Point[]} path          the way it walks, tile by tile (moveEntityTowards)
+ * @property {Point | null} pathTarget
+ * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
+ * @property {number} [hunger]       seconds until its next meal
+ * @property {boolean} [quiver]
+ * @property {number} [arrows]
+ * @property {boolean} [shield]
+ * @property {string|boolean} [armor]
+ * @property {boolean} [backpack]
+ * @property {boolean} [wateringCan]
+ * @property {number} [facing]       the angle its held item points at
+ * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
+ * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
+ * @property {Building} [towerAssignment] the watchtower it guards
+ * @property {boolean} [isIdle]
+ * @property {boolean} [hasArmor]
+ * @property {number} [usingCan]     seconds left of watering with the can
+ * @property {number} [bagHerbs]     a medic's herbs
+ * @property {number} [burning]      seconds left on fire
+ * @property {number} [temporary]    a raised zombie's seconds left
+ * @property {boolean} [crumbled]
+ * @property {boolean} [deadProcessed]
+ * @property {Building} [sacrificeAt]
+ */
+
+/**
+ * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
+ * @typedef {Object} Enemy
+ * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {string} type           'normal', 'big', 'archer'...
+ * @property {number} x
+ * @property {number} y
+ * @property {number} hp
+ * @property {number} maxHp
+ * @property {number} radius
+ * @property {number} speed
+ * @property {number} damage
+ * @property {string} weapon
+ * @property {Object<string, number>} reward   what killing it adds to the stock
+ * @property {Settler | null} [attackTarget]
+ * @property {Building | null} buildTarget     the tent site it's building
+ * @property {Point[]} path
+ * @property {Point | null} pathTarget
+ * @property {number} [arrows]
+ * @property {number} [facing]
+ * @property {number} [burning]
+ * @property {number} [temporary]
+ * @property {boolean} [crumbled]
+ * @property {boolean} [summoned]     from a tent, not the wave
+ * @property {boolean} [fromWave]
+ * @property {boolean} [markedTarget] the player pointed at it
+ * @property {boolean} [rewardGranted]
+ * @property {Object} [battleEntry]   its place in a battle's line-up
+ */
+
+/**
+ * A building or a blueprint of one (GAME_CONFIG.buildings): created by createBuildingBlueprint; built,
+ * it goes from game.blueprints to game.buildings.
+ * @typedef {Object} Building
+ * @property {string} type           GAME_CONFIG.buildings key
+ * @property {number} x              its tile's centre
+ * @property {number} y
+ * @property {number} progress       building work done, of maxProgress
+ * @property {number} maxProgress
+ * @property {number} [hp]
+ * @property {number} [maxHp]
+ * @property {Object<string, number>} [needs]  materials still to be brought to the blueprint
+ * @property {{ arrowCapacity: number, capacity?: number }} [tower]
+ * @property {number} [arrows]
+ * @property {Settler[]} [guards]    a watchtower's archers
+ * @property {number} [usesLeft]     a trap's uses
+ * @property {number} [radius]
+ * @property {boolean} [repairRequested]
+ * @property {boolean} [isDemolishing]
+ * @property {Building} [targetBuilding] what a demolition blueprint takes down
+ * @property {number} [fuelLeft]     a campfire's
+ * @property {number} [burning]
+ * @property {number} [oreLoaded]    a smelter's
+ * @property {number} [coalLoaded]
+ * @property {number} [ironProduced]
+ * @property {number} [smeltProgress]
+ * @property {Settler} [collector]
+ * @property {number} [cookProgress] a campfire's piece cooking now, 0..1
+ */
+
+/**
+ * The town hall: a storage too, and what the enemies are after.
+ * @typedef {{ x: number, y: number, radius: number, hp: number, maxHp: number, repairRequested: boolean }} TownHall
+ */
+
+/**
+ * A tone or a burst of noise (engine/platform/audio.js): its sound type, pitch (gliding to `to`), length,
+ * loudness, attack, a lowpass filter for a tone, a band's sharpness (q)
+ * @typedef {{ type?: string, freq?: number, to?: number, dur: number, gain: number, attack?: number, filter?: number, q?: number }} Sound
+ */
+
+/**
+ * The state of the game being played (engine/world/state.js).
+ * @typedef {Object} Game
+ * @property {'endless'|'battle'|'editor'|'menu'} gameMode
+ * @property {boolean} gameStarted
+ * @property {boolean} isPaused
+ * @property {string} gameDifficulty
+ * @property {{ cols: number, rows: number }} mapSettings
+ * @property {Object | null} customMap
+ * @property {Object | null} worldSeed
+ * @property {number} COLS
+ * @property {number} ROWS
+ * @property {number} WORLD_WIDTH
+ * @property {number} WORLD_HEIGHT
+ * @property {number} waveInterval
+ * @property {number} waveTimer
+ * @property {number} waveNum
+ * @property {number} boarRespawnTimer
+ * @property {number} pathTick
+ * @property {string} buildMode
+ * @property {Settler | null} selectedSettler
+ * @property {Object | null} defensePlan
+ * @property {Settler[]} settlers
+ * @property {Enemy[]} enemies
+ * @property {Building[]} buildings
+ * @property {Building[]} blueprints
+ * @property {Object[]} trees         (things on the map: x, y, hp, priority... as each list's own)
+ * @property {Object[]} cacti
+ * @property {Object[]} boulders
+ * @property {Object[]} grassList
+ * @property {Object[]} berryBushes
+ * @property {Object[]} farmPlots
+ * @property {Object[]} farmZones
+ * @property {Object[]} blightZones
+ * @property {Object[]} naturalRocks
+ * @property {Object[]} waterTiles
+ * @property {Object[]} desertTiles
+ * @property {Object | null} desertRegion
+ * @property {Object[]} beachTiles
+ * @property {Object[]} sticks
+ * @property {Object[]} pebbles
+ * @property {Object[]} ironOres
+ * @property {Object[]} coalOres
+ * @property {Object[]} boars
+ * @property {Object | null} armorOrder
+ * @property {Object[]} enemyTents
+ * @property {Object[]} enemyTentBlueprints
+ * @property {Object[]} projectiles
+ * @property {Object<string, number>} foodMix
+ * @property {Object[]} bloodSplats
+ * @property {Object[]} dung
+ * @property {Object[]} corpses
+ * @property {number} enemyArrowStock
+ * @property {Object[]} forests
+ * @property {Object[]} pendingRespawns
+ */
+
+export {};

@@ -40,7 +40,6 @@ test('a settler type can be limited to some kinds of orders (#133)', async ({ pa
   await openGame(page);
   const r = await page.evaluate(() => {
     window.sim.start('orders-limited');
-    window.showNotification = () => {};
     const s = settlers[0];
     s.isPossessed = true; s.tool = 'axe';
     const tree = trees.find(t => !t.isGrowing);

@@ -10,7 +10,6 @@ Object.assign(window.sim, (() => {
     sides.player.color = '#9b59b6';
     sides.enemy.color = '#e8572a';
     start(seed);
-    window.showNotification = () => {};
   }
 
   // A new game as the undead: what it can hire and build, its tabs and HUD, its food, bones and rot

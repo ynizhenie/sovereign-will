@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { openGame } from './helpers.mjs';
 
 test('no emoji anywhere in the game: every icon is drawn (#7)', () => {
-  const files = ['www/index.html', 'www/css/style.css', ...readdirSync('www/js').map(f => `www/js/${f}`)];
+  const files = ['www/index.html', 'www/css/style.css', ...readdirSync('www/js', { recursive: true }).filter(f => f.endsWith('.js')).map(f => `www/js/${f}`)];
   const found = [];
   for (const file of files) {
     readFileSync(file, 'utf8').split('\n').forEach((line, i) => {

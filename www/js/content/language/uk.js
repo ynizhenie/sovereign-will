@@ -1,0 +1,83 @@
+// Ukrainian
+
+export const ukLanguage = {
+  uk: {
+    label: 'Українська',
+    names: {
+      resources: {
+        food: 'Їжа', rawMeat: 'Сире м\'ясо', rawFish: 'Сира риба', wheat: 'Зерно', wood: 'Дерево', stone: 'Камінь', coal: 'Вугілля',
+        ironOre: 'Руда', iron: 'Залізо', leather: 'Шкіра', arrows: 'Стріли', wheatSeeds: 'Насіння', saplings: 'Саджанці',
+        herbs: 'Трави', worms: 'Черв\'яки', bones: 'Кістки', rot: 'Гниль', appleSaplings: 'Саджанці яблуні'
+      },
+      resourceGroups: { raw: 'Сира їжа', plants: 'Рослини', materials: 'Матеріали', supplies: 'Припаси', toolsHeld: 'Інструменти', weaponsHeld: 'Зброя' },
+      tools: { axe: 'Сокира', pickaxe: 'Кайло', iron_axe: 'Залізна сокира', iron_pickaxe: 'Залізне кайло', rod: 'Вудка', medbag: 'Сумка медика', hoe: 'Мотика', necro_staff: 'Посох некроманта' },
+      weapons: { fist: 'Кулак', club: 'Кийок', sword: 'Меч', spear: 'Спис', iron_sword: 'Залізний меч', iron_spear: 'Залізний спис', bow: 'Лук' },
+      buildings: {
+        wall_wood: 'Дерев\'яна стіна', wall_stone: 'Кам\'яна стіна', spikes: 'Шипи', door: 'Двері', tent: 'Намет', campfire: 'Багаття',
+        smelter: 'Плавильня', watchtower: 'Сторожова вежа', warehouse: 'Склад', grave: 'Могила', sacrifice_circle: 'Жертовне коло', portal: 'Портал', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
+      },
+      enemies: { raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник', undead_zombie: 'Зомбі', undead_big_zombie: 'Великий зомбі', undead_skeleton: 'Скелет', undead_necromancer: 'Некромант', demon_imp: 'Чорт', demon_brute: 'Демон', demon_fire_imp: 'Вогняний чорт' },
+      factions: { humans: 'Люди', demons: 'Демони', undead: 'Нежить' },
+      settlerTypes: { normal: 'Робітник', big: 'Богатир', zombie: 'Зомбі', big_zombie: 'Великий зомбі', skeleton: 'Скелет', necromancer: 'Некромант', imp: 'Чорт', demon: 'Демон', fire_imp: 'Вогняний чорт' },
+      gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лійка' },
+      recipes: { arrows: 'Стріли' },
+      foodKinds: { berries: 'Ягоди', apples: 'Яблука', bread: 'Хліб', cookedFish: 'Смажена риба', cookedMeat: 'Смажене м\'ясо' }
+    },
+    text: {
+      'menu.play': 'ГРАТИ', 'menu.waveInterval': 'Інтервал хвиль (с):', 'menu.custom': 'Свій', 'menu.mapSize': 'Розмір мапи:',
+      'menu.mapSmall': 'Мала', 'menu.mapMedium': 'Середня', 'menu.mapLarge': 'Велика', 'menu.mapCustom': 'Своя',
+      'menu.seed': 'Сід світу', 'menu.newSeed': 'Новий випадковий сід', 'menu.language': 'Мова:', 'menu.endless': 'Нескінченний', 'menu.battles': 'Битви', 'menu.editor': 'Редактор мап', 'menu.settings': 'Налаштування', 'menu.exit': 'Вийти', 'menu.back': '← Назад', 'menu.difficulty': 'Складність:', 'menu.easy': 'Легка', 'menu.normal': 'Звичайна', 'menu.hard': 'Важка', 'menu.fps': 'Частота кадрів:', 'menu.fpsDisplay': 'Як екран', 'menu.showFps': 'Показувати FPS:', 'menu.sound': 'Звук:', 'menu.music': 'Музика:', 'menu.on': 'Увімк.', 'menu.off': 'Вимк.',
+      'pause.title': 'Пауза', 'pause.continue': 'Продовжити', 'pause.exit': 'Вийти в головне меню',
+      'pause.resumeHint': 'Продовжити [Space]', 'pause.pauseHint': 'Пауза [Space / P]',
+      'top.wave': 'Хвиля', 'top.seconds': 'с', 'top.zoomIn': 'Наблизити', 'top.zoomOut': 'Віддалити', 'top.point': 'Вказати',
+      'hud.selected': 'Обрано:', 'hud.nobody': 'Ніхто', 'hud.base': 'База', 'hud.people': 'Жителі',
+      'hud.ironArmor': 'Залізна броня', 'hud.quiver': 'Сагайдак {n}/12',
+      'tab.build': '[[build]] Будівництво', 'tab.farming': '[[wheat]] Фермерство', 'tab.tools': '[[tools]] Інструменти', 'tab.weapons': '[[swords]] Зброя',
+      'btn.demolish': '[[hammer]] Знести', 'btn.repairAll': '[[tools]] Полагодити все', 'btn.zoneWheat': '[[zone_wheat]] Зона пшениці', 'btn.zoneSapling': '[[zone_sapling]] Зона саджанців',
+      'btn.zoneApple': '[[zone_apple]] Зона яблунь', 'btn.zoneClear': '[[close]] Прибрати зону', 'btn.wateringCanOff': '[[no]] Розібрати лійку',
+      'btn.backpackOff': '[[no]] Розібрати рюкзак', 'btn.disarmTool': '[[no]] Забрати інструмент', 'btn.armorOff': '[[no]] Розібрати броню',
+      'btn.disarmWeapon': '[[no]] Забрати зброю', 'btn.upgrade': '[[{icon}]] Покращити ({cost})', 'btn.upgradeWorker': '[[{icon}]] Покращити робітника ({cost})',
+      'repair.ordered': '[[tools]] Ремонт: {name} ({cost} за крок)', 'repair.cancelled': '[[no]] Ремонт скасовано',
+      'repair.allOrdered': '[[tools]] Ремонт замовлено: {count}', 'repair.nothing': '[[ok]] Усе ціле',
+      'repair.hall': '[[tools]] Ремонт ({cost})', 'repair.hallNeeded': '[[warn]] Потрібен ремонт',
+      'cost.missing': '{prefix} {cost} (бракує {missing})', 'cost.notEnough': '[[no]] Бракує ресурсів! Потрібно',
+      'cost.needs': '[[no]] {name}: потрібно', 'build.costs': '[[hint]] {name} коштує {cost} (вам бракує {missing})',
+      'wave.warning': '[[warn]] Хвиля ворогів за {seconds} секунд!',
+      'gear.nobody': '[[warn]] Нікому видати: {name}', 'gear.fetching': '[[ok]] [[{icon}]] {name}: житель іде по нього на базу',
+      'gear.noneHas': '[[warn]] Ні в кого немає: {name}', 'gear.returning': '[[ok]] [[{icon}]] {name}: житель несе його на базу',
+      'build.zoneHere': '[[no]] Тут зона ферми: спершу приберіть зону', 'build.onHall': '[[no]] Не можна будувати на клітинці ратуші',
+      'possess.handsFull': '[[no]] Руки зайняті: спершу віднесіть до ратуші', 'possess.needs.axe': '[[no]] Потрібна сокира',
+      'possess.needs.pickaxe': '[[no]] Потрібна кирка', 'possess.notRipe': '[[no]] Ще не дозріло', 'possess.needsRod': '[[no]] Потрібна вудка',
+      'possess.noBait': '[[no]] На складі немає наживки (черв\'яків чи насіння)', 'possess.noRepairCost': '[[no]] Не вистачає ресурсів на ремонт',
+      'build.occupied': '[[no]] Ця клітинка зайнята', 'zone.badTile': '[[no]] Зона — лише на траві, де немає дерев, каміння та будівель',
+      'tool.unknown': '[[warn]] Невідомий інструмент: {id}', 'tool.nobody': '[[warn]] Немає вільного жителя, щоб видати інструмент!', 'tool.given': '[[ok]] Видано інструмент ({name})',
+      'weapon.unknown': '[[warn]] Невідома зброя: {id}', 'weapon.nobody': '[[warn]] Немає вільного жителя, щоб видати зброю!', 'weapon.made': '[[ok]] Зброю створено ({name})',
+      'arrows.needArcher': '[[warn]] Спершу потрібен лучник із сагайдаком', 'arrows.made': '[[ok]] Створено {count} стріл. Вони зберігаються в ратуші',
+      'disarm.tool': '[[ok]] Інструмент забрано', 'disarm.weapon': '[[ok]] Зброю забрано', 'disarm.item': '[[ok]] Предмет забрано',
+      'disarm.noTool': '[[warn]] Немає жителя з інструментом!', 'disarm.noWeapon': '[[warn]] Немає жителя зі зброєю чи бронею!', 'disarm.noItem': '[[warn]] Немає жителя з предметом, який можна забрати!',
+      'pop.limit': '[[warn]] Перевищено ліміт жителів! Збудуйте намет ([[tent]])', 'hire.done': '[[ok]] Найнято: {name}!',
+      'upgrade.noone': '[[no]] Немає звичайного жителя для покращення!', 'upgrade.needs': '[[no]] Покращення до {name}: потрібно', 'upgrade.done': '[[ok]] Жителя покращено: {name}!',
+      'battle.hint': 'Тап — поставити, ще тап — прибрати: свої зліва, вороги справа', 'battle.cat.own': 'Гравець', 'battle.cancel': '[[close]] Скасувати бій', 'battle.cat.enemy': 'Вороги', 'battle.cat.buildings': 'Будівлі', 'battle.armor': '[[armor]] Броня', 'battle.shield': '[[shield]] Щит', 'battle.clearGreen': '[[broom]] Зелених', 'battle.clearRed': '[[broom]] Червоних', 'battle.only.green': '[[warn]] Своїх — лише на зелений бік', 'battle.only.red': '[[warn]] Ворогів — лише на червоний бік', 'battle.fight': '[[swords]] У бій!', 'battle.needBoth': '[[warn]] Спершу поставте юнітів з обох боків', 'battle.greenWins': 'Перемогли зелені!', 'battle.redWins': 'Перемогли червоні!', 'battle.drawWins': 'Нічия!', 'preset.fist': 'Без зброї', 'preset.club': 'Кийок', 'preset.sword': 'Меч', 'preset.spear': 'Спис', 'preset.iron_sword': 'Залізний меч', 'preset.iron_spear': 'Залізний спис', 'preset.bow': 'Лучник', 'preset.big_club': 'Богатир, кийок', 'preset.big_spear': 'Богатир, спис', 'preset.raider_club': 'Дикун', 'preset.raider': 'Розбійник', 'preset.brute': 'Громило', 'preset.raider_archer': 'Ворожий лучник',
+      'menu.generator': 'Генератор мап', 'gen.standard': 'Стандарт', 'gen.save': 'Зберегти', 'gen.presetName': 'Назва пресету', 'gen.group.water': 'Вода', 'gen.group.desert': 'Пустеля', 'gen.group.forests': 'Ліси', 'gen.group.resources': 'Ресурси', 'gen.group.ore': 'Руда', 'gen.group.rocks': 'Скелі', 'gen.group.animals': 'Тварини', 'gen.group.regrowth': 'Відростання (с)', 'gen.group.other': 'Інше', 'gen.lakes': 'Озера', 'gen.lakeWidth': 'Ширина озера', 'gen.lakeHeight': 'Висота озера', 'gen.lakeMinDistance': 'Відстань між озерами', 'gen.deserts': 'Пустелі', 'gen.desertRadiusX': 'Ширина пустелі', 'gen.desertRadiusY': 'Висота пустелі', 'gen.desertCactus': 'Кактусів у пустелі', 'gen.desertPebbles': 'Камінців у пустелі', 'gen.forests': 'Ліси', 'gen.forestTrees': 'Дерев у лісі', 'gen.forestRadius': 'Розмір лісу', 'gen.forestUndergrowthShare': 'Підлісок у лісах (0-1)', 'gen.trees': 'Окремі дерева', 'gen.boulders': 'Валуни', 'gen.boulderPiles': 'Купи валунів', 'gen.boulderPileSize': 'Валунів у купі', 'gen.grass': 'Трава', 'gen.berryBushes': 'Ягідні кущі', 'gen.sticks': 'Палиці', 'gen.pebbles': 'Камінці', 'gen.ironSpawners': 'Спавнери заліза', 'gen.coalSpawners': 'Спавнери вугілля', 'gen.orePerSpawner': 'Руди на спавнер', 'gen.oreSpawnerRadius': 'Розкид руди (клітинки)', 'gen.rockClusters': 'Скельні масиви', 'gen.rockClusterWidth': 'Ширина масиву', 'gen.rockClusterHeight': 'Висота масиву', 'gen.boars': 'Кабани', 'gen.respawnDelay': 'Ресурси відростають', 'gen.oreRespawnDelay': 'Руда відростає',
+      'sacrifice.pick': '[[warn]] Спершу оберіть жителя, потім тапніть коло', 'sacrifice.going': '[[sacrifice_circle]] {name} іде до кола', 'sacrifice.done': '[[ok]] Жертва вилікувала всіх',
+      'save.button': 'Зберегти гру', 'save.list': 'Збереження:', 'save.name': 'Хвиля {wave} · {time}', 'save.done': '[[save]] Збережено: {name}', 'save.failed': '[[no]] Не вдалося зберегти на пристрої',
+      'tab.blight': '[[rot]] Псування', 'blight.hint': 'Позначте землю, яку зіпсує некромант: вороги на ній повільніші, трупи встають', 'btn.blightZone': '[[rot]] Зона псування', 'btn.blightClear': '[[close]] Прибрати зону', 'blight.already': 'Ця земля вже зіпсована',
+      'panel.defense': 'Оборона', 'panel.homes': 'Житло', 'panel.economy': 'Господарство', 'panel.plant': 'Посадка', 'panel.zones': 'Зони ферми', 'panel.tools': 'Інструменти', 'panel.gear': 'Спорядження', 'panel.weapons': 'Зброя', 'panel.arrows': 'Стріли', 'panel.armour': 'Захист',
+      'activity.playerControlled': 'Під вашим керуванням', 'activity.goToSacrifice': 'Іде до кола', 'activity.loadTowerArrows': 'Несе стріли на вежу', 'activity.collectSmelterIron': 'Забирає залізо', 'activity.supplySmelter': 'Постачає плавильню', 'activity.deliverToSmelter': 'Постачає плавильню', 'activity.guardTower': 'На вежі', 'activity.repairTownHall': 'Лагодить ратушу', 'activity.repairBuilding': 'Лагодить', 'activity.equip': 'Іде по спорядження', 'activity.cook': 'Готує', 'activity.deliverMaterials': 'Несе матеріали на будову', 'activity.deliverCarrying': 'Несе на склад', 'activity.repairTent': 'Лагодить укриття', 'activity.eatCorpse': 'Їсть труп', 'activity.healAtTent': 'Лікується', 'activity.treatWounded': 'Лікує поранених', 'activity.necromancy': 'Чаклує', 'activity.holdPost': 'На посту', 'activity.fightEnemies': 'Б\'ється', 'activity.breakOutOfSealedBase': 'Пробиває вихід', 'activity.clearEnemyTents': 'Штурмує намети ворога', 'activity.relieve': 'Відійшов до вітру', 'activity.build': 'Будує', 'activity.collectWorms': 'Збирає черв\'яків', 'activity.fish': 'Рибалить', 'activity.pickApples': 'Збирає яблука', 'activity.harvest': 'Добуває', 'activity.tendFarmZones': 'Садить', 'activity.waterCrops': 'Поливає', 'activity.farmerGathersGrass': 'Збирає траву', 'activity.deliverWhenNothingToDo': 'Несе на склад', 'activity.patrol': 'Без діла',
+      'info.hungry': 'зголодніє за {seconds} с', 'info.noHunger': 'не голодує', 'info.crumbles': 'розсиплеться за {seconds} с', 'info.carries': 'несе',
+      'menu.factions': 'Фракції:', 'menu.you': 'Ви', 'menu.enemy': 'Ворог', 'menu.soon': 'незабаром',
+      'menu.map': 'Мапа:', 'menu.randomMap': 'Випадкова', 'menu.customMap': 'Своя мапа',
+      'editor.eraser': '[[eraser]] Гумка', 'editor.sizeButton': 'Розмір', 'editor.side.top': 'Зверху', 'editor.side.bottom': 'Знизу', 'editor.side.left': 'Зліва', 'editor.side.right': 'Справа', 'editor.hallInTheWay': '[[warn]] Заважає ратуша: спершу пересуньте її', 'editor.cat.terrain': 'Місцевість', 'editor.cat.nature': 'Природа', 'editor.cat.ore': 'Руда', 'editor.cat.buildings': 'Будівлі', 'list.deleteQuestion': 'Видалити «{name}»?', 'list.yes': 'Так', 'list.no': 'Ні',
+      'editor.newMap': 'Нова мапа:', 'editor.empty': 'Порожня', 'editor.generated': 'З генератора', 'editor.savedMaps': 'Збережені мапи:',
+      'editor.noMaps': 'Збережених мап ще немає: створіть у Редакторі мап', 'editor.hint': 'Оберіть, що ставити, і тапайте по мапі. Тягніть, щоб роздивитися',
+      'editor.brush': 'Пензель:', 'editor.name': 'Назва мапи', 'editor.save': '[[save]] Зберегти', 'editor.needName': '[[warn]] Спершу назвіть мапу',
+      'editor.saveFailed': '[[no]] Не вдалося зберегти мапу на пристрої', 'editor.saved': '[[ok]] Мапу збережено: {name}',
+      'editor.tool.erase': 'Гумка', 'editor.tool.water': 'Вода', 'editor.tool.rock': 'Скеля', 'editor.tool.sand': 'Пісок',
+      'editor.tool.town_hall': 'Ратуша', 'editor.tool.tree': 'Дерево', 'editor.tool.apple_tree': 'Яблуня', 'editor.tool.cactus': 'Кактус',
+      'editor.tool.boulder': 'Валун', 'editor.tool.grass': 'Трава', 'editor.tool.berry_bush': 'Ягідний кущ', 'editor.tool.stick': 'Палиця',
+      'editor.tool.pebble': 'Камінець', 'editor.tool.iron_ore': 'Залізна руда', 'editor.tool.coal_ore': 'Вугілля', 'editor.tool.iron_spawner': 'Джерело заліза',
+      'editor.tool.coal_spawner': 'Джерело вугілля', 'editor.tool.boar': 'Кабан',
+      'defeat.title': 'ПОРАЗКА!', 'defeat.survived': 'Ви протрималися {waves} хвиль', 'defeat.restart': 'Почати знову'
+    }
+  }
+};

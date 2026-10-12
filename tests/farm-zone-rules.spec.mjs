@@ -17,7 +17,6 @@ test('nothing can be built on a farm zone until the zone is removed (#92)', asyn
   await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
-    window.showNotification = () => {};
     const g = getGridPos(townHall.x, townHall.y);
     const { x: tx, y: ty } = window.sim.helpers.tileCenter(g.gx + 4, g.gy + 4);
     for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, naturalRocks, waterTiles]) {

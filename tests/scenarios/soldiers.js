@@ -9,7 +9,6 @@ Object.assign(window.sim, (() => {
     start(seed);
     clearResources();
     invalidateAllPaths();
-    window.showNotification = () => {};
     defensePlan = null;
   }
 

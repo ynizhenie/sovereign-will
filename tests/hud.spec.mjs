@@ -44,7 +44,7 @@ test('farm zones are drawn only with the Farming tab open (#106)', async ({ page
       return frames;
     };
     const onBuild = drawn();
-    switchTab(document.querySelector('.tab-btn[onclick*="tab-farming"]'), 'tab-farming');
+    switchTab(document.querySelector('.tab-btn[data-arg="tab-farming"]'), 'tab-farming');
     const onFarming = drawn();
     return { onBuild, onFarming };
   });
