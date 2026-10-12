@@ -38,6 +38,8 @@ export function answerPressedButton(ok) {
 // A list of saved things (maps, generator presets), one per row: tap a name to pick it; its delete
 // button asks right there whether to delete it. items: [{ id, label }]; attr names the data attributes the
 // rows carry (data-<attr>, data-delete-<attr>).
+/** @param {Element} list @param {{ id: string, label: string }[]} items
+ * @param {{ attr: string, selected?: string, onPick: (id: string) => void, onDelete?: (id: string) => void, emptyText?: string }} options */
 export function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyText }) {
   list.innerHTML = '';
   list.classList.add('item-list');

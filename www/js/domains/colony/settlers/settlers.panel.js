@@ -14,8 +14,8 @@ export function updateUnitCounts() {
   const workersElem = document.getElementById('workers-cnt');
   const warriorsElem = document.getElementById('warriors-cnt');
 
-  if (workersElem) workersElem.innerText = workers;
-  if (warriorsElem) warriorsElem.innerText = warriors;
+  if (workersElem) workersElem.innerText = String(workers);
+  if (warriorsElem) warriorsElem.innerText = String(warriors);
 }
 
 // The selected settler's info line: what it's doing, when it's next hungry, what it carries

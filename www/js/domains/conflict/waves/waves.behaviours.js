@@ -46,8 +46,10 @@ export function tickEnemy(en, dt) {
 
   const enemyDef = getEnemyDef(en);
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
+  /** @type {import('../../../engine/world/types.js').Settler | import('../../../engine/world/types.js').TownHall} */
   let target = townHall;
   let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
+  /** @type {import('../../../engine/world/types.js').Settler | null} */
   let closestSettler = null;
 
   game.settlers.forEach(s => {
@@ -118,7 +120,7 @@ export function tickEnemy(en, dt) {
 
   // a melee enemy close enough to strike stands and fights instead of walking into its target
   // the drawn size of a settler: a big one is pushed off further (see separateSettlersFromEnemies)
-  let attackRange = (target === townHall ? townHall.radius : (target.visualRadius || target.radius)) + en.radius + meleeDef.reach;
+  let attackRange = (target === townHall ? townHall.radius : (/** @type {import('../../../engine/world/types.js').Settler} */ (target).visualRadius || target.radius)) + en.radius + meleeDef.reach;
   const holdsGround = keepsAway || (inMelee && minDist < attackRange);
 
   // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.

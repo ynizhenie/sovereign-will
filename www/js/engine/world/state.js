@@ -73,6 +73,7 @@ export const WORLD_LISTS = Object.keys(game).slice(Object.keys(game).indexOf('se
 
 export const BOAR_LIMIT = 5;
 export const TOWN_HALL_HP = 100;
+/** @type {import('./types.js').TownHall} */
 export const townHall = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
 
 for (const key of Object.keys(game)) {

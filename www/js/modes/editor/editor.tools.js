@@ -23,6 +23,7 @@ import { renderEditorMapList, renderEditorPanel } from './editor.panel.js';
 // What can be put on a tile, by palette category (the eraser has its own button). kind: a
 // GAME_CONFIG.mapResources entry; building: a GAME_CONFIG.buildings one.
 export const EDITOR_CATEGORIES = ['terrain', 'nature', 'ore', 'buildings'];
+/** @type {{ id: string, icon: string, category?: string, kind?: string, building?: string, list?: string, spawner?: string }[]} */
 export const EDITOR_TOOLS = [
   { id: 'erase', icon: 'eraser' },
   { id: 'water', icon: 'water', category: 'terrain' },

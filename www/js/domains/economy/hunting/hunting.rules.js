@@ -92,6 +92,7 @@ export function tickBoars(dt) {
     if (b.fleeTimer > 0) b.fleeTimer -= dt;
 
     if ((b.fleeTimer || 0) <= 0 && !b.hideTarget) {
+      /** @type {import('../../../engine/world/types.js').Settler | null} */
       let nearest = null, nearestDist = Infinity;
       game.settlers.forEach(s => {
         let d = Math.hypot(s.x - b.x, s.y - b.y);

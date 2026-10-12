@@ -9,8 +9,16 @@ interface Element {
   disabled: boolean;
   value: string;
   title: string;
+  placeholder: string;
+  offsetParent: Element | null;
   click(): void;
   focus(): void;
+}
+
+// an event's target is an element of the page
+interface EventTarget {
+  id: string;
+  closest(selectors: string): Element | null;
 }
 
 interface HTMLElement {
@@ -24,5 +32,7 @@ interface HTMLElement {
 interface Window {
   // the Android app's native bridge (Capacitor), when the game runs as the app
   Capacitor?: any;
+  // older Safari's name for AudioContext
+  webkitAudioContext?: typeof AudioContext;
   toastTimeout?: any;
 }
