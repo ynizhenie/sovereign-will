@@ -326,7 +326,7 @@ test('wheat and saplings are planted from the Farming tab (#64)', async ({ page 
   await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
   // picking a crop in the Farming tab switches to placing it
   const mode = await page.evaluate(() => {
-    switchTab(document.querySelector('.tab-btn[onclick*="tab-farming"]'), 'tab-farming');
+    switchTab(document.querySelector('.tab-btn[data-arg="tab-farming"]'), 'tab-farming');
     setMode('wheat');
     return buildMode;
   });
