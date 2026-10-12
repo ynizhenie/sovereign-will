@@ -1,3 +1,5 @@
+// The top bar and the resource tiles: the wave and its timer, the base, settlers, the stock, the seed
+
 function updateUI() {
   document.getElementById('wave-num').innerText = waveNum;
   document.getElementById('wave-timer').innerText = Math.ceil(waveTimer);
@@ -58,37 +60,24 @@ function updateUI() {
 
 }
 
-// Buttons with a price (#UI): what the stock is short of shows in red, and a button that can't be paid
-// for is dimmed, as the stock changes (a few times a second)
-let affordabilityTick = 0;
-function refreshAffordability(force = false) {
-  if (!force && ++affordabilityTick % 8 !== 0) return;
-  for (const button of document.querySelectorAll('#bottom-panel button, #selected-bar button')) {
-    const parts = button.querySelectorAll('.cost-part');
-    if (!parts.length) continue;
-    let short = false;
-    for (const part of parts) {
-      const missing = Number(stock[part.dataset.res] || 0) < Number(part.dataset.amount);
-      part.classList.toggle('short', missing);
-      if (missing) short = true;
-    }
-    button.classList.toggle('cant-afford', short);
+function resourceHudId(resourceKey) {
+  return `resource-${resourceKey}-txt`;
+}
+
+// Open a resource group's row (closing any other), or close it if it's open
+function toggleResourceGroup(groupId) {
+  for (const group of GAME_CONFIG.resourceGroups) {
+    const row = document.getElementById(`group-${group.id}-members`);
+    const tile = document.getElementById(`group-${group.id}`);
+    if (!row) continue;
+    row.hidden = group.id === groupId ? !row.hidden : true;
+    if (tile) tile.classList.toggle('open', !row.hidden);
   }
 }
 
-// A button's answer (#UI): the one just pressed flashes green when what it did worked (a green notice) and
-// shakes when it didn't (a red one), within a moment of the press
-let pressedButton = null, pressedAt = 0;
-document.addEventListener('pointerdown', e => {
-  const button = e.target.closest && e.target.closest('button');
-  if (button) { pressedButton = button; pressedAt = performance.now(); }
-}, true);
-function answerPressedButton(ok) {
-  if (!pressedButton || performance.now() - pressedAt > 600) return;
-  const button = pressedButton, name = ok ? 'btn-ok' : 'btn-no';
-  pressedButton = null;
-  button.classList.remove('btn-ok', 'btn-no');
-  void button.offsetWidth; // restart the animation
-  button.classList.add(name);
-  setTimeout(() => button.classList.remove(name), 500);
+function updateSeedHud() {
+  const seedElem = document.getElementById('hud-seed');
+  if (seedElem && worldSeed) {
+    seedElem.innerText = worldSeed.value;
+  }
 }

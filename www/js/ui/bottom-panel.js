@@ -1,16 +1,23 @@
-function resourceHudId(resourceKey) {
-  return `resource-${resourceKey}-txt`;
+// The bottom panel: its tabs, and the buttons made from the config (hire, build, farm, tools, weapons)
+
+// the bottom panel's open tab (farm zones are only drawn with the Farming tab open)
+let activeTab = 'tab-build';
+
+// Open a tab by its id, as tapping its button does
+function openTab(tabId) {
+  const button = [...document.querySelectorAll('.tab-btn')].find(b => (b.getAttribute('onclick') || '').includes(`'${tabId}'`));
+  if (button) switchTab(button, tabId);
 }
 
-// Open a resource group's row (closing any other), or close it if it's open
-function toggleResourceGroup(groupId) {
-  for (const group of GAME_CONFIG.resourceGroups) {
-    const row = document.getElementById(`group-${group.id}-members`);
-    const tile = document.getElementById(`group-${group.id}`);
-    if (!row) continue;
-    row.hidden = group.id === groupId ? !row.hidden : true;
-    if (tile) tile.classList.toggle('open', !row.hidden);
-  }
+function switchTab(btnElement, tabId) {
+  activeTab = tabId;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  // switching to any tab goes back to the Point (interact) mode
+  setMode('interact');
+  
+  btnElement.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
 }
 
 function createConfigButton(item, action) {
@@ -186,14 +193,4 @@ function renderConfigHud() {
       weaponActions.appendChild(createConfigButton(item, craftWeapon));
     }
   });
-}
-
-function getResourceIconName(resourceKey) {
-  const known = GAME_CONFIG.resources[resourceKey] || GAME_CONFIG.foodKinds[resourceKey];
-  return known ? known.icon : 'bundle';
-}
-
-function getResourceIcon(resourceKey) {
-  const resource = GAME_CONFIG.resources[resourceKey];
-  return resource ? `[[${resource.icon}]]` : resourceKey;
 }

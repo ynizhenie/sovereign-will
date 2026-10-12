@@ -1,9 +1,4 @@
-function updateSeedHud() {
-  const seedElem = document.getElementById('hud-seed');
-  if (seedElem && worldSeed) {
-    seedElem.innerText = worldSeed.value;
-  }
-}
+// Messages at the top of the map: red for a warning, green for done
 
 function showNotification(msg, isWarning = true) {
   if (isWarning && typeof playSound === 'function') playSound('error');
