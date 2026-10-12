@@ -17,10 +17,6 @@ function getPlayerFaction() {
 
 function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.faction]; }
 
-function getDifficulty() {
-  return GAME_CONFIG.difficulty[gameDifficulty] || GAME_CONFIG.difficulty.normal;
-}
-
 function showNotification(msg, isWarning = true) {
   if (isWarning && typeof playSound === 'function') playSound('error');
   if (typeof answerPressedButton === 'function') answerPressedButton(!isWarning);

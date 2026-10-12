@@ -1,9 +1,4 @@
 
-// A shelter: a building settlers heal at (the humans' tent, the undead's grave, #43)
-function isShelter(building) {
-  return !!(getDefinition('buildings', building.type) || {}).healPerSecond;
-}
-
 // The necromancy a settler has from what it holds (the undead's staff, #164), or null
 function getNecromancy(s) {
   return (getDefinition('tools', s.tool) || {}).necromancer || null;

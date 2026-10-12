@@ -1,28 +1,4 @@
 
-// Spike traps: a unit stepping onto a spike tile takes its damage once per visit; each visit uses one
-// of the trap's uses, and it breaks when they run out. Runs once a tick after movement.
-function applySpikeTraps() {
-  const tiles = getTileIndex();
-  if (tiles.spikes.size === 0) return;
-  const spikesAt = new Map(buildings.filter(b => b.type === 'spikes').map(b => [`${b.x},${b.y}`, b]));
-  const step = (unit, hurt) => {
-    const g = getGridPos(unit.x, unit.y);
-    const key = `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`;
-    const trap = spikesAt.get(key);
-    if (!trap) { unit.spikeTile = null; return; }
-    if (unit.spikeTile === key || trap.usesLeft <= 0) return;
-    unit.spikeTile = key;
-    hurt(getDefinition('buildings', 'spikes').build.trap.damage);
-    trap.usesLeft--;
-    if (trap.usesLeft <= 0) {
-      buildings.splice(buildings.indexOf(trap), 1);
-      invalidateAllPaths();
-    }
-  };
-  for (const s of settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
-  for (const en of enemies) step(en, damage => { en.hp -= damage; bleed(en, null); });
-}
-
 // The demons' portals (#43): built in pairs, the 1st with the 2nd, the 3rd with the 4th...
 function getPortalPairs() {
   const portals = buildings.filter(b => b.type === 'portal');
