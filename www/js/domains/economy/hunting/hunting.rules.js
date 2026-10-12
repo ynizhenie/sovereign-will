@@ -52,3 +52,99 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
     boar.targetY = Math.max(edge, Math.min(WORLD_HEIGHT - edge, boar.y + dy / distance * fleeDistance));
   }
 }
+
+// A new boar every 25 s while there are fewer than BOAR_LIMIT
+function tickBoarRespawn(dt) {
+  if (boars.length < BOAR_LIMIT) {
+    boarRespawnTimer -= dt;
+    if (boarRespawnTimer <= 0) {
+      spawnResource('boar');
+      boarRespawnTimer = 25;
+    }
+  } else {
+    boarRespawnTimer = 25;
+  }
+}
+
+// Boars: hide in the grass, run from settlers that come near, wander
+function tickBoars(dt) {
+  boars.forEach(b => {
+    if (b.bloodAge !== undefined) b.bloodAge += dt;
+    if (b.isCarcass) return;
+
+    if (b.hidden) {
+      b.hideTimer -= dt;
+      if (b.hideTimer <= 0) {
+        b.hidden = false;
+        b.hideTarget = null;
+        b.wanderTimer = 0;
+      }
+      return;
+    }
+
+    if (b.fleeTimer > 0) b.fleeTimer -= dt;
+
+    if ((b.fleeTimer || 0) <= 0 && !b.hideTarget) {
+      let nearest = null, nearestDist = Infinity;
+      settlers.forEach(s => {
+        let d = Math.hypot(s.x - b.x, s.y - b.y);
+        if (d < nearestDist) { nearestDist = d; nearest = s; }
+      });
+      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
+    }
+
+    if (b.hideTarget) {
+      if (!grassList.includes(b.hideTarget)) {
+        b.hideTarget = null;
+      } else {
+        let hideDistance = Math.hypot(b.hideTarget.x - b.x, b.hideTarget.y - b.y);
+        if (hideDistance <= 18) {
+          b.x = b.hideTarget.x;
+          b.y = b.hideTarget.y;
+          b.hidden = true;
+          b.hideTimer = 2;
+          b.fleeTimer = 0;
+          invalidateAllPaths();
+          return;
+        }
+        let hideDx = (b.hideTarget.x - b.x) / hideDistance;
+        let hideDy = (b.hideTarget.y - b.y) / hideDistance;
+        let hideSpeed = (b.fleeSpeed || 1.35) * GAME_CONFIG.movementScale;
+        if (!collidesWithWall(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12) &&
+            !collidesWithWater(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12)) {
+          b.x += hideDx * hideSpeed;
+          b.y += hideDy * hideSpeed;
+        } else {
+          b.hideTarget = null;
+          b.fleeTimer = 0;
+        }
+        return;
+      }
+    }
+
+    b.wanderTimer = (b.wanderTimer || 0) + dt;
+    if ((b.fleeTimer || 0) <= 0 && b.wanderTimer >= (b.wanderInterval || 4.0)) {
+      b.wanderTimer = 0;
+      b.wanderInterval = 3 + rand() * 3;
+      let ang = rand() * Math.PI * 2;
+      let dist = 15 + rand() * 35;
+      b.targetX = Math.max(60, Math.min(WORLD_WIDTH - 60, b.x + Math.cos(ang) * dist));
+      b.targetY = Math.max(60, Math.min(WORLD_HEIGHT - 60, b.y + Math.sin(ang) * dist));
+    }
+    let dx = (b.targetX !== undefined ? b.targetX : b.x) - b.x;
+    let dy = (b.targetY !== undefined ? b.targetY : b.y) - b.y;
+    let dist = Math.hypot(dx, dy);
+    if (dist > 2) {
+      let speed = (b.fleeTimer > 0 ? (b.fleeSpeed || 0.65) : 0.3) * GAME_CONFIG.movementScale;
+      let vx = (dx / dist) * speed;
+      let vy = (dy / dist) * speed;
+      if (!collidesWithWall(b.x + vx, b.y + vy, 12) && !collidesWithWater(b.x + vx, b.y + vy, 12)) {
+        b.x += vx;
+        b.y += vy;
+      } else {
+        b.wanderTimer = b.wanderInterval || 4.0;
+        if (b.fleeTimer > 0) b.fleeTimer = 0;
+      }
+    }
+  });
+}

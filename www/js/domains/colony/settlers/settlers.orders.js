@@ -173,3 +173,25 @@ function followOrder(s, tick) {
   const order = ORDERS.find(o => o.kind === s.order.kind);
   return !!order && order.step(s, s.order.target, tick);
 }
+
+// The possessed settler moves by the joystick or WASD (a diagonal isn't faster than straight)
+function movePossessed(dt) {
+  const p = getPossessed();
+  if (p) {
+    let dx = joystick.x, dy = joystick.y;
+    if (keys['w'] || keys['ц']) dy -= 1;
+    if (keys['s'] || keys['ы']) dy += 1;
+    if (keys['a'] || keys['ф']) dx -= 1;
+    if (keys['d'] || keys['в']) dx += 1;
+    const push = Math.hypot(dx, dy);
+    if (push > 1) { dx /= push; dy /= push; }
+    if (push > 0.1) {
+      p.order = null; // moving by hand cancels a tap order
+      faceTowards(p, p.x + dx, p.y + dy);
+      let vx = dx * p.speed * GAME_CONFIG.movementScale;
+      let vy = dy * p.speed * GAME_CONFIG.movementScale;
+      if (!collidesWithWall(p.x + vx, p.y, p.radius)) p.x += vx;
+      if (!collidesWithWall(p.x, p.y + vy, p.radius)) p.y += vy;
+    }
+  }
+}

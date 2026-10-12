@@ -135,3 +135,21 @@ function enemyNecromancy(en, necro, dt) {
   }
   return true;
 }
+
+// The undead make bones by themselves: their graveyard and each grave (#43); and rot, from each grave (#164)
+function makeBonesAndRot(dt) {
+  const bonesRate = getPlayerFaction().bonesPerSecond;
+  if (bonesRate && gameMode === 'endless') {
+    stock.bones += dt * (bonesRate.hall + buildings.filter(b => b.type === 'grave').length * bonesRate.grave);
+  }
+  const rotRate = getPlayerFaction().rotPerSecond;
+  if (rotRate && gameMode === 'endless') {
+    stock.rot += dt * (rotRate.hall + buildings.filter(b => b.type === 'grave').length * rotRate.grave);
+  }
+}
+
+// Blighted zones taken away fade (#186)
+function fadeClearedBlight(dt) {
+  for (const z of blightZones) if (z.clearing !== undefined) z.clearing -= dt;
+  if (blightZones.some(z => z.clearing <= 0)) blightZones = blightZones.filter(z => !(z.clearing <= 0));
+}

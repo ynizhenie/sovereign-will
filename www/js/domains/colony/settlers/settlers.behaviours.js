@@ -184,3 +184,21 @@ const SETTLER_BEHAVIOURS = [
   deliverWhenNothingToDo,
   patrol
 ];
+
+// Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
+function tickSettlers(dt) {
+  const settlerTick = createSettlerTick(dt);
+  assignTowerArchers();
+
+  settlers.forEach(s => {
+    prepareSettler(s, dt);
+    s.isIdle = false;
+    for (const behaviour of SETTLER_BEHAVIOURS) {
+      if (behaviour(s, settlerTick)) {
+        s.isIdle = behaviour === patrol;
+        s.activity = behaviour.name; // what it's doing, for the selected settler's info (#180)
+        return;
+      }
+    }
+  });
+}

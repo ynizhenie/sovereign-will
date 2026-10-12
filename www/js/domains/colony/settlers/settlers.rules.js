@@ -172,3 +172,28 @@ function eatMeal(s) {
   s.meals = (s.meals || 0) + 1;
   if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
 }
+
+// Meals, each settler on its own clock (#178), for a faction that eats (the undead don't)
+function tickMeals(dt) {
+  if (gameMode === 'endless' && getPlayerFaction().eats) {
+    const meals = GAME_CONFIG.meals;
+    for (const s of settlers) {
+      if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
+      s.hunger -= dt;
+      if (s.hunger <= 0) { s.hunger = meals.seconds; eatMeal(s); }
+    }
+  }
+}
+
+// Dead settlers: their equipment back to the stock, a corpse, and off the list
+function removeDeadSettlers() {
+  settlers.forEach(s => {
+    if (s.hp <= 0 && !s.deadProcessed) {
+      s.deadProcessed = true;
+      refundEquipment(s);
+      if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot (#164)
+      if (selectedSettler === s) selectedSettler = null;
+    }
+  });
+  settlers = settlers.filter(s => s.hp > 0);
+}
