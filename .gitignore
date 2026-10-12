@@ -10,3 +10,30 @@ node_modules/
 # Playwright output
 test-results/
 playwright-report/
+
+# Android / Gradle generated files
+android/.gradle/
+android/**/build/
+android/local.properties
+
+# IDE and editor state
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Logs and local caches
+*.log
+npm-debug.log*
+.eslintcache
+
+# Local tools, not part of the game: the Figma bridge and plugin, scratch helpers
+figma-bridge/
+figma-wire-plugin/
+_snapshot.mjs
+_weapons.mjs
+
+# Local working notes (refactor review, structure proposal): never in a PR
+docs/
+.claude/
