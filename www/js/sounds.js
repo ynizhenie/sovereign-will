@@ -154,17 +154,5 @@ function updateMusic() {
   }
 }
 
-// ---- The Settings: sound and music on / off, remembered on the device
-const markAudioOptions = () => {
-  document.querySelectorAll('[data-sound]').forEach(b => b.classList.toggle('active', (b.dataset.sound === 'on') === audio.soundOn));
-  document.querySelectorAll('[data-music]').forEach(b => b.classList.toggle('active', (b.dataset.music === 'on') === audio.musicOn));
-};
-
-markAudioOptions();
-
-document.querySelectorAll('[data-sound]').forEach(b => onTap(b, () => { setSoundOn(b.dataset.sound === 'on'); markAudioOptions(); }));
-
-document.querySelectorAll('[data-music]').forEach(b => onTap(b, () => { setMusicOn(b.dataset.music === 'on'); markAudioOptions(); }));
-
 // a click for every button
 document.addEventListener('pointerdown', e => { if (e.target.closest('button')) { startAudio(); playSound('click'); } }, true);

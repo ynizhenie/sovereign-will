@@ -1,0 +1,87 @@
+// Saved maps: stored on the device as plain data, and a world built from one
+
+const MAP_STORAGE_KEY = 'sovereign-will-maps';
+
+// ---- Saved maps
+
+function loadSavedMaps() {
+  try { return JSON.parse(localStorage.getItem(MAP_STORAGE_KEY)) || {}; } catch (e) { return {}; }
+}
+
+function storeSavedMaps(maps) {
+  try { localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(maps)); return true; } catch (e) { return false; }
+}
+
+// The world as plain data: tiles by grid position
+function serializeMap(name) {
+  const tile = o => [Math.floor(o.x / TILE_SIZE), Math.floor(o.y / TILE_SIZE)];
+  const resources = {};
+  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
+    if (kind === 'boar' || kind === 'farm') continue;
+    resources[kind] = WORLD[def.list].filter(r => !r.oreSpawner).map(tile);
+  }
+  return {
+    name, cols: COLS, rows: ROWS, faction: editor.faction,
+    hall: [townHall.x, townHall.y],
+    water: waterTiles.map(tile),
+    sand: desertTiles.map(tile),
+    resources,
+    apples: trees.filter(tr => tr.apple).map(tile),
+    spawners: naturalRocks.filter(r => r.oreSpawner).map(r => [...tile(r), r.oreSpawner]),
+    boars: boars.filter(b => !b.isCarcass).map(tile),
+    buildings: buildings.map(b => [b.type, ...tile(b)])
+  };
+}
+
+// Build the world from a saved map, in place of generateMap() (see resetGame)
+function loadCustomMap(map) {
+  naturalRocks = []; waterTiles = []; desertTiles = []; desertRegion = null; beachTiles = []; forests = [];
+  trees = []; cacti = []; boulders = []; grassList = []; berryBushes = []; sticks = []; pebbles = [];
+  ironOres = []; coalOres = []; boars = []; buildings = [];
+  const at = ([gx, gy]) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+  if (map.hall) { townHall.x = map.hall[0]; townHall.y = map.hall[1]; }
+  for (const t of map.water || []) waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0 });
+  for (const t of map.sand || []) desertTiles.push(at(t));
+  for (const [kind, tiles] of Object.entries(map.resources || {})) {
+    if (!GAME_CONFIG.mapResources[kind]) continue;
+    for (const t of tiles) { const p = at(t); addMapResource(kind, p.x, p.y); }
+  }
+  const appleKeys = new Set((map.apples || []).map(t => `${t[0]},${t[1]}`));
+  for (const tr of trees) if (appleKeys.has(`${Math.floor(tr.x / TILE_SIZE)},${Math.floor(tr.y / TILE_SIZE)}`)) makeAppleTree(tr);
+  for (const [gx, gy, kind] of map.spawners || []) {
+    const p = at([gx, gy]);
+    addMapResource('natural_rock', p.x, p.y).oreSpawner = kind;
+  }
+  for (const t of map.boars || []) placeBoar(at(t));
+  for (const [type, gx, gy] of map.buildings || []) {
+    if (!getDefinition('buildings', type)) continue;
+    const p = at([gx, gy]);
+    buildings.push(makeBuilt(type, p.x, p.y));
+  }
+  placeBeaches();
+  camera.x = townHall.x; camera.y = townHall.y;
+}
+
+function placeBoar({ x, y }) {
+  const hp = GAME_CONFIG.mapResources.boar.hp;
+  boars.push({ x, y, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
+}
+
+// A finished building (a blueprint with its building work done)
+function makeBuilt(type, x, y) {
+  const b = createBuildingBlueprint(type, x, y);
+  delete b.progress;
+  delete b.maxProgress;
+  return b;
+}
+
+// The saved maps, one per row: its name and size; in the editor's menu also a delete button (asks first)
+function renderSavedMapList(list, { open, remove, selected }) {
+  const maps = loadSavedMaps();
+  renderItemList(list, Object.values(maps).map(map => ({ id: map.name, label: `${map.name} · ${map.cols}×${map.rows}` })), {
+    attr: 'map', selected, emptyText: t('editor.noMaps'),
+    onPick: name => open(maps[name]),
+    onDelete: remove
+  });
+  list.classList.toggle('no-delete', !remove);
+}
