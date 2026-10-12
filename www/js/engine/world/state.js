@@ -8,6 +8,7 @@ export const BORDER_MARGIN = 2;
 // (see fitCanvasToScreen)
 export const DEFAULT_MAP_TILES = 40;
 
+/** @type {import('./types.js').Game} */
 export const game = {
   gameMode: 'endless',      // endless / battle / editor (modes/) / menu (the world behind the main menu, modes/menu/menu.world.js)
   gameStarted: false,

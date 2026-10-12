@@ -41,6 +41,7 @@ export function changeSettlerType(s, type) {
 
 // A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind (skeletons)
 // comes with its bow and a full quiver, a necromancer with its raises
+/** @returns {import('../../../engine/world/types.js').Settler} */
 export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
   const s = {

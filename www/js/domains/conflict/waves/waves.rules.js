@@ -43,6 +43,7 @@ export function getEnemyDef(enemy) {
 }
 
 // A new enemy from GAME_CONFIG.enemies; type and radius come from the config unless given
+/** @returns {import('../../../engine/world/types.js').Enemy} */
 export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return null;
