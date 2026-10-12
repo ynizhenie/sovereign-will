@@ -188,37 +188,6 @@ function renderConfigHud() {
   });
 }
 
-function getDefinition(category, key) {
-  return (GAME_CONFIG[category] && GAME_CONFIG[category][key]) || null;
-}
-
-// counts that grow with the map's area (see getMapAreaScale); the rest are sizes or per-cluster counts
-const AREA_SCALED_COUNTS = new Set(['trees', 'boulders', 'grass', 'berryBushes', 'sticks', 'pebbles', 'boars',
-  'forests', 'boulderPiles', 'ironSpawners', 'coalSpawners']);
-
-function getMapCount(key, fallback) {
-  const count = getUnscaledMapCount(key, fallback);
-  return AREA_SCALED_COUNTS.has(key) ? Math.max(count > 0 ? 1 : 0, Math.round(count * getMapAreaScale())) : count;
-}
-
-function getUnscaledMapCount(key, fallback) {
-  const value = GAME_CONFIG.map && GAME_CONFIG.map[key];
-  if (value === undefined || value === null) return fallback;
-  if (typeof value === 'object') {
-    const min = Math.max(0, Math.floor(Number(value.min ?? fallback)));
-    const max = Math.max(min, Math.floor(Number(value.max ?? min)));
-    return min + Math.floor(rand() * (max - min + 1));
-  }
-  return Math.max(0, Math.floor(Number(value)));
-}
-
-function getMapRange(key, fallbackMin, fallbackMax) {
-  const configured = GAME_CONFIG.map && GAME_CONFIG.map[key];
-  const min = Math.max(0, Number(configured && configured.min !== undefined ? configured.min : fallbackMin));
-  const max = Math.max(min, Number(configured && configured.max !== undefined ? configured.max : fallbackMax));
-  return { min, max };
-}
-
 function getResourceIconName(resourceKey) {
   const known = GAME_CONFIG.resources[resourceKey] || GAME_CONFIG.foodKinds[resourceKey];
   return known ? known.icon : 'bundle';

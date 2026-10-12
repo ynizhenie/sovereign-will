@@ -5,3 +5,7 @@
 const GAME_CONFIG = {};
 
 globalThis.GAME_CONFIG = GAME_CONFIG;
+
+function getDefinition(category, key) {
+  return (GAME_CONFIG[category] && GAME_CONFIG[category][key]) || null;
+}
