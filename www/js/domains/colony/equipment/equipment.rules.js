@@ -31,7 +31,7 @@ function orderGear(id) {
   const free = s => rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment;
   const selected = getSelectedSettler() || getPossessed();
   const target = (selected && free(selected) ? selected : null) ||
-    settlers.find(s => free(s) && rules.first(s)) || settlers.find(free);
+    game.settlers.find(s => free(s) && rules.first(s)) || game.settlers.find(free);
   if (!target) {
     showNotification(t('gear.nobody', { name: item.label }), true);
     return;
@@ -51,7 +51,7 @@ function orderGearOff(id) {
   const selected = getSelectedSettler() || getPossessed();
   const target = selected && hasGear(selected, id) && !selected.targetEquipment
     ? selected
-    : settlers.find(s => hasGear(s, id) && !s.targetEquipment);
+    : game.settlers.find(s => hasGear(s, id) && !s.targetEquipment);
   if (!target) {
     showNotification(t('gear.noneHas', { name: item.label }), true);
     return;
@@ -149,12 +149,12 @@ function assignTool(toolType) {
 
   if (!target) {
     if (toolType === 'rod') {
-      target = settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
-               settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
+      target = game.settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
+               game.settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
     } else {
-      target = settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
-               settlers.find(s => s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) || 
-               settlers.find(s => s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
+      target = game.settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
+               game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) || 
+               game.settlers.find(s => s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
     }
   }
 
@@ -184,9 +184,9 @@ function craftWeapon(type) {
   let target = getSelectedSettler() || getPossessed();
 
   if (!target) {
-    target = settlers.find(s => isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
-             settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
-             settlers.find(s => s.weapon !== type && !s.targetEquipment);
+    target = game.settlers.find(s => isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
+             game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
+             game.settlers.find(s => s.weapon !== type && !s.targetEquipment);
   }
 
   if (!target) {
@@ -205,7 +205,7 @@ function craftWeapon(type) {
 
 function craftArrows() {
   let target = getSelectedSettler() || getPossessed();
-  if (!target) target = settlers.find(s => s.weapon === 'bow' && s.quiver);
+  if (!target) target = game.settlers.find(s => s.weapon === 'bow' && s.quiver);
   if (!target || target.weapon !== 'bow' || !target.quiver) {
     showNotification(t('arrows.needArcher'), true);
     return;
@@ -235,7 +235,7 @@ function disarmSettler(type = 'all') {
   }
 
   if (!target) {
-    target = settlers.find(s => hasTargetItem(s) && !s.targetEquipment);
+    target = game.settlers.find(s => hasTargetItem(s) && !s.targetEquipment);
   }
 
   if (target) {
@@ -284,7 +284,7 @@ function getHeldItems(group) {
 
 // How many settlers hold that tool, weapon or piece of gear
 function countHeld(category, id) {
-  if (category === 'tools') return settlers.filter(s => s.tool === id).length;
-  if (category === 'weapons') return settlers.filter(s => s.weapon === id).length;
-  return settlers.filter(s => hasGear(s, id)).length;
+  if (category === 'tools') return game.settlers.filter(s => s.tool === id).length;
+  if (category === 'weapons') return game.settlers.filter(s => s.weapon === id).length;
+  return game.settlers.filter(s => hasGear(s, id)).length;
 }

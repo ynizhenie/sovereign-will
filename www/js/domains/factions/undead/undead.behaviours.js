@@ -13,7 +13,7 @@ function necromancy(s, tick) {
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
 
   let patient = null;
-  for (const other of settlers) {
+  for (const other of game.settlers) {
     if (other !== s && other.hp < other.maxHp && dist(other) < necro.range / 2 && (!patient || dist(other) < dist(patient))) patient = other;
   }
   if (patient) {
@@ -31,7 +31,7 @@ function necromancy(s, tick) {
   let corpse = null;
   const zombieType = c => (c.big ? 'big_zombie' : 'zombie');
   if (s.raisesLeft > 0) {
-    for (const c of corpses) {
+    for (const c of game.corpses) {
       if (tick.raiseAssignments.has(c) || dist(c) > necro.range) continue;
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
     }
@@ -56,7 +56,7 @@ function necromancy(s, tick) {
   }
 
   // marked ground to blight (#164)
-  const zone = blightZones.filter(z => !z.done && !tick.blightAssignments.has(z))
+  const zone = game.blightZones.filter(z => !z.done && !tick.blightAssignments.has(z))
     .sort((a, b) => dist(a) - dist(b))[0];
   if (zone) {
     tick.blightAssignments.add(zone);
@@ -73,7 +73,7 @@ function necromancy(s, tick) {
   }
 
   if (s.raisesLeft < necro.raises) {
-    const graves = buildings.filter(b => b.type === 'grave');
+    const graves = game.buildings.filter(b => b.type === 'grave');
     const grave = graves.length ? graves.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : townHall;
     s.patrolTarget = null;
     if (grave === townHall ? dist(townHall) > townHall.radius + s.radius + 4 : dist(grave) > 32) {

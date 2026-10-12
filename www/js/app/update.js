@@ -1,14 +1,14 @@
 // One step of the game: every mechanic's turn, in order
 
 function update(dt) {
-  if ((!gameStarted && gameMode !== 'menu') || isPaused || gameMode === 'editor') return; // the menu's world runs too (#193)
+  if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too (#193)
   // battle mode: units stand still while being placed, and the result shows for a moment
-  if (gameMode === 'battle') {
+  if (game.gameMode === 'battle') {
     updateBattle(dt);
     if (battle.phase !== 'fight') return;
   }
   resetTileIndex();
-  pathTick++;
+  game.pathTick++;
 
   updatePossessionView();
   tickWaveTimer(dt);
@@ -31,10 +31,10 @@ function update(dt) {
   tickEnemies(dt);
 
   separateSettlersFromEnemies();
-  for (const unit of settlers) tickAnimation(unit, dt);
+  for (const unit of game.settlers) tickAnimation(unit, dt);
   ageBloodAndDung(dt);
   trackAllFootprints();
-  for (const unit of enemies) tickAnimation(unit, dt);
+  for (const unit of game.enemies) tickAnimation(unit, dt);
   applySpikeTraps();
 
   removeDeadSettlers();

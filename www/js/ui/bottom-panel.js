@@ -38,7 +38,7 @@ function rebuildConfigHud() {
   const details = document.getElementById('resource-details');
   if (details) details.remove();
   renderConfigHud();
-  if (typeof updateUI === 'function' && gameStarted) { updateUI(); refreshAffordability(true); }
+  if (typeof updateUI === 'function' && game.gameStarted) { updateUI(); refreshAffordability(true); }
 }
 
 let renderedFaction = null; // whose units and buildings the HUD shows (#43)

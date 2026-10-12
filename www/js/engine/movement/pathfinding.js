@@ -6,10 +6,10 @@ let settlerBlockedGrid = { signature: null, grid: null };
 
 function getSettlerBlockedGrid() {
   const signature = getTileIndex().signature;
-  if (settlerBlockedGrid.signature !== signature || settlerBlockedGrid.grid.length !== COLS * ROWS) {
-    const grid = new Uint8Array(COLS * ROWS);
-    for (let gy = 0; gy < ROWS; gy++) {
-      for (let gx = 0; gx < COLS; gx++) grid[gy * COLS + gx] = computeTileBlockedForSettler(gx, gy) ? 1 : 0;
+  if (settlerBlockedGrid.signature !== signature || settlerBlockedGrid.grid.length !== game.COLS * game.ROWS) {
+    const grid = new Uint8Array(game.COLS * game.ROWS);
+    for (let gy = 0; gy < game.ROWS; gy++) {
+      for (let gx = 0; gx < game.COLS; gx++) grid[gy * game.COLS + gx] = computeTileBlockedForSettler(gx, gy) ? 1 : 0;
     }
     settlerBlockedGrid = { signature, grid };
   }
@@ -17,12 +17,12 @@ function getSettlerBlockedGrid() {
 }
 
 function isTileBlockedForSettler(gx, gy) {
-  if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
-  return getSettlerBlockedGrid()[gy * COLS + gx] === 1;
+  if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
+  return getSettlerBlockedGrid()[gy * game.COLS + gx] === 1;
 }
 
 function computeTileBlockedForSettler(gx, gy) {
-  if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
+  if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
@@ -37,22 +37,22 @@ function computeTileBlockedForSettler(gx, gy) {
 // -1 where it can't get. Cached until the settler changes tile or the world's blocking tiles change.
 function getSettlerReach(settler) {
   const start = getGridPos(settler.x, settler.y);
-  const startIndex = start.gy * COLS + start.gx;
+  const startIndex = start.gy * game.COLS + start.gx;
   const signature = getTileIndex().signature;
   const cache = settler.reachCache;
   if (cache && cache.startIndex === startIndex && cache.signature === signature) return cache.steps;
 
   const blocked = getSettlerBlockedGrid();
-  const steps = new Int16Array(COLS * ROWS).fill(-1);
+  const steps = new Int16Array(game.COLS * game.ROWS).fill(-1);
   const queue = [startIndex];
   if (startIndex >= 0 && startIndex < steps.length) steps[startIndex] = 0;
   for (let i = 0; i < queue.length; i++) {
     const current = queue[i];
-    const cx = current % COLS, cy = (current - cx) / COLS;
+    const cx = current % game.COLS, cy = (current - cx) / game.COLS;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const gx = cx + dx, gy = cy + dy;
-      if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) continue;
-      const index = gy * COLS + gx;
+      if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) continue;
+      const index = gy * game.COLS + gx;
       if (steps[index] !== -1 || blocked[index]) continue;
       steps[index] = steps[current] + 1;
       queue.push(index);
@@ -63,8 +63,8 @@ function getSettlerReach(settler) {
 }
 
 function getReachSteps(reach, gx, gy) {
-  if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) return -1;
-  return reach[gy * COLS + gx];
+  if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) return -1;
+  return reach[gy * game.COLS + gx];
 }
 
 // Steps to stand next to (or on) a resource, or Infinity if the settler can't get there.
@@ -82,7 +82,7 @@ function getReachDistanceToResource(reach, resource) {
 }
 
 function isTileBlockedForEnemyStrict(gx, gy) {
-  if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
+  if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
@@ -94,7 +94,7 @@ function isTileBlockedForEnemyStrict(gx, gy) {
 }
 
 function isTileBlockedForEnemyPermissive(gx, gy) {
-  if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return true;
+  if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore
@@ -221,8 +221,8 @@ function pathCost(path) {
 function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false) {
   const startG = getGridPos(startX, startY);
   const endG = getGridPos(targetX, targetY);
-  endG.gx = Math.max(0, Math.min(COLS - 1, endG.gx));
-  endG.gy = Math.max(0, Math.min(ROWS - 1, endG.gy));
+  endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
+  endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
   const tiles = getTileIndex();
   const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k);
   const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
@@ -257,8 +257,8 @@ function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
   let startG = getGridPos(startX, startY);
   let endG = getGridPos(targetX, targetY);
 
-  endG.gx = Math.max(0, Math.min(COLS - 1, endG.gx));
-  endG.gy = Math.max(0, Math.min(ROWS - 1, endG.gy));
+  endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
+  endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
 
   if (startG.gx === endG.gx && startG.gy === endG.gy) {
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: false };
@@ -334,6 +334,6 @@ function pathCrossesSpikes(en) {
 
 function invalidateAllPaths() {
   resetTileIndex();
-  settlers.forEach(s => { s.path = null; s.pathTarget = null; });
-  enemies.forEach(en => { en.path = null; en.pathTarget = null; });
+  game.settlers.forEach(s => { s.path = null; s.pathTarget = null; });
+  game.enemies.forEach(en => { en.path = null; en.pathTarget = null; });
 }

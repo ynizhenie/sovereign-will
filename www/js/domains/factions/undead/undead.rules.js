@@ -10,10 +10,10 @@ function getNecromancy(s) {
 let blightCache = { key: '', keys: new Set(), base: new Set() };
 
 function updateBlightCache() {
-  const cacheKey = `${pathTick}|${sides.player.faction}|${gameMode}|${buildings.length}|${blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}`;
+  const cacheKey = `${game.pathTick}|${sides.player.faction}|${game.gameMode}|${game.buildings.length}|${game.blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}`;
   if (blightCache.key === cacheKey) return blightCache;
   const base = new Set();
-  if (sides.player.faction === 'undead' && gameMode === 'endless') {
+  if (sides.player.faction === 'undead' && game.gameMode === 'endless') {
     const b = GAME_CONFIG.blight;
     // the tiles from (gx0, gy0) to (gx1, gy1) and r more on every side
     const around = (gx0, gy0, gx1, gy1, r) => {
@@ -24,14 +24,14 @@ function updateBlightCache() {
     // the graveyard stands on the 2×2 tiles round its centre, a tile corner (#186: as far on every side)
     const hx = Math.round(townHall.x / TILE_SIZE), hy = Math.round(townHall.y / TILE_SIZE);
     around(hx - 1, hy - 1, hx, hy, b.hallTiles);
-    for (const grave of buildings) {
+    for (const grave of game.buildings) {
       if (grave.type !== 'grave') continue;
       const g = getGridPos(grave.x, grave.y);
       around(g.gx, g.gy, g.gx, g.gy, b.graveTiles);
     }
   }
   const keys = new Set(base);
-  if (base.size) for (const z of blightZones) if (z.done) keys.add(`${z.x},${z.y}`);
+  if (base.size) for (const z of game.blightZones) if (z.done) keys.add(`${z.x},${z.y}`);
   blightCache = { key: cacheKey, keys, base };
   return blightCache;
 }
@@ -55,35 +55,35 @@ function isBlighted(x, y) {
 // A marked tile not blighted yet goes at once; blighted ground fades over clearSeconds (still blighted till
 // then), and a tap while it fades keeps it. Ground blighted round the graveyard or a grave takes no mark (#186).
 function toggleBlightZone(x, y, gx, gy, clearOnly) {
-  const existing = blightZones.find(z => z.x === x && z.y === y);
+  const existing = game.blightZones.find(z => z.x === x && z.y === y);
   if (existing) {
-    if (!existing.done) blightZones.splice(blightZones.indexOf(existing), 1);
+    if (!existing.done) game.blightZones.splice(game.blightZones.indexOf(existing), 1);
     else if (existing.clearing === undefined) existing.clearing = GAME_CONFIG.blight.clearSeconds;
     else if (!clearOnly) delete existing.clearing;
     return;
   }
   if (clearOnly || isBorderZone(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
   if (isBaseBlighted(x, y)) { showNotification(t('blight.already'), true); return; }
-  blightZones.push({ x, y, done: false });
+  game.blightZones.push({ x, y, done: false });
 }
 
 // Raised zombies crumble when their time is up (#164, #175); the player's leave rot behind
 function updateTemporaryZombies(dt) {
   // gone at once: no corpse, no reward, and nothing can heal them back (a necromancer would)
   const crumbled = unit => unit.temporary !== undefined && (unit.temporary -= dt) <= 0;
-  const gone = settlers.filter(crumbled);
+  const gone = game.settlers.filter(crumbled);
   if (gone.length) {
-    settlers = settlers.filter(s => !gone.includes(s));
-    if (gone.includes(selectedSettler)) selectedSettler = null;
+    game.settlers = game.settlers.filter(s => !gone.includes(s));
+    if (gone.includes(game.selectedSettler)) game.selectedSettler = null;
     stock.rot += gone.length * GAME_CONFIG.temporaryZombie.rot;
   }
-  enemies = enemies.filter(en => !crumbled(en));
+  game.enemies = game.enemies.filter(en => !crumbled(en));
 }
 
 // A corpse on blighted ground rises as a temporary zombie after a while (#164)
 function raiseOnBlight(dt) {
   if (sides.player.faction !== 'undead') return;
-  for (const corpse of [...corpses]) {
+  for (const corpse of [...game.corpses]) {
     if (!isBlighted(corpse.x, corpse.y)) continue;
     corpse.blightAge = (corpse.blightAge || 0) + dt;
     if (corpse.blightAge >= GAME_CONFIG.blight.riseSeconds) raiseTemporaryZombie(corpse);
@@ -95,8 +95,8 @@ function raiseOnBlight(dt) {
 function raiseTemporaryZombie(corpse) {
   const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
   zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
-  settlers.push(zombie);
-  corpses.splice(corpses.indexOf(corpse), 1);
+  game.settlers.push(zombie);
+  game.corpses.splice(game.corpses.indexOf(corpse), 1);
   return zombie;
 }
 
@@ -105,14 +105,14 @@ function raiseTemporaryZombie(corpse) {
 // times as it has raises. True while it's busy raising (it does nothing else then).
 function enemyNecromancy(en, necro, dt) {
   if (en.raisesLeft === undefined) en.raisesLeft = necro.raises;
-  for (const other of enemies) {
+  for (const other of game.enemies) {
     if (other !== en && other.hp < other.maxHp && Math.hypot(other.x - en.x, other.y - en.y) < necro.healRange) {
       other.hp = Math.min(other.maxHp, other.hp + necro.healPerSecond * dt);
     }
   }
-  if (en.raisesLeft <= 0 || settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 60)) return false;
+  if (en.raisesLeft <= 0 || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 60)) return false;
   let corpse = null, best = necro.range;
-  for (const c of corpses) {
+  for (const c of game.corpses) {
     const d = Math.hypot(c.x - en.x, c.y - en.y);
     if (d < best && (!c.raisedBy || c.raisedBy === en)) { best = d; corpse = c; }
   }
@@ -127,11 +127,11 @@ function enemyNecromancy(en, necro, dt) {
   if (en.raiseTimer >= necro.raiseSeconds) {
     en.raiseTimer = 0;
     en.raisesLeft--;
-    corpses.splice(corpses.indexOf(corpse), 1);
+    game.corpses.splice(game.corpses.indexOf(corpse), 1);
     const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
     zombie.fromWave = en.fromWave;
     zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds; // as the player's (#175)
-    enemies.push(zombie);
+    game.enemies.push(zombie);
   }
   return true;
 }
@@ -139,17 +139,17 @@ function enemyNecromancy(en, necro, dt) {
 // The undead make bones by themselves: their graveyard and each grave (#43); and rot, from each grave (#164)
 function makeBonesAndRot(dt) {
   const bonesRate = getPlayerFaction().bonesPerSecond;
-  if (bonesRate && gameMode === 'endless') {
-    stock.bones += dt * (bonesRate.hall + buildings.filter(b => b.type === 'grave').length * bonesRate.grave);
+  if (bonesRate && game.gameMode === 'endless') {
+    stock.bones += dt * (bonesRate.hall + game.buildings.filter(b => b.type === 'grave').length * bonesRate.grave);
   }
   const rotRate = getPlayerFaction().rotPerSecond;
-  if (rotRate && gameMode === 'endless') {
-    stock.rot += dt * (rotRate.hall + buildings.filter(b => b.type === 'grave').length * rotRate.grave);
+  if (rotRate && game.gameMode === 'endless') {
+    stock.rot += dt * (rotRate.hall + game.buildings.filter(b => b.type === 'grave').length * rotRate.grave);
   }
 }
 
 // Blighted zones taken away fade (#186)
 function fadeClearedBlight(dt) {
-  for (const z of blightZones) if (z.clearing !== undefined) z.clearing -= dt;
-  if (blightZones.some(z => z.clearing <= 0)) blightZones = blightZones.filter(z => !(z.clearing <= 0));
+  for (const z of game.blightZones) if (z.clearing !== undefined) z.clearing -= dt;
+  if (game.blightZones.some(z => z.clearing <= 0)) game.blightZones = game.blightZones.filter(z => !(z.clearing <= 0));
 }

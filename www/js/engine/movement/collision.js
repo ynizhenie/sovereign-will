@@ -44,7 +44,7 @@ function collidesWithWater(x, y, radius) {
 function getSettlerAvoidance(entity) {
   let avoidX = 0;
   let avoidY = 0;
-  settlers.forEach(other => {
+  game.settlers.forEach(other => {
     if (other === entity) return;
     let dx = entity.x - other.x;
     let dy = entity.y - other.y;
@@ -74,10 +74,10 @@ function separateSettlersFromEnemies() {
 
 function separateSettlersFromEnemiesOnce() {
   let moved = false;
-  for (const s of settlers) {
+  for (const s of game.settlers) {
     if (s.towerAssignment) continue; // up in a watchtower
     const sRadius = s.visualRadius || s.radius;
-    for (const en of enemies) {
+    for (const en of game.enemies) {
       let dx = s.x - en.x, dy = s.y - en.y;
       let dist = Math.hypot(dx, dy);
       const overlap = sRadius + en.radius - dist;
@@ -97,12 +97,12 @@ function separateSettlersFromEnemiesOnce() {
 }
 
 function clampEntityToBounds(ent) {
-  ent.x = Math.max(ent.radius, Math.min(WORLD_WIDTH - ent.radius, ent.x));
-  ent.y = Math.max(ent.radius, Math.min(WORLD_HEIGHT - ent.radius, ent.y));
+  ent.x = Math.max(ent.radius, Math.min(game.WORLD_WIDTH - ent.radius, ent.x));
+  ent.y = Math.max(ent.radius, Math.min(game.WORLD_HEIGHT - ent.radius, ent.y));
 }
 
 function ejectEntitiesFromTile(x, y) {
-  const allEntities = [...settlers, ...enemies];
+  const allEntities = [...game.settlers, ...game.enemies];
   allEntities.forEach(ent => {
     if (Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {
       const offsets = [

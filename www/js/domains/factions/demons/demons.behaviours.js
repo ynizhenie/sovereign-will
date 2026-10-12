@@ -5,7 +5,7 @@
 function goToSacrifice(s, tick) {
   const circle = s.sacrificeAt;
   if (!circle) return false;
-  if (!buildings.includes(circle)) { s.sacrificeAt = null; return false; }
+  if (!game.buildings.includes(circle)) { s.sacrificeAt = null; return false; }
   s.patrolTarget = null;
   if (Math.hypot(circle.x - s.x, circle.y - s.y) > 30) {
     moveEntityTowards(s, circle.x, circle.y, s.speed, false, tick.dt);
@@ -13,7 +13,7 @@ function goToSacrifice(s, tick) {
   }
   s.sacrificeAt = null;
   s.hp = 0;
-  for (const other of settlers) if (other !== s) other.hp = other.maxHp;
+  for (const other of game.settlers) if (other !== s) other.hp = other.maxHp;
   showNotification(t('sacrifice.done'), false);
   return true;
 }
@@ -22,7 +22,7 @@ function goToSacrifice(s, tick) {
 function eatCorpse(s, tick) {
   if (!(getDefinition('settlerTypes', s.type) || {}).eatsCorpses || s.hp >= s.maxHp || tick.isWaveActive || s.carrying) return false;
   let corpse = null, best = Infinity;
-  for (const c of corpses) {
+  for (const c of game.corpses) {
     const d = Math.hypot(c.x - s.x, c.y - s.y);
     if (d < best && !tick.raiseAssignments.has(c)) { best = d; corpse = c; }
   }
@@ -40,7 +40,7 @@ function eatCorpse(s, tick) {
   if (s.eatTimer >= GAME_CONFIG.eatCorpseSeconds) {
     s.eatTimer = 0;
     s.hp = s.maxHp;
-    corpses.splice(corpses.indexOf(corpse), 1);
+    game.corpses.splice(game.corpses.indexOf(corpse), 1);
   }
   return true;
 }

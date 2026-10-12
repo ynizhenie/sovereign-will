@@ -38,16 +38,16 @@ if (worldSeedInput && (!worldSeedInput.value || worldSeedInput.value === 'defaul
   worldSeedInput.value = createDefaultSeed();
 }
 
-let worldSeed = createWorldSeed(worldSeedInput ? worldSeedInput.value : createDefaultSeed());
+game.worldSeed = createWorldSeed(worldSeedInput ? worldSeedInput.value : createDefaultSeed());
 
 function applySeedFromUI() {
   const rawSeed = worldSeedInput ? worldSeedInput.value.trim() : '';
-  worldSeed = createWorldSeed(rawSeed || createDefaultSeed());
+  game.worldSeed = createWorldSeed(rawSeed || createDefaultSeed());
   updateSeedHud();
-  return worldSeed;
+  return game.worldSeed;
 }
 
 function rand() {
-  if (worldSeed && typeof worldSeed.random === 'function') return worldSeed.random();
+  if (game.worldSeed && typeof game.worldSeed.random === 'function') return game.worldSeed.random();
   return Math.random();
 }

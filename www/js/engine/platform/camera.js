@@ -1,6 +1,6 @@
 // The camera over the world: where it looks, how close (zoom), and screen <-> world coordinates
 
-let camera = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, zoom: 1 };
+let camera = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, zoom: 1 };
 
 let cameraDragging = false;
 
@@ -43,7 +43,7 @@ function getMaxZoom() {
 
 // zoomed out this far, the whole world fits on the screen
 function getMinZoom() {
-  return Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT) / getBaseScale();
+  return Math.min(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT) / getBaseScale();
 }
 
 function setZoom(zoom) {
@@ -62,6 +62,6 @@ function updateInputPos(clientX, clientY) {
 function clampCamera() {
   // the camera's centre stays on the map, at any zoom: the view goes up to half of it past the map's
   // edge, and zoomed all the way out it isn't pulled back to the middle (#182, #189)
-  camera.x = Math.max(0, Math.min(WORLD_WIDTH, camera.x));
-  camera.y = Math.max(0, Math.min(WORLD_HEIGHT, camera.y));
+  camera.x = Math.max(0, Math.min(game.WORLD_WIDTH, camera.x));
+  camera.y = Math.max(0, Math.min(game.WORLD_HEIGHT, camera.y));
 }

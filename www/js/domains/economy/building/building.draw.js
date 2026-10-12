@@ -36,23 +36,23 @@ function drawDamage(x, y, half, share) {
 
 // In a build mode: the tile grid, and the tile under the pointer (red where it can't go)
 function drawBuildGrid() {
-  if (buildMode !== 'interact' && buildMode !== 'possess') {
+  if (game.buildMode !== 'interact' && game.buildMode !== 'possess') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < WORLD_WIDTH; x += TILE_SIZE) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_HEIGHT); ctx.stroke();
+    for (let x = 0; x < game.WORLD_WIDTH; x += TILE_SIZE) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, game.WORLD_HEIGHT); ctx.stroke();
     }
-    for (let y = 0; y < WORLD_HEIGHT; y += TILE_SIZE) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_WIDTH, y); ctx.stroke();
+    for (let y = 0; y < game.WORLD_HEIGHT; y += TILE_SIZE) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(game.WORLD_WIDTH, y); ctx.stroke();
     }
     let gxIdx = Math.floor(mouse.x / TILE_SIZE);
     let gyIdx = Math.floor(mouse.y / TILE_SIZE);
     let gx = gxIdx * TILE_SIZE;
     let gy = gyIdx * TILE_SIZE;
-    if (isBorderZone(gxIdx, gyIdx) && buildMode !== 'demolish') {
+    if (isBorderZone(gxIdx, gyIdx) && game.buildMode !== 'demolish') {
       ctx.fillStyle = 'rgba(231, 76, 60, 0.5)';
     } else {
-      ctx.fillStyle = buildMode === 'demolish' ? 'rgba(231, 76, 60, 0.35)' : 'rgba(70, 184, 218, 0.25)';
+      ctx.fillStyle = game.buildMode === 'demolish' ? 'rgba(231, 76, 60, 0.35)' : 'rgba(70, 184, 218, 0.25)';
     }
     ctx.fillRect(gx, gy, TILE_SIZE, TILE_SIZE);
   }
@@ -91,7 +91,7 @@ function drawTownHall() {
 
 // Blueprints: their shape, the materials still to come, the work done
 function drawBlueprints() {
-  blueprints.forEach(bp => {
+  game.blueprints.forEach(bp => {
     ctx.save(); ctx.globalAlpha = 0.5;
     if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
     else if (bp.type === 'wall_wood') ctx.fillStyle = '#8e5a2b';
@@ -129,7 +129,7 @@ function drawBlueprints() {
 
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
 function drawBuildings() {
-  buildings.forEach(b => {
+  game.buildings.forEach(b => {
     if (b.type === 'wall_wood') {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#5c3a17'; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
@@ -171,8 +171,8 @@ function drawBuildings() {
       ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
       ctx.textAlign = 'center';
       // no count in battles: arrows don't run out there (#166)
-      if (gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22); }
-      if (gameMode !== 'battle') {
+      if (game.gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22); }
+      if (game.gameMode !== 'battle') {
         ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
         ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / b.tower.arrowCapacity), 1);
       }

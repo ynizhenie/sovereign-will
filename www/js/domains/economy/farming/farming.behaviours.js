@@ -9,7 +9,7 @@ function pickApples(s, tick) {
   if (s.carrying && !hasRoomToCarry(s)) return false;
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;
-  for (const t of trees) {
+  for (const t of game.trees) {
     if (!t.apple || !t.applesReady || tick.appleAssignments.has(t)) continue;
     if (!(t.markIntent === 'apples' && t.priority > 0) && !isInSafeArea(t.x, t.y)) continue;
     const d = getReachDistanceToResource(reach, t) - (t.markIntent === 'apples' && t.priority > 0 ? 1000 : 0);
@@ -33,7 +33,7 @@ function pickApplesFrom(s, target, dt) {
     faceTowards(s, target.x, target.y);
     const apples = GAME_CONFIG.appleTrees;
     target.pickShare = s.pickProgress / apples.pickSeconds; // shown on the tree (#176)
-    target.pickTick = pathTick;
+    target.pickTick = game.pathTick;
     if (s.pickProgress >= apples.pickSeconds) {
       s.pickProgress = 0;
       for (const [item, amount] of Object.entries(apples.yield)) giveResourceToSettler(s, item, amount);
@@ -56,13 +56,13 @@ function pickApplesFrom(s, target, dt) {
 function waterCrops(s, tick) {
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'hoe') || !s.wateringCan || s.carrying || s.isPossessed || tick.isWaveActive) return false;
   const can = GAME_CONFIG.gear.wateringCan;
-  const thirsty = [...farmPlots.filter(f => f.growth < 100), ...trees.filter(t => t.isGrowing)]
+  const thirsty = [...game.farmPlots.filter(f => f.growth < 100), ...game.trees.filter(t => t.isGrowing)]
     .filter(c => !c.watered && !tick.wateringAssignments.has(c));
   if (thirsty.length === 0) return false;
   s.patrolTarget = null;
   s.usingCan = 0.3; // the can in hand, the hoe on its back (see render)
   if (!(s.waterCharges > 0)) {
-    const water = waterTiles.filter(w => isWaterReachable(w))
+    const water = game.waterTiles.filter(w => isWaterReachable(w))
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (!water) return false;
     if (Math.hypot(water.x - s.x, water.y - s.y) > 32) moveEntityTowards(s, water.x, water.y, s.speed, false, tick.dt);
@@ -96,8 +96,8 @@ function farmerGathersGrass(s, tick) {
 // tool take it home first (worked as if marked with priority 1), so the tile can be planted
 function findZoneBlockers(allResources, resourceKind) {
   const blockers = new Set();
-  if (farmZones.length === 0) return blockers;
-  const zoneTiles = new Set(farmZones.map(z => `${z.x},${z.y}`));
+  if (game.farmZones.length === 0) return blockers;
+  const zoneTiles = new Set(game.farmZones.map(z => `${z.x},${z.y}`));
   for (const r of allResources) {
     const kind = resourceKind.get(r);
     const def = getMapResourceDef(kind);
@@ -113,7 +113,7 @@ function tendFarmZones(s, tick) {
   const farming = GAME_CONFIG.farming;
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;
-  for (const zone of farmZones) {
+  for (const zone of game.farmZones) {
     if (tick.plantAssignments.has(zone) || isTileOccupied(zone.x, zone.y)) continue;
     const crop = getDefinition('buildings', farming.crops[zone.crop]);
     if (!crop || !canAfford(crop.cost || {})) continue;
@@ -134,10 +134,10 @@ function tendFarmZones(s, tick) {
       s.plantProgress = 0;
       const cropId = farming.crops[target.crop];
       payCost(getDefinition('buildings', cropId).cost || {});
-      if (cropId === 'wheat') farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
+      if (cropId === 'wheat') game.farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
       else {
         const tree = { x: target.x, y: target.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
-        trees.push(cropId === 'apple_sapling' ? makeAppleTree(tree) : tree);
+        game.trees.push(cropId === 'apple_sapling' ? makeAppleTree(tree) : tree);
       }
       ejectEntitiesFromTile(target.x, target.y);
       resetTileIndex();

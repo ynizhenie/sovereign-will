@@ -3,7 +3,7 @@
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it (#155)
 function takeMarkedTarget(s, tick) {
   let best = null;
-  for (const en of enemies) {
+  for (const en of game.enemies) {
     if (!en.markedTarget || (tick.markedAssignments.get(en) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
     if (!best || Math.hypot(en.x - s.x, en.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = en;
   }
@@ -23,14 +23,14 @@ function holdPost(s, tick) {
   if (marked) { s.postTarget = marked; return false; }
   const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
   let nearest = null, best = engage;
-  for (const en of enemies) {
+  for (const en of game.enemies) {
     const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
     if (d < best) { best = d; nearest = en; }
   }
   // nothing near the post: the nearest enemy that got into the base, wherever that is
   if (!nearest) {
     best = Infinity;
-    for (const en of enemies) {
+    for (const en of game.enemies) {
       const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
       if (d < best && isInsideBase(en)) { best = d; nearest = en; }
     }
@@ -52,7 +52,7 @@ function fightEnemies(s, tick) {
   const dt = tick.dt;
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  enemies.forEach(en => {
+  game.enemies.forEach(en => {
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
     let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
@@ -60,21 +60,21 @@ function fightEnemies(s, tick) {
   });
   // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
   // squad soldier already got its own from holdPost)...
-  if (s.weapon !== 'fist' && !(s.postTarget && s.postTarget.markedTarget && enemies.includes(s.postTarget))) {
+  if (s.weapon !== 'fist' && !(s.postTarget && s.postTarget.markedTarget && game.enemies.includes(s.postTarget))) {
     const marked = takeMarkedTarget(s, tick);
     if (marked) targetEnemy = marked;
   }
   // ...but whoever is hitting this settler right now comes first of all
   const attacker = getRecentAttacker(s);
   // a squad soldier goes for the enemy that came near its post (see holdPost)
-  if (!attacker && s.postTarget && enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
+  if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
   if (attacker) targetEnemy = attacker;
   // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents)
   const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
   if (assaulting && !attacker) {
     targetEnemy = null;
     let nearest = TENT_ASSAULT_FIGHT_DISTANCE;
-    enemies.forEach(en => {
+    game.enemies.forEach(en => {
       const d = Math.hypot(en.x - s.x, en.y - s.y);
       if (d < nearest) { nearest = d; targetEnemy = en; }
     });
@@ -127,7 +127,7 @@ function fightEnemies(s, tick) {
   const alarm = tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
   if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker')) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)
-    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && gameMode !== 'battle') {
+    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && game.gameMode !== 'battle') {
       let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTown > townHall.radius + 15) {
         moveSettlerToTownHall(s, s.speed, dt);
@@ -170,7 +170,7 @@ function clearEnemyTents(s, tick) {
   if (tick.tentAssault) {
     if (joinsTentAssault(s, tick)) {
       let nearestTent = null, minDist = Infinity;
-      enemyTents.forEach(et => {
+      game.enemyTents.forEach(et => {
         let d = Math.hypot(et.x - s.x, et.y - s.y);
         if (d < minDist) { minDist = d; nearestTent = et; }
       });

@@ -1,8 +1,8 @@
 // The settlers in the panel: how many of each, and the selected one's info line
 
 function updateUnitCounts() {
-  const workers = settlers.filter(s => s.role === 'worker').length;
-  const warriors = settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
+  const workers = game.settlers.filter(s => s.role === 'worker').length;
+  const warriors = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
 
   const workersElem = document.getElementById('workers-cnt');
   const warriorsElem = document.getElementById('warriors-cnt');

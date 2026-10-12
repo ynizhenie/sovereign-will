@@ -5,9 +5,9 @@
 // Workers mend a damaged tent unless enemies are right next to it
 function repairTent(s, tick) {
   if (s.role === 'worker' && !s.isPossessed) {
-    let damagedTent = buildings.find(b => isShelter(b) && b.hp < b.maxHp);
+    let damagedTent = game.buildings.find(b => isShelter(b) && b.hp < b.maxHp);
     if (damagedTent) {
-      let tentThreatened = enemies.some(en => Math.hypot(en.x - damagedTent.x, en.y - damagedTent.y) < 120);
+      let tentThreatened = game.enemies.some(en => Math.hypot(en.x - damagedTent.x, en.y - damagedTent.y) < 120);
       if (!tentThreatened) {
         let distToTent = Math.hypot(damagedTent.x - s.x, damagedTent.y - s.y);
         if (distToTent > 32) {
@@ -31,12 +31,12 @@ function healAtTent(s, tick) {
   const badlyWounded = s.hp < s.maxHp * 0.25;
   // being hit right now: it turns on whoever hits it (fightEnemies) and heals once it has fought them off
   // (a playtest saw badly hurt settlers stand healing at a tent while an enemy beat them to death)
-  const hitNow = !!getRecentAttacker(s) && pathTick - s.lastAttackedTick < 90;
+  const hitNow = !!getRecentAttacker(s) && game.pathTick - s.lastAttackedTick < 90;
   if (hitNow) { s.healing = false; return false; }
   if (s.healing && (s.hp >= s.maxHp || tents.length === 0 || (getRecentAttacker(s) && !badlyWounded))) s.healing = false;
-  const calm = enemies.length === 0 && !(tick.tentAssault && joinsTentAssault(s, tick));
+  const calm = game.enemies.length === 0 && !(tick.tentAssault && joinsTentAssault(s, tick));
   if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed && (calm || badlyWounded || s.healing)) {
-    let nearbyThreat = enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 100);
+    let nearbyThreat = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 100);
     if (!nearbyThreat || badlyWounded || s.healing) {
       let nearestTent = tents.reduce((closest, t) => {
         let d = Math.hypot(t.x - s.x, t.y - s.y);
@@ -68,7 +68,7 @@ function treatWounded(s, tick) {
   const medic = GAME_CONFIG.medic;
   if (!(s.bagHerbs > 0) && stock.herbs <= 0) return false;
   let patient = null, best = Infinity;
-  for (const other of settlers) {
+  for (const other of game.settlers) {
     if (other === s || other.hp >= other.maxHp || other.towerAssignment || tick.patients.has(other)) continue;
     const d = Math.hypot(other.x - s.x, other.y - s.y) + (other.role === 'worker' ? 10000 : 0); // soldiers first
     if (d < best) { best = d; patient = other; }

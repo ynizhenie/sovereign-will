@@ -3,7 +3,7 @@
 // Pick up smelted iron and carry it home
 function collectSmelterIron(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
-    let smelterWithIron = buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isBuildingJobFree(b, 'collector', s));
+    let smelterWithIron = game.buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isBuildingJobFree(b, 'collector', s));
     if (smelterWithIron) {
       claimBuildingJob(smelterWithIron, 'collector', s);
       let dist = Math.hypot(smelterWithIron.x - s.x, smelterWithIron.y - s.y);
@@ -26,7 +26,7 @@ function supplySmelter(s, tick) {
     const limits = getSmelterLimits();
     for (const [resource, loaded, max] of [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]]) {
       if (stock[resource] <= 0) continue;
-      const smelter = buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
+      const smelter = game.buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
       if (!smelter) continue;
       claimBuildingJob(smelter, 'supplier', s);
       return fetchFromStorage(s, resource, tick.dt, () => {
@@ -42,7 +42,7 @@ function supplySmelter(s, tick) {
 function deliverToSmelter(s, tick) {
   if (s.carrying && s.carrying.type === 'smelterDelivery') {
     let targetSmelter = s.carrying.targetSmelter;
-    if (!buildings.includes(targetSmelter)) {
+    if (!game.buildings.includes(targetSmelter)) {
       stock[s.carrying.resource] += s.carrying.amount; // smelter gone: back into the stock
       s.carrying = null;
       return true;
@@ -91,7 +91,7 @@ function repairTownHall(s, tick) {
 function repairBuilding(s, tick) {
   if (s.role !== 'worker' || s.carrying || s.targetEquipment || s.isPossessed || s.towerAssignment) return false;
   let target = null, best = Infinity;
-  for (const b of buildings) {
+  for (const b of game.buildings) {
     if (!needsRepair(b) || (tick.repairAssignments.get(b) || 0) >= 2 || !canAfford(getRepairStep(b).cost)) continue;
     const d = Math.hypot(b.x - s.x, b.y - s.y);
     if (d < best) { best = d; target = b; }
@@ -123,7 +123,7 @@ function repairStep(b, dt) {
 function deliverMaterials(s, tick) {
   const bp = s.carrying && s.carrying.forBlueprint;
   if (!bp) return false;
-  if (!blueprints.includes(bp)) { delete s.carrying.forBlueprint; return false; } // gone: back to storage
+  if (!game.blueprints.includes(bp)) { delete s.carrying.forBlueprint; return false; } // gone: back to storage
   if (Math.hypot(bp.x - s.x, bp.y - s.y) > 30) {
     moveEntityTowards(s, bp.x, bp.y, s.speed, false, tick.dt);
   } else {
@@ -140,12 +140,12 @@ function deliverMaterials(s, tick) {
 // Build (or demolish) the nearest blueprint that has fewer than 3 builders
 function build(s, tick) {
   const dt = tick.dt;
-  if (blueprints.length > 0 && !s.carrying && s.role === 'worker') {
-    let hasNearbyEnemy = enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
+  if (game.blueprints.length > 0 && !s.carrying && s.role === 'worker') {
+    let hasNearbyEnemy = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
     if (!hasNearbyEnemy) {
       let bestBp = null;
       let minDist = Infinity;
-      blueprints.forEach(bp => {
+      game.blueprints.forEach(bp => {
         let assignedCount = tick.blueprintAssignments.get(bp) || 0;
         if (assignedCount < 3) {
           let d = Math.hypot(bp.x - s.x, bp.y - s.y);
@@ -191,22 +191,22 @@ function workBlueprint(s, bp, dt) {
     playSound('built', bp);
     if (bp.type === 'demolish_building') {
       const b = bp.targetBuilding;
-      if (buildings.includes(b)) {
+      if (game.buildings.includes(b)) {
         const definition = getDefinition('buildings', b.type);
         removeBuilding(b); // first: the refund mustn't go into a warehouse being taken down
         addResources(definition && definition.demolishRefund);
       }
     } else if (bp.type === 'wheat') {
-      farmPlots.push({ x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0 });
+      game.farmPlots.push({ x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0 });
     } else if (bp.type === 'sapling' || bp.type === 'apple_sapling') {
       const tree = { x: bp.x, y: bp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
-      trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
+      game.trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
     } else {
-      buildings.push(bp);
+      game.buildings.push(bp);
       ejectEntitiesFromTile(bp.x, bp.y);
       invalidateAllPaths();
     }
-    blueprints.splice(blueprints.indexOf(bp), 1);
+    game.blueprints.splice(game.blueprints.indexOf(bp), 1);
   }
 }
 
@@ -216,7 +216,7 @@ function breakOutOfSealedBase(s, tick) {
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;
   for (const r of tick.doorBlockers) {
-    if (!WORLD[getMapResourceDef(tick.resourceKind.get(r)).list].includes(r)) continue; // already broken this tick
+    if (!game[getMapResourceDef(tick.resourceKind.get(r)).list].includes(r)) continue; // already broken this tick
     const d = getReachDistanceToResource(reach, r);
     if (d < best) { best = d; target = r; }
   }

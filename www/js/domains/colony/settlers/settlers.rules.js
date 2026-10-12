@@ -3,12 +3,12 @@
 
 // The start's limit, plus what each tent (or grave) adds
 function getMaxPop() {
-  return buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
+  return game.buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
 }
 
 // Raised zombies don't count (#164): they're temporary
 function getCurrentPop() {
-  return settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
+  return game.settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
 }
 
 // A big body: a giant or a big zombie (settlerTypes with big), or a big enemy
@@ -53,7 +53,7 @@ function spawnSettler(type = 'normal') {
     return;
   }
   payCost(settlerType.hireCost);
-  settlers.push(createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false }));
+  game.settlers.push(createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false }));
   showNotification(t('hire.done', { name: settlerType.label }), false);
   playSound('hire');
 }
@@ -69,7 +69,7 @@ function upgradeToBig(target) {
   if (!upgrade) return;
   const { normal, big } = upgrade;
   if (!target) target = getSelectedSettler() || getPossessed();
-  if (!target || target.type !== upgrade.from) target = settlers.find(s => s.type === upgrade.from);
+  if (!target || target.type !== upgrade.from) target = game.settlers.find(s => s.type === upgrade.from);
 
   if (!target || target.type !== upgrade.from) {
     showNotification(t('upgrade.noone'), true);
@@ -103,47 +103,47 @@ function damageSettler(settler, amount, attacker = null) {
   if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); }
   if (attacker) {
     settler.lastAttacker = attacker;
-    settler.lastAttackedTick = pathTick;
+    settler.lastAttackedTick = game.pathTick;
   }
 }
 
 // The enemy that hit this settler in the last few seconds, if it's still alive
 function getRecentAttacker(settler) {
-  const recent = pathTick - (settler.lastAttackedTick || -Infinity) < 4 * 60;
-  return recent && enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
+  const recent = game.pathTick - (settler.lastAttackedTick || -Infinity) < 4 * 60;
+  return recent && game.enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
 }
 
-function getPossessed() { return settlers.find(s => s.isPossessed); }
+function getPossessed() { return game.settlers.find(s => s.isPossessed); }
 
 // the settler picked in the UI, if it's still alive
 function getSelectedSettler() {
-  return selectedSettler && settlers.includes(selectedSettler) ? selectedSettler : null;
+  return game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
 }
 
 let lastPossessedIndex = -1;
 
 function unpossess() {
-  const currentIdx = settlers.findIndex(s => s.isPossessed);
+  const currentIdx = game.settlers.findIndex(s => s.isPossessed);
   if (currentIdx !== -1) {
     lastPossessedIndex = currentIdx;
   }
-  settlers.forEach(s => s.isPossessed = false);
+  game.settlers.forEach(s => s.isPossessed = false);
 }
 
 function switchPossession() {
-  if (settlers.length === 0 || isDefeated()) return;
-  if (gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on (#166)
+  if (game.settlers.length === 0 || isDefeated()) return;
+  if (game.gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on (#166)
 
   const currentPossessed = getPossessed();
 
-  if (selectedSettler) {
-    if (currentPossessed === selectedSettler) {
+  if (game.selectedSettler) {
+    if (currentPossessed === game.selectedSettler) {
       unpossess();
     } else {
       unpossess();
-      selectedSettler.isPossessed = true;
+      game.selectedSettler.isPossessed = true;
 
-      const idx = settlers.indexOf(selectedSettler);
+      const idx = game.settlers.indexOf(game.selectedSettler);
       if (idx !== -1) lastPossessedIndex = idx;
     }
     return;
@@ -152,15 +152,15 @@ function switchPossession() {
   if (currentPossessed) {
     unpossess();
   } else {
-    let nextIdx = (lastPossessedIndex + 1) % settlers.length;
-    if (nextIdx >= settlers.length || nextIdx < 0) nextIdx = 0;
+    let nextIdx = (lastPossessedIndex + 1) % game.settlers.length;
+    if (nextIdx >= game.settlers.length || nextIdx < 0) nextIdx = 0;
 
-    settlers[nextIdx].isPossessed = true;
+    game.settlers[nextIdx].isPossessed = true;
     lastPossessedIndex = nextIdx;
   }
 }
 
-function deselectSettler() { selectedSettler = null; }
+function deselectSettler() { game.selectedSettler = null; }
 
 // One settler's meal (#178): food from the stock (2 for a big one), worms when it runs short; a few
 // meals in, it needs to go (see relieve)
@@ -175,9 +175,9 @@ function eatMeal(s) {
 
 // Meals, each settler on its own clock (#178), for a faction that eats (the undead don't)
 function tickMeals(dt) {
-  if (gameMode === 'endless' && getPlayerFaction().eats) {
+  if (game.gameMode === 'endless' && getPlayerFaction().eats) {
     const meals = GAME_CONFIG.meals;
-    for (const s of settlers) {
+    for (const s of game.settlers) {
       if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
       s.hunger -= dt;
       if (s.hunger <= 0) { s.hunger = meals.seconds; eatMeal(s); }
@@ -187,13 +187,13 @@ function tickMeals(dt) {
 
 // Dead settlers: their equipment back to the stock, a corpse, and off the list
 function removeDeadSettlers() {
-  settlers.forEach(s => {
+  game.settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       refundEquipment(s);
       if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot (#164)
-      if (selectedSettler === s) selectedSettler = null;
+      if (game.selectedSettler === s) game.selectedSettler = null;
     }
   });
-  settlers = settlers.filter(s => s.hp > 0);
+  game.settlers = game.settlers.filter(s => s.hp > 0);
 }

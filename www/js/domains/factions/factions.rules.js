@@ -7,8 +7,8 @@ const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { factio
 
 // in the map editor, the faction the map is made for (#170)
 function getPlayerFaction() {
-  if (gameMode === 'editor' && typeof editor !== 'undefined') return GAME_CONFIG.factions[editor.faction];
-  if (gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction]; // #193
+  if (game.gameMode === 'editor' && typeof editor !== 'undefined') return GAME_CONFIG.factions[editor.faction];
+  if (game.gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction]; // #193
   return GAME_CONFIG.factions[sides.player.faction];
 }
 
@@ -19,12 +19,12 @@ const FACTION_STORAGE_KEY = 'sovereign-will-factions';
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour (#167)
 function getSettlerColor(s) {
-  const color = gameMode === 'battle' ? '#27ae60' : gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
+  const color = game.gameMode === 'battle' ? '#27ae60' : game.gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
 }
 
 function getEnemyColor(en) {
-  const color = gameMode === 'battle' ? '#e74c3c' : sides.enemy.color;
+  const color = game.gameMode === 'battle' ? '#e74c3c' : sides.enemy.color;
   return en && en.type === 'big' ? shadeColor(color, -0.25) : color;
 }
 
@@ -43,7 +43,7 @@ function freeColor(wanted, other) {
 
 // The faction a custom map in Endless fixes for the player (#170), or null
 function getLockedPlayerFaction() {
-  return typeof mapSource !== 'undefined' && mapSource === 'custom' && customMap && customMap.faction ? customMap.faction : null;
+  return typeof mapSource !== 'undefined' && mapSource === 'custom' && game.customMap && game.customMap.faction ? game.customMap.faction : null;
 }
 
 function setSideFaction(side, faction) {

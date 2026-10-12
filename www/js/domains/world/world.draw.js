@@ -12,8 +12,8 @@ function tileVariantHash(gx, gy) {
 }
 
 function drawGrassGround() {
-  for (let gy = 0; gy < ROWS; gy++) {
-    for (let gx = 0; gx < COLS; gx++) {
+  for (let gy = 0; gy < game.ROWS; gy++) {
+    for (let gx = 0; gx < game.COLS; gx++) {
       const h = tileVariantHash(gx, gy);
       const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
       ctx.fillStyle = GRASS_SHADES[h % GRASS_SHADES.length];
@@ -128,25 +128,25 @@ function drawOreSpawner(x, y, kind) {
 // The border zone round the map, and the line where it starts
 function drawMapBorder() {
   ctx.fillStyle = '#2d4a22';
-  ctx.fillRect(0, 0, WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(0, WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, 0, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, game.WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(game.WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 
   ctx.strokeStyle = 'rgba(231, 76, 60, 0.4)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 }
 
 // Desert and beach sand
 function drawSand() {
-  desertTiles.forEach(drawDesertTile);
-  beachTiles.forEach(drawDesertTile);
+  game.desertTiles.forEach(drawDesertTile);
+  game.beachTiles.forEach(drawDesertTile);
 }
 
 // Water, and the fishing spots marked on it
 function drawWater(terrain) {
-  waterTiles.forEach(w => {
+  game.waterTiles.forEach(w => {
     drawWaterTile(w, isWaterReachable(w), terrain);
     if (w.isFishing) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
@@ -164,7 +164,7 @@ function drawWater(terrain) {
 
 // Natural rock and ore spawners
 function drawRocks(terrain) {
-  naturalRocks.forEach(r => {
+  game.naturalRocks.forEach(r => {
     if (r.oreSpawner) {
       drawOreSpawner(r.x, r.y, r.oreSpawner);
     } else {

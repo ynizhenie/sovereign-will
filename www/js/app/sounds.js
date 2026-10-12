@@ -57,7 +57,7 @@ function playSound(name, at, ...args) {
   if (!place) return;
   audio.last[name] = t;
   const out = audio.ctx.createGain();
-  out.gain.value = place.volume * (gameMode === 'menu' && at ? SOUND.menuWorldShare : 1);
+  out.gain.value = place.volume * (game.gameMode === 'menu' && at ? SOUND.menuWorldShare : 1);
   let node = out;
   if (audio.ctx.createStereoPanner) {
     const pan = audio.ctx.createStereoPanner();
@@ -120,14 +120,14 @@ const MUSIC_STYLES = {
 // Which music now, and how loud: { style: level }
 function musicMix() {
   if (!audio.musicOn) return {};
-  const menuShows = gameMode === 'menu' || (!gameStarted && gameMode === 'endless');
+  const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
-  if (gameMode === 'editor') return { ambient: 0.6 };
-  if (gameMode === 'battle') return battle.phase === 'fight' ? { battle: 1 } : { ambient: 0.8 };
+  if (game.gameMode === 'editor') return { ambient: 0.6 };
+  if (game.gameMode === 'battle') return battle.phase === 'fight' ? { battle: 1 } : { ambient: 0.8 };
   if (typeof isDefeated === 'function' && isDefeated()) return {};
-  const pause = isPaused ? 0.4 : 1;
+  const pause = game.isPaused ? 0.4 : 1;
   // a wave is on until the last enemy and enemy tent are gone (#174)
-  const fighting = enemies.length > 0 || enemyTents.length > 0 || enemyTentBlueprints.length > 0;
+  const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
   return fighting ? { battle: pause } : { ambient: pause };
 }
 

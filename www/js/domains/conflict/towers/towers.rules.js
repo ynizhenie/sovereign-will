@@ -3,13 +3,13 @@
 // Archers climb the towers while there's tower duty (#155: they stay up when enemies reach the base, that's
 // when a tower is worth most), as long as they or the tower have arrows
 function assignTowerArchers() {
-  const towers = buildings.filter(building => building.type === 'watchtower');
+  const towers = game.buildings.filter(building => building.type === 'watchtower');
   const towerSet = new Set(towers);
   towers.forEach(tower => {
-    tower.guards = (tower.guards || []).filter(guard => settlers.includes(guard));
+    tower.guards = (tower.guards || []).filter(guard => game.settlers.includes(guard));
   });
 
-  settlers.forEach(settler => {
+  game.settlers.forEach(settler => {
     if (settler.towerAssignment && (!towerSet.has(settler.towerAssignment) ||
         !settler.towerAssignment.guards.includes(settler))) {
       if (towerSet.has(settler.towerAssignment)) {
@@ -36,22 +36,22 @@ function assignTowerArchers() {
 
 // A tower is manned when enough enemies are about, or from the warning until the wave is beaten (#14, #155)
 function isTowerDutyOn(tower) {
-  return enemies.length >= tower.tower.minEnemies || isDefenseAlert();
+  return game.enemies.length >= tower.tower.minEnemies || isDefenseAlert();
 }
 
 function findTowerForArrows(settler) {
-  return buildings
+  return game.buildings
     .filter(tower => tower.type === 'watchtower' &&
       tower.arrows < tower.tower.arrowCapacity && stock.arrows > 0 &&
-      !settlers.some(s => s !== settler && s.carrying && s.carrying.forTower === tower))
+      !game.settlers.some(s => s !== settler && s.carrying && s.carrying.forTower === tower))
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }
 
 function findNearestArrowTower(settler) {
   const townHallDistance = Math.hypot(townHall.x - settler.x, townHall.y - settler.y);
-  const townHallThreatened = enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260);
-  if (townHallThreatened || enemies.length < 2) return null;
-  return buildings
+  const townHallThreatened = game.enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260);
+  if (townHallThreatened || game.enemies.length < 2) return null;
+  return game.buildings
     .filter(tower => tower.type === 'watchtower' && tower.arrows > 0 && Math.hypot(tower.x - settler.x, tower.y - settler.y) < townHallDistance)
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }
@@ -145,7 +145,7 @@ function updateTowerGuard(settler, tower, dt) {
   }
   if (settler.arrows <= 0) return;
 
-  const target = enemies
+  const target = game.enemies
     .filter(enemy => Math.hypot(enemy.x - tower.x, enemy.y - tower.y) <= tower.tower.range &&
       hasLineOfFire(tower.x, tower.y, enemy.x, enemy.y, true))
     .sort((a, b) => Math.hypot(a.x - tower.x, a.y - tower.y) - Math.hypot(b.x - tower.x, b.y - tower.y))[0];
@@ -153,7 +153,7 @@ function updateTowerGuard(settler, tower, dt) {
 
   const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
   faceTowards(settler, target.x, target.y);
-  projectiles.push({
+  game.projectiles.push({
     x: tower.x,
     y: tower.y,
     vx: Math.cos(angle) * tower.tower.projectileSpeed,
@@ -164,6 +164,6 @@ function updateTowerGuard(settler, tower, dt) {
     owner: settler,
     fromTower: true
   });
-  if (gameMode !== 'battle') settler.arrows--;
+  if (game.gameMode !== 'battle') settler.arrows--;
   settler.towerAttackCooldown = tower.tower.cooldown;
 }

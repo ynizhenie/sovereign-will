@@ -29,9 +29,9 @@ function getMapRange(key, fallbackMin, fallbackMax) {
 }
 
 function isDesertTile(x, y) {
-  if (desertTiles.some(tile => tile.x === x && tile.y === y)) return true;
-  if (!desertRegion) return false;
-  return Math.hypot((x - desertRegion.x) / (TILE_SIZE * desertRegion.rx), (y - desertRegion.y) / (TILE_SIZE * desertRegion.ry)) <= 1;
+  if (game.desertTiles.some(tile => tile.x === x && tile.y === y)) return true;
+  if (!game.desertRegion) return false;
+  return Math.hypot((x - game.desertRegion.x) / (TILE_SIZE * game.desertRegion.rx), (y - game.desertRegion.y) / (TILE_SIZE * game.desertRegion.ry)) <= 1;
 }
 
 // ---- Ore spawners
@@ -49,7 +49,7 @@ function getOreSpawnerRadius() {
 }
 
 function getOreSpawners(kind) {
-  return naturalRocks.filter(r => r.oreSpawner === kind);
+  return game.naturalRocks.filter(r => r.oreSpawner === kind);
 }
 
 // Tiles around a spawner where an ore can appear; rock is set when the ore would replace natural rock
@@ -59,7 +59,7 @@ function getOreSpotsAround(spawner, radius) {
   for (let gy = center.gy - radius; gy <= center.gy + radius; gy++) {
     for (let gx = center.gx - radius; gx <= center.gx + radius; gx++) {
       if (gx === center.gx && gy === center.gy) continue;
-      if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS || isBorderZone(gx, gy)) continue;
+      if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
       if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
       // free ground only: ore never replaces natural rock
@@ -82,8 +82,8 @@ function isOreSpotExposed(spot, reach) {
 // Put a small rock outcrop on free ground far from the hall, for maps with no usable rock
 function placeRockOutcrop() {
   for (let attempt = 0; attempt < 200; attempt++) {
-    const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 3));
-    const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 3));
+    const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 3));
+    const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 3));
     const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
     if (tiles.some(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) < 220 || isTileOccupied(t.x, t.y) || isDesertTile(t.x, t.y))) continue;
     for (const t of tiles) addMapResource('natural_rock', t.x, t.y);
@@ -97,16 +97,16 @@ function placeOreSpawners(kind, count) {
   for (let n = 0; n < count; n++) {
     resetTileIndex();
     const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
-    const others = naturalRocks.filter(r => r.oreSpawner);
+    const others = game.naturalRocks.filter(r => r.oreSpawner);
     // rock far from the hall and from other spawners, with room for ores and at least one reachable spot
-    const candidates = naturalRocks.filter(r => !r.oreSpawner &&
+    const candidates = game.naturalRocks.filter(r => !r.oreSpawner &&
       Math.hypot(r.x - townHall.x, r.y - townHall.y) > 220 &&
       others.every(o => Math.hypot(o.x - r.x, o.y - r.y) > 6 * TILE_SIZE) &&
       getOreSpotsAround(r, radius).filter(s => isOreSpotExposed(s, reach)).length >= 2);
     let spawner = candidates.length ? candidates[Math.floor(rand() * candidates.length)] : null;
     if (!spawner) {
       if (n > 0 || !placeRockOutcrop()) continue;
-      spawner = naturalRocks[naturalRocks.length - 1];
+      spawner = game.naturalRocks[game.naturalRocks.length - 1];
     }
     spawner.oreSpawner = kind;
 
@@ -136,11 +136,11 @@ function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint
       const point = pickPoint ? pickPoint() : { x: nearX + (rand() - 0.5) * spread, y: nearY + (rand() - 0.5) * spread };
       tx = point.x;
       ty = point.y;
-      gx = Math.max(BORDER_MARGIN, Math.min(COLS - BORDER_MARGIN - 1, Math.floor(tx / TILE_SIZE)));
-      gy = Math.max(BORDER_MARGIN, Math.min(ROWS - BORDER_MARGIN - 1, Math.floor(ty / TILE_SIZE)));
+      gx = Math.max(BORDER_MARGIN, Math.min(game.COLS - BORDER_MARGIN - 1, Math.floor(tx / TILE_SIZE)));
+      gy = Math.max(BORDER_MARGIN, Math.min(game.ROWS - BORDER_MARGIN - 1, Math.floor(ty / TILE_SIZE)));
     } else {
-      gx = Math.floor(rand() * (COLS - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
-      gy = Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
+      gx = Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
+      gy = Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
     }
     tx = gx * TILE_SIZE + 15;
     ty = gy * TILE_SIZE + 15;
@@ -155,7 +155,7 @@ function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint
   if (isValid) {
     if (type === 'boar') {
       const hp = GAME_CONFIG.mapResources.boar.hp;
-      boars.push({ x: tx, y: ty, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: tx, targetY: ty });
+      game.boars.push({ x: tx, y: ty, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: tx, targetY: ty });
     } else {
       addMapResource(type, tx, ty);
     }
@@ -179,8 +179,8 @@ function getForestSpread() {
 function spawnForestAware(type) {
   // trees (forestShare 1) always grow back in a forest, so forests don't thin out into a scatter
   const share = getMapResourceDef(type).forestShare ?? GAME_CONFIG.map.forestUndergrowthShare ?? 0.7;
-  if (forests.length > 0 && rand() < share) {
-    const forest = forests[Math.floor(rand() * forests.length)];
+  if (game.forests.length > 0 && rand() < share) {
+    const forest = game.forests[Math.floor(rand() * game.forests.length)];
     spawnResource(type, forest.x, forest.y, getForestSpread(), () => pickForestPoint(forest));
   } else {
     spawnResource(type);
@@ -208,18 +208,18 @@ function pickForestPoint(forest) {
 }
 
 function placeForests() {
-  forests = [];
+  game.forests = [];
   for (let n = 0; n < getMapCount('forests', 4); n++) {
     for (let attempt = 0; attempt < 40; attempt++) {
-      const x = (BORDER_MARGIN + 3 + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
-      const y = (BORDER_MARGIN + 3 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
+      const x = (BORDER_MARGIN + 3 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
+      const y = (BORDER_MARGIN + 3 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
       const valid = Math.hypot(x - townHall.x, y - townHall.y) > 180 &&
         !isDesertTile(x, y) &&
-        !waterTiles.some(wt => Math.hypot(wt.x - x, wt.y - y) < 90) &&
-        forests.every(f => Math.hypot(f.x - x, f.y - y) > 6 * TILE_SIZE);
+        !game.waterTiles.some(wt => Math.hypot(wt.x - x, wt.y - y) < 90) &&
+        game.forests.every(f => Math.hypot(f.x - x, f.y - y) > 6 * TILE_SIZE);
       if (!valid) continue;
       const forest = { x, y, lobes: makeForestLobes(x, y) };
-      forests.push(forest);
+      game.forests.push(forest);
       for (let i = 0; i < getMapCount('forestTrees', 9); i++) spawnResource('tree', x, y, getForestSpread(), () => pickForestPoint(forest));
       break;
     }
@@ -231,9 +231,9 @@ function placeForests() {
 function placeBoulderPiles() {
   for (let n = 0; n < getMapCount('boulderPiles', 2); n++) {
     for (let attempt = 0; attempt < 40; attempt++) {
-      const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (COLS - 2 * BORDER_MARGIN - 2));
-      const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (ROWS - 2 * BORDER_MARGIN - 2));
-      const free = (tx, ty) => tx >= BORDER_MARGIN && ty >= BORDER_MARGIN && tx < COLS - BORDER_MARGIN && ty < ROWS - BORDER_MARGIN &&
+      const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 2));
+      const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 2));
+      const free = (tx, ty) => tx >= BORDER_MARGIN && ty >= BORDER_MARGIN && tx < game.COLS - BORDER_MARGIN && ty < game.ROWS - BORDER_MARGIN &&
         Math.hypot(tx * TILE_SIZE + 15 - townHall.x, ty * TILE_SIZE + 15 - townHall.y) > 180 &&
         !isDesertTile(tx * TILE_SIZE + 15, ty * TILE_SIZE + 15) && !isTileOccupied(tx * TILE_SIZE + 15, ty * TILE_SIZE + 15);
       if (!free(gx, gy)) continue;
@@ -264,8 +264,8 @@ function isWaterReachable(w) {
 }
 
 function generateMap() {
-  naturalRocks = []; waterTiles = []; desertTiles = []; desertRegion = null; trees = []; cacti = []; boulders = [];
-  grassList = []; berryBushes = []; sticks = []; pebbles = []; ironOres = []; coalOres = []; boars = [];
+  game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
+  game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.ironOres = []; game.coalOres = []; game.boars = [];
 
   const lakeRange = getMapRange('lakes', 1, 4);
   const lakeWidthRange = getMapRange('lakeWidth', 3, 8);
@@ -285,8 +285,8 @@ function generateMap() {
     let minDistance = lakeDistRange.min + rand() * (lakeDistRange.max - lakeDistRange.min);
 
     for (let attempt = 0; attempt < 60; attempt++) {
-      const candidateX = Math.floor(rand() * (COLS - lw - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
-      const candidateY = Math.floor(rand() * (ROWS - lh - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
+      const candidateX = Math.floor(rand() * (game.COLS - lw - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
+      const candidateY = Math.floor(rand() * (game.ROWS - lh - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
       const candidateCenter = { x: candidateX + (lw - 1) / 2, y: candidateY + (lh - 1) / 2 };
 
       const isSeparated = lakeCenters.every(center => 
@@ -325,7 +325,7 @@ function generateMap() {
         let dynamicThreshold = Math.max(0.75, 0.9 + Math.sin(angle * waves + phase) * amp);
 
         if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 160) {
-          if (!waterTiles.some(w => w.x === tx && w.y === ty)) {
+          if (!game.waterTiles.some(w => w.x === tx && w.y === ty)) {
             tempTiles.push({ x: tx, y: ty, isFishing: false, fishTimer: 0 });
           }
         }
@@ -334,7 +334,7 @@ function generateMap() {
 
     if (tempTiles.length >= 3) {
       lakeCenters.push({ x: lakeCenterX, y: lakeCenterY });
-      waterTiles.push(...tempTiles);
+      game.waterTiles.push(...tempTiles);
     }
   }
 
@@ -352,23 +352,23 @@ function generateMap() {
     let desertCenterX = 0, desertCenterY = 0, desertPlaced = false;
 
     for (let attempt = 0; attempt < 100 && !desertPlaced; attempt++) {
-      let centerGx = Math.floor(rand() * (COLS - 2 * rx - 2 * BORDER_MARGIN)) + BORDER_MARGIN + rx;
-      let centerGy = Math.floor(rand() * (ROWS - 2 * ry - 2 * BORDER_MARGIN)) + BORDER_MARGIN + ry;
+      let centerGx = Math.floor(rand() * (game.COLS - 2 * rx - 2 * BORDER_MARGIN)) + BORDER_MARGIN + rx;
+      let centerGy = Math.floor(rand() * (game.ROWS - 2 * ry - 2 * BORDER_MARGIN)) + BORDER_MARGIN + ry;
 
-      centerGx = Math.max(BORDER_MARGIN + rx, Math.min(COLS - BORDER_MARGIN - rx, centerGx));
-      centerGy = Math.max(BORDER_MARGIN + ry, Math.min(ROWS - BORDER_MARGIN - ry, centerGy));
+      centerGx = Math.max(BORDER_MARGIN + rx, Math.min(game.COLS - BORDER_MARGIN - rx, centerGx));
+      centerGy = Math.max(BORDER_MARGIN + ry, Math.min(game.ROWS - BORDER_MARGIN - ry, centerGy));
 
       desertCenterX = centerGx * TILE_SIZE + 15;
       desertCenterY = centerGy * TILE_SIZE + 15;
 
       desertPlaced = Math.hypot(desertCenterX - townHall.x, desertCenterY - townHall.y) > 200 &&
-        !waterTiles.some(w => Math.hypot(w.x - desertCenterX, w.y - desertCenterY) < 110) &&
+        !game.waterTiles.some(w => Math.hypot(w.x - desertCenterX, w.y - desertCenterY) < 110) &&
         desertCenters.every(dc => Math.hypot(dc.x - desertCenterX, dc.y - desertCenterY) > 150);
     }
 
     if (desertPlaced) {
       desertCenters.push({ x: desertCenterX, y: desertCenterY });
-      if (!desertRegion) desertRegion = { x: desertCenterX, y: desertCenterY, rx, ry };
+      if (!game.desertRegion) game.desertRegion = { x: desertCenterX, y: desertCenterY, rx, ry };
 
       const subBlobs = [];
       let numBlobs = 2 + Math.floor(rand() * 2);
@@ -394,11 +394,11 @@ function generateMap() {
           });
 
           if (isInside &&
-              tileX >= BORDER_MARGIN * TILE_SIZE + 15 && tileX < (COLS - BORDER_MARGIN) * TILE_SIZE - 15 &&
-              tileY >= BORDER_MARGIN * TILE_SIZE + 15 && tileY < (ROWS - BORDER_MARGIN) * TILE_SIZE - 15 &&
-              !waterTiles.some(w => w.x === tileX && w.y === tileY) &&
-              !desertTiles.some(d => d.x === tileX && d.y === tileY)) {
-            desertTiles.push({ x: tileX, y: tileY });
+              tileX >= BORDER_MARGIN * TILE_SIZE + 15 && tileX < (game.COLS - BORDER_MARGIN) * TILE_SIZE - 15 &&
+              tileY >= BORDER_MARGIN * TILE_SIZE + 15 && tileY < (game.ROWS - BORDER_MARGIN) * TILE_SIZE - 15 &&
+              !game.waterTiles.some(w => w.x === tileX && w.y === tileY) &&
+              !game.desertTiles.some(d => d.x === tileX && d.y === tileY)) {
+            game.desertTiles.push({ x: tileX, y: tileY });
           }
         }
       }
@@ -414,8 +414,8 @@ function generateMap() {
   for (let c = 0; c < numRockClusters; c++) {
     let rw = cfg.rockClusterWidth.min + Math.floor(rand() * (cfg.rockClusterWidth.max - cfg.rockClusterWidth.min + 1));
     let rh = cfg.rockClusterHeight.min + Math.floor(rand() * (cfg.rockClusterHeight.max - cfg.rockClusterHeight.min + 1));
-    let rx = Math.floor(rand() * (COLS - rw - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
-    let ry = Math.floor(rand() * (ROWS - rh - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
+    let rx = Math.floor(rand() * (game.COLS - rw - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
+    let ry = Math.floor(rand() * (game.ROWS - rh - 2 * BORDER_MARGIN)) + BORDER_MARGIN;
 
     let rockCenterX = rx + (rw - 1) / 2;
     let rockCenterY = ry + (rh - 1) / 2;
@@ -468,13 +468,13 @@ function generateMap() {
 const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
 
 function placeBeaches() {
-  beachTiles = [];
+  game.beachTiles = [];
   const key = (x, y) => `${x},${y}`;
-  const water = new Set(waterTiles.map(w => key(w.x, w.y)));
-  const rock = new Set(naturalRocks.map(r => key(r.x, r.y)));
+  const water = new Set(game.waterTiles.map(w => key(w.x, w.y)));
+  const rock = new Set(game.naturalRocks.map(r => key(r.x, r.y)));
   const beach = new Set();
   const seen = new Set();
-  for (const first of waterTiles) {
+  for (const first of game.waterTiles) {
     if (seen.has(key(first.x, first.y))) continue;
     // one lake: the water tiles joined to this one
     const lake = [first];
@@ -497,7 +497,7 @@ function placeBeaches() {
           if (water.has(key(x, y)) || rock.has(key(x, y)) || beach.has(key(x, y)) || isBorderZone(g.gx, g.gy)) continue;
           let off = Math.abs(Math.atan2(y - cy, x - cx) - side) % (Math.PI * 2);
           if (off > Math.PI) off = Math.PI * 2 - off;
-          if (off <= BEACH_SPREAD) { beach.add(key(x, y)); beachTiles.push({ x, y }); }
+          if (off <= BEACH_SPREAD) { beach.add(key(x, y)); game.beachTiles.push({ x, y }); }
         }
       }
     }

@@ -6,18 +6,18 @@
 function canBeFarmZone(x, y) {
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return false;
   const at = o => o.x === x && o.y === y;
-  if (isDesertTile(x, y) || beachTiles.some(at)) return false;
-  if (waterTiles.some(at) || buildings.some(at) || blueprints.some(at)) return false;
+  if (isDesertTile(x, y) || game.beachTiles.some(at)) return false;
+  if (game.waterTiles.some(at) || game.buildings.some(at) || game.blueprints.some(at)) return false;
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    if (def.tool && WORLD[def.list].some(o => at(o) && !(kind === 'tree' && o.isGrowing))) return false;
+    if (def.tool && game[def.list].some(o => at(o) && !(kind === 'tree' && o.isGrowing))) return false;
   }
   return true;
 }
 
 function toggleFarmZone(x, y, crop) {
-  const existing = farmZones.find(z => z.x === x && z.y === y);
+  const existing = game.farmZones.find(z => z.x === x && z.y === y);
   if (crop === 'clear' || (existing && existing.crop === crop)) {
-    if (existing) farmZones.splice(farmZones.indexOf(existing), 1);
+    if (existing) game.farmZones.splice(game.farmZones.indexOf(existing), 1);
     return;
   }
   if (!existing && !canBeFarmZone(x, y)) {
@@ -25,14 +25,14 @@ function toggleFarmZone(x, y, crop) {
     return;
   }
   if (existing) existing.crop = crop;
-  else farmZones.push({ x, y, crop });
+  else game.farmZones.push({ x, y, crop });
 }
 
 // A share of the map's grown trees are apple trees (GAME_CONFIG.appleTrees). Picked by a hash of the
 // tile, not rand(), so the rest of the seeded game stays the same.
 function placeAppleTrees() {
   const share = GAME_CONFIG.appleTrees.share;
-  for (const t of trees) {
+  for (const t of game.trees) {
     if (!t.isGrowing && tileVariantHash(t.x + 7, t.y + 13) % 1000 < share * 1000) makeAppleTree(t);
   }
 }
@@ -46,11 +46,11 @@ function makeAppleTree(tree) {
 
 // Wheat grows; saplings grow into trees; apple trees grow apples (faster watered)
 function growCrops(dt) {
-  farmPlots.forEach(f => {
+  game.farmPlots.forEach(f => {
     if (f.growth < 100) f.growth += dt * 5 * (f.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1);
   });
 
-  trees.forEach(t => {
+  game.trees.forEach(t => {
     if (t.isGrowing) {
       t.growProgress = (t.growProgress || 0) + dt * (t.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1);
       if (t.growProgress >= 20) {

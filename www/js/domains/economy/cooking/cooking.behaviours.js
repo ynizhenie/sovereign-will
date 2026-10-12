@@ -14,14 +14,14 @@ function cook(s, tick) {
   // raw meat piling up while every worker held a tool and nobody cooked); "low" leaves room to hire with
   // (a later playtest: food stuck at a few meals, 90 raw in stock, nobody could be hired)
   const freeHands = s.tool === 'none' && s.weapon === 'fist' && !tick.isWaveActive;
-  const runningLow = stock.food < settlers.length * cooking.lowFood + cooking.hireReserve;
+  const runningLow = stock.food < game.settlers.length * cooking.lowFood + cooking.hireReserve;
   if (!job && !freeHands && !runningLow) return false;
   if (s.carrying && !job) return false; // carrying something else: deliver that first
-  let fire = job && buildings.includes(job) ? job : null;
+  let fire = job && game.buildings.includes(job) ? job : null;
   if (!fire) {
     if (s.carrying) return false; // its fire is gone: deliverCarrying puts it back in the stock
     if (!cooking.raw.some(r => stock[r] > 0)) return false;
-    fire = buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && (b.fuelLeft > 0 || findFuel()))
+    fire = game.buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && (b.fuelLeft > 0 || findFuel()))
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (!fire) return false;
   }

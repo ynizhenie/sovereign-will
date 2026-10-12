@@ -4,13 +4,13 @@
 function cancelBattleFight() {
   if (battle.phase !== 'fight') return;
   battle.phase = 'setup';
-  settlers.forEach(s => { s.isPossessed = false; });
+  game.settlers.forEach(s => { s.isPossessed = false; });
   resetBattleUnits();
   renderBattlePanel();
 }
 
 function startBattleFight() {
-  if (battle.phase !== 'setup' || settlers.length === 0 || enemies.length === 0) {
+  if (battle.phase !== 'setup' || game.settlers.length === 0 || game.enemies.length === 0) {
     showNotification(t('battle.needBoth'), true);
     return;
   }
@@ -21,8 +21,8 @@ function startBattleFight() {
 // Called every update in battle mode: the fight ends when a side has nobody left
 function updateBattle(dt) {
   if (battle.phase === 'fight') {
-    if (settlers.length === 0 || enemies.length === 0) {
-      battle.winner = settlers.length > 0 ? 'green' : enemies.length > 0 ? 'red' : 'draw';
+    if (game.settlers.length === 0 || game.enemies.length === 0) {
+      battle.winner = game.settlers.length > 0 ? 'green' : game.enemies.length > 0 ? 'red' : 'draw';
       battle.phase = 'result';
       battle.resultTimer = BATTLE_RESULT_SECONDS;
     }

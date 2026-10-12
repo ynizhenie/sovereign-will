@@ -17,7 +17,7 @@ const clampInput = (input, fallback) => {
 };
 
 // wave interval: a preset, or "custom" with its own number of seconds
-const applyCustomWave = () => { waveInterval = clampInput(waveCustom, 90); waveTimer = waveInterval; };
+const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom, 90); game.waveTimer = game.waveInterval; };
 
 waveOptions.forEach(button => {
     const selectWave = (e) => {
@@ -25,7 +25,7 @@ waveOptions.forEach(button => {
         const custom = button.dataset.waveInterval === 'custom';
         waveCustom.hidden = !custom;
         if (custom) applyCustomWave();
-        else { waveInterval = Number(button.dataset.waveInterval); waveTimer = waveInterval; }
+        else { game.waveInterval = Number(button.dataset.waveInterval); game.waveTimer = game.waveInterval; }
 
         waveOptions.forEach(btn => {
             btn.classList.remove('active');
@@ -43,14 +43,14 @@ waveCustom.addEventListener('change', applyCustomWave);
 // map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
 const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
 
-const applyCustomMap = () => { mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
+const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
 
 mapOptions.forEach(button => {
     onTap(button, () => {
         const custom = button.dataset.mapSize === 'custom';
         mapCustom.hidden = !custom;
         if (custom) applyCustomMap();
-        else { const size = Number(button.dataset.mapSize); mapSettings = { cols: size, rows: size }; }
+        else { const size = Number(button.dataset.mapSize); game.mapSettings = { cols: size, rows: size }; }
         mapOptions.forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
     });
@@ -64,7 +64,7 @@ mapRowsInput.addEventListener('change', applyCustomMap);
 const difficultyOptions = document.querySelectorAll('.difficulty-option');
 
 difficultyOptions.forEach(button => onTap(button, () => {
-  gameDifficulty = button.dataset.difficulty;
+  game.gameDifficulty = button.dataset.difficulty;
   difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
 }));
 
@@ -73,7 +73,7 @@ const startGame = (e) => {
     applySeedFromUI();
     resetGame();
     openTab('tab-build'); // a new game starts on the Building tab (#188)
-    gameStarted = true;
+    game.gameStarted = true;
     mainMenu.style.display = 'none';
 };
 
@@ -92,14 +92,14 @@ let mapSource = 'random';
 function renderCustomMapList() {
   const maps = loadSavedMaps();
   // the chosen map may have been deleted or changed in the editor since
-  if (customMap) customMap = maps[customMap.name] || null;
-  if (mapSource === 'custom' && !customMap) customMap = Object.values(maps)[0] || null;
+  if (game.customMap) game.customMap = maps[game.customMap.name] || null;
+  if (mapSource === 'custom' && !game.customMap) game.customMap = Object.values(maps)[0] || null;
   // a custom map is played as the faction it was made for (#170)
-  if (mapSource === 'custom' && customMap && customMap.faction && sides.player.faction !== customMap.faction) setSideFaction('player', customMap.faction);
+  if (mapSource === 'custom' && game.customMap && game.customMap.faction && sides.player.faction !== game.customMap.faction) setSideFaction('player', game.customMap.faction);
   renderFactionPicker();
   renderSavedMapList(document.getElementById('custom-map-list'), {
-    selected: customMap && customMap.name,
-    open: map => { customMap = map; renderCustomMapList(); }
+    selected: game.customMap && game.customMap.name,
+    open: map => { game.customMap = map; renderCustomMapList(); }
   });
 }
 
@@ -107,7 +107,7 @@ function setMapSource(source) {
   mapSource = source;
   document.querySelectorAll('[data-map-source]').forEach(b => b.classList.toggle('active', b.dataset.mapSource === source));
   document.getElementById('main-menu').classList.toggle('custom-map', source === 'custom');
-  if (source === 'random') customMap = null;
+  if (source === 'random') game.customMap = null;
   renderCustomMapList();
 }
 

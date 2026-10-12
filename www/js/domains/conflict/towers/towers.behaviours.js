@@ -5,7 +5,7 @@ function loadTowerArrows(s, tick) {
   if (s.isPossessed || s.role !== 'worker' || s.weapon !== 'fist' || s.tool !== 'none' || s.targetEquipment) return false;
   const load = s.carrying && s.carrying.forTower;
   if (s.carrying && !load) return false;
-  if (load && !buildings.includes(load)) { delete s.carrying.forTower; return false; } // tower gone: back to storage
+  if (load && !game.buildings.includes(load)) { delete s.carrying.forTower; return false; } // tower gone: back to storage
   const tower = load || findTowerForArrows(s);
   if (!tower) return false;
   s.patrolTarget = null;

@@ -28,7 +28,7 @@ function fitCanvasToScreen() {
 
 // canvas pixels per world unit at zoom 1: the world just covers the screen
 function getBaseScale() {
-  return Math.max(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+  return Math.max(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT);
 }
 
 // canvas pixels per world unit now

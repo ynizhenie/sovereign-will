@@ -7,7 +7,7 @@
 const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
 
 function getStorages() {
-  return [townHall, ...buildings.filter(b => b.type === 'warehouse')];
+  return [townHall, ...game.buildings.filter(b => b.type === 'warehouse')];
 }
 
 // Take up to `amount` of a resource out of the stock; returns how much there was
@@ -21,8 +21,8 @@ function takeStock(id, amount) {
 function getResourceAmount(resourceKey) {
   let amount = stock[resourceKey] || 0;
   if (resourceKey === 'arrows') {
-    amount += buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) +
-      settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0);
+    amount += game.buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) +
+      game.settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0);
   }
   return amount;
 }
@@ -37,10 +37,10 @@ function isFoodKind(type) {
 // The start's food as a random mix of kinds (#169)
 function mixStartFood() {
   const kinds = Object.keys(GAME_CONFIG.foodKinds);
-  foodMix = {};
+  game.foodMix = {};
   for (let i = 0; i < Math.floor(stock.food); i++) {
     const kind = kinds[Math.floor(rand() * kinds.length)];
-    foodMix[kind] = (foodMix[kind] || 0) + 1;
+    game.foodMix[kind] = (game.foodMix[kind] || 0) + 1;
   }
   syncFoodMix();
 }
@@ -48,24 +48,24 @@ function mixStartFood() {
 function addFood(kind, amount) {
   syncFoodMix();
   stock.food += amount;
-  foodMix[kind] = (foodMix[kind] || 0) + amount;
+  game.foodMix[kind] = (game.foodMix[kind] || 0) + amount;
 }
 
 // Keep the kinds adding up to stock.food: food added without a kind goes, a piece at a time, to whichever
 // kind there's least of; food spent or eaten comes off the kinds in GAME_CONFIG.foodKinds order
 function syncFoodMix() {
   const kinds = Object.keys(GAME_CONFIG.foodKinds);
-  let diff = stock.food - kinds.reduce((sum, k) => sum + (foodMix[k] || 0), 0);
+  let diff = stock.food - kinds.reduce((sum, k) => sum + (game.foodMix[k] || 0), 0);
   while (diff > 1e-9) {
-    const least = kinds.reduce((a, b) => ((foodMix[b] || 0) < (foodMix[a] || 0) ? b : a));
+    const least = kinds.reduce((a, b) => ((game.foodMix[b] || 0) < (game.foodMix[a] || 0) ? b : a));
     const piece = Math.min(1, diff);
-    foodMix[least] = (foodMix[least] || 0) + piece;
+    game.foodMix[least] = (game.foodMix[least] || 0) + piece;
     diff -= piece;
   }
   for (const kind of kinds) {
     if (diff >= 0) break;
-    const take = Math.min(foodMix[kind] || 0, -diff);
-    foodMix[kind] = (foodMix[kind] || 0) - take;
+    const take = Math.min(game.foodMix[kind] || 0, -diff);
+    game.foodMix[kind] = (game.foodMix[kind] || 0) - take;
     diff += take;
   }
 }
