@@ -1,5 +1,16 @@
+// Keyboard, mouse, touch and the on-screen joystick: what the player presses, turned into the game's
+// commands (pause, possession, camera drag and zoom, taps on the map)
+
+const keys = {};
+
+// the on-screen joystick for the possessed settler: x, y in -1..1 (see input.js)
+const joystick = { x: 0, y: 0 };
+
+let mouse = { x: 0, y: 0 };
+
 // Shift held: a building placed keeps the build mode on, to place another (see handleCanvasClick)
 let shiftDown = false;
+
 // a touch screen: the possession joystick shows there only (a keyboard steers on a computer)
 const isTouchScreen = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
 
@@ -12,10 +23,12 @@ window.addEventListener('keydown', e => {
 });
 
 window.addEventListener('keyup', e => { if (e.key === 'Shift') shiftDown = false; keys[e.key.toLowerCase()] = false; });
+
 window.addEventListener('blur', () => { shiftDown = false; });
 
 // The joystick for the possessed settler: drag the knob, how far from the centre sets the speed
 const JOYSTICK_REACH = 45;
+
 (function bindJoystick() {
   const base = document.getElementById('mobile-joystick');
   const knob = base.querySelector('.joystick-knob');
@@ -45,94 +58,6 @@ const JOYSTICK_REACH = 45;
   base.addEventListener('pointerup', release);
   base.addEventListener('pointercancel', release);
 })();
-
-function getCanvasScreenCoords(clientX, clientY) {
-  const rect = canvas.getBoundingClientRect();
-  const canvasAspect = canvas.width / canvas.height;
-  const rectAspect = rect.width / rect.height;
-
-  let renderWidth, renderHeight, offsetX, offsetY;
-
-  if (rectAspect > canvasAspect) {
-    renderHeight = rect.height;
-    renderWidth = rect.height * canvasAspect;
-    offsetX = (rect.width - renderWidth) / 2;
-    offsetY = 0;
-  } else {
-    renderWidth = rect.width;
-    renderHeight = rect.width / canvasAspect;
-    offsetX = 0;
-    offsetY = (rect.height - renderHeight) / 2;
-  }
-
-  const screenX = (clientX - rect.left - offsetX) * canvas.width / renderWidth;
-  const screenY = (clientY - rect.top - offsetY) * canvas.height / renderHeight;
-
-  return { screenX, screenY, renderWidth, renderHeight };
-}
-
-// ---- Screen and camera
-//
-// The canvas covers the whole game area at the screen's resolution (fitCanvasToScreen). At zoom 1 the
-// world covers the screen; zooming out to getMinZoom() shows all of it.
-let screenPixelRatio = 1;
-
-function fitCanvasToScreen() {
-  screenPixelRatio = Math.min(2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
-  const width = Math.max(1, Math.round(canvas.clientWidth * screenPixelRatio));
-  const height = Math.max(1, Math.round(canvas.clientHeight * screenPixelRatio));
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-  }
-  camera.zoom = Math.max(getMinZoom(), Math.min(getMaxZoom(), camera.zoom));
-  clampCamera();
-}
-
-// canvas pixels per world unit at zoom 1: the world just covers the screen
-function getBaseScale() {
-  return Math.max(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
-}
-
-// canvas pixels per world unit now
-function getViewScale() {
-  return getBaseScale() * camera.zoom;
-}
-
-// zoomed in at most this far, or until a world unit is MAX_CSS_SCALE CSS pixels, whichever is closer:
-// on a big map the base scale is small, so a fixed factor didn't get close enough on a phone (#182)
-const MAX_ZOOM = 2.4;
-const MAX_CSS_SCALE = 3;
-function getMaxZoom() {
-  return Math.max(MAX_ZOOM, MAX_CSS_SCALE * screenPixelRatio / getBaseScale());
-}
-
-// zoomed out this far, the whole world fits on the screen
-function getMinZoom() {
-  return Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT) / getBaseScale();
-}
-
-function setZoom(zoom) {
-  camera.zoom = Math.max(getMinZoom(), Math.min(getMaxZoom(), zoom));
-}
-
-window.addEventListener('resize', fitCanvasToScreen);
-
-function updateInputPos(clientX, clientY) {
-  const { screenX, screenY } = getCanvasScreenCoords(clientX, clientY);
-  // screen coords are for UI drawn over the canvas without the camera
-  mouse.screenX = screenX;
-  mouse.screenY = screenY;
-  mouse.x = camera.x + (screenX - canvas.width / 2) / getViewScale();
-  mouse.y = camera.y + (screenY - canvas.height / 2) / getViewScale();
-}
-
-function clampCamera() {
-  // the camera's centre stays on the map, at any zoom: the view goes up to half of it past the map's
-  // edge, and zoomed all the way out it isn't pulled back to the middle (#182, #189)
-  camera.x = Math.max(0, Math.min(WORLD_WIDTH, camera.x));
-  camera.y = Math.max(0, Math.min(WORLD_HEIGHT, camera.y));
-}
 
 canvas.addEventListener('mousemove', e => {
   if (cameraDragging && !isCameraLocked()) {
@@ -176,10 +101,15 @@ window.addEventListener('mouseup', e => {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 let touchStartDist = 0;
+
 let touchStartZoom = 1;
+
 let touchDragPoint = { x: 0, y: 0 };
+
 let touchStartPos = { x: 0, y: 0 };
+
 let isTouchDragging = false;
+
 let isTap = false;
 
 canvas.addEventListener('touchstart', e => {
@@ -255,12 +185,12 @@ canvas.addEventListener('touchend', e => {
   }
 });
 
-
 window.addEventListener('dblclick', function(e) {
   e.preventDefault();
 }, { passive: false });
 
 let lastTouchEnd = 0;
+
 document.addEventListener('touchend', function(e) {
   const now = Date.now();
   if (now - lastTouchEnd <= 300) {

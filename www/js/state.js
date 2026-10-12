@@ -1,7 +1,9 @@
 const worldSeedInput = document.getElementById('seed-input');
+
 if (worldSeedInput && (!worldSeedInput.value || worldSeedInput.value === 'default-world-seed')) {
   worldSeedInput.value = createDefaultSeed();
 }
+
 let worldSeed = createWorldSeed(worldSeedInput ? worldSeedInput.value : createDefaultSeed());
 
 function applySeedFromUI() {
@@ -23,33 +25,40 @@ function rand() {
   return Math.random();
 }
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d', {
-  alpha: false,
-  desynchronized: true,
-  willReadFrequently: false
-});
 const TILE_SIZE = 30;
+
 const BORDER_MARGIN = 2;
+
 // the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
 // (see fitCanvasToScreen)
 const DEFAULT_MAP_TILES = 40;
+
 let COLS = DEFAULT_MAP_TILES;
+
 let ROWS = DEFAULT_MAP_TILES;
+
 let WORLD_WIDTH = COLS * TILE_SIZE;
+
 let WORLD_HEIGHT = ROWS * TILE_SIZE;
+
 let mapSettings = { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }; // set from the menu, used by resetGame
+
 let gameDifficulty = 'normal'; // GAME_CONFIG.difficulty key, set from the menu
+
 let gameMode = 'endless';      // endless / battle (battle.js) / editor (editor.js) / menu (the world behind the main menu, menu-scene.js)
+
 let customMap = null;          // a saved map (editor.js) Endless plays instead of a generated one
+
 // the two sides (#43, factions.js): GAME_CONFIG.factions ids and the colours their units are drawn in
 const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };
+
 // in the map editor, the faction the map is made for (#170)
 function getPlayerFaction() {
   if (gameMode === 'editor' && typeof editor !== 'undefined') return GAME_CONFIG.factions[editor.faction];
   if (gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction]; // #193
   return GAME_CONFIG.factions[sides.player.faction];
 }
+
 function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.faction]; }
 
 function getDifficulty() {
@@ -68,25 +77,26 @@ function getMapAreaScale() {
   return (COLS * ROWS) / (DEFAULT_MAP_TILES * DEFAULT_MAP_TILES);
 }
 
-const keys = {};
-// the on-screen joystick for the possessed settler: x, y in -1..1 (see input.js)
-const joystick = { x: 0, y: 0 };
-let mouse = { x: 0, y: 0 };
-let camera = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, zoom: 1 };
-let cameraDragging = false;
-let cameraDragPoint = { x: 0, y: 0 };
-
 let waveInterval = 90;
+
 let waveTimer = waveInterval;
+
 let gameStarted = false;
+
 let boarRespawnTimer = 25;
+
 const BOAR_LIMIT = 5;
+
 let waveNum = 1;
+
 let buildMode = 'interact';
+
 let isPaused = false;
+
 let selectedSettler = null;
 
 const TOWN_HALL_HP = 100;
+
 const townHall = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
 
 const WORLD = {
@@ -126,6 +136,7 @@ const WORLD = {
 };
 
 const WORLD_ALIASES = Object.keys(WORLD);
+
 for (const key of WORLD_ALIASES) {
   Object.defineProperty(globalThis, key, {
     configurable: true,
