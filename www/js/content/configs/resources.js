@@ -1,0 +1,66 @@
+// Resources: what the colony stocks, how the HUD groups them, kinds of food, the start
+
+Object.assign(GAME_CONFIG, {
+  resources: {
+    // food: ready to eat (berries, apples, and anything cooked); the raw kinds need a campfire (cooking)
+    food: { id: 'food', icon: 'food', type: 'resource' },
+    rawMeat: { id: 'rawMeat', icon: 'rawMeat', type: 'resource' },
+    rawFish: { id: 'rawFish', icon: 'rawFish', type: 'resource' },
+    wheat: { id: 'wheat', icon: 'wheat', type: 'resource' },
+    wood: { id: 'wood', icon: 'wood', type: 'resource' },
+    stone: { id: 'stone', icon: 'stone', type: 'resource' },
+    coal: { id: 'coal', icon: 'coal', type: 'resource' },
+    ironOre: { id: 'ironOre', icon: 'ironOre', type: 'resource' },
+    iron: { id: 'iron', icon: 'iron', type: 'resource' },
+    leather: { id: 'leather', icon: 'leather', type: 'resource' },
+    arrows: { id: 'arrows', icon: 'arrows', type: 'resource' },
+    wheatSeeds: { id: 'wheatSeeds', icon: 'wheatSeeds', type: 'resource' },
+    saplings: { id: 'saplings', icon: 'saplings', type: 'resource' },
+    herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
+    worms: { id: 'worms', icon: 'worms', type: 'resource' },
+    appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
+    // factions: only shown to these factions (#43)
+    bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] },
+    // the undead's other hiring resource (#164): food brought in turns into it (meat and fish into bones)
+    rot: { id: 'rot', icon: 'rot', type: 'resource', factions: ['undead'] }
+  },
+
+  // how the HUD groups resources: a tile per group with its total, tapped to show what's in it. A group
+  // of one shows as that resource; resources in no group get their own tile. `held` groups count what
+  // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
+  resourceGroups: [
+    // factions: only these factions see it (the undead have no food, #164)
+    { id: 'bones', members: ['bones'], factions: ['undead'] }, // the undead's own, first (#188)
+    { id: 'rot', members: ['rot'], factions: ['undead'] },
+    { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'] }, // Food, opening onto what it's made of
+    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food (#169)
+    { id: 'wood', members: ['wood'] },
+    { id: 'stone', members: ['stone'] },
+    { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
+    { id: 'materials', icon: 'stone', members: ['coal', 'ironOre', 'iron', 'leather'] },
+    { id: 'supplies', members: ['arrows'] },
+    // not stock: how many settlers hold each tool / weapon / piece of gear
+    { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan'] } },
+    { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'shield'] } }
+  ],
+
+  // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows
+  // what it's made of. The start's food is a random mix of these; food that comes in without a kind
+  // (loot) goes to whichever kind there's least of; food spent or eaten comes off in this order (#169).
+  foodKinds: {
+    berries: { id: 'berries', icon: 'berries' }, apples: { id: 'apples', icon: 'apples' },
+    bread: { id: 'bread', icon: 'bread' }, cookedFish: { id: 'cookedFish', icon: 'cookedFish' }, cookedMeat: { id: 'cookedMeat', icon: 'cookedMeat' }
+  },
+
+  // ---- Colony
+
+  // builders bring a building's cost from the nearest storage, carryMaterials at a time (#36)
+  storage: { carryMaterials: 10 },
+
+  start: {
+    // stock at the start of a game (ids from `resources`)
+    resources: { wood: 30, stone: 20, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0 },
+    // population limit before tents (each tent adds buildings.tent.population)
+    population: 5
+  }
+});
