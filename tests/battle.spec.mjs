@@ -90,7 +90,6 @@ test('a fight can be cancelled back to the line-up; a unit can be possessed in i
 test('your units only on the green side, enemies only on the red; armour, shield and buildings (#142)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
-    window.showNotification = () => {};
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     battle.preset = 'raider_archer'; battleTap(at(8, 8).x, at(8, 8).y);  // an enemy on the green side: refused
     battle.preset = 'big_spear'; battleTap(at(30, 8).x, at(30, 8).y);    // a giant on the red side: refused
@@ -185,10 +184,13 @@ test('after a battle, Endless starts with a normal town hall (#135)', async ({ p
 test('the line splitting the field shows while placing, not in the fight or the result', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
+    // the midline is the one dashed line the game draws
     let drawn = 0;
-    window.drawBattleOverlay = () => { drawn++; };
+    const original = ctx.setLineDash;
+    ctx.setLineDash = function (dash) { if (dash.length) drawn++; return original.call(this, dash); };
     const at = phase => { battle.phase = phase; drawn = 0; render(); return drawn; };
-    const result = { setup: at('setup'), fight: at('fight'), result: at('result') };
+    let result;
+    try { result = { setup: at('setup'), fight: at('fight'), result: at('result') }; } finally { ctx.setLineDash = original; }
     battle.phase = 'setup';
     return result;
   });

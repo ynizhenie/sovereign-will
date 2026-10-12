@@ -1,24 +1,37 @@
 // Settlers: making one, hiring and upgrading, population, kinds, getting hurt, meals, and which one the
 // player has selected or possesses
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { t } from '../../../engine/platform/i18n.js';
+import { game, townHall } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { hasWorkingShield, refundEquipment } from '../equipment/equipment.rules.js';
+import { canAfford, payCost, showCostError, stock } from '../storage/storage.rules.js';
+import { getPlayerFaction } from '../../factions/factions.rules.js';
+import { showNotification } from '../../../ui/toasts.js';
+import { addCorpse, bleed } from '../../conflict/combat/combat.rules.js';
+import { isDefeated } from '../../../modes/endless/endless.rules.js';
+import { battle } from '../../../modes/battle/battle.setup.js';
+import { playSound } from '../../../app/sounds.js';
+
 // The start's limit, plus what each tent (or grave) adds
-function getMaxPop() {
+export function getMaxPop() {
   return game.buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
 }
 
 // Raised zombies don't count (#164): they're temporary
-function getCurrentPop() {
+export function getCurrentPop() {
   return game.settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
 }
 
 // A big body: a giant or a big zombie (settlerTypes with big), or a big enemy
-function isBigBody(unit) {
+export function isBigBody(unit) {
   return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
 }
 
 // A settler turns into another kind of its faction (a zombie given a bow into a skeleton, #164), keeping
 // its share of hp, its armour and everything it holds
-function changeSettlerType(s, type) {
+export function changeSettlerType(s, type) {
   const t = GAME_CONFIG.settlerTypes[type];
   if (!t || s.type === type) return;
   const share = s.hp / s.maxHp;
@@ -29,7 +42,7 @@ function changeSettlerType(s, type) {
 
 // A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind (skeletons)
 // comes with its bow and a full quiver, a necromancer with its raises
-function createSettler(typeKey, id, x, y, extra = {}) {
+export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
   const s = {
     id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
@@ -40,7 +53,7 @@ function createSettler(typeKey, id, x, y, extra = {}) {
   return s;
 }
 
-function spawnSettler(type = 'normal') {
+export function spawnSettler(type = 'normal') {
   const settlerType = GAME_CONFIG.settlerTypes[type];
   if (!settlerType) return;
 
@@ -59,12 +72,12 @@ function spawnSettler(type = 'normal') {
 }
 
 // The faction's upgrade (#43): a worker into a giant, a zombie into a big zombie
-function getUpgrade() {
+export function getUpgrade() {
   const [from, to] = Object.entries(getPlayerFaction().upgrades || {})[0] || [];
   return from ? { from, to, normal: GAME_CONFIG.settlerTypes[from], big: GAME_CONFIG.settlerTypes[to] } : null;
 }
 
-function upgradeToBig(target) {
+export function upgradeToBig(target) {
   const upgrade = getUpgrade();
   if (!upgrade) return;
   const { normal, big } = upgrade;
@@ -96,7 +109,7 @@ function upgradeToBig(target) {
 }
 
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
-function damageSettler(settler, amount, attacker = null) {
+export function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   settler.hp -= damage;
@@ -108,21 +121,21 @@ function damageSettler(settler, amount, attacker = null) {
 }
 
 // The enemy that hit this settler in the last few seconds, if it's still alive
-function getRecentAttacker(settler) {
+export function getRecentAttacker(settler) {
   const recent = game.pathTick - (settler.lastAttackedTick || -Infinity) < 4 * 60;
   return recent && game.enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
 }
 
-function getPossessed() { return game.settlers.find(s => s.isPossessed); }
+export function getPossessed() { return game.settlers.find(s => s.isPossessed); }
 
 // the settler picked in the UI, if it's still alive
-function getSelectedSettler() {
+export function getSelectedSettler() {
   return game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
 }
 
-let lastPossessedIndex = -1;
+export let lastPossessedIndex = -1;
 
-function unpossess() {
+export function unpossess() {
   const currentIdx = game.settlers.findIndex(s => s.isPossessed);
   if (currentIdx !== -1) {
     lastPossessedIndex = currentIdx;
@@ -130,7 +143,7 @@ function unpossess() {
   game.settlers.forEach(s => s.isPossessed = false);
 }
 
-function switchPossession() {
+export function switchPossession() {
   if (game.settlers.length === 0 || isDefeated()) return;
   if (game.gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on (#166)
 
@@ -160,11 +173,11 @@ function switchPossession() {
   }
 }
 
-function deselectSettler() { game.selectedSettler = null; }
+export function deselectSettler() { game.selectedSettler = null; }
 
 // One settler's meal (#178): food from the stock (2 for a big one), worms when it runs short; a few
 // meals in, it needs to go (see relieve)
-function eatMeal(s) {
+export function eatMeal(s) {
   const cost = isBigBody(s) ? 2 : 1;
   const short = Math.max(0, cost - stock.food);
   stock.food = Math.max(0, stock.food - cost);
@@ -174,7 +187,7 @@ function eatMeal(s) {
 }
 
 // Meals, each settler on its own clock (#178), for a faction that eats (the undead don't)
-function tickMeals(dt) {
+export function tickMeals(dt) {
   if (game.gameMode === 'endless' && getPlayerFaction().eats) {
     const meals = GAME_CONFIG.meals;
     for (const s of game.settlers) {
@@ -186,7 +199,7 @@ function tickMeals(dt) {
 }
 
 // Dead settlers: their equipment back to the stock, a corpse, and off the list
-function removeDeadSettlers() {
+export function removeDeadSettlers() {
   game.settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;

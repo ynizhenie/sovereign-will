@@ -1,7 +1,10 @@
 // The world's seed and the random numbers drawn from it: the same seed always makes the same map. The seed
 // is still read from the Endless menu's field here, until a game is made from a seed it's given (createGame).
 
-function createWorldSeed(seedInput = 'default-world-seed') {
+import { game } from './state.js';
+import { updateSeedHud } from '../../ui/hud.js';
+
+export function createWorldSeed(seedInput = 'default-world-seed') {
   const seedValue = String(seedInput || 'default-world-seed');
   let state = 2166136261;
   for (let i = 0; i < seedValue.length; i++) {
@@ -22,7 +25,7 @@ function createWorldSeed(seedInput = 'default-world-seed') {
   };
 }
 
-function createDefaultSeed() {
+export function createDefaultSeed() {
   const values = new Uint32Array(2);
   if (globalThis.crypto && crypto.getRandomValues) crypto.getRandomValues(values);
   else {
@@ -32,22 +35,22 @@ function createDefaultSeed() {
   return `lima-${Date.now().toString(36)}-${values[0].toString(36)}-${values[1].toString(36)}`;
 }
 
-const worldSeedInput = document.getElementById('seed-input');
+export const worldSeedInput = document.getElementById('seed-input');
 
-function applySeedFromUI() {
+export function applySeedFromUI() {
   const rawSeed = worldSeedInput ? worldSeedInput.value.trim() : '';
   game.worldSeed = createWorldSeed(rawSeed || createDefaultSeed());
   updateSeedHud();
   return game.worldSeed;
 }
 
-function rand() {
+export function rand() {
   if (game.worldSeed && typeof game.worldSeed.random === 'function') return game.worldSeed.random();
   return Math.random();
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initRng() {
+export function initRng() {
   if (worldSeedInput && (!worldSeedInput.value || worldSeedInput.value === 'default-world-seed')) {
     worldSeedInput.value = createDefaultSeed();
   }

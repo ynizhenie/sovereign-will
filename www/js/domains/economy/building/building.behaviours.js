@@ -1,7 +1,21 @@
 // Builders build, bring materials, repair and run the smelters; a walled-in base breaks out
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { game, townHall } from '../../../engine/world/state.js';
+import { getWeaponStats } from '../../colony/equipment/equipment.rules.js';
+import { addResources, canAfford, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/storage.rules.js';
+import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
+import { finishHarvest, getMapResourceDef } from '../gathering/gathering.rules.js';
+import { makeAppleTree } from '../farming/farming.rules.js';
+import { getReachDistanceToResource, getSettlerReach, invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+import { ejectEntitiesFromTile } from '../../../engine/movement/collision.js';
+import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
+import { playSound, playWorkSound } from '../../../app/sounds.js';
+
 // Pick up smelted iron and carry it home
-function collectSmelterIron(s, tick) {
+export function collectSmelterIron(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
     let smelterWithIron = game.buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isBuildingJobFree(b, 'collector', s));
     if (smelterWithIron) {
@@ -21,7 +35,7 @@ function collectSmelterIron(s, tick) {
 }
 
 // Take ore or coal from the town hall for a smelter that has room for it (one supplier per smelter)
-function supplySmelter(s, tick) {
+export function supplySmelter(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
     const limits = getSmelterLimits();
     for (const [resource, loaded, max] of [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]]) {
@@ -39,7 +53,7 @@ function supplySmelter(s, tick) {
 }
 
 // Bring the ore/coal picked up by supplySmelter to its smelter
-function deliverToSmelter(s, tick) {
+export function deliverToSmelter(s, tick) {
   if (s.carrying && s.carrying.type === 'smelterDelivery') {
     let targetSmelter = s.carrying.targetSmelter;
     if (!game.buildings.includes(targetSmelter)) {
@@ -67,7 +81,7 @@ function deliverToSmelter(s, tick) {
 }
 
 // Repair the town hall when the player asked for it (cost and hp per step: GAME_CONFIG.repairs.townHall)
-function repairTownHall(s, tick) {
+export function repairTownHall(s, tick) {
   if (townHall.repairRequested && townHall.hp < townHall.maxHp && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed) {
     const repair = GAME_CONFIG.repairs.townHall;
     if (canAfford(repair.cost)) {
@@ -88,7 +102,7 @@ function repairTownHall(s, tick) {
 
 // Repair the nearest damaged building that needs it (see needsRepair), at most 2 workers on each.
 // Cost, hp and pace per step: getRepairStep()
-function repairBuilding(s, tick) {
+export function repairBuilding(s, tick) {
   if (s.role !== 'worker' || s.carrying || s.targetEquipment || s.isPossessed || s.towerAssignment) return false;
   let target = null, best = Infinity;
   for (const b of game.buildings) {
@@ -108,7 +122,7 @@ function repairBuilding(s, tick) {
 }
 
 // One repair step's worth of time at a building: pays getRepairStep's cost every interval
-function repairStep(b, dt) {
+export function repairStep(b, dt) {
   const step = getRepairStep(b);
   b.repairTimer = (b.repairTimer || 0) - dt;
   if (b.repairTimer <= 0) {
@@ -120,7 +134,7 @@ function repairStep(b, dt) {
 }
 
 // Building materials a builder carries (forBlueprint) go to their blueprint (see build)
-function deliverMaterials(s, tick) {
+export function deliverMaterials(s, tick) {
   const bp = s.carrying && s.carrying.forBlueprint;
   if (!bp) return false;
   if (!game.blueprints.includes(bp)) { delete s.carrying.forBlueprint; return false; } // gone: back to storage
@@ -138,7 +152,7 @@ function deliverMaterials(s, tick) {
 // ---- Work
 
 // Build (or demolish) the nearest blueprint that has fewer than 3 builders
-function build(s, tick) {
+export function build(s, tick) {
   const dt = tick.dt;
   if (game.blueprints.length > 0 && !s.carrying && s.role === 'worker') {
     let hasNearbyEnemy = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
@@ -182,7 +196,7 @@ function build(s, tick) {
 }
 
 // Work on a blueprint the settler is standing at; finished, it becomes what it was for
-function workBlueprint(s, bp, dt) {
+export function workBlueprint(s, bp, dt) {
   bp.progress += dt * 40;
   s.working = 0.1;
   faceTowards(s, bp.x, bp.y);
@@ -211,7 +225,7 @@ function workBlueprint(s, bp, dt) {
 }
 
 // A walled-in base: soldiers break the nearest door blocker they can reach, one hp per strike
-function breakOutOfSealedBase(s, tick) {
+export function breakOutOfSealedBase(s, tick) {
   if (!tick.baseSealed || s.role === 'worker' || s.isPossessed) return false;
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;

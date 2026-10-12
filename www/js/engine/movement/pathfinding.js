@@ -1,10 +1,13 @@
 // Finding a way: which tiles block whom (settlers, enemies), walking distances, and A* paths
 
+import { getGridPos, getTileIndex, resetTileIndex } from '../world/grid.js';
+import { TILE_SIZE, game, townHall } from '../world/state.js';
+
 // isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
 // world's blocking tiles change. Settler path searches read this instead of re-checking each tile.
-let settlerBlockedGrid = { signature: null, grid: null };
+export let settlerBlockedGrid = { signature: null, grid: null };
 
-function getSettlerBlockedGrid() {
+export function getSettlerBlockedGrid() {
   const signature = getTileIndex().signature;
   if (settlerBlockedGrid.signature !== signature || settlerBlockedGrid.grid.length !== game.COLS * game.ROWS) {
     const grid = new Uint8Array(game.COLS * game.ROWS);
@@ -16,12 +19,12 @@ function getSettlerBlockedGrid() {
   return settlerBlockedGrid.grid;
 }
 
-function isTileBlockedForSettler(gx, gy) {
+export function isTileBlockedForSettler(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   return getSettlerBlockedGrid()[gy * game.COLS + gx] === 1;
 }
 
-function computeTileBlockedForSettler(gx, gy) {
+export function computeTileBlockedForSettler(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
@@ -35,7 +38,7 @@ function computeTileBlockedForSettler(gx, gy) {
 
 // Walking distance (in tiles) from the settler's tile to every tile, as an Int16Array indexed gy * COLS + gx,
 // -1 where it can't get. Cached until the settler changes tile or the world's blocking tiles change.
-function getSettlerReach(settler) {
+export function getSettlerReach(settler) {
   const start = getGridPos(settler.x, settler.y);
   const startIndex = start.gy * game.COLS + start.gx;
   const signature = getTileIndex().signature;
@@ -62,7 +65,7 @@ function getSettlerReach(settler) {
   return steps;
 }
 
-function getReachSteps(reach, gx, gy) {
+export function getReachSteps(reach, gx, gy) {
   if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) return -1;
   return reach[gy * game.COLS + gx];
 }
@@ -71,7 +74,7 @@ function getReachSteps(reach, gx, gy) {
 // reach comes from getSettlerReach(). Only the resource's own tile and its 4 direct neighbours count:
 // a diagonal neighbour is only usable through one of those, and a resource reachable only across a
 // corner between two rocks has no spot a settler can actually stand on.
-function getReachDistanceToResource(reach, resource) {
+export function getReachDistanceToResource(reach, resource) {
   const g = getGridPos(resource.x, resource.y);
   let best = Infinity;
   for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -81,7 +84,7 @@ function getReachDistanceToResource(reach, resource) {
   return best;
 }
 
-function isTileBlockedForEnemyStrict(gx, gy) {
+export function isTileBlockedForEnemyStrict(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
@@ -93,7 +96,7 @@ function isTileBlockedForEnemyStrict(gx, gy) {
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
-function isTileBlockedForEnemyPermissive(gx, gy) {
+export function isTileBlockedForEnemyPermissive(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
@@ -102,13 +105,13 @@ function isTileBlockedForEnemyPermissive(gx, gy) {
   return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k);
 }
 
-const PATH_DIRECTIONS = [
+export const PATH_DIRECTIONS = [
   {dx:0, dy:-1, cost:1}, {dx:0, dy:1, cost:1}, {dx:-1, dy:0, cost:1}, {dx:1, dy:0, cost:1},
   {dx:-1, dy:-1, cost:1.41}, {dx:1, dy:-1, cost:1.41}, {dx:-1, dy:1, cost:1.41}, {dx:1, dy:1, cost:1.41}
 ];
 
 // min-heap keyed by f, for the A* open list
-function createOpenList() {
+export function createOpenList() {
   const items = [];
   const swap = (i, j) => { const t = items[i]; items[i] = items[j]; items[j] = t; };
   return {
@@ -142,7 +145,7 @@ function createOpenList() {
   };
 }
 
-function findGridPath(startG, endG, targetX, targetY, options) {
+export function findGridPath(startG, endG, targetX, targetY, options) {
   if (startG.gx === endG.gx && startG.gy === endG.gy) {
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: options.isBlockedPath };
   }
@@ -207,10 +210,10 @@ function findGridPath(startG, endG, targetX, targetY, options) {
 // Enemies' way to their target (#155): one search that weighs going round against breaking through, in
 // tiles of walking: breaking a building costs `building`, a tree or boulder `nature`, walking over spikes
 // `spikes`. Rock and water can't be crossed at all.
-const ENEMY_PATH_COST = { building: 12, nature: 25, spikes: 2 };
+export const ENEMY_PATH_COST = { building: 12, nature: 25, spikes: 2 };
 
 // A path's length in tiles (diagonal steps count 1.41)
-function pathCost(path) {
+export function pathCost(path) {
   let cost = 0;
   for (let i = 1; i < path.length - 1; i++) cost += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y) / TILE_SIZE;
   return cost;
@@ -218,7 +221,7 @@ function pathCost(path) {
 
 // natureBlocks: trees and boulders are walked round, not chopped through (only buildings and spikes
 // are taken straight, when the way round is long)
-function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false) {
+export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false) {
   const startG = getGridPos(startX, startY);
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
@@ -253,7 +256,7 @@ function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks 
   return result;
 }
 
-function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
+export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
   let startG = getGridPos(startX, startY);
   let endG = getGridPos(targetX, targetY);
 
@@ -297,7 +300,7 @@ function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
   return result;
 }
 
-function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
+export function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
   let distance = Math.hypot(targetX - startX, targetY - startY);
   if (distance < 1) return true;
   let steps = Math.ceil(distance / 10);
@@ -326,13 +329,13 @@ function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
 // (or one by all of it when the other would be pushed into a wall). Runs once a tick after movement;
 // a few rounds, since pushing one pair apart can push a unit into its neighbour.
 // Whether an enemy's current path goes over a spike trap (see pathViaSpikes)
-function pathCrossesSpikes(en) {
+export function pathCrossesSpikes(en) {
   if (!en.path || en.path.length === 0) return false;
   const tiles = getTileIndex();
   return en.path.some(p => tiles.spikes.has(`${p.x},${p.y}`));
 }
 
-function invalidateAllPaths() {
+export function invalidateAllPaths() {
   resetTileIndex();
   game.settlers.forEach(s => { s.path = null; s.pathTarget = null; });
   game.enemies.forEach(en => { en.path = null; en.pathTarget = null; });

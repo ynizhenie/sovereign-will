@@ -2,13 +2,13 @@
 // selected, and every list of things on the map. Each field is also reachable by its own name on
 // window (for the tests and the console); the game's own code says game.x.
 
-const TILE_SIZE = 30;
-const BORDER_MARGIN = 2;
+export const TILE_SIZE = 30;
+export const BORDER_MARGIN = 2;
 // the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
 // (see fitCanvasToScreen)
-const DEFAULT_MAP_TILES = 40;
+export const DEFAULT_MAP_TILES = 40;
 
-const game = {
+export const game = {
   gameMode: 'endless',      // endless / battle (battle.js) / editor (editor.js) / menu (the world behind the main menu, menu-scene.js)
   gameStarted: false,
   isPaused: false,
@@ -68,11 +68,11 @@ const game = {
 };
 
 // the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns
-const WORLD_LISTS = Object.keys(game).slice(Object.keys(game).indexOf('settlers'));
+export const WORLD_LISTS = Object.keys(game).slice(Object.keys(game).indexOf('settlers'));
 
-const BOAR_LIMIT = 5;
-const TOWN_HALL_HP = 100;
-const townHall = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
+export const BOAR_LIMIT = 5;
+export const TOWN_HALL_HP = 100;
+export const townHall = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
 
 for (const key of Object.keys(game)) {
   Object.defineProperty(globalThis, key, {

@@ -1,7 +1,18 @@
 // Hunting a boar and carrying its carcass home
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { townHall } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { getWeaponStats, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
+import { finishHarvest } from '../gathering/gathering.rules.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { woundBoar } from './hunting.rules.js';
+import { hasLineOfFire, performAttack } from '../../conflict/combat/combat.rules.js';
+import { faceTowards, startSwing } from '../../colony/settlers/settlers.draw.js';
+import { playWorkSound } from '../../../app/sounds.js';
+
 // Hunt a boar or collect its carcass
-function huntBoar(s, boar, tick) {
+export function huntBoar(s, boar, tick) {
   const dt = tick.dt;
   let dist = Math.hypot(boar.x - s.x, boar.y - s.y);
   if (boar.isCarcass) {

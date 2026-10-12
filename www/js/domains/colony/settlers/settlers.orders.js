@@ -9,10 +9,32 @@
 // A settler type can be limited to some kinds of orders (GAME_CONFIG.settlerTypes[type].orders);
 // without that list it takes them all. An archer's tap on nothing else shoots there.
 
-const handsFull = p => p.carrying && !hasRoomToCarry(p);
-const walkTo = (s, x, y, tick) => moveEntityTowards(s, x, y, s.speed, false, tick.dt);
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { t } from '../../../engine/platform/i18n.js';
+import { game, townHall } from '../../../engine/world/state.js';
+import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/equipment.rules.js';
+import { canAfford, hasRoomToCarry, moveSettlerToTownHall, payCost, takeStock } from '../storage/storage.rules.js';
+import { getMissingMaterial, getRepairStep } from '../../economy/building/building.rules.js';
+import { showNotification } from '../../../ui/toasts.js';
+import { joystick, keys } from '../../../engine/platform/input.js';
+import { getPossessed } from './settlers.rules.js';
+import { getHarvestableResources, getMapResourceDef, getMapResourceKind } from '../../economy/gathering/gathering.rules.js';
+import { collidesWithWall } from '../../../engine/movement/collision.js';
+import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
+import { performAttack } from '../../conflict/combat/combat.rules.js';
+import { faceTowards } from './settlers.draw.js';
+import { getFishingBait } from '../../economy/fishing/fishing.rules.js';
+import { fetchBait, fishAt } from '../../economy/fishing/fishing.behaviours.js';
+import { fetchFromStorage, goDeliver } from '../storage/storage.behaviours.js';
+import { workResource } from '../../economy/gathering/gathering.behaviours.js';
+import { huntBoar } from '../../economy/hunting/hunting.behaviours.js';
+import { deliverMaterials, repairStep, workBlueprint } from '../../economy/building/building.behaviours.js';
+import { pickApplesFrom } from '../../economy/farming/farming.behaviours.js';
 
-const ORDERS = [
+export const handsFull = p => p.carrying && !hasRoomToCarry(p);
+export const walkTo = (s, x, y, tick) => moveEntityTowards(s, x, y, s.speed, false, tick.dt);
+
+export const ORDERS = [
   {
     kind: 'attack',
     find: (p, near) => game.enemies.find(en => near(en, en.radius + 15)) || game.enemyTents.find(et => near(et, 25)),
@@ -141,14 +163,14 @@ const ORDERS = [
 ];
 
 // The orders this settler's type takes
-function canTakeOrder(p, kind) {
+export function canTakeOrder(p, kind) {
   const allowed = (getDefinition('settlerTypes', p.type) || {}).orders;
   return !allowed || allowed.includes(kind);
 }
 
 // A tap while possessing: an order for the possessed settler. Returns false if the tap wasn't on
 // anything for it, so the tap goes on as usual.
-function orderPossessed(p, x, y) {
+export function orderPossessed(p, x, y) {
   const near = (o, r) => Math.hypot(x - o.x, y - o.y) < r;
   for (const order of ORDERS) {
     if (!canTakeOrder(p, order.kind)) continue;
@@ -169,13 +191,13 @@ function orderPossessed(p, x, y) {
 }
 
 // One tick of the possessed settler's order; false once it's done or can't be carried on
-function followOrder(s, tick) {
+export function followOrder(s, tick) {
   const order = ORDERS.find(o => o.kind === s.order.kind);
   return !!order && order.step(s, s.order.target, tick);
 }
 
 // The possessed settler moves by the joystick or WASD (a diagonal isn't faster than straight)
-function movePossessed(dt) {
+export function movePossessed(dt) {
   const p = getPossessed();
   if (p) {
     let dx = joystick.x, dy = joystick.y;

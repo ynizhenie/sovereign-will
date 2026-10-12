@@ -8,4 +8,8 @@
 //
 // A key missing in a language falls back to English, then to the key itself.
 
-const LANGUAGES = {};
+import { enLanguage } from './en.js';
+import { ukLanguage } from './uk.js';
+import { ruLanguage } from './ru.js';
+
+export const LANGUAGES = { ...enLanguage, ...ukLanguage, ...ruLanguage };

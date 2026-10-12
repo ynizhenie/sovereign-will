@@ -1,38 +1,44 @@
 // Keyboard, mouse, touch and the on-screen joystick: what the player presses, turned into the game's
 // commands (pause, possession, camera drag and zoom, taps on the map)
 
-const keys = {};
+import { canvas, getViewScale } from './canvas.js';
+import { camera, clampCamera, getCanvasScreenCoords, setZoom, updateInputPos } from './camera.js';
+import { getPossessed, switchPossession, unpossess } from '../../domains/colony/settlers/settlers.rules.js';
+import { togglePause } from '../../app/session.js';
+import { isCameraLocked } from '../../modes/endless/endless.rules.js';
+
+export const keys = {};
 
 // the on-screen joystick for the possessed settler: x, y in -1..1 (see input.js)
-const joystick = { x: 0, y: 0 };
+export const joystick = { x: 0, y: 0 };
 
-let mouse = { x: 0, y: 0 };
+export let mouse = { x: 0, y: 0 };
 
 // Shift held: a building placed keeps the build mode on, to place another (see handleCanvasClick)
-let shiftDown = false;
+export let shiftDown = false;
 
 // a touch screen: the possession joystick shows there only (a keyboard steers on a computer)
-const isTouchScreen = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+export const isTouchScreen = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
 
 // The joystick for the possessed settler: drag the knob, how far from the centre sets the speed
-const JOYSTICK_REACH = 45;
+export const JOYSTICK_REACH = 45;
 
-let touchStartDist = 0;
+export let touchStartDist = 0;
 
-let touchStartZoom = 1;
+export let touchStartZoom = 1;
 
-let touchDragPoint = { x: 0, y: 0 };
+export let touchDragPoint = { x: 0, y: 0 };
 
-let touchStartPos = { x: 0, y: 0 };
+export let touchStartPos = { x: 0, y: 0 };
 
-let isTouchDragging = false;
+export let isTouchDragging = false;
 
-let isTap = false;
+export let isTap = false;
 
-let lastTouchEnd = 0;
+export let lastTouchEnd = 0;
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initInput() {
+export function initInput() {
   window.addEventListener('keydown', e => {
     if (e.key === 'Shift') shiftDown = true;
     if (e.code === 'Space' || (e.code === 'KeyP' && !e.repeat && document.activeElement.tagName !== 'INPUT')) { e.preventDefault(); togglePause(); return; }
@@ -202,6 +208,6 @@ function initInput() {
   });
 }
 
-let cameraDragging = false;
+export let cameraDragging = false;
 
-let cameraDragPoint = { x: 0, y: 0 };
+export let cameraDragPoint = { x: 0, y: 0 };

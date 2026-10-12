@@ -1,15 +1,28 @@
 // The bottom panel: its tabs, and the buttons made from the config (hire, build, farm, tools, weapons)
 
+import { GAME_CONFIG } from '../content/configs/index.js';
+import { escapeHtml, iconHtml, setRichText } from './icons.js';
+import { t } from '../engine/platform/i18n.js';
+import { game } from '../engine/world/state.js';
+import { assignTool, craftWeapon, getHeldItems } from '../domains/colony/equipment/equipment.rules.js';
+import { formatCost } from '../domains/colony/storage/storage.rules.js';
+import { resourceHudId, toggleResourceGroup, updateUI } from './hud.js';
+import { getPlayerFaction, sides } from '../domains/factions/factions.rules.js';
+import { getUpgrade, spawnSettler, upgradeToBig } from '../domains/colony/settlers/settlers.rules.js';
+import { onTap } from '../engine/platform/dom.js';
+import { setMode } from './map-input.js';
+import { refreshAffordability } from './widgets.js';
+
 // the bottom panel's open tab (farm zones are only drawn with the Farming tab open)
-let activeTab = 'tab-build';
+export let activeTab = 'tab-build';
 
 // Open a tab by its id, as tapping its button does
-function openTab(tabId) {
+export function openTab(tabId) {
   const button = document.querySelector(`.tab-btn[data-arg="${tabId}"]`);
   if (button) switchTab(button, tabId);
 }
 
-function switchTab(btnElement, tabId) {
+export function switchTab(btnElement, tabId) {
   activeTab = tabId;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -20,7 +33,7 @@ function switchTab(btnElement, tabId) {
   document.getElementById(tabId).classList.add('active');
 }
 
-function createConfigButton(item, action) {
+export function createConfigButton(item, action) {
   const button = document.createElement('button');
   button.className = 'btn';
   button.id = `btn-${item.id}`;
@@ -30,7 +43,7 @@ function createConfigButton(item, action) {
 }
 
 // Rebuild the generated HUD and buttons, e.g. after a language change (setLanguage)
-function rebuildConfigHud() {
+export function rebuildConfigHud() {
   for (const id of ['resources-hud', 'build-actions', 'farming-actions', 'tool-actions', 'weapon-actions', 'recruit-row']) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
@@ -41,9 +54,9 @@ function rebuildConfigHud() {
   if (typeof updateUI === 'function' && game.gameStarted) { updateUI(); refreshAffordability(true); }
 }
 
-let renderedFaction = null; // whose units and buildings the HUD shows (#43)
+export let renderedFaction = null; // whose units and buildings the HUD shows (#43)
 
-function renderConfigHud() {
+export function renderConfigHud() {
   // only what the player's faction has (#43): its resources, buildings, units to hire and upgrade
   renderedFaction = sides.player.faction;
   const ours = item => !item.factions || item.factions.includes(sides.player.faction);

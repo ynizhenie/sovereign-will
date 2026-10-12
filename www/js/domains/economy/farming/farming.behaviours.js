@@ -2,9 +2,26 @@
 
 // ---- Apple trees
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { getGridPos, resetTileIndex } from '../../../engine/world/grid.js';
+import { game } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { hasToolFamily } from '../../colony/equipment/equipment.rules.js';
+import { addCarryLoad, addResources, canAfford, giveResourceToSettler, hasRoomToCarry, payCost } from '../../colony/storage/storage.rules.js';
+import { isTileOccupied } from '../building/building.rules.js';
+import { isWaterReachable } from '../../world/world.generator.js';
+import { getMapResourceDef } from '../gathering/gathering.rules.js';
+import { makeAppleTree } from './farming.rules.js';
+import { getReachDistanceToResource, getReachSteps, getSettlerReach } from '../../../engine/movement/pathfinding.js';
+import { ejectEntitiesFromTile } from '../../../engine/movement/collision.js';
+import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
+import { isInSafeArea } from '../../conflict/combat/combat.rules.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { harvest } from '../gathering/gathering.behaviours.js';
+
 // Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
 // one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)
-function pickApples(s, tick) {
+export function pickApples(s, tick) {
   if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.isPossessed || tick.isWaveActive) return false;
   if (s.carrying && !hasRoomToCarry(s)) return false;
   const reach = getSettlerReach(s);
@@ -21,7 +38,7 @@ function pickApples(s, tick) {
 }
 
 // Walk up to an apple tree and pick its apples; false if there's nowhere to stand next to it
-function pickApplesFrom(s, target, dt) {
+export function pickApplesFrom(s, target, dt) {
   const spot = getResourceApproachPoint(s, target);
   if (!spot) return false;
   if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) {
@@ -53,7 +70,7 @@ function pickApplesFrom(s, target, dt) {
 
 // A farmer with a watering can waters growing crops (wheat plots, saplings) that aren't watered yet,
 // filling up at the nearest water it can reach; a watered crop grows faster (GAME_CONFIG.gear.wateringCan)
-function waterCrops(s, tick) {
+export function waterCrops(s, tick) {
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'hoe') || !s.wateringCan || s.carrying || s.isPossessed || tick.isWaveActive) return false;
   const can = GAME_CONFIG.gear.wateringCan;
   const thirsty = [...game.farmPlots.filter(f => f.growth < 100), ...game.trees.filter(t => t.isGrowing)]
@@ -82,7 +99,7 @@ function waterCrops(s, tick) {
 }
 
 // A farmer with nothing to plant or harvest gathers grass (see canSettlerHarvest)
-function farmerGathersGrass(s, tick) {
+export function farmerGathersGrass(s, tick) {
   if (!hasToolFamily(s.tool, 'hoe')) return false;
   tick.idleFarmer = s;
   const busy = harvest(s, tick);
@@ -94,7 +111,7 @@ function farmerGathersGrass(s, tick) {
 
 // What's gathered by hand (grass, sticks, pebbles, bushes) lying on a farm zone tile: workers without a
 // tool take it home first (worked as if marked with priority 1), so the tile can be planted
-function findZoneBlockers(allResources, resourceKind) {
+export function findZoneBlockers(allResources, resourceKind) {
   const blockers = new Set();
   if (game.farmZones.length === 0) return blockers;
   const zoneTiles = new Set(game.farmZones.map(z => `${z.x},${z.y}`));
@@ -108,7 +125,7 @@ function findZoneBlockers(allResources, resourceKind) {
 
 // Farmers (a worker with a hoe) plant the empty tiles of the player's farm zones, nearest first; one
 // farmer per tile. Planting takes GAME_CONFIG.farming.plantSeconds and costs the crop's building cost.
-function tendFarmZones(s, tick) {
+export function tendFarmZones(s, tick) {
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'hoe') || s.carrying || s.isPossessed || tick.isWaveActive) return false;
   const farming = GAME_CONFIG.farming;
   const reach = getSettlerReach(s);

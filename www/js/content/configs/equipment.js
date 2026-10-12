@@ -1,6 +1,6 @@
 // Tools, weapons, gear and what's crafted at the town hall
 
-Object.assign(GAME_CONFIG, {
+export const equipmentConfig = {
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
   // combatDamage / huntDamage: what an unarmed settler carrying it hits enemies / boars for.
   tools: {
@@ -63,4 +63,4 @@ Object.assign(GAME_CONFIG, {
   recipes: {
     arrows: { id: 'arrows', icon: 'arrows', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } }
   }
-});
+};

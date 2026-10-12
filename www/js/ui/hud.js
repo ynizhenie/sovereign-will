@@ -1,6 +1,15 @@
 // The top bar and the resource tiles: the wave and its timer, the base, settlers, the stock, the seed
 
-function updateUI() {
+import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
+import { setRichText } from './icons.js';
+import { t } from '../engine/platform/i18n.js';
+import { game, townHall } from '../engine/world/state.js';
+import { renderSettlerInfo } from '../domains/colony/settlers/settlers.panel.js';
+import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/equipment.rules.js';
+import { getResourceAmount, syncFoodMix } from '../domains/colony/storage/storage.rules.js';
+import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade } from '../domains/colony/settlers/settlers.rules.js';
+
+export function updateUI() {
   document.getElementById('wave-num').innerText = game.waveNum;
   document.getElementById('wave-timer').innerText = Math.ceil(game.waveTimer);
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
@@ -60,12 +69,12 @@ function updateUI() {
 
 }
 
-function resourceHudId(resourceKey) {
+export function resourceHudId(resourceKey) {
   return `resource-${resourceKey}-txt`;
 }
 
 // Open a resource group's row (closing any other), or close it if it's open
-function toggleResourceGroup(groupId) {
+export function toggleResourceGroup(groupId) {
   for (const group of GAME_CONFIG.resourceGroups) {
     const row = document.getElementById(`group-${group.id}-members`);
     const tile = document.getElementById(`group-${group.id}`);
@@ -75,7 +84,7 @@ function toggleResourceGroup(groupId) {
   }
 }
 
-function updateSeedHud() {
+export function updateSeedHud() {
   const seedElem = document.getElementById('hud-seed');
   if (seedElem && game.worldSeed) {
     seedElem.innerText = game.worldSeed.value;

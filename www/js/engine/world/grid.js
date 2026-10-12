@@ -1,7 +1,11 @@
 // The world as a grid of tiles: setting the map's size, world <-> tile, and an index of what stands on
 // each tile (rebuilt when something changes). The tile size itself is in state.js.
 
-function setWorldSize(cols, rows) {
+import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
+import { BORDER_MARGIN, DEFAULT_MAP_TILES, TILE_SIZE, game, townHall } from './state.js';
+import { camera } from '../platform/camera.js';
+
+export function setWorldSize(cols, rows) {
   game.COLS = cols; game.ROWS = rows;
   game.WORLD_WIDTH = cols * TILE_SIZE; game.WORLD_HEIGHT = rows * TILE_SIZE;
   townHall.x = game.WORLD_WIDTH / 2; townHall.y = game.WORLD_HEIGHT / 2;
@@ -9,20 +13,20 @@ function setWorldSize(cols, rows) {
 }
 
 // how many times the default map's area this one is: counts on the map (forests, lakes...) scale by it
-function getMapAreaScale() {
+export function getMapAreaScale() {
   return (game.COLS * game.ROWS) / (DEFAULT_MAP_TILES * DEFAULT_MAP_TILES);
 }
 
-function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: Math.floor(y / TILE_SIZE) }; }
+export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: Math.floor(y / TILE_SIZE) }; }
 
 // What occupies each tile, keyed "x,y" by tile center. Path searches check thousands of tiles,
 // so they look tiles up here instead of scanning every object list. Rebuilt lazily after
 // resetTileIndex(), which runs every tick and whenever paths are invalidated.
-let tileIndex = null;
+export let tileIndex = null;
 
-function resetTileIndex() { tileIndex = null; }
+export function resetTileIndex() { tileIndex = null; }
 
-function getTileIndex() {
+export function getTileIndex() {
   if (tileIndex) return tileIndex;
   const keys = list => new Set(list.map(o => `${o.x},${o.y}`));
   // changes whenever anything that blocks a tile appears, disappears or moves; used to invalidate
@@ -57,6 +61,6 @@ function getTileIndex() {
   return tileIndex;
 }
 
-function isBorderZone(gx, gy) {
+export function isBorderZone(gx, gy) {
   return gx < BORDER_MARGIN || gx >= game.COLS - BORDER_MARGIN || gy < BORDER_MARGIN || gy >= game.ROWS - BORDER_MARGIN;
 }

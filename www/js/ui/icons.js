@@ -7,95 +7,97 @@
 //   them on the canvas, and plainText() drops them where only text fits (tooltips).
 // - drawIcon(ctx, name, x, y, size) draws one centred at (x, y) on the canvas.
 
-const ICON_PIXELS = 64; // each icon is painted once at this size and scaled from there
+import { GAME_CONFIG } from '../content/configs/index.js';
+
+export const ICON_PIXELS = 64; // each icon is painted once at this size and scaled from there
 
 // ---- Painting helpers (c: a context scaled to the 32×32 grid)
 
-function icPath(c, points, close = true) {
+export function icPath(c, points, close = true) {
   c.beginPath();
   c.moveTo(points[0][0], points[0][1]);
   for (let i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
   if (close) c.closePath();
 }
-function icFill(c, color, points) { c.fillStyle = color; icPath(c, points); c.fill(); }
-function icLine(c, color, width, points) {
+export function icFill(c, color, points) { c.fillStyle = color; icPath(c, points); c.fill(); }
+export function icLine(c, color, width, points) {
   c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round';
   icPath(c, points, false); c.stroke();
 }
-function icCircle(c, color, x, y, r) { c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
-function icRing(c, color, width, x, y, r, from = 0, to = Math.PI * 2) {
+export function icCircle(c, color, x, y, r) { c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
+export function icRing(c, color, width, x, y, r, from = 0, to = Math.PI * 2) {
   c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.beginPath(); c.arc(x, y, r, from, to); c.stroke();
 }
-function icRect(c, color, x, y, w, h) { c.fillStyle = color; c.fillRect(x, y, w, h); }
-function icRound(c, color, x, y, w, h, r) {
+export function icRect(c, color, x, y, w, h) { c.fillStyle = color; c.fillRect(x, y, w, h); }
+export function icRound(c, color, x, y, w, h, r) {
   c.fillStyle = color; c.beginPath(); c.roundRect(x, y, w, h, r); c.fill();
 }
-function icEllipse(c, color, x, y, rx, ry, rot = 0) {
+export function icEllipse(c, color, x, y, rx, ry, rot = 0) {
   c.fillStyle = color; c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); c.fill();
 }
 
 // shared shapes
-const icSword = (c, blade, edge) => {
+export const icSword = (c, blade, edge) => {
   icFill(c, blade, [[22, 4], [27, 5], [12, 20], [10, 18]]);
   icLine(c, edge, 1.2, [[25, 5], [11, 19]]);
   icLine(c, '#f39c12', 3, [[7, 15], [15, 23]]);
   icLine(c, '#8e5a2b', 3, [[10, 20], [5, 25]]);
   icCircle(c, '#f39c12', 4.5, 25.5, 2);
 };
-const icSpear = (c, shaft) => {
+export const icSpear = (c, shaft) => {
   icLine(c, shaft, 2.6, [[5, 27], [22, 10]]);
   icFill(c, '#dfe6e9', [[28, 4], [25, 13], [19, 7]]);
 };
-const icAxe = (c, head, edge) => {
+export const icAxe = (c, head, edge) => {
   icLine(c, '#8e5a2b', 3, [[8, 28], [20, 6]]);
   icFill(c, head, [[16, 6], [26, 3], [28, 13], [19, 13]]);
   icLine(c, edge, 1.5, [[26, 4], [28, 12]]);
 };
-const icPickaxe = (c, head) => {
+export const icPickaxe = (c, head) => {
   icLine(c, '#8e5a2b', 3, [[7, 28], [20, 9]]);
   c.strokeStyle = head; c.lineWidth = 3.5; c.lineCap = 'round';
   c.beginPath(); c.moveTo(6, 9); c.quadraticCurveTo(17, 1, 29, 12); c.stroke();
 };
-const icRockLump = (c, x, y, s, color, shade) => {
+export const icRockLump = (c, x, y, s, color, shade) => {
   icFill(c, color, [[x - 7 * s, y + 5 * s], [x - 8 * s, y - 1 * s], [x - 3 * s, y - 6 * s], [x + 4 * s, y - 6 * s], [x + 8 * s, y], [x + 6 * s, y + 5 * s]]);
   icFill(c, shade, [[x - 7 * s, y + 5 * s], [x + 6 * s, y + 5 * s], [x + 8 * s, y], [x + 2 * s, y + 2 * s]]);
 };
-const icTile = (c, color, edge) => { icRound(c, color, 3, 3, 26, 26, 4); c.strokeStyle = edge; c.lineWidth = 2; c.beginPath(); c.roundRect(3, 3, 26, 26, 4); c.stroke(); };
-const icCrown = (c, color, shade) => {
+export const icTile = (c, color, edge) => { icRound(c, color, 3, 3, 26, 26, 4); c.strokeStyle = edge; c.lineWidth = 2; c.beginPath(); c.roundRect(3, 3, 26, 26, 4); c.stroke(); };
+export const icCrown = (c, color, shade) => {
   icRect(c, '#6d4c2f', 14, 18, 4, 11);
   icCircle(c, shade, 16, 14, 11);
   icCircle(c, color, 14.5, 12.5, 9);
 };
-const icSprout = c => {
+export const icSprout = c => {
   icLine(c, '#27ae60', 2.5, [[16, 28], [16, 14]]);
   icEllipse(c, '#2ecc71', 10.5, 13, 6, 3.5, -0.5);
   icEllipse(c, '#58d68d', 21.5, 11, 6, 3.5, 0.5);
   icEllipse(c, '#6d4c2f', 16, 28, 8, 2.5);
 };
-const icFish = (c, body, fin) => {
+export const icFish = (c, body, fin) => {
   icEllipse(c, body, 15, 16, 10, 6.5);
   icFill(c, fin, [[24, 16], [30, 9], [30, 23]]);
   icCircle(c, '#fff', 9.5, 14.5, 2); icCircle(c, '#2c3e50', 9.5, 14.5, 1);
 };
-const icFlame = (c, x, y, s) => {
+export const icFlame = (c, x, y, s) => {
   c.fillStyle = '#e67e22'; c.beginPath(); c.moveTo(x - 8 * s, y);
   c.quadraticCurveTo(x - 9 * s, y - 10 * s, x, y - 18 * s); c.quadraticCurveTo(x + 9 * s, y - 10 * s, x + 8 * s, y); c.closePath(); c.fill();
   c.fillStyle = '#f1c40f'; c.beginPath(); c.moveTo(x - 4 * s, y);
   c.quadraticCurveTo(x - 4 * s, y - 6 * s, x, y - 10 * s); c.quadraticCurveTo(x + 4 * s, y - 6 * s, x + 4 * s, y); c.closePath(); c.fill();
 };
-const icPerson = (c, body, scale) => {
+export const icPerson = (c, body, scale) => {
   icCircle(c, '#1e272e', 16, 17, 12 * scale + 1.5);
   icCircle(c, body, 16, 17, 12 * scale);
 };
-const icZone = (c, fill, edge) => { icRound(c, fill, 4, 4, 24, 24, 3); c.strokeStyle = edge; c.lineWidth = 2.5; c.beginPath(); c.roundRect(4, 4, 24, 24, 3); c.stroke(); };
-const icArrow = (c, x) => {
+export const icZone = (c, fill, edge) => { icRound(c, fill, 4, 4, 24, 24, 3); c.strokeStyle = edge; c.lineWidth = 2.5; c.beginPath(); c.roundRect(4, 4, 24, 24, 3); c.stroke(); };
+export const icArrow = (c, x) => {
   icLine(c, '#8e5a2b', 2, [[x, 27], [x, 9]]);
   icFill(c, '#bdc3c7', [[x - 3.5, 10], [x, 3], [x + 3.5, 10]]);
   icFill(c, '#ecf0f1', [[x, 22], [x - 3.5, 29], [x - 3.5, 24], [x, 18]]);
   icFill(c, '#d5dbdb', [[x, 22], [x + 3.5, 29], [x + 3.5, 24], [x, 18]]);
 };
 
-const ICONS = {
+export const ICONS = {
   // ---- Messages and controls
   no: c => { icLine(c, '#e74c3c', 5.5, [[8, 8], [24, 24]]); icLine(c, '#e74c3c', 5.5, [[24, 8], [8, 24]]); },
   close: c => { icLine(c, '#bdc3c7', 4.5, [[9, 9], [23, 23]]); icLine(c, '#bdc3c7', 4.5, [[23, 9], [9, 23]]); },
@@ -514,8 +516,8 @@ const ICONS = {
 
 // ---- Rendering icons
 
-const iconCanvases = {};
-function getIconCanvas(name) {
+export const iconCanvases = {};
+export function getIconCanvas(name) {
   if (iconCanvases[name]) return iconCanvases[name];
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = ICON_PIXELS;
@@ -526,39 +528,39 @@ function getIconCanvas(name) {
   return canvas;
 }
 
-function drawIcon(context, name, x, y, size) {
+export function drawIcon(context, name, x, y, size) {
   context.drawImage(getIconCanvas(name), x - size / 2, y - size / 2, size, size);
 }
 
-const ICON_TOKEN = /\[\[([\w]+)\]\]/g;
+export const ICON_TOKEN = /\[\[([\w]+)\]\]/g;
 // a price's part, {{resource:amount}} (formatCost): drawn as the amount and the resource's icon, in a span
 // of its own, so a button can show which part the stock is short of (refreshAffordability in ui.js)
-const COST_TOKEN = /\{\{(\w+):([\d.]+)\}\}/g;
-const expandCostTokens = text => String(text).replace(COST_TOKEN, (_, id, amount) => `${amount}${getResourceIcon(id)}`);
-const escapeHtml = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+export const COST_TOKEN = /\{\{(\w+):([\d.]+)\}\}/g;
+export const expandCostTokens = text => String(text).replace(COST_TOKEN, (_, id, amount) => `${amount}${getResourceIcon(id)}`);
+export const escapeHtml = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
-function iconHtml(name) {
+export function iconHtml(name) {
   return `<i class="ic ic-${name}"></i>`;
 }
 
 // Text with [[icon]] marks as HTML: the text escaped, the marks as icons
-function richText(text) {
+export function richText(text) {
   return escapeHtml(text)
     .replace(COST_TOKEN, (_, id, amount) => `<span class="cost-part" data-res="${id}" data-amount="${amount}">${amount}${richText(getResourceIcon(id))}</span>`)
     .replace(ICON_TOKEN, (_, name) => iconHtml(name));
 }
 
 // The text without its icons, for where only plain text goes (tooltips, placeholders)
-function plainText(text) {
+export function plainText(text) {
   return expandCostTokens(text).replace(ICON_TOKEN, '').replace(/\s{2,}/g, ' ').trim();
 }
 
-function setRichText(element, text) {
+export function setRichText(element, text) {
   element.innerHTML = richText(text);
 }
 
 // Text with [[icon]] marks on the canvas, in the current font, fillStyle and textAlign (left/center)
-function fillRichText(context, text, x, y) {
+export function fillRichText(context, text, x, y) {
   const parts = expandCostTokens(text).split(ICON_TOKEN); // text, icon name, text, icon name...
   const size = parseFloat(/(\d+(\.\d+)?)px/.exec(context.font)?.[1] || 12) * 1.15;
   const width = parts.reduce((sum, part, i) => sum + (i % 2 ? size : context.measureText(part).width), 0);
@@ -572,18 +574,18 @@ function fillRichText(context, text, x, y) {
   context.textAlign = align;
 }
 
-function getResourceIconName(resourceKey) {
+export function getResourceIconName(resourceKey) {
   const known = GAME_CONFIG.resources[resourceKey] || GAME_CONFIG.foodKinds[resourceKey];
   return known ? known.icon : 'bundle';
 }
 
-function getResourceIcon(resourceKey) {
+export function getResourceIcon(resourceKey) {
   const resource = GAME_CONFIG.resources[resourceKey];
   return resource ? `[[${resource.icon}]]` : resourceKey;
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initIcons() {
+export function initIcons() {
   // The icons as CSS classes (.ic-name), so HTML anywhere can show one with <i class="ic ic-name">
   (function makeIconStyles() {
     const rules = Object.keys(ICONS).map(name => `.ic-${name}{background-image:url(${getIconCanvas(name).toDataURL()})}`);

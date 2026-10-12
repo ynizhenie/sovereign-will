@@ -7,19 +7,34 @@
 // load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
 // loading puts the real object back in its place.
 
-const SAVE_STORAGE_KEY = 'sovereign-will-saves';
-// caches, worked out again after loading rather than saved
-const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
+import { rebuildConfigHud, renderedFaction } from '../../ui/bottom-panel.js';
+import { t } from '../../engine/platform/i18n.js';
+import { resetTileIndex, setWorldSize } from '../../engine/world/grid.js';
+import { WORLD_LISTS, game, townHall } from '../../engine/world/state.js';
+import { createWorldSeed } from '../../engine/world/rng.js';
+import { updateUnitCounts } from '../../domains/colony/settlers/settlers.panel.js';
+import { stock } from '../../domains/colony/storage/storage.rules.js';
+import { updateSeedHud } from '../../ui/hud.js';
+import { sides } from '../../domains/factions/factions.rules.js';
+import { showNotification } from '../../ui/toasts.js';
+import { camera, clampCamera } from '../../engine/platform/camera.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { setPaused } from '../../app/session.js';
+import { renderItemList } from '../../ui/widgets.js';
 
-function loadSaves() {
+export const SAVE_STORAGE_KEY = 'sovereign-will-saves';
+// caches, worked out again after loading rather than saved
+export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
+
+export function loadSaves() {
   try { return JSON.parse(localStorage.getItem(SAVE_STORAGE_KEY)) || {}; } catch (e) { return {}; }
 }
 
-function storeSaves(saves) {
+export function storeSaves(saves) {
   try { localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(saves)); return true; } catch (e) { return false; }
 }
 
-function serializeGame() {
+export function serializeGame() {
   const refs = new Map([[townHall, '$hall']]);
   for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) {
     if (Array.isArray(value)) value.forEach((o, i) => { if (o && typeof o === 'object') refs.set(o, `${list}:${i}`); });
@@ -47,7 +62,7 @@ function serializeGame() {
 }
 
 // Put every { $ref } back as the object it names
-function resolveRefs(root) {
+export function resolveRefs(root) {
   const lookup = ref => (ref === '$hall' ? townHall : game[ref.slice(0, ref.indexOf(':'))][Number(ref.slice(ref.indexOf(':') + 1))]);
   const seen = new Set();
   const walk = value => {
@@ -62,7 +77,7 @@ function resolveRefs(root) {
   walk(root);
 }
 
-function loadGame(data) {
+export function loadGame(data) {
   game.gameMode = 'endless';
   Object.assign(sides.player, data.sides.player);
   Object.assign(sides.enemy, data.sides.enemy);
@@ -90,7 +105,7 @@ function loadGame(data) {
 }
 
 // From the pause menu: saved under the wave and the time, never over another save
-function saveCurrentGame() {
+export function saveCurrentGame() {
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
@@ -104,7 +119,7 @@ function saveCurrentGame() {
 }
 
 // The Endless menu's list of saves, newest first
-function renderSaveList() {
+export function renderSaveList() {
   const saves = Object.values(loadSaves()).sort((a, b) => b.savedAt - a.savedAt);
   document.getElementById('save-settings').hidden = saves.length === 0;
   renderItemList(document.getElementById('save-list'), saves.map(s => ({ id: s.name, label: s.name })), {
@@ -115,7 +130,7 @@ function renderSaveList() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initEndlessSaves() {
+export function initEndlessSaves() {
   onTap(document.getElementById('save-game-button'), saveCurrentGame);
   onTap(document.getElementById('mode-endless'), renderSaveList);
 }

@@ -51,7 +51,6 @@ test('the watering can is given from the Tools tab, only to a farmer (#106)', as
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
     window.sim.start('can-test');
-    window.showNotification = () => {};
     const worker = makeSettler(1, townHall.x + 50, townHall.y), farmer = makeSettler(2, townHall.x - 50, townHall.y, { tool: 'hoe' });
     settlers = [worker, farmer];
     stock.wood = stock.iron = 10;

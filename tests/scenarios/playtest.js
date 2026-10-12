@@ -54,7 +54,6 @@ Object.assign(window.sim, (() => {
   // other work. Returns how long anyone stood still on a tile it can't walk (inside the campfire).
   function campfireInFront({ seed = 'stuck-a', seconds = 120 }) {
     start(seed);
-    window.showNotification = () => {};
     const cf = nearHall(0, 2); placeBuilding('campfire', cf.x, cf.y);
     for (const [dx, dy] of [[-2, 1], [-2, 2], [2, 1]]) { const p = nearHall(dx, dy); placeBuilding('spikes', p.x, p.y); }
     const wh = nearHall(4, 3); placeBuilding('warehouse', wh.x, wh.y);
@@ -113,16 +112,14 @@ Object.assign(window.sim, (() => {
   function ownSpikesAtHall({ seed = 'own-spikes', seconds = 90 }) {
     start(seed);
     clearResources();
-    window.showNotification = () => {};
     for (const [dx, dy] of [[-2, -1], [-2, 0], [-2, 1], [0, -2], [-1, -2]]) { const p = nearHall(dx, dy); placeBuilding('spikes', p.x, p.y); }
     // trees out to the left and above, so the way home comes past the spikes
     for (const [dx, dy] of [[-7, 0], [-7, 2], [-6, -3], [0, -7], [-3, -6]]) { const p = nearHall(dx, dy); trees.push({ x: p.x, y: p.y, hp: 40, maxHp: 40 }); }
     invalidateAllPaths();
     settlers = [1, 2, 3].map(i => makeSettler(i, townHall.x - 120, townHall.y - 20 * i, { tool: 'axe' }));
+    // the damage taken: each tick what the settlers lost, then healed back to full
     let hurt = 0;
-    const was = window.damageSettler; window.damageSettler = (s, amount, attacker) => { hurt += amount; was(s, amount, attacker); };
-    run(seconds, { each: () => settlers.forEach(s => { s.hunger = 999; s.hp = s.maxHp; }) });
-    window.damageSettler = was;
+    run(seconds, { each: () => settlers.forEach(s => { hurt += s.maxHp - s.hp; s.hunger = 999; s.hp = s.maxHp; }) });
     return { hurt, wood: stock.wood };
   }
 

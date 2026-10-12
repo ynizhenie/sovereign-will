@@ -1,7 +1,14 @@
 // Blood, arrows, flames and the target mark
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { game } from '../../../engine/world/state.js';
+import { ctx } from '../../../engine/platform/canvas.js';
+import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
+import { corpseHasWorms } from '../../economy/fishing/fishing.rules.js';
+import { tileVariantHash } from '../../world/world.draw.js';
+
 // Blood on the blade of the held item, fading (see bleed)
-function drawWeaponBlood(unit) {
+export function drawWeaponBlood(unit) {
   const alpha = bloodAlpha(unit.weaponBloodAge);
   if (alpha <= 0) return;
   ctx.fillStyle = `rgba(120, 0, 0, ${0.85 * alpha})`;
@@ -9,7 +16,7 @@ function drawWeaponBlood(unit) {
 }
 
 // Blood on a hurt unit's body: a few blotches at spots fixed per unit; stays while badly wounded
-function drawBodyBlood(unit, radius) {
+export function drawBodyBlood(unit, radius) {
   const alpha = bodyBloodAlpha(unit);
   if (alpha <= 0) return;
   ctx.fillStyle = `rgba(110, 0, 0, ${0.8 * alpha})`;
@@ -21,7 +28,7 @@ function drawBodyBlood(unit, radius) {
 }
 
 // An arrow in flight: a shaft along its way, a grey head, pale fletching (enemies' red)
-function drawArrow(proj) {
+export function drawArrow(proj) {
   ctx.save();
   ctx.translate(proj.x, proj.y);
   ctx.rotate(Math.atan2(proj.vy, proj.vx));
@@ -33,7 +40,7 @@ function drawArrow(proj) {
 }
 
 // Flames licking up a burning unit (#165)
-function drawBurning(x, y, r) {
+export function drawBurning(x, y, r) {
   const flicker = Math.sin(game.pathTick * 0.5) * 2;
   ctx.fillStyle = 'rgba(230, 126, 34, 0.85)';
   ctx.beginPath(); ctx.moveTo(x - r * 0.6, y); ctx.quadraticCurveTo(x, y - r * 1.6 - flicker, x + r * 0.6, y); ctx.fill();
@@ -42,7 +49,7 @@ function drawBurning(x, y, r) {
 }
 
 // Enemy the player marked as a priority target: a red reticle
-function drawTargetMark(en) {
+export function drawTargetMark(en) {
   const r = en.radius + 6;
   ctx.strokeStyle = '#ff5c5c'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(en.x, en.y, r, 0, Math.PI * 2); ctx.stroke();
@@ -55,7 +62,7 @@ function drawTargetMark(en) {
 }
 
 // Blood on the ground, and footprints out of blood or dung
-function drawBloodOnGround() {
+export function drawBloodOnGround() {
   game.bloodSplats.forEach(b => {
     const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
     ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
@@ -64,7 +71,7 @@ function drawBloodOnGround() {
 }
 
 // Corpses: grey, fading out over their last 10 seconds; worms on them
-function drawCorpses() {
+export function drawCorpses() {
   game.corpses.forEach(c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
     ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
@@ -88,7 +95,7 @@ function drawCorpses() {
 }
 
 // Arrows and fireballs in flight
-function drawProjectiles() {
+export function drawProjectiles() {
   game.projectiles.forEach(proj => {
     // fireballs (#43) bigger and orange; everything else is an arrow, pointing where it flies (#173)
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }

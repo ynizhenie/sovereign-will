@@ -1,12 +1,23 @@
 // Workers gather: pick a resource (the player's marks first), walk to it, work it with the right tool
 
+import { game } from '../../../engine/world/state.js';
+import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
+import { isBigBody } from '../../colony/settlers/settlers.rules.js';
+import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
+import { getReachDistanceToResource, getSettlerReach } from '../../../engine/movement/pathfinding.js';
+import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
+import { isInSafeArea } from '../../conflict/combat/combat.rules.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { huntBoar } from '../hunting/hunting.behaviours.js';
+import { playWorkSound } from '../../../app/sounds.js';
+
 // Workers gather any time; soldiers only between waves (hunting boars, picking up carcasses)
-function canGather(s, tick) {
+export function canGather(s, tick) {
   return s.role === 'worker' || (s.role !== 'worker' && !tick.isWaveActive);
 }
 
 // Can this settler work this resource with what it has in hand?
-function canSettlerHarvest(s, r, tick) {
+export function canSettlerHarvest(s, r, tick) {
   const kind = tick.resourceKind.get(r);
   if (s.role !== 'worker') {
     if (r.isCarcass) return r.collector === s;
@@ -43,7 +54,7 @@ function canSettlerHarvest(s, r, tick) {
 
 // Player-marked resources first (up to their priority in workers), otherwise the nearest one the settler
 // can walk to. Returns null if there's nothing to do.
-function pickResourceToHarvest(s, tick) {
+export function pickResourceToHarvest(s, tick) {
   const settlerReach = getSettlerReach(s);
   // resources this settler recently found no spot next to (see harvest())
   const skipped = r => s.skippedResource === r && game.pathTick < s.skippedUntilTick;
@@ -74,7 +85,7 @@ function pickResourceToHarvest(s, tick) {
 }
 
 // Work a resource the settler is standing next to, the way its GAME_CONFIG.mapResources `work` says
-function workResource(s, assignedRes, tick) {
+export function workResource(s, assignedRes, tick) {
   const dt = tick.dt;
   const kind = tick.resourceKind.get(assignedRes);
   const def = getMapResourceDef(kind);
@@ -111,7 +122,7 @@ function workResource(s, assignedRes, tick) {
 }
 
 // Gather: pick a resource, walk to a free spot next to it, work it
-function harvest(s, tick) {
+export function harvest(s, tick) {
   if (!canGather(s, tick)) return false;
   const assignedRes = pickResourceToHarvest(s, tick);
   if (!assignedRes) return false;
@@ -141,6 +152,6 @@ function harvest(s, tick) {
 // ---- Doors
 
 // How many workers a priority resource takes at once: the player's mark, or 1 for a door blocker
-function getWorkPriority(r) {
+export function getWorkPriority(r) {
   return r.priority || 1;
 }

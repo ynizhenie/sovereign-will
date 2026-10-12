@@ -1,6 +1,15 @@
 // The settlers in the panel: how many of each, and the selected one's info line
 
-function updateUnitCounts() {
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { getResourceIconName, setRichText } from '../../../ui/icons.js';
+import { t } from '../../../engine/platform/i18n.js';
+import { game } from '../../../engine/world/state.js';
+import { getPlayerFaction } from '../../factions/factions.rules.js';
+import { camera, clampCamera } from '../../../engine/platform/camera.js';
+import { isTouchScreen } from '../../../engine/platform/input.js';
+import { getPossessed } from './settlers.rules.js';
+
+export function updateUnitCounts() {
   const workers = game.settlers.filter(s => s.role === 'worker').length;
   const warriors = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
 
@@ -12,7 +21,7 @@ function updateUnitCounts() {
 }
 
 // The selected settler's info line (#180): what it's doing, when it's next hungry, what it carries
-function renderSettlerInfo(s) {
+export function renderSettlerInfo(s) {
   const activity = `activity.${s.activity || 'patrol'}`;
   const parts = [t(activity) === activity ? t('activity.patrol') : t(activity)];
   parts.push(getPlayerFaction().eats ? t('info.hungry', { seconds: Math.max(0, Math.ceil(getHungerSeconds(s))) }) : t('info.noHunger'));
@@ -27,12 +36,12 @@ function renderSettlerInfo(s) {
 }
 
 // Seconds until this settler eats next
-function getHungerSeconds(s) {
+export function getHungerSeconds(s) {
   return s.hunger !== undefined ? s.hunger : GAME_CONFIG.meals.seconds;
 }
 
 // While possessing: the camera follows the possessed settler; the joystick shows on a touch screen
-function updatePossessionView() {
+export function updatePossessionView() {
   const possessed = getPossessed();
   const joystickEl = document.getElementById('mobile-joystick');
 

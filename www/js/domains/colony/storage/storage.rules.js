@@ -1,24 +1,35 @@
 // The colony's stock and its storages (the town hall and warehouses): taking and adding, prices and
 // whether they can be paid, food by kind, and what a settler carries
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { getResourceIcon } from '../../../ui/icons.js';
+import { t } from '../../../engine/platform/i18n.js';
+import { getGridPos } from '../../../engine/world/grid.js';
+import { game, townHall } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { getReservedForBlueprints } from '../../economy/building/building.rules.js';
+import { showNotification } from '../../../ui/toasts.js';
+import { isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+
 // ---- The colony's stock (#36, #141): amount per resource id of GAME_CONFIG.resources, shared by the
 // whole colony (set from GAME_CONFIG.start by resetGame). The town hall and warehouses are where
 // settlers bring what they gather and fetch what they need: whichever is nearest.
-const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
+export const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
 
-function getStorages() {
+export function getStorages() {
   return [townHall, ...game.buildings.filter(b => b.type === 'warehouse')];
 }
 
 // Take up to `amount` of a resource out of the stock; returns how much there was
-function takeStock(id, amount) {
+export function takeStock(id, amount) {
   const got = Math.max(0, Math.min(amount, stock[id] || 0));
   stock[id] -= got;
   return got;
 }
 
 // Shown in the HUD: the stock, plus for arrows the ones already loaded in towers and quivers
-function getResourceAmount(resourceKey) {
+export function getResourceAmount(resourceKey) {
   let amount = stock[resourceKey] || 0;
   if (resourceKey === 'arrows') {
     amount += game.buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) +
@@ -29,13 +40,13 @@ function getResourceAmount(resourceKey) {
 
 // ---- Food kinds (GAME_CONFIG.foodKinds): all Food, remembered by kind for the HUD
 
-function isFoodKind(type) {
+export function isFoodKind(type) {
   return !!GAME_CONFIG.foodKinds[type];
 }
 
 // Ready food of a kind into the stock
 // The start's food as a random mix of kinds (#169)
-function mixStartFood() {
+export function mixStartFood() {
   const kinds = Object.keys(GAME_CONFIG.foodKinds);
   game.foodMix = {};
   for (let i = 0; i < Math.floor(stock.food); i++) {
@@ -45,7 +56,7 @@ function mixStartFood() {
   syncFoodMix();
 }
 
-function addFood(kind, amount) {
+export function addFood(kind, amount) {
   syncFoodMix();
   stock.food += amount;
   game.foodMix[kind] = (game.foodMix[kind] || 0) + amount;
@@ -53,7 +64,7 @@ function addFood(kind, amount) {
 
 // Keep the kinds adding up to stock.food: food added without a kind goes, a piece at a time, to whichever
 // kind there's least of; food spent or eaten comes off the kinds in GAME_CONFIG.foodKinds order
-function syncFoodMix() {
+export function syncFoodMix() {
   const kinds = Object.keys(GAME_CONFIG.foodKinds);
   let diff = stock.food - kinds.reduce((sum, k) => sum + (game.foodMix[k] || 0), 0);
   while (diff > 1e-9) {
@@ -70,40 +81,40 @@ function syncFoodMix() {
   }
 }
 
-function formatCost(cost = {}) {
+export function formatCost(cost = {}) {
   return Object.entries(cost)
     .map(([key, value]) => (GAME_CONFIG.resources[key] ? `{{${key}:${value}}}` : `${value}${getResourceIcon(key)}`))
     .join(' ');
 }
 
-function canAfford(cost = {}) {
+export function canAfford(cost = {}) {
   return Object.entries(cost).every(([key, amount]) => Number(stock[key] || 0) >= Number(amount || 0));
 }
 
-const getFreeStock = id => Number(stock[id] || 0) - getReservedForBlueprints(id);
+export const getFreeStock = id => Number(stock[id] || 0) - getReservedForBlueprints(id);
 
 // Take / give a cost ({ resourceId: amount }) from / to the stock
-function payCost(cost = {}) {
+export function payCost(cost = {}) {
   for (const [resource, amount] of Object.entries(cost)) stock[resource] = Number(stock[resource] || 0) - Number(amount || 0);
 }
 
-function addResources(amounts = {}) {
+export function addResources(amounts = {}) {
   for (const [resource, amount] of Object.entries(amounts)) stock[resource] = Number(stock[resource] || 0) + Number(amount || 0);
 }
 
 // have: how much of a resource counts as there (the whole stock, or for buildings what's not promised)
-function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
+export function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
   return Object.entries(cost)
     .filter(([key, amount]) => have(key) < Number(amount || 0))
     .map(([key, amount]) => `${Number(amount) - have(key)}${getResourceIcon(key)}`)
     .join(', ');
 }
 
-function showCostError(cost, prefix, have) {
+export function showCostError(cost, prefix, have) {
   showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost, have) }), true);
 }
 
-function giveResourceToSettler(s, type, amount) {
+export function giveResourceToSettler(s, type, amount) {
   if (!s) return;
   if (!s.carrying) {
     s.carrying = { type: type, amount: amount };
@@ -120,23 +131,23 @@ function giveResourceToSettler(s, type, amount) {
 
 // How many gathered loads this settler carries before heading home: its type's carryLoads, plus a
 // backpack's. Fishers bring each catch home (they pick up bait there).
-function getCarryCapacity(s) {
+export function getCarryCapacity(s) {
   if (s.tool === 'rod') return 1;
   const type = getDefinition('settlerTypes', s.type) || GAME_CONFIG.settlerTypes.normal;
   return (type.carryLoads || 1) + (s.backpack ? GAME_CONFIG.gear.backpack.extraLoads : 0);
 }
 
 // Count one more gathered load on what the settler carries
-function addCarryLoad(s) {
+export function addCarryLoad(s) {
   if (s && s.carrying) s.carrying.loads = (s.carrying.loads || 0) + 1;
 }
 
 // Carrying gathered loads but room for more (smelter runs etc. have no loads: always full)
-function hasRoomToCarry(s) {
+export function hasRoomToCarry(s) {
   return !!s.carrying && s.carrying.loads !== undefined && s.carrying.loads < getCarryCapacity(s);
 }
 
-function getTownHallApproachPoint(settler) {
+export function getTownHallApproachPoint(settler) {
   let dx = settler.x - townHall.x;
   let dy = settler.y - townHall.y;
   let distance = Math.hypot(dx, dy);
@@ -161,7 +172,7 @@ function getTownHallApproachPoint(settler) {
   return { x: townHall.x + (dx / distance) * approachDistance, y: townHall.y + (dy / distance) * approachDistance };
 }
 
-function moveSettlerToTownHall(settler, speed, dt) {
+export function moveSettlerToTownHall(settler, speed, dt) {
   let approachPoint = getTownHallApproachPoint(settler);
   moveEntityTowards(settler, approachPoint.x, approachPoint.y, speed, false, dt);
 }

@@ -25,7 +25,6 @@ test('the shield button equips a melee soldier; disarming gives the shield back 
   await page.click('#play-button');
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
-    window.showNotification = () => {};
     settlers = [
       makeSettler(1, townHall.x - 40, townHall.y, { weapon: 'bow', role: 'archer', quiver: true }),
       makeSettler(2, townHall.x + 40, townHall.y, { weapon: 'sword', role: 'soldier' })

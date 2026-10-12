@@ -1,6 +1,6 @@
 // The map: how it's generated, what grows on it
 
-Object.assign(GAME_CONFIG, {
+export const mapConfig = {
   // ---- Things on the map to gather
   //
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
@@ -93,4 +93,4 @@ Object.assign(GAME_CONFIG, {
     rockClusterWidth: { min: 1, max: 10 },
     rockClusterHeight: { min: 1, max: 10 }
   }
-});
+};

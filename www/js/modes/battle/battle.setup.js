@@ -4,9 +4,23 @@
 // A fight can be called off, and the player can possess one of theirs in it. Archers' arrows don't run
 // out. Green units are settlers and red ones enemies, driven by the usual AI (#142, #166).
 
-const BATTLE_RESULT_SECONDS = 4;
+import { t } from '../../engine/platform/i18n.js';
+import { getGridPos, isBorderZone } from '../../engine/world/grid.js';
+import { TILE_SIZE, game, townHall } from '../../engine/world/state.js';
+import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/equipment.rules.js';
+import { createBuildingBlueprint } from '../../domains/economy/building/building.rules.js';
+import { createConfiguredEnemy } from '../../domains/conflict/waves/waves.rules.js';
+import { showNotification } from '../../ui/toasts.js';
+import { camera, clampCamera, setZoom } from '../../engine/platform/camera.js';
+import { createSettler } from '../../domains/colony/settlers/settlers.rules.js';
+import { exitToMainMenu, resetGame } from '../../app/session.js';
+import { invalidateAllPaths } from '../../engine/movement/pathfinding.js';
+import { getBattlePreset } from './battle.roster.js';
+import { renderBattlePanel } from './battle.panel.js';
 
-const battle = {
+export const BATTLE_RESULT_SECONDS = 4;
+
+export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'own',    // the panel's category
   faction: 'humans',  // the faction its units and buildings are shown for (#166)
@@ -22,11 +36,11 @@ const battle = {
 };
 
 // The midline: left of it is green, right of it red
-function battleSide(x) {
+export function battleSide(x) {
   return x < game.WORLD_WIDTH / 2 ? 'green' : 'red';
 }
 
-function makeBattleUnit(entry) {
+export function makeBattleUnit(entry) {
   const preset = getBattlePreset(entry.presetId);
   if (preset.enemy) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
@@ -48,7 +62,7 @@ function makeBattleUnit(entry) {
 }
 
 // An empty field: grass only, the town hall out of the way, no waves, no animals
-function setUpBattleField() {
+export function setUpBattleField() {
   battle.savedMapSettings = game.mapSettings;
   game.mapSettings = { cols: 40, rows: 26 };
   resetGame();
@@ -64,7 +78,7 @@ function setUpBattleField() {
 }
 
 // The line-up as placed: units standing still until Fight
-function resetBattleUnits() {
+export function resetBattleUnits() {
   game.settlers = []; game.enemies = []; game.projectiles = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
   for (const entry of battle.lineup) {
     if (entry.building) {
@@ -79,7 +93,7 @@ function resetBattleUnits() {
   invalidateAllPaths();
 }
 
-function startBattleMode() {
+export function startBattleMode() {
   game.gameMode = 'battle';
   battle.phase = 'setup';
   battle.lineup = [];
@@ -92,7 +106,7 @@ function startBattleMode() {
   renderBattlePanel();
 }
 
-function leaveBattleMode() {
+export function leaveBattleMode() {
   game.gameMode = 'endless';
   battle.phase = 'off';
   document.body.classList.remove('battle-mode');
@@ -102,7 +116,7 @@ function leaveBattleMode() {
 
 // A tap during setup: place what's chosen on an empty tile (colony units on the green side, enemies on
 // the red one, buildings anywhere), or take away what stands there
-function battleTap(x, y) {
+export function battleTap(x, y) {
   if (battle.phase !== 'setup') return;
   const g = getGridPos(x, y);
   if (isBorderZone(g.gx, g.gy)) return;
@@ -123,7 +137,7 @@ function battleTap(x, y) {
 }
 
 // Take away everything placed on one side
-function clearBattleSide(side) {
+export function clearBattleSide(side) {
   if (battle.phase !== 'setup') return;
   battle.lineup = battle.lineup.filter(e => battleSide(e.x) !== side);
   resetBattleUnits();

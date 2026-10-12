@@ -42,7 +42,6 @@ test('farmers plant apple trees in an apple zone (#103)', async ({ page }) => {
     const { makeSettler, clearResources, tileCenter } = window.sim.helpers;
     window.sim.start('apple-zone-test');
     clearResources();
-    window.showNotification = () => {};
     const g = getGridPos(townHall.x, townHall.y);
     const spots = [tileCenter(g.gx + 3, g.gy + 2), tileCenter(g.gx + 4, g.gy + 2)];
     for (const p of spots) toggleFarmZone(p.x, p.y, 'apple');

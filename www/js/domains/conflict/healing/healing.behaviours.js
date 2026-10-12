@@ -2,8 +2,19 @@
 
 // ---- Tents and healing
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { game } from '../../../engine/world/state.js';
+import { hasToolFamily } from '../../colony/equipment/equipment.rules.js';
+import { stock, takeStock } from '../../colony/storage/storage.rules.js';
+import { getRecentAttacker } from '../../colony/settlers/settlers.rules.js';
+import { isShelter } from './healing.rules.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
+import { joinsTentAssault } from '../combat/combat.behaviours.js';
+
 // Workers mend a damaged tent unless enemies are right next to it
-function repairTent(s, tick) {
+export function repairTent(s, tick) {
   if (s.role === 'worker' && !s.isPossessed) {
     let damagedTent = game.buildings.find(b => isShelter(b) && b.hp < b.maxHp);
     if (damagedTent) {
@@ -26,7 +37,7 @@ function repairTent(s, tick) {
 // Heal at the nearest tent. While enemies are on the map, or while it's destroying enemy tents, only a
 // badly wounded settler (< 25% hp) leaves for this; the rest keep fighting, starting with whoever is
 // attacking them. Once at the tent it heals up fully, unless it's attacked there.
-function healAtTent(s, tick) {
+export function healAtTent(s, tick) {
   const tents = tick.tents;
   const badlyWounded = s.hp < s.maxHp * 0.25;
   // being hit right now: it turns on whoever hits it (fightEnemies) and heals once it has fought them off
@@ -63,7 +74,7 @@ function healAtTent(s, tick) {
 
 // Medics (a worker with a medbag) heal the wounded while enemies are about: the nearest wounded settler,
 // soldiers before workers, one medic per patient, one herb from the stock per healPerHerb hp.
-function treatWounded(s, tick) {
+export function treatWounded(s, tick) {
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive) return false;
   const medic = GAME_CONFIG.medic;
   if (!(s.bagHerbs > 0) && stock.herbs <= 0) return false;

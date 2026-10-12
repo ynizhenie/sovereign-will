@@ -1,32 +1,40 @@
 // Tools, weapons and gear: their families and stats, ordering and handing them out, crafting weapons and
 // arrows, armour, shields, backpacks and watering cans
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { t } from '../../../engine/platform/i18n.js';
+import { game } from '../../../engine/world/state.js';
+import { addResources, canAfford, payCost, showCostError, stock } from '../storage/storage.rules.js';
+import { getPlayerFaction } from '../../factions/factions.rules.js';
+import { showNotification } from '../../../ui/toasts.js';
+import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/settlers.rules.js';
+
 // A shield only helps a melee soldier: a worker or an archer doesn't fight with it
-function canUseShield(s) {
+export function canUseShield(s) {
   return s.role === 'soldier' && !isBowWeapon(s.weapon);
 }
 
-function hasWorkingShield(s) {
+export function hasWorkingShield(s) {
   return !!s.shield && canUseShield(s);
 }
 
 // ---- Gear (GAME_CONFIG.gear): ordered with its button, put on / taken off at the town hall
 
 // Who can wear each piece, and who gets it first when nobody who can is selected
-const GEAR_RULES = {
+export const GEAR_RULES = {
   backpack: { canWear: s => s.role !== 'archer', first: s => s.role === 'worker' && s.tool !== 'rod' },
   armor: { canWear: () => true, first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true }
 };
 
-function hasGear(s, id) {
+export function hasGear(s, id) {
   return id === 'armor' ? s.armor === 'iron' : !!s[id];
 }
 
 // Pay for a piece of gear and send a settler to pick it up at the town hall: the selected one if it can
 // wear it, otherwise the first one the rules prefer, otherwise anyone who can
-function orderGear(id) {
+export function orderGear(id) {
   const item = GAME_CONFIG.gear[id], rules = GEAR_RULES[id];
   const free = s => rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment;
   const selected = getSelectedSettler() || getPossessed();
@@ -46,7 +54,7 @@ function orderGear(id) {
 }
 
 // Send the selected settler wearing it (or the first one) to the town hall to hand it back
-function orderGearOff(id) {
+export function orderGearOff(id) {
   const item = GAME_CONFIG.gear[id];
   const selected = getSelectedSettler() || getPossessed();
   const target = selected && hasGear(selected, id) && !selected.targetEquipment
@@ -61,7 +69,7 @@ function orderGearOff(id) {
 }
 
 // At the town hall (see equip()): put a piece on, or take it off and put its cost back in the stock
-function putOnGear(s, id) {
+export function putOnGear(s, id) {
   if (id === 'armor') {
     s.armor = 'iron';
     const bonus = GAME_CONFIG.gear.armor.hpBonus;
@@ -72,7 +80,7 @@ function putOnGear(s, id) {
   }
 }
 
-function takeOffGear(s, id) {
+export function takeOffGear(s, id) {
   if (!hasGear(s, id)) return;
   if (id === 'armor') {
     s.armor = null;
@@ -85,25 +93,25 @@ function takeOffGear(s, id) {
 }
 
 // weapon / tool families, from GAME_CONFIG
-function getToolFamily(tool) { const def = getDefinition('tools', tool); return def ? def.family : null; }
+export function getToolFamily(tool) { const def = getDefinition('tools', tool); return def ? def.family : null; }
 
-function getWeaponFamily(weapon) { const def = getDefinition('weapons', weapon); return def ? def.family : null; }
+export function getWeaponFamily(weapon) { const def = getDefinition('weapons', weapon); return def ? def.family : null; }
 
-function hasAxeTool(tool) { return getToolFamily(tool) === 'axe'; }
+export function hasAxeTool(tool) { return getToolFamily(tool) === 'axe'; }
 
-function hasPickaxeTool(tool) { return getToolFamily(tool) === 'pickaxe'; }
+export function hasPickaxeTool(tool) { return getToolFamily(tool) === 'pickaxe'; }
 
-function isClubWeapon(weapon) { return getWeaponFamily(weapon) === 'club'; }
+export function isClubWeapon(weapon) { return getWeaponFamily(weapon) === 'club'; }
 
-function isSwordWeapon(weapon) { return getWeaponFamily(weapon) === 'sword'; }
+export function isSwordWeapon(weapon) { return getWeaponFamily(weapon) === 'sword'; }
 
-function isSpearWeapon(weapon) { return getWeaponFamily(weapon) === 'spear'; }
+export function isSpearWeapon(weapon) { return getWeaponFamily(weapon) === 'spear'; }
 
-function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; }
+export function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; }
 
 // A settler's weapon stats for `use` ('combat' or 'hunt'). Damage: the weapon's, or, for fists (and weapons
 // with no damage for that use), the carried tool's, else bare hands; times the settler type's multiplier.
-function getWeaponStats(s, use) {
+export function getWeaponStats(s, use) {
   const fist = GAME_CONFIG.weapons.fist;
   const weapon = getDefinition('weapons', s.weapon) || fist;
   const stats = weapon[use];
@@ -117,7 +125,7 @@ function getWeaponStats(s, use) {
   return { ...stats, damage, multiplier: settlerType ? settlerType.damageMultiplier : 1 };
 }
 
-function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
+export function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
   // a medic's herbs go back with the bag
   if (settler.bagHerbs > 0) { stock.herbs += settler.bagHerbs; settler.bagHerbs = 0; }
   // refund exactly what the item cost, as defined in GAME_CONFIG
@@ -132,7 +140,7 @@ function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
   }
 }
 
-function assignTool(toolType) {
+export function assignTool(toolType) {
   const item = getDefinition('tools', toolType);
   if (!item) {
     showNotification(t('tool.unknown', { id: toolType }), true);
@@ -168,7 +176,7 @@ function assignTool(toolType) {
   showNotification(t('tool.given', { name: item.label }), false);
 }
 
-function craftWeapon(type) {
+export function craftWeapon(type) {
   const item = getDefinition('weapons', type);
   if (!item) {
     showNotification(t('weapon.unknown', { id: type }), true);
@@ -203,7 +211,7 @@ function craftWeapon(type) {
   showNotification(t('weapon.made', { name: item.label }), false);
 }
 
-function craftArrows() {
+export function craftArrows() {
   let target = getSelectedSettler() || getPossessed();
   if (!target) target = game.settlers.find(s => s.weapon === 'bow' && s.quiver);
   if (!target || target.weapon !== 'bow' || !target.quiver) {
@@ -221,7 +229,7 @@ function craftArrows() {
   showNotification(t('arrows.made', { count: recipe.produces.arrows }), false);
 }
 
-function disarmSettler(type = 'all') {
+export function disarmSettler(type = 'all') {
   let target = getSelectedSettler() || getPossessed();
 
   const hasTargetItem = (s) => {
@@ -260,7 +268,7 @@ function disarmSettler(type = 'all') {
 
 // Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the undead's
 // zombie into a skeleton, the demons' imp into a fire imp (#164, #165)
-function applyBowUnit(s) {
+export function applyBowUnit(s) {
   const forms = getPlayerFaction().bowUnits || {};
   if (isBowWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);
   const base = Object.keys(forms).find(k => forms[k] === s.type);
@@ -268,12 +276,12 @@ function applyBowUnit(s) {
 }
 
 // Whether the tool belongs to that family (GAME_CONFIG.tools.*.family: axe, pickaxe, rod, hoe)
-function hasToolFamily(tool, family) {
+export function hasToolFamily(tool, family) {
   return getToolFamily(tool) === family;
 }
 
 // The [category, id] pairs a `held` HUD group counts (see GAME_CONFIG.resourceGroups)
-function getHeldItems(group) {
+export function getHeldItems(group) {
   const items = [];
   for (const [category, ids] of Object.entries(group.held)) {
     const all = Object.keys(GAME_CONFIG[category]).filter(id => id !== 'fist');
@@ -283,7 +291,7 @@ function getHeldItems(group) {
 }
 
 // How many settlers hold that tool, weapon or piece of gear
-function countHeld(category, id) {
+export function countHeld(category, id) {
   if (category === 'tools') return game.settlers.filter(s => s.tool === id).length;
   if (category === 'weapons') return game.settlers.filter(s => s.weapon === id).length;
   return game.settlers.filter(s => hasGear(s, id)).length;

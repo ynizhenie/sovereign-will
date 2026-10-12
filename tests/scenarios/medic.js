@@ -36,7 +36,6 @@ Object.assign(window.sim, (() => {
   function medbagGoesToEmptyHanded({ seed = 'medbag-test' }) {
     start(seed);
     clearResources(); // nothing to gather or hunt on the way: only the bag's cost changes the stock
-    window.showNotification = () => {};
     const hx = townHall.x, hy = townHall.y;
     settlers = [
       makeSettler(1, hx + 50, hy, { weapon: 'sword', role: 'soldier' }),

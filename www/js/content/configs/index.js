@@ -1,11 +1,21 @@
 // The game's data: every kind of resource, building, unit, weapon, enemy and faction, and the numbers
-// each mechanic is tuned by. GAME_CONFIG is filled by the other files of this folder, one per topic.
+// each mechanic is tuned by. GAME_CONFIG gathers the other files of this folder, one per topic.
 // Data only: what the game does with it lives in domains/.
 
-const GAME_CONFIG = {};
+import { resourcesConfig } from './resources.js';
+import { equipmentConfig } from './equipment.js';
+import { buildingsConfig } from './buildings.js';
+import { enemiesConfig } from './enemies.js';
+import { factionsConfig } from './factions.js';
+import { unitsConfig } from './units.js';
+import { difficultyConfig } from './difficulty.js';
+import { mapConfig } from './map.js';
+import { mechanicsConfig } from './mechanics.js';
+
+export const GAME_CONFIG = { ...resourcesConfig, ...equipmentConfig, ...buildingsConfig, ...enemiesConfig, ...factionsConfig, ...unitsConfig, ...difficultyConfig, ...mapConfig, ...mechanicsConfig };
 
 globalThis.GAME_CONFIG = GAME_CONFIG;
 
-function getDefinition(category, key) {
+export function getDefinition(category, key) {
   return (GAME_CONFIG[category] && GAME_CONFIG[category][key]) || null;
 }

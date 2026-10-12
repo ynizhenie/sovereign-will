@@ -1,6 +1,6 @@
 // Resources: what the colony stocks, how the HUD groups them, kinds of food, the start
 
-Object.assign(GAME_CONFIG, {
+export const resourcesConfig = {
   resources: {
     // food: ready to eat (berries, apples, and anything cooked); the raw kinds need a campfire (cooking)
     food: { id: 'food', icon: 'food', type: 'resource' },
@@ -63,4 +63,4 @@ Object.assign(GAME_CONFIG, {
     // population limit before tents (each tent adds buildings.tent.population)
     population: 5
   }
-});
+};

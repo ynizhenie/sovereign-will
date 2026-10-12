@@ -2,8 +2,13 @@
 
 // ---- Equipment and hauling
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { townHall } from '../../../engine/world/state.js';
+import { applyBowUnit, canUseShield, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
+import { addResources, moveSettlerToTownHall } from '../storage/storage.rules.js';
+
 // Go to the town hall to swap weapon/tool/armour the player ordered
-function equip(s, tick) {
+export function equip(s, tick) {
   if (s.targetEquipment) {
     let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
     if (dist > townHall.radius + s.radius) {

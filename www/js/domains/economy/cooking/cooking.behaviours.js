@@ -2,11 +2,19 @@
 
 // ---- Cooking
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { game } from '../../../engine/world/state.js';
+import { stock, takeStock } from '../../colony/storage/storage.rules.js';
+import { claimBuildingJob, isBuildingJobFree } from '../building/building.rules.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
+
 // Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a worker with no tool looks
 // after a campfire, one per fire. It fetches fuel from the town hall when the fire is out, then a batch of
 // raw food, cooks it piece by piece and takes the food home. What it carries is ordinary stock (wood,
 // raw meat...) marked with the fire it's for, so if it's called away (a wave) it just goes back in stock.
-function cook(s, tick) {
+export function cook(s, tick) {
   if (s.role !== 'worker' || s.isPossessed) return false;
   const cooking = GAME_CONFIG.cooking;
   const job = s.carrying && s.carrying.forFire;
@@ -74,6 +82,6 @@ function cook(s, tick) {
 }
 
 // The fuel the stock has, coal before wood (see GAME_CONFIG.cooking.fuel)
-function findFuel() {
+export function findFuel() {
   return Object.keys(GAME_CONFIG.cooking.fuel).find(f => stock[f] > 0) || null;
 }

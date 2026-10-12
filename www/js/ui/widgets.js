@@ -1,9 +1,14 @@
 // Pieces the screens share: a button's answer to a tap, prices shown short in red, a list of saved things
 
+import { escapeHtml, iconHtml } from './icons.js';
+import { t } from '../engine/platform/i18n.js';
+import { stock } from '../domains/colony/storage/storage.rules.js';
+import { onTap } from '../engine/platform/dom.js';
+
 // Buttons with a price (#UI): what the stock is short of shows in red, and a button that can't be paid
 // for is dimmed, as the stock changes (a few times a second)
-let affordabilityTick = 0;
-function refreshAffordability(force = false) {
+export let affordabilityTick = 0;
+export function refreshAffordability(force = false) {
   if (!force && ++affordabilityTick % 8 !== 0) return;
   for (const button of document.querySelectorAll('#bottom-panel button, #selected-bar button')) {
     const parts = button.querySelectorAll('.cost-part');
@@ -20,8 +25,8 @@ function refreshAffordability(force = false) {
 
 // A button's answer (#UI): the one just pressed flashes green when what it did worked (a green notice) and
 // shakes when it didn't (a red one), within a moment of the press
-let pressedButton = null, pressedAt = 0;
-function answerPressedButton(ok) {
+export let pressedButton = null, pressedAt = 0;
+export function answerPressedButton(ok) {
   if (!pressedButton || performance.now() - pressedAt > 600) return;
   const button = pressedButton, name = ok ? 'btn-ok' : 'btn-no';
   pressedButton = null;
@@ -34,7 +39,7 @@ function answerPressedButton(ok) {
 // A list of saved things (maps, generator presets), one per row (#143): tap a name to pick it; its delete
 // button asks right there whether to delete it. items: [{ id, label }]; attr names the data attributes the
 // rows carry (data-<attr>, data-delete-<attr>).
-function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyText }) {
+export function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyText }) {
   list.innerHTML = '';
   list.classList.add('item-list');
   if (items.length === 0 && emptyText) {
@@ -77,7 +82,7 @@ function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyTe
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initWidgets() {
+export function initWidgets() {
   document.addEventListener('pointerdown', e => {
     const button = e.target.closest && e.target.closest('button');
     if (button) { pressedButton = button; pressedAt = performance.now(); }

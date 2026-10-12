@@ -1,6 +1,6 @@
 // Ukrainian
 
-Object.assign(LANGUAGES, {
+export const ukLanguage = {
   uk: {
     label: 'Українська',
     names: {
@@ -80,4 +80,4 @@ Object.assign(LANGUAGES, {
       'defeat.title': 'ПОРАЗКА!', 'defeat.survived': 'Ви протрималися {waves} хвиль', 'defeat.restart': 'Почати знову'
     }
   }
-});
+};

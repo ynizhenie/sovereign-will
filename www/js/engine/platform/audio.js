@@ -1,7 +1,10 @@
 // Sound output: the audio context (started on the first gesture), sound and music switches, and the two
 // building blocks every sound and note is made of, a tone and a burst of noise
 
-const audio = {
+import { loadSetting, saveSetting } from './storage.js';
+import { MUSIC_STYLES, SOUND } from '../../app/sounds.js';
+
+export const audio = {
   ctx: null, master: null, sfx: null, music: null, noise: null,
   layers: {},            // music styles: { gain, next, step, bar } each
   last: {},              // when each sound last played (audio time)
@@ -11,7 +14,7 @@ const audio = {
 
 // ---- Setting up (on the first gesture)
 
-function startAudio() {
+export function startAudio() {
   if (audio.ctx) { if (audio.ctx.state === 'suspended' && !document.hidden) audio.ctx.resume(); return; }
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return;
@@ -36,13 +39,13 @@ function startAudio() {
   }
 }
 
-function setSoundOn(on) { audio.soundOn = on; saveSetting('sound', on ? 'on' : 'off'); }
+export function setSoundOn(on) { audio.soundOn = on; saveSetting('sound', on ? 'on' : 'off'); }
 
-function setMusicOn(on) { audio.musicOn = on; saveSetting('music', on ? 'on' : 'off'); }
+export function setMusicOn(on) { audio.musicOn = on; saveSetting('music', on ? 'on' : 'off'); }
 
 // ---- Building blocks: a tone and a burst of noise, each with a quick attack and a fading tail
 
-function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.005, filter, q = 1 }) {
+export function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.005, filter, q = 1 }) {
   const ctx = audio.ctx;
   const osc = ctx.createOscillator();
   osc.type = type;
@@ -62,7 +65,7 @@ function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.005, filt
   osc.start(t); osc.stop(t + dur + 0.05);
 }
 
-function noise(out, t, { dur, gain, type = 'bandpass', freq = 1000, to, q = 1, attack = 0.003 }) {
+export function noise(out, t, { dur, gain, type = 'bandpass', freq = 1000, to, q = 1, attack = 0.003 }) {
   const ctx = audio.ctx;
   const src = ctx.createBufferSource();
   src.buffer = audio.noise;
@@ -80,10 +83,10 @@ function noise(out, t, { dur, gain, type = 'bandpass', freq = 1000, to, q = 1, a
 
 // ---- Music: generated as it plays, a few bars ahead. Each style a layer of its own, faded in and out.
 
-const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+export const midi = n => 440 * Math.pow(2, (n - 69) / 12);
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initAudio() {
+export function initAudio() {
   for (const type of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(type, startAudio, true);
   document.addEventListener('visibilitychange', () => {
     if (!audio.ctx) return;

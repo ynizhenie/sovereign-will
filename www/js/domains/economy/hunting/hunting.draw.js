@@ -1,7 +1,12 @@
 // Boars, and their carcasses
 
+import { drawIcon } from '../../../ui/icons.js';
+import { game } from '../../../engine/world/state.js';
+import { ctx, drawProgressBar } from '../../../engine/platform/canvas.js';
+import { drawBodyBlood } from '../../conflict/combat/combat.draw.js';
+
 // Boars (faded while hidden), and carcasses being butchered
-function drawBoars() {
+export function drawBoars() {
   game.boars.forEach(b => {
     ctx.save();
     if (b.isCarcass) {

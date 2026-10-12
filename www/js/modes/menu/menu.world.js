@@ -6,23 +6,32 @@
 // for it. The world is made to fit the screen: its centre is the screen's, with the hall and what's
 // around it beside the menu's panel, not behind it.
 
-const MENU_WORLD = {
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game } from '../../engine/world/state.js';
+import { canvas, fitCanvasToScreen, getBaseScale, screenPixelRatio } from '../../engine/platform/canvas.js';
+import { getPlayerFaction } from '../../domains/factions/factions.rules.js';
+import { camera, updateInputPos } from '../../engine/platform/camera.js';
+import { mouse } from '../../engine/platform/input.js';
+import { changeSettlerType, createSettler } from '../../domains/colony/settlers/settlers.rules.js';
+import { resetGame } from '../../app/session.js';
+
+export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
   boars: 3, trees: 7, boulders: 4, grass: 7
 };
 
-const menuWorld = {
+export const menuWorld = {
   faction: 'humans',    // whose the soldier is (see getPlayerFaction)
   size: '',             // the screen it was made for: made again when that changes
   opened: false         // the game's opening done: the curtain lifted (style.css)
 };
 
-function isMenuWorld() {
+export function isMenuWorld() {
   return game.gameMode === 'menu';
 }
 
 // The menu's panel on the screen (CSS px), with the game's title over it when it shows, or null
-function menuPanelRect() {
+export function menuPanelRect() {
   const panel = [...document.querySelectorAll('#main-menu .main-menu-content')].find(p => !p.hidden);
   if (!panel) return null;
   const r = panel.getBoundingClientRect();
@@ -33,7 +42,7 @@ function menuPanelRect() {
 }
 
 // Make the world and show it behind the menu
-function enterMenuWorld() {
+export function enterMenuWorld() {
   document.body.classList.add('menu-world');
   fitCanvasToScreen();
   const spr = screenPixelRatio;
@@ -110,14 +119,14 @@ function enterMenuWorld() {
 }
 
 // Back to an ordinary (not running) Endless before a real game, a battle or the editor is set up
-function leaveMenuWorld() {
+export function leaveMenuWorld() {
   document.getElementById('main-menu').classList.add('lifted'); // never dark again
   game.gameMode = 'endless';
   document.body.classList.remove('menu-world');
 }
 
 // A tap on the menu's background: the soldier, a boar, or nothing
-function menuWorldTap(clientX, clientY) {
+export function menuWorldTap(clientX, clientY) {
   if (!isMenuWorld()) return;
   updateInputPos(clientX, clientY);
   const soldier = game.settlers[0];
@@ -139,7 +148,7 @@ function menuWorldTap(clientX, clientY) {
 
 // Each frame (main.js): the world runs while the main menu shows and no game is on; made again for a new
 // screen size
-function syncMenuWorld() {
+export function syncMenuWorld() {
   const showing = getComputedStyle(document.getElementById('main-menu')).display !== 'none';
   if (isMenuWorld()) {
     if (!showing || game.gameStarted) { leaveMenuWorld(); return; }
@@ -154,7 +163,7 @@ function syncMenuWorld() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initMenuWorld() {
+export function initMenuWorld() {
   document.getElementById('main-menu').addEventListener('click', e => {
     if (e.target.id === 'main-menu') menuWorldTap(e.clientX, e.clientY);
   });

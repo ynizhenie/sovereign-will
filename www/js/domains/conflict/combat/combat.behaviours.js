@@ -1,7 +1,17 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
+import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
+import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/storage.rules.js';
+import { getRecentAttacker } from '../../colony/settlers/settlers.rules.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { NORMAL_BODIES, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
+import { findNearestArrowTower, refillArcherFromTower } from '../towers/towers.rules.js';
+import { findNearestStorage, isAtStorage, walkToStorage } from '../../colony/storage/storage.behaviours.js';
+
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it (#155)
-function takeMarkedTarget(s, tick) {
+export function takeMarkedTarget(s, tick) {
   let best = null;
   for (const en of game.enemies) {
     if (!en.markedTarget || (tick.markedAssignments.get(en) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
@@ -13,7 +23,7 @@ function takeMarkedTarget(s, tick) {
 
 // A soldier in a squad holds its post until an enemy comes near the post, gets into the base (or next
 // to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards
-function holdPost(s, tick) {
+export function holdPost(s, tick) {
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
@@ -48,7 +58,7 @@ function holdPost(s, tick) {
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
 // Archers restock arrows from towers or the town hall; unarmed settlers shelter at the town hall
 // while there are defenders, unless they're being attacked themselves.
-function fightEnemies(s, tick) {
+export function fightEnemies(s, tick) {
   const dt = tick.dt;
   let targetEnemy = null;
   let minBaseDist = Infinity;
@@ -158,15 +168,15 @@ function fightEnemies(s, tick) {
 }
 
 // Who goes to destroy enemy tents: anyone armed, and unarmed workers only when nobody is armed
-function joinsTentAssault(s, tick) {
+export function joinsTentAssault(s, tick) {
   return s.role !== 'worker' || s.weapon !== 'fist' || tick.workersHelpTents;
 }
 
 // Enemies closer than this to a settler on its way to the enemy tents get fought on the way
-const TENT_ASSAULT_FIGHT_DISTANCE = 150;
+export const TENT_ASSAULT_FIGHT_DISTANCE = 150;
 
 // Once a wave is down to its last few enemies, go destroy enemy tents
-function clearEnemyTents(s, tick) {
+export function clearEnemyTents(s, tick) {
   if (tick.tentAssault) {
     if (joinsTentAssault(s, tick)) {
       let nearestTent = null, minDist = Infinity;

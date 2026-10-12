@@ -1,6 +1,26 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
-function handleCanvasClick() {
+import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
+import { t } from '../engine/platform/i18n.js';
+import { isBorderZone } from '../engine/world/grid.js';
+import { TILE_SIZE, game, townHall } from '../engine/world/state.js';
+import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/storage.rules.js';
+import { canBuild, createBuildingBlueprint, isBuildLocationAllowed, toggleBuildingRepair } from '../domains/economy/building/building.rules.js';
+import { isWaterReachable } from '../domains/world/world.generator.js';
+import { canvas } from '../engine/platform/canvas.js';
+import { showNotification } from './toasts.js';
+import { updateInputPos } from '../engine/platform/camera.js';
+import { isTap, mouse, shiftDown } from '../engine/platform/input.js';
+import { getPossessed, getSelectedSettler } from '../domains/colony/settlers/settlers.rules.js';
+import { getHarvestableResources } from '../domains/economy/gathering/gathering.rules.js';
+import { toggleFarmZone } from '../domains/economy/farming/farming.rules.js';
+import { toggleBlightZone } from '../domains/factions/undead/undead.rules.js';
+import { orderPossessed } from '../domains/colony/settlers/settlers.orders.js';
+import { isDefeated } from '../modes/endless/endless.rules.js';
+import { battle, battleTap } from '../modes/battle/battle.setup.js';
+import { editorTap } from '../modes/editor/editor.tools.js';
+
+export function handleCanvasClick() {
   // battle mode: placing while setting up; in a fight, orders for a possessed unit (#166)
   if (game.gameMode === 'battle') {
     if (battle.phase === 'setup') battleTap(mouse.x, mouse.y);
@@ -153,12 +173,12 @@ function handleCanvasClick() {
   }
 }
 
-function processInteraction(clientX, clientY) {
+export function processInteraction(clientX, clientY) {
   updateInputPos(clientX, clientY);
   handleCanvasClick();
 }
 
-function setMode(mode) {
+export function setMode(mode) {
   game.buildMode = mode;
   document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
   if (document.getElementById('btn-' + mode)) document.getElementById('btn-' + mode).classList.add('active');
@@ -173,7 +193,7 @@ function setMode(mode) {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initMapInput() {
+export function initMapInput() {
   canvas.addEventListener('pointerup', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 

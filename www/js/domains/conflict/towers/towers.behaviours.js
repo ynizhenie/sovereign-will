@@ -1,7 +1,12 @@
 // Keeping towers stocked with arrows, and archers staying in theirs
 
+import { game } from '../../../engine/world/state.js';
+import { takeStock } from '../../colony/storage/storage.rules.js';
+import { findTowerForArrows, isTowerDutyOn, releaseTowerGuard, updateTowerArrowLoader, updateTowerGuard } from './towers.rules.js';
+import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
+
 // Idle unarmed workers keep watchtowers stocked with arrows, fetched from a storage (#36)
-function loadTowerArrows(s, tick) {
+export function loadTowerArrows(s, tick) {
   if (s.isPossessed || s.role !== 'worker' || s.weapon !== 'fist' || s.tool !== 'none' || s.targetEquipment) return false;
   const load = s.carrying && s.carrying.forTower;
   if (s.carrying && !load) return false;
@@ -21,7 +26,7 @@ function loadTowerArrows(s, tick) {
 // ---- Towers and repairs
 
 // Archers assigned to a watchtower stay in it until the fight comes close to the town hall
-function guardTower(s, tick) {
+export function guardTower(s, tick) {
   if (s.towerAssignment) {
     if (!isTowerDutyOn(s.towerAssignment)) {
       releaseTowerGuard(s);

@@ -2,7 +2,12 @@
 
 // ---- Drawing and the panel
 
-function drawBattleOverlay() {
+import { t } from '../../engine/platform/i18n.js';
+import { game } from '../../engine/world/state.js';
+import { canvas, ctx, screenPixelRatio } from '../../engine/platform/canvas.js';
+import { battle } from './battle.setup.js';
+
+export function drawBattleOverlay() {
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
   ctx.lineWidth = 3;
   ctx.setLineDash([12, 8]);
@@ -12,7 +17,7 @@ function drawBattleOverlay() {
   ctx.fillStyle = 'rgba(231, 76, 60, 0.06)'; ctx.fillRect(game.WORLD_WIDTH / 2, 0, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT);
 }
 
-function drawBattleResult() {
+export function drawBattleResult() {
   if (battle.phase !== 'result') return;
   ctx.save();
   ctx.scale(screenPixelRatio, screenPixelRatio);

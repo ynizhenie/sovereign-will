@@ -3,13 +3,25 @@
 
 // ---- Animation state (drawn by getHeldItemPose in render.js)
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { drawIcon } from '../../../ui/icons.js';
+import { game } from '../../../engine/world/state.js';
+import { isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/equipment.rules.js';
+import { getCarryCapacity } from '../storage/storage.rules.js';
+import { ctx } from '../../../engine/platform/canvas.js';
+import { getPlayerFaction, getSettlerColor } from '../../factions/factions.rules.js';
+import { getNecromancy } from '../../factions/undead/undead.rules.js';
+import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/combat.draw.js';
+import { drawStaff } from '../../factions/undead/undead.draw.js';
+import { drawHorns } from '../../factions/demons/demons.draw.js';
+
 // A strike: the held weapon or tool swings through once over `seconds`
-function startSwing(unit, seconds) {
+export function startSwing(unit, seconds) {
   unit.swingT = seconds;
   unit.swingLen = seconds;
 }
 
-function tickAnimation(unit, dt) {
+export function tickAnimation(unit, dt) {
   // walking (not striking or working): the held item turns the way it goes, not stay where it last struck
   // (a playtest saw weapons "stuck in one pose" on walking settlers)
   if (unit.lastX !== undefined) {
@@ -25,14 +37,14 @@ function tickAnimation(unit, dt) {
 }
 
 // Point the held weapon or tool at (x, y): what the unit strikes or works on (drawn by applyHeldItemPose)
-function faceTowards(unit, x, y) {
+export function faceTowards(unit, x, y) {
   if (x !== unit.x || y !== unit.y) unit.facing = Math.atan2(y - unit.y, x - unit.x);
 }
 
 // How the held weapon or tool is posed right now: a rotation around the body and a push forward.
 // A strike (swingT): swords, clubs, fists and tools sweep an arc, spears thrust, bows recoil. Working
 // (chopping, mining, planting...): a steady chop in time with the game's ticks, so replays look the same.
-function getHeldItemPose(unit) {
+export function getHeldItemPose(unit) {
   const item = unit.weapon && unit.weapon !== 'fist' ? unit.weapon : (unit.tool && unit.tool !== 'none' ? unit.tool : 'fist');
   if (unit.swingT > 0) {
     const p = 1 - unit.swingT / (unit.swingLen || 0.3);
@@ -51,26 +63,26 @@ function getHeldItemPose(unit) {
 }
 
 // The held item points where the unit faces (faceTowards), posed on top of that
-function applyHeldItemPose(unit) {
+export function applyHeldItemPose(unit) {
   const pose = getHeldItemPose(unit);
   ctx.rotate((unit.facing || 0) + pose.angle);
   ctx.translate(pose.push, 0);
 }
 
 // Nothing to do (#171): a settler puts what it holds on its back (not in a battle, where it waits to fight)
-function isResting(s) {
+export function isResting(s) {
   return s.activity === 'patrol' && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
 
 // The held item across the back: turned square to where the unit faces, behind it
-function applyBackPose(unit) {
+export function applyBackPose(unit) {
   ctx.rotate((unit.facing || 0) + Math.PI / 2);
   ctx.translate(-15, unit.visualRadius * 0.7);
 }
 
 // Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
 // Shared by settlers and enemies. Returns false for no weapon (fists).
-function drawHeldWeapon(weapon) {
+export function drawHeldWeapon(weapon) {
   if (isSwordWeapon(weapon)) {
     ctx.fillStyle = weapon === 'iron_sword' ? '#b0bec5' : '#e0e0e0'; ctx.fillRect(8, -2, 14, 4);
     ctx.fillStyle = '#f39c12'; ctx.fillRect(6, -4, 2, 8);
@@ -90,7 +102,7 @@ function drawHeldWeapon(weapon) {
 }
 
 // A watering can: a tin body, a handle on top and a long spout forward; `scale` for carrying it small
-function drawWateringCan(x, y, scale) {
+export function drawWateringCan(x, y, scale) {
   ctx.save();
   ctx.translate(x, y); ctx.scale(scale, scale);
   ctx.fillStyle = '#7fa7c9'; ctx.fillRect(-5, -4, 10, 8);
@@ -102,14 +114,14 @@ function drawWateringCan(x, y, scale) {
 }
 
 // Quiver on the back (left edge x), one arrow shown for every 3 left
-function drawQuiver(x, arrows) {
+export function drawQuiver(x, arrows) {
   ctx.fillStyle = '#8e5a2b'; ctx.fillRect(x - 2, -6, 5, 11);
   ctx.fillStyle = '#ecf0f1';
   for (let i = 0; i < Math.min(4, Math.ceil(arrows / 3)); i++) ctx.fillRect(x - 2 + i * 1.3, -9, 1, 3);
 }
 
 // Idle settler: a small thought bubble with "zZ" above the head
-function drawIdleIcon(x, y) {
+export function drawIdleIcon(x, y) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
   ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 6, y + 7, 2, 0, Math.PI * 2); ctx.fill();
@@ -119,7 +131,7 @@ function drawIdleIcon(x, y) {
 }
 
 // Dung: a small brown pile, fading over its last 10 s
-function drawDung() {
+export function drawDung() {
   game.dung.forEach(p => {
     ctx.globalAlpha = Math.max(0, Math.min(1, (GAME_CONFIG.relief.dungSeconds - p.age) / 10));
     ctx.fillStyle = '#5c3d16';
@@ -132,7 +144,7 @@ function drawDung() {
 }
 
 // Settlers: body, what they hold and carry, armour, shield, quiver, rings, health
-function drawSettlers() {
+export function drawSettlers() {
   game.settlers.forEach(s => {
     // the whole body in the colony's colour (#43); the possessed one ringed in white
     ctx.fillStyle = getSettlerColor(s);

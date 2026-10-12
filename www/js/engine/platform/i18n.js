@@ -1,12 +1,17 @@
 // Texts in the player's language: t(key) for a message, applyNames() for what things are called (into
 // GAME_CONFIG's labels), applyPageTexts() for index.html's marked texts. The texts are in content/language.
 
-const DEFAULT_LANGUAGE = 'en';
+import { rebuildConfigHud } from '../../ui/bottom-panel.js';
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { plainText, setRichText } from '../../ui/icons.js';
+import { LANGUAGES } from '../../content/language/index.js';
 
-const LANGUAGE_STORAGE_KEY = 'sovereign-will-language';
+export const DEFAULT_LANGUAGE = 'en';
+
+export const LANGUAGE_STORAGE_KEY = 'sovereign-will-language';
 
 // the saved choice, if the device can remember one
-function loadLanguage() {
+export function loadLanguage() {
   try {
     const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (saved && LANGUAGES[saved]) return saved;
@@ -14,16 +19,16 @@ function loadLanguage() {
   return DEFAULT_LANGUAGE;
 }
 
-let currentLanguage = loadLanguage();
+export let currentLanguage = loadLanguage();
 
 // The text for `key` in the current language, with {placeholders} filled from `params`
-function t(key, params = {}) {
+export function t(key, params = {}) {
   const text = LANGUAGES[currentLanguage].text[key] ?? LANGUAGES[DEFAULT_LANGUAGE].text[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? params[name] : match));
 }
 
 // Names from the current language into the config (item.label), falling back to English
-function applyNames() {
+export function applyNames() {
   const names = LANGUAGES[currentLanguage].names, fallback = LANGUAGES[DEFAULT_LANGUAGE].names;
   for (const [category, byId] of Object.entries(fallback)) {
     const items = GAME_CONFIG[category];
@@ -36,7 +41,7 @@ function applyNames() {
 }
 
 // Texts marked in index.html (data-i18n / data-i18n-title) in the current language
-function applyPageTexts() {
+export function applyPageTexts() {
   document.documentElement.lang = currentLanguage;
   document.querySelectorAll('[data-i18n]').forEach(el => setRichText(el, t(el.dataset.i18n)));
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = plainText(t(el.dataset.i18nPlaceholder)); });
@@ -47,7 +52,7 @@ function applyPageTexts() {
 }
 
 // Switch language: remembered on the device, and everything on screen is redrawn in it
-function setLanguage(language) {
+export function setLanguage(language) {
   if (!LANGUAGES[language]) return;
   currentLanguage = language;
   try { localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch (e) { /* not remembered */ }
@@ -57,6 +62,6 @@ function setLanguage(language) {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initI18n() {
+export function initI18n() {
   applyNames();
 }

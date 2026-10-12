@@ -1,13 +1,28 @@
 // What enemies do by themselves, each tick
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { game, townHall } from '../../../engine/world/state.js';
+import { isBuildingSingle, removeBuilding } from '../../economy/building/building.rules.js';
+import { findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
+import { damageSettler } from '../../colony/settlers/settlers.rules.js';
+import { scheduleRespawn } from '../../economy/gathering/gathering.rules.js';
+import { isShelter } from '../healing/healing.rules.js';
+import { enemyNecromancy } from '../../factions/undead/undead.rules.js';
+import { invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+import { clampEntityToBounds, collidesWithBoxList } from '../../../engine/movement/collision.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { hasLineOfFire } from '../combat/combat.rules.js';
+import { faceTowards, startSwing } from '../../colony/settlers/settlers.draw.js';
+import { playSound } from '../../../app/sounds.js';
+
 // Every enemy's tick, last first
-function tickEnemies(dt) {
+export function tickEnemies(dt) {
   for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt);
 }
 
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
 // breaks through what blocks its way, and strikes
-function tickEnemy(en, dt) {
+export function tickEnemy(en, dt) {
   clampEntityToBounds(en);
 
   if (en.buildTarget) {

@@ -2,12 +2,18 @@
 // and the player's own presets, saved on the device. The values go straight into GAME_CONFIG.map, which
 // the next new game (resetGame -> generateMap) reads.
 
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { t } from '../../engine/platform/i18n.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { renderItemList } from '../../ui/widgets.js';
+import { showMenuScreen } from '../menu/menu.screens.js';
+
 // The settings as the game ships them: the Standard preset
-const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));
-const PRESET_STORAGE_KEY = 'sovereign-will-map-presets';
+export const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));
+export const PRESET_STORAGE_KEY = 'sovereign-will-map-presets';
 
 // Fields in groups; a GAME_CONFIG.map value missing here still gets a field, under "other"
-const GENERATOR_GROUPS = [
+export const GENERATOR_GROUPS = [
   ['water', ['lakes', 'lakeWidth', 'lakeHeight', 'lakeMinDistance']],
   ['desert', ['deserts', 'desertRadiusX', 'desertRadiusY', 'desertCactus', 'desertPebbles']],
   ['forests', ['forests', 'forestTrees', 'forestRadius', 'forestUndergrowthShare', 'trees']],
@@ -18,18 +24,18 @@ const GENERATOR_GROUPS = [
   ['regrowth', ['respawnDelay', 'oreRespawnDelay']]
 ];
 
-function isShare(key) {
+export function isShare(key) {
   return key === 'forestUndergrowthShare';
 }
 
 // A typed-in number, kept sensible: never negative, shares 0..1, whole numbers otherwise
-function cleanValue(key, raw) {
+export function cleanValue(key, raw) {
   const n = Number(raw);
   if (!Number.isFinite(n)) return null;
   return isShare(key) ? Math.max(0, Math.min(1, n)) : Math.max(0, Math.round(n));
 }
 
-function renderGeneratorFields() {
+export function renderGeneratorFields() {
   const container = document.getElementById('generator-fields');
   container.innerHTML = '';
   const listed = new Set(GENERATOR_GROUPS.flatMap(([, keys]) => keys));
@@ -46,7 +52,7 @@ function renderGeneratorFields() {
 }
 
 // One labelled field: "from - to" for a range, a single box for a number
-function generatorField(key) {
+export function generatorField(key) {
   const row = document.createElement('label');
   row.className = 'generator-field';
   const name = document.createElement('span');
@@ -82,21 +88,21 @@ function generatorField(key) {
 
 // ---- Presets
 
-function loadPresets() {
+export function loadPresets() {
   try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY)) || {}; } catch (e) { return {}; }
 }
 
-function savePresets(presets) {
+export function savePresets(presets) {
   try { localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets)); } catch (e) { /* not remembered */ }
 }
 
-function applyMapSettings(settings) {
+export function applyMapSettings(settings) {
   for (const key of Object.keys(GAME_CONFIG.map)) delete GAME_CONFIG.map[key];
   Object.assign(GAME_CONFIG.map, JSON.parse(JSON.stringify(STANDARD_MAP_SETTINGS)), JSON.parse(JSON.stringify(settings)));
   renderGeneratorFields();
 }
 
-function renderPresetList() {
+export function renderPresetList() {
   renderItemList(document.getElementById('preset-list'), Object.keys(loadPresets()).map(name => ({ id: name, label: name })), {
     attr: 'preset',
     onPick: name => applyMapSettings(loadPresets()[name]),
@@ -105,7 +111,7 @@ function renderPresetList() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initEndlessGenerator() {
+export function initEndlessGenerator() {
   onTap(document.getElementById('open-generator'), () => { renderGeneratorFields(); renderPresetList(); showMenuScreen('generator'); });
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
   onTap(document.getElementById('preset-standard'), () => applyMapSettings(STANDARD_MAP_SETTINGS));

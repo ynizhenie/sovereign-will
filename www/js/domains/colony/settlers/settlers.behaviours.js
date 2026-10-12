@@ -11,7 +11,35 @@
 // The behaviours themselves live with their mechanic (domains/*/*.behaviours.js); here are the list and
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
-function createSettlerTick(dt) {
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { getGridPos } from '../../../engine/world/grid.js';
+import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { moveSettlerToTownHall } from '../storage/storage.rules.js';
+import { findDoorBlockers, isBaseSealed, isTileOccupied } from '../../economy/building/building.rules.js';
+import { isWaterReachable } from '../../world/world.generator.js';
+import { getHarvestableResources } from '../../economy/gathering/gathering.rules.js';
+import { isShelter } from '../../conflict/healing/healing.rules.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
+import { clampEntityToBounds } from '../../../engine/movement/collision.js';
+import { moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/steering.js';
+import { isDefenseAlert, isInSafeArea } from '../../conflict/combat/combat.rules.js';
+import { collectWorms, fish } from '../../economy/fishing/fishing.behaviours.js';
+import { assignTowerArchers } from '../../conflict/towers/towers.rules.js';
+import { deliverCarrying, deliverWhenNothingToDo } from '../storage/storage.behaviours.js';
+import { getWorkPriority, harvest } from '../../economy/gathering/gathering.behaviours.js';
+import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/building.behaviours.js';
+import { farmerGathersGrass, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/farming.behaviours.js';
+import { cook } from '../../economy/cooking/cooking.behaviours.js';
+import { clearEnemyTents, fightEnemies, holdPost } from '../../conflict/combat/combat.behaviours.js';
+import { guardTower, loadTowerArrows } from '../../conflict/towers/towers.behaviours.js';
+import { healAtTent, repairTent, treatWounded } from '../../conflict/healing/healing.behaviours.js';
+import { necromancy } from '../../factions/undead/undead.behaviours.js';
+import { eatCorpse, goToSacrifice } from '../../factions/demons/demons.behaviours.js';
+import { equip } from '../equipment/equipment.behaviours.js';
+import { followOrder } from './settlers.orders.js';
+
+export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
   // which GAME_CONFIG.mapResources kind each resource is, so canSettlerHarvest() doesn't scan every list
   const resourceKind = new Map();
@@ -59,7 +87,7 @@ function createSettlerTick(dt) {
 }
 
 // Housekeeping every settler gets each tick, before any behaviour
-function prepareSettler(s, dt) {
+export function prepareSettler(s, dt) {
   clampEntityToBounds(s);
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) s.attackCooldown -= dt;
@@ -70,7 +98,7 @@ function prepareSettler(s, dt) {
 // Its AI is off: it doesn't work, heal or even hit back by itself. The player moves it (see update())
 // and taps things to give it an order (see orderPossessed()): it walks there and does what it can with
 // what it has in hand. Moving it by hand cancels the order. Gear the player picked is still fetched.
-function playerControlled(s, tick) {
+export function playerControlled(s, tick) {
   if (!s.isPossessed) return false;
   if (s.targetEquipment) return equip(s, tick);
   if (s.order && !followOrder(s, tick)) s.order = null;
@@ -81,7 +109,7 @@ function playerControlled(s, tick) {
 
 // A settler that needs to go (see the meals in update) walks off to a quiet spot away from the buildings,
 // near grass if there's some, waits a moment and leaves dung there
-function relieve(s, tick) {
+export function relieve(s, tick) {
   if (!s.needsRelief || s.isPossessed || isDefenseAlert() || tick.isWaveActive || s.towerAssignment) return false;
   const relief = GAME_CONFIG.relief;
   if (!s.reliefSpot) s.reliefSpot = findReliefSpot(s);
@@ -102,7 +130,7 @@ function relieve(s, tick) {
 
 // The nearest spot the settler can walk to that's far enough from every building (and the town hall):
 // grass first, then any free tile; where it stands if there's none
-function findReliefSpot(s) {
+export function findReliefSpot(s) {
   const minDist = GAME_CONFIG.relief.awayFromBuildings * TILE_SIZE;
   const away = p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist + townHall.radius &&
     game.buildings.every(b => Math.hypot(p.x - b.x, p.y - b.y) >= minDist);
@@ -124,7 +152,7 @@ function findReliefSpot(s) {
 }
 
 // Nothing else to do: wander near the town hall (shown with an idle icon, see render())
-function patrol(s, tick) {
+export function patrol(s, tick) {
   if (game.gameMode === 'battle') return true; // nothing to wander around: stand
   // caught outside the base when the alert starts: straight back, not a stroll
   if (!isInSafeArea(s.x, s.y)) {
@@ -149,7 +177,7 @@ function patrol(s, tick) {
 }
 
 // Order = priority: the first behaviour that takes a settler's tick wins.
-const SETTLER_BEHAVIOURS = [
+export const SETTLER_BEHAVIOURS = [
   playerControlled,
   goToSacrifice,
   loadTowerArrows,
@@ -186,7 +214,7 @@ const SETTLER_BEHAVIOURS = [
 ];
 
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
-function tickSettlers(dt) {
+export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
   assignTowerArchers();
 
