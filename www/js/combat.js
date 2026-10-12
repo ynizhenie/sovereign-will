@@ -1,34 +1,3 @@
-function collidesWithBoxList(x, y, radius, objects, halfSize) {
-  return objects.some(object => {
-    const closestX = Math.max(object.x - halfSize, Math.min(x, object.x + halfSize));
-    const closestY = Math.max(object.y - halfSize, Math.min(y, object.y + halfSize));
-    const dx = x - closestX;
-    const dy = y - closestY;
-    return dx * dx + dy * dy < radius * radius;
-  });
-}
-
-// Box collision against what occupies the tiles around (x, y). Everything solid sits on a tile center,
-// so only the few nearby tiles need checking instead of every object on the map.
-// kinds: [[tileIndex set name, box half size], ...]
-function collidesWithTiles(x, y, radius, kinds) {
-  const tiles = getTileIndex();
-  const span = Math.ceil((radius + 15) / TILE_SIZE);
-  const g = getGridPos(x, y);
-  for (let gy = g.gy - span; gy <= g.gy + span; gy++) {
-    for (let gx = g.gx - span; gx <= g.gx + span; gx++) {
-      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15, key = `${cx},${cy}`;
-      for (const [set, halfSize] of kinds) {
-        if (!tiles[set].has(key)) continue;
-        const dx = x - Math.max(cx - halfSize, Math.min(x, cx + halfSize));
-        const dy = y - Math.max(cy - halfSize, Math.min(y, cy + halfSize));
-        if (dx * dx + dy * dy < radius * radius) return true;
-      }
-    }
-  }
-  return false;
-}
-
 // Whether an arrow is stopped on tile (gx, gy). fromTower: shot from a watchtower, over walls and doors.
 function isArrowBlockedTile(gx, gy, fromTower) {
   const tiles = getTileIndex();
@@ -70,12 +39,6 @@ function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   return true;
 }
 
-const WALL_COLLISION_KINDS = [['walls', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
-
-function collidesWithWall(x, y, radius) {
-  return collidesWithTiles(x, y, radius, WALL_COLLISION_KINDS);
-}
-
 function getTownHallApproachPoint(settler) {
   let dx = settler.x - townHall.x;
   let dy = settler.y - townHall.y;
@@ -104,31 +67,6 @@ function getTownHallApproachPoint(settler) {
 function moveSettlerToTownHall(settler, speed, dt) {
   let approachPoint = getTownHallApproachPoint(settler);
   moveEntityTowards(settler, approachPoint.x, approachPoint.y, speed, false, dt);
-}
-
-function getSettlerAvoidance(entity) {
-  let avoidX = 0;
-  let avoidY = 0;
-  settlers.forEach(other => {
-    if (other === entity) return;
-    let dx = entity.x - other.x;
-    let dy = entity.y - other.y;
-    let distance = Math.hypot(dx, dy);
-    if (distance >= 38) return;
-    if (distance === 0) {
-      dx = entity.id % 2 === 0 ? 1 : -1;
-      dy = 0;
-      distance = 1;
-    }
-    let strength = (38 - distance) / 38;
-    avoidX += (dx / distance) * strength;
-    avoidY += (dy / distance) * strength;
-  });
-  return { x: avoidX, y: avoidY };
-}
-
-function collidesWithWater(x, y, radius) {
-  return collidesWithTiles(x, y, radius, [['water', 15]]);
 }
 
 function performAttack(attacker, targetX, targetY) {

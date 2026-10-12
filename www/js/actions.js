@@ -231,12 +231,19 @@ function getRecentAttacker(settler) {
 
 // weapon / tool families, from GAME_CONFIG
 function getToolFamily(tool) { const def = getDefinition('tools', tool); return def ? def.family : null; }
+
 function getWeaponFamily(weapon) { const def = getDefinition('weapons', weapon); return def ? def.family : null; }
+
 function hasAxeTool(tool) { return getToolFamily(tool) === 'axe'; }
+
 function hasPickaxeTool(tool) { return getToolFamily(tool) === 'pickaxe'; }
+
 function isClubWeapon(weapon) { return getWeaponFamily(weapon) === 'club'; }
+
 function isSwordWeapon(weapon) { return getWeaponFamily(weapon) === 'sword'; }
+
 function isSpearWeapon(weapon) { return getWeaponFamily(weapon) === 'spear'; }
+
 function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; }
 
 // A settler's weapon stats for `use` ('combat' or 'hunt'). Damage: the weapon's, or, for fists (and weapons
@@ -253,12 +260,6 @@ function getWeaponStats(s, use) {
   }
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
   return { ...stats, damage, multiplier: settlerType ? settlerType.damageMultiplier : 1 };
-}
-
-function invalidateAllPaths() {
-  resetTileIndex();
-  settlers.forEach(s => { s.path = null; s.pathTarget = null; });
-  enemies.forEach(en => { en.path = null; en.pathTarget = null; });
 }
 
 function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
@@ -486,24 +487,6 @@ canvas.addEventListener('pointerup', e => {
 
   processInteraction(e.clientX, e.clientY);
 });
-
-function ejectEntitiesFromTile(x, y) {
-  const allEntities = [...settlers, ...enemies];
-  allEntities.forEach(ent => {
-    if (Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {
-      const offsets = [
-        {x: 0, y: -TILE_SIZE}, {x: 0, y: TILE_SIZE}, {x: -TILE_SIZE, y: 0}, {x: TILE_SIZE, y: 0}
-      ];
-      for (let off of offsets) {
-        let nx = x + off.x, ny = y + off.y;
-        if (!collidesWithWall(nx, ny, ent.radius)) {
-          ent.x = nx; ent.y = ny;
-          break;
-        }
-      }
-    }
-  });
-}
 
 function togglePause() {
   if (!gameStarted) return;
