@@ -30,3 +30,20 @@ function renderSettlerInfo(s) {
 function getHungerSeconds(s) {
   return s.hunger !== undefined ? s.hunger : GAME_CONFIG.meals.seconds;
 }
+
+// While possessing: the camera follows the possessed settler; the joystick shows on a touch screen
+function updatePossessionView() {
+  const possessed = getPossessed();
+  const joystickEl = document.getElementById('mobile-joystick');
+
+  if (possessed) {
+    camera.x = possessed.x;
+    camera.y = possessed.y;
+    clampCamera();
+
+    const shown = isTouchScreen() ? 'block' : 'none';
+    if (joystickEl.style.display !== shown) joystickEl.style.display = shown;
+  } else {
+    if (joystickEl.style.display !== 'none') joystickEl.style.display = 'none';
+  }
+}

@@ -274,3 +274,71 @@ function getDefensePlan() {
   defensePlan = { key, posts, squadOf };
   return defensePlan;
 }
+
+// Arrows fly, hit what they reach (settlers and the town hall, or enemies, tents and boars), stop at obstacles
+function tickProjectiles() {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    let proj = projectiles[i];
+    if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
+    proj.x += proj.vx; proj.y += proj.vy; proj.life--;
+    let hit = false;
+
+    if (proj.fromEnemy) {
+      if (Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
+        townHall.hp -= proj.damage;
+        hit = true;
+      }
+      for (let s of settlers) {
+        if (hit) break;
+        if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
+          damageSettler(s, proj.damage, proj.owner);
+          if (proj.fire) setBurning(s);
+          hit = true;
+        }
+      }
+    } else {
+      for (let j = enemies.length - 1; j >= 0 && !hit; j--) {
+        let en = enemies[j];
+        if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
+          en.hp -= proj.damage;
+          bleed(en, proj.owner);
+          playSound('arrowHit', en);
+          if (proj.fire) setBurning(en);
+          hit = true;
+        }
+      }
+      for (let j = enemyTents.length - 1; j >= 0 && !hit; j--) {
+        let et = enemyTents[j];
+        if (Math.hypot(et.x - proj.x, et.y - proj.y) < 18) {
+          et.hp -= proj.damage;
+          hit = true;
+        }
+      }
+      for (let j = boars.length - 1; j >= 0 && !hit; j--) {
+        let b = boars[j];
+        if (!b.isCarcass && !b.hidden && !b.hideTarget && Math.hypot(b.x - proj.x, b.y - proj.y) < 12) {
+          woundBoar(b, proj.damage, proj.owner || null, proj.owner ? proj.owner.x : proj.x, proj.owner ? proj.owner.y : proj.y);
+          hit = true;
+        }
+      }
+    }
+    // gone: it hit something, flew its full range, or struck an obstacle past its shooter's own tile
+    const tile = getGridPos(proj.x, proj.y);
+    const leftStartTile = tile.gx !== proj.startTile.gx || tile.gy !== proj.startTile.gy;
+    if (hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower))) projectiles.splice(i, 1);
+  }
+}
+
+// Blood on the ground dries; dung goes after a while
+function ageBloodAndDung(dt) {
+  for (const splat of bloodSplats) splat.age += dt;
+  bloodSplats = bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
+  for (const pile of dung) pile.age += dt;
+  dung = dung.filter(pile => pile.age < GAME_CONFIG.relief.dungSeconds);
+}
+
+// Units stepping in blood or dung leave footprints
+function trackAllFootprints() {
+  for (const unit of settlers) trackFootprints(unit);
+  for (const unit of enemies) trackFootprints(unit);
+}

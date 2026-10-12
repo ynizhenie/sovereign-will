@@ -175,3 +175,25 @@ function isBaseSealed() {
   }
   return true;
 }
+
+// Smelters turn ore and coal into iron
+function tickSmelters(dt) {
+  buildings.filter(b => b.type === 'smelter').forEach(smelter => {
+    smelter.oreLoaded = smelter.oreLoaded || 0;
+    smelter.coalLoaded = smelter.coalLoaded || 0;
+    smelter.ironProduced = smelter.ironProduced || 0;
+
+    const limits = getSmelterLimits();
+    if (smelter.oreLoaded > 0 && smelter.coalLoaded > 0 && smelter.ironProduced < limits.maxIron) {
+      smelter.smeltProgress = (smelter.smeltProgress || 0) + dt;
+      if (smelter.smeltProgress >= limits.seconds) {
+        smelter.oreLoaded--;
+        smelter.coalLoaded--;
+        smelter.ironProduced++;
+        smelter.smeltProgress = 0;
+      }
+    } else {
+      smelter.smeltProgress = 0;
+    }
+  });
+}

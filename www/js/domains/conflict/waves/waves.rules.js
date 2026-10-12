@@ -186,3 +186,54 @@ function startNextWave() {
 
   waveNum++;
 }
+
+// The wave timer: a warning 15 s before, then the wave
+function tickWaveTimer(dt) {
+  const before = waveTimer;
+  waveTimer -= dt;
+  // one warning, 15 s before the wave (holds of the timer in tests keep it above)
+  if (before > WAVE_WARNING_SECONDS && waveTimer <= WAVE_WARNING_SECONDS) showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
+  if (waveTimer <= 0) {
+    startNextWave();
+    waveTimer = waveInterval;
+  }
+}
+
+// Enemy tents: destroyed ones go; the rest summon enemies now and then
+function tickEnemyTents(dt) {
+  for (let i = enemyTents.length - 1; i >= 0; i--) {
+    let et = enemyTents[i];
+    if (et.hp <= 0) {
+      enemyTents.splice(i, 1);
+      invalidateAllPaths();
+    }
+  }
+
+  enemyTents.forEach(et => {
+    et.summonTimer = (et.summonTimer || 0) + dt;
+    const tentConfig = GAME_CONFIG.enemyTents;
+    if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && enemies.length < tentConfig.maxEnemies) {
+      et.summonTimer = 0;
+      et.summonsLeft--;
+      let spawnPos = {
+        x: Math.max(15, Math.min(WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
+        y: Math.max(15, Math.min(WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
+      };
+      const summoned = createConfiguredEnemy(spawnPos, getEnemyFaction().summonEnemy || tentConfig.summonEnemy);
+      summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
+      enemies.push(summoned);
+    }
+  });
+}
+
+// Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
+function removeDeadEnemies() {
+  enemies.forEach(en => {
+    if (en.hp <= 0 && !en.rewardGranted) {
+      en.rewardGranted = true;
+      if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); }
+    }
+  });
+  enemies = enemies.filter(en => en.hp > 0);
+  enemyTentBlueprints = enemyTentBlueprints.filter(site => enemies.includes(site.builder));
+}
