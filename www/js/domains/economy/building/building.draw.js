@@ -33,3 +33,210 @@ function drawDamage(x, y, half, share) {
     }
   }
 }
+
+// In a build mode: the tile grid, and the tile under the pointer (red where it can't go)
+function drawBuildGrid() {
+  if (buildMode !== 'interact' && buildMode !== 'possess') {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < WORLD_WIDTH; x += TILE_SIZE) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_HEIGHT); ctx.stroke();
+    }
+    for (let y = 0; y < WORLD_HEIGHT; y += TILE_SIZE) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_WIDTH, y); ctx.stroke();
+    }
+    let gxIdx = Math.floor(mouse.x / TILE_SIZE);
+    let gyIdx = Math.floor(mouse.y / TILE_SIZE);
+    let gx = gxIdx * TILE_SIZE;
+    let gy = gyIdx * TILE_SIZE;
+    if (isBorderZone(gxIdx, gyIdx) && buildMode !== 'demolish') {
+      ctx.fillStyle = 'rgba(231, 76, 60, 0.5)';
+    } else {
+      ctx.fillStyle = buildMode === 'demolish' ? 'rgba(231, 76, 60, 0.35)' : 'rgba(70, 184, 218, 0.25)';
+    }
+    ctx.fillRect(gx, gy, TILE_SIZE, TILE_SIZE);
+  }
+}
+
+// The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair
+function drawTownHall() {
+  if (getPlayerFaction().hall === 'hellgate') {
+    // the demons' Hell Gate (#43): a dark stone gate with fire inside
+    ctx.fillStyle = '#3d1f1f'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4; ctx.stroke();
+    drawIcon(ctx, 'hellgate', townHall.x, townHall.y, townHall.radius * 1.4);
+  } else if (getPlayerFaction().hall === 'graveyard') {
+    // the undead's graveyard (#43): a dark fenced plot with tombstones
+    ctx.fillStyle = '#2c2c34'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 4; ctx.stroke();
+    drawIcon(ctx, 'graveyard', townHall.x, townHall.y, townHall.radius * 1.4);
+  } else {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 4; ctx.stroke();
+  }
+  
+  drawDamage(townHall.x, townHall.y, townHall.radius - 4, townHall.hp / townHall.maxHp);
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(townHall.x - 30, townHall.y - 45, 60, 8);
+  ctx.fillStyle = townHall.hp > 40 ? '#2ecc71' : '#e74c3c';
+  ctx.fillRect(townHall.x - 30, townHall.y - 45, (Math.max(0, townHall.hp) / townHall.maxHp) * 60, 8);
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(townHall.x - 30, townHall.y - 45, 60, 8);
+
+  if (townHall.hp < townHall.maxHp) {
+    ctx.fillStyle = townHall.repairRequested ? '#f1c40f' : '#e74c3c';
+    ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    fillRichText(ctx, townHall.repairRequested ? t('repair.hall', { cost: formatCost(GAME_CONFIG.repairs.townHall.cost) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
+  }
+}
+
+// Blueprints: their shape, the materials still to come, the work done
+function drawBlueprints() {
+  blueprints.forEach(bp => {
+    ctx.save(); ctx.globalAlpha = 0.5;
+    if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
+    else if (bp.type === 'wall_wood') ctx.fillStyle = '#8e5a2b';
+    else if (bp.type === 'wall_stone') ctx.fillStyle = '#7f8c8d';
+    else if (bp.type === 'door') ctx.fillStyle = '#a0522d';
+    else if (bp.type === 'wheat') ctx.fillStyle = '#f1c40f';
+    else if (bp.type === 'tent') ctx.fillStyle = '#e67e22';
+    else if (bp.type === 'smelter') ctx.fillStyle = '#c0392b';
+    else if (bp.type === 'watchtower') ctx.fillStyle = '#607d8b';
+    else if (bp.type === 'sapling') ctx.fillStyle = '#2ecc71';
+    else if (bp.type === 'warehouse') ctx.fillStyle = '#a47148';
+    ctx.fillRect(bp.x - 14, bp.y - 14, 28, 28);
+    ctx.restore();
+
+    // materials still to be brought from storage (#36): an orange bar of what's here
+    const cost = (getDefinition('buildings', bp.type) || {}).cost;
+    if (bp.needs && cost) {
+      const total = Object.values(cost).reduce((a, b) => a + b, 0);
+      const missing = Object.values(bp.needs).reduce((a, b) => a + b, 0);
+      if (missing > 0 && total > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bp.x - 12, bp.y + 11, 24, 3);
+        ctx.fillStyle = '#e67e22'; ctx.fillRect(bp.x - 12, bp.y + 11, 24 * (1 - missing / total), 3);
+        drawIcon(ctx, getResourceIconName(Object.keys(bp.needs)[0]), bp.x, bp.y, 14);
+      }
+    }
+
+    if (bp.type === 'demolish_building') {
+      drawIcon(ctx, 'hammer', bp.x, bp.y, 16);
+      ctx.fillStyle = '#e74c3c'; ctx.fillRect(bp.x - 12, bp.y + 16, (bp.progress / bp.maxProgress) * 24, 3);
+    } else {
+      ctx.fillStyle = '#fff'; ctx.fillRect(bp.x - 12, bp.y + 16, (bp.progress / bp.maxProgress) * 24, 3);
+    }
+  });
+}
+
+// Buildings, each kind its own way, with their damage, health and repair, and demolition marks
+function drawBuildings() {
+  buildings.forEach(b => {
+    if (b.type === 'wall_wood') {
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = '#5c3a17'; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+    } else if (b.type === 'wall_stone') {
+      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+    } else if (b.type === 'door') {
+      ctx.fillStyle = '#a0522d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+      drawIcon(ctx, 'door', b.x, b.y, 16);
+    } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
+      if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour (#177)
+      else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons' (#43)
+    } else if (b.type === 'tent') {
+      ctx.fillStyle = '#d35400'; ctx.beginPath();
+      ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#4a2511'; ctx.beginPath();
+      ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + 5, b.y + 14); ctx.lineTo(b.x - 5, b.y + 14); ctx.closePath(); ctx.fill();
+	  
+    } else if (b.type === 'spikes') {
+      // wooden base with iron points; a dot per use left
+      ctx.fillStyle = '#6d4c2f'; ctx.fillRect(b.x - 13, b.y - 13, 26, 26);
+      ctx.fillStyle = '#b0bec5';
+      for (const [px, py] of [[-7, -7], [5, -7], [-7, 5], [5, 5], [-1, -1]]) {
+        ctx.beginPath(); ctx.moveTo(b.x + px - 3, b.y + py + 3); ctx.lineTo(b.x + px, b.y + py - 4); ctx.lineTo(b.x + px + 3, b.y + py + 3); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = '#e74c3c';
+      for (let i = 0; i < Math.min(b.usesLeft || 0, 5); i++) ctx.fillRect(b.x - 12 + i * 5, b.y + 10, 3, 2);
+    } else if (b.type === 'watchtower') {
+      // a wooden lookout seen from above: four posts with cross braces, and a plank platform with a
+      // railing, where its archer stands (drawn with the settlers)
+      ctx.fillStyle = '#5d3a1a';
+      for (const [px, py] of [[-13, -13], [9, -13], [-13, 9], [9, 9]]) ctx.fillRect(b.x + px, b.y + py, 4, 4);
+      ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(b.x - 11, b.y - 11); ctx.lineTo(b.x + 11, b.y + 11); ctx.moveTo(b.x + 11, b.y - 11); ctx.lineTo(b.x - 11, b.y + 11); ctx.stroke();
+      ctx.fillStyle = '#a47148'; ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
+      ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 1;
+      for (let i = -5; i <= 5; i += 5) { ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + i); ctx.lineTo(b.x + 10, b.y + i); ctx.stroke(); }
+      ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
+      ctx.textAlign = 'center';
+      // no count in battles: arrows don't run out there (#166)
+      if (gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22); }
+      if (gameMode !== 'battle') {
+        ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
+        ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / b.tower.arrowCapacity), 1);
+      }
+
+    } else if (b.type === 'campfire') {
+      // crossed logs, a flame while someone cooks
+      ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + 8); ctx.lineTo(b.x + 10, b.y - 2); ctx.moveTo(b.x + 10, b.y + 8); ctx.lineTo(b.x - 10, b.y - 2); ctx.stroke();
+      ctx.fillStyle = '#7f8c8d';
+      for (const [sx, sy] of [[-12, 10], [-5, 12], [3, 12], [11, 10]]) { ctx.beginPath(); ctx.arc(b.x + sx, b.y + sy, 2.5, 0, Math.PI * 2); ctx.fill(); }
+      // fuel left (orange) and the piece cooking now (yellow)
+      const perFuel = Math.max(...Object.values(GAME_CONFIG.cooking.fuel));
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3); ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
+      ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, (b.fuelLeft || 0) / perFuel), 3);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress || 0), 3);
+      if (b.burning > 0) {
+        ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(b.x - 6, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 16, b.x + 6, b.y + 4); ctx.fill();
+        ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
+      }
+    } else if (b.type === 'warehouse') {
+      drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed (#36)
+    } else if (b.type === 'smelter') {
+	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+	  drawIcon(ctx, 'fire', b.x, b.y, 13);
+	  if ((b.oreLoaded || 0) > 0) {
+		ctx.fillStyle = '#34495e'; ctx.fillRect(b.x - 13, b.y - 13, 12, 10);
+		ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+		ctx.fillText(`${b.oreLoaded}`, b.x - 7, b.y - 5);
+	  }
+	  if ((b.ironProduced || 0) > 0) {
+		ctx.fillStyle = '#bdc3c7'; ctx.fillRect(b.x + 1, b.y - 13, 12, 10);
+		ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+		ctx.fillText(`${b.ironProduced}`, b.x + 7, b.y - 5);
+	  }
+	  if ((b.coalLoaded || 0) > 0) {
+		ctx.fillStyle = '#1e272e'; ctx.fillRect(b.x - 11, b.y + 5, 22, 8);
+		ctx.fillStyle = '#ffffff'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+		fillRichText(ctx, `[[coal]]${b.coalLoaded}`, b.x, b.y + 11);
+	  }
+	  if (b.smeltProgress > 0) {
+		ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(b.x - 14, b.y - 19, 28, 4);
+		ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 13, b.y - 18, 26 * Math.min(1, b.smeltProgress / getSmelterLimits().seconds), 2);
+	  }
+}
+
+    drawDamage(b.x, b.y, 14, b.hp / b.maxHp);
+
+    // hp of a damaged building, and a wrench while its repair is ordered
+    if (b.hp < b.maxHp) {
+      const barY = b.type === 'watchtower' ? b.y - 32 : b.y - 20;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, barY, 24, 3);
+      ctx.fillStyle = b.hp / b.maxHp > 0.5 ? '#f1c40f' : '#e74c3c';
+      ctx.fillRect(b.x - 12, barY, Math.max(0, b.hp / b.maxHp) * 24, 3);
+      if (needsRepair(b)) {
+        drawIcon(ctx, 'tools', b.x + 16, barY + 1, 10);
+      }
+    }
+
+    if (b.isDemolishing) {
+      ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
+      ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2;
+      ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+    }
+  });
+}

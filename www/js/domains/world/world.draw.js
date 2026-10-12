@@ -124,3 +124,52 @@ function drawOreSpawner(x, y, kind) {
   ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill();
   ctx.fillStyle = c.shine; ctx.fillRect(x - 1, y - 4, 2, 4);
 }
+
+// The border zone round the map, and the line where it starts
+function drawMapBorder() {
+  ctx.fillStyle = '#2d4a22';
+  ctx.fillRect(0, 0, WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.fillRect(WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+
+  ctx.strokeStyle = 'rgba(231, 76, 60, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+}
+
+// Desert and beach sand
+function drawSand() {
+  desertTiles.forEach(drawDesertTile);
+  beachTiles.forEach(drawDesertTile);
+}
+
+// Water, and the fishing spots marked on it
+function drawWater(terrain) {
+  waterTiles.forEach(w => {
+    drawWaterTile(w, isWaterReachable(w), terrain);
+    if (w.isFishing) {
+      ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
+      ctx.strokeRect(w.x - 14, w.y - 14, 28, 28);
+      drawIcon(ctx, 'rod', w.x, w.y, 18);
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(w.x - 14, w.y - 22, 28, 4);
+      ctx.fillStyle = '#f1c40f';
+      ctx.fillRect(w.x - 13, w.y - 21, 26 * Math.min(1, (w.fishTimer || 0) / 3), 2);
+      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1;
+      ctx.strokeRect(w.x - 14, w.y - 22, 28, 4);
+    }
+  });
+}
+
+// Natural rock and ore spawners
+function drawRocks(terrain) {
+  naturalRocks.forEach(r => {
+    if (r.oreSpawner) {
+      drawOreSpawner(r.x, r.y, r.oreSpawner);
+    } else {
+      drawRockTile(r.x, r.y, terrain);
+    }
+    drawHarvestProgress(r, 36);
+  });
+}
