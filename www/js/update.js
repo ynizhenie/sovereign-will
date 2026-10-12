@@ -1,4 +1,3 @@
-const WAVE_WARNING_SECONDS = 15;
 
 // Raised zombies crumble when their time is up (#164, #175); the player's leave rot behind
 function updateTemporaryZombies(dt) {
@@ -11,20 +10,6 @@ function updateTemporaryZombies(dt) {
     stock.rot += gone.length * GAME_CONFIG.temporaryZombie.rot;
   }
   enemies = enemies.filter(en => !crumbled(en));
-}
-
-// Burning arrows (#165): what they hit burns a few seconds
-function setBurning(unit) {
-  unit.burning = GAME_CONFIG.burning.seconds;
-}
-
-function updateBurning(dt) {
-  for (const unit of [...settlers, ...enemies]) {
-    if (!(unit.burning > 0)) continue;
-    unit.burning -= dt;
-    if (settlers.includes(unit)) damageSettler(unit, GAME_CONFIG.burning.dps * dt, null);
-    else unit.hp -= GAME_CONFIG.burning.dps * dt;
-  }
 }
 
 // A corpse on blighted ground rises as a temporary zombie after a while (#164)

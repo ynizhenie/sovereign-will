@@ -1,49 +1,4 @@
 
-// A unit was hurt: blood on it, a splat under it (at most every half second per unit) and on the melee
-// weapon that did it (GAME_CONFIG.blood)
-function bleed(unit, attacker) {
-  unit.bloodAge = 0;
-  if (attacker && !isBowWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
-  if (pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
-  unit.lastBleedTick = pathTick;
-  const h = tileVariantHash(pathTick, bloodSplats.length);
-  bloodSplats.push({ x: unit.x + (h % 11) - 5, y: unit.y + ((h >>> 8) % 11) - 5, r: 3 + (h >>> 16) % 4, age: 0 });
-  if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
-}
-
-// Stepping in a pool of blood or in dung: the unit then leaves footprints for a few steps. Footprints
-// themselves don't smear further. Whoever left the dung can't step in it until it has walked off first.
-function trackFootprints(unit) {
-  for (const pile of dung) {
-    if (pile.by === unit && !pile.byLeft && Math.hypot(unit.x - pile.x, unit.y - pile.y) > 20) pile.byLeft = true;
-  }
-  if (!unit.smear || unit.smear.steps <= 0) {
-    const pool = bloodSplats.find(b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4);
-    const pile = dung.find(p => (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9);
-    if (pool || pile) unit.smear = { color: pile ? 'dung' : 'blood', steps: GAME_CONFIG.smears.steps, x: unit.x, y: unit.y };
-    return;
-  }
-  if (Math.hypot(unit.x - unit.smear.x, unit.y - unit.smear.y) < GAME_CONFIG.smears.stepGap) return;
-  unit.smear.x = unit.x; unit.smear.y = unit.y;
-  unit.smear.steps--;
-  bloodSplats.push({ x: unit.x, y: unit.y, r: 2.2, age: 0, kind: 'trail', color: unit.smear.color });
-  if (bloodSplats.length > GAME_CONFIG.blood.maxSplats) bloodSplats.shift();
-}
-
-// How visible the blood on a unit's body is: it doesn't dry while the unit is badly wounded
-function bodyBloodAlpha(unit) {
-  if (unit.bloodAge === undefined) return 0;
-  return bloodAlpha(unit.bloodAge, unit.hp <= unit.maxHp * GAME_CONFIG.blood.woundedShare);
-}
-
-// How visible blood of this age is (1..0); `wounded` blood on a badly hurt unit never fades
-function bloodAlpha(age, wounded = false) {
-  if (age === undefined) return 0;
-  const blood = GAME_CONFIG.blood;
-  if (wounded || age <= blood.fadeAfter) return 1;
-  return Math.max(0, 1 - (age - blood.fadeAfter) / blood.fadeSeconds);
-}
-
 function handleCanvasClick() {
   // battle mode: placing while setting up; in a fight, orders for a possessed unit (#166)
   if (gameMode === 'battle') {
