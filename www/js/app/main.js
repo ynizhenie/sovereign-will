@@ -8,13 +8,9 @@ const STEP = 1 / 60;
 
 const MAX_STEPS_PER_FRAME = 6; // after a long hitch, catch up at most this much instead of freezing
 
-let lastTime = performance.now();
-
-let stepTime = 0;
-
-let lastDrawn = 0;
-
-let frameRateSetting = loadSetting('fps', 'display');
+// the loop's clock: when the last frame was, game time not stepped yet, when the last frame was drawn,
+// and the frame-rate setting (30, 60, or 'display': every screen refresh)
+const loop = { lastTime: performance.now(), stepTime: 0, lastDrawn: 0, frameRate: loadSetting('fps', 'display') };
 
 // One step of the game, unless it's lost: then the world stops and no more waves come (#169)
 function stepGame(dt) {
@@ -26,19 +22,19 @@ function stepGame(dt) {
 function gameLoop(now) {
   if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu (#193)
   if (typeof updateMusic === 'function') updateMusic(); // (#174)
-  stepTime += Math.min(0.25, (now - lastTime) / 1000);
-  lastTime = now;
+  loop.stepTime += Math.min(0.25, (now - loop.lastTime) / 1000);
+  loop.lastTime = now;
   let steps = 0;
-  while (stepTime >= STEP && steps < MAX_STEPS_PER_FRAME) {
+  while (loop.stepTime >= STEP && steps < MAX_STEPS_PER_FRAME) {
     stepGame(STEP);
-    stepTime -= STEP;
+    loop.stepTime -= STEP;
     steps++;
   }
-  if (steps === MAX_STEPS_PER_FRAME) stepTime = 0;
+  if (steps === MAX_STEPS_PER_FRAME) loop.stepTime = 0;
 
-  const limit = Number(frameRateSetting);
-  if (!limit || now - lastDrawn >= 1000 / limit - 2) {
-    lastDrawn = now;
+  const limit = Number(loop.frameRate);
+  if (!limit || now - loop.lastDrawn >= 1000 / limit - 2) {
+    loop.lastDrawn = now;
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     render();
     countFrame(now);
@@ -64,7 +60,7 @@ function countFrame(now) {
 function initMain() {
   applyPageTexts();
   renderConfigHud();
-  if (frameRateSetting === 'unlimited') frameRateSetting = 'display'; // the old "no limit" (see #123)
+  if (loop.frameRate === 'unlimited') loop.frameRate = 'display'; // the old "no limit" (see #123)
   fitCanvasToScreen();
   requestAnimationFrame(gameLoop);
 }

@@ -45,16 +45,13 @@ test('difficulty changes how many enemies come and their hp (#39)', async ({ pag
 test('the game runs at the same speed whatever the frame rate (#39)', async ({ page }) => {
   await openFresh(page);
   // drive the real loop with fake frame times: 60 s of play at 30 fps and at 144 fps
+  // the steps counted by the game's own tick counter (the world behind the menu runs every step)
   const ticks = await page.evaluate(() => [30, 144].map(fps => {
-    let steps = 0;
-    const original = update;
-    window.update = dt => { steps++; };
-    try {
-      const start = performance.now() + 1000;
-      lastTime = start; stepTime = 0;
-      for (let i = 1; i <= 60 * fps; i++) gameLoop(start + i * 1000 / fps);
-    } finally { window.update = original; }
-    return steps;
+    const before = pathTick;
+    const start = performance.now() + 1000;
+    loop.lastTime = start; loop.stepTime = 0;
+    for (let i = 1; i <= 60 * fps; i++) gameLoop(start + i * 1000 / fps);
+    return pathTick - before;
   }));
   expect(ticks[0]).toBeGreaterThanOrEqual(3595);
   expect(ticks[0]).toBeLessThanOrEqual(3605);

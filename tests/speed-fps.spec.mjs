@@ -34,5 +34,5 @@ test('Settings: show FPS on and off, remembered; no "no limit" frame rate (#123)
 test('a saved "no limit" frame rate falls back to the screen rate (#123)', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('sovereign-will-fps', 'unlimited'));
   await page.goto('/');
-  expect(await page.evaluate(() => frameRateSetting)).toBe('display');
+  expect(await page.evaluate(() => loop.frameRate)).toBe('display');
 });
