@@ -78,7 +78,8 @@ test('a building placed: back to Point; with Shift held, the build mode stays fo
     const place = (gx, gy) => { setMode('wall_wood'); mouse.x = gx * TILE_SIZE + 15; mouse.y = gy * TILE_SIZE + 15; };
     const g = getGridPos(townHall.x, townHall.y);
     place(g.gx + 4, g.gy + 4); handleCanvasClick(); const after = buildMode;
-    shiftDown = true; place(g.gx + 5, g.gy + 4); handleCanvasClick(); const withShift = buildMode; shiftDown = false;
+    const shift = type => window.dispatchEvent(new KeyboardEvent(type, { key: 'Shift' }));
+    shift('keydown'); place(g.gx + 5, g.gy + 4); handleCanvasClick(); const withShift = buildMode; shift('keyup');
     return { after, withShift, placed: blueprints.length };
   });
   expect(r).toEqual({ after: 'interact', withShift: 'wall_wood', placed: 2 });

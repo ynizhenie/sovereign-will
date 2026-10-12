@@ -205,24 +205,21 @@ window.sim = (() => {
       const t = spots[(i * 7) % spots.length], p = tileCenter(t.gx, t.gy);
       settlers.push(makeSettler(500 + i, p.x, p.y, { tool: tools[i % tools.length] }));
     }
-    const original = moveEntityTowards;
-    let frame = 0;
-    window.moveEntityTowards = function (ent, tx, ty, speed, isEnemy) {
-      if (!isEnemy) {
-        const d = Math.hypot(ent.x - tx, ent.y - ty);
-        if (d > 20) ent.__want = { frame, tx, ty, d };
-      }
-      return original.apply(this, arguments);
+    // a settler on its way somewhere (a path to follow) and still more than 20 px from where it's going
+    const wantOf = s => {
+      if (!s.pathTarget || !s.path || !s.path.length) return null;
+      const d = Math.hypot(s.x - s.pathTarget.x, s.y - s.pathTarget.y);
+      return d > 20 ? { tx: s.pathTarget.x, ty: s.pathTarget.y, d } : null;
     };
     const track = new Map();
     const suspects = new Set();
-    try {
-      for (frame = 0; frame < seconds * 60; frame++) {
+    {
+      for (let frame = 0; frame < seconds * 60; frame++) {
         waveTimer = 999;
         update(TICK);
         for (const s of settlers) {
-          const w = s.__want;
-          if (!w || w.frame !== frame) { track.delete(s); continue; }
+          const w = wantOf(s);
+          if (!w) { track.delete(s); continue; }
           const tr = track.get(s);
           if (!tr || Math.hypot(tr.tx - w.tx, tr.ty - w.ty) > 20) { track.set(s, { since: frame, best: w.d, tx: w.tx, ty: w.ty }); continue; }
           if (w.d < tr.best - 5) { tr.best = w.d; tr.since = frame; continue; }
@@ -239,8 +236,6 @@ window.sim = (() => {
         }
       }
       return { stuck: stuck.map(s => ({ id: s.id, x: Math.round(s.x), y: Math.round(s.y) })), overlapping };
-    } finally {
-      window.moveEntityTowards = original;
     }
   }
 
@@ -356,13 +351,14 @@ window.sim = (() => {
     spot.isFishing = true;
     settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
     stock.wheatSeeds = seeds;
-    let catches = 0;
-    const original = giveResourceToSettler;
-    window.giveResourceToSettler = function (s, type, amount) {
-      if (type in GAME_CONFIG.fishing.catch && s === settlers[0]) catches++;
-      return original.apply(this, arguments);
-    };
-    try { run(seconds); } finally { window.giveResourceToSettler = original; }
+    // a catch: the fisher's load of fish grows
+    let catches = 0, carried = 0;
+    run(seconds, { each: () => {
+      const load = settlers[0] && settlers[0].carrying;
+      const fish = load && load.type in GAME_CONFIG.fishing.catch ? load.amount : 0;
+      if (fish > carried) catches++;
+      carried = fish;
+    } });
     return { catches, seedsLeft: stock.wheatSeeds };
   }
 

@@ -16,7 +16,7 @@ const exitButton = document.getElementById('exit-app');
 // frame rate (Settings), remembered on the device
 const fpsOptions = document.querySelectorAll('.fps-option[data-fps]');
 
-const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === frameRateSetting));
+const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === loop.frameRate));
 
 // FPS counter on / off (Settings), remembered on the device
 const showFpsOptions = document.querySelectorAll('[data-show-fps]');
@@ -49,8 +49,8 @@ function initMenuScreens() {
   onTap(exitButton, () => { if (nativeApp) nativeApp.exitApp(); });
   markFps();
   fpsOptions.forEach(button => button.dataset.fps && onTap(button, () => {
-    frameRateSetting = button.dataset.fps;
-    saveSetting('fps', frameRateSetting);
+    loop.frameRate = button.dataset.fps;
+    saveSetting('fps', loop.frameRate);
     markFps();
   }));
   applyShowFps(loadSetting('showFps', 'off'));
