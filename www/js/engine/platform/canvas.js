@@ -36,8 +36,6 @@ function getViewScale() {
   return getBaseScale() * camera.zoom;
 }
 
-window.addEventListener('resize', fitCanvasToScreen);
-
 // A small yellow bar above a thing being worked on, share 0..1 done
 function drawProgressBar(cx, cy, share, width = 24) {
   const progress = Math.max(0, Math.min(1, share));
@@ -52,4 +50,9 @@ function drawProgressBar(cx, cy, share, width = 24) {
   ctx.strokeStyle = '#2c3e50';
   ctx.lineWidth = 1;
   ctx.strokeRect(x, y, width, 4);
+}
+
+// What this file sets up as the game starts (called by app/boot.js)
+function initCanvas() {
+  window.addEventListener('resize', fitCanvasToScreen);
 }

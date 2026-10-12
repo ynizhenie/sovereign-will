@@ -44,6 +44,8 @@ function isCameraLocked() {
   return isDefeated();
 }
 
-onTap(document.getElementById('defeat-restart'), () => { resetGame(); openTab('tab-build'); });
-
-onTap(document.getElementById('defeat-exit'), () => exitToMainMenu());
+// What this file sets up as the game starts (called by app/boot.js)
+function initEndlessRules() {
+  onTap(document.getElementById('defeat-restart'), () => { resetGame(); openTab('tab-build'); });
+  onTap(document.getElementById('defeat-exit'), () => exitToMainMenu());
+}

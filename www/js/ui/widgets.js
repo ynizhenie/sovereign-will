@@ -21,10 +21,6 @@ function refreshAffordability(force = false) {
 // A button's answer (#UI): the one just pressed flashes green when what it did worked (a green notice) and
 // shakes when it didn't (a red one), within a moment of the press
 let pressedButton = null, pressedAt = 0;
-document.addEventListener('pointerdown', e => {
-  const button = e.target.closest && e.target.closest('button');
-  if (button) { pressedButton = button; pressedAt = performance.now(); }
-}, true);
 function answerPressedButton(ok) {
   if (!pressedButton || performance.now() - pressedAt > 600) return;
   const button = pressedButton, name = ok ? 'btn-ok' : 'btn-no';
@@ -78,4 +74,12 @@ function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyTe
     showItem();
     list.appendChild(row);
   }
+}
+
+// What this file sets up as the game starts (called by app/boot.js)
+function initWidgets() {
+  document.addEventListener('pointerdown', e => {
+    const button = e.target.closest && e.target.closest('button');
+    if (button) { pressedButton = button; pressedAt = performance.now(); }
+  }, true);
 }

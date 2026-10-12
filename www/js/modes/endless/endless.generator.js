@@ -104,16 +104,19 @@ function renderPresetList() {
   });
 }
 
-onTap(document.getElementById('open-generator'), () => { renderGeneratorFields(); renderPresetList(); showMenuScreen('generator'); });
-document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
-onTap(document.getElementById('preset-standard'), () => applyMapSettings(STANDARD_MAP_SETTINGS));
-onTap(document.getElementById('preset-save'), () => {
-  const input = document.getElementById('preset-name');
-  const name = input.value.trim();
-  if (!name) return;
-  const presets = loadPresets();
-  presets[name] = JSON.parse(JSON.stringify(GAME_CONFIG.map));
-  savePresets(presets);
-  input.value = '';
-  renderPresetList();
-});
+// What this file sets up as the game starts (called by app/boot.js)
+function initEndlessGenerator() {
+  onTap(document.getElementById('open-generator'), () => { renderGeneratorFields(); renderPresetList(); showMenuScreen('generator'); });
+  document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
+  onTap(document.getElementById('preset-standard'), () => applyMapSettings(STANDARD_MAP_SETTINGS));
+  onTap(document.getElementById('preset-save'), () => {
+    const input = document.getElementById('preset-name');
+    const name = input.value.trim();
+    if (!name) return;
+    const presets = loadPresets();
+    presets[name] = JSON.parse(JSON.stringify(GAME_CONFIG.map));
+    savePresets(presets);
+    input.value = '';
+    renderPresetList();
+  });
+}

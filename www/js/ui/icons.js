@@ -572,14 +572,6 @@ function fillRichText(context, text, x, y) {
   context.textAlign = align;
 }
 
-// The icons as CSS classes (.ic-name), so HTML anywhere can show one with <i class="ic ic-name">
-(function makeIconStyles() {
-  const rules = Object.keys(ICONS).map(name => `.ic-${name}{background-image:url(${getIconCanvas(name).toDataURL()})}`);
-  const style = document.createElement('style');
-  style.textContent = `.ic{display:inline-block;width:1.15em;height:1.15em;vertical-align:-0.2em;background-size:contain;background-repeat:no-repeat;background-position:center}${rules.join('')}`;
-  document.head.appendChild(style);
-})();
-
 function getResourceIconName(resourceKey) {
   const known = GAME_CONFIG.resources[resourceKey] || GAME_CONFIG.foodKinds[resourceKey];
   return known ? known.icon : 'bundle';
@@ -588,4 +580,15 @@ function getResourceIconName(resourceKey) {
 function getResourceIcon(resourceKey) {
   const resource = GAME_CONFIG.resources[resourceKey];
   return resource ? `[[${resource.icon}]]` : resourceKey;
+}
+
+// What this file sets up as the game starts (called by app/boot.js)
+function initIcons() {
+  // The icons as CSS classes (.ic-name), so HTML anywhere can show one with <i class="ic ic-name">
+  (function makeIconStyles() {
+    const rules = Object.keys(ICONS).map(name => `.ic-${name}{background-image:url(${getIconCanvas(name).toDataURL()})}`);
+    const style = document.createElement('style');
+    style.textContent = `.ic{display:inline-block;width:1.15em;height:1.15em;vertical-align:-0.2em;background-size:contain;background-repeat:no-repeat;background-position:center}${rules.join('')}`;
+    document.head.appendChild(style);
+  })();
 }
