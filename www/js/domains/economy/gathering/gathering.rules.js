@@ -1,11 +1,10 @@
 // Resources on the map: which can be gathered, adding one, what a finished one gives, and growing back
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/storage.rules.js';
-import { ORE_KINDS, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, placeOre, spawnForestAware, spawnResource } from '../../world/world.generator.js';
-import { invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+import { game, rand } from '../../../engine/world/index.js';
+import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
+import { ORE_KINDS, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, placeOre, spawnForestAware, spawnResource } from '../../world/index.js';
+import { invalidateAllPaths } from '../../../engine/movement/index.js';
 
 export function getPlacedResources(includeGrowingTrees = true) {
   return [

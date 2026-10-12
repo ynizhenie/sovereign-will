@@ -10,26 +10,20 @@
 // without that list it takes them all. An archer's tap on nothing else shoots there.
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { game, townHall } from '../../../engine/world/state.js';
-import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/equipment.rules.js';
-import { canAfford, hasRoomToCarry, moveSettlerToTownHall, payCost, takeStock } from '../storage/storage.rules.js';
-import { getMissingMaterial, getRepairStep } from '../../economy/building/building.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { joystick, keys } from '../../../engine/platform/input.js';
+import { joystick, keys, t } from '../../../engine/platform/index.js';
+import { game, townHall } from '../../../engine/world/index.js';
+import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/index.js';
+import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, takeStock } from '../storage/index.js';
+import { deliverMaterials, getMissingMaterial, getRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
+import { showNotification } from '../../../ui/index.js';
 import { getPossessed } from './settlers.rules.js';
-import { getHarvestableResources, getMapResourceDef, getMapResourceKind } from '../../economy/gathering/gathering.rules.js';
-import { collidesWithWall } from '../../../engine/movement/collision.js';
-import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
-import { performAttack } from '../../conflict/combat/combat.rules.js';
+import { getHarvestableResources, getMapResourceDef, getMapResourceKind, workResource } from '../../economy/gathering/index.js';
+import { collidesWithWall, getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/index.js';
+import { performAttack } from '../../conflict/combat/index.js';
 import { faceTowards } from './settlers.draw.js';
-import { getFishingBait } from '../../economy/fishing/fishing.rules.js';
-import { fetchBait, fishAt } from '../../economy/fishing/fishing.behaviours.js';
-import { fetchFromStorage, goDeliver } from '../storage/storage.behaviours.js';
-import { workResource } from '../../economy/gathering/gathering.behaviours.js';
-import { huntBoar } from '../../economy/hunting/hunting.behaviours.js';
-import { deliverMaterials, repairStep, workBlueprint } from '../../economy/building/building.behaviours.js';
-import { pickApplesFrom } from '../../economy/farming/farming.behaviours.js';
+import { fetchBait, fishAt, getFishingBait } from '../../economy/fishing/index.js';
+import { huntBoar } from '../../economy/hunting/index.js';
+import { pickApplesFrom } from '../../economy/farming/index.js';
 
 export const handsFull = p => p.carrying && !hasRoomToCarry(p);
 export const walkTo = (s, x, y, tick) => moveEntityTowards(s, x, y, s.speed, false, tick.dt);

@@ -1,21 +1,18 @@
 // One frame: the ground, then everything on it, layer by layer, then the marks over it
 
-import { getTileIndex } from '../engine/world/grid.js';
-import { game } from '../engine/world/state.js';
-import { canvas, ctx, getViewScale } from '../engine/platform/canvas.js';
-import { drawEnemies, drawEnemyTentSites, drawEnemyTents } from '../domains/conflict/waves/waves.draw.js';
-import { camera } from '../engine/platform/camera.js';
-import { drawDung, drawSettlers } from '../domains/colony/settlers/settlers.draw.js';
-import { drawBoars } from '../domains/economy/hunting/hunting.draw.js';
-import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/farming.draw.js';
-import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/gathering.draw.js';
-import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall } from '../domains/economy/building/building.draw.js';
-import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/combat.draw.js';
-import { drawBlight } from '../domains/factions/undead/undead.draw.js';
-import { drawGrassGround, drawMapBorder, drawRocks, drawSand, drawWater } from '../domains/world/world.draw.js';
-import { isDefeated } from '../modes/endless/endless.rules.js';
-import { battle } from '../modes/battle/battle.setup.js';
-import { drawBattleOverlay, drawBattleResult } from '../modes/battle/battle.draw.js';
+import { game, getTileIndex } from '../engine/world/index.js';
+import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
+import { drawEnemies, drawEnemyTentSites, drawEnemyTents } from '../domains/conflict/waves/index.js';
+import { drawDung, drawSettlers } from '../domains/colony/settlers/index.js';
+import { drawBoars } from '../domains/economy/hunting/index.js';
+import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
+import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
+import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall } from '../domains/economy/building/index.js';
+import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
+import { drawBlight } from '../domains/factions/undead/index.js';
+import { drawGrassGround, drawMapBorder, drawRocks, drawSand, drawWater } from '../domains/world/index.js';
+import { isDefeated } from '../modes/endless/index.js';
+import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 
 export function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);

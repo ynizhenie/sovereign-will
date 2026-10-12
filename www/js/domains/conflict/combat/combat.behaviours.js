@@ -1,14 +1,13 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
-import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/storage.rules.js';
-import { getRecentAttacker } from '../../colony/settlers/settlers.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
+import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../colony/equipment/index.js';
+import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
+import { getRecentAttacker } from '../../colony/settlers/index.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { NORMAL_BODIES, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
-import { findNearestArrowTower, refillArcherFromTower } from '../towers/towers.rules.js';
-import { findNearestStorage, isAtStorage, walkToStorage } from '../../colony/storage/storage.behaviours.js';
+import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it (#155)
 export function takeMarkedTarget(s, tick) {

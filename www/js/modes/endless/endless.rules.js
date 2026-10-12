@@ -1,17 +1,11 @@
 // An Endless game is lost when the town hall falls or the last settler dies: the defeat screen, the camera
 // flying to the base
 
-import { openTab } from '../../ui/bottom-panel.js';
-import { t } from '../../engine/platform/i18n.js';
-import { game, townHall } from '../../engine/world/state.js';
-import { updateUI } from '../../ui/hud.js';
-import { getBaseScale, screenPixelRatio } from '../../engine/platform/canvas.js';
-import { camera, getMaxZoom } from '../../engine/platform/camera.js';
-import { unpossess } from '../../domains/colony/settlers/settlers.rules.js';
-import { onTap } from '../../engine/platform/dom.js';
-import { exitToMainMenu, resetGame } from '../../app/session.js';
-import { setMode } from '../../ui/map-input.js';
-import { playSound } from '../../app/sounds.js';
+import { openTab, setMode, updateUI } from '../../ui/index.js';
+import { camera, getBaseScale, getMaxZoom, onTap, screenPixelRatio, t } from '../../engine/platform/index.js';
+import { game, townHall } from '../../engine/world/index.js';
+import { unpossess } from '../../domains/colony/settlers/index.js';
+import { exitToMainMenu, playSound, resetGame } from '../../app/index.js';
 
 // Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
 export function isDefeated() {

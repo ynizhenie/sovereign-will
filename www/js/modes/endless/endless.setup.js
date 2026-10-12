@@ -1,16 +1,14 @@
 // The Endless menu before a game: wave interval, map (random or saved, its size), difficulty, factions and
 // colours, the seed, and Play
 
-import { openTab } from '../../ui/bottom-panel.js';
+import { openTab } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { t } from '../../engine/platform/i18n.js';
-import { game } from '../../engine/world/state.js';
-import { applySeedFromUI, createDefaultSeed } from '../../engine/world/rng.js';
-import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/factions.rules.js';
-import { onTap } from '../../engine/platform/dom.js';
-import { resetGame } from '../../app/session.js';
-import { mainMenu } from '../menu/menu.screens.js';
-import { loadSavedMaps, renderSavedMapList } from '../editor/editor.maps.js';
+import { onTap, t } from '../../engine/platform/index.js';
+import { applySeedFromUI, createDefaultSeed, game } from '../../engine/world/index.js';
+import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
+import { resetGame } from '../../app/index.js';
+import { mainMenu } from '../menu/index.js';
+import { loadSavedMaps, renderSavedMapList } from '../editor/index.js';
 
 export const playButton = document.getElementById('play-button');
 

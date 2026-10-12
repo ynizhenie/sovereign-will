@@ -1,7 +1,7 @@
 // Portals and horns
 
-import { ctx } from '../../../engine/platform/canvas.js';
-import { shadeColor } from '../factions.rules.js';
+import { ctx } from '../../../engine/platform/index.js';
+import { shadeColor } from '../index.js';
 
 // A demon portal in its side's colour (#177): a dark rim, the colour, a bright heart
 export function drawPortal(x, y, color) {

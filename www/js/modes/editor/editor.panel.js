@@ -3,11 +3,10 @@
 // ---- Panels
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { setRichText } from '../../ui/icons.js';
-import { t } from '../../engine/platform/i18n.js';
-import { game } from '../../engine/world/state.js';
-import { onTap } from '../../engine/platform/dom.js';
-import { showMenuScreen } from '../menu/menu.screens.js';
+import { setRichText } from '../../ui/index.js';
+import { onTap, t } from '../../engine/platform/index.js';
+import { game } from '../../engine/world/index.js';
+import { showMenuScreen } from '../menu/index.js';
 import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
 import { EDITOR_TOOLS, editor, resizeEditorMap, saveEditorMap, startEditor } from './editor.tools.js';
 

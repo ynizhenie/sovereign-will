@@ -1,7 +1,6 @@
 // Finding a way: which tiles block whom (settlers, enemies), walking distances, and A* paths
 
-import { getGridPos, getTileIndex, resetTileIndex } from '../world/grid.js';
-import { TILE_SIZE, game, townHall } from '../world/state.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, resetTileIndex, townHall } from '../world/index.js';
 
 // isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
 // world's blocking tiles change. Settler path searches read this instead of re-checking each tile.

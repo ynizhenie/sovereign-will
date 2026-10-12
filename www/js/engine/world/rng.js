@@ -2,7 +2,7 @@
 // is still read from the Endless menu's field here, until a game is made from a seed it's given (createGame).
 
 import { game } from './state.js';
-import { updateSeedHud } from '../../ui/hud.js';
+import { updateSeedHud } from '../../ui/index.js';
 
 export function createWorldSeed(seedInput = 'default-world-seed') {
   const seedValue = String(seedInput || 'default-world-seed');

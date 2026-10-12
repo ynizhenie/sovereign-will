@@ -2,12 +2,11 @@
 // spikes; and where to stand to reach a resource
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { getGridPos, getTileIndex } from '../world/grid.js';
-import { TILE_SIZE, game } from '../world/state.js';
-import { isBlighted } from '../../domains/factions/undead/undead.rules.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
+import { isBlighted } from '../../domains/factions/undead/index.js';
 import { findPathAStar, findPathAStarPermissive, getReachSteps, getSettlerReach, hasClearEnemyLine, isTileBlockedForSettler, pathCrossesSpikes } from './pathfinding.js';
 import { clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
-import { takePortal } from '../../domains/factions/demons/demons.rules.js';
+import { takePortal } from '../../domains/factions/demons/index.js';
 
 export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
   let dx = targetX - entity.x;

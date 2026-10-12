@@ -7,20 +7,13 @@
 // load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
 // loading puts the real object back in its place.
 
-import { rebuildConfigHud, renderedFaction } from '../../ui/bottom-panel.js';
-import { t } from '../../engine/platform/i18n.js';
-import { resetTileIndex, setWorldSize } from '../../engine/world/grid.js';
-import { WORLD_LISTS, game, townHall } from '../../engine/world/state.js';
-import { createWorldSeed } from '../../engine/world/rng.js';
-import { updateUnitCounts } from '../../domains/colony/settlers/settlers.panel.js';
-import { stock } from '../../domains/colony/storage/storage.rules.js';
-import { updateSeedHud } from '../../ui/hud.js';
-import { sides } from '../../domains/factions/factions.rules.js';
-import { showNotification } from '../../ui/toasts.js';
-import { camera, clampCamera } from '../../engine/platform/camera.js';
-import { onTap } from '../../engine/platform/dom.js';
-import { setPaused } from '../../app/session.js';
-import { renderItemList } from '../../ui/widgets.js';
+import { rebuildConfigHud, renderItemList, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
+import { camera, clampCamera, onTap, t } from '../../engine/platform/index.js';
+import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
+import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
+import { stock } from '../../domains/colony/storage/index.js';
+import { sides } from '../../domains/factions/index.js';
+import { setPaused } from '../../app/index.js';
 
 export const SAVE_STORAGE_KEY = 'sovereign-will-saves';
 // caches, worked out again after loading rather than saved

@@ -1,14 +1,14 @@
 // Enemies, their tents and tent sites
 
-import { drawIcon } from '../../../ui/icons.js';
-import { game } from '../../../engine/world/state.js';
-import { ctx } from '../../../engine/platform/canvas.js';
+import { drawIcon } from '../../../ui/index.js';
+import { game } from '../../../engine/world/index.js';
+import { ctx } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
-import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/factions.rules.js';
-import { applyHeldItemPose, drawHeldWeapon, drawQuiver } from '../../colony/settlers/settlers.draw.js';
-import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/combat.draw.js';
-import { drawStaff } from '../../factions/undead/undead.draw.js';
-import { drawHorns, drawPortal } from '../../factions/demons/demons.draw.js';
+import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
+import { applyHeldItemPose, drawHeldWeapon, drawQuiver } from '../../colony/settlers/index.js';
+import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
+import { drawStaff } from '../../factions/undead/index.js';
+import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {

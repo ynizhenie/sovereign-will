@@ -4,16 +4,15 @@
 // ---- Animation state (drawn by getHeldItemPose in render.js)
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { drawIcon } from '../../../ui/icons.js';
-import { game } from '../../../engine/world/state.js';
-import { isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/equipment.rules.js';
-import { getCarryCapacity } from '../storage/storage.rules.js';
-import { ctx } from '../../../engine/platform/canvas.js';
-import { getPlayerFaction, getSettlerColor } from '../../factions/factions.rules.js';
-import { getNecromancy } from '../../factions/undead/undead.rules.js';
-import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/combat.draw.js';
-import { drawStaff } from '../../factions/undead/undead.draw.js';
-import { drawHorns } from '../../factions/demons/demons.draw.js';
+import { drawIcon } from '../../../ui/index.js';
+import { game } from '../../../engine/world/index.js';
+import { isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
+import { getCarryCapacity } from '../storage/index.js';
+import { ctx } from '../../../engine/platform/index.js';
+import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
+import { drawStaff, getNecromancy } from '../../factions/undead/index.js';
+import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/index.js';
+import { drawHorns } from '../../factions/demons/index.js';
 
 // A strike: the held weapon or tool swings through once over `seconds`
 export function startSwing(unit, seconds) {

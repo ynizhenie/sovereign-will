@@ -12,31 +12,21 @@
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { getGridPos } from '../../../engine/world/grid.js';
-import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { moveSettlerToTownHall } from '../storage/storage.rules.js';
-import { findDoorBlockers, isBaseSealed, isTileOccupied } from '../../economy/building/building.rules.js';
-import { isWaterReachable } from '../../world/world.generator.js';
-import { getHarvestableResources } from '../../economy/gathering/gathering.rules.js';
-import { isShelter } from '../../conflict/healing/healing.rules.js';
-import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
-import { clampEntityToBounds } from '../../../engine/movement/collision.js';
-import { moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/steering.js';
-import { isDefenseAlert, isInSafeArea } from '../../conflict/combat/combat.rules.js';
-import { collectWorms, fish } from '../../economy/fishing/fishing.behaviours.js';
-import { assignTowerArchers } from '../../conflict/towers/towers.rules.js';
-import { deliverCarrying, deliverWhenNothingToDo } from '../storage/storage.behaviours.js';
-import { getWorkPriority, harvest } from '../../economy/gathering/gathering.behaviours.js';
-import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/building.behaviours.js';
-import { farmerGathersGrass, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/farming.behaviours.js';
-import { cook } from '../../economy/cooking/cooking.behaviours.js';
-import { clearEnemyTents, fightEnemies, holdPost } from '../../conflict/combat/combat.behaviours.js';
-import { guardTower, loadTowerArrows } from '../../conflict/towers/towers.behaviours.js';
-import { healAtTent, repairTent, treatWounded } from '../../conflict/healing/healing.behaviours.js';
-import { necromancy } from '../../factions/undead/undead.behaviours.js';
-import { eatCorpse, goToSacrifice } from '../../factions/demons/demons.behaviours.js';
-import { equip } from '../equipment/equipment.behaviours.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { deliverCarrying, deliverWhenNothingToDo, moveSettlerToTownHall } from '../storage/index.js';
+import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
+import { isWaterReachable } from '../../world/index.js';
+import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
+import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
+import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
+import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea } from '../../conflict/combat/index.js';
+import { collectWorms, fish } from '../../economy/fishing/index.js';
+import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
+import { farmerGathersGrass, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
+import { cook } from '../../economy/cooking/index.js';
+import { necromancy } from '../../factions/undead/index.js';
+import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
+import { equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 
 export function createSettlerTick(dt) {

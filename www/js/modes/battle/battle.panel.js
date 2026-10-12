@@ -1,8 +1,8 @@
 // The battle's panel: categories, factions, what to place, armour and shield; its buttons
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { setRichText } from '../../ui/icons.js';
-import { onTap } from '../../engine/platform/dom.js';
+import { setRichText } from '../../ui/index.js';
+import { onTap } from '../../engine/platform/index.js';
 import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
 import { battle, clearBattleSide, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';

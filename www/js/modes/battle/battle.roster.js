@@ -1,8 +1,8 @@
 // What can be placed in a battle: each faction's units (colony kinds with a weapon), enemies, buildings
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { t } from '../../engine/platform/i18n.js';
-import { isBowWeapon } from '../../domains/colony/equipment/equipment.rules.js';
+import { t } from '../../engine/platform/index.js';
+import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { battle } from './battle.setup.js';
 
 // The panel's categories: the player's units (green side), enemies (red side), buildings (either side);

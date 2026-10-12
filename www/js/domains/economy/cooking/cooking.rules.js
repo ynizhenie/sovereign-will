@@ -1,6 +1,6 @@
 // Campfires
 
-import { game } from '../../../engine/world/state.js';
+import { game } from '../../../engine/world/index.js';
 
 // A lit campfire burns down when nobody cooks at it
 export function tickCampfires(dt) {

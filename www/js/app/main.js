@@ -1,14 +1,12 @@
 // The start: texts and panel made, the canvas fitted, and the loop: the game in fixed steps of 1/60 s,
 // drawn as often as the frame rate setting allows
 
-import { renderConfigHud } from '../ui/bottom-panel.js';
-import { applyPageTexts } from '../engine/platform/i18n.js';
-import { fitCanvasToScreen } from '../engine/platform/canvas.js';
+import { renderConfigHud } from '../ui/index.js';
+import { applyPageTexts, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
-import { loadSetting } from '../engine/platform/storage.js';
-import { isDefeated, updateDefeat } from '../modes/endless/endless.rules.js';
-import { syncMenuWorld } from '../modes/menu/menu.world.js';
+import { isDefeated, updateDefeat } from '../modes/endless/index.js';
+import { syncMenuWorld } from '../modes/menu/index.js';
 import { updateMusic } from './sounds.js';
 
 // The game runs in fixed steps of 1/60 s whatever the frame rate, so it plays at the same speed on a

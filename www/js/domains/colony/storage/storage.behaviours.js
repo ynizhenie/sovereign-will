@@ -1,12 +1,12 @@
 // Carrying things home: to the nearest storage, and fetching from it
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/state.js';
+import { game, townHall } from '../../../engine/world/index.js';
 import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall, stock } from './storage.rules.js';
-import { getPlayerFaction } from '../../factions/factions.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { takeFishingBait } from '../../economy/fishing/fishing.rules.js';
-import { playSound } from '../../../app/sounds.js';
+import { getPlayerFaction } from '../../factions/index.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { takeFishingBait } from '../../economy/fishing/index.js';
+import { playSound } from '../../../app/index.js';
 
 // Carry whatever the settler holds to the town hall and add it to the stock. With room for more loads
 // (a backpack, a big settler) it keeps gathering first, unless a wave is on; see deliverWhenNothingToDo.

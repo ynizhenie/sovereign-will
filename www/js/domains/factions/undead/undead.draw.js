@@ -1,9 +1,9 @@
 // The necromancer's staff
 
-import { activeTab } from '../../../ui/bottom-panel.js';
+import { activeTab } from '../../../ui/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game } from '../../../engine/world/state.js';
-import { ctx } from '../../../engine/platform/canvas.js';
+import { TILE_SIZE, game } from '../../../engine/world/index.js';
+import { ctx } from '../../../engine/platform/index.js';
 import { updateBlightCache } from './undead.rules.js';
 
 // A necromancer's staff, a pale purple orb at its top (#43)

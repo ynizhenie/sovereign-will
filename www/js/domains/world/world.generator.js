@@ -2,13 +2,11 @@
 // in the numbers GAME_CONFIG.map asks for (scaled to the map's size)
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { getGridPos, getMapAreaScale, isBorderZone, resetTileIndex } from '../../engine/world/grid.js';
-import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../engine/world/state.js';
-import { rand } from '../../engine/world/rng.js';
-import { isTileOccupied } from '../economy/building/building.rules.js';
-import { addMapResource, getMapResourceDef } from '../economy/gathering/gathering.rules.js';
-import { placeAppleTrees } from '../economy/farming/farming.rules.js';
-import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/pathfinding.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getMapAreaScale, isBorderZone, rand, resetTileIndex, townHall } from '../../engine/world/index.js';
+import { isTileOccupied } from '../economy/building/index.js';
+import { addMapResource, getMapResourceDef } from '../economy/gathering/index.js';
+import { placeAppleTrees } from '../economy/farming/index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/index.js';
 import { tileVariantHash } from './world.draw.js';
 
 // counts that grow with the map's area (see getMapAreaScale); the rest are sizes or per-cluster counts

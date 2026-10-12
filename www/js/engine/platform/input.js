@@ -3,9 +3,9 @@
 
 import { canvas, getViewScale } from './canvas.js';
 import { camera, clampCamera, getCanvasScreenCoords, setZoom, updateInputPos } from './camera.js';
-import { getPossessed, switchPossession, unpossess } from '../../domains/colony/settlers/settlers.rules.js';
-import { togglePause } from '../../app/session.js';
-import { isCameraLocked } from '../../modes/endless/endless.rules.js';
+import { getPossessed, switchPossession, unpossess } from '../../domains/colony/settlers/index.js';
+import { togglePause } from '../../app/index.js';
+import { isCameraLocked } from '../../modes/endless/index.js';
 
 export const keys = {};
 

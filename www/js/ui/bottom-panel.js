@@ -2,14 +2,13 @@
 
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { escapeHtml, iconHtml, setRichText } from './icons.js';
-import { t } from '../engine/platform/i18n.js';
-import { game } from '../engine/world/state.js';
-import { assignTool, craftWeapon, getHeldItems } from '../domains/colony/equipment/equipment.rules.js';
-import { formatCost } from '../domains/colony/storage/storage.rules.js';
+import { onTap, t } from '../engine/platform/index.js';
+import { game } from '../engine/world/index.js';
+import { assignTool, craftWeapon, getHeldItems } from '../domains/colony/equipment/index.js';
+import { formatCost } from '../domains/colony/storage/index.js';
 import { resourceHudId, toggleResourceGroup, updateUI } from './hud.js';
-import { getPlayerFaction, sides } from '../domains/factions/factions.rules.js';
-import { getUpgrade, spawnSettler, upgradeToBig } from '../domains/colony/settlers/settlers.rules.js';
-import { onTap } from '../engine/platform/dom.js';
+import { getPlayerFaction, sides } from '../domains/factions/index.js';
+import { getUpgrade, spawnSettler, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { setMode } from './map-input.js';
 import { refreshAffordability } from './widgets.js';
 

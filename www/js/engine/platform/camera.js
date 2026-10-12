@@ -1,6 +1,6 @@
 // The camera over the world: where it looks, how close (zoom), and screen <-> world coordinates
 
-import { game } from '../world/state.js';
+import { game } from '../world/index.js';
 import { canvas, getBaseScale, getViewScale, screenPixelRatio } from './canvas.js';
 import { mouse } from './input.js';
 

@@ -1,14 +1,13 @@
 // Fishers fetch bait, fish at the marked spots, collect worms
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/state.js';
-import { addCarryLoad, giveResourceToSettler } from '../../colony/storage/storage.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { isInSafeArea } from '../../conflict/combat/combat.rules.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { game } from '../../../engine/world/index.js';
+import { addCarryLoad, findNearestStorage, giveResourceToSettler, isAtStorage, walkToStorage } from '../../colony/storage/index.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { isInSafeArea } from '../../conflict/combat/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
 import { corpseHasWorms, getFishingBait, takeFishingBait } from './fishing.rules.js';
-import { findNearestStorage, isAtStorage, walkToStorage } from '../../colony/storage/storage.behaviours.js';
-import { canGather } from '../gathering/gathering.behaviours.js';
+import { canGather } from '../gathering/index.js';
 
 // Walk to the nearest storage and take one bait; false if the stock has none
 export function fetchBait(s, dt) {

@@ -3,10 +3,9 @@
 // the next new game (resetGame -> generateMap) reads.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { t } from '../../engine/platform/i18n.js';
-import { onTap } from '../../engine/platform/dom.js';
-import { renderItemList } from '../../ui/widgets.js';
-import { showMenuScreen } from '../menu/menu.screens.js';
+import { onTap, t } from '../../engine/platform/index.js';
+import { renderItemList } from '../../ui/index.js';
+import { showMenuScreen } from '../menu/index.js';
 
 // The settings as the game ships them: the Standard preset
 export const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));

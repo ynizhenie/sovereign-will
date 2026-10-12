@@ -2,15 +2,13 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { getGridPos, getTileIndex } from '../../../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { getWeaponStats, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
-import { damageSettler, isBigBody } from '../../colony/settlers/settlers.rules.js';
-import { getReachSteps, getSettlerReach, invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
-import { woundBoar } from '../../economy/hunting/hunting.rules.js';
-import { faceTowards, startSwing } from '../../colony/settlers/settlers.draw.js';
-import { tileVariantHash } from '../../world/world.draw.js';
-import { playSound } from '../../../app/sounds.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
+import { damageSettler, faceTowards, isBigBody, startSwing } from '../../colony/settlers/index.js';
+import { getReachSteps, getSettlerReach, invalidateAllPaths } from '../../../engine/movement/index.js';
+import { woundBoar } from '../../economy/hunting/index.js';
+import { tileVariantHash } from '../../world/index.js';
+import { playSound } from '../../../app/index.js';
 
 // Whether an arrow is stopped on tile (gx, gy). fromTower: shot from a watchtower, over walls and doors.
 export function isArrowBlockedTile(gx, gy, fromTower) {

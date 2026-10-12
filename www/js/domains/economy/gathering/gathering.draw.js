@@ -1,9 +1,9 @@
 // How far a resource is worked through
 
-import { TILE_SIZE, game } from '../../../engine/world/state.js';
-import { ctx, drawProgressBar } from '../../../engine/platform/canvas.js';
+import { TILE_SIZE, game } from '../../../engine/world/index.js';
+import { ctx, drawProgressBar } from '../../../engine/platform/index.js';
 import { getHarvestableResources, getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
-import { drawOreVeins } from '../../world/world.draw.js';
+import { drawOreVeins } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;

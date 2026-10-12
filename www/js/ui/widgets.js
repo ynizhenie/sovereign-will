@@ -1,9 +1,8 @@
 // Pieces the screens share: a button's answer to a tap, prices shown short in red, a list of saved things
 
 import { escapeHtml, iconHtml } from './icons.js';
-import { t } from '../engine/platform/i18n.js';
-import { stock } from '../domains/colony/storage/storage.rules.js';
-import { onTap } from '../engine/platform/dom.js';
+import { onTap, t } from '../engine/platform/index.js';
+import { stock } from '../domains/colony/storage/index.js';
 
 // Buttons with a price (#UI): what the stock is short of shows in red, and a button that can't be paid
 // for is dimmed, as the stock changes (a few times a second)

@@ -1,18 +1,15 @@
 // Builders build, bring materials, repair and run the smelters; a walled-in base breaks out
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/state.js';
-import { getWeaponStats } from '../../colony/equipment/equipment.rules.js';
-import { addResources, canAfford, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/storage.rules.js';
+import { game, townHall } from '../../../engine/world/index.js';
+import { getWeaponStats } from '../../colony/equipment/index.js';
+import { addResources, canAfford, fetchFromStorage, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
 import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
-import { finishHarvest, getMapResourceDef } from '../gathering/gathering.rules.js';
-import { makeAppleTree } from '../farming/farming.rules.js';
-import { getReachDistanceToResource, getSettlerReach, invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
-import { ejectEntitiesFromTile } from '../../../engine/movement/collision.js';
-import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
-import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
-import { playSound, playWorkSound } from '../../../app/sounds.js';
+import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
+import { makeAppleTree } from '../farming/index.js';
+import { ejectEntitiesFromTile, getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
+import { playSound, playWorkSound } from '../../../app/index.js';
 
 // Pick up smelted iron and carry it home
 export function collectSmelterIron(s, tick) {

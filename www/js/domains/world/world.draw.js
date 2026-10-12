@@ -1,11 +1,10 @@
 // The ground: grass, water, rock, desert and ore, each joining its own kind
 
-import { drawIcon } from '../../ui/icons.js';
-import { getTileIndex } from '../../engine/world/grid.js';
-import { BORDER_MARGIN, TILE_SIZE, game } from '../../engine/world/state.js';
+import { drawIcon } from '../../ui/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getTileIndex } from '../../engine/world/index.js';
 import { isWaterReachable } from './world.generator.js';
-import { ctx } from '../../engine/platform/canvas.js';
-import { drawHarvestProgress } from '../economy/gathering/gathering.draw.js';
+import { ctx } from '../../engine/platform/index.js';
+import { drawHarvestProgress } from '../economy/gathering/index.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill (#61). Picked per-tile from a coordinate hash, not rand(), so it

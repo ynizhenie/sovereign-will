@@ -2,11 +2,11 @@
 
 // ---- Necromancers (#43)
 
-import { game, townHall } from '../../../engine/world/state.js';
-import { moveSettlerToTownHall } from '../../colony/storage/storage.rules.js';
+import { game, townHall } from '../../../engine/world/index.js';
+import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { getNecromancy, raiseTemporaryZombie } from './undead.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
 
 // The undead's necromancer: heals the wounded around it; raises corpses (any, a big one into a big
 // zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,

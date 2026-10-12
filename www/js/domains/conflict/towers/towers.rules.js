@@ -1,13 +1,11 @@
 // Watchtowers: archers climb them while there's tower duty, shoot from them, come down; arrows for them
 
-import { getGridPos } from '../../../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { isBowWeapon } from '../../colony/equipment/equipment.rules.js';
-import { stock } from '../../colony/storage/storage.rules.js';
-import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { hasLineOfFire, isDefenseAlert } from '../combat/combat.rules.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
+import { isBowWeapon } from '../../colony/equipment/index.js';
+import { stock } from '../../colony/storage/index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
+import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
 
 // Archers climb the towers while there's tower duty (#155: they stay up when enemies reach the base, that's
 // when a tower is worth most), as long as they or the tower have arrows

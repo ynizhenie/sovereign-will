@@ -2,9 +2,8 @@
 
 // ---- Drawing and the panel
 
-import { t } from '../../engine/platform/i18n.js';
-import { game } from '../../engine/world/state.js';
-import { canvas, ctx, screenPixelRatio } from '../../engine/platform/canvas.js';
+import { canvas, ctx, screenPixelRatio, t } from '../../engine/platform/index.js';
+import { game } from '../../engine/world/index.js';
 import { battle } from './battle.setup.js';
 
 export function drawBattleOverlay() {

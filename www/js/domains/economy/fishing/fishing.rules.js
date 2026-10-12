@@ -1,7 +1,7 @@
 // Fishing bait, and worms on corpses
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { canAfford, payCost } from '../../colony/storage/storage.rules.js';
+import { canAfford, payCost } from '../../colony/storage/index.js';
 
 // A fisher at the town hall takes one seed as bait for the next catch
 // The bait a fisher would take now: the first of GAME_CONFIG.fishing.bait the stock has (worms first)

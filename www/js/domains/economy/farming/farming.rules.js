@@ -1,11 +1,10 @@
 // Farm zones and apple trees
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { game, townHall } from '../../../engine/world/state.js';
-import { isDesertTile } from '../../world/world.generator.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { tileVariantHash } from '../../world/world.draw.js';
+import { t } from '../../../engine/platform/index.js';
+import { game, townHall } from '../../../engine/world/index.js';
+import { isDesertTile, tileVariantHash } from '../../world/index.js';
+import { showNotification } from '../../../ui/index.js';
 
 // A farm zone goes only on grass ground (not sand, water, rock, a building or a blueprint) with nothing
 // on it that needs a tool (a grown tree, boulder, ore, cactus). What's gathered by hand (grass, sticks,

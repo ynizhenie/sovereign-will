@@ -7,13 +7,11 @@
 // around it beside the menu's panel, not behind it.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game } from '../../engine/world/state.js';
-import { canvas, fitCanvasToScreen, getBaseScale, screenPixelRatio } from '../../engine/platform/canvas.js';
-import { getPlayerFaction } from '../../domains/factions/factions.rules.js';
-import { camera, updateInputPos } from '../../engine/platform/camera.js';
-import { mouse } from '../../engine/platform/input.js';
-import { changeSettlerType, createSettler } from '../../domains/colony/settlers/settlers.rules.js';
-import { resetGame } from '../../app/session.js';
+import { BORDER_MARGIN, TILE_SIZE, game } from '../../engine/world/index.js';
+import { camera, canvas, fitCanvasToScreen, getBaseScale, mouse, screenPixelRatio, updateInputPos } from '../../engine/platform/index.js';
+import { getPlayerFaction } from '../../domains/factions/index.js';
+import { changeSettlerType, createSettler } from '../../domains/colony/settlers/index.js';
+import { resetGame } from '../../app/index.js';
 
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view

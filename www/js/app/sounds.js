@@ -4,12 +4,10 @@
 // while a wave is on (until the last enemy and enemy tent are gone). Sound and music can each be turned
 // off in the Settings. The audio starts with the first tap or key (browsers allow it only then).
 
-import { game } from '../engine/world/state.js';
-import { canvas, getViewScale, screenPixelRatio } from '../engine/platform/canvas.js';
-import { camera } from '../engine/platform/camera.js';
-import { isDefeated } from '../modes/endless/endless.rules.js';
-import { audio, midi, noise, startAudio, tone } from '../engine/platform/audio.js';
-import { battle } from '../modes/battle/battle.setup.js';
+import { game } from '../engine/world/index.js';
+import { audio, camera, canvas, getViewScale, midi, noise, screenPixelRatio, startAudio, tone } from '../engine/platform/index.js';
+import { isDefeated } from '../modes/endless/index.js';
+import { battle } from '../modes/battle/index.js';
 
 export const SOUND = {
   sfxVolume: 0.55, musicVolume: 0.3,

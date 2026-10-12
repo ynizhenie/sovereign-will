@@ -2,17 +2,16 @@
 // player has selected or possesses
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { game, townHall } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { hasWorkingShield, refundEquipment } from '../equipment/equipment.rules.js';
-import { canAfford, payCost, showCostError, stock } from '../storage/storage.rules.js';
-import { getPlayerFaction } from '../../factions/factions.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { addCorpse, bleed } from '../../conflict/combat/combat.rules.js';
-import { isDefeated } from '../../../modes/endless/endless.rules.js';
-import { battle } from '../../../modes/battle/battle.setup.js';
-import { playSound } from '../../../app/sounds.js';
+import { t } from '../../../engine/platform/index.js';
+import { game, rand, townHall } from '../../../engine/world/index.js';
+import { hasWorkingShield, refundEquipment } from '../equipment/index.js';
+import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
+import { getPlayerFaction } from '../../factions/index.js';
+import { showNotification } from '../../../ui/index.js';
+import { addCorpse, bleed } from '../../conflict/combat/index.js';
+import { isDefeated } from '../../../modes/endless/index.js';
+import { battle } from '../../../modes/battle/index.js';
+import { playSound } from '../../../app/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {

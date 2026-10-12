@@ -8,18 +8,15 @@
 // plain data (serializeMap), keyed by name in localStorage; loadCustomMap() builds the world from one.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { t } from '../../engine/platform/i18n.js';
-import { getGridPos, isBorderZone, resetTileIndex } from '../../engine/world/grid.js';
-import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../engine/world/state.js';
-import { applySeedFromUI } from '../../engine/world/rng.js';
-import { isTileOccupied } from '../../domains/economy/building/building.rules.js';
-import { showNotification } from '../../ui/toasts.js';
-import { camera, clampCamera, setZoom } from '../../engine/platform/camera.js';
-import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/gathering.rules.js';
-import { makeAppleTree } from '../../domains/economy/farming/farming.rules.js';
-import { exitToMainMenu, resetGame } from '../../app/session.js';
-import { invalidateAllPaths } from '../../engine/movement/pathfinding.js';
-import { showMenuScreen } from '../menu/menu.screens.js';
+import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
+import { BORDER_MARGIN, TILE_SIZE, applySeedFromUI, game, getGridPos, isBorderZone, resetTileIndex, townHall } from '../../engine/world/index.js';
+import { isTileOccupied } from '../../domains/economy/building/index.js';
+import { showNotification } from '../../ui/index.js';
+import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/index.js';
+import { makeAppleTree } from '../../domains/economy/farming/index.js';
+import { exitToMainMenu, resetGame } from '../../app/index.js';
+import { invalidateAllPaths } from '../../engine/movement/index.js';
+import { showMenuScreen } from '../menu/index.js';
 import { loadSavedMaps, makeBuilt, placeBoar, serializeMap, storeSavedMaps } from './editor.maps.js';
 import { renderEditorMapList, renderEditorPanel } from './editor.panel.js';
 

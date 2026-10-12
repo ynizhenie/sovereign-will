@@ -1,11 +1,11 @@
 // Blood, arrows, flames and the target mark
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/state.js';
-import { ctx } from '../../../engine/platform/canvas.js';
+import { game } from '../../../engine/world/index.js';
+import { ctx } from '../../../engine/platform/index.js';
 import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
-import { corpseHasWorms } from '../../economy/fishing/fishing.rules.js';
-import { tileVariantHash } from '../../world/world.draw.js';
+import { corpseHasWorms } from '../../economy/fishing/index.js';
+import { tileVariantHash } from '../../world/index.js';
 
 // Blood on the blade of the held item, fading (see bleed)
 export function drawWeaponBlood(unit) {

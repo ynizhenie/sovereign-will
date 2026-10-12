@@ -1,12 +1,10 @@
 // The demons: portals in pairs, and the enemy's portals a wave comes through
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { getGridPos } from '../../../engine/world/grid.js';
-import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { isTileOccupied } from '../../economy/building/building.rules.js';
-import { getEnemyFaction } from '../factions.rules.js';
-import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { isTileOccupied } from '../../economy/building/index.js';
+import { getEnemyFaction } from '../index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
 
 // The demons' portals (#43): built in pairs, the 1st with the 2nd, the 3rd with the 4th...
 export function getPortalPairs() {

@@ -1,15 +1,13 @@
 // Saved maps: stored on the device as plain data, and a world built from one
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { t } from '../../engine/platform/i18n.js';
-import { TILE_SIZE, game, townHall } from '../../engine/world/state.js';
-import { rand } from '../../engine/world/rng.js';
-import { createBuildingBlueprint } from '../../domains/economy/building/building.rules.js';
-import { placeBeaches } from '../../domains/world/world.generator.js';
-import { camera } from '../../engine/platform/camera.js';
-import { addMapResource } from '../../domains/economy/gathering/gathering.rules.js';
-import { makeAppleTree } from '../../domains/economy/farming/farming.rules.js';
-import { renderItemList } from '../../ui/widgets.js';
+import { camera, t } from '../../engine/platform/index.js';
+import { TILE_SIZE, game, rand, townHall } from '../../engine/world/index.js';
+import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
+import { placeBeaches } from '../../domains/world/index.js';
+import { addMapResource } from '../../domains/economy/gathering/index.js';
+import { makeAppleTree } from '../../domains/economy/farming/index.js';
+import { renderItemList } from '../../ui/index.js';
 import { editor } from './editor.tools.js';
 
 export const MAP_STORAGE_KEY = 'sovereign-will-maps';

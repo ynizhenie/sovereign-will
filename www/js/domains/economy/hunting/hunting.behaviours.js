@@ -1,15 +1,14 @@
 // Hunting a boar and carrying its carcass home
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { townHall } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { getWeaponStats, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
-import { finishHarvest } from '../gathering/gathering.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { rand, townHall } from '../../../engine/world/index.js';
+import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
+import { finishHarvest } from '../gathering/index.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { woundBoar } from './hunting.rules.js';
-import { hasLineOfFire, performAttack } from '../../conflict/combat/combat.rules.js';
-import { faceTowards, startSwing } from '../../colony/settlers/settlers.draw.js';
-import { playWorkSound } from '../../../app/sounds.js';
+import { hasLineOfFire, performAttack } from '../../conflict/combat/index.js';
+import { faceTowards, startSwing } from '../../colony/settlers/index.js';
+import { playWorkSound } from '../../../app/index.js';
 
 // Hunt a boar or collect its carcass
 export function huntBoar(s, boar, tick) {
