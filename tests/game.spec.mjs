@@ -262,7 +262,11 @@ test('armed settlers go for an enemy the player marked (#35)', async ({ page }) 
 test('clicking an enemy with the Point tool marks and unmarks it (#35)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  const at = await page.evaluate(() => {
+  const at = await page.evaluate(async () => {
+    // the panel below the map settles first (the fonts in, a frame or two fitted), so the canvas doesn't
+    // move between working out where the enemy is on the page and the click
+    await document.fonts.ready;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const e = createNormalEnemy({ x: townHall.x + 150, y: townHall.y + 90 }, 'raider');
     e.speed = 0;
     enemies = [e];
