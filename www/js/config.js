@@ -304,7 +304,9 @@ const GAME_CONFIG = {
   // campfires: while there's raw food in the stock, a worker with no tool (one per campfire) cooks it.
   // It carries fuel from the town hall to the fire (one unit lasts `fuel[resource]` pieces, coal first),
   // fetches up to `batch` raw pieces, cooks each in `seconds` into `makes` food, and carries the food home.
-  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 },
+  // Under lowFood meals per settler plus hireReserve (enough to hire a giant), any worker cooks, tool in
+  // hand or in a wave too
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 }, lowFood: 2, hireReserve: 30,
     dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
 
   // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows

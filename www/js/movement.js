@@ -581,6 +581,15 @@ function takePortal(entity, targetX, targetY) {
   return null;
 }
 
+// A settler's step that would take it onto a spike tile from off one (its own traps: it never walks
+// them, the player's possessed settler aside, which moves by hand)
+function stepsOntoSpikes(entity, vx, vy) {
+  const tiles = getTileIndex();
+  if (tiles.spikes.size === 0) return false;
+  const key = (x, y) => { const g = getGridPos(x, y); return `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`; };
+  return tiles.spikes.has(key(entity.x + vx, entity.y + vy)) && !tiles.spikes.has(key(entity.x, entity.y));
+}
+
 function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   // the undead's blighted ground holds enemies back (#164)
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
@@ -678,9 +687,14 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         dy = nextNode.y - entity.y;
         dist = Math.hypot(dx, dy);
       } else {
+        // there: onto the exact point, unless that's inside something it can't walk (a campfire it cooks
+        // at, a wall): it stays beside it then (a playtest found cooks put inside the fire, stuck there)
         if (!isEnemy) {
-          entity.x = targetX;
-          entity.y = targetY;
+          const t = getGridPos(targetX, targetY);
+          if (!isTileBlockedForSettler(t.gx, t.gy)) {
+            entity.x = targetX;
+            entity.y = targetY;
+          }
         }
         return;
       }
@@ -713,15 +727,16 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
         entity.moveVy = 0;
         entity.path = null;
         entity.pathRetryTimer = 0.25;
-      } else if (!isEnemy && collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius)) {
+      } else if (!isEnemy && ((collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius) && !collidesWithWall(entity.x, entity.y, bodyRadius)) || stepsOntoSpikes(entity, vx, vy))) {
         // the push away from other settlers can shove a settler into a rock corner: try the plain
         // path direction first, then sidestep toward the next path node (not the final target, which
         // around a corner points straight back into the rock)
         const plainVx = (dx / dist) * speed;
         const plainVy = (dy / dist) * speed;
-        let fallback = !collidesWithWall(entity.x + plainVx, entity.y + plainVy, bodyRadius)
+        let fallback = !collidesWithWall(entity.x + plainVx, entity.y + plainVy, bodyRadius) && !stepsOntoSpikes(entity, plainVx, plainVy)
           ? { x: plainVx, y: plainVy }
           : findSafeStepAroundObstacle(entity, nextNode.x, nextNode.y, speed);
+        if (fallback && stepsOntoSpikes(entity, fallback.x, fallback.y)) fallback = null;
         if (fallback) {
           entity.x += fallback.x;
           entity.y += fallback.y;
@@ -744,7 +759,8 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
       let directVx = (directDx / directDist) * speed;
       let directVy = (directDy / directDist) * speed;
 
-      if (!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius)) {
+      // (caught inside something already: it may walk out)
+      if ((!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius) || collidesWithWall(entity.x, entity.y, bodyRadius)) && !stepsOntoSpikes(entity, directVx, directVy)) {
         entity.x += directVx;
         entity.y += directVy;
       }

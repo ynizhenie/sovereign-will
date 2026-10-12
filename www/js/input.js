@@ -1,11 +1,18 @@
+// Shift held: a building placed keeps the build mode on, to place another (see handleCanvasClick)
+let shiftDown = false;
+// a touch screen: the possession joystick shows there only (a keyboard steers on a computer)
+const isTouchScreen = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+
 window.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); togglePause(); return; }
+  if (e.key === 'Shift') shiftDown = true;
+  if (e.code === 'Space' || (e.code === 'KeyP' && !e.repeat && document.activeElement.tagName !== 'INPUT')) { e.preventDefault(); togglePause(); return; }
   if (e.code === 'Escape') { unpossess(); return; }
   keys[e.key.toLowerCase()] = true;
   if (e.key === 'Tab') { e.preventDefault(); switchPossession(); }
 });
 
-window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+window.addEventListener('keyup', e => { if (e.key === 'Shift') shiftDown = false; keys[e.key.toLowerCase()] = false; });
+window.addEventListener('blur', () => { shiftDown = false; });
 
 // The joystick for the possessed settler: drag the knob, how far from the centre sets the speed
 const JOYSTICK_REACH = 45;

@@ -181,3 +181,29 @@ test('after a battle, Endless starts with a normal town hall (#135)', async ({ p
   });
   expect(r).toEqual({ hp: 100, maxHp: 100, inWorld: true });
 });
+
+test('the line splitting the field shows while placing, not in the fight or the result', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    let drawn = 0;
+    window.drawBattleOverlay = () => { drawn++; };
+    const at = phase => { battle.phase = phase; drawn = 0; render(); return drawn; };
+    const result = { setup: at('setup'), fight: at('fight'), result: at('result') };
+    battle.phase = 'setup';
+    return result;
+  });
+  expect(r).toEqual({ setup: 1, fight: 0, result: 0 });
+});
+
+test('placed units face the other side, red ones too (playtest: the enemies stood facing away)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    const left = at(10, 10), right = at(30, 10);
+    battle.preset = 'sword'; battleTap(left.x, left.y);
+    battle.preset = 'brute'; battleTap(right.x, right.y);
+    return { green: Math.cos(settlers[0].facing || 0), red: Math.cos(enemies[0].facing || 0) };
+  });
+  expect(r.green).toBeGreaterThan(0.9);
+  expect(r.red).toBeLessThan(-0.9);
+});

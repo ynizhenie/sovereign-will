@@ -7,6 +7,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 // page coordinates of a world point, as the menu shows it
+// the game opening over: the curtain lifted
+const opened = page => page.waitForFunction(() => document.getElementById('main-menu').classList.contains('lifted'));
+
 const toPage = (page, p) => page.evaluate(({ x, y }) => {
   const rect = canvas.getBoundingClientRect(), k = getViewScale() / screenPixelRatio;
   return { x: rect.left + rect.width / 2 + (x - camera.x) * k, y: rect.top + rect.height / 2 + (y - camera.y) * k };
@@ -16,7 +19,7 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
-  await page.waitForTimeout(500);
+  await opened(page);
   const r = await page.evaluate(() => ({
     mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'),
     soldiers: settlers.map(s => [s.weapon, s.role]), warehouse: buildings.filter(b => b.type === 'warehouse').length,
@@ -31,7 +34,7 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
 
 test('a tapped boar is marked and hunted, butchered and its meat carried to the warehouse; the soldier changes faction on a tap (#193)', async ({ page }) => {
   await page.goto('/');
-  await page.waitForTimeout(500);
+  await opened(page);
   const boar = await page.evaluate(() => { const b = boars[0]; return { x: b.x, y: b.y }; });
   await page.mouse.click(...Object.values(await toPage(page, boar)));
   const marked = await page.evaluate(() => boars.findIndex(b => b.priority > 0));
@@ -60,7 +63,7 @@ test('a tapped boar is marked and hunted, butchered and its meat carried to the 
 
 test('playing leaves the menu world for a real game, and the menu brings it back (#193)', async ({ page }) => {
   await page.goto('/');
-  await page.waitForTimeout(300);
+  await opened(page);
   await page.click('#mode-endless');
   await page.click('#play-button');
   const game = await page.evaluate(() => ({ mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'), settlers: settlers.length, waveTimer: Number.isFinite(waveTimer) }));

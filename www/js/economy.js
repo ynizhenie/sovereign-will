@@ -112,7 +112,7 @@ function rebuildConfigHud() {
   const details = document.getElementById('resource-details');
   if (details) details.remove();
   renderConfigHud();
-  if (typeof updateUI === 'function' && gameStarted) updateUI();
+  if (typeof updateUI === 'function' && gameStarted) { updateUI(); refreshAffordability(true); }
 }
 
 let renderedFaction = null; // whose units and buildings the HUD shows (#43)
@@ -335,7 +335,7 @@ function getResourceIcon(resourceKey) {
 
 function formatCost(cost = {}) {
   return Object.entries(cost)
-    .map(([key, value]) => `${value}${getResourceIcon(key)}`)
+    .map(([key, value]) => (GAME_CONFIG.resources[key] ? `{{${key}:${value}}}` : `${value}${getResourceIcon(key)}`))
     .join(' ');
 }
 
