@@ -19,54 +19,11 @@ let frameRateSetting = loadSetting('fps', 'display');
 
 if (frameRateSetting === 'unlimited') frameRateSetting = 'display'; // the old "no limit" (see #123)
 
-// Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
-function isDefeated() {
-  return gameStarted && gameMode === 'endless' && (townHall.hp <= 0 || settlers.length === 0);
-}
-
 // One step of the game, unless it's lost: then the world stops and no more waves come (#169)
 function stepGame(dt) {
   updateDefeat(dt);
   if (isDefeated()) return;
   update(dt);
-}
-
-// ---- Defeat (#191): the bottom panel and possession go dead, the camera flies to the base, zooms in and
-// stays there; the screen offers to start again or to go back to the main menu
-const DEFEAT_FLY_SECONDS = 1.2;
-
-const DEFEAT_CSS_SCALE = 1.5; // how close the camera comes: CSS pixels per world unit
-
-let defeatView = null;      // { from: { x, y, zoom }, to: { x, y, zoom }, t } while the defeat shows
-
-function updateDefeat(dt) {
-  const lost = isDefeated();
-  document.body.classList.toggle('defeated', lost);
-  const overlay = document.getElementById('defeat-overlay');
-  if (overlay.hidden === lost) overlay.hidden = !lost;
-  if (!lost) { defeatView = null; return; }
-  if (!defeatView) {
-    unpossess();
-    selectedSettler = null;
-    setMode('interact');
-    updateUI(); // the HUD as it ended (the hall at 0): nothing updates it after this
-    playSound('defeat');
-    document.getElementById('defeat-survived').textContent = t('defeat.survived', { waves: waveNum - 1 });
-    const zoom = Math.max(1, Math.min(getMaxZoom(), DEFEAT_CSS_SCALE * screenPixelRatio / getBaseScale()));
-    defeatView = { from: { x: camera.x, y: camera.y, zoom: camera.zoom }, to: { x: townHall.x, y: townHall.y, zoom }, t: 0 };
-  }
-  if (defeatView.t >= 1) return;
-  defeatView.t = Math.min(1, defeatView.t + dt / DEFEAT_FLY_SECONDS);
-  const k = 1 - Math.pow(1 - defeatView.t, 3); // eases out
-  const { from, to } = defeatView;
-  camera.x = from.x + (to.x - from.x) * k;
-  camera.y = from.y + (to.y - from.y) * k;
-  camera.zoom = from.zoom + (to.zoom - from.zoom) * k;
-}
-
-// the camera doesn't move by hand while the defeat shows
-function isCameraLocked() {
-  return isDefeated();
 }
 
 function gameLoop(now) {
@@ -110,149 +67,7 @@ fitCanvasToScreen();
 
 requestAnimationFrame(gameLoop);
 
-const mainMenu = document.getElementById('main-menu');
-
-const playButton = document.getElementById('play-button');
-
-const waveOptions = document.querySelectorAll('.wave-option');
-
-const waveCustom = document.getElementById('wave-custom');
-
-const mapOptions = document.querySelectorAll('.map-option');
-
-const mapCustom = document.querySelector('.map-custom');
-
-const clampInput = (input, fallback) => {
-    const value = Math.round(Number(input.value));
-    return Number.isFinite(value) ? Math.max(Number(input.min), Math.min(Number(input.max), value)) : fallback;
-};
-
-// wave interval: a preset, or "custom" with its own number of seconds
-const applyCustomWave = () => { waveInterval = clampInput(waveCustom, 90); waveTimer = waveInterval; };
-
-waveOptions.forEach(button => {
-    const selectWave = (e) => {
-        e.preventDefault();
-        const custom = button.dataset.waveInterval === 'custom';
-        waveCustom.hidden = !custom;
-        if (custom) applyCustomWave();
-        else { waveInterval = Number(button.dataset.waveInterval); waveTimer = waveInterval; }
-
-        waveOptions.forEach(btn => {
-            btn.classList.remove('active');
-        });
-
-        button.classList.add('active');
-    };
-
-    button.addEventListener('click', selectWave);
-    button.addEventListener('touchend', selectWave);
-});
-
-waveCustom.addEventListener('change', applyCustomWave);
-
-// map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
-const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
-
-const applyCustomMap = () => { mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
-
-mapOptions.forEach(button => {
-    onTap(button, () => {
-        const custom = button.dataset.mapSize === 'custom';
-        mapCustom.hidden = !custom;
-        if (custom) applyCustomMap();
-        else { const size = Number(button.dataset.mapSize); mapSettings = { cols: size, rows: size }; }
-        mapOptions.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-    });
-});
-
-mapColsInput.addEventListener('change', applyCustomMap);
-
-mapRowsInput.addEventListener('change', applyCustomMap);
-
-// ---- Main menu screens: home (modes), endless (setup), settings
-
-// the opening animation, once, as the page loads (style.css: #main-menu.intro)
-document.getElementById('main-menu').classList.add('intro');
-
-setTimeout(() => document.getElementById('main-menu').classList.remove('intro'), 3500);
-
-function showMenuScreen(name) {
-  document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
-  document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
-}
-
-onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
-
-onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
-
-document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => showMenuScreen('home')));
-
-// Exit closes the app on Android; a browser tab can't close itself, so there it isn't shown
-const nativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
-  window.Capacitor.Plugins && window.Capacitor.Plugins.App;
-
-const exitButton = document.getElementById('exit-app');
-
-exitButton.hidden = !nativeApp;
-
-onTap(exitButton, () => { if (nativeApp) nativeApp.exitApp(); });
-
-// difficulty (Endless)
-const difficultyOptions = document.querySelectorAll('.difficulty-option');
-
-difficultyOptions.forEach(button => onTap(button, () => {
-  gameDifficulty = button.dataset.difficulty;
-  difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
-}));
-
-// frame rate (Settings), remembered on the device
-const fpsOptions = document.querySelectorAll('.fps-option[data-fps]');
-
-const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === frameRateSetting));
-
-markFps();
-
-fpsOptions.forEach(button => button.dataset.fps && onTap(button, () => {
-  frameRateSetting = button.dataset.fps;
-  saveSetting('fps', frameRateSetting);
-  markFps();
-}));
-
-// FPS counter on / off (Settings), remembered on the device
-const showFpsOptions = document.querySelectorAll('[data-show-fps]');
-
-const applyShowFps = value => {
-  fpsCounter.hidden = value !== 'on';
-  showFpsOptions.forEach(b => b.classList.toggle('active', b.dataset.showFps === value));
-};
-
-applyShowFps(loadSetting('showFps', 'off'));
-
-showFpsOptions.forEach(button => onTap(button, () => {
-  saveSetting('showFps', button.dataset.showFps);
-  applyShowFps(button.dataset.showFps);
-}));
-
-const startGame = (e) => {
-    if (e) e.preventDefault();
-    applySeedFromUI();
-    resetGame();
-    openTab('tab-build'); // a new game starts on the Building tab (#188)
-    gameStarted = true;
-    mainMenu.style.display = 'none';
-};
-
-playButton.addEventListener('click', startGame);
-
-playButton.addEventListener('touchend', startGame);
-
 onTap(document.getElementById('resume-button'), () => setPaused(false));
-
-onTap(document.getElementById('defeat-restart'), () => { resetGame(); openTab('tab-build'); });
-
-onTap(document.getElementById('defeat-exit'), () => exitToMainMenu());
 
 // out of the pause menu: each mode leaves its own way (#145)
 onTap(document.getElementById('exit-to-menu-button'), () => {
@@ -260,23 +75,3 @@ onTap(document.getElementById('exit-to-menu-button'), () => {
   else if (gameMode === 'editor') leaveEditor();
   else exitToMainMenu();
 });
-
-// the small button next to the seed: a new random seed
-onTap(document.getElementById('seed-reroll'), () => {
-  document.getElementById('seed-input').value = createDefaultSeed();
-});
-
-// language buttons in the main menu (see i18n.js)
-const languageOptions = document.getElementById('language-options');
-
-for (const [code, language] of Object.entries(LANGUAGES)) {
-  const button = document.createElement('button');
-  button.className = 'wave-option' + (code === currentLanguage ? ' active' : '');
-  button.dataset.language = code;
-  button.textContent = language.label;
-  languageOptions.appendChild(button);
-  onTap(button, () => {
-    setLanguage(code);
-    languageOptions.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.language === code));
-  });
-}
