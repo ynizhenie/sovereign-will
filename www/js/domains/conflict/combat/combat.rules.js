@@ -1,14 +1,25 @@
 // Fighting: a strike, arrows and what stops them, blood, burning, spikes, corpses, and the base's defence
 // before and during a wave
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { getGridPos, getTileIndex } from '../../../engine/world/grid.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
+import { getWeaponStats, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
+import { damageSettler, isBigBody } from '../../colony/settlers/settlers.rules.js';
+import { getReachSteps, getSettlerReach, invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+import { woundBoar } from '../../economy/hunting/hunting.rules.js';
+import { faceTowards, startSwing } from '../../colony/settlers/settlers.draw.js';
+import { tileVariantHash } from '../../world/world.draw.js';
+import { playSound } from '../../../app/sounds.js';
+
 // Whether an arrow is stopped on tile (gx, gy). fromTower: shot from a watchtower, over walls and doors.
-function isArrowBlockedTile(gx, gy, fromTower) {
+export function isArrowBlockedTile(gx, gy, fromTower) {
   const tiles = getTileIndex();
   const key = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`;
   return tiles.arrowBlockers.has(key) || (fromTower ? tiles.towerArrowBuildings : tiles.arrowBuildings).has(key);
 }
 
-function isArrowBlockedAt(x, y, fromTower) {
+export function isArrowBlockedAt(x, y, fromTower) {
   const g = getGridPos(x, y);
   return isArrowBlockedTile(g.gx, g.gy, fromTower);
 }
@@ -16,7 +27,7 @@ function isArrowBlockedAt(x, y, fromTower) {
 // Whether an arrow from (x1, y1) would fly to (x2, y2) unstopped. Walks every tile the line touches
 // (not just points along it), so an arrow never clips a corner the check missed. The shooter's own
 // tile doesn't count.
-function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
+export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   let gx = Math.floor(x1 / TILE_SIZE), gy = Math.floor(y1 / TILE_SIZE);
   const endGx = Math.floor(x2 / TILE_SIZE), endGy = Math.floor(y2 / TILE_SIZE);
   const dx = x2 - x1, dy = y2 - y1;
@@ -42,7 +53,7 @@ function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   return true;
 }
 
-function performAttack(attacker, targetX, targetY) {
+export function performAttack(attacker, targetX, targetY) {
   if (attacker.attackCooldown > 0) return;
   faceTowards(attacker, targetX, targetY);
 
@@ -95,7 +106,7 @@ function performAttack(attacker, targetX, targetY) {
 
 // A unit was hurt: blood on it, a splat under it (at most every half second per unit) and on the melee
 // weapon that did it (GAME_CONFIG.blood)
-function bleed(unit, attacker) {
+export function bleed(unit, attacker) {
   unit.bloodAge = 0;
   if (attacker && !isBowWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
   if (game.pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
@@ -107,7 +118,7 @@ function bleed(unit, attacker) {
 
 // Stepping in a pool of blood or in dung: the unit then leaves footprints for a few steps. Footprints
 // themselves don't smear further. Whoever left the dung can't step in it until it has walked off first.
-function trackFootprints(unit) {
+export function trackFootprints(unit) {
   for (const pile of game.dung) {
     if (pile.by === unit && !pile.byLeft && Math.hypot(unit.x - pile.x, unit.y - pile.y) > 20) pile.byLeft = true;
   }
@@ -125,13 +136,13 @@ function trackFootprints(unit) {
 }
 
 // How visible the blood on a unit's body is: it doesn't dry while the unit is badly wounded
-function bodyBloodAlpha(unit) {
+export function bodyBloodAlpha(unit) {
   if (unit.bloodAge === undefined) return 0;
   return bloodAlpha(unit.bloodAge, unit.hp <= unit.maxHp * GAME_CONFIG.blood.woundedShare);
 }
 
 // How visible blood of this age is (1..0); `wounded` blood on a badly hurt unit never fades
-function bloodAlpha(age, wounded = false) {
+export function bloodAlpha(age, wounded = false) {
   if (age === undefined) return 0;
   const blood = GAME_CONFIG.blood;
   if (wounded || age <= blood.fadeAfter) return 1;
@@ -139,11 +150,11 @@ function bloodAlpha(age, wounded = false) {
 }
 
 // Burning arrows (#165): what they hit burns a few seconds
-function setBurning(unit) {
+export function setBurning(unit) {
   unit.burning = GAME_CONFIG.burning.seconds;
 }
 
-function updateBurning(dt) {
+export function updateBurning(dt) {
   for (const unit of [...game.settlers, ...game.enemies]) {
     if (!(unit.burning > 0)) continue;
     unit.burning -= dt;
@@ -154,7 +165,7 @@ function updateBurning(dt) {
 
 // Spike traps: a unit stepping onto a spike tile takes its damage once per visit; each visit uses one
 // of the trap's uses, and it breaks when they run out. Runs once a tick after movement.
-function applySpikeTraps() {
+export function applySpikeTraps() {
   const tiles = getTileIndex();
   if (tiles.spikes.size === 0) return;
   const spikesAt = new Map(game.buildings.filter(b => b.type === 'spikes').map(b => [`${b.x},${b.y}`, b]));
@@ -178,47 +189,47 @@ function applySpikeTraps() {
 
 // ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
 // later mechanic (e.g. raising the dead) can use one up by removing it from `corpses`.
-function addCorpse(unit, side, kind) {
+export function addCorpse(unit, side, kind) {
   playSound('death', unit, side === 'enemy');
   const big = isBigBody(unit);
   game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
 }
 
-function updateCorpses(dt) {
+export function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
 }
 
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
-const NORMAL_BODIES = 21;
+export const NORMAL_BODIES = 21;
 
 // ---- Pre-wave deployment (#14)
 
 // From deploySeconds before a wave until its enemies are beaten, not in battle mode
-function isDefenseAlert() {
+export function isDefenseAlert() {
   if (game.gameMode === 'battle' || !game.gameStarted) return false;
   return game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave);
 }
 
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
-function getBaseRadius() {
+export function getBaseRadius() {
   const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
   return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
 }
 
 // From the warning until the wave is beaten, settlers go no farther from the town hall than the base's
 // farthest building (plus a tile) on their own; only what the player marked takes them farther
-function getSafeRadius() {
+export function getSafeRadius() {
   return isDefenseAlert() ? getBaseRadius() + TILE_SIZE : Infinity;
 }
 
-function isInSafeArea(x, y) {
+export function isInSafeArea(x, y) {
   return Math.hypot(x - townHall.x, y - townHall.y) <= getSafeRadius();
 }
 
 // An enemy inside the base, or next to one of its buildings or the town hall
-function isInsideBase(en) {
+export function isInsideBase(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
   return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
     game.buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
@@ -227,7 +238,7 @@ function isInsideBase(en) {
 // Squads and their posts, rebuilt when the soldiers or the buildings change: squads of squadSize melee
 // soldiers (plus an archer each while there are any), posts at the doors first, the rest spread evenly
 // around the town hall at the base's radius, each on a tile a settler can stand on
-function getDefensePlan() {
+export function getDefensePlan() {
   const melee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
   const archers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
   const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + game.buildings.length;
@@ -274,7 +285,7 @@ function getDefensePlan() {
 }
 
 // Arrows fly, hit what they reach (settlers and the town hall, or enemies, tents and boars), stop at obstacles
-function tickProjectiles() {
+export function tickProjectiles() {
   for (let i = game.projectiles.length - 1; i >= 0; i--) {
     let proj = game.projectiles[i];
     if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
@@ -328,7 +339,7 @@ function tickProjectiles() {
 }
 
 // Blood on the ground dries; dung goes after a while
-function ageBloodAndDung(dt) {
+export function ageBloodAndDung(dt) {
   for (const splat of game.bloodSplats) splat.age += dt;
   game.bloodSplats = game.bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
   for (const pile of game.dung) pile.age += dt;
@@ -336,7 +347,7 @@ function ageBloodAndDung(dt) {
 }
 
 // Units stepping in blood or dung leave footprints
-function trackAllFootprints() {
+export function trackAllFootprints() {
   for (const unit of game.settlers) trackFootprints(unit);
   for (const unit of game.enemies) trackFootprints(unit);
 }

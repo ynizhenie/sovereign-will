@@ -1,8 +1,21 @@
 // A damaged building looks it
 
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/icons.js';
+import { t } from '../../../engine/platform/i18n.js';
+import { isBorderZone } from '../../../engine/world/grid.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
+import { formatCost } from '../../colony/storage/storage.rules.js';
+import { getSmelterLimits, needsRepair } from './building.rules.js';
+import { ctx } from '../../../engine/platform/canvas.js';
+import { getPlayerFaction, sides } from '../../factions/factions.rules.js';
+import { mouse } from '../../../engine/platform/input.js';
+import { drawPortal } from '../../factions/demons/demons.draw.js';
+import { tileVariantHash } from '../../world/world.draw.js';
+
 // A damaged building looks it (#157): cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).
-function drawDamage(x, y, half, share) {
+export function drawDamage(x, y, half, share) {
   if (!(share < 0.9)) return;
   const harm = 1 - Math.max(0, share);
   const h = tileVariantHash(Math.round(x), Math.round(y));
@@ -35,7 +48,7 @@ function drawDamage(x, y, half, share) {
 }
 
 // In a build mode: the tile grid, and the tile under the pointer (red where it can't go)
-function drawBuildGrid() {
+export function drawBuildGrid() {
   if (game.buildMode !== 'interact' && game.buildMode !== 'possess') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
@@ -59,7 +72,7 @@ function drawBuildGrid() {
 }
 
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair
-function drawTownHall() {
+export function drawTownHall() {
   if (getPlayerFaction().hall === 'hellgate') {
     // the demons' Hell Gate (#43): a dark stone gate with fire inside
     ctx.fillStyle = '#3d1f1f'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
@@ -90,7 +103,7 @@ function drawTownHall() {
 }
 
 // Blueprints: their shape, the materials still to come, the work done
-function drawBlueprints() {
+export function drawBlueprints() {
   game.blueprints.forEach(bp => {
     ctx.save(); ctx.globalAlpha = 0.5;
     if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
@@ -128,7 +141,7 @@ function drawBlueprints() {
 }
 
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
-function drawBuildings() {
+export function drawBuildings() {
   game.buildings.forEach(b => {
     if (b.type === 'wall_wood') {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);

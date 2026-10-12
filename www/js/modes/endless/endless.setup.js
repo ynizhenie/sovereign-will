@@ -1,33 +1,44 @@
 // The Endless menu before a game: wave interval, map (random or saved, its size), difficulty, factions and
 // colours, the seed, and Play
 
-const playButton = document.getElementById('play-button');
+import { openTab } from '../../ui/bottom-panel.js';
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { t } from '../../engine/platform/i18n.js';
+import { game } from '../../engine/world/state.js';
+import { applySeedFromUI, createDefaultSeed } from '../../engine/world/rng.js';
+import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/factions.rules.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { resetGame } from '../../app/session.js';
+import { mainMenu } from '../menu/menu.screens.js';
+import { loadSavedMaps, renderSavedMapList } from '../editor/editor.maps.js';
 
-const waveOptions = document.querySelectorAll('.wave-option');
+export const playButton = document.getElementById('play-button');
 
-const waveCustom = document.getElementById('wave-custom');
+export const waveOptions = document.querySelectorAll('.wave-option');
 
-const mapOptions = document.querySelectorAll('.map-option');
+export const waveCustom = document.getElementById('wave-custom');
 
-const mapCustom = document.querySelector('.map-custom');
+export const mapOptions = document.querySelectorAll('.map-option');
 
-const clampInput = (input, fallback) => {
+export const mapCustom = document.querySelector('.map-custom');
+
+export const clampInput = (input, fallback) => {
     const value = Math.round(Number(input.value));
     return Number.isFinite(value) ? Math.max(Number(input.min), Math.min(Number(input.max), value)) : fallback;
 };
 
 // wave interval: a preset, or "custom" with its own number of seconds
-const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom, 90); game.waveTimer = game.waveInterval; };
+export const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom, 90); game.waveTimer = game.waveInterval; };
 
 // map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
-const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
+export const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
 
-const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
+export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
 
 // difficulty (Endless)
-const difficultyOptions = document.querySelectorAll('.difficulty-option');
+export const difficultyOptions = document.querySelectorAll('.difficulty-option');
 
-const startGame = (e) => {
+export const startGame = (e) => {
     if (e) e.preventDefault();
     applySeedFromUI();
     resetGame();
@@ -37,9 +48,9 @@ const startGame = (e) => {
 };
 
 // Endless: random (generated) map, or one of the saved maps
-let mapSource = 'random';
+export let mapSource = 'random';
 
-function renderCustomMapList() {
+export function renderCustomMapList() {
   const maps = loadSavedMaps();
   // the chosen map may have been deleted or changed in the editor since
   if (game.customMap) game.customMap = maps[game.customMap.name] || null;
@@ -53,7 +64,7 @@ function renderCustomMapList() {
   });
 }
 
-function setMapSource(source) {
+export function setMapSource(source) {
   mapSource = source;
   document.querySelectorAll('[data-map-source]').forEach(b => b.classList.toggle('active', b.dataset.mapSource === source));
   document.getElementById('main-menu').classList.toggle('custom-map', source === 'custom');
@@ -62,7 +73,7 @@ function setMapSource(source) {
 }
 
 // The Endless menu's faction rows: a button per faction (the unready ones say "soon") and the colours
-function renderFactionPicker() {
+export function renderFactionPicker() {
   for (const side of ['player', 'enemy']) {
     const row = document.getElementById(`faction-${side}`);
     row.innerHTML = '';
@@ -93,7 +104,7 @@ function renderFactionPicker() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initEndlessSetup() {
+export function initEndlessSetup() {
   waveOptions.forEach(button => {
       const selectWave = (e) => {
           e.preventDefault();

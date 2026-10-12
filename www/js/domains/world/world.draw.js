@@ -1,17 +1,24 @@
 // The ground: grass, water, rock, desert and ore, each joining its own kind
 
+import { drawIcon } from '../../ui/icons.js';
+import { getTileIndex } from '../../engine/world/grid.js';
+import { BORDER_MARGIN, TILE_SIZE, game } from '../../engine/world/state.js';
+import { isWaterReachable } from './world.generator.js';
+import { ctx } from '../../engine/platform/canvas.js';
+import { drawHarvestProgress } from '../economy/gathering/gathering.draw.js';
+
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill (#61). Picked per-tile from a coordinate hash, not rand(), so it
 // stays put across frames without disturbing the seeded world-gen RNG sequence.
-const GRASS_SHADES = ['#2d4a22', '#2f4d25', '#2a4620', '#31501f', '#294419', '#2e4b28'];
+export const GRASS_SHADES = ['#2d4a22', '#2f4d25', '#2a4620', '#31501f', '#294419', '#2e4b28'];
 
-function tileVariantHash(gx, gy) {
+export function tileVariantHash(gx, gy) {
   let h = Math.imul(gx, 374761393) + Math.imul(gy, 668265263);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return (h ^ (h >>> 16)) >>> 0;
 }
 
-function drawGrassGround() {
+export function drawGrassGround() {
   for (let gy = 0; gy < game.ROWS; gy++) {
     for (let gx = 0; gx < game.COLS; gx++) {
       const h = tileVariantHash(gx, gy);
@@ -31,13 +38,13 @@ function drawGrassGround() {
 // Water joins water, natural rock joins rock and ore: every tile covers its whole square, and gets an
 // outline only on sides with no neighbour of its kind, so lakes and rock masses read as shapes instead
 // of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
-const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
-const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; // water no settler can reach
-const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
-const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
+export const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
+export const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; // water no settler can reach
+export const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
+export const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
 
 // Which sides of tile (x, y) have no neighbour in `keys` (a Set of "x,y" tile centres)
-function openSides(keys, x, y) {
+export function openSides(keys, x, y) {
   return {
     n: !keys.has(`${x},${y - TILE_SIZE}`), s: !keys.has(`${x},${y + TILE_SIZE}`),
     w: !keys.has(`${x - TILE_SIZE},${y}`), e: !keys.has(`${x + TILE_SIZE},${y}`)
@@ -45,7 +52,7 @@ function openSides(keys, x, y) {
 }
 
 // The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind
-function drawJoinedTile(x, y, open, edgeColor, fillColor) {
+export function drawJoinedTile(x, y, open, edgeColor, fillColor) {
   ctx.fillStyle = fillColor; ctx.fillRect(x - 15, y - 15, TILE_SIZE, TILE_SIZE);
   ctx.fillStyle = edgeColor;
   if (open.n) ctx.fillRect(x - 15, y - 15, TILE_SIZE, 2);
@@ -54,7 +61,7 @@ function drawJoinedTile(x, y, open, edgeColor, fillColor) {
   if (open.e) ctx.fillRect(x + 13, y - 15, 2, TILE_SIZE);
 }
 
-function drawWaterTile(w, reachable, tiles) {
+export function drawWaterTile(w, reachable, tiles) {
   const h = tileVariantHash(w.x, w.y);
   const shades = reachable ? WATER_SHADES : DEEP_WATER_SHADES;
   drawJoinedTile(w.x, w.y, openSides(tiles.water, w.x, w.y), reachable ? '#1f618d' : '#154360', shades[h % shades.length]);
@@ -67,7 +74,7 @@ function drawWaterTile(w, reachable, tiles) {
 }
 
 // Natural rock (and the rock under ore): joins every rock and ore tile around it
-function drawRockTile(x, y, tiles) {
+export function drawRockTile(x, y, tiles) {
   const h = tileVariantHash(x, y);
   drawJoinedTile(x, y, openSides(tiles.rockAndOre, x, y), '#1a252f', ROCK_SHADES[h % ROCK_SHADES.length]);
   // a crack or a couple of speckles
@@ -82,7 +89,7 @@ function drawRockTile(x, y, tiles) {
   }
 }
 
-function drawDesertTile(tile) {
+export function drawDesertTile(tile) {
   const h = tileVariantHash(tile.x, tile.y);
   ctx.fillStyle = DESERT_SHADES[h % DESERT_SHADES.length];
   ctx.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
@@ -100,12 +107,12 @@ function drawDesertTile(tile) {
 
 // Rock with ore veins, shared by ore tiles and ore spawners so they read as the same material.
 // half: half the square's size (a full rock tile is 14)
-const ORE_COLORS = {
+export const ORE_COLORS = {
   iron: { body: '#aab7c3', shine: '#dfe6ed' },
   coal: { body: '#050608', shine: '#6b7785' }
 };
 
-function drawOreVeins(x, y, kind, half) {
+export function drawOreVeins(x, y, kind, half) {
   const c = ORE_COLORS[kind];
   const k = half / 14;
   drawRockTile(x, y, getTileIndex());
@@ -116,7 +123,7 @@ function drawOreVeins(x, y, kind, half) {
 }
 
 // Spawner: the same veined rock on a full tile, framed in the ore colour with a large crystal in the middle
-function drawOreSpawner(x, y, kind) {
+export function drawOreSpawner(x, y, kind) {
   const c = ORE_COLORS[kind];
   drawOreVeins(x, y, kind, 14);
   ctx.strokeStyle = c.body; ctx.lineWidth = 2; ctx.strokeRect(x - 11, y - 11, 22, 22);
@@ -126,7 +133,7 @@ function drawOreSpawner(x, y, kind) {
 }
 
 // The border zone round the map, and the line where it starts
-function drawMapBorder() {
+export function drawMapBorder() {
   ctx.fillStyle = '#2d4a22';
   ctx.fillRect(0, 0, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
   ctx.fillRect(0, game.WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
@@ -139,13 +146,13 @@ function drawMapBorder() {
 }
 
 // Desert and beach sand
-function drawSand() {
+export function drawSand() {
   game.desertTiles.forEach(drawDesertTile);
   game.beachTiles.forEach(drawDesertTile);
 }
 
 // Water, and the fishing spots marked on it
-function drawWater(terrain) {
+export function drawWater(terrain) {
   game.waterTiles.forEach(w => {
     drawWaterTile(w, isWaterReachable(w), terrain);
     if (w.isFishing) {
@@ -163,7 +170,7 @@ function drawWater(terrain) {
 }
 
 // Natural rock and ore spawners
-function drawRocks(terrain) {
+export function drawRocks(terrain) {
   game.naturalRocks.forEach(r => {
     if (r.oreSpawner) {
       drawOreSpawner(r.x, r.y, r.oreSpawner);

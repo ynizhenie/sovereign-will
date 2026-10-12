@@ -1,6 +1,6 @@
 // Enemies, their tents, and how waves grow
 
-Object.assign(GAME_CONFIG, {
+export const enemiesConfig = {
   // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
   //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
   // waveKey: its name in attackGroups. buildsTents: can be sent to build an enemy tent.
@@ -71,4 +71,4 @@ Object.assign(GAME_CONFIG, {
     { club: 3, raider: 2, brute: 2, archer: 1 }, // brute-heavy
     { club: 2, raider: 2, brute: 2, archer: 2 }  // balanced mixed squad
   ]
-});
+};

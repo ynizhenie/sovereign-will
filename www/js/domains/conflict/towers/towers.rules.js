@@ -1,8 +1,17 @@
 // Watchtowers: archers climb them while there's tower duty, shoot from them, come down; arrows for them
 
+import { getGridPos } from '../../../engine/world/grid.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
+import { isBowWeapon } from '../../colony/equipment/equipment.rules.js';
+import { stock } from '../../colony/storage/storage.rules.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { hasLineOfFire, isDefenseAlert } from '../combat/combat.rules.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+
 // Archers climb the towers while there's tower duty (#155: they stay up when enemies reach the base, that's
 // when a tower is worth most), as long as they or the tower have arrows
-function assignTowerArchers() {
+export function assignTowerArchers() {
   const towers = game.buildings.filter(building => building.type === 'watchtower');
   const towerSet = new Set(towers);
   towers.forEach(tower => {
@@ -35,11 +44,11 @@ function assignTowerArchers() {
 }
 
 // A tower is manned when enough enemies are about, or from the warning until the wave is beaten (#14, #155)
-function isTowerDutyOn(tower) {
+export function isTowerDutyOn(tower) {
   return game.enemies.length >= tower.tower.minEnemies || isDefenseAlert();
 }
 
-function findTowerForArrows(settler) {
+export function findTowerForArrows(settler) {
   return game.buildings
     .filter(tower => tower.type === 'watchtower' &&
       tower.arrows < tower.tower.arrowCapacity && stock.arrows > 0 &&
@@ -47,7 +56,7 @@ function findTowerForArrows(settler) {
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }
 
-function findNearestArrowTower(settler) {
+export function findNearestArrowTower(settler) {
   const townHallDistance = Math.hypot(townHall.x - settler.x, townHall.y - settler.y);
   const townHallThreatened = game.enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260);
   if (townHallThreatened || game.enemies.length < 2) return null;
@@ -56,13 +65,13 @@ function findNearestArrowTower(settler) {
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }
 
-function refillArcherFromTower(settler, tower) {
+export function refillArcherFromTower(settler, tower) {
   const amount = Math.min(tower.arrows, (settler.quiverCapacity || 12) - (settler.arrows || 0));
   settler.arrows = (settler.arrows || 0) + amount;
   tower.arrows -= amount;
 }
 
-function updateTowerArrowLoader(settler, tower, dt) {
+export function updateTowerArrowLoader(settler, tower, dt) {
   const distance = Math.hypot(tower.x - settler.x, tower.y - settler.y);
   if (distance > 32) {
     moveEntityTowards(settler, tower.x, tower.y, settler.speed, false, dt);
@@ -79,7 +88,7 @@ function updateTowerArrowLoader(settler, tower, dt) {
 
 // Where a guard climbs down: the free tile next to the tower (then further out) that can be walked to from
 // the town hall, nearest the side it faces, so it never lands inside a wall or in a sealed pocket
-function findTowerExit(tower, settler) {
+export function findTowerExit(tower, settler) {
   const start = getGridPos(tower.x, tower.y);
   const hallReach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const facing = Math.atan2(settler.y - tower.y, settler.x - tower.x) || 0;
@@ -111,7 +120,7 @@ function findTowerExit(tower, settler) {
   return { x: tower.x, y: tower.y };
 }
 
-function releaseTowerGuard(settler) {
+export function releaseTowerGuard(settler) {
   const tower = settler.towerAssignment;
   if (!tower) return;
   tower.guards = tower.guards.filter(guard => guard !== settler);
@@ -122,7 +131,7 @@ function releaseTowerGuard(settler) {
   settler.towerAssignment = null;
 }
 
-function updateTowerGuard(settler, tower, dt) {
+export function updateTowerGuard(settler, tower, dt) {
   // up from a free tile beside it that can be walked to (not from the side a wall is on, #173)
   const distanceToTower = Math.hypot(tower.x - settler.x, tower.y - settler.y);
   if (distanceToTower > 32) {

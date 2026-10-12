@@ -1,7 +1,15 @@
 // One step towards a target: along the path, round obstacles and other units, never onto the colony's own
 // spikes; and where to stand to reach a resource
 
-function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { getGridPos, getTileIndex } from '../world/grid.js';
+import { TILE_SIZE, game } from '../world/state.js';
+import { isBlighted } from '../../domains/factions/undead/undead.rules.js';
+import { findPathAStar, findPathAStarPermissive, getReachSteps, getSettlerReach, hasClearEnemyLine, isTileBlockedForSettler, pathCrossesSpikes } from './pathfinding.js';
+import { clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
+import { takePortal } from '../../domains/factions/demons/demons.rules.js';
+
+export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
   let dx = targetX - entity.x;
   let dy = targetY - entity.y;
   let dist = Math.hypot(dx, dy) || 1;
@@ -46,14 +54,14 @@ function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
 
 // A settler's step that would take it onto a spike tile from off one (its own traps: it never walks
 // them, the player's possessed settler aside, which moves by hand)
-function stepsOntoSpikes(entity, vx, vy) {
+export function stepsOntoSpikes(entity, vx, vy) {
   const tiles = getTileIndex();
   if (tiles.spikes.size === 0) return false;
   const key = (x, y) => { const g = getGridPos(x, y); return `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`; };
   return tiles.spikes.has(key(entity.x + vx, entity.y + vy)) && !tiles.spikes.has(key(entity.x, entity.y));
 }
 
-function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
+export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   // the undead's blighted ground holds enemies back (#164)
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
   if (!isEnemy && game.buildings.length) {
@@ -231,7 +239,7 @@ function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt 
   }
 }
 
-function getResourceApproachPoint(entity, resource) {
+export function getResourceApproachPoint(entity, resource) {
   let resRadius = resource.radius || 14;
   let entRadius = entity.radius || 10;
   let minDistance = resRadius + entRadius + 1;
@@ -278,7 +286,7 @@ function getResourceApproachPoint(entity, resource) {
   return null;
 }
 
-function rescueSettlerFromResource(settler) {
+export function rescueSettlerFromResource(settler) {
   if (settler.towerAssignment) return;
   // solid things sit on tile centers, so only the settler's own tile can be within 14px of it
   const tile = getGridPos(settler.x, settler.y);

@@ -1,6 +1,6 @@
 // Russian
 
-Object.assign(LANGUAGES, {
+export const ruLanguage = {
   ru: {
     label: 'Русский',
     names: {
@@ -80,4 +80,4 @@ Object.assign(LANGUAGES, {
       'defeat.title': 'ПОРАЖЕНИЕ!', 'defeat.survived': 'Вы продержались {waves} волн', 'defeat.restart': 'Начать заново'
     }
   }
-});
+};

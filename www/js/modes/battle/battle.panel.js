@@ -1,6 +1,13 @@
 // The battle's panel: categories, factions, what to place, armour and shield; its buttons
 
-function renderBattlePanel() {
+import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
+import { setRichText } from '../../ui/icons.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
+import { battle, clearBattleSide, startBattleMode } from './battle.setup.js';
+import { cancelBattleFight, startBattleFight } from './battle.rules.js';
+
+export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
   document.querySelectorAll('[data-battle-category]').forEach(b => b.classList.toggle('active', b.dataset.battleCategory === battle.category));
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[b.dataset.battleGear]));
@@ -44,19 +51,19 @@ function renderBattlePanel() {
 }
 
 // Switching category or faction picks the first unit shown (so a tap never places from another one)
-function setBattleCategory(category) {
+export function setBattleCategory(category) {
   battle.category = category;
   pickShownPreset();
   renderBattlePanel();
 }
 
-function setBattleFaction(faction) {
+export function setBattleFaction(faction) {
   battle.faction = faction;
   pickShownPreset();
   renderBattlePanel();
 }
 
-function pickShownPreset() {
+export function pickShownPreset() {
   if (battle.category === 'buildings') {
     if (!getBattleBuildings().includes(battle.building)) battle.building = getBattleBuildings()[0];
   } else if (!getBattlePresetsShown().some(p => p.id === battle.preset)) {
@@ -65,7 +72,7 @@ function pickShownPreset() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initBattlePanel() {
+export function initBattlePanel() {
   document.getElementById('mode-battles').disabled = false;
   onTap(document.getElementById('mode-battles'), startBattleMode);
   onTap(document.getElementById('battle-fight'), startBattleFight);

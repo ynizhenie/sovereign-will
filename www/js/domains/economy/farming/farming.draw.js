@@ -1,7 +1,11 @@
 // Farm zones and wheat plots
 
+import { activeTab } from '../../../ui/bottom-panel.js';
+import { TILE_SIZE, game } from '../../../engine/world/state.js';
+import { ctx } from '../../../engine/platform/canvas.js';
+
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
-function drawFarmZones() {
+export function drawFarmZones() {
   const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
   if (activeTab === 'tab-farming') game.farmZones.forEach(z => {
     const rgb = ZONE_COLORS[z.crop] || ZONE_COLORS.sapling;
@@ -13,7 +17,7 @@ function drawFarmZones() {
 }
 
 // Wheat plots: growing, ripe, being harvested
-function drawFarmPlots() {
+export function drawFarmPlots() {
   game.farmPlots.forEach(f => {
     ctx.fillStyle = '#5c4033'; ctx.fillRect(f.x - 13, f.y - 13, 26, 26);
     if (f.growth < 100) {

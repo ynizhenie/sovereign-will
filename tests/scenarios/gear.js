@@ -6,7 +6,6 @@ Object.assign(window.sim, (() => {
   // button and follows who gets it: not worn at once, worn once they've been to the town hall.
   function orderGearFor({ seed = 'gear-test', id, only }) {
     start(seed);
-    window.showNotification = () => {};
     boars.length = 0; // a hunt would bring leather in and blur what was paid
     const hx = townHall.x, hy = townHall.y;
     const all = {
@@ -29,7 +28,6 @@ Object.assign(window.sim, (() => {
   // A swordsman in armour: disarming the weapon keeps the armour; Take off armour hands it back
   function armorOff({ seed = 'armor-off-test' }) {
     start(seed);
-    window.showNotification = () => {};
     const s = makeSettler(1, townHall.x + 120, townHall.y, { weapon: 'sword', role: 'soldier' });
     settlers = [s];
     putOnGear(s, 'armor');

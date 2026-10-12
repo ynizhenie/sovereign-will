@@ -1,6 +1,6 @@
 // English: the default language
 
-Object.assign(LANGUAGES, {
+export const enLanguage = {
   en: {
     label: 'English',
     names: {
@@ -80,4 +80,4 @@ Object.assign(LANGUAGES, {
       'defeat.title': 'DEFEAT!', 'defeat.survived': 'You held out for {waves} waves', 'defeat.restart': 'Start again'
     }
   }
-});
+};

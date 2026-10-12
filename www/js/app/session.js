@@ -1,6 +1,25 @@
 // A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
-function resetGame(map) {
+import { rebuildConfigHud, renderedFaction } from '../ui/bottom-panel.js';
+import { GAME_CONFIG } from '../content/configs/index.js';
+import { iconHtml } from '../ui/icons.js';
+import { t } from '../engine/platform/i18n.js';
+import { resetTileIndex, setWorldSize } from '../engine/world/grid.js';
+import { TOWN_HALL_HP, game, townHall } from '../engine/world/state.js';
+import { updateUnitCounts } from '../domains/colony/settlers/settlers.panel.js';
+import { addResources, mixStartFood, stock } from '../domains/colony/storage/storage.rules.js';
+import { generateMap } from '../domains/world/world.generator.js';
+import { updateSeedHud } from '../ui/hud.js';
+import { getPlayerFaction, sides } from '../domains/factions/factions.rules.js';
+import { createSettler } from '../domains/colony/settlers/settlers.rules.js';
+import { onTap } from '../engine/platform/dom.js';
+import { showMenuScreen } from '../modes/menu/menu.screens.js';
+import { leaveBattleMode } from '../modes/battle/battle.setup.js';
+import { loadCustomMap } from '../modes/editor/editor.maps.js';
+import { leaveEditor } from '../modes/editor/editor.tools.js';
+import { leaveMenuWorld } from '../modes/menu/menu.world.js';
+
+export function resetGame(map) {
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu (#193)
   if (map === undefined) map = game.gameMode === 'endless' ? game.customMap : null;
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
@@ -30,13 +49,13 @@ function resetGame(map) {
   updateUnitCounts();
 }
 
-function togglePause() {
+export function togglePause() {
   if (!game.gameStarted) return;
   setPaused(!game.isPaused);
 }
 
 // Pausing opens the pause menu (Continue / Main menu)
-function setPaused(paused) {
+export function setPaused(paused) {
   game.isPaused = paused;
   const btn = document.getElementById('btn-pause-toggle');
   btn.innerHTML = iconHtml(game.isPaused ? 'play' : 'pause');
@@ -45,7 +64,7 @@ function setPaused(paused) {
   document.getElementById('pause-menu').hidden = !game.isPaused;
 }
 
-function exitToMainMenu() {
+export function exitToMainMenu() {
   setPaused(false);
   game.gameStarted = false;
   document.getElementById('main-menu').style.display = '';
@@ -53,7 +72,7 @@ function exitToMainMenu() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initSession() {
+export function initSession() {
   onTap(document.getElementById('resume-button'), () => setPaused(false));
   // out of the pause menu: each mode leaves its own way (#145)
   onTap(document.getElementById('exit-to-menu-button'), () => {

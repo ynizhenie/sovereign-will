@@ -2,7 +2,16 @@
 
 // ---- Panels
 
-function renderEditorPanel() {
+import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
+import { setRichText } from '../../ui/icons.js';
+import { t } from '../../engine/platform/i18n.js';
+import { game } from '../../engine/world/state.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { showMenuScreen } from '../menu/menu.screens.js';
+import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
+import { EDITOR_TOOLS, editor, resizeEditorMap, saveEditorMap, startEditor } from './editor.tools.js';
+
+export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
   tools.innerHTML = '';
   const forFaction = tl => !tl.building || !getDefinition('buildings', tl.building).factions || getDefinition('buildings', tl.building).factions.includes(editor.faction);
@@ -22,7 +31,7 @@ function renderEditorPanel() {
 }
 
 // The editor menu's faction choice (#170)
-function renderEditorFaction() {
+export function renderEditorFaction() {
   const row = document.getElementById('editor-faction');
   row.innerHTML = '';
   for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
@@ -36,7 +45,7 @@ function renderEditorFaction() {
 }
 
 // The editor's menu screen: new map (size, empty or generated) and the saved maps to open or delete
-function renderEditorMapList() {
+export function renderEditorMapList() {
   renderEditorFaction();
   renderSavedMapList(document.getElementById('editor-map-list'), {
     open: map => startEditor({ map }),
@@ -44,10 +53,10 @@ function renderEditorMapList() {
   });
 }
 
-let editorNewSize = 40;
+export let editorNewSize = 40;
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initEditorPanel() {
+export function initEditorPanel() {
   document.querySelectorAll('[data-editor-size]').forEach(button => onTap(button, () => {
     editorNewSize = Number(button.dataset.editorSize);
     document.querySelectorAll('[data-editor-size]').forEach(b => b.classList.toggle('active', b === button));

@@ -1,6 +1,6 @@
 // The colony's unit kinds, and how fast everyone moves
 
-Object.assign(GAME_CONFIG, {
+export const unitsConfig = {
   // how far everyone moves per game step, times their own speed (settlers, enemies, boars). 2 is the pace
   // the game was tuned at on a 120 Hz screen, before updates became a fixed 60 per second (#123)
   movementScale: 2,
@@ -23,4 +23,4 @@ Object.assign(GAME_CONFIG, {
     // an imp given a bow (bowUnits, #165)
     fire_imp: { id: 'fire_imp', icon: 'fire_imp', fireArrows: true, eatsCorpses: true, hp: 70, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1 }
   }
-});
+};

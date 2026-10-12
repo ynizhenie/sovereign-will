@@ -1,7 +1,15 @@
 // The demons: portals in pairs, and the enemy's portals a wave comes through
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { getGridPos } from '../../../engine/world/grid.js';
+import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { isTileOccupied } from '../../economy/building/building.rules.js';
+import { getEnemyFaction } from '../factions.rules.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
+
 // The demons' portals (#43): built in pairs, the 1st with the 2nd, the 3rd with the 4th...
-function getPortalPairs() {
+export function getPortalPairs() {
   const portals = game.buildings.filter(b => b.type === 'portal');
   const pairs = [];
   for (let i = 0; i + 1 < portals.length; i += 2) pairs.push([portals[i], portals[i + 1]], [portals[i + 1], portals[i]]);
@@ -10,9 +18,9 @@ function getPortalPairs() {
 
 // A settler going somewhere a portal pair gets it to quicker: walks into the near portal and steps out of
 // the far one (next to it). Returns where to walk to instead, or null to go straight; true once stepped through.
-const PORTAL_SAVING = 90; // px the way through must save to be worth it
+export const PORTAL_SAVING = 90; // px the way through must save to be worth it
 
-function takePortal(entity, targetX, targetY) {
+export function takePortal(entity, targetX, targetY) {
   const direct = Math.hypot(targetX - entity.x, targetY - entity.y);
   for (const [near, far] of getPortalPairs()) {
     const toNear = Math.hypot(near.x - entity.x, near.y - entity.y);
@@ -35,7 +43,7 @@ function takePortal(entity, targetX, targetY) {
 }
 
 // A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall (#43)
-function openDemonPortal() {
+export function openDemonPortal() {
   const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const minDist = getEnemyFaction().minPortalTiles * TILE_SIZE;
   for (let attempt = 0; attempt < 200; attempt++) {

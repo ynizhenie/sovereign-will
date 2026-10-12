@@ -1,20 +1,32 @@
 // An Endless game is lost when the town hall falls or the last settler dies: the defeat screen, the camera
 // flying to the base
 
+import { openTab } from '../../ui/bottom-panel.js';
+import { t } from '../../engine/platform/i18n.js';
+import { game, townHall } from '../../engine/world/state.js';
+import { updateUI } from '../../ui/hud.js';
+import { getBaseScale, screenPixelRatio } from '../../engine/platform/canvas.js';
+import { camera, getMaxZoom } from '../../engine/platform/camera.js';
+import { unpossess } from '../../domains/colony/settlers/settlers.rules.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { exitToMainMenu, resetGame } from '../../app/session.js';
+import { setMode } from '../../ui/map-input.js';
+import { playSound } from '../../app/sounds.js';
+
 // Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
-function isDefeated() {
+export function isDefeated() {
   return game.gameStarted && game.gameMode === 'endless' && (townHall.hp <= 0 || game.settlers.length === 0);
 }
 
 // ---- Defeat (#191): the bottom panel and possession go dead, the camera flies to the base, zooms in and
 // stays there; the screen offers to start again or to go back to the main menu
-const DEFEAT_FLY_SECONDS = 1.2;
+export const DEFEAT_FLY_SECONDS = 1.2;
 
-const DEFEAT_CSS_SCALE = 1.5; // how close the camera comes: CSS pixels per world unit
+export const DEFEAT_CSS_SCALE = 1.5; // how close the camera comes: CSS pixels per world unit
 
-let defeatView = null;      // { from: { x, y, zoom }, to: { x, y, zoom }, t } while the defeat shows
+export let defeatView = null;      // { from: { x, y, zoom }, to: { x, y, zoom }, t } while the defeat shows
 
-function updateDefeat(dt) {
+export function updateDefeat(dt) {
   const lost = isDefeated();
   document.body.classList.toggle('defeated', lost);
   const overlay = document.getElementById('defeat-overlay');
@@ -40,12 +52,12 @@ function updateDefeat(dt) {
 }
 
 // the camera doesn't move by hand while the defeat shows
-function isCameraLocked() {
+export function isCameraLocked() {
   return isDefeated();
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initEndlessRules() {
+export function initEndlessRules() {
   onTap(document.getElementById('defeat-restart'), () => { resetGame(); openTab('tab-build'); });
   onTap(document.getElementById('defeat-exit'), () => exitToMainMenu());
 }

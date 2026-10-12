@@ -1,8 +1,11 @@
 // The canvas the game is drawn on: it covers the whole game area at the screen's resolution
 
-const canvas = document.getElementById('gameCanvas');
+import { game } from '../world/state.js';
+import { camera, clampCamera, getMaxZoom, getMinZoom } from './camera.js';
 
-const ctx = canvas.getContext('2d', {
+export const canvas = document.getElementById('gameCanvas');
+
+export const ctx = canvas.getContext('2d', {
   alpha: false,
   desynchronized: true,
   willReadFrequently: false
@@ -12,9 +15,9 @@ const ctx = canvas.getContext('2d', {
 //
 // The canvas covers the whole game area at the screen's resolution (fitCanvasToScreen). At zoom 1 the
 // world covers the screen; zooming out to getMinZoom() shows all of it.
-let screenPixelRatio = 1;
+export let screenPixelRatio = 1;
 
-function fitCanvasToScreen() {
+export function fitCanvasToScreen() {
   screenPixelRatio = Math.min(2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
   const width = Math.max(1, Math.round(canvas.clientWidth * screenPixelRatio));
   const height = Math.max(1, Math.round(canvas.clientHeight * screenPixelRatio));
@@ -27,17 +30,17 @@ function fitCanvasToScreen() {
 }
 
 // canvas pixels per world unit at zoom 1: the world just covers the screen
-function getBaseScale() {
+export function getBaseScale() {
   return Math.max(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT);
 }
 
 // canvas pixels per world unit now
-function getViewScale() {
+export function getViewScale() {
   return getBaseScale() * camera.zoom;
 }
 
 // A small yellow bar above a thing being worked on, share 0..1 done
-function drawProgressBar(cx, cy, share, width = 24) {
+export function drawProgressBar(cx, cy, share, width = 24) {
   const progress = Math.max(0, Math.min(1, share));
   if (progress <= 0) return;
 
@@ -53,6 +56,6 @@ function drawProgressBar(cx, cy, share, width = 24) {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initCanvas() {
+export function initCanvas() {
   window.addEventListener('resize', fitCanvasToScreen);
 }

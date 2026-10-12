@@ -1,6 +1,13 @@
 // Resources on the map: which can be gathered, adding one, what a finished one gives, and growing back
 
-function getPlacedResources(includeGrowingTrees = true) {
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { game } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/storage.rules.js';
+import { ORE_KINDS, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, placeOre, spawnForestAware, spawnResource } from '../../world/world.generator.js';
+import { invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+
+export function getPlacedResources(includeGrowingTrees = true) {
   return [
     ...(includeGrowingTrees ? game.trees : game.trees.filter(tree => !tree.isGrowing)),
     ...game.cacti, ...game.boulders, ...game.grassList, ...game.berryBushes,
@@ -8,26 +15,26 @@ function getPlacedResources(includeGrowingTrees = true) {
   ];
 }
 
-function getHarvestableResources() {
+export function getHarvestableResources() {
   // ore spawners are natural rock that can't be mined
   return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];
 }
 
 // ---- Map resources (GAME_CONFIG.mapResources)
 
-function getMapResourceDef(kind) {
+export function getMapResourceDef(kind) {
   return GAME_CONFIG.mapResources[kind] || null;
 }
 
 // Which GAME_CONFIG.mapResources entry an object on the map is, by the list it's in
-function getMapResourceKind(resource) {
+export function getMapResourceKind(resource) {
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
     if (game[def.list].includes(resource)) return kind;
   }
   return null;
 }
 
-function addMapResource(kind, x, y) {
+export function addMapResource(kind, x, y) {
   const def = GAME_CONFIG.mapResources[kind];
   const resource = { x, y, hp: def.hp, maxHp: def.hp, priority: 0 };
   if (def.list === 'trees') Object.assign(resource, { isGrowing: false, growProgress: 0 });
@@ -36,7 +43,7 @@ function addMapResource(kind, x, y) {
 }
 
 // A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
-function finishHarvest(settler, resource, kind) {
+export function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
   for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount);
   addCarryLoad(settler);
@@ -55,13 +62,13 @@ function finishHarvest(settler, resource, kind) {
 // A harvested (or destroyed) resource doesn't reappear at once: it's queued and grows back after
 // respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti).
 
-function scheduleRespawn(type, nearX = null, nearY = null) {
+export function scheduleRespawn(type, nearX = null, nearY = null) {
   const isOre = getMapResourceDef(type).regrow === 'spawner';
   const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
   game.pendingRespawns.push({ type, nearX, nearY, timer: delay });
 }
 
-function updatePendingRespawns(dt) {
+export function updatePendingRespawns(dt) {
   for (let i = game.pendingRespawns.length - 1; i >= 0; i--) {
     const pending = game.pendingRespawns[i];
     pending.timer -= dt;
@@ -78,7 +85,7 @@ function updatePendingRespawns(dt) {
 }
 
 // A mined ore grows back around a random spawner of its kind
-function respawnOre(kind) {
+export function respawnOre(kind) {
   const spawners = getOreSpawners(kind);
   if (spawners.length === 0) return;
   const spawner = spawners[Math.floor(rand() * spawners.length)];

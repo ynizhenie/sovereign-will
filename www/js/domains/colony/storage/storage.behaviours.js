@@ -1,22 +1,30 @@
 // Carrying things home: to the nearest storage, and fetching from it
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { game, townHall } from '../../../engine/world/state.js';
+import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall, stock } from './storage.rules.js';
+import { getPlayerFaction } from '../../factions/factions.rules.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { takeFishingBait } from '../../economy/fishing/fishing.rules.js';
+import { playSound } from '../../../app/sounds.js';
+
 // Carry whatever the settler holds to the town hall and add it to the stock. With room for more loads
 // (a backpack, a big settler) it keeps gathering first, unless a wave is on; see deliverWhenNothingToDo.
-function deliverCarrying(s, tick) {
+export function deliverCarrying(s, tick) {
   if (!s.carrying || (hasRoomToCarry(s) && !tick.isWaveActive)) return false;
   goDeliver(s, tick);
   return true;
 }
 
 // A part-filled load goes home too once there's nothing left to gather
-function deliverWhenNothingToDo(s, tick) {
+export function deliverWhenNothingToDo(s, tick) {
   if (!s.carrying) return false;
   goDeliver(s, tick);
   return true;
 }
 
 // To the nearest storage, the town hall or a warehouse (#36, #141), and into the stock
-function goDeliver(s, tick) {
+export function goDeliver(s, tick) {
   const storage = findNearestStorage(s);
   if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return; }
   const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot (#164)
@@ -36,8 +44,8 @@ function goDeliver(s, tick) {
 // The town hall or the warehouse nearest the settler. Once it heads for one it keeps to it while it keeps
 // asking (every tick on the way): halfway between two, the nearest flipped back and forth as it walked and
 // it went nowhere (a playtest). A second without asking, and it picks afresh.
-const storageChoice = new WeakMap(); // settler -> { storage, tick }; kept off the settler, so not in saves
-function findNearestStorage(s) {
+export const storageChoice = new WeakMap(); // settler -> { storage, tick }; kept off the settler, so not in saves
+export function findNearestStorage(s) {
   const kept = storageChoice.get(s);
   if (kept && game.pathTick - kept.tick <= 60 && getStorages().includes(kept.storage)) { kept.tick = game.pathTick; return kept.storage; }
   let best = townHall, bestDist = Infinity;
@@ -49,19 +57,19 @@ function findNearestStorage(s) {
   return best;
 }
 
-function isAtStorage(s, storage) {
+export function isAtStorage(s, storage) {
   const d = Math.hypot(storage.x - s.x, storage.y - s.y);
   return storage === townHall ? d <= townHall.radius + s.radius + 4 : d <= 34;
 }
 
-function walkToStorage(s, storage, dt) {
+export function walkToStorage(s, storage, dt) {
   if (storage === townHall) moveSettlerToTownHall(s, s.speed, dt);
   else moveEntityTowards(s, storage.x, storage.y, s.speed, false, dt);
   s.patrolTarget = null;
 }
 
 // Walk to the nearest storage for some `id` from the stock; once there, take(). False if there's none.
-function fetchFromStorage(s, id, dt, take) {
+export function fetchFromStorage(s, id, dt, take) {
   if (!(stock[id] > 0)) return false;
   const storage = findNearestStorage(s);
   if (isAtStorage(s, storage)) take(storage);

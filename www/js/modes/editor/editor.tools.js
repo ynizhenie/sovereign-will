@@ -7,10 +7,26 @@
 // thing it clears it instead. Rows and columns can be added or taken away at any edge. Saved maps are
 // plain data (serializeMap), keyed by name in localStorage; loadCustomMap() builds the world from one.
 
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { t } from '../../engine/platform/i18n.js';
+import { getGridPos, isBorderZone, resetTileIndex } from '../../engine/world/grid.js';
+import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../engine/world/state.js';
+import { applySeedFromUI } from '../../engine/world/rng.js';
+import { isTileOccupied } from '../../domains/economy/building/building.rules.js';
+import { showNotification } from '../../ui/toasts.js';
+import { camera, clampCamera, setZoom } from '../../engine/platform/camera.js';
+import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/gathering.rules.js';
+import { makeAppleTree } from '../../domains/economy/farming/farming.rules.js';
+import { exitToMainMenu, resetGame } from '../../app/session.js';
+import { invalidateAllPaths } from '../../engine/movement/pathfinding.js';
+import { showMenuScreen } from '../menu/menu.screens.js';
+import { loadSavedMaps, makeBuilt, placeBoar, serializeMap, storeSavedMaps } from './editor.maps.js';
+import { renderEditorMapList, renderEditorPanel } from './editor.panel.js';
+
 // What can be put on a tile, by palette category (the eraser has its own button). kind: a
 // GAME_CONFIG.mapResources entry; building: a GAME_CONFIG.buildings one.
-const EDITOR_CATEGORIES = ['terrain', 'nature', 'ore', 'buildings'];
-const EDITOR_TOOLS = [
+export const EDITOR_CATEGORIES = ['terrain', 'nature', 'ore', 'buildings'];
+export const EDITOR_TOOLS = [
   { id: 'erase', icon: 'eraser' },
   { id: 'water', icon: 'water', category: 'terrain' },
   { id: 'rock', icon: 'rock', category: 'terrain' },
@@ -36,9 +52,9 @@ const EDITOR_TOOLS = [
 ];
 
 // how small and big a map can be made (the same as the Endless custom size)
-const EDITOR_MIN_TILES = 20, EDITOR_MAX_TILES = 100;
+export const EDITOR_MIN_TILES = 20, EDITOR_MAX_TILES = 100;
 
-const editor = {
+export const editor = {
   tool: 'tree',
   category: 'nature',
   brush: 1,     // 1 or 3: a 3×3 brush covers the tapped tile and the ones around it
@@ -48,10 +64,10 @@ const editor = {
 
 // ---- Editing
 
-const tileKey = (x, y) => `${x},${y}`;
+export const tileKey = (x, y) => `${x},${y}`;
 
 // Take away whatever stands on the tile (sand stays: it's ground)
-function clearEditorTile(x, y) {
+export function clearEditorTile(x, y) {
   const here = o => Math.abs(o.x - x) < TILE_SIZE / 2 && Math.abs(o.y - y) < TILE_SIZE / 2;
   for (const list of ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
     'naturalRocks', 'waterTiles', 'boars', 'buildings']) {
@@ -59,12 +75,12 @@ function clearEditorTile(x, y) {
   }
 }
 
-function hasSomethingOn(x, y) {
+export function hasSomethingOn(x, y) {
   return isTileOccupied(x, y) && Math.hypot(x - townHall.x, y - townHall.y) >= townHall.radius + 15;
 }
 
 // Does the tile already have what this tool puts there?
-function tileHasTool(tool, gx, gy) {
+export function tileHasTool(tool, gx, gy) {
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
   const at = list => game[list].find(o => o.x === x && o.y === y);
   if (tool.id === 'water') return !!at('waterTiles');
@@ -81,7 +97,7 @@ function tileHasTool(tool, gx, gy) {
 }
 
 // The tool on one tile; clearing: take that thing away instead (a second tap with the same tool)
-function applyEditorTool(tool, gx, gy, clearing) {
+export function applyEditorTool(tool, gx, gy, clearing) {
   if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) return;
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
   if (clearing) {
@@ -124,7 +140,7 @@ function applyEditorTool(tool, gx, gy, clearing) {
 }
 
 // The town hall moves to the tile corner nearest the tap; what was under it goes
-function moveTownHall(x, y) {
+export function moveTownHall(x, y) {
   const cx = Math.round(x / TILE_SIZE) * TILE_SIZE, cy = Math.round(y / TILE_SIZE) * TILE_SIZE;
   const g = getGridPos(cx - 1, cy - 1);
   if (isBorderZone(g.gx, g.gy) || isBorderZone(g.gx + 1, g.gy + 1)) return;
@@ -137,7 +153,7 @@ function moveTownHall(x, y) {
   }
 }
 
-function editorTap(x, y) {
+export function editorTap(x, y) {
   const tool = EDITOR_TOOLS.find(tl => tl.id === editor.tool);
   if (!tool) return;
   if (tool.id === 'town_hall') moveTownHall(x, y);
@@ -153,12 +169,12 @@ function editorTap(x, y) {
 
 // ---- Map size
 
-const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
+export const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
   'naturalRocks', 'waterTiles', 'desertTiles', 'beachTiles', 'boars', 'buildings'];
 
 // Add (delta 1) or take away (delta -1) a whole row or column of tiles at one edge: top, bottom, left,
 // right. What would end up off the map or on the new border goes; the town hall must stay clear of it.
-function resizeEditorMap(side, delta) {
+export function resizeEditorMap(side, delta) {
   const horizontal = side === 'left' || side === 'right';
   const cols = game.COLS + (horizontal ? delta : 0), rows = game.ROWS + (horizontal ? 0 : delta);
   if (Math.min(cols, rows) < EDITOR_MIN_TILES || Math.max(cols, rows) > EDITOR_MAX_TILES) return;
@@ -186,7 +202,7 @@ function resizeEditorMap(side, delta) {
 // ---- Opening and leaving the editor
 
 // source: { map } a saved map, or { cols, rows, generate } a new one (generate: from the generator, else empty)
-function startEditor(source) {
+export function startEditor(source) {
   game.gameMode = 'editor';
   if (source.map) {
     editor.name = source.map.name;
@@ -212,7 +228,7 @@ function startEditor(source) {
   renderEditorPanel();
 }
 
-function leaveEditor() {
+export function leaveEditor() {
   game.gameMode = 'endless';
   document.body.classList.remove('editor-mode');
   exitToMainMenu();
@@ -220,7 +236,7 @@ function leaveEditor() {
   showMenuScreen('editor');
 }
 
-function saveEditorMap() {
+export function saveEditorMap() {
   const name = document.getElementById('editor-name').value.trim();
   if (!name) { showNotification(t('editor.needName'), true); return; }
   const maps = loadSavedMaps();

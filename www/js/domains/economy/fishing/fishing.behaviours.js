@@ -1,7 +1,17 @@
 // Fishers fetch bait, fish at the marked spots, collect worms
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { game } from '../../../engine/world/state.js';
+import { addCarryLoad, giveResourceToSettler } from '../../colony/storage/storage.rules.js';
+import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { isInSafeArea } from '../../conflict/combat/combat.rules.js';
+import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { corpseHasWorms, getFishingBait, takeFishingBait } from './fishing.rules.js';
+import { findNearestStorage, isAtStorage, walkToStorage } from '../../colony/storage/storage.behaviours.js';
+import { canGather } from '../gathering/gathering.behaviours.js';
+
 // Walk to the nearest storage and take one bait; false if the stock has none
-function fetchBait(s, dt) {
+export function fetchBait(s, dt) {
   if (!getFishingBait()) return false;
   const storage = findNearestStorage(s);
   if (isAtStorage(s, storage)) takeFishingBait(s);
@@ -11,7 +21,7 @@ function fetchBait(s, dt) {
 
 // Fishers with a rod fish at a spot the player marked; every catch uses one seed as bait,
 // picked up at the town hall. No seeds, no fishing.
-function fish(s, tick) {
+export function fish(s, tick) {
   if (!canGather(s, tick) || s.role !== 'worker' || s.tool !== 'rod') return false;
   const dt = tick.dt;
   let fishSpot = tick.activeWaterSpots[tick.assignedFishersCount];
@@ -31,7 +41,7 @@ function fish(s, tick) {
 }
 
 // Walk to a fishing spot and fish there (the settler has bait)
-function fishAt(s, fishSpot, dt) {
+export function fishAt(s, fishSpot, dt) {
   let dist = Math.hypot(fishSpot.x - s.x, fishSpot.y - s.y);
   if (dist > 32) {
     moveEntityTowards(s, fishSpot.x, fishSpot.y, s.speed, false, dt);
@@ -52,7 +62,7 @@ function fishAt(s, fishSpot, dt) {
 // ---- Worms
 
 // Fishers pick worms off corpses that have them (see corpseHasWorms) and carry them home as bait
-function collectWorms(s, tick) {
+export function collectWorms(s, tick) {
   if (s.role !== 'worker' || s.tool !== 'rod' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
   let target = null, best = Infinity;
   for (const c of game.corpses) {

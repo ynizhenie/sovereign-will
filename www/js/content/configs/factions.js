@@ -1,6 +1,6 @@
 // Factions and their colours
 
-Object.assign(GAME_CONFIG, {
+export const factionsConfig = {
   // ---- Factions (#43): who the colony is, and who the enemy is (chosen in the Endless menu).
   // color: the faction's own (its units are drawn in it, unless another is picked). enemies: the enemy
   // kinds of GAME_CONFIG.enemies its waves are made of; summonEnemy: what its spawners call up.
@@ -28,4 +28,4 @@ Object.assign(GAME_CONFIG, {
 
   // the colours either side can pick from; the two sides never share one
   factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1']
-});
+};

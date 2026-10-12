@@ -1,7 +1,7 @@
 // The numbers each mechanic is tuned by: defence, farming, healing, blood, meals, corpses, fishing,
 // cooking, burning, the undead's zombies and blight
 
-Object.assign(GAME_CONFIG, {
+export const mechanicsConfig = {
   // before a wave (#14): deploySeconds ahead, soldiers form squads of squadSize melee (plus an archer if
   // there are any) at posts around the base, no farther out than its farthest building (at least
   // minRadius tiles), doors first. A squad holds its post until an enemy comes within engageTiles of it.
@@ -69,4 +69,4 @@ Object.assign(GAME_CONFIG, {
   temporaryZombie: { lifeSeconds: 60, rot: 1 },
 
   blight: { hallTiles: 2, graveTiles: 1, slowFactor: 0.6, riseSeconds: 4, clearSeconds: 5 }
-});
+};

@@ -1,7 +1,17 @@
 // Enemies, their tents and tent sites
 
+import { drawIcon } from '../../../ui/icons.js';
+import { game } from '../../../engine/world/state.js';
+import { ctx } from '../../../engine/platform/canvas.js';
+import { getEnemyDef } from './waves.rules.js';
+import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/factions.rules.js';
+import { applyHeldItemPose, drawHeldWeapon, drawQuiver } from '../../colony/settlers/settlers.draw.js';
+import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/combat.draw.js';
+import { drawStaff } from '../../factions/undead/undead.draw.js';
+import { drawHorns, drawPortal } from '../../factions/demons/demons.draw.js';
+
 // Enemy tents (the undead's graves, the demons' portals), with their health
-function drawEnemyTents() {
+export function drawEnemyTents() {
   game.enemyTents.forEach(et => {
     if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
       // the undead's spawners are graves, the demons' portals (#43), ringed in the enemy's colour
@@ -25,7 +35,7 @@ function drawEnemyTents() {
 }
 
 // Tent sites enemies are building
-function drawEnemyTentSites() {
+export function drawEnemyTentSites() {
   game.enemyTentBlueprints.forEach(site => {
     ctx.fillStyle = 'rgba(192, 57, 43, 0.35)';
     ctx.beginPath();
@@ -37,7 +47,7 @@ function drawEnemyTentSites() {
 }
 
 // Enemies: body, weapon, quiver, the target mark, health
-function drawEnemies() {
+export function drawEnemies() {
   game.enemies.forEach(en => {
     // enemies in the enemy's colour (#43; big ones darker), holding their weapon the way settlers do
     ctx.fillStyle = getEnemyColor(en);

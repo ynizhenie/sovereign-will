@@ -5,13 +5,10 @@ test('one warning 15 s before a wave (#106)', async ({ page }) => {
   await openGame(page);
   const notes = await page.evaluate(() => {
     window.sim.start('warning-test');
-    const seen = [];
-    const original = showNotification;
-    window.showNotification = msg => seen.push(msg);
-    try {
-      waveTimer = 20;
-      for (let f = 0; f < 60 * 10; f++) update(1 / 60); // 20 s -> 10 s left
-    } finally { window.showNotification = original; }
+    const seen = recentNotifications; // the messages shown from here on
+    seen.length = 0;
+    waveTimer = 20;
+    for (let f = 0; f < 60 * 10; f++) update(1 / 60); // 20 s -> 10 s left
     return seen.filter(m => m.includes('Волна'));
   });
   expect(notes).toEqual(['[[warn]] Волна врагов через 15 секунд!']);
@@ -44,7 +41,6 @@ test('a watchtower is repaired only when ordered, priced like any building (#106
   const r = await page.evaluate(() => {
     const { makeSettler, placeBuilding } = window.sim.helpers;
     window.sim.start('tower-repair-test');
-    window.showNotification = () => {};
     const tower = placeBuilding('watchtower', townHall.x + 90, townHall.y + 90);
     tower.hp = tower.maxHp / 2;
     settlers = [makeSettler(1, townHall.x - 40, townHall.y)];

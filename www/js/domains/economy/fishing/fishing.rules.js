@@ -1,13 +1,16 @@
 // Fishing bait, and worms on corpses
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { canAfford, payCost } from '../../colony/storage/storage.rules.js';
+
 // A fisher at the town hall takes one seed as bait for the next catch
 // The bait a fisher would take now: the first of GAME_CONFIG.fishing.bait the stock has (worms first)
-function getFishingBait() {
+export function getFishingBait() {
   return GAME_CONFIG.fishing.bait.find(bait => canAfford(bait)) || null;
 }
 
 // A fisher at a storage takes one bait for the next catch
-function takeFishingBait(s) {
+export function takeFishingBait(s) {
   const bait = getFishingBait();
   if (s.tool === 'rod' && !s.bait && bait) {
     payCost(bait);
@@ -16,6 +19,6 @@ function takeFishingBait(s) {
 }
 
 // Worms show up on a corpse that has lain for GAME_CONFIG.worms.after of its time, until a fisher takes them
-function corpseHasWorms(corpse) {
+export function corpseHasWorms(corpse) {
   return !corpse.wormsTaken && corpse.age >= GAME_CONFIG.corpses.seconds * GAME_CONFIG.worms.after;
 }

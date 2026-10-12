@@ -1,7 +1,13 @@
 // The fight: started, called off, and over when a side has nobody left
 
+import { t } from '../../engine/platform/i18n.js';
+import { game } from '../../engine/world/state.js';
+import { showNotification } from '../../ui/toasts.js';
+import { BATTLE_RESULT_SECONDS, battle, resetBattleUnits } from './battle.setup.js';
+import { renderBattlePanel } from './battle.panel.js';
+
 // Stop a fight and put the line-up back as it was placed (#166)
-function cancelBattleFight() {
+export function cancelBattleFight() {
   if (battle.phase !== 'fight') return;
   battle.phase = 'setup';
   game.settlers.forEach(s => { s.isPossessed = false; });
@@ -9,7 +15,7 @@ function cancelBattleFight() {
   renderBattlePanel();
 }
 
-function startBattleFight() {
+export function startBattleFight() {
   if (battle.phase !== 'setup' || game.settlers.length === 0 || game.enemies.length === 0) {
     showNotification(t('battle.needBoth'), true);
     return;
@@ -19,7 +25,7 @@ function startBattleFight() {
 }
 
 // Called every update in battle mode: the fight ends when a side has nobody left
-function updateBattle(dt) {
+export function updateBattle(dt) {
   if (battle.phase === 'fight') {
     if (game.settlers.length === 0 || game.enemies.length === 0) {
       battle.winner = game.settlers.length > 0 ? 'green' : game.enemies.length > 0 ? 'red' : 'draw';

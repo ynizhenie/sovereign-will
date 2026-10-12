@@ -4,7 +4,14 @@
 // while a wave is on (until the last enemy and enemy tent are gone). Sound and music can each be turned
 // off in the Settings. The audio starts with the first tap or key (browsers allow it only then).
 
-const SOUND = {
+import { game } from '../engine/world/state.js';
+import { canvas, getViewScale, screenPixelRatio } from '../engine/platform/canvas.js';
+import { camera } from '../engine/platform/camera.js';
+import { isDefeated } from '../modes/endless/endless.rules.js';
+import { audio, midi, noise, startAudio, tone } from '../engine/platform/audio.js';
+import { battle } from '../modes/battle/battle.setup.js';
+
+export const SOUND = {
   sfxVolume: 0.55, musicVolume: 0.3,
   menuWorldShare: 0.35,  // the world behind the main menu is quieter
   fadeSeconds: 1.2,      // the music's crossfades: a time constant, so about 4x this to the end
@@ -15,7 +22,7 @@ const SOUND = {
 
 // ---- Sound effects
 
-const SOUNDS = {
+export const SOUNDS = {
   click: (o, t) => tone(o, t, { type: 'triangle', freq: 1400, to: 900, dur: 0.04, gain: 0.05 }),
   swing: (o, t) => noise(o, t, { dur: 0.13, gain: 1.2, freq: 700, to: 2600, q: 1.5, attack: 0.03 }),
   hit: (o, t) => { noise(o, t, { dur: 0.07, gain: 0.45, type: 'lowpass', freq: 1400 }); tone(o, t, { freq: 150, to: 55, dur: 0.12, gain: 0.5 }); },
@@ -39,7 +46,7 @@ const SOUNDS = {
 };
 
 // How loud a sound at a world point is, and where left-right: null when it's well off the screen
-function soundPlace(at) {
+export function soundPlace(at) {
   if (!at || typeof camera === 'undefined') return { volume: 1, pan: 0 };
   const k = getViewScale() / screenPixelRatio;
   const halfW = Math.max(1, canvas.clientWidth / 2), halfH = Math.max(1, canvas.clientHeight / 2);
@@ -49,7 +56,7 @@ function soundPlace(at) {
   return { volume: Math.max(0.15, 1 - 0.55 * far), pan: Math.max(-0.8, Math.min(0.8, dx * 0.7)) };
 }
 
-function playSound(name, at, ...args) {
+export function playSound(name, at, ...args) {
   if (!audio.ctx || audio.ctx.state !== 'running' || !audio.soundOn || !SOUNDS[name]) return;
   const t = audio.ctx.currentTime;
   if (t - (audio.last[name] ?? -1) < (SOUND.minGap[name] || 0)) return;
@@ -70,14 +77,14 @@ function playSound(name, at, ...args) {
 }
 
 // Steady work makes its sound on a beat of its own per unit (chopping, mining, building...)
-function playWorkSound(unit, name, everySeconds = 0.5) {
+export function playWorkSound(unit, name, everySeconds = 0.5) {
   const now = performance.now() / 1000;
   if (now - (unit.lastWorkSound || 0) < everySeconds) return;
   unit.lastWorkSound = now;
   playSound(name, unit);
 }
 
-const MUSIC_STYLES = {
+export const MUSIC_STYLES = {
   // calm, for the main menu: soft chords, a slow bass, a few plucked notes
   menu: {
     bpm: 72, chords: [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 67]], scale: [72, 74, 76, 79, 81, 84],
@@ -118,7 +125,7 @@ const MUSIC_STYLES = {
 };
 
 // Which music now, and how loud: { style: level }
-function musicMix() {
+export function musicMix() {
   if (!audio.musicOn) return {};
   const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
@@ -132,7 +139,7 @@ function musicMix() {
 }
 
 // Every frame: fade the styles to the mix, and schedule the notes of those that can be heard
-function updateMusic() {
+export function updateMusic() {
   if (!audio.ctx || audio.ctx.state !== 'running') return;
   const ctx = audio.ctx, now = ctx.currentTime, mix = musicMix();
   for (const [name, layer] of Object.entries(audio.layers)) {
@@ -155,7 +162,7 @@ function updateMusic() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initSounds() {
+export function initSounds() {
   // a click for every button
   document.addEventListener('pointerdown', e => { if (e.target.closest('button')) { startAudio(); playSound('click'); } }, true);
 }

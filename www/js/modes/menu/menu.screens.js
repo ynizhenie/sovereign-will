@@ -1,42 +1,49 @@
 // The main menu's screens: home, settings (language, frame rate, FPS counter, sound, music), and the opening
 
-const mainMenu = document.getElementById('main-menu');
+import { LANGUAGES } from '../../content/language/index.js';
+import { currentLanguage, setLanguage } from '../../engine/platform/i18n.js';
+import { onTap } from '../../engine/platform/dom.js';
+import { loadSetting, saveSetting } from '../../engine/platform/storage.js';
+import { audio, setMusicOn, setSoundOn } from '../../engine/platform/audio.js';
+import { fpsCounter, loop } from '../../app/main.js';
 
-function showMenuScreen(name) {
+export const mainMenu = document.getElementById('main-menu');
+
+export function showMenuScreen(name) {
   document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
   document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
 }
 
 // Exit closes the app on Android; a browser tab can't close itself, so there it isn't shown
-const nativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+export const nativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
   window.Capacitor.Plugins && window.Capacitor.Plugins.App;
 
-const exitButton = document.getElementById('exit-app');
+export const exitButton = document.getElementById('exit-app');
 
 // frame rate (Settings), remembered on the device
-const fpsOptions = document.querySelectorAll('.fps-option[data-fps]');
+export const fpsOptions = document.querySelectorAll('.fps-option[data-fps]');
 
-const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === loop.frameRate));
+export const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active', b.dataset.fps === loop.frameRate));
 
 // FPS counter on / off (Settings), remembered on the device
-const showFpsOptions = document.querySelectorAll('[data-show-fps]');
+export const showFpsOptions = document.querySelectorAll('[data-show-fps]');
 
-const applyShowFps = value => {
+export const applyShowFps = value => {
   fpsCounter.hidden = value !== 'on';
   showFpsOptions.forEach(b => b.classList.toggle('active', b.dataset.showFps === value));
 };
 
 // language buttons in the main menu (see i18n.js)
-const languageOptions = document.getElementById('language-options');
+export const languageOptions = document.getElementById('language-options');
 
 // ---- The Settings: sound and music on / off, remembered on the device
-const markAudioOptions = () => {
+export const markAudioOptions = () => {
   document.querySelectorAll('[data-sound]').forEach(b => b.classList.toggle('active', (b.dataset.sound === 'on') === audio.soundOn));
   document.querySelectorAll('[data-music]').forEach(b => b.classList.toggle('active', (b.dataset.music === 'on') === audio.musicOn));
 };
 
 // What this file sets up as the game starts (called by app/boot.js)
-function initMenuScreens() {
+export function initMenuScreens() {
   // ---- Main menu screens: home (modes), endless (setup), settings
 
   // the opening animation, once, as the page loads (style.css: #main-menu.intro)

@@ -1,18 +1,23 @@
 // How far a resource is worked through
 
-function getHarvestMaxHp(resource) {
+import { TILE_SIZE, game } from '../../../engine/world/state.js';
+import { ctx, drawProgressBar } from '../../../engine/platform/canvas.js';
+import { getHarvestableResources, getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
+import { drawOreVeins } from '../../world/world.draw.js';
+
+export function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
   const def = getMapResourceDef(getMapResourceKind(resource));
   return (def && def.hp) || 1;
 }
 
-function drawHarvestProgress(resource, width = 24) {
+export function drawHarvestProgress(resource, width = 24) {
   let maxHp = getHarvestMaxHp(resource);
   drawProgressBar(resource.x, resource.y, (maxHp - Math.max(0, resource.hp)) / maxHp, width);
 }
 
 // Sticks and pebbles, and minable ore
-function drawSticksPebblesOre() {
+export function drawSticksPebblesOre() {
   game.sticks.forEach(st => {
     ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(st.x - 6, st.y - 4); ctx.lineTo(st.x + 6, st.y + 4); ctx.stroke();
@@ -37,7 +42,7 @@ function drawSticksPebblesOre() {
 }
 
 // Trees: saplings growing, grown trees, apple trees with their apples
-function drawTrees() {
+export function drawTrees() {
   game.trees.forEach(t => {
     if (t.isGrowing) {
       ctx.fillStyle = '#2ecc71';
@@ -62,7 +67,7 @@ function drawTrees() {
 }
 
 // Cacti, boulders, grass and berry bushes
-function drawCactiBouldersGrassBushes() {
+export function drawCactiBouldersGrassBushes() {
   game.cacti.forEach(c => {
     ctx.fillStyle = '#2f8f46';
     ctx.fillRect(c.x - 4, c.y - 13, 8, 26);
@@ -97,7 +102,7 @@ function drawCactiBouldersGrassBushes() {
 }
 
 // The player's marks on resources: a square and the priority
-function drawPriorityMarks() {
+export function drawPriorityMarks() {
   getHarvestableResources().forEach(r => {
     if (r.priority > 0) {
       // a square around the tile, the priority in its corner: clear of the progress bar above it

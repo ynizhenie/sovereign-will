@@ -1,13 +1,18 @@
 // What can be placed in a battle: each faction's units (colony kinds with a weapon), enemies, buildings
 
+import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
+import { t } from '../../engine/platform/i18n.js';
+import { isBowWeapon } from '../../domains/colony/equipment/equipment.rules.js';
+import { battle } from './battle.setup.js';
+
 // The panel's categories: the player's units (green side), enemies (red side), buildings (either side);
 // each by faction (#166)
-const BATTLE_CATEGORIES = ['own', 'enemy', 'buildings'];
+export const BATTLE_CATEGORIES = ['own', 'enemy', 'buildings'];
 
 // The player's units by faction: a settler kind with a weapon (and a tool: the undead's necromancer);
 // armour and a shield come from the panel's toggles. Enemies: the enemy kinds of each faction, with their
 // own stats (GAME_CONFIG.factions[f].enemies).
-const BATTLE_PLAYER_UNITS = {
+export const BATTLE_PLAYER_UNITS = {
   humans: [
     { id: 'fist', type: 'normal', weapon: 'fist' }, { id: 'club', type: 'normal', weapon: 'club' },
     { id: 'sword', type: 'normal', weapon: 'sword' }, { id: 'spear', type: 'normal', weapon: 'spear' },
@@ -26,20 +31,20 @@ const BATTLE_PLAYER_UNITS = {
   ]
 };
 
-const BATTLE_PRESETS = [
+export const BATTLE_PRESETS = [
   ...Object.entries(BATTLE_PLAYER_UNITS).flatMap(([faction, units]) => units.map(u => ({ ...u, faction }))),
   ...Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.enemies).flatMap(f => f.enemies.map(id => ({ id, enemy: id, faction: f.id })))
 ];
 
 // buildings any faction has, then each faction's own (those with `factions` in GAME_CONFIG.buildings)
-const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'spikes', 'watchtower', 'tent', 'grave', 'sacrifice_circle', 'portal'];
+export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'spikes', 'watchtower', 'tent', 'grave', 'sacrifice_circle', 'portal'];
 
-function getBattlePreset(id) {
+export function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);
 }
 
 // What a preset is called: a human one by its own name, an enemy by its kind, the others kind + weapon
-function battlePresetLabel(preset) {
+export function battlePresetLabel(preset) {
   if (preset.enemy) return GAME_CONFIG.enemies[preset.enemy].label;
   if (preset.faction === 'humans') return t(`preset.${preset.id}`);
   const parts = [GAME_CONFIG.settlerTypes[preset.type].label];
@@ -49,10 +54,10 @@ function battlePresetLabel(preset) {
 }
 
 // The presets the panel shows now: the category's side, the chosen faction's
-function getBattlePresetsShown() {
+export function getBattlePresetsShown() {
   return BATTLE_PRESETS.filter(p => !!p.enemy === (battle.category === 'enemy') && p.faction === battle.faction);
 }
 
-function getBattleBuildings() {
+export function getBattleBuildings() {
   return BATTLE_BUILDINGS.filter(id => { const f = getDefinition('buildings', id).factions; return !f || f.includes(battle.faction); });
 }

@@ -530,7 +530,6 @@ window.sim = (() => {
     const atStart = stock.flint;
     run(20);
     const delivered = stock.flint;
-    window.showNotification = () => {};
     const canPay = canAfford(GAME_CONFIG.tools.axe.cost);
     assignTool('axe');
     return { atStart, delivered, canPay, afterTool: stock.flint };

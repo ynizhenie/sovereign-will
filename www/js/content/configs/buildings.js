@@ -1,6 +1,6 @@
 // Buildings and their repairs
 
-Object.assign(GAME_CONFIG, {
+export const buildingsConfig = {
   // tab: which tab of the bottom panel its button goes in: 'build' (default) or 'farming'.
   // Arrows stop at buildings, except arrowsPass ones; towerArrowsPass ones only stop arrows shot from the ground.
   // group: the section of the Building tab it's in (#181): defense / homes / economy
@@ -40,4 +40,4 @@ Object.assign(GAME_CONFIG, {
     townHall: { cost: { wood: 15, stone: 15 }, hp: 35 },
     buildings: { costShare: 0.2, hpShare: 0.25, interval: 1 }
   }
-});
+};

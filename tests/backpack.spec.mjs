@@ -21,7 +21,6 @@ test('the backpack button gives a worker a backpack for its leather cost (#26)',
   await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
-    window.showNotification = () => {};
     stock.leather = 10;
     selectedSettler = settlers[0];
     document.getElementById('btn-backpack').click();

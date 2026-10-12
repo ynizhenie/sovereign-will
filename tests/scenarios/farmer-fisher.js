@@ -30,7 +30,6 @@ Object.assign(window.sim, (() => {
   function worms({ seed = 'worms-test', seconds = 40 }) {
     start(seed);
     clearResources();
-    window.showNotification = () => {};
     const spot = nearHall(-4, 0);
     waterTiles.push({ ...spot, isFishing: true });
     invalidateAllPaths();
@@ -42,15 +41,14 @@ Object.assign(window.sim, (() => {
     ];
     settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
     Object.assign(stock, { worms: 0, wheatSeeds: 0, wheat: 0 });
-    const fresh = corpses[2];
-    let wormsSeen = 0;
-    const original = payCost;
-    let wormsSpent = 0;
-    window.payCost = cost => { if (cost.worms) wormsSpent += cost.worms; return original(cost); };
-    try {
-      run(seconds, { each: () => { wormsSeen = Math.max(wormsSeen, stock.worms + wormsSpent); fresh.age = Math.min(fresh.age, 1); } });
-    } finally { window.payCost = original; }
-    return { wormsGathered: wormsSeen, freshUntouched: !fresh.wormsTaken, caughtFish: stock.rawFish > 0, wormsSpent };
+    const fresh = corpses[2], laid = [...corpses]; // (corpses leave the list as they rot away)
+    run(seconds, { each: () => { fresh.age = Math.min(fresh.age, 1); } });
+    // worms gathered: what was taken off the corpses (1 each, 2 off a big one); spent as bait: what of
+    // that is no longer in the stock or in the fisher's hands
+    const worms = GAME_CONFIG.worms, load = settlers[0] && settlers[0].carrying;
+    const wormsGathered = laid.filter(c => c.wormsTaken).reduce((n, c) => n + (c.big ? worms.perBigCorpse : worms.perCorpse), 0);
+    const wormsSpent = wormsGathered - stock.worms - (load && load.type === 'worms' ? load.amount : 0);
+    return { wormsGathered, freshUntouched: !fresh.wormsTaken, caughtFish: stock.rawFish > 0, wormsSpent };
   }
 
   return { idleFarmer, watering, worms };

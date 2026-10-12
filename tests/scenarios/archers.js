@@ -13,17 +13,17 @@ Object.assign(window.sim, (() => {
     invalidateAllPaths();
     const archer = makeSettler(1, nearHall(3, 0).x, nearHall(3, 0).y, { weapon: 'bow', role: 'soldier', quiver: true, arrows: 30 });
     settlers = [archer];
+    // every arrow the archer lets go (a new projectile of its), and whether it had a clear line to the boar
     let shots = 0, blind = 0;
-    const original = performAttack;
-    window.performAttack = function (attacker, x, y) {
-      if (attacker === archer && attacker.attackCooldown <= 0 && attacker.arrows > 0) {
-        shots++;
-        if (!hasLineOfFire(attacker.x, attacker.y, x, y)) blind++;
+    const seen = new Set();
+    run(8, { each: () => {
+      for (const p of projectiles) {
+        if (p.owner !== archer || seen.has(p)) continue;
+        seen.add(p); shots++;
+        if (!hasLineOfFire(archer.x, archer.y, b.x, b.y)) blind++;
       }
-      return original.apply(this, arguments);
-    };
-    try { run(8, { each: () => { const boar = boars[0]; if (boar) { boar.fleeTimer = 0; boar.x = b.x; boar.y = b.y; } } }); }
-    finally { window.performAttack = original; }
+      const boar = boars[0]; if (boar) { boar.fleeTimer = 0; boar.x = b.x; boar.y = b.y; }
+    } });
     return { shots: shots > 0, blind };
   }
 

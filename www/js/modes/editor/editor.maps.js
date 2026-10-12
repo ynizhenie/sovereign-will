@@ -1,19 +1,31 @@
 // Saved maps: stored on the device as plain data, and a world built from one
 
-const MAP_STORAGE_KEY = 'sovereign-will-maps';
+import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
+import { t } from '../../engine/platform/i18n.js';
+import { TILE_SIZE, game, townHall } from '../../engine/world/state.js';
+import { rand } from '../../engine/world/rng.js';
+import { createBuildingBlueprint } from '../../domains/economy/building/building.rules.js';
+import { placeBeaches } from '../../domains/world/world.generator.js';
+import { camera } from '../../engine/platform/camera.js';
+import { addMapResource } from '../../domains/economy/gathering/gathering.rules.js';
+import { makeAppleTree } from '../../domains/economy/farming/farming.rules.js';
+import { renderItemList } from '../../ui/widgets.js';
+import { editor } from './editor.tools.js';
+
+export const MAP_STORAGE_KEY = 'sovereign-will-maps';
 
 // ---- Saved maps
 
-function loadSavedMaps() {
+export function loadSavedMaps() {
   try { return JSON.parse(localStorage.getItem(MAP_STORAGE_KEY)) || {}; } catch (e) { return {}; }
 }
 
-function storeSavedMaps(maps) {
+export function storeSavedMaps(maps) {
   try { localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(maps)); return true; } catch (e) { return false; }
 }
 
 // The world as plain data: tiles by grid position
-function serializeMap(name) {
+export function serializeMap(name) {
   const tile = o => [Math.floor(o.x / TILE_SIZE), Math.floor(o.y / TILE_SIZE)];
   const resources = {};
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
@@ -34,7 +46,7 @@ function serializeMap(name) {
 }
 
 // Build the world from a saved map, in place of generateMap() (see resetGame)
-function loadCustomMap(map) {
+export function loadCustomMap(map) {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.beachTiles = []; game.forests = [];
   game.trees = []; game.cacti = []; game.boulders = []; game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = [];
   game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = [];
@@ -62,13 +74,13 @@ function loadCustomMap(map) {
   camera.x = townHall.x; camera.y = townHall.y;
 }
 
-function placeBoar({ x, y }) {
+export function placeBoar({ x, y }) {
   const hp = GAME_CONFIG.mapResources.boar.hp;
   game.boars.push({ x, y, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
 }
 
 // A finished building (a blueprint with its building work done)
-function makeBuilt(type, x, y) {
+export function makeBuilt(type, x, y) {
   const b = createBuildingBlueprint(type, x, y);
   delete b.progress;
   delete b.maxProgress;
@@ -76,7 +88,7 @@ function makeBuilt(type, x, y) {
 }
 
 // The saved maps, one per row: its name and size; in the editor's menu also a delete button (asks first)
-function renderSavedMapList(list, { open, remove, selected }) {
+export function renderSavedMapList(list, { open, remove, selected }) {
   const maps = loadSavedMaps();
   renderItemList(list, Object.values(maps).map(map => ({ id: map.name, label: `${map.name} · ${map.cols}×${map.rows}` })), {
     attr: 'map', selected, emptyText: t('editor.noMaps'),

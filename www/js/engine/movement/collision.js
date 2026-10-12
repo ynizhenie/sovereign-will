@@ -1,6 +1,9 @@
 // Bodies and what stops them: walls, water, natural obstacles, the map's edge, and units pushed apart
 
-function collidesWithBoxList(x, y, radius, objects, halfSize) {
+import { getGridPos, getTileIndex } from '../world/grid.js';
+import { TILE_SIZE, game } from '../world/state.js';
+
+export function collidesWithBoxList(x, y, radius, objects, halfSize) {
   return objects.some(object => {
     const closestX = Math.max(object.x - halfSize, Math.min(x, object.x + halfSize));
     const closestY = Math.max(object.y - halfSize, Math.min(y, object.y + halfSize));
@@ -13,7 +16,7 @@ function collidesWithBoxList(x, y, radius, objects, halfSize) {
 // Box collision against what occupies the tiles around (x, y). Everything solid sits on a tile center,
 // so only the few nearby tiles need checking instead of every object on the map.
 // kinds: [[tileIndex set name, box half size], ...]
-function collidesWithTiles(x, y, radius, kinds) {
+export function collidesWithTiles(x, y, radius, kinds) {
   const tiles = getTileIndex();
   const span = Math.ceil((radius + 15) / TILE_SIZE);
   const g = getGridPos(x, y);
@@ -31,17 +34,17 @@ function collidesWithTiles(x, y, radius, kinds) {
   return false;
 }
 
-const WALL_COLLISION_KINDS = [['walls', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
+export const WALL_COLLISION_KINDS = [['walls', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
 
-function collidesWithWall(x, y, radius) {
+export function collidesWithWall(x, y, radius) {
   return collidesWithTiles(x, y, radius, WALL_COLLISION_KINDS);
 }
 
-function collidesWithWater(x, y, radius) {
+export function collidesWithWater(x, y, radius) {
   return collidesWithTiles(x, y, radius, [['water', 15]]);
 }
 
-function getSettlerAvoidance(entity) {
+export function getSettlerAvoidance(entity) {
   let avoidX = 0;
   let avoidY = 0;
   game.settlers.forEach(other => {
@@ -62,17 +65,17 @@ function getSettlerAvoidance(entity) {
   return { x: avoidX, y: avoidY };
 }
 
-function collidesWithEnemyNaturalResource(x, y, radius) {
+export function collidesWithEnemyNaturalResource(x, y, radius) {
   return collidesWithTiles(x, y, radius, [['trees', 14], ['solids', 14]]);
 }
 
-function separateSettlersFromEnemies() {
+export function separateSettlersFromEnemies() {
   for (let round = 0; round < 4; round++) {
     if (!separateSettlersFromEnemiesOnce()) return;
   }
 }
 
-function separateSettlersFromEnemiesOnce() {
+export function separateSettlersFromEnemiesOnce() {
   let moved = false;
   for (const s of game.settlers) {
     if (s.towerAssignment) continue; // up in a watchtower
@@ -96,12 +99,12 @@ function separateSettlersFromEnemiesOnce() {
   return moved;
 }
 
-function clampEntityToBounds(ent) {
+export function clampEntityToBounds(ent) {
   ent.x = Math.max(ent.radius, Math.min(game.WORLD_WIDTH - ent.radius, ent.x));
   ent.y = Math.max(ent.radius, Math.min(game.WORLD_HEIGHT - ent.radius, ent.y));
 }
 
-function ejectEntitiesFromTile(x, y) {
+export function ejectEntitiesFromTile(x, y) {
   const allEntities = [...game.settlers, ...game.enemies];
   allEntities.forEach(ent => {
     if (Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {

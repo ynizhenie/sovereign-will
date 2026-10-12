@@ -1,12 +1,21 @@
 // Boars: hurt, they run (and hide in the bushes)
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game } from '../../../engine/world/state.js';
+import { rand } from '../../../engine/world/rng.js';
+import { spawnResource } from '../../world/world.generator.js';
+import { invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+import { collidesWithWall, collidesWithWater } from '../../../engine/movement/collision.js';
+import { bleed } from '../../conflict/combat/combat.rules.js';
+import { playSound } from '../../../app/sounds.js';
+
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
 // Run from (sourceX, sourceY): a sprint to hide in grass when hit, or (wary) a slower back-off when a
 // settler just comes close. Never into the strip along the map edge, where it would get cornered.
 // A blow or an arrow (#172): the boar bleeds (on itself and the ground), sometimes leaves dung out of
 // fright, and runs; killed, it drops as a carcass for `collector` to butcher (see huntBoar)
-function woundBoar(boar, damage, attacker, fromX, fromY) {
+export function woundBoar(boar, damage, attacker, fromX, fromY) {
   boar.hp -= damage;
   bleed(boar, attacker);
   playSound('boar', boar);
@@ -15,7 +24,7 @@ function woundBoar(boar, damage, attacker, fromX, fromY) {
   Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
 
-function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
+export function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
   // already running: only a hit turns a wary back-off into a sprint
   if ((boar.fleeTimer || 0) > 0 && (wary || boar.sprinting)) return;
 
@@ -54,7 +63,7 @@ function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
 }
 
 // A new boar every 25 s while there are fewer than BOAR_LIMIT
-function tickBoarRespawn(dt) {
+export function tickBoarRespawn(dt) {
   if (game.boars.length < BOAR_LIMIT) {
     game.boarRespawnTimer -= dt;
     if (game.boarRespawnTimer <= 0) {
@@ -67,7 +76,7 @@ function tickBoarRespawn(dt) {
 }
 
 // Boars: hide in the grass, run from settlers that come near, wander
-function tickBoars(dt) {
+export function tickBoars(dt) {
   game.boars.forEach(b => {
     if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) return;

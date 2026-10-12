@@ -1,16 +1,26 @@
 // Making a map: water, desert, rock and ore, forests, boulders, beaches, and everything that grows on it,
 // in the numbers GAME_CONFIG.map asks for (scaled to the map's size)
 
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { getGridPos, getMapAreaScale, isBorderZone, resetTileIndex } from '../../engine/world/grid.js';
+import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../engine/world/state.js';
+import { rand } from '../../engine/world/rng.js';
+import { isTileOccupied } from '../economy/building/building.rules.js';
+import { addMapResource, getMapResourceDef } from '../economy/gathering/gathering.rules.js';
+import { placeAppleTrees } from '../economy/farming/farming.rules.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/pathfinding.js';
+import { tileVariantHash } from './world.draw.js';
+
 // counts that grow with the map's area (see getMapAreaScale); the rest are sizes or per-cluster counts
-const AREA_SCALED_COUNTS = new Set(['trees', 'boulders', 'grass', 'berryBushes', 'sticks', 'pebbles', 'boars',
+export const AREA_SCALED_COUNTS = new Set(['trees', 'boulders', 'grass', 'berryBushes', 'sticks', 'pebbles', 'boars',
   'forests', 'boulderPiles', 'ironSpawners', 'coalSpawners']);
 
-function getMapCount(key, fallback) {
+export function getMapCount(key, fallback) {
   const count = getUnscaledMapCount(key, fallback);
   return AREA_SCALED_COUNTS.has(key) ? Math.max(count > 0 ? 1 : 0, Math.round(count * getMapAreaScale())) : count;
 }
 
-function getUnscaledMapCount(key, fallback) {
+export function getUnscaledMapCount(key, fallback) {
   const value = GAME_CONFIG.map && GAME_CONFIG.map[key];
   if (value === undefined || value === null) return fallback;
   if (typeof value === 'object') {
@@ -21,14 +31,14 @@ function getUnscaledMapCount(key, fallback) {
   return Math.max(0, Math.floor(Number(value)));
 }
 
-function getMapRange(key, fallbackMin, fallbackMax) {
+export function getMapRange(key, fallbackMin, fallbackMax) {
   const configured = GAME_CONFIG.map && GAME_CONFIG.map[key];
   const min = Math.max(0, Number(configured && configured.min !== undefined ? configured.min : fallbackMin));
   const max = Math.max(min, Number(configured && configured.max !== undefined ? configured.max : fallbackMax));
   return { min, max };
 }
 
-function isDesertTile(x, y) {
+export function isDesertTile(x, y) {
   if (game.desertTiles.some(tile => tile.x === x && tile.y === y)) return true;
   if (!game.desertRegion) return false;
   return Math.hypot((x - game.desertRegion.x) / (TILE_SIZE * game.desertRegion.rx), (y - game.desertRegion.y) / (TILE_SIZE * game.desertRegion.ry)) <= 1;
@@ -39,21 +49,21 @@ function isDesertTile(x, y) {
 // can't be mined, and ores of its kind appear within a few tiles of it: on free ground, or inside the
 // rock itself (the ore replaces that rock tile, so mining it cuts into the rock).
 
-const ORE_KINDS = {
+export const ORE_KINDS = {
   iron: { resource: 'iron_ore', spawnerKey: 'ironSpawners' },
   coal: { resource: 'coal_ore', spawnerKey: 'coalSpawners' }
 };
 
-function getOreSpawnerRadius() {
+export function getOreSpawnerRadius() {
   return getMapCount('oreSpawnerRadius', 3);
 }
 
-function getOreSpawners(kind) {
+export function getOreSpawners(kind) {
   return game.naturalRocks.filter(r => r.oreSpawner === kind);
 }
 
 // Tiles around a spawner where an ore can appear; rock is set when the ore would replace natural rock
-function getOreSpotsAround(spawner, radius) {
+export function getOreSpotsAround(spawner, radius) {
   const spots = [];
   const center = getGridPos(spawner.x, spawner.y);
   for (let gy = center.gy - radius; gy <= center.gy + radius; gy++) {
@@ -69,18 +79,18 @@ function getOreSpotsAround(spawner, radius) {
   return spots;
 }
 
-function placeOre(kind, spot) {
+export function placeOre(kind, spot) {
   addMapResource(ORE_KINDS[kind].resource, spot.x, spot.y);
 }
 
 // A spot is exposed when a settler starting at the town hall can stand next to it
-function isOreSpotExposed(spot, reach) {
+export function isOreSpotExposed(spot, reach) {
   const g = getGridPos(spot.x, spot.y);
   return [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => getReachSteps(reach, g.gx + dx, g.gy + dy) >= 0);
 }
 
 // Put a small rock outcrop on free ground far from the hall, for maps with no usable rock
-function placeRockOutcrop() {
+export function placeRockOutcrop() {
   for (let attempt = 0; attempt < 200; attempt++) {
     const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 3));
     const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 3));
@@ -92,7 +102,7 @@ function placeRockOutcrop() {
   return false;
 }
 
-function placeOreSpawners(kind, count) {
+export function placeOreSpawners(kind, count) {
   const radius = getOreSpawnerRadius();
   for (let n = 0; n < count; n++) {
     resetTileIndex();
@@ -127,7 +137,7 @@ function placeOreSpawners(kind, count) {
 
 // spread: side of the square (px) around nearX/nearY to pick a spot in
 // pickPoint: optional () => { x, y } to try instead of a square around (nearX, nearY) (forest shapes)
-function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null) {
+export function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null) {
   let tx, ty, isValid = false, attempts = 0;
   while (!isValid && attempts < 100) {
     attempts++;
@@ -162,7 +172,7 @@ function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint
   }
 }
 
-function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
+export function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
   for (let i = 0; i < count; i++) {
     spawnResource(type, centerX, centerY, spread);
   }
@@ -172,11 +182,11 @@ function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
 // Trees grow in forests; grass, berry bushes and sticks favour them too (forestUndergrowthShare), both at
 // map generation and when they grow back. Forest centres are kept in `forests`.
 
-function getForestSpread() {
+export function getForestSpread() {
   return (getMapCount('forestRadius', 3) * 2 + 1) * TILE_SIZE;
 }
 
-function spawnForestAware(type) {
+export function spawnForestAware(type) {
   // trees (forestShare 1) always grow back in a forest, so forests don't thin out into a scatter
   const share = getMapResourceDef(type).forestShare ?? GAME_CONFIG.map.forestUndergrowthShare ?? 0.7;
   if (game.forests.length > 0 && rand() < share) {
@@ -189,7 +199,7 @@ function spawnForestAware(type) {
 
 // A forest is a few overlapping round lobes around its centre, so it grows into an uneven blob rather
 // than a square
-function makeForestLobes(x, y) {
+export function makeForestLobes(x, y) {
   const reach = getForestSpread() / 2;
   const lobes = [{ x, y, r: reach * 0.8 }];
   const extra = 2 + Math.floor(rand() * 3);
@@ -201,13 +211,13 @@ function makeForestLobes(x, y) {
 }
 
 // A random point in one of the forest's lobes
-function pickForestPoint(forest) {
+export function pickForestPoint(forest) {
   const lobe = forest.lobes[Math.floor(rand() * forest.lobes.length)];
   const angle = rand() * Math.PI * 2, dist = lobe.r * Math.sqrt(rand());
   return { x: lobe.x + Math.cos(angle) * dist, y: lobe.y + Math.sin(angle) * dist };
 }
 
-function placeForests() {
+export function placeForests() {
   game.forests = [];
   for (let n = 0; n < getMapCount('forests', 4); n++) {
     for (let attempt = 0; attempt < 40; attempt++) {
@@ -228,7 +238,7 @@ function placeForests() {
 
 // ---- Boulder piles: a few boulders on touching tiles
 
-function placeBoulderPiles() {
+export function placeBoulderPiles() {
   for (let n = 0; n < getMapCount('boulderPiles', 2); n++) {
     for (let attempt = 0; attempt < 40; attempt++) {
       const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 2));
@@ -252,7 +262,7 @@ function placeBoulderPiles() {
   }
 }
 
-function isWaterReachable(w) {
+export function isWaterReachable(w) {
   let gx = Math.floor(w.x / TILE_SIZE);
   let gy = Math.floor(w.y / TILE_SIZE);
   let dirs = [
@@ -263,7 +273,7 @@ function isWaterReachable(w) {
   return dirs.some(d => !isTileBlockedForSettler(d.gx, d.gy));
 }
 
-function generateMap() {
+export function generateMap() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
   game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.ironOres = []; game.coalOres = []; game.boars = [];
 
@@ -465,9 +475,9 @@ function generateMap() {
 // Sand on one stretch of each lake's shore (#79): the tiles touching the water on one side of the lake.
 // The side comes from the lake's own shape, not rand(), so the rest of the seeded map doesn't change.
 // Only drawn: for everything else (building, regrowth, cacti) a beach is ordinary ground.
-const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
+export const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
 
-function placeBeaches() {
+export function placeBeaches() {
   game.beachTiles = [];
   const key = (x, y) => `${x},${y}`;
   const water = new Set(game.waterTiles.map(w => key(w.x, w.y)));
