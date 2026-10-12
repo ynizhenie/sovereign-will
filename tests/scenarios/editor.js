@@ -6,7 +6,7 @@ Object.assign(window.sim, (() => {
 
   // Make a small map by hand, save it, then play it in Endless. Returns what the played world has.
   function handMadeMap() {
-    localStorage.removeItem(MAP_STORAGE_KEY);
+    localStorage.removeItem('sovereign-will-maps');
     startEditor({ cols: 30, rows: 30, generate: false });
     const empty = trees.length + waterTiles.length + naturalRocks.length + buildings.length;
     use('water', 6, 6, 3);       // a 3×3 pond...

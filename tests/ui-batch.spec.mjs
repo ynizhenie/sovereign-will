@@ -58,7 +58,7 @@ test('the selected settler shows what it is doing, when it eats, and what it car
 test('a map is made for a faction, and Endless plays it as that faction (#170)', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(() => {
-    localStorage.removeItem(MAP_STORAGE_KEY);
+    localStorage.removeItem('sovereign-will-maps');
     showMenuScreen('editor');
     renderEditorMapList();
     document.querySelector('#editor-faction [data-faction="undead"]').click();

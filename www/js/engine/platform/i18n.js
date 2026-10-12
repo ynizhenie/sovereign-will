@@ -4,18 +4,14 @@
 import { plainText, rebuildConfigHud, setRichText } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { LANGUAGES } from '../../content/language/index.js';
+import { loadSetting, saveSetting } from './storage.js';
 
 export const DEFAULT_LANGUAGE = 'en';
 
-export const LANGUAGE_STORAGE_KEY = 'sovereign-will-language';
-
 // the saved choice, if the device can remember one
 export function loadLanguage() {
-  try {
-    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (saved && LANGUAGES[saved]) return saved;
-  } catch (e) { /* no storage: default */ }
-  return DEFAULT_LANGUAGE;
+  const saved = loadSetting('language', DEFAULT_LANGUAGE);
+  return LANGUAGES[saved] ? saved : DEFAULT_LANGUAGE;
 }
 
 export let currentLanguage = loadLanguage();
@@ -54,7 +50,7 @@ export function applyPageTexts() {
 export function setLanguage(language) {
   if (!LANGUAGES[language]) return;
   currentLanguage = language;
-  try { localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch (e) { /* not remembered */ }
+  saveSetting('language', language);
   applyNames();
   applyPageTexts();
   if (typeof rebuildConfigHud === 'function') rebuildConfigHud();

@@ -7,6 +7,7 @@ import { game } from '../../engine/world/index.js';
 import { mapSource, renderFactionPicker } from '../../modes/endless/index.js';
 import { editor } from '../../modes/editor/index.js';
 import { menuWorld } from '../../modes/menu/index.js';
+import { loadData, saveData } from '../../engine/platform/index.js';
 
 // the two sides: GAME_CONFIG.factions ids and the colours their units are drawn in
 export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };
@@ -19,8 +20,6 @@ export function getPlayerFaction() {
 }
 
 export function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.faction]; }
-
-export const FACTION_STORAGE_KEY = 'sovereign-will-factions';
 
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour
@@ -72,12 +71,11 @@ export function setSideColor(side, color) {
 }
 
 export function saveSides() {
-  try { localStorage.setItem(FACTION_STORAGE_KEY, JSON.stringify(sides)); } catch (e) { /* not remembered */ }
+  saveData('factions', sides);
 }
 
 export function loadSides() {
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(FACTION_STORAGE_KEY)); } catch (e) { /* none */ }
+  const saved = loadData('factions', null);
   for (const side of ['player', 'enemy']) {
     const s = saved && saved[side];
     if (s && GAME_CONFIG.factions[s.faction] && GAME_CONFIG.factions[s.faction].ready) sides[side].faction = s.faction;

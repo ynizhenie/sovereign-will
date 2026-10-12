@@ -3,14 +3,12 @@
 // the next new game (resetGame -> generateMap) reads.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { onTap, t } from '../../engine/platform/index.js';
+import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { renderItemList } from '../../ui/index.js';
 import { showMenuScreen } from '../menu/index.js';
 
 // The settings as the game ships them: the Standard preset
 export const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));
-export const PRESET_STORAGE_KEY = 'sovereign-will-map-presets';
-
 // Fields in groups; a GAME_CONFIG.map value missing here still gets a field, under "other"
 export const GENERATOR_GROUPS = [
   ['water', ['lakes', 'lakeWidth', 'lakeHeight', 'lakeMinDistance']],
@@ -88,11 +86,11 @@ export function generatorField(key) {
 // ---- Presets
 
 export function loadPresets() {
-  try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY)) || {}; } catch (e) { return {}; }
+  return loadData('map-presets', {});
 }
 
 export function savePresets(presets) {
-  try { localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets)); } catch (e) { /* not remembered */ }
+  saveData('map-presets', presets);
 }
 
 export function applyMapSettings(settings) {
