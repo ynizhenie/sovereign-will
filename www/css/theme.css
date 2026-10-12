@@ -1,0 +1,159 @@
+/* The game's look (the designer's Figma file, 2026-10): wooden planks for buttons, tabs and tiles, a
+   small-caps serif, dark green panels. Loaded after style.css, which keeps the layout; this file only
+   dresses it. The textures are in assets/ui, the fonts in assets/fonts. */
+
+/* Latin and Cyrillic (en, ru, uk), as Google Fonts splits them; OFL fonts kept with the game, which runs offline */
+@font-face { font-family: 'Bona Nova SC'; font-weight: 400; font-display: swap; src: url('../assets/fonts/BonaNovaSC-400-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Bona Nova SC'; font-weight: 400; font-display: swap; src: url('../assets/fonts/BonaNovaSC-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Bona Nova SC'; font-weight: 700; font-display: swap; src: url('../assets/fonts/BonaNovaSC-700-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Bona Nova SC'; font-weight: 700; font-display: swap; src: url('../assets/fonts/BonaNovaSC-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Philosopher'; font-weight: 700; font-display: swap; src: url('../assets/fonts/Philosopher-700-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Philosopher'; font-weight: 700; font-display: swap; src: url('../assets/fonts/Philosopher-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root {
+  --font: 'Bona Nova SC', Georgia, 'Times New Roman', serif;
+  --font-title: 'Philosopher', Georgia, serif;
+  --bg: #0d140d;              /* panels, bars */
+  --bg-deep: #070b07;         /* fields, behind everything */
+  --edge: #2d313b;            /* a panel's thin border */
+  --text: #eeeeee;
+  --text-bright: #ffffff;
+  --text-dim: #8a91a0;        /* headings, options not chosen */
+  --text-menu: #b6c1b8;       /* the main menu's buttons */
+  --warn: #e74c3c;
+  --gold: #f1c40f;
+  --glow: 0 0 10px #2a2d18;   /* round anything chosen */
+  --plank: url('../assets/ui/plank.webp');
+  --plank-green: url('../assets/ui/plank-green.webp');
+  --plank-green-hover: url('../assets/ui/plank-green-hover.webp');
+  --plank-green-pressed: url('../assets/ui/plank-green-pressed.webp');
+  --plank-teal: url('../assets/ui/plank-teal.webp');
+  --plank-dark: url('../assets/ui/frame.webp');
+  --plank-red: url('../assets/ui/frame-red.webp');
+}
+
+html, body, button, input, select, textarea { font-family: var(--font); }
+#game-container, #main-area { background: var(--bg-deep); }
+
+/* ---- Planks: every button-like thing is a piece of wood; chosen ones are green with a glow */
+.btn, .menu-button, #play-button, .tab-btn, .wave-option, .map-option, .map-source-option, .editor-size-option,
+.difficulty-option, .fps-option, .faction-option, .menu-gear, #seed-reroll,
+.item-row .item-name, .item-row .item-delete, .item-row .item-confirm, .item-row .item-cancel,
+.resources-grid div, .resource-group-members div {
+  background: var(--plank) center / cover;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+}
+/* options and tabs not chosen are quieter */
+.tab-btn, .wave-option, .map-option, .map-source-option, .editor-size-option, .difficulty-option, .fps-option,
+.faction-option { color: var(--text-dim); }
+@media (hover: hover) {
+  .tab-btn:not(:disabled):hover, .wave-option:not(:disabled):hover, .map-option:not(:disabled):hover,
+  .map-source-option:not(:disabled):hover, .editor-size-option:not(:disabled):hover,
+  .difficulty-option:not(:disabled):hover, .fps-option:not(:disabled):hover, .faction-option:not(:disabled):hover { color: var(--text); }
+  .btn:not(:disabled):hover, .menu-button:not(:disabled):hover { color: var(--text-bright); }
+  /* the plank's own light, not a filter over the text too */
+  button:not(:disabled):hover { filter: none; }
+}
+.btn.active, .tab-btn.active, .wave-option.active, .map-option.active, .map-source-option.active,
+.editor-size-option.active, .difficulty-option.active, .fps-option.active, .faction-option.active,
+.item-row .item-name.active, .resources-grid .resource-group.open, .menu-button-primary, #play-button {
+  background: var(--plank-green) center / cover;
+  border: none;
+  color: var(--text-bright);
+  box-shadow: var(--glow);
+}
+@media (hover: hover) {
+  .menu-button-primary:not(:disabled):hover, #play-button:not(:disabled):hover, .btn.active:not(:disabled):hover {
+    background-image: var(--plank-green-hover);
+  }
+}
+.menu-button-primary:not(:disabled):active, #play-button:not(:disabled):active, .btn.active:not(:disabled):active {
+  background-image: var(--plank-green-pressed);
+}
+/* a build mode switched on in the panel: teal, so it reads as "on" rather than "chosen" */
+#build-actions .btn.active, #tab-farming .btn.active { background-image: var(--plank-teal); }
+.menu-button:disabled, .faction-option:disabled { color: var(--text-dim); opacity: 1; }
+button.cant-afford { opacity: 0.55; }
+
+/* buttons that say something about a settler keep their colour, laid over the wood */
+.btn-unpossess { background: linear-gradient(rgba(142, 68, 173, 0.75), rgba(142, 68, 173, 0.75)), var(--plank) center / cover; }
+.btn-demolish { background: var(--plank-red) center / cover; }
+.btn-disarm { background: linear-gradient(rgba(211, 84, 0, 0.6), rgba(211, 84, 0, 0.6)), var(--plank) center / cover; }
+.btn-armor { background: linear-gradient(rgba(39, 174, 96, 0.55), rgba(39, 174, 96, 0.55)), var(--plank) center / cover; }
+.item-row .item-confirm { background: var(--plank-red) center / cover; color: var(--text-bright); }
+.item-row .item-question { color: var(--gold); }
+
+/* ---- The bars and panels */
+#top-bar { background: var(--bg); border-bottom: 1px solid var(--edge); }
+#bottom-panel, #battle-panel, #editor-panel { background: var(--bg); border-top: 1px solid var(--edge); }
+.tab-content-container { background: var(--bg); border: 1px solid var(--edge); }
+.panel-heading, .wave-settings, .seed-settings, .generator-fields h2 { color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+.resources-grid div, .resource-group-members div { font-weight: 400; padding: 4px 3px; }
+.resources-grid .resource-group { border: none; }
+.resource-group-members { background: var(--bg); border: 1px solid var(--edge); }
+.selected-unit-box { background: var(--plank-dark) center / cover; border: none; }
+#seed-input, .menu-number, .generator-field input { background: var(--bg-deep); border: 1px solid var(--edge); }
+
+/* the Point button: a green plank when it's on */
+#btn-interact { background: var(--plank) center / cover; border: none; border-radius: 6px; }
+#btn-interact.active { background: var(--plank-green) center / cover; border: none; box-shadow: var(--glow); }
+
+/* ---- Toasts: a red plank for a warning, a green one for done (showNotification sets .ok) */
+#toast-notification { background: var(--plank-red) center / cover; border: none; font-weight: 700; }
+#toast-notification.ok { background: var(--plank-green) center / cover; box-shadow: var(--glow); }
+
+/* ---- The main menu */
+.main-menu-content {
+  background: rgba(32, 54, 37, 0.3);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(2px);
+}
+#main-menu, .menu-overlay { background: rgba(7, 11, 7, 0.92); }
+body.menu-world #main-menu { background: transparent; }
+.main-menu-content h1 { font-weight: 700; letter-spacing: 0; }
+.menu-back { background: none; color: var(--text-dim); }
+
+/* the first screen's buttons: a plank framed in metal corners, the corners kept whatever the size */
+.main-menu-content[data-screen="home"] { gap: 16px; }
+.main-menu-content[data-screen="home"] .menu-button {
+  min-height: 62px;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-menu);
+  text-shadow: 4px 5px 4px rgba(0, 0, 0, 0.25);
+  background: none;
+  box-shadow: none;
+  border-style: solid;
+  border-width: 22px 28px;
+  border-image: url('../assets/ui/menu-button.webp') 80 100 fill / 22px 28px stretch;
+  border-radius: 0;
+}
+@media (hover: hover) {
+  .main-menu-content[data-screen="home"] .menu-button:not(:disabled):hover { color: var(--text-bright); filter: brightness(1.12); }
+}
+.main-menu-content[data-screen="home"] .menu-button:disabled { color: var(--text-dim); filter: saturate(0.4) brightness(0.8); }
+
+/* the game's name: old gold letters with a dark edge below and a soft shadow (a gradient fill can't take a
+   text-shadow, so the shadows are filters) */
+.menu-title { color: transparent; text-shadow: none; font-family: var(--font-title); font-weight: 700; letter-spacing: 2px; }
+.menu-title span {
+  background: linear-gradient(90deg, #67614f 0%, #999177 50%, #67614f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 4px 0 #3d2b00) drop-shadow(-2px 8px 9px rgba(0, 0, 0, 0.75));
+}
+
+/* ---- The defeat screen */
+.defeat-box { background: var(--bg); border: 1px solid #c0392b; }
+.defeat-title { font: 700 32px var(--font); }
