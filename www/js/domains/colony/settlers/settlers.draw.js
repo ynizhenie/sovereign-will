@@ -117,3 +117,119 @@ function drawIdleIcon(x, y) {
   ctx.fillText('zZ', x, y + 1);
   ctx.textBaseline = 'alphabetic';
 }
+
+// Dung: a small brown pile, fading over its last 10 s
+function drawDung() {
+  dung.forEach(p => {
+    ctx.globalAlpha = Math.max(0, Math.min(1, (GAME_CONFIG.relief.dungSeconds - p.age) / 10));
+    ctx.fillStyle = '#5c3d16';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6e4a1c';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y - 1, 4, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(p.x + 0.5, p.y - 3.5, 2, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+}
+
+// Settlers: body, what they hold and carry, armour, shield, quiver, rings, health
+function drawSettlers() {
+  settlers.forEach(s => {
+    // the whole body in the colony's colour (#43); the possessed one ringed in white
+    ctx.fillStyle = getSettlerColor(s);
+    if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while (#164)
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    if (s.burning > 0) drawBurning(s.x, s.y, s.visualRadius);
+    if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
+    if (getPlayerFaction().id === 'demons' && gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
+    drawBodyBlood(s, s.visualRadius);
+
+    // a backpack on the left side, with a bar for how full it is
+    if (s.backpack) {
+      const bx = s.x - s.visualRadius - 3, by = s.y - 6;
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(bx, by, 6, 12);
+      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, 6, 12);
+      const loads = (s.carrying && s.carrying.loads) || 0;
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(bx + 1, by + 11 - 10 * Math.min(1, loads / getCarryCapacity(s)), 4, 10 * Math.min(1, loads / getCarryCapacity(s)));
+    }
+
+    if (s.carrying) {
+      const type = s.carrying.type;
+      const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
+      const icon = type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat');
+      drawIcon(ctx, icon, s.x, s.y - s.visualRadius - 9, 13);
+    }
+
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.save();
+    if (isResting(s)) applyBackPose(s);
+    else applyHeldItemPose(s);
+    if (getNecromancy(s) && s.weapon === 'fist') {
+      drawStaff();
+    } else if (!drawHeldWeapon(s.weapon)) {
+    if (s.tool === 'axe' || s.tool === 'iron_axe') {
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
+      ctx.fillStyle = s.tool === 'iron_axe' ? '#cfd8dc' : '#7f8c8d'; ctx.fillRect(16, -5, 5, 10);
+    } else if (s.tool === 'pickaxe' || s.tool === 'iron_pickaxe') {
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
+      ctx.fillStyle = s.tool === 'iron_pickaxe' ? '#cfd8dc' : '#7f8c8d'; ctx.beginPath(); ctx.arc(18, 0, 7, -Math.PI/2, Math.PI/2); ctx.fill();
+    } else if (s.tool === 'rod') {
+      ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
+    } else if (s.tool === 'medbag') {
+      // a leather bag with a small green cross; the green inside rises with the herbs it holds
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(7, -5, 10, 10);
+      const full = Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize);
+      ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
+      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
+      ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
+    } else if (s.tool === 'hoe' && s.wateringCan && s.usingCan > 0) {
+      drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
+    } else if (s.tool === 'hoe') {
+      // a long handle with a flat blade turned down at the end
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 15, 2);
+      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(19, -1, 3, 7);
+    }
+    }
+    drawWeaponBlood(s);
+    ctx.restore(); // pose only moves the held item
+    if (s.armor === 'iron' || s.hasArmor) {
+	  ctx.strokeStyle = '#95a5a6';
+	  ctx.lineWidth = 3;
+	  ctx.beginPath(); 
+	  ctx.arc(0, 0, s.visualRadius + 2, 0, Math.PI * 2);
+	  ctx.stroke();
+	}
+    // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
+    if (s.tool === 'hoe' && s.wateringCan) {
+      if (s.usingCan > 0) {
+        ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 2, -8, 2, 15);
+        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-s.visualRadius - 4, -9, 6, 3);
+      } else {
+        drawWateringCan(-s.visualRadius, 4, 0.7);
+      }
+    }
+    if (s.shield) {
+      // a round wooden shield with an iron rim and boss on the left arm
+      ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    if (s.quiver) {
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 3, -5, 4, 10);
+      ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-s.visualRadius - 2, -4); ctx.lineTo(-s.visualRadius - 2, -10); ctx.moveTo(-s.visualRadius, -4); ctx.lineTo(-s.visualRadius, -10); ctx.stroke();
+    }
+    ctx.restore();
+
+    if (s === selectedSettler) {
+      ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius + 4, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    if (s.isIdle && !s.carrying) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, 30, 4);
+    ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
+  });
+}
