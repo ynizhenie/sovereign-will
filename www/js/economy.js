@@ -2,16 +2,6 @@ function resourceHudId(resourceKey) {
   return `resource-${resourceKey}-txt`;
 }
 
-// Shown in the HUD: the stock, plus for arrows the ones already loaded in towers and quivers
-function getResourceAmount(resourceKey) {
-  let amount = stock[resourceKey] || 0;
-  if (resourceKey === 'arrows') {
-    amount += buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) +
-      settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0);
-  }
-  return amount;
-}
-
 // Open a resource group's row (closing any other), or close it if it's open
 function toggleResourceGroup(groupId) {
   for (const group of GAME_CONFIG.resourceGroups) {
@@ -21,77 +11,6 @@ function toggleResourceGroup(groupId) {
     row.hidden = group.id === groupId ? !row.hidden : true;
     if (tile) tile.classList.toggle('open', !row.hidden);
   }
-}
-
-// ---- Food kinds (GAME_CONFIG.foodKinds): all Food, remembered by kind for the HUD
-
-function isFoodKind(type) {
-  return !!GAME_CONFIG.foodKinds[type];
-}
-
-// Ready food of a kind into the stock
-// The start's food as a random mix of kinds (#169)
-function mixStartFood() {
-  const kinds = Object.keys(GAME_CONFIG.foodKinds);
-  foodMix = {};
-  for (let i = 0; i < Math.floor(stock.food); i++) {
-    const kind = kinds[Math.floor(rand() * kinds.length)];
-    foodMix[kind] = (foodMix[kind] || 0) + 1;
-  }
-  syncFoodMix();
-}
-
-function addFood(kind, amount) {
-  syncFoodMix();
-  stock.food += amount;
-  foodMix[kind] = (foodMix[kind] || 0) + amount;
-}
-
-// Keep the kinds adding up to stock.food: food added without a kind goes, a piece at a time, to whichever
-// kind there's least of; food spent or eaten comes off the kinds in GAME_CONFIG.foodKinds order
-function syncFoodMix() {
-  const kinds = Object.keys(GAME_CONFIG.foodKinds);
-  let diff = stock.food - kinds.reduce((sum, k) => sum + (foodMix[k] || 0), 0);
-  while (diff > 1e-9) {
-    const least = kinds.reduce((a, b) => ((foodMix[b] || 0) < (foodMix[a] || 0) ? b : a));
-    const piece = Math.min(1, diff);
-    foodMix[least] = (foodMix[least] || 0) + piece;
-    diff -= piece;
-  }
-  for (const kind of kinds) {
-    if (diff >= 0) break;
-    const take = Math.min(foodMix[kind] || 0, -diff);
-    foodMix[kind] = (foodMix[kind] || 0) - take;
-    diff += take;
-  }
-}
-
-// The [category, id] pairs a `held` HUD group counts (see GAME_CONFIG.resourceGroups)
-function getHeldItems(group) {
-  const items = [];
-  for (const [category, ids] of Object.entries(group.held)) {
-    const all = Object.keys(GAME_CONFIG[category]).filter(id => id !== 'fist');
-    for (const id of ids === 'all' ? all : ids) items.push([category, id]);
-  }
-  return items;
-}
-
-// How many settlers hold that tool, weapon or piece of gear
-function countHeld(category, id) {
-  if (category === 'tools') return settlers.filter(s => s.tool === id).length;
-  if (category === 'weapons') return settlers.filter(s => s.weapon === id).length;
-  return settlers.filter(s => hasGear(s, id)).length;
-}
-
-function updateUnitCounts() {
-  const workers = settlers.filter(s => s.role === 'worker').length;
-  const warriors = settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
-
-  const workersElem = document.getElementById('workers-cnt');
-  const warriorsElem = document.getElementById('warriors-cnt');
-
-  if (workersElem) workersElem.innerText = workers;
-  if (warriorsElem) warriorsElem.innerText = warriors;
 }
 
 function createConfigButton(item, action) {
@@ -310,16 +229,6 @@ function getResourceIcon(resourceKey) {
   return resource ? `[[${resource.icon}]]` : resourceKey;
 }
 
-function formatCost(cost = {}) {
-  return Object.entries(cost)
-    .map(([key, value]) => (GAME_CONFIG.resources[key] ? `{{${key}:${value}}}` : `${value}${getResourceIcon(key)}`))
-    .join(' ');
-}
-
-function canAfford(cost = {}) {
-  return Object.entries(cost).every(([key, amount]) => Number(stock[key] || 0) >= Number(amount || 0));
-}
-
 // Building materials promised to blueprints and not brought to them yet (#36): builders fetch them from
 // storage (see build), so another building can't count on them
 function getReservedForBlueprints(id) {
@@ -328,8 +237,6 @@ function getReservedForBlueprints(id) {
   for (const s of settlers) if (s.carrying && s.carrying.forBlueprint && s.carrying.type === id) reserved -= s.carrying.amount;
   return Math.max(0, reserved);
 }
-
-const getFreeStock = id => Number(stock[id] || 0) - getReservedForBlueprints(id);
 
 function canBuild(buildingType) {
   const item = getDefinition('buildings', buildingType);
@@ -391,25 +298,4 @@ function createBuildingBlueprint(type, x, y) {
     blueprint.guards = [];
   }
   return blueprint;
-}
-
-// Take / give a cost ({ resourceId: amount }) from / to the stock
-function payCost(cost = {}) {
-  for (const [resource, amount] of Object.entries(cost)) stock[resource] = Number(stock[resource] || 0) - Number(amount || 0);
-}
-
-function addResources(amounts = {}) {
-  for (const [resource, amount] of Object.entries(amounts)) stock[resource] = Number(stock[resource] || 0) + Number(amount || 0);
-}
-
-// have: how much of a resource counts as there (the whole stock, or for buildings what's not promised)
-function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
-  return Object.entries(cost)
-    .filter(([key, amount]) => have(key) < Number(amount || 0))
-    .map(([key, amount]) => `${Number(amount) - have(key)}${getResourceIcon(key)}`)
-    .join(', ');
-}
-
-function showCostError(cost, prefix, have) {
-  showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost, have) }), true);
 }

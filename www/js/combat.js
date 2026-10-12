@@ -39,36 +39,6 @@ function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   return true;
 }
 
-function getTownHallApproachPoint(settler) {
-  let dx = settler.x - townHall.x;
-  let dy = settler.y - townHall.y;
-  let distance = Math.hypot(dx, dy);
-  if (distance === 0) {
-    dx = 1;
-    dy = 0;
-    distance = 1;
-  }
-  let approachDistance = townHall.radius + settler.radius - 1;
-  // the side facing the settler, or the nearest side round from it that's free to stand on: spikes or a
-  // wall against the hall there and it would walk onto them (a playtest saw settlers killed by their own
-  // spikes beside the hall)
-  const angle = Math.atan2(dy, dx);
-  for (let turn = 0; turn <= 12; turn++) {
-    for (const sign of turn ? [1, -1] : [1]) {
-      const a = angle + sign * turn * Math.PI / 12;
-      const p = { x: townHall.x + Math.cos(a) * approachDistance, y: townHall.y + Math.sin(a) * approachDistance };
-      const g = getGridPos(p.x, p.y);
-      if (!isTileBlockedForSettler(g.gx, g.gy) || turn === 12) return p;
-    }
-  }
-  return { x: townHall.x + (dx / distance) * approachDistance, y: townHall.y + (dy / distance) * approachDistance };
-}
-
-function moveSettlerToTownHall(settler, speed, dt) {
-  let approachPoint = getTownHallApproachPoint(settler);
-  moveEntityTowards(settler, approachPoint.x, approachPoint.y, speed, false, dt);
-}
-
 function performAttack(attacker, targetX, targetY) {
   if (attacker.attackCooldown > 0) return;
   faceTowards(attacker, targetX, targetY);

@@ -21,22 +21,6 @@ function getDifficulty() {
   return GAME_CONFIG.difficulty[gameDifficulty] || GAME_CONFIG.difficulty.normal;
 }
 
-// ---- The colony's stock (#36, #141): amount per resource id of GAME_CONFIG.resources, shared by the
-// whole colony (set from GAME_CONFIG.start by resetGame). The town hall and warehouses are where
-// settlers bring what they gather and fetch what they need: whichever is nearest.
-const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
-
-function getStorages() {
-  return [townHall, ...buildings.filter(b => b.type === 'warehouse')];
-}
-
-// Take up to `amount` of a resource out of the stock; returns how much there was
-function takeStock(id, amount) {
-  const got = Math.max(0, Math.min(amount, stock[id] || 0));
-  stock[id] -= got;
-  return got;
-}
-
 function showNotification(msg, isWarning = true) {
   if (isWarning && typeof playSound === 'function') playSound('error');
   if (typeof answerPressedButton === 'function') answerPressedButton(!isWarning);

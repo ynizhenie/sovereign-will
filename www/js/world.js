@@ -1,41 +1,7 @@
-// The start's limit, plus what each tent (or grave) adds
-function getMaxPop() {
-  return buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
-}
 
 // A shelter: a building settlers heal at (the humans' tent, the undead's grave, #43)
 function isShelter(building) {
   return !!(getDefinition('buildings', building.type) || {}).healPerSecond;
-}
-
-// A big body: a giant or a big zombie (settlerTypes with big), or a big enemy
-function isBigBody(unit) {
-  return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
-}
-
-// Raised zombies don't count (#164): they're temporary
-function getCurrentPop() {
-  return settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
-}
-
-// A settler turns into another kind of its faction (a zombie given a bow into a skeleton, #164), keeping
-// its share of hp, its armour and everything it holds
-function changeSettlerType(s, type) {
-  const t = GAME_CONFIG.settlerTypes[type];
-  if (!t || s.type === type) return;
-  const share = s.hp / s.maxHp;
-  const bonus = s.armor === 'iron' ? GAME_CONFIG.gear.armor.hpBonus : 0;
-  Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, maxHp: t.hp + bonus });
-  s.hp = s.maxHp * share;
-}
-
-// Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the undead's
-// zombie into a skeleton, the demons' imp into a fire imp (#164, #165)
-function applyBowUnit(s) {
-  const forms = getPlayerFaction().bowUnits || {};
-  if (isBowWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);
-  const base = Object.keys(forms).find(k => forms[k] === s.type);
-  if (!isBowWeapon(s.weapon) && base) changeSettlerType(s, base);
 }
 
 // The necromancy a settler has from what it holds (the undead's staff, #164), or null
@@ -86,19 +52,6 @@ function isBaseBlighted(x, y) {
 function isBlighted(x, y) {
   const g = getGridPos(x, y);
   return getBlightKeys().has(`${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`);
-}
-
-// A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind (skeletons)
-// comes with its bow and a full quiver, a necromancer with its raises
-function createSettler(typeKey, id, x, y, extra = {}) {
-  const t = GAME_CONFIG.settlerTypes[typeKey];
-  const s = {
-    id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
-    isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
-    carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
-  };
-  if (t.archer) Object.assign(s, { weapon: t.archerWeapon || 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
-  return s;
 }
 
 function isBuildingSingle(building) {
@@ -316,11 +269,6 @@ function addMapResource(kind, x, y) {
   if (def.list === 'trees') Object.assign(resource, { isGrowing: false, growProgress: 0 });
   WORLD[def.list].push(resource);
   return resource;
-}
-
-// Whether the tool belongs to that family (GAME_CONFIG.tools.*.family: axe, pickaxe, rod, hoe)
-function hasToolFamily(tool, family) {
-  return getToolFamily(tool) === family;
 }
 
 // A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
