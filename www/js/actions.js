@@ -1,26 +1,3 @@
-// A fisher at the town hall takes one seed as bait for the next catch
-// The bait a fisher would take now: the first of GAME_CONFIG.fishing.bait the stock has (worms first)
-function getFishingBait() {
-  return GAME_CONFIG.fishing.bait.find(bait => canAfford(bait)) || null;
-}
-
-// A fisher at a storage takes one bait for the next catch
-function takeFishingBait(s) {
-  const bait = getFishingBait();
-  if (s.tool === 'rod' && !s.bait && bait) {
-    payCost(bait);
-    s.bait = true;
-  }
-}
-
-// Walk to the nearest storage and take one bait; false if the stock has none
-function fetchBait(s, dt) {
-  if (!getFishingBait()) return false;
-  const storage = findNearestStorage(s);
-  if (isAtStorage(s, storage)) takeFishingBait(s);
-  else walkToStorage(s, storage, dt);
-  return true;
-}
 
 // A unit was hurt: blood on it, a splat under it (at most every half second per unit) and on the melee
 // weapon that did it (GAME_CONFIG.blood)
@@ -220,20 +197,6 @@ function handleCanvasClick() {
   }
 }
 
-// A farm zone goes only on grass ground (not sand, water, rock, a building or a blueprint) with nothing
-// on it that needs a tool (a grown tree, boulder, ore, cactus). What's gathered by hand (grass, sticks,
-// pebbles, bushes) is fine: workers clear it (see findZoneBlockers).
-function canBeFarmZone(x, y) {
-  if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return false;
-  const at = o => o.x === x && o.y === y;
-  if (isDesertTile(x, y) || beachTiles.some(at)) return false;
-  if (waterTiles.some(at) || buildings.some(at) || blueprints.some(at)) return false;
-  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    if (def.tool && WORLD[def.list].some(o => at(o) && !(kind === 'tree' && o.isGrowing))) return false;
-  }
-  return true;
-}
-
 // Mark tile (x, y) as a farm zone for `crop` ('wheat' / 'sapling'), or unmark it: tapping a tile
 // already in that zone, or with crop 'clear'. See canBeFarmZone for where it can go.
 // A marked tile not blighted yet goes at once; blighted ground fades over clearSeconds (still blighted till
@@ -249,20 +212,6 @@ function toggleBlightZone(x, y, gx, gy, clearOnly) {
   if (clearOnly || isBorderZone(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
   if (isBaseBlighted(x, y)) { showNotification(t('blight.already'), true); return; }
   blightZones.push({ x, y, done: false });
-}
-
-function toggleFarmZone(x, y, crop) {
-  const existing = farmZones.find(z => z.x === x && z.y === y);
-  if (crop === 'clear' || (existing && existing.crop === crop)) {
-    if (existing) farmZones.splice(farmZones.indexOf(existing), 1);
-    return;
-  }
-  if (!existing && !canBeFarmZone(x, y)) {
-    showNotification(t('zone.badTile'), true);
-    return;
-  }
-  if (existing) existing.crop = crop;
-  else farmZones.push({ x, y, crop });
 }
 
 function processInteraction(clientX, clientY) {
