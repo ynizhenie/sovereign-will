@@ -1,7 +1,7 @@
 // Saved maps: stored on the device as plain data, and a world built from one
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { camera, t } from '../../engine/platform/index.js';
+import { camera, loadData, saveData, t } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, rand, townHall } from '../../engine/world/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { placeBeaches } from '../../domains/world/index.js';
@@ -10,16 +10,14 @@ import { makeAppleTree } from '../../domains/economy/farming/index.js';
 import { renderItemList } from '../../ui/index.js';
 import { editor } from './editor.tools.js';
 
-export const MAP_STORAGE_KEY = 'sovereign-will-maps';
-
 // ---- Saved maps
 
 export function loadSavedMaps() {
-  try { return JSON.parse(localStorage.getItem(MAP_STORAGE_KEY)) || {}; } catch (e) { return {}; }
+  return loadData('maps', {});
 }
 
 export function storeSavedMaps(maps) {
-  try { localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(maps)); return true; } catch (e) { return false; }
+  return saveData('maps', maps);
 }
 
 // The world as plain data: tiles by grid position

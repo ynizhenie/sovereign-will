@@ -7,4 +7,4 @@ export { canvas, ctx, drawProgressBar, fitCanvasToScreen, getBaseScale, getViewS
 export { onTap } from './dom.js';
 export { applyPageTexts, currentLanguage, initI18n, setLanguage, t } from './i18n.js';
 export { initInput, isTap, isTouchScreen, joystick, keys, mouse, shiftDown } from './input.js';
-export { loadSetting, saveSetting } from './storage.js';
+export { loadData, loadSetting, saveData, saveSetting } from './storage.js';

@@ -8,23 +8,22 @@
 // loading puts the real object back in its place.
 
 import { rebuildConfigHud, renderItemList, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
-import { camera, clampCamera, onTap, t } from '../../engine/platform/index.js';
+import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
 import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
 
-export const SAVE_STORAGE_KEY = 'sovereign-will-saves';
 // caches, worked out again after loading rather than saved
 export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
 
 export function loadSaves() {
-  try { return JSON.parse(localStorage.getItem(SAVE_STORAGE_KEY)) || {}; } catch (e) { return {}; }
+  return loadData('saves', {});
 }
 
 export function storeSaves(saves) {
-  try { localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(saves)); return true; } catch (e) { return false; }
+  return saveData('saves', saves);
 }
 
 export function serializeGame() {

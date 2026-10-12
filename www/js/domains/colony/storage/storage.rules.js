@@ -13,8 +13,16 @@ import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/move
 // settlers bring what they gather and fetch what they need: whichever is nearest.
 export const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(id => [id, 0]));
 
+// The town hall and the warehouses: worked out again only when the buildings change (a building added or
+// taken away: a new list or a new length) or a tick has passed, not on every call (every settler carrying
+// something asks, every tick)
+const storages = { buildings: null, length: -1, tick: -1, list: [] };
 export function getStorages() {
-  return [townHall, ...game.buildings.filter(b => b.type === 'warehouse')];
+  if (storages.buildings !== game.buildings || storages.length !== game.buildings.length || storages.tick !== game.pathTick) {
+    Object.assign(storages, { buildings: game.buildings, length: game.buildings.length, tick: game.pathTick,
+      list: [townHall, ...game.buildings.filter(b => b.type === 'warehouse')] });
+  }
+  return storages.list;
 }
 
 // Take up to `amount` of a resource out of the stock; returns how much there was
