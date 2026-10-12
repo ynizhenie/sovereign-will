@@ -69,10 +69,10 @@ export function performAttack(attacker, targetX, targetY) {
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
-      fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's (#165)
+      fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's
     });
     playSound('bow', attacker);
-    if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles (#166)
+    if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, 0.3);
   } else {
@@ -88,7 +88,7 @@ export function performAttack(attacker, targetX, targetY) {
           woundBoar(b, dmg, attacker, attacker.x, attacker.y);
         } }))
     ];
-    // a big settler's blow hits everything around it; anyone else hits one: the one aimed at (#144)
+    // a big settler's blow hits everything around it; anyone else hits one: the one aimed at
     if (isBigBody(attacker)) struck.forEach(target => target.hit());
     else if (struck.length > 0) {
       const aimed = struck.reduce((best, target) =>
@@ -147,7 +147,7 @@ export function bloodAlpha(age, wounded = false) {
   return Math.max(0, 1 - (age - blood.fadeAfter) / blood.fadeSeconds);
 }
 
-// Burning arrows (#165): what they hit burns a few seconds
+// Burning arrows: what they hit burns a few seconds
 export function setBurning(unit) {
   unit.burning = GAME_CONFIG.burning.seconds;
 }
@@ -185,7 +185,7 @@ export function applySpikeTraps() {
   for (const en of game.enemies) step(en, damage => { en.hp -= damage; bleed(en, null); });
 }
 
-// ---- Corpses (#42): where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
+// ---- Corpses: where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
 // later mechanic (e.g. raising the dead) can use one up by removing it from `corpses`.
 export function addCorpse(unit, side, kind) {
   playSound('death', unit, side === 'enemy');
@@ -202,7 +202,7 @@ export function updateCorpses(dt) {
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
 export const NORMAL_BODIES = 21;
 
-// ---- Pre-wave deployment (#14)
+// ---- Pre-wave deployment
 
 // From deploySeconds before a wave until its enemies are beaten, not in battle mode
 export function isDefenseAlert() {
@@ -242,7 +242,7 @@ export function getDefensePlan() {
   const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + game.buildings.length;
   if (game.defensePlan && game.defensePlan.key === key) return game.defensePlan;
   const size = GAME_CONFIG.defense.squadSize;
-  // too few for two squads: everyone on a post of their own round the base (#155)
+  // too few for two squads: everyone on a post of their own round the base
   const singles = melee.length < 2 * size;
   const count = singles ? melee.length + archers.length : Math.ceil(melee.length / size);
   const radius = getBaseRadius();

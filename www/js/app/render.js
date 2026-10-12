@@ -53,6 +53,6 @@ export function render() {
   ctx.restore();
 
   if (game.gameMode === 'battle') drawBattleResult();
-  // lost (#191): the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
+  // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 }

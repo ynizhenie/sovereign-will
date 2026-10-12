@@ -10,7 +10,7 @@ import { getPlayerFaction, sides } from '../../factions/index.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
-// A damaged building looks it (#157): cracks spread over it as it loses hp, soot darkens it, and below a
+// A damaged building looks it: cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).
 export function drawDamage(x, y, half, share) {
   if (!(share < 0.9)) return;
@@ -71,12 +71,12 @@ export function drawBuildGrid() {
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair
 export function drawTownHall() {
   if (getPlayerFaction().hall === 'hellgate') {
-    // the demons' Hell Gate (#43): a dark stone gate with fire inside
+    // the demons' Hell Gate: a dark stone gate with fire inside
     ctx.fillStyle = '#3d1f1f'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4; ctx.stroke();
     drawIcon(ctx, 'hellgate', townHall.x, townHall.y, townHall.radius * 1.4);
   } else if (getPlayerFaction().hall === 'graveyard') {
-    // the undead's graveyard (#43): a dark fenced plot with tombstones
+    // the undead's graveyard: a dark fenced plot with tombstones
     ctx.fillStyle = '#2c2c34'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 4; ctx.stroke();
     drawIcon(ctx, 'graveyard', townHall.x, townHall.y, townHall.radius * 1.4);
@@ -116,7 +116,7 @@ export function drawBlueprints() {
     ctx.fillRect(bp.x - 14, bp.y - 14, 28, 28);
     ctx.restore();
 
-    // materials still to be brought from storage (#36): an orange bar of what's here
+    // materials still to be brought from storage: an orange bar of what's here
     const cost = (getDefinition('buildings', bp.type) || {}).cost;
     if (bp.needs && cost) {
       const total = Object.values(cost).reduce((a, b) => a + b, 0);
@@ -151,8 +151,8 @@ export function drawBuildings() {
       ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'door', b.x, b.y, 16);
     } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
-      if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour (#177)
-      else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons' (#43)
+      if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour
+      else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons'
     } else if (b.type === 'tent') {
       ctx.fillStyle = '#d35400'; ctx.beginPath();
       ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
@@ -180,7 +180,7 @@ export function drawBuildings() {
       for (let i = -5; i <= 5; i += 5) { ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + i); ctx.lineTo(b.x + 10, b.y + i); ctx.stroke(); }
       ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
       ctx.textAlign = 'center';
-      // no count in battles: arrows don't run out there (#166)
+      // no count in battles: arrows don't run out there
       if (game.gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${b.tower.arrowCapacity}`, b.x, b.y - 22); }
       if (game.gameMode !== 'battle') {
         ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
@@ -203,7 +203,7 @@ export function drawBuildings() {
         ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
       }
     } else if (b.type === 'warehouse') {
-      drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed (#36)
+      drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed
     } else if (b.type === 'smelter') {
 	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
 	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);

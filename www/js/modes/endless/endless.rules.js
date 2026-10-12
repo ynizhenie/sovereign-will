@@ -12,7 +12,7 @@ export function isDefeated() {
   return game.gameStarted && game.gameMode === 'endless' && (townHall.hp <= 0 || game.settlers.length === 0);
 }
 
-// ---- Defeat (#191): the bottom panel and possession go dead, the camera flies to the base, zooms in and
+// ---- Defeat: the bottom panel and possession go dead, the camera flies to the base, zooms in and
 // stays there; the screen offers to start again or to go back to the main menu
 export const DEFEAT_FLY_SECONDS = 1.2;
 

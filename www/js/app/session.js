@@ -13,17 +13,17 @@ import { leaveBattleMode } from '../modes/battle/index.js';
 import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
 
 export function resetGame(map) {
-  if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu (#193)
+  if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu
   if (map === undefined) map = game.gameMode === 'endless' ? game.customMap : null;
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);
   addResources(getPlayerFaction().startResources);
-  if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food (#164)
-  if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings (#43)
+  if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food
+  if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings
   game.waveTimer = game.waveInterval; game.boarRespawnTimer = 25; game.waveNum = 1;
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
-  townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable (#135)
+  townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
   game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0;
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
@@ -67,7 +67,7 @@ export function exitToMainMenu() {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initSession() {
   onTap(document.getElementById('resume-button'), () => setPaused(false));
-  // out of the pause menu: each mode leaves its own way (#145)
+  // out of the pause menu: each mode leaves its own way
   onTap(document.getElementById('exit-to-menu-button'), () => {
     if (game.gameMode === 'battle') leaveBattleMode();
     else if (game.gameMode === 'editor') leaveEditor();

@@ -6,7 +6,7 @@ import { showNotification } from '../../ui/index.js';
 import { BATTLE_RESULT_SECONDS, battle, resetBattleUnits } from './battle.setup.js';
 import { renderBattlePanel } from './battle.panel.js';
 
-// Stop a fight and put the line-up back as it was placed (#166)
+// Stop a fight and put the line-up back as it was placed
 export function cancelBattleFight() {
   if (battle.phase !== 'fight') return;
   battle.phase = 'setup';

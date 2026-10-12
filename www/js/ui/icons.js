@@ -1,4 +1,4 @@
-// Drawn icons (#7): every icon in the game is painted here, in the flat style of the map tiles, instead
+// Drawn icons: every icon in the game is painted here, in the flat style of the map tiles, instead
 // of an emoji (emoji look different on every phone, and some don't have them at all).
 //
 // - ICONS: name -> painter (c) drawing on a 32×32 grid. Config items name theirs in `icon`.
@@ -360,7 +360,7 @@ export const ICONS = {
     icLine(c, '#4f7a9e', 2.5, [[21, 19], [27, 11]]); icRect(c, '#4f7a9e', 25, 8, 5, 4);
   },
 
-  // ---- The undead (#43)
+  // ---- The undead
   bones: c => {
     c.save(); c.translate(16, 16); c.rotate(-0.6);
     icRound(c, '#ecf0f1', -10, -2.5, 20, 5, 2.5);
@@ -406,7 +406,7 @@ export const ICONS = {
   },
   staff: c => { icLine(c, '#8e5a2b', 3, [[8, 28], [22, 8]]); icCircle(c, '#bb8fce', 23, 7, 4.5); icCircle(c, '#e8daef', 22, 6, 1.5); },
 
-  // ---- The demons (#43)
+  // ---- The demons
   imp: c => {
     icFill(c, '#2c2c34', [[8, 8], [11, 2], [13, 9]]); icFill(c, '#2c2c34', [[24, 8], [21, 2], [19, 9]]);
     icPerson(c, '#e8572a', 0.75);
@@ -534,7 +534,7 @@ export function drawIcon(context, name, x, y, size) {
 
 export const ICON_TOKEN = /\[\[([\w]+)\]\]/g;
 // a price's part, {{resource:amount}} (formatCost): drawn as the amount and the resource's icon, in a span
-// of its own, so a button can show which part the stock is short of (refreshAffordability in ui.js)
+// of its own, so a button can show which part the stock is short of (refreshAffordability in ui/widgets.js)
 export const COST_TOKEN = /\{\{(\w+):([\d.]+)\}\}/g;
 export const expandCostTokens = text => String(text).replace(COST_TOKEN, (_, id, amount) => `${amount}${getResourceIcon(id)}`);
 export const escapeHtml = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);

@@ -39,7 +39,7 @@ export function drawArrow(proj) {
   ctx.restore();
 }
 
-// Flames licking up a burning unit (#165)
+// Flames licking up a burning unit
 export function drawBurning(x, y, r) {
   const flicker = Math.sin(game.pathTick * 0.5) * 2;
   ctx.fillStyle = 'rgba(230, 126, 34, 0.85)';
@@ -97,7 +97,7 @@ export function drawCorpses() {
 // Arrows and fireballs in flight
 export function drawProjectiles() {
   game.projectiles.forEach(proj => {
-    // fireballs (#43) bigger and orange; everything else is an arrow, pointing where it flies (#173)
+    // fireballs bigger and orange; everything else is an arrow, pointing where it flies
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
     else { drawArrow(proj); return; }
     ctx.beginPath(); ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2); ctx.fill();

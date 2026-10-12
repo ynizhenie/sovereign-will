@@ -1,4 +1,4 @@
-// Factions (#43): the colony's faction and the enemy's, each with its colour, chosen in the Endless menu
+// Factions: the colony's faction and the enemy's, each with its colour, chosen in the Endless menu
 // and remembered on the device. The enemy's faction decides what its waves and spawners are made of
 // (GAME_CONFIG.factions); every unit is drawn in its side's colour, and the two sides never share one.
 
@@ -8,13 +8,13 @@ import { mapSource, renderFactionPicker } from '../../modes/endless/index.js';
 import { editor } from '../../modes/editor/index.js';
 import { menuWorld } from '../../modes/menu/index.js';
 
-// the two sides (#43, factions.js): GAME_CONFIG.factions ids and the colours their units are drawn in
+// the two sides: GAME_CONFIG.factions ids and the colours their units are drawn in
 export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };
 
-// in the map editor, the faction the map is made for (#170)
+// in the map editor, the faction the map is made for
 export function getPlayerFaction() {
   if (game.gameMode === 'editor' && typeof editor !== 'undefined') return GAME_CONFIG.factions[editor.faction];
-  if (game.gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction]; // #193
+  if (game.gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction];
   return GAME_CONFIG.factions[sides.player.faction];
 }
 
@@ -23,7 +23,7 @@ export function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.fact
 export const FACTION_STORAGE_KEY = 'sovereign-will-factions';
 
 // In battle mode the sides stay green and red, as the field is marked
-// Soldiers (and archers) a shade darker than workers, so they stand out in any colour (#167)
+// Soldiers (and archers) a shade darker than workers, so they stand out in any colour
 export function getSettlerColor(s) {
   const color = game.gameMode === 'battle' ? '#27ae60' : game.gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
@@ -47,7 +47,7 @@ export function freeColor(wanted, other) {
   return GAME_CONFIG.factionColors.find(c => c !== other);
 }
 
-// The faction a custom map in Endless fixes for the player (#170), or null
+// The faction a custom map in Endless fixes for the player, or null
 export function getLockedPlayerFaction() {
   return typeof mapSource !== 'undefined' && mapSource === 'custom' && game.customMap && game.customMap.faction ? game.customMap.faction : null;
 }

@@ -10,12 +10,12 @@ import { showNotification } from '../../../ui/index.js';
 import { createSettler, faceTowards } from '../../colony/settlers/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 
-// The necromancy a settler has from what it holds (the undead's staff, #164), or null
+// The necromancy a settler has from what it holds (the undead's staff), or null
 export function getNecromancy(s) {
   return (getDefinition('tools', s.tool) || {}).necromancer || null;
 }
 
-// Blighted ground (#164): round the undead's graveyard and graves (`base`), and marked ground a
+// Blighted ground: round the undead's graveyard and graves (`base`), and marked ground a
 // necromancer has blighted. Worked out once per tick; tile keys 'x,y'.
 export let blightCache = { key: '', keys: new Set(), base: new Set() };
 
@@ -31,7 +31,7 @@ export function updateBlightCache() {
         if (!isBorderZone(gx, gy)) base.add(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`);
       }
     };
-    // the graveyard stands on the 2×2 tiles round its centre, a tile corner (#186: as far on every side)
+    // the graveyard stands on the 2×2 tiles round its centre, a tile corner (as far on every side)
     const hx = Math.round(townHall.x / TILE_SIZE), hy = Math.round(townHall.y / TILE_SIZE);
     around(hx - 1, hy - 1, hx, hy, b.hallTiles);
     for (const grave of game.buildings) {
@@ -50,7 +50,7 @@ export function getBlightKeys() {
   return updateBlightCache().keys;
 }
 
-// A tile blighted round the graveyard or a grave, not by a necromancer (no zone can be marked there, #186)
+// A tile blighted round the graveyard or a grave, not by a necromancer (no zone can be marked there)
 export function isBaseBlighted(x, y) {
   return updateBlightCache().base.has(`${x},${y}`);
 }
@@ -63,7 +63,7 @@ export function isBlighted(x, y) {
 // Mark tile (x, y) as a farm zone for `crop` ('wheat' / 'sapling'), or unmark it: tapping a tile
 // already in that zone, or with crop 'clear'. See canBeFarmZone for where it can go.
 // A marked tile not blighted yet goes at once; blighted ground fades over clearSeconds (still blighted till
-// then), and a tap while it fades keeps it. Ground blighted round the graveyard or a grave takes no mark (#186).
+// then), and a tap while it fades keeps it. Ground blighted round the graveyard or a grave takes no mark.
 export function toggleBlightZone(x, y, gx, gy, clearOnly) {
   const existing = game.blightZones.find(z => z.x === x && z.y === y);
   if (existing) {
@@ -77,7 +77,7 @@ export function toggleBlightZone(x, y, gx, gy, clearOnly) {
   game.blightZones.push({ x, y, done: false });
 }
 
-// Raised zombies crumble when their time is up (#164, #175); the player's leave rot behind
+// Raised zombies crumble when their time is up; the player's leave rot behind
 export function updateTemporaryZombies(dt) {
   // gone at once: no corpse, no reward, and nothing can heal them back (a necromancer would)
   const crumbled = unit => unit.temporary !== undefined && (unit.temporary -= dt) <= 0;
@@ -90,7 +90,7 @@ export function updateTemporaryZombies(dt) {
   game.enemies = game.enemies.filter(en => !crumbled(en));
 }
 
-// A corpse on blighted ground rises as a temporary zombie after a while (#164)
+// A corpse on blighted ground rises as a temporary zombie after a while
 export function raiseOnBlight(dt) {
   if (sides.player.faction !== 'undead') return;
   for (const corpse of [...game.corpses]) {
@@ -100,7 +100,7 @@ export function raiseOnBlight(dt) {
   }
 }
 
-// A corpse rises as a temporary zombie (#164): no room taken in the colony; it crumbles into rot after
+// A corpse rises as a temporary zombie: no room taken in the colony; it crumbles into rot after
 // GAME_CONFIG.temporaryZombie.lifeSeconds (see updateTemporaryZombies)
 export function raiseTemporaryZombie(corpse) {
   const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
@@ -110,7 +110,7 @@ export function raiseTemporaryZombie(corpse) {
   return zombie;
 }
 
-// An enemy necromancer (#43): heals the wounded enemies around it as it goes; with no settler close by
+// An enemy necromancer: heals the wounded enemies around it as it goes; with no settler close by
 // it walks to a corpse within range and raises it into a zombie (a big corpse: a big zombie), as many
 // times as it has raises. True while it's busy raising (it does nothing else then).
 export function enemyNecromancy(en, necro, dt) {
@@ -140,13 +140,13 @@ export function enemyNecromancy(en, necro, dt) {
     game.corpses.splice(game.corpses.indexOf(corpse), 1);
     const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
     zombie.fromWave = en.fromWave;
-    zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds; // as the player's (#175)
+    zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds; // as the player's
     game.enemies.push(zombie);
   }
   return true;
 }
 
-// The undead make bones by themselves: their graveyard and each grave (#43); and rot, from each grave (#164)
+// The undead make bones by themselves: their graveyard and each grave; and rot, from each grave
 export function makeBonesAndRot(dt) {
   const bonesRate = getPlayerFaction().bonesPerSecond;
   if (bonesRate && game.gameMode === 'endless') {
@@ -158,7 +158,7 @@ export function makeBonesAndRot(dt) {
   }
 }
 
-// Blighted zones taken away fade (#186)
+// Blighted zones taken away fade
 export function fadeClearedBlight(dt) {
   for (const z of game.blightZones) if (z.clearing !== undefined) z.clearing -= dt;
   if (game.blightZones.some(z => z.clearing <= 0)) game.blightZones = game.blightZones.filter(z => !(z.clearing <= 0));

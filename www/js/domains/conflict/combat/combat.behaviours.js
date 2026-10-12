@@ -9,7 +9,7 @@ import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { NORMAL_BODIES, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
 import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 
-// An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it (#155)
+// An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
   let best = null;
   for (const en of game.enemies) {
@@ -27,7 +27,7 @@ export function holdPost(s, tick) {
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
   if (getRecentAttacker(s)) return false;
-  // an enemy the player pointed at: a few soldiers leave their posts for it (#155)
+  // an enemy the player pointed at: a few soldiers leave their posts for it
   const marked = takeMarkedTarget(s, tick);
   if (marked) { s.postTarget = marked; return false; }
   const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
@@ -94,7 +94,7 @@ export function fightEnemies(s, tick) {
     let currentArrows = s.arrows || 0;
     let capacity = s.quiverCapacity || 12;
     let nearbyTower = findNearestArrowTower(s);
-    // arrows from the nearest storage, if the stock has any (#36)
+    // arrows from the nearest storage, if the stock has any
     const arrowStore = stock.arrows > 0 ? findNearestStorage(s) : null;
     const atArrowStore = !!arrowStore && isAtStorage(s, arrowStore);
     let towerDistance = nearbyTower ? Math.hypot(nearbyTower.x - s.x, nearbyTower.y - s.y) : Infinity;
@@ -132,7 +132,7 @@ export function fightEnemies(s, tick) {
   let isToolWorker = isUnarmedOrRod && (hasAxeTool(s.tool) || hasPickaxeTool(s.tool));
   let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
   // tent-summoned enemies alone don't call workers off their work, unless they come close
-  // workers keep working through a wave and only react to an enemy close by (#14)
+  // workers keep working through a wave and only react to an enemy close by
   const alarm = tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
   if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker')) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)

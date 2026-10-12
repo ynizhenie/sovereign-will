@@ -60,7 +60,7 @@ export function drawTrees() {
         for (const [ax, ay] of [[-6, -5], [5, -7], [6, 4], [-4, 6], [0, -1]]) { ctx.beginPath(); ctx.arc(t.x + ax, t.y + ay, 2.2, 0, Math.PI * 2); ctx.fill(); }
       }
       drawHarvestProgress(t);
-      // apples being picked (#176): pickShare is kept up only while someone is at it
+      // apples being picked: pickShare is kept up only while someone is at it
       if (t.apple && t.pickShare > 0 && game.pathTick - t.pickTick < 3) drawProgressBar(t.x, t.y, t.pickShare);
     }
   });
@@ -94,7 +94,7 @@ export function drawCactiBouldersGrassBushes() {
 
   game.berryBushes.forEach(b => {
     ctx.fillStyle = '#1e824c'; ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#5b6ee1'; // blue, as the Berries icon (#169)
+    ctx.fillStyle = '#5b6ee1'; // blue, as the Berries icon
     ctx.beginPath(); ctx.arc(b.x - 4, b.y - 3, 3, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(b.x + 4, b.y - 2, 3, 0, Math.PI * 2); ctx.fill();
     drawHarvestProgress(b, 22);

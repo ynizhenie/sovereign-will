@@ -2,7 +2,7 @@
 
 import { getDefinition } from '../../../content/configs/index.js';
 
-// A shelter: a building settlers heal at (the humans' tent, the undead's grave, #43)
+// A shelter: a building settlers heal at (the humans' tent, the undead's grave)
 export function isShelter(building) {
   return !!(getDefinition('buildings', building.type) || {}).healPerSecond;
 }

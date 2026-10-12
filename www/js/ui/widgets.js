@@ -35,7 +35,7 @@ export function answerPressedButton(ok) {
   setTimeout(() => button.classList.remove(name), 500);
 }
 
-// A list of saved things (maps, generator presets), one per row (#143): tap a name to pick it; its delete
+// A list of saved things (maps, generator presets), one per row: tap a name to pick it; its delete
 // button asks right there whether to delete it. items: [{ id, label }]; attr names the data attributes the
 // rows carry (data-<attr>, data-delete-<attr>).
 export function renderItemList(list, items, { attr, selected, onPick, onDelete, emptyText }) {

@@ -7,7 +7,7 @@ import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowa
 import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 
-// Archers climb the towers while there's tower duty (#155: they stay up when enemies reach the base, that's
+// Archers climb the towers while there's tower duty (they stay up when enemies reach the base, that's
 // when a tower is worth most), as long as they or the tower have arrows
 export function assignTowerArchers() {
   const towers = game.buildings.filter(building => building.type === 'watchtower');
@@ -41,7 +41,7 @@ export function assignTowerArchers() {
   });
 }
 
-// A tower is manned when enough enemies are about, or from the warning until the wave is beaten (#14, #155)
+// A tower is manned when enough enemies are about, or from the warning until the wave is beaten
 export function isTowerDutyOn(tower) {
   return game.enemies.length >= tower.tower.minEnemies || isDefenseAlert();
 }
@@ -105,7 +105,7 @@ export function findTowerExit(tower, settler) {
     }
     if (best) return best;
   }
-  // walled in from the town hall: any free tile next to it, rather than into a wall (#173)
+  // walled in from the town hall: any free tile next to it, rather than into a wall
   for (let ring = 1; ring <= 4; ring++) {
     for (let dy = -ring; dy <= ring; dy++) {
       for (let dx = -ring; dx <= ring; dx++) {
@@ -130,7 +130,7 @@ export function releaseTowerGuard(settler) {
 }
 
 export function updateTowerGuard(settler, tower, dt) {
-  // up from a free tile beside it that can be walked to (not from the side a wall is on, #173)
+  // up from a free tile beside it that can be walked to (not from the side a wall is on)
   const distanceToTower = Math.hypot(tower.x - settler.x, tower.y - settler.y);
   if (distanceToTower > 32) {
     if (!settler.towerEntry || settler.towerEntry.tower !== tower) settler.towerEntry = { tower, ...findTowerExit(tower, settler) };

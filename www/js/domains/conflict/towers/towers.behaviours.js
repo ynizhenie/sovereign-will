@@ -4,7 +4,7 @@ import { game } from '../../../engine/world/index.js';
 import { fetchFromStorage, takeStock } from '../../colony/storage/index.js';
 import { findTowerForArrows, isTowerDutyOn, releaseTowerGuard, updateTowerArrowLoader, updateTowerGuard } from './towers.rules.js';
 
-// Idle unarmed workers keep watchtowers stocked with arrows, fetched from a storage (#36)
+// Idle unarmed workers keep watchtowers stocked with arrows, fetched from a storage
 export function loadTowerArrows(s, tick) {
   if (s.isPossessed || s.role !== 'worker' || s.weapon !== 'fist' || s.tool !== 'none' || s.targetEquipment) return false;
   const load = s.carrying && s.carrying.forTower;

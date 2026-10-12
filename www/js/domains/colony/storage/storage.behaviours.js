@@ -23,11 +23,11 @@ export function deliverWhenNothingToDo(s, tick) {
   return true;
 }
 
-// To the nearest storage, the town hall or a warehouse (#36, #141), and into the stock
+// To the nearest storage, the town hall or a warehouse, and into the stock
 export function goDeliver(s, tick) {
   const storage = findNearestStorage(s);
   if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return; }
-  const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot (#164)
+  const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot
   for (const item of s.carrying.items || [s.carrying]) {
     const isFood = isFoodKind(item.type) || ['food', 'rawMeat', 'rawFish', 'wheat'].includes(item.type);
     const type = into && isFood ? (into[item.type] || into.default) : item.type;
@@ -39,11 +39,11 @@ export function goDeliver(s, tick) {
   takeFishingBait(s);
 }
 
-// ---- Storages (#36, #141): the town hall and warehouses (see getStorages in state.js)
+// ---- Storages: the town hall and warehouses (see getStorages in storage.rules.js)
 
 // The town hall or the warehouse nearest the settler. Once it heads for one it keeps to it while it keeps
-// asking (every tick on the way): halfway between two, the nearest flipped back and forth as it walked and
-// it went nowhere (a playtest). A second without asking, and it picks afresh.
+// asking (every tick on the way), so halfway between two it doesn't turn back and forth and go nowhere.
+// A second without asking, and it picks afresh.
 export const storageChoice = new WeakMap(); // settler -> { storage, tick }; kept off the settler, so not in saves
 export function findNearestStorage(s) {
   const kept = storageChoice.get(s);

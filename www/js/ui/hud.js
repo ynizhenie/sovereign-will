@@ -47,7 +47,7 @@ export function updateUI() {
     let tName = game.selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', game.selectedSettler.tool)?.label || game.selectedSettler.tool);
     let aName = game.selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
     let qName = game.selectedSettler.quiver ? ` / ${t('hud.quiver', { n: game.selectedSettler.arrows || 0 })}` : '';
-    // the rest of what it wears (#180)
+    // the rest of what it wears
     const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(game.selectedSettler, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
     renderSettlerInfo(game.selectedSettler);

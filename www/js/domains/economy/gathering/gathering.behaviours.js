@@ -69,7 +69,7 @@ export function pickResourceToHarvest(s, tick) {
   }
 
   if (!assignedRes) {
-    // from the warning until the wave is beaten, nothing beyond the base's farthest building (#14)
+    // from the warning until the wave is beaten, nothing beyond the base's farthest building
     let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) &&
       !getMapResourceDef(tick.resourceKind.get(r)).markOnly && isInSafeArea(r.x, r.y));
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
@@ -109,7 +109,7 @@ export function workResource(s, assignedRes, tick) {
     }
     if (assignedRes.harvestProgress >= duration) finishHarvest(s, assignedRes, kind);
   } else if (work.chop) {
-    // by body, not by kind: a zombie or an imp chops like a worker, a big zombie or a demon like a giant (#163)
+    // by body, not by kind: a zombie or an imp chops like a worker, a big zombie or a demon like a giant
     assignedRes.hp -= dt * work.chop[isBigBody(s) ? 'big' : 'normal'] * ((work.toolBonus && work.toolBonus[s.tool]) || 1);
     if (assignedRes.hp <= 0) finishHarvest(s, assignedRes, kind);
   } else if (work.drain) {

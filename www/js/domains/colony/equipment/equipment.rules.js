@@ -267,7 +267,7 @@ export function disarmSettler(type = 'all') {
 }
 
 // Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the undead's
-// zombie into a skeleton, the demons' imp into a fire imp (#164, #165)
+// zombie into a skeleton, the demons' imp into a fire imp
 export function applyBowUnit(s) {
   const forms = getPlayerFaction().bowUnits || {};
   if (isBowWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);

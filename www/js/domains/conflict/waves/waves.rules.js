@@ -98,11 +98,11 @@ export function getNearbyEnemyTentSite(origin) {
   return null;
 }
 
-// Where a wave's enemy appears: the map's edge, or for the demons one of their portals (#43)
+// Where a wave's enemy appears: the map's edge, or for the demons one of their portals
 export function getWaveSpawnPos() {
   if (!getEnemyFaction().portalSpawns || game.enemyTents.length === 0) return getRandomBorderPos();
   const portal = game.enemyTents[Math.floor(rand() * game.enemyTents.length)];
-  // a free tile beside the portal, never inside a tree, a rock or the water (#177)
+  // a free tile beside the portal, never inside a tree, a rock or the water
   const g = getGridPos(portal.x, portal.y);
   const free = [];
   for (let dy = -2; dy <= 2; dy++) {
@@ -113,7 +113,7 @@ export function getWaveSpawnPos() {
   return free.length ? free[Math.floor(rand() * free.length)] : { x: portal.x, y: portal.y };
 }
 
-// How much the player's army scales a wave (#179): 1 at army.base settlers, more for a bigger army
+// How much the player's army scales a wave: 1 at army.base settlers, more for a bigger army
 export function getWaveArmyFactor() {
   const army = GAME_CONFIG.waveScaling.army;
   const units = game.settlers.filter(s => s.temporary === undefined).length;
@@ -138,7 +138,7 @@ export function startNextWave() {
   );
 
   // the demons' portals open first, so the wave can come out of them
-  // as many as tents would be (#177), but always one to come out of
+  // as many as tents would be, but always one to come out of
   if (getEnemyFaction().portalSpawns) {
     for (let i = 0; i < (game.enemyTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
     invalidateAllPaths();
@@ -147,7 +147,7 @@ export function startNextWave() {
   let normalEnemies = [];
 
   // squad size grows by growthPerDifficulty per difficulty level (+50%: wave 1-5 x1, 96-100 x10.5), with
-  // the player's army (#179); the first wave is lighter
+  // the player's army; the first wave is lighter
   const multiplier = (1 + (difficulty * scaling.growthPerDifficulty)) * getWaveArmyFactor() * (game.waveNum === 1 ? scaling.firstWave : 1);
 
   // a random base squad from the config
@@ -171,7 +171,7 @@ export function startNextWave() {
   const waveKinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id));
 
   if (group) {
-    // every enemy kind of the enemy's faction with a waveKey, in config order (#43)
+    // every enemy kind of the enemy's faction with a waveKey, in config order
     waveKinds.forEach(def => {
       const baseCount = [].concat(def.waveKey).reduce((sum, key) => sum + Number(group[key] || 0), 0);
       const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1)));
@@ -181,7 +181,7 @@ export function startNextWave() {
   // never an empty wave: one of the first kind
   if (spawned === 0 && waveKinds.length) spawnWaveEnemy(waveKinds[0]);
 
-  // portals (the demons, #43) have opened by themselves already; tents need builders
+  // portals (the demons) have opened by themselves already; tents need builders
   if (getEnemyFaction().portalSpawns) normalEnemies = [];
   tentCount = Math.min(tentCount, normalEnemies.length);
 

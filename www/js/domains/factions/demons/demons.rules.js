@@ -6,7 +6,7 @@ import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction } from '../index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
 
-// The demons' portals (#43): built in pairs, the 1st with the 2nd, the 3rd with the 4th...
+// The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th...
 export function getPortalPairs() {
   const portals = game.buildings.filter(b => b.type === 'portal');
   const pairs = [];
@@ -40,7 +40,7 @@ export function takePortal(entity, targetX, targetY) {
   return null;
 }
 
-// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall (#43)
+// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall
 export function openDemonPortal() {
   const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const minDist = getEnemyFaction().minPortalTiles * TILE_SIZE;

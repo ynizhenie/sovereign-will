@@ -1,4 +1,4 @@
-// Localization (#41): every text the player sees, per language. English is the default; the player picks
+// Localization: every text the player sees, per language. English is the default; the player picks
 // the language in the main menu and it's remembered on the device.
 //
 // - names: what things are called, by GAME_CONFIG category and id. applyLanguage() puts them into the

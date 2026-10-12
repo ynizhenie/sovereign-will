@@ -15,7 +15,7 @@ import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
 
 export function update(dt) {
-  if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too (#193)
+  if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (game.gameMode === 'battle') {
     updateBattle(dt);

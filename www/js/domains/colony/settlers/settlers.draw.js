@@ -1,7 +1,7 @@
 // How a settler looks and moves: the held weapon or tool, its swing and work animation, where it faces,
 // what it carries on its back, the idle "zZ"
 
-// ---- Animation state (drawn by getHeldItemPose in render.js)
+// ---- Animation state (drawn by getHeldItemPose, below)
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { drawIcon } from '../../../ui/index.js';
@@ -22,7 +22,6 @@ export function startSwing(unit, seconds) {
 
 export function tickAnimation(unit, dt) {
   // walking (not striking or working): the held item turns the way it goes, not stay where it last struck
-  // (a playtest saw weapons "stuck in one pose" on walking settlers)
   if (unit.lastX !== undefined) {
     const dx = unit.x - unit.lastX, dy = unit.y - unit.lastY;
     if (Math.hypot(dx, dy) > 0.3 && !(unit.swingT > 0) && !(unit.working > 0)) unit.facing = Math.atan2(dy, dx);
@@ -68,7 +67,7 @@ export function applyHeldItemPose(unit) {
   ctx.translate(pose.push, 0);
 }
 
-// Nothing to do (#171): a settler puts what it holds on its back (not in a battle, where it waits to fight)
+// Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)
 export function isResting(s) {
   return s.activity === 'patrol' && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
@@ -145,9 +144,9 @@ export function drawDung() {
 // Settlers: body, what they hold and carry, armour, shield, quiver, rings, health
 export function drawSettlers() {
   game.settlers.forEach(s => {
-    // the whole body in the colony's colour (#43); the possessed one ringed in white
+    // the whole body in the colony's colour; the possessed one ringed in white
     ctx.fillStyle = getSettlerColor(s);
-    if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while (#164)
+    if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
     if (s.burning > 0) drawBurning(s.x, s.y, s.visualRadius);

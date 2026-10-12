@@ -18,7 +18,7 @@ export function getMaxPop() {
   return game.buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
 }
 
-// Raised zombies don't count (#164): they're temporary
+// Raised zombies don't count: they're temporary
 export function getCurrentPop() {
   return game.settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
 }
@@ -28,7 +28,7 @@ export function isBigBody(unit) {
   return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
 }
 
-// A settler turns into another kind of its faction (a zombie given a bow into a skeleton, #164), keeping
+// A settler turns into another kind of its faction (a zombie given a bow into a skeleton), keeping
 // its share of hp, its armour and everything it holds
 export function changeSettlerType(s, type) {
   const t = GAME_CONFIG.settlerTypes[type];
@@ -70,7 +70,7 @@ export function spawnSettler(type = 'normal') {
   playSound('hire');
 }
 
-// The faction's upgrade (#43): a worker into a giant, a zombie into a big zombie
+// The faction's upgrade: a worker into a giant, a zombie into a big zombie
 export function getUpgrade() {
   const [from, to] = Object.entries(getPlayerFaction().upgrades || {})[0] || [];
   return from ? { from, to, normal: GAME_CONFIG.settlerTypes[from], big: GAME_CONFIG.settlerTypes[to] } : null;
@@ -144,7 +144,7 @@ export function unpossess() {
 
 export function switchPossession() {
   if (game.settlers.length === 0 || isDefeated()) return;
-  if (game.gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on (#166)
+  if (game.gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on
 
   const currentPossessed = getPossessed();
 
@@ -174,7 +174,7 @@ export function switchPossession() {
 
 export function deselectSettler() { game.selectedSettler = null; }
 
-// One settler's meal (#178): food from the stock (2 for a big one), worms when it runs short; a few
+// One settler's meal: food from the stock (2 for a big one), worms when it runs short; a few
 // meals in, it needs to go (see relieve)
 export function eatMeal(s) {
   const cost = isBigBody(s) ? 2 : 1;
@@ -185,7 +185,7 @@ export function eatMeal(s) {
   if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
 }
 
-// Meals, each settler on its own clock (#178), for a faction that eats (the undead don't)
+// Meals, each settler on its own clock, for a faction that eats (the undead don't)
 export function tickMeals(dt) {
   if (game.gameMode === 'endless' && getPlayerFaction().eats) {
     const meals = GAME_CONFIG.meals;
@@ -203,7 +203,7 @@ export function removeDeadSettlers() {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       refundEquipment(s);
-      if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot (#164)
+      if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot
       if (game.selectedSettler === s) game.selectedSettler = null;
     }
   });

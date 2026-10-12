@@ -11,7 +11,7 @@ import { playSound } from '../../../app/index.js';
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
 // Run from (sourceX, sourceY): a sprint to hide in grass when hit, or (wary) a slower back-off when a
 // settler just comes close. Never into the strip along the map edge, where it would get cornered.
-// A blow or an arrow (#172): the boar bleeds (on itself and the ground), sometimes leaves dung out of
+// A blow or an arrow: the boar bleeds (on itself and the ground), sometimes leaves dung out of
 // fright, and runs; killed, it drops as a carcass for `collector` to butcher (see huntBoar)
 export function woundBoar(boar, damage, attacker, fromX, fromY) {
   boar.hp -= damage;

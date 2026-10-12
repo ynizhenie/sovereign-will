@@ -44,7 +44,7 @@ export function pickApplesFrom(s, target, dt) {
     s.working = 0.1;
     faceTowards(s, target.x, target.y);
     const apples = GAME_CONFIG.appleTrees;
-    target.pickShare = s.pickProgress / apples.pickSeconds; // shown on the tree (#176)
+    target.pickShare = s.pickProgress / apples.pickSeconds; // shown on the tree
     target.pickTick = game.pathTick;
     if (s.pickProgress >= apples.pickSeconds) {
       s.pickProgress = 0;

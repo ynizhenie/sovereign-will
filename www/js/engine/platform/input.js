@@ -9,7 +9,7 @@ import { isCameraLocked } from '../../modes/endless/index.js';
 
 export const keys = {};
 
-// the on-screen joystick for the possessed settler: x, y in -1..1 (see input.js)
+// the on-screen joystick for the possessed settler: x, y in -1..1 (bindJoystick, below)
 export const joystick = { x: 0, y: 0 };
 
 export let mouse = { x: 0, y: 0 };

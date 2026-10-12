@@ -1,7 +1,7 @@
 // Factions and their colours
 
 export const factionsConfig = {
-  // ---- Factions (#43): who the colony is, and who the enemy is (chosen in the Endless menu).
+  // ---- Factions: who the colony is, and who the enemy is (chosen in the Endless menu).
   // color: the faction's own (its units are drawn in it, unless another is picked). enemies: the enemy
   // kinds of GAME_CONFIG.enemies its waves are made of; summonEnemy: what its spawners call up.
   // ready: playable yet (the others show as coming soon).
@@ -14,7 +14,7 @@ export const factionsConfig = {
       enemies: ['raider_club', 'raider', 'brute', 'raider_archer'], summonEnemy: 'raider' },
     // portalSpawns: its spawners are portals that open anywhere (but not within minPortalTiles of the
     // town hall) and its waves come out of them instead of the map's edge
-    // bowUnits: what a kind becomes when it's given a bow (and back when the bow is taken, #164, #165)
+    // bowUnits: what a kind becomes when it's given a bow (and back when the bow is taken)
     demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon'], upgrades: { imp: 'demon' }, bowUnits: { imp: 'fire_imp' }, startUnits: 'imp', eats: true,
       hall: 'hellgate', spawner: 'portal', portalSpawns: true, minPortalTiles: 8,
       enemies: ['demon_imp', 'demon_brute', 'demon_fire_imp'], summonEnemy: 'demon_imp' },

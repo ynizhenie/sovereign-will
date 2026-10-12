@@ -29,7 +29,7 @@ export function renderEditorPanel() {
   document.getElementById('editor-size').textContent = `${game.COLS}×${game.ROWS}`;
 }
 
-// The editor menu's faction choice (#170)
+// The editor menu's faction choice
 export function renderEditorFaction() {
   const row = document.getElementById('editor-faction');
   row.innerHTML = '';

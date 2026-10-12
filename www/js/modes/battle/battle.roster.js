@@ -6,7 +6,7 @@ import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { battle } from './battle.setup.js';
 
 // The panel's categories: the player's units (green side), enemies (red side), buildings (either side);
-// each by faction (#166)
+// each by faction
 export const BATTLE_CATEGORIES = ['own', 'enemy', 'buildings'];
 
 // The player's units by faction: a settler kind with a weapon (and a tool: the undead's necromancer);

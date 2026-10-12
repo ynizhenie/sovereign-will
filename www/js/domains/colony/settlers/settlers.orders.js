@@ -1,4 +1,4 @@
-// Orders for the possessed settler (#16, #133). Its AI is off (see playerControlled): a tap on something
+// Orders for the possessed settler. Its AI is off (see playerControlled): a tap on something
 // is an order to walk there and do what the settler can with what it has in hand. Each kind of order is
 // one entry here, tried in this order; the first whose find() matches the tap takes it.
 //
@@ -53,7 +53,7 @@ export const ORDERS = [
     }
   },
   {
-    // hand in what it carries at a warehouse or the town hall (#36)
+    // hand in what it carries at a warehouse or the town hall
     kind: 'deliver',
     find: (p, near) => (!p.carrying ? null
       : game.buildings.find(b => b.type === 'warehouse' && near(b, 18)) || (near(townHall, townHall.radius + 10) ? townHall : null)),
@@ -83,7 +83,7 @@ export const ORDERS = [
     find: (p, near) => game.blueprints.find(bp => near(bp, 18)),
     step: (s, target, tick) => {
       if (!game.blueprints.includes(target)) return false;
-      // its materials first, from storage (#36)
+      // its materials first, from storage
       if (s.carrying && s.carrying.forBlueprint === target) return deliverMaterials(s, tick);
       const missing = getMissingMaterial(target);
       if (missing) {

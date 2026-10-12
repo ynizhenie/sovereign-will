@@ -1,4 +1,4 @@
-// Saving and loading Endless games (#156): from the pause menu, a save of the whole game on the device;
+// Saving and loading Endless games: from the pause menu, a save of the whole game on the device;
 // from the Endless menu, the saves to carry on from (or delete). A save holds the world (every list in
 // WORLD_LISTS), the stock, the clocks, the factions and the random sequence, so a loaded game goes on exactly
 // as it would have.

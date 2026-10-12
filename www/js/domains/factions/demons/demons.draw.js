@@ -3,14 +3,14 @@
 import { ctx } from '../../../engine/platform/index.js';
 import { shadeColor } from '../index.js';
 
-// A demon portal in its side's colour (#177): a dark rim, the colour, a bright heart
+// A demon portal in its side's colour: a dark rim, the colour, a bright heart
 export function drawPortal(x, y, color) {
   ctx.fillStyle = shadeColor(color, -0.55); ctx.beginPath(); ctx.ellipse(x, y, 10, 13, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(x, y, 7.5, 10, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = shadeColor(color, 0.65); ctx.beginPath(); ctx.ellipse(x, y, 3, 5.5, 0, 0, Math.PI * 2); ctx.fill();
 }
 
-// A demon's horns (#43): two dark points on top of the body
+// A demon's horns: two dark points on top of the body
 export function drawHorns(x, y, r) {
   ctx.fillStyle = '#2c2c34';
   for (const side of [-1, 1]) {

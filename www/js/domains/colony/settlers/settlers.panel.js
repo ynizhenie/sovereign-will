@@ -18,7 +18,7 @@ export function updateUnitCounts() {
   if (warriorsElem) warriorsElem.innerText = warriors;
 }
 
-// The selected settler's info line (#180): what it's doing, when it's next hungry, what it carries
+// The selected settler's info line: what it's doing, when it's next hungry, what it carries
 export function renderSettlerInfo(s) {
   const activity = `activity.${s.activity || 'patrol'}`;
   const parts = [t(activity) === activity ? t('activity.patrol') : t(activity)];
@@ -29,7 +29,7 @@ export function renderSettlerInfo(s) {
   if (carried) parts.push(`${t('info.carries')} ${carried}`);
   const info = document.getElementById('selected-info');
   info.hidden = false;
-  document.getElementById('selected-bar').classList.add('has-settler'); // a fixed size, whatever it carries (#188)
+  document.getElementById('selected-bar').classList.add('has-settler'); // a fixed size, whatever it carries
   setRichText(info, parts.join(' · '));
 }
 
