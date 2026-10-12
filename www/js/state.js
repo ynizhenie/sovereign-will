@@ -157,7 +157,7 @@ function showNotification(msg, isWarning = true) {
   const toastDiv = document.getElementById('toast-notification');
   if (toastDiv) {
     setRichText(toastDiv, msg);
-    toastDiv.style.background = isWarning ? 'rgba(192, 57, 43, 0.95)' : 'rgba(39, 174, 96, 0.95)';
+    toastDiv.classList.toggle('ok', !isWarning); // red for a warning, green for done (theme.css)
     toastDiv.style.opacity = '1';
     toastDiv.style.transform = 'translateX(-50%) translateY(0px)';
     
