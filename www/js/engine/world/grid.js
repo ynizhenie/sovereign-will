@@ -1,13 +1,5 @@
-// The world as a grid of tiles: the tile size, the map's size, world <-> tile, and an index of what stands
-// on each tile (rebuilt when something changes)
-
-const TILE_SIZE = 30;
-
-const BORDER_MARGIN = 2;
-
-// the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
-// (see fitCanvasToScreen)
-const DEFAULT_MAP_TILES = 40;
+// The world as a grid of tiles: setting the map's size, world <-> tile, and an index of what stands on
+// each tile (rebuilt when something changes). The tile size itself is in state.js.
 
 function setWorldSize(cols, rows) {
   game.COLS = cols; game.ROWS = rows;

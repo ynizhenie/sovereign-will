@@ -2,6 +2,12 @@
 // selected, and every list of things on the map. Each field is also reachable by its own name on
 // window (for the tests and the console); the game's own code says game.x.
 
+const TILE_SIZE = 30;
+const BORDER_MARGIN = 2;
+// the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
+// (see fitCanvasToScreen)
+const DEFAULT_MAP_TILES = 40;
+
 const game = {
   gameMode: 'endless',      // endless / battle (battle.js) / editor (editor.js) / menu (the world behind the main menu, menu-scene.js)
   gameStarted: false,

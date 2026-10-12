@@ -201,3 +201,7 @@ function initInput() {
     });
   });
 }
+
+let cameraDragging = false;
+
+let cameraDragPoint = { x: 0, y: 0 };

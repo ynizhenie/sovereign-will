@@ -43,7 +43,7 @@ const editor = {
   category: 'nature',
   brush: 1,     // 1 or 3: a 3×3 brush covers the tapped tile and the ones around it
   name: '',     // the name it was opened or last saved as
-  faction: sides.player.faction // whose map it is (#170): its buildings in the palette, its town hall; Endless plays it as them
+  faction: 'humans' // whose map it is (#170; the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
 };
 
 // ---- Editing
