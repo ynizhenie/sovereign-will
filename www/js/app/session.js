@@ -1,3 +1,4 @@
+// A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
 function resetGame(map) {
   if (gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu (#193)
@@ -28,3 +29,34 @@ function resetGame(map) {
 
   updateUnitCounts();
 }
+
+function togglePause() {
+  if (!gameStarted) return;
+  setPaused(!isPaused);
+}
+
+// Pausing opens the pause menu (Continue / Main menu)
+function setPaused(paused) {
+  isPaused = paused;
+  const btn = document.getElementById('btn-pause-toggle');
+  btn.innerHTML = iconHtml(isPaused ? 'play' : 'pause');
+  btn.title = isPaused ? t('pause.resumeHint') : t('pause.pauseHint');
+  btn.classList.toggle('paused', isPaused);
+  document.getElementById('pause-menu').hidden = !isPaused;
+}
+
+function exitToMainMenu() {
+  setPaused(false);
+  gameStarted = false;
+  document.getElementById('main-menu').style.display = '';
+  showMenuScreen('home');
+}
+
+onTap(document.getElementById('resume-button'), () => setPaused(false));
+
+// out of the pause menu: each mode leaves its own way (#145)
+onTap(document.getElementById('exit-to-menu-button'), () => {
+  if (gameMode === 'battle') leaveBattleMode();
+  else if (gameMode === 'editor') leaveEditor();
+  else exitToMainMenu();
+});
