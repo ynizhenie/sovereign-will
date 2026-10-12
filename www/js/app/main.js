@@ -1,3 +1,6 @@
+// The start: texts and panel made, the canvas fitted, and the loop: the game in fixed steps of 1/60 s,
+// drawn as often as the frame rate setting allows
+
 applyPageTexts();
 
 renderConfigHud();
@@ -66,12 +69,3 @@ function countFrame(now) {
 fitCanvasToScreen();
 
 requestAnimationFrame(gameLoop);
-
-onTap(document.getElementById('resume-button'), () => setPaused(false));
-
-// out of the pause menu: each mode leaves its own way (#145)
-onTap(document.getElementById('exit-to-menu-button'), () => {
-  if (gameMode === 'battle') leaveBattleMode();
-  else if (gameMode === 'editor') leaveEditor();
-  else exitToMainMenu();
-});

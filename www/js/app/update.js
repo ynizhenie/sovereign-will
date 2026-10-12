@@ -1,3 +1,4 @@
+// One step of the game: every mechanic's turn, in order
 
 function update(dt) {
   if ((!gameStarted && gameMode !== 'menu') || isPaused || gameMode === 'editor') return; // the menu's world runs too (#193)

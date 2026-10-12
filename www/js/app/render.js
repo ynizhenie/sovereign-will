@@ -1,3 +1,4 @@
+// One frame: the ground, then everything on it, layer by layer, then the marks over it
 
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
