@@ -1,8 +1,8 @@
 // Farm zones and wheat plots
 
-import { activeTab } from '../../../ui/bottom-panel.js';
-import { TILE_SIZE, game } from '../../../engine/world/state.js';
-import { ctx } from '../../../engine/platform/canvas.js';
+import { activeTab } from '../../../ui/index.js';
+import { TILE_SIZE, game } from '../../../engine/world/index.js';
+import { ctx } from '../../../engine/platform/index.js';
 
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
 export function drawFarmZones() {

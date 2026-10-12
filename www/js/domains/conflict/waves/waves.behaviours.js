@@ -1,19 +1,16 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/state.js';
-import { isBuildingSingle, removeBuilding } from '../../economy/building/building.rules.js';
+import { game, townHall } from '../../../engine/world/index.js';
+import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
-import { damageSettler } from '../../colony/settlers/settlers.rules.js';
-import { scheduleRespawn } from '../../economy/gathering/gathering.rules.js';
-import { isShelter } from '../healing/healing.rules.js';
-import { enemyNecromancy } from '../../factions/undead/undead.rules.js';
-import { invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
-import { clampEntityToBounds, collidesWithBoxList } from '../../../engine/movement/collision.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { hasLineOfFire } from '../combat/combat.rules.js';
-import { faceTowards, startSwing } from '../../colony/settlers/settlers.draw.js';
-import { playSound } from '../../../app/sounds.js';
+import { damageSettler, faceTowards, startSwing } from '../../colony/settlers/index.js';
+import { scheduleRespawn } from '../../economy/gathering/index.js';
+import { isShelter } from '../healing/index.js';
+import { enemyNecromancy } from '../../factions/undead/index.js';
+import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
+import { hasLineOfFire } from '../combat/index.js';
+import { playSound } from '../../../app/index.js';
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {

@@ -1,18 +1,14 @@
 // The undead: necromancy from the staff, blighted ground, raised zombies that crumble, the enemy's necromancer
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { getGridPos, isBorderZone } from '../../../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { stock } from '../../colony/storage/storage.rules.js';
-import { createConfiguredEnemy } from '../../conflict/waves/waves.rules.js';
-import { getPlayerFaction, sides } from '../factions.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { createSettler } from '../../colony/settlers/settlers.rules.js';
-import { isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { t } from '../../../engine/platform/index.js';
+import { TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
+import { stock } from '../../colony/storage/index.js';
+import { createConfiguredEnemy } from '../../conflict/waves/index.js';
+import { getPlayerFaction, sides } from '../index.js';
+import { showNotification } from '../../../ui/index.js';
+import { createSettler, faceTowards } from '../../colony/settlers/index.js';
+import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 
 // The necromancy a settler has from what it holds (the undead's staff, #164), or null
 export function getNecromancy(s) {

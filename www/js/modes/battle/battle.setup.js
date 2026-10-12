@@ -4,17 +4,15 @@
 // A fight can be called off, and the player can possess one of theirs in it. Archers' arrows don't run
 // out. Green units are settlers and red ones enemies, driven by the usual AI (#142, #166).
 
-import { t } from '../../engine/platform/i18n.js';
-import { getGridPos, isBorderZone } from '../../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../../engine/world/state.js';
-import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/equipment.rules.js';
-import { createBuildingBlueprint } from '../../domains/economy/building/building.rules.js';
-import { createConfiguredEnemy } from '../../domains/conflict/waves/waves.rules.js';
-import { showNotification } from '../../ui/toasts.js';
-import { camera, clampCamera, setZoom } from '../../engine/platform/camera.js';
-import { createSettler } from '../../domains/colony/settlers/settlers.rules.js';
-import { exitToMainMenu, resetGame } from '../../app/session.js';
-import { invalidateAllPaths } from '../../engine/movement/pathfinding.js';
+import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
+import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
+import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
+import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
+import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
+import { showNotification } from '../../ui/index.js';
+import { createSettler } from '../../domains/colony/settlers/index.js';
+import { exitToMainMenu, resetGame } from '../../app/index.js';
+import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { getBattlePreset } from './battle.roster.js';
 import { renderBattlePanel } from './battle.panel.js';
 

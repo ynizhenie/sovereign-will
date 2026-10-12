@@ -2,14 +2,13 @@
 // base is walled in
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { getTileIndex } from '../../../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { formatCost, getFreeStock } from '../../colony/storage/storage.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { getMapResourceDef } from '../gathering/gathering.rules.js';
-import { isShelter } from '../../conflict/healing/healing.rules.js';
-import { getSettlerReach, invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
+import { t } from '../../../engine/platform/index.js';
+import { TILE_SIZE, game, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { formatCost, getFreeStock } from '../../colony/storage/index.js';
+import { showNotification } from '../../../ui/index.js';
+import { getMapResourceDef } from '../gathering/index.js';
+import { isShelter } from '../../conflict/healing/index.js';
+import { getSettlerReach, invalidateAllPaths } from '../../../engine/movement/index.js';
 
 export function isBuildingSingle(building) {
   if (!building) return true;

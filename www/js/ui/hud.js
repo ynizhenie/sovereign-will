@@ -2,12 +2,11 @@
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { setRichText } from './icons.js';
-import { t } from '../engine/platform/i18n.js';
-import { game, townHall } from '../engine/world/state.js';
-import { renderSettlerInfo } from '../domains/colony/settlers/settlers.panel.js';
-import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/equipment.rules.js';
-import { getResourceAmount, syncFoodMix } from '../domains/colony/storage/storage.rules.js';
-import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade } from '../domains/colony/settlers/settlers.rules.js';
+import { t } from '../engine/platform/index.js';
+import { game, townHall } from '../engine/world/index.js';
+import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
+import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/index.js';
+import { getResourceAmount, syncFoodMix } from '../domains/colony/storage/index.js';
 
 export function updateUI() {
   document.getElementById('wave-num').innerText = game.waveNum;

@@ -1,15 +1,13 @@
 // Workers gather: pick a resource (the player's marks first), walk to it, work it with the right tool
 
-import { game } from '../../../engine/world/state.js';
-import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/equipment.rules.js';
-import { isBigBody } from '../../colony/settlers/settlers.rules.js';
+import { game } from '../../../engine/world/index.js';
+import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
+import { faceTowards, isBigBody } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
-import { getReachDistanceToResource, getSettlerReach } from '../../../engine/movement/pathfinding.js';
-import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
-import { isInSafeArea } from '../../conflict/combat/combat.rules.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
-import { huntBoar } from '../hunting/hunting.behaviours.js';
-import { playWorkSound } from '../../../app/sounds.js';
+import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
+import { isInSafeArea } from '../../conflict/combat/index.js';
+import { huntBoar } from '../hunting/index.js';
+import { playWorkSound } from '../../../app/index.js';
 
 // Workers gather any time; soldiers only between waves (hunting boars, picking up carcasses)
 export function canGather(s, tick) {

@@ -1,18 +1,16 @@
 // Waves: when they come, how big, what enemies they bring and where from, their tents, the difficulty
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { getGridPos, isBorderZone } from '../../../engine/world/grid.js';
-import { BORDER_MARGIN, TILE_SIZE, game } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { addResources } from '../../colony/storage/storage.rules.js';
-import { isTileOccupied } from '../../economy/building/building.rules.js';
-import { getEnemyFaction } from '../../factions/factions.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/pathfinding.js';
-import { addCorpse } from '../combat/combat.rules.js';
-import { openDemonPortal } from '../../factions/demons/demons.rules.js';
-import { playSound } from '../../../app/sounds.js';
+import { t } from '../../../engine/platform/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand } from '../../../engine/world/index.js';
+import { addResources } from '../../colony/storage/index.js';
+import { isTileOccupied } from '../../economy/building/index.js';
+import { getEnemyFaction } from '../../factions/index.js';
+import { showNotification } from '../../../ui/index.js';
+import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
+import { addCorpse } from '../combat/index.js';
+import { openDemonPortal } from '../../factions/demons/index.js';
+import { playSound } from '../../../app/index.js';
 
 export const WAVE_WARNING_SECONDS = 15;
 

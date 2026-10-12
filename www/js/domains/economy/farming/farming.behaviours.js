@@ -3,21 +3,16 @@
 // ---- Apple trees
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { getGridPos, resetTileIndex } from '../../../engine/world/grid.js';
-import { game } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { hasToolFamily } from '../../colony/equipment/equipment.rules.js';
-import { addCarryLoad, addResources, canAfford, giveResourceToSettler, hasRoomToCarry, payCost } from '../../colony/storage/storage.rules.js';
-import { isTileOccupied } from '../building/building.rules.js';
-import { isWaterReachable } from '../../world/world.generator.js';
-import { getMapResourceDef } from '../gathering/gathering.rules.js';
+import { game, getGridPos, rand, resetTileIndex } from '../../../engine/world/index.js';
+import { hasToolFamily } from '../../colony/equipment/index.js';
+import { addCarryLoad, addResources, canAfford, giveResourceToSettler, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
+import { isTileOccupied } from '../building/index.js';
+import { isWaterReachable } from '../../world/index.js';
+import { getMapResourceDef, harvest } from '../gathering/index.js';
 import { makeAppleTree } from './farming.rules.js';
-import { getReachDistanceToResource, getReachSteps, getSettlerReach } from '../../../engine/movement/pathfinding.js';
-import { ejectEntitiesFromTile } from '../../../engine/movement/collision.js';
-import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/steering.js';
-import { isInSafeArea } from '../../conflict/combat/combat.rules.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
-import { harvest } from '../gathering/gathering.behaviours.js';
+import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
+import { isInSafeArea } from '../../conflict/combat/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
 
 // Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
 // one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)

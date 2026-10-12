@@ -2,12 +2,12 @@
 // arrows, armour, shields, backpacks and watering cans
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { game } from '../../../engine/world/state.js';
-import { addResources, canAfford, payCost, showCostError, stock } from '../storage/storage.rules.js';
-import { getPlayerFaction } from '../../factions/factions.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/settlers.rules.js';
+import { t } from '../../../engine/platform/index.js';
+import { game } from '../../../engine/world/index.js';
+import { addResources, canAfford, payCost, showCostError, stock } from '../storage/index.js';
+import { getPlayerFaction } from '../../factions/index.js';
+import { showNotification } from '../../../ui/index.js';
+import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
 
 // A shield only helps a melee soldier: a worker or an archer doesn't fight with it
 export function canUseShield(s) {

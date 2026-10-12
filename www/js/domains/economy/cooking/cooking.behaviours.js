@@ -3,12 +3,11 @@
 // ---- Cooking
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/state.js';
-import { stock, takeStock } from '../../colony/storage/storage.rules.js';
-import { claimBuildingJob, isBuildingJobFree } from '../building/building.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
-import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
+import { game } from '../../../engine/world/index.js';
+import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
+import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
 
 // Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a worker with no tool looks
 // after a campfire, one per fire. It fetches fuel from the town hall when the fire is out, then a batch of

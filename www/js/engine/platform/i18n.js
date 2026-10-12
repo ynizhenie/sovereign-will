@@ -1,9 +1,8 @@
 // Texts in the player's language: t(key) for a message, applyNames() for what things are called (into
 // GAME_CONFIG's labels), applyPageTexts() for index.html's marked texts. The texts are in content/language.
 
-import { rebuildConfigHud } from '../../ui/bottom-panel.js';
+import { plainText, rebuildConfigHud, setRichText } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { plainText, setRichText } from '../../ui/icons.js';
 import { LANGUAGES } from '../../content/language/index.js';
 
 export const DEFAULT_LANGUAGE = 'en';

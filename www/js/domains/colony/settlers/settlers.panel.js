@@ -1,12 +1,10 @@
 // The settlers in the panel: how many of each, and the selected one's info line
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { getResourceIconName, setRichText } from '../../../ui/icons.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { game } from '../../../engine/world/state.js';
-import { getPlayerFaction } from '../../factions/factions.rules.js';
-import { camera, clampCamera } from '../../../engine/platform/camera.js';
-import { isTouchScreen } from '../../../engine/platform/input.js';
+import { getResourceIconName, setRichText } from '../../../ui/index.js';
+import { camera, clampCamera, isTouchScreen, t } from '../../../engine/platform/index.js';
+import { game } from '../../../engine/world/index.js';
+import { getPlayerFaction } from '../../factions/index.js';
 import { getPossessed } from './settlers.rules.js';
 
 export function updateUnitCounts() {

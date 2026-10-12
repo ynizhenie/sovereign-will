@@ -2,7 +2,7 @@
 
 import { setRichText } from './icons.js';
 import { answerPressedButton } from './widgets.js';
-import { playSound } from '../app/sounds.js';
+import { playSound } from '../app/index.js';
 
 // the last messages shown, newest last (for the console and the tests)
 export const recentNotifications = [];

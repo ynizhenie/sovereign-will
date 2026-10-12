@@ -1,24 +1,19 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
-import { t } from '../engine/platform/i18n.js';
-import { isBorderZone } from '../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../engine/world/state.js';
-import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/storage.rules.js';
-import { canBuild, createBuildingBlueprint, isBuildLocationAllowed, toggleBuildingRepair } from '../domains/economy/building/building.rules.js';
-import { isWaterReachable } from '../domains/world/world.generator.js';
-import { canvas } from '../engine/platform/canvas.js';
+import { canvas, isTap, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
+import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
+import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
+import { canBuild, createBuildingBlueprint, isBuildLocationAllowed, toggleBuildingRepair } from '../domains/economy/building/index.js';
+import { isWaterReachable } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
-import { updateInputPos } from '../engine/platform/camera.js';
-import { isTap, mouse, shiftDown } from '../engine/platform/input.js';
-import { getPossessed, getSelectedSettler } from '../domains/colony/settlers/settlers.rules.js';
-import { getHarvestableResources } from '../domains/economy/gathering/gathering.rules.js';
-import { toggleFarmZone } from '../domains/economy/farming/farming.rules.js';
-import { toggleBlightZone } from '../domains/factions/undead/undead.rules.js';
-import { orderPossessed } from '../domains/colony/settlers/settlers.orders.js';
-import { isDefeated } from '../modes/endless/endless.rules.js';
-import { battle, battleTap } from '../modes/battle/battle.setup.js';
-import { editorTap } from '../modes/editor/editor.tools.js';
+import { getPossessed, getSelectedSettler, orderPossessed } from '../domains/colony/settlers/index.js';
+import { getHarvestableResources } from '../domains/economy/gathering/index.js';
+import { toggleFarmZone } from '../domains/economy/farming/index.js';
+import { toggleBlightZone } from '../domains/factions/undead/index.js';
+import { isDefeated } from '../modes/endless/index.js';
+import { battle, battleTap } from '../modes/battle/index.js';
+import { editorTap } from '../modes/editor/index.js';
 
 export function handleCanvasClick() {
   // battle mode: placing while setting up; in a fight, orders for a possessed unit (#166)

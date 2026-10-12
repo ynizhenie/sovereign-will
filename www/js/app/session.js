@@ -1,23 +1,16 @@
 // A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
-import { rebuildConfigHud, renderedFaction } from '../ui/bottom-panel.js';
+import { iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
-import { iconHtml } from '../ui/icons.js';
-import { t } from '../engine/platform/i18n.js';
-import { resetTileIndex, setWorldSize } from '../engine/world/grid.js';
-import { TOWN_HALL_HP, game, townHall } from '../engine/world/state.js';
-import { updateUnitCounts } from '../domains/colony/settlers/settlers.panel.js';
-import { addResources, mixStartFood, stock } from '../domains/colony/storage/storage.rules.js';
-import { generateMap } from '../domains/world/world.generator.js';
-import { updateSeedHud } from '../ui/hud.js';
-import { getPlayerFaction, sides } from '../domains/factions/factions.rules.js';
-import { createSettler } from '../domains/colony/settlers/settlers.rules.js';
-import { onTap } from '../engine/platform/dom.js';
-import { showMenuScreen } from '../modes/menu/menu.screens.js';
-import { leaveBattleMode } from '../modes/battle/battle.setup.js';
-import { loadCustomMap } from '../modes/editor/editor.maps.js';
-import { leaveEditor } from '../modes/editor/editor.tools.js';
-import { leaveMenuWorld } from '../modes/menu/menu.world.js';
+import { onTap, t } from '../engine/platform/index.js';
+import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
+import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
+import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
+import { generateMap } from '../domains/world/index.js';
+import { getPlayerFaction, sides } from '../domains/factions/index.js';
+import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
+import { leaveBattleMode } from '../modes/battle/index.js';
+import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
 
 export function resetGame(map) {
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu (#193)

@@ -3,9 +3,9 @@
 // ---- Equipment and hauling
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { townHall } from '../../../engine/world/state.js';
+import { townHall } from '../../../engine/world/index.js';
 import { applyBowUnit, canUseShield, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
-import { addResources, moveSettlerToTownHall } from '../storage/storage.rules.js';
+import { addResources, moveSettlerToTownHall } from '../storage/index.js';
 
 // Go to the town hall to swap weapon/tool/armour the player ordered
 export function equip(s, tick) {

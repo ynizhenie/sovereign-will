@@ -1,17 +1,14 @@
 // A damaged building looks it
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/icons.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { isBorderZone } from '../../../engine/world/grid.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/state.js';
-import { formatCost } from '../../colony/storage/storage.rules.js';
+import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/index.js';
+import { ctx, mouse, t } from '../../../engine/platform/index.js';
+import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
+import { formatCost } from '../../colony/storage/index.js';
 import { getSmelterLimits, needsRepair } from './building.rules.js';
-import { ctx } from '../../../engine/platform/canvas.js';
-import { getPlayerFaction, sides } from '../../factions/factions.rules.js';
-import { mouse } from '../../../engine/platform/input.js';
-import { drawPortal } from '../../factions/demons/demons.draw.js';
-import { tileVariantHash } from '../../world/world.draw.js';
+import { getPlayerFaction, sides } from '../../factions/index.js';
+import { drawPortal } from '../../factions/demons/index.js';
+import { tileVariantHash } from '../../world/index.js';
 
 // A damaged building looks it (#157): cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).

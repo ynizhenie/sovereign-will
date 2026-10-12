@@ -1,7 +1,6 @@
 // Bodies and what stops them: walls, water, natural obstacles, the map's edge, and units pushed apart
 
-import { getGridPos, getTileIndex } from '../world/grid.js';
-import { TILE_SIZE, game } from '../world/state.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
 
 export function collidesWithBoxList(x, y, radius, objects, halfSize) {
   return objects.some(object => {

@@ -1,6 +1,6 @@
 // The canvas the game is drawn on: it covers the whole game area at the screen's resolution
 
-import { game } from '../world/state.js';
+import { game } from '../world/index.js';
 import { camera, clampCamera, getMaxZoom, getMinZoom } from './camera.js';
 
 export const canvas = document.getElementById('gameCanvas');

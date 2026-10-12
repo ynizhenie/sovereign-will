@@ -3,15 +3,13 @@
 // ---- Tents and healing
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/state.js';
-import { hasToolFamily } from '../../colony/equipment/equipment.rules.js';
-import { stock, takeStock } from '../../colony/storage/storage.rules.js';
-import { getRecentAttacker } from '../../colony/settlers/settlers.rules.js';
+import { game } from '../../../engine/world/index.js';
+import { hasToolFamily } from '../../colony/equipment/index.js';
+import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
+import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { isShelter } from './healing.rules.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
-import { fetchFromStorage } from '../../colony/storage/storage.behaviours.js';
-import { joinsTentAssault } from '../combat/combat.behaviours.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { joinsTentAssault } from '../combat/index.js';
 
 // Workers mend a damaged tent unless enemies are right next to it
 export function repairTent(s, tick) {

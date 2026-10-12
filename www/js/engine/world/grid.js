@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { BORDER_MARGIN, DEFAULT_MAP_TILES, TILE_SIZE, game, townHall } from './state.js';
-import { camera } from '../platform/camera.js';
+import { camera } from '../platform/index.js';
 
 export function setWorldSize(cols, rows) {
   game.COLS = cols; game.ROWS = rows;

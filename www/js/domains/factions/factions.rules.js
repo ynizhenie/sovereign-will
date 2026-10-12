@@ -3,10 +3,10 @@
 // (GAME_CONFIG.factions); every unit is drawn in its side's colour, and the two sides never share one.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { game } from '../../engine/world/state.js';
-import { mapSource, renderFactionPicker } from '../../modes/endless/endless.setup.js';
-import { editor } from '../../modes/editor/editor.tools.js';
-import { menuWorld } from '../../modes/menu/menu.world.js';
+import { game } from '../../engine/world/index.js';
+import { mapSource, renderFactionPicker } from '../../modes/endless/index.js';
+import { editor } from '../../modes/editor/index.js';
+import { menuWorld } from '../../modes/menu/index.js';
 
 // the two sides (#43, factions.js): GAME_CONFIG.factions ids and the colours their units are drawn in
 export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };

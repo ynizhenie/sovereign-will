@@ -1,13 +1,11 @@
 // Boars: hurt, they run (and hide in the bushes)
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { spawnResource } from '../../world/world.generator.js';
-import { invalidateAllPaths } from '../../../engine/movement/pathfinding.js';
-import { collidesWithWall, collidesWithWater } from '../../../engine/movement/collision.js';
-import { bleed } from '../../conflict/combat/combat.rules.js';
-import { playSound } from '../../../app/sounds.js';
+import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand } from '../../../engine/world/index.js';
+import { spawnResource } from '../../world/index.js';
+import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../../engine/movement/index.js';
+import { bleed } from '../../conflict/combat/index.js';
+import { playSound } from '../../../app/index.js';
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).

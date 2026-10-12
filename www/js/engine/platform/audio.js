@@ -2,7 +2,7 @@
 // building blocks every sound and note is made of, a tone and a burst of noise
 
 import { loadSetting, saveSetting } from './storage.js';
-import { MUSIC_STYLES, SOUND } from '../../app/sounds.js';
+import { MUSIC_STYLES, SOUND } from '../../app/index.js';
 
 export const audio = {
   ctx: null, master: null, sfx: null, music: null, noise: null,

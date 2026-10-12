@@ -1,8 +1,8 @@
 // The fight: started, called off, and over when a side has nobody left
 
-import { t } from '../../engine/platform/i18n.js';
-import { game } from '../../engine/world/state.js';
-import { showNotification } from '../../ui/toasts.js';
+import { t } from '../../engine/platform/index.js';
+import { game } from '../../engine/world/index.js';
+import { showNotification } from '../../ui/index.js';
 import { BATTLE_RESULT_SECONDS, battle, resetBattleUnits } from './battle.setup.js';
 import { renderBattlePanel } from './battle.panel.js';
 

@@ -2,15 +2,11 @@
 // whether they can be paid, food by kind, and what a settler carries
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { getResourceIcon } from '../../../ui/icons.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { getGridPos } from '../../../engine/world/grid.js';
-import { game, townHall } from '../../../engine/world/state.js';
-import { rand } from '../../../engine/world/rng.js';
-import { getReservedForBlueprints } from '../../economy/building/building.rules.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { isTileBlockedForSettler } from '../../../engine/movement/pathfinding.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
+import { getResourceIcon, showNotification } from '../../../ui/index.js';
+import { t } from '../../../engine/platform/index.js';
+import { game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { getReservedForBlueprints } from '../../economy/building/index.js';
+import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 
 // ---- The colony's stock (#36, #141): amount per resource id of GAME_CONFIG.resources, shared by the
 // whole colony (set from GAME_CONFIG.start by resetGame). The town hall and warehouses are where

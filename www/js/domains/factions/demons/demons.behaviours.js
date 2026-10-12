@@ -1,11 +1,11 @@
 // Demons walk into the sacrificial circle when sent, and heal by eating corpses
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { t } from '../../../engine/platform/i18n.js';
-import { game } from '../../../engine/world/state.js';
-import { showNotification } from '../../../ui/toasts.js';
-import { moveEntityTowards } from '../../../engine/movement/steering.js';
-import { faceTowards } from '../../colony/settlers/settlers.draw.js';
+import { t } from '../../../engine/platform/index.js';
+import { game } from '../../../engine/world/index.js';
+import { showNotification } from '../../../ui/index.js';
+import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { faceTowards } from '../../colony/settlers/index.js';
 
 // A settler the player sent into a sacrificial circle walks there and dies in it; everyone else is
 // healed to full (see the circle tap in handleCanvasClick)

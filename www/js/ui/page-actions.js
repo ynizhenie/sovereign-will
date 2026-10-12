@@ -2,10 +2,10 @@
 // calls the action with its argument (switchTab also gets the button)
 
 import { switchTab } from './bottom-panel.js';
-import { craftArrows, disarmSettler, orderGear, orderGearOff } from '../domains/colony/equipment/equipment.rules.js';
-import { repairAllBuildings } from '../domains/economy/building/building.rules.js';
-import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/settlers.rules.js';
-import { togglePause } from '../app/session.js';
+import { craftArrows, disarmSettler, orderGear, orderGearOff } from '../domains/colony/equipment/index.js';
+import { repairAllBuildings } from '../domains/economy/building/index.js';
+import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { togglePause } from '../app/index.js';
 import { setMode } from './map-input.js';
 
 export const PAGE_ACTIONS = {

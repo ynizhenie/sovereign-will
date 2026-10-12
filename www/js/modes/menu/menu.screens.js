@@ -1,11 +1,8 @@
 // The main menu's screens: home, settings (language, frame rate, FPS counter, sound, music), and the opening
 
 import { LANGUAGES } from '../../content/language/index.js';
-import { currentLanguage, setLanguage } from '../../engine/platform/i18n.js';
-import { onTap } from '../../engine/platform/dom.js';
-import { loadSetting, saveSetting } from '../../engine/platform/storage.js';
-import { audio, setMusicOn, setSoundOn } from '../../engine/platform/audio.js';
-import { fpsCounter, loop } from '../../app/main.js';
+import { audio, currentLanguage, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn } from '../../engine/platform/index.js';
+import { fpsCounter, loop } from '../../app/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
 
