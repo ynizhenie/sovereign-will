@@ -36,13 +36,6 @@ function startAudio() {
   }
 }
 
-for (const type of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(type, startAudio, true);
-
-document.addEventListener('visibilitychange', () => {
-  if (!audio.ctx) return;
-  if (document.hidden) audio.ctx.suspend(); else audio.ctx.resume();
-});
-
 function setSoundOn(on) { audio.soundOn = on; saveSetting('sound', on ? 'on' : 'off'); }
 
 function setMusicOn(on) { audio.musicOn = on; saveSetting('music', on ? 'on' : 'off'); }
@@ -88,3 +81,12 @@ function noise(out, t, { dur, gain, type = 'bandpass', freq = 1000, to, q = 1, a
 // ---- Music: generated as it plays, a few bars ahead. Each style a layer of its own, faded in and out.
 
 const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+
+// What this file sets up as the game starts (called by app/boot.js)
+function initAudio() {
+  for (const type of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(type, startAudio, true);
+  document.addEventListener('visibilitychange', () => {
+    if (!audio.ctx) return;
+    if (document.hidden) audio.ctx.suspend(); else audio.ctx.resume();
+  });
+}

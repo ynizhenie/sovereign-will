@@ -1,10 +1,6 @@
 // The start: texts and panel made, the canvas fitted, and the loop: the game in fixed steps of 1/60 s,
 // drawn as often as the frame rate setting allows
 
-applyPageTexts();
-
-renderConfigHud();
-
 // The game runs in fixed steps of 1/60 s whatever the frame rate, so it plays at the same speed on a
 // 30 Hz phone and a 144 Hz monitor (much of the movement is per step). Frames are drawn as often as the
 // frame-rate setting allows: 30, 60, or every screen refresh (a browser can't show more than that).
@@ -19,8 +15,6 @@ let stepTime = 0;
 let lastDrawn = 0;
 
 let frameRateSetting = loadSetting('fps', 'display');
-
-if (frameRateSetting === 'unlimited') frameRateSetting = 'display'; // the old "no limit" (see #123)
 
 // One step of the game, unless it's lost: then the world stops and no more waves come (#169)
 function stepGame(dt) {
@@ -66,6 +60,11 @@ function countFrame(now) {
   }
 }
 
-fitCanvasToScreen();
-
-requestAnimationFrame(gameLoop);
+// What this file sets up as the game starts (called by app/boot.js)
+function initMain() {
+  applyPageTexts();
+  renderConfigHud();
+  if (frameRateSetting === 'unlimited') frameRateSetting = 'display'; // the old "no limit" (see #123)
+  fitCanvasToScreen();
+  requestAnimationFrame(gameLoop);
+}

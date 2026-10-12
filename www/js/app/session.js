@@ -52,11 +52,13 @@ function exitToMainMenu() {
   showMenuScreen('home');
 }
 
-onTap(document.getElementById('resume-button'), () => setPaused(false));
-
-// out of the pause menu: each mode leaves its own way (#145)
-onTap(document.getElementById('exit-to-menu-button'), () => {
-  if (game.gameMode === 'battle') leaveBattleMode();
-  else if (game.gameMode === 'editor') leaveEditor();
-  else exitToMainMenu();
-});
+// What this file sets up as the game starts (called by app/boot.js)
+function initSession() {
+  onTap(document.getElementById('resume-button'), () => setPaused(false));
+  // out of the pause menu: each mode leaves its own way (#145)
+  onTap(document.getElementById('exit-to-menu-button'), () => {
+    if (game.gameMode === 'battle') leaveBattleMode();
+    else if (game.gameMode === 'editor') leaveEditor();
+    else exitToMainMenu();
+  });
+}

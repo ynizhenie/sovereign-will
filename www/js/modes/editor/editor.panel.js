@@ -45,25 +45,28 @@ function renderEditorMapList() {
 }
 
 let editorNewSize = 40;
-document.querySelectorAll('[data-editor-size]').forEach(button => onTap(button, () => {
-  editorNewSize = Number(button.dataset.editorSize);
-  document.querySelectorAll('[data-editor-size]').forEach(b => b.classList.toggle('active', b === button));
-}));
 
-document.getElementById('mode-editor').disabled = false;
-onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
-onTap(document.getElementById('editor-new-empty'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: false }));
-onTap(document.getElementById('editor-new-generated'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: true }));
-onTap(document.getElementById('editor-save'), saveEditorMap);
-document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));
-document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
-  editor.category = button.dataset.editorCategory;
-  if (editor.tool !== 'erase') editor.tool = EDITOR_TOOLS.find(tl => tl.category === editor.category).id;
-  renderEditorPanel();
-}));
-onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; renderEditorPanel(); });
-onTap(document.getElementById('editor-resize'), () => { document.getElementById('editor-resize-panel').hidden ^= true; });
-document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
-  const [side, delta] = button.dataset.resize.split(':');
-  resizeEditorMap(side, Number(delta));
-}));
+// What this file sets up as the game starts (called by app/boot.js)
+function initEditorPanel() {
+  document.querySelectorAll('[data-editor-size]').forEach(button => onTap(button, () => {
+    editorNewSize = Number(button.dataset.editorSize);
+    document.querySelectorAll('[data-editor-size]').forEach(b => b.classList.toggle('active', b === button));
+  }));
+  document.getElementById('mode-editor').disabled = false;
+  onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
+  onTap(document.getElementById('editor-new-empty'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: false }));
+  onTap(document.getElementById('editor-new-generated'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: true }));
+  onTap(document.getElementById('editor-save'), saveEditorMap);
+  document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));
+  document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
+    editor.category = button.dataset.editorCategory;
+    if (editor.tool !== 'erase') editor.tool = EDITOR_TOOLS.find(tl => tl.category === editor.category).id;
+    renderEditorPanel();
+  }));
+  onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; renderEditorPanel(); });
+  onTap(document.getElementById('editor-resize'), () => { document.getElementById('editor-resize-panel').hidden ^= true; });
+  document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
+    const [side, delta] = button.dataset.resize.split(':');
+    resizeEditorMap(side, Number(delta));
+  }));
+}

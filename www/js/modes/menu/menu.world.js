@@ -153,6 +153,9 @@ function syncMenuWorld() {
   }
 }
 
-document.getElementById('main-menu').addEventListener('click', e => {
-  if (e.target.id === 'main-menu') menuWorldTap(e.clientX, e.clientY);
-});
+// What this file sets up as the game starts (called by app/boot.js)
+function initMenuWorld() {
+  document.getElementById('main-menu').addEventListener('click', e => {
+    if (e.target.id === 'main-menu') menuWorldTap(e.clientX, e.clientY);
+  });
+}

@@ -114,5 +114,8 @@ function renderSaveList() {
   });
 }
 
-onTap(document.getElementById('save-game-button'), saveCurrentGame);
-onTap(document.getElementById('mode-endless'), renderSaveList);
+// What this file sets up as the game starts (called by app/boot.js)
+function initEndlessSaves() {
+  onTap(document.getElementById('save-game-button'), saveCurrentGame);
+  onTap(document.getElementById('mode-endless'), renderSaveList);
+}

@@ -64,11 +64,14 @@ function pickShownPreset() {
   }
 }
 
-document.getElementById('mode-battles').disabled = false;
-onTap(document.getElementById('mode-battles'), startBattleMode);
-onTap(document.getElementById('battle-fight'), startBattleFight);
-onTap(document.getElementById('battle-cancel'), cancelBattleFight);
-onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
-onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
-document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => setBattleCategory(b.dataset.battleCategory)));
-document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { battle[b.dataset.battleGear] = !battle[b.dataset.battleGear]; renderBattlePanel(); }));
+// What this file sets up as the game starts (called by app/boot.js)
+function initBattlePanel() {
+  document.getElementById('mode-battles').disabled = false;
+  onTap(document.getElementById('mode-battles'), startBattleMode);
+  onTap(document.getElementById('battle-fight'), startBattleFight);
+  onTap(document.getElementById('battle-cancel'), cancelBattleFight);
+  onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
+  onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
+  document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => setBattleCategory(b.dataset.battleCategory)));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { battle[b.dataset.battleGear] = !battle[b.dataset.battleGear]; renderBattlePanel(); }));
+}

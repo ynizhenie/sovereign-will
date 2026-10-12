@@ -56,4 +56,7 @@ function setLanguage(language) {
   if (typeof rebuildConfigHud === 'function') rebuildConfigHud();
 }
 
-applyNames();
+// What this file sets up as the game starts (called by app/boot.js)
+function initI18n() {
+  applyNames();
+}

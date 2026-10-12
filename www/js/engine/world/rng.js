@@ -34,12 +34,6 @@ function createDefaultSeed() {
 
 const worldSeedInput = document.getElementById('seed-input');
 
-if (worldSeedInput && (!worldSeedInput.value || worldSeedInput.value === 'default-world-seed')) {
-  worldSeedInput.value = createDefaultSeed();
-}
-
-game.worldSeed = createWorldSeed(worldSeedInput ? worldSeedInput.value : createDefaultSeed());
-
 function applySeedFromUI() {
   const rawSeed = worldSeedInput ? worldSeedInput.value.trim() : '';
   game.worldSeed = createWorldSeed(rawSeed || createDefaultSeed());
@@ -50,4 +44,12 @@ function applySeedFromUI() {
 function rand() {
   if (game.worldSeed && typeof game.worldSeed.random === 'function') return game.worldSeed.random();
   return Math.random();
+}
+
+// What this file sets up as the game starts (called by app/boot.js)
+function initRng() {
+  if (worldSeedInput && (!worldSeedInput.value || worldSeedInput.value === 'default-world-seed')) {
+    worldSeedInput.value = createDefaultSeed();
+  }
+  game.worldSeed = createWorldSeed(worldSeedInput ? worldSeedInput.value : createDefaultSeed());
 }

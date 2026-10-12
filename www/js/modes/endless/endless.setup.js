@@ -19,54 +19,13 @@ const clampInput = (input, fallback) => {
 // wave interval: a preset, or "custom" with its own number of seconds
 const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom, 90); game.waveTimer = game.waveInterval; };
 
-waveOptions.forEach(button => {
-    const selectWave = (e) => {
-        e.preventDefault();
-        const custom = button.dataset.waveInterval === 'custom';
-        waveCustom.hidden = !custom;
-        if (custom) applyCustomWave();
-        else { game.waveInterval = Number(button.dataset.waveInterval); game.waveTimer = game.waveInterval; }
-
-        waveOptions.forEach(btn => {
-            btn.classList.remove('active');
-        });
-
-        button.classList.add('active');
-    };
-
-    button.addEventListener('click', selectWave);
-    button.addEventListener('touchend', selectWave);
-});
-
-waveCustom.addEventListener('change', applyCustomWave);
-
 // map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
 const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
 
 const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
 
-mapOptions.forEach(button => {
-    onTap(button, () => {
-        const custom = button.dataset.mapSize === 'custom';
-        mapCustom.hidden = !custom;
-        if (custom) applyCustomMap();
-        else { const size = Number(button.dataset.mapSize); game.mapSettings = { cols: size, rows: size }; }
-        mapOptions.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-    });
-});
-
-mapColsInput.addEventListener('change', applyCustomMap);
-
-mapRowsInput.addEventListener('change', applyCustomMap);
-
 // difficulty (Endless)
 const difficultyOptions = document.querySelectorAll('.difficulty-option');
-
-difficultyOptions.forEach(button => onTap(button, () => {
-  game.gameDifficulty = button.dataset.difficulty;
-  difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
-}));
 
 const startGame = (e) => {
     if (e) e.preventDefault();
@@ -76,15 +35,6 @@ const startGame = (e) => {
     game.gameStarted = true;
     mainMenu.style.display = 'none';
 };
-
-playButton.addEventListener('click', startGame);
-
-playButton.addEventListener('touchend', startGame);
-
-// the small button next to the seed: a new random seed
-onTap(document.getElementById('seed-reroll'), () => {
-  document.getElementById('seed-input').value = createDefaultSeed();
-});
 
 // Endless: random (generated) map, or one of the saved maps
 let mapSource = 'random';
@@ -110,9 +60,6 @@ function setMapSource(source) {
   if (source === 'random') game.customMap = null;
   renderCustomMapList();
 }
-
-document.querySelectorAll('[data-map-source]').forEach(button => onTap(button, () => setMapSource(button.dataset.mapSource)));
-onTap(document.getElementById('mode-endless'), renderCustomMapList); // maps may have changed in the editor
 
 // The Endless menu's faction rows: a button per faction (the unready ones say "soon") and the colours
 function renderFactionPicker() {
@@ -145,6 +92,52 @@ function renderFactionPicker() {
   }
 }
 
-loadSides();
-renderFactionPicker();
-onTap(document.getElementById('mode-endless'), renderFactionPicker); // in the current language
+// What this file sets up as the game starts (called by app/boot.js)
+function initEndlessSetup() {
+  waveOptions.forEach(button => {
+      const selectWave = (e) => {
+          e.preventDefault();
+          const custom = button.dataset.waveInterval === 'custom';
+          waveCustom.hidden = !custom;
+          if (custom) applyCustomWave();
+          else { game.waveInterval = Number(button.dataset.waveInterval); game.waveTimer = game.waveInterval; }
+
+          waveOptions.forEach(btn => {
+              btn.classList.remove('active');
+          });
+
+          button.classList.add('active');
+      };
+
+      button.addEventListener('click', selectWave);
+      button.addEventListener('touchend', selectWave);
+  });
+  waveCustom.addEventListener('change', applyCustomWave);
+  mapOptions.forEach(button => {
+      onTap(button, () => {
+          const custom = button.dataset.mapSize === 'custom';
+          mapCustom.hidden = !custom;
+          if (custom) applyCustomMap();
+          else { const size = Number(button.dataset.mapSize); game.mapSettings = { cols: size, rows: size }; }
+          mapOptions.forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+      });
+  });
+  mapColsInput.addEventListener('change', applyCustomMap);
+  mapRowsInput.addEventListener('change', applyCustomMap);
+  difficultyOptions.forEach(button => onTap(button, () => {
+    game.gameDifficulty = button.dataset.difficulty;
+    difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
+  }));
+  playButton.addEventListener('click', startGame);
+  playButton.addEventListener('touchend', startGame);
+  // the small button next to the seed: a new random seed
+  onTap(document.getElementById('seed-reroll'), () => {
+    document.getElementById('seed-input').value = createDefaultSeed();
+  });
+  document.querySelectorAll('[data-map-source]').forEach(button => onTap(button, () => setMapSource(button.dataset.mapSource)));
+  onTap(document.getElementById('mode-endless'), renderCustomMapList); // maps may have changed in the editor
+  loadSides();
+  renderFactionPicker();
+  onTap(document.getElementById('mode-endless'), renderFactionPicker); // in the current language
+}

@@ -158,14 +158,6 @@ function processInteraction(clientX, clientY) {
   handleCanvasClick();
 }
 
-canvas.addEventListener('pointerup', e => {
-  if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-  if (e.pointerType === 'touch' && !isTap) return;
-
-  processInteraction(e.clientX, e.clientY);
-});
-
 function setMode(mode) {
   game.buildMode = mode;
   document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
@@ -178,4 +170,15 @@ function setMode(mode) {
     const missing = getMissingCost(item.cost || {});
     showNotification(t('build.costs', { name: item.label, cost: formatCost(item.cost || {}), missing }), true);
   }
+}
+
+// What this file sets up as the game starts (called by app/boot.js)
+function initMapInput() {
+  canvas.addEventListener('pointerup', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    if (e.pointerType === 'touch' && !isTap) return;
+
+    processInteraction(e.clientX, e.clientY);
+  });
 }

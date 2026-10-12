@@ -154,5 +154,8 @@ function updateMusic() {
   }
 }
 
-// a click for every button
-document.addEventListener('pointerdown', e => { if (e.target.closest('button')) { startAudio(); playSound('click'); } }, true);
+// What this file sets up as the game starts (called by app/boot.js)
+function initSounds() {
+  // a click for every button
+  document.addEventListener('pointerdown', e => { if (e.target.closest('button')) { startAudio(); playSound('click'); } }, true);
+}
