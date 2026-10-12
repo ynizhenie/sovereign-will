@@ -1,5 +1,15 @@
-// What a settler does by itself, each tick: the list of behaviours in priority order (the first that takes
-// the tick wins) and the ones every settler has, whatever its job (being possessed, relief, wandering)
+// Settler AI.
+//
+// Every tick update() runs SETTLER_BEHAVIOURS for each settler, in order. A behaviour looks at the
+// settler and either takes over its tick (does something and returns true — later behaviours don't run
+// for this settler this tick) or passes (returns false). To change priorities, reorder the list; to add
+// a behaviour, write a function (settler, tick) => boolean and put it where it belongs in the list.
+//
+// `tick` holds what's shared by all settlers within one tick (see createSettlerTick), including the
+// assignment counters that keep settlers from piling onto the same job.
+//
+// The behaviours themselves live with their mechanic (domains/*/*.behaviours.js); here are the list and
+// the ones every settler has, whatever its job: being possessed, relief, wandering.
 
 function createSettlerTick(dt) {
   const allResources = getHarvestableResources();

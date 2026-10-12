@@ -152,23 +152,6 @@ function handleCanvasClick() {
   }
 }
 
-// Mark tile (x, y) as a farm zone for `crop` ('wheat' / 'sapling'), or unmark it: tapping a tile
-// already in that zone, or with crop 'clear'. See canBeFarmZone for where it can go.
-// A marked tile not blighted yet goes at once; blighted ground fades over clearSeconds (still blighted till
-// then), and a tap while it fades keeps it. Ground blighted round the graveyard or a grave takes no mark (#186).
-function toggleBlightZone(x, y, gx, gy, clearOnly) {
-  const existing = blightZones.find(z => z.x === x && z.y === y);
-  if (existing) {
-    if (!existing.done) blightZones.splice(blightZones.indexOf(existing), 1);
-    else if (existing.clearing === undefined) existing.clearing = GAME_CONFIG.blight.clearSeconds;
-    else if (!clearOnly) delete existing.clearing;
-    return;
-  }
-  if (clearOnly || isBorderZone(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
-  if (isBaseBlighted(x, y)) { showNotification(t('blight.already'), true); return; }
-  blightZones.push({ x, y, done: false });
-}
-
 function processInteraction(clientX, clientY) {
   updateInputPos(clientX, clientY);
   handleCanvasClick();

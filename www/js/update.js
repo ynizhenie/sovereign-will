@@ -1,27 +1,4 @@
 
-// Raised zombies crumble when their time is up (#164, #175); the player's leave rot behind
-function updateTemporaryZombies(dt) {
-  // gone at once: no corpse, no reward, and nothing can heal them back (a necromancer would)
-  const crumbled = unit => unit.temporary !== undefined && (unit.temporary -= dt) <= 0;
-  const gone = settlers.filter(crumbled);
-  if (gone.length) {
-    settlers = settlers.filter(s => !gone.includes(s));
-    if (gone.includes(selectedSettler)) selectedSettler = null;
-    stock.rot += gone.length * GAME_CONFIG.temporaryZombie.rot;
-  }
-  enemies = enemies.filter(en => !crumbled(en));
-}
-
-// A corpse on blighted ground rises as a temporary zombie after a while (#164)
-function raiseOnBlight(dt) {
-  if (sides.player.faction !== 'undead') return;
-  for (const corpse of [...corpses]) {
-    if (!isBlighted(corpse.x, corpse.y)) continue;
-    corpse.blightAge = (corpse.blightAge || 0) + dt;
-    if (corpse.blightAge >= GAME_CONFIG.blight.riseSeconds) raiseTemporaryZombie(corpse);
-  }
-}
-
 function update(dt) {
   if ((!gameStarted && gameMode !== 'menu') || isPaused || gameMode === 'editor') return; // the menu's world runs too (#193)
   // battle mode: units stand still while being placed, and the result shows for a moment
