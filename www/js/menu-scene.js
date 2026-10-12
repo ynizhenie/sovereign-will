@@ -13,17 +13,23 @@ const MENU_WORLD = {
 
 const menuWorld = {
   faction: 'humans',    // whose the soldier is (see getPlayerFaction)
-  size: ''              // the screen it was made for: made again when that changes
+  size: '',             // the screen it was made for: made again when that changes
+  opened: false         // the game's opening done: the curtain lifted (style.css)
 };
 
 function isMenuWorld() {
   return gameMode === 'menu';
 }
 
-// The menu's panel on the screen (CSS px), or null
+// The menu's panel on the screen (CSS px), with the game's title over it when it shows, or null
 function menuPanelRect() {
   const panel = [...document.querySelectorAll('#main-menu .main-menu-content')].find(p => !p.hidden);
-  return panel ? panel.getBoundingClientRect() : null;
+  if (!panel) return null;
+  const r = panel.getBoundingClientRect();
+  const title = document.querySelector('#menu-title span'); // the letters, not the whole strip they're in
+  const tr = title && title.offsetParent ? title.getBoundingClientRect() : null;
+  if (!tr) return r;
+  return { left: Math.min(r.left, tr.left), top: Math.min(r.top, tr.top), right: Math.max(r.right, tr.right), bottom: Math.max(r.bottom, tr.bottom) };
 }
 
 // Make the world and show it behind the menu
@@ -96,10 +102,16 @@ function enterMenuWorld() {
   camera.x = centre.x; camera.y = centre.y;
   camera.zoom = MENU_WORLD.cssScale * spr / getBaseScale();
   menuWorld.size = `${canvas.width}x${canvas.height}`;
+  if (!menuWorld.opened) {
+    // the first time, as the page opens: the curtain lifts once the world has been drawn
+    menuWorld.opened = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('main-menu').classList.add('lifted')));
+  }
 }
 
 // Back to an ordinary (not running) Endless before a real game, a battle or the editor is set up
 function leaveMenuWorld() {
+  document.getElementById('main-menu').classList.add('lifted'); // never dark again
   gameMode = 'endless';
   document.body.classList.remove('menu-world');
 }

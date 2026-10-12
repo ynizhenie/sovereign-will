@@ -158,8 +158,13 @@ mapRowsInput.addEventListener('change', applyCustomMap);
 
 // ---- Main menu screens: home (modes), endless (setup), settings
 
+// the opening animation, once, as the page loads (style.css: #main-menu.intro)
+document.getElementById('main-menu').classList.add('intro');
+setTimeout(() => document.getElementById('main-menu').classList.remove('intro'), 3500);
+
 function showMenuScreen(name) {
-  document.querySelectorAll('#main-menu [data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
+  document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
+  document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
 }
 
 onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));

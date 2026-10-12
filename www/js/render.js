@@ -371,7 +371,7 @@ function render() {
   ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
 
   const terrain = getTileIndex();
-  if (gameMode === 'battle') drawBattleOverlay();
+  if (gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing
   desertTiles.forEach(drawDesertTile);
   beachTiles.forEach(drawDesertTile);
 

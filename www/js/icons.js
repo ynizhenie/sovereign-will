@@ -531,6 +531,10 @@ function drawIcon(context, name, x, y, size) {
 }
 
 const ICON_TOKEN = /\[\[([\w]+)\]\]/g;
+// a price's part, {{resource:amount}} (formatCost): drawn as the amount and the resource's icon, in a span
+// of its own, so a button can show which part the stock is short of (refreshAffordability in ui.js)
+const COST_TOKEN = /\{\{(\w+):([\d.]+)\}\}/g;
+const expandCostTokens = text => String(text).replace(COST_TOKEN, (_, id, amount) => `${amount}${getResourceIcon(id)}`);
 const escapeHtml = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
 function iconHtml(name) {
@@ -539,12 +543,14 @@ function iconHtml(name) {
 
 // Text with [[icon]] marks as HTML: the text escaped, the marks as icons
 function richText(text) {
-  return escapeHtml(text).replace(ICON_TOKEN, (_, name) => iconHtml(name));
+  return escapeHtml(text)
+    .replace(COST_TOKEN, (_, id, amount) => `<span class="cost-part" data-res="${id}" data-amount="${amount}">${amount}${richText(getResourceIcon(id))}</span>`)
+    .replace(ICON_TOKEN, (_, name) => iconHtml(name));
 }
 
 // The text without its icons, for where only plain text goes (tooltips, placeholders)
 function plainText(text) {
-  return String(text).replace(ICON_TOKEN, '').replace(/\s{2,}/g, ' ').trim();
+  return expandCostTokens(text).replace(ICON_TOKEN, '').replace(/\s{2,}/g, ' ').trim();
 }
 
 function setRichText(element, text) {
@@ -553,7 +559,7 @@ function setRichText(element, text) {
 
 // Text with [[icon]] marks on the canvas, in the current font, fillStyle and textAlign (left/center)
 function fillRichText(context, text, x, y) {
-  const parts = String(text).split(ICON_TOKEN); // text, icon name, text, icon name...
+  const parts = expandCostTokens(text).split(ICON_TOKEN); // text, icon name, text, icon name...
   const size = parseFloat(/(\d+(\.\d+)?)px/.exec(context.font)?.[1] || 12) * 1.15;
   const width = parts.reduce((sum, part, i) => sum + (i % 2 ? size : context.measureText(part).width), 0);
   const align = context.textAlign;
