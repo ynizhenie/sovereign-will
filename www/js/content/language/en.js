@@ -16,7 +16,7 @@ export const enLanguage = {
         wall_wood: 'Wooden wall', wall_stone: 'Stone wall', spikes: 'Spikes', door: 'Door', tent: 'Tent', campfire: 'Campfire',
         smelter: 'Smelter', watchtower: 'Watchtower', warehouse: 'Warehouse', grave: 'Grave', sacrifice_circle: 'Sacrificial circle', portal: 'Portal', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
       },
-      enemies: { raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer', undead_zombie: 'Zombie', undead_big_zombie: 'Big zombie', undead_skeleton: 'Skeleton', undead_necromancer: 'Necromancer', demon_imp: 'Imp', demon_brute: 'Demon', demon_fire_imp: 'Fire imp' },
+      enemies: { raider_medic: 'Healer', undead_zombie_sword: 'Zombie with a sword', demon_imp_sword: 'Imp with a sword', raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer', undead_zombie: 'Zombie', undead_big_zombie: 'Big zombie', undead_skeleton: 'Skeleton', undead_necromancer: 'Necromancer', demon_imp: 'Imp', demon_brute: 'Demon', demon_fire_imp: 'Fire imp' },
       factions: { humans: 'Humans', demons: 'Demons', undead: 'Undead' },
       settlerTypes: { normal: 'Worker', big: 'Giant', zombie: 'Zombie', big_zombie: 'Big zombie', skeleton: 'Skeleton', necromancer: 'Necromancer', imp: 'Imp', demon: 'Demon', fire_imp: 'Fire imp' },
       gear: { backpack: 'Backpack', shield: 'Shield', armor: 'Armour', wateringCan: 'Watering can' },

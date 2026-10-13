@@ -20,6 +20,25 @@ export function tickEnemies(dt) {
 /** @typedef {import('../../../engine/world/types.js').Settler} Settler */
 /** @typedef {import('../../../engine/world/types.js').TownHall} TownHall */
 
+// An enemy medic (#203): walks up to the most hurt of its side within range and heals it; with a settler
+// at it, or nobody hurt, it fights like the rest (weakly). True while it heals
+function enemyHeal(en, healer, dt) {
+  if (game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 50)) return false;
+  let patient = null;
+  for (const other of game.enemies) {
+    if (other === en || other.hp >= other.maxHp || Math.hypot(other.x - en.x, other.y - en.y) > healer.range) continue;
+    if (!patient || other.hp / other.maxHp < patient.hp / patient.maxHp) patient = other;
+  }
+  if (!patient) return false;
+  if (Math.hypot(patient.x - en.x, patient.y - en.y) > healer.healRange + patient.radius) {
+    moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
+  } else {
+    patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * dt);
+    faceTowards(en, patient.x, patient.y);
+  }
+  return true;
+}
+
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
@@ -28,6 +47,7 @@ export function tickEnemy(en, dt) {
 
   const enemyDef = getEnemyDef(en);
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
+  if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
   en.weapon = meleeDef.weapon || 'sword';
