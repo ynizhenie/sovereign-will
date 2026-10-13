@@ -5,7 +5,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
 import { addResources, canAfford, payCost, showCostError, stock } from '../storage/index.js';
-import { getPlayerFaction } from '../../factions/index.js';
+import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
 
@@ -287,7 +287,7 @@ export function getHeldItems(group) {
     const all = Object.keys(GAME_CONFIG[category]).filter(id => id !== 'fist');
     for (const id of ids === 'all' ? all : ids) items.push([category, id]);
   }
-  return items;
+  return items.filter(([category, id]) => isForPlayerFaction(GAME_CONFIG[category][id])); // the faction's own (#200)
 }
 
 // How many settlers hold that tool, weapon or piece of gear
