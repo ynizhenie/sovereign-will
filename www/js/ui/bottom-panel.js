@@ -59,7 +59,8 @@ export function rebuildConfigHud() {
   const details = document.getElementById('resource-details');
   if (details) details.remove();
   renderConfigHud();
-  if (typeof updateUI === 'function' && game.gameStarted) { updateUI(); refreshAffordability(true); }
+  if (typeof updateUI === 'function' && game.gameStarted) updateUI();
+  refreshAffordability(true);
 }
 
 /** @type {string | null} */
@@ -78,4 +79,6 @@ export function renderConfigHud() {
   document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
   document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
   renderWeaponsTab();
+  // the tab left open was another faction's (Farming for the undead): back to Building (#200)
+  if (document.querySelector(`.tab-btn[data-arg="${activeTab}"]`)?.hidden) openTab('tab-build');
 }
