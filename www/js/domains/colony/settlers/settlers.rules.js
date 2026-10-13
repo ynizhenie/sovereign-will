@@ -6,7 +6,7 @@ import { t } from '../../../engine/platform/index.js';
 import { game, rand, townHall } from '../../../engine/world/index.js';
 import { hasWorkingShield, refundEquipment } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
-import { getPlayerFaction } from '../../factions/index.js';
+import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { addCorpse, bleed } from '../../conflict/combat/index.js';
 import { isDefeated } from '../../../modes/endless/index.js';
@@ -16,6 +16,12 @@ import { playSound } from '../../../app/index.js';
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
   return game.buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
+}
+
+// Too many settlers: the hint names the player's own home (a tent, a grave, a sacrificial circle) (#200)
+function showPopLimit() {
+  const home = Object.values(GAME_CONFIG.buildings).find(b => b.population && isForPlayerFaction(b));
+  showNotification(home ? t('pop.limit', { name: getDefinition('buildings', home.id).label, icon: home.icon }) : t('pop.limitNoHome'), true);
 }
 
 // Raised zombies don't count: they're temporary
@@ -58,7 +64,7 @@ export function spawnSettler(type = 'normal') {
   if (!settlerType) return;
 
   if (getCurrentPop() + settlerType.population > getMaxPop()) {
-    showNotification(t('pop.limit'), true);
+    showPopLimit();
     return;
   }
   if (!canAfford(settlerType.hireCost)) {
@@ -89,7 +95,7 @@ export function upgradeToBig(target) {
     return;
   }
   if (getCurrentPop() + big.population - normal.population > getMaxPop()) {
-    showNotification(t('pop.limit'), true);
+    showPopLimit();
     return;
   }
   if (!canAfford(big.upgradeCost)) {
