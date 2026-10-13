@@ -12,8 +12,8 @@ export const unitsConfig = {
     big: { id: 'big', icon: 'giant', big: true, hp: 250, speed: 0.7, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { food: 30, wood: 15 }, upgradeCost: { food: 15, wood: 15 } },
     // the undead's. archer: hired with a bow and a quiver. necromancer: see enemies.undead_necromancer;
     // raised zombies take population like hired ones
-    zombie: { id: 'zombie', icon: 'zombie', hp: 100, speed: 0.85, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 10 } },
-    big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 25 }, upgradeCost: { bones: 15 } },
+    zombie: { id: 'zombie', icon: 'zombie', hp: 100, speed: 0.85, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 8, rot: 3 } },
+    big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 20, rot: 8 }, upgradeCost: { bones: 12, rot: 5 } },
     // a zombie given a bow (bowUnits)
     skeleton: { id: 'skeleton', icon: 'skeleton', hp: 70, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1 },
     // the demons'. eatsCorpses: heals by eating a corpse (eatSeconds) when not fighting.
