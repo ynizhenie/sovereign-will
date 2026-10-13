@@ -59,6 +59,22 @@ export function holdPost(s, tick) {
 // while there are defenders, unless they're being attacked themselves.
 export function fightEnemies(s, tick) {
   const dt = tick.dt;
+  const choice = chooseSettlerTarget(s, tick);
+  if (!choice) return false; // on the way to the enemy tents, with nothing in the way
+  const { targetEnemy, attacker } = choice;
+  if (isBowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
+  // an archer with nothing to shoot waits
+  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) {
+    s.patrolTarget = null;
+    return true;
+  }
+  return engageEnemy(s, tick, targetEnemy, attacker, dt);
+}
+
+// The enemy a settler fights: the one most dangerous to the base, an enemy the player marked, the one near
+// its post, or whoever is hitting it right now. On the way to the enemy tents, only what's in the way
+// (null: nothing is). attacker: the one hitting it, if any.
+function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
   game.enemies.forEach(en => {
@@ -87,45 +103,48 @@ export function fightEnemies(s, tick) {
       const d = Math.hypot(en.x - s.x, en.y - s.y);
       if (d < nearest) { nearest = d; targetEnemy = en; }
     });
-    if (!targetEnemy) return false;
+    if (!targetEnemy) return null;
   }
+  return { targetEnemy, attacker };
+}
 
-  if (isBowWeapon(s.weapon) && s.quiver) {
-    let currentArrows = s.arrows || 0;
-    let capacity = s.quiverCapacity || 12;
-    let nearbyTower = findNearestArrowTower(s);
-    // arrows from the nearest storage, if the stock has any
-    const arrowStore = stock.arrows > 0 ? findNearestStorage(s) : null;
-    const atArrowStore = !!arrowStore && isAtStorage(s, arrowStore);
-    let towerDistance = nearbyTower ? Math.hypot(nearbyTower.x - s.x, nearbyTower.y - s.y) : Infinity;
+// An archer's arrows: from a tower close by, from the storage it's at, or it walks to a storage when
+// empty. True while that keeps it busy.
+function restockArrows(s, dt) {
+  let currentArrows = s.arrows || 0;
+  let capacity = s.quiverCapacity || 12;
+  let nearbyTower = findNearestArrowTower(s);
+  // arrows from the nearest storage, if the stock has any
+  const arrowStore = stock.arrows > 0 ? findNearestStorage(s) : null;
+  const atArrowStore = !!arrowStore && isAtStorage(s, arrowStore);
+  let towerDistance = nearbyTower ? Math.hypot(nearbyTower.x - s.x, nearbyTower.y - s.y) : Infinity;
 
-    if (nearbyTower && currentArrows < capacity) {
-      if (towerDistance > 32) {
-        moveEntityTowards(s, nearbyTower.x, nearbyTower.y, s.speed, false, dt);
-        s.patrolTarget = null;
-        return true;
-      }
-      refillArcherFromTower(s, nearbyTower);
-      currentArrows = s.arrows;
-    }
-
-    if (atArrowStore && currentArrows < capacity) {
-      s.arrows = currentArrows + takeStock('arrows', capacity - currentArrows);
-      currentArrows = s.arrows;
-    }
-
-    if (currentArrows === 0 && arrowStore && !atArrowStore) {
-      walkToStorage(s, arrowStore, dt);
+  if (nearbyTower && currentArrows < capacity) {
+    if (towerDistance > 32) {
+      moveEntityTowards(s, nearbyTower.x, nearbyTower.y, s.speed, false, dt);
+      s.patrolTarget = null;
       return true;
     }
+    refillArcherFromTower(s, nearbyTower);
+    currentArrows = s.arrows;
   }
 
-  // an archer with nothing to shoot waits
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) {
-    s.patrolTarget = null;
+  if (atArrowStore && currentArrows < capacity) {
+    s.arrows = currentArrows + takeStock('arrows', capacity - currentArrows);
+    currentArrows = s.arrows;
+  }
+
+  if (currentArrows === 0 && arrowStore && !atArrowStore) {
+    walkToStorage(s, arrowStore, dt);
     return true;
   }
+  return false;
+}
 
+// Fight the enemy if it's close enough (or it's not a worker): the unarmed shelter at the town hall while
+// there are defenders; the rest walk up and strike (an archer shoots from where it has a clear line).
+// False when there's nothing to fight.
+function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
 
   let isUnarmedOrRod = (s.weapon === 'fist');
