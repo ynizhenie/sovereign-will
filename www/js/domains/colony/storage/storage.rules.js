@@ -111,7 +111,8 @@ export function addResources(amounts = {}) {
 export function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
   return Object.entries(cost)
     .filter(([key, amount]) => have(key) < Number(amount || 0))
-    .map(([key, amount]) => `${Number(amount) - have(key)}${getResourceIcon(key)}`)
+    // in whole pieces: a stock that trickles in (the undead's bones) shows no 0.0000001 (#204)
+    .map(([key, amount]) => `${Math.max(1, Math.ceil(Number(amount) - have(key)))}${getResourceIcon(key)}`)
     .join(', ');
 }
 

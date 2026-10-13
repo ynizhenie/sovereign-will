@@ -130,6 +130,30 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
+  // Rot is spent (#204): a marked tile takes blightRot of it, and waits while there's none; hiring a zombie
+  // takes rot as well as bones
+  function rotSpent({ seed = 'undead-rot' } = {}) {
+    asUndead(seed);
+    clearResources();
+    invalidateAllPaths();
+    const mark = nearHall(7, 0);
+    buildMode = 'blight'; mouse.x = mark.x; mouse.y = mark.y; handleCanvasClick(); buildMode = 'interact';
+    settlers = [necromancerAt(1, nearHall(4, 0))];
+    corpses = [];
+    stock.rot = 0;
+    run(6, { each: () => { stock.rot = 0; } });
+    const waitedWithout = !isBlighted(mark.x, mark.y);
+    stock.rot = 5;
+    run(6, { each: () => { if (stock.rot > 5) stock.rot = 5; } }); // (no rot trickling in from the graveyard)
+    const r = { waitedWithout, blighted: isBlighted(mark.x, mark.y), rotLeft: Math.round(stock.rot) };
+    Object.assign(stock, { bones: 100, rot: 100 });
+    spawnSettler('zombie');
+    r.hire = { bones: 100 - stock.bones, rot: Math.round(100 - stock.rot) };
+    stock.bones = 3.4; stock.rot = 0;
+    r.missing = getMissingCost(GAME_CONFIG.settlerTypes.zombie.hireCost);
+    return r;
+  }
+
   // The undead as the enemy: a wave is theirs, and their necromancer raises a corpse into a temporary zombie
   function undeadEnemies({ seed = 'undead-enemy' } = {}) {
     sides.enemy.faction = 'undead';
@@ -147,5 +171,5 @@ Object.assign(window.sim, (() => {
     return { kinds, zombies: enemies.filter(en => en.enemyKey === 'undead_zombie').length, corpses: corpses.length, temporary: !!zombie && zombie.temporary > 0 };
   }
 
-  return { undeadColony, bowMakesSkeleton, necromancerRaises, necromancerHeals, undeadBlight: blight, undeadEnemies };
+  return { undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerHeals, undeadBlight: blight, undeadEnemies };
 })());

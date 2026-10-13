@@ -16,9 +16,9 @@ export const equipmentConfig = {
     hoe: { id: 'hoe', icon: 'hoe', factions: ['humans', 'demons'], cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8, huntDamage: 8 },
     // the undead's necromancer's staff: whoever holds it is a necromancer: heals the undead around,
     // raises corpses into temporary zombies (raises before going back to a grave for more), blights
-    // the ground the player marks (blightSeconds a tile)
+    // the ground the player marks (blightSeconds and blightRot of the stock a tile)
     necro_staff: { id: 'necro_staff', icon: 'staff', factions: ['undead'], cost: { bones: 20, rot: 10 }, family: 'necro', combatDamage: 6, huntDamage: 6,
-      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2 } }
+      necromancer: { raises: 5, range: 400, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
   },
 
   // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
