@@ -8,20 +8,39 @@ import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.j
 import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
+import { isDefenseAlert } from '../../conflict/combat/index.js';
 
-// Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a worker with no tool looks
-// after a campfire, one per fire. It fetches fuel from the town hall when the fire is out, then a batch of
+// A soldier (or archer) free to cook: on the ground, not on a tower, not steered by the player
+function isSoldierCook(s) {
+  return (s.role === 'soldier' || s.role === 'archer') && !s.isPossessed && !s.towerAssignment;
+}
+
+// Enough soldiers free to cook at every campfire (between waves): the workers keep to their own work
+function soldiersCoverFires(tick) {
+  if (tick.isWaveActive || isDefenseAlert()) return false;
+  const fires = game.buildings.filter(b => b.type === 'campfire').length;
+  return fires > 0 && game.settlers.filter(isSoldierCook).length >= fires;
+}
+
+// Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a campfire is looked after,
+// one cook per fire: idle soldiers first between waves, then a worker with no tool if no soldier is free
+// for it (#200). It fetches fuel from the town hall when the fire is out, then a batch of
 // raw food, cooks it piece by piece and takes the food home. What it carries is ordinary stock (wood,
 // raw meat...) marked with the fire it's for, so if it's called away (a wave) it just goes back in stock.
 export function cook(s, tick) {
-  if (s.role !== 'worker' || s.isPossessed) return false;
+  if (s.isPossessed) return false;
   const cooking = GAME_CONFIG.cooking;
+  const soldier = isSoldierCook(s);
+  if (s.role !== 'worker' && !soldier) return false;
+  if (s.role !== 'worker' && (tick.isWaveActive || isDefenseAlert())) return false; // to arms
   const job = s.carrying && s.carrying.forFire;
-  // cooking is the free hands' job between waves; when the food runs low, everyone's, tool in hand or in a
-  // wave too. "Low" leaves room to hire with: meals for everyone plus GAME_CONFIG.cooking.hireReserve
-  const freeHands = s.tool === 'none' && s.weapon === 'fist' && !tick.isWaveActive;
-  const runningLow = stock.food < game.settlers.length * cooking.lowFood + cooking.hireReserve;
-  if (!job && !freeHands && !runningLow) return false;
+  // cooking is the idle soldiers' job between waves; workers' only where the soldiers don't cover every fire:
+  // the free hands', and when the food runs low every worker's, tool in hand or in a wave too. "Low" leaves
+  // room to hire with: meals for everyone plus GAME_CONFIG.cooking.hireReserve
+  const workerNeeded = s.role === 'worker' && !soldiersCoverFires(tick);
+  const freeHands = workerNeeded && s.tool === 'none' && s.weapon === 'fist' && !tick.isWaveActive;
+  const runningLow = workerNeeded && stock.food < game.settlers.length * cooking.lowFood + cooking.hireReserve;
+  if (!job && !soldier && !freeHands && !runningLow) return false;
   if (s.carrying && !job) return false; // carrying something else: deliver that first
   let fire = job && game.buildings.includes(job) ? job : null;
   if (!fire) {

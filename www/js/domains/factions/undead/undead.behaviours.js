@@ -3,7 +3,7 @@
 // ---- Necromancers
 
 import { game, townHall } from '../../../engine/world/index.js';
-import { moveSettlerToTownHall } from '../../colony/storage/index.js';
+import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
 import { getNecromancy, raiseTemporaryZombie } from './undead.rules.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
@@ -61,9 +61,9 @@ export function necromancy(s, tick) {
     return true;
   }
 
-  // marked ground to blight
-  const zone = game.blightZones.filter(z => !z.done && !tick.blightAssignments.has(z))
-    .sort((a, b) => dist(a) - dist(b))[0];
+  // marked ground to blight, while there's the rot for it (blightRot a tile, #204)
+  const zone = stock.rot >= necro.blightRot ? game.blightZones.filter(z => !z.done && !tick.blightAssignments.has(z))
+    .sort((a, b) => dist(a) - dist(b))[0] : null;
   if (zone) {
     tick.blightAssignments.add(zone);
     s.patrolTarget = null;
@@ -73,7 +73,7 @@ export function necromancy(s, tick) {
     } else {
       s.working = 0.1;
       s.blightTimer = (s.blightTimer || 0) + dt;
-      if (s.blightTimer >= necro.blightSeconds) { s.blightTimer = 0; zone.done = true; }
+      if (s.blightTimer >= necro.blightSeconds) { s.blightTimer = 0; zone.done = true; takeStock('rot', necro.blightRot); }
     }
     return true;
   }

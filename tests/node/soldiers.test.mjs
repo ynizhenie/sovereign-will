@@ -23,3 +23,23 @@ test('enemies break the wall in front of them rather than walk round to a far do
   expect(await sim.soldiersWayIn({ ring: 'walls' })).toMatchObject({ throughWall: true, viaDoor: false });
   expect(await sim.soldiersWayIn({ ring: 'spikes' })).toMatchObject({ overSpikes: true });
 });
+
+test('tapping an enemy at a damaged wall, next to a soldier, marks it: not the wall\'s repair, not the soldier (#202)', () => {
+  const r = (() => {
+    const { makeSettler, placeBuilding, clearResources, tileCenter } = window.sim.helpers;
+    window.sim.start('mark-at-wall');
+    clearResources();
+    const g = getGridPos(townHall.x, townHall.y);
+    const at = tileCenter(g.gx + 5, g.gy);
+    const wall = placeBuilding('wall_wood', at.x, at.y);
+    wall.hp = wall.maxHp / 2;
+    const en = createConfiguredEnemy({ x: at.x + 12, y: at.y }, 'raider'); // breaking the wall, over its tile
+    const soldier = makeSettler(1, en.x + 22, en.y, { weapon: 'sword', role: 'soldier' });
+    settlers = [soldier]; enemies = [en]; selectedSettler = null;
+    setMode('interact');
+    mouse.x = en.x - 4; mouse.y = en.y; // on the wall's tile too
+    handleCanvasClick();
+    return { marked: !!en.markedTarget, repair: !!wall.repairRequested, selected: selectedSettler === soldier };
+  })();
+  expect(r).toEqual({ marked: true, repair: false, selected: false });
+});

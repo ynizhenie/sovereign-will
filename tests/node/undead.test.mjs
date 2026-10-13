@@ -29,3 +29,11 @@ test('undead enemies: waves of theirs; their necromancer raises temporary zombie
   expect(r.kinds.every(k => k.startsWith('undead_'))).toBe(true);
   expect(r).toMatchObject({ zombies: 1, corpses: 0, temporary: true });
 });
+
+test('the undead spend rot: a tile of blight, hiring a zombie; what\'s missing shows in whole pieces (#204)', async () => {
+  expect(await sim.undeadRotSpent()).toEqual({
+    waitedWithout: true, blighted: true, rotLeft: 4,
+    hire: { bones: 8, rot: 3 },
+    missing: '5[[bones]], 3[[rot]]'
+  });
+});

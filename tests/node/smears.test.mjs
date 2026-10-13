@@ -20,3 +20,8 @@ test('whoever left the dung does not step in it before walking off (#124)', asyn
 test('after five meals a settler relieves itself near grass, away from the buildings (#124)', async () => {
   expect(await sim.relief({})).toEqual({ needs: true, piles: 1, stillNeeds: false, meals: 0, awayFromBuildings: true, nearGrass: true });
 });
+
+test('a relief spot walled off on the way: the settler goes somewhere else it can get to (#200)', async () => {
+  const r = await sim.relief({ walledOff: true, seconds: 40 });
+  expect(r).toMatchObject({ needs: true, piles: 1, stillNeeds: false, elsewhere: true });
+});

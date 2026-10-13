@@ -106,6 +106,15 @@ export function relieve(s, tick) {
   const spot = s.reliefSpot;
   s.patrolTarget = null;
   if (Math.hypot(spot.x - s.x, spot.y - s.y) > 12) {
+    s.reliefWalk = (s.reliefWalk || 0) + tick.dt;
+    // can't get there (walled off since, or stuck): another spot, and after a few, right where it is (#200)
+    if (s.reliefWalk > relief.giveUpSeconds || (game.pathTick % 30 === 0 && !canReach(s, spot))) {
+      s.reliefTries = (s.reliefTries || 0) + 1;
+      (s.reliefAvoid = s.reliefAvoid || []).push(spot);
+      s.reliefSpot = s.reliefTries >= relief.maxTries ? { x: s.x, y: s.y } : findReliefSpot(s);
+      s.reliefWalk = 0;
+      return true;
+    }
     moveEntityTowards(s, spot.x, spot.y, s.speed, false, tick.dt);
     s.reliefTimer = 0;
     return true;
@@ -114,19 +123,28 @@ export function relieve(s, tick) {
   if (s.reliefTimer >= relief.seconds) {
     game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false });
     s.needsRelief = false; s.meals = 0; s.reliefSpot = null; s.reliefTimer = 0;
+    s.reliefWalk = 0; s.reliefTries = 0; s.reliefAvoid = null;
   }
   return true;
 }
 
+// The settler can walk to that point from where it is now
+function canReach(s, p) {
+  const g = getGridPos(p.x, p.y);
+  return getReachSteps(getSettlerReach(s), g.gx, g.gy) !== -1;
+}
+
 // The nearest spot the settler can walk to that's far enough from every building (and the town hall):
-// grass first, then any free tile; where it stands if there's none
+// grass first, then any free tile; where it stands if there's none. Spots it gave up on are left out
 export function findReliefSpot(s) {
   const minDist = GAME_CONFIG.relief.awayFromBuildings * TILE_SIZE;
   const away = p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist + townHall.radius &&
     game.buildings.every(b => Math.hypot(p.x - b.x, p.y - b.y) >= minDist);
   const reach = getSettlerReach(s);
   const reachable = p => { const g = getGridPos(p.x, p.y); return getReachSteps(reach, g.gx, g.gy) !== -1; };
-  const nearest = list => list.filter(p => away(p) && reachable(p))
+  // not where it already couldn't get to
+  const tried = p => (s.reliefAvoid || []).some(a => Math.hypot(a.x - p.x, a.y - p.y) < TILE_SIZE * 2);
+  const nearest = list => list.filter(p => away(p) && reachable(p) && !tried(p))
     .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
   // beside a grass tuft, not on it
   const byGrass = nearest(game.grassList.map(g => ({ x: g.x + TILE_SIZE, y: g.y })).filter(p => !isTileOccupied(p.x, p.y)));

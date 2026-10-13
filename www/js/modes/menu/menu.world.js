@@ -1,7 +1,7 @@
 // Behind the main menu: a little Endless world, run and drawn by the game itself
 // (update() and render()), so everything in it behaves exactly as in the game. A soldier with a spear by
-// the town hall hunts boars, butchers them and carries the meat to the warehouse, rests with its spear on
-// its back; boars wander, back off, run for the grass. No waves come and nobody gets hungry. Tapping the
+// the warehouse hunts boars, butchers them and carries the meat there, rests with its spear on its back
+// (the warehouse is the town hall, drawn as one: no hall in the menu, #200); boars wander, back off, run for the grass. No waves come and nobody gets hungry. Tapping the
 // soldier changes its faction; tapping a boar marks it, as a tap does in the game, and the soldier goes
 // for it. The world is made to fit the screen: its centre is the screen's, with the hall and what's
 // around it beside the menu's panel, not behind it.
@@ -77,9 +77,6 @@ export function enterMenuWorld() {
     gx * TILE_SIZE >= v0.x && (gx + 1) * TILE_SIZE <= v1.x && gy * TILE_SIZE >= v0.y && (gy + 1) * TILE_SIZE <= v1.y;
   // round the hall: nothing within 2 tiles of it
   for (let gy = hg[1] - 3; gy <= hg[1] + 2; gy++) for (let gx = hg[0] - 3; gx <= hg[0] + 2; gx++) taken.add(`${gx},${gy}`);
-  // the warehouse two tiles beside the hall, wherever there's room for it on the screen
-  const warehouse = [[hg[0] + 3, hg[1]], [hg[0] - 4, hg[1] - 1], [hg[0], hg[1] + 3], [hg[0] - 1, hg[1] - 4]].find(([gx, gy]) => tileFree(gx, gy)) || [hg[0] + 3, hg[1]];
-  taken.add(`${warehouse[0]},${warehouse[1]}`);
   // the rest on free tiles of the screen
   const freeTile = () => {
     for (let attempt = 0; attempt < 300; attempt++) {
@@ -97,7 +94,7 @@ export function enterMenuWorld() {
     cols, rows, hall,
     resources: { tree: some(MENU_WORLD.trees), boulder: some(MENU_WORLD.boulders), grass: some(MENU_WORLD.grass) },
     boars: some(MENU_WORLD.boars),
-    buildings: [['warehouse', ...warehouse]]
+    buildings: []
   };
   game.gameMode = 'endless';
   resetGame(map);
