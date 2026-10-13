@@ -45,5 +45,25 @@ Object.assign(window.sim, (() => {
     return { afterWheat, afterSapling, afterToggleOff, afterClear, onWater: farmZones.length };
   }
 
-  return { farmZonesPlanted, farmZonePainting };
+  // A wheat plot growing, a dung pile a few tiles off, a farmer with (or without) a backpack: it carries the
+  // dung to the plot; the plot's harvest then yields twice the wheat (#201)
+  function fertilizer({ seed = 'fertilizer', backpack = true } = {}) {
+    start(seed);
+    clearResources();
+    const p = nearHall(4, 3), d = nearHall(-3, 4);
+    farmPlots = [{ x: p.x, y: p.y, growth: 30, priority: 0, harvestProgress: 0 }];
+    dung = [{ x: d.x, y: d.y, age: 0, by: null, byLeft: true }];
+    const farmer = makeSettler(1, townHall.x + 40, townHall.y + 40, { tool: 'hoe', backpack });
+    settlers = [farmer];
+    stock.food = 999;
+    run(15, { each: () => { farmer.hunger = 999; } });
+    const plot = farmPlots[0];
+    const r = { fertilized: !!plot.fertilized, dungLeft: dung.length };
+    const harvester = makeSettler(2, plot.x, plot.y);
+    finishHarvest(harvester, plot, 'farm');
+    r.wheat = harvester.carrying ? (harvester.carrying.items || [harvester.carrying]).filter(c => c.type === 'wheat').reduce((n, c) => n + c.amount, 0) : 0;
+    return r;
+  }
+
+  return { farmZonesPlanted, farmZonePainting, fertilizer };
 })());
