@@ -40,7 +40,7 @@ export const startGame = (e) => {
     if (e) e.preventDefault();
     applySeedFromUI();
     resetGame();
-    openTab('tab-build'); // a new game starts on the Building tab
+    openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
     game.gameStarted = true;
     mainMenu.style.display = 'none';
 };

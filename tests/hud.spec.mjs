@@ -7,6 +7,7 @@ test('resources are grouped: a group tile shows its total and opens a row with e
   await page.evaluate(() => { Object.assign(stock, { rawMeat: 6, rawFish: 2, wheat: 4 }); updateUI(); });
   await expect(page.locator('#group-raw-txt')).toHaveText('12');
   await expect(page.locator('#group-raw-members')).toBeHidden();
+  await page.click('#resource-strip'); // all of the stock, dropped down from the strip
   await page.click('#group-raw');
   await expect(page.locator('#group-raw-members')).toBeVisible();
   await expect.poll(() => iconText(page, '#group-raw-members div')).toEqual(['[[rawMeat]] Сырое мясо: 6', '[[rawFish]] Сырая рыба: 2', '[[wheat]] Зерно: 4', '[[worms]] Червяки: 0']);

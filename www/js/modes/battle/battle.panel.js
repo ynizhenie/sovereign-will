@@ -1,15 +1,15 @@
 // The battle's panel: categories, factions, what to place, armour and shield; its buttons
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { setRichText } from '../../ui/index.js';
-import { onTap } from '../../engine/platform/index.js';
+import { closeSheet, hidePlacing, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
+import { onTap, t } from '../../engine/platform/index.js';
+import { game } from '../../engine/world/index.js';
 import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
 import { battle, clearBattleSide, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
-  document.querySelectorAll('[data-battle-category]').forEach(b => b.classList.toggle('active', b.dataset.battleCategory === battle.category));
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[/** @type {'armor' | 'shield'} */ (b.dataset.battleGear)]));
   // the faction sub-tabs
   const factions = document.getElementById('battle-factions');
@@ -25,13 +25,16 @@ export function renderBattlePanel() {
   panel.dataset.category = battle.category;
   const presets = document.getElementById('battle-presets');
   presets.innerHTML = '';
+  // picked: the sheet steps aside for the field, the chip says what a tap places
+  let chosen = '';
   const add = (id, active, label, pick) => {
     const button = document.createElement('button');
     button.className = 'btn' + (active ? ' active' : '');
     button.dataset.preset = id;
     setRichText(button, label);
-    onTap(button, () => { pick(); renderBattlePanel(); });
+    onTap(button, () => { pick(); closeSheet(); renderBattlePanel(); });
     presets.appendChild(button);
+    if (active) chosen = button.innerHTML;
   };
   if (battle.category === 'buildings') {
     for (const id of getBattleBuildings()) {
@@ -48,6 +51,19 @@ export function renderBattlePanel() {
   }
   panel.dataset.phase = battle.phase;
   document.body.dataset.battlePhase = battle.phase;
+  if (battle.phase === 'setup') showPlacing(chosen);
+  else { hidePlacing(); closeSheet(); }
+  updateBattleTop();
+}
+
+// The top bar's middle: placing, fighting or who won, and how many stand on each side
+export function updateBattleTop() {
+  const label = battle.phase === 'fight' ? t('battle.phase.fight')
+    : battle.phase === 'result' ? t(battle.winner === 'green' ? 'battle.greenWins' : battle.winner === 'red' ? 'battle.redWins' : 'battle.drawWins')
+    : t('battle.phase.setup');
+  document.getElementById('battle-phase-label').textContent = label;
+  document.getElementById('battle-count-green').textContent = String(game.settlers.length);
+  document.getElementById('battle-count-red').textContent = String(game.enemies.length);
 }
 
 // Switching category or faction picks the first unit shown (so a tap never places from another one)
@@ -79,6 +95,10 @@ export function initBattlePanel() {
   onTap(document.getElementById('battle-cancel'), cancelBattleFight);
   onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
   onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
-  document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => setBattleCategory(b.dataset.battleCategory)));
+  // the dock: a category's sheet opens (again: closes)
+  document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => {
+    setBattleCategory(b.dataset.battleCategory);
+    toggleSheet('battle', b.dataset.battleCategory);
+  }));
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { const gear = /** @type {'armor' | 'shield'} */ (b.dataset.battleGear); battle[gear] = !battle[gear]; renderBattlePanel(); }));
 }

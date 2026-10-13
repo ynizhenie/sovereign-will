@@ -179,6 +179,7 @@
 <div id="pause-menu" class="menu-overlay" hidden>
     <div class="main-menu-content">
         <h1 data-i18n="pause.title">Paused</h1>
+        <div class="pause-seed"><span data-i18n="pause.seed">World seed</span>: <span id="hud-seed">-</span></div>
         <button id="resume-button" class="menu-button menu-button-primary" data-i18n="pause.continue">Continue</button>
         <button id="save-game-button" class="menu-button" data-i18n="save.button">Save game</button>
         <button id="exit-to-menu-button" class="menu-button" data-i18n="pause.exit">Exit to main menu</button>
@@ -187,38 +188,10 @@
 
 <div id="game-container">
 
-  <div id="top-bar">
-    <div class="top-wave">
-      <i class="ic ic-water"></i> <span data-i18n="top.wave">Wave</span> <span id="wave-num">1</span> (<span id="wave-timer">90</span><span data-i18n="top.seconds">s</span>)
-    </div>
-
-    <div class="battle-top">
-      <button class="btn" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
-      <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
-    </div>
-
-    <button class="btn-pause-square" id="btn-pause-toggle" data-action="togglePause" data-i18n-title="pause.pauseHint" title="Pause [Space]"><i class="ic ic-pause"></i></button>
-
-    <div class="top-actions">
-      <button class="btn btn-unpossess" data-action="switchPossession"><i class="ic ic-eye"></i></button>
-    </div>
-
-  </div>
-
-  <!-- battle mode: Fight (and Cancel during a fight) in the middle under the pause button (#166) -->
-  <div id="battle-fight-bar">
-    <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-    <button class="btn btn-disarm" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
-  </div>
-
+  <!-- the map fills the screen; the bars and sheets lie over it, so opening one never resizes the map -->
   <div id="main-area">
     <div id="toast-notification"></div>
     <div id="fps-counter" hidden></div>
-
-    <div class="hud-seed-box">
-      <span id="hud-seed">-</span>
-    </div>
-
 
     <canvas id="gameCanvas"></canvas>
 
@@ -235,57 +208,45 @@
         </div>
       </div>
     </div>
-
-    <button class="btn active" id="btn-interact" data-action="setMode" data-arg="interact">
-      <span class="fab-icon"><i class="ic ic-point"></i></span>
-      <span class="fab-label" data-i18n="top.point">Point</span>
-    </button>
   </div>
 
-  <!-- battle mode (battle.js): presets to place, Fight, Clear, back to the menu -->
-  <div id="battle-panel">
-    <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: yours on the left, enemies on the right</div>
-    <div class="battle-row">
-      <button class="fps-option" data-battle-category="own" data-i18n="battle.cat.own">Player</button>
-      <button class="fps-option" data-battle-category="enemy" data-i18n="battle.cat.enemy">Enemies</button>
-      <button class="fps-option" data-battle-category="buildings" data-i18n="battle.cat.buildings">Buildings</button>
+  <!-- the top bar: pause on the left, what the mode is at in the middle, its actions on the right -->
+  <div id="top-bar" class="hud-layer">
+    <button class="btn-pause-square" id="btn-pause-toggle" data-action="togglePause" data-i18n-title="pause.pauseHint" title="Pause [Space]"><i class="ic ic-pause"></i></button>
+
+    <div class="top-center">
+      <!-- Endless: the wave, the time to it, and a bar running down to it -->
+      <div class="top-wave" id="top-wave">
+        <span class="top-wave-name"><i class="ic ic-swords"></i> <span data-i18n="top.wave">Wave</span> <span id="wave-num">1</span></span>
+        <span class="top-wave-time" id="wave-timer">1:30</span>
+        <span class="top-wave-bar"><span id="wave-progress"></span></span>
+      </div>
+      <!-- battle: placing or fighting, and how many on each side -->
+      <div class="top-battle">
+        <span id="battle-phase-label" data-i18n="battle.phase.setup">Placing</span>
+        <span class="battle-score"><b class="green" id="battle-count-green">0</b> : <b class="red" id="battle-count-red">0</b></span>
+      </div>
+      <!-- the editor: the map's name and size (a tap opens the map's sheet) -->
+      <button class="top-editor" data-action="toggleSheet" data-arg="editor-map">
+        <span id="editor-map-label"></span> <b id="editor-top-size">40×40</b>
+      </button>
     </div>
-    <div class="battle-row" id="battle-factions"></div>
-    <div class="battle-row battle-gear">
-      <button class="fps-option" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
-      <button class="fps-option" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
+
+    <div class="top-actions">
+      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
+      <button class="btn btn-disarm" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
+      <button class="btn btn-unpossess" data-action="switchPossession" data-i18n-title="top.possess" title="Possess [Tab]"><i class="ic ic-eye"></i></button>
     </div>
-    <div id="battle-presets" class="battle-presets"></div>
   </div>
 
-  <div id="editor-panel">
-    <div class="battle-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
-    <div class="editor-toolbar">
-      <button class="fps-option" id="editor-erase" data-i18n="editor.eraser">Eraser</button>
-      <span class="editor-brush"><span data-i18n="editor.brush">Brush:</span>
-        <button class="fps-option active" data-brush="1">1</button><button class="fps-option" data-brush="3">3×3</button></span>
-      <button class="fps-option" id="editor-resize"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></button>
-    </div>
-    <div id="editor-resize-panel" class="editor-resize" hidden>
-      <span data-i18n="editor.side.top">Top</span><button class="fps-option" data-resize="top:1">+</button><button class="fps-option" data-resize="top:-1">−</button>
-      <span data-i18n="editor.side.bottom">Bottom</span><button class="fps-option" data-resize="bottom:1">+</button><button class="fps-option" data-resize="bottom:-1">−</button>
-      <span data-i18n="editor.side.left">Left</span><button class="fps-option" data-resize="left:1">+</button><button class="fps-option" data-resize="left:-1">−</button>
-      <span data-i18n="editor.side.right">Right</span><button class="fps-option" data-resize="right:1">+</button><button class="fps-option" data-resize="right:-1">−</button>
-    </div>
-    <div class="editor-toolbar">
-      <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
-      <button class="fps-option" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
-    </div>
-    <div class="battle-row">
-      <button class="fps-option" data-editor-category="terrain" data-i18n="editor.cat.terrain">Terrain</button>
-      <button class="fps-option" data-editor-category="nature" data-i18n="editor.cat.nature">Nature</button>
-      <button class="fps-option" data-editor-category="ore" data-i18n="editor.cat.ore">Ore</button>
-      <button class="fps-option" data-editor-category="buildings" data-i18n="editor.cat.buildings">Buildings</button>
-    </div>
-    <div id="editor-tools" class="battle-presets"></div>
+  <!-- Endless: the main stock under the top bar; a tap drops down all of it -->
+  <button id="resource-strip" class="hud-layer" data-action="toggleResources"></button>
+  <div id="resources-panel" class="hud-layer">
+    <div class="resources-grid" id="resources-hud"></div>
   </div>
 
-  <div id="bottom-panel">
+  <!-- over the bottom of the map, above the dock: the selected settler, what's being placed, the open sheet -->
+  <div id="hud-bottom" class="hud-layer">
 
     <div id="selected-bar" class="selected-unit-box">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -296,89 +257,159 @@
       <div id="selected-info" hidden></div>
     </div>
 
-    <div class="resources-grid" id="resources-hud"></div>
-
-    <div class="recruit-row" id="recruit-row"></div>
-
-    <div class="tab-navigation">
-      <button class="tab-btn active" data-action="switchTab" data-arg="tab-build" data-i18n="tab.build">[[build]] Building</button>
-      <button class="tab-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-i18n="tab.farming">[[wheat]] Farming</button>
-      <button class="tab-btn" id="tab-btn-blight" data-action="switchTab" data-arg="tab-blight" data-i18n="tab.blight" hidden>[[rot]] Blight</button>
-      <button class="tab-btn" data-action="switchTab" data-arg="tab-tools" data-i18n="tab.tools">[[tools]] Tools</button>
-      <button class="tab-btn" data-action="switchTab" data-arg="tab-weapons" data-i18n="tab.weapons">[[swords]] Weapons</button>
+    <!-- a build (or zone, demolish, battle, editor) tool picked: its name; a tap opens its sheet again, × puts it down -->
+    <div id="placing-chip">
+      <button class="placing-what" id="placing-what" data-action="reopenSheet"></button>
+      <button class="placing-close" id="placing-close" data-action="stopPlacing"><i class="ic ic-close"></i></button>
     </div>
 
-    <div class="tab-content-container">
+    <!-- the open sheet: its frame rises in and sinks away; inside, the sheet asked for -->
+    <div id="sheet-frame">
+      <!-- Endless: the colony's sheet, one tab at a time (the dock's buttons) -->
+      <div id="bottom-panel" class="hud-sheet" data-sheet="colony">
+        <div class="tab-content-container">
 
-      <div id="tab-build" class="tab-pane active">
-        <div id="build-actions"></div>
+          <div id="tab-build" class="tab-pane active">
+            <div id="build-actions"></div>
 
-        <div class="action-row">
-          <button class="btn btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
-          <button class="btn" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
+            <div class="action-row">
+              <button class="btn btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
+              <button class="btn" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
+            </div>
+          </div>
+
+          <div id="tab-farming" class="tab-pane">
+            <div class="panel-heading" data-i18n="panel.plant">Plant</div>
+            <div class="btn-grid-2col" id="farming-actions"></div>
+            <div class="panel-heading" data-i18n="panel.zones">Farm zones</div>
+            <div class="action-row">
+              <button class="btn" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
+              <button class="btn" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
+              <button class="btn" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
+              <button class="btn" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
+            </div>
+          </div>
+
+          <div id="tab-blight" class="tab-pane">
+            <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
+            <div class="action-row">
+              <button class="btn" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
+              <button class="btn" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
+            </div>
+          </div>
+
+          <!-- people: hiring first, then their tools and gear -->
+          <div id="tab-tools" class="tab-pane">
+            <div class="panel-heading" data-i18n="panel.hire">Hire</div>
+            <div class="recruit-row" id="recruit-row"></div>
+
+            <div class="panel-heading" data-i18n="panel.tools">Tools</div>
+            <div class="btn-grid-2col" id="tool-actions"></div>
+
+            <div class="panel-heading" data-i18n="panel.gear">Gear</div>
+            <div class="btn-grid-2col gear-actions">
+              <button class="btn" id="btn-backpack" data-action="orderGear" data-arg="backpack"></button>
+              <button class="btn" id="btn-wateringCan" data-action="orderGear" data-arg="wateringCan"></button>
+            </div>
+
+            <div class="action-row">
+              <button class="btn btn-disarm" data-action="orderGearOff" data-arg="backpack" data-i18n="btn.backpackOff">[[no]] Take backpack apart</button>
+              <button class="btn btn-disarm" data-action="orderGearOff" data-arg="wateringCan" data-i18n="btn.wateringCanOff">[[no]] Take watering can apart</button>
+              <button class="btn btn-disarm" data-action="disarmSettler" data-arg="tool" data-i18n="btn.disarmTool">[[no]] Take tool away</button>
+            </div>
+          </div>
+
+          <div id="tab-weapons" class="tab-pane">
+            <div class="panel-heading" data-i18n="panel.weapons">Weapons</div>
+            <div class="btn-grid-2col" id="weapon-actions"></div>
+            <div class="panel-heading" data-i18n="panel.arrows">Arrows</div>
+            <div class="btn-grid-2col" id="special-actions">
+              <button class="btn" id="btn-craft-arrows" data-action="craftArrows"></button>
+            </div>
+
+            <div class="panel-heading" data-i18n="panel.armour">Armour</div>
+            <div class="btn-grid-2col gear-actions">
+              <button class="btn" id="btn-armor" data-action="orderGear" data-arg="armor"></button>
+              <button class="btn" id="btn-shield" data-action="orderGear" data-arg="shield"></button>
+            </div>
+
+            <div class="action-row">
+              <button class="btn btn-disarm" data-action="orderGearOff" data-arg="armor" data-i18n="btn.armorOff">[[no]] Take armour apart</button>
+              <button class="btn btn-disarm" data-action="disarmSettler" data-arg="weapon" data-i18n="btn.disarmWeapon">[[no]] Take weapon away</button>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <div id="tab-farming" class="tab-pane">
-        <div class="panel-heading" data-i18n="panel.plant">Plant</div>
-        <div class="btn-grid-2col" id="farming-actions"></div>
-        <div class="panel-heading" data-i18n="panel.zones">Farm zones</div>
-        <div class="action-row">
-          <button class="btn" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
-          <button class="btn" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
-          <button class="btn" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
-          <button class="btn" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
+      <!-- battle mode (battle.js): who to place (the dock picks yours, the enemies or buildings) -->
+      <div id="battle-panel" class="hud-sheet" data-sheet="battle">
+        <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: yours on the left, enemies on the right</div>
+        <div class="battle-row" id="battle-factions"></div>
+        <div class="battle-row battle-gear">
+          <button class="fps-option" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
+          <button class="fps-option" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
+        </div>
+        <div id="battle-presets" class="battle-presets"></div>
+      </div>
+      <div class="hud-sheet" data-sheet="battle-clear">
+        <div class="battle-row">
+          <button class="btn" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
+          <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
         </div>
       </div>
 
-      <div id="tab-blight" class="tab-pane">
-        <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
-        <div class="action-row">
-          <button class="btn" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
-          <button class="btn" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
+      <!-- the map editor: what to put down (the dock picks the category), and the map's own settings -->
+      <div id="editor-panel" class="hud-sheet" data-sheet="editor">
+        <div class="battle-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
+        <div id="editor-tools" class="battle-presets"></div>
+      </div>
+      <div class="hud-sheet" data-sheet="editor-map">
+        <div class="editor-toolbar">
+          <span class="editor-brush"><span data-i18n="editor.brush">Brush:</span>
+            <button class="fps-option active" data-brush="1">1</button><button class="fps-option" data-brush="3">3×3</button></span>
+          <button class="fps-option" id="editor-resize"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></button>
+        </div>
+        <div id="editor-resize-panel" class="editor-resize" hidden>
+          <span data-i18n="editor.side.top">Top</span><button class="fps-option" data-resize="top:1">+</button><button class="fps-option" data-resize="top:-1">−</button>
+          <span data-i18n="editor.side.bottom">Bottom</span><button class="fps-option" data-resize="bottom:1">+</button><button class="fps-option" data-resize="bottom:-1">−</button>
+          <span data-i18n="editor.side.left">Left</span><button class="fps-option" data-resize="left:1">+</button><button class="fps-option" data-resize="left:-1">−</button>
+          <span data-i18n="editor.side.right">Right</span><button class="fps-option" data-resize="right:1">+</button><button class="fps-option" data-resize="right:-1">−</button>
+        </div>
+        <div class="editor-toolbar">
+          <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
+          <button class="fps-option" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
         </div>
       </div>
-
-      <div id="tab-tools" class="tab-pane">
-        <div class="panel-heading" data-i18n="panel.tools">Tools</div>
-        <div class="btn-grid-2col" id="tool-actions"></div>
-
-        <div class="panel-heading" data-i18n="panel.gear">Gear</div>
-        <div class="btn-grid-2col gear-actions">
-          <button class="btn" id="btn-backpack" data-action="orderGear" data-arg="backpack"></button>
-          <button class="btn" id="btn-wateringCan" data-action="orderGear" data-arg="wateringCan"></button>
-        </div>
-
-        <div class="action-row">
-          <button class="btn btn-disarm" data-action="orderGearOff" data-arg="backpack" data-i18n="btn.backpackOff">[[no]] Take backpack apart</button>
-          <button class="btn btn-disarm" data-action="orderGearOff" data-arg="wateringCan" data-i18n="btn.wateringCanOff">[[no]] Take watering can apart</button>
-          <button class="btn btn-disarm" data-action="disarmSettler" data-arg="tool" data-i18n="btn.disarmTool">[[no]] Take tool away</button>
-        </div>
-      </div>
-
-      <div id="tab-weapons" class="tab-pane">
-        <div class="panel-heading" data-i18n="panel.weapons">Weapons</div>
-        <div class="btn-grid-2col" id="weapon-actions"></div>
-        <div class="panel-heading" data-i18n="panel.arrows">Arrows</div>
-        <div class="btn-grid-2col" id="special-actions">
-          <button class="btn" id="btn-craft-arrows" data-action="craftArrows"></button>
-        </div>
-
-        <div class="panel-heading" data-i18n="panel.armour">Armour</div>
-        <div class="btn-grid-2col gear-actions">
-          <button class="btn" id="btn-armor" data-action="orderGear" data-arg="armor"></button>
-          <button class="btn" id="btn-shield" data-action="orderGear" data-arg="shield"></button>
-        </div>
-
-        <div class="action-row">
-          <button class="btn btn-disarm" data-action="orderGearOff" data-arg="armor" data-i18n="btn.armorOff">[[no]] Take armour apart</button>
-          <button class="btn btn-disarm" data-action="disarmSettler" data-arg="weapon" data-i18n="btn.disarmWeapon">[[no]] Take weapon away</button>
-        </div>
-      </div>
-
     </div>
 
   </div>
+
+  <!-- the dock: a row of big buttons, one per sheet (a tap opens it, again closes it); each mode its own row -->
+  <nav id="dock" class="hud-layer">
+    <div class="dock-row" data-hud-mode="endless">
+      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-build" data-dock="colony:tab-build"><i class="ic ic-build"></i><span data-i18n="dock.build">Build</span></button>
+      <button class="tab-btn dock-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-dock="colony:tab-farming"><i class="ic ic-wheat"></i><span data-i18n="dock.farming">Farm</span></button>
+      <button class="tab-btn dock-btn" id="tab-btn-blight" data-action="switchTab" data-arg="tab-blight" data-dock="colony:tab-blight" hidden><i class="ic ic-rot"></i><span data-i18n="dock.blight">Blight</span></button>
+      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-tools" data-dock="colony:tab-tools"><i class="ic ic-worker"></i><span data-i18n="dock.people">People</span></button>
+      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-weapons" data-dock="colony:tab-weapons"><i class="ic ic-swords"></i><span data-i18n="dock.arsenal">Arsenal</span></button>
+      <button class="dock-btn dock-point active" id="btn-interact" data-action="pointMode"><i class="ic ic-point"></i><span data-i18n="top.point">Point</span></button>
+    </div>
+    <div class="dock-row" data-hud-mode="battle">
+      <button class="dock-btn" data-battle-category="own" data-dock="battle:own"><i class="ic ic-worker"></i><span data-i18n="battle.cat.own">Player</span></button>
+      <button class="dock-btn" data-battle-category="enemy" data-dock="battle:enemy"><i class="ic ic-swords"></i><span data-i18n="battle.cat.enemy">Enemies</span></button>
+      <button class="dock-btn" data-battle-category="buildings" data-dock="battle:buildings"><i class="ic ic-build"></i><span data-i18n="battle.cat.buildings">Buildings</span></button>
+      <button class="dock-btn" data-action="toggleSheet" data-arg="battle-clear" data-dock="battle-clear"><i class="ic ic-broom"></i><span data-i18n="dock.clear">Clear</span></button>
+    </div>
+    <div class="dock-row" data-hud-mode="editor">
+      <button class="dock-btn" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
+      <button class="dock-btn" data-editor-category="nature" data-dock="editor:nature"><i class="ic ic-tree"></i><span data-i18n="editor.cat.nature">Nature</span></button>
+      <button class="dock-btn" data-editor-category="ore" data-dock="editor:ore"><i class="ic ic-iron_ore"></i><span data-i18n="editor.cat.ore">Ore</span></button>
+      <button class="dock-btn" data-editor-category="buildings" data-dock="editor:buildings"><i class="ic ic-build"></i><span data-i18n="editor.cat.buildings">Buildings</span></button>
+      <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
+      <button class="dock-btn" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>
+    </div>
+  </nav>
 </div>
 
 <script type="module" src="js/app/boot.js"></script>

@@ -1,6 +1,6 @@
 // The necromancer's staff
 
-import { activeTab } from '../../../ui/index.js';
+import { isTabShown } from '../../../ui/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
@@ -23,7 +23,7 @@ export function drawBlight() {
     ctx.fillStyle = `rgba(74, 35, 90, ${0.28 * Math.max(0, share)})`;
     ctx.fillRect(bx - 15, by - 15, TILE_SIZE, TILE_SIZE);
   }
-  if (activeTab === 'tab-blight') game.blightZones.forEach(z => {
+  if (isTabShown('tab-blight')) game.blightZones.forEach(z => {
     if (z.done) return;
     ctx.strokeStyle = 'rgba(187, 143, 206, 0.8)'; ctx.lineWidth = 1;
     ctx.strokeRect(z.x - 13.5, z.y - 13.5, TILE_SIZE - 3, TILE_SIZE - 3);

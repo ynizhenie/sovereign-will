@@ -10,8 +10,8 @@ import { getResourceAmount, syncFoodMix } from '../domains/colony/storage/index.
 import { isForPlayerFaction } from '../domains/factions/index.js';
 
 export function updateUI() {
-  document.getElementById('wave-num').innerText = String(game.waveNum);
-  document.getElementById('wave-timer').innerText = String(Math.ceil(game.waveTimer));
+  updateWave();
+  updateResourceStrip();
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
     if (resourceElement) resourceElement.innerText = String(Math.floor(getResourceAmount(resourceKey)));
@@ -71,6 +71,46 @@ export function updateUI() {
     }
   }
 
+}
+
+// The wave in the middle of the top bar: its number, the time to the next as m:ss, a bar running down to
+// it; the last seconds pulse, and a new wave shakes it
+let shownWave = 0;
+function updateWave() {
+  const left = Math.max(0, Math.ceil(game.waveTimer));
+  document.getElementById('wave-num').innerText = String(game.waveNum);
+  document.getElementById('wave-timer').innerText = Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+  const share = game.waveInterval > 0 && Number.isFinite(game.waveTimer) ? game.waveTimer / game.waveInterval : 0;
+  document.getElementById('wave-progress').style.width = `${Math.max(0, Math.min(1, share)) * 100}%`;
+  const box = document.getElementById('top-wave');
+  box.classList.toggle('soon', left <= 10);
+  if (game.waveNum !== shownWave) {
+    if (shownWave && game.waveNum > shownWave) { box.classList.remove('arrived'); void box.offsetWidth; box.classList.add('arrived'); }
+    shownWave = game.waveNum;
+  }
+}
+
+// The strip under the top bar: the base, the settlers and the pinned resources (GAME_CONFIG.resourceGroups
+// pinned) of the player's faction. A tap drops down all of the stock (toggleResources)
+export function renderResourceStrip() {
+  const strip = document.getElementById('resource-strip');
+  if (!strip) return;
+  const chip = (icon, id, title) => `<span class="strip-chip" title="${escapeHtml(title)}">${iconHtml(icon)} <b id="${id}">0</b></span>`;
+  let html = chip('hall', 'strip-base', t('hud.base')) + chip('worker', 'strip-pop', t('hud.people'));
+  for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned && isForPlayerFaction(g))) {
+    const resource = GAME_CONFIG.resources[group.members[0]];
+    if (resource) html += chip(resource.icon || group.icon, `strip-${resource.id}`, resource.label);
+  }
+  strip.innerHTML = `${html}<span class="strip-more">▾</span>`;
+}
+
+function updateResourceStrip() {
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+  set('strip-base', String(Math.max(0, Math.ceil(townHall.hp))));
+  set('strip-pop', `${getCurrentPop()}/${getMaxPop()}`);
+  for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned)) {
+    set(`strip-${group.members[0]}`, String(Math.floor(getResourceAmount(group.members[0]))));
+  }
 }
 
 export function resourceHudId(resourceKey) {

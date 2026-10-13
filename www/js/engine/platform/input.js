@@ -219,10 +219,9 @@ function keepPageStill() {
   }, { passive: false });
   document.addEventListener("touchstart", function() {}, true);
   window.addEventListener('DOMContentLoaded', () => {
-    const uiElements = ['top-bar', 'bottom-panel', 'btn-interact', 'mobile-joystick'];
-  
-    uiElements.forEach(id => {
-      const el = document.getElementById(id);
+    const uiElements = [...document.querySelectorAll('.hud-layer'), document.getElementById('mobile-joystick')];
+
+    uiElements.forEach(el => {
       if (el) {
         el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
         el.addEventListener('touchend', (e) => e.stopPropagation(), { passive: true });

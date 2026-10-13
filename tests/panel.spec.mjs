@@ -4,7 +4,10 @@ import { openGame, iconText } from './helpers.mjs';
 test('opening a resource group does not change the panel size (#119)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  const panel = page.locator('#bottom-panel');
+  await page.click('#resource-strip'); // all of the stock, dropped down from the strip
+  const panel = page.locator('#resources-panel');
+  await expect(panel).toBeVisible();
+  await page.waitForTimeout(400); // done dropping down
   const before = await panel.boundingBox();
   await page.click('#group-food');
   await expect(page.locator('#group-food-members')).toBeVisible();

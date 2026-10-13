@@ -1,7 +1,7 @@
 // The start: texts and panel made, the canvas fitted, and the loop: the game in fixed steps of 1/60 s,
 // drawn as often as the frame rate setting allows
 
-import { renderConfigHud } from '../ui/index.js';
+import { renderConfigHud, syncHudMode } from '../ui/index.js';
 import { applyPageTexts, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
@@ -29,6 +29,7 @@ export function stepGame(dt) {
 
 export function gameLoop(now) {
   if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu
+  syncHudMode();
   if (typeof updateMusic === 'function') updateMusic();
   loop.stepTime += Math.min(0.25, (now - loop.lastTime) / 1000);
   loop.lastTime = now;

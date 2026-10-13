@@ -19,6 +19,7 @@ test('Food opens onto what it is made of; food without a kind tops up the scarce
   expect(Object.values(r.after).slice(1).reduce((a, b) => a + b, 0)).toBe(14);
   expect(r.spent.berries).toBe(0);
   expect(r.shown).toBe(String(r.spent.cookedMeat));
+  await page.click('#resource-strip'); // all of the stock, dropped down from the strip
   await page.click('#group-food');
   await expect(page.locator('#group-food-members')).toBeVisible();
   await expect(page.locator('#group-food-members div')).toHaveCount(5); // no Provisions any more (#169)
