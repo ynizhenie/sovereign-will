@@ -41,14 +41,24 @@ export function gameLoop(now) {
   }
   if (steps === MAX_STEPS_PER_FRAME) loop.stepTime = 0;
 
-  const limit = Number(loop.frameRate);
-  if (!limit || now - loop.lastDrawn >= 1000 / limit - 2) {
-    loop.lastDrawn = now;
+  if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     render();
     countFrame(now);
   }
   requestAnimationFrame(gameLoop);
+}
+
+// Is a frame to be drawn at `now`, under the frame-rate setting? Each one is due a whole interval after the
+// last one was due, not after it was drawn: drawn after, a 60 cap gave every third refresh on a 144 Hz
+// screen (48 fps) and every other one at 90 Hz (45) (#197). After a hitch it doesn't rush to catch up.
+export function frameDue(now) {
+  const limit = Number(loop.frameRate);
+  if (!limit) return true;
+  const interval = 1000 / limit;
+  if (now - loop.lastDrawn < interval - 1) return false;
+  loop.lastDrawn = Math.max(loop.lastDrawn + interval, now - interval);
+  return true;
 }
 
 // ---- FPS counter (Settings): frames drawn over the last second
