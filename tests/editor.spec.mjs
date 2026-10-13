@@ -8,9 +8,10 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
   await page.locator('[data-editor-size="30"]').click();
   await page.locator('#editor-new-empty').click();
+  await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock
+  await expect(page.locator('[data-arg="tab-build"]')).toBeHidden();
+  await page.locator('[data-editor-category="terrain"]').click(); // its sheet
   await expect(page.locator('#editor-panel')).toBeVisible();
-  await expect(page.locator('#bottom-panel')).toBeHidden();
-  await page.locator('[data-editor-category="terrain"]').click();
   await expect.poll(() => iconText(page, '#editor-tools [data-tool="water"]')).toEqual(['[[water]] Вода']);
   await page.locator('[data-editor-category="buildings"]').click();
   await expect(page.locator('#editor-tools [data-tool="wall_stone"]')).toContainText('Каменная стена');
@@ -28,6 +29,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.mouse.click(spot.x, spot.y);
   expect(await page.evaluate(() => waterTiles.length)).toBe(1);
 
+  await page.locator('[data-dock="editor-map"]').click(); // the map's sheet: its name, size, save
   await page.locator('#editor-save').click();
   await expect.poll(() => iconText(page, '#toast-notification')).toEqual(['[[warn]] Сначала назовите карту']);
   await page.locator('#editor-name').fill('Озерцо');

@@ -29,13 +29,13 @@ export const resourcesConfig = {
   // of one shows as that resource; resources in no group get their own tile. `held` groups count what
   // settlers carry instead (a category's items, 'all' but the bare fist, or listed ids).
   resourceGroups: [
-    // factions: only these factions see it (the undead have no food)
-    { id: 'bones', members: ['bones'], factions: ['undead'] }, // the undead's own, first
+    // factions: only these factions see it (the undead have no food); pinned: on the strip under the top bar
+    { id: 'bones', members: ['bones'], factions: ['undead'], pinned: true }, // the undead's own, first
     { id: 'rot', members: ['rot'], factions: ['undead'] },
-    { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'] }, // Food, opening onto what it's made of
+    { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'], pinned: true }, // Food, opening onto what it's made of
     { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food
-    { id: 'wood', members: ['wood'] },
-    { id: 'stone', members: ['stone'] },
+    { id: 'wood', members: ['wood'], pinned: true },
+    { id: 'stone', members: ['stone'], pinned: true },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
     { id: 'materials', icon: 'stone', members: ['coal', 'ironOre', 'iron', 'leather'] },
     { id: 'supplies', members: ['arrows'] },

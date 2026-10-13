@@ -31,67 +31,22 @@ button:focus-visible { outline: 2px solid #46b8da; outline-offset: 1px; }
 input, textarea { user-select: text; -webkit-user-select: text; }
 
 #game-container {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
   background: #111;
+  /* the HUD's sizes and motion: the menu's own easing (title-drop, menu-rise), the buttons' spring */
+  --top-h: calc(50px + env(safe-area-inset-top));
+  --dock-h: calc(60px + env(safe-area-inset-bottom));
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-#top-bar {
-  flex: 0 0 46px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #181a1f;
-  padding: 0 12px;
-  border-bottom: 2px solid #2c3e50;
-  color: #fff;
-  z-index: 20;
-  position: relative;
-}
-
-.top-wave {
-  font-weight: bold;
-  font-size: 13px;
-  color: #e74c3c;
-}
-
-.btn-pause-square {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 36px;
-  height: 36px;
-  background: #c0392b;
-  border: 1px solid #e74c3c;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  color: #fff;
-  padding: 0;
-  box-sizing: border-box;
-  overflow: hidden;
-  user-select: none;
-  flex-shrink: 0;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.top-actions .btn {
-  padding: 6px 10px;
-  font-size: 13px;
-}
-
+/* the map fills the screen; the HUD lies over it, so nothing opening or closing resizes the map */
 #main-area {
-  flex: 1 1 auto;
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   background: #000;
   display: flex;
@@ -113,12 +68,6 @@ canvas {
   -webkit-user-select: none;
 }
 
-/* the seed in the top-right corner, where the zoom buttons were (#182) */
-.hud-seed-box {
-  position: absolute; top: 8px; right: 10px; z-index: 5; font-size: 10px; color: rgba(255, 255, 255, 0.35);
-  pointer-events: none; user-select: none; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
 /* ---- Buttons answer the hand: every kind the same way */
 button {
   touch-action: manipulation;
@@ -130,11 +79,10 @@ button {
    lifted a pixel */
 @media (hover: hover) {
   button:not(:disabled):hover { filter: brightness(1.15); border-color: rgba(255, 255, 255, 0.4); }
-  button:not(:disabled):not(.btn-pause-square):not(.color-swatch):hover { transform: translateY(-1px); }
-  .btn-pause-square:hover { transform: translateX(-50%) translateY(-1px); }
+  button:not(:disabled):not(.color-swatch):hover { transform: translateY(-1px); }
 }
 /* pressed: in at once, a little smaller and darker */
-button:not(:disabled):not(.btn-pause-square):active { transform: scale(0.95); filter: brightness(0.85); transition-duration: 0.05s; }
+button:not(:disabled):active { transform: scale(0.95); filter: brightness(0.85); transition-duration: 0.05s; }
 /* chosen (a faction, a difficulty, a tab...): a soft glow around it */
 .btn.active, .tab-btn.active, .fps-option.active, .difficulty-option.active, .faction-option.active,
 .wave-option.active, .map-option.active, .item-row .item-name.active {
@@ -152,72 +100,6 @@ button.btn-no { animation: btn-no 0.35s ease; }
 @media (pointer: coarse) {
   .btn, .tab-btn, .fps-option, .difficulty-option, .faction-option, .wave-option, .map-option { min-height: 36px; }
   .menu-button, #play-button { min-height: 44px; }
-}
-
-.btn-pause-square.paused {
-  background: #27ae60;
-  border-color: #2ecc71;
-}
-
-.btn-pause-square:active {
-  transform: translateX(-50%) scale(0.92);
-  filter: brightness(1.3);
-}
-
-#btn-interact {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  background: #2c3e50;
-  color: white;
-  border: 2px solid #34495e;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 30;
-  padding: 0;
-  cursor: pointer;
-}
-
-#btn-interact.active {
-  background: #27ae60;
-  border-color: #2ecc71;
-  box-shadow: 0 0 12px rgba(39, 174, 96, 0.8);
-}
-.fab-icon { font-size: 20px; line-height: 1; }
-.fab-label { font-size: 9px; font-weight: bold; margin-top: 2px; }
-
-#bottom-panel {
-  position: relative;
-  flex: 0 0 auto;
-  background: #16171a;
-  border-top: 2px solid #2a2d34;
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.6);
-}
-
-.selected-unit-box {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 6px;
-  z-index: 35;
-  white-space: nowrap;
-
-  background: #22242a;
-  border: 1px solid #383c48;
-  border-radius: 6px;
-  padding: 4px 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
 .resources-grid {
@@ -289,61 +171,12 @@ button.btn-no { animation: btn-no 0.35s ease; }
   font-size: 15px !important;
 }
 
-.tab-navigation {
-  display: flex;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.tab-btn {
-  flex: 1;
-  background: #252830;
-  color: #8a91a0;
-  border: 1px solid #353a46;
-  padding: 5px 0;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: bold;
-  cursor: pointer;
-  text-align: center;
-}
-.tab-btn.active {
-  background: #2e6da4;
-  color: #fff;
-  border-color: #46b8da;
-}
-
-.tab-content-container {
-  height: 115px;
-  min-height: 0;
-  max-height: 115px;
-  flex: 0 0 115px;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
-  background: #1f2127;
-  border: 1px solid #2d313b;
-  border-radius: 6px;
-  padding: 5px;
-  padding-bottom: 25px;
-  box-sizing: border-box;
-}
-
 .tab-pane {
   display: none;
 }
 
 .tab-pane.active {
   display: block;
-  padding-bottom: 20px;
-}
-
-.tab-pane::after {
-  content: "";
-  display: block;
-  height: 25px;
-  width: 100%;
 }
 
 .btn {
@@ -397,7 +230,7 @@ button.btn-no { animation: btn-no 0.35s ease; }
 
 #toast-notification {
   position: absolute;
-  top: 15px;
+  top: calc(var(--top-h) + 48px); /* under the strip of the main stock */
   left: 50%;
   transform: translateX(-50%);
   background: rgba(192, 57, 43, 0.95);
@@ -417,7 +250,7 @@ button.btn-no { animation: btn-no 0.35s ease; }
 
 #mobile-joystick {
   position: absolute;
-  bottom: 24px;
+  bottom: calc(var(--dock-h) + 24px);
   left: 24px;
   width: 120px;
   height: 120px;
@@ -443,15 +276,6 @@ button.btn-no { animation: btn-no 0.35s ease; }
 }
 
 @media (min-width: 768px) {
-  .tab-content-container { padding-bottom: 6px; }
-
-  .tab-pane.active {
-    padding-bottom: 0;
-  }
-  .tab-pane::after {
-    display: none;
-  }
-
   .resources-grid, .resource-group-members {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
@@ -499,8 +323,7 @@ body.menu-world #gameCanvas { filter: blur(3px) brightness(0.72) saturate(0.8); 
 @keyframes menu-rise { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
 #main-menu.intro .menu-title span { display: inline-block; animation: title-drop 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1s both; }
 #main-menu.intro .main-menu-content[data-screen="home"] { animation: menu-rise 0.6s ease-out 1.7s both; }
-body.menu-world #top-bar, body.menu-world #bottom-panel, body.menu-world .hud-seed-box, body.menu-world #btn-interact,
-body.menu-world #mobile-joystick, body.menu-world #defeat-overlay, body.menu-world #battle-fight-bar { display: none !important; }
+body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: none !important; }
 #main-menu .main-menu-content { position: relative; z-index: 1; flex-shrink: 0; }
 
 .main-menu-content {
@@ -680,7 +503,7 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay, body.menu-wor
 
 #fps-counter {
   position: absolute;
-  top: 6px;
+  top: calc(var(--top-h) + 6px);
   left: 10px;
   z-index: 6;
   font: bold 11px monospace;
@@ -757,40 +580,11 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay, body.menu-wor
   border-color: #46b8da;
 }
 
-/* battle mode (#38): its own panel instead of the colony's */
-#battle-panel {
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  background: #16171a;
-  border-top: 1px solid #2a2d34;
-}
-body.battle-mode #battle-panel { display: flex; }
-body.battle-mode #bottom-panel,
-body.battle-mode .top-wave,
-body.battle-mode #btn-interact,
-body.battle-mode #hud-seed { display: none; }
-#battle-panel[data-phase="fight"] .battle-presets,
-#battle-panel[data-phase="fight"] .battle-row,
-body[data-battle-phase="fight"] .battle-top .btn { opacity: 0.4; pointer-events: none; }
-#battle-fight-bar { display: none; position: absolute; top: 52px; left: 50%; transform: translateX(-50%); z-index: 40; }
-body.battle-mode #battle-fight-bar { display: block; }
-#battle-fight-bar .btn { padding: 6px 14px; font-size: 13px; }
-#battle-cancel, body[data-battle-phase="fight"] #battle-fight { display: none; }
-body[data-battle-phase="fight"] #battle-cancel { display: inline-block; }
-body[data-battle-phase="result"] #battle-fight-bar { visibility: hidden; }
-/* the eye (possess) only while fighting (#166) */
-body.battle-mode:not([data-battle-phase="fight"]) .top-actions { visibility: hidden; }
-/* the battle's Clear and Fight buttons in the top bar (#153) */
-.battle-top { display: none; gap: 4px; }
-body.battle-mode .battle-top { display: flex; }
-.battle-top .btn { padding: 5px 6px; font-size: 11px; white-space: nowrap; }
-/* the panel keeps its height whatever the category (#153) */
-#battle-presets, #editor-tools { height: 150px; max-height: none; align-content: start; }
+/* battle mode (#38) and the map editor (#37): their own sheets and dock rows (the HUD, below) */
 .battle-row { display: flex; gap: 4px; }
-.battle-row .fps-option { flex: 1; padding: 6px 0; }
-#battle-panel:not([data-category="own"]) .battle-gear { visibility: hidden; }
+.battle-row > * { flex: 1; }
+.battle-row .fps-option { padding: 6px 0; }
+#battle-panel:not([data-category="own"]) .battle-gear { display: none; }
 .battle-hint {
   font-size: 11px;
   color: #8a91a0;
@@ -800,8 +594,6 @@ body.battle-mode .battle-top { display: flex; }
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
-  max-height: 150px;
-  overflow-y: auto;
 }
 .battle-presets .btn {
   font-size: 11px;
@@ -810,22 +602,6 @@ body.battle-mode .battle-top { display: flex; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* map editor (#37): its own panel, like battle mode */
-#editor-panel {
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  background: #16171a;
-  border-top: 1px solid #2a2d34;
-}
-body.editor-mode #editor-panel { display: flex; }
-body.editor-mode #bottom-panel,
-body.editor-mode .top-wave,
-body.editor-mode .top-actions,
-body.editor-mode #btn-interact,
-body.editor-mode #hud-seed { display: none; }
 #editor-tools { grid-auto-rows: minmax(30px, auto); }
 .editor-toolbar { display: flex; align-items: center; gap: 6px; }
 .editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
@@ -943,26 +719,247 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 .selected-unit-box.has-settler > div:first-child > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .selected-unit-box.has-settler #selected-info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 15px; line-height: 15px; }
 
-/* on a phone the bottom panel stays compact (#188): tighter tiles, the hire buttons in one row,
-   lower tabs and a shorter tab area */
+/* on a phone the sheets stay compact (#188): tighter tiles, the hire buttons in one row */
 @media (max-width: 767px) {
-  #bottom-panel { padding: 4px 6px; gap: 3px; }
   .resources-grid div, .resource-group-members div { padding: 2px 2px; line-height: 1.25; }
-  .recruit-row { flex-wrap: nowrap; margin-bottom: 0; }
+  .recruit-row { flex-wrap: nowrap; }
   .recruit-row .btn { padding: 4px 5px; font-size: 10px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .tab-btn { padding: 3px 0; font-size: 10.5px; }
-  .tab-content-container { height: 100px; max-height: 100px; }
-  /* clear of the Point button on the right */
-  .selected-unit-box.has-settler { left: 6px; transform: none; width: min(calc(100vw - 90px), 360px); }
 }
 
 /* the defeat screen (#191): over the game, which shows the base; the panel and possession go dead */
-#defeat-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; background: rgba(0, 0, 0, 0.25); }
+#defeat-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding-top: calc(var(--top-h) + 10px); background: rgba(0, 0, 0, 0.25); }
 #defeat-overlay[hidden] { display: none; }
 .defeat-box { background: rgba(20, 21, 26, 0.92); border: 1px solid #c0392b; border-radius: 10px; padding: 14px 18px; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,0.6); max-width: 90%; }
 .defeat-title { color: #e74c3c; font: bold 32px sans-serif; }
 .defeat-survived { color: #fff; font-size: 16px; margin: 6px 0 12px; }
 .defeat-buttons { display: flex; flex-direction: column; gap: 8px; }
 .defeat-buttons .menu-button { margin: 0; }
-body.defeated #bottom-panel, body.defeated .btn-unpossess, body.defeated #btn-interact, body.defeated #mobile-joystick { pointer-events: none; opacity: 0.4; }
+body.defeated #dock, body.defeated #hud-bottom, body.defeated #resource-strip, body.defeated .btn-unpossess, body.defeated #mobile-joystick { pointer-events: none; opacity: 0.4; }
 
+
+/* ========================================== */
+/*   The HUD over the map (index.html)        */
+/* ========================================== */
+/* - the top bar: pause on the left, the mode's state in the middle (body[data-hud]), its actions on the right;
+   - Endless: a strip of the main stock under it, a tap drops down all of it;
+   - the dock at the bottom: a button per sheet; the sheet rises over the map above it, with the selected
+     settler's card and the chip of the tool picked.
+   They come in as a game starts and go as it ends (body.menu-world): the menu's own easing; the sheet
+   rises like the menu's buttons (menu-rise), the chip pops with the buttons' spring. */
+.hud-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  visibility: hidden;
+  opacity: 0;
+  transition: transform 0.35s ease-in, opacity 0.3s ease, visibility 0s 0.35s;
+}
+#top-bar, #resource-strip { transform: translateY(-140%); }
+#dock, #hud-bottom { transform: translateY(140%); }
+body[data-hud]:not(.menu-world) :is(#top-bar, #resource-strip, #dock, #hud-bottom) {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition: transform 0.55s var(--ease-settle), opacity 0.3s ease, visibility 0s;
+}
+/* one after the other, as the menu's title and buttons do */
+body[data-hud]:not(.menu-world) #resource-strip { transition-delay: 0.12s; }
+body[data-hud]:not(.menu-world) #hud-bottom { transition-delay: 0.12s; }
+
+/* ---- The top bar */
+#top-bar {
+  top: 0;
+  height: var(--top-h);
+  padding: env(safe-area-inset-top) 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #fff;
+}
+.btn-pause-square {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 16px;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.top-center {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  max-width: calc(100% - 120px);
+}
+.top-wave, .top-battle, .top-editor { display: none; }
+body[data-hud="endless"] .top-wave, body[data-hud="battle"] .top-battle, body[data-hud="editor"] .top-editor { display: flex; }
+/* the wave: its name and the time to it, a bar running down under them */
+.top-wave {
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 10px;
+  row-gap: 3px;
+  min-width: 150px;
+  padding: 4px 14px 5px;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.top-wave-name { color: var(--gold, #f1c40f); }
+.top-wave-time { font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; }
+.top-wave-bar { flex-basis: 100%; height: 3px; border-radius: 2px; background: rgba(0, 0, 0, 0.55); overflow: hidden; }
+#wave-progress { display: block; height: 100%; width: 100%; background: var(--gold, #f1c40f); transition: width 0.3s linear, background-color 0.3s ease; }
+/* the last seconds pulse red; a wave coming in shakes it (the buttons' "no") */
+@keyframes wave-soon { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.75); } 100% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } }
+.top-wave.soon { animation: wave-soon 1s ease-out infinite; }
+.top-wave.soon .top-wave-time { color: #ff6b6b; }
+.top-wave.soon #wave-progress { background: #e74c3c; }
+.top-wave.arrived { animation: btn-no 0.45s ease; }
+/* battle: placing, fighting or who won, and the count on each side */
+.top-battle, .top-editor {
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: #fff;
+}
+.battle-score { font-variant-numeric: tabular-nums; }
+.battle-score .green { color: #2ecc71; }
+.battle-score .red { color: #e74c3c; }
+.top-editor { border: none; cursor: pointer; font: inherit; font-size: 13px; overflow: hidden; }
+#editor-map-label { overflow: hidden; text-overflow: ellipsis; }
+.top-actions { display: flex; align-items: center; gap: 6px; }
+.top-actions .btn { padding: 7px 10px; font-size: 13px; }
+#battle-fight, #battle-cancel { display: none; }
+body[data-hud="battle"][data-battle-phase="setup"] #battle-fight,
+body[data-hud="battle"][data-battle-phase="fight"] #battle-cancel { display: inline-block; }
+/* the eye (possess): not in the editor; in a battle only while fighting (#166) */
+body[data-hud="editor"] .btn-unpossess, body[data-hud="battle"]:not([data-battle-phase="fight"]) .btn-unpossess { display: none; }
+
+/* ---- Endless: the main stock under the top bar, and all of it dropped down */
+#resource-strip {
+  top: calc(var(--top-h) + 6px);
+  left: 50%;
+  right: auto;
+  translate: -50% 0;
+  max-width: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+body:not([data-hud="endless"]) #resource-strip { display: none; }
+.strip-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+.strip-chip b { font-variant-numeric: tabular-nums; }
+.strip-more { padding: 0 4px; transition: transform 0.25s var(--ease-settle); }
+body.resources-open .strip-more { transform: rotate(180deg); }
+#resources-panel {
+  top: calc(var(--top-h) + 42px);
+  left: 50%;
+  right: auto;
+  translate: -50% 0;
+  width: min(760px, calc(100% - 12px));
+  padding: 6px; /* no scrolling: an open group's row drops over the map below it */
+  border-radius: 8px;
+  transform: translateY(-10px);
+  transition: transform 0.2s ease-in, opacity 0.2s ease, visibility 0s 0.2s;
+}
+body.resources-open[data-hud="endless"]:not(.menu-world) #resources-panel {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition: transform 0.35s var(--ease-settle), opacity 0.2s ease, visibility 0s;
+}
+
+/* ---- Over the dock: the selected settler, the chip of the tool picked, the open sheet */
+#hud-bottom {
+  bottom: var(--dock-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px 6px;
+  pointer-events: none;
+}
+#hud-bottom > * { pointer-events: auto; }
+.selected-unit-box {
+  display: none;
+  white-space: nowrap;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+.selected-unit-box.has-settler { display: block; animation: menu-rise 0.3s var(--ease-settle); }
+#placing-chip { display: none; align-items: stretch; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); }
+@keyframes chip-pop { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: none; } }
+/* it pops once the sheet has sunk away (until then it would stand above it) */
+body.placing:not(.sheet-open) #placing-chip { display: flex; animation: chip-pop 0.35s var(--spring) 0.22s both; }
+.placing-what { border: none; background: none; color: #fff; font: inherit; font-size: 13px; padding: 9px 14px; cursor: pointer; white-space: nowrap; max-width: 70vw; overflow: hidden; text-overflow: ellipsis; }
+.placing-close { border: none; color: #fff; padding: 0 14px; font-size: 14px; cursor: pointer; }
+.placing-close[hidden] { display: none; }
+/* the sheet's frame rises in and sinks away (display flips at the end of the way out) */
+#sheet-frame {
+  display: none;
+  width: min(760px, 100%);
+  max-height: 44vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 8px;
+  border-radius: 10px;
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.18s ease, transform 0.22s ease-in, display 0.22s allow-discrete;
+}
+body.sheet-open #sheet-frame {
+  display: block;
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.25s ease, transform 0.35s var(--ease-settle), display 0.35s allow-discrete;
+}
+@starting-style { body.sheet-open #sheet-frame { opacity: 0; transform: translateY(16px); } }
+.hud-sheet { display: none; }
+.hud-sheet.open { display: flex; flex-direction: column; gap: 6px; }
+
+/* ---- The dock: one row per mode */
+#dock { bottom: 0; height: var(--dock-h); padding-bottom: env(safe-area-inset-bottom); }
+.dock-row { display: none; height: 100%; max-width: 640px; margin: 0 auto; gap: 4px; padding: 5px 6px; }
+body[data-hud="endless"] .dock-row[data-hud-mode="endless"],
+body[data-hud="battle"] .dock-row[data-hud-mode="battle"],
+body[data-hud="editor"] .dock-row[data-hud-mode="editor"] { display: flex; }
+.dock-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px;
+  border-radius: 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dock-btn .ic { font-size: 22px; }
+.dock-btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dock-btn[hidden] { display: none; }
+/* a battle's dock rests while it's fought */
+body[data-battle-phase="fight"] .dock-row[data-hud-mode="battle"],
+body[data-battle-phase="result"] .dock-row[data-hud-mode="battle"] { opacity: 0.4; pointer-events: none; }
+
+/* the world's seed, in the pause menu (it was over the map) */
+.pause-seed { font-size: 11px; color: #8a91a0; word-break: break-all; user-select: text; -webkit-user-select: text; }

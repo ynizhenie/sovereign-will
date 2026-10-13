@@ -1,12 +1,13 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
-import { canvas, isTap, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
+import { canvas, isTap, isTouchScreen, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed, toggleBuildingRepair } from '../domains/economy/building/index.js';
 import { isWaterReachable } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
+import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { getPossessed, getSelectedSettler, orderPossessed } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
@@ -161,8 +162,9 @@ function placeBlueprint({ gx, gy }) {
     const bp = createBuildingBlueprint(game.buildMode, gx, gy);
     bp.needs = { ...(building.cost || {}) };
     game.blueprints.push(bp);
-    // placed: back to Point, unless Shift is held to place another
-    if (!shiftDown) setMode('interact');
+    // placed: back to Point, unless Shift is held to place another; on a touch screen the mode stays
+    // (its chip's × puts it down)
+    if (!shiftDown && !isTouchScreen()) setMode('interact');
   }
 }
 
@@ -199,8 +201,12 @@ export function processInteraction(clientX, clientY) {
 
 export function setMode(mode) {
   game.buildMode = mode;
-  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-  if (document.getElementById('btn-' + mode)) document.getElementById('btn-' + mode).classList.add('active');
+  document.querySelectorAll('.btn, #btn-interact').forEach(b => b.classList.remove('active'));
+  const button = document.getElementById('btn-' + mode);
+  if (button) button.classList.add('active');
+  // a tool picked: its sheet steps aside for the map, its chip shows what's being placed
+  if (mode === 'interact' || !button) hidePlacing();
+  else { closeSheet(); showPlacing(button.innerHTML, () => setMode('interact')); }
 
   const item = getDefinition('buildings', mode);
   if (!item) return;
@@ -218,6 +224,7 @@ export function initMapInput() {
 
     if (e.pointerType === 'touch' && !isTap) return;
 
+    closeOverlays(); // a tap on the map closes the open sheet (a drag to look around doesn't)
     processInteraction(e.clientX, e.clientY);
   });
 }

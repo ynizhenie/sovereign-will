@@ -26,7 +26,7 @@ test('on a defeat the panel and possession go dead, the camera flies to the base
     const possessed = !!getPossessed();
     return {
       onBase: Math.hypot(camera.x - townHall.x, camera.y - townHall.y) < 1, zoomedIn: camera.zoom > 1, at, possessed,
-      panel: getComputedStyle(document.getElementById('bottom-panel')).pointerEvents
+      panel: getComputedStyle(document.getElementById('dock')).pointerEvents
     };
   });
   expect(r).toMatchObject({ onBase: true, zoomedIn: true, possessed: false, panel: 'none' });
