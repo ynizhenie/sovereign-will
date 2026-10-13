@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 test('Food opens onto what it is made of; food without a kind tops up the scarcest; spending goes in order (#106, #169)', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 test('with nothing to do a settler puts its weapon on its back; at work it holds its tool (#171)', async ({ page }) => {

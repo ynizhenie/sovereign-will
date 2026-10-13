@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 test('nothing can be built on a farm zone until the zone is removed (#92)', async ({ page }) => {

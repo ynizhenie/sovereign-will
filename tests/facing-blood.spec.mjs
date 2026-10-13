@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('blood on the hurt, the ground and the weapon; it dries after 10 s, except on the badly wounded (#108)', async ({ page }) => {

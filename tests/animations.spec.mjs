@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('strikes swing the weapon once, work keeps the tool moving, and both settle back (#25)', async ({ page }) => {

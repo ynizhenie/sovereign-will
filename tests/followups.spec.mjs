@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
 
 test('a new game opens on the Building tab; the undead see bones and rot right after the people (#188)', async ({ page }) => {

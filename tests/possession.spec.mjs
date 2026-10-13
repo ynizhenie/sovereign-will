@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 for (const by of ['keys', 'joystick']) {

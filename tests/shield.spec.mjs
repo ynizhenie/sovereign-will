@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, iconText } from './helpers.mjs';
 
 test('the shield button equips a melee soldier; disarming gives the shield back (#27)', async ({ page }) => {

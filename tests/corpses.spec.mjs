@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('fallen settlers and enemies leave grey corpses that disappear after a while (#42)', async ({ page }) => {

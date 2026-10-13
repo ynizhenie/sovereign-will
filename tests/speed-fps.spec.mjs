@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('Settings: show FPS on and off, remembered; no "no limit" frame rate (#123)', async ({ page }) => {

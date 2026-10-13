@@ -10,6 +10,34 @@
 //     return { myScenario };
 //   })());
 import { existsSync, readdirSync } from 'node:fs';
+import { test as base, expect } from '@playwright/test';
+import { pageBridgeSource } from './bridge.mjs';
+
+// The specs' test(): every page it opens (goto, reload) gets the tests' bridge to the game (tests/bridge.mjs)
+// once the page has loaded, and goto/reload wait for it
+const BRIDGE = pageBridgeSource();
+export { expect };
+export const test = base.extend({
+  page: async ({ page }, use) => {
+    await page.addInitScript(source => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.textContent = source;
+        document.head.appendChild(script);
+      });
+    }, BRIDGE);
+    for (const method of ['goto', 'reload']) {
+      const original = page[method].bind(page);
+      page[method] = async (...args) => {
+        const response = await original(...args);
+        await page.waitForFunction(() => window.__bridged === true);
+        return response;
+      };
+    }
+    await use(page);
+  }
+});
 
 const SCENARIOS = 'tests/scenarios';
 

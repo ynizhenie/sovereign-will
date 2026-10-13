@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 test('the undead: zombies only to hire, the staff, no farming or food, blight; graves add 1 and make bones and rot (#164)', async ({ page }) => {

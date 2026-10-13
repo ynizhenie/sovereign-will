@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('water and rock tiles join their own kind; rendering stays error-free (#79)', async ({ page }) => {
