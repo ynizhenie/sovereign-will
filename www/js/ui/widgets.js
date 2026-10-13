@@ -1,6 +1,6 @@
 // Pieces the screens share: a button's answer to a tap, prices shown short in red, a list of saved things
 
-import { escapeHtml, iconHtml } from './icons.js';
+import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { stock } from '../domains/colony/storage/index.js';
 
@@ -90,4 +90,10 @@ export function initWidgets() {
     const target = /** @type {Element} */ (e.target), button = /** @type {HTMLElement | null} */ (target.closest && target.closest('button'));
     if (button) { pressedButton = button; pressedAt = performance.now(); }
   }, true);
+}
+
+// A button of the page (index.html) gets its text, icons marked [[name]], if it's there
+export function labelButton(id, text) {
+  const el = document.getElementById(id);
+  if (el) setRichText(el, text);
 }

@@ -3,3 +3,4 @@
 
 export { equip } from './equipment.behaviours.js';
 export { assignTool, canUseShield, countHeld, craftArrows, craftWeapon, disarmSettler, getHeldItems, getWeaponStats, hasAxeTool, hasGear, hasPickaxeTool, hasToolFamily, hasWorkingShield, isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon, orderGear, orderGearOff, putOnGear, refundEquipment } from './equipment.rules.js';
+export { renderGearLabels, renderToolsTab, renderWeaponsTab } from './equipment.panel.js';
