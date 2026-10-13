@@ -184,7 +184,10 @@ export function drawSettlers() {
       ctx.fillStyle = '#f1c40f'; ctx.fillRect(bx + 1, by + 11 - 10 * Math.min(1, loads / getCarryCapacity(s)), 4, 10 * Math.min(1, loads / getCarryCapacity(s)));
     }
 
-    if (s.carrying) {
+    if (s.carrying && s.carrying.type === 'dung') {
+      // dung for a plot: a small brown pile over its head (#201)
+      ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(s.x, s.y - s.visualRadius - 7, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (s.carrying) {
       const type = s.carrying.type;
       const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
       const icon = type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat');

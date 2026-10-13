@@ -22,7 +22,7 @@ import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSe
 import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea } from '../../conflict/combat/index.js';
 import { collectWorms, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
-import { farmerGathersGrass, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
+import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { cook } from '../../economy/cooking/index.js';
 import { necromancy } from '../../factions/undead/index.js';
 import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
@@ -62,6 +62,8 @@ export function createSettlerTick(dt) {
     appleAssignments: new Set(),     // apple trees someone is picking this tick
     wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
+    fertilizeAssignments: new Set(), // wheat plots a farmer is bringing dung to this tick
+    dungAssignments: new Set(),      // dung piles a farmer is going to pick up this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
@@ -197,6 +199,7 @@ export const SETTLER_BEHAVIOURS = [
   repairBuilding,
   equip,
   cook,
+  fertilize,
   deliverMaterials,
   deliverCarrying,
   repairTent,

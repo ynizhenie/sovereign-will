@@ -93,6 +93,48 @@ export function waterCrops(s, tick) {
   return true;
 }
 
+// ---- Fertiliser
+
+// A farmer with a backpack, between waves, carries a pile of dung to a wheat plot not fertilised yet;
+// the plot's next harvest yields more (GAME_CONFIG.fertilizer). Called off its way (a wave), it drops the
+// dung where it is (#201)
+export function fertilize(s, tick) {
+  const carriesDung = !!s.carrying && s.carrying.type === 'dung';
+  const able = s.role === 'worker' && hasToolFamily(s.tool, 'hoe') && s.backpack && !s.isPossessed && !tick.isWaveActive;
+  if (carriesDung && !able) {
+    game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false });
+    s.carrying = null;
+    return false;
+  }
+  if (!able || (s.carrying && !carriesDung)) return false;
+  const near = list => list.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+  const plot = near(game.farmPlots.filter(f => !f.fertilized && !tick.fertilizeAssignments.has(f)));
+  if (!plot) {
+    if (carriesDung) { game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false }); s.carrying = null; }
+    return false;
+  }
+  if (!carriesDung) {
+    const pile = near(game.dung.filter(p => !tick.dungAssignments.has(p) && isInSafeArea(p.x, p.y)));
+    if (!pile) return false;
+    tick.dungAssignments.add(pile);
+    tick.fertilizeAssignments.add(plot);
+    s.patrolTarget = null;
+    if (Math.hypot(pile.x - s.x, pile.y - s.y) > 16) moveEntityTowards(s, pile.x, pile.y, s.speed, false, tick.dt);
+    else { game.dung.splice(game.dung.indexOf(pile), 1); s.carrying = { type: 'dung', amount: 1 }; }
+    return true;
+  }
+  tick.fertilizeAssignments.add(plot);
+  s.patrolTarget = null;
+  if (Math.hypot(plot.x - s.x, plot.y - s.y) > 20) {
+    moveEntityTowards(s, plot.x, plot.y, s.speed, false, tick.dt);
+  } else {
+    plot.fertilized = true;
+    s.carrying = null;
+    s.working = 0.1;
+  }
+  return true;
+}
+
 // A farmer with nothing to plant or harvest gathers grass (see canSettlerHarvest)
 export function farmerGathersGrass(s, tick) {
   if (!hasToolFamily(s.tool, 'hoe')) return false;
