@@ -43,3 +43,7 @@ test('tapping an enemy at a damaged wall, next to a soldier, marks it: not the w
   })();
   expect(r).toEqual({ marked: true, repair: false, selected: false });
 });
+
+test('a tap on an enemy tent marks it: three soldiers leave their posts and destroy it, before the nearer one (#203)', async () => {
+  expect(await sim.soldiersMarkedTent()).toEqual({ marked: true, alert: true, going: 3, farDestroyed: true, nearStands: true });
+});

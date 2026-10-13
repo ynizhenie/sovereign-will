@@ -27,6 +27,7 @@ export function drawEnemyTents() {
       ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
     }
 
+    if (et.markedTarget) drawTargetMark({ x: et.x, y: et.y, radius: 16 }); // the player pointed at it (#203)
     if (et.hp < et.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(et.x - 14, et.y - 20, 28, 4);
       ctx.fillStyle = '#e74c3c'; ctx.fillRect(et.x - 14, et.y - 20, (et.hp / et.maxHp) * 28, 4);
