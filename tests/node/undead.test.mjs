@@ -37,3 +37,7 @@ test('the undead spend rot: a tile of blight, hiring a zombie; what\'s missing s
     missing: '5[[bones]], 3[[rot]]'
   });
 });
+
+test('a necromancer raises a corpse from a few tiles off, without walking up to it (#203)', async () => {
+  expect(await sim.undeadRaiseFromAfar()).toEqual({ raised: true, stayed: true, thread: true });
+});

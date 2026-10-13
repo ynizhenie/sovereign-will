@@ -130,6 +130,21 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
+  // A necromancer raises a corpse from where it stands, a few tiles off, without walking up to it (#203)
+  function raiseFromAfar({ seed = 'undead-afar' } = {}) {
+    asUndead(seed);
+    clearResources();
+    invalidateAllPaths();
+    const necro = necromancerAt(1, nearHall(4, 0));
+    settlers = [necro];
+    const corpse = corpseAt(nearHall(7, 0)); // 90 px away
+    corpses = [corpse];
+    const x0 = necro.x;
+    let thread = false, xAtRaise = null;
+    run(3, { each: () => { if (necro.raising) thread = true; if (xAtRaise === null && corpses.length === 0) xAtRaise = necro.x; } });
+    return { raised: corpses.length === 0 && settlers.some(s => s.temporary !== undefined), stayed: xAtRaise !== null && Math.abs(xAtRaise - x0) < 10, thread };
+  }
+
   // Rot is spent (#204): a marked tile takes blightRot of it, and waits while there's none; hiring a zombie
   // takes rot as well as bones
   function rotSpent({ seed = 'undead-rot' } = {}) {
@@ -171,5 +186,5 @@ Object.assign(window.sim, (() => {
     return { kinds, zombies: enemies.filter(en => en.enemyKey === 'undead_zombie').length, corpses: corpses.length, temporary: !!zombie && zombie.temporary > 0 };
   }
 
-  return { undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerHeals, undeadBlight: blight, undeadEnemies };
+  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerHeals, undeadBlight: blight, undeadEnemies };
 })());

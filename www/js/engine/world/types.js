@@ -46,6 +46,7 @@
  * @property {boolean} [crumbled]
  * @property {boolean} [deadProcessed]
  * @property {Building} [sacrificeAt]
+ * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
 /**
@@ -76,6 +77,7 @@
  * @property {boolean} [markedTarget] the player pointed at it
  * @property {boolean} [rewardGranted]
  * @property {Object} [battleEntry]   its place in a battle's line-up
+ * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
 /**
