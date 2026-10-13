@@ -69,7 +69,7 @@ test('playing leaves the menu world for a real game, and the menu brings it back
   await page.click('#play-button');
   const game = await page.evaluate(() => ({ mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'), settlers: settlers.length, waveTimer: Number.isFinite(waveTimer) }));
   expect(game).toEqual({ mode: 'endless', started: true, cls: false, settlers: 2, waveTimer: true });
-  await expect(page.locator('#bottom-panel')).toBeVisible();
+  await expect(page.locator('#dock')).toBeVisible();
   await page.evaluate(() => exitToMainMenu());
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => [gameMode, settlers.length, document.body.classList.contains('menu-world')])).toEqual(['menu', 1, true]);

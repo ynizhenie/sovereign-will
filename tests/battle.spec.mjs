@@ -6,6 +6,13 @@ async function openBattle(page) {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await expect(page.locator('[data-battle-category="own"]')).toBeVisible();
+}
+
+// A category's sheet, open (its dock button opens it, and closes it if it's the one open)
+async function showCategory(page, category) {
+  const button = page.locator(`[data-battle-category="${category}"]`);
+  if (!(await button.evaluate(b => b.classList.contains('active')))) await button.click();
   await expect(page.locator('#battle-panel')).toBeVisible();
 }
 
@@ -31,12 +38,13 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
 test('the panel has categories: your units, enemies, buildings; armour and shield only for yours (#142)', async ({ page }) => {
   await openBattle(page);
   const count = () => page.locator('#battle-presets button').count();
+  await showCategory(page, 'own');
   expect(await count()).toBe(9);
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
-  await page.click('[data-battle-category="enemy"]');
+  await showCategory(page, 'enemy');
   expect(await count()).toBe(4);
   await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
-  await page.click('[data-battle-category="buildings"]');
+  await showCategory(page, 'buildings');
   expect(await count()).toBe(6); // walls, door, spikes, tower, and the humans' tent
 });
 
@@ -44,11 +52,12 @@ test('every category has faction sub-tabs: each faction its own units and buildi
   await openBattle(page);
   const shown = async () => page.$$eval('#battle-presets button', bs => bs.map(b => b.dataset.preset));
   const r = {};
+  await showCategory(page, 'own');
   for (const faction of ['humans', 'undead', 'demons']) {
     await page.click(`[data-battle-faction="${faction}"]`);
     r[faction] = {};
     for (const category of ['own', 'enemy', 'buildings']) {
-      await page.click(`[data-battle-category="${category}"]`);
+      await showCategory(page, category);
       r[faction][category] = await shown();
     }
   }

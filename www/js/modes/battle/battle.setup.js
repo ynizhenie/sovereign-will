@@ -9,7 +9,7 @@ import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engin
 import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
-import { showNotification } from '../../ui/index.js';
+import { closeOverlays, showNotification } from '../../ui/index.js';
 import { createSettler } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
@@ -105,6 +105,7 @@ export function startBattleMode() {
   game.gameStarted = true;
   document.getElementById('main-menu').style.display = 'none';
   document.body.classList.add('battle-mode');
+  closeOverlays();
   renderBattlePanel();
 }
 

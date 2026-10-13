@@ -11,7 +11,7 @@ import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
 import { BORDER_MARGIN, TILE_SIZE, applySeedFromUI, game, getGridPos, isBorderZone, resetTileIndex, townHall } from '../../engine/world/index.js';
 import { isTileOccupied } from '../../domains/economy/building/index.js';
-import { showNotification } from '../../ui/index.js';
+import { closeOverlays, showNotification } from '../../ui/index.js';
 import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/index.js';
 import { makeAppleTree } from '../../domains/economy/farming/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
@@ -222,6 +222,7 @@ export function startEditor(source) {
   game.gameStarted = true;
   document.getElementById('main-menu').style.display = 'none';
   document.body.classList.add('editor-mode');
+  closeOverlays();
   document.getElementById('editor-name').value = editor.name;
   renderEditorPanel();
 }
