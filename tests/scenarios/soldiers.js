@@ -87,5 +87,21 @@ Object.assign(window.sim, (() => {
     return { throughWall: crosses('walls'), overSpikes: crosses('spikes'), viaDoor: !!door && path.some(p => p.x === door.x && p.y === door.y) };
   }
 
-  return { soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
+  // Two enemy tents, ahead of a wave (the soldiers on their posts): the player taps the far one; three of
+  // the four soldiers leave their posts and destroy it, the near one is left (#203)
+  function markedTent({ seed = 'soldiers-tent' } = {}) {
+    setUp(seed);
+    settlers = soldiers(4);
+    const tentAt = (dx, dy) => { const p = nearHall(dx, dy); return { x: p.x, y: p.y, hp: 80, maxHp: 80, summonTimer: 0, summonsLeft: 0 }; };
+    const near = tentAt(8, 0), far = tentAt(-12, 8);
+    enemyTents = [near, far];
+    buildMode = 'interact'; mouse.x = far.x + 3; mouse.y = far.y; handleCanvasClick();
+    const marked = !!far.markedTarget;
+    let going = 0;
+    waveTimer = 5;
+    run(25, { holdWaves: false, each: () => { waveTimer = 5; if (enemyTents.includes(far)) going = Math.max(going, settlers.filter(s => Math.hypot(s.x - far.x, s.y - far.y) < 60).length); } });
+    return { marked, alert: isDefenseAlert(), going, farDestroyed: !enemyTents.includes(far), nearStands: near.hp === near.maxHp };
+  }
+
+  return { soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
 })());
