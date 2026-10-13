@@ -128,11 +128,12 @@ export function enemyNecromancy(en, necro, dt) {
   }
   if (!corpse) return false;
   corpse.raisedBy = en;
-  if (best > 16) {
+  if (best > necro.raiseReach) { // raised from a distance, as the player's (#203)
     moveEntityTowards(en, corpse.x, corpse.y, en.speed, true, dt);
     return true;
   }
   faceTowards(en, corpse.x, corpse.y);
+  en.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 }; // its thread (drawRaising)
   en.raiseTimer = (en.raiseTimer || 0) + dt;
   if (en.raiseTimer >= necro.raiseSeconds) {
     en.raiseTimer = 0;
