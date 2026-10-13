@@ -19,13 +19,14 @@ Object.assign(window.sim, (() => {
     Object.assign(stock, { food, rawMeat: 20, rawFish: 0, wheat: 0, wood: 30, coal: 0 });
     foodMix = {}; syncFoodMix();
     if (wave) enemies = [createConfiguredEnemy({ x: 45, y: 45 }, 'raider')];
-    let cooked = false;
+    let cooked = false, workersCooked = false;
     run(seconds, { each: () => {
       settlers.forEach(s => { s.hunger = 999; });
       if (wave) { enemies.forEach(en => { en.x = 45; en.y = 45; en.hp = en.maxHp; }); }
       if (settlers.some(s => s.carrying && s.carrying.forFire)) cooked = true;
+      if (settlers.some(s => s.role === 'worker' && s.carrying && s.carrying.forFire)) workersCooked = true;
     } });
-    return { food: Math.floor(stock.food), rawMeat: stock.rawMeat, cooked, tools: settlers.map(s => s.tool) };
+    return { food: Math.floor(stock.food), rawMeat: stock.rawMeat, cooked, workersCooked, tools: settlers.map(s => s.tool) };
   }
 
   // A badly hurt worker healing at a tent; an enemy comes and hits it there. Does it stand and heal, or
