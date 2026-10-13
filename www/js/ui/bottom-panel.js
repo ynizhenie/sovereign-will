@@ -6,31 +6,39 @@ import { onTap, t } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { renderGearLabels, renderToolsTab, renderWeaponsTab } from '../domains/colony/equipment/index.js';
 import { formatCost } from '../domains/colony/storage/index.js';
-import { renderResourceTiles, updateUI } from './hud.js';
+import { renderResourceStrip, renderResourceTiles, updateUI } from './hud.js';
 import { sides } from '../domains/factions/index.js';
 import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
 import { setMode } from './map-input.js';
 import { refreshAffordability } from './widgets.js';
+import { closeSheet, getOpenSheet, toggleSheet } from './sheets.js';
 
-// the bottom panel's open tab (farm zones are only drawn with the Farming tab open)
+// the colony sheet's tab (the last one opened, even with the sheet closed)
 export let activeTab = 'tab-build';
 
-// Open a tab by its id, as tapping its button does
-export function openTab(tabId) {
-  const button = document.querySelector(`.tab-btn[data-arg="${tabId}"]`);
-  if (button) switchTab(button, tabId);
+// A tab's things show on the map (farm zones, blight) while its sheet is out or one of its tools is in hand
+export function isTabShown(tabId) {
+  return activeTab === tabId && (getOpenSheet() === 'colony' || game.buildMode !== 'interact');
 }
 
-export function switchTab(btnElement, tabId) {
+// Pick a tab, the sheet closed (a new game starts on Building)
+export function openTab(tabId) {
+  showTab(tabId);
+  closeSheet();
+}
+
+function showTab(tabId) {
   activeTab = tabId;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  // switching to any tab goes back to the Point (interact) mode
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === tabId));
+}
+
+// A dock button: back to Point (#80), and its tab's sheet opens, or closes if it's the one open (a picked
+// tool's sheet comes back from its chip instead, the tool kept)
+export function switchTab(_button, tabId) {
   setMode('interact');
-  
-  btnElement.classList.add('active');
-  document.getElementById(tabId).classList.add('active');
+  showTab(tabId);
+  toggleSheet('colony', tabId);
 }
 
 export function createConfigButton(item, action) {
@@ -44,7 +52,7 @@ export function createConfigButton(item, action) {
 
 // Rebuild the generated HUD and buttons, e.g. after a language change (setLanguage)
 export function rebuildConfigHud() {
-  for (const id of ['resources-hud', 'build-actions', 'farming-actions', 'tool-actions', 'weapon-actions', 'recruit-row']) {
+  for (const id of ['resource-strip', 'resources-hud', 'build-actions', 'farming-actions', 'tool-actions', 'weapon-actions', 'recruit-row']) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   }
@@ -61,6 +69,7 @@ export function renderConfigHud() {
   // only what the player's faction has: its resources, buildings, units to hire and upgrade
   renderedFaction = sides.player.faction;
   renderResourceTiles();
+  renderResourceStrip();
   renderBuildTab();
   renderToolsTab();
   renderRecruitRow();

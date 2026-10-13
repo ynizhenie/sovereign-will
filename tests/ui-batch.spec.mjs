@@ -14,7 +14,7 @@ test('the camera zooms closer on a big map and goes up to the map edge; no zoom 
   expect(r.cssScale).toBeGreaterThanOrEqual(2.99);
   expect(r.edge).toEqual([0, r.world]);
   await expect(page.locator('#zoom-controls')).toHaveCount(0);
-  await expect(page.locator('.hud-seed-box')).toBeVisible();
+  await expect(page.locator('#pause-menu #hud-seed')).not.toHaveText('-'); // the seed, in the pause menu now
 });
 
 test('the Building tab is in sections, and the other tabs have headings (#181)', async ({ page }) => {

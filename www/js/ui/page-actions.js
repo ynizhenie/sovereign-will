@@ -7,6 +7,7 @@ import { repairAllBuildings } from '../domains/economy/building/index.js';
 import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { togglePause } from '../app/index.js';
 import { setMode } from './map-input.js';
+import { closeOverlays, reopenSheet, stopPlacing, toggleResources, toggleSheet } from './sheets.js';
 
 export const PAGE_ACTIONS = {
   togglePause: () => togglePause(),
@@ -19,7 +20,13 @@ export const PAGE_ACTIONS = {
   orderGear: id => orderGear(id),
   orderGearOff: id => orderGearOff(id),
   disarmSettler: what => disarmSettler(what),
-  switchTab: (tabId, button) => switchTab(button, tabId)
+  switchTab: (tabId, button) => switchTab(button, tabId),
+  // Point: back to selecting, nothing open
+  pointMode: () => { setMode('interact'); closeOverlays(); },
+  toggleSheet: name => toggleSheet(name),
+  reopenSheet: () => reopenSheet(),
+  stopPlacing: () => stopPlacing(),
+  toggleResources: () => toggleResources()
 };
 
 // What this file sets up as the game starts (called by app/boot.js)

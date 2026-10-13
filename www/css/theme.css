@@ -92,19 +92,34 @@ button.cant-afford { opacity: 0.55; }
 .item-row .item-question { color: var(--gold); }
 
 /* ---- The bars and panels */
-#top-bar { background: var(--bg); border-bottom: 1px solid var(--edge); }
-#bottom-panel, #battle-panel, #editor-panel { background: var(--bg); border-top: 1px solid var(--edge); }
-.tab-content-container { background: var(--bg); border: 1px solid var(--edge); }
+#top-bar, #dock { background: var(--bg); }
+#top-bar { border-bottom: 1px solid var(--edge); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); }
+#dock { border-top: 1px solid var(--edge); box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.45); }
+#sheet-frame, #resources-panel { background: var(--bg); border: 1px solid var(--edge); }
+#resources-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); }
+/* the middle of the top bar and the chip of the tool picked: framed dark planks */
+.top-wave, .top-battle, .top-editor, #placing-chip { background: var(--plank-dark) center / cover; }
+.btn-pause-square { background: var(--plank) center / cover; border: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.btn-pause-square.paused { background-image: var(--plank-green); box-shadow: var(--glow); }
+.placing-close { background: var(--plank-red) center / cover; }
+/* the strip of the main stock: small planks on a dark band */
+#resource-strip { background: rgba(7, 11, 7, 0.78); border: 1px solid var(--edge); color: var(--text); font-family: var(--font); }
+.strip-chip { background: var(--plank) center / cover; }
+.strip-more { color: var(--text-dim); }
+/* the dock: quiet until a sheet's open, then that button is a green plank */
+#dock .dock-btn { background: none; border: none; box-shadow: none; color: var(--text-dim); }
+#dock .dock-btn.active { background: var(--plank-green) center / cover; color: var(--text-bright); box-shadow: var(--glow); }
+/* Point and the eraser are modes, not sheets: on, they only turn gold */
+#dock .dock-point.active, #dock #editor-erase.active { background: none; box-shadow: none; color: var(--gold); }
+@media (hover: hover) {
+  #dock .dock-btn:not(.active):hover { background: var(--plank) center / cover; color: var(--text); }
+}
 .panel-heading, .wave-settings, .seed-settings, .generator-fields h2 { color: var(--text-dim); text-transform: none; letter-spacing: 0; }
 .resources-grid div, .resource-group-members div { font-weight: 400; padding: 4px 3px; }
 .resources-grid .resource-group { border: none; }
 .resource-group-members { background: var(--bg); border: 1px solid var(--edge); }
 .selected-unit-box { background: var(--plank-dark) center / cover; border: none; }
 #seed-input, .menu-number, .generator-field input { background: var(--bg-deep); border: 1px solid var(--edge); }
-
-/* the Point button: a green plank when it's on */
-#btn-interact { background: var(--plank) center / cover; border: none; border-radius: 6px; }
-#btn-interact.active { background: var(--plank-green) center / cover; border: none; box-shadow: var(--glow); }
 
 /* ---- Toasts: a red plank for a warning, a green one for done (showNotification sets .ok) */
 #toast-notification { background: var(--plank-red) center / cover; border: none; font-weight: 700; }
