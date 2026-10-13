@@ -14,7 +14,7 @@ test('the undead: zombies only to hire, the staff, no farming or food, blight; g
   expect(r).toMatchObject({ farmingTab: false, blightTab: true, foodTile: false, food: 0, foodAfter: 0 });
   expect(r.maxPop).toBe(await page.evaluate(() => GAME_CONFIG.start.population) + 1);
   expect(r.bonesMade).toBe(3.5); // graveyard 0.25 + grave 0.1 a second, 10 s
-  expect(r.rotMade).toBe(1);     // grave 0.1 a second
+  expect(r.rotMade).toBe(1.5);   // graveyard 0.05 + grave 0.1 a second (#204)
   expect(r).toMatchObject({ fromMeat: 3, fromBerries: 2 });
 });
 
