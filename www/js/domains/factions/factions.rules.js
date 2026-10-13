@@ -83,3 +83,9 @@ export function loadSides() {
   }
   if (sides.enemy.color === sides.player.color) sides.enemy.color = freeColor(sides.enemy.color, sides.player.color);
 }
+
+// Whether the player's faction has this (a resource, building, tool, gear...): yes unless the item names
+// the factions it's for (`factions`) and the player's isn't one of them
+export function isForPlayerFaction(item) {
+  return !item.factions || item.factions.includes(sides.player.faction);
+}
