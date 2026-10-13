@@ -28,7 +28,8 @@ Object.assign(window.sim, (() => {
   }
 
   // Three meals in, a settler walks off away from the buildings and leaves dung there
-  function relief({ seed = 'relief-test', seconds = 30 }) {
+  // walledOff: the spot it picks gets walled round on its way there; it goes somewhere else (#200)
+  function relief({ seed = 'relief-test', seconds = 30, walledOff = false }) {
     start(seed);
     clearResources();
     for (let i = 0; i < 3; i++) grassList.push({ ...nearHall(8, -2 + i * 2), hp: 1 });
@@ -40,13 +41,23 @@ Object.assign(window.sim, (() => {
     stock.food = 100;
     for (let meal = 0; meal < GAME_CONFIG.relief.mealsBefore; meal++) { s.hunger = 0.001; update(1 / 60); }
     const needs = !!s.needsRelief;
+    let walled = null;
+    if (walledOff) {
+      walled = s.reliefSpot = findReliefSpot(s);
+      const g = getGridPos(walled.x, walled.y);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (dx || dy) placeBuilding('wall_stone', (g.gx + dx) * TILE_SIZE + 15, (g.gy + dy) * TILE_SIZE + 15);
+      }
+      invalidateAllPaths(); resetTileIndex();
+    }
     run(seconds, { each: () => { pendingRespawns.length = 0; s.hunger = 999; } });
     const pile = dung[0];
     const minDist = GAME_CONFIG.relief.awayFromBuildings * TILE_SIZE;
     return {
       needs, piles: dung.length, stillNeeds: !!s.needsRelief, meals: s.meals,
       awayFromBuildings: !!pile && buildings.every(b => Math.hypot(pile.x - b.x, pile.y - b.y) >= minDist),
-      nearGrass: !!pile && grassAt.some(g => Math.hypot(pile.x - g.x, pile.y - g.y) <= TILE_SIZE * 1.5)
+      nearGrass: !!pile && grassAt.some(g => Math.hypot(pile.x - g.x, pile.y - g.y) <= TILE_SIZE * 1.5),
+      ...(walled ? { elsewhere: !!pile && Math.hypot(pile.x - walled.x, pile.y - walled.y) > TILE_SIZE } : {})
     };
   }
 
