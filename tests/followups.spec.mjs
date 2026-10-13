@@ -1,15 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { openGame, sim, iconText } from './helpers.mjs';
 
-test('blight: as far on every side of the graveyard; a tap again unmarks; no mark on blighted ground; taking it away fades (#186)', async ({ page }) => {
-  await openGame(page);
-  const r = await sim(page, 'blightZonesFollowup', {});
-  expect(r).toEqual({
-    reach: { left: true, right: true, up: true, down: true },
-    refused: true, marked: true, unmarked: true, stillAfter1s: true, goneLater: true
-  });
-});
-
 test('a new game opens on the Building tab; the undead see bones and rot right after the people (#188)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');

@@ -1,22 +1,22 @@
-import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.mjs';
+// misc106: the game's logic, run in Node (moved from tests/misc106.spec.mjs; see tests/node/game.mjs)
+import { test } from 'node:test';
+import { expect } from './expect.mjs';
+import { sim } from './game.mjs';
 
-test('one warning 15 s before a wave (#106)', async ({ page }) => {
-  await openGame(page);
-  const notes = await page.evaluate(() => {
+test('one warning 15 s before a wave (#106)', async () => {
+  const notes = await (() => {
     window.sim.start('warning-test');
     const seen = recentNotifications; // the messages shown from here on
     seen.length = 0;
     waveTimer = 20;
     for (let f = 0; f < 60 * 10; f++) update(1 / 60); // 20 s -> 10 s left
     return seen.filter(m => m.includes('Волна'));
-  });
+  })();
   expect(notes).toEqual(['[[warn]] Волна врагов через 15 секунд!']);
 });
 
-test('a medic fills its bag with herbs at the town hall and gives them back with the bag (#106)', async ({ page }) => {
-  await openGame(page);
-  const r = await page.evaluate(() => {
+test('a medic fills its bag with herbs at the town hall and gives them back with the bag (#106)', async () => {
+  const r = await (() => {
     const { makeSettler, clearResources } = window.sim.helpers;
     window.sim.start('medic-bag-test');
     clearResources();
@@ -30,15 +30,14 @@ test('a medic fills its bag with herbs at the town hall and gives them back with
     const filled = { bag: medic.bagHerbs, stock: stock.herbs };
     refundEquipment(medic);
     return { filled, afterRefund: { bag: medic.bagHerbs, stock: stock.herbs } };
-  });
+  })();
   // 5 into the bag, one used on the soldier (90 -> 100)
   expect(r.filled).toEqual({ bag: 4, stock: 3 });
   expect(r.afterRefund).toEqual({ bag: 0, stock: 9 }); // 3 + the 4 in the bag + the bag's own 2 herbs
 });
 
-test('a watchtower is repaired only when ordered, priced like any building (#106)', async ({ page }) => {
-  await openGame(page);
-  const r = await page.evaluate(() => {
+test('a watchtower is repaired only when ordered, priced like any building (#106)', async () => {
+  const r = await (() => {
     const { makeSettler, placeBuilding } = window.sim.helpers;
     window.sim.start('tower-repair-test');
     const tower = placeBuilding('watchtower', townHall.x + 90, townHall.y + 90);
@@ -50,32 +49,30 @@ test('a watchtower is repaired only when ordered, priced like any building (#106
     toggleBuildingRepair(tower);
     window.sim.run(20);
     return { unordered, after: tower.hp / tower.maxHp, step: getRepairStep(tower).cost };
-  });
+  })();
   expect(r.unordered).toBe(0.5);
   expect(r.after).toBe(1);
   expect(r.step).toEqual({ wood: 5, stone: 4 }); // 20% of 25 wood, 20 stone
 });
 
-test('ore spawners grow ore on free ground only, never over natural rock (#106)', async ({ page }) => {
-  await openGame(page);
-  const r = await page.evaluate(() => ['maze-283', 'maze-137', 'ore-a'].map(seed => {
+test('ore spawners grow ore on free ground only, never over natural rock (#106)', async () => {
+  const r = await (() => ['maze-283', 'maze-137', 'ore-a'].map(seed => {
     window.sim.start(seed);
     const rocks = naturalRocks.length;
     const rockAt = new Set(naturalRocks.map(o => `${o.x},${o.y}`));
     for (let i = 0; i < 40; i++) { respawnOre('iron'); respawnOre('coal'); }
     return { rocksKept: naturalRocks.length === rocks, oreOnRock: [...ironOres, ...coalOres].some(o => rockAt.has(`${o.x},${o.y}`)) };
-  }));
+  }))();
   for (const m of r) expect(m).toEqual({ rocksKept: true, oreOnRock: false });
 });
 
-test('forests are uneven blobs of lobes, their trees inside them (#106)', async ({ page }) => {
-  await openGame(page);
-  const r = await page.evaluate(() => ['forest-a', 'forest-b', 'maze-137'].map(seed => {
+test('forests are uneven blobs of lobes, their trees inside them (#106)', async () => {
+  const r = await (() => ['forest-a', 'forest-b', 'maze-137'].map(seed => {
     window.sim.start(seed);
     const inForest = t => forests.some(f => f.lobes.some(l => Math.hypot(t.x - l.x, t.y - l.y) <= l.r + TILE_SIZE));
     const grown = trees.filter(t => !t.isGrowing);
     return { forests: forests.length, minLobes: Math.min(...forests.map(f => f.lobes.length)), shareInForests: grown.filter(inForest).length / grown.length };
-  }));
+  }))();
   for (const m of r) {
     expect(m.forests).toBeGreaterThan(0);
     expect(m.minLobes).toBeGreaterThanOrEqual(3);

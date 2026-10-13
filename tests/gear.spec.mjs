@@ -18,9 +18,3 @@ test('armour goes to a melee soldier first, then anyone; +50 hp once put on (#94
     .toMatchObject({ worn: true, maxHp: 150 });
 });
 
-test('disarming the weapon keeps armour; Take off armour hands it back at the town hall (#94)', async ({ page }) => {
-  await openGame(page);
-  expect(await sim(page, 'armorOff', {})).toEqual({
-    afterDisarm: { armor: 'iron', maxHp: 150 }, armor: null, maxHp: 100, ironBack: 8
-  });
-});
