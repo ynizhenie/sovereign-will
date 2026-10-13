@@ -20,3 +20,26 @@ test('Endless: pick your faction and the enemy\'s, each with a colour the other 
   expect(await page.evaluate(() => sides.player.color)).toBe('#3498db');
 });
 
+
+test('switching to the undead: no other faction\'s items or tab left in the panel; the limit hint names a grave (#200)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.click('[data-arg="tab-farming"]'); // a humans' tab left open
+  await page.evaluate(() => exitToMainMenu());
+  await page.evaluate(() => showMenuScreen('endless'));
+  await page.click('#faction-player [data-faction="undead"]');
+  await page.click('#play-button');
+  const r = await page.evaluate(() => ({
+    tab: document.querySelector('.tab-pane.active').id,
+    held: [...document.querySelectorAll('#group-toolsHeld-members div')].map(d => d.querySelector('b').id),
+    canButtons: ['btn-wateringCan', 'btn-hoe', 'btn-medbag'].map(id => document.getElementById(id)?.hidden ?? 'none'),
+    canOff: document.querySelector('[data-action="orderGearOff"][data-arg="wateringCan"]').hidden
+  }));
+  expect(r.tab).toBe('tab-build');
+  expect(r.held).toContain('held-tools-necro_staff-txt');
+  expect(r.held.filter(id => /wateringCan|hoe|medbag/.test(id))).toEqual([]);
+  expect(r.canButtons).toEqual([true, 'none', 'none']);
+  expect(r.canOff).toBe(true);
+  await page.evaluate(() => { stock.bones = 999; stock.rot = 999; settlers = settlers.concat(settlers, settlers); spawnSettler(getPlayerFaction().startUnits); });
+  await expect(page.locator('#toast-notification')).toContainText('Могила');
+});

@@ -29,6 +29,7 @@ export function handleCanvasClick() {
 
   const p = getPossessed();
   if (p && orderPossessed(p, mouse.x, mouse.y)) return;
+  if (game.buildMode === 'interact' && enemyTapped()) return;
   if (game.buildMode === 'interact' && selectTapped()) return;
 
   const tile = tapTile();
@@ -123,15 +124,21 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
   return true;
 }
 
-// Point mode on the map: mark an enemy as a target, a fishing spot, or a resource's priority (again: unmark)
-function markTapped() {
-  // pointing at an enemy marks it as a priority target for armed settlers; again to unmark
-  let clickedEnemy = game.enemies.find(en => Math.hypot(mouse.x - en.x, mouse.y - en.y) < en.radius + 8);
-  if (clickedEnemy) {
-    clickedEnemy.markedTarget = !clickedEnemy.markedTarget;
-    return;
-  }
+// Point mode on an enemy: marked as a priority target for armed settlers (again: unmarked). Before the
+// settlers and buildings: an enemy is mostly tapped while it fights at a wall or next to a soldier, and that
+// tap selected the soldier or ordered the wall's repair instead (#202). A settler nearer the tap than the
+// enemy still gets it. True when the tap was used.
+function enemyTapped() {
+  const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
+  const enemy = game.enemies.filter(en => away(en) < en.radius + 12).sort((a, b) => away(a) - away(b))[0];
+  if (!enemy) return false;
+  if (game.settlers.some(s => away(s) < s.visualRadius + 8 && away(s) < away(enemy))) return false;
+  enemy.markedTarget = !enemy.markedTarget;
+  return true;
+}
 
+// Point mode on the map: a fishing spot, or a resource's priority (again: unmark)
+function markTapped() {
   let clickedWater = game.waterTiles.find(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 18);
   if (clickedWater) {
     if (isWaterReachable(clickedWater)) {

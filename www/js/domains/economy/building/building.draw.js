@@ -68,8 +68,10 @@ export function drawBuildGrid() {
   }
 }
 
-// The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair
+// The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
+// menu it's drawn as a warehouse, the storage it is there (#200)
 export function drawTownHall() {
+  if (game.gameMode === 'menu') { drawIcon(ctx, 'warehouse', townHall.x, townHall.y, townHall.radius * 1.7); return; }
   if (getPlayerFaction().hall === 'hellgate') {
     // the demons' Hell Gate: a dark stone gate with fire inside
     ctx.fillStyle = '#3d1f1f'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();

@@ -35,8 +35,9 @@ export const mechanicsConfig = {
   meals: { seconds: 25, firstShare: 0.3 },
 
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
-  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds
-  relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120 },
+  // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
+  // can't get to (walled off since, or stuck giveUpSeconds on the way): another one; after maxTries, where it is
+  relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },

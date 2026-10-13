@@ -16,3 +16,19 @@ test('everyone moves at twice the base speed per step, the pace the game was tun
   expect(r.scale).toBe(2);
   expect(r.stepped).toBeCloseTo(2, 1); // speed 1 x scale 2 per step
 });
+
+test('a frame-rate cap gives that many frames on any screen: 60 on 75, 90, 144 and 165 Hz too (#197)', async () => {
+  const r = (() => {
+    const drawnPerSecond = (hz, cap) => {
+      loop.frameRate = cap; loop.lastDrawn = 0;
+      let drawn = 0;
+      for (let i = 1; i <= hz * 10; i++) if (frameDue(1000 + i * 1000 / hz + ((i * 7919) % 13 - 6) / 8)) drawn++;
+      return Math.round(drawn / 10);
+    };
+    const out = Object.fromEntries([[60, 60], [75, 60], [90, 60], [144, 60], [165, 60], [144, 30], [60, 30]].map(([hz, cap]) => [`${hz}/${cap}`, drawnPerSecond(hz, cap)]));
+    loop.frameRate = 'display';
+    out.display = [1, 2, 3].every(i => frameDue(i));
+    return out;
+  })();
+  expect(r).toEqual({ '60/60': 60, '75/60': 60, '90/60': 60, '144/60': 60, '165/60': 60, '144/30': 30, '60/30': 30, display: true });
+});

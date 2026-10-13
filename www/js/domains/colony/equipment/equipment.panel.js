@@ -19,8 +19,9 @@ export function renderGearLabels() {
   labelButton('btn-craft-arrows', `[[${recipes.arrows.icon}]] ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
   for (const item of Object.values(GAME_CONFIG.gear)) {
     labelButton(`btn-${item.id}`, `[[${item.icon}]] ${item.label} (${formatCost(item.cost)})`);
-    const button = document.getElementById(`btn-${item.id}`);
-    if (button) button.hidden = !isForPlayerFaction(item);
+    // gear a faction doesn't have: neither its button nor taking it apart (#200)
+    const buttons = [document.getElementById(`btn-${item.id}`), document.querySelector(`[data-action="orderGearOff"][data-arg="${item.id}"]`)];
+    for (const button of buttons) if (button) button.hidden = !isForPlayerFaction(item);
   }
 }
 

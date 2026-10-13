@@ -21,7 +21,7 @@ export const factionsConfig = {
     // rotPerSecond: rot its hall and graves make; foodInto: what food turns into when it's brought in
     undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie'], bowUnits: { zombie: 'skeleton' },
       upgrades: { zombie: 'big_zombie' }, startUnits: 'zombie', eats: false, hall: 'graveyard', shelter: 'grave', spawner: 'grave',
-      startResources: { bones: 30 }, bonesPerSecond: { hall: 0.25, grave: 0.1 }, rotPerSecond: { hall: 0, grave: 0.1 },
+      startResources: { bones: 30, rot: 10 }, bonesPerSecond: { hall: 0.25, grave: 0.1 }, rotPerSecond: { hall: 0.05, grave: 0.1 },
       foodInto: { rawMeat: 'bones', rawFish: 'bones', default: 'rot' },
       enemies: ['undead_zombie', 'undead_big_zombie', 'undead_skeleton', 'undead_necromancer'], summonEnemy: 'undead_zombie' }
   },

@@ -15,17 +15,17 @@ const toPage = (page, p) => page.evaluate(({ x, y }) => {
   return { x: rect.left + rect.width / 2 + (x - camera.x) * k, y: rect.top + rect.height / 2 + (y - camera.y) * k };
 }, p);
 
-test('behind the menu the game runs a little world: a soldier with a spear, a warehouse, boars; no waves (#193)', async ({ page }) => {
+test('behind the menu the game runs a little world: a soldier with a spear, a warehouse (the hall drawn as one, #200), boars; no waves (#193)', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await opened(page);
   const r = await page.evaluate(() => ({
     mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'),
-    soldiers: settlers.map(s => [s.weapon, s.role]), warehouse: buildings.filter(b => b.type === 'warehouse').length,
+    soldiers: settlers.map(s => [s.weapon, s.role]), buildings: buildings.length,
     boars: boars.length, panelHidden: getComputedStyle(document.getElementById('bottom-panel')).display === 'none'
   }));
-  expect(r).toEqual({ mode: 'menu', started: false, cls: true, soldiers: [['spear', 'soldier']], warehouse: 1, boars: 3, panelHidden: true });
+  expect(r).toEqual({ mode: 'menu', started: false, cls: true, soldiers: [['spear', 'soldier']], buildings: 0, boars: 3, panelHidden: true });
   // as the game loop runs it, for a while: no wave, no enemies
   const after = await page.evaluate(() => { for (let f = 0; f < 60 * 120; f++) stepGame(1 / 60); return { waveNum, enemies: enemies.length, mode: gameMode }; });
   expect(after).toEqual({ waveNum: 1, enemies: 0, mode: 'menu' });
