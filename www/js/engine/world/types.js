@@ -77,6 +77,8 @@
  * @property {boolean} [markedTarget] the player pointed at it
  * @property {boolean} [rewardGranted]
  * @property {Object} [battleEntry]   its place in a battle's line-up
+ * @property {string} [armor]          'iron': a wave enemy in armour (#203)
+ * @property {boolean} [shield]
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
@@ -193,6 +195,7 @@
  * @property {Object[]} dung
  * @property {Object[]} corpses
  * @property {number} enemyArrowStock
+ * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  */

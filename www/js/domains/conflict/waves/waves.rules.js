@@ -121,6 +121,19 @@ export function getWaveArmyFactor() {
   return Math.max(army.min, Math.min(army.max, 1 + (units - army.base) * army.perUnit));
 }
 
+// Armour and a shield on a wave enemy, by chance, once the player has made them (GAME_CONFIG.enemyGear)
+function dressForWave(enemy, def) {
+  const gear = GAME_CONFIG.enemyGear;
+  const chance = Math.min(gear.max, (game.waveNum - gear.fromWave + 1) * gear.perWave);
+  if (chance <= 0) return;
+  if (game.playerGear.armor && rand() < chance) {
+    enemy.armor = 'iron';
+    enemy.maxHp += GAME_CONFIG.gear.armor.hpBonus;
+    enemy.hp = enemy.maxHp;
+  }
+  if (game.playerGear.shield && def.type === 'normal' && !def.ranged && !def.healer && !def.necromancer && rand() < chance) enemy.shield = true;
+}
+
 export function startNextWave() {
   if (game.gameMode === 'endless') playSound('horn');
   const scaling = GAME_CONFIG.waveScaling;
@@ -165,6 +178,7 @@ export function startNextWave() {
     const enemy = createConfiguredEnemy(getWaveSpawnPos(), def.id);
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
+    dressForWave(enemy, def);
     game.enemies.push(enemy);
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);

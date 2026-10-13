@@ -46,6 +46,7 @@ export function serializeGame() {
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested },
     cols: game.COLS, rows: game.ROWS,
     clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
+    playerGear: { ...game.playerGear },
     sides: JSON.parse(JSON.stringify(sides)),
     difficulty: game.gameDifficulty,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
@@ -83,6 +84,7 @@ export function loadGame(data) {
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
+  game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();
   game.selectedSettler = null;
   game.defensePlan = null;

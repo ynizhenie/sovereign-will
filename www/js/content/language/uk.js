@@ -16,7 +16,7 @@ export const ukLanguage = {
         wall_wood: 'Дерев\'яна стіна', wall_stone: 'Кам\'яна стіна', spikes: 'Шипи', door: 'Двері', tent: 'Намет', campfire: 'Багаття',
         smelter: 'Плавильня', watchtower: 'Сторожова вежа', warehouse: 'Склад', grave: 'Могила', sacrifice_circle: 'Жертовне коло', portal: 'Портал', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
       },
-      enemies: { raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник', undead_zombie: 'Зомбі', undead_big_zombie: 'Великий зомбі', undead_skeleton: 'Скелет', undead_necromancer: 'Некромант', demon_imp: 'Чорт', demon_brute: 'Демон', demon_fire_imp: 'Вогняний чорт' },
+      enemies: { raider_medic: 'Лікар', undead_zombie_sword: 'Зомбі з мечем', demon_imp_sword: 'Чорт з мечем', raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник', undead_zombie: 'Зомбі', undead_big_zombie: 'Великий зомбі', undead_skeleton: 'Скелет', undead_necromancer: 'Некромант', demon_imp: 'Чорт', demon_brute: 'Демон', demon_fire_imp: 'Вогняний чорт' },
       factions: { humans: 'Люди', demons: 'Демони', undead: 'Нежить' },
       settlerTypes: { normal: 'Робітник', big: 'Богатир', zombie: 'Зомбі', big_zombie: 'Великий зомбі', skeleton: 'Скелет', necromancer: 'Некромант', imp: 'Чорт', demon: 'Демон', fire_imp: 'Вогняний чорт' },
       gear: { backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лійка' },

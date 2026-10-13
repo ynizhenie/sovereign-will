@@ -5,7 +5,7 @@ import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { applyHeldItemPose, drawHeldWeapon, drawQuiver } from '../../colony/settlers/index.js';
+import { applyHeldItemPose, drawArmor, drawHeldWeapon, drawMedbag, drawQuiver, drawShield } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
@@ -64,9 +64,12 @@ export function drawEnemies() {
     ctx.save();
     applyHeldItemPose(en);
     if (getEnemyDef(en).necromancer) drawStaff();
+    else if (getEnemyDef(en).tool === 'medbag') drawMedbag(1);
     else drawHeldWeapon(en.weapon);
     drawWeaponBlood(en);
     ctx.restore();
+    if (en.armor === 'iron') drawArmor(en.radius);
+    if (en.shield) drawShield(en.radius);
     if ((en.arrows || 0) > 0) drawQuiver(-en.radius, en.arrows || 0);
     ctx.restore();
 

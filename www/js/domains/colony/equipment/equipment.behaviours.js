@@ -3,7 +3,7 @@
 // ---- Equipment and hauling
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { townHall } from '../../../engine/world/index.js';
+import { game, townHall } from '../../../engine/world/index.js';
 import { applyBowUnit, canUseShield, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
 import { addResources, moveSettlerToTownHall } from '../storage/index.js';
 
@@ -17,7 +17,10 @@ export function equip(s, tick) {
       let equipment = s.targetEquipment;
       // gear only: put it on / hand it back, and nothing else changes
       if (equipment.gear || equipment.gearOff) {
-        if (equipment.gear) putOnGear(s, equipment.gear);
+        if (equipment.gear) {
+          putOnGear(s, equipment.gear);
+          if (equipment.gear === 'armor' || equipment.gear === 'shield') game.playerGear[equipment.gear] = true; // waves answer it (#203)
+        }
         else takeOffGear(s, equipment.gearOff);
         s.targetEquipment = null;
         return true;

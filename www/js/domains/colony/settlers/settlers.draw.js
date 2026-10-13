@@ -80,6 +80,27 @@ export function applyBackPose(unit) {
 
 // Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
 // Shared by settlers and enemies. Returns false for no weapon (fists).
+// Iron armour: a grey ring round a body of that radius
+export function drawArmor(radius) {
+  ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0, 0, radius + 2, 0, Math.PI * 2); ctx.stroke();
+}
+
+// A round wooden shield with an iron rim and boss on the left arm of a body of that radius
+export function drawShield(radius) {
+  ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-radius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(-radius + 1, 3, 1.8, 0, Math.PI * 2); ctx.fill();
+}
+
+// A medic's bag in hand: leather with a small green cross; the green inside rises with its herbs (full, 0..1)
+export function drawMedbag(full) {
+  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(7, -5, 10, 10);
+  ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
+  ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
+  ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
+}
+
 export function drawHeldWeapon(weapon) {
   if (isSwordWeapon(weapon)) {
     ctx.fillStyle = weapon === 'iron_sword' ? '#b0bec5' : '#e0e0e0'; ctx.fillRect(8, -2, 14, 4);
@@ -187,12 +208,7 @@ export function drawSettlers() {
     } else if (s.tool === 'rod') {
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
     } else if (s.tool === 'medbag') {
-      // a leather bag with a small green cross; the green inside rises with the herbs it holds
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(7, -5, 10, 10);
-      const full = Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize);
-      ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
-      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
-      ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
+      drawMedbag(Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
     } else if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) {
       drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
     } else if (s.tool === 'hoe') {
@@ -203,13 +219,7 @@ export function drawSettlers() {
     }
     drawWeaponBlood(s);
     ctx.restore(); // pose only moves the held item
-    if (s.armor === 'iron' || s.hasArmor) {
-	  ctx.strokeStyle = '#95a5a6';
-	  ctx.lineWidth = 3;
-	  ctx.beginPath(); 
-	  ctx.arc(0, 0, s.visualRadius + 2, 0, Math.PI * 2);
-	  ctx.stroke();
-	}
+    if (s.armor === 'iron' || s.hasArmor) drawArmor(s.visualRadius);
     // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
     if (s.tool === 'hoe' && s.wateringCan) {
       if ((s.usingCan || 0) > 0) {
@@ -219,12 +229,7 @@ export function drawSettlers() {
         drawWateringCan(-s.visualRadius, 4, 0.7);
       }
     }
-    if (s.shield) {
-      // a round wooden shield with an iron rim and boss on the left arm
-      ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(-s.visualRadius + 1, 3, 1.8, 0, Math.PI * 2); ctx.fill();
-    }
+    if (s.shield) drawShield(s.visualRadius);
     if (s.quiver) {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 3, -5, 4, 10);
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1;

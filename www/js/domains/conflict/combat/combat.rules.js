@@ -81,7 +81,7 @@ export function performAttack(attacker, targetX, targetY) {
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { en.hp -= dmg; bleed(en, attacker); playSound('hit', en); } })),
+      ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); bleed(en, attacker); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
@@ -184,7 +184,7 @@ export function applySpikeTraps() {
     }
   };
   for (const s of game.settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
-  for (const en of game.enemies) step(en, damage => { en.hp -= damage; bleed(en, null); });
+  for (const en of game.enemies) step(en, damage => { damageEnemy(en, damage); bleed(en, null); });
 }
 
 // ---- Corpses: where a settler or enemy fell, grey, until GAME_CONFIG.corpses.seconds pass. A
@@ -199,6 +199,13 @@ export function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
+}
+
+// Damage to an enemy, less what its armour and shield take, as a settler's (#203)
+export function damageEnemy(en, amount) {
+  let damage = en.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
+  if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
+  en.hp -= damage;
 }
 
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
@@ -309,7 +316,7 @@ export function tickProjectiles() {
       for (let j = game.enemies.length - 1; j >= 0 && !hit; j--) {
         let en = game.enemies[j];
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
-          en.hp -= proj.damage;
+          damageEnemy(en, proj.damage);
           bleed(en, proj.owner);
           playSound('arrowHit', en);
           if (proj.fire) setBurning(en);

@@ -11,6 +11,8 @@ export const enemiesConfig = {
   // quiver: arrows it spawns with; tentStock: arrows it adds to the shared stock in enemy tents;
   //   refill: arrows taken from a tent at once; melee: the enemy it fights like when out of arrows
   //   and no tent has any left.
+  // healer: walks up to the most hurt of its own side within range px and heals it by healPerSecond from
+  //   healRange; tool: what it's drawn holding instead of a weapon.
   // reward: added to the stock when it dies. Waves spawn kinds in this order.
   enemies: {
     raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
@@ -23,11 +25,18 @@ export const enemiesConfig = {
       type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } },
+    // a medic with a bag of herbs: heals the other raiders (#203)
+    raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
+      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.5, reach: 6, siege: { buildings: 5, resources: 1 },
+      healer: { range: 220, healRange: 30, healPerSecond: 10 } },
     // the undead: slow zombies, big zombies, skeleton archers, and necromancers that raise the dead
     // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
     // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
     undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
+    // a zombie that picked up a sword (#203)
+    undead_zombie_sword: { id: 'undead_zombie_sword', hp: 60, speed: 0.7, damage: 18, reward: { food: 1 }, weapon: 'sword',
+      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.66, reach: 12, siege: { buildings: 10, resources: 2 } },
     undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'fist',
       type: 'big', radius: 18, waveKey: 'brute', reach: 20, siege: { buildings: 25, resources: 4 }, splash: { radius: 60, share: 0.5 } },
     undead_skeleton: { id: 'undead_skeleton', hp: 45, speed: 0.9, damage: 25, reward: { food: 1 }, weapon: 'bow',
@@ -40,14 +49,21 @@ export const enemiesConfig = {
     // the demons: quick imps, big demons that hit all around, fire imps that throw fireballs. They
     // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
     demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',
-      type: 'normal', radius: 10, waveKey: ['club', 'raider'], reach: 6, siege: { buildings: 10, resources: 2 } },
-    demon_brute: { id: 'demon_brute', hp: 140, speed: 0.7, damage: 28, reward: { food: 2 }, weapon: 'club',
+      type: 'normal', radius: 10, waveKey: 'club', reach: 6, siege: { buildings: 10, resources: 2 } },
+    // an imp with a sword; the big demon carries a spear, not a club (#203)
+    demon_imp_sword: { id: 'demon_imp_sword', hp: 55, speed: 1.05, damage: 18, reward: { food: 1 }, weapon: 'sword',
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
+    demon_brute: { id: 'demon_brute', hp: 140, speed: 0.7, damage: 28, reward: { food: 2 }, weapon: 'spear',
       type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
     demon_fire_imp: { id: 'demon_fire_imp', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'bow', fireArrows: true,
       type: 'archer', radius: 10, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 170, keepAway: 140, cooldown: 1.4, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
   },
+
+  // armour and shields in waves (#203): once the player has made armour (a shield), each wave enemy from
+  // wave fromWave wears it with a chance growing by perWave a wave, up to max. Shields: melee, not big
+  enemyGear: { fromWave: 4, perWave: 0.04, max: 0.5 },
 
   // enemy tents: builders put them up near the map edge; each summons extra enemies during a wave
   enemyTents: {
