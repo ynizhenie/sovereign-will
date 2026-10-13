@@ -42,20 +42,22 @@ export function updateUI() {
 
   let btnUpgrade = document.getElementById('btn-upgrade-big');
 
-  if (getSelectedSettler()) {
-    const type = GAME_CONFIG.settlerTypes[game.selectedSettler.type] || GAME_CONFIG.settlerTypes.normal;
+  const selected = getSelectedSettler();
+  if (selected) {
+    const type = GAME_CONFIG.settlerTypes[selected.type] || GAME_CONFIG.settlerTypes.normal;
     let name = `[[${type.icon}]] ${type.label}`;
-    let wName = getDefinition('weapons', game.selectedSettler.weapon)?.label || game.selectedSettler.weapon;
-    let tName = game.selectedSettler.tool === 'none' ? '' : ' / ' + (getDefinition('tools', game.selectedSettler.tool)?.label || game.selectedSettler.tool);
-    let aName = game.selectedSettler.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
-    let qName = game.selectedSettler.quiver ? ` / ${t('hud.quiver', { n: game.selectedSettler.arrows || 0 })}` : '';
+    let wName = getDefinition('weapons', selected.weapon)?.label || selected.weapon;
+    let tName = selected.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selected.tool)?.label || selected.tool);
+    let aName = selected.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
+    let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
     // the rest of what it wears
-    const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(game.selectedSettler, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
+    const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
-    renderSettlerInfo(game.selectedSettler);
+    renderSettlerInfo(selected);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
-      btnUpgrade.style.display = getUpgrade() && game.selectedSettler.type === getUpgrade().from ? 'block' : 'none';
+      const upgrade = getUpgrade();
+      btnUpgrade.style.display = upgrade && selected.type === upgrade.from ? 'block' : 'none';
     }
   } else {
     game.selectedSettler = null;

@@ -135,13 +135,15 @@ export function placeOreSpawners(kind, count) {
 
 // spread: side of the square (px) around nearX/nearY to pick a spot in
 // pickPoint: optional () => { x, y } to try instead of a square around (nearX, nearY) (forest shapes)
+/** @param {string} type @param {number | null} [nearX] @param {number | null} [nearY] @param {number} [spread]
+ * @param {(() => { x: number, y: number }) | null} [pickPoint] */
 export function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null) {
   let tx, ty, isValid = false, attempts = 0;
   while (!isValid && attempts < 100) {
     attempts++;
     let gx, gy;
     if (pickPoint || (nearX !== null && nearY !== null)) {
-      const point = pickPoint ? pickPoint() : { x: nearX + (rand() - 0.5) * spread, y: nearY + (rand() - 0.5) * spread };
+      const point = pickPoint ? pickPoint() : { x: /** @type {number} */ (nearX) + (rand() - 0.5) * spread, y: /** @type {number} */ (nearY) + (rand() - 0.5) * spread };
       tx = point.x;
       ty = point.y;
       gx = Math.max(BORDER_MARGIN, Math.min(game.COLS - BORDER_MARGIN - 1, Math.floor(tx / TILE_SIZE)));

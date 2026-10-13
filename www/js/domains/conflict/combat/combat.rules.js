@@ -154,8 +154,9 @@ export function setBurning(unit) {
 
 export function updateBurning(dt) {
   for (const unit of [...game.settlers, ...game.enemies]) {
-    if (!(unit.burning > 0)) continue;
-    unit.burning -= dt;
+    const burning = unit.burning || 0;
+    if (!(burning > 0)) continue;
+    unit.burning = burning - dt;
     if (game.settlers.includes(/** @type {any} */ (unit))) damageSettler(/** @type {any} */ (unit), GAME_CONFIG.burning.dps * dt, null);
     else unit.hp -= GAME_CONFIG.burning.dps * dt;
   }
@@ -172,10 +173,11 @@ export function applySpikeTraps() {
     const key = `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`;
     const trap = spikesAt.get(key);
     if (!trap) { unit.spikeTile = null; return; }
-    if (unit.spikeTile === key || trap.usesLeft <= 0) return;
+    const usesLeft = trap.usesLeft || 0;
+    if (unit.spikeTile === key || usesLeft <= 0) return;
     unit.spikeTile = key;
     hurt(getDefinition('buildings', 'spikes').build.trap.damage);
-    trap.usesLeft--;
+    trap.usesLeft = usesLeft - 1;
     if (trap.usesLeft <= 0) {
       game.buildings.splice(game.buildings.indexOf(trap), 1);
       invalidateAllPaths();

@@ -54,7 +54,7 @@ export function drawEnemies() {
     ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = shadeColor(getEnemyColor(), -0.45); ctx.lineWidth = 2; ctx.stroke();
     if (en.enemyKey.startsWith('demon_')) drawHorns(en.x, en.y, en.radius);
-    if (en.burning > 0) drawBurning(en.x, en.y, en.radius);
+    if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
 
     ctx.save();
@@ -66,7 +66,7 @@ export function drawEnemies() {
     else drawHeldWeapon(en.weapon);
     drawWeaponBlood(en);
     ctx.restore();
-    if (en.arrows > 0) drawQuiver(-en.radius, en.arrows);
+    if ((en.arrows || 0) > 0) drawQuiver(-en.radius, en.arrows || 0);
     ctx.restore();
 
     if (en.markedTarget) drawTargetMark(en);

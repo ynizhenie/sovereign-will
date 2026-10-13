@@ -41,7 +41,7 @@ export let lastTouchEnd = 0;
 export function initInput() {
   window.addEventListener('keydown', e => {
     if (e.key === 'Shift') shiftDown = true;
-    if (e.code === 'Space' || (e.code === 'KeyP' && !e.repeat && document.activeElement.tagName !== 'INPUT')) { e.preventDefault(); togglePause(); return; }
+    if (e.code === 'Space' || (e.code === 'KeyP' && !e.repeat && document.activeElement?.tagName !== 'INPUT')) { e.preventDefault(); togglePause(); return; }
     if (e.code === 'Escape') { unpossess(); return; }
     keys[e.key.toLowerCase()] = true;
     if (e.key === 'Tab') { e.preventDefault(); switchPossession(); }
@@ -50,7 +50,7 @@ export function initInput() {
   window.addEventListener('blur', () => { shiftDown = false; });
   (function bindJoystick() {
     const base = document.getElementById('mobile-joystick');
-    const knob = base.querySelector('.joystick-knob');
+    const knob = /** @type {HTMLElement} */ (base.querySelector('.joystick-knob'));
     let pointerId = null;
     const moveKnob = (clientX, clientY) => {
       const rect = base.getBoundingClientRect();

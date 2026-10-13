@@ -4,6 +4,8 @@
 import { loadSetting, saveSetting } from './storage.js';
 import { MUSIC_STYLES, SOUND } from '../../app/index.js';
 
+/** @type {{ ctx: AudioContext | null, master: GainNode | null, sfx: GainNode | null, music: GainNode | null,
+ *   noise: AudioBuffer | null, layers: Object<string, any>, last: Object<string, number>, soundOn: boolean, musicOn: boolean }} */
 export const audio = {
   ctx: null, master: null, sfx: null, music: null, noise: null,
   layers: {},            // music styles: { gain, next, step, bar } each
@@ -47,15 +49,16 @@ export function setMusicOn(on) { audio.musicOn = on; saveSetting('music', on ? '
 
 /** @param {AudioNode} out @param {number} t @param {import('../world/types.js').Sound} sound */
 export function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.005, filter, q = 1 }) {
-  const ctx = audio.ctx;
+  const ctx = /** @type {AudioContext} */ (audio.ctx);
   const osc = ctx.createOscillator();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, t);
+  osc.type = /** @type {OscillatorType} */ (type);
+  osc.frequency.setValueAtTime(/** @type {number} */ (freq), t);
   if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
   const env = ctx.createGain();
   env.gain.setValueAtTime(0.0001, t);
   env.gain.exponentialRampToValueAtTime(gain, t + attack);
   env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  /** @type {AudioNode} */
   let node = osc;
   if (filter) {
     const f = ctx.createBiquadFilter();
@@ -68,11 +71,11 @@ export function tone(out, t, { type = 'sine', freq, to, dur, gain, attack = 0.00
 
 /** @param {AudioNode} out @param {number} t @param {import('../world/types.js').Sound} sound */
 export function noise(out, t, { dur, gain, type = 'bandpass', freq = 1000, to, q = 1, attack = 0.003 }) {
-  const ctx = audio.ctx;
+  const ctx = /** @type {AudioContext} */ (audio.ctx);
   const src = ctx.createBufferSource();
   src.buffer = audio.noise;
   const f = ctx.createBiquadFilter();
-  f.type = type; f.Q.value = q;
+  f.type = /** @type {BiquadFilterType} */ (type); f.Q.value = q;
   f.frequency.setValueAtTime(freq, t);
   if (to) f.frequency.exponentialRampToValueAtTime(to, t + dur);
   const env = ctx.createGain();

@@ -63,13 +63,14 @@ export function playSound(name, at, ...args) {
   audio.last[name] = t;
   const out = audio.ctx.createGain();
   out.gain.value = place.volume * (game.gameMode === 'menu' && at ? SOUND.menuWorldShare : 1);
+  /** @type {AudioNode} */
   let node = out;
   if (audio.ctx.createStereoPanner) {
     const pan = audio.ctx.createStereoPanner();
     pan.pan.value = place.pan;
     out.connect(pan); node = pan;
   }
-  node.connect(audio.sfx);
+  node.connect(/** @type {GainNode} */ (audio.sfx));
   SOUNDS[name](out, t, ...args);
   setTimeout(() => node.disconnect(), 3000);
 }
@@ -162,5 +163,5 @@ export function updateMusic() {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initSounds() {
   // a click for every button
-  document.addEventListener('pointerdown', e => { if (e.target.closest('button')) { startAudio(); playSound('click'); } }, true);
+  document.addEventListener('pointerdown', e => { if (/** @type {Element} */ (e.target).closest('button')) { startAudio(); playSound('click'); } }, true);
 }

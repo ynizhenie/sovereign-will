@@ -67,14 +67,14 @@ export function initEditorPanel() {
   onTap(document.getElementById('editor-save'), saveEditorMap);
   document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));
   document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
-    editor.category = button.dataset.editorCategory;
-    if (editor.tool !== 'erase') editor.tool = EDITOR_TOOLS.find(tl => tl.category === editor.category).id;
+    editor.category = /** @type {string} */ (button.dataset.editorCategory);
+    if (editor.tool !== 'erase') editor.tool = /** @type {{ id: string }} */ (EDITOR_TOOLS.find(tl => tl.category === editor.category)).id;
     renderEditorPanel();
   }));
   onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; renderEditorPanel(); });
   onTap(document.getElementById('editor-resize'), () => { const panel = document.getElementById('editor-resize-panel'); panel.hidden = !panel.hidden; });
   document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
-    const [side, delta] = button.dataset.resize.split(':');
+    const [side, delta] = /** @type {string} */ (button.dataset.resize).split(':');
     resizeEditorMap(side, Number(delta));
   }));
 }

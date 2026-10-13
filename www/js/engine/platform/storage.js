@@ -13,7 +13,7 @@ export function saveSetting(name, value) {
 }
 
 export function loadData(name, fallback) {
-  try { return JSON.parse(localStorage.getItem(key(name))) ?? fallback; } catch (e) { return fallback; }
+  try { return JSON.parse(localStorage.getItem(key(name)) ?? 'null') ?? fallback; } catch (e) { return fallback; }
 }
 
 export function saveData(name, value) {
