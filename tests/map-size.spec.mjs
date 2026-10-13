@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('small, large and custom maps generate and play a wave without errors, scaled to their area (#21)', async ({ page }) => {

@@ -16,6 +16,7 @@ export const stock = Object.fromEntries(Object.keys(GAME_CONFIG.resources).map(i
 // The town hall and the warehouses: worked out again only when the buildings change (a building added or
 // taken away: a new list or a new length) or a tick has passed, not on every call (every settler carrying
 // something asks, every tick)
+/** @type {{ buildings: Object[] | null, length: number, tick: number, list: (import('../../../engine/world/types.js').Building | import('../../../engine/world/types.js').TownHall)[] }} */
 const storages = { buildings: null, length: -1, tick: -1, list: [] };
 export function getStorages() {
   if (storages.buildings !== game.buildings || storages.length !== game.buildings.length || storages.tick !== game.pathTick) {

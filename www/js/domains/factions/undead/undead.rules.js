@@ -84,7 +84,7 @@ export function updateTemporaryZombies(dt) {
   const gone = game.settlers.filter(crumbled);
   if (gone.length) {
     game.settlers = game.settlers.filter(s => !gone.includes(s));
-    if (gone.includes(game.selectedSettler)) game.selectedSettler = null;
+    if (game.selectedSettler && gone.includes(game.selectedSettler)) game.selectedSettler = null;
     stock.rot += gone.length * GAME_CONFIG.temporaryZombie.rot;
   }
   game.enemies = game.enemies.filter(en => !crumbled(en));

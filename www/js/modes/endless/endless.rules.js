@@ -18,6 +18,7 @@ export const DEFEAT_FLY_SECONDS = 1.2;
 
 export const DEFEAT_CSS_SCALE = 1.5; // how close the camera comes: CSS pixels per world unit
 
+/** @type {{ from: { x: number, y: number, zoom: number }, to: { x: number, y: number, zoom: number }, t: number } | null} */
 export let defeatView = null;      // { from: { x, y, zoom }, to: { x, y, zoom }, t } while the defeat shows
 
 export function updateDefeat(dt) {

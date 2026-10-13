@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { iconText } from './helpers.mjs';
 
 // These open the game themselves: helpers.openGame switches it to Russian for the other tests

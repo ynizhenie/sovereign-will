@@ -4,18 +4,20 @@ import { TILE_SIZE, game, getGridPos, getTileIndex, resetTileIndex, townHall } f
 
 // isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
 // world's blocking tiles change. Settler path searches read this instead of re-checking each tile.
+/** @type {{ signature: number | null, grid: Uint8Array | null }} */
 export let settlerBlockedGrid = { signature: null, grid: null };
 
+/** @returns {Uint8Array} */
 export function getSettlerBlockedGrid() {
   const signature = getTileIndex().signature;
-  if (settlerBlockedGrid.signature !== signature || settlerBlockedGrid.grid.length !== game.COLS * game.ROWS) {
+  if (settlerBlockedGrid.signature !== signature || !settlerBlockedGrid.grid || settlerBlockedGrid.grid.length !== game.COLS * game.ROWS) {
     const grid = new Uint8Array(game.COLS * game.ROWS);
     for (let gy = 0; gy < game.ROWS; gy++) {
       for (let gx = 0; gx < game.COLS; gx++) grid[gy * game.COLS + gx] = computeTileBlockedForSettler(gx, gy) ? 1 : 0;
     }
     settlerBlockedGrid = { signature, grid };
   }
-  return settlerBlockedGrid.grid;
+  return /** @type {Uint8Array} */ (settlerBlockedGrid.grid);
 }
 
 export function isTileBlockedForSettler(gx, gy) {
@@ -188,7 +190,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
       const worldY = gy * TILE_SIZE + 15;
       const extraCost = options.extraCost ? options.extraCost(worldX, worldY) : 0;
       const tentativeG = (gScore.get(currentKey) || 0) + direction.cost + extraCost;
-      if (!gScore.has(nextKey) || tentativeG < gScore.get(nextKey)) {
+      if (!gScore.has(nextKey) || tentativeG < /** @type {number} */ (gScore.get(nextKey))) {
         gScore.set(nextKey, tentativeG);
         parentMap.set(nextKey, current);
         openList.push({ gx, gy, f: tentativeG + Math.hypot(gx - endG.gx, gy - endG.gy) });

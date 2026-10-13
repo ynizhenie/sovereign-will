@@ -523,7 +523,7 @@ export function getIconCanvas(name) {
   if (iconCanvases[name]) return iconCanvases[name];
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = ICON_PIXELS;
-  const c = canvas.getContext('2d');
+  const c = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
   c.scale(ICON_PIXELS / 32, ICON_PIXELS / 32);
   (ICONS[name] || ICONS.warn)(c);
   iconCanvases[name] = canvas;

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, iconText } from './helpers.mjs';
 
 test('opening a resource group does not change the panel size (#119)', async ({ page }) => {

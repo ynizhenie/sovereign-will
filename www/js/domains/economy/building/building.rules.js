@@ -112,7 +112,7 @@ export function getSmelterLimits() {
   return GAME_CONFIG.buildings.smelter.build.smelter;
 }
 
-/** @returns {import('../../../engine/world/types.js').Building} */
+/** @returns {import('../../../engine/world/types.js').Blueprint} */
 export function createBuildingBlueprint(type, x, y) {
   const item = getDefinition('buildings', type);
   const build = item && item.build ? item.build : {};
@@ -197,7 +197,7 @@ export function tickSmelters(dt) {
     const limits = getSmelterLimits();
     if (smelter.oreLoaded > 0 && smelter.coalLoaded > 0 && smelter.ironProduced < limits.maxIron) {
       smelter.smeltProgress = (smelter.smeltProgress || 0) + dt;
-      if (smelter.smeltProgress >= limits.seconds) {
+      if ((smelter.smeltProgress || 0) >= limits.seconds) {
         smelter.oreLoaded--;
         smelter.coalLoaded--;
         smelter.ironProduced++;

@@ -1,6 +1,5 @@
 // The state of the game being played: one object, `game`. Its mode and clocks, the map's size, what's
-// selected, and every list of things on the map. Each field is also reachable by its own name on
-// window (for the tests and the console); the game's own code says game.x.
+// selected, and every list of things on the map.
 
 export const TILE_SIZE = 30;
 export const BORDER_MARGIN = 2;
@@ -75,12 +74,3 @@ export const BOAR_LIMIT = 5;
 export const TOWN_HALL_HP = 100;
 /** @type {import('./types.js').TownHall} */
 export const townHall = { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2, radius: 32, hp: TOWN_HALL_HP, maxHp: TOWN_HALL_HP, repairRequested: false };
-
-for (const key of Object.keys(game)) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    enumerable: true,
-    get() { return game[key]; },
-    set(value) { game[key] = value; }
-  });
-}

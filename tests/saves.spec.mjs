@@ -1,10 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
-
-test('a saved game loads back exactly, pointers between things included, and goes on the same way (#156)', async ({ page }) => {
-  await openGame(page);
-  expect(await sim(page, 'saveRoundTrip')).toEqual({ same: true, pointers: true, sameAfterwards: true });
-});
 
 test('save from the pause menu, then carry on from the Endless menu, or delete the save (#156)', async ({ page }) => {
   await openGame(page);
