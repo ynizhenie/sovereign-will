@@ -1,7 +1,7 @@
 // Regression tests: the real game in Chromium, driven through tests/sim.js on fixed seeds.
 // Thresholds come from measurements after the pathfinding fixes (#1, #2); a failure here usually means
 // enemies or settlers got stuck again, or a change made the simulation much slower.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
 
 // Rock-heavy seeds: large natural rock masses with narrow corridors

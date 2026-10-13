@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 test('a warehouse costs 5 wood, and tapping it shows no storage window (#141)', async ({ page }) => {

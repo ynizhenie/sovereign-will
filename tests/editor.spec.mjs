@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
 
 test('editor screens: new map, tools, save by name, open and delete saved maps (#37, #39)', async ({ page }) => {

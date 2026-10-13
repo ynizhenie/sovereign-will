@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, iconText } from './helpers.mjs';
 
 test('the camera zooms closer on a big map and goes up to the map edge; no zoom buttons (#182)', async ({ page }) => {

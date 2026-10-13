@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('raw food comes right after Food in the panel; berry bushes have blue berries (#169)', async ({ page }) => {

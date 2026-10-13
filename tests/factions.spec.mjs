@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('Endless: pick your faction and the enemy\'s, each with a colour the other side can\'t have (#43)', async ({ page }) => {

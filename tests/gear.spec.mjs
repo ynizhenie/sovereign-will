@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 test('a backpack goes to a worker, never an archer, and is put on at the town hall (#94)', async ({ page }) => {

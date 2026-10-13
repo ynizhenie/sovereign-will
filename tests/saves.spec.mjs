@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
 
 test('save from the pause menu, then carry on from the Endless menu, or delete the save (#156)', async ({ page }) => {
