@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('the button next to the seed puts in a new random seed, which the game then uses (#39)', async ({ page }) => {

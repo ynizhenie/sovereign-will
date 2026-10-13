@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 
 // The world behind the main menu (#193): a little Endless run by the game's own code
 test.beforeEach(async ({ page }) => {

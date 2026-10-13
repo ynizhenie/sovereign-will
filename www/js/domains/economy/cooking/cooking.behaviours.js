@@ -27,7 +27,7 @@ export function cook(s, tick) {
   if (!fire) {
     if (s.carrying) return false; // its fire is gone: deliverCarrying puts it back in the stock
     if (!cooking.raw.some(r => stock[r] > 0)) return false;
-    fire = game.buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && (b.fuelLeft > 0 || findFuel()))
+    fire = game.buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && ((b.fuelLeft || 0) > 0 || findFuel()))
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (!fire) return false;
   }

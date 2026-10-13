@@ -135,13 +135,15 @@ export function placeOreSpawners(kind, count) {
 
 // spread: side of the square (px) around nearX/nearY to pick a spot in
 // pickPoint: optional () => { x, y } to try instead of a square around (nearX, nearY) (forest shapes)
+/** @param {string} type @param {number | null} [nearX] @param {number | null} [nearY] @param {number} [spread]
+ * @param {(() => { x: number, y: number }) | null} [pickPoint] */
 export function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null) {
   let tx, ty, isValid = false, attempts = 0;
   while (!isValid && attempts < 100) {
     attempts++;
     let gx, gy;
     if (pickPoint || (nearX !== null && nearY !== null)) {
-      const point = pickPoint ? pickPoint() : { x: nearX + (rand() - 0.5) * spread, y: nearY + (rand() - 0.5) * spread };
+      const point = pickPoint ? pickPoint() : { x: /** @type {number} */ (nearX) + (rand() - 0.5) * spread, y: /** @type {number} */ (nearY) + (rand() - 0.5) * spread };
       tx = point.x;
       ty = point.y;
       gx = Math.max(BORDER_MARGIN, Math.min(game.COLS - BORDER_MARGIN - 1, Math.floor(tx / TILE_SIZE)));
@@ -275,6 +277,31 @@ export function generateMap() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
   game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.ironOres = []; game.coalOres = []; game.boars = [];
 
+  placeLakes();
+  placeDeserts();
+  placeRockClusters();
+
+  placeForests();
+  for (let i = 0; i < getMapCount('trees', 8); i++) spawnResource('tree');  // lone trees outside forests
+  placeBoulderPiles();
+  for (let i = 0; i < getMapCount('boulders', 15); i++) spawnResource('boulder');
+  for (let i = 0; i < getMapCount('grass', 16); i++) spawnForestAware('grass');
+  for (let i = 0; i < getMapCount('berryBushes', 8); i++) spawnForestAware('berry_bush');
+  for (let i = 0; i < getMapCount('sticks', 15); i++) spawnForestAware('stick');
+  for (let i = 0; i < getMapCount('pebbles', 14); i++) spawnResource('pebble');
+
+  // at least one spawner of each kind, even if the config says 0
+  for (const kind of Object.keys(ORE_KINDS)) {
+    placeOreSpawners(kind, Math.max(1, getMapCount(ORE_KINDS[kind].spawnerKey, 1)));
+  }
+
+  for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
+  placeBeaches();
+  placeAppleTrees();
+}
+
+// Lakes: a few blobs of water with wavy shores, apart from each other and away from the town hall
+function placeLakes() {
   const lakeRange = getMapRange('lakes', 1, 4);
   const lakeWidthRange = getMapRange('lakeWidth', 3, 8);
   const lakeHeightRange = getMapRange('lakeHeight', 3, 8);
@@ -345,7 +372,10 @@ export function generateMap() {
       game.waterTiles.push(...tempTiles);
     }
   }
+}
 
+// Deserts: sand in a few overlapping blobs, away from the hall and the water, with cacti and pebbles on it
+function placeDeserts() {
   const desertRange = getMapRange('deserts', 1, 1);
   const desertRxRange = getMapRange('desertRadiusX', 3, 5);
   const desertRyRange = getMapRange('desertRadiusY', 2, 4);
@@ -415,7 +445,10 @@ export function generateMap() {
       spawnResourceCluster('pebble', getMapCount('desertPebbles', 5), desertCenterX, desertCenterY);
     }
   }
+}
 
+// Rock: clusters of natural rock with wavy edges, not on sand, away from the hall
+function placeRockClusters() {
   const cfg = GAME_CONFIG.map;
   let numRockClusters = Math.round((cfg.rockClusters.min + Math.floor(rand() * (cfg.rockClusters.max - cfg.rockClusters.min + 1))) * getMapAreaScale());
 
@@ -450,24 +483,6 @@ export function generateMap() {
       }
     }
   }
-
-  placeForests();
-  for (let i = 0; i < getMapCount('trees', 8); i++) spawnResource('tree');  // lone trees outside forests
-  placeBoulderPiles();
-  for (let i = 0; i < getMapCount('boulders', 15); i++) spawnResource('boulder');
-  for (let i = 0; i < getMapCount('grass', 16); i++) spawnForestAware('grass');
-  for (let i = 0; i < getMapCount('berryBushes', 8); i++) spawnForestAware('berry_bush');
-  for (let i = 0; i < getMapCount('sticks', 15); i++) spawnForestAware('stick');
-  for (let i = 0; i < getMapCount('pebbles', 14); i++) spawnResource('pebble');
-
-  // at least one spawner of each kind, even if the config says 0
-  for (const kind of Object.keys(ORE_KINDS)) {
-    placeOreSpawners(kind, Math.max(1, getMapCount(ORE_KINDS[kind].spawnerKey, 1)));
-  }
-
-  for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
-  placeBeaches();
-  placeAppleTrees();
 }
 
 // Sand on one stretch of each lake's shore: the tiles touching the water on one side of the lake.

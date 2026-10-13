@@ -1,6 +1,6 @@
 // Pieces the screens share: a button's answer to a tap, prices shown short in red, a list of saved things
 
-import { escapeHtml, iconHtml } from './icons.js';
+import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { stock } from '../domains/colony/storage/index.js';
 
@@ -14,7 +14,7 @@ export function refreshAffordability(force = false) {
     if (!parts.length) continue;
     let short = false;
     for (const part of parts) {
-      const missing = Number(stock[part.dataset.res] || 0) < Number(part.dataset.amount);
+      const missing = Number(stock[part.dataset.res || ''] || 0) < Number(part.dataset.amount);
       part.classList.toggle('short', missing);
       if (missing) short = true;
     }
@@ -24,7 +24,9 @@ export function refreshAffordability(force = false) {
 
 // A button's answer (#UI): the one just pressed flashes green when what it did worked (a green notice) and
 // shakes when it didn't (a red one), within a moment of the press
-export let pressedButton = null, pressedAt = 0;
+/** @type {HTMLElement | null} */
+export let pressedButton = null;
+export let pressedAt = 0;
 export function answerPressedButton(ok) {
   if (!pressedButton || performance.now() - pressedAt > 600) return;
   const button = pressedButton, name = ok ? 'btn-ok' : 'btn-no';
@@ -74,7 +76,7 @@ export function renderItemList(list, items, { attr, selected, onPick, onDelete, 
       question.className = 'item-question';
       question.textContent = t('list.deleteQuestion', { name: label });
       row.append(question,
-        button('item-confirm', escapeHtml(t('list.yes')), 'confirmDelete', id, () => onDelete(id)),
+        button('item-confirm', escapeHtml(t('list.yes')), 'confirmDelete', id, () => onDelete && onDelete(id)),
         button('item-cancel', escapeHtml(t('list.no')), 'cancelDelete', id, showItem));
     };
     showItem();
@@ -85,7 +87,13 @@ export function renderItemList(list, items, { attr, selected, onPick, onDelete, 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initWidgets() {
   document.addEventListener('pointerdown', e => {
-    const button = e.target.closest && e.target.closest('button');
+    const target = /** @type {Element} */ (e.target), button = /** @type {HTMLElement | null} */ (target.closest && target.closest('button'));
     if (button) { pressedButton = button; pressedAt = performance.now(); }
   }, true);
+}
+
+// A button of the page (index.html) gets its text, icons marked [[name]], if it's there
+export function labelButton(id, text) {
+  const el = document.getElementById(id);
+  if (el) setRichText(el, text);
 }

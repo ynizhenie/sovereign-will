@@ -29,6 +29,11 @@ interface HTMLElement {
   getContext(contextId: '2d', options?: CanvasRenderingContext2DSettings): CanvasRenderingContext2D;
 }
 
+// the game's own page (index.html) always has the elements the code asks for by id
+interface Document {
+  getElementById(elementId: string): HTMLElement;
+}
+
 interface Window {
   // the Android app's native bridge (Capacitor), when the game runs as the app
   Capacitor?: any;

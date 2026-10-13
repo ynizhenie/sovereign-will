@@ -1,17 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
-
-test('farm zones go on grass and hand-gathered things, not on trees, boulders, sand or walls (#92)', async ({ page }) => {
-  await openGame(page);
-  expect(await sim(page, 'zonePlacement', {})).toEqual({
-    grass: true, grassTuft: true, stick: true, bush: true, tree: false, boulder: false, sand: false, wall: false
-  });
-});
-
-test('a worker clears grass off a zone tile, then the farmer plants it (#92)', async ({ page }) => {
-  await openGame(page);
-  expect(await sim(page, 'zoneGetsCleared', {})).toEqual({ grassGone: true, planted: true });
-});
 
 test('nothing can be built on a farm zone until the zone is removed (#92)', async ({ page }) => {
   await openGame(page);

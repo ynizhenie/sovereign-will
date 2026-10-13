@@ -18,6 +18,9 @@ import { renderBattlePanel } from './battle.panel.js';
 
 export const BATTLE_RESULT_SECONDS = 4;
 
+/** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean,
+ *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean, shield?: boolean }[],
+ *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'own',    // the panel's category
@@ -80,7 +83,8 @@ export function resetBattleUnits() {
   game.settlers = []; game.enemies = []; game.projectiles = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
   for (const entry of battle.lineup) {
     if (entry.building) {
-      const b = createBuildingBlueprint(entry.building, entry.x, entry.y);
+      // built at once: a building, not a blueprint
+      const b = /** @type {any} */ (createBuildingBlueprint(entry.building, entry.x, entry.y));
       delete b.progress;
       delete b.maxProgress;
       game.buildings.push(b);

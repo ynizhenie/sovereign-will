@@ -23,7 +23,7 @@
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
  * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building } | null} carrying
- * @property {Point[]} path          the way it walks, tile by tile (moveEntityTowards)
+ * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
  * @property {number} [hunger]       seconds until its next meal
@@ -36,7 +36,7 @@
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
- * @property {Building} [towerAssignment] the watchtower it guards
+ * @property {Watchtower | null} [towerAssignment] the watchtower it guards
  * @property {boolean} [isIdle]
  * @property {boolean} [hasArmor]
  * @property {number} [usingCan]     seconds left of watering with the can
@@ -63,8 +63,8 @@
  * @property {string} weapon
  * @property {Object<string, number>} reward   what killing it adds to the stock
  * @property {Settler | null} [attackTarget]
- * @property {Building | null} buildTarget     the tent site it's building
- * @property {Point[]} path
+ * @property {Object | null} buildTarget     the tent site it's building
+ * @property {Point[] | null} path
  * @property {Point | null} pathTarget
  * @property {number} [arrows]
  * @property {number} [facing]
@@ -79,16 +79,30 @@
  */
 
 /**
- * A building or a blueprint of one (GAME_CONFIG.buildings): created by createBuildingBlueprint; built,
- * it goes from game.blueprints to game.buildings.
- * @typedef {Object} Building
- * @property {string} type           GAME_CONFIG.buildings key
+ * A blueprint (GAME_CONFIG.buildings, or a demolition): created by createBuildingBlueprint, worked on in
+ * game.blueprints; finished, it goes to game.buildings as a Building.
+ * @typedef {Object} Blueprint
+ * @property {string} type           GAME_CONFIG.buildings key, or 'demolish_building'
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} progress       building work done, of maxProgress
  * @property {number} maxProgress
  * @property {number} [hp]
  * @property {number} [maxHp]
+ * @property {Object<string, number>} [needs]  materials still to be brought
+ * @property {Building} [targetBuilding] what a demolition takes down
+ */
+
+/**
+ * A building standing on the map (game.buildings).
+ * @typedef {Object} Building
+ * @property {string} type           GAME_CONFIG.buildings key
+ * @property {number} x              its tile's centre
+ * @property {number} y
+ * @property {number} [progress]
+ * @property {number} [maxProgress]
+ * @property {number} hp
+ * @property {number} maxHp
  * @property {Object<string, number>} [needs]  materials still to be brought to the blueprint
  * @property {{ arrowCapacity: number, capacity?: number }} [tower]
  * @property {number} [arrows]
@@ -104,8 +118,13 @@
  * @property {number} [coalLoaded]
  * @property {number} [ironProduced]
  * @property {number} [smeltProgress]
- * @property {Settler} [collector]
+ * @property {Settler | null} [collector]
  * @property {number} [cookProgress] a campfire's piece cooking now, 0..1
+ */
+
+/**
+ * A watchtower: a building with its tower, its arrows and its guards
+ * @typedef {Building & { tower: { arrowCapacity: number, capacity: number }, arrows: number, guards: Settler[] }} Watchtower
  */
 
 /**
@@ -144,7 +163,7 @@
  * @property {Settler[]} settlers
  * @property {Enemy[]} enemies
  * @property {Building[]} buildings
- * @property {Building[]} blueprints
+ * @property {Blueprint[]} blueprints
  * @property {Object[]} trees         (things on the map: x, y, hp, priority... as each list's own)
  * @property {Object[]} cacti
  * @property {Object[]} boulders

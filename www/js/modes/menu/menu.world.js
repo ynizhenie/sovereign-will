@@ -56,7 +56,8 @@ export function enterMenuWorld() {
     y: centre.y + (cy - view.top - view.height / 2) / MENU_WORLD.cssScale
   });
   const panel = menuPanelRect();
-  const p0 = panel && toWorld(panel.left, panel.top), p1 = panel && toWorld(panel.right, panel.bottom);
+  // (with no panel showing, p0 and p1 are never read)
+  const p0 = panel ? toWorld(panel.left, panel.top) : centre, p1 = panel ? toWorld(panel.right, panel.bottom) : centre;
   const behindPanel = (x, y) => !!panel && x > p0.x - TILE_SIZE && x < p1.x + TILE_SIZE && y > p0.y - TILE_SIZE && y < p1.y + TILE_SIZE;
   const v0 = toWorld(view.left, view.top), v1 = toWorld(view.right, view.bottom);
 
@@ -163,6 +164,6 @@ export function syncMenuWorld() {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initMenuWorld() {
   document.getElementById('main-menu').addEventListener('click', e => {
-    if (e.target.id === 'main-menu') menuWorldTap(e.clientX, e.clientY);
+    if (/** @type {Element} */ (e.target).id === 'main-menu') menuWorldTap(e.clientX, e.clientY);
   });
 }

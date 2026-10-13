@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('sound starts with the first tap; menu music in the menu, the ambient in Endless, battle music while a wave is on (#174)', async ({ page }) => {

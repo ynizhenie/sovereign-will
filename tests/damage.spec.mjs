@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 test('damaged buildings and the town hall are drawn with cracks, the more the worse (#157)', async ({ page }) => {

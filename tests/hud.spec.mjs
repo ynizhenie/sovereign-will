@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers.mjs';
 import { openGame, iconText } from './helpers.mjs';
 
 test('resources are grouped: a group tile shows its total and opens a row with each resource (#106)', async ({ page }) => {

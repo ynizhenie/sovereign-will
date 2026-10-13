@@ -24,3 +24,17 @@ test('saves, maps and settings are kept under the keys they always were', () => 
   saveSetting('fps', '30');
   expect(loadSetting('fps', 'display')).toBe('30');
 });
+
+test('wood goes to the nearest storage, a warehouse here; the stock has no limit (#36, #141)', async () => {
+  expect(await sim.deliverToWarehouse()).toEqual({ wood: 1003, atWarehouse: true, atHall: false });
+});
+
+test('builders fetch materials at the nearest storage; promised materials are not spent twice (#36, #141)', async () => {
+  expect(await sim.buildFromWarehouse()).toEqual({
+    placed: 1, secondPlaced: false, woodRightAfter: 8, atWarehouse: true, atHall: false, wood: 3, built: true
+  });
+});
+
+test('a broken warehouse takes no resources with it (#141)', async () => {
+  expect(await sim.warehouseDestroyed()).toEqual({ same: true, gone: true });
+});

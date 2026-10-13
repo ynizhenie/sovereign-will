@@ -4,3 +4,4 @@
 export { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, repairBuilding, repairStep, repairTownHall, supplySmelter, workBlueprint } from './building.behaviours.js';
 export { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall } from './building.draw.js';
 export { canBuild, claimBuildingJob, createBuildingBlueprint, findDoorBlockers, getMissingMaterial, getRepairStep, getReservedForBlueprints, isBaseSealed, isBuildLocationAllowed, isBuildingJobFree, isBuildingSingle, isTileOccupied, removeBuilding, repairAllBuildings, tickSmelters, toggleBuildingRepair } from './building.rules.js';
+export { renderBuildTab } from './building.panel.js';

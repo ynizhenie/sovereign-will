@@ -22,10 +22,19 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
 // What occupies each tile, keyed "x,y" by tile center. Path searches check thousands of tiles,
 // so they look tiles up here instead of scanning every object list. Rebuilt lazily after
 // resetTileIndex(), which runs every tick and whenever paths are invalidated.
+/**
+ * Tile keys ("x,y" of tile centres) of each kind of thing, and a signature that changes with them
+ * @typedef {{ signature: number, rocks: Set<string>, water: Set<string>, trees: Set<string>, cacti: Set<string>,
+ *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
+ *   walls: Set<string>, spikes: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
+ *   towerArrowBuildings: Set<string> }} TileIndex
+ */
+/** @type {TileIndex | null} */
 export let tileIndex = null;
 
 export function resetTileIndex() { tileIndex = null; }
 
+/** @returns {TileIndex} */
 export function getTileIndex() {
   if (tileIndex) return tileIndex;
   const keys = list => new Set(list.map(o => `${o.x},${o.y}`));

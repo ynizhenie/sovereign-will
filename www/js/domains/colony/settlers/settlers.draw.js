@@ -149,7 +149,7 @@ export function drawSettlers() {
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    if (s.burning > 0) drawBurning(s.x, s.y, s.visualRadius);
+    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, s.visualRadius);
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
     if (getPlayerFaction().id === 'demons' && game.gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
     drawBodyBlood(s, s.visualRadius);
@@ -193,7 +193,7 @@ export function drawSettlers() {
       ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
       ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
       ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
-    } else if (s.tool === 'hoe' && s.wateringCan && s.usingCan > 0) {
+    } else if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) {
       drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
     } else if (s.tool === 'hoe') {
       // a long handle with a flat blade turned down at the end
@@ -212,7 +212,7 @@ export function drawSettlers() {
 	}
     // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
     if (s.tool === 'hoe' && s.wateringCan) {
-      if (s.usingCan > 0) {
+      if ((s.usingCan || 0) > 0) {
         ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 2, -8, 2, 15);
         ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-s.visualRadius - 4, -9, 6, 3);
       } else {

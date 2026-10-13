@@ -10,7 +10,7 @@ import { faceTowards } from '../../colony/settlers/index.js';
 // Archers climb the towers while there's tower duty (they stay up when enemies reach the base, that's
 // when a tower is worth most), as long as they or the tower have arrows
 export function assignTowerArchers() {
-  const towers = game.buildings.filter(building => building.type === 'watchtower');
+  const towers = /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(building => building.type === 'watchtower'));
   const towerSet = new Set(towers);
   towers.forEach(tower => {
     tower.guards = (tower.guards || []).filter(guard => game.settlers.includes(guard));
@@ -47,8 +47,8 @@ export function isTowerDutyOn(tower) {
 }
 
 export function findTowerForArrows(settler) {
-  return game.buildings
-    .filter(tower => tower.type === 'watchtower' &&
+  return /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(b => b.type === 'watchtower'))
+    .filter(tower =>
       tower.arrows < tower.tower.arrowCapacity && stock.arrows > 0 &&
       !game.settlers.some(s => s !== settler && s.carrying && s.carrying.forTower === tower))
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
@@ -58,8 +58,8 @@ export function findNearestArrowTower(settler) {
   const townHallDistance = Math.hypot(townHall.x - settler.x, townHall.y - settler.y);
   const townHallThreatened = game.enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260);
   if (townHallThreatened || game.enemies.length < 2) return null;
-  return game.buildings
-    .filter(tower => tower.type === 'watchtower' && tower.arrows > 0 && Math.hypot(tower.x - settler.x, tower.y - settler.y) < townHallDistance)
+  return /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(b => b.type === 'watchtower'))
+    .filter(tower => tower.arrows > 0 && Math.hypot(tower.x - settler.x, tower.y - settler.y) < townHallDistance)
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }
 
