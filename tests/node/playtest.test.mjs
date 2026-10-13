@@ -23,9 +23,9 @@ test('...and keep cooking past a few meals, up to enough to hire with (playtest:
   expect(r.food).toBeGreaterThan(15);
 });
 
-test('with food to spare, workers holding tools stay at their own work', () => {
+test('with food to spare, workers holding tools stay at their own work (the idle soldier cooks, #200)', () => {
   const r = sim.cookingWithTools({ seed: 'cook-tools-fed', food: 100, seconds: 20 });
-  expect(r.cooked).toBe(false);
+  expect(r.workersCooked).toBe(false);
 });
 
 test('a badly hurt settler healing at a tent turns on an enemy hitting it there, not stand and die (playtest)', () => {

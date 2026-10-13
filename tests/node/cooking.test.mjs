@@ -6,7 +6,7 @@ import { sim } from './game.mjs';
 test('a worker carries fuel to the campfire, cooks all the raw food and carries it home (#30, #106)', async () => {
   // 7 raw pieces -> 7 food; 5 pieces per fuel -> 2 wood, fetched in 2 trips
   expect(await sim.cookingRun({}))
-    .toEqual({ food: 12, rawMeat: 0, rawFish: 0, wheat: 0, wood: 0, coal: 0, maxCooks: 1, carriedFood: true, fuelTrips: 2 });
+    .toEqual({ food: 12, rawMeat: 0, rawFish: 0, wheat: 0, wood: 0, coal: 0, maxCooks: 1, carriedFood: true, fuelTrips: 2, cooks: ['worker'] });
 });
 
 test('coal burns first (#30)', async () => {
@@ -29,4 +29,10 @@ test('boars give raw meat, fishing raw fish, farms grain; berries stay ready foo
     fish: GAME_CONFIG.fishing.catch, berry: GAME_CONFIG.mapResources.berry_bush.yield
   }))();
   expect(y).toEqual({ boar: { rawMeat: 6, leather: 2 }, farm: { wheat: 4, wheatSeeds: 1 }, fish: { rawFish: 2 }, berry: { berries: 2 } });
+});
+
+test('an idle soldier cooks before a worker does; with none, a worker with free hands (#200)', async () => {
+  const both = await sim.cookingRun({ workers: 1, soldiers: 1 });
+  expect(both).toMatchObject({ cooks: ['soldier'], carriedFood: true }); // (the soldier hunts boars too: more meat than fuel)
+  expect((await sim.cookingRun({ workers: 1 })).cooks).toEqual(['worker']);
 });
