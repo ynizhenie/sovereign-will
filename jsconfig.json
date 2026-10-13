@@ -10,7 +10,12 @@
     "checkJs": true,
     "allowJs": true,
     "noEmit": true,
-    "strict": false
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitReturns": true,
+    "strictNullChecks": true
   },
   "include": [
     "www/js/**/*.js",

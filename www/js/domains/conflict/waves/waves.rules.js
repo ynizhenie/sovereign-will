@@ -46,7 +46,7 @@ export function getEnemyDef(enemy) {
 /** @returns {import('../../../engine/world/types.js').Enemy} */
 export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
-  if (!definition) return null;
+  if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
   const enemy = {
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
     hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp,
@@ -66,7 +66,7 @@ export function createNormalEnemy(pos, enemyKey = 'raider') {
 }
 
 export function findNearestEnemyTent(origin) {
-  let nearest = null;
+  let nearest = /** @type {{ x: number, y: number } | null} */ (null);
   let nearestDist = Infinity;
   game.enemyTents.forEach(tent => {
     const dist = Math.hypot(tent.x - origin.x, tent.y - origin.y);
@@ -174,7 +174,7 @@ export function startNextWave() {
   if (group) {
     // every enemy kind of the enemy's faction with a waveKey, in config order
     waveKinds.forEach(def => {
-      const baseCount = [].concat(def.waveKey).reduce((sum, key) => sum + Number(group[key] || 0), 0);
+      const baseCount = /** @type {string[]} */ ([]).concat(def.waveKey).reduce((sum, key) => sum + Number(group[key] || 0), 0);
       const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1)));
       for (let i = 0; i < count; i++) spawnWaveEnemy(def);
     });

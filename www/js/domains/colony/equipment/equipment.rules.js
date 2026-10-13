@@ -239,7 +239,7 @@ export function disarmSettler(type = 'all') {
   };
 
   if (target && !hasTargetItem(target)) {
-    target = null;
+    target = undefined;
   }
 
   if (!target) {

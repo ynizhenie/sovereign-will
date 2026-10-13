@@ -18,7 +18,7 @@ export const waveCustom = document.getElementById('wave-custom');
 
 export const mapOptions = document.querySelectorAll('.map-option');
 
-export const mapCustom = document.querySelector('.map-custom');
+export const mapCustom = /** @type {HTMLElement} */ (document.querySelector('.map-custom'));
 
 export const clampInput = (input, fallback) => {
     const value = Math.round(Number(input.value));
@@ -135,7 +135,7 @@ export function initEndlessSetup() {
   mapColsInput.addEventListener('change', applyCustomMap);
   mapRowsInput.addEventListener('change', applyCustomMap);
   difficultyOptions.forEach(button => onTap(button, () => {
-    game.gameDifficulty = button.dataset.difficulty;
+    game.gameDifficulty = /** @type {string} */ (button.dataset.difficulty);
     difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
   }));
   playButton.addEventListener('click', startGame);

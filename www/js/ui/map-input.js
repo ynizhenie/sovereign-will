@@ -159,8 +159,9 @@ export function handleCanvasClick() {
       }
       // materials already brought go back to storage
       const building = getDefinition('buildings', targetBp.type);
-      if (building && targetBp.needs) {
-        addResources(Object.fromEntries(Object.entries(building.cost || {}).map(([id, amount]) => [id, amount - (targetBp.needs[id] || 0)])));
+      const needs = targetBp.needs;
+      if (building && needs) {
+        addResources(Object.fromEntries(Object.entries(building.cost || {}).map(([id, amount]) => [id, amount - (needs[id] || 0)])));
       }
       game.blueprints.splice(game.blueprints.indexOf(targetBp), 1);
       return;

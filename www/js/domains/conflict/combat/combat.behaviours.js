@@ -178,8 +178,7 @@ export const TENT_ASSAULT_FIGHT_DISTANCE = 150;
 export function clearEnemyTents(s, tick) {
   if (tick.tentAssault) {
     if (joinsTentAssault(s, tick)) {
-      /** @type {{ x: number, y: number } | null} */
-      let nearestTent = null, minDist = Infinity;
+      let nearestTent = /** @type {{ x: number, y: number } | null} */ (null), minDist = Infinity;
       game.enemyTents.forEach(et => {
         let d = Math.hypot(et.x - s.x, et.y - s.y);
         if (d < minDist) { minDist = d; nearestTent = et; }

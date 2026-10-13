@@ -49,8 +49,7 @@ export function tickEnemy(en, dt) {
   /** @type {import('../../../engine/world/types.js').Settler | import('../../../engine/world/types.js').TownHall} */
   let target = townHall;
   let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
-  /** @type {import('../../../engine/world/types.js').Settler | null} */
-  let closestSettler = null;
+  let closestSettler = /** @type {import('../../../engine/world/types.js').Settler | null} */ (null);
 
   game.settlers.forEach(s => {
     let d = Math.hypot(en.x - s.x, en.y - s.y);
@@ -80,6 +79,7 @@ export function tickEnemy(en, dt) {
   // or fights like its melee enemy when the tents have none left
   let shooting = en.type === 'archer';
   let meleeDef = enemyDef;
+  /** @type {{ x: number, y: number }} */
   let moveTarget = target;
   const quiver = enemyDef.quiver;
   if (quiver && en.arrows <= 0) {

@@ -76,8 +76,9 @@ export function placeBoar({ x, y }) {
 }
 
 // A finished building (a blueprint with its building work done)
+/** @returns {import('../../engine/world/types.js').Building} */
 export function makeBuilt(type, x, y) {
-  const b = createBuildingBlueprint(type, x, y);
+  const b = /** @type {any} */ (createBuildingBlueprint(type, x, y));
   delete b.progress;
   delete b.maxProgress;
   return b;

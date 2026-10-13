@@ -53,6 +53,7 @@ export function rebuildConfigHud() {
   if (typeof updateUI === 'function' && game.gameStarted) { updateUI(); refreshAffordability(true); }
 }
 
+/** @type {string | null} */
 export let renderedFaction = null; // whose units and buildings the HUD shows
 
 export function renderConfigHud() {

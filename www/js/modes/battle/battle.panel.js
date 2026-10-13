@@ -10,7 +10,7 @@ import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
   document.querySelectorAll('[data-battle-category]').forEach(b => b.classList.toggle('active', b.dataset.battleCategory === battle.category));
-  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[b.dataset.battleGear]));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[/** @type {'armor' | 'shield'} */ (b.dataset.battleGear)]));
   // the faction sub-tabs
   const factions = document.getElementById('battle-factions');
   factions.innerHTML = '';
@@ -80,5 +80,5 @@ export function initBattlePanel() {
   onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
   onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
   document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => setBattleCategory(b.dataset.battleCategory)));
-  document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { battle[b.dataset.battleGear] = !battle[b.dataset.battleGear]; renderBattlePanel(); }));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { const gear = /** @type {'armor' | 'shield'} */ (b.dataset.battleGear); battle[gear] = !battle[gear]; renderBattlePanel(); }));
 }

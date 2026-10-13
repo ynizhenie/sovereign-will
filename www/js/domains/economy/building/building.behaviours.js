@@ -14,7 +14,7 @@ import { playSound, playWorkSound } from '../../../app/index.js';
 // Pick up smelted iron and carry it home
 export function collectSmelterIron(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
-    let smelterWithIron = game.buildings.find(b => b.type === 'smelter' && b.ironProduced > 0 && isBuildingJobFree(b, 'collector', s));
+    let smelterWithIron = game.buildings.find(b => b.type === 'smelter' && (b.ironProduced || 0) > 0 && isBuildingJobFree(b, 'collector', s));
     if (smelterWithIron) {
       claimBuildingJob(smelterWithIron, 'collector', s);
       let dist = Math.hypot(smelterWithIron.x - s.x, smelterWithIron.y - s.y);
@@ -156,8 +156,7 @@ export function build(s, tick) {
   if (game.blueprints.length > 0 && !s.carrying && s.role === 'worker') {
     let hasNearbyEnemy = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
     if (!hasNearbyEnemy) {
-      /** @type {import('../../../engine/world/types.js').Building | null} */
-      let bestBp = null;
+      let bestBp = /** @type {import('../../../engine/world/types.js').Blueprint | null} */ (null);
       let minDist = Infinity;
       game.blueprints.forEach(bp => {
         let assignedCount = tick.blueprintAssignments.get(bp) || 0;
