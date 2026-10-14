@@ -64,6 +64,7 @@ export function renderRecruitRow() {
     const button = document.createElement('button');
     button.className = 'btn';
     button.id = `btn-hire-${type}`;
+    button.dataset.info = `settlerTypes:${type}`;
     setRichText(button, `[[${unit.icon}]] ${unit.label} (${formatCost(unit.hireCost)})`);
     onTap(button, () => spawnSettler(type));
     recruit.appendChild(button);
@@ -73,6 +74,7 @@ export function renderRecruitRow() {
     const button = document.createElement('button');
     button.className = 'btn btn-armor';
     button.id = 'btn-upgrade';
+    button.dataset.info = `settlerTypes:${upgrade.big.id}`;
     setRichText(button, t('btn.upgrade', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) }));
     onTap(button, () => upgradeToBig());
     recruit.appendChild(button);
