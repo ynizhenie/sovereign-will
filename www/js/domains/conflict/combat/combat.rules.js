@@ -149,6 +149,7 @@ export function bloodAlpha(age, wounded = false) {
 
 // Burning arrows: what they hit burns a few seconds
 export function setBurning(unit) {
+  if (!(unit.burning > 0)) playSound('ignite', unit);
   unit.burning = GAME_CONFIG.burning.seconds;
 }
 

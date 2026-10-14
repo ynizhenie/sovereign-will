@@ -1,13 +1,16 @@
 // Sounds and music, all made with Web Audio: no sound files. playSound(name, at) for what happens in
 // the game (at: where in the world, for its loudness and left-right; none for the interface); updateMusic()
-// every frame for the music: calm in the main menu, an ambient in Endless that turns into battle music
-// while a wave is on (until the last enemy and enemy tent are gone). Sound and music can each be turned
+// every frame for the music: calm in the main menu, one of the colony faction's ambients in Endless that
+// turns into one of the attacking faction's battle tracks while a wave is on (until the last enemy and enemy
+// tent are gone; GAME_CONFIG.music, #198). Sound and music can each be turned
 // off in the Settings. The audio starts with the first tap or key (browsers allow it only then).
 
 import { game } from '../engine/world/index.js';
 import { audio, camera, canvas, getViewScale, midi, noise, screenPixelRatio, startAudio, tone } from '../engine/platform/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle } from '../modes/battle/index.js';
+import { GAME_CONFIG } from '../content/configs/index.js';
+import { getEnemyFaction, getPlayerFaction } from '../domains/factions/index.js';
 
 export const SOUND = {
   sfxVolume: 0.55, musicVolume: 0.3,
@@ -15,7 +18,8 @@ export const SOUND = {
   fadeSeconds: 1.2,      // the music's crossfades: a time constant, so about 4x this to the end
   // a sound plays at most once in this many seconds (the same name), so crowds don't drown everything
   minGap: { click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
-    hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3 }
+    hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3,
+    eat: 0.2, sizzle: 0.3, dig: 0.2, splash: 0.2, drip: 0.1, catch: 0.3, heal: 0.3, raise: 0.3, collapse: 0.2, smelt: 0.3, ignite: 0.2 }
 };
 
 // ---- Sound effects
@@ -40,7 +44,20 @@ export const SOUNDS = {
   hire: (o, t) => [392, 494, 587].forEach((f, i) => tone(o, t + i * 0.07, { type: 'triangle', freq: f, dur: 0.22, gain: 0.18 })),
   horn: (o, t) => [98, 147].forEach(f => tone(o, t, { type: 'sawtooth', freq: f, dur: 1.6, gain: 0.16, attack: 0.35, filter: 700 })),
   error: (o, t) => { tone(o, t, { type: 'square', freq: 180, dur: 0.1, gain: 0.06 }); tone(o, t + 0.12, { type: 'square', freq: 150, dur: 0.12, gain: 0.06 }); },
-  defeat: (o, t) => [392, 349, 311, 262].forEach((f, i) => tone(o, t + i * 0.32, { type: 'triangle', freq: f, dur: 0.5, gain: 0.22 }))
+  defeat: (o, t) => [392, 349, 311, 262].forEach((f, i) => tone(o, t + i * 0.32, { type: 'triangle', freq: f, dur: 0.5, gain: 0.22 })),
+  // the colony's work and life (#198)
+  eat: (o, t) => [0, 0.14].forEach(d => noise(o, t + d, { dur: 0.07, gain: 0.18, type: 'lowpass', freq: 900 })),
+  sizzle: (o, t) => noise(o, t, { dur: 0.5, gain: 0.08, type: 'highpass', freq: 2500, attack: 0.05 }),
+  dig: (o, t) => { noise(o, t, { dur: 0.12, gain: 0.3, type: 'lowpass', freq: 600 }); tone(o, t, { freq: 90, to: 60, dur: 0.12, gain: 0.2 }); },
+  splash: (o, t) => noise(o, t, { dur: 0.25, gain: 0.25, freq: 1200, to: 400, q: 1.2 }),
+  drip: (o, t) => tone(o, t, { freq: 1500, to: 900, dur: 0.08, gain: 0.05 }),
+  catch: (o, t) => { noise(o, t, { dur: 0.2, gain: 0.2, freq: 1200, to: 500, q: 1.2 }); tone(o, t + 0.12, { type: 'triangle', freq: 880, to: 1320, dur: 0.15, gain: 0.08 }); },
+  heal: (o, t) => { tone(o, t, { freq: 660, to: 990, dur: 0.25, gain: 0.06 }); tone(o, t + 0.1, { freq: 1320, dur: 0.2, gain: 0.04 }); },
+  raise: (o, t) => { tone(o, t, { type: 'sawtooth', freq: 80, to: 160, dur: 0.9, gain: 0.15, attack: 0.2, filter: 400 }); noise(o, t, { dur: 0.8, gain: 0.06, freq: 600, to: 1800, q: 5, attack: 0.3 }); },
+  collapse: (o, t) => { noise(o, t, { dur: 0.6, gain: 0.5, type: 'lowpass', freq: 500 }); tone(o, t, { freq: 70, to: 35, dur: 0.5, gain: 0.3 }); },
+  smelt: (o, t) => { tone(o, t, { type: 'triangle', freq: 1200, dur: 0.25, gain: 0.08 }); tone(o, t, { type: 'triangle', freq: 1810, dur: 0.15, gain: 0.05 }); noise(o, t, { dur: 0.3, gain: 0.06, type: 'highpass', freq: 2500 }); },
+  tentUp: (o, t) => tone(o, t, { type: 'sawtooth', freq: 110, dur: 0.6, gain: 0.12, attack: 0.1, filter: 500 }),
+  ignite: (o, t) => noise(o, t, { dur: 0.3, gain: 0.2, freq: 1500, to: 3000, q: 1, attack: 0.02 })
 };
 
 // How loud a sound at a world point is, and where left-right: null when it's well off the screen
@@ -96,45 +113,90 @@ export const MUSIC_STYLES = {
       if (Math.random() < 0.22) tone(o, t, { type: 'triangle', freq: midi(this.scale[Math.floor(Math.random() * this.scale.length)]), dur: 1.4, gain: 0.1, attack: 0.01 });
     }
   },
-  // the Endless ambient: low, slow chords, sparse notes, now and then a bird
-  ambient: {
-    bpm: 60, chords: [[50, 57, 62, 64], [46, 53, 58, 62], [53, 57, 60, 64], [48, 55, 60, 62]], scale: [74, 76, 77, 79, 81],
-    step(o, t, step, beat) {
-      const bar = Math.floor(step / 8) % 4, chord = this.chords[bar];
-      if (step % 8 === 0) chord.forEach(n => tone(o, t, { type: 'sine', freq: midi(n), dur: beat * 4.5, gain: 0.1, attack: 1.4 }));
-      if (Math.random() < 0.1) tone(o, t, { type: 'triangle', freq: midi(this.scale[Math.floor(Math.random() * this.scale.length)]), dur: 1.8, gain: 0.08 });
-      if (Math.random() < 0.025) {
-        const f = 2600 + Math.random() * 900;
-        for (let i = 0; i < 3; i++) tone(o, t + i * 0.09, { freq: f, to: f * 1.25, dur: 0.07, gain: 0.04 });
-      }
-    }
-  },
-  // a wave: drums, a driving bass, minor stabs
-  battle: {
-    bpm: 124, bass: [45, 45, 48, 45, 43, 45, 40, 43], chords: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 56, 59]],
-    step(o, t, step, beat) {
-      const eighth = step % 8, bar = Math.floor(step / 8) % 4;
-      tone(o, t, { type: 'sawtooth', freq: midi(this.bass[eighth]), dur: beat * 0.45, gain: 0.08, filter: 520 });
-      if (eighth === 0 || eighth === 4) tone(o, t, { freq: 120, to: 42, dur: 0.28, gain: 0.45 });
-      if (eighth === 2 || eighth === 6) noise(o, t, { dur: 0.13, gain: 0.16, freq: 1800, q: 0.8 });
-      if (bar === 3 && eighth >= 5) tone(o, t, { freq: 220 - eighth * 15, to: 80, dur: 0.18, gain: 0.25 });
-      if (eighth === 0) this.chords[bar].forEach(n => tone(o, t, { type: 'sawtooth', freq: midi(n), dur: beat * 1.6, gain: 0.03, filter: 1300, attack: 0.02 }));
+  // every faction's tracks (GAME_CONFIG.music), each played by playTrack
+  ...Object.fromEntries(Object.entries(GAME_CONFIG.music).map(([id, track]) => [id, { bpm: track.bpm, step: (o, t, step, beat) => playTrack(track, o, t, step, beat) }]))
+};
+
+const hits = pattern => pattern || '........';
+
+// One eighth of a track (GAME_CONFIG.music): its pad on the bar, the arp, bass and lead notes, the drums,
+// now and then a sound of its world
+export function playTrack(track, o, t, step, beat) {
+  const eighth = step % 8, bar = Math.floor(step / 8) % track.chords.length, chord = track.chords[bar];
+  const { pad, arp, bass, lead, drums, extra } = track;
+  if (pad && eighth === 0) {
+    for (const n of chord) {
+      const freq = midi(n + (pad.octave || 0));
+      tone(o, t, { type: pad.wave, freq, dur: beat * pad.length, gain: pad.gain, attack: pad.attack, filter: pad.filter });
+      if (pad.detune) tone(o, t, { type: pad.wave, freq: freq * (1 + pad.detune), dur: beat * pad.length, gain: pad.gain * 0.7, attack: pad.attack, filter: pad.filter });
     }
   }
+  if (arp && arp.pattern[eighth] !== null && arp.pattern[eighth] !== undefined) {
+    const i = arp.pattern[eighth];
+    tone(o, t, { type: arp.wave, freq: midi(chord[i % chord.length] + 12 * Math.floor(i / chord.length) + (arp.octave || 0)), dur: beat * arp.length, gain: arp.gain, filter: arp.filter });
+  }
+  if (bass) {
+    const note = bass.notes ? bass.notes[eighth] : (bass.pattern[eighth] === null ? null : chord[0] + (bass.octave || 0) + bass.pattern[eighth]);
+    if (note !== null && note !== undefined) tone(o, t, { type: bass.wave, freq: midi(note), dur: beat * bass.length, gain: bass.gain, filter: bass.filter });
+  }
+  if (lead && Math.random() < lead.chance) {
+    tone(o, t, { type: lead.wave, freq: midi(lead.scale[Math.floor(Math.random() * lead.scale.length)]), dur: lead.length, gain: lead.gain, filter: lead.filter, attack: 0.01 });
+  }
+  if (drums) {
+    const kick = hits(drums.kick)[eighth];
+    if (kick !== '.') tone(o, t, { freq: 120, to: 42, dur: 0.28, gain: kick === 'X' ? 0.6 : 0.45 });
+    if (hits(drums.snare)[eighth] !== '.') noise(o, t, { dur: 0.13, gain: 0.16, freq: 1800, q: 0.8 });
+    if (hits(drums.hat)[eighth] !== '.') noise(o, t, { dur: 0.035, gain: 0.05, type: 'highpass', freq: 7000 });
+    if (hits(drums.tom)[eighth] !== '.') tone(o, t, { freq: 190, to: 70, dur: 0.25, gain: 0.3 });
+    if (drums.fill && bar === track.chords.length - 1 && eighth >= 5) tone(o, t, { freq: 220 - eighth * 15, to: 80, dur: 0.18, gain: 0.25 });
+  }
+  if (extra && Math.random() < extra.chance) WORLD_SOUNDS[extra.kind](o, t, chord, beat);
+}
+
+// The sounds of a faction's world in its music
+export const WORLD_SOUNDS = {
+  birds: (o, t) => { const f = 2600 + Math.random() * 900; for (let i = 0; i < 3; i++) tone(o, t + i * 0.09, { freq: f, to: f * 1.25, dur: 0.07, gain: 0.04 }); },
+  crickets: (o, t) => { for (let i = 0; i < 4; i++) tone(o, t + i * 0.05, { freq: 4300, dur: 0.03, gain: 0.015 }); },
+  toll: (o, t, chord) => { const f = midi(chord[0]); tone(o, t, { freq: f, dur: 3.5, gain: 0.08, attack: 0.005 }); tone(o, t, { freq: f * 2.76, dur: 2, gain: 0.03 }); },
+  whispers: (o, t) => noise(o, t, { dur: 1.2, gain: 0.05, freq: 800, to: 2400, q: 6, attack: 0.4 }),
+  crackle: (o, t, chord, beat) => { for (let i = 0; i < 4; i++) noise(o, t + Math.random() * beat, { dur: 0.015, gain: 0.08, type: 'highpass', freq: 3000 }); },
+  growl: (o, t) => tone(o, t, { type: 'sawtooth', freq: 55, to: 40, dur: 1.5, gain: 0.08, attack: 0.3, filter: 300 }),
+  chant: (o, t, chord, beat) => [12, 19].forEach(up => tone(o, t, { type: 'sawtooth', freq: midi(chord[0] + up), dur: beat * 2, gain: 0.03, attack: 0.1, filter: 900, q: 5 }))
 };
+
+// Which tracks play: the colony's ambient (another after each wave) and the attacking faction's battle
+// track (one picked as each wave comes)
+export const musicPick = { ambient: '', ambientFaction: '', battle: '', fighting: false };
+const pickOne = (list, not = '') => { const choice = list.filter(id => id !== not); return choice[Math.floor(Math.random() * choice.length)] || list[0]; };
+
+function ambientFor(faction) {
+  if (musicPick.ambientFaction !== faction.id || !musicPick.ambient) {
+    musicPick.ambientFaction = faction.id;
+    musicPick.ambient = pickOne(faction.music.ambient);
+  }
+  return musicPick.ambient;
+}
+
+// fighting now or not: a new battle track as a fight starts, a new ambient as one ends
+function trackFor(fighting) {
+  if (fighting && !musicPick.fighting) musicPick.battle = pickOne(getEnemyFaction().music.battle);
+  if (!fighting && musicPick.fighting) musicPick.ambient = pickOne(getPlayerFaction().music.ambient, musicPick.ambient);
+  musicPick.fighting = fighting;
+  return fighting ? musicPick.battle || pickOne(getEnemyFaction().music.battle) : ambientFor(getPlayerFaction());
+}
 
 // Which music now, and how loud: { style: level }
 export function musicMix() {
   if (!audio.musicOn) return {};
   const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
-  if (game.gameMode === 'editor') return { ambient: 0.6 };
-  if (game.gameMode === 'battle') return battle.phase === 'fight' ? { battle: 1 } : { ambient: 0.8 };
+  if (game.gameMode === 'editor') return { [ambientFor(getPlayerFaction())]: 0.6 };
+  if (game.gameMode === 'battle') return battle.phase === 'fight' ? { [trackFor(true)]: 1 } : { [trackFor(false)]: 0.8 };
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
   // a wave is on until the last enemy and enemy tent are gone
   const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
-  return fighting ? { battle: pause } : { ambient: pause };
+  return { [trackFor(fighting)]: pause };
 }
 
 // Every frame: fade the styles to the mix, and schedule the notes of those that can be heard

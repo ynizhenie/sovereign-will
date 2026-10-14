@@ -80,6 +80,7 @@ function buildEnemyTent(en, dt) {
     site.progress += dt * tentConfig.buildRate;
     if (site.progress >= site.maxProgress) {
       game.enemyTents.push({ x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp, summonTimer: 0, summonsLeft: tentConfig.summonsPerWave });
+      playSound('tentUp', site);
       game.enemyTentBlueprints.splice(game.enemyTentBlueprints.indexOf(site), 1);
       en.buildTarget = null;
       invalidateAllPaths();
