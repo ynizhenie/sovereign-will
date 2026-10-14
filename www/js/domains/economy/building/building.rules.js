@@ -9,6 +9,7 @@ import { showNotification } from '../../../ui/index.js';
 import { getMapResourceDef } from '../gathering/index.js';
 import { isShelter } from '../../conflict/healing/index.js';
 import { getSettlerReach, invalidateAllPaths } from '../../../engine/movement/index.js';
+import { playSound } from '../../../app/index.js';
 
 export function isBuildingSingle(building) {
   if (!building) return true;
@@ -53,6 +54,7 @@ export function removeBuilding(building) {
   const index = game.buildings.indexOf(building);
   if (index === -1) return;
   game.buildings.splice(index, 1);
+  playSound('collapse', building);
   invalidateAllPaths();
 }
 
@@ -201,6 +203,7 @@ export function tickSmelters(dt) {
         smelter.oreLoaded--;
         smelter.coalLoaded--;
         smelter.ironProduced++;
+        playSound('smelt', smelter);
         smelter.smeltProgress = 0;
       }
     } else {

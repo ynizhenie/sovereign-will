@@ -184,6 +184,7 @@ export function deselectSettler() { game.selectedSettler = null; }
 // One settler's meal: food from the stock (2 for a big one), worms when it runs short; a few
 // meals in, it needs to go (see relieve)
 export function eatMeal(s) {
+  playSound('eat', s);
   const cost = isBigBody(s) ? 2 : 1;
   const short = Math.max(0, cost - stock.food);
   stock.food = Math.max(0, stock.food - cost);

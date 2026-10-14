@@ -13,6 +13,7 @@ import { makeAppleTree } from './farming.rules.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { isInSafeArea } from '../../conflict/combat/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
+import { playSound } from '../../../app/index.js';
 
 // Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
 // one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)
@@ -78,7 +79,7 @@ export function waterCrops(s, tick) {
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (!water) return false;
     if (Math.hypot(water.x - s.x, water.y - s.y) > 32) moveEntityTowards(s, water.x, water.y, s.speed, false, tick.dt);
-    else s.waterCharges = can.charges;
+    else { s.waterCharges = can.charges; playSound('splash', s); }
     return true;
   }
   const crop = thirsty.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
@@ -87,6 +88,7 @@ export function waterCrops(s, tick) {
     moveEntityTowards(s, crop.x, crop.y, s.speed, false, tick.dt);
   } else {
     crop.watered = true;
+    playSound('drip', crop);
     s.waterCharges--;
     s.working = 0.1;
   }
@@ -186,6 +188,7 @@ export function tendFarmZones(s, tick) {
     faceTowards(s, target.x, target.y);
     if (s.plantProgress >= farming.plantSeconds) {
       s.plantProgress = 0;
+      playSound('dig', target);
       const cropId = farming.crops[target.crop];
       payCost(getDefinition('buildings', cropId).cost || {});
       if (cropId === 'wheat') game.farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
