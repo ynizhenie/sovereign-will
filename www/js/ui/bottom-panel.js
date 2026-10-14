@@ -6,7 +6,7 @@ import { onTap, t } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { renderGearLabels, renderToolsTab, renderWeaponsTab } from '../domains/colony/equipment/index.js';
 import { formatCost } from '../domains/colony/storage/index.js';
-import { renderResourceStrip, renderResourceTiles, updateUI } from './hud.js';
+import { renderResourceStrip, renderResourceTiles, renderSheetStock, updateUI } from './hud.js';
 import { sides } from '../domains/factions/index.js';
 import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
@@ -31,6 +31,7 @@ export function openTab(tabId) {
 function showTab(tabId) {
   activeTab = tabId;
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === tabId));
+  renderSheetStock(tabId);
 }
 
 // A dock button: back to Point (#80), and its tab's sheet opens, or closes if it's the one open (a picked
@@ -79,6 +80,7 @@ export function renderConfigHud() {
   document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
   document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
   renderWeaponsTab();
+  renderSheetStock(activeTab);
   // the tab left open was another faction's (Farming for the undead): back to Building (#200)
   if (document.querySelector(`.tab-btn[data-arg="${activeTab}"]`)?.hidden) openTab('tab-build');
 }
