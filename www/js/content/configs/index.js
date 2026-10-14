@@ -11,8 +11,9 @@ import { unitsConfig } from './units.js';
 import { difficultyConfig } from './difficulty.js';
 import { mapConfig } from './map.js';
 import { mechanicsConfig } from './mechanics.js';
+import { musicConfig } from './music.js';
 
-export const GAME_CONFIG = { ...resourcesConfig, ...equipmentConfig, ...buildingsConfig, ...enemiesConfig, ...factionsConfig, ...unitsConfig, ...difficultyConfig, ...mapConfig, ...mechanicsConfig };
+export const GAME_CONFIG = { ...resourcesConfig, ...equipmentConfig, ...buildingsConfig, ...enemiesConfig, ...factionsConfig, ...unitsConfig, ...difficultyConfig, ...mapConfig, ...mechanicsConfig, ...musicConfig };
 
 globalThis.GAME_CONFIG = GAME_CONFIG;
 
