@@ -10,18 +10,21 @@ import { assignTool, craftWeapon } from './equipment.rules.js';
 export function renderToolsTab() {
   const toolActions = document.getElementById('tool-actions');
   Object.values(GAME_CONFIG.tools).filter(isForPlayerFaction).forEach(item => {
-    if (toolActions) toolActions.appendChild(createConfigButton(item, assignTool));
+    if (toolActions) toolActions.appendChild(createConfigButton(item, assignTool, 'tools'));
   });
 }
 
 export function renderGearLabels() {
   const recipes = GAME_CONFIG.recipes;
+  const arrows = document.getElementById('btn-craft-arrows');
+  if (arrows) arrows.dataset.info = 'recipes:arrows';
   labelButton('btn-craft-arrows', `[[${recipes.arrows.icon}]] ${recipes.arrows.label} (${formatCost(recipes.arrows.cost)} → ${recipes.arrows.produces.arrows})`);
   for (const item of Object.values(GAME_CONFIG.gear)) {
     labelButton(`btn-${item.id}`, `[[${item.icon}]] ${item.label} (${formatCost(item.cost)})`);
     // gear a faction doesn't have: neither its button nor taking it apart (#200)
     const buttons = [document.getElementById(`btn-${item.id}`), document.querySelector(`[data-action="orderGearOff"][data-arg="${item.id}"]`)];
     for (const button of buttons) if (button) button.hidden = !isForPlayerFaction(item);
+    if (buttons[0]) buttons[0].dataset.info = `gear:${item.id}`;
   }
 }
 
@@ -29,7 +32,7 @@ export function renderWeaponsTab() {
   const weaponActions = document.getElementById('weapon-actions');
   Object.values(GAME_CONFIG.weapons).forEach(item => {
     if (item.id !== 'fist' && !item.hidden && weaponActions) {
-      weaponActions.appendChild(createConfigButton(item, craftWeapon));
+      weaponActions.appendChild(createConfigButton(item, craftWeapon, 'weapons'));
     }
   });
 }

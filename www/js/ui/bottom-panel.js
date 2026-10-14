@@ -42,10 +42,12 @@ export function switchTab(_button, tabId) {
   toggleSheet('colony', tabId);
 }
 
-export function createConfigButton(item, action) {
+// A button for a config item (category: its GAME_CONFIG section, for its card, #213)
+export function createConfigButton(item, action, category) {
   const button = document.createElement('button');
   button.className = 'btn';
   button.id = `btn-${item.id}`;
+  if (category) button.dataset.info = `${category}:${item.id}`;
   setRichText(button, `${item.icon ? `[[${item.icon}]]` : ''} ${item.label} (${formatCost(item.cost || {})})`);
   button.addEventListener('click', () => action(item.id));
   return button;

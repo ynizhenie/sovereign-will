@@ -22,17 +22,25 @@ export function t(key, params = {}) {
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? params[name] : match));
 }
 
-// Names from the current language into the config (item.label), falling back to English
+// Names and descriptions (#213) from the current language into the config (item.label, item.desc), falling
+// back to English
 export function applyNames() {
-  const names = LANGUAGES[currentLanguage].names, fallback = LANGUAGES[DEFAULT_LANGUAGE].names;
-  for (const [category, byId] of Object.entries(fallback)) {
-    const items = GAME_CONFIG[category];
-    if (!items) continue;
-    for (const item of Array.isArray(items) ? items : Object.values(items)) {
-      const name = (names[category] || {})[item.id] ?? byId[item.id];
-      if (name) item.label = name;
+  for (const [part, field] of [['names', 'label'], ['descriptions', 'desc']]) {
+    const own = LANGUAGES[currentLanguage][part] || {}, fallback = LANGUAGES[DEFAULT_LANGUAGE][part];
+    for (const [category, byId] of Object.entries(fallback)) {
+      const items = GAME_CONFIG[category];
+      if (!items) continue;
+      for (const item of Array.isArray(items) ? items : Object.values(items)) {
+        const text = (own[category] || {})[item.id] ?? byId[item.id];
+        if (text) item[field] = text;
+      }
     }
   }
+}
+
+// The label of one of an item's numbers (descriptions' statLabels: hp, damage, reach...)
+export function statLabel(key) {
+  return LANGUAGES[currentLanguage].statLabels?.[key] ?? LANGUAGES[DEFAULT_LANGUAGE].statLabels[key] ?? key;
 }
 
 // Texts marked in index.html (data-i18n / data-i18n-title) in the current language

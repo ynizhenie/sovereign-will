@@ -7,5 +7,6 @@ export { drawIcon, escapeHtml, fillRichText, getResourceIcon, getResourceIconNam
 export { initMapInput, setMode } from './map-input.js';
 export { initPageActions } from './page-actions.js';
 export { closeOverlays, closeSheet, hidePlacing, initSheets, openSheet, showPlacing, syncHudMode, toggleSheet } from './sheets.js';
+export { hideInfo, initItemInfo } from './item-info.js';
 export { showNotification } from './toasts.js';
 export { initWidgets, labelButton, refreshAffordability, renderItemList } from './widgets.js';

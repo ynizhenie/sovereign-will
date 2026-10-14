@@ -98,7 +98,7 @@ button.cant-afford { opacity: 0.55; }
 #sheet-frame, #resources-panel { background: var(--bg); border: 1px solid var(--edge); }
 #resources-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); }
 /* the middle of the top bar and the chip of the tool picked: framed dark planks */
-.top-wave, .top-battle, .top-editor, #placing-chip { background: var(--plank-dark) center / cover; }
+.top-wave, .top-battle, .top-editor, #placing-chip, #info-card { background: var(--plank-dark) center / cover; }
 .btn-pause-square { background: var(--plank) center / cover; border: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
 .btn-pause-square.paused { background-image: var(--plank-green); box-shadow: var(--glow); }
 .placing-close { background: var(--plank-red) center / cover; }

@@ -1,7 +1,7 @@
 // The game starts: each file sets up what it needs (wires its buttons, fills its menus...), in the order
 // the files depend on each other
 
-import { initIcons, initMapInput, initPageActions, initSheets, initWidgets } from '../ui/index.js';
+import { initIcons, initItemInfo, initMapInput, initPageActions, initSheets, initWidgets } from '../ui/index.js';
 import { initAudio, initCanvas, initI18n, initInput } from '../engine/platform/index.js';
 import { initRng } from '../engine/world/index.js';
 import { initSession } from './session.js';
@@ -22,6 +22,7 @@ initMapInput();
 initWidgets();
 initPageActions();
 initSheets();
+initItemInfo();
 initEndlessSetup();
 initEndlessRules();
 initAudio();
