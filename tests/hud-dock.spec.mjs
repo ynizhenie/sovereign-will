@@ -186,3 +186,16 @@ test('editor: a category opens its sheet, a tool or the eraser shows on the chip
   await page.fill('#editor-name', 'Остров');
   await expect(page.locator('#editor-map-label')).toHaveText('Остров');
 });
+
+test('the open sheet shows the stock of what its prices ask for, by the prices (the friend\'s playtest)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.evaluate(() => { stock.wood = 42; stock.leather = 3; updateUI(); });
+  await page.click('[data-arg="tab-build"]');
+  await expect(page.locator('#sheet-stock [data-res="wood"] b')).toHaveText('42');
+  await expect(page.locator('#sheet-stock [data-res="leather"] b')).toHaveText('3'); // the tent
+  await page.evaluate(() => { stock.wood = 7; updateUI(); });
+  await expect(page.locator('#sheet-stock [data-res="wood"] b')).toHaveText('7');
+  await page.click('[data-arg="tab-tools"]'); // People: hiring takes food
+  await expect(page.locator('#sheet-stock [data-res="food"]')).toBeVisible();
+});

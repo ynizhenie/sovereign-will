@@ -6,12 +6,13 @@ import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
 import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/index.js';
-import { getResourceAmount, syncFoodMix } from '../domains/colony/storage/index.js';
+import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 
 export function updateUI() {
   updateWave();
   updateResourceStrip();
+  updateSheetStock();
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
     if (resourceElement) resourceElement.innerText = String(Math.floor(getResourceAmount(resourceKey)));
@@ -110,6 +111,25 @@ function updateResourceStrip() {
   set('strip-pop', `${getCurrentPop()}/${getMaxPop()}`);
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned)) {
     set(`strip-${group.members[0]}`, String(Math.floor(getResourceAmount(group.members[0]))));
+  }
+}
+
+// The colony sheet's own stock row: each resource the tab's (tabId) prices ask for, with what the stock has of it,
+// so a price and what there is to pay it with are read in one place (the friend's playtest)
+export function renderSheetStock(tabId) {
+  const row = document.getElementById('sheet-stock');
+  const pane = document.getElementById(tabId);
+  if (!row || !pane) return;
+  const ids = [...new Set([...pane.querySelectorAll('.cost-part')].map(part => part.dataset.res || ''))].filter(id => GAME_CONFIG.resources[id]);
+  row.innerHTML = ids.map(id => `<span class="strip-chip" data-res="${id}" title="${escapeHtml(GAME_CONFIG.resources[id].label)}">${iconHtml(GAME_CONFIG.resources[id].icon)} <b>0</b></span>`).join('');
+  row.hidden = ids.length === 0;
+  updateSheetStock();
+}
+
+export function updateSheetStock() {
+  for (const chip of document.querySelectorAll('#sheet-stock [data-res]')) {
+    const b = chip.querySelector('b');
+    if (b) b.textContent = String(Math.floor(Number(stock[/** @type {HTMLElement} */ (chip).dataset.res || ''] || 0)));
   }
 }
 
