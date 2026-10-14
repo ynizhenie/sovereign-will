@@ -10,6 +10,7 @@ import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { isShelter } from './healing.rules.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { joinsTentAssault } from '../combat/index.js';
+import { playSound } from '../../../app/index.js';
 
 // Workers mend a damaged tent unless enemies are right next to it
 export function repairTent(s, tick) {
@@ -98,6 +99,7 @@ export function treatWounded(s, tick) {
       s.healTimer = 0;
       s.bagHerbs--;
       patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
+      playSound('heal', patient);
     }
   }
   s.patrolTarget = null;

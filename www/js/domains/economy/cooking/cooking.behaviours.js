@@ -9,6 +9,7 @@ import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
+import { playSound } from '../../../app/index.js';
 
 // A soldier (or archer) free to cook: on the ground, not on a tower, not steered by the player, and no
 // enemy tent the player pointed at to go and destroy
@@ -88,6 +89,7 @@ export function cook(s, tick) {
   fire.cookProgress = (fire.cookProgress || 0) + tick.dt / cooking.seconds;
   if (fire.cookProgress >= 1) {
     fire.cookProgress = 0;
+    playSound('sizzle', fire);
     fire.fuelLeft--;
     load.amount--;
     s.cooked = (s.cooked || 0) + cooking.makes;

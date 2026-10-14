@@ -84,3 +84,25 @@ test('every faction has three ambients and three battle tracks of its own, and e
   });
   expect(errors).toEqual([]);
 });
+
+test('the colony\'s work and life have their sounds: eating, building falling, catching fire, raising the dead... (#198)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    camera.x = townHall.x; camera.y = townHall.y;
+    const played = name => audio.last[name] !== undefined;
+    // every new sound plays without an error
+    const fresh = ['eat', 'sizzle', 'dig', 'splash', 'drip', 'catch', 'heal', 'raise', 'collapse', 'smelt', 'tentUp', 'ignite'];
+    const known = fresh.every(name => typeof SOUNDS[name] === 'function');
+    // and the game makes them as things happen
+    const s = settlers[0];
+    stock.food = 10; eatMeal(s);
+    const wall = window.sim.helpers.placeBuilding('wall_wood', townHall.x + 60, townHall.y + 60); removeBuilding(wall);
+    setBurning(s);
+    const corpse = { x: townHall.x + 40, y: townHall.y - 40, radius: 11, side: 'enemy', kind: 'raider', age: 0, big: false, wormsTaken: false };
+    corpses = [corpse]; raiseTemporaryZombie(corpse);
+    return { known, eat: played('eat'), collapse: played('collapse'), ignite: played('ignite'), raise: played('raise') };
+  });
+  expect(r).toEqual({ known: true, eat: true, collapse: true, ignite: true, raise: true });
+  expect(errors).toEqual([]);
+});

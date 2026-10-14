@@ -18,7 +18,8 @@ export const SOUND = {
   fadeSeconds: 1.2,      // the music's crossfades: a time constant, so about 4x this to the end
   // a sound plays at most once in this many seconds (the same name), so crowds don't drown everything
   minGap: { click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
-    hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3 }
+    hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3,
+    eat: 0.2, sizzle: 0.3, dig: 0.2, splash: 0.2, drip: 0.1, catch: 0.3, heal: 0.3, raise: 0.3, collapse: 0.2, smelt: 0.3, ignite: 0.2 }
 };
 
 // ---- Sound effects
@@ -43,7 +44,20 @@ export const SOUNDS = {
   hire: (o, t) => [392, 494, 587].forEach((f, i) => tone(o, t + i * 0.07, { type: 'triangle', freq: f, dur: 0.22, gain: 0.18 })),
   horn: (o, t) => [98, 147].forEach(f => tone(o, t, { type: 'sawtooth', freq: f, dur: 1.6, gain: 0.16, attack: 0.35, filter: 700 })),
   error: (o, t) => { tone(o, t, { type: 'square', freq: 180, dur: 0.1, gain: 0.06 }); tone(o, t + 0.12, { type: 'square', freq: 150, dur: 0.12, gain: 0.06 }); },
-  defeat: (o, t) => [392, 349, 311, 262].forEach((f, i) => tone(o, t + i * 0.32, { type: 'triangle', freq: f, dur: 0.5, gain: 0.22 }))
+  defeat: (o, t) => [392, 349, 311, 262].forEach((f, i) => tone(o, t + i * 0.32, { type: 'triangle', freq: f, dur: 0.5, gain: 0.22 })),
+  // the colony's work and life (#198)
+  eat: (o, t) => [0, 0.14].forEach(d => noise(o, t + d, { dur: 0.07, gain: 0.18, type: 'lowpass', freq: 900 })),
+  sizzle: (o, t) => noise(o, t, { dur: 0.5, gain: 0.08, type: 'highpass', freq: 2500, attack: 0.05 }),
+  dig: (o, t) => { noise(o, t, { dur: 0.12, gain: 0.3, type: 'lowpass', freq: 600 }); tone(o, t, { freq: 90, to: 60, dur: 0.12, gain: 0.2 }); },
+  splash: (o, t) => noise(o, t, { dur: 0.25, gain: 0.25, freq: 1200, to: 400, q: 1.2 }),
+  drip: (o, t) => tone(o, t, { freq: 1500, to: 900, dur: 0.08, gain: 0.05 }),
+  catch: (o, t) => { noise(o, t, { dur: 0.2, gain: 0.2, freq: 1200, to: 500, q: 1.2 }); tone(o, t + 0.12, { type: 'triangle', freq: 880, to: 1320, dur: 0.15, gain: 0.08 }); },
+  heal: (o, t) => { tone(o, t, { freq: 660, to: 990, dur: 0.25, gain: 0.06 }); tone(o, t + 0.1, { freq: 1320, dur: 0.2, gain: 0.04 }); },
+  raise: (o, t) => { tone(o, t, { type: 'sawtooth', freq: 80, to: 160, dur: 0.9, gain: 0.15, attack: 0.2, filter: 400 }); noise(o, t, { dur: 0.8, gain: 0.06, freq: 600, to: 1800, q: 5, attack: 0.3 }); },
+  collapse: (o, t) => { noise(o, t, { dur: 0.6, gain: 0.5, type: 'lowpass', freq: 500 }); tone(o, t, { freq: 70, to: 35, dur: 0.5, gain: 0.3 }); },
+  smelt: (o, t) => { tone(o, t, { type: 'triangle', freq: 1200, dur: 0.25, gain: 0.08 }); tone(o, t, { type: 'triangle', freq: 1810, dur: 0.15, gain: 0.05 }); noise(o, t, { dur: 0.3, gain: 0.06, type: 'highpass', freq: 2500 }); },
+  tentUp: (o, t) => tone(o, t, { type: 'sawtooth', freq: 110, dur: 0.6, gain: 0.12, attack: 0.1, filter: 500 }),
+  ignite: (o, t) => noise(o, t, { dur: 0.3, gain: 0.2, freq: 1500, to: 3000, q: 1, attack: 0.02 })
 };
 
 // How loud a sound at a world point is, and where left-right: null when it's well off the screen
