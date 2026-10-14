@@ -35,12 +35,14 @@ Object.assign(window.sim, (() => {
     clearResources();
     // two squads (fewer would stand one to a post, #155); the first one is watched
     settlers = [0, 1, 2, 3, 4, 5].map(i => makeSettler(i + 1, townHall.x - 50 + i * 20, townHall.y + 50, { weapon: 'sword', role: 'soldier', hp: 1e4, maxHp: 1e4 }));
+    // the wave's enemy north of the base first: the posts face it (#202)
+    const en = createConfiguredEnemy({ x: townHall.x, y: townHall.y - 16 * TILE_SIZE }, 'raider');
+    en.fromWave = true; en.speed = 0; en.hp = en.maxHp = 1e4;
+    enemies = [en];
     defensePlan = null;
     const post = getDefensePlan().posts[0];
     const squad = settlers.filter(s => getDefensePlan().squadOf.get(s).post === post);
-    const en = createConfiguredEnemy({ x: post.x, y: post.y - 12 * TILE_SIZE }, 'raider');
-    en.fromWave = true; en.speed = 0; en.hp = en.maxHp = 1e4;
-    enemies = [en];
+    en.x = post.x; en.y = post.y - 12 * TILE_SIZE;
     run(8, { each: () => { waveTimer = 50; } });
     const held = squad.every(s => Math.hypot(s.x - post.x, s.y - post.y) < 30);
     en.y = post.y - 4 * TILE_SIZE; // now within 6 tiles of the post
