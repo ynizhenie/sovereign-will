@@ -45,12 +45,14 @@ export function necromancy(s, tick) {
   if (corpse) {
     tick.raiseAssignments.add(corpse);
     s.patrolTarget = null;
-    if (dist(corpse) > 16) {
+    // raised from a distance (raiseReach), not standing over it (#203)
+    if (dist(corpse) > necro.raiseReach) {
       moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, dt);
       s.raiseTimer = 0;
       return true;
     }
     s.working = 0.1;
+    s.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 }; // its thread (drawRaising)
     faceTowards(s, corpse.x, corpse.y);
     s.raiseTimer = (s.raiseTimer || 0) + dt;
     if (s.raiseTimer >= necro.raiseSeconds) {

@@ -18,3 +18,8 @@ test('zone tiles are painted, switched, toggled off and cleared; never on water 
     afterWheat: ['wheat'], afterSapling: ['sapling'], afterToggleOff: 0, afterClear: 0, onWater: 0
   });
 });
+
+test('a farmer with a backpack carries dung to a wheat plot: its harvest yields twice (#201)', async () => {
+  expect(await sim.fertilizer({})).toEqual({ fertilized: true, dungLeft: 0, wheat: 8 });
+  expect(await sim.fertilizer({ backpack: false })).toEqual({ fertilized: false, dungLeft: 1, wheat: 4 });
+});

@@ -130,7 +130,10 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
 // enemy still gets it. True when the tap was used.
 function enemyTapped() {
   const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
-  const enemy = game.enemies.filter(en => away(en) < en.radius + 12).sort((a, b) => away(a) - away(b))[0];
+  // an enemy tent (a grave, a portal) too: armed settlers go and destroy it (#203)
+  const tentRadius = 20;
+  const enemy = [...game.enemies.filter(en => away(en) < en.radius + 12), ...game.enemyTents.filter(et => away(et) < tentRadius)]
+    .sort((a, b) => away(a) - away(b))[0];
   if (!enemy) return false;
   if (game.settlers.some(s => away(s) < s.visualRadius + 8 && away(s) < away(enemy))) return false;
   enemy.markedTarget = !enemy.markedTarget;

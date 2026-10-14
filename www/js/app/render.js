@@ -9,7 +9,7 @@ import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.j
 import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
-import { drawBlight } from '../domains/factions/undead/index.js';
+import { drawBlight, drawRaising } from '../domains/factions/undead/index.js';
 import { drawGrassGround, drawMapBorder, drawRocks, drawSand, drawWater } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
@@ -48,6 +48,7 @@ export function render() {
   drawEnemyTentSites();
   drawSettlers();
   drawEnemies();
+  drawRaising();
   drawProjectiles();
 
   ctx.restore();

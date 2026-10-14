@@ -41,10 +41,12 @@ export function addMapResource(kind, x, y) {
   return resource;
 }
 
-// A resource is done: the settler gets what it yields, it's removed, and queued to grow back if it does
+// A resource is done: the settler gets what it yields (more off a fertilised plot, #201), it's removed,
+// and queued to grow back if it does
 export function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
-  for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount);
+  const factor = resource.fertilized ? GAME_CONFIG.fertilizer.yieldFactor : 1;
+  for (const [item, amount] of Object.entries(def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
   addCarryLoad(settler);
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {

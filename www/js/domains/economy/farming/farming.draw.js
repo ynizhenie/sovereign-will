@@ -20,6 +20,10 @@ export function drawFarmZones() {
 export function drawFarmPlots() {
   game.farmPlots.forEach(f => {
     ctx.fillStyle = '#5c4033'; ctx.fillRect(f.x - 13, f.y - 13, 26, 26);
+    if (f.fertilized) {
+      // fertilised: darker, richer soil round the edge (#201)
+      ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 3; ctx.strokeRect(f.x - 11.5, f.y - 11.5, 23, 23);
+    }
     if (f.growth < 100) {
       ctx.fillStyle = '#2ecc71'; ctx.fillRect(f.x - 6, f.y - 6, 12, 12);
     } else {

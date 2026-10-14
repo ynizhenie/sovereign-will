@@ -30,6 +30,7 @@ export function holdPost(s, tick) {
   // an enemy the player pointed at: a few soldiers leave their posts for it
   const marked = takeMarkedTarget(s, tick);
   if (marked) { s.postTarget = marked; return false; }
+  if (goForMarkedTent(s, tick)) return true; // a tent the player pointed at, too (#203)
   const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
   let nearest = null, best = engage;
   for (const en of game.enemies) {
@@ -193,27 +194,51 @@ export function joinsTentAssault(s, tick) {
 // Enemies closer than this to a settler on its way to the enemy tents get fought on the way
 export const TENT_ASSAULT_FIGHT_DISTANCE = 150;
 
-// Once a wave is down to its last few enemies, go destroy enemy tents
+// Once a wave is down to its last few enemies, go destroy enemy tents, the nearest first; a tent the
+// player pointed at first of all (goForMarkedTent)
 export function clearEnemyTents(s, tick) {
-  if (tick.tentAssault) {
-    if (joinsTentAssault(s, tick)) {
-      let nearestTent = /** @type {{ x: number, y: number } | null} */ (null), minDist = Infinity;
-      game.enemyTents.forEach(et => {
-        let d = Math.hypot(et.x - s.x, et.y - s.y);
-        if (d < minDist) { minDist = d; nearestTent = et; }
-      });
-      if (nearestTent) {
-        let attackDist = getWeaponStats(s, 'combat').tentReach;
-        const blockedShot = isBowWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, nearestTent.x, nearestTent.y);
-        if (minDist > attackDist || blockedShot) {
-          moveEntityTowards(s, nearestTent.x, nearestTent.y, s.speed, false, tick.dt);
-        } else {
-          performAttack(s, nearestTent.x, nearestTent.y);
-        }
-        s.patrolTarget = null;
-        return true;
-      }
-    }
+  if (goForMarkedTent(s, tick)) return true;
+  if (!tick.tentAssault || !joinsTentAssault(s, tick)) return false;
+  let tent = null, minDist = Infinity;
+  game.enemyTents.forEach(et => {
+    const d = Math.hypot(et.x - s.x, et.y - s.y);
+    if (d < minDist) { minDist = d; tent = et; }
+  });
+  if (!tent) return false;
+  attackTent(s, tent, tick);
+  return true;
+}
+
+// A tent the player pointed at (#203): up to markedSquad of the armed go and destroy it, any time, off
+// their posts in a wave too (holdPost). True when this settler is one of them
+export function goForMarkedTent(s, tick) {
+  if (s.weapon === 'fist' || s.isPossessed || s.towerAssignment) return false;
+  const tent = takeMarkedTent(s, tick);
+  if (!tent) return false;
+  attackTent(s, tent, tick);
+  return true;
+}
+
+// Walk up to a tent and strike it (an archer: from where it has a clear shot)
+function attackTent(s, tent, tick) {
+  const dist = Math.hypot(tent.x - s.x, tent.y - s.y);
+  const attackDist = getWeaponStats(s, 'combat').tentReach;
+  const blockedShot = isBowWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
+  if (dist > attackDist || blockedShot) {
+    moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
+  } else {
+    performAttack(s, tent.x, tent.y);
   }
-  return false;
+  s.patrolTarget = null;
+}
+
+// A tent the player pointed at, for this settler, while fewer than markedSquad go for it
+function takeMarkedTent(s, tick) {
+  let best = null;
+  for (const et of game.enemyTents) {
+    if (!et.markedTarget || (tick.markedAssignments.get(et) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
+    if (!best || Math.hypot(et.x - s.x, et.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = et;
+  }
+  if (best) tick.markedAssignments.set(best, (tick.markedAssignments.get(best) || 0) + 1);
+  return best;
 }

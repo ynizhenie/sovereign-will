@@ -10,9 +10,10 @@ import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 
-// A soldier (or archer) free to cook: on the ground, not on a tower, not steered by the player
+// A soldier (or archer) free to cook: on the ground, not on a tower, not steered by the player, and no
+// enemy tent the player pointed at to go and destroy
 function isSoldierCook(s) {
-  return (s.role === 'soldier' || s.role === 'archer') && !s.isPossessed && !s.towerAssignment;
+  return (s.role === 'soldier' || s.role === 'archer') && !s.isPossessed && !s.towerAssignment && !game.enemyTents.some(et => et.markedTarget);
 }
 
 // Enough soldiers free to cook at every campfire (between waves): the workers keep to their own work
