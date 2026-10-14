@@ -235,6 +235,20 @@ export function isInSafeArea(x, y) {
   return Math.hypot(x - townHall.x, y - townHall.y) <= getSafeRadius();
 }
 
+// Where the wave comes from (#202): the arc of the wave's enemies on the map as seen from the town hall,
+// widened by threatMargin and rounded to sixteenths of a turn (so the posts don't move every step); null
+// with no wave enemy on the map, or when they come from all round
+export function getThreatArc() {
+  const wave = game.enemies.filter(en => en.fromWave && en.hp > 0);
+  if (!wave.length) return null;
+  const angles = wave.map(en => Math.atan2(en.y - townHall.y, en.x - townHall.x));
+  const centre = Math.atan2(angles.reduce((sum, a) => sum + Math.sin(a), 0), angles.reduce((sum, a) => sum + Math.cos(a), 0));
+  const half = Math.max(...angles.map(a => Math.abs(Math.atan2(Math.sin(a - centre), Math.cos(a - centre))))) + GAME_CONFIG.defense.threatMargin;
+  if (half >= Math.PI * 0.75) return null;
+  const step = Math.PI / 8;
+  return { centre: Math.round(centre / step) * step, half: Math.ceil(half / step) * step };
+}
+
 // An enemy inside the base, or next to one of its buildings or the town hall
 export function isInsideBase(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
@@ -242,13 +256,17 @@ export function isInsideBase(en) {
     game.buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
 }
 
-// Squads and their posts, rebuilt when the soldiers or the buildings change: squads of squadSize melee
-// soldiers (plus an archer each while there are any), posts at the doors first, the rest spread evenly
-// around the town hall at the base's radius, each on a tile a settler can stand on
+// Squads and their posts, rebuilt when the soldiers, the buildings or the wave's side change: squads of
+// squadSize melee soldiers (plus an archer each while there are any), posts at the doors first, the rest
+// spread evenly around the town hall at the base's radius, each on a tile a settler can stand on. Once
+// the wave is on the map, only on the side it comes from (getThreatArc, #202): doors on that side, the rest
+// spread along that arc
 export function getDefensePlan() {
   const melee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
   const archers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
-  const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + game.buildings.length;
+  const arc = getThreatArc();
+  const facing = a => !arc || Math.abs(Math.atan2(Math.sin(a - arc.centre), Math.cos(a - arc.centre))) <= arc.half;
+  const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + game.buildings.length + '|' + (arc ? `${arc.centre},${arc.half}` : 'all');
   if (game.defensePlan && game.defensePlan.key === key) return game.defensePlan;
   const size = GAME_CONFIG.defense.squadSize;
   // too few for two squads: everyone on a post of their own round the base
@@ -269,7 +287,7 @@ export function getDefensePlan() {
     return { x, y };
   };
   const posts = [];
-  for (const door of game.buildings.filter(b => b.type === 'door')) {
+  for (const door of game.buildings.filter(b => b.type === 'door' && facing(Math.atan2(b.y - townHall.y, b.x - townHall.x)))) {
     if (posts.length >= count) break;
     // just inside the door, on the town hall's side
     const angle = Math.atan2(door.y - townHall.y, door.x - townHall.x);
@@ -277,7 +295,7 @@ export function getDefensePlan() {
   }
   const ring = count - posts.length;
   for (let i = 0; i < ring; i++) {
-    const angle = (i / ring) * Math.PI * 2 - Math.PI / 2;
+    const angle = arc ? arc.centre - arc.half + ((i + 0.5) / ring) * 2 * arc.half : (i / ring) * Math.PI * 2 - Math.PI / 2;
     posts.push(standable(townHall.x + Math.cos(angle) * radius, townHall.y + Math.sin(angle) * radius));
   }
   const squadOf = new Map();
