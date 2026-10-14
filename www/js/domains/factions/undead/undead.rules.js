@@ -9,6 +9,7 @@ import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
 import { createSettler, faceTowards } from '../../colony/settlers/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
+import { playSound } from '../../../app/index.js';
 
 // The necromancy a settler has from what it holds (the undead's staff), or null
 export function getNecromancy(s) {
@@ -107,6 +108,7 @@ export function raiseTemporaryZombie(corpse) {
   zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
   game.settlers.push(zombie);
   game.corpses.splice(game.corpses.indexOf(corpse), 1);
+  playSound('raise', corpse);
   return zombie;
 }
 
@@ -143,6 +145,7 @@ export function enemyNecromancy(en, necro, dt) {
     zombie.fromWave = en.fromWave;
     zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds; // as the player's
     game.enemies.push(zombie);
+    playSound('raise', corpse);
   }
   return true;
 }

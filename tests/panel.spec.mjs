@@ -7,13 +7,12 @@ test('opening a resource group does not change the panel size (#119)', async ({ 
   await page.click('#resource-strip'); // all of the stock, dropped down from the strip
   const panel = page.locator('#resources-panel');
   await expect(panel).toBeVisible();
-  await page.waitForTimeout(400); // done dropping down
-  const before = await panel.boundingBox();
+  // its layout box, not its drawn one (that one moves while it drops down)
+  const box = () => panel.evaluate(el => ({ height: el.offsetHeight, top: el.offsetTop }));
+  const before = await box();
   await page.click('#group-food');
   await expect(page.locator('#group-food-members')).toBeVisible();
-  const after = await panel.boundingBox();
-  expect(after.height).toBe(before.height);
-  expect(after.y).toBe(before.y);
+  expect(await box()).toEqual(before);
 });
 
 test('wood and stone always show; worms are raw food and get eaten when food runs out (#119)', async ({ page }) => {
