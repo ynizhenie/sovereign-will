@@ -109,8 +109,11 @@ button.cant-afford { opacity: 0.55; }
 /* the dock: quiet until a sheet's open, then that button is a green plank */
 #dock .dock-btn { background: none; border: none; box-shadow: none; color: var(--text-dim); }
 #dock .dock-btn.active { background: var(--plank-green) center / cover; color: var(--text-bright); box-shadow: var(--glow); }
-/* Point and the eraser are modes, not sheets: on, they only turn gold */
-#dock .dock-point.active, #dock #editor-erase.active { background: none; box-shadow: none; color: var(--gold); }
+/* the eraser is a mode, not a sheet: on, it only turns gold */
+#dock #editor-erase.active { background: none; box-shadow: none; color: var(--gold); }
+/* Point: a round plank, green while it's on */
+#dock .dock-point { background: var(--plank) center / cover; color: var(--text); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); border: 2px solid var(--edge); }
+#dock .dock-point.active { background: var(--plank-green) center / cover; color: var(--text-bright); box-shadow: var(--glow), 0 4px 12px rgba(0, 0, 0, 0.6); }
 @media (hover: hover) {
   #dock .dock-btn:not(.active):hover { background: var(--plank) center / cover; color: var(--text); }
 }
