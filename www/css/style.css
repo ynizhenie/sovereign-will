@@ -957,6 +957,18 @@ body[data-hud="editor"] .dock-row[data-hud-mode="editor"] { display: flex; }
 .dock-btn .ic { font-size: 22px; }
 .dock-btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dock-btn[hidden] { display: none; }
+/* Point: its own big round button at the dock's right end, standing up out of it, a gap from the tabs,
+   so it's easy to hit and switch back to (the friend's playtest) */
+.dock-btn.dock-point {
+  flex: 0 0 66px;
+  height: 66px;
+  margin: -20px 0 0 10px;
+  border-radius: 50%;
+  font-size: 10px;
+  gap: 1px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+.dock-btn.dock-point .ic { font-size: 26px; }
 /* a battle's dock rests while it's fought */
 body[data-battle-phase="fight"] .dock-row[data-hud-mode="battle"],
 body[data-battle-phase="result"] .dock-row[data-hud-mode="battle"] { opacity: 0.4; pointer-events: none; }
