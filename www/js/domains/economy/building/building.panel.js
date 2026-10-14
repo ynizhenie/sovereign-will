@@ -18,7 +18,7 @@ export function renderBuildTab() {
   for (const group of ['defense', 'homes', 'economy']) sectionFor(group);
   Object.values(GAME_CONFIG.buildings).filter(isForPlayerFaction).forEach(item => {
     const actions = item.tab ? document.getElementById(`${item.tab}-actions`) : sectionFor(item.group || 'economy');
-    if (actions) actions.appendChild(createConfigButton(item, setMode));
+    if (actions) actions.appendChild(createConfigButton(item, setMode, 'buildings'));
   });
   for (const section of Object.values(buildSections)) section.parentNode.hidden = section.children.length === 0;
 }

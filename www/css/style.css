@@ -979,3 +979,11 @@ body[data-battle-phase="result"] .dock-row[data-hud-mode="battle"] { opacity: 0.
 /* the colony sheet's stock row: what there is of what its prices ask for (bottom-panel.js) */
 .sheet-stock { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--edge, #2d313b); }
 .sheet-stock[hidden] { display: none; }
+
+/* what a thing in the sheet is and does (#213, ui/item-info.js): over the sheet while pointed at or long-pressed */
+#info-card { display: none; width: min(420px, 100%); padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); font-size: 12px; pointer-events: none; }
+body.sheet-open.info-open #info-card { display: block; animation: menu-rise 0.18s var(--ease-settle); }
+.info-title { font-size: 14px; color: #fff; }
+.info-desc { margin: 3px 0 5px; color: #d0d4dc; }
+.info-stats { display: flex; flex-wrap: wrap; gap: 4px 10px; color: #b6c1b8; }
+.info-stat b { color: #fff; font-variant-numeric: tabular-nums; }
