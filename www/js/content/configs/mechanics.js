@@ -17,6 +17,10 @@ export const mechanicsConfig = {
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
   farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
 
+  // fertiliser (#201): a farmer with a backpack carries dung to a wheat plot that has none; its next
+  // harvest yields yieldFactor times, once
+  fertilizer: { yieldFactor: 2 },
+
   // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
   // healPerHerb hp for one herb every healSeconds. Herbs come from the bag, filled at the town hall with
   // up to bagSize from the stock.

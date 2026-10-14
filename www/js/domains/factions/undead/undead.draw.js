@@ -13,6 +13,21 @@ export function drawStaff() {
   ctx.fillStyle = '#e8daef'; ctx.beginPath(); ctx.arc(24, -1, 1.5, 0, Math.PI * 2); ctx.fill();
 }
 
+// A necromancer raising a corpse from afar: a wavering dark purple thread from it to the corpse (#203)
+export function drawRaising() {
+  for (const unit of [...game.settlers, ...game.enemies]) {
+    const r = unit.raising;
+    if (!r || r.until < game.pathTick) continue;
+    const wave = Math.sin(game.pathTick * 0.3) * 4;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(142, 68, 173, 0.7)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.lineDashOffset = -game.pathTick;
+    ctx.beginPath(); ctx.moveTo(unit.x, unit.y);
+    ctx.quadraticCurveTo((unit.x + r.x) / 2 + wave, (unit.y + r.y) / 2 - wave, r.x, r.y); ctx.stroke();
+    ctx.restore();
+  }
+}
+
 // The undead's blighted ground, and ground marked for it (while the Blight tab is open)
 export function drawBlight() {
   const fading = new Map(game.blightZones.filter(z => z.clearing !== undefined).map(z => [`${z.x},${z.y}`, z.clearing / GAME_CONFIG.blight.clearSeconds]));
