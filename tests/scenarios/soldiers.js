@@ -103,5 +103,17 @@ Object.assign(window.sim, (() => {
     return { marked, alert: isDefenseAlert(), going, farDestroyed: !enemyTents.includes(far), nearStands: near.hp === near.maxHp };
   }
 
-  return { soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
+  // Posts all round the base before the wave; once its enemies are on the map, all from the east, every
+  // post moves to the east side (#202)
+  function postsToThreat({ seed = 'soldiers-threat' } = {}) {
+    setUp(seed);
+    settlers = soldiers(4);
+    const sides = () => getDefensePlan().posts.map(p => Math.sign(Math.round((p.x - townHall.x) / TILE_SIZE)));
+    const before = sides();
+    enemies = [-3, 0, 3].map(dy => { const en = createConfiguredEnemy(nearHall(16, dy), 'raider'); en.fromWave = true; return en; });
+    const after = sides();
+    return { westBefore: before.includes(-1), eastAfter: after.every(side => side === 1) };
+  }
+
+  return { soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
 })());

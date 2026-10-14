@@ -47,3 +47,7 @@ test('tapping an enemy at a damaged wall, next to a soldier, marks it: not the w
 test('a tap on an enemy tent marks it: three soldiers leave their posts and destroy it, before the nearer one (#203)', async () => {
   expect(await sim.soldiersMarkedTent()).toEqual({ marked: true, alert: true, going: 3, farDestroyed: true, nearStands: true });
 });
+
+test('once a wave is on the map, the posts move to the side it comes from (#202)', async () => {
+  expect(await sim.soldiersPostsToThreat()).toEqual({ westBefore: true, eastAfter: true });
+});
