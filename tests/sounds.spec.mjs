@@ -11,18 +11,23 @@ test('sound starts with the first tap; menu music in the menu, the ambient in En
   expect(menu.steps).toBeGreaterThan(0); // notes are being played
 
   await page.click('#play-button');
-  const calm = await page.evaluate(() => { enemies = []; enemyTents = []; enemyTentBlueprints = []; return musicMix(); });
-  expect(calm).toEqual({ ambient: 1 });
-  // a wave: battle music until the last enemy and enemy tent are gone
+  // the ambient: one of the colony faction's; a wave: one of the attacking faction's battle tracks until the
+  // last enemy and enemy tent are gone, then another ambient (#198)
   const r = await page.evaluate(() => {
+    const own = GAME_CONFIG.factions[sides.player.faction].music, theirs = GAME_CONFIG.factions[sides.enemy.faction].music;
+    enemies = []; enemyTents = []; enemyTentBlueprints = [];
+    const calm = musicMix();
     waveNum = 3; startNextWave();
     const during = musicMix();
     enemies = [];
-    const tentsLeft = enemyTents.length + enemyTentBlueprints.length > 0 ? musicMix() : { battle: 1 };
+    const tentsLeft = enemyTents.length + enemyTentBlueprints.length > 0 ? musicMix() : during;
     enemyTents = []; enemyTentBlueprints = [];
-    return { during, tentsLeft, after: musicMix() };
+    const after = musicMix();
+    const one = (mix, list) => Object.keys(mix).length === 1 && list.includes(Object.keys(mix)[0]) && Object.values(mix)[0] === 1;
+    return { calm: one(calm, own.ambient), during: one(during, theirs.battle), tentsLeft: JSON.stringify(tentsLeft) === JSON.stringify(during),
+      after: one(after, own.ambient), another: Object.keys(after)[0] !== Object.keys(calm)[0], layers: Object.keys(audio.layers).length };
   });
-  expect(r).toEqual({ during: { battle: 1 }, tentsLeft: { battle: 1 }, after: { ambient: 1 } });
+  expect(r).toEqual({ calm: true, during: true, tentsLeft: true, after: true, another: true, layers: 19 });
   await page.waitForTimeout(300);
   expect(errors).toEqual([]);
 });
@@ -49,5 +54,33 @@ test('sounds play where things happen on screen, not far off it, and not too oft
   expect(await page.evaluate(() => [loadSetting('music', 'on'), loadSetting('sound', 'on'), JSON.stringify(musicMix())])).toEqual(['off', 'off', '{}']);
   await page.click('[data-music="on"]');
   await page.click('[data-sound="on"]');
+  expect(errors).toEqual([]);
+});
+
+test('every faction has three ambients and three battle tracks of its own, and each plays (#198)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.mouse.click(5, 5); // the first gesture: the audio starts
+  await page.waitForTimeout(200);
+  const r = await page.evaluate(() => {
+    const out = {};
+    for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
+      const tracks = [...faction.music.ambient, ...faction.music.battle];
+      out[faction.id] = { ambient: faction.music.ambient.length, battle: faction.music.battle.length, own: tracks.every(id => id.startsWith(faction.id + '_') && GAME_CONFIG.music[id]) };
+      // two bars of each, scheduled into a silent node
+      const sink = audio.ctx.createGain(); sink.gain.value = 0; sink.connect(audio.ctx.destination);
+      for (const id of tracks) for (let step = 0; step < 32; step++) playTrack(GAME_CONFIG.music[id], sink, audio.ctx.currentTime + 0.1, step, 0.5);
+    }
+    // the undead attack: their battle music
+    sides.enemy.faction = 'undead';
+    musicPick.fighting = false;
+    gameStarted = true; gameMode = 'endless'; enemies = [createConfiguredEnemy({ x: 100, y: 100 }, 'undead_zombie')];
+    out.undeadWave = Object.keys(musicMix())[0].startsWith('undead_');
+    enemies = []; sides.enemy.faction = 'humans'; gameStarted = false;
+    return out;
+  });
+  expect(r).toEqual({
+    humans: { ambient: 3, battle: 3, own: true }, demons: { ambient: 3, battle: 3, own: true }, undead: { ambient: 3, battle: 3, own: true },
+    undeadWave: true
+  });
   expect(errors).toEqual([]);
 });
