@@ -975,3 +975,7 @@ body[data-battle-phase="result"] .dock-row[data-hud-mode="battle"] { opacity: 0.
 
 /* the world's seed, in the pause menu (it was over the map) */
 .pause-seed { font-size: 11px; color: #8a91a0; word-break: break-all; user-select: text; -webkit-user-select: text; }
+
+/* the colony sheet's stock row: what there is of what its prices ask for (bottom-panel.js) */
+.sheet-stock { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--edge, #2d313b); }
+.sheet-stock[hidden] { display: none; }
