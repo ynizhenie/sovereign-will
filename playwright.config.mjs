@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'tests',
+  testIgnore: 'node/**', // the logic tests run in Node itself (npm run test:node)
   // scenarios simulate up to a minute of game time each
   timeout: 120_000,
   fullyParallel: true,
