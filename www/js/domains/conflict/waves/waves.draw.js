@@ -35,6 +35,14 @@ export function drawEnemyTents() {
   });
 }
 
+// Piles fallen enemies dropped (#210): a little sack, a gold glint if a thing is in it
+export function drawLoot() {
+  for (const pile of game.loot) {
+    drawIcon(ctx, 'bundle', pile.x, pile.y, 16);
+    if ((pile.items || []).length) { ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(pile.x + 6, pile.y - 6, 2.5, 0, Math.PI * 2); ctx.fill(); }
+  }
+}
+
 // Tent sites enemies are building
 export function drawEnemyTentSites() {
   game.enemyTentBlueprints.forEach(site => {
