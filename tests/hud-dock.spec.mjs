@@ -199,3 +199,35 @@ test('the open sheet shows the stock of what its prices ask for, by the prices (
   await page.click('[data-arg="tab-tools"]'); // People: hiring takes food
   await expect(page.locator('#sheet-stock [data-res="food"]')).toBeVisible();
 });
+
+test('the soldiers\' stance on the top bar and on a soldier\'s card; reserves in the stock drop-down (#212)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const top = page.locator('#stance-toggle');
+  await expect(top).toContainText('Защищать');
+  await top.click();
+  await expect(top).toContainText('Атаковать');
+  await top.click();
+  await expect(top).toContainText('Держать');
+  expect(await page.evaluate(() => game.stance)).toBe('hold');
+  // a soldier's own
+  await page.evaluate(() => { const s = settlers[0]; Object.assign(s, { weapon: 'sword', role: 'soldier' }); selectedSettler = s; isPaused = true; updateUI(); });
+  const own = page.locator('#btn-own-stance');
+  await expect(own).toContainText('общий');
+  await own.click();
+  await expect(own).toContainText('Держать');
+  await own.click();
+  expect(await page.evaluate(() => settlers[0].stance)).toBe('defend');
+  // a worker has none
+  await page.evaluate(() => { selectedSettler = settlers[1]; updateUI(); });
+  await expect(own).toBeHidden();
+  // reserves
+  await page.evaluate(() => { isPaused = false; });
+  await page.click('#resource-strip');
+  const wood = page.locator('#reserves [data-res="wood"]');
+  await wood.locator('button', { hasText: '+' }).click();
+  await wood.locator('button', { hasText: '+' }).click();
+  await expect(wood.locator('b')).toHaveText('10');
+  await wood.locator('button', { hasText: '−' }).click();
+  expect(await page.evaluate(() => game.reserves.wood)).toBe(5);
+});

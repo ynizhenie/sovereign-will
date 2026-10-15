@@ -63,6 +63,9 @@ export const game = {
   dung: [],             // { x, y, age, by, byLeft } see relieve()
   corpses: [],          // { x, y, radius, side: 'settler' | 'enemy', kind, age }, see addCorpse()
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
+  stance: 'defend',     // the soldiers' stance for everyone (#212; a settler's own: settler.stance)
+  /** @type {Object<string, number>} */
+  reserves: {},         // what upkeep leaves in the stock, by resource (#212)
   /** @type {{ armor: boolean, shield: boolean }} */
   playerGear: { armor: false, shield: false }, // armour / a shield the player has made: waves wear them too (#203)
   forests: [],          // forest centres, see placeForests()

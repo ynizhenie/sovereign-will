@@ -51,3 +51,11 @@ test('a tap on an enemy tent marks it: three soldiers leave their posts and dest
 test('once a wave is on the map, the posts move to the side it comes from (#202)', async () => {
   expect(await sim.soldiersPostsToThreat()).toEqual({ westBefore: true, eastAfter: true });
 });
+
+test('stances: holding, squads leave an enemy in the base far from their posts; attacking, they go out for one far past it; a soldier\'s own beats everyone\'s (#212)', async () => {
+  expect((await sim.soldiersStances({ stance: 'hold' })).engaged).toBe(false);
+  expect((await sim.soldiersStances({ stance: 'defend' })).engaged).toBe(true);
+  expect((await sim.soldiersStances({ stance: 'defend', where: 'farOut' })).engaged).toBe(false);
+  expect((await sim.soldiersStances({ stance: 'attack', where: 'farOut' })).engaged).toBe(true);
+  expect(await sim.soldiersStances({ stance: 'hold', own: 'attack', where: 'farOut' })).toMatchObject({ ownWent: true, othersWent: false });
+});
