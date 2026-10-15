@@ -37,7 +37,7 @@ test('a dock button opens its sheet and closes it again; another tab swaps it; P
 
   await build.click();
   await page.click('[data-arg="tab-tools"]');
-  await expect(page.locator('#recruit-row')).toBeVisible(); // hiring is in People now
+  await expect(page.locator('#tool-actions')).toBeVisible(); // tools in People (hiring is at the town hall, #211)
   await expect(page.locator('#build-actions')).toBeHidden();
   await page.click('#btn-interact');
   expect(await body(page)).toEqual({ sheet: false, placing: false, stock: false });
@@ -196,8 +196,8 @@ test('the open sheet shows the stock of what its prices ask for, by the prices (
   await expect(page.locator('#sheet-stock [data-res="leather"] b')).toHaveText('3'); // the tent
   await page.evaluate(() => { stock.wood = 7; updateUI(); });
   await expect(page.locator('#sheet-stock [data-res="wood"] b')).toHaveText('7');
-  await page.click('[data-arg="tab-tools"]'); // People: hiring takes food
-  await expect(page.locator('#sheet-stock [data-res="food"]')).toBeVisible();
+  await page.click('[data-arg="tab-tools"]'); // People: tools take wood and stone
+  await expect(page.locator('#sheet-stock [data-res="stone"]')).toBeVisible();
 });
 
 test('the soldiers\' stance on the top bar and on a soldier\'s card; reserves in the stock drop-down (#212)', async ({ page }) => {
@@ -259,4 +259,24 @@ test('work priorities in the People sheet: ▲ ▼ move a group, the order is wh
   await expect(rows.first()).toContainText('Стройка');
   expect(await page.evaluate(() => game.jobPriority)).toEqual(['build', 'supply', 'repair', 'cook', 'gather']);
   await expect(page.locator('#job-priority [data-job="build"] button', { hasText: '▲' })).toBeDisabled();
+});
+
+test('a tap on the town hall opens its card with the hiring; a damaged building\'s card orders its repair (#211)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.evaluate(() => { stock.food = 100; isPaused = true; mouse.x = townHall.x; mouse.y = townHall.y; buildMode = 'interact'; handleCanvasClick(); updateUI(); });
+  await expect(page.locator('#building-card')).toBeVisible();
+  await expect(page.locator('#card-title')).toContainText('Ратуша');
+  const settlers0 = await page.evaluate(() => settlers.length);
+  await page.click('#btn-hire-normal');
+  expect(await page.evaluate(() => settlers.length)).toBe(settlers0 + 1);
+  // a damaged wall: its card, its repair
+  await page.evaluate(() => {
+    const wall = window.sim.helpers.placeBuilding('wall_wood', townHall.x + 120 + 15 - ((townHall.x + 120) % 30), townHall.y + 15 - (townHall.y % 30));
+    wall.hp = wall.maxHp / 2;
+    mouse.x = wall.x; mouse.y = wall.y; handleCanvasClick(); updateUI();
+  });
+  await expect(page.locator('#card-title')).toContainText('Деревянная стена');
+  await page.locator('#card-actions button', { hasText: 'Починить' }).click();
+  expect(await page.evaluate(() => buildings.find(b => b.type === 'wall_wood').repairRequested)).toBe(true);
 });

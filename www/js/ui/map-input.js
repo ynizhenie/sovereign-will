@@ -1,14 +1,15 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
-import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
+import { getDefinition } from '../content/configs/index.js';
 import { canvas, isTap, isTouchScreen, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
-import { canBuild, createBuildingBlueprint, isBuildLocationAllowed, toggleBuildingRepair } from '../domains/economy/building/index.js';
+import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
 import { isWaterReachable } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
-import { getPossessed, getSelectedSettler, orderPossessed } from '../domains/colony/settlers/index.js';
+import { openBuildingCard } from './building-card.js';
+import { getPossessed, orderPossessed } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
@@ -33,8 +34,9 @@ export function handleCanvasClick() {
   if (game.buildMode === 'interact' && selectTapped()) return;
 
   const tile = tapTile();
-  if (Math.hypot(mouse.x - townHall.x, mouse.y - townHall.y) < townHall.radius + 10 && townHall.hp < townHall.maxHp) {
-    townHall.repairRequested = !townHall.repairRequested;
+  // a building or the town hall: its card (#211), with its repair, hiring, the circle...
+  if (game.buildMode === 'interact' && Math.hypot(mouse.x - townHall.x, mouse.y - townHall.y) < townHall.radius + 10) {
+    openBuildingCard(townHall);
     return;
   }
   if (game.buildMode === 'interact' && buildingTapped(tile)) return;
@@ -85,22 +87,13 @@ function selectTapped() {
   return false;
 }
 
-// Point mode on a building: order its repair, or send the selected settler into the demons' sacrificial
-// circle. True when the tap was used.
+// Point mode on a building: its card (#211; its repair, the circle taking the selected settler in...).
+// True when the tap was used.
 function buildingTapped({ gx, gy }) {
-  const damaged = game.buildings.find(b => b.x === gx && b.y === gy && b.hp < b.maxHp);
-  if (damaged && toggleBuildingRepair(damaged)) return true;
-  // the demons' sacrificial circle: the selected settler goes into it
-  const circle = game.buildings.find(b => b.x === gx && b.y === gy && (getDefinition('buildings', b.type) || {}).sacrifice);
-  if (circle) {
-    const victim = getSelectedSettler();
-    if (!victim) { showNotification(t('sacrifice.pick'), true); return true; }
-    victim.sacrificeAt = circle;
-    game.selectedSettler = null;
-    showNotification(t('sacrifice.going', { name: GAME_CONFIG.settlerTypes[victim.type].label }), false);
-    return true;
-  }
-  return false;
+  const building = game.buildings.find(b => b.x === gx && b.y === gy);
+  if (!building) return false;
+  openBuildingCard(building);
+  return true;
 }
 
 // Can the build mode's thing go on this tile? (not the border, a farm zone, the hall or an occupied tile;
