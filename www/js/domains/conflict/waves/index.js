@@ -3,4 +3,4 @@
 
 export { tickEnemies } from './waves.behaviours.js';
 export { drawEnemies, drawEnemyTentSites, drawEnemyTents } from './waves.draw.js';
-export { createConfiguredEnemy, removeDeadEnemies, tickEnemyTents, tickWaveTimer } from './waves.rules.js';
+export { createConfiguredEnemy, getEnemyDef, removeDeadEnemies, tickEnemyTents, tickWaveTimer } from './waves.rules.js';
