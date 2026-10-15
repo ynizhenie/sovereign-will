@@ -7,7 +7,7 @@
 // load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
 // loading puts the real object back in its place.
 
-import { rebuildConfigHud, renderItemList, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
+import { rebuildConfigHud, renderItemList, renderReserves, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
 import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
@@ -47,6 +47,7 @@ export function serializeGame() {
     cols: game.COLS, rows: game.ROWS,
     clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
     playerGear: { ...game.playerGear },
+    stance: game.stance, reserves: { ...game.reserves },
     sides: JSON.parse(JSON.stringify(sides)),
     difficulty: game.gameDifficulty,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
@@ -85,6 +86,8 @@ export function loadGame(data) {
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
+  game.stance = data.stance || 'defend';
+  game.reserves = { ...data.reserves };
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();
   game.selectedSettler = null;
   game.defensePlan = null;
@@ -92,6 +95,7 @@ export function loadGame(data) {
   Object.assign(camera, data.camera);
   clampCamera();
   updateSeedHud();
+  renderReserves();
   updateUnitCounts();
   game.gameStarted = true;
   setPaused(false);
