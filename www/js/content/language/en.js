@@ -43,6 +43,7 @@ export const enLanguage = {
       'stance.hold': 'Hold', 'stance.defend': 'Defend', 'stance.attack': 'Attack', 'stance.everyone': 'everyone\'s', 'stance.own': 'Stance: {name}', 'stance.hint': 'Soldiers\' stance: hold the posts, defend the base or attack', 'reserves.title': 'Keep back from campfires, the smelter and towers:',
       'quota.title': 'Keep this many held (handed out by itself, from the armory first):', 'quota.stored': '{n} in store',
       'panel.jobs': 'Work priorities (top first)', 'job.supply': 'Towers and the smelter', 'job.repair': 'Repairs', 'job.cook': 'Cooking and fertilising', 'job.build': 'Building', 'job.gather': 'Gathering, farming, fishing', 'activity.carryOn': 'Carrying for a job',
+      'btn.openHall': '[[hall]] Hire at the town hall', 'card.hp': 'Durability {hp}/{max}', 'card.repair': '[[tools]] Repair ({cost})', 'card.repairCancel': '[[close]] Cancel the repair', 'card.sacrifice': '[[sacrifice_circle]] Send into the circle: {name}', 'card.arrows': 'Arrows {n}/{max}', 'card.fuel': 'Fuel {n}', 'card.smelter': 'Ore {ore}, coal {coal}, iron {iron}', 'hall.hall': 'Town hall', 'hall.graveyard': 'Graveyard', 'hall.hellgate': 'Hell Gate',
       'top.possess': 'Possess [Tab]', 'pause.seed': 'World seed', 'panel.hire': 'Hire', 'editor.untitled': 'New map',
       'dock.build': 'Build', 'dock.farming': 'Farm', 'dock.blight': 'Blight', 'dock.people': 'People', 'dock.arsenal': 'Arsenal',
       'dock.clear': 'Clear', 'dock.eraser': 'Eraser', 'dock.map': 'Map', 'battle.phase.setup': 'Placing', 'battle.phase.fight': 'Fight',

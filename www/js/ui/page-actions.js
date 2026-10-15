@@ -2,6 +2,7 @@
 // calls the action with its argument (switchTab also gets the button)
 
 import { switchTab } from './bottom-panel.js';
+import { openHallCard } from './building-card.js';
 import { cycleOwnStance, cycleStance } from './hud.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
@@ -22,6 +23,7 @@ export const PAGE_ACTIONS = {
   orderGearOff: id => orderGearOff(id),
   disarmSettler: what => disarmSettler(what),
   switchTab: (tabId, button) => switchTab(button, tabId),
+  openHall: () => openHallCard(),
   // Point: back to selecting, nothing open
   pointMode: () => { setMode('interact'); closeOverlays(); },
   toggleSheet: name => toggleSheet(name),
