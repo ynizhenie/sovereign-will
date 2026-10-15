@@ -29,6 +29,8 @@ export const mapConfig = {
       work: { drain: { pickaxe: 25, iron_pickaxe: 38 } } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
+    // what a fallen enemy dropped (#210): picked up like a stick; its yield and items are its own
+    loot: { list: 'loot', hp: 1, yield: {}, work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { berries: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { wheat: 4, wheatSeeds: 1 }, work: { seconds: 2.5 } },

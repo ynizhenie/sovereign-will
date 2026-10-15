@@ -253,12 +253,37 @@ export function tickEnemyTents(dt) {
   });
 }
 
+// What a fallen enemy drops (GAME_CONFIG.loot, #210): for each thing it held, now and then the thing
+// itself, more often part of what it costs; a pile on the ground the settlers pick up
+export function dropLoot(en) {
+  if (game.gameMode !== 'endless') return;
+  const loot = GAME_CONFIG.loot;
+  const held = [];
+  if (en.weapon && en.weapon !== 'fist' && GAME_CONFIG.weapons[en.weapon]) held.push(['weapons', en.weapon]);
+  if (en.armor === 'iron') held.push(['gear', 'armor']);
+  if (en.shield) held.push(['gear', 'shield']);
+  /** @type {Object<string, number>} */
+  const yieldOf = {};
+  const items = [];
+  for (const [category, id] of held) {
+    const roll = rand();
+    if (roll < loot.itemChance) { items.push(`${category}:${id}`); continue; }
+    if (roll >= loot.itemChance + loot.partChance) continue;
+    for (const [res, amount] of Object.entries(GAME_CONFIG[category][id].cost || {})) {
+      const part = Math.floor(amount * loot.partShare);
+      if (part > 0) yieldOf[res] = (yieldOf[res] || 0) + part;
+    }
+  }
+  if (!items.length && !Object.keys(yieldOf).length) return;
+  game.loot.push({ x: en.x, y: en.y, hp: 1, maxHp: 1, priority: 0, yield: yieldOf, items });
+}
+
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
 export function removeDeadEnemies() {
   game.enemies.forEach(en => {
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
-      if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); }
+      if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); dropLoot(en); }
     }
   });
   game.enemies = game.enemies.filter(en => en.hp > 0);

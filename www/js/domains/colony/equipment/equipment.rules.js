@@ -44,11 +44,13 @@ export function orderGear(id) {
     showNotification(t('gear.nobody', { name: item.label }), true);
     return;
   }
-  if (!canAfford(item.cost)) {
-    showCostError(item.cost, t('cost.notEnough'));
-    return;
+  if (!takeFromArmory(`gear:${id}`)) {
+    if (!canAfford(item.cost)) {
+      showCostError(item.cost, t('cost.notEnough'));
+      return;
+    }
+    payCost(item.cost);
   }
-  payCost(item.cost);
   target.targetEquipment = { gear: id };
   showNotification(t('gear.fetching', { icon: item.icon, name: item.label }), false);
 }
@@ -140,22 +142,28 @@ export function refundEquipment(settler, includeArmor = false, includeQuiver = f
   }
 }
 
-export function assignTool(toolType) {
+// auto (quotas, #210): only a worker with no tool, nothing said; true if it was given. A tool in the armory
+// goes first, else it's paid for
+export function assignTool(toolType, auto = false) {
   const item = getDefinition('tools', toolType);
   if (!item) {
-    showNotification(t('tool.unknown', { id: toolType }), true);
-    return;
+    if (!auto) showNotification(t('tool.unknown', { id: toolType }), true);
+    return false;
   }
 
   const cost = item.cost || {};
-  if (!canAfford(cost)) {
-    showCostError(cost, t('cost.notEnough'));
-    return;
+  const inArmory = (game.armory[`tools:${toolType}`] || 0) > 0;
+  if (!inArmory && !canAfford(cost)) {
+    if (!auto) showCostError(cost, t('cost.notEnough'));
+    return false;
   }
 
-  let target = getSelectedSettler() || getPossessed();
+  let target = auto ? null : getSelectedSettler() || getPossessed();
 
-  if (!target) {
+  if (auto) {
+    target = game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment && !s.isPossessed &&
+      !(toolType === 'rod' && isBigBody(s))) || null;
+  } else if (!target) {
     if (toolType === 'rod') {
       target = game.settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool === 'none' && !s.targetEquipment) ||
                game.settlers.find(s => !isBigBody(s) && s.role === 'worker' && s.tool !== toolType && !s.targetEquipment);
@@ -167,48 +175,86 @@ export function assignTool(toolType) {
   }
 
   if (!target) {
-    showNotification(t('tool.nobody'), true);
-    return;
+    if (!auto) showNotification(t('tool.nobody'), true);
+    return false;
   }
 
-  payCost(cost);
+  if (!takeFromArmory(`tools:${toolType}`)) payCost(cost);
   target.targetEquipment = { weapon: 'fist', tool: toolType, role: 'worker' };
-  showNotification(t('tool.given', { name: item.label }), false);
+  if (!auto) showNotification(t('tool.given', { name: item.label }), false);
+  return true;
 }
 
-export function craftWeapon(type) {
+// auto (quotas, #210): only an unarmed settler with no tool, nothing said; true if it was made. A weapon in
+// the armory goes first, else it's paid for
+export function craftWeapon(type, auto = false) {
   const item = getDefinition('weapons', type);
   if (!item) {
-    showNotification(t('weapon.unknown', { id: type }), true);
-    return;
+    if (!auto) showNotification(t('weapon.unknown', { id: type }), true);
+    return false;
   }
 
   const cost = item.cost || {};
-  if (!canAfford(cost)) {
-    showCostError(cost, t('cost.notEnough'));
-    return;
+  const inArmory = (game.armory[`weapons:${type}`] || 0) > 0;
+  if (!inArmory && !canAfford(cost)) {
+    if (!auto) showCostError(cost, t('cost.notEnough'));
+    return false;
   }
 
-  let target = getSelectedSettler() || getPossessed();
+  let target = auto ? null : getSelectedSettler() || getPossessed();
 
-  if (!target) {
+  if (auto) {
+    target = game.settlers.find(s => isBigBody(s) && s.weapon === 'fist' && s.tool === 'none' && !s.targetEquipment && !s.isPossessed) ||
+             game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment && !s.isPossessed) || null;
+  } else if (!target) {
     target = game.settlers.find(s => isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
              game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
              game.settlers.find(s => s.weapon !== type && !s.targetEquipment);
   }
 
   if (!target) {
-    showNotification(t('weapon.nobody'), true);
-    return;
+    if (!auto) showNotification(t('weapon.nobody'), true);
+    return false;
   }
 
-  payCost(cost);
+  if (!takeFromArmory(`weapons:${type}`)) payCost(cost);
   target.targetEquipment = { weapon: type, tool: 'none', role: type === 'bow' ? 'archer' : 'soldier' };
   if (type === 'bow') {
     target.targetEquipment.quiver = true;
     target.targetEquipment.quiverOnly = true;
   }
-  showNotification(t('weapon.made', { name: item.label }), false);
+  if (!auto) showNotification(t('weapon.made', { name: item.label }), false);
+  return true;
+}
+
+// One from the armory (#210), if it has one: true
+export function takeFromArmory(key) {
+  if (!((game.armory[key] || 0) > 0)) return false;
+  game.armory[key]--;
+  return true;
+}
+
+// ---- Quotas (#210): every few seconds, one more of each tool and weapon the colony is short of
+
+let quotaClock = 0;
+export function tickQuotas(dt) {
+  if (game.gameMode !== 'endless') return;
+  quotaClock += dt;
+  if (quotaClock < GAME_CONFIG.quotas.checkSeconds) return;
+  quotaClock = 0;
+  for (const [key, wanted] of Object.entries(game.quotas)) {
+    if (!(wanted > 0)) continue;
+    const [category, id] = key.split(':');
+    if (countWithPending(category, id) >= wanted) continue;
+    if (category === 'tools') assignTool(id, true);
+    else if (category === 'weapons') craftWeapon(id, true);
+  }
+}
+
+// how many hold it, or are on their way to pick it up
+export function countWithPending(category, id) {
+  const field = category === 'tools' ? 'tool' : 'weapon';
+  return game.settlers.filter(s => s[field] === id || (s.targetEquipment && s.targetEquipment[field] === id)).length;
 }
 
 export function craftArrows() {

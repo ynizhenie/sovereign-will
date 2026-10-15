@@ -31,6 +31,10 @@ export const game = {
   buildMode: 'interact',
   selectedSettler: null,
   defensePlan: null,        // squads and their posts (getDefensePlan)
+  /** @type {Object<string, number>} */
+  armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)
+  /** @type {Object<string, number>} */
+  quotas: {},           // how many of each '<category>:<id>' the player wants held (#210)
   // the things on the map (WORLD_LISTS)
   settlers: [],
   trees: [],
@@ -48,6 +52,7 @@ export const game = {
   beachTiles: [],       // sand on part of each lake's shore; only drawn, see placeBeaches()
   sticks: [],
   pebbles: [],
+  loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
   ironOres: [],
   coalOres: [],
   boars: [],
