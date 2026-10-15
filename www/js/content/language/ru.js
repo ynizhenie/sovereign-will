@@ -40,6 +40,7 @@ export const ruLanguage = {
       'pause.title': 'Пауза', 'pause.continue': 'Продолжить', 'pause.exit': 'Выйти в главное меню',
       'pause.resumeHint': 'Продолжить [Space]', 'pause.pauseHint': 'Пауза [Space / P]',
       'top.wave': 'Волна', 'top.seconds': 'с', 'top.zoomIn': 'Приблизить', 'top.zoomOut': 'Отдалить', 'top.point': 'Указать',
+      'stance.hold': 'Держать', 'stance.defend': 'Защищать', 'stance.attack': 'Атаковать', 'stance.everyone': 'общий', 'stance.own': 'Режим: {name}', 'stance.hint': 'Режим солдат: держать посты, защищать базу или атаковать', 'reserves.title': 'Не тратить на костёр, плавку и башни ниже:',
       'top.possess': 'Вселиться [Tab]', 'pause.seed': 'Сид мира', 'panel.hire': 'Найм', 'editor.untitled': 'Новая карта',
       'dock.build': 'Стройка', 'dock.farming': 'Ферма', 'dock.blight': 'Порча', 'dock.people': 'Люди', 'dock.arsenal': 'Арсенал',
       'dock.clear': 'Очистить', 'dock.eraser': 'Ластик', 'dock.map': 'Карта', 'battle.phase.setup': 'Расстановка', 'battle.phase.fight': 'Бой',

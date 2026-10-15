@@ -11,6 +11,7 @@ import { isForPlayerFaction } from '../domains/factions/index.js';
 
 export function updateUI() {
   updateWave();
+  renderStance();
   updateResourceStrip();
   updateSheetStock();
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
@@ -56,6 +57,7 @@ export function updateUI() {
     const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
     renderSettlerInfo(selected);
+    renderStance();
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
       const upgrade = getUpgrade();
@@ -67,6 +69,7 @@ export function updateUI() {
     document.getElementById('selected-info').hidden = true;
     document.getElementById('selected-bar').classList.remove('has-settler');
     document.getElementById('btn-deselect').style.display = 'none';
+    document.getElementById('btn-own-stance').hidden = true;
     if (btnUpgrade) {
       btnUpgrade.style.display = 'none';
     }
@@ -131,6 +134,69 @@ export function updateSheetStock() {
     const b = chip.querySelector('b');
     if (b) b.textContent = String(Math.floor(Number(stock[/** @type {HTMLElement} */ (chip).dataset.res || ''] || 0)));
   }
+}
+
+// ---- The soldiers' stance (#212): everyone's on the top bar, a soldier's own on its card
+
+const STANCE_ICONS = { hold: 'shield', defend: 'hall', attack: 'swords' };
+
+export function cycleStance() {
+  const stances = GAME_CONFIG.stances;
+  game.stance = stances[(stances.indexOf(game.stance) + 1) % stances.length];
+  renderStance();
+}
+
+// a selected soldier's own: everyone's (none), then each stance in turn
+export function cycleOwnStance() {
+  const s = getSelectedSettler();
+  if (!s) return;
+  const order = [null, ...GAME_CONFIG.stances];
+  s.stance = order[(order.indexOf(s.stance || null) + 1) % order.length];
+  renderStance();
+}
+
+// (each frame from updateUI: redrawn only when something changed)
+let shownStance = '';
+export function renderStance() {
+  const s0 = getSelectedSettler();
+  const key = `${game.stance}|${s0 ? s0.id : ''}|${s0 ? s0.stance || '' : ''}|${s0 ? s0.role : ''}`;
+  if (key === shownStance) return;
+  shownStance = key;
+  const top = document.getElementById('stance-toggle');
+  // (on a phone only its icon shows: the name is in its hint)
+  if (top) {
+    top.innerHTML = `${iconHtml(STANCE_ICONS[game.stance])} <span class="stance-name">${escapeHtml(t(`stance.${game.stance}`))}</span>`;
+    top.title = `${t('stance.hint')}: ${t(`stance.${game.stance}`)}`;
+  }
+  const own = document.getElementById('btn-own-stance');
+  const s = getSelectedSettler();
+  if (!own) return;
+  own.hidden = !s || (s.role !== 'soldier' && s.role !== 'archer');
+  if (!own.hidden && s) setRichText(own, t('stance.own', { name: s.stance ? t(`stance.${s.stance}`) : t('stance.everyone') }));
+}
+
+// ---- Reserves (#212): what the colony's upkeep leaves in the stock, set in the stock's drop-down
+
+export function renderReserves() {
+  const box = document.getElementById('reserves');
+  if (!box) return;
+  const config = GAME_CONFIG.reserves;
+  box.innerHTML = `<div class="panel-heading">${escapeHtml(t('reserves.title'))}</div>`;
+  const row = document.createElement('div');
+  row.className = 'reserves-row';
+  for (const id of config.resources.filter(r => GAME_CONFIG.resources[r] && isForPlayerFaction(GAME_CONFIG.resources[r]))) {
+    const cell = document.createElement('span');
+    cell.className = 'reserve';
+    cell.dataset.res = id;
+    const step = (delta) => () => { game.reserves[id] = Math.max(0, (game.reserves[id] || 0) + delta); renderReserves(); };
+    const minus = document.createElement('button'); minus.className = 'btn'; minus.textContent = '−'; minus.addEventListener('click', step(-config.step));
+    const plus = document.createElement('button'); plus.className = 'btn'; plus.textContent = '+'; plus.addEventListener('click', step(config.step));
+    const value = document.createElement('b'); value.textContent = String(game.reserves[id] || 0);
+    const icon = document.createElement('span'); icon.innerHTML = iconHtml(GAME_CONFIG.resources[id].icon); icon.title = GAME_CONFIG.resources[id].label;
+    cell.append(icon, minus, value, plus);
+    row.appendChild(cell);
+  }
+  box.appendChild(row);
 }
 
 export function resourceHudId(resourceKey) {
