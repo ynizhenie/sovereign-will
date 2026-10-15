@@ -46,6 +46,8 @@
  * @property {boolean} [crumbled]
  * @property {boolean} [deadProcessed]
  * @property {Building} [sacrificeAt]
+ * @property {number} [morale]         0..100 (#207)
+ * @property {boolean} [panic]
  * @property {string | null} [stance]  its own stance (hold, defend, attack); none: everyone's
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
@@ -78,6 +80,10 @@
  * @property {boolean} [markedTarget] the player pointed at it
  * @property {boolean} [rewardGranted]
  * @property {Object} [battleEntry]   its place in a battle's line-up
+ * @property {number} [morale]         0..100 (#207)
+ * @property {boolean} [panic]
+ * @property {boolean} [fled]          ran off the map's edge
+ * @property {boolean} [deadNoted]     its fall has shaken (and heartened) those around
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
  * @property {boolean} [shield]
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
@@ -196,6 +202,8 @@
  * @property {Object[]} dung
  * @property {Object[]} corpses
  * @property {number} enemyArrowStock
+ * @property {number} waveSize        how many the last wave brought
+ * @property {boolean} waveRouted     it's lost most of them and run (#207)
  * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
  * @property {string} stance           the soldiers' stance for everyone: hold, defend or attack
  * @property {Object<string, number>} reserves  what upkeep leaves in the stock, by resource
