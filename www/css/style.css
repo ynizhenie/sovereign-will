@@ -987,3 +987,18 @@ body.sheet-open.info-open #info-card { display: block; animation: menu-rise 0.18
 .info-desc { margin: 3px 0 5px; color: #d0d4dc; }
 .info-stats { display: flex; flex-wrap: wrap; gap: 4px 10px; color: #b6c1b8; }
 .info-stat b { color: #fff; font-variant-numeric: tabular-nums; }
+
+/* the soldiers' stance (#212): on the top bar in Endless only */
+#stance-toggle { display: none; }
+body[data-hud="endless"] #stance-toggle { display: inline-block; }
+#btn-own-stance { margin-top: 3px; padding: 3px 8px; font-size: 11px; }
+#btn-own-stance[hidden] { display: none; }
+/* reserves in the stock's drop-down (#212) */
+.reserves { margin-top: 6px; padding-top: 4px; border-top: 1px solid #2d313b; }
+.reserves-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.reserve { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.reserve .btn { padding: 2px 8px; min-height: 0; }
+.reserve b { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { #stance-toggle .stance-name { display: none; } }
+/* on a touch screen: the button whose card shows, a second tap presses it */
+button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }

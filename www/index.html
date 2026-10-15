@@ -235,6 +235,8 @@
     <div class="top-actions">
       <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
       <button class="btn btn-disarm" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
+      <!-- Endless: the soldiers' stance for everyone (#212): hold, defend, attack; a tap moves to the next -->
+      <button class="btn btn-stance" id="stance-toggle" data-action="cycleStance" data-i18n-title="stance.hint" title="Soldiers' stance"></button>
       <button class="btn btn-unpossess" data-action="switchPossession" data-i18n-title="top.possess" title="Possess [Tab]"><i class="ic ic-eye"></i></button>
     </div>
   </div>
@@ -243,6 +245,8 @@
   <button id="resource-strip" class="hud-layer" data-action="toggleResources"></button>
   <div id="resources-panel" class="hud-layer">
     <div class="resources-grid" id="resources-hud"></div>
+    <!-- what upkeep (campfire fuel, the smelter, tower arrows) leaves in the stock (#212) -->
+    <div class="reserves" id="reserves"></div>
   </div>
 
   <!-- over the bottom of the map, above the dock: the selected settler, what's being placed, the open sheet -->
@@ -254,6 +258,8 @@
         <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" data-action="deselectSettler"><i class="ic ic-no"></i></button>
       </div>
       <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
+      <!-- a soldier's own stance (#212): everyone's, hold, defend, attack -->
+      <button class="btn" id="btn-own-stance" data-action="cycleOwnStance" hidden></button>
       <div id="selected-info" hidden></div>
     </div>
 

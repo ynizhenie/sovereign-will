@@ -3,6 +3,7 @@
 // in it (the sheet steps aside for the map; the tool's chip brings it back).
 
 import { game } from '../engine/world/index.js';
+import { resetItemInfo } from './item-info.js';
 
 /** @type {string | null} */
 let openName = null;
@@ -27,6 +28,7 @@ export function openSheet(name, key = null) {
   for (const sheet of document.querySelectorAll('.hud-sheet')) sheet.classList.toggle('open', sheet.dataset.sheet === name);
   document.body.classList.add('sheet-open');
   closeResources();
+  resetItemInfo();
   markDock();
 }
 
@@ -35,6 +37,7 @@ export function closeSheet() {
   openName = null;
   openKey = null;
   document.body.classList.remove('sheet-open'); // the frame sinks away with the sheet still in it
+  resetItemInfo();
   markDock();
 }
 
