@@ -189,54 +189,53 @@ export function patrol(s, tick) {
 }
 
 // Order = priority: the first behaviour that takes a settler's tick wins.
-export const SETTLER_BEHAVIOURS = [
-  playerControlled,
-  panic,
-  strikeBack,
-  goToSacrifice,
-  loadTowerArrows,
-  collectSmelterIron,
-  supplySmelter,
-  deliverToSmelter,
-  guardTower,
-  repairTownHall,
-  repairBuilding,
-  equip,
-  cook,
-  fertilize,
-  deliverMaterials,
-  deliverCarrying,
-  repairTent,
-  eatCorpse,
-  healAtTent,
-  treatWounded,
-  necromancy,
-  holdPost,
-  fightEnemies,
-  breakOutOfSealedBase,
-  clearEnemyTents,
-  relieve,
-  build,
-  collectWorms,
-  fish,
-  pickApples,
-  harvest,
-  tendFarmZones,
-  waterCrops,
-  farmerGathersGrass,
-  deliverWhenNothingToDo,
-  patrol
-];
+// A job already in hand goes on first, whatever the priorities: raw food or fuel for a fire, arrows for a
+// tower, dung for a plot (else deliverCarrying would take them to storage)
+export function carryOn(s, tick) {
+  const load = s.carrying;
+  if (!load) return false;
+  if (load.forFire) return cook(s, tick);
+  if (load.forTower) return loadTowerArrows(s, tick);
+  if (load.type === 'dung') return fertilize(s, tick);
+  return false;
+}
+
+// The colony's work in groups, run in the order the player sets (game.jobPriority, #212); the default is
+// the order they always had
+export const JOB_GROUPS = {
+  supply: [loadTowerArrows, collectSmelterIron, supplySmelter],
+  repair: [repairTownHall, repairBuilding, repairTent],
+  cook: [cook, fertilize],
+  build: [build],
+  gather: [collectWorms, fish, pickApples, harvest, tendFarmZones, waterCrops, farmerGathersGrass]
+};
+export const DEFAULT_JOB_PRIORITY = ['supply', 'repair', 'cook', 'build', 'gather'];
+
+// Order = priority: the first behaviour that takes a settler's tick wins. Before the work: the player's own
+// control, panic... the fight; after it, a part-filled load home, then idling
+const BEFORE_WORK = [playerControlled, panic, strikeBack, goToSacrifice, carryOn, deliverToSmelter, guardTower, equip, deliverMaterials, deliverCarrying,
+  eatCorpse, healAtTent, treatWounded, necromancy, holdPost, fightEnemies, breakOutOfSealedBase, clearEnemyTents, relieve];
+const AFTER_WORK = [deliverWhenNothingToDo, patrol];
+
+/** @returns {Function[]} */
+export function getSettlerBehaviours(priority = game.jobPriority || DEFAULT_JOB_PRIORITY) {
+  const groups = [...priority.filter(g => JOB_GROUPS[g]), ...DEFAULT_JOB_PRIORITY.filter(g => !priority.includes(g))];
+  return [...BEFORE_WORK, ...groups.flatMap(g => JOB_GROUPS[g]), ...AFTER_WORK];
+}
+
+// every behaviour, in the default order (their names: the selected settler's activity texts)
+export const SETTLER_BEHAVIOURS = getSettlerBehaviours(DEFAULT_JOB_PRIORITY);
 
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
   assignTowerArchers();
+  const order = getSettlerBehaviours();
 
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
     s.isIdle = false;
-    for (const behaviour of SETTLER_BEHAVIOURS) {
+    for (const behaviour of order) {
       if (behaviour(s, settlerTick)) {
         s.isIdle = behaviour === patrol;
         s.activity = behaviour.name; // what it's doing, for the selected settler's info

@@ -1002,3 +1002,9 @@ body[data-hud="endless"] #stance-toggle { display: inline-block; }
 @media (max-width: 560px) { #stance-toggle .stance-name { display: none; } }
 /* on a touch screen: the button whose card shows, a second tap presses it */
 button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
+
+/* work priorities in the People sheet (#212) */
+.job-priority { display: flex; flex-direction: column; gap: 3px; max-width: 360px; margin: 0 auto; }
+.job-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.job-row span { flex: 1; }
+.job-row .btn { padding: 2px 10px; min-height: 0; }

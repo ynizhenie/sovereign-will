@@ -141,5 +141,24 @@ Object.assign(window.sim, (() => {
     return { pointsEastShare: Math.round(east / frames * 100) / 100 };
   }
 
-  return { cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter, ownSpikesAtHall, facingWhileWalking };
+  // A worker with no tool, a watchtower out of arrows (and arrows in stock) and a wall blueprint to build:
+  // by default it takes arrows to the tower first; with building put first, it builds (#212)
+  function jobOrder({ seed = 'job-order', order = null } = {}) {
+    start(seed);
+    clearResources();
+    placeBuilding('watchtower', nearHall(5, 0).x, nearHall(5, 0).y).arrows = 0;
+    const bp = createBuildingBlueprint('wall_wood', nearHall(-4, 2).x, nearHall(-4, 2).y);
+    bp.needs = {};
+    blueprints = [bp];
+    stock.arrows = 12;
+    game.jobPriority = order;
+    const w = makeSettler(1, townHall.x + 30, townHall.y + 40);
+    settlers = [w];
+    const seen = new Set();
+    run(2, { each: () => { w.hunger = 999; seen.add(w.activity); } });
+    game.jobPriority = null;
+    return { first: [...seen].find(a => a === 'loadTowerArrows' || a === 'build') || null };
+  }
+
+  return { jobOrder, cookingWithTools, healUnderAttack, campfireInFront, walksOutOfObstacle, deliveryJitter, ownSpikesAtHall, facingWhileWalking };
 })());
