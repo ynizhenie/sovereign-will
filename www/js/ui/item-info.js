@@ -1,14 +1,12 @@
 // What a thing in a sheet is and does (#213): a card over the open sheet with its name, a line about it
 // (item.desc, from the language files) and its numbers from the config. With a mouse it shows while the
-// pointer is over the thing's button; on a touch screen with a long press, and the touch that ends the
-// press doesn't press the button. Buttons say what they are with data-info="<config category>:<id>".
+// pointer is over the thing's button; on a touch screen the first tap on a button shows it, the second
+// presses the button. Buttons say what they are with data-info="<config category>:<id>".
 
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { statLabel } from '../engine/platform/index.js';
 import { TILE_SIZE } from '../engine/world/index.js';
 import { escapeHtml, iconHtml } from './icons.js';
-
-const LONG_PRESS_MS = 450;
 
 const round = (n, digits = 1) => String(Math.round(n * 10 ** digits) / 10 ** digits);
 const tiles = px => `${round(px / TILE_SIZE)} ${statLabel('tiles')}`;
@@ -66,41 +64,50 @@ export function hideInfo() {
   document.body.classList.remove('info-open');
 }
 
+// On a touch screen: the button whose card shows, waiting for a second tap to be pressed
+/** @type {HTMLElement | null} */
+let armed = null;
+
+function arm(button) {
+  if (armed) armed.classList.remove('armed');
+  armed = button;
+  if (button) button.classList.add('armed');
+}
+
+// What's picked and shown goes (the sheet closed or switched)
+export function resetItemInfo() {
+  arm(null);
+  hideInfo();
+}
+
 // What this file sets up as the game starts (called by app/boot.js)
 export function initItemInfo() {
   const area = document.getElementById('hud-bottom');
-  // a mouse: while it's over a button
+  const buttonAt = e => /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest('[data-info]'));
+  // a mouse: the card while it's over a button; a click presses it at once
   area.addEventListener('pointerover', e => {
     if (e.pointerType !== 'mouse') return;
-    const button = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest('[data-info]'));
+    const button = buttonAt(e);
     if (button) showInfo(button); else hideInfo();
   });
   area.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideInfo(); });
-  // a touch: a long press shows it until the next touch; the touch that ends the press does nothing else
-  /** @type {ReturnType<typeof setTimeout> | null} */
-  let timer = null;
-  let start = { x: 0, y: 0 };
+  // a touch (the friend's playtest): the first tap on a button shows its card and doesn't press it; a
+  // second tap on the same button presses it (and again, for another one); a tap elsewhere puts it away
   let swallow = false;
-  const cancel = () => { if (timer) clearTimeout(timer); timer = null; };
-  area.addEventListener('pointerdown', e => {
+  area.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') swallow = false; });
+  area.addEventListener('pointerup', e => {
     if (e.pointerType === 'mouse') return;
-    hideInfo();
-    swallow = false;
-    const button = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest('[data-info]'));
-    if (!button) return;
-    start = { x: e.clientX, y: e.clientY };
-    timer = setTimeout(() => { timer = null; if (showInfo(button)) swallow = true; }, LONG_PRESS_MS);
+    const button = buttonAt(e);
+    if (!button) { resetItemInfo(); return; }
+    if (button === armed) return; // the second tap: pressed as usual
+    if (showInfo(button)) { arm(button); swallow = true; }
   });
-  area.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel(); });
-  area.addEventListener('pointerup', cancel);
-  area.addEventListener('pointercancel', cancel);
-  // ahead of the buttons' own (onTap listens for touchend and click)
+  // ahead of the buttons' own (onTap listens for touchend and click; data-action ones for click)
   for (const type of ['touchend', 'click']) {
     area.addEventListener(type, e => {
       if (!swallow) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (type === 'click') swallow = false;
     }, true);
   }
 }
