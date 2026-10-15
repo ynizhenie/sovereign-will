@@ -1000,3 +1000,5 @@ body[data-hud="endless"] #stance-toggle { display: inline-block; }
 .reserve .btn { padding: 2px 8px; min-height: 0; }
 .reserve b { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) { #stance-toggle .stance-name { display: none; } }
+/* on a touch screen: the button whose card shows, a second tap presses it */
+button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
