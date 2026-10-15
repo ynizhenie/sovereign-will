@@ -4,7 +4,7 @@ import { iconHtml, rebuildConfigHud, renderReserves, renderedFaction, updateSeed
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
-import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
+import { createSettler, renderJobPriority, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { generateMap } from '../domains/world/index.js';
 import { getPlayerFaction, sides } from '../domains/factions/index.js';
@@ -25,7 +25,7 @@ export function resetGame(map) {
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.stance = 'defend'; game.reserves = {};
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.jobPriority = null; game.playerGear = { armor: false, shield: false }; game.stance = 'defend'; game.reserves = {};
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
   
   if (map) loadCustomMap(map);
@@ -33,6 +33,7 @@ export function resetGame(map) {
   mixStartFood(); // after the map, so the seeded map stays the same
   resetTileIndex();
   updateSeedHud();
+  renderJobPriority(); // a new game: the default order
   renderReserves(); // a new game keeps nothing back
 
   game.settlers.push(

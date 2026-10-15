@@ -10,7 +10,7 @@
 import { rebuildConfigHud, renderItemList, renderReserves, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
-import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
+import { renderJobPriority, updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
@@ -45,6 +45,7 @@ export function serializeGame() {
     stock: { ...stock },
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested },
     cols: game.COLS, rows: game.ROWS,
+    jobPriority: game.jobPriority,
     clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
     playerGear: { ...game.playerGear },
     stance: game.stance, reserves: { ...game.reserves },
@@ -88,7 +89,9 @@ export function loadGame(data) {
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
   game.stance = data.stance || 'defend';
   game.reserves = { ...data.reserves };
+  game.jobPriority = data.jobPriority || null;
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();
+  renderJobPriority();
   game.selectedSettler = null;
   game.defensePlan = null;
   resetTileIndex();
