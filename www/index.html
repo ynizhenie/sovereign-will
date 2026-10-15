@@ -274,6 +274,17 @@
 
     <!-- the open sheet: its frame rises in and sinks away; inside, the sheet asked for -->
     <div id="sheet-frame">
+      <!-- a building's card (#211): a tap on a building (or the town hall) opens it: what it is, how it stands, what it does -->
+      <div id="building-card" class="hud-sheet" data-sheet="building">
+        <div class="card-title" id="card-title"></div>
+        <div class="card-info" id="card-info"></div>
+        <div class="card-hall" id="card-hall">
+          <div class="panel-heading" data-i18n="panel.hire">Hire</div>
+          <div class="recruit-row" id="recruit-row"></div>
+        </div>
+        <div class="action-row" id="card-actions"></div>
+      </div>
+
       <!-- Endless: the colony's sheet, one tab at a time (the dock's buttons) -->
       <div id="bottom-panel" class="hud-sheet" data-sheet="colony">
         <!-- what the stock has of what this tab's prices ask for, by the prices themselves -->
@@ -311,8 +322,8 @@
 
           <!-- people: hiring first, then their tools and gear -->
           <div id="tab-tools" class="tab-pane">
-            <div class="panel-heading" data-i18n="panel.hire">Hire</div>
-            <div class="recruit-row" id="recruit-row"></div>
+            <!-- hiring is at the town hall now (#211): a tap on it, or this -->
+            <div class="hall-link"><button class="btn" data-action="openHall" data-i18n="btn.openHall">[[hall]] Hire at the town hall</button></div>
 
             <div class="panel-heading" data-i18n="panel.tools">Tools</div>
             <div class="btn-grid-2col" id="tool-actions"></div>

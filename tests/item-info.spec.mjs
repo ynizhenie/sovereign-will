@@ -46,6 +46,7 @@ test.describe('on a touch screen', () => {
     await page.click('#play-button');
     await page.evaluate(() => { stock.food = 100; updateUI(); });
     await page.tap('[data-arg="tab-tools"]');
+    await page.tap('[data-action="openHall"]'); // hiring is at the town hall (#211)
     const settlers0 = await page.evaluate(() => settlers.length);
     await page.tap('#btn-hire-normal');
     await expect(page.locator('#info-card')).toContainText('Рабочий');

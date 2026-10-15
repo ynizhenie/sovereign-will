@@ -53,8 +53,11 @@ Object.assign(window.sim, (() => {
     corpses = [];
     waveTimer = 999;
     selectedSettler = victim;
+    // a tap on the circle opens its card (#211); its button sends the selected settler in
     buildMode = 'interact'; mouse.x = circle.x; mouse.y = circle.y; handleCanvasClick();
-    const sent = victim.sacrificeAt === circle;
+    const card = getOpenSheet() === 'building';
+    sacrificeSelected(circle);
+    const sent = card && victim.sacrificeAt === circle;
     run(10);
     return { sent, victimDead: !settlers.includes(victim), healed: a.hp === a.maxHp && b.hp === b.maxHp };
   }
