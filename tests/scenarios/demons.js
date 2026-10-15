@@ -21,7 +21,7 @@ Object.assign(window.sim, (() => {
     const imp = settlers[0];
     selectedSettler = imp;
     craftWeapon('bow');
-    run(5);
+    run(20); // made at the town hall first (#211)
     return {
       startUnits, hire, tent: build.includes('btn-tent'), circle: build.includes('btn-sacrifice_circle'), portal: build.includes('btn-portal'),
       fireImp: { type: imp.type, weapon: imp.weapon, role: imp.role }

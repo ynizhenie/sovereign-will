@@ -251,13 +251,15 @@ test('work priorities in the People sheet: ▲ ▼ move a group, the order is wh
   await page.click('#play-button');
   await page.click('[data-arg="tab-tools"]');
   const rows = page.locator('#job-priority .job-row');
-  await expect(rows).toHaveCount(5);
+  await expect(rows).toHaveCount(6);
   await expect(rows.first()).toContainText('Башни и плавильня');
+  await expect(rows.nth(1)).toContainText('Изготовление вещей'); // (#211)
+  await page.locator('#job-priority [data-job="build"] button', { hasText: '▲' }).click();
   await page.locator('#job-priority [data-job="build"] button', { hasText: '▲' }).click();
   await page.locator('#job-priority [data-job="build"] button', { hasText: '▲' }).click();
   await page.locator('#job-priority [data-job="build"] button', { hasText: '▲' }).click();
   await expect(rows.first()).toContainText('Стройка');
-  expect(await page.evaluate(() => game.jobPriority)).toEqual(['build', 'supply', 'repair', 'cook', 'gather']);
+  expect(await page.evaluate(() => game.jobPriority)).toEqual(['build', 'supply', 'craft', 'repair', 'cook', 'gather']);
   await expect(page.locator('#job-priority [data-job="build"] button', { hasText: '▲' })).toBeDisabled();
 });
 

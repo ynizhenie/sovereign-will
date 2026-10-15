@@ -8,6 +8,7 @@ import { addResources, canAfford, payCost, showCostError, stock } from '../stora
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
+import { craftPlace, onCraftMade, orderCraft, pendingCrafts } from './equipment.crafting.js';
 
 // A shield only helps a melee soldier: a worker or an archer doesn't fight with it
 export function canUseShield(s) {
@@ -34,26 +35,49 @@ export function hasGear(s, id) {
 
 // Pay for a piece of gear and send a settler to pick it up at the town hall: the selected one if it can
 // wear it, otherwise the first one the rules prefer, otherwise anyone who can
-export function orderGear(id) {
+// One in the armory goes at once; otherwise it's made first (#211), then handed out. auto: nothing said;
+// forSettler: who it's for, if it's still free to take it
+/** @param {string} id @param {boolean} [auto] @param {any} [forSettler] */
+export function orderGear(id, auto = false, forSettler = null) {
   const item = GAME_CONFIG.gear[id], rules = GEAR_RULES[id];
-  const free = s => rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment;
-  const selected = getSelectedSettler() || getPossessed();
+  const free = s => rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment && game.settlers.includes(s);
+  const selected = forSettler || (auto ? null : getSelectedSettler() || getPossessed());
+  if (!((game.armory[`gear:${id}`] || 0) > 0)) return orderMade('gear', id, auto, selected);
   const target = (selected && free(selected) ? selected : null) ||
     game.settlers.find(s => free(s) && rules.first(s)) || game.settlers.find(free);
   if (!target) {
-    showNotification(t('gear.nobody', { name: item.label }), true);
-    return;
+    if (!auto) showNotification(t('gear.nobody', { name: item.label }), true);
+    return false;
   }
-  if (!takeFromArmory(`gear:${id}`)) {
-    if (!canAfford(item.cost)) {
-      showCostError(item.cost, t('cost.notEnough'));
-      return;
-    }
-    payCost(item.cost);
-  }
+  takeFromArmory(`gear:${id}`);
   target.targetEquipment = { gear: id };
-  showNotification(t('gear.fetching', { icon: item.icon, name: item.label }), false);
+  if (!auto) showNotification(t('gear.fetching', { icon: item.icon, name: item.label }), false);
+  return true;
 }
+
+// Not in the armory: ordered made at the town hall or the smithy (#211); true if it was
+function orderMade(category, id, auto, forSettler) {
+  const item = GAME_CONFIG[category][id];
+  const result = orderCraft(category, id);
+  if (result === 'ordered') {
+    const order = game.craftOrders[game.craftOrders.length - 1];
+    order.for = forSettler || null;
+    if (!auto) showNotification(t(craftPlace(category, id) === 'smithy' ? 'craft.atSmithy' : 'craft.atHall', { name: item.label }), false);
+    return true;
+  }
+  if (!auto) {
+    if (result === 'noSmithy') showNotification(t('craft.needSmithy', { name: item.label }), true);
+    else showCostError(item.cost || {}, t('cost.notEnough'));
+  }
+  return false;
+}
+
+// a made thing goes to whoever it was for, or a settler free to take it, the same as a button would
+onCraftMade(order => {
+  if (order.category === 'tools') assignTool(order.id, true, order.for);
+  else if (order.category === 'weapons') craftWeapon(order.id, true, order.for);
+  else if (order.category === 'gear') orderGear(order.id, true, order.for);
+});
 
 // Send the selected settler wearing it (or the first one) to the town hall to hand it back
 export function orderGearOff(id) {
@@ -144,23 +168,22 @@ export function refundEquipment(settler, includeArmor = false, includeQuiver = f
 
 // auto (quotas, #210): only a worker with no tool, nothing said; true if it was given. A tool in the armory
 // goes first, else it's paid for
-export function assignTool(toolType, auto = false) {
+/** @param {string} toolType @param {boolean} [auto] @param {any} [forSettler] */
+export function assignTool(toolType, auto = false, forSettler = null) {
   const item = getDefinition('tools', toolType);
   if (!item) {
     if (!auto) showNotification(t('tool.unknown', { id: toolType }), true);
     return false;
   }
 
-  const cost = item.cost || {};
-  const inArmory = (game.armory[`tools:${toolType}`] || 0) > 0;
-  if (!inArmory && !canAfford(cost)) {
-    if (!auto) showCostError(cost, t('cost.notEnough'));
-    return false;
-  }
+  // none in the armory: made first (#211)
+  if (!((game.armory[`tools:${toolType}`] || 0) > 0)) return orderMade('tools', toolType, auto, forSettler || (auto ? null : getSelectedSettler() || getPossessed()));
 
-  let target = auto ? null : getSelectedSettler() || getPossessed();
+  let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : auto ? null : getSelectedSettler() || getPossessed();
 
-  if (auto) {
+  if (target) {
+    // (the one it's for)
+  } else if (auto) {
     target = game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment && !s.isPossessed &&
       !(toolType === 'rod' && isBigBody(s))) || null;
   } else if (!target) {
@@ -179,7 +202,7 @@ export function assignTool(toolType, auto = false) {
     return false;
   }
 
-  if (!takeFromArmory(`tools:${toolType}`)) payCost(cost);
+  takeFromArmory(`tools:${toolType}`);
   target.targetEquipment = { weapon: 'fist', tool: toolType, role: 'worker' };
   if (!auto) showNotification(t('tool.given', { name: item.label }), false);
   return true;
@@ -187,23 +210,22 @@ export function assignTool(toolType, auto = false) {
 
 // auto (quotas, #210): only an unarmed settler with no tool, nothing said; true if it was made. A weapon in
 // the armory goes first, else it's paid for
-export function craftWeapon(type, auto = false) {
+/** @param {string} type @param {boolean} [auto] @param {any} [forSettler] */
+export function craftWeapon(type, auto = false, forSettler = null) {
   const item = getDefinition('weapons', type);
   if (!item) {
     if (!auto) showNotification(t('weapon.unknown', { id: type }), true);
     return false;
   }
 
-  const cost = item.cost || {};
-  const inArmory = (game.armory[`weapons:${type}`] || 0) > 0;
-  if (!inArmory && !canAfford(cost)) {
-    if (!auto) showCostError(cost, t('cost.notEnough'));
-    return false;
-  }
+  // none in the armory: made first (#211)
+  if (!((game.armory[`weapons:${type}`] || 0) > 0)) return orderMade('weapons', type, auto, forSettler || (auto ? null : getSelectedSettler() || getPossessed()));
 
-  let target = auto ? null : getSelectedSettler() || getPossessed();
+  let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : auto ? null : getSelectedSettler() || getPossessed();
 
-  if (auto) {
+  if (target) {
+    // (the one it's for)
+  } else if (auto) {
     target = game.settlers.find(s => isBigBody(s) && s.weapon === 'fist' && s.tool === 'none' && !s.targetEquipment && !s.isPossessed) ||
              game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment && !s.isPossessed) || null;
   } else if (!target) {
@@ -217,7 +239,7 @@ export function craftWeapon(type, auto = false) {
     return false;
   }
 
-  if (!takeFromArmory(`weapons:${type}`)) payCost(cost);
+  takeFromArmory(`weapons:${type}`);
   target.targetEquipment = { weapon: type, tool: 'none', role: type === 'bow' ? 'archer' : 'soldier' };
   if (type === 'bow') {
     target.targetEquipment.quiver = true;
@@ -254,7 +276,7 @@ export function tickQuotas(dt) {
 // how many hold it, or are on their way to pick it up
 export function countWithPending(category, id) {
   const field = category === 'tools' ? 'tool' : 'weapon';
-  return game.settlers.filter(s => s[field] === id || (s.targetEquipment && s.targetEquipment[field] === id)).length;
+  return game.settlers.filter(s => s[field] === id || (s.targetEquipment && s.targetEquipment[field] === id)).length + pendingCrafts(category, id);
 }
 
 export function craftArrows() {

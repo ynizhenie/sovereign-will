@@ -16,3 +16,7 @@ test('a fallen enemy drops loot; a worker picks it up, the sword goes into the a
 test('quotas: two axes wanted, three free workers: two get one by themselves (#210)', async () => {
   expect(await sim.quotaAxes()).toEqual({ withAxe: 2 });
 });
+
+test('things are made: an axe at the town hall by a worker, then handed out; iron only with a smithy, and made there (#211)', async () => {
+  expect(await sim.crafting()).toEqual({ ordered: true, crafting: true, axe: true, noSmithy: true, atSmithy: true, sword: true });
+});
