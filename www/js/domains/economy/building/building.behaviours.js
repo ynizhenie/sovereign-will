@@ -3,7 +3,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats } from '../../colony/equipment/index.js';
-import { addResources, canAfford, fetchFromStorage, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
+import { addResources, canAfford, fetchFromStorage, getSpareStock, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
 import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
 import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
 import { makeAppleTree } from '../farming/index.js';
@@ -38,12 +38,12 @@ export function supplySmelter(s, tick) {
     /** @type {[string, string, number][]} */
     const loads = [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]];
     for (const [resource, loaded, max] of loads) {
-      if (stock[resource] <= 0) continue;
+      if (getSpareStock(resource) < 1) continue; // not what's kept back (#212)
       const smelter = game.buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
       if (!smelter) continue;
       claimBuildingJob(smelter, 'supplier', s);
       return fetchFromStorage(s, resource, tick.dt, () => {
-        const amountToTake = takeStock(resource, Math.min(2, max - (smelter[loaded] || 0)));
+        const amountToTake = takeStock(resource, Math.min(2, max - (smelter[loaded] || 0), Math.floor(getSpareStock(resource))));
         s.carrying = { type: 'smelterDelivery', resource, amount: amountToTake, targetSmelter: smelter };
       });
     }

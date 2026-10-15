@@ -6,7 +6,7 @@ import { onTap, t } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { renderGearLabels, renderToolsTab, renderWeaponsTab } from '../domains/colony/equipment/index.js';
 import { formatCost } from '../domains/colony/storage/index.js';
-import { renderResourceStrip, renderResourceTiles, renderSheetStock, updateUI } from './hud.js';
+import { renderReserves, renderResourceStrip, renderResourceTiles, renderSheetStock, renderStance, updateUI } from './hud.js';
 import { sides } from '../domains/factions/index.js';
 import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
@@ -74,6 +74,8 @@ export function renderConfigHud() {
   renderedFaction = sides.player.faction;
   renderResourceTiles();
   renderResourceStrip();
+  renderReserves();
+  renderStance();
   renderBuildTab();
   renderToolsTab();
   renderRecruitRow();

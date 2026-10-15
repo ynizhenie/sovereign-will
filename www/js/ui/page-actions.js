@@ -2,6 +2,7 @@
 // calls the action with its argument (switchTab also gets the button)
 
 import { switchTab } from './bottom-panel.js';
+import { cycleOwnStance, cycleStance } from './hud.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
 import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
@@ -26,7 +27,9 @@ export const PAGE_ACTIONS = {
   toggleSheet: name => toggleSheet(name),
   reopenSheet: () => reopenSheet(),
   stopPlacing: () => stopPlacing(),
-  toggleResources: () => toggleResources()
+  toggleResources: () => toggleResources(),
+  cycleStance: () => cycleStance(),
+  cycleOwnStance: () => cycleOwnStance()
 };
 
 // What this file sets up as the game starts (called by app/boot.js)
