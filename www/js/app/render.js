@@ -13,6 +13,7 @@ import { drawBlight, drawRaising } from '../domains/factions/undead/index.js';
 import { drawGrassGround, drawMapBorder, drawRocks, drawSand, drawWater } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
+import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 
 export function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -49,6 +50,7 @@ export function render() {
   drawEnemyTentSites();
   drawSettlers();
   drawEnemies();
+  drawMoraleMarks();
   drawRaising();
   drawProjectiles();
 

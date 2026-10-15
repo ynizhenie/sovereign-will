@@ -11,6 +11,7 @@ import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire } from '../combat/index.js';
 import { playSound } from '../../../app/index.js';
+import { enemyPanic, necromancerKeepsBack } from '../morale/index.js';
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
@@ -43,10 +44,12 @@ function enemyHeal(en, healer, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   clampEntityToBounds(en);
+  if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
 
   const enemyDef = getEnemyDef(en);
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
+  if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);

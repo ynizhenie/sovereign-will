@@ -20,6 +20,7 @@ import { getHarvestableResources, getWorkPriority, harvest } from '../../economy
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -190,6 +191,7 @@ export function patrol(s, tick) {
 // Order = priority: the first behaviour that takes a settler's tick wins.
 export const SETTLER_BEHAVIOURS = [
   playerControlled,
+  panic,
   strikeBack,
   goToSacrifice,
   loadTowerArrows,
