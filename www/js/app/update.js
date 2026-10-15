@@ -3,6 +3,7 @@
 import { game, resetTileIndex } from '../engine/world/index.js';
 import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickSettlers, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
+import { tickQuotas } from '../domains/colony/equipment/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
 import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickWaveTimer } from '../domains/conflict/waves/index.js';
 import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
@@ -41,6 +42,7 @@ export function update(dt) {
   tickBoars(dt);
   tickCampfires(dt);
   tickSmelters(dt);
+  tickQuotas(dt);
   movePossessed(dt);
   tickSettlers(dt);
   tickEnemyTents(dt);

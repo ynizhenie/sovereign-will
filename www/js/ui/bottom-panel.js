@@ -4,7 +4,7 @@ import { GAME_CONFIG } from '../content/configs/index.js';
 import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
-import { renderGearLabels, renderToolsTab, renderWeaponsTab } from '../domains/colony/equipment/index.js';
+import { renderGearLabels, renderQuotas, renderToolsTab, renderWeaponsTab } from '../domains/colony/equipment/index.js';
 import { formatCost } from '../domains/colony/storage/index.js';
 import { renderReserves, renderResourceStrip, renderResourceTiles, renderSheetStock, renderStance, updateUI } from './hud.js';
 import { sides } from '../domains/factions/index.js';
@@ -85,6 +85,7 @@ export function renderConfigHud() {
   document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
   document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
   renderWeaponsTab();
+  renderQuotas(true);
   renderSheetStock(activeTab);
   // the tab left open was another faction's (Farming for the undead): back to Building (#200)
   if (document.querySelector(`.tab-btn[data-arg="${activeTab}"]`)?.hidden) openTab('tab-build');

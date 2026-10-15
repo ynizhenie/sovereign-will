@@ -190,6 +190,9 @@
  * @property {Object[]} beachTiles
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
+ * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
+ * @property {Object<string, number>} armory  tools, weapons, gear in store, by '<category>:<id>'
+ * @property {Object<string, number>} quotas  how many of each the player wants held
  * @property {Object[]} ironOres
  * @property {Object[]} coalOres
  * @property {Object[]} boars

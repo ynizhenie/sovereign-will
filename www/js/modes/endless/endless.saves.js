@@ -48,7 +48,7 @@ export function serializeGame() {
     jobPriority: game.jobPriority,
     clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
     playerGear: { ...game.playerGear },
-    stance: game.stance, reserves: { ...game.reserves },
+    stance: game.stance, reserves: { ...game.reserves }, armory: { ...game.armory }, quotas: { ...game.quotas },
     sides: JSON.parse(JSON.stringify(sides)),
     difficulty: game.gameDifficulty,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
@@ -89,6 +89,8 @@ export function loadGame(data) {
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
   game.stance = data.stance || 'defend';
   game.reserves = { ...data.reserves };
+  game.armory = { ...data.armory };
+  game.quotas = { ...data.quotas };
   game.jobPriority = data.jobPriority || null;
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();
   renderJobPriority();
