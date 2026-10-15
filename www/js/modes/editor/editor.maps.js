@@ -25,7 +25,7 @@ export function serializeMap(name) {
   const tile = o => [Math.floor(o.x / TILE_SIZE), Math.floor(o.y / TILE_SIZE)];
   const resources = {};
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    if (kind === 'boar' || kind === 'farm') continue;
+    if (kind === 'boar' || kind === 'farm' || kind === 'loot') continue;
     resources[kind] = game[def.list].filter(r => !r.oreSpawner).map(tile);
   }
   return {

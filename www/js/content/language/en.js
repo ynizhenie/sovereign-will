@@ -41,6 +41,7 @@ export const enLanguage = {
       'pause.resumeHint': 'Continue [Space]', 'pause.pauseHint': 'Pause [Space / P]',
       'top.wave': 'Wave', 'top.seconds': 's', 'top.zoomIn': 'Zoom in', 'top.zoomOut': 'Zoom out', 'top.point': 'Point',
       'stance.hold': 'Hold', 'stance.defend': 'Defend', 'stance.attack': 'Attack', 'stance.everyone': 'everyone\'s', 'stance.own': 'Stance: {name}', 'stance.hint': 'Soldiers\' stance: hold the posts, defend the base or attack', 'reserves.title': 'Keep back from campfires, the smelter and towers:',
+      'quota.title': 'Keep this many held (handed out by itself, from the armory first):', 'quota.stored': '{n} in store',
       'panel.jobs': 'Work priorities (top first)', 'job.supply': 'Towers and the smelter', 'job.repair': 'Repairs', 'job.cook': 'Cooking and fertilising', 'job.build': 'Building', 'job.gather': 'Gathering, farming, fishing', 'activity.carryOn': 'Carrying for a job',
       'top.possess': 'Possess [Tab]', 'pause.seed': 'World seed', 'panel.hire': 'Hire', 'editor.untitled': 'New map',
       'dock.build': 'Build', 'dock.farming': 'Farm', 'dock.blight': 'Blight', 'dock.people': 'People', 'dock.arsenal': 'Arsenal',
