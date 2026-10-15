@@ -48,6 +48,7 @@
  * @property {Building} [sacrificeAt]
  * @property {number} [morale]         0..100 (#207)
  * @property {boolean} [panic]
+ * @property {string | null} [stance]  its own stance (hold, defend, attack); none: everyone's
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
@@ -204,6 +205,8 @@
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
  * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
+ * @property {string} stance           the soldiers' stance for everyone: hold, defend or attack
+ * @property {Object<string, number>} reserves  what upkeep leaves in the stock, by resource
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  */

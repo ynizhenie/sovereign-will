@@ -26,6 +26,17 @@ export const mechanicsConfig = {
     scaryFoes: { humans: { demons: -10, undead: -10 } }, hit: 3, lowHp: 10, lowHpShare: 0.3, allyDeath: 10, foeDeath: 6,
     nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.6, rout: 40,
     tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140 },
+  // fighting (#208): at most meleePerEnemy settlers in melee on one enemy (meleePerBig on a big one), round
+  // it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
+  // health when an armed one is within coverRange px to hold the line (alone, only below a quarter). (Archers
+  // stepping back from melee enemies shot less and lost more in seeded waves: they stand and shoot.)
+  combatAI: { meleePerEnemy: 3, meleePerBig: 5, retreatShare: 0.35, coverRange: 150 },
+  // stances (#212): hold (squads keep to their posts, take on only what comes near), defend (as above),
+  // attack (no posts: go for the nearest enemy, and the enemy tents at any time). One for everyone; a soldier
+  // can have its own. reserves: what the colony's own upkeep (campfire fuel, the smelter, tower arrows) leaves
+  // in the stock, set by the player in steps of `step` for these resources
+  stances: ['hold', 'defend', 'attack'],
+  reserves: { resources: ['wood', 'coal', 'ironOre', 'arrows'], step: 5 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
