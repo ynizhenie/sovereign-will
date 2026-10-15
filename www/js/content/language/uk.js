@@ -41,6 +41,7 @@ export const ukLanguage = {
       'pause.resumeHint': 'Продовжити [Space]', 'pause.pauseHint': 'Пауза [Space / P]',
       'top.wave': 'Хвиля', 'top.seconds': 'с', 'top.zoomIn': 'Наблизити', 'top.zoomOut': 'Віддалити', 'top.point': 'Вказати',
       'stance.hold': 'Тримати', 'stance.defend': 'Захищати', 'stance.attack': 'Атакувати', 'stance.everyone': 'спільний', 'stance.own': 'Режим: {name}', 'stance.hint': 'Режим солдатів: тримати пости, захищати базу або атакувати', 'reserves.title': 'Не витрачати на вогнище, плавку й вежі нижче:',
+      'panel.jobs': 'Пріоритети робіт (згори — важливіше)', 'job.supply': 'Вежі й плавильня', 'job.repair': 'Ремонт', 'job.cook': 'Готування й удобрення', 'job.build': 'Будівництво', 'job.gather': 'Збір, ферма, риболовля', 'activity.carryOn': 'Несе у справі',
       'top.possess': 'Вселитися [Tab]', 'pause.seed': 'Сід світу', 'panel.hire': 'Найм', 'editor.untitled': 'Нова мапа',
       'dock.build': 'Будова', 'dock.farming': 'Ферма', 'dock.blight': 'Псування', 'dock.people': 'Люди', 'dock.arsenal': 'Арсенал',
       'dock.clear': 'Очистити', 'dock.eraser': 'Гумка', 'dock.map': 'Мапа', 'battle.phase.setup': 'Розстановка', 'battle.phase.fight': 'Бій',
