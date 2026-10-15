@@ -14,6 +14,7 @@ import { tickBoarRespawn, tickBoars } from '../domains/economy/hunting/index.js'
 import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
+import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 
 export function update(dt) {
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
@@ -26,6 +27,8 @@ export function update(dt) {
   game.pathTick++;
 
   updatePossessionView();
+  tickMorale(dt);
+  boarsPanic();
   tickWaveTimer(dt);
   updatePendingRespawns(dt);
   makeBonesAndRot(dt);
