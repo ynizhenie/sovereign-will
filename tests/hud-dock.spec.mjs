@@ -231,3 +231,17 @@ test('the soldiers\' stance on the top bar and on a soldier\'s card; reserves in
   await wood.locator('button', { hasText: '−' }).click();
   expect(await page.evaluate(() => game.reserves.wood)).toBe(5);
 });
+
+test('quotas under the tools and the weapons: − n + per item, and what waits in the armory (#210)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.click('[data-arg="tab-tools"]');
+  const axe = page.locator('#quotas-tools [data-quota="tools:axe"]');
+  await axe.locator('button', { hasText: '+' }).click();
+  await axe.locator('button', { hasText: '+' }).click();
+  await expect(axe.locator('b')).toHaveText('2');
+  expect(await page.evaluate(() => game.quotas['tools:axe'])).toBe(2);
+  await page.evaluate(() => { game.armory['weapons:sword'] = 3; updateUI(); });
+  await page.click('[data-arg="tab-weapons"]');
+  await expect(page.locator('#quotas-weapons [data-quota="weapons:sword"]')).toContainText('на складе 3');
+});

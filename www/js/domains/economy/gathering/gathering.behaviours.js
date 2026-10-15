@@ -33,6 +33,8 @@ export function canSettlerHarvest(s, r, tick) {
   }
 
   if (kind === 'grass' && game.boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
+  // loot (#210): not while an enemy is close to it
+  if (kind === 'loot' && game.enemies.some(en => Math.hypot(en.x - r.x, en.y - r.y) < 150)) return false;
   if (kind === 'grass' && hasToolFamily(s.tool, 'medic')) return true; // medics gather grass for herbs
   if (kind === 'grass' && tick.idleFarmer === s) return true; // so does a farmer with nothing else to do
 

@@ -5,12 +5,13 @@ import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
-import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/index.js';
+import { countHeld, getHeldItems, hasGear, renderQuotas } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 
 export function updateUI() {
   updateWave();
+  renderQuotas();
   renderStance();
   updateResourceStrip();
   updateSheetStock();
