@@ -35,8 +35,9 @@ test('the watering can is given from the Tools tab, only to a farmer (#106)', as
     const worker = makeSettler(1, townHall.x + 50, townHall.y), farmer = makeSettler(2, townHall.x - 50, townHall.y, { tool: 'hoe' });
     settlers = [worker, farmer];
     stock.wood = stock.iron = 10;
+    window.sim.helpers.placeBuilding('smithy', townHall.x + 90, townHall.y + 15 - (townHall.y % 30) + 60); // (iron in it, #211)
     orderGear('wateringCan');
-    window.sim.run(5);
+    window.sim.run(30);
     return { worker: !!worker.wateringCan, farmer: !!farmer.wateringCan, charges: GAME_CONFIG.gear.wateringCan.charges };
   });
   expect(r).toEqual({ worker: false, farmer: true, charges: 5 });

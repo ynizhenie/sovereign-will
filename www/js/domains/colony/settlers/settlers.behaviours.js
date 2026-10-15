@@ -27,7 +27,7 @@ import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZo
 import { cook } from '../../economy/cooking/index.js';
 import { necromancy } from '../../factions/undead/index.js';
 import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
-import { equip } from '../equipment/index.js';
+import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 
 export function createSettlerTick(dt) {
@@ -197,6 +197,7 @@ export function carryOn(s, tick) {
   if (load.forFire) return cook(s, tick);
   if (load.forTower) return loadTowerArrows(s, tick);
   if (load.type === 'dung') return fertilize(s, tick);
+  if (load.forCraft) return craftItem(s, tick);
   return false;
 }
 
@@ -204,12 +205,13 @@ export function carryOn(s, tick) {
 // the order they always had
 export const JOB_GROUPS = {
   supply: [loadTowerArrows, collectSmelterIron, supplySmelter],
+  craft: [craftItem],
   repair: [repairTownHall, repairBuilding, repairTent],
   cook: [cook, fertilize],
   build: [build],
   gather: [collectWorms, fish, pickApples, harvest, tendFarmZones, waterCrops, farmerGathersGrass]
 };
-export const DEFAULT_JOB_PRIORITY = ['supply', 'repair', 'cook', 'build', 'gather'];
+export const DEFAULT_JOB_PRIORITY = ['supply', 'craft', 'repair', 'cook', 'build', 'gather'];
 
 // Order = priority: the first behaviour that takes a settler's tick wins. Before the work: the player's own
 // control, panic... the fight; after it, a part-filled load home, then idling
