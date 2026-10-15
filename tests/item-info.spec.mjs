@@ -41,25 +41,26 @@ test('every button with a card has a line about it, in every language', async ({
 
 test.describe('on a touch screen', () => {
   test.use({ hasTouch: true });
-  test('a long press shows the card and doesn\'t press the button; a tap still does', async ({ page }) => {
+  test('the first tap on a button shows its card and doesn\'t press it; a second tap presses it (the friend\'s playtest)', async ({ page }) => {
     await openGame(page);
     await page.click('#play-button');
     await page.evaluate(() => { stock.food = 100; updateUI(); });
     await page.tap('[data-arg="tab-tools"]');
-    const hire = page.locator('#btn-hire-normal');
-    const box = await hire.boundingBox();
-    const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     const settlers0 = await page.evaluate(() => settlers.length);
-    // a long press: down, held, up
-    await hire.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: at.x, clientY: at.y, bubbles: true });
-    await page.waitForTimeout(600);
+    await page.tap('#btn-hire-normal');
     await expect(page.locator('#info-card')).toContainText('Рабочий');
-    await hire.dispatchEvent('pointerup', { pointerType: 'touch', bubbles: true });
-    await hire.dispatchEvent('touchend', { bubbles: true, cancelable: true });
-    await hire.dispatchEvent('click', { bubbles: true, cancelable: true });
-    expect(await page.evaluate(() => settlers.length)).toBe(settlers0);
-    // a plain tap hires
+    await expect(page.locator('#btn-hire-normal')).toHaveClass(/armed/);
+    expect(await page.evaluate(() => settlers.length)).toBe(settlers0); // not hired yet
     await page.tap('#btn-hire-normal');
     expect(await page.evaluate(() => settlers.length)).toBe(settlers0 + 1);
+    await page.tap('#btn-hire-normal'); // and again
+    expect(await page.evaluate(() => settlers.length)).toBe(settlers0 + 2);
+    // another button: its card first
+    await page.tap('[data-arg="tab-build"]');
+    await page.tap('#btn-wall_wood');
+    await expect(page.locator('#info-card')).toContainText('Деревянная стена');
+    expect(await page.evaluate(() => buildMode)).toBe('interact');
+    await page.tap('#btn-wall_wood');
+    expect(await page.evaluate(() => buildMode)).toBe('wall_wood');
   });
 });
