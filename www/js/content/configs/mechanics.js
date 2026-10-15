@@ -35,6 +35,9 @@ export const mechanicsConfig = {
   // attack (no posts: go for the nearest enemy, and the enemy tents at any time). One for everyone; a soldier
   // can have its own. reserves: what the colony's own upkeep (campfire fuel, the smelter, tower arrows) leaves
   // in the stock, set by the player in steps of `step` for these resources
+  // quotas (#210): how many of each tool and weapon the player wants held; every checkSeconds, one more of
+  // each that's short goes to a free settler, out of the armory first, else paid for
+  quotas: { checkSeconds: 1 },
   stances: ['hold', 'defend', 'attack'],
   reserves: { resources: ['wood', 'coal', 'ironOre', 'arrows'], step: 5 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },

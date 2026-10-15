@@ -61,6 +61,10 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
   },
 
+  // loot (#210): a fallen enemy drops a pile; for each thing it held (its weapon, armour, shield), itemChance
+  // of the thing itself (into the armory), else partChance of partShare of what it costs, as resources
+  loot: { itemChance: 0.12, partChance: 0.6, partShare: 0.5 },
+
   // armour and shields in waves (#203): once the player has made armour (a shield), each wave enemy from
   // wave fromWave wears it with a chance growing by perWave a wave, up to max. Shields: melee, not big
   enemyGear: { fromWave: 4, perWave: 0.04, max: 0.5 },

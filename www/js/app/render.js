@@ -2,7 +2,7 @@
 
 import { game, getTileIndex } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
-import { drawEnemies, drawEnemyTentSites, drawEnemyTents } from '../domains/conflict/waves/index.js';
+import { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawDung, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawBoars } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
@@ -34,6 +34,7 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawSticksPebblesOre();
+  drawLoot();
   drawTownHall();
   drawTrees();
   drawCactiBouldersGrassBushes();

@@ -41,6 +41,7 @@ export const ruLanguage = {
       'pause.resumeHint': 'Продолжить [Space]', 'pause.pauseHint': 'Пауза [Space / P]',
       'top.wave': 'Волна', 'top.seconds': 'с', 'top.zoomIn': 'Приблизить', 'top.zoomOut': 'Отдалить', 'top.point': 'Указать',
       'stance.hold': 'Держать', 'stance.defend': 'Защищать', 'stance.attack': 'Атаковать', 'stance.everyone': 'общий', 'stance.own': 'Режим: {name}', 'stance.hint': 'Режим солдат: держать посты, защищать базу или атаковать', 'reserves.title': 'Не тратить на костёр, плавку и башни ниже:',
+      'quota.title': 'Держать столько (выдаётся само, сначала со склада вещей):', 'quota.stored': 'на складе {n}',
       'panel.jobs': 'Приоритеты работ (сверху — важнее)', 'job.supply': 'Башни и плавильня', 'job.repair': 'Ремонт', 'job.cook': 'Готовка и удобрение', 'job.build': 'Стройка', 'job.gather': 'Сбор, ферма, рыбалка', 'activity.carryOn': 'Несёт по делу',
       'btn.openHall': '[[hall]] Найм — в ратуше', 'card.hp': 'Прочность {hp}/{max}', 'card.repair': '[[tools]] Починить ({cost})', 'card.repairCancel': '[[close]] Отменить ремонт', 'card.sacrifice': '[[sacrifice_circle]] Отправить в круг: {name}', 'card.arrows': 'Стрел {n}/{max}', 'card.fuel': 'Топливо {n}', 'card.smelter': 'Руда {ore}, уголь {coal}, железо {iron}', 'hall.hall': 'Ратуша', 'hall.graveyard': 'Кладбище', 'hall.hellgate': 'Врата ада',
       'top.possess': 'Вселиться [Tab]', 'pause.seed': 'Сид мира', 'panel.hire': 'Найм', 'editor.untitled': 'Новая карта',
