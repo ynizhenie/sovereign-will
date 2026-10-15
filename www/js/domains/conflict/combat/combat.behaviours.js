@@ -58,6 +58,17 @@ export function holdPost(s, tick) {
   return true;
 }
 
+// Hit right now (#208): whatever it was about (carrying, building, on its way to a job), it turns on whoever
+// hit it in the last second and a half. Tower guards keep shooting from up there; an archer with no arrows
+// can't; the possessed are the player's
+export function strikeBack(s, tick) {
+  if (s.isPossessed || s.towerAssignment || game.gameMode === 'menu') return false;
+  const attacker = getRecentAttacker(s);
+  if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
+  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
+  return engageEnemy(s, tick, attacker, attacker, tick.dt);
+}
+
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
 // Archers restock arrows from towers or the town hall; unarmed settlers shelter at the town hall
 // while there are defenders, unless they're being attacked themselves.
@@ -100,6 +111,12 @@ function chooseSettlerTarget(s, tick) {
   // a squad soldier goes for the enemy that came near its post (see holdPost)
   if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
   if (attacker) targetEnemy = attacker;
+  // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
+  if (targetEnemy && !attacker && !isBowWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
+    const others = game.enemies.filter(en => en !== targetEnemy && !meleeFull(en, tick));
+    const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (next && Math.hypot(next.x - s.x, next.y - s.y) < 300) targetEnemy = next;
+  }
   // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents)
   const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
   if (assaulting && !attacker) {
@@ -112,6 +129,12 @@ function chooseSettlerTarget(s, tick) {
     if (!targetEnemy) return null;
   }
   return { targetEnemy, attacker };
+}
+
+// Enough settlers in melee on that enemy this tick already (GAME_CONFIG.combatAI)
+function meleeFull(en, tick) {
+  const ai = GAME_CONFIG.combatAI;
+  return (tick.meleeOn.get(en) || 0) >= (en.type === 'big' ? ai.meleePerBig : ai.meleePerEnemy);
 }
 
 // An archer's arrows: from a tower close by, from the storage it's at, or it walks to a storage when
@@ -182,9 +205,16 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       : dist <= approach + extraBody;
     if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
+    } else if (!isBowWeapon(s.weapon)) {
+      // in melee each takes a side of its own round the enemy (#208)
+      const slot = tick.meleeOn.get(targetEnemy) || 0;
+      const around = Math.atan2(s.y - targetEnemy.y, s.x - targetEnemy.x) + (slot % 2 ? 1 : -1) * Math.ceil(slot / 2) * 0.9;
+      const near = dist < approach * 3;
+      moveEntityTowards(s, near ? targetEnemy.x + Math.cos(around) * approach * 0.8 : targetEnemy.x, near ? targetEnemy.y + Math.sin(around) * approach * 0.8 : targetEnemy.y, s.speed, false, dt);
     } else {
       moveEntityTowards(s, targetEnemy.x, targetEnemy.y, s.speed, false, dt);
     }
+    if (!isBowWeapon(s.weapon)) tick.meleeOn.set(targetEnemy, (tick.meleeOn.get(targetEnemy) || 0) + 1);
     s.patrolTarget = null;
     return true;
   }

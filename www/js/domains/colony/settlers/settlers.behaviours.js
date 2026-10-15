@@ -19,7 +19,7 @@ import { isWaterReachable } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea } from '../../conflict/combat/index.js';
+import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { collectWorms, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -66,6 +66,7 @@ export function createSettlerTick(dt) {
     dungAssignments: new Set(),      // dung piles a farmer is going to pick up this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
+    meleeOn: new Map(),              // enemy -> settlers fighting it in melee this tick (#208)
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     activeWaterSpots: game.waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
@@ -189,6 +190,7 @@ export function patrol(s, tick) {
 // Order = priority: the first behaviour that takes a settler's tick wins.
 export const SETTLER_BEHAVIOURS = [
   playerControlled,
+  strikeBack,
   goToSacrifice,
   loadTowerArrows,
   collectSmelterIron,
