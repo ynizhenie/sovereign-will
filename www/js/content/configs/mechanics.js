@@ -12,6 +12,12 @@ export const mechanicsConfig = {
   // is. markedSquad: how many soldiers go for each enemy the player points at (the rest keep their posts).
   // Once the wave is on the map, the posts move to the side it comes from, its arc widened by threatMargin
   // (radians) (#202).
+  // stances (#212): hold (squads keep to their posts, take on only what comes near), defend (as above),
+  // attack (no posts: go for the nearest enemy, and the enemy tents at any time). One for everyone; a soldier
+  // can have its own. reserves: what the colony's own upkeep (campfire fuel, the smelter, tower arrows) leaves
+  // in the stock, set by the player in steps of `step` for these resources
+  stances: ['hold', 'defend', 'attack'],
+  reserves: { resources: ['wood', 'coal', 'ironOre', 'arrows'], step: 5 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock

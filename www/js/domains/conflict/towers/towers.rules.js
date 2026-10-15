@@ -2,7 +2,7 @@
 
 import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
 import { isBowWeapon } from '../../colony/equipment/index.js';
-import { stock } from '../../colony/storage/index.js';
+import { getSpareStock, stock } from '../../colony/storage/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
@@ -49,7 +49,7 @@ export function isTowerDutyOn(tower) {
 export function findTowerForArrows(settler) {
   return /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(b => b.type === 'watchtower'))
     .filter(tower =>
-      tower.arrows < tower.tower.arrowCapacity && stock.arrows > 0 &&
+      tower.arrows < tower.tower.arrowCapacity && getSpareStock('arrows') >= 1 &&
       !game.settlers.some(s => s !== settler && s.carrying && s.carrying.forTower === tower))
     .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
 }

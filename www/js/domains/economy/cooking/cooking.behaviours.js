@@ -4,7 +4,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
-import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
+import { fetchFromStorage, getSpareStock, stock, takeStock } from '../../colony/storage/index.js';
 import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
@@ -103,5 +103,5 @@ export function cook(s, tick) {
 
 // The fuel the stock has, coal before wood (see GAME_CONFIG.cooking.fuel)
 export function findFuel() {
-  return Object.keys(GAME_CONFIG.cooking.fuel).find(f => stock[f] > 0) || null;
+  return Object.keys(GAME_CONFIG.cooking.fuel).find(f => getSpareStock(f) >= 1) || null; // not what's kept back (#212)
 }
