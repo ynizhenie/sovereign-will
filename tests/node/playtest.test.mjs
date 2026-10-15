@@ -60,3 +60,8 @@ test('a walking settler turns its weapon the way it walks, not keep it where it 
   const r = sim.facingWhileWalking({});
   expect(r.pointsEastShare).toBeGreaterThan(0.8);
 });
+
+test('work priorities: by default a free worker takes arrows to a tower before building; with building first, it builds (#212)', () => {
+  expect(sim.jobOrder({}).first).toBe('loadTowerArrows');
+  expect(sim.jobOrder({ order: ['build', 'supply', 'repair', 'cook', 'gather'] }).first).toBe('build');
+});

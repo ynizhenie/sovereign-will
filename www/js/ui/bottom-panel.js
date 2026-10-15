@@ -8,7 +8,7 @@ import { renderGearLabels, renderToolsTab, renderWeaponsTab } from '../domains/c
 import { formatCost } from '../domains/colony/storage/index.js';
 import { renderReserves, renderResourceStrip, renderResourceTiles, renderSheetStock, renderStance, updateUI } from './hud.js';
 import { sides } from '../domains/factions/index.js';
-import { renderRecruitRow } from '../domains/colony/settlers/index.js';
+import { renderJobPriority, renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
 import { setMode } from './map-input.js';
 import { refreshAffordability } from './widgets.js';
@@ -79,6 +79,7 @@ export function renderConfigHud() {
   renderBuildTab();
   renderToolsTab();
   renderRecruitRow();
+  renderJobPriority();
   renderGearLabels();
   // the undead blight the ground instead of farming
   document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';

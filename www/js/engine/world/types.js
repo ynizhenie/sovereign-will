@@ -202,6 +202,7 @@
  * @property {Object[]} dung
  * @property {Object[]} corpses
  * @property {number} enemyArrowStock
+ * @property {string[] | null} jobPriority  the order of the work groups (supply, repair, cook, build, gather)
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
  * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
