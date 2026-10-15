@@ -20,6 +20,7 @@ import { getHarvestableResources, getWorkPriority, harvest } from '../../economy
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -212,7 +213,7 @@ export const DEFAULT_JOB_PRIORITY = ['supply', 'repair', 'cook', 'build', 'gathe
 
 // Order = priority: the first behaviour that takes a settler's tick wins. Before the work: the player's own
 // control, panic... the fight; after it, a part-filled load home, then idling
-const BEFORE_WORK = [playerControlled, strikeBack, goToSacrifice, carryOn, deliverToSmelter, guardTower, equip, deliverMaterials, deliverCarrying,
+const BEFORE_WORK = [playerControlled, panic, strikeBack, goToSacrifice, carryOn, deliverToSmelter, guardTower, equip, deliverMaterials, deliverCarrying,
   eatCorpse, healAtTent, treatWounded, necromancy, holdPost, fightEnemies, breakOutOfSealedBase, clearEnemyTents, relieve];
 const AFTER_WORK = [deliverWhenNothingToDo, patrol];
 

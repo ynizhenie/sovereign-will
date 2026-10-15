@@ -8,6 +8,7 @@ import { getPlayerFaction } from '../../factions/index.js';
 import { getPossessed, getUpgrade, spawnSettler, upgradeToBig } from './settlers.rules.js';
 import { formatCost } from '../storage/index.js';
 import { DEFAULT_JOB_PRIORITY } from './settlers.behaviours.js';
+import { getMorale } from '../../conflict/morale/index.js';
 
 export function updateUnitCounts() {
   const workers = game.settlers.filter(s => s.role === 'worker').length;
@@ -26,6 +27,7 @@ export function renderSettlerInfo(s) {
   const parts = [t(activity) === activity ? t('activity.patrol') : t(activity)];
   parts.push(getPlayerFaction().eats ? t('info.hungry', { seconds: Math.max(0, Math.ceil(getHungerSeconds(s))) }) : t('info.noHunger'));
   if (s.temporary !== undefined) parts.push(t('info.crumbles', { seconds: Math.ceil(s.temporary) }));
+  parts.push(s.panic ? t('info.panic') : t('info.morale', { n: Math.round(getMorale(s)) })); // (#207)
   const items = s.carrying ? (s.carrying.items || [s.carrying]) : [];
   const carried = items.filter(item => item.amount > 0).map(item => `${Math.round(item.amount)}[[${getResourceIconName(item.type)}]]`).join(' ');
   if (carried) parts.push(`${t('info.carries')} ${carried}`);
