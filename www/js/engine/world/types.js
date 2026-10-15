@@ -46,6 +46,7 @@
  * @property {boolean} [crumbled]
  * @property {boolean} [deadProcessed]
  * @property {Building} [sacrificeAt]
+ * @property {string | null} [stance]  its own stance (hold, defend, attack); none: everyone's
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
@@ -196,6 +197,8 @@
  * @property {Object[]} corpses
  * @property {number} enemyArrowStock
  * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
+ * @property {string} stance           the soldiers' stance for everyone: hold, defend or attack
+ * @property {Object<string, number>} reserves  what upkeep leaves in the stock, by resource
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  */

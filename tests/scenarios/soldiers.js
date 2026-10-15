@@ -115,5 +115,25 @@ Object.assign(window.sim, (() => {
     return { westBefore: before.includes(-1), eastAfter: after.every(side => side === 1) };
   }
 
-  return { soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
+  // Six soldiers ahead of a wave (the posts all round) and one enemy: `where` in the base far from every
+  // post, or far out past the base. Holding, the squads leave the one in the base; defending (as ever) they
+  // go for it but wait for the far one; attacking, they go out for that too. A soldier's own stance beats
+  // everyone's (#212)
+  function stances({ seed = 'soldiers-stance', stance = 'defend', own = null, where = 'inBase' } = {}) {
+    setUp(seed);
+    settlers = soldiers(6);
+    if (own) settlers[0].stance = own;
+    game.stance = stance;
+    const plan = getDefensePlan();
+    const awayFromPosts = p => Math.min(...plan.posts.map(q => Math.hypot(q.x - p.x, q.y - p.y)));
+    const side = [[0, 1], [1, 0], [0, -1], [-1, 0]].map(([dx, dy]) => ({ dx, dy, p: nearHall(dx * 6, dy * 6) })).sort((x, y) => awayFromPosts(y.p) - awayFromPosts(x.p))[0];
+    const en = createConfiguredEnemy(where === 'inBase' ? side.p : nearHall(side.dx * 20, side.dy * 20), 'raider');
+    en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1e4; // not a wave's: the posts stay all round
+    enemies = [en];
+    run(14, { holdWaves: false, each: () => { waveTimer = 5; } });
+    game.stance = 'defend';
+    return { engaged: en.hp < en.maxHp, ownWent: !!own && Math.hypot(settlers[0].x - en.x, settlers[0].y - en.y) < 60, othersWent: settlers.slice(own ? 1 : 0).some(s => Math.hypot(s.x - en.x, s.y - en.y) < 60) };
+  }
+
+  return { soldiersStances: stances, soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
 })());
