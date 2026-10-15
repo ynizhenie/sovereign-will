@@ -62,6 +62,8 @@ export const game = {
   bloodSplats: [],      // { x, y, r, age, kind } blood on the ground (bleed) and footprints (trackFootprints)
   dung: [],             // { x, y, age, by, byLeft } see relieve()
   corpses: [],          // { x, y, radius, side: 'settler' | 'enemy', kind, age }, see addCorpse()
+  /** @type {string[] | null} */
+  jobPriority: null,    // the order the colony's work groups go in (#212); none: the default
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
   stance: 'defend',     // the soldiers' stance for everyone (#212; a settler's own: settler.stance)
   /** @type {Object<string, number>} */

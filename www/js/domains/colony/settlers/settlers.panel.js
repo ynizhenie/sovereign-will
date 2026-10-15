@@ -7,6 +7,7 @@ import { game } from '../../../engine/world/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getPossessed, getUpgrade, spawnSettler, upgradeToBig } from './settlers.rules.js';
 import { formatCost } from '../storage/index.js';
+import { DEFAULT_JOB_PRIORITY } from './settlers.behaviours.js';
 
 export function updateUnitCounts() {
   const workers = game.settlers.filter(s => s.role === 'worker').length;
@@ -32,6 +33,37 @@ export function renderSettlerInfo(s) {
   info.hidden = false;
   document.getElementById('selected-bar').classList.add('has-settler'); // a fixed size, whatever it carries
   setRichText(info, parts.join(' · '));
+}
+
+// ---- Work priorities (#212): the colony's work groups top first; ▲ ▼ move one
+
+export function renderJobPriority() {
+  const list = document.getElementById('job-priority');
+  if (!list) return;
+  const order = game.jobPriority || [...DEFAULT_JOB_PRIORITY];
+  list.innerHTML = '';
+  order.forEach((group, i) => {
+    const row = document.createElement('div');
+    row.className = 'job-row';
+    row.dataset.job = group;
+    const name = document.createElement('span');
+    name.textContent = `${i + 1}. ${t(`job.${group}`)}`;
+    const move = (delta, label) => {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = label;
+      b.disabled = i + delta < 0 || i + delta >= order.length;
+      b.addEventListener('click', () => {
+        const next = [...order];
+        [next[i], next[i + delta]] = [next[i + delta], next[i]];
+        game.jobPriority = next;
+        renderJobPriority();
+      });
+      return b;
+    };
+    row.append(name, move(-1, '▲'), move(1, '▼'));
+    list.appendChild(row);
+  });
 }
 
 // Seconds until this settler eats next
