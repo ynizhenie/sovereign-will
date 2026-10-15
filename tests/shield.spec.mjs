@@ -18,7 +18,7 @@ test('the shield button equips a melee soldier; disarming gives the shield back 
     const out = { archer: !!settlers[0].shield, soldier: !!settlers[1].shield, wood: stock.wood, iron: stock.iron };
     selectedSettler = settlers[1];
     disarmSettler('weapon');
-    window.sim.run(5);
+    window.sim.run(15); // back to the town hall from wherever the making took it (#211)
     return { ...out, afterDisarm: !!settlers[1].shield, ironBack: stock.iron };
   });
   expect(r).toMatchObject({ archer: false, soldier: true, wood: 4, iron: 3, afterDisarm: false, ironBack: 5 });
