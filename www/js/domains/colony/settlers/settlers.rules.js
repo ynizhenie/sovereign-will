@@ -12,6 +12,7 @@ import { addCorpse, bleed } from '../../conflict/combat/index.js';
 import { isDefeated } from '../../../modes/endless/index.js';
 import { battle } from '../../../modes/battle/index.js';
 import { playSound } from '../../../app/index.js';
+import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
@@ -119,7 +120,7 @@ export function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   settler.hp -= damage;
-  if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); }
+  if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); shakeOnHit(settler); }
   if (attacker) {
     settler.lastAttacker = attacker;
     settler.lastAttackedTick = game.pathTick;
@@ -210,6 +211,7 @@ export function removeDeadSettlers() {
   game.settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
+      onUnitDeath(s, 'settler');
       refundEquipment(s);
       if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot
       if (game.selectedSettler === s) game.selectedSettler = null;
