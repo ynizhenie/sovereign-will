@@ -1008,3 +1008,11 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .job-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .job-row span { flex: 1; }
 .job-row .btn { padding: 2px 10px; min-height: 0; }
+
+/* a building's card (#211) */
+.card-title { font-size: 15px; color: #fff; text-align: center; }
+.card-info { font-size: 12px; color: #c9cdd6; text-align: center; }
+.card-hall[hidden] { display: none; }
+.card-hint { font-size: 12px; color: #8a91a0; }
+.hall-link { display: flex; justify-content: center; margin-bottom: 6px; }
+#card-actions:empty { display: none; }

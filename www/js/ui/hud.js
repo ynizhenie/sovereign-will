@@ -2,6 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { escapeHtml, iconHtml, setRichText } from './icons.js';
+import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
@@ -11,6 +12,7 @@ import { isForPlayerFaction } from '../domains/factions/index.js';
 
 export function updateUI() {
   updateWave();
+  renderBuildingCard();
   renderStance();
   updateResourceStrip();
   updateSheetStock();
