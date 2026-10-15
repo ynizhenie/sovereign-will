@@ -11,6 +11,7 @@ import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { playSound } from '../../../app/index.js';
+import { onUnitDeath } from '../morale/index.js';
 
 export const WAVE_WARNING_SECONDS = 15;
 
@@ -211,6 +212,8 @@ export function startNextWave() {
     }
   }
 
+  game.waveSize = game.enemies.filter(en => en.fromWave).length; // (morale: a wave that's lost most of them runs)
+  game.waveRouted = false;
   game.waveNum++;
 }
 
@@ -256,6 +259,7 @@ export function tickEnemyTents(dt) {
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
 export function removeDeadEnemies() {
   game.enemies.forEach(en => {
+    if (en.hp <= 0 && !en.fled && !en.deadNoted) { en.deadNoted = true; onUnitDeath(en, 'enemy'); }
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
       if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); }

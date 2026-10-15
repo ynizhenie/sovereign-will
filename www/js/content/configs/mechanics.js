@@ -12,6 +12,20 @@ export const mechanicsConfig = {
   // is. markedSquad: how many soldiers go for each enemy the player points at (the rest keep their posts).
   // Once the wave is on the map, the posts move to the side it comes from, its arc widened by threatMargin
   // (radians) (#202).
+  // morale (#207): 0..max for everyone; below panicBelow a unit panics until back at calmAbove (or its base,
+  // if lower). base: where each faction's settles (scaryFoes: less against these); hits take `hit` (and
+  // lowHp more as one falls below lowHpShare); an ally falling within nearRange px takes allyDeath, a foe
+  // falling there gives foeDeath (demons twice); outnumbered (more than `outnumbered` times as many foes
+  // close by) loses outnumberedPerSecond; with no foe near it comes back recoverPerSecond (twice by the
+  // town hall). A wave that's lost routShare of its number takes `rout`. Panicking enemies heal at their
+  // tents (tentHealPerSecond); a demon in a panic takes demonHeal a second off an ally. An undead unit within
+  // necroRange of its necromancer keeps its morale; the enemy necromancer keeps necroKeepBack px off. The
+  // armed take every shake at armedShare. A panic passes by itself (panicRecoverPerSecond, foes or not), and
+  // one cornered (hit with its attacker at hand) fights back.
+  morale: { max: 100, panicBelow: 30, calmAbove: 40, base: { humans: 70, demons: 90, undead: 30, boar: 50 },
+    scaryFoes: { humans: { demons: -10, undead: -10 } }, hit: 3, lowHp: 10, lowHpShare: 0.3, allyDeath: 10, foeDeath: 6,
+    nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.6, rout: 40,
+    tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock

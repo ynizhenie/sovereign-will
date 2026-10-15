@@ -9,6 +9,7 @@ import { getReachSteps, getSettlerReach, invalidateAllPaths } from '../../../eng
 import { woundBoar } from '../../economy/hunting/index.js';
 import { tileVariantHash } from '../../world/index.js';
 import { playSound } from '../../../app/index.js';
+import { shakeOnHit } from '../morale/index.js';
 
 // Whether an arrow is stopped on tile (gx, gy). fromTower: shot from a watchtower, over walls and doors.
 export function isArrowBlockedTile(gx, gy, fromTower) {
@@ -207,6 +208,7 @@ export function damageEnemy(en, amount) {
   let damage = en.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   en.hp -= damage;
+  if (damage > 0) shakeOnHit(en); // (#207)
 }
 
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for
