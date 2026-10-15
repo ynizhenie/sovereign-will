@@ -51,7 +51,7 @@ Object.assign(window.sim, (() => {
     stock.wood = 50; stock.leather = 20;
     selectedSettler = z;
     craftWeapon('bow');
-    run(5);
+    run(20); // made at the town hall first (#211), then taken up
     const withBow = { type: z.type, weapon: z.weapon };
     selectedSettler = z;
     disarmSettler('weapon');

@@ -78,8 +78,9 @@ export function fightEnemies(s, tick) {
   if (!choice) return false; // on the way to the enemy tents, with nothing in the way
   const { targetEnemy, attacker } = choice;
   if (isBowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
-  // an archer with nothing to shoot waits
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) {
+  // an archer with nothing to shoot waits, while there's an enemy to shoot at (with none, it gets on with
+  // its other work: it used to stand here for good)
+  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy) {
     s.patrolTarget = null;
     return true;
   }

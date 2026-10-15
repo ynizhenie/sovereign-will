@@ -4,3 +4,4 @@
 export { equip } from './equipment.behaviours.js';
 export { assignTool, canUseShield, countHeld, countWithPending, craftArrows, craftWeapon, disarmSettler, getHeldItems, getWeaponStats, hasAxeTool, hasGear, hasPickaxeTool, hasToolFamily, hasWorkingShield, isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon, orderGear, orderGearOff, putOnGear, refundEquipment, takeFromArmory, tickQuotas } from './equipment.rules.js';
 export { renderGearLabels, renderQuotas, renderToolsTab, renderWeaponsTab } from './equipment.panel.js';
+export { craftItem, craftPlace, findWorkplace, orderCraft, pendingCrafts } from './equipment.crafting.js';

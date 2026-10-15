@@ -9,6 +9,7 @@ import { formatCost } from '../domains/colony/storage/index.js';
 import { getRepairStep, toggleBuildingRepair } from '../domains/economy/building/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
 import { getSelectedSettler } from '../domains/colony/settlers/index.js';
+import { craftPlace } from '../domains/colony/equipment/index.js';
 import { isShelter } from '../domains/conflict/healing/index.js';
 import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { getOpenSheet, openSheet } from './sheets.js';
@@ -50,7 +51,11 @@ export function renderBuildingCard() {
   if (!isHall && !game.buildings.includes(b)) return; // gone: what was there stays till it's closed
   const def = isHall ? null : getDefinition('buildings', b.type);
   const selected = getSelectedSettler();
-  const key = [isHall, b.type, Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
+  // what's being made here (#211): the town hall's, or a smithy's
+  const place = isHall ? 'hall' : def && def.crafts;
+  const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
+  const queueText = queue.map(o => `${GAME_CONFIG[o.category][o.id].label} ${o.stage === 'work' ? `${Math.floor(o.progress * 100)}%` : t('card.waiting')}`).join(', ');
+  const key = [queueText, isHall, b.type, Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
   if (key === shownKey) return;
   shownKey = key;
   const { name, icon } = isHall ? hallName() : { name: def ? def.label : b.type, icon: def ? def.icon : 'build' };
@@ -60,6 +65,7 @@ export function renderBuildingCard() {
   if (b.type === 'campfire') info.push(t('card.fuel', { n: Math.round(b.fuelLeft || 0) }));
   if (b.type === 'smelter') info.push(t('card.smelter', { ore: b.oreLoaded || 0, coal: b.coalLoaded || 0, iron: b.ironProduced || 0 }));
   if (def && def.desc) info.push(def.desc);
+  if (queueText) info.push(t('card.queue', { list: queueText }));
   setRichText(document.getElementById('card-info'), info.join(' · '));
   document.getElementById('card-hall').hidden = !isHall;
   // actions
