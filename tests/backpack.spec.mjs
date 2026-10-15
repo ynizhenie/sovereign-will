@@ -8,7 +8,7 @@ test('the backpack button gives a worker a backpack for its leather cost (#26)',
     stock.leather = 10;
     selectedSettler = settlers[0];
     document.getElementById('btn-backpack').click();
-    window.sim.run(5); // walks to the town hall for it
+    window.sim.run(25); // made at the town hall (#211), then it walks there for it
     return { hasBackpack: !!settlers[0].backpack, leather: stock.leather, };
   });
   expect(r.hasBackpack).toBe(true);
