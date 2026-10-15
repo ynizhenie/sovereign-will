@@ -54,3 +54,13 @@ test('waves come in armour and with shields once the player has made them, more 
   expect(r.late.armor).toBeLessThan(r.late.all);
   expect(r.lost).toEqual([20, 10]); // 20 x 0.65 x 0.75
 });
+
+test('hit while carrying wood home, a worker turns on the enemy rather than walk on (#208)', async () => {
+  expect(await sim.struckWhileCarrying()).toEqual({ turned: true, hit: true });
+});
+
+test('six swordsmen on two raiders a few steps apart: both fought, at most three on one (#208)', async () => {
+  const r = await sim.meleeSlots();
+  expect(r.bothFought).toBe(true);
+  expect(r.most).toBeLessThanOrEqual(4); // three fighting, and now and then one passing by
+});

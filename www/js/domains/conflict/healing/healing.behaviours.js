@@ -38,7 +38,10 @@ export function repairTent(s, tick) {
 // attacking them. Once at the tent it heals up fully, unless it's attacked there.
 export function healAtTent(s, tick) {
   const tents = tick.tents;
-  const badlyWounded = s.hp < s.maxHp * 0.25;
+  // badly wounded: below a quarter of its health; with an armed one near to hold the line, a little sooner (#208)
+  const ai = GAME_CONFIG.combatAI;
+  const covered = game.settlers.some(o => o !== s && o.weapon !== 'fist' && !o.towerAssignment && Math.hypot(o.x - s.x, o.y - s.y) < ai.coverRange);
+  const badlyWounded = s.hp < s.maxHp * (covered ? ai.retreatShare : 0.25);
   // being hit right now: it turns on whoever hits it (fightEnemies) and heals once it has fought them off
   const hitNow = !!getRecentAttacker(s) && game.pathTick - s.lastAttackedTick < 90;
   if (hitNow) { s.healing = false; return false; }
