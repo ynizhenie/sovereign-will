@@ -93,6 +93,11 @@ function drawCarriedInHands(s) {
     ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(x, y, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
     return;
   }
+  if (type === 'corpse') {
+    // a body across its arms (#199)
+    ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.ellipse(x * 1.2, y * 1.2, 9, 6, f + Math.PI / 2, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
   const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
   drawIcon(ctx, type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat'), x, y, 12);
 }
@@ -255,7 +260,7 @@ export function drawSettlers() {
     } else if (s.tool === 'rod') {
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
     } else if (s.tool === 'medbag') {
-      drawMedbag(Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
+      drawMedbag(Math.min(1, ((s.bagHerbs || 0) + (s.bagPotions || 0)) / GAME_CONFIG.medic.bagSize));
     } else if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) {
       drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
     } else if (s.tool === 'hoe') {

@@ -49,7 +49,9 @@ export const mechanicsConfig = {
   // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
   // healPerHerb hp for one herb every healSeconds. Herbs come from the bag, filled at the town hall with
   // up to bagSize from the stock.
-  medic: { healPerHerb: 30, healSeconds: 1.2, range: 26, bagSize: 5 },
+  // a medic's potion heals healPerPotion (a herb healPerHerb); between waves it brews one (#199): brew.herbs
+  // herbs and water from the nearest water, boiled brew.seconds at a campfire, up to brew.max in the stock
+  medic: { healPerHerb: 30, healPerPotion: 75, healSeconds: 1.2, range: 26, bagSize: 5, brew: { herbs: 2, seconds: 4, max: 5 } },
 
   // blood on a hurt unit, under it, and on the melee weapon that hit it: it starts to fade after
   // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less
@@ -66,6 +68,9 @@ export const mechanicsConfig = {
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
   // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
   // can't get to (walled off since, or stuck giveUpSeconds on the way): another one; after maxTries, where it is
+  // porters (#199): a load is taken off a gatherer more than relayTiles from any storage; corpses go
+  // corpseHeapTiles past the base's edge, carried at corpseSpeed of a settler's speed
+  porter: { relayTiles: 10, corpseHeapTiles: 4, corpseSpeed: 0.6 },
   // a boar takes this many times an item's damage (#232)
   boarDamageFactor: 2,
   // idle settlers' pastimes between waves (#199), each for `seconds` (from..to): by a campfire (morale up at
