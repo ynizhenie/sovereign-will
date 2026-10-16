@@ -31,17 +31,11 @@ export const mechanicsConfig = {
   // health when an armed one is within coverRange px to hold the line (alone, only below a quarter). (Archers
   // stepping back from melee enemies shot less and lost more in seeded waves: they stand and shoot.)
   combatAI: { meleePerEnemy: 3, meleePerBig: 5, retreatShare: 0.35, coverRange: 150 },
-  // stances (#212): hold (squads keep to their posts, take on only what comes near), defend (as above),
-  // attack (no posts: go for the nearest enemy, and the enemy tents at any time). One for everyone; a soldier
-  // can have its own. reserves: what the colony's own upkeep (campfire fuel, the smelter, tower arrows) leaves
-  // in the stock, set by the player in steps of `step` for these resources
-  // quotas (#210): how many of each tool and weapon the player wants held; every checkSeconds, one more of
-  // each that's short goes to a free settler, out of the armory first, else paid for
-  quotas: { checkSeconds: 1 },
   // making things (#211): seconds a worker works on one, by its kind (at the town hall, or the smithy for
   // anything with iron in it)
   crafting: { seconds: { tools: 4, weapons: 6, gear: 6 } },
-  stances: ['hold', 'defend', 'attack'],
+  // reserves (#212): what the colony's own upkeep (campfire fuel, the smelter, tower arrows) leaves
+  // in the stock, set by the player in steps of `step` for these resources
   reserves: { resources: ['wood', 'coal', 'ironOre', 'arrows'], step: 5 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 

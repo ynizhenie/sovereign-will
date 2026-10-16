@@ -33,8 +33,6 @@ export const game = {
   defensePlan: null,        // squads and their posts (getDefensePlan)
   /** @type {Object<string, number>} */
   armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)
-  /** @type {Object<string, number>} */
-  quotas: {},           // how many of each '<category>:<id>' the player wants held (#210)
   // the things on the map (WORLD_LISTS)
   settlers: [],
   trees: [],
@@ -68,12 +66,9 @@ export const game = {
   bloodSplats: [],      // { x, y, r, age, kind } blood on the ground (bleed) and footprints (trackFootprints)
   dung: [],             // { x, y, age, by, byLeft } see relieve()
   corpses: [],          // { x, y, radius, side: 'settler' | 'enemy', kind, age }, see addCorpse()
-  /** @type {string[] | null} */
-  jobPriority: null,    // the order the colony's work groups go in (#212); none: the default
   waveSize: 0,          // how many the last wave brought (morale: a wave that's lost most of them runs, #207)
   waveRouted: false,
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
-  stance: 'defend',     // the soldiers' stance for everyone (#212; a settler's own: settler.stance)
   /** @type {Object<string, number>} */
   reserves: {},         // what upkeep leaves in the stock, by resource (#212)
   /** @type {{ armor: boolean, shield: boolean }} */

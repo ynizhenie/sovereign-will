@@ -41,17 +41,12 @@ export function orderCraft(category, id, handOut = true) {
   return 'ordered';
 }
 
-// How many of it are being made
-export function pendingCrafts(category, id) {
-  return game.craftOrders.filter(o => o.category === category && o.id === id).length;
-}
-
 /** @type {((order: any) => void) | null} */
 let handOutMade = null;
 // what hands a made thing out (equipment.rules.js: the same as a button, from the armory, nothing said)
 export function onCraftMade(handler) { handOutMade = handler; }
 
-// A settler on an order (a job group of its own, see JOB_GROUPS): to a storage for what it takes, to where
+// A settler on an order (see SETTLER_BEHAVIOURS): to a storage for what it takes, to where
 // it's made, and at it until it's done
 export function craftItem(s, tick) {
   // a worker; a soldier or archer too between waves (a colony of soldiers still makes its things)

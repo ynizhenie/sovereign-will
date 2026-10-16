@@ -216,11 +216,6 @@ export const NORMAL_BODIES = 21;
 
 // ---- Pre-wave deployment
 
-// A soldier's stance (#212): its own, or everyone's (game.stance): hold, defend or attack
-export function getStance(s) {
-  return s.stance || game.stance || 'defend';
-}
-
 // From deploySeconds before a wave until its enemies are beaten, not in battle mode
 export function isDefenseAlert() {
   if (game.gameMode === 'battle' || !game.gameStarted) return false;

@@ -64,19 +64,6 @@ Object.assign(window.sim, (() => {
       going: settlers[0].targetEquipment && settlers[0].targetEquipment.weapon };
   }
 
-  // Quotas: two axes wanted, three free workers: two get one by themselves, the third doesn't (#210)
-  function quotaAxes({ seed = 'quota-axes' } = {}) {
-    start(seed);
-    clearResources();
-    settlers = [0, 1, 2].map(i => makeSettler(i + 1, townHall.x - 40 + i * 30, townHall.y + 50));
-    Object.assign(stock, { wood: 100, stone: 100 });
-    window.game.quotas = { 'tools:axe': 2 };
-    run(8, { each: () => settlers.forEach(s => { s.hunger = 999; }) });
-    const withAxe = settlers.filter(s => s.tool === 'axe' || (s.targetEquipment && s.targetEquipment.tool === 'axe')).length;
-    window.game.quotas = {};
-    return { withAxe };
-  }
-
   // Making things (#211): an axe ordered with none in the armory is paid for, made at the town hall by a
   // worker (it fetches the materials, works a few seconds) and handed out; an iron sword can't be ordered
   // without a smithy, and with one it's made there
@@ -105,5 +92,5 @@ Object.assign(window.sim, (() => {
     return { ordered, crafting, axe, noSmithy, atSmithy, sword };
   }
 
-  return { crafting, lootToArmory, quotaAxes, orderGearFor, armorOff };
+  return { crafting, lootToArmory, orderGearFor, armorOff };
 })());
