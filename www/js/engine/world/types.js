@@ -22,7 +22,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -39,7 +39,7 @@
  * @property {Watchtower | null} [towerAssignment] the watchtower it guards
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
- * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number } | null} [idle]  its pastime (#199)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
@@ -51,6 +51,7 @@
  * @property {number} [bagHerbs]     a medic's herbs
  * @property {number} [bagPotions]   a medic's potions (#199)
  * @property {number} [brewTimer]    a medic brewing a potion
+ * @property {number} [chopTimer]    a woodcutter chopping firewood
  * @property {{ kind: string, who: any } | null} [porterTarget]  a porter's job: a gatherer's load or a corpse (#199)
  * @property {number} [burning]      seconds left on fire
  * @property {number} [temporary]    a raised zombie's seconds left
@@ -130,6 +131,8 @@
  * @property {Settler[]} [guards]    a watchtower's archers
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
+ * @property {number} [fish]         a fish trap's catch waiting (#199)
+ * @property {number} [fishTimer]
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
  * @property {boolean} [isDemolishing]
