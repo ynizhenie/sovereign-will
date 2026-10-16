@@ -65,6 +65,8 @@ export const mechanicsConfig = {
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
   // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
   // can't get to (walled off since, or stuck giveUpSeconds on the way): another one; after maxTries, where it is
+  // a boar takes this many times an item's damage (#232)
+  boarDamageFactor: 2,
   // idle settlers' pastimes between waves (#199), each for `seconds` (from..to): by a campfire (morale up at
   // campfireMoralePerSecond, up to campfireAbove past its usual), talking in a knot (company within
   // companyRange px), humans sharpening a blade (sharpenSeconds; the next blow that lands does sharpenBonus

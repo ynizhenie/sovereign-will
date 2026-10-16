@@ -4,7 +4,7 @@
 // hits harder), demons spar in pairs (morale up, a little health down), the undead stand and sway; soldiers
 // and archers also walk the edge of the base on patrol, or train at a dummy (their damage grows). Each
 // pastime lasts a while (GAME_CONFIG.idle.seconds), then another is picked. And any settler free between
-// waves carries dung lying about the base to a heap by the farm plots, nearer for the farmers.
+// waves carries dung lying about the base to a compost heap, where the farmers take it from.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
@@ -170,39 +170,34 @@ function edgePoint(angle) {
   return { x: townHall.x + Math.cos(angle) * r, y: townHall.y + Math.sin(angle) * r };
 }
 
-// ---- Dung to the heap
+// ---- Dung to the compost heap
 
-// Where the heap is: one tile from the farm plot nearest the town hall, on the hall's side (none with no plots)
-export function getDungHeap() {
-  if (!game.farmPlots.length) return null;
-  const plot = game.farmPlots.reduce((a, b) => Math.hypot(a.x - townHall.x, a.y - townHall.y) <= Math.hypot(b.x - townHall.x, b.y - townHall.y) ? a : b);
-  const d = Math.hypot(townHall.x - plot.x, townHall.y - plot.y) || 1;
-  return { x: plot.x + (townHall.x - plot.x) / d * TILE_SIZE, y: plot.y + (townHall.y - plot.y) / d * TILE_SIZE };
+// The nearest compost heap with room for more dung (#232), or null
+export function findDungHeap(from) {
+  const room = b => b.type === 'dung_heap' && (b.dung || 0) < (GAME_CONFIG.buildings.dung_heap.dungCapacity || 5);
+  return game.buildings.filter(room).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0] || null;
 }
 
-const byThePlots = p => game.farmPlots.some(f => Math.hypot(f.x - p.x, f.y - p.y) < TILE_SIZE * 2.5);
-
-// A settler that had nothing to do (idle last tick) carries a pile of dung in the base to the heap by the
-// farm plots; one already carrying one goes on with it. Not in a wave: then it drops it where it is
+// A settler that had nothing to do (idle last tick) carries a pile of dung in the base to a compost heap
+// with room; one already carrying one goes on with it. No heap, nobody gathers dung (#232). In a wave, or
+// with the heap full or gone on the way, it drops it where it is
 export function cleanDung(s, tick) {
   const load = s.carrying && s.carrying.type === 'dung' && s.carrying.toHeap ? s.carrying : null;
   if (s.dungTarget && (!game.dung.includes(s.dungTarget) || s.carrying || tick.isWaveActive)) s.dungTarget = null;
   if (!load && !s.dungTarget && (s.carrying || !s.wasIdle || s.isPossessed || s.towerAssignment || tick.isWaveActive)) return false;
-  const heap = getDungHeap();
+  const heap = findDungHeap(s);
   const drop = () => { game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false }); s.carrying = null; };
   if (load && (tick.isWaveActive || !heap)) { drop(); return false; }
   if (!heap) return false;
   if (load) {
-    // a little apart from the others in the heap, not all on one spot
-    const place = { x: heap.x + ((s.id * 7) % 13) - 6, y: heap.y + ((s.id * 11) % 13) - 6 };
-    if (Math.hypot(place.x - s.x, place.y - s.y) > 8) moveEntityTowards(s, place.x, place.y, s.speed, false, tick.dt);
-    else drop();
+    if (Math.hypot(heap.x - s.x, heap.y - s.y) > 32) moveEntityTowards(s, heap.x, heap.y, s.speed, false, tick.dt);
+    else { heap.dung = (heap.dung || 0) + 1; s.carrying = null; }
     s.patrolTarget = null;
     return true;
   }
   // (one each: not a pile another is already going for)
   const taken = new Set(game.settlers.filter(o => o !== s).map(o => o.dungTarget).filter(Boolean));
-  const pile = s.dungTarget || game.dung.filter(p => !taken.has(p) && !tick.dungAssignments.has(p) && isInSafeArea(p.x, p.y) && !byThePlots(p))
+  const pile = s.dungTarget || game.dung.filter(p => !taken.has(p) && !tick.dungAssignments.has(p) && isInSafeArea(p.x, p.y))
     .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
   if (!pile) return false;
   tick.dungAssignments.add(pile);

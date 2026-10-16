@@ -13,9 +13,10 @@ import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 // Run from (sourceX, sourceY): a sprint to hide in grass when hit, or (wary) a slower back-off when a
 // settler just comes close. Never into the strip along the map edge, where it would get cornered.
 // A blow or an arrow: the boar bleeds (on itself and the ground), sometimes leaves dung out of
-// fright, and runs; killed, it drops as a carcass for `collector` to butcher (see huntBoar)
+// fright, and runs; killed, it drops as a carcass for `collector` to butcher (see huntBoar). `damage`: the
+// item's, a boar takes boarDamageFactor times it (#232)
 export function woundBoar(boar, damage, attacker, fromX, fromY) {
-  boar.hp -= damage;
+  boar.hp -= damage * GAME_CONFIG.boarDamageFactor;
   bleed(boar, attacker);
   playSound('boar', boar);
   if (rand() < GAME_CONFIG.mapResources.boar.dungChance) game.dung.push({ x: boar.x, y: boar.y, age: 0, by: null, byLeft: true });

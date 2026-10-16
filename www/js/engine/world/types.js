@@ -125,6 +125,7 @@
  * @property {number} [arrows]
  * @property {Settler[]} [guards]    a watchtower's archers
  * @property {number} [usesLeft]     a trap's uses
+ * @property {number} [dung]         a compost heap's dung (#232)
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
  * @property {boolean} [isDemolishing]

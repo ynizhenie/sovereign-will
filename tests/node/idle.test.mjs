@@ -23,6 +23,7 @@ test('an idle zombie stands where it is and sways', () => {
   expect(sim.idleSway({})).toEqual({ swaying: true, stood: true, activity: 'idleSway' });
 });
 
-test('dung lying in the base goes to a heap by the farm plots, carried by a settler with nothing to do', () => {
-  expect(sim.idleDungHeap({})).toEqual({ piles: 1, byPlots: true, activity: 'cleanDung' });
+test('dung lying in the base goes into the compost heap, carried by a settler with nothing to do; no heap, nobody gathers it (#232)', () => {
+  expect(sim.idleDungHeap({})).toEqual({ onGround: 0, inHeap: 1, activity: 'cleanDung' });
+  expect(sim.idleDungHeap({ withHeap: false })).toEqual({ onGround: 1, inHeap: null, activity: null });
 });

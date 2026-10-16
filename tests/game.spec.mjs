@@ -11,7 +11,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(page.locator('#build-actions button')).toHaveCount(11); // with the smithy (#211) and the dummy (#199)
-  await expect(page.locator('#farming-actions button')).toHaveCount(3);
+  await expect(page.locator('#farming-actions button')).toHaveCount(4); // with the compost heap (#232)
   await expect(page.locator('#tool-actions button')).toHaveCount(7);
   await expect(page.locator('#weapon-actions button')).toHaveCount(6);
 
@@ -125,7 +125,7 @@ test('clicking an enemy with the Point tool marks and unmarks it (#35)', async (
 
 test('wheat and saplings are planted from the Farming tab (#64)', async ({ page }) => {
   await openGame(page);
-  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[wheat]] Пшеница (1[[wheatSeeds]])', '[[saplings]] Саженец (1[[saplings]])', '[[appleSaplings]] Саженец яблони (1[[appleSaplings]])']);
+  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[dung_heap]] Компостная куча (6[[wood]])', '[[wheat]] Пшеница (1[[wheatSeeds]])', '[[saplings]] Саженец (1[[saplings]])', '[[appleSaplings]] Саженец яблони (1[[appleSaplings]])']);
   await expect(page.locator('#build-actions #btn-wheat')).toHaveCount(0);
   await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
   // picking a crop in the Farming tab switches to placing it

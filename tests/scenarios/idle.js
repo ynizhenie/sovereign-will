@@ -81,17 +81,17 @@ Object.assign(window.sim, (() => {
     return { swaying: !!z.swaying, stood: Math.hypot(z.x - x0, z.y - y0) < 2, activity: z.activity };
   }
 
-  // Dung in the base far from the farm plots: an idle worker carries it to the heap by them
-  function dungHeap({ seed = 'idle-dung' } = {}) {
+  // Dung in the base: an idle worker carries it into the compost heap; with no heap, nobody touches it (#232)
+  function dungHeap({ seed = 'idle-dung', withHeap = true } = {}) {
     asFaction('humans', seed);
-    for (let i = 0; i < 3; i++) farmPlots.push({ ...nearHall(5 + i, 4), growth: 0, priority: 0, harvestProgress: 0 });
+    const heap = withHeap ? placeBuilding('dung_heap', nearHall(5, 4).x, nearHall(5, 4).y) : null;
+    invalidateAllPaths();
     const w = makeSettler(1, townHall.x, townHall.y + 50);
     settlers = [w];
     dung = [{ x: nearHall(-4, -2).x, y: nearHall(-4, -2).y, age: 0, by: null, byLeft: true }];
     const carried = new Set();
     run(30, { each: () => { fed(); if (w.carrying && w.carrying.type === 'dung') carried.add(w.activity); } });
-    const heap = { x: nearHall(5, 4).x, y: nearHall(5, 4).y };
-    return { piles: dung.length, byPlots: dung.every(p => Math.hypot(p.x - heap.x, p.y - heap.y) < 3 * TILE_SIZE), activity: [...carried][0] || null };
+    return { onGround: dung.length, inHeap: heap ? heap.dung || 0 : null, activity: [...carried][0] || null };
   }
 
   return { idleCampfire: campfire, idleTalk: talk, idleSharpen: sharpen, idleSpar: spar, idleSway: sway, idleDungHeap: dungHeap };
