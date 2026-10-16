@@ -96,12 +96,6 @@ export function canAfford(cost = {}) {
   return Object.entries(cost).every(([key, amount]) => Number(stock[key] || 0) >= Number(amount || 0));
 }
 
-// What the colony's upkeep may take of a resource (campfire fuel, the smelter, tower arrows): the stock less
-// what the player keeps back (game.reserves, #212)
-export function getSpareStock(id) {
-  return Math.max(0, Number(stock[id] || 0) - (game.reserves[id] || 0));
-}
-
 export const getFreeStock = id => Number(stock[id] || 0) - getReservedForBlueprints(id);
 
 // Take / give a cost ({ resourceId: amount }) from / to the stock

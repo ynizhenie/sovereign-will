@@ -209,18 +209,6 @@ test('Point takes the selection off the settler (#232)', async ({ page }) => {
   expect(await page.evaluate(() => selectedSettler)).toBeNull();
 });
 
-test('reserves in the stock drop-down (#212)', async ({ page }) => {
-  await openGame(page);
-  await page.click('#play-button');
-  await page.click('#resource-strip');
-  const wood = page.locator('#reserves [data-res="wood"]');
-  await wood.locator('button', { hasText: '+' }).click();
-  await wood.locator('button', { hasText: '+' }).click();
-  await expect(wood.locator('b')).toHaveText('10');
-  await wood.locator('button', { hasText: '−' }).click();
-  expect(await page.evaluate(() => game.reserves.wood)).toBe(5);
-});
-
 test('a tap on the town hall opens its card with the hiring; a damaged building\'s card orders its repair (#211)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
