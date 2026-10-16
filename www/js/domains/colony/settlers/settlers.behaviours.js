@@ -65,7 +65,8 @@ export function createSettlerTick(dt) {
     wormAssignments: new Set(),      // corpses a fisher is taking worms off this tick
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
     fertilizeAssignments: new Set(), // wheat plots a farmer is bringing dung to this tick
-    dungAssignments: new Set(),      // dung piles a farmer is going to pick up this tick
+    dungAssignments: new Set(),      // dung piles a settler is going to carry to a compost heap this tick
+    heapTakers: new Map(),           // compost heap -> farmers going to take dung from it this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
     meleeOn: new Map(),              // enemy -> settlers fighting it in melee this tick (#208)
