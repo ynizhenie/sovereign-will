@@ -93,7 +93,7 @@ test('Esc with nothing open or picked leaves possession, as before', async ({ pa
 test('the strip shows the main stock and drops down all of it; a sheet and the strip never show together', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await page.evaluate(() => { stock.wood = 77; updateUI(); });
+  await page.evaluate(() => { settlers = []; stock.wood = 77; updateUI(); }); // (nobody to bring wood in between)
   await expect(page.locator('#strip-wood')).toHaveText('77');
   await expect(page.locator('#strip-pop')).toHaveText(/\d+\/\d+/);
   await page.click('#resource-strip');
@@ -190,7 +190,8 @@ test('editor: a category opens its sheet, a tool or the eraser shows on the chip
 test('the open sheet shows the stock of what its prices ask for, by the prices (the friend\'s playtest)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await page.evaluate(() => { stock.wood = 42; stock.leather = 3; updateUI(); });
+  // nobody about to bring wood in between (it raced on CI: 44)
+  await page.evaluate(() => { settlers = []; stock.wood = 42; stock.leather = 3; updateUI(); });
   await page.click('[data-arg="tab-build"]');
   await expect(page.locator('#sheet-stock [data-res="wood"] b')).toHaveText('42');
   await expect(page.locator('#sheet-stock [data-res="leather"] b')).toHaveText('3'); // the tent
