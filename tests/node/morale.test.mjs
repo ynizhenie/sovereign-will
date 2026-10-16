@@ -8,6 +8,10 @@ test('a wave that has lost most of its number panics: to its tent to heal, or of
   expect(await sim.moraleRout({ tent: false })).toMatchObject({ panicked: true, gone: true, noReward: true });
 });
 
+test('a wave that has lost seven of ten still fights: it runs only with a fifth or less left (#232)', async () => {
+  expect(await sim.moraleHoldOn({})).toEqual({ routed: false, panicked: false });
+});
+
 test('the undead panic at a single blow, unless their necromancer is close by', async () => {
   expect(await sim.moraleUndead({})).toEqual({ panic: true });
   expect(await sim.moraleUndead({ necromancer: true })).toEqual({ panic: false });
