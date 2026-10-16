@@ -23,7 +23,9 @@ export function necromancy(s, tick) {
   // it keeps behind its own (#199): an enemy closer than necroKeepBack, it steps back towards the town hall
   // (hit, it still strikes back: strikeBack comes first)
   if (!s.isPossessed) {
-    const keep = GAME_CONFIG.morale.necroKeepBack;
+    // (raising or healing, it holds on unless an enemy is right on it: no stepping back and forth, #232)
+    const busy = (s.raiseTimer || 0) > 0 || (s.working || 0) > 0;
+    const keep = busy ? 60 : GAME_CONFIG.morale.necroKeepBack;
     const threat = game.enemies.filter(en => en.hp > 0 && dist(en) < keep).sort((a, b) => dist(a) - dist(b))[0];
     if (threat && dist(townHall) > townHall.radius + s.radius + 10) {
       const d = Math.max(1, dist(threat));
@@ -56,8 +58,10 @@ export function necromancy(s, tick) {
   const zombieType = c => (c.big ? 'big_zombie' : 'zombie');
   // raised in a fight; between waves the corpses give bones instead (collectBones, #199)
   if (s.raisesLeft > 0 && (tick.isWaveActive || isDefenseAlert())) {
+    // not one with an enemy close to it: it would go for it and step back again (#232)
+    const guarded = c => game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - c.x, en.y - c.y) < GAME_CONFIG.morale.necroCorpseClear);
     for (const c of game.corpses) {
-      if (tick.raiseAssignments.has(c) || dist(c) > necro.range) continue;
+      if (tick.raiseAssignments.has(c) || dist(c) > necro.range || guarded(c)) continue;
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
     }
   }

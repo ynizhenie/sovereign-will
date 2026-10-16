@@ -150,7 +150,9 @@ export function getWeaponStats(s, use) {
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
   // trained at a dummy (#199): a little more in a fight
   const trained = use === 'combat' ? 1 + (s.trained || 0) : 1;
-  return { ...stats, damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * trained };
+  // the undead fight on in a panic, weaker (#232; the others run, hitting back at full strength if cornered)
+  const shaken = s.panic && getPlayerFaction().id === 'undead' && game.settlers.includes(s) ? GAME_CONFIG.morale.panicDamage : 1;
+  return { ...stats, damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * trained * shaken };
 }
 
 export function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
