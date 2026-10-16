@@ -55,16 +55,20 @@ export function getHeldItemPose(unit) {
     const beat = Math.sin(game.pathTick * 0.3);
     if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
     if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
+    // a blade (butchering a carcass): it cuts into what's in front, not chops at it like an axe
+    if (isSwordWeapon(item) || isSpearWeapon(item)) return { angle: 0.15 * beat, push: 3 + 3 * beat };
     return { angle: 0.7 * beat - 0.2, push: 0 };
   }
   return { angle: 0, push: 0 };
 }
 
-// The held item points where the unit faces (faceTowards), posed on top of that
+// The held item points where the unit faces (faceTowards), posed on top of that; held in the right hand
+// at the body's side, not coming out of its middle
 export function applyHeldItemPose(unit) {
   const pose = getHeldItemPose(unit);
+  const r = unit.visualRadius || unit.radius || 11;
   ctx.rotate((unit.facing || 0) + pose.angle);
-  ctx.translate(pose.push, 0);
+  ctx.translate(pose.push + r * 0.25, r * 0.5);
 }
 
 // Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)

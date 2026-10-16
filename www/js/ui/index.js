@@ -7,7 +7,7 @@ export { drawIcon, escapeHtml, fillRichText, getResourceIcon, getResourceIconNam
 export { initMapInput, setMode } from './map-input.js';
 export { initPageActions } from './page-actions.js';
 export { closeOverlays, closeSheet, getOpenSheet, hidePlacing, initSheets, openSheet, showPlacing, syncHudMode, toggleSheet } from './sheets.js';
-export { hideInfo, initItemInfo } from './item-info.js';
+export { hideInfo, initItemInfo, showCostOnButton } from './item-info.js';
 export { openBuildingCard, openHallCard, renderBuildingCard, sacrificeSelected } from './building-card.js';
 export { showNotification } from './toasts.js';
 export { initWidgets, labelButton, refreshAffordability, renderItemList } from './widgets.js';

@@ -6,7 +6,7 @@ import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
-import { countHeld, getHeldItems, hasGear } from '../domains/colony/equipment/index.js';
+import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 
@@ -58,6 +58,7 @@ export function updateUI() {
     const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
     renderSettlerInfo(selected);
+    renderSelectedGear(selected);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
       const upgrade = getUpgrade();
@@ -67,6 +68,7 @@ export function updateUI() {
     game.selectedSettler = null;
     document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
     document.getElementById('selected-info').hidden = true;
+    renderSelectedGear(null);
     document.getElementById('selected-bar').classList.remove('has-settler');
     document.getElementById('btn-deselect').style.display = 'none';
     if (btnUpgrade) {
@@ -230,4 +232,37 @@ function groupTile(group, html, resourcesHud, details) {
   details.appendChild(row);
   tile.addEventListener('click', () => toggleResourceGroup(group.id));
   return row;
+}
+
+// ---- What the selected settler holds, a "take off" on each: its tool, its weapon, its gear (the buttons
+// for that used to sit in the sheets and took it off whoever, #232)
+
+let shownGear = '';
+export function renderSelectedGear(s) {
+  const box = document.getElementById('selected-gear');
+  if (!box) return;
+  /** @type {[string, string, string][]} */
+  const items = [];
+  if (s) {
+    if (s.tool && s.tool !== 'none') items.push(['disarmSettler', 'tool', s.tool]);
+    if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
+    for (const id of ['armor', 'shield', 'backpack', 'wateringCan']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
+  }
+  const key = `${s ? s.id : ''}|${items.map(i => i[2]).join(',')}|${s && s.targetEquipment ? 1 : 0}`;
+  if (key === shownGear) return;
+  shownGear = key;
+  box.hidden = !items.length;
+  box.innerHTML = '';
+  for (const [action, arg, id] of items) {
+    const def = getDefinition('tools', id) || getDefinition('weapons', id) || GAME_CONFIG.gear[id] || {};
+    const button = document.createElement('button');
+    button.className = 'btn btn-disarm';
+    button.dataset.action = action;
+    button.dataset.arg = arg;
+    button.title = t('gearOff.take', { name: def.label || id });
+    setRichText(button, `[[${def.icon || 'tools'}]] ${def.label || id} [[no]]`);
+    // (made after the page's buttons were wired: its own listener)
+    button.addEventListener('click', () => { if (action === 'disarmSettler') disarmSettler(arg); else orderGearOff(arg); shownGear = ''; });
+    box.appendChild(button);
+  }
 }
