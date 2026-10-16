@@ -40,7 +40,7 @@ export const ruLanguage = {
       'pause.title': 'Пауза', 'pause.continue': 'Продолжить', 'pause.exit': 'Выйти в главное меню',
       'pause.resumeHint': 'Продолжить [Space]', 'pause.pauseHint': 'Пауза [Space / P]',
       'top.wave': 'Волна', 'top.seconds': 'с', 'top.zoomIn': 'Приблизить', 'top.zoomOut': 'Отдалить', 'top.point': 'Указать',
-      'reserves.title': 'Не тратить на костёр, плавку и башни ниже:',
+     
       'btn.openHall': '[[hall]] Найм — в ратуше', 'card.hp': 'Прочность {hp}/{max}', 'card.repair': '[[tools]] Починить ({cost})', 'card.repairCancel': '[[close]] Отменить ремонт', 'card.sacrifice': '[[sacrifice_circle]] Отправить в круг: {name}', 'card.arrows': 'Стрел {n}/{max}', 'card.fuel': 'Топливо {n}', 'card.smelter': 'Руда {ore}, уголь {coal}, железо {iron}', 'hall.hall': 'Ратуша', 'hall.graveyard': 'Кладбище', 'hall.hellgate': 'Врата ада',
       'craft.atHall': '{name}: делают в ратуше', 'craft.atSmithy': '{name}: делают в кузнице', 'craft.needSmithy': '[[warn]] {name}: нужна кузница (в ней железо)', 'card.queue': 'Делается: {list}', 'card.waiting': 'ждёт', 'activity.craftItem': 'Делает вещь',
       'top.possess': 'Вселиться [Tab]', 'pause.seed': 'Сид мира', 'panel.hire': 'Найм', 'editor.untitled': 'Новая карта',

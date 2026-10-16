@@ -34,9 +34,6 @@ export const mechanicsConfig = {
   // making things (#211): seconds a worker works on one, by its kind (at the town hall, or the smithy for
   // anything with iron in it)
   crafting: { seconds: { tools: 4, weapons: 6, gear: 6 } },
-  // reserves (#212): what the colony's own upkeep (campfire fuel, the smelter, tower arrows) leaves
-  // in the stock, set by the player in steps of `step` for these resources
-  reserves: { resources: ['wood', 'coal', 'ironOre', 'arrows'], step: 5 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock

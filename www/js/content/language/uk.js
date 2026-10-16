@@ -40,7 +40,7 @@ export const ukLanguage = {
       'pause.title': 'Пауза', 'pause.continue': 'Продовжити', 'pause.exit': 'Вийти в головне меню',
       'pause.resumeHint': 'Продовжити [Space]', 'pause.pauseHint': 'Пауза [Space / P]',
       'top.wave': 'Хвиля', 'top.seconds': 'с', 'top.zoomIn': 'Наблизити', 'top.zoomOut': 'Віддалити', 'top.point': 'Вказати',
-      'reserves.title': 'Не витрачати на вогнище, плавку й вежі нижче:',
+     
       'btn.openHall': '[[hall]] Найм — у ратуші', 'card.hp': 'Міцність {hp}/{max}', 'card.repair': '[[tools]] Полагодити ({cost})', 'card.repairCancel': '[[close]] Скасувати ремонт', 'card.sacrifice': '[[sacrifice_circle]] Відправити в коло: {name}', 'card.arrows': 'Стріл {n}/{max}', 'card.fuel': 'Паливо {n}', 'card.smelter': 'Руда {ore}, вугілля {coal}, залізо {iron}', 'hall.hall': 'Ратуша', 'hall.graveyard': 'Цвинтар', 'hall.hellgate': 'Пекельна брама',
       'craft.atHall': '{name}: роблять у ратуші', 'craft.atSmithy': '{name}: роблять у кузні', 'craft.needSmithy': '[[warn]] {name}: потрібна кузня (у ньому залізо)', 'card.queue': 'Робиться: {list}', 'card.waiting': 'чекає', 'activity.craftItem': 'Робить річ',
       'top.possess': 'Вселитися [Tab]', 'pause.seed': 'Сід світу', 'panel.hire': 'Найм', 'editor.untitled': 'Нова мапа',

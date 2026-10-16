@@ -135,30 +135,6 @@ export function updateSheetStock() {
   }
 }
 
-// ---- Reserves (#212): what the colony's upkeep leaves in the stock, set in the stock's drop-down
-
-export function renderReserves() {
-  const box = document.getElementById('reserves');
-  if (!box) return;
-  const config = GAME_CONFIG.reserves;
-  box.innerHTML = `<div class="panel-heading">${escapeHtml(t('reserves.title'))}</div>`;
-  const row = document.createElement('div');
-  row.className = 'reserves-row';
-  for (const id of config.resources.filter(r => GAME_CONFIG.resources[r] && isForPlayerFaction(GAME_CONFIG.resources[r]))) {
-    const cell = document.createElement('span');
-    cell.className = 'reserve';
-    cell.dataset.res = id;
-    const step = (delta) => () => { game.reserves[id] = Math.max(0, (game.reserves[id] || 0) + delta); renderReserves(); };
-    const minus = document.createElement('button'); minus.className = 'btn'; minus.textContent = '−'; minus.addEventListener('click', step(-config.step));
-    const plus = document.createElement('button'); plus.className = 'btn'; plus.textContent = '+'; plus.addEventListener('click', step(config.step));
-    const value = document.createElement('b'); value.textContent = String(game.reserves[id] || 0);
-    const icon = document.createElement('span'); icon.innerHTML = iconHtml(GAME_CONFIG.resources[id].icon); icon.title = GAME_CONFIG.resources[id].label;
-    cell.append(icon, minus, value, plus);
-    row.appendChild(cell);
-  }
-  box.appendChild(row);
-}
-
 export function resourceHudId(resourceKey) {
   return `resource-${resourceKey}-txt`;
 }

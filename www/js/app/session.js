@@ -1,6 +1,6 @@
 // A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
-import { iconHtml, rebuildConfigHud, renderReserves, renderedFaction, updateSeedHud } from '../ui/index.js';
+import { iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
@@ -25,7 +25,7 @@ export function resetGame(map) {
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.reserves = {}; game.armory = {}; game.loot = []; game.craftOrders = [];
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.craftOrders = [];
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
   
   if (map) loadCustomMap(map);
@@ -33,7 +33,6 @@ export function resetGame(map) {
   mixStartFood(); // after the map, so the seeded map stays the same
   resetTileIndex();
   updateSeedHud();
-  renderReserves(); // a new game keeps nothing back
 
   game.settlers.push(
     createSettler(getPlayerFaction().startUnits, 101, townHall.x - 45, townHall.y),

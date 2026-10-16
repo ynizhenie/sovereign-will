@@ -40,7 +40,7 @@ export const enLanguage = {
       'pause.title': 'Paused', 'pause.continue': 'Continue', 'pause.exit': 'Exit to main menu',
       'pause.resumeHint': 'Continue [Space]', 'pause.pauseHint': 'Pause [Space / P]',
       'top.wave': 'Wave', 'top.seconds': 's', 'top.zoomIn': 'Zoom in', 'top.zoomOut': 'Zoom out', 'top.point': 'Point',
-      'reserves.title': 'Keep back from campfires, the smelter and towers:',
+     
       'btn.openHall': '[[hall]] Hire at the town hall', 'card.hp': 'Durability {hp}/{max}', 'card.repair': '[[tools]] Repair ({cost})', 'card.repairCancel': '[[close]] Cancel the repair', 'card.sacrifice': '[[sacrifice_circle]] Send into the circle: {name}', 'card.arrows': 'Arrows {n}/{max}', 'card.fuel': 'Fuel {n}', 'card.smelter': 'Ore {ore}, coal {coal}, iron {iron}', 'hall.hall': 'Town hall', 'hall.graveyard': 'Graveyard', 'hall.hellgate': 'Hell Gate',
       'craft.atHall': '{name}: being made at the town hall', 'craft.atSmithy': '{name}: being made at the smithy', 'craft.needSmithy': '[[warn]] {name}: needs a smithy (there is iron in it)', 'card.queue': 'Being made: {list}', 'card.waiting': 'waiting', 'activity.craftItem': 'Making a thing',
       'top.possess': 'Possess [Tab]', 'pause.seed': 'World seed', 'panel.hire': 'Hire', 'editor.untitled': 'New map',
