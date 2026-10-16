@@ -5,8 +5,9 @@ test('save from the pause menu, then carry on from the Endless menu, or delete t
   await openGame(page);
   await page.evaluate(() => localStorage.removeItem('sovereign-will-saves'));
   await page.click('#play-button');
-  await page.evaluate(() => { stock.stone = 123; waveNum = 4; });
+  // paused first: a worker bringing in stone between setting it and saving made it 124 (a slow CI runner)
   await page.click('#btn-pause-toggle');
+  await page.evaluate(() => { stock.stone = 123; waveNum = 4; });
   await page.click('#save-game-button');
   await expect.poll(() => iconText(page, '#toast-notification')).toEqual([expect.stringMatching(/^\[\[save\]\] Сохранено: Волна 4 · /)]);
   await page.click('#exit-to-menu-button');
