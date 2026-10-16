@@ -1,5 +1,6 @@
 // Workers gather: pick a resource (the player's marks first), walk to it, work it with the right tool
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody } from '../../colony/settlers/index.js';
@@ -152,7 +153,7 @@ export function harvest(s, tick) {
 
 // ---- Doors
 
-// How many workers a priority resource takes at once: the player's mark, or 1 for a door blocker
+// How many workers a marked resource takes at once: markWorkers for the player's mark, 1 for a door blocker
 export function getWorkPriority(r) {
-  return r.priority || 1;
+  return r.priority > 0 ? GAME_CONFIG.markWorkers : 1;
 }

@@ -631,7 +631,7 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: non
 #selected-info[hidden] { display: none; }
 
 /* sections of the panel's tabs (#181) */
-.panel-heading { font-size: 10px; color: #8a91a0; text-transform: uppercase; letter-spacing: 0.5px; margin: 6px 0 3px; text-align: left; }
+.panel-heading { font-size: 10px; color: #8a91a0; text-transform: uppercase; letter-spacing: 0.5px; margin: 6px 0 3px; text-align: center; }
 .panel-heading:first-child { margin-top: 0; }
 .panel-section[hidden] { display: none; }
 .tab-pane .gear-actions { margin-top: 0; padding-top: 0; border-top: none; }
@@ -998,3 +998,12 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .card-hint { font-size: 12px; color: #8a91a0; }
 .hall-link { display: flex; justify-content: center; margin-bottom: 6px; }
 #card-actions:empty { display: none; }
+
+/* what the selected settler holds, a "take off" on each */
+.selected-gear { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 4px; }
+.selected-gear[hidden] { display: none; }
+.selected-gear .btn { padding: 2px 7px; font-size: 11px; min-height: 0; }
+.selected-gear .btn .ic-no { width: 10px; height: 10px; }
+.info-cost { color: #c9cdd6; }
+.info-cost b { color: #fff; font-variant-numeric: tabular-nums; }
+.info-cost.short, .info-cost.short b { color: #ff6b6b; }
