@@ -80,7 +80,11 @@ export function craftItem(s, tick) {
   faceTowards(s, place.x, place.y);
   s.working = 0.1;
   playWorkSound(s, 'hammer', 0.5);
-  order.progress += tick.dt / (GAME_CONFIG.crafting.seconds[order.category] || 5);
+  // quicker at the town hall: nothing with iron is made there (#232)
+  const seconds = (GAME_CONFIG.crafting.seconds[order.category] || 5) * (place === townHall ? GAME_CONFIG.crafting.hallShare : 1);
+  order.progress += tick.dt / seconds;
+  // what's drawn: a hammer in its hands, the thing on an anvil in front of it, how far along (#232)
+  s.crafting = { icon: (GAME_CONFIG[order.category][order.id] || {}).icon, progress: Math.min(1, order.progress), until: game.pathTick + 2 };
   if (order.progress >= 1) {
     game.craftOrders.splice(game.craftOrders.indexOf(order), 1);
     s.carrying = null;
