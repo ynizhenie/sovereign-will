@@ -29,8 +29,9 @@ export const mechanicsConfig = {
   // fighting (#208): at most meleePerEnemy settlers in melee on one enemy (meleePerBig on a big one), round
   // it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
   // health when an armed one is within coverRange px to hold the line (alone, only below a quarter). (Archers
-  // stepping back from melee enemies shot less and lost more in seeded waves: they stand and shoot.)
-  combatAI: { meleePerEnemy: 3, meleePerBig: 5, retreatShare: 0.35, coverRange: 150 },
+  // stepping back from melee enemies shot less and lost more in seeded waves: they stand and shoot.) A big one's
+  // blow hits at most splashMax at once, the one it aims at and the nearest round it (#209)
+  combatAI: { meleePerEnemy: 3, meleePerBig: 5, retreatShare: 0.35, coverRange: 150, splashMax: 3 },
   // making things (#211): seconds a worker works on one, by its kind, at the smithy (anything with iron in
   // it); at the town hall hallShare of that (#232)
   crafting: { seconds: { tools: 4, weapons: 6, gear: 6 }, hallShare: 0.5 },

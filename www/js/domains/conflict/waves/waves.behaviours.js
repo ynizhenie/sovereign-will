@@ -258,7 +258,8 @@ function breakResource(en, blockedRes, enemyDef, dt) {
   }
 }
 
-// A melee strike at its target; a big one hits everyone around it (and the hall) too
+// A melee strike at its target; a big one hits the nearest others round it (or the hall) too, up to
+// splashMax in all (#209)
 function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   const meleeDamage = meleeDef === enemyDef ? en.damage : meleeDef.damage;
   faceTowards(en, target.x, target.y);
@@ -269,14 +270,13 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
     if (target === townHall) townHall.hp -= dt * en.damage;
     else damageSettler(target, dt * en.damage, en);
 
-    game.settlers.forEach(s => {
-      if (s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius) {
-        damageSettler(s, splashDamage, en);
-      }
-    });
-
-    if (target !== townHall && Math.hypot(en.x - townHall.x, en.y - townHall.y) < splashRadius + townHall.radius) {
-      townHall.hp -= splashDamage;
+    /** @type {any[]} */
+    const around = game.settlers.filter(s => s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius);
+    if (target !== townHall && Math.hypot(en.x - townHall.x, en.y - townHall.y) < splashRadius + townHall.radius) around.push(townHall);
+    const edge = o => Math.hypot(en.x - o.x, en.y - o.y) - (o.radius || 0);
+    for (const o of around.sort((a, b) => edge(a) - edge(b)).slice(0, GAME_CONFIG.combatAI.splashMax - 1)) {
+      if (o === townHall) townHall.hp -= splashDamage;
+      else damageSettler(o, splashDamage, en);
     }
   } else {
     if (target === townHall) townHall.hp -= dt * meleeDamage;
