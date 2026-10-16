@@ -68,9 +68,9 @@ export function applyHeldItemPose(unit) {
 }
 
 // Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)
-// (a pastime too, but sharpening or sparring it holds its weapon, #199)
+// (a pastime too, but sharpening, sparring, training or on patrol it holds its weapon, #199)
 export function isResting(s) {
-  const pastime = s.isIdle && s.idle && s.idle.act !== 'sharpen' && s.idle.act !== 'spar';
+  const pastime = s.isIdle && s.idle && !['sharpen', 'spar', 'train', 'patrolEdge'].includes(s.idle.act);
   return (s.activity === 'patrol' || pastime) && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
 

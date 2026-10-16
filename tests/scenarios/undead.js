@@ -59,7 +59,7 @@ Object.assign(window.sim, (() => {
     return { withBow, without: { type: z.type, weapon: z.weapon } };
   }
 
-  // A zombie with the necromancer's staff, a grave and seven corpses (one big): it raises five as
+  // A zombie with the necromancer's staff, a grave and seven corpses (one big), a wave coming: it raises five as
   // temporary zombies (they take no room), gets its raises back at the grave, raises the last two;
   // a raised zombie crumbles into rot when its time is up
   function necromancerRaises({ seed = 'undead-raise' } = {}) {
@@ -71,7 +71,8 @@ Object.assign(window.sim, (() => {
     settlers = [necro];
     corpses = [corpseAt(nearHall(5, 2), true), ...[3, 4, 5, 6, 7, 8].map(dx => corpseAt(nearHall(dx, 4)))];
     let afterFirstRound = null, recharged = false;
-    run(45, { each: () => {
+    run(45, { holdWaves: false, each: () => {
+      waveTimer = 5; // a wave coming: raised, not taken for bones (#199)
       settlers.forEach(s => { if (s.temporary !== undefined) s.temporary = 999; });
       if (necro.raisesLeft === 0 && afterFirstRound === null) afterFirstRound = settlers.length - 1;
       if (afterFirstRound !== null && necro.raisesLeft === 5) recharged = true;
@@ -141,7 +142,7 @@ Object.assign(window.sim, (() => {
     corpses = [corpse];
     const x0 = necro.x;
     let thread = false, xAtRaise = null;
-    run(3, { each: () => { if (necro.raising) thread = true; if (xAtRaise === null && corpses.length === 0) xAtRaise = necro.x; } });
+    run(3, { holdWaves: false, each: () => { waveTimer = 5; if (necro.raising) thread = true; if (xAtRaise === null && corpses.length === 0) xAtRaise = necro.x; } });
     return { raised: corpses.length === 0 && settlers.some(s => s.temporary !== undefined), stayed: xAtRaise !== null && Math.abs(xAtRaise - x0) < 10, thread };
   }
 

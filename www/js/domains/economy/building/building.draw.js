@@ -209,6 +209,8 @@ export function drawBuildings() {
       ctx.fillStyle = '#3d3d44'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'hammer', b.x, b.y, 18);
+    } else if (b.type === 'dummy') {
+      drawIcon(ctx, 'dummy', b.x, b.y, 28); // a training dummy (#199)
     } else if (b.type === 'warehouse') {
       drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed
     } else if (b.type === 'smelter') {

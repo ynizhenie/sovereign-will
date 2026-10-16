@@ -148,7 +148,9 @@ export function getWeaponStats(s, use) {
     damage = toolDamage !== undefined && toolDamage !== null ? toolDamage : fist[use].damage;
   }
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
-  return { ...stats, damage, multiplier: settlerType ? settlerType.damageMultiplier : 1 };
+  // trained at a dummy (#199): a little more in a fight
+  const trained = use === 'combat' ? 1 + (s.trained || 0) : 1;
+  return { ...stats, damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * trained };
 }
 
 export function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
