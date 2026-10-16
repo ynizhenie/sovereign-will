@@ -83,5 +83,17 @@ Object.assign(window.sim, (() => {
     return { away: Math.hypot(necro.x - en.x, necro.y - en.y) > 110, nearerHall: necro.x < en.x - 80 };
   }
 
-  return { dutyPatrol: patrol, dutyTrain: train, dutyGuard: guard, dutyBones: bones, dutyKeepBack: keepBack };
+  // An archer out of arrows (#232): no hunting a boar, no training at a dummy
+  function archerNoArrows({ seed = 'duty-noarrows' } = {}) {
+    asFaction('humans', seed);
+    const dummy = placeBuilding('dummy', nearHall(3, 2).x, nearHall(3, 2).y);
+    const a = makeSettler(1, townHall.x + 40, townHall.y + 40, { weapon: 'bow', role: 'archer', quiver: true, arrows: 0 });
+    settlers = [a];
+    const boar = { x: townHall.x + 200, y: townHall.y, hp: 30, maxHp: 30, wanderTimer: 0, wanderInterval: 999, priority: 0, targetX: townHall.x + 200, targetY: townHall.y };
+    const acts = new Set();
+    run(30, { each: () => { a.hunger = 999; boars = [boar]; boarRespawnTimer = 999; pendingRespawns = []; acts.add(a.activity); if (a.idle && a.idle.act === 'train') acts.add('train'); } });
+    return { hunted: acts.has('harvest'), trained: acts.has('train') || (a.trained || 0) > 0, dummy: !!dummy };
+  }
+
+  return { dutyArcherNoArrows: archerNoArrows, dutyPatrol: patrol, dutyTrain: train, dutyGuard: guard, dutyBones: bones, dutyKeepBack: keepBack };
 })());

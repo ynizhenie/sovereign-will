@@ -10,7 +10,7 @@ Object.assign(window.sim, (() => {
   };
   const back = () => { sides.player.faction = 'humans'; sides.enemy.faction = 'humans'; };
 
-  // A wave of ten that's lost seven: the three left panic; with a tent of theirs they go to it and heal there,
+  // A wave of ten that's lost eight (routShare, #232): the two left panic; with a tent of theirs they go to it and heal there,
   // without one they leave the map with no reward
   function rout({ seed = 'morale-rout', tent = true } = {}) {
     asFactions('humans', 'humans', seed);
@@ -19,7 +19,7 @@ Object.assign(window.sim, (() => {
     waveSize = 10; waveRouted = false;
     const tentAt = nearHall(-20, -14);
     enemyTents = tent ? [{ x: tentAt.x, y: tentAt.y, hp: 60, maxHp: 60, summonTimer: 0, summonsLeft: 0 }] : [];
-    for (const en of enemies.slice(0, 7)) en.hp = 0;
+    for (const en of enemies.slice(0, 8)) en.hp = 0;
     removeDeadEnemies();
     const left = [...enemies];
     left.forEach(en => { en.hp = en.maxHp / 2; });
@@ -36,6 +36,20 @@ Object.assign(window.sim, (() => {
       gone: tent ? undefined : left.every(en => !enemies.includes(en)),
       noReward: stock.food === food0
     };
+  }
+
+  // A wave of ten that's lost seven: the three left still fight (#232: they ran too early)
+  function holdOn({ seed = 'morale-hold' } = {}) {
+    asFactions('humans', 'humans', seed);
+    settlers = [];
+    enemies = Array.from({ length: 10 }, (_, i) => { const en = createConfiguredEnemy(nearHall(-14 + (i % 5), -10 + Math.floor(i / 5)), 'raider'); en.fromWave = true; return en; });
+    waveSize = 10; waveRouted = false;
+    for (const en of enemies.slice(0, 7)) en.hp = 0;
+    removeDeadEnemies();
+    run(1);
+    const r = { routed: waveRouted, panicked: enemies.some(en => en.panic) };
+    back();
+    return r;
   }
 
   // The undead panic at a single blow, unless their necromancer is close by; humans hold
@@ -101,5 +115,5 @@ Object.assign(window.sim, (() => {
     return { panic: !!boar.panic, running: (boar.fleeTimer || 0) > 0 };
   }
 
-  return { moraleBoar: boarPanic, moraleRout: rout, moraleUndead: undeadNerves, moraleBases: bases, moraleDemonBite: demonBite, moraleNecromancerBack: necromancerBack };
+  return { moraleHoldOn: holdOn, moraleBoar: boarPanic, moraleRout: rout, moraleUndead: undeadNerves, moraleBases: bases, moraleDemonBite: demonBite, moraleNecromancerBack: necromancerBack };
 })());
