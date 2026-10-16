@@ -17,7 +17,7 @@ import { faceTowards, startSwing } from './settlers.draw.js';
 const config = () => GAME_CONFIG.idle;
 
 // the activity texts of the pastimes (activity.<name>)
-export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain' };
+export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain', digWorms: 'idleDigWorms' };
 
 const byId = id => game.settlers.find(o => o.id === id) || null;
 const isMelee = s => s.weapon && s.weapon !== 'fist' && s.weapon !== 'bow';
@@ -43,6 +43,7 @@ function pickPastime(s) {
   if (faction === 'humans' && isMelee(s) && !s.sharpened) options.push('sharpen', 'sharpen');
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
   if (faction === 'undead') options.push('sway', 'sway');
+  if (s.tool === 'rod' && nearestGrass(s)) options.push('digWorms', 'digWorms'); // a fisher digs for worms (#199)
   if (isFighter(s)) {
     options.push('patrolEdge', 'patrolEdge');
     if (freeDummy(s) && canTrain(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
@@ -130,6 +131,22 @@ export function idlePastime(s, tick) {
       cheer(s, c.sparMoralePerSecond, c.sparAbove, tick.dt);
       return true;
     }
+    case 'digWorms': {
+      // at a tuft of grass, digging a while; now and then a worm, carried home as bait
+      const grass = idle.spot && game.grassList.find(g => Math.hypot(g.x - idle.spot.x, g.y - idle.spot.y) < 1) || nearestGrass(s);
+      if (!grass) { idle.left = 0; return false; }
+      idle.spot = { x: grass.x, y: grass.y };
+      if (Math.hypot(grass.x - s.x, grass.y - s.y) > 18) { moveEntityTowards(s, grass.x, grass.y, s.speed * 0.8, false, tick.dt); return true; }
+      faceTowards(s, grass.x, grass.y);
+      s.working = 0.1;
+      idle.dug = (idle.dug || 0) + tick.dt;
+      if (idle.dug >= GAME_CONFIG.digWorms.seconds) {
+        idle.dug = 0;
+        idle.left = 0;
+        if (rand() < GAME_CONFIG.digWorms.chance) s.carrying = { type: 'worms', amount: 1 };
+      }
+      return true;
+    }
     case 'sway':
       s.swaying = true;
       return true;
@@ -170,6 +187,16 @@ function edgePoint(angle) {
     if (!isTileBlockedForSettler(g.gx, g.gy)) return { x: g.gx * TILE_SIZE + 15, y: g.gy * TILE_SIZE + 15 };
   }
   return { x: townHall.x + Math.cos(angle) * r, y: townHall.y + Math.sin(angle) * r };
+}
+
+// The nearest grass in the base (#199: a fisher digs for worms there)
+function nearestGrass(s) {
+  let best = null, bestD = Infinity;
+  for (const g of game.grassList) {
+    const d = Math.hypot(g.x - s.x, g.y - s.y);
+    if (d < bestD && isInSafeArea(g.x, g.y) && d < 400) { bestD = d; best = g; }
+  }
+  return best;
 }
 
 // ---- Dung to the compost heap

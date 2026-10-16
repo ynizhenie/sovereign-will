@@ -351,6 +351,7 @@ window.sim = (() => {
     spot.isFishing = true;
     settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
     stock.wheatSeeds = seeds;
+    grassList = []; // (an idle fisher digs for worms in the grass, #199: bait from nowhere here)
     // a catch: the fisher's load of fish grows
     let catches = 0, carried = 0;
     run(seconds, { each: () => {
