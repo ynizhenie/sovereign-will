@@ -19,7 +19,7 @@ test('zone tiles are painted, switched, toggled off and cleared; never on water 
   });
 });
 
-test('a farmer with a backpack carries dung to a wheat plot: its harvest yields twice (#201)', async () => {
+test('a farmer with a backpack carries dung from the compost heap to a wheat plot: its harvest yields twice (#201, #232)', async () => {
   expect(await sim.fertilizer({})).toEqual({ fertilized: true, dungLeft: 0, wheat: 8 });
   expect(await sim.fertilizer({ backpack: false })).toEqual({ fertilized: false, dungLeft: 1, wheat: 4 });
 });

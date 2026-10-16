@@ -209,6 +209,15 @@ export function drawBuildings() {
       ctx.fillStyle = '#3d3d44'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'hammer', b.x, b.y, 18);
+    } else if (b.type === 'dung_heap') {
+      // a compost heap (#232): bigger the more dung it holds
+      const share = Math.min(1, (b.dung || 0) / (GAME_CONFIG.buildings.dung_heap.dungCapacity || 5));
+      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(b.x - 14, b.y + 4, 28, 8);
+      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(b.x - 14, b.y + 4, 28, 8);
+      if (share > 0) {
+        ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(b.x, b.y + 4, 4 + 9 * share, 3 + 9 * share, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#6e4a1c'; ctx.beginPath(); ctx.ellipse(b.x - 1, b.y + 4 - 6 * share, 2 + 4 * share, 1.5 + 3 * share, 0, Math.PI, 0); ctx.fill();
+      }
     } else if (b.type === 'dummy') {
       drawIcon(ctx, 'dummy', b.x, b.y, 28); // a training dummy (#199)
     } else if (b.type === 'warehouse') {

@@ -135,17 +135,17 @@ export function isSpearWeapon(weapon) { return getWeaponFamily(weapon) === 'spea
 
 export function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; }
 
-// A settler's weapon stats for `use` ('combat' or 'hunt'). Damage: the weapon's, or, for fists (and weapons
-// with no damage for that use), the carried tool's, else bare hands; times the settler type's multiplier.
+// A settler's weapon stats for `use` ('combat' or 'hunt': the same numbers, a boar takes twice the damage
+// in woundBoar, #232; a hunt's range is the weapon's reach, a bow's its shooting distance). Damage: the
+// weapon's, or, for fists, the carried tool's, else bare hands; times the settler type's multiplier.
 export function getWeaponStats(s, use) {
   const fist = GAME_CONFIG.weapons.fist;
   const weapon = getDefinition('weapons', s.weapon) || fist;
-  const stats = weapon[use];
+  const stats = use === 'hunt' ? { ...weapon.combat, range: weapon.combat.range || weapon.combat.approach } : weapon.combat;
   let damage = s.weapon !== 'fist' ? stats.damage : undefined;
   if (damage === undefined) {
     const tool = getDefinition('tools', s.tool);
-    const toolDamage = tool && (use === 'combat' ? tool.combatDamage : tool.huntDamage);
-    damage = toolDamage !== undefined && toolDamage !== null ? toolDamage : fist[use].damage;
+    damage = tool && tool.combatDamage !== undefined && tool.combatDamage !== null ? tool.combatDamage : fist.combat.damage;
   }
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
   // trained at a dummy (#199): a little more in a fight

@@ -152,6 +152,12 @@ export const ICONS = {
     c.save(); icSword(c, '#dfe6e9', '#fff'); c.restore();
     c.save(); c.translate(32, 0); c.scale(-1, 1); icSword(c, '#dfe6e9', '#fff'); c.restore();
   },
+  dung_heap: c => {
+    // a heap of dung in a low wooden frame
+    icRound(c, '#8e5a2b', 3, 20, 26, 8, 2);
+    c.fillStyle = '#5c3d16'; c.beginPath(); c.ellipse(16, 20, 11, 8, 0, Math.PI, 0); c.fill();
+    c.fillStyle = '#6e4a1c'; c.beginPath(); c.ellipse(16, 14, 6, 4, 0, Math.PI, 0); c.fill();
+  },
   dummy: c => {
     // a straw dummy on a post, a crossbar for arms
     icLine(c, '#8e5a2b', 3, [[16, 30], [16, 8]]);

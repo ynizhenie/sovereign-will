@@ -97,7 +97,7 @@ export function waterCrops(s, tick) {
 
 // ---- Fertiliser
 
-// A farmer with a backpack, between waves, carries a pile of dung to a wheat plot not fertilised yet;
+// A farmer with a backpack, between waves, carries dung from a compost heap (#232) to a wheat plot not fertilised yet;
 // the plot's next harvest yields more (GAME_CONFIG.fertilizer). Called off its way (a wave), it drops the
 // dung where it is (#201)
 export function fertilize(s, tick) {
@@ -117,13 +117,14 @@ export function fertilize(s, tick) {
     return false;
   }
   if (!carriesDung) {
-    const pile = near(game.dung.filter(p => !tick.dungAssignments.has(p) && isInSafeArea(p.x, p.y)));
-    if (!pile) return false;
-    tick.dungAssignments.add(pile);
+    // from a compost heap (#232): no more farmers going to one than it has dung
+    const heap = near(game.buildings.filter(b => b.type === 'dung_heap' && (b.dung || 0) > (tick.heapTakers.get(b) || 0)));
+    if (!heap) return false;
+    tick.heapTakers.set(heap, (tick.heapTakers.get(heap) || 0) + 1);
     tick.fertilizeAssignments.add(plot);
     s.patrolTarget = null;
-    if (Math.hypot(pile.x - s.x, pile.y - s.y) > 16) moveEntityTowards(s, pile.x, pile.y, s.speed, false, tick.dt);
-    else { game.dung.splice(game.dung.indexOf(pile), 1); s.carrying = { type: 'dung', amount: 1 }; }
+    if (Math.hypot(heap.x - s.x, heap.y - s.y) > 32) moveEntityTowards(s, heap.x, heap.y, s.speed, false, tick.dt);
+    else { heap.dung--; s.carrying = { type: 'dung', amount: 1 }; }
     return true;
   }
   tick.fertilizeAssignments.add(plot);
