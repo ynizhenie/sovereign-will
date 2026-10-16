@@ -49,10 +49,41 @@ test('Tools and Weapons tiles count what settlers hold (#119)', async ({ page })
   await expect(page.locator('#held-weapons-fist-txt')).toHaveCount(0);
 });
 
-test('armour/shield and backpack/watering can sit in their own block; removing says "Разобрать" (#119)', async ({ page }) => {
+test('armour/shield and backpack/watering can sit in their own block; taking things off is on the selected settler, one button per thing it holds (#119, #232)', async ({ page }) => {
   await openGame(page);
+  await page.click('#play-button');
   await expect(page.locator('#tab-weapons .gear-actions button')).toHaveCount(2);
   await expect(page.locator('#tab-tools .gear-actions button')).toHaveCount(2);
-  expect((await iconText(page, '#tab-tools .action-row button'))[0]).toBe('[[no]] Разобрать рюкзак');
-  expect((await iconText(page, '#tab-weapons .action-row button'))[0]).toBe('[[no]] Разобрать броню');
+  await expect(page.locator('#tab-tools .btn-disarm, #tab-weapons .btn-disarm')).toHaveCount(0); // none in the sheets
+  await page.evaluate(() => { const s = settlers[0]; Object.assign(s, { weapon: 'sword', role: 'soldier', tool: 'none', armor: 'iron', backpack: true }); selectedSettler = s; isPaused = true; updateUI(); });
+  const chips = page.locator('#selected-gear button');
+  await expect(chips).toHaveCount(3);
+  expect(await iconText(page, '#selected-gear button')).toEqual(['[[sword]] Меч [[no]]', '[[armor]] Броня [[no]]', '[[backpack]] Рюкзак [[no]]']);
+  await page.evaluate(() => { isPaused = false; });
+  await chips.nth(1).click();
+  expect(await page.evaluate(() => settlers[0].targetEquipment)).toEqual({ gearOff: 'armor' });
+  // a worker with nothing: no buttons
+  await page.evaluate(() => { const s = settlers[1]; Object.assign(s, { weapon: 'fist', tool: 'none' }); selectedSettler = s; updateUI(); });
+  await expect(page.locator('#selected-gear')).toBeHidden();
+});
+
+test('an item\'s card shows its cost against the stock, what\'s left after or what\'s short; pressing it short shows the card, no notice (#232)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.evaluate(() => { stock.wood = 10; stock.stone = 2; });
+  await page.click('[data-arg="tab-tools"]');
+  const axe = page.locator('#tool-actions button[data-info="tools:axe"]');
+  await axe.hover();
+  await expect(page.locator('#info-card')).toContainText('10/5');
+  await expect(page.locator('#info-card')).toContainText('2/5');
+  await expect(page.locator('#info-card .info-cost.short').first()).toBeVisible();
+  await expect(page.locator('#info-card')).toContainText('Не хватает');
+  await page.mouse.move(5, 5);
+  await axe.click();
+  await expect(page.locator('#info-card')).toContainText('Не хватает');
+  await expect(page.locator('#toast-notification')).not.toContainText('Не хватает');
+  await page.evaluate(() => { stock.stone = 50; });
+  await page.mouse.move(5, 5);
+  await axe.hover();
+  await expect(page.locator('#info-card')).toContainText('Останется');
 });

@@ -55,6 +55,8 @@ export function getHeldItemPose(unit) {
     const beat = Math.sin(game.pathTick * 0.3);
     if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
     if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
+    // a blade (butchering a carcass): it cuts into what's in front, not chops at it like an axe
+    if (isSwordWeapon(item) || isSpearWeapon(item)) return { angle: 0.15 * beat, push: 3 + 3 * beat };
     return { angle: 0.7 * beat - 0.2, push: 0 };
   }
   return { angle: 0, push: 0 };
