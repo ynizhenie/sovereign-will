@@ -8,7 +8,7 @@ import { addResources, canAfford, payCost, showCostError, stock } from '../stora
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
-import { craftPlace, onCraftMade, orderCraft, pendingCrafts } from './equipment.crafting.js';
+import { craftPlace, onCraftMade, orderCraft } from './equipment.crafting.js';
 
 // A shield only helps a melee soldier: a worker or an archer doesn't fight with it
 export function canUseShield(s) {
@@ -166,7 +166,7 @@ export function refundEquipment(settler, includeArmor = false, includeQuiver = f
   }
 }
 
-// auto (quotas, #210): only a worker with no tool, nothing said; true if it was given. A tool in the armory
+// auto (a thing just made, #211): only a worker with no tool, nothing said; true if it was given. A tool in the armory
 // goes first, else it's paid for
 /** @param {string} toolType @param {boolean} [auto] @param {any} [forSettler] */
 export function assignTool(toolType, auto = false, forSettler = null) {
@@ -208,7 +208,7 @@ export function assignTool(toolType, auto = false, forSettler = null) {
   return true;
 }
 
-// auto (quotas, #210): only an unarmed settler with no tool, nothing said; true if it was made. A weapon in
+// auto (a thing just made, #211): only an unarmed settler with no tool, nothing said; true if it was made. A weapon in
 // the armory goes first, else it's paid for
 /** @param {string} type @param {boolean} [auto] @param {any} [forSettler] */
 export function craftWeapon(type, auto = false, forSettler = null) {
@@ -254,29 +254,6 @@ export function takeFromArmory(key) {
   if (!((game.armory[key] || 0) > 0)) return false;
   game.armory[key]--;
   return true;
-}
-
-// ---- Quotas (#210): every few seconds, one more of each tool and weapon the colony is short of
-
-let quotaClock = 0;
-export function tickQuotas(dt) {
-  if (game.gameMode !== 'endless') return;
-  quotaClock += dt;
-  if (quotaClock < GAME_CONFIG.quotas.checkSeconds) return;
-  quotaClock = 0;
-  for (const [key, wanted] of Object.entries(game.quotas)) {
-    if (!(wanted > 0)) continue;
-    const [category, id] = key.split(':');
-    if (countWithPending(category, id) >= wanted) continue;
-    if (category === 'tools') assignTool(id, true);
-    else if (category === 'weapons') craftWeapon(id, true);
-  }
-}
-
-// how many hold it, or are on their way to pick it up
-export function countWithPending(category, id) {
-  const field = category === 'tools' ? 'tool' : 'weapon';
-  return game.settlers.filter(s => s[field] === id || (s.targetEquipment && s.targetEquipment[field] === id)).length + pendingCrafts(category, id);
 }
 
 export function craftArrows() {

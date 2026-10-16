@@ -235,8 +235,6 @@
     <div class="top-actions">
       <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
       <button class="btn btn-disarm" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
-      <!-- Endless: the soldiers' stance for everyone (#212): hold, defend, attack; a tap moves to the next -->
-      <button class="btn btn-stance" id="stance-toggle" data-action="cycleStance" data-i18n-title="stance.hint" title="Soldiers' stance"></button>
       <button class="btn btn-unpossess" data-action="switchPossession" data-i18n-title="top.possess" title="Possess [Tab]"><i class="ic ic-eye"></i></button>
     </div>
   </div>
@@ -258,8 +256,6 @@
         <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" data-action="deselectSettler"><i class="ic ic-no"></i></button>
       </div>
       <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
-      <!-- a soldier's own stance (#212): everyone's, hold, defend, attack -->
-      <button class="btn" id="btn-own-stance" data-action="cycleOwnStance" hidden></button>
       <div id="selected-info" hidden></div>
     </div>
 
@@ -327,8 +323,6 @@
 
             <div class="panel-heading" data-i18n="panel.tools">Tools</div>
             <div class="btn-grid-2col" id="tool-actions"></div>
-            <!-- quotas (#210): how many to keep held; handed out by themselves -->
-            <div class="quotas" id="quotas-tools"></div>
 
             <div class="panel-heading" data-i18n="panel.gear">Gear</div>
             <div class="btn-grid-2col gear-actions">
@@ -341,16 +335,11 @@
               <button class="btn btn-disarm" data-action="orderGearOff" data-arg="wateringCan" data-i18n="btn.wateringCanOff">[[no]] Take watering can apart</button>
               <button class="btn btn-disarm" data-action="disarmSettler" data-arg="tool" data-i18n="btn.disarmTool">[[no]] Take tool away</button>
             </div>
-
-            <!-- the order the colony's work goes in (#212): top first -->
-            <div class="panel-heading" data-i18n="panel.jobs">Work priorities</div>
-            <div class="job-priority" id="job-priority"></div>
           </div>
 
           <div id="tab-weapons" class="tab-pane">
             <div class="panel-heading" data-i18n="panel.weapons">Weapons</div>
             <div class="btn-grid-2col" id="weapon-actions"></div>
-            <div class="quotas" id="quotas-weapons"></div>
             <div class="panel-heading" data-i18n="panel.arrows">Arrows</div>
             <div class="btn-grid-2col" id="special-actions">
               <button class="btn" id="btn-craft-arrows" data-action="craftArrows"></button>

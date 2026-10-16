@@ -3,7 +3,6 @@
 
 import { switchTab } from './bottom-panel.js';
 import { openHallCard } from './building-card.js';
-import { cycleOwnStance, cycleStance } from './hud.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
 import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
@@ -24,14 +23,12 @@ export const PAGE_ACTIONS = {
   disarmSettler: what => disarmSettler(what),
   switchTab: (tabId, button) => switchTab(button, tabId),
   openHall: () => openHallCard(),
-  // Point: back to selecting, nothing open
-  pointMode: () => { setMode('interact'); closeOverlays(); },
+  // Point: back to selecting, nothing open and nobody selected (#232)
+  pointMode: () => { setMode('interact'); closeOverlays(); deselectSettler(); },
   toggleSheet: name => toggleSheet(name),
   reopenSheet: () => reopenSheet(),
   stopPlacing: () => stopPlacing(),
-  toggleResources: () => toggleResources(),
-  cycleStance: () => cycleStance(),
-  cycleOwnStance: () => cycleOwnStance()
+  toggleResources: () => toggleResources()
 };
 
 // What this file sets up as the game starts (called by app/boot.js)

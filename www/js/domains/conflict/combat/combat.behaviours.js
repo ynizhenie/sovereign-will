@@ -6,7 +6,7 @@ import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../c
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { NORMAL_BODIES, getDefensePlan, getStance, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
+import { NORMAL_BODIES, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
 import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
@@ -21,12 +21,9 @@ export function takeMarkedTarget(s, tick) {
 }
 
 // A soldier in a squad holds its post until an enemy comes near the post, gets into the base (or next
-// to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards. Its stance
-// (#212): holding, it doesn't go for enemies in the base far from its post; attacking, it keeps no post
+// to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards
 export function holdPost(s, tick) {
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
-  const stance = getStance(s);
-  if (stance === 'attack') return false;
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
   if (getRecentAttacker(s)) return false;
@@ -40,8 +37,8 @@ export function holdPost(s, tick) {
     const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
     if (d < best) { best = d; nearest = en; }
   }
-  // nothing near the post: the nearest enemy that got into the base, wherever that is (not when holding)
-  if (!nearest && stance !== 'hold') {
+  // nothing near the post: the nearest enemy that got into the base, wherever that is
+  if (!nearest) {
     best = Infinity;
     for (const en of game.enemies) {
       const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
@@ -93,12 +90,10 @@ export function fightEnemies(s, tick) {
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  // attacking (#212): simply the nearest enemy; otherwise the one most dangerous to the base
-  const attacking = s.role !== 'worker' && getStance(s) === 'attack';
   game.enemies.forEach(en => {
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
-    let score = attacking ? dToSettler : dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
+    let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
   });
   // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
@@ -234,11 +229,7 @@ export const TENT_ASSAULT_FIGHT_DISTANCE = 150;
 // player pointed at first of all (goForMarkedTent)
 export function clearEnemyTents(s, tick) {
   if (goForMarkedTent(s, tick)) return true;
-  // attacking (#212): the armed go for the tents at any time; holding: only when the player marks one
-  const stance = s.role !== 'worker' ? getStance(s) : 'defend';
-  if (stance === 'hold') return false;
-  const assault = (tick.tentAssault && joinsTentAssault(s, tick)) || (stance === 'attack' && s.weapon !== 'fist' && !s.isPossessed && !s.towerAssignment);
-  if (!assault) return false;
+  if (!tick.tentAssault || !joinsTentAssault(s, tick)) return false;
   let tent = null, minDist = Infinity;
   game.enemyTents.forEach(et => {
     const d = Math.hypot(et.x - s.x, et.y - s.y);
