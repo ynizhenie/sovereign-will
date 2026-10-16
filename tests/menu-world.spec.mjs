@@ -35,9 +35,10 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
 test('a tapped boar is marked and hunted, butchered and its meat carried to the warehouse; the soldier changes faction on a tap (#193)', async ({ page }) => {
   await page.goto('/');
   await opened(page);
-  const boar = await page.evaluate(() => { const b = boars[0]; return { x: b.x, y: b.y }; });
+  // the world stands still for the tap: otherwise the boar wanders off between reading where it is and the click
+  const boar = await page.evaluate(() => { isPaused = true; const b = boars[0]; return { x: b.x, y: b.y }; });
   await page.mouse.click(...Object.values(await toPage(page, boar)));
-  const marked = await page.evaluate(() => boars.findIndex(b => b.priority > 0));
+  const marked = await page.evaluate(() => { isPaused = false; return boars.findIndex(b => b.priority > 0); });
   expect(marked).toBe(0);
   const hunt = await page.evaluate(() => {
     const target = boars[0];
