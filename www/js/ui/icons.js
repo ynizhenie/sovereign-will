@@ -320,6 +320,14 @@ export const ICONS = {
     icLine(c, '#1e8449', 1.6, [[7, 26], [22, 6]]);
     for (const t of [0.35, 0.55, 0.75]) icLine(c, '#1e8449', 1, [[7 + 15 * t, 26 - 20 * t], [7 + 15 * t - 4, 26 - 20 * t - 2]]);
   },
+  potions: c => {
+    // a round flask of green brew with a cork
+    icRect(c, '#c8a46a', 13, 3, 6, 5);
+    icRound(c, '#d6eaf8', 12, 7, 8, 6, 1);
+    icCircle(c, '#d6eaf8', 16, 20, 9);
+    icCircle(c, '#27ae60', 16, 21, 7);
+    icCircle(c, '#a9dfbf', 13, 18, 2);
+  },
   worms: c => {
     c.strokeStyle = '#e8a0a0'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath();
     c.moveTo(5, 20); c.bezierCurveTo(10, 8, 14, 28, 19, 16); c.bezierCurveTo(22, 10, 26, 14, 27, 18); c.stroke();
