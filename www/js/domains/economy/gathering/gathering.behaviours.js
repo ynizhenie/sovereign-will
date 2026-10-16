@@ -54,23 +54,26 @@ export function canSettlerHarvest(s, r, tick) {
   return s.tool === 'none' || hasPriority;
 }
 
-// Player-marked resources first (up to their priority in workers), otherwise the nearest one the settler
-// can walk to. Returns null if there's nothing to do.
+// Player-marked resources first, otherwise the nearest one the settler can walk to. Of the marked: the one
+// it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
+// worker on one (up to getWorkPriority) — two on one while others waited made one of them stand about
+// (#232). Returns null if there's nothing to do.
 export function pickResourceToHarvest(s, tick) {
   const settlerReach = getSettlerReach(s);
   // resources this settler recently found no spot next to (see harvest())
   const skipped = r => s.skippedResource === r && game.pathTick < s.skippedUntilTick;
   let assignedRes = null;
-  for (let r of tick.markedResources) {
-    if (canSettlerHarvest(s, r, tick) && !skipped(r) && getReachDistanceToResource(settlerReach, r) < Infinity) {
-      let currentWorkers = tick.workerAssignments.get(r) || 0;
-      if (currentWorkers < getWorkPriority(r)) {
-        assignedRes = r;
-        tick.workerAssignments.set(r, currentWorkers + 1);
-        break;
-      }
-    }
+  const workers = r => tick.workerAssignments.get(r) || 0;
+  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
+    .filter(m => m.d < Infinity && workers(m.r) < getWorkPriority(m.r));
+  const nearest = list => list.reduce((best, m) => (!best || m.d < best.d ? m : best), null);
+  const kept = marked.find(m => m.r === s.markTarget);
+  const pick = kept || nearest(marked.filter(m => workers(m.r) === 0)) || nearest(marked);
+  if (pick) {
+    assignedRes = pick.r;
+    tick.workerAssignments.set(pick.r, workers(pick.r) + 1);
   }
+  s.markTarget = assignedRes;
 
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building

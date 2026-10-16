@@ -19,7 +19,7 @@ import { isWaterReachable } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
 import { brewPotion, healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
@@ -224,6 +224,7 @@ export const SETTLER_BEHAVIOURS = [
   healAtTent,
   treatWounded,
   necromancy,
+  restockQuiver,
   holdPost,
   fightEnemies,
   breakOutOfSealedBase,

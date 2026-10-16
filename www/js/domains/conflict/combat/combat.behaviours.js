@@ -305,3 +305,18 @@ export function escortGatherers(s, tick) {
   else faceTowards(s, w.x + (w.x - townHall.x), w.y + (w.y - townHall.y));
   return true;
 }
+
+// An archer fills its quiver at a storage (#232: it stood at its post empty before a wave with arrows in the
+// stock): with a wave coming, up to full; otherwise once it's empty. Not with an enemy close (then it fights,
+// restocking from a tower or the storage it's at in fightEnemies), nor on a tower (the tower's arrows)
+export function restockQuiver(s, tick) {
+  if (!isBowWeapon(s.weapon) || !s.quiver || s.isPossessed || s.towerAssignment || s.carrying || !(stock.arrows > 0)) return false;
+  const capacity = s.quiverCapacity || 12, have = s.arrows || 0;
+  if (!(isDefenseAlert() ? have < capacity : have <= 0)) return false;
+  if (getRecentAttacker(s) || game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 160)) return false;
+  const store = findNearestStorage(s);
+  s.patrolTarget = null;
+  if (isAtStorage(s, store)) { s.arrows = have + takeStock('arrows', capacity - have); return true; }
+  walkToStorage(s, store, tick.dt);
+  return true;
+}
