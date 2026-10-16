@@ -10,7 +10,7 @@
 import { rebuildConfigHud, renderItemList, renderReserves, renderedFaction, showNotification, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
-import { renderJobPriority, updateUnitCounts } from '../../domains/colony/settlers/index.js';
+import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
@@ -45,10 +45,9 @@ export function serializeGame() {
     stock: { ...stock },
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested },
     cols: game.COLS, rows: game.ROWS,
-    jobPriority: game.jobPriority,
     clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
     playerGear: { ...game.playerGear },
-    stance: game.stance, reserves: { ...game.reserves }, armory: { ...game.armory }, quotas: { ...game.quotas },
+    reserves: { ...game.reserves }, armory: { ...game.armory },
     sides: JSON.parse(JSON.stringify(sides)),
     difficulty: game.gameDifficulty,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
@@ -87,13 +86,9 @@ export function loadGame(data) {
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
-  game.stance = data.stance || 'defend';
   game.reserves = { ...data.reserves };
   game.armory = { ...data.armory };
-  game.quotas = { ...data.quotas };
-  game.jobPriority = data.jobPriority || null;
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();
-  renderJobPriority();
   game.selectedSettler = null;
   game.defensePlan = null;
   resetTileIndex();
