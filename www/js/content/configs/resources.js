@@ -17,6 +17,8 @@ export const resourcesConfig = {
     wheatSeeds: { id: 'wheatSeeds', icon: 'wheatSeeds', type: 'resource' },
     saplings: { id: 'saplings', icon: 'saplings', type: 'resource' },
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
+    // campfire fuel (#199): a woodcutter chops it from wood; campfires burn it (or coal), not the wood
+    firewood: { id: 'firewood', icon: 'firewood', type: 'resource', factions: ['humans', 'demons'] },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
     // a medic's potion (#199): brewed from herbs and water at a campfire, heals more than a herb
@@ -39,7 +41,7 @@ export const resourcesConfig = {
     { id: 'wood', members: ['wood'], pinned: true },
     { id: 'stone', members: ['stone'], pinned: true },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
-    { id: 'materials', icon: 'stone', members: ['coal', 'ironOre', 'iron', 'leather'] },
+    { id: 'materials', icon: 'stone', members: ['firewood', 'coal', 'ironOre', 'iron', 'leather'] },
     { id: 'supplies', icon: 'arrows', members: ['arrows', 'potions'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
     { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan'] } },
@@ -61,7 +63,7 @@ export const resourcesConfig = {
 
   start: {
     // stock at the start of a game (ids from `resources`)
-    resources: { wood: 30, stone: 20, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0 },
+    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0 },
     // population limit before tents (each tent adds buildings.tent.population)
     population: 5
   }

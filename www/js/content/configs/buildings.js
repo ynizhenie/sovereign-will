@@ -31,6 +31,9 @@ export const buildingsConfig = {
     // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
     // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
     dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },
+    // a fish trap (#199): only on a tile next to water (nearWater); it catches a fish every fishTrap.seconds,
+    // holding up to fishTrap.holds; fishers empty it (anyone with free hands once it's full)
+    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 8 }, demolishRefund: { wood: 4 }, nearWater: true, fishTrap: { seconds: 25, holds: 4 }, build: { maxProgress: 50, hp: 60 } },
     // a place nearer than the town hall to bring resources to and fetch them from
     warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 150 } },
     // a compost heap (#232): settlers with nothing to do bring it the dung lying in the base, up to

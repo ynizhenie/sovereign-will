@@ -83,3 +83,31 @@ export function collectWorms(s, tick) {
   s.patrolTarget = null;
   return true;
 }
+
+// ---- Fish traps (#199)
+
+// A fisher empties a fish trap with two or more fish in it, anyone with free hands a full one; between
+// waves. The fish are carried home like a catch
+export function emptyFishTrap(s, tick) {
+  if (s.role !== 'worker' || s.carrying || s.isPossessed || tick.isWaveActive) return false;
+  const holds = GAME_CONFIG.buildings.fish_trap.fishTrap.holds;
+  const fisher = s.tool === 'rod';
+  if (!fisher && !(s.tool === 'none' && s.weapon === 'fist')) return false;
+  let trap = null, best = Infinity;
+  for (const b of game.buildings) {
+    if (b.type !== 'fish_trap' || (b.fish || 0) < (fisher ? 2 : holds) || tick.trapAssignments.has(b)) continue;
+    const d = Math.hypot(b.x - s.x, b.y - s.y);
+    if (d < best) { best = d; trap = b; }
+  }
+  if (!trap) return false;
+  tick.trapAssignments.add(trap);
+  s.patrolTarget = null;
+  if (best > 32) { moveEntityTowards(s, trap.x, trap.y, s.speed, false, tick.dt); return true; }
+  faceTowards(s, trap.x, trap.y);
+  giveResourceToSettler(s, 'rawFish', trap.fish);
+  addCarryLoad(s);
+  if (s.carrying) s.carrying.loads = 99; // (straight home with it)
+  trap.fish = 0;
+  playSound('catch', s);
+  return true;
+}

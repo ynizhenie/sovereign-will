@@ -320,6 +320,16 @@ export const ICONS = {
     icLine(c, '#1e8449', 1.6, [[7, 26], [22, 6]]);
     for (const t of [0.35, 0.55, 0.75]) icLine(c, '#1e8449', 1, [[7 + 15 * t, 26 - 20 * t], [7 + 15 * t - 4, 26 - 20 * t - 2]]);
   },
+  firewood: c => {
+    // split logs, stacked
+    for (const [x, y] of [[6, 18], [16, 18], [11, 9]]) { icRound(c, '#a0522d', x, y, 10, 8, 2); icCircle(c, '#deb887', x + 3, y + 4, 2); }
+  },
+  fish_trap: c => {
+    // a wicker basket in the water
+    icRound(c, '#3a6e8f', 2, 18, 28, 10, 3);
+    icRound(c, '#c19a6b', 7, 8, 18, 16, 6);
+    for (const x of [11, 16, 21]) icLine(c, '#8e6b3d', 1.5, [[x, 9], [x, 23]]);
+  },
   potions: c => {
     // a round flask of green brew with a cork
     icRect(c, '#c8a46a', 13, 3, 6, 5);

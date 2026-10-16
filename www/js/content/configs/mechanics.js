@@ -91,6 +91,13 @@ export const mechanicsConfig = {
 
   // bait: the first of these the stock can pay for, per catch (worms first)
   fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { wheat: 1 }] },
+  // a woodcutter (an axe) with nothing to do, or with the firewood nearly out, chops firewood at a storage
+  // (#199): each wood into `makes` firewood in `seconds`, up to `perTrip` wood a go, while the stock has
+  // less than `keep`
+  firewood: { seconds: 2, makes: 2, perTrip: 3, keep: 20, low: 2 },
+  // an idle fisher now and then digs for worms in the grass (#199): `seconds` digging, a worm one time in
+  // 1/chance
+  digWorms: { seconds: 4, chance: 0.35 },
 
   // worms turn up on a corpse once it has lain for `after` of its time; fishers pick them (1, or 2 off a
   // big body) and carry them home as bait
@@ -101,7 +108,7 @@ export const mechanicsConfig = {
   // fetches up to `batch` raw pieces, cooks each in `seconds` into `makes` food, and carries the food home.
   // Under lowFood meals per settler plus hireReserve (enough to hire a giant), any worker cooks, tool in
   // hand or in a wave too
-  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, wood: 5 }, lowFood: 2, hireReserve: 30,
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, firewood: 5 }, lowFood: 2, hireReserve: 30,
     dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
 
   // demons eating a corpse to heal

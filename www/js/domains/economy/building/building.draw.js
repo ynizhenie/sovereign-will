@@ -209,6 +209,10 @@ export function drawBuildings() {
       ctx.fillStyle = '#3d3d44'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
       drawIcon(ctx, 'hammer', b.x, b.y, 18);
+    } else if (b.type === 'fish_trap') {
+      // a fish trap (#199): a basket, a fish mark for each fish waiting in it
+      drawIcon(ctx, 'fish_trap', b.x, b.y, 26);
+      for (let k = 0; k < (b.fish || 0); k++) { ctx.fillStyle = '#bdc3c7'; ctx.beginPath(); ctx.ellipse(b.x - 9 + k * 6, b.y - 13, 2.5, 1.5, 0, 0, Math.PI * 2); ctx.fill(); }
     } else if (b.type === 'dung_heap') {
       // a compost heap (#232): bigger the more dung it holds
       const share = Math.min(1, (b.dung || 0) / (GAME_CONFIG.buildings.dung_heap.dungCapacity || 5));

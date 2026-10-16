@@ -35,20 +35,33 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
 test('a tapped boar is marked and hunted, butchered and its meat carried to the warehouse; the soldier changes faction on a tap (#193)', async ({ page }) => {
   await page.goto('/');
   await opened(page);
-  // the world stands still for the tap: otherwise the boar wanders off between reading where it is and the click
-  const boar = await page.evaluate(() => { isPaused = true; const b = boars[0]; return { x: b.x, y: b.y }; });
+  // the world stands still for the tap, and the boar tapped is one the menu's panel doesn't cover (the
+  // world is a little different each time: a boar under the buttons took the tap); none free: one is put
+  // where the menu shows the world
+  const boar = await page.evaluate(() => {
+    isPaused = true;
+    const rect = canvas.getBoundingClientRect(), k = getViewScale() / screenPixelRatio;
+    const onPage = p => ({ x: rect.left + rect.width / 2 + (p.x - camera.x) * k, y: rect.top + rect.height / 2 + (p.y - camera.y) * k });
+    const open = p => { const q = onPage(p); const el = document.elementFromPoint(q.x, q.y); return !!el && el.id === 'main-menu'; };
+    let i = boars.findIndex(b => !b.isCarcass && open(b));
+    if (i < 0) {
+      i = 0;
+      for (let dx = -300; dx <= 300 && !open(boars[0]); dx += 30) for (let dy = -200; dy <= 200 && !open(boars[0]); dy += 30) Object.assign(boars[0], { x: camera.x + dx, y: camera.y + dy });
+    }
+    return { i, x: boars[i].x, y: boars[i].y };
+  });
   await page.mouse.click(...Object.values(await toPage(page, boar)));
   const marked = await page.evaluate(() => { isPaused = false; return boars.findIndex(b => b.priority > 0); });
-  expect(marked).toBe(0);
-  const hunt = await page.evaluate(() => {
-    const target = boars[0];
+  expect(marked).toBe(boar.i);
+  const hunt = await page.evaluate(i => {
+    const target = boars[i];
     let butchered = false;
     for (let f = 0; f < 60 * 90 && stock.rawMeat === 0; f++) {
       update(1 / 60);
       if (target.isCarcass && target.butcher > 0) butchered = true;
     }
     return { butchered, meat: stock.rawMeat, gone: !boars.includes(target) };
-  });
+  }, boar.i);
   expect(hunt.butchered).toBe(true);
   expect(hunt.gone).toBe(true);
   expect(hunt.meat).toBeGreaterThan(0);

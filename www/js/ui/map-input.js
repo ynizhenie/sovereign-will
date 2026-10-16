@@ -106,6 +106,12 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
     showNotification(t('build.zoneHere'), true);
     return false;
   }
+  // a fish trap only by the water (#199)
+  const item = getDefinition('buildings', game.buildMode);
+  if (item && item.nearWater && !game.waterTiles.some(w => Math.abs(w.x - gx) <= TILE_SIZE && Math.abs(w.y - gy) <= TILE_SIZE && (w.x !== gx || w.y !== gy))) {
+    showNotification(t('build.nearWater'), true);
+    return false;
+  }
   if (!isBuildLocationAllowed(gx, gy)) {
     if (Math.hypot(gx - townHall.x, gy - townHall.y) < townHall.radius + 15) {
       showNotification(t('build.onHall'), true);

@@ -12,6 +12,7 @@ import { separateSettlersFromEnemies } from '../engine/movement/index.js';
 import { tickBoarRespawn, tickBoars } from '../domains/economy/hunting/index.js';
 import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
+import { tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 
@@ -40,6 +41,7 @@ export function update(dt) {
   growCrops(dt);
   tickBoars(dt);
   tickCampfires(dt);
+  tickFishTraps(dt);
   tickSmelters(dt);
   movePossessed(dt);
   tickSettlers(dt);
