@@ -25,6 +25,8 @@ const isMelee = s => s.weapon && s.weapon !== 'fist' && s.weapon !== 'bow';
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfires = () => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y));
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
+// an archer out of arrows doesn't train (#232)
+const canTrain = s => !(s.weapon === 'bow' && (!s.quiver || (s.arrows || 0) <= 0));
 // a training dummy with room for one more
 const freeDummy = s => game.buildings.filter(b => b.type === 'dummy' &&
   game.settlers.filter(o => o !== s && o.idle && o.idle.act === 'train' && o.idle.spot && Math.hypot(o.idle.spot.x - b.x, o.idle.spot.y - b.y) < 1).length < (GAME_CONFIG.buildings.dummy.trainers || 2))
@@ -43,7 +45,7 @@ function pickPastime(s) {
   if (faction === 'undead') options.push('sway', 'sway');
   if (isFighter(s)) {
     options.push('patrolEdge', 'patrolEdge');
-    if (freeDummy(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
+    if (freeDummy(s) && canTrain(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
   }
   const act = options[Math.floor(rand() * options.length)];
   const seconds = c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
@@ -144,7 +146,7 @@ export function idlePastime(s, tick) {
     }
     case 'train': {
       const dummy = game.buildings.find(b => b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
-      if (!dummy || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
+      if (!dummy || !canTrain(s) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
       const place = ringPlace(s, dummy, c.trainRing);
       // (close enough: the dummy itself may keep it off its exact place)
       if (Math.hypot(place.x - s.x, place.y - s.y) > 6 && Math.hypot(dummy.x - s.x, dummy.y - s.y) > c.trainRing + 10) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }

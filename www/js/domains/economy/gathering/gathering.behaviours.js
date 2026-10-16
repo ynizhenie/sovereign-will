@@ -19,7 +19,8 @@ export function canSettlerHarvest(s, r, tick) {
   const kind = tick.resourceKind.get(r);
   if (s.role !== 'worker') {
     if (r.isCarcass) return r.collector === s;
-    if (kind === 'boar') return !tick.isWaveActive && !r.hidden && !r.hideTarget;
+    // (an archer out of arrows doesn't go hunting, #232)
+    if (kind === 'boar') return !tick.isWaveActive && !r.hidden && !r.hideTarget && !(isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0));
     return false;
   }
   if (r.isCarcass) return r.collector === s;

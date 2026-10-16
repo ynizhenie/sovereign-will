@@ -251,6 +251,8 @@ export function drawSettlers() {
     }
 
     if (s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+    // an archer out of arrows (#232): a crossed-out arrow over it
+    if (isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - s.visualRadius - 2, s.y - s.visualRadius - 16);
     // "talking" in a knot (#199): now and then a speech bubble
     if (s.isIdle && s.idle && s.idle.act === 'talk' && Math.sin(performance.now() / 700 + s.id * 1.7) > 0.4) drawTalkBubble(s.x + s.visualRadius, s.y - s.visualRadius - 16);
 
@@ -258,6 +260,15 @@ export function drawSettlers() {
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
     if (sway) ctx.restore();
   });
+}
+
+// An arrow crossed out in red: out of arrows
+export function drawNoArrows(x, y) {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+  drawIcon(ctx, 'arrows', x, y, 12);
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - 6, y + 6); ctx.lineTo(x + 6, y - 6); ctx.stroke();
 }
 
 // A speech bubble with "..." in it

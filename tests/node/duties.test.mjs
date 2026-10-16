@@ -23,3 +23,7 @@ test('between waves a necromancer takes the bones from a corpse; in a wave it ra
 test('an enemy closing in: the colony\'s necromancer steps back towards the town hall', () => {
   expect(sim.dutyKeepBack({})).toEqual({ away: true, nearerHall: true });
 });
+
+test('an archer out of arrows neither hunts nor trains at the dummy (#232)', () => {
+  expect(sim.dutyArcherNoArrows({})).toEqual({ hunted: false, trained: false, dummy: true });
+});

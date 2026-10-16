@@ -24,7 +24,7 @@ export const mechanicsConfig = {
   // one cornered (hit with its attacker at hand) fights back.
   morale: { max: 100, panicBelow: 30, calmAbove: 40, base: { humans: 70, demons: 90, undead: 30, boar: 50 },
     scaryFoes: { humans: { demons: -10, undead: -10 } }, hit: 3, lowHp: 10, lowHpShare: 0.3, allyDeath: 10, foeDeath: 6,
-    nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.6, rout: 40,
+    nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.8, rout: 40,
     tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140 },
   // fighting (#208): at most meleePerEnemy settlers in melee on one enemy (meleePerBig on a big one), round
   // it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
