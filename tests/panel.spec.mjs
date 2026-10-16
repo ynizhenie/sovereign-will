@@ -70,7 +70,8 @@ test('armour/shield and backpack/watering can sit in their own block; taking thi
 test('an item\'s card shows its cost against the stock, what\'s left after or what\'s short; pressing it short shows the card, no notice (#232)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await page.evaluate(() => { stock.wood = 10; stock.stone = 2; });
+  // nobody about to bring wood in between (it raced on CI: 11/5)
+  await page.evaluate(() => { settlers = []; stock.wood = 10; stock.stone = 2; });
   await page.click('[data-arg="tab-tools"]');
   const axe = page.locator('#tool-actions button[data-info="tools:axe"]');
   await axe.hover();
