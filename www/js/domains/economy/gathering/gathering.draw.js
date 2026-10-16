@@ -101,16 +101,15 @@ export function drawCactiBouldersGrassBushes() {
   });
 }
 
-// The player's marks on resources: a square and the priority
+// The player's marks on resources: a square around it and a pointer over it, "here" (#232)
 export function drawPriorityMarks() {
   getHarvestableResources().forEach(r => {
     if (r.priority > 0) {
-      // a square around the tile, the priority in its corner: clear of the progress bar above it
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
       ctx.strokeRect(r.x - 15, r.y - 15, TILE_SIZE, TILE_SIZE);
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(r.x + 5, r.y + 5, 10, 10);
-      ctx.fillStyle = '#1b1b1b'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(`${r.priority}`, r.x + 10, r.y + 13);
+      // a small arrow pointing down at it, above the tile (clear of the progress bar)
+      ctx.fillStyle = '#f1c40f'; ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(r.x - 6, r.y - 27); ctx.lineTo(r.x + 6, r.y - 27); ctx.lineTo(r.x, r.y - 18); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   });
 }

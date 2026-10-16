@@ -62,11 +62,13 @@ export function getHeldItemPose(unit) {
   return { angle: 0, push: 0 };
 }
 
-// The held item points where the unit faces (faceTowards), posed on top of that
+// The held item points where the unit faces (faceTowards), posed on top of that; held in the right hand
+// at the body's side, not coming out of its middle
 export function applyHeldItemPose(unit) {
   const pose = getHeldItemPose(unit);
+  const r = unit.visualRadius || unit.radius || 11;
   ctx.rotate((unit.facing || 0) + pose.angle);
-  ctx.translate(pose.push, 0);
+  ctx.translate(pose.push + r * 0.25, r * 0.5);
 }
 
 // Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)
