@@ -68,6 +68,13 @@ export const mechanicsConfig = {
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
   // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
   // can't get to (walled off since, or stuck giveUpSeconds on the way): another one; after maxTries, where it is
+  // idle settlers' pastimes between waves (#199), each for `seconds` (from..to): by a campfire (morale up at
+  // campfireMoralePerSecond, up to campfireAbove past its usual), talking in a knot (company within
+  // companyRange px), humans sharpening a blade (sharpenSeconds; the next blow that lands does sharpenBonus
+  // times the damage), demons sparring (morale up to sparAbove past its usual, health down to sparMinHp of
+  // its most)
+  idle: { seconds: [8, 16], campfireRing: 34, campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 16, companyRange: 260,
+    sharpenSeconds: 6, sharpenBonus: 1.5, sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used

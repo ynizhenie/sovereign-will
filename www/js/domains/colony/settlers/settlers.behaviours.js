@@ -29,6 +29,7 @@ import { necromancy } from '../../factions/undead/index.js';
 import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
+import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 
 export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
@@ -163,7 +164,8 @@ export function findReliefSpot(s) {
   return nearest(tiles) || { x: s.x, y: s.y };
 }
 
-// Nothing else to do: wander near the town hall (shown with an idle icon, see render())
+// Nothing else to do: between waves a pastime (settlers.idle.js), else wander near the town hall (shown
+// with an idle icon, see render())
 export function patrol(s, tick) {
   if (game.gameMode === 'battle') return true; // nothing to wander around: stand
   // caught outside the base when the alert starts: straight back, not a stroll
@@ -172,6 +174,9 @@ export function patrol(s, tick) {
     moveSettlerToTownHall(s, s.speed, tick.dt);
     return true;
   }
+  if (game.gameMode === 'endless' && !tick.isWaveActive && !isDefenseAlert() && !s.isPossessed && idlePastime(s, tick)) return true;
+  if (s.idle && s.idle.act !== 'wander') s.idle = null;
+  s.swaying = false;
   if (!s.patrolTarget || Math.hypot(s.x - s.patrolTarget.x, s.y - s.patrolTarget.y) < 15) {
     // a spot round the hall it can stand on (not on spikes, a wall, a tree...)
     for (let tries = 0; tries < 8; tries++) {
@@ -205,6 +210,7 @@ export const SETTLER_BEHAVIOURS = [
   equip,
   cook,
   fertilize,
+  cleanDung,
   deliverMaterials,
   deliverCarrying,
   repairTent,
@@ -236,11 +242,14 @@ export function tickSettlers(dt) {
 
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
+    s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (behaviour(s, settlerTick)) {
         s.isIdle = behaviour === patrol;
-        s.activity = behaviour.name; // what it's doing, for the selected settler's info
+        if (!s.isIdle) { s.idle = null; s.swaying = false; }
+        // what it's doing, for the selected settler's info (a pastime: its own text)
+        s.activity = s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
         return;
       }
     }
