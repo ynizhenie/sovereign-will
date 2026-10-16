@@ -19,13 +19,13 @@ import { isWaterReachable } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { cook } from '../../economy/cooking/index.js';
-import { necromancy } from '../../factions/undead/index.js';
+import { collectBones, necromancy } from '../../factions/undead/index.js';
 import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
@@ -231,6 +231,8 @@ export const SETTLER_BEHAVIOURS = [
   tendFarmZones,
   waterCrops,
   farmerGathersGrass,
+  collectBones,
+  escortGatherers,
   deliverWhenNothingToDo,
   patrol
 ];

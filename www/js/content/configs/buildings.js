@@ -28,6 +28,9 @@ export const buildingsConfig = {
     watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
     // crafts: where things are made (#211): the smithy makes everything with iron in it
     smithy: { id: 'smithy', group: 'economy', icon: 'hammer', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 180 } },
+    // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
+    // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
+    dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },
     // a place nearer than the town hall to bring resources to and fetch them from
     warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 150 } },
     wheat: { id: 'wheat', icon: 'wheat', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },

@@ -152,6 +152,13 @@ export const ICONS = {
     c.save(); icSword(c, '#dfe6e9', '#fff'); c.restore();
     c.save(); c.translate(32, 0); c.scale(-1, 1); icSword(c, '#dfe6e9', '#fff'); c.restore();
   },
+  dummy: c => {
+    // a straw dummy on a post, a crossbar for arms
+    icLine(c, '#8e5a2b', 3, [[16, 30], [16, 8]]);
+    icLine(c, '#8e5a2b', 3, [[6, 15], [26, 15]]);
+    icRound(c, '#d4ac4a', 11, 11, 10, 13, 3);
+    icCircle(c, '#e2c06a', 16, 7, 4.5);
+  },
   hammer: c => {
     icLine(c, '#8e5a2b', 3.5, [[7, 27], [19, 13]]);
     c.save(); c.translate(20, 11); c.rotate(Math.PI / 4.4); icRound(c, '#7f8c8d', -9, -4.5, 18, 9, 2); c.restore();
