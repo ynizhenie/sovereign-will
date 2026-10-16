@@ -52,6 +52,7 @@
  * @property {number} [bagPotions]   a medic's potions (#199)
  * @property {number} [brewTimer]    a medic brewing a potion
  * @property {number} [chopTimer]    a woodcutter chopping firewood
+ * @property {Object | null} [markTarget]  the marked resource it's working (kept till done, #232)
  * @property {{ kind: string, who: any } | null} [porterTarget]  a porter's job: a gatherer's load or a corpse (#199)
  * @property {number} [burning]      seconds left on fire
  * @property {number} [temporary]    a raised zombie's seconds left
