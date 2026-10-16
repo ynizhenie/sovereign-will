@@ -222,6 +222,18 @@ export function isDefenseAlert() {
   return game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave);
 }
 
+// How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
+// out by far buildings on one side, in the open on the other): its farthest building within 40° of the
+// angle, at least minRadius tiles
+export function baseRadiusToward(angle) {
+  let far = 0;
+  for (const b of game.buildings) {
+    const a = Math.atan2(b.y - townHall.y, b.x - townHall.x);
+    if (Math.abs(Math.atan2(Math.sin(a - angle), Math.cos(a - angle))) <= Math.PI * 40 / 180) far = Math.max(far, Math.hypot(b.x - townHall.x, b.y - townHall.y));
+  }
+  return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+}
+
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
 export function getBaseRadius() {
   const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
@@ -275,7 +287,6 @@ export function getDefensePlan() {
   // too few for two squads: everyone on a post of their own round the base
   const singles = melee.length < 2 * size;
   const count = singles ? melee.length + archers.length : Math.ceil(melee.length / size);
-  const radius = getBaseRadius();
   const hallReach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const standable = (x, y) => {
     const g = getGridPos(x, y);
@@ -299,7 +310,8 @@ export function getDefensePlan() {
   const ring = count - posts.length;
   for (let i = 0; i < ring; i++) {
     const angle = arc ? arc.centre - arc.half + ((i + 0.5) / ring) * 2 * arc.half : (i / ring) * Math.PI * 2 - Math.PI / 2;
-    posts.push(standable(townHall.x + Math.cos(angle) * radius, townHall.y + Math.sin(angle) * radius));
+    const r = baseRadiusToward(angle);
+    posts.push(standable(townHall.x + Math.cos(angle) * r, townHall.y + Math.sin(angle) * r));
   }
   const squadOf = new Map();
   if (singles) {

@@ -11,6 +11,7 @@ import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settler
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
+import { getEnemyDef } from '../waves/index.js';
 
 const config = () => GAME_CONFIG.morale;
 
@@ -43,6 +44,8 @@ function healOnAlly(unit, allies, dt) {
 // In battle mode, where there's no hall to run to, away from the nearest enemy
 export function panic(s, tick) {
   if (!s.panic || s.isPossessed) return false;
+  // the undead don't run: they fight on in a panic, weaker (getWeaponStats, morale.panicDamage, #232)
+  if (getPlayerFaction().id === 'undead') return false;
   // cornered: hit just now with its attacker at hand, it fights back (strikeBack)
   const attacker = getRecentAttacker(s);
   if (attacker && game.pathTick - (s.lastAttackedTick || 0) < 60 && Math.hypot(attacker.x - s.x, attacker.y - s.y) < 45) return false;
@@ -61,6 +64,7 @@ export function panic(s, tick) {
 // True: it took the step
 export function enemyPanic(en, dt) {
   if (!en.panic) return false;
+  if (getEnemyFaction().id === 'undead') return false; // they fight on, weaker (enemyStrike, #232)
   if (getEnemyFaction().id === 'demons' && healOnAlly(en, game.enemies, dt)) return true;
   const tent = nearest(game.enemyTents, en);
   if (tent) {
@@ -107,11 +111,14 @@ export function necromancerKeepsBack(en, dt) {
     moveEntityTowards(en, en.x + (en.x - threat.x) / d * 80, en.y + (en.y - threat.y) / d * 80, en.speed, true, dt);
     return true;
   }
-  const front = game.enemies.filter(o => o !== en && o.hp > 0)
-    .sort((a, b) => Math.hypot(a.x - townHall.x, a.y - townHall.y) - Math.hypot(b.x - townHall.x, b.y - townHall.y))[0];
-  if (!front) return false;
-  const d = Math.max(1, Math.hypot(front.x - townHall.x, front.y - townHall.y));
-  const spot = { x: front.x + (front.x - townHall.x) / d * 70, y: front.y + (front.y - townHall.y) / d * 70 };
+  // amid its own, a little behind their middle (#232: behind the front one it was off on its own, its own
+  // out of its reach and panicking): the allies within reach of it, else all of them
+  const allies = game.enemies.filter(o => o !== en && o.hp > 0 && !getEnemyDef(o).necromancer);
+  if (!allies.length) return false;
+  const group = allies.filter(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroRange * 2.5);
+  const mid = (group.length ? group : allies).reduce((m, o, i, list) => ({ x: m.x + o.x / list.length, y: m.y + o.y / list.length }), { x: 0, y: 0 });
+  const d = Math.max(1, Math.hypot(mid.x - townHall.x, mid.y - townHall.y));
+  const spot = { x: mid.x + (mid.x - townHall.x) / d * 50, y: mid.y + (mid.y - townHall.y) / d * 50 };
   if (Math.hypot(spot.x - en.x, spot.y - en.y) > 12) moveEntityTowards(en, spot.x, spot.y, en.speed, true, dt);
   return true;
 }
