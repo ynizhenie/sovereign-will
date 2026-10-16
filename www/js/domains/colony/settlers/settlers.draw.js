@@ -74,6 +74,50 @@ export function isResting(s) {
   return (s.activity === 'patrol' || pastime) && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
 
+// It carries a load in its hands (#232): not in a backpack (a backpack's loads stay in it)
+export function isCarryingInHands(s) {
+  return !!s.carrying && !(s.backpack && s.carrying.loads !== undefined);
+}
+
+// It's making a thing right now (equipment.crafting.js sets s.crafting each step it works)
+export function isCrafting(s) {
+  return !!s.crafting && s.crafting.until >= game.pathTick;
+}
+
+// The load in front of it, held in both hands (drawn around its centre, after translate)
+function drawCarriedInHands(s) {
+  const type = s.carrying.type;
+  const f = s.facing || 0;
+  const x = Math.cos(f) * (s.visualRadius + 3), y = Math.sin(f) * (s.visualRadius + 3);
+  if (type === 'dung') {
+    ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(x, y, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
+  drawIcon(ctx, type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat'), x, y, 12);
+}
+
+// A hammer going up and down in its hand while it makes a thing
+function drawCraftHammer(s) {
+  const beat = Math.abs(Math.sin(performance.now() / 160 + s.id));
+  ctx.save();
+  ctx.rotate((s.facing || 0) - 0.9 + beat * 0.9);
+  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(4, -1.5, 14, 3);
+  ctx.fillStyle = '#7f8c8d'; ctx.fillRect(15, -5, 5, 10);
+  ctx.restore();
+}
+
+// The thing being made, on a little anvil in front of it, and how far along it is
+function drawWorkpiece(s) {
+  const f = s.facing || 0;
+  const x = s.x + Math.cos(f) * (s.visualRadius + 13), y = s.y + Math.sin(f) * (s.visualRadius + 13);
+  ctx.fillStyle = '#4a4f57'; ctx.fillRect(x - 6, y + 1, 12, 5);
+  ctx.fillStyle = '#5d636d'; ctx.fillRect(x - 4, y + 6, 8, 3);
+  if (s.crafting.icon) drawIcon(ctx, s.crafting.icon, x, y - 2, 11);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 10, y - 12, 20, 3);
+  ctx.fillStyle = '#f1c40f'; ctx.fillRect(x - 10, y - 12, 20 * s.crafting.progress, 3);
+}
+
 // The held item across the back: turned square to where the unit faces, behind it
 export function applyBackPose(unit) {
   ctx.rotate((unit.facing || 0) + Math.PI / 2);
@@ -189,20 +233,15 @@ export function drawSettlers() {
       ctx.fillStyle = '#f1c40f'; ctx.fillRect(bx + 1, by + 11 - 10 * Math.min(1, loads / getCarryCapacity(s)), 4, 10 * Math.min(1, loads / getCarryCapacity(s)));
     }
 
-    if (s.carrying && s.carrying.type === 'dung') {
-      // dung for a plot: a small brown pile over its head (#201)
-      ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(s.x, s.y - s.visualRadius - 7, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
-    } else if (s.carrying) {
-      const type = s.carrying.type;
-      const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
-      const icon = type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat');
-      drawIcon(ctx, icon, s.x, s.y - s.visualRadius - 9, 13);
-    }
+    // what it carries is in its hands, what it held goes on its back (in a backpack it stays out of sight,
+    // the bar above says how full); making a thing, a hammer in its hands (#232)
+    const inHands = isCarryingInHands(s);
+    const crafting = isCrafting(s);
 
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.save();
-    if (isResting(s)) applyBackPose(s);
+    if (isResting(s) || inHands || crafting) applyBackPose(s);
     else applyHeldItemPose(s);
     if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
@@ -227,6 +266,8 @@ export function drawSettlers() {
     }
     drawWeaponBlood(s);
     ctx.restore(); // pose only moves the held item
+    if (inHands) drawCarriedInHands(s);
+    if (crafting) drawCraftHammer(s);
     if (s.armor === 'iron' || s.hasArmor) drawArmor(s.visualRadius);
     // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
     if (s.tool === 'hoe' && s.wateringCan) {
@@ -244,6 +285,8 @@ export function drawSettlers() {
       ctx.beginPath(); ctx.moveTo(-s.visualRadius - 2, -4); ctx.lineTo(-s.visualRadius - 2, -10); ctx.moveTo(-s.visualRadius, -4); ctx.lineTo(-s.visualRadius, -10); ctx.stroke();
     }
     ctx.restore();
+
+    if (crafting) drawWorkpiece(s);
 
     if (s === game.selectedSettler) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;

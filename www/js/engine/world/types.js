@@ -40,6 +40,7 @@
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number } | null} [idle]  its pastime (#199)
+ * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
  * @property {number | null} [guardingId]  the gatherer it guards (escortGatherers)
