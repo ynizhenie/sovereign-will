@@ -44,6 +44,14 @@ export function isTileOccupied(x, y) {
          game.boars.some(b => Math.hypot(b.x - x, b.y - y) < 20);
 }
 
+// Where something may grow or spawn (ore round a spawner, trees, grass...): free ground with no corpse
+// and nobody on it, so a corpse raised there, or whoever stands there, isn't left inside it (#223)
+export function isSpawnSpotFree(x, y) {
+  if (isTileOccupied(x, y)) return false;
+  const near = p => Math.hypot(p.x - x, p.y - y) < 22;
+  return !game.corpses.some(near) && !game.settlers.some(near) && !game.enemies.some(near) && !(game.enemyTents || []).some(near);
+}
+
 export function isBuildLocationAllowed(x, y) {
   return !isTileOccupied(x, y);
 }
