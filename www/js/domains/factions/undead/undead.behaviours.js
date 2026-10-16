@@ -2,14 +2,16 @@
 
 // ---- Necromancers
 
-import { game, townHall } from '../../../engine/world/index.js';
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
 import { getNecromancy, raiseTemporaryZombie } from './undead.rules.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
+import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 
-// The undead's necromancer: heals the wounded around it; raises corpses (any, a big one into a big
-// zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,
+// The undead's necromancer: heals the wounded around it; in a fight raises corpses (any, a big one into a
+// big zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,
 // it gets them back at the nearest grave (or the graveyard)
 export function necromancy(s, tick) {
   const necro = getNecromancy(s);
@@ -17,6 +19,22 @@ export function necromancy(s, tick) {
   if (s.raisesLeft === undefined) s.raisesLeft = necro.raises;
   const dt = tick.dt;
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
+
+  // it keeps behind its own (#199): an enemy closer than necroKeepBack, it steps back towards the town hall
+  // (hit, it still strikes back: strikeBack comes first)
+  if (!s.isPossessed) {
+    const keep = GAME_CONFIG.morale.necroKeepBack;
+    const threat = game.enemies.filter(en => en.hp > 0 && dist(en) < keep).sort((a, b) => dist(a) - dist(b))[0];
+    if (threat && dist(townHall) > townHall.radius + s.radius + 10) {
+      const d = Math.max(1, dist(threat));
+      const away = { x: s.x + (s.x - threat.x) / d * 60, y: s.y + (s.y - threat.y) / d * 60 };
+      // away from it, leaning towards the hall, behind its own
+      const h = Math.max(1, dist(townHall));
+      s.patrolTarget = null;
+      moveEntityTowards(s, (away.x + s.x + (townHall.x - s.x) / h * 60) / 2, (away.y + s.y + (townHall.y - s.y) / h * 60) / 2, s.speed, false, dt);
+      return true;
+    }
+  }
 
   let patient = null;
   for (const other of game.settlers) {
@@ -36,7 +54,8 @@ export function necromancy(s, tick) {
 
   let corpse = null;
   const zombieType = c => (c.big ? 'big_zombie' : 'zombie');
-  if (s.raisesLeft > 0) {
+  // raised in a fight; between waves the corpses give bones instead (collectBones, #199)
+  if (s.raisesLeft > 0 && (tick.isWaveActive || isDefenseAlert())) {
     for (const c of game.corpses) {
       if (tick.raiseAssignments.has(c) || dist(c) > necro.range) continue;
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
@@ -93,4 +112,30 @@ export function necromancy(s, tick) {
     return true;
   }
   return false;
+}
+
+// Between waves (no one to fight, a raised zombie would only crumble), a necromancer with nothing else to
+// do takes the bones from a corpse in or near the base: `bones` (twice that from a big one) in boneSeconds
+// (GAME_CONFIG.idle, #199)
+export function collectBones(s, tick) {
+  const necro = getNecromancy(s);
+  if (!necro || s.isPossessed || s.carrying || tick.isWaveActive) return false;
+  const c = GAME_CONFIG.idle;
+  const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
+  const reach = getBaseRadius() + 3 * TILE_SIZE;
+  const corpse = game.corpses.filter(k => !tick.raiseAssignments.has(k) && Math.hypot(k.x - townHall.x, k.y - townHall.y) <= reach)
+    .sort((a, b) => dist(a) - dist(b))[0];
+  if (!corpse) { s.boneTimer = 0; return false; }
+  tick.raiseAssignments.add(corpse);
+  s.patrolTarget = null;
+  if (dist(corpse) > 18) { moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, tick.dt); s.boneTimer = 0; return true; }
+  faceTowards(s, corpse.x, corpse.y);
+  s.working = 0.1;
+  s.boneTimer = (s.boneTimer || 0) + tick.dt;
+  if (s.boneTimer >= c.boneSeconds) {
+    s.boneTimer = 0;
+    game.corpses.splice(game.corpses.indexOf(corpse), 1);
+    stock.bones = (stock.bones || 0) + c.bones * (corpse.big ? 2 : 1);
+  }
+  return true;
 }

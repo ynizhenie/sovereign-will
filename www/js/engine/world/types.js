@@ -39,8 +39,10 @@
  * @property {Watchtower | null} [towerAssignment] the watchtower it guards
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
- * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number } | null} [idle]  its pastime (#199)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number } | null} [idle]  its pastime (#199)
  * @property {boolean} [swaying]     an idle undead swaying
+ * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
+ * @property {number | null} [guardingId]  the gatherer it guards (escortGatherers)
  * @property {boolean} [sharpened]   its blade sharpened: the next blow that lands hits harder
  * @property {Object | null} [dungTarget]  the pile of dung it's going for (cleanDung)
  * @property {boolean} [hasArmor]

@@ -4,9 +4,9 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
-import { getRecentAttacker } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { NORMAL_BODIES, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
+import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
 import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
@@ -272,4 +272,36 @@ function takeMarkedTent(s, tick) {
   }
   if (best) tick.markedAssignments.set(best, (tick.markedAssignments.get(best) || 0) + 1);
   return best;
+}
+
+// ---- Guarding gatherers (#199)
+
+// A worker far out: more than guardBeyondTiles past the edge of the base
+function isFarOut(w) {
+  return Math.hypot(w.x - townHall.x, w.y - townHall.y) > getBaseRadius() + GAME_CONFIG.idle.guardBeyondTiles * TILE_SIZE;
+}
+
+// Between waves, a soldier or archer with nothing else to do guards a worker gathering far out of the base:
+// one each, keeping within guardRange of it on the base's side, facing out (an enemy coming at them it
+// fights, as ever: fightEnemies comes first)
+export function escortGatherers(s, tick) {
+  if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert()) {
+    s.guardingId = null;
+    return false;
+  }
+  const guarded = new Set(game.settlers.filter(o => o !== s && o.guardingId).map(o => o.guardingId));
+  let w = s.guardingId ? game.settlers.find(o => o.id === s.guardingId) : null;
+  if (!w || w.role !== 'worker' || w.isIdle || !isFarOut(w)) {
+    w = game.settlers.filter(o => o.role === 'worker' && !o.isIdle && !o.isPossessed && !guarded.has(o.id) && isFarOut(o))
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+  }
+  s.guardingId = w ? w.id : null;
+  if (!w) return false;
+  const range = GAME_CONFIG.idle.guardRange;
+  const d = Math.max(1, Math.hypot(w.x - townHall.x, w.y - townHall.y));
+  const spot = { x: w.x + (townHall.x - w.x) / d * range * 0.6, y: w.y + (townHall.y - w.y) / d * range * 0.6 };
+  s.patrolTarget = null;
+  if (Math.hypot(spot.x - s.x, spot.y - s.y) > range * 0.4) moveEntityTowards(s, spot.x, spot.y, s.speed, false, tick.dt);
+  else faceTowards(s, w.x + (w.x - townHall.x), w.y + (w.y - townHall.y));
+  return true;
 }
