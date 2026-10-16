@@ -90,13 +90,11 @@ export function performAttack(attacker, targetX, targetY) {
           woundBoar(b, dmg, attacker, attacker.x, attacker.y);
         } }))
     ];
-    // a big settler's blow hits everything around it; anyone else hits one: the one aimed at
-    if (isBigBody(attacker)) struck.forEach(target => target.hit());
-    else if (struck.length > 0) {
-      const aimed = struck.reduce((best, target) =>
-        Math.hypot(target.at.x - targetX, target.at.y - targetY) < Math.hypot(best.at.x - targetX, best.at.y - targetY) ? target : best);
-      aimed.hit();
-    }
+    // a big settler's blow hits up to splashMax round it, the one aimed at first (#209); anyone else hits
+    // one: the one aimed at
+    const toAim = target => Math.hypot(target.at.x - targetX, target.at.y - targetY);
+    if (isBigBody(attacker)) struck.sort((a, b) => toAim(a) - toAim(b)).slice(0, GAME_CONFIG.combatAI.splashMax).forEach(target => target.hit());
+    else if (struck.length > 0) struck.reduce((best, target) => (toAim(target) < toAim(best) ? target : best)).hit();
     if (struck.length > 0) attacker.sharpened = false;
 
     attacker.attackCooldown = stats.cooldown;
