@@ -68,8 +68,10 @@ export function applyHeldItemPose(unit) {
 }
 
 // Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)
+// (a pastime too, but sharpening or sparring it holds its weapon, #199)
 export function isResting(s) {
-  return s.activity === 'patrol' && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
+  const pastime = s.isIdle && s.idle && s.idle.act !== 'sharpen' && s.idle.act !== 'spar';
+  return (s.activity === 'patrol' || pastime) && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
 
 // The held item across the back: turned square to where the unit faces, behind it
@@ -165,6 +167,9 @@ export function drawDung() {
 // Settlers: body, what they hold and carry, armour, shield, quiver, rings, health
 export function drawSettlers() {
   game.settlers.forEach(s => {
+    // an idle undead sways where it stands (#199): drawn a little to and fro
+    const sway = s.swaying ? Math.sin(performance.now() / 450 + s.id) * 2.5 : 0;
+    if (sway) { ctx.save(); ctx.translate(sway, 0); }
     // the whole body in the colony's colour; the possessed one ringed in white
     ctx.fillStyle = getSettlerColor(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
@@ -245,9 +250,21 @@ export function drawSettlers() {
       ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius + 4, 0, Math.PI * 2); ctx.stroke();
     }
 
-    if (s.isIdle && !s.carrying) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+    if (s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+    // "talking" in a knot (#199): now and then a speech bubble
+    if (s.isIdle && s.idle && s.idle.act === 'talk' && Math.sin(performance.now() / 700 + s.id * 1.7) > 0.4) drawTalkBubble(s.x + s.visualRadius, s.y - s.visualRadius - 16);
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
+    if (sway) ctx.restore();
   });
+}
+
+// A speech bubble with "..." in it
+export function drawTalkBubble(x, y) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.beginPath(); ctx.ellipse(x, y, 9, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 8, y + 9); ctx.lineTo(x - 1, y + 5); ctx.fill();
+  ctx.fillStyle = '#34495e';
+  for (const dx of [-4, 0, 4]) { ctx.beginPath(); ctx.arc(x + dx, y, 1.2, 0, Math.PI * 2); ctx.fill(); }
 }
