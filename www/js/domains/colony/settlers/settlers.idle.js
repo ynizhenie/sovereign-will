@@ -4,7 +4,7 @@
 // hits harder), demons spar in pairs (morale up, a little health down), the undead stand and sway; soldiers
 // and archers also walk the edge of the base on patrol, or train at a dummy (their damage grows). Each
 // pastime lasts a while (GAME_CONFIG.idle.seconds), then another is picked. And any settler free between
-// waves carries dung lying about the base to a compost heap, where the farmers take it from.
+// waves a farmer with a backpack carries dung lying about the base to a compost heap, to fertilise from.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
@@ -74,9 +74,13 @@ function pickPastime(s) {
   return idle;
 }
 
-// Its place round a spot (a fire, a knot): a ring, each settler at its own angle
-function ringPlace(s, spot, radius) {
-  const angle = ((s.id * 2.399) % (Math.PI * 2));
+// Its place round a spot (a fire, a knot, a dummy): evenly round it with the others there for the same
+// pastime, in order of their ids, so no two stand in each other (#232)
+function ringPlace(s, spot, radius, act) {
+  const near = o => o.idle && o.idle.act === act && o.idle.spot && Math.hypot(o.idle.spot.x - spot.x, o.idle.spot.y - spot.y) < 1;
+  const here = game.settlers.filter(o => o === s || near(o)).sort((a, b) => a.id - b.id);
+  const k = Math.max(0, here.indexOf(s)), n = Math.max(1, here.length);
+  const angle = (k / n) * Math.PI * 2 + (spot.x + spot.y) * 0.01;
   return { x: spot.x + Math.cos(angle) * radius, y: spot.y + Math.sin(angle) * radius };
 }
 
@@ -103,13 +107,13 @@ export function idlePastime(s, tick) {
     case 'campfire': {
       const fire = campfires().find(b => Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
       if (!fire) { idle.left = 0; return false; }
-      const place = ringPlace(s, fire, c.campfireRing);
+      const place = ringPlace(s, fire, c.campfireRing, 'campfire');
       goStand(s, place, tick.dt, fire);
       if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
       return true;
     }
     case 'talk': {
-      const place = ringPlace(s, idle.spot, c.talkRing);
+      const place = ringPlace(s, idle.spot, c.talkRing, 'talk');
       goStand(s, place, tick.dt, idle.spot);
       // alone in its knot for long: off it goes
       if (!game.settlers.some(o => o !== s && o.idle && o.idle.act === 'talk' && o.idle.spot && Math.hypot(o.idle.spot.x - idle.spot.x, o.idle.spot.y - idle.spot.y) < 1)) idle.left = Math.min(idle.left, 1);
@@ -164,7 +168,7 @@ export function idlePastime(s, tick) {
     case 'train': {
       const dummy = game.buildings.find(b => b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
       if (!dummy || !canTrain(s) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
-      const place = ringPlace(s, dummy, c.trainRing);
+      const place = ringPlace(s, dummy, c.trainRing, 'train');
       // (close enough: the dummy itself may keep it off its exact place)
       if (Math.hypot(place.x - s.x, place.y - s.y) > 6 && Math.hypot(dummy.x - s.x, dummy.y - s.y) > c.trainRing + 10) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }
       faceTowards(s, dummy.x, dummy.y);
@@ -207,13 +211,15 @@ export function findDungHeap(from) {
   return game.buildings.filter(room).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0] || null;
 }
 
-// A settler that had nothing to do (idle last tick) carries a pile of dung in the base to a compost heap
-// with room; one already carrying one goes on with it. No heap, nobody gathers dung (#232). In a wave, or
-// with the heap full or gone on the way, it drops it where it is
+// A farmer with a backpack (#232: only them, nobody by hand), with no plot to fertilise just now (fertilize
+// comes first), carries a pile of dung in the base to a compost heap with room; one already carrying one
+// goes on with it. No heap, nobody gathers dung. In a wave, or with the heap full or gone on the way, it
+// drops it where it is
+const isDungFarmer = s => s.role === 'worker' && s.tool === 'hoe' && !!s.backpack;
 export function cleanDung(s, tick) {
   const load = s.carrying && s.carrying.type === 'dung' && s.carrying.toHeap ? s.carrying : null;
   if (s.dungTarget && (!game.dung.includes(s.dungTarget) || s.carrying || tick.isWaveActive)) s.dungTarget = null;
-  if (!load && !s.dungTarget && (s.carrying || !s.wasIdle || s.isPossessed || s.towerAssignment || tick.isWaveActive)) return false;
+  if (!load && !s.dungTarget && (!isDungFarmer(s) || s.carrying || s.isPossessed || tick.isWaveActive)) return false;
   const heap = findDungHeap(s);
   const drop = () => { game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false }); s.carrying = null; };
   if (load && (tick.isWaveActive || !heap)) { drop(); return false; }

@@ -122,11 +122,17 @@ export function enemyNecromancy(en, necro, dt) {
       other.hp = Math.min(other.maxHp, other.hp + necro.healPerSecond * dt);
     }
   }
-  if (en.raisesLeft <= 0 || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 60)) return false;
+  // (while raising it holds on unless a settler is right on it: no stepping back and forth, #232)
+  const near = en.raiseTimer > 0 ? 40 : 60;
+  if (en.raisesLeft <= 0 || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < near)) return false;
+  // only corpses no settler (nor the town hall) is close to: going for one by the colony's fighters it was
+  // pushed back (necromancerKeepsBack) and came again, twitching to and fro (#232)
+  const guarded = c => game.settlers.some(s => Math.hypot(s.x - c.x, s.y - c.y) < GAME_CONFIG.morale.necroCorpseClear) ||
+    Math.hypot(townHall.x - c.x, townHall.y - c.y) < townHall.radius + GAME_CONFIG.morale.necroCorpseClear;
   let corpse = null, best = necro.range;
   for (const c of game.corpses) {
     const d = Math.hypot(c.x - en.x, c.y - en.y);
-    if (d < best && (!c.raisedBy || c.raisedBy === en)) { best = d; corpse = c; }
+    if (d < best && (!c.raisedBy || c.raisedBy === en) && (c.raisedBy === en || !guarded(c))) { best = d; corpse = c; }
   }
   if (!corpse) return false;
   corpse.raisedBy = en;

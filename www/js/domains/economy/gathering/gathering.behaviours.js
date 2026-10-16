@@ -64,8 +64,15 @@ export function pickResourceToHarvest(s, tick) {
   const skipped = r => s.skippedResource === r && game.pathTick < s.skippedUntilTick;
   let assignedRes = null;
   const workers = r => tick.workerAssignments.get(r) || 0;
-  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
-    .filter(m => m.d < Infinity && workers(m.r) < getWorkPriority(m.r));
+  // something marked that needs no tool (sticks, pebbles, berries, apples) is for the free hands: one with a
+  // tool takes it only while no worker with nothing in hand is free for it, and only one nobody's on (#232)
+  const freeHand = o => o.role === 'worker' && o.tool === 'none' && o.weapon === 'fist' && !o.isPossessed;
+  const handsFree = s.tool !== 'none' && game.settlers.some(o => o !== s && freeHand(o) && (!o.markTarget || !tick.markedResources.includes(o.markTarget)));
+  const forHands = r => !getMapResourceDef(tick.resourceKind.get(r)).tool;
+  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) && !(handsFree && forHands(r)) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
+    .filter(m => m.d < Infinity && workers(m.r) < getWorkPriority(m.r) &&
+      // (nor a second pair of hands on one someone's already going for)
+      !(s.tool !== 'none' && forHands(m.r) && game.settlers.some(o => o !== s && o.markTarget === m.r)));
   const nearest = list => list.reduce((best, m) => (!best || m.d < best.d ? m : best), null);
   const kept = marked.find(m => m.r === s.markTarget);
   const pick = kept || nearest(marked.filter(m => workers(m.r) === 0)) || nearest(marked);
