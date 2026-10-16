@@ -14,16 +14,16 @@ Object.assign(window.sim, (() => {
     const boar = boars[0];
     GAME_CONFIG.mapResources.boar.dungChance = 1; // every hit scares dung out of it here
     const splats = bloodSplats.length;
-    let killedAt = null, meatAt = null, worked = false;
+    let killedAt = null, meatAt = null, worked = false, bled = false;
     run(30, { each: f => {
-      if (killedAt === null && boar.isCarcass) killedAt = f / 60;
+      if (killedAt === null && boar.isCarcass) { killedAt = f / 60; bled = bloodSplats.length > splats && boar.bloodAge !== undefined; } // (blood dries later)
       if (killedAt !== null && meatAt === null && boar.butcher > 0 && s.working > 0) worked = true;
       if (meatAt === null && s.carrying && (s.carrying.items || [s.carrying]).some(i => i.type === 'rawMeat')) meatAt = f / 60;
     } });
     GAME_CONFIG.mapResources.boar.dungChance = 0.12;
     return {
       killed: killedAt !== null, butcherSeconds: meatAt !== null && killedAt !== null ? meatAt - killedAt : null,
-      worked, gone: !boars.includes(boar), bled: bloodSplats.length > splats && boar.bloodAge !== undefined, dung: dung.length > 0
+      worked, gone: !boars.includes(boar), bled, dung: dung.length > 0
     };
   }
 

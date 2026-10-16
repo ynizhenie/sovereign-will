@@ -1,14 +1,15 @@
 // What settlers do with nothing to do (#199): between waves, instead of wandering round the town hall,
 // an idle settler sits by a campfire (its morale rises faster, and a little past its usual), stands with
 // others in a knot "talking", or does its faction's own thing: humans sharpen their blade (the next blow
-// hits harder), demons spar in pairs (morale up, a little health down), the undead stand and sway. Each
+// hits harder), demons spar in pairs (morale up, a little health down), the undead stand and sway; soldiers
+// and archers also walk the edge of the base on patrol, or train at a dummy (their damage grows). Each
 // pastime lasts a while (GAME_CONFIG.idle.seconds), then another is picked. And any settler free between
 // waves carries dung lying about the base to a heap by the farm plots, nearer for the farmers.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { isInSafeArea } from '../../conflict/combat/index.js';
+import { TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
+import { getBaseRadius, isInSafeArea } from '../../conflict/combat/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
@@ -16,13 +17,18 @@ import { faceTowards, startSwing } from './settlers.draw.js';
 const config = () => GAME_CONFIG.idle;
 
 // the activity texts of the pastimes (activity.<name>)
-export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway' };
+export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain' };
 
 const byId = id => game.settlers.find(o => o.id === id) || null;
 const isMelee = s => s.weapon && s.weapon !== 'fist' && s.weapon !== 'bow';
 // another idle settler free for company: wandering, or already in a knot
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfires = () => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y));
+const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
+// a training dummy with room for one more
+const freeDummy = s => game.buildings.filter(b => b.type === 'dummy' &&
+  game.settlers.filter(o => o !== s && o.idle && o.idle.act === 'train' && o.idle.spot && Math.hypot(o.idle.spot.x - b.x, o.idle.spot.y - b.y) < 1).length < (GAME_CONFIG.buildings.dummy.trainers || 2))
+  .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
 
 // A pastime for the next while: what's possible, one of them at random
 function pickPastime(s) {
@@ -35,6 +41,10 @@ function pickPastime(s) {
   if (faction === 'humans' && isMelee(s) && !s.sharpened) options.push('sharpen', 'sharpen');
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
   if (faction === 'undead') options.push('sway', 'sway');
+  if (isFighter(s)) {
+    options.push('patrolEdge', 'patrolEdge');
+    if (freeDummy(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
+  }
   const act = options[Math.floor(rand() * options.length)];
   const seconds = c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
   /** @type {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null }} */
@@ -52,6 +62,11 @@ function pickPastime(s) {
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     idle.partnerId = other.id;
     other.idle = { act: 'spar', left: seconds, spot: null, partnerId: s.id };
+  } else if (act === 'train') {
+    const dummy = freeDummy(s);
+    idle.spot = { x: dummy.x, y: dummy.y };
+  } else if (act === 'patrolEdge') {
+    idle.left *= 2; // a round takes a while
   }
   return idle;
 }
@@ -116,9 +131,43 @@ export function idlePastime(s, tick) {
     case 'sway':
       s.swaying = true;
       return true;
+    case 'patrolEdge': {
+      // round the base just past its edge, waypoint to waypoint (each soldier its own way round)
+      const dir = Math.floor(s.id) % 2 ? 1 : -1;
+      if (idle.angle === undefined) idle.angle = Math.atan2(s.y - townHall.y, s.x - townHall.x);
+      const point = edgePoint(idle.angle);
+      idle.onPoint = (idle.onPoint || 0) + tick.dt;
+      // there, or can't get there for long: on to the next
+      if (Math.hypot(point.x - s.x, point.y - s.y) < 14 || idle.onPoint > 8) { idle.angle += dir * c.patrolStep; idle.onPoint = 0; }
+      else moveEntityTowards(s, point.x, point.y, s.speed * 0.7, false, tick.dt);
+      return true;
+    }
+    case 'train': {
+      const dummy = game.buildings.find(b => b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
+      if (!dummy || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
+      const place = ringPlace(s, dummy, c.trainRing);
+      // (close enough: the dummy itself may keep it off its exact place)
+      if (Math.hypot(place.x - s.x, place.y - s.y) > 6 && Math.hypot(dummy.x - s.x, dummy.y - s.y) > c.trainRing + 10) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }
+      faceTowards(s, dummy.x, dummy.y);
+      if ((s.attackCooldown || 0) <= 0) { startSwing(s, 0.3); s.attackCooldown = 0.9; }
+      s.trained = Math.min(c.trainMax, (s.trained || 0) + c.trainPerSecond * tick.dt);
+      return true;
+    }
     default:
       return false;
   }
+}
+
+// A patrol's waypoint at `angle` round the town hall: a tile past the base's edge, or nearer in where
+// that's blocked (a wall, water, a tree)
+function edgePoint(angle) {
+  const r = getBaseRadius() + TILE_SIZE;
+  for (let k = 0; k < 4; k++) {
+    const p = { x: townHall.x + Math.cos(angle) * (r - k * TILE_SIZE), y: townHall.y + Math.sin(angle) * (r - k * TILE_SIZE) };
+    const g = getGridPos(p.x, p.y);
+    if (!isTileBlockedForSettler(g.gx, g.gy)) return { x: g.gx * TILE_SIZE + 15, y: g.gy * TILE_SIZE + 15 };
+  }
+  return { x: townHall.x + Math.cos(angle) * r, y: townHall.y + Math.sin(angle) * r };
 }
 
 // ---- Dung to the heap
