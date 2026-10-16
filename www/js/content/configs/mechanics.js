@@ -25,7 +25,7 @@ export const mechanicsConfig = {
   morale: { max: 100, panicBelow: 30, calmAbove: 40, base: { humans: 70, demons: 90, undead: 30, boar: 50 },
     scaryFoes: { humans: { demons: -10, undead: -10 } }, hit: 3, lowHp: 10, lowHpShare: 0.3, allyDeath: 10, foeDeath: 6,
     nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.8, rout: 40,
-    tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140 },
+    tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140, necroCorpseClear: 90, panicDamage: 0.6 },
   // fighting (#208): at most meleePerEnemy settlers in melee on one enemy (meleePerBig on a big one), round
   // it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
   // health when an armed one is within coverRange px to hold the line (alone, only below a quarter). (Archers
@@ -83,7 +83,7 @@ export const mechanicsConfig = {
   // train at a dummy (their damage up trainPerSecond of itself a second, up to trainMax); a soldier guards a
   // gatherer more than guardBeyondTiles past the base's edge, keeping within guardRange px; an idle
   // necromancer takes `bones` bones from a corpse in boneSeconds
-  idle: { seconds: [8, 16], campfireRing: 34, campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 16, companyRange: 260,
+  idle: { seconds: [8, 16], campfireRing: 34, campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sharpenSeconds: 6, sharpenBonus: 1.5, sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
     trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },

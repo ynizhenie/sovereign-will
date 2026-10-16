@@ -24,6 +24,7 @@ export function takeMarkedTarget(s, tick) {
 // to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards
 export function holdPost(s, tick) {
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
+  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false; // no arrows: no post (#232, fightEnemies)
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
   if (getRecentAttacker(s)) return false;
@@ -75,10 +76,11 @@ export function fightEnemies(s, tick) {
   if (!choice) return false; // on the way to the enemy tents, with nothing in the way
   const { targetEnemy, attacker } = choice;
   if (isBowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
-  // an archer with nothing to shoot waits, while there's an enemy to shoot at (with none, it gets on with
-  // its other work: it used to stand here for good)
+  // an archer with nothing to shoot keeps out of the fight at the town hall while there's an enemy about
+  // (#232: it went out to its post empty); with none, it gets on with its other work
   if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy) {
     s.patrolTarget = null;
+    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, dt);
     return true;
   }
   return engageEnemy(s, tick, targetEnemy, attacker, dt);

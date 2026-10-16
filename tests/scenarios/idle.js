@@ -81,12 +81,13 @@ Object.assign(window.sim, (() => {
     return { swaying: !!z.swaying, stood: Math.hypot(z.x - x0, z.y - y0) < 2, activity: z.activity };
   }
 
-  // Dung in the base: an idle worker carries it into the compost heap; with no heap, nobody touches it (#232)
-  function dungHeap({ seed = 'idle-dung', withHeap = true } = {}) {
+  // Dung in the base: a farmer with a backpack carries it into the compost heap; a worker by hand doesn't;
+  // with no heap, nobody touches it (#232)
+  function dungHeap({ seed = 'idle-dung', withHeap = true, farmer = true } = {}) {
     asFaction('humans', seed);
     const heap = withHeap ? placeBuilding('dung_heap', nearHall(5, 4).x, nearHall(5, 4).y) : null;
     invalidateAllPaths();
-    const w = makeSettler(1, townHall.x, townHall.y + 50);
+    const w = makeSettler(1, townHall.x, townHall.y + 50, farmer ? { tool: 'hoe', backpack: true } : {});
     settlers = [w];
     dung = [{ x: nearHall(-4, -2).x, y: nearHall(-4, -2).y, age: 0, by: null, byLeft: true }];
     const carried = new Set();
