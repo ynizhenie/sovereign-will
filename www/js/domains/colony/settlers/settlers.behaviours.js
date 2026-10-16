@@ -21,10 +21,10 @@ import { brewPotion, healAtTent, isShelter, repairTent, treatWounded } from '../
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
-import { collectWorms, fish } from '../../economy/fishing/index.js';
+import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
-import { cook } from '../../economy/cooking/index.js';
+import { chopFirewood, cook } from '../../economy/cooking/index.js';
 import { collectBones, necromancy } from '../../factions/undead/index.js';
 import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
@@ -67,6 +67,7 @@ export function createSettlerTick(dt) {
     wateringAssignments: new Set(),  // crops a farmer is watering this tick
     fertilizeAssignments: new Set(), // wheat plots a farmer is bringing dung to this tick
     dungAssignments: new Set(),      // dung piles a settler is going to carry to a compost heap this tick
+    trapAssignments: new Set(),      // fish traps being emptied this tick
     heapTakers: new Map(),           // compost heap -> farmers going to take dung from it this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
@@ -215,6 +216,7 @@ export const SETTLER_BEHAVIOURS = [
   cleanDung,
   carryCorpse,
   brewPotion,
+  chopFirewood,
   deliverMaterials,
   deliverCarrying,
   repairTent,
@@ -229,6 +231,7 @@ export const SETTLER_BEHAVIOURS = [
   relieve,
   build,
   porterWork,
+  emptyFishTrap,
   collectWorms,
   fish,
   pickApples,

@@ -5,6 +5,8 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
+import { hasAxeTool } from '../../colony/equipment/index.js';
+import { playWorkSound } from '../../../app/index.js';
 import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
@@ -104,4 +106,34 @@ export function cook(s, tick) {
 // The fuel the stock has, coal before wood (see GAME_CONFIG.cooking.fuel)
 export function findFuel() {
   return Object.keys(GAME_CONFIG.cooking.fuel).find(f => stock[f] > 0) || null;
+}
+
+// ---- Firewood (#199)
+
+// A woodcutter with nothing to do (idle last tick), or any time the firewood is nearly out, chops firewood
+// at a storage: takes up to perTrip wood and splits each into `makes` firewood in `seconds`, while the
+// colony has a campfire and less firewood than `keep`. The wood is in its hands meanwhile
+export function chopFirewood(s, tick) {
+  const c = GAME_CONFIG.firewood;
+  const load = s.carrying && s.carrying.forChop ? s.carrying : null;
+  if (load && (tick.isWaveActive || s.isPossessed)) { stock.wood += load.amount; s.carrying = null; return false; }
+  if (!load) {
+    if (s.role !== 'worker' || !hasAxeTool(s.tool) || s.isPossessed || s.carrying || tick.isWaveActive) return false;
+    if (!game.buildings.some(b => b.type === 'campfire') || stock.wood < 1 || (stock.firewood || 0) >= c.keep) return false;
+    if (!s.wasIdle && (stock.firewood || 0) >= c.low) return false;
+    s.patrolTarget = null;
+    return fetchFromStorage(s, 'wood', tick.dt, () => { s.carrying = { type: 'wood', amount: takeStock('wood', c.perTrip), forChop: true }; s.chopTimer = 0; });
+  }
+  // at the storage it took the wood from: split it there
+  s.patrolTarget = null;
+  s.working = 0.1;
+  playWorkSound(s, 'chop', 0.5);
+  s.chopTimer = (s.chopTimer || 0) + tick.dt;
+  if (s.chopTimer >= c.seconds) {
+    s.chopTimer = 0;
+    load.amount--;
+    stock.firewood = (stock.firewood || 0) + c.makes;
+    if (load.amount <= 0) s.carrying = null;
+  }
+  return true;
 }
