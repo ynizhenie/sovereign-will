@@ -66,6 +66,31 @@ test('ore spawners grow ore on free ground only, never over natural rock (#106)'
   for (const m of r) expect(m).toEqual({ rocksKept: true, oreOnRock: false });
 });
 
+test('nothing grows on a corpse or on a unit: ore round a spawner and regrowth skip their tiles (#223)', () => {
+  const r = (() => {
+    window.sim.start('ore-a');
+    const spawner = getOreSpawners('iron')[0];
+    const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
+    // a corpse on every free spot but one, a zombie on that one: no ore grows
+    corpses = spots.slice(1).map(p => ({ x: p.x, y: p.y, radius: 10, side: 'enemy', kind: 'raider', age: 0 }));
+    settlers = [createSettler('zombie', 1, spots[0].x, spots[0].y)];
+    const leftForOre = getOreSpotsAround(spawner, getOreSpawnerRadius()).length;
+    for (let i = 0; i < 20; i++) respawnOre('iron');
+    // a tree growing back on a free tile with a corpse on it lands elsewhere
+    const g = getGridPos(townHall.x, townHall.y);
+    let c = null;
+    for (let d = 6; !c && d < 30; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) {
+      const x = (g.gx + dx) * TILE_SIZE + 15, y = (g.gy + dy) * TILE_SIZE + 15;
+      if (!c && !isDesertTile(x, y) && !isTileOccupied(x, y)) c = { x, y, radius: 10, side: 'enemy', kind: 'raider', age: 0 };
+    }
+    corpses.push(c);
+    for (let i = 0; i < 20; i++) spawnResource('tree', c.x, c.y, 1);
+    const taken = [...corpses, ...settlers];
+    return { leftForOre, oreOnThem: ironOres.some(o => taken.some(p => Math.hypot(o.x - p.x, o.y - p.y) < 20)), treeOnCorpse: trees.some(t => Math.hypot(t.x - c.x, t.y - c.y) < 20) };
+  })();
+  expect(r).toEqual({ leftForOre: 0, oreOnThem: false, treeOnCorpse: false });
+});
+
 test('forests are uneven blobs of lobes, their trees inside them (#106)', async () => {
   const r = await (() => ['forest-a', 'forest-b', 'maze-137'].map(seed => {
     window.sim.start(seed);

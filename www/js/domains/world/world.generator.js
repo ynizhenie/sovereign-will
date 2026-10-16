@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getMapAreaScale, isBorderZone, rand, resetTileIndex, townHall } from '../../engine/world/index.js';
-import { isTileOccupied } from '../economy/building/index.js';
+import { isSpawnSpotFree, isTileOccupied } from '../economy/building/index.js';
 import { addMapResource, getMapResourceDef } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/index.js';
@@ -71,7 +71,7 @@ export function getOreSpotsAround(spawner, radius) {
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
       if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
       // free ground only: ore never replaces natural rock
-      if (!isDesertTile(x, y) && !isTileOccupied(x, y)) spots.push({ x, y });
+      if (!isDesertTile(x, y) && isSpawnSpotFree(x, y)) spots.push({ x, y });
     }
   }
   return spots;
@@ -157,7 +157,7 @@ export function spawnResource(type, nearX = null, nearY = null, spread = 180, pi
     let inDesert = isDesertTile(tx, ty);
     let desertResource = type === 'cactus' || type === 'pebble';
     let cactusOutsideDesert = type === 'cactus' && !inDesert;
-    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && !isTileOccupied(tx, ty) &&
+    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && isSpawnSpotFree(tx, ty) &&
         (!inDesert || desertResource) && !cactusOutsideDesert) {
       isValid = true;
     }
