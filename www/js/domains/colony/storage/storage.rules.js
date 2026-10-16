@@ -2,7 +2,7 @@
 // whether they can be paid, food by kind, and what a settler carries
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { getResourceIcon, showNotification } from '../../../ui/index.js';
+import { getResourceIcon, showCostOnButton, showNotification } from '../../../ui/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { getReservedForBlueprints } from '../../economy/building/index.js';
@@ -117,6 +117,7 @@ export function getMissingCost(cost, have = id => Number(stock[id] || 0)) {
 }
 
 export function showCostError(cost, prefix, have) {
+  if (showCostOnButton()) return; // on the item's own card, by its button (#232)
   showNotification(t('cost.missing', { prefix, cost: formatCost(cost), missing: getMissingCost(cost, have) }), true);
 }
 
