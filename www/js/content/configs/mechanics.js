@@ -71,6 +71,8 @@ export const mechanicsConfig = {
   // porters (#199): a load is taken off a gatherer more than relayTiles from any storage; corpses go
   // corpseHeapTiles past the base's edge, carried at corpseSpeed of a settler's speed
   porter: { relayTiles: 10, corpseHeapTiles: 4, corpseSpeed: 0.6 },
+  // a resource the player marked with Point is worked by up to this many at once (#232: one kind of mark)
+  markWorkers: 2,
   // a boar takes this many times an item's damage (#232)
   boarDamageFactor: 2,
   // idle settlers' pastimes between waves (#199), each for `seconds` (from..to): by a campfire (morale up at

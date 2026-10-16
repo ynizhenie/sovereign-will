@@ -133,7 +133,8 @@ function enemyTapped() {
   return true;
 }
 
-// Point mode on the map: a fishing spot, or a resource's priority (again: unmark)
+// Point mode on the map: a fishing spot, or a resource marked "work here" (again: unmark). One kind of
+// mark, no levels (the 1-2-3 levels were confusing, #232)
 function markTapped() {
   let clickedWater = game.waterTiles.find(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 18);
   if (clickedWater) {
@@ -147,7 +148,7 @@ function markTapped() {
   let clickedRes = allResources.find(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22);
 
   if (clickedRes) {
-    clickedRes.priority = ((clickedRes.priority || 0) + 1) % 4;
+    clickedRes.priority = clickedRes.priority ? 0 : 1;
     // an apple tree marked while it has apples gets its apples picked, not felled (see pickApples)
     if (clickedRes.apple) clickedRes.markIntent = clickedRes.applesReady ? 'apples' : 'chop';
     return;
