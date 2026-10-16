@@ -64,6 +64,7 @@ Object.assign(window.sim, (() => {
     clearResources();
     const idle = makeSettler(1, townHall.x + 40, townHall.y + 40, { weapon: 'sword', role: 'soldier' });
     settlers = [idle];
+    idle.idle = { act: 'wander', left: 99, spot: null, partnerId: null }; // (not a pastime, #199)
     run(1);
     const idleRests = isResting(idle);
     trees.push({ x: townHall.x + 90, y: townHall.y, hp: 50, maxHp: 50 });
