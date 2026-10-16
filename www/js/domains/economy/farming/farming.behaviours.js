@@ -101,6 +101,7 @@ export function waterCrops(s, tick) {
 // the plot's next harvest yields more (GAME_CONFIG.fertilizer). Called off its way (a wave), it drops the
 // dung where it is (#201)
 export function fertilize(s, tick) {
+  if (s.carrying && s.carrying.toHeap) return false; // on its way to the heap (cleanDung, #199)
   const carriesDung = !!s.carrying && s.carrying.type === 'dung';
   const able = s.role === 'worker' && hasToolFamily(s.tool, 'hoe') && s.backpack && !s.isPossessed && !tick.isWaveActive;
   if (carriesDung && !able) {

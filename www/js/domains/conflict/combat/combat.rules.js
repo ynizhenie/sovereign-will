@@ -78,7 +78,8 @@ export function performAttack(attacker, targetX, targetY) {
     startSwing(attacker, 0.3);
   } else {
     const range = stats.range;
-    const dmg = stats.damage * stats.multiplier;
+    // a blade sharpened while idle (#199): its next blow that lands hits harder
+    const dmg = stats.damage * stats.multiplier * (attacker.sharpened ? GAME_CONFIG.idle.sharpenBonus : 1);
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
@@ -96,6 +97,7 @@ export function performAttack(attacker, targetX, targetY) {
         Math.hypot(target.at.x - targetX, target.at.y - targetY) < Math.hypot(best.at.x - targetX, best.at.y - targetY) ? target : best);
       aimed.hit();
     }
+    if (struck.length > 0) attacker.sharpened = false;
 
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, Math.min(0.35, stats.cooldown * 0.8));

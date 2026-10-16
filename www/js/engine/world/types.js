@@ -38,6 +38,11 @@
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
  * @property {Watchtower | null} [towerAssignment] the watchtower it guards
  * @property {boolean} [isIdle]
+ * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number } | null} [idle]  its pastime (#199)
+ * @property {boolean} [swaying]     an idle undead swaying
+ * @property {boolean} [sharpened]   its blade sharpened: the next blow that lands hits harder
+ * @property {Object | null} [dungTarget]  the pile of dung it's going for (cleanDung)
  * @property {boolean} [hasArmor]
  * @property {number} [usingCan]     seconds left of watering with the can
  * @property {number} [bagHerbs]     a medic's herbs
