@@ -2,4 +2,4 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { deliverCarrying, deliverWhenNothingToDo, fetchFromStorage, findNearestStorage, goDeliver, isAtStorage, walkToStorage } from './storage.behaviours.js';
-export { addCarryLoad, addResources, canAfford, formatCost, getCarryCapacity, getFreeStock, getMissingCost, getResourceAmount, getSpareStock, giveResourceToSettler, hasRoomToCarry, mixStartFood, moveSettlerToTownHall, payCost, showCostError, stock, syncFoodMix, takeStock } from './storage.rules.js';
+export { addCarryLoad, addResources, canAfford, formatCost, getCarryCapacity, getFreeStock, getMissingCost, getResourceAmount, giveResourceToSettler, hasRoomToCarry, mixStartFood, moveSettlerToTownHall, payCost, showCostError, stock, syncFoodMix, takeStock } from './storage.rules.js';

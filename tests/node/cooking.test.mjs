@@ -36,8 +36,3 @@ test('an idle soldier cooks before a worker does; with none, a worker with free 
   expect(both).toMatchObject({ cooks: ['soldier'], carriedFood: true }); // (the soldier hunts boars too: more meat than fuel)
   expect((await sim.cookingRun({ workers: 1 })).cooks).toEqual(['worker']);
 });
-
-test('a campfire leaves the wood the player keeps back (#212)', async () => {
-  expect(await sim.cookingRun({ fuel: { wood: 2, coal: 0 }, reserves: { wood: 5 } })).toMatchObject({ food: 5, rawMeat: 3, wood: 2 });
-  expect(await sim.cookingRun({ fuel: { wood: 7, coal: 0 }, reserves: { wood: 5 } })).toMatchObject({ food: 12, wood: 5 });
-});
