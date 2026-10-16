@@ -92,5 +92,31 @@ Object.assign(window.sim, (() => {
     return { ordered, crafting, axe, noSmithy, atSmithy, sword };
   }
 
-  return { crafting, lootToArmory, orderGearFor, armorOff };
+  // How long the making takes (#232): an axe at the town hall half its time (2 s), an iron sword at the
+  // smithy all of it (6 s); while working it's drawn making it, with the materials in its hands before
+  function craftTimes({ seed = 'craft-times' } = {}) {
+    start(seed);
+    clearResources();
+    const g = getGridPos(townHall.x, townHall.y);
+    placeBuilding('smithy', (g.gx + 6) * TILE_SIZE + 15, g.gy * TILE_SIZE + 15);
+    invalidateAllPaths();
+    const w = makeSettler(1, townHall.x + 60, townHall.y + 60);
+    settlers = [w];
+    Object.assign(stock, { wood: 50, stone: 50, iron: 20 });
+    window.game.armory = {};
+    const timeIt = order => {
+      order();
+      let work = 0, inHands = false, drawnMaking = false;
+      run(20, { each: () => { w.hunger = 999; const o = window.game.craftOrders[0];
+        if (o && o.stage === 'work') { work += 1 / 60; if (isCrafting(w)) drawnMaking = true; }
+        if (o && o.stage === 'carry' && isCarryingInHands(w)) inHands = true; } });
+      return { seconds: Math.round(work * 2) / 2, inHands, drawnMaking };
+    };
+    const axe = timeIt(() => assignTool('axe'));
+    w.tool = 'none'; w.targetEquipment = null;
+    const sword = timeIt(() => craftWeapon('iron_sword'));
+    return { axe, sword };
+  }
+
+  return { craftTimes, crafting, lootToArmory, orderGearFor, armorOff };
 })());

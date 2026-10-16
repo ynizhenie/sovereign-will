@@ -16,3 +16,7 @@ test('a fallen enemy drops loot; a worker picks it up, the sword goes into the a
 test('things are made: an axe at the town hall by a worker, then handed out; iron only with a smithy, and made there (#211)', async () => {
   expect(await sim.crafting()).toEqual({ ordered: true, crafting: true, axe: true, noSmithy: true, atSmithy: true, sword: true });
 });
+
+test('things without iron are made quicker at the town hall (2 s for an axe) than iron ones at the smithy (6 s); the materials are carried in hands (#232)', async () => {
+  expect(await sim.craftTimes()).toEqual({ axe: { seconds: 2, inHands: true, drawnMaking: true }, sword: { seconds: 6, inHands: true, drawnMaking: true } });
+});
