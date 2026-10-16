@@ -22,7 +22,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -49,6 +49,9 @@
  * @property {boolean} [hasArmor]
  * @property {number} [usingCan]     seconds left of watering with the can
  * @property {number} [bagHerbs]     a medic's herbs
+ * @property {number} [bagPotions]   a medic's potions (#199)
+ * @property {number} [brewTimer]    a medic brewing a potion
+ * @property {{ kind: string, who: any } | null} [porterTarget]  a porter's job: a gatherer's load or a corpse (#199)
  * @property {number} [burning]      seconds left on fire
  * @property {number} [temporary]    a raised zombie's seconds left
  * @property {boolean} [crumbled]

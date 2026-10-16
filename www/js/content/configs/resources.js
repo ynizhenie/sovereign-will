@@ -19,6 +19,8 @@ export const resourcesConfig = {
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
+    // a medic's potion (#199): brewed from herbs and water at a campfire, heals more than a herb
+    potions: { id: 'potions', icon: 'potions', type: 'resource', factions: ['humans', 'demons'] },
     // factions: only shown to these factions
     bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] },
     // the undead's other hiring resource: food brought in turns into it (meat and fish into bones)
@@ -38,7 +40,7 @@ export const resourcesConfig = {
     { id: 'stone', members: ['stone'], pinned: true },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
     { id: 'materials', icon: 'stone', members: ['coal', 'ironOre', 'iron', 'leather'] },
-    { id: 'supplies', members: ['arrows'] },
+    { id: 'supplies', icon: 'arrows', members: ['arrows', 'potions'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
     { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan'] } },
     { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'shield'] } }

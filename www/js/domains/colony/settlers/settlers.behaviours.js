@@ -17,7 +17,7 @@ import { deliverCarrying, deliverWhenNothingToDo, moveSettlerToTownHall } from '
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { isWaterReachable } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
-import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
+import { brewPotion, healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
@@ -30,6 +30,7 @@ import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
+import { carryCorpse, porterWork } from './settlers.porter.js';
 
 export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
@@ -212,6 +213,8 @@ export const SETTLER_BEHAVIOURS = [
   cook,
   fertilize,
   cleanDung,
+  carryCorpse,
+  brewPotion,
   deliverMaterials,
   deliverCarrying,
   repairTent,
@@ -225,6 +228,7 @@ export const SETTLER_BEHAVIOURS = [
   clearEnemyTents,
   relieve,
   build,
+  porterWork,
   collectWorms,
   fish,
   pickApples,
