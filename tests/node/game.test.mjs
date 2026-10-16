@@ -107,11 +107,11 @@ test('the ground uses more than one grass shade, not one flat repeating fill (#6
   expect(r.shadeCount).toBe(r.totalShades);
 });
 
-test('a boar takes the wielded weapon\'s hunt damage, not a fixed amount (#62)', async () => {
+test('a boar takes twice the wielded weapon\'s damage, not a fixed amount (#62, #232)', async () => {
   const fistDmg = await sim.boarHuntDamage({ weapon: 'fist' });
   const swordDmg = await sim.boarHuntDamage({ weapon: 'sword' });
-  expect(fistDmg).toBe(5);
-  expect(swordDmg).toBe(32);
+  expect(fistDmg).toBe(12); // 6 × 2
+  expect(swordDmg).toBe(40); // 20 × 2
 });
 
 test('a boar flees a settler that gets close, even before being attacked (#62)', async () => {

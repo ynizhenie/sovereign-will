@@ -21,9 +21,9 @@ export function getItemStats(category, item) {
     stats = [['hp', item.hp], ['speed', item.speed], ['strength', `×${item.damageMultiplier}`], ['places', item.population], ['loads', item.carryLoads]];
   } else if (category === 'weapons' && item.combat) {
     stats = [['damage', item.combat.damage], ['hits', item.combat.cooldown ? round(1 / item.combat.cooldown) : undefined],
-      ['reach', tiles(item.combat.range || item.combat.approach)], ['hunt', item.hunt && item.hunt.damage]];
+      ['reach', tiles(item.combat.range || item.combat.approach)]];
   } else if (category === 'tools') {
-    stats = [['fight', item.combatDamage], ['hunt', item.huntDamage]];
+    stats = [['fight', item.combatDamage]];
   } else if (category === 'gear') {
     if (item.hpBonus) stats.push(['hp', `+${item.hpBonus}`]);
     if (item.damageReduction) stats.push(['cut', percent(item.damageReduction)]);

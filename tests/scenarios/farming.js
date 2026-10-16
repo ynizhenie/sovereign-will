@@ -1,6 +1,6 @@
 // Farm zones and farmers (#29)
 Object.assign(window.sim, (() => {
-  const { start, run, helpers: { tileCenter, makeSettler, clearResources } } = window.sim;
+  const { start, run, helpers: { tileCenter, makeSettler, clearResources, placeBuilding } } = window.sim;
   // tile centres east of the town hall: dx tiles right, dy tiles down
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
 
@@ -52,13 +52,14 @@ Object.assign(window.sim, (() => {
     clearResources();
     const p = nearHall(4, 3), d = nearHall(-3, 4);
     farmPlots = [{ x: p.x, y: p.y, growth: 30, priority: 0, harvestProgress: 0 }];
-    dung = [{ x: d.x, y: d.y, age: 0, by: null, byLeft: true }];
+    const heap = Object.assign(placeBuilding('dung_heap', d.x, d.y), { dung: 1 }); // (#232)
+    invalidateAllPaths();
     const farmer = makeSettler(1, townHall.x + 40, townHall.y + 40, { tool: 'hoe', backpack });
     settlers = [farmer];
     stock.food = 999;
     run(15, { each: () => { farmer.hunger = 999; } });
     const plot = farmPlots[0];
-    const r = { fertilized: !!plot.fertilized, dungLeft: dung.length };
+    const r = { fertilized: !!plot.fertilized, dungLeft: heap.dung };
     const harvester = makeSettler(2, plot.x, plot.y);
     finishHarvest(harvester, plot, 'farm');
     r.wheat = harvester.carrying ? (harvester.carrying.items || [harvester.carrying]).filter(c => c.type === 'wheat').reduce((n, c) => n + c.amount, 0) : 0;
