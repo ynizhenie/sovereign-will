@@ -13,7 +13,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
-import { deliverCarrying, deliverWhenNothingToDo, moveSettlerToTownHall } from '../storage/index.js';
+import { deliverCarrying, deliverWhenNothingToDo, haulPiles, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { isWaterReachable } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
@@ -246,6 +246,7 @@ export const SETTLER_BEHAVIOURS = [
   collectBones,
   escortGatherers,
   deliverWhenNothingToDo,
+  haulPiles,
   patrol
 ];
 

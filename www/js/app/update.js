@@ -10,6 +10,7 @@ import { growCrops } from '../domains/economy/farming/index.js';
 import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, updateTemporaryZombies } from '../domains/factions/undead/index.js';
 import { separateSettlersFromEnemies } from '../engine/movement/index.js';
 import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
+import { keepStoresInStep } from '../domains/colony/storage/index.js';
 import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishTraps } from '../domains/economy/fishing/index.js';
@@ -61,6 +62,7 @@ export function update(dt) {
   removeDeadEnemies();
   updateCorpses(dt);
 
+  keepStoresInStep(); // what lies where, in step with the stock (#248)
   updateUnitCounts();
   updateUI();
   refreshAffordability();

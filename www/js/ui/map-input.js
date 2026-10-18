@@ -172,7 +172,7 @@ function markResource(r) {
 
 // What a thing on the map is called and drawn as, for the menu: loot by what's in it
 function resourceLook(r) {
-  const kind = r.apple ? 'apple_tree' : getMapResourceKind(r) || '';
+  const kind = r.apple ? 'apple_tree' : r.oreSpawner ? `${r.oreSpawner}_spawner` : getMapResourceKind(r) || '';
   const [category, id] = ((r.items || [])[0] || '').split(':');
   const item = category && GAME_CONFIG[category] && GAME_CONFIG[category][id];
   if (item) return { icon: item.icon, name: item.label };

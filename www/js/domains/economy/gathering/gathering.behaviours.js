@@ -5,6 +5,8 @@ import { game } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
+import { addCarryLoad, giveResourceToSettler } from '../../colony/storage/index.js';
+import { ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { isInSafeArea } from '../../conflict/combat/index.js';
 import { huntBoar } from '../hunting/index.js';
@@ -118,7 +120,15 @@ export function workResource(s, assignedRes, tick) {
   const work = def.work;
   playWorkSound(s, def.tool === 'axe' ? 'chop' : def.tool === 'pickaxe' ? 'mine' : 'rustle', def.tool ? 0.5 : 0.7);
 
-  if (work.pickup) {
+  if (assignedRes.oreSpawner) {
+    // an ore spawner (#248): slow, one ore at a time, never used up
+    assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
+    if (assignedRes.harvestProgress >= def.spawnerWork.seconds[s.tool]) {
+      assignedRes.harvestProgress = 0;
+      for (const [item, amount] of Object.entries(getMapResourceDef(ORE_KINDS[assignedRes.oreSpawner].resource).yield)) giveResourceToSettler(s, item, Math.min(1, amount));
+      addCarryLoad(s);
+    }
+  } else if (work.pickup) {
     finishHarvest(s, assignedRes, kind);
   } else if (work.seconds !== undefined) {
     const duration = typeof work.seconds === 'number' ? work.seconds : (work.seconds[s.tool] ?? Object.values(work.seconds)[0]);

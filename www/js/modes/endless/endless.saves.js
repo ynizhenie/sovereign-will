@@ -43,7 +43,7 @@ export function serializeGame() {
     version: 1,
     world,
     stock: { ...stock },
-    townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested },
+    townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested, store: { ...(townHall.store || {}) } },
     cols: game.COLS, rows: game.ROWS,
     clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
     playerGear: { ...game.playerGear },
@@ -86,7 +86,8 @@ export function loadGame(data) {
   for (const s of game.settlers) if (goneKinds[s.type]) s.type = goneKinds[s.type];
   const goneEnemies = { undead_skeleton: 'undead_zombie_archer', demon_fire_imp: 'demon_imp_archer' };
   for (const en of game.enemies) if (goneEnemies[en.enemyKey]) en.enemyKey = goneEnemies[en.enemyKey];
-  Object.assign(townHall, data.townHall);
+  Object.assign(townHall, { store: {} }, data.townHall); // (older saves: nothing in it, filled again from the stock)
+  game.piles = game.piles || [];
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);

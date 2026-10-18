@@ -25,8 +25,10 @@ export const mapConfig = {
       work: { seconds: { pickaxe: 3.0, iron_pickaxe: 2.0 } } },
     coal_ore: { list: 'coalOres', blocksArrows: true, tool: 'pickaxe', hp: 5, yield: { coal: 3 }, regrow: 'spawner',
       work: { seconds: { pickaxe: 2.5, iron_pickaxe: 1.7 } } },
+    // spawnerWork (#248): an ore spawner (rock too) marked is mined for one of its ore every `seconds`, never
+    // used up
     natural_rock: { list: 'naturalRocks', blocksArrows: true, tool: 'pickaxe', markOnly: true, hp: 100, yield: { stone: 15 }, clearsPath: true,
-      work: { drain: { pickaxe: 25, iron_pickaxe: 38 } } },
+      work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, spawnerWork: { seconds: { pickaxe: 9, iron_pickaxe: 6 } } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
     // what a fallen enemy dropped (#210): picked up like a stick; its yield and items are its own
