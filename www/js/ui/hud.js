@@ -6,13 +6,14 @@ import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
-import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff } from '../domains/colony/equipment/index.js';
+import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 
 export function updateUI() {
   updateWave();
   renderBuildingCard();
+  updateCraftLists();
   updateResourceStrip();
   updateSheetStock();
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
@@ -141,17 +142,6 @@ export function resourceHudId(resourceKey) {
   return `resource-${resourceKey}-txt`;
 }
 
-// Open a resource group's row (closing any other), or close it if it's open
-export function toggleResourceGroup(groupId) {
-  for (const group of GAME_CONFIG.resourceGroups) {
-    const row = document.getElementById(`group-${group.id}-members`);
-    const tile = document.getElementById(`group-${group.id}`);
-    if (!row) continue;
-    row.hidden = group.id === groupId ? !row.hidden : true;
-    if (tile) tile.classList.toggle('open', !row.hidden);
-  }
-}
-
 export function updateSeedHud() {
   const seedElem = document.getElementById('hud-seed');
   if (seedElem && game.worldSeed) {
@@ -159,79 +149,63 @@ export function updateSeedHud() {
   }
 }
 
-// The resource tiles: the base, the population, then the resources by group (GAME_CONFIG.resourceGroups):
-// a tile with the group's total, tapping it opens a row with each resource in it, under the tiles
+// The stock's drop-down (#248: a drop-down of tiles that opened rows of their own was a menu in a menu in a
+// menu): the base and the population, then one line a group (GAME_CONFIG.resourceGroups) with its name and
+// every resource in it, an icon and a number each, all in sight at once
 export function renderResourceTiles() {
   const resourcesHud = document.getElementById('resources-hud');
   if (!resourcesHud) return;
-  const base = document.createElement('div');
-  base.innerHTML = `${iconHtml('hall')} ${escapeHtml(t('hud.base'))}: <b id="base-hp-txt" style="color: #e74c3c;">100/100</b>`;
-  resourcesHud.appendChild(base);
-
-  const population = document.createElement('div');
-  population.className = 'population-tile';
-  population.innerHTML = `${iconHtml('worker')} ${escapeHtml(t('hud.people'))}: <b id="pop-txt" style="color: #2ecc71;">2/5</b> <span style="font-size: 0.9em; opacity: 0.85;">(${iconHtml('worker')} <b id="workers-cnt">0</b> | ${iconHtml('swords')} <b id="warriors-cnt">0</b>)</span>`;
-  resourcesHud.appendChild(population);
-
-  // resources by group (GAME_CONFIG.resourceGroups): a tile with the group's total; tapping it opens a
-  // row with each resource in it, underneath the tiles
-  const resourceTile = (resource, parent) => {
-    const item = document.createElement('div');
-    item.innerHTML = `${resource.icon ? iconHtml(resource.icon) : ''} ${escapeHtml(resource.label)}: <b id="${resourceHudId(resource.id)}">0</b>`;
-    parent.appendChild(item);
+  resourcesHud.classList.add('res-lines');
+  const line = (name, id = '') => {
+    const el = document.createElement('div');
+    el.className = 'res-line';
+    if (id) el.id = `group-${id}`;
+    if (name) { const n = document.createElement('span'); n.className = 'res-line-name'; n.textContent = name; el.appendChild(n); }
+    resourcesHud.appendChild(el);
+    return el;
   };
-  const details = document.createElement('div');
-  details.id = 'resource-details';
-  details.className = 'resource-details';
+  const chip = (parent, icon, label, id) => {
+    const c = document.createElement('span');
+    c.className = 'res-chip';
+    c.title = label;
+    c.innerHTML = `${icon ? iconHtml(icon) : ''} <b id="${id}">0</b>`;
+    parent.appendChild(c);
+  };
+  const top = line('');
+  top.innerHTML = `<span class="res-chip">${iconHtml('hall')} ${escapeHtml(t('hud.base'))} <b id="base-hp-txt" style="color: #e74c3c;">100/100</b></span>` +
+    `<span class="res-chip population-tile">${iconHtml('worker')} <b id="pop-txt" style="color: #2ecc71;">2/5</b> (${iconHtml('worker')} <b id="workers-cnt">0</b> ${iconHtml('swords')} <b id="warriors-cnt">0</b>)</span>`;
   const grouped = new Set();
+  const singles = [];
   for (const group of GAME_CONFIG.resourceGroups) {
     const members = group.members.filter(id => GAME_CONFIG.resources[id]);
     members.forEach(id => grouped.add(id));
-    if (!isForPlayerFaction(group)) continue; // the undead have no food groups, nor its resources' tiles
+    if (!isForPlayerFaction(group)) continue; // the undead have no food groups, nor its resources
     if (group.kinds) {
-      // one resource opening onto its kinds (Food: berries, bread...)
+      // food, and what it's made of
       const resource = GAME_CONFIG.resources[members[0]];
-      const row = groupTile(group, `${resource.icon ? iconHtml(resource.icon) : ''} ${escapeHtml(resource.label)}: <b id="${resourceHudId(resource.id)}">0</b> ▾`, resourcesHud, details);
-      for (const kind of Object.values(GAME_CONFIG[group.kinds])) {
-        const item = document.createElement('div');
-        item.innerHTML = `${iconHtml(kind.icon)} ${escapeHtml(kind.label)}: <b id="food-kind-${kind.id}-txt">0</b>`;
-        row.appendChild(item);
-      }
+      const row = line(resource.label, group.id);
+      chip(row, resource.icon, resource.label, resourceHudId(resource.id));
+      for (const kind of Object.values(GAME_CONFIG[group.kinds])) chip(row, kind.icon, kind.label, `food-kind-${kind.id}-txt`);
       continue;
     }
-    if (members.length === 1) { resourceTile(GAME_CONFIG.resources[members[0]], resourcesHud); continue; }
     if (group.held) {
-      const row = groupTile(group, `${iconHtml(group.icon)} ${escapeHtml(group.label)}: <b id="group-${group.id}-txt">0</b> ▾`, resourcesHud, details);
-      for (const [category, id] of getHeldItems(group)) {
-        const item = GAME_CONFIG[category][id];
-        const cell = document.createElement('div');
-        cell.innerHTML = `${item.icon ? iconHtml(item.icon) : ''} ${escapeHtml(item.label)}: <b id="held-${category}-${id}-txt">0</b>`;
-        row.appendChild(cell);
-      }
+      const row = line(group.label, group.id);
+      chip(row, group.icon, group.label, `group-${group.id}-txt`);
+      for (const [category, id] of getHeldItems(group)) chip(row, GAME_CONFIG[category][id].icon, GAME_CONFIG[category][id].label, `held-${category}-${id}-txt`);
       continue;
     }
-    const row = groupTile(group, `${iconHtml(group.icon)} ${escapeHtml(group.label)}: <b id="group-${group.id}-txt">0</b> ▾`, resourcesHud, details);
-    members.forEach(id => resourceTile(GAME_CONFIG.resources[id], row));
+    if (members.length === 1) { singles.push(GAME_CONFIG.resources[members[0]]); continue; }
+    const row = line(group.label, group.id);
+    members.filter(id => isForPlayerFaction(GAME_CONFIG.resources[id])).forEach(id => chip(row, GAME_CONFIG.resources[id].icon, GAME_CONFIG.resources[id].label, resourceHudId(id)));
+    // (its total, as before, for whoever reads it)
+    const total = document.createElement('b'); total.id = `group-${group.id}-txt`; total.hidden = true; row.appendChild(total);
   }
-  Object.values(GAME_CONFIG.resources).filter(r => !grouped.has(r.id) && isForPlayerFaction(r)).forEach(r => resourceTile(r, resourcesHud));
-  resourcesHud.after(details);
-}
-
-// A group's tile (its text as HTML) on the HUD, and its row of members (returned, to fill) in `details`,
-// opened and closed by a tap on the tile
-function groupTile(group, html, resourcesHud, details) {
-  const tile = document.createElement('div');
-  tile.className = 'resource-group';
-  tile.id = `group-${group.id}`;
-  tile.innerHTML = html;
-  resourcesHud.appendChild(tile);
-  const row = document.createElement('div');
-  row.className = 'resource-group-members';
-  row.id = `group-${group.id}-members`;
-  row.hidden = true;
-  details.appendChild(row);
-  tile.addEventListener('click', () => toggleResourceGroup(group.id));
-  return row;
+  singles.push(...Object.values(GAME_CONFIG.resources).filter(r => !grouped.has(r.id) && isForPlayerFaction(r)));
+  if (singles.length) {
+    const row = line('');
+    resourcesHud.insertBefore(row, resourcesHud.children[1] || null);
+    singles.forEach(r => chip(row, r.icon, r.label, resourceHudId(r.id)));
+  }
 }
 
 // ---- What the selected settler holds, a "take off" on each: its tool, its weapon, its gear (the buttons

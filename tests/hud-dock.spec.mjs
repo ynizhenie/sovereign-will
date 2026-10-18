@@ -37,7 +37,7 @@ test('a dock button opens its sheet and closes it again; another tab swaps it; P
 
   await build.click();
   await page.click('[data-arg="tab-tools"]');
-  await expect(page.locator('#tool-actions')).toBeVisible(); // tools in People (hiring is at the town hall, #211)
+  await expect(page.locator('#workshop-list')).toBeVisible(); // the Workshop's list (#248)
   await expect(page.locator('#build-actions')).toBeHidden();
   await page.click('#btn-interact');
   expect(await body(page)).toEqual({ sheet: false, placing: false, stock: false });

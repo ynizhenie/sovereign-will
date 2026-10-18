@@ -1,26 +1,11 @@
 import { test, expect } from './helpers.mjs';
 import { openGame, iconText } from './helpers.mjs';
 
-test('opening a resource group does not change the panel size (#119)', async ({ page }) => {
-  await openGame(page);
-  await page.click('#play-button');
-  await page.click('#resource-strip'); // all of the stock, dropped down from the strip
-  const panel = page.locator('#resources-panel');
-  await expect(panel).toBeVisible();
-  // its layout box, not its drawn one (that one moves while it drops down)
-  const box = () => panel.evaluate(el => ({ height: el.offsetHeight, top: el.offsetTop }));
-  const before = await box();
-  await page.click('#group-food');
-  await expect(page.locator('#group-food-members')).toBeVisible();
-  expect(await box()).toEqual(before);
-});
-
 test('wood and stone always show; worms are raw food and get eaten when food runs out (#119)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  const tiles = await iconText(page, '#resources-hud > div');
-  expect(tiles.filter(text => text.startsWith('[[wood]] Дерево:'))).toHaveLength(1);
-  expect(tiles.filter(text => text.startsWith('[[stone]] Камень:'))).toHaveLength(1);
+  expect(await page.locator('#resources-hud #resource-wood-txt').count()).toBe(1);
+  expect(await page.locator('#resources-hud #resource-stone-txt').count()).toBe(1);
   const r = await page.evaluate(() => {
     stock.food = 1; stock.worms = 5;
     settlers.forEach(s => { s.hunger = 0.001; });
@@ -49,11 +34,11 @@ test('Tools and Weapons tiles count what settlers hold (#119)', async ({ page })
   await expect(page.locator('#held-weapons-fist-txt')).toHaveCount(0);
 });
 
-test('armour/shield and backpack/watering can sit in their own block; taking things off is on the selected settler, one button per thing it holds (#119, #232)', async ({ page }) => {
+test('gear is made where its iron says (a backpack at a workshop; armour, a shield, a watering can at a smithy); taking things off is on the selected settler, one button per thing it holds (#119, #232, #248)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await expect(page.locator('#tab-weapons .gear-actions button')).toHaveCount(2);
-  await expect(page.locator('#tab-tools .gear-actions button')).toHaveCount(2);
+  await expect(page.locator('#workshop-list [data-item="gear:backpack"]')).toHaveCount(1);
+  for (const id of ['armor', 'shield', 'wateringCan']) await expect(page.locator(`#smithy-list [data-item="gear:${id}"]`)).toHaveCount(1);
   await expect(page.locator('#tab-tools .btn-disarm, #tab-weapons .btn-disarm')).toHaveCount(0); // none in the sheets
   await page.evaluate(() => { const s = settlers[0]; Object.assign(s, { weapon: 'sword', role: 'soldier', tool: 'none', armor: 'iron', backpack: true }); selectedSettler = s; isPaused = true; updateUI(); });
   const chips = page.locator('#selected-gear button');
@@ -71,9 +56,9 @@ test('an item\'s card shows its cost against the stock, what\'s left after or wh
   await openGame(page);
   await page.click('#play-button');
   // paused: nobody brings wood in between (it raced on CI: 11/5)
-  await page.evaluate(() => { isPaused = true; stock.wood = 10; stock.stone = 2; });
+  await page.evaluate(() => { isPaused = true; stock.wood = 10; stock.stone = 2; window.sim.helpers.placeWorkshop(); });
   await page.click('[data-arg="tab-tools"]');
-  const axe = page.locator('#tool-actions button[data-info="tools:axe"]');
+  const axe = page.locator('#btn-axe');
   await axe.hover();
   await expect(page.locator('#info-card')).toContainText('10/5');
   await expect(page.locator('#info-card')).toContainText('2/5');

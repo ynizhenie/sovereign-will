@@ -27,9 +27,12 @@ Object.assign(window.sim, (() => {
     Object.assign(stock, { wood: 50, stone: 50 });
     armory = {};
     selectedSettler = null;
+    window.sim.helpers.placeWorkshop();
     assignTool('axe');
     const makers = new Set();
     run(15, { each: () => { quiet(); settlers.forEach(s => { if (s.activity === 'craftItem') makers.add(s.id); }); } });
+    giveStored('tools', 'axe'); // into the store first, then handed out (#248)
+    run(8, { each: quiet });
     return { makers: [...makers], gotIt: taker.tool };
   }
 
@@ -66,6 +69,7 @@ Object.assign(window.sim, (() => {
     settlers = [builder, miner];
     // the free-handed one busy making a thing for itself (a long one)
     Object.assign(stock, { wood: 50, stone: 50 }); armory = {}; selectedSettler = null;
+    window.sim.helpers.placeWorkshop();
     GAME_CONFIG.crafting.seconds.weapons = 60;
     craftWeapon('club', false, builder);
     let minerOnIt = false;

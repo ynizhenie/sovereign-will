@@ -1012,3 +1012,22 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 #save-game-button.save-ok { background: #27ae60; color: #fff; }
 #save-game-button.save-no { background: #c0392b; color: #fff; }
 #pause-load { max-height: 40vh; overflow-y: auto; }
+
+/* the craft lists and the hiring list (#248): a row a thing, its tile and buttons on its right; scrolls */
+.craft-list { display: flex; flex-direction: column; gap: 4px; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.craft-row { display: flex; align-items: stretch; gap: 4px; }
+.craft-tile { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 4px 8px; font-size: 12px;
+  border: 1px solid #4a5160; border-radius: 6px; background: rgba(255, 255, 255, 0.04); color: #e6e8ec; }
+.craft-tile b { font-weight: 600; }
+.craft-cost { color: #aeb4c0; font-size: 11px; }
+.craft-count { margin-left: auto; color: #f1c40f; font-size: 11px; }
+.row-btn { width: 38px; min-width: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.row-btn:disabled { opacity: 0.35; }
+.row-make { background: #2e7d32; }
+
+/* the stock's drop-down, one level (#248) */
+#resources-hud.res-lines { display: flex; flex-direction: column; gap: 4px; }
+.res-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 2px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.res-line:first-child { border-top: none; }
+.res-line-name { color: #8a91a0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 64px; }
+.res-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; white-space: nowrap; }
