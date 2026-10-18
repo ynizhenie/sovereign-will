@@ -28,7 +28,14 @@ export const buildingsConfig = {
     // a grave: the undead's tent, also where necromancers get their raises back; it makes bones
     // the demons': a sacrificial circle adds population, and a settler sent into it heals everyone;
     // portals come in pairs (the 1st with the 2nd, the 3rd with the 4th...) and settlers step through
-    sacrifice_circle: { id: 'sacrifice_circle', group: 'homes', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, population: 3, sacrifice: true, build: { maxProgress: 80, hp: 150 } },
+    // (#250) a den is the demons' home (population, no healing at it); the circle is only for sacrifices now
+    demon_den: { id: 'demon_den', group: 'homes', icon: 'demon_den', factions: ['demons'], cost: { stone: 8, wood: 4 }, demolishRefund: { stone: 4 }, population: 2, build: { maxProgress: 70, hp: 140 } },
+    sacrifice_circle: { id: 'sacrifice_circle', group: 'homes', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, sacrifice: true, build: { maxProgress: 80, hp: 150 } },
+    // (#250) a corpse pit: soldiers carry corpses in, up to `holds`; in it they keep (age at keepShare of the
+    // speed); a wounded demon eats from it. A cage holds one badly wounded enemy caught at a wave's end, to
+    // be eaten; after captiveSeconds it dies in there and is a corpse
+    corpse_pit: { id: 'corpse_pit', group: 'economy', icon: 'corpse_pit', factions: ['demons'], cost: { stone: 6 }, demolishRefund: { stone: 3 }, corpsePit: { holds: 3, keepShare: 0.25 }, build: { maxProgress: 50, hp: 100 }, arrowsPass: true },
+    cage: { id: 'cage', group: 'economy', icon: 'cage', factions: ['demons'], cost: { wood: 6, iron: 2 }, demolishRefund: { wood: 3 }, cage: { captiveSeconds: 240 }, build: { maxProgress: 60, hp: 120 } },
     portal: { id: 'portal', group: 'homes', icon: 'portal', factions: ['demons'], cost: { stone: 10, iron: 2 }, demolishRefund: { stone: 5 }, portal: true, build: { maxProgress: 100, hp: 120 } },
     grave: { id: 'grave', group: 'homes', icon: 'grave', factions: ['undead'], cost: { stone: 10 }, demolishRefund: { stone: 5 }, population: 1, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 100 } },
     campfire: { id: 'campfire', group: 'economy', icon: 'campfire', factions: ['humans', 'demons'], cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },

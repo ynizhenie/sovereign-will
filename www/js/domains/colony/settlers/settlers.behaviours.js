@@ -26,7 +26,7 @@ import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
 import { collectBones, necromancy } from '../../factions/undead/index.js';
-import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
+import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
@@ -52,7 +52,7 @@ export function createSettlerTick(dt) {
 
   return {
     dt,
-    isWaveActive: game.enemies.length > 0,
+    isWaveActive: game.enemies.length > 0 || (game.portalQueue || []).length > 0, // (demons still to come out, #250)
     tents: game.buildings.filter(isShelter), // tents or graves
     allResources,
     resourceKind,
@@ -209,6 +209,7 @@ export const SETTLER_BEHAVIOURS = [
   playerControlled,
   panic,
   strikeBack,
+  carryCaptive,
   captainOrders,
   goToSacrifice,
   loadTowerArrows,
@@ -225,6 +226,7 @@ export const SETTLER_BEHAVIOURS = [
   cook,
   fertilize,
   cleanDung,
+  tendCorpses,
   carryCorpse,
   brewPotion,
   chopFirewood,
@@ -237,6 +239,7 @@ export const SETTLER_BEHAVIOURS = [
   treatWounded,
   necromancy,
   restockQuiver,
+  catchForCage, // (before holdPost: a soldier on its post goes for one to cage too, #250)
   holdPost,
   fightEnemies,
   breakOutOfSealedBase,
