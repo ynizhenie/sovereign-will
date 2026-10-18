@@ -8,7 +8,7 @@ import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js
 import { drawBoars } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
-import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall } from '../domains/economy/building/index.js';
+import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising } from '../domains/factions/undead/index.js';
 import { drawGrassGround, drawMapBorder, drawRocks, drawSand, drawWater } from '../domains/world/index.js';
@@ -45,6 +45,7 @@ export function render() {
   drawPriorityMarks();
   drawBlueprints();
   drawBuildings();
+  drawUpgrades(); // (over what they replace, #261)
   drawStoreContents(); // (#248)
   drawEnemyTents();
   drawBloodOnGround();
