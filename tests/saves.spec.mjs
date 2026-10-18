@@ -21,7 +21,7 @@ test('save from the pause menu, then carry on from the Endless menu, or delete t
   await expect(page.locator('#save-settings')).toBeVisible();
   const save = page.locator('#save-list [data-save]');
   await expect(save).toHaveCount(1);
-  await expect(save).toContainText(/^Волна 4 · .* · мир /);
+  await expect(save).toContainText(/^Мир .*Волна 4 · /); // (a tile: its world, its wave and time, #254)
   await save.click();
   expect(await page.evaluate(() => [stock.stone, waveNum, gameStarted])).toEqual([123, 4, true]);
   // delete it, asked first
@@ -62,4 +62,28 @@ test('the pause menu loads a save and opens the settings, Back returns to it; te
   await page.click('#save-game-button');
   await expect(page.locator('#save-game-button')).toContainText('слотов заняты');
   expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('sovereign-will-saves'))).length)).toBe(10);
+});
+
+test('in the pause menu Load is this world\'s slot only; a battle has no saving or loading (#254)', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => {
+    localStorage.setItem('sovereign-will-saves', JSON.stringify({ 'world:elsewhere': { name: 'elsewhere', savedAt: 1, data: { seed: { value: 'elsewhere' }, clocks: { waveNum: 3 } } } }));
+  });
+  await page.click('#play-button');
+  await page.click('#btn-pause-toggle');
+  await page.click('#load-game-button');
+  await expect(page.locator('#pause-load-list [data-save]')).toHaveCount(0); // (another world's)
+  await expect(page.locator('#pause-load-list')).toContainText('Этот мир ещё не сохранён');
+  await page.click('#save-game-button');
+  await page.click('#load-game-button'); // (shut)
+  await page.click('#load-game-button');
+  await expect(page.locator('#pause-load-list [data-save]')).toHaveCount(1);
+  // a battle: no Save, no Load in its pause menu
+  await page.evaluate(() => { exitToMainMenu(); showMenuScreen('home'); });
+  await page.click('#mode-battles');
+  await expect(page.locator('[data-battle-category="own"]')).toBeVisible();
+  await page.click('#btn-pause-toggle');
+  await expect(page.locator('#pause-menu')).toBeVisible();
+  await expect(page.locator('#save-game-button')).toBeHidden();
+  await expect(page.locator('#load-game-button')).toBeHidden();
 });
