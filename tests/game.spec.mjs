@@ -10,10 +10,11 @@ const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
-  await expect(page.locator('#build-actions button')).toHaveCount(12); // with the smithy (#211), the dummy and the fish trap (#199)
+  await expect(page.locator('#build-actions button')).toHaveCount(13); // with the smithy (#211), the dummy and the fish trap (#199), the workshop (#248)
   await expect(page.locator('#farming-actions button')).toHaveCount(4); // with the compost heap (#232)
-  await expect(page.locator('#tool-actions button')).toHaveCount(7);
-  await expect(page.locator('#weapon-actions button')).toHaveCount(6);
+  // what's made where, a row each (#248): without iron at a workshop, with it at a smithy
+  await expect(page.locator('#workshop-list .craft-row')).toHaveCount(11);
+  await expect(page.locator('#smithy-list .craft-row')).toHaveCount(7);
 
   await page.fill('#seed-input', 'smoke-test');
   await page.click('#play-button');
@@ -68,17 +69,19 @@ test('the defeat screen restart button works with the camera moved and zoomed (#
 
 test('hire, upgrade and craft buttons show their cost from the config (#45)', async ({ page }) => {
   await openGame(page);
-  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Рабочий (15[[food]])']);
-  await expect.poll(() => iconText(page, '#btn-hire-big')).toEqual(['[[giant]] Богатырь (30[[food]] 15[[wood]])']);
-  await expect.poll(() => iconText(page, '#btn-upgrade')).toEqual(['[[giant]] Улучшить (15[[food]] 15[[wood]])']);
-  await expect.poll(() => iconText(page, '#btn-craft-arrows')).toEqual(['[[arrows]] Стрелы (3[[wood]] 1[[stone]] → 6)']);
-  await expect.poll(() => iconText(page, '#btn-armor')).toEqual(['[[armor]] Броня (8[[iron]])']);
+  // (a row's tile, #248)
+  const tile = id => iconText(page, `.craft-row:has(#${id}) .craft-tile`);
+  await expect.poll(() => tile('btn-hire-normal')).toEqual(['[[worker]] Рабочий 15[[food]]']);
+  await expect.poll(() => tile('btn-hire-big')).toEqual(['[[giant]] Богатырь 30[[food]] 15[[wood]]']);
+  await expect.poll(() => tile('btn-upgrade')).toEqual(['[[giant]] Улучшить (15[[food]] 15[[wood]])']);
+  await expect.poll(() => tile('btn-arrows')).toEqual(['[[arrows]] Стрелы 3[[wood]] 1[[stone]] → 6']);
+  await expect.poll(() => tile('btn-armor')).toEqual(['[[armor]] Броня 8[[iron]]']);
   // change a price in the config and the button follows
   await page.evaluate(() => {
     GAME_CONFIG.settlerTypes.normal.hireCost = { food: 20, wood: 2 };
     rebuildConfigHud();
   });
-  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Рабочий (20[[food]] 2[[wood]])']);
+  await expect.poll(() => tile('btn-hire-normal')).toEqual(['[[worker]] Рабочий 20[[food]] 2[[wood]]']);
 });
 
 for (const seed of ROCK_SEEDS) {

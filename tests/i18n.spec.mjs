@@ -12,7 +12,7 @@ async function openFresh(page) {
 test('the game starts in English (#41)', async ({ page }) => {
   const errors = await openFresh(page);
   await expect(page.locator('#play-button')).toHaveText('PLAY');
-  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Worker (15[[food]])']);
+  await expect.poll(() => iconText(page, '.craft-row:has(#btn-hire-normal) .craft-tile')).toEqual(['[[worker]] Worker 15[[food]]']);
   await expect.poll(() => iconText(page, '.tab-btn:first-child')).toEqual(['[[build]]Build']);
   await expect(page.locator('#language-options button.active')).toHaveText('English');
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('en');
@@ -26,7 +26,7 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await page.click('#main-menu [data-screen="settings"] [data-back]');
   await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
-  await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Робітник (15[[food]])']);
+  await expect.poll(() => iconText(page, '.craft-row:has(#btn-hire-normal) .craft-tile')).toEqual(['[[worker]] Робітник 15[[food]]']);
   await expect.poll(() => iconText(page, '#btn-wall_wood')).toEqual(['[[wall_wood]] Дерев\'яна стіна (5[[wood]])']);
   await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[wheat]]Ферма']);
   await expect(page.locator('#seed-reroll')).toHaveAttribute('title', 'Новий випадковий сід');

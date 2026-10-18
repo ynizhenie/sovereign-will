@@ -168,6 +168,13 @@ export const ICONS = {
     c.fillStyle = '#5c3d16'; c.beginPath(); c.ellipse(16, 20, 11, 8, 0, Math.PI, 0); c.fill();
     c.fillStyle = '#6e4a1c'; c.beginPath(); c.ellipse(16, 14, 6, 4, 0, Math.PI, 0); c.fill();
   },
+  workshop: c => {
+    // a workbench with a saw on it
+    icRound(c, '#8e5a2b', 3, 14, 26, 6, 2);
+    icRect(c, '#6d4c2f', 5, 20, 3, 9); icRect(c, '#6d4c2f', 24, 20, 3, 9);
+    icFill(c, '#bdc3c7', [[8, 13], [24, 13], [22, 7], [8, 9]]);
+    icRect(c, '#8e5a2b', 22, 6, 6, 4);
+  },
   dummy: c => {
     // a straw dummy on a post, a crossbar for arms
     icLine(c, '#8e5a2b', 3, [[16, 30], [16, 8]]);

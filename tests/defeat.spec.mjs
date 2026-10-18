@@ -4,8 +4,9 @@ import { openGame } from './helpers.mjs';
 test('raw food comes right after Food in the panel; berry bushes have blue berries (#169)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  const order = await page.evaluate(() => [...document.querySelectorAll('#resources-hud > div')].map(el => el.id).filter(Boolean));
-  expect(order.indexOf('group-raw')).toBe(order.indexOf('group-food') + 1);
+  // (one line a group in the drop-down, #248)
+  const lines = await page.evaluate(() => { const all = [...document.querySelectorAll('#resources-hud .res-line')]; const at = id => all.findIndex(l => l.querySelector(`#${id}`)); return { food: at('food-kind-berries-txt'), raw: at('resource-rawMeat-txt') }; });
+  expect(lines.raw).toBe(lines.food + 1);
 });
 
 test('on a defeat the panel and possession go dead, the camera flies to the base and stays; restart or exit (#191)', async ({ page }) => {

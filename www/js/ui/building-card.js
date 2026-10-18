@@ -52,7 +52,7 @@ export function renderBuildingCard() {
   const def = isHall ? null : getDefinition('buildings', b.type);
   const selected = getSelectedSettler();
   // what's being made here (#211): the town hall's, or a smithy's
-  const place = isHall ? 'hall' : def && def.crafts;
+  const place = !isHall && def && def.crafts;
   const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
   const queueText = queue.map(o => `${GAME_CONFIG[o.category][o.id].label} ${o.stage === 'work' ? `${Math.floor(o.progress * 100)}%` : t('card.waiting')}`).join(', ');
   const key = [queueText, isHall, b.type, Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');

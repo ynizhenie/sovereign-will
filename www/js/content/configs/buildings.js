@@ -28,7 +28,9 @@ export const buildingsConfig = {
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
     watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
-    // crafts: where things are made (#211): the smithy makes everything with iron in it
+    // crafts: where things are made (#211, #248): the workshop everything without iron in it, the smithy
+    // everything with
+    workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 150 } },
     smithy: { id: 'smithy', group: 'economy', icon: 'hammer', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 180 } },
     // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
     // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once

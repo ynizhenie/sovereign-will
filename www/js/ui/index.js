@@ -3,7 +3,7 @@
 
 export { activeTab, createConfigButton, isTabShown, openTab, rebuildConfigHud, renderConfigHud, renderedFaction } from './bottom-panel.js';
 export { updateSeedHud, updateUI } from './hud.js';
-export { drawIcon, escapeHtml, fillRichText, getResourceIcon, getResourceIconName, iconHtml, initIcons, plainText, setRichText } from './icons.js';
+export { drawIcon, escapeHtml, fillRichText, getResourceIcon, getResourceIconName, iconHtml, initIcons, plainText, richText, setRichText } from './icons.js';
 export { initMapInput, setMode } from './map-input.js';
 export { initPageActions } from './page-actions.js';
 export { closeOverlays, closeSheet, getOpenSheet, hidePlacing, initSheets, openSheet, showPlacing, syncHudMode, toggleSheet } from './sheets.js';
