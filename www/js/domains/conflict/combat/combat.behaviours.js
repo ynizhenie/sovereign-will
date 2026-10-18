@@ -116,10 +116,12 @@ function chooseSettlerTarget(s, tick) {
     const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (next && Math.hypot(next.x - s.x, next.y - s.y) < 300) targetEnemy = next;
   }
-  // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents)
+  // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents); but an
+  // enemy the player marked, or one at the base, comes first (#261: they went for the tents past both)
   const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
-  if (assaulting && !attacker) {
-    targetEnemy = null;
+  if (assaulting && !attacker && !(targetEnemy && (targetEnemy.markedTarget || isInsideBase(targetEnemy)))) {
+    targetEnemy = game.enemies.filter(isInsideBase).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+    if (targetEnemy) return { targetEnemy, attacker };
     let nearest = TENT_ASSAULT_FIGHT_DISTANCE;
     game.enemies.forEach(en => {
       const d = Math.hypot(en.x - s.x, en.y - s.y);
@@ -234,6 +236,7 @@ export const TENT_ASSAULT_FIGHT_DISTANCE = 150;
 export function clearEnemyTents(s, tick) {
   if (goForMarkedTent(s, tick)) return true;
   if (!tick.tentAssault || !joinsTentAssault(s, tick)) return false;
+  if (game.enemies.some(isInsideBase)) return false; // (they're fought first, #261)
   let tent = null, minDist = Infinity;
   game.enemyTents.forEach(et => {
     const d = Math.hypot(et.x - s.x, et.y - s.y);

@@ -9,8 +9,8 @@ test('disarming the weapon keeps armour; Take off armour hands it back at the to
   });
 });
 
-test('a fallen enemy drops loot; a worker picks it up, the sword goes into the armory and a sword is made from it (#210)', async () => {
-  expect(await sim.lootToArmory()).toEqual({ dropped: true, picked: true, stored: 1, usedArmory: true, going: 'sword' });
+test('a fallen enemy drops loot; a worker picks it up and carries it to the storage, the sword goes into the armory there and a sword is made from it (#210, #261)', async () => {
+  expect(await sim.lootToArmory()).toEqual({ dropped: true, picked: true, carried: true, stored: 1, usedArmory: true, going: 'sword' });
 });
 
 test('things are made: an axe at a workshop (none without one) by a worker, into the store, then handed out; iron only with a smithy, and made there (#211, #248)', async () => {

@@ -21,11 +21,17 @@ export function equip(s, tick) {
           putOnGear(s, equipment.gear);
           if (equipment.gear === 'armor' || equipment.gear === 'shield') game.playerGear[equipment.gear] = true; // waves answer it (#203)
         }
-        else takeOffGear(s, equipment.gearOff);
+        else takeOffGear(s, equipment.gearOff, !!equipment.keep);
         s.targetEquipment = null;
         return true;
       }
-      if (!equipment.armorOnly) refundEquipment(s, equipment.armor === 'none', equipment.quiver === false);
+      if (!equipment.armorOnly) {
+        refundEquipment(s, {
+          weapon: equipment.weapon !== undefined && equipment.weapon !== s.weapon,
+          tool: equipment.tool !== undefined && equipment.tool !== s.tool,
+          armor: equipment.armor === 'none', quiver: equipment.quiver === false, keep: !!equipment.keep
+        });
+      }
       if (equipment.weapon !== undefined) { s.weapon = equipment.weapon; applyBowUnit(s); }
       if (equipment.tool !== undefined) s.tool = equipment.tool;
       if (equipment.role !== undefined) s.role = equipment.role;

@@ -47,8 +47,8 @@ export function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
   const factor = resource.fertilized ? GAME_CONFIG.fertilizer.yieldFactor : 1;
   for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
-  // loot's things go into the armory (#210)
-  for (const key of resource.items || []) game.armory[key] = (game.armory[key] || 0) + 1;
+  // loot's things are carried to a storage whole, into the armory there (#210; #261: not at once)
+  for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
   addCarryLoad(settler);
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {

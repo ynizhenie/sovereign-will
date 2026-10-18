@@ -1,16 +1,17 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
-import { getDefinition } from '../content/configs/index.js';
+import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { canvas, isTap, isTouchScreen, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
 import { isWaterReachable } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
+import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
 import { getPossessed, orderPossessed } from '../domains/colony/settlers/index.js';
-import { getHarvestableResources } from '../domains/economy/gathering/index.js';
+import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
 import { isDefeated } from '../modes/endless/index.js';
@@ -150,15 +151,63 @@ function markTapped() {
     return;
   }
 
-  let allResources = getHarvestableResources();
-  let clickedRes = allResources.find(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22);
+  // several things there (a stick, a pebble and loot on one tile): a menu picks which (#261)
+  const here = getHarvestableResources().filter(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22)
+    .sort((a, b) => Math.hypot(mouse.x - a.x, mouse.y - a.y) - Math.hypot(mouse.x - b.x, mouse.y - b.y));
+  if (here.length > 1) showPickMenu(here, tapClient);
+  else if (here.length) markResource(here[0]);
+}
 
-  if (clickedRes) {
-    clickedRes.priority = clickedRes.priority ? 0 : 1;
-    // an apple tree marked while it has apples gets its apples picked, not felled (see pickApples)
-    if (clickedRes.apple) clickedRes.markIntent = clickedRes.applesReady ? 'apples' : 'chop';
-    return;
+function markResource(r) {
+  r.priority = r.priority ? 0 : 1;
+  // an apple tree marked while it has apples gets its apples picked, not felled (see pickApples)
+  if (r.apple) r.markIntent = r.applesReady ? 'apples' : 'chop';
+}
+
+// What a thing on the map is called and drawn as, for the menu: loot by what's in it
+function resourceLook(r) {
+  const kind = r.apple ? 'apple_tree' : getMapResourceKind(r) || '';
+  const [category, id] = ((r.items || [])[0] || '').split(':');
+  const item = category && GAME_CONFIG[category] && GAME_CONFIG[category][id];
+  if (item) return { icon: item.icon, name: item.label };
+  if (kind === 'loot') return { icon: 'bundle', name: t('pick.loot') };
+  const name = t(`editor.tool.${kind === 'natural_rock' ? 'rock' : kind}`);
+  return { icon: kind === 'natural_rock' ? 'rock' : kind === 'farm' ? 'wheat' : kind, name: name.startsWith('editor.') ? kind : name };
+}
+
+// The menu by the finger: a row for each thing, marked (or unmarked) by a tap on it; a tap anywhere
+// else puts it away
+/** @type {{ x: number, y: number }} */
+let tapClient = { x: 0, y: 0 };
+export function showPickMenu(resources, at) {
+  hidePickMenu();
+  const menu = document.createElement('div');
+  menu.id = 'pick-menu';
+  for (const r of resources) {
+    const { icon, name } = resourceLook(r);
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.innerHTML = `${iconHtml(icon)} ${escapeHtml(name)}${r.priority ? ` ${iconHtml('ok')}` : ''}`;
+    b.addEventListener('click', () => { markResource(r); hidePickMenu(); });
+    menu.appendChild(b);
   }
+  document.body.appendChild(menu);
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = `${Math.max(4, Math.min(window.innerWidth - w - 4, at.x - w / 2))}px`;
+  menu.style.top = `${Math.max(4, Math.min(window.innerHeight - h - 4, at.y - h - 12))}px`;
+  setTimeout(() => document.addEventListener('pointerdown', awayFromMenu, true), 0);
+}
+
+function awayFromMenu(e) {
+  const menu = document.getElementById('pick-menu');
+  if (menu && menu.contains(/** @type {Node} */ (e.target))) return;
+  hidePickMenu();
+}
+
+export function hidePickMenu() {
+  document.removeEventListener('pointerdown', awayFromMenu, true);
+  const menu = document.getElementById('pick-menu');
+  if (menu) menu.remove();
 }
 
 // A building mode: a blueprint on the tile, if the stock can pay (its cost stays in storage until builders
@@ -205,6 +254,7 @@ function demolishTapped({ gx, gy }) {
 }
 
 export function processInteraction(clientX, clientY) {
+  tapClient = { x: clientX, y: clientY };
   updateInputPos(clientX, clientY);
   handleCanvasClick();
 }

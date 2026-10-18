@@ -14,7 +14,7 @@ Object.assign(window.sim, (() => {
   function demonColony({ seed = 'demon-colony' } = {}) {
     asDemons(seed);
     const startUnits = settlers.map(s => s.type);
-    const hire = [...document.querySelectorAll('#recruit-row .row-make')].map(b => b.id); // (a list's Hire buttons, #248)
+    const hire = [...document.querySelectorAll('#recruit-row .tile')].map(b => b.id); // (the Hire tiles, #261)
     const build = [...document.querySelectorAll('#build-actions button')].map(b => b.id);
     // an imp given a bow becomes a fire imp (#165)
     stock.wood = 100; stock.leather = 20;

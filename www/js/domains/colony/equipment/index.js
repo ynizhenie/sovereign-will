@@ -3,5 +3,5 @@
 
 export { equip } from './equipment.behaviours.js';
 export { assignTool, canUseShield, countHeld, craftArrows, craftWeapon, disarmSettler, getHeldItems, getWeaponStats, hasAxeTool, hasGear, hasPickaxeTool, hasToolFamily, giveStored, hasWorkingShield, isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon, makeToStore, orderGear, orderGearOff, putOnGear, refundEquipment, takeApartStored, takeFromArmory } from './equipment.rules.js';
-export { renderCraftLists, updateCraftLists } from './equipment.panel.js';
+export { renderCraftLists, showCraftKind, updateCraftLists } from './equipment.panel.js';
 export { craftItem, craftPlace, findWorkplace, orderCraft } from './equipment.crafting.js';

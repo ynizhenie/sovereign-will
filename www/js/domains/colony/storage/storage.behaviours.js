@@ -31,7 +31,8 @@ export function goDeliver(s, tick) {
   for (const item of s.carrying.items || [s.carrying]) {
     const isFood = isFoodKind(item.type) || ['food', 'rawMeat', 'rawFish', 'wheat'].includes(item.type);
     const type = into && isFood ? (into[item.type] || into.default) : item.type;
-    if (GAME_CONFIG.resources[type]) stock[type] += item.amount;
+    if (type.startsWith('armory:')) game.armory[type.slice(7)] = (game.armory[type.slice(7)] || 0) + item.amount; // (loot, #261)
+    else if (GAME_CONFIG.resources[type]) stock[type] += item.amount;
     else if (isFoodKind(type)) addFood(type, item.amount);
   }
   s.carrying = null;

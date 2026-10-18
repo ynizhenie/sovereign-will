@@ -3,7 +3,7 @@
 
 import { switchTab } from './bottom-panel.js';
 import { openHallCard } from './building-card.js';
-import { craftArrows, disarmSettler, orderGear, orderGearOff } from '../domains/colony/equipment/index.js';
+import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
 import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { togglePause } from '../app/index.js';
@@ -22,6 +22,7 @@ export const PAGE_ACTIONS = {
   orderGearOff: id => orderGearOff(id),
   disarmSettler: what => disarmSettler(what),
   switchTab: (tabId, button) => switchTab(button, tabId),
+  showCraftKind: kind => showCraftKind(kind),
   openHall: () => openHallCard(),
   // Point: back to selecting, nothing open and nobody selected (#232)
   pointMode: () => { setMode('interact'); closeOverlays(); deselectSettler(); },

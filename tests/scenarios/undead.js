@@ -17,8 +17,8 @@ Object.assign(window.sim, (() => {
     asUndead(seed);
     const ids = sel => [...document.querySelectorAll(sel)].filter(b => !b.hidden).map(b => b.id);
     const r = {
-      startUnits: settlers.map(s => s.type), hire: ids('#recruit-row .row-make'),
-      tools: ids('#workshop-list .row-make'), gear: ids('#workshop-list .row-make'),
+      startUnits: settlers.map(s => s.type), hire: ids('#recruit-row .tile'),
+      tools: ids('#craft-tools .tile'), gear: ids('#craft-gear .tile'),
       build: ids('#build-actions button'), farmingTab: !document.getElementById('tab-btn-farming').hidden,
       blightTab: !document.getElementById('tab-btn-blight').hidden, foodTile: !!document.getElementById('group-food') || !!document.getElementById(resourceHudId('food')) || !!document.getElementById(resourceHudId('rawMeat')),
       food: stock.food

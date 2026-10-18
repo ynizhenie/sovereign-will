@@ -12,9 +12,12 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(page.locator('#build-actions button')).toHaveCount(13); // with the smithy (#211), the dummy and the fish trap (#199), the workshop (#248)
   await expect(page.locator('#farming-actions button')).toHaveCount(4); // with the compost heap (#232)
-  // what's made where, a row each (#248): without iron at a workshop, with it at a smithy
-  await expect(page.locator('#workshop-list .craft-row')).toHaveCount(11);
-  await expect(page.locator('#smithy-list .craft-row')).toHaveCount(7);
+  // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
+  // at a smithy
+  await expect(page.locator('#craft-tools .tile')).toHaveCount(7);
+  await expect(page.locator('#craft-weapons .tile')).toHaveCount(7);
+  await expect(page.locator('#craft-gear .tile')).toHaveCount(4);
+  await expect(page.locator('#craft-weapons .panel-heading')).toHaveCount(3);
 
   await page.fill('#seed-input', 'smoke-test');
   await page.click('#play-button');
@@ -69,11 +72,11 @@ test('the defeat screen restart button works with the camera moved and zoomed (#
 
 test('hire, upgrade and craft buttons show their cost from the config (#45)', async ({ page }) => {
   await openGame(page);
-  // (a row's tile, #248)
-  const tile = id => iconText(page, `.craft-row:has(#${id}) .craft-tile`);
+  // (a tile, #261)
+  const tile = id => iconText(page, `#${id}`);
   await expect.poll(() => tile('btn-hire-normal')).toEqual(['[[worker]] Рабочий 15[[food]]']);
   await expect.poll(() => tile('btn-hire-big')).toEqual(['[[giant]] Богатырь 30[[food]] 15[[wood]]']);
-  await expect.poll(() => tile('btn-upgrade')).toEqual(['[[giant]] Улучшить (15[[food]] 15[[wood]])']);
+  await expect.poll(() => tile('btn-upgrade')).toEqual(['[[giant]] Улучшить: Богатырь 15[[food]] 15[[wood]]']);
   await expect.poll(() => tile('btn-arrows')).toEqual(['[[arrows]] Стрелы 3[[wood]] 1[[stone]] → 6']);
   await expect.poll(() => tile('btn-armor')).toEqual(['[[armor]] Броня 8[[iron]]']);
   // change a price in the config and the button follows
@@ -128,7 +131,7 @@ test('clicking an enemy with the Point tool marks and unmarks it (#35)', async (
 
 test('wheat and saplings are planted from the Farming tab (#64)', async ({ page }) => {
   await openGame(page);
-  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[dung_heap]] Компостная куча (6[[wood]])', '[[wheat]] Пшеница (1[[wheatSeeds]])', '[[saplings]] Саженец (1[[saplings]])', '[[appleSaplings]] Саженец яблони (1[[appleSaplings]])']);
+  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[dung_heap]] Компостная куча 6[[wood]]', '[[wheat]] Пшеница 1[[wheatSeeds]]', '[[saplings]] Саженец 1[[saplings]]', '[[appleSaplings]] Саженец яблони 1[[appleSaplings]]']);
   await expect(page.locator('#build-actions #btn-wheat')).toHaveCount(0);
   await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
   // picking a crop in the Farming tab switches to placing it

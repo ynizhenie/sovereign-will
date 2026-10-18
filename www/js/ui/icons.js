@@ -121,19 +121,13 @@ export const ICONS = {
   plus: c => { icRound(c, '#2c3e50', 13.5, 5, 5, 22, 2); icRound(c, '#2c3e50', 5, 13.5, 22, 5, 2); },
   minus: c => icRound(c, '#2c3e50', 5, 13.5, 22, 5, 2),
   point: c => {
-    // a hand pointing up-left with its index finger, a tap mark at the fingertip (#232: it read as a fist)
-    icRing(c, '#f1c40f', 1.6, 6, 6, 4.5);
-    icCircle(c, '#f1c40f', 6, 6, 1.6);
-    c.save(); c.translate(17, 18); c.rotate(-Math.PI / 4);
-    const skin = '#f5cba7', edge = '#8a5a3b';
-    c.lineWidth = 1.4; c.strokeStyle = edge;
-    // the index finger, out
-    c.fillStyle = skin; c.beginPath(); c.roundRect(-2.6, -15, 5.2, 13, 2.6); c.fill(); c.stroke();
-    // the fist with the other fingers curled, and the thumb
-    c.beginPath(); c.roundRect(-6, -4, 12, 11, 3.5); c.fill(); c.stroke();
-    c.beginPath(); c.roundRect(-8.5, -3, 4, 7, 2); c.fill(); c.stroke();
-    for (const y of [0.5, 3.5]) { c.beginPath(); c.moveTo(-1, y); c.lineTo(5, y); c.stroke(); }
-    c.restore();
+    // a pointer, the arrow cursor, its tip on a tap mark (#261: a cursor, not a hand)
+    icRing(c, '#f1c40f', 1.6, 7, 6, 4.5);
+    icCircle(c, '#f1c40f', 7, 6, 1.6);
+    c.lineJoin = 'round'; c.lineWidth = 2; c.strokeStyle = '#1c1f26'; c.fillStyle = '#ecf0f1';
+    c.beginPath();
+    c.moveTo(8, 7); c.lineTo(8, 27); c.lineTo(13, 22); c.lineTo(16.5, 29.5); c.lineTo(20, 28); c.lineTo(16.5, 20.5); c.lineTo(23.5, 20.5);
+    c.closePath(); c.fill(); c.stroke();
   },
   reroll: c => {
     icRing(c, '#5dade2', 3, 16, 16, 10, Math.PI * 1.1, Math.PI * 1.9);
@@ -625,6 +619,9 @@ export function fillRichText(context, text, x, y) {
 }
 
 export function getResourceIconName(resourceKey) {
+  // a whole thing carried to the armory: 'armory:<category>:<id>' (#261)
+  const [armory, category, id] = resourceKey.split(':');
+  if (armory === 'armory' && GAME_CONFIG[category] && GAME_CONFIG[category][id]) return GAME_CONFIG[category][id].icon;
   const known = GAME_CONFIG.resources[resourceKey] || GAME_CONFIG.foodKinds[resourceKey];
   return known ? known.icon : 'bundle';
 }
