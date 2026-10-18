@@ -1,5 +1,6 @@
 // Enemies, their tents and tent sites
 
+import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { drawIcon } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
@@ -35,11 +36,15 @@ export function drawEnemyTents() {
   });
 }
 
-// Piles fallen enemies dropped (#210): a little sack, a gold glint if a thing is in it
+// Things fallen enemies dropped (#210, #232): the thing itself on the ground, a faint shadow under it (an old
+// save's pile of resources: a little sack)
 export function drawLoot() {
   for (const pile of game.loot) {
-    drawIcon(ctx, 'bundle', pile.x, pile.y, 16);
-    if ((pile.items || []).length) { ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(pile.x + 6, pile.y - 6, 2.5, 0, Math.PI * 2); ctx.fill(); }
+    const key = (pile.items || [])[0];
+    const [category, id] = key ? key.split(':') : [];
+    const item = key && GAME_CONFIG[category] && GAME_CONFIG[category][id];
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(pile.x, pile.y + 5, 8, 3, 0, 0, Math.PI * 2); ctx.fill();
+    drawIcon(ctx, item ? item.icon : 'bundle', pile.x, pile.y, 18);
   }
 }
 

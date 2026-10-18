@@ -3,12 +3,20 @@ import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
-test('spikes hurt once per visit and break after 5 visits (#32)', async () => {
+test('spikes: a full blow and a use worn per step onto them, a little all the while one stands on them; worn out they stay, harmless, to be repaired (#32, #232, #248)', async () => {
   const r = await sim.spikeVisits({});
   // [damage taken so far, uses left] after each move
-  expect(r.log.slice(0, 4)).toEqual([[25, 4], [25, 4], [25, 4], [50, 3]]);
-  expect(r.log.at(-1)).toEqual([125, 0]);
-  expect(r.trapGone).toBe(true);
+  const [first, stood, away, second] = r.log;
+  expect(first[1]).toBe(4);
+  expect(stood[1]).toBe(4); // standing wears nothing
+  expect(stood[0]).toBeGreaterThan(first[0]); // but it hurts
+  expect(away[0]).toBe(stood[0]);
+  expect(second[1]).toBe(3);
+  expect(second[0] - away[0]).toBeGreaterThanOrEqual(25);
+  expect(r.log.at(-1)[1]).toBe(0);
+  expect(r.usedUp).toEqual({ stays: true, usesLeft: 0, hp: 0 });
+  expect(r.harmless).toBe(true);
+  expect(r.repaired).toBe(true);
 });
 
 test('settlers walk around spikes (#32)', async () => {

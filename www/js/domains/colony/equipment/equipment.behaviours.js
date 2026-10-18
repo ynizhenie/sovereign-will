@@ -4,7 +4,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { applyBowUnit, canUseShield, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
+import { applyBowUnit, isBowWeapon, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
 import { addResources, moveSettlerToTownHall } from '../storage/index.js';
 
 // Go to the town hall to swap weapon/tool/armour the player ordered
@@ -36,8 +36,9 @@ export function equip(s, tick) {
         s.arrows = 0;
       }
       if (equipment.quiver !== undefined) s.quiver = equipment.quiver;
-      // no longer a melee soldier (disarmed, or given a bow): the shield goes back to the stock
-      if (s.shield && !canUseShield(s)) {
+      // given a bow, the shield goes back to the stock; disarmed, it keeps it (#232: taking the spear off took
+      // the shield too), of use again once it's given a melee weapon
+      if (s.shield && isBowWeapon(s.weapon)) {
         addResources(GAME_CONFIG.gear.shield.cost);
         s.shield = false;
       }

@@ -121,9 +121,19 @@ export const ICONS = {
   plus: c => { icRound(c, '#2c3e50', 13.5, 5, 5, 22, 2); icRound(c, '#2c3e50', 5, 13.5, 22, 5, 2); },
   minus: c => icRound(c, '#2c3e50', 5, 13.5, 22, 5, 2),
   point: c => {
-    icRound(c, '#f5cba7', 13, 3, 6, 16, 3);
-    icRound(c, '#f5cba7', 8, 13, 18, 15, 5);
-    icLine(c, '#d4a373', 1.2, [[19, 15], [19, 19]]); icLine(c, '#d4a373', 1.2, [[23, 15], [23, 19]]);
+    // a hand pointing up-left with its index finger, a tap mark at the fingertip (#232: it read as a fist)
+    icRing(c, '#f1c40f', 1.6, 6, 6, 4.5);
+    icCircle(c, '#f1c40f', 6, 6, 1.6);
+    c.save(); c.translate(17, 18); c.rotate(-Math.PI / 4);
+    const skin = '#f5cba7', edge = '#8a5a3b';
+    c.lineWidth = 1.4; c.strokeStyle = edge;
+    // the index finger, out
+    c.fillStyle = skin; c.beginPath(); c.roundRect(-2.6, -15, 5.2, 13, 2.6); c.fill(); c.stroke();
+    // the fist with the other fingers curled, and the thumb
+    c.beginPath(); c.roundRect(-6, -4, 12, 11, 3.5); c.fill(); c.stroke();
+    c.beginPath(); c.roundRect(-8.5, -3, 4, 7, 2); c.fill(); c.stroke();
+    for (const y of [0.5, 3.5]) { c.beginPath(); c.moveTo(-1, y); c.lineTo(5, y); c.stroke(); }
+    c.restore();
   },
   reroll: c => {
     icRing(c, '#5dade2', 3, 16, 16, 10, Math.PI * 1.1, Math.PI * 1.9);

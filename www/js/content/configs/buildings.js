@@ -7,9 +7,11 @@ export const buildingsConfig = {
   buildings: {
     wall_wood: { id: 'wall_wood', group: 'defense', icon: 'wall_wood', cost: { wood: 5 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     wall_stone: { id: 'wall_stone', group: 'defense', icon: 'wall_stone', cost: { stone: 5 }, demolishRefund: { stone: 3 }, build: { maxProgress: 120, hp: 300 }, towerArrowsPass: true },
-    // trap: every unit stepping onto it takes `damage`; it breaks after `uses` steps. Settlers walk
-    // around it; enemies too, unless there's no other way (then it's cheaper for them than a wall)
-    spikes: { id: 'spikes', group: 'defense', icon: 'spikes', cost: { wood: 6, iron: 2 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5 } }, arrowsPass: true },
+    // trap: every unit stepping onto it takes `damage`, and standDps a second while it stands on it; each step
+    // onto it uses one of its `uses` (standing doesn't), and with none left it's broken, harmless, until
+    // repaired (#232, #248). Settlers walk around it; enemies too, unless there's no other way (then it's
+    // cheaper for them than a wall)
+    spikes: { id: 'spikes', group: 'defense', icon: 'spikes', cost: { wood: 4, iron: 1 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5, standDps: 10 } }, arrowsPass: true },
     door: { id: 'door', group: 'defense', icon: 'door', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     // factions: only these factions build it; tents are the humans', graves the undead's
