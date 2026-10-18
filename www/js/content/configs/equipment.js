@@ -62,6 +62,7 @@ export const equipmentConfig = {
 
   // crafted at the town hall into the stock
   recipes: {
-    arrows: { id: 'arrows', icon: 'arrows', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 } }
+    // made by archers in `batches` quick jobs (#249)
+    arrows: { id: 'arrows', icon: 'arrows', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3 }
   }
 };

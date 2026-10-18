@@ -279,22 +279,20 @@ export function takeFromArmory(key) {
   return true;
 }
 
+// Arrows are made, not conjured (#249): paid for at once, then `batches` jobs of produces/batches each at the
+// town hall, by the archers (anyone free while there are none); no archer needed to order them
 export function craftArrows() {
-  let target = getSelectedSettler() || getPossessed();
-  if (!target) target = game.settlers.find(s => s.weapon === 'bow' && s.quiver);
-  if (!target || target.weapon !== 'bow' || !target.quiver) {
-    showNotification(t('arrows.needArcher'), true);
-    return;
-  }
   const recipe = GAME_CONFIG.recipes.arrows;
   if (!canAfford(recipe.cost)) {
     showCostError(recipe.cost, t('cost.needs', { name: recipe.label }));
     return;
   }
-
   payCost(recipe.cost);
-  addResources(recipe.produces);
-  showNotification(t('arrows.made', { count: recipe.produces.arrows }), false);
+  for (let i = 0; i < recipe.batches; i++) {
+    game.craftOrders.push({ key: 'recipes:arrows', category: 'recipes', id: 'arrows', crafter: null, stage: 'fetch', progress: 0, handOut: false, for: null,
+      yields: { arrows: recipe.produces.arrows / recipe.batches } });
+  }
+  showNotification(t('arrows.ordered', { count: recipe.produces.arrows }), false);
 }
 
 export function disarmSettler(type = 'all') {
@@ -334,8 +332,8 @@ export function disarmSettler(type = 'all') {
   }
 }
 
-// Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the undead's
-// zombie into a skeleton, the demons' imp into a fire imp
+// Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the
+// faction's bowUnits (none now: a zombie or an imp with a bow stays one, #249)
 export function applyBowUnit(s) {
   const forms = getPlayerFaction().bowUnits || {};
   if (isBowWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);

@@ -29,7 +29,7 @@ export const enemiesConfig = {
     raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.5, reach: 6, siege: { buildings: 5, resources: 1 },
       healer: { range: 220, healRange: 30, healPerSecond: 10 } },
-    // the undead: slow zombies, big zombies, skeleton archers, and necromancers that raise the dead
+    // the undead: slow zombies, big zombies, zombie archers, and necromancers that raise the dead
     // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
     // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
     undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
@@ -39,14 +39,15 @@ export const enemiesConfig = {
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.66, reach: 12, siege: { buildings: 10, resources: 2 } },
     undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'fist',
       type: 'big', radius: 18, waveKey: 'brute', reach: 20, siege: { buildings: 25, resources: 4 }, splash: { radius: 60, share: 0.5 } },
-    undead_skeleton: { id: 'undead_skeleton', hp: 45, speed: 0.9, damage: 25, reward: { food: 1 }, weapon: 'bow',
+    // an archer of theirs is a zombie with a bow (#249: no skeletons)
+    undead_zombie_archer: { id: 'undead_zombie_archer', hp: 45, speed: 0.9, damage: 25, reward: { food: 1 }, weapon: 'bow',
       type: 'archer', radius: 11, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
     undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
       necromancer: { raises: 5, range: 200, raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } },
-    // the demons: quick imps, big demons that hit all around, fire imps that throw fireballs. They
+    // the demons: quick imps, big demons that hit all around, imp archers. They
     // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
     demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'club', reach: 6, siege: { buildings: 10, resources: 2 } },
@@ -55,7 +56,8 @@ export const enemiesConfig = {
       type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
     demon_brute: { id: 'demon_brute', hp: 140, speed: 0.7, damage: 28, reward: { food: 2 }, weapon: 'spear',
       type: 'big', radius: 18, waveKey: 'brute', reach: 24, siege: { buildings: 25, resources: 4 }, splash: { radius: 70, share: 0.6 } },
-    demon_fire_imp: { id: 'demon_fire_imp', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'bow', fireArrows: true,
+    // an imp with a bow, as the humans' archer (#249: no fire arrows for now)
+    demon_imp_archer: { id: 'demon_imp_archer', hp: 50, speed: 0.95, damage: 26, reward: { food: 1 }, weapon: 'bow',
       type: 'archer', radius: 10, waveKey: 'archer', reach: 6, siege: { buildings: 10, resources: 2 },
       ranged: { range: 170, keepAway: 140, cooldown: 1.4, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
