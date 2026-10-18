@@ -201,7 +201,8 @@ export function tickMeals(dt) {
     for (const s of game.settlers) {
       if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
       s.hunger -= dt;
-      if (s.hunger <= 0) { s.hunger = meals.seconds; eatMeal(s); }
+      // hungry: it goes and gets its meal (goEat, #248); the last one still not eaten, it's eaten on the go
+      if (s.hunger <= 0) { s.hunger = meals.seconds; if (s.wantsMeal) eatMeal(s); else s.wantsMeal = true; }
     }
   }
 }

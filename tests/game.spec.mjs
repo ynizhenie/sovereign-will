@@ -16,7 +16,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   // at a smithy
   await expect(page.locator('#craft-tools .tile')).toHaveCount(8); // (rope, #248)
   await expect(page.locator('#craft-weapons .tile')).toHaveCount(7);
-  await expect(page.locator('#craft-gear .tile')).toHaveCount(4);
+  await expect(page.locator('#craft-gear .tile')).toHaveCount(6); // (the whistle and the banner, #248)
   await expect(page.locator('#craft-weapons .panel-heading')).toHaveCount(3);
 
   await page.fill('#seed-input', 'smoke-test');

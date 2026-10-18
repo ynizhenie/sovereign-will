@@ -33,6 +33,8 @@
  * @property {string|boolean} [armor]
  * @property {boolean} [backpack]
  * @property {boolean} [wateringCan]
+ * @property {boolean} [whistle]     a foreman's (#248)
+ * @property {boolean} [banner]      a captain's (#248)
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
@@ -40,6 +42,19 @@
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)
+ * @property {number} [smoking]     seconds left of its smoke (#248)
+ * @property {number} [straw]       seconds left of the wheat stalk in its mouth (#248)
+ * @property {number} [smokeRest]   seconds till it may have another
+ * @property {{ resource: string, until: number } | null} [focus] what its foreman said to gather first (#248)
+ * @property {Object | null} [captainTarget] the enemy its captain gave it (#248)
+ * @property {number[]} [squadIds]   a commander's squad
+ * @property {number} [orderIn]      seconds till a commander's next order
+ * @property {number} [orderTurn]    whose turn in its squad it is
+ * @property {number | null} [orderTo] the one a foreman is walking to with an order
+ * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it
+ * @property {{ toId: number, until: number } | null} [orderLine] a commander's line to the one it told
+ * @property {boolean} [wantsMeal]  hungry: going for its meal (goEat, #248)
+ * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
@@ -239,6 +254,7 @@
  * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
+ * @property {Object<string, number>} paths  'gx,gy' -> how worn its ground is (#248)
  */
 
 export {};
