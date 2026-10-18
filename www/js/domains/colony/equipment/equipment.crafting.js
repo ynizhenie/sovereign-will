@@ -1,7 +1,7 @@
 // Making things (#211, #248): a tool, a weapon or a piece of gear is made by a worker. It's paid for when
-// it's ordered; the worker fetches what it costs from a storage, carries it to where it's made (a workshop,
-// or a smithy for anything with iron in it) and works on it there (GAME_CONFIG.crafting). Made, it goes
-// into the armory, to be handed out from there.
+// it's ordered; the worker fetches what it costs from a storage, carries it to where it's made (the town
+// hall for what's made by hand, a workshop, or a smithy for anything with iron in it) and works on it there
+// (GAME_CONFIG.crafting). Made, it goes into the armory, to be handed out from there.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
@@ -11,14 +11,19 @@ import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { playWorkSound } from '../../../app/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 
-// Where it's made: the smithy if there's iron in it, otherwise the workshop
+// Where it's made: by hand (madeBy: 'hand', at the town hall, #261), the smithy if there's iron in it,
+// otherwise the workshop
+/** @returns {'hand' | 'workshop' | 'smithy'} */
 export function craftPlace(category, id) {
   const item = GAME_CONFIG[category][id];
+  if (item && item.madeBy === 'hand') return 'hand';
   return item && item.cost && item.cost.iron ? 'smithy' : 'workshop';
 }
 
-// The nearest place of that kind to `from`: a workshop or a smithy (null with none built)
+// The nearest place of that kind to `from`: a workshop or a smithy (null with none built); by hand, the
+// town hall
 export function findWorkplace(place, from = townHall) {
+  if (place === 'hand') return townHall;
   let best = null, bestD = Infinity;
   for (const b of game.buildings) {
     if (GAME_CONFIG.buildings[b.type] && GAME_CONFIG.buildings[b.type].crafts === place) {
@@ -33,7 +38,7 @@ export function findWorkplace(place, from = townHall) {
 // armory to be handed out (#248)
 export function orderCraft(category, id) {
   const place = craftPlace(category, id);
-  if (!findWorkplace(place)) return place === 'smithy' ? 'noSmithy' : 'noWorkshop';
+  if (!findWorkplace(place)) return place === 'smithy' ? 'noSmithy' : 'noWorkshop'; // (by hand: always)
   const cost = GAME_CONFIG[category][id].cost || {};
   if (!canAfford(cost)) return 'cantAfford';
   payCost(cost);

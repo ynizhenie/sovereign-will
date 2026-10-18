@@ -87,7 +87,7 @@ Object.assign(window.sim, (() => {
     return { healed: d.hp > hp0, allyAlive: ally.hp >= 1 };
   }
 
-  // The enemy's necromancer keeps off: a settler walking up to it, it backs away
+  // The enemy's necromancer doesn't run from a settler that comes for it (#261): it stands and fights
   function necromancerBack({ seed = 'morale-necro' } = {}) {
     asFactions('humans', 'undead', seed);
     const necro = createConfiguredEnemy(nearHall(-12, 0), 'undead_necromancer');
@@ -100,7 +100,7 @@ Object.assign(window.sim, (() => {
     corpses = [];
     run(3);
     back();
-    return { keptOff: Math.hypot(necro.x - s.x, necro.y - s.y) >= GAME_CONFIG.morale.necroKeepBack - 10 };
+    return { stayed: Math.hypot(necro.x - s.x, necro.y - s.y) < GAME_CONFIG.morale.necroKeepBack, hitBack: s.hp < s.maxHp };
   }
 
   // A boar shaken to a panic keeps running from the settler near it

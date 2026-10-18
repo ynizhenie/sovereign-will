@@ -6,15 +6,16 @@ import { openGame } from './helpers.mjs';
 test('pointing at a button in a sheet shows what it is: its name, a line about it and its numbers', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await page.click('[data-arg="tab-tools"]'); // the workshop's list (#248)
-  await page.hover('[data-item="weapons:spear"] .row-info');
+  await page.click('[data-arg="tab-craft"]');
+  await page.click('#craft-tab-weapons'); // (#261)
+  await page.hover('#btn-spear');
   const card = page.locator('#info-card');
   await expect(card).toBeVisible();
   await expect(card).toContainText('Копье');
   await expect(card).toContainText('Бьёт дальше');
   await expect(card).toContainText('Урон: 25');
-  await page.click('[data-arg="tab-weapons"]'); // the smithy's
-  await page.hover('[data-item="gear:armor"] .craft-tile');
+  await page.click('#craft-tab-gear');
+  await page.hover('#btn-armor');
   await expect(card).toContainText('Здоровье: +50');
   await expect(card).toContainText('Урон по носящему: −35%');
   await page.click('[data-arg="tab-build"]');
@@ -42,13 +43,13 @@ test('every button with a card has a line about it, in every language', async ({
 
 test.describe('on a touch screen', () => {
   test.use({ hasTouch: true });
-  test('the first tap on a button shows its card and doesn\'t press it; a second tap presses it (the friend\'s playtest); a list\'s row has its own buttons for the card and the action (#248)', async ({ page }) => {
+  test('the first tap on a button shows its card and doesn\'t press it; a second tap presses it (the friend\'s playtest), a tile too (#261)', async ({ page }) => {
     await openGame(page);
     await page.click('#play-button');
     await page.evaluate(() => { stock.food = 100; updateUI(); openHallCard(); }); // hiring is at the town hall (#211)
     const settlers0 = await page.evaluate(() => settlers.length);
-    // a list's row (#248): its info button shows the card, its Hire button hires at once
-    await page.tap('.craft-row:has(#btn-hire-normal) .row-info');
+    // a tile (#261): the first tap its card, the second hires
+    await page.tap('#btn-hire-normal');
     await expect(page.locator('#info-card')).toContainText('Рабочий');
     expect(await page.evaluate(() => settlers.length)).toBe(settlers0);
     await page.tap('#btn-hire-normal');

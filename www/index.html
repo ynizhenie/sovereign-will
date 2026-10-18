@@ -294,42 +294,42 @@
           <div id="tab-build" class="tab-pane active">
             <div id="build-actions"></div>
 
-            <div class="action-row">
-              <button class="btn btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
-              <button class="btn" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
+            <div class="tile-grid">
+              <button class="btn tile btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
+              <button class="btn tile" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
             </div>
           </div>
 
           <div id="tab-farming" class="tab-pane">
             <div class="panel-heading" data-i18n="panel.plant">Plant</div>
-            <div class="btn-grid-2col" id="farming-actions"></div>
+            <div class="tile-grid" id="farming-actions"></div>
             <div class="panel-heading" data-i18n="panel.zones">Farm zones</div>
-            <div class="action-row">
-              <button class="btn" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
-              <button class="btn" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
-              <button class="btn" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
-              <button class="btn" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
+            <div class="tile-grid">
+              <button class="btn tile" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
+              <button class="btn tile" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
+              <button class="btn tile" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
+              <button class="btn tile" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
             </div>
           </div>
 
           <div id="tab-blight" class="tab-pane">
             <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
-            <div class="action-row">
-              <button class="btn" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
-              <button class="btn" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
+            <div class="tile-grid">
+              <button class="btn tile" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
+              <button class="btn tile" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
             </div>
           </div>
 
-          <!-- the workshop: what's made without iron (#248), a list -->
-          <div id="tab-tools" class="tab-pane">
-            <div class="panel-heading" data-i18n="panel.workshop">Made at a workshop</div>
-            <div id="workshop-list"></div>
-          </div>
-
-          <!-- the smithy: what's made with iron in it (#248), a list -->
-          <div id="tab-weapons" class="tab-pane">
-            <div class="panel-heading" data-i18n="panel.smithy">Made at a smithy</div>
-            <div id="smithy-list"></div>
+          <!-- making things (#248, #261): tools, weapons, gear, each by where it's made (equipment.panel.js) -->
+          <div id="tab-craft" class="tab-pane">
+            <div class="sub-tabs">
+              <button class="btn sub-tab on" id="craft-tab-tools" data-action="showCraftKind" data-arg="tools" data-i18n="craft.kind.tools">Tools</button>
+              <button class="btn sub-tab" id="craft-tab-weapons" data-action="showCraftKind" data-arg="weapons" data-i18n="craft.kind.weapons">Weapons</button>
+              <button class="btn sub-tab" id="craft-tab-gear" data-action="showCraftKind" data-arg="gear" data-i18n="craft.kind.gear">Gear</button>
+            </div>
+            <div id="craft-tools"></div>
+            <div id="craft-weapons" hidden></div>
+            <div id="craft-gear" hidden></div>
           </div>
 
         </div>
@@ -384,8 +384,7 @@
       <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-build" data-dock="colony:tab-build"><i class="ic ic-build"></i><span data-i18n="dock.build">Build</span></button>
       <button class="tab-btn dock-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-dock="colony:tab-farming"><i class="ic ic-wheat"></i><span data-i18n="dock.farming">Farm</span></button>
       <button class="tab-btn dock-btn" id="tab-btn-blight" data-action="switchTab" data-arg="tab-blight" data-dock="colony:tab-blight" hidden><i class="ic ic-rot"></i><span data-i18n="dock.blight">Blight</span></button>
-      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-tools" data-dock="colony:tab-tools"><i class="ic ic-workshop"></i><span data-i18n="dock.people">Workshop</span></button>
-      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-weapons" data-dock="colony:tab-weapons"><i class="ic ic-hammer"></i><span data-i18n="dock.arsenal">Smithy</span></button>
+      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-craft" data-dock="colony:tab-craft"><i class="ic ic-hammer"></i><span data-i18n="dock.craft">Craft</span></button>
       <button class="dock-btn dock-point active" id="btn-interact" data-action="pointMode"><i class="ic ic-point"></i><span data-i18n="top.point">Point</span></button>
     </div>
     <div class="dock-row" data-hud-mode="battle">

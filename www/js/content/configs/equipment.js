@@ -3,22 +3,23 @@
 export const equipmentConfig = {
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
   // combatDamage: what an unarmed settler carrying it hits for (a boar: twice that, GAME_CONFIG.boarDamageFactor).
+  // madeBy: 'hand': made at the town hall, no workshop needed (#261); otherwise a workshop, a smithy with iron.
   tools: {
     axe: { id: 'axe', icon: 'axe', cost: { wood: 5, stone: 5 }, family: 'axe', combatDamage: 15 },
     pickaxe: { id: 'pickaxe', icon: 'pickaxe', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10 },
     iron_axe: { id: 'iron_axe', icon: 'iron_axe', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18 },
     iron_pickaxe: { id: 'iron_pickaxe', icon: 'iron_pickaxe', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13 },
-    rod: { id: 'rod', icon: 'rod', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6 },
+    rod: { id: 'rod', icon: 'rod', madeBy: 'hand', cost: { wood: 10, wheatSeeds: 5 }, family: 'rod', combatDamage: 6 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
     // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
     // factions: only these factions have it (the undead don't farm or heal with herbs)
-    medbag: { id: 'medbag', icon: 'medbag', factions: ['humans', 'demons'], cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4 },
+    medbag: { id: 'medbag', icon: 'medbag', factions: ['humans', 'demons'], madeBy: 'hand', cost: { leather: 3, herbs: 2 }, family: 'medic', combatDamage: 4 },
     hoe: { id: 'hoe', icon: 'hoe', factions: ['humans', 'demons'], cost: { wood: 5, stone: 2 }, family: 'hoe', combatDamage: 8 },
     // the undead's necromancer's staff: whoever holds it is a necromancer: heals the undead around,
     // raises corpses into temporary zombies (raises before going back to a grave for more), blights
     // the ground the player marks (blightSeconds and blightRot of the stock a tile); it raises a corpse
     // from raiseReach away, a dark thread to it while it does (#203)
-    necro_staff: { id: 'necro_staff', icon: 'staff', factions: ['undead'], cost: { bones: 20, rot: 10 }, family: 'necro', combatDamage: 6,
+    necro_staff: { id: 'necro_staff', icon: 'staff', factions: ['undead'], madeBy: 'hand', cost: { bones: 20, rot: 10 }, family: 'necro', combatDamage: 6,
       necromancer: { raises: 5, range: 400, raiseReach: 110, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
   },
 
@@ -32,7 +33,7 @@ export const equipmentConfig = {
   weapons: {
     fist: { id: 'fist', icon: 'fist', cost: {},
       combat: { damage: 6, range: 28, cooldown: 0.7, approach: 22, tentReach: 25 } },
-    club: { id: 'club', icon: 'club', cost: { wood: 4 }, family: 'club',
+    club: { id: 'club', icon: 'club', madeBy: 'hand', cost: { wood: 4 }, family: 'club',
       combat: { damage: 10, range: 35, cooldown: 0.6, approach: 22, tentReach: 25 } },
     sword: { id: 'sword', icon: 'sword', cost: { wood: 6, stone: 3 }, family: 'sword',
       combat: { damage: 20, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 } },
@@ -52,7 +53,7 @@ export const equipmentConfig = {
   // loads (never an archer: the quiver is on its back). armor: +hpBonus, damageReduction off every hit,
   // melee soldiers first. shield: melee soldiers only, damageReduction off every hit, on top of armour.
   gear: {
-    backpack: { id: 'backpack', icon: 'backpack', cost: { leather: 5 }, extraLoads: 1 },
+    backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 5 }, extraLoads: 1 },
     shield: { id: 'shield', icon: 'shield', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
     // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows

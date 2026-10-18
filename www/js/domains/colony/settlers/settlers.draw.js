@@ -4,7 +4,7 @@
 // ---- Animation state (drawn by getHeldItemPose, below)
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { drawIcon } from '../../../ui/index.js';
+import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
 import { getCarryCapacity } from '../storage/index.js';
@@ -103,7 +103,7 @@ function drawCarriedInHands(s) {
     return;
   }
   const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
-  drawIcon(ctx, type === 'bundle' ? 'bundle' : (known ? known.icon : 'wheat'), x, y, 12);
+  drawIcon(ctx, type === 'bundle' ? 'bundle' : type.startsWith('armory:') ? getResourceIconName(type) : (known ? known.icon : 'wheat'), x, y, 12);
 }
 
 // A hammer going up and down in its hand while it makes a thing

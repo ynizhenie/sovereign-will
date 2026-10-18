@@ -28,8 +28,8 @@ test('a badly hurt demon in a panic heals on an ally next to it, never to the al
   expect(await sim.moraleDemonBite({})).toEqual({ healed: true, allyAlive: true });
 });
 
-test('the enemy necromancer keeps off the settlers', async () => {
-  expect(await sim.moraleNecromancerBack({})).toEqual({ keptOff: true });
+test('the enemy necromancer doesn\'t run from a settler that comes for it: it fights (#261)', async () => {
+  expect(await sim.moraleNecromancerBack({})).toEqual({ stayed: true, hitBack: true });
 });
 
 test('a boar in a panic keeps running from the settler near it', async () => {

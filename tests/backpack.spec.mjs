@@ -16,5 +16,5 @@ test('the backpack button gives a worker a backpack for its leather cost (#26)',
   });
   expect(r.hasBackpack).toBe(true);
   expect(r.leather).toBe(5);
-  await expect.poll(() => iconText(page, '[data-item="gear:backpack"] .craft-tile')).toEqual(['[[backpack]] Рюкзак 5[[leather]]']);
+  await expect.poll(() => iconText(page, '#btn-backpack')).toEqual(['[[backpack]] Рюкзак 5[[leather]]']);
 });

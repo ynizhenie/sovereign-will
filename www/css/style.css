@@ -1004,6 +1004,9 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .selected-gear[hidden] { display: none; }
 .selected-gear .btn { padding: 2px 7px; font-size: 11px; min-height: 0; }
 .selected-gear .btn .ic-no { width: 10px; height: 10px; }
+/* a thing it has: its name, then into the store or taken apart (#248) */
+.gear-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 2px 1px 6px; font-size: 11px; border: 1px solid #4a5160; border-radius: 5px; }
+.selected-gear .btn-store { background: #2e6da4; }
 .info-cost { color: #c9cdd6; }
 .info-cost b { color: #fff; font-variant-numeric: tabular-nums; }
 .info-cost.short, .info-cost.short b { color: #ff6b6b; }
@@ -1013,17 +1016,23 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 #save-game-button.save-no { background: #c0392b; color: #fff; }
 #pause-load { max-height: 40vh; overflow-y: auto; }
 
-/* the craft lists and the hiring list (#248): a row a thing, its tile and buttons on its right; scrolls */
-.craft-list { display: flex; flex-direction: column; gap: 4px; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-.craft-row { display: flex; align-items: stretch; gap: 4px; }
-.craft-tile { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 4px 8px; font-size: 12px;
-  border: 1px solid #4a5160; border-radius: 6px; background: rgba(255, 255, 255, 0.04); color: #e6e8ec; }
-.craft-tile b { font-weight: 600; }
-.craft-cost { color: #aeb4c0; font-size: 11px; }
-.craft-count { margin-left: auto; color: #f1c40f; font-size: 11px; }
-.row-btn { width: 38px; min-width: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-.row-btn:disabled { opacity: 0.35; }
-.row-make { background: #2e7d32; }
+/* every tab's things as tiles (#261): a grid of compact buttons, the icon and name over the cost; a tap
+   does it. Craft tiles: how many are stored in a corner, and under one with some, Give and Take apart */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 4px; }
+.btn.tile { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; position: relative;
+  min-height: 40px; padding: 4px 6px; white-space: normal; text-align: left; font-size: 11px; line-height: 1.15; width: 100%; }
+.tile-name { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.tile-name b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.tile-cost { color: #aeb4c0; font-size: 10px; font-weight: normal; }
+.tile-count { position: absolute; top: 2px; right: 4px; color: #f1c40f; font-size: 10px; }
+.tile-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile-acts { display: flex; gap: 2px; }
+.tile-acts[hidden] { display: none; }
+.btn.tile-act { flex: 1; padding: 1px 0; min-height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.sub-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
+.btn.sub-tab { flex: 1; }
+.btn.sub-tab.on { background: #2e6da4; border-color: #46b8da; }
+#tab-craft { max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
 
 /* the stock's drop-down, one level (#248) */
 #resources-hud.res-lines { display: flex; flex-direction: column; gap: 4px; }
@@ -1031,3 +1040,8 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .res-line:first-child { border-top: none; }
 .res-line-name { color: #8a91a0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 64px; }
 .res-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; white-space: nowrap; }
+
+/* Point on a tile with several things on it: which one (#261) */
+#pick-menu { position: fixed; z-index: 60; display: flex; flex-direction: column; gap: 3px; padding: 4px; min-width: 130px;
+  background: rgba(24, 27, 34, 0.96); border: 1px solid #4a5160; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); }
+#pick-menu .btn { text-align: left; font-size: 12px; padding: 6px 8px; }
