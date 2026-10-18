@@ -14,7 +14,9 @@ test('the shield button equips a melee soldier; taking its weapon off keeps the 
     window.sim.helpers.placeBuilding('smithy', townHall.x + 90, townHall.y + 15 - (townHall.y % 30) + 60);
     selectedSettler = null;
     document.getElementById('btn-shield').click();
-    window.sim.run(30); // made at the smithy (iron, #211), then it walks to the town hall for it
+    window.sim.run(30); // made at the smithy (iron, #211), into the store
+    document.querySelector('[data-item="gear:shield"] .row-give').click(); // handed out (#248)
+    window.sim.run(20); // it walks to the town hall for it
     const out = { archer: !!settlers[0].shield, soldier: !!settlers[1].shield, wood: stock.wood, iron: stock.iron };
     selectedSettler = settlers[1];
     disarmSettler('weapon');
@@ -25,5 +27,5 @@ test('the shield button equips a melee soldier; taking its weapon off keeps the 
     return { ...out, afterDisarm, shieldOff: !settlers[1].shield, ironBack: stock.iron };
   });
   expect(r).toMatchObject({ archer: false, soldier: true, wood: 4, iron: 3, afterDisarm: { weapon: 'fist', shield: true }, shieldOff: true, ironBack: 5 });
-  await expect.poll(() => iconText(page, '#btn-shield')).toEqual(['[[shield]] Щит (6[[wood]] 2[[iron]])']);
+  await expect.poll(() => iconText(page, '[data-item="gear:shield"] .craft-tile')).toEqual(['[[shield]] Щит 6[[wood]] 2[[iron]]']);
 });

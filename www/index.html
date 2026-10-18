@@ -320,34 +320,16 @@
             </div>
           </div>
 
-          <!-- people: hiring first, then their tools and gear -->
+          <!-- the workshop: what's made without iron (#248), a list -->
           <div id="tab-tools" class="tab-pane">
-            <!-- hiring is at the town hall now (#211): a tap on it, or this -->
-            <div class="hall-link"><button class="btn" data-action="openHall" data-i18n="btn.openHall">[[hall]] Hire at the town hall</button></div>
-
-            <div class="panel-heading" data-i18n="panel.tools">Tools</div>
-            <div class="btn-grid-2col" id="tool-actions"></div>
-
-            <div class="panel-heading" data-i18n="panel.gear">Gear</div>
-            <div class="btn-grid-2col gear-actions">
-              <button class="btn" id="btn-backpack" data-action="orderGear" data-arg="backpack"></button>
-              <button class="btn" id="btn-wateringCan" data-action="orderGear" data-arg="wateringCan"></button>
-            </div>
+            <div class="panel-heading" data-i18n="panel.workshop">Made at a workshop</div>
+            <div id="workshop-list"></div>
           </div>
 
+          <!-- the smithy: what's made with iron in it (#248), a list -->
           <div id="tab-weapons" class="tab-pane">
-            <div class="panel-heading" data-i18n="panel.weapons">Weapons</div>
-            <div class="btn-grid-2col" id="weapon-actions"></div>
-            <div class="panel-heading" data-i18n="panel.arrows">Arrows</div>
-            <div class="btn-grid-2col" id="special-actions">
-              <button class="btn" id="btn-craft-arrows" data-action="craftArrows"></button>
-            </div>
-
-            <div class="panel-heading" data-i18n="panel.armour">Armour</div>
-            <div class="btn-grid-2col gear-actions">
-              <button class="btn" id="btn-armor" data-action="orderGear" data-arg="armor"></button>
-              <button class="btn" id="btn-shield" data-action="orderGear" data-arg="shield"></button>
-            </div>
+            <div class="panel-heading" data-i18n="panel.smithy">Made at a smithy</div>
+            <div id="smithy-list"></div>
           </div>
 
         </div>
@@ -402,8 +384,8 @@
       <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-build" data-dock="colony:tab-build"><i class="ic ic-build"></i><span data-i18n="dock.build">Build</span></button>
       <button class="tab-btn dock-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-dock="colony:tab-farming"><i class="ic ic-wheat"></i><span data-i18n="dock.farming">Farm</span></button>
       <button class="tab-btn dock-btn" id="tab-btn-blight" data-action="switchTab" data-arg="tab-blight" data-dock="colony:tab-blight" hidden><i class="ic ic-rot"></i><span data-i18n="dock.blight">Blight</span></button>
-      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-tools" data-dock="colony:tab-tools"><i class="ic ic-worker"></i><span data-i18n="dock.people">People</span></button>
-      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-weapons" data-dock="colony:tab-weapons"><i class="ic ic-swords"></i><span data-i18n="dock.arsenal">Arsenal</span></button>
+      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-tools" data-dock="colony:tab-tools"><i class="ic ic-workshop"></i><span data-i18n="dock.people">Workshop</span></button>
+      <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-weapons" data-dock="colony:tab-weapons"><i class="ic ic-hammer"></i><span data-i18n="dock.arsenal">Smithy</span></button>
       <button class="dock-btn dock-point active" id="btn-interact" data-action="pointMode"><i class="ic ic-point"></i><span data-i18n="top.point">Point</span></button>
     </div>
     <div class="dock-row" data-hud-mode="battle">

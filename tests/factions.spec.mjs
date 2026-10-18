@@ -31,13 +31,13 @@ test('switching to the undead: no other faction\'s items or tab left in the pane
   await page.click('#play-button');
   const r = await page.evaluate(() => ({
     tab: document.querySelector('.tab-pane.active').id,
-    held: [...document.querySelectorAll('#group-toolsHeld-members div')].map(d => d.querySelector('b').id),
+    held: [...document.querySelectorAll('#resources-hud .res-line:has(#group-toolsHeld-txt) b')].map(b => b.id),
     canButtons: ['btn-wateringCan', 'btn-hoe', 'btn-medbag'].map(id => document.getElementById(id)?.hidden ?? 'none')
   }));
   expect(r.tab).toBe('tab-build');
   expect(r.held).toContain('held-tools-necro_staff-txt');
   expect(r.held.filter(id => /wateringCan|hoe|medbag/.test(id))).toEqual([]);
-  expect(r.canButtons).toEqual([true, 'none', 'none']);
+  expect(r.canButtons).toEqual(['none', 'none', 'none']); // not in the lists at all (#248)
   await page.evaluate(() => { stock.bones = 999; stock.rot = 999; settlers = settlers.concat(settlers, settlers); spawnSettler(getPlayerFaction().startUnits); });
   await expect(page.locator('#toast-notification')).toContainText('Могила');
 });

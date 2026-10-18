@@ -7,6 +7,7 @@ Object.assign(window.sim, (() => {
     const w = makeSettler(1, townHall.x + 40, townHall.y + 40);
     const a = makeSettler(2, townHall.x - 40, townHall.y + 40, { weapon: 'bow', role: 'archer', quiver: true, arrows: 12 });
     settlers = archer ? [w, a] : [w];
+    window.sim.helpers.placeWorkshop(); // made at a workshop (#248)
     Object.assign(stock, { wood: 10, stone: 10, arrows: 0 });
     craftArrows();
     const orders = craftOrders.length, instant = stock.arrows;

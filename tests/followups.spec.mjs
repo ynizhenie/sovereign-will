@@ -10,9 +10,10 @@ test('a new game opens on the Building tab; the undead see bones and rot right a
   await expect(page.locator('#tab-build')).toHaveClass(/active/);
 
   await sim(page, 'asUndeadForHud', {});
-  const tiles = await iconText(page, '#resources-hud > div');
-  expect(tiles[2]).toContain('[[bones]]');
-  expect(tiles[3]).toContain('[[rot]]');
+  // the line right after the base and the people: bones, then rot (one level, #248)
+  const chips = await iconText(page, '#resources-hud .res-line:nth-child(2) .res-chip');
+  expect(chips[0]).toContain('[[bones]]');
+  expect(chips[1]).toContain('[[rot]]');
 });
 
 test('on a phone the bottom panel is compact, and the selected settler box keeps its size (#188)', async ({ page }) => {

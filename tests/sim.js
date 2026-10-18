@@ -519,6 +519,14 @@ window.sim = (() => {
 
   // A resource that exists only in GAME_CONFIG: a worker picks up a pebble that yields it and brings it
   // home, then it pays for a tool. Returns the stock of it after each step.
+  // A workshop by the town hall: things without iron are made there (#248)
+  function placeWorkshop() {
+    const g = getGridPos(townHall.x, townHall.y);
+    const w = placeBuilding('workshop', (g.gx - 3) * TILE_SIZE + 15, (g.gy + 3) * TILE_SIZE + 15);
+    invalidateAllPaths();
+    return w;
+  }
+
   function configOnlyResource({ seed = 'config-resource-test' }) {
     GAME_CONFIG.resources.flint = { id: 'flint', label: 'Кремень', icon: 'pebble', type: 'resource' };
     GAME_CONFIG.mapResources.pebble.yield = { flint: 2 };
@@ -527,7 +535,7 @@ window.sim = (() => {
     for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars]) list.length = 0;
     pebbles.push({ x: townHall.x + 3 * TILE_SIZE, y: townHall.y, hp: 1, priority: 0 });
     settlers = [makeSettler(1, townHall.x - 60, townHall.y)];
-    invalidateAllPaths();
+    placeWorkshop();
     const atStart = stock.flint;
     run(20);
     const delivered = stock.flint;
@@ -717,7 +725,7 @@ window.sim = (() => {
 
   return {
     // for scenarios in tests/scenarios/*.js
-    helpers: { tileCenter, makeSettler, placeBuilding, reachableFromHall, wallRing, clearResources },
+    helpers: { tileCenter, makeSettler, placeBuilding, placeWorkshop, reachableFromHall, wallRing, clearResources },
     start, run, mapSignature, resourceCounts, pathCoverage, assault, treeSiege, wallContact,
     homecoming, crowd, bunker, waveCost, refundMismatches, oreReport, oreRespawn, woundedUnderFire, fishing,
     markedTarget, idleFlags, treeRegrowth, largestBoulderPiles, forestShares, grassTileVariety,

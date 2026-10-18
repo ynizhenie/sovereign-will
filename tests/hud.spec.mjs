@@ -1,30 +1,21 @@
 import { test, expect } from './helpers.mjs';
 import { openGame, iconText } from './helpers.mjs';
 
-test('resources are grouped: a group tile shows its total and opens a row with each resource (#106)', async ({ page }) => {
+test('the stock drops down at one level: a line a group, its name and each resource in it in sight, no rows to open (#106, #248)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
   await page.evaluate(() => { Object.assign(stock, { rawMeat: 6, rawFish: 2, wheat: 4 }); updateUI(); });
-  await expect(page.locator('#group-raw-txt')).toHaveText('12');
-  await expect(page.locator('#group-raw-members')).toBeHidden();
   await page.click('#resource-strip'); // all of the stock, dropped down from the strip
-  await page.click('#group-raw');
-  await expect(page.locator('#group-raw-members')).toBeVisible();
-  await expect.poll(() => iconText(page, '#group-raw-members div')).toEqual(['[[rawMeat]] Сырое мясо: 6', '[[rawFish]] Сырая рыба: 2', '[[wheat]] Зерно: 4', '[[worms]] Червяки: 0']);
-  // another group closes the first; tapping it again closes it
-  await page.click('#group-materials');
-  await expect(page.locator('#group-raw-members')).toBeHidden();
-  await expect(page.locator('#group-materials-members')).toBeVisible();
-  await page.click('#group-materials');
-  await expect(page.locator('#group-materials-members')).toBeHidden();
-  // every resource has exactly one tile, grouped or not
-  // (a faction's own resources only show for it: no bones for the humans, #43)
-  const tiles = await page.evaluate(() => Object.values(GAME_CONFIG.resources).filter(r => !r.factions || r.factions.includes(sides.player.faction))
+  const raw = page.locator('#resources-hud .res-line', { has: page.locator('#resource-rawMeat-txt') });
+  await expect(raw).toBeVisible();
+  await expect(raw.locator('.res-line-name')).toHaveText('Сырая еда');
+  await expect.poll(() => iconText(page, '#resources-hud .res-line:has(#resource-rawMeat-txt) .res-chip')).toEqual(['[[rawMeat]] 6', '[[rawFish]] 2', '[[wheat]] 4', '[[worms]] 0']);
+  // every resource has exactly one place, grouped or not (a faction's own only for it: no bones for the humans, #43)
+  const places = await page.evaluate(() => Object.values(GAME_CONFIG.resources).filter(r => !r.factions || r.factions.includes(sides.player.faction))
     .map(r => document.querySelectorAll(`#${resourceHudId(r.id)}`).length));
-  expect(tiles.every(n => n === 1)).toBe(true);
+  expect(places.every(n => n === 1)).toBe(true);
   // the panel never gets wider than a phone
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.click('#group-plants');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
 });
 
