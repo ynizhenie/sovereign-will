@@ -536,6 +536,21 @@ export const ICONS = {
     icLine(c, '#6d4520', 1.2, [[13, 5], [13, 28]]); icLine(c, '#6d4520', 1.2, [[19, 5], [19, 28]]);
     icCircle(c, '#f39c12', 21.5, 17, 1.8);
   },
+  iron_door: c => {
+    // a plank door bound with iron bands and rivets (#248)
+    icRound(c, '#8d5a34', 7, 4, 18, 25, 2);
+    for (const y of [8, 16, 24]) { icRect(c, '#7f8c8d', 7, y - 1.5, 18, 3); icCircle(c, '#bdc3c7', 10, y, 1); icCircle(c, '#bdc3c7', 22, y, 1); }
+    icCircle(c, '#2c3e50', 21.5, 20, 1.8);
+  },
+  iron_trap: c => {
+    // a jaw trap, open: a ring of iron with teeth round it (#248)
+    icRing(c, '#7f8c8d', 2.5, 16, 17, 10);
+    for (let i = 0; i < 10; i++) {
+      const a = i / 10 * Math.PI * 2;
+      icFill(c, '#bdc3c7', [[16 + Math.cos(a) * 8, 17 + Math.sin(a) * 8], [16 + Math.cos(a + 0.2) * 4.5, 17 + Math.sin(a + 0.2) * 4.5], [16 + Math.cos(a + 0.4) * 8, 17 + Math.sin(a + 0.4) * 8]]);
+    }
+    icCircle(c, '#5d6d7e', 16, 17, 2.5);
+  },
   campfire: c => {
     icLine(c, '#6d4520', 3.5, [[5, 28], [27, 20]]); icLine(c, '#6d4520', 3.5, [[27, 28], [5, 20]]);
     icFlame(c, 16, 23, 1);

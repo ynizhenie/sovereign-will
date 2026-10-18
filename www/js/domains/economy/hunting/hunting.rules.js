@@ -7,6 +7,7 @@ import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../.
 import { bleed } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
+import { boarToBait } from './hunting.traps.js';
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
@@ -81,6 +82,8 @@ export function tickBoars(dt) {
   game.boars.forEach(b => {
     if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) return;
+    // a baited iron trap near by: it goes for the food, and may be caught (#248)
+    if (!b.hidden && !(b.fleeTimer > 0) && boarToBait(b)) return;
 
     if (b.hidden) {
       b.hideTimer -= dt;

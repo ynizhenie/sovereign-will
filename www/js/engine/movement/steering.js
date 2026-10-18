@@ -55,9 +55,10 @@ export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
 // them, the player's possessed settler aside, which moves by hand)
 export function stepsOntoSpikes(entity, vx, vy) {
   const tiles = getTileIndex();
-  if (tiles.spikes.size === 0) return false;
+  if (tiles.spikes.size === 0 && tiles.traps.size === 0) return false;
   const key = (x, y) => { const g = getGridPos(x, y); return `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`; };
-  return tiles.spikes.has(key(entity.x + vx, entity.y + vy)) && !tiles.spikes.has(key(entity.x, entity.y));
+  const hazard = k => tiles.spikes.has(k) || tiles.traps.has(k); // (iron traps too, #248)
+  return hazard(key(entity.x + vx, entity.y + vy)) && !hazard(key(entity.x, entity.y));
 }
 
 export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {

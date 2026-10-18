@@ -108,7 +108,7 @@ export function drawBlueprints() {
     if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
     else if (bp.type === 'wall_wood') ctx.fillStyle = '#8e5a2b';
     else if (bp.type === 'wall_stone') ctx.fillStyle = '#7f8c8d';
-    else if (bp.type === 'door') ctx.fillStyle = '#a0522d';
+    else if (bp.type === 'door' || bp.type === 'iron_door') ctx.fillStyle = '#a0522d';
     else if (bp.type === 'wheat') ctx.fillStyle = '#f1c40f';
     else if (bp.type === 'tent') ctx.fillStyle = '#e67e22';
     else if (bp.type === 'smelter') ctx.fillStyle = '#c0392b';
@@ -148,10 +148,19 @@ export function drawBuildings() {
     } else if (b.type === 'wall_stone') {
       ctx.fillStyle = '#7f8c8d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
       ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-    } else if (b.type === 'door') {
-      ctx.fillStyle = '#a0522d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-      drawIcon(ctx, 'door', b.x, b.y, 16);
+    } else if (b.type === 'door' || b.type === 'iron_door') {
+      ctx.fillStyle = b.type === 'door' ? '#a0522d' : '#6e4a2e'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = b.type === 'door' ? '#3e2723' : '#5d6d7e'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+      drawIcon(ctx, b.type, b.x, b.y, 16);
+    } else if (b.type === 'iron_trap') {
+      // an iron trap (#248): open, with food in it when baited; shut on whoever it holds
+      if (b.holding) {
+        ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(b.x - 11, b.y); ctx.lineTo(b.x + 11, b.y); ctx.stroke();
+      } else {
+        drawIcon(ctx, 'iron_trap', b.x, b.y, 24);
+        if (b.bait) drawIcon(ctx, 'food', b.x, b.y, 9);
+      }
     } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
       if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour
       else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons'
@@ -218,6 +227,7 @@ export function drawBuildings() {
     } else if (b.type === 'fish_trap') {
       // a fish trap (#199): a basket, a fish mark for each fish waiting in it
       drawIcon(ctx, 'fish_trap', b.x, b.y, 26);
+      if (!((b.baitLeft || 0) > 0)) drawIcon(ctx, 'worms', b.x + 9, b.y + 9, 10); // (needs bait, #248)
       for (let k = 0; k < (b.fish || 0); k++) { ctx.fillStyle = '#bdc3c7'; ctx.beginPath(); ctx.ellipse(b.x - 9 + k * 6, b.y - 13, 2.5, 1.5, 0, 0, Math.PI * 2); ctx.fill(); }
     } else if (b.type === 'dung_heap') {
       // a compost heap (#232): bigger the more dung it holds
