@@ -4,7 +4,7 @@ import { game, resetTileIndex } from '../engine/world/index.js';
 import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickSettlers, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
-import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickWaveTimer } from '../domains/conflict/waves/index.js';
+import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from '../domains/conflict/waves/index.js';
 import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
 import { tickPaths } from '../domains/world/index.js';
 import { growCrops } from '../domains/economy/farming/index.js';
@@ -12,6 +12,7 @@ import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, updateTemporaryZombi
 import { separateSettlersFromEnemies } from '../engine/movement/index.js';
 import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
 import { keepStoresInStep } from '../domains/colony/storage/index.js';
+import { tickDemonCamp } from '../domains/factions/demons/index.js';
 import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishTraps } from '../domains/economy/fishing/index.js';
@@ -48,6 +49,8 @@ export function update(dt) {
   movePossessed(dt);
   tickSettlers(dt);
   tickEnemyTents(dt);
+  tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
+  tickDemonCamp(dt); // (their corpse pits and cages)
   tickProjectiles();
   tickEnemies(dt);
 

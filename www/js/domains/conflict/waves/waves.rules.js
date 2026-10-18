@@ -178,7 +178,11 @@ export function startNextWave() {
   }
 
   let spawned = 0;
+  // the demons' come out of their portals a few at a time (#250): queued, let out by tickPortalWave
+  const queued = getEnemyFaction().portalSpawns;
+  game.portalQueue = [];
   const spawnWaveEnemy = def => {
+    if (queued) { game.portalQueue.push(def.id); spawned++; return; }
     const enemy = createConfiguredEnemy(getWaveSpawnPos(), def.id);
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
@@ -218,9 +222,26 @@ export function startNextWave() {
     }
   }
 
-  game.waveSize = game.enemies.filter(en => en.fromWave).length; // (morale: a wave that's lost most of them runs)
+  if (queued) { game.portalTimer = 0; tickPortalWave(0); } // (the first of them at once)
+  game.waveSize = game.enemies.filter(en => en.fromWave).length + game.portalQueue.length; // (morale: a wave that's lost most of them runs)
   game.waveRouted = false;
   game.waveNum++;
+}
+
+// A wave's demons still to come out of the portals (#250): `batch` of them every `seconds`
+export function tickPortalWave(dt) {
+  if (!game.portalQueue || !game.portalQueue.length) return;
+  game.portalTimer = (game.portalTimer || 0) - dt;
+  if (game.portalTimer > 0) return;
+  const c = GAME_CONFIG.portalWave;
+  game.portalTimer = c.seconds;
+  for (const id of game.portalQueue.splice(0, c.batch)) {
+    const enemy = createConfiguredEnemy(getWaveSpawnPos(), id);
+    if (!enemy) continue;
+    enemy.fromWave = true;
+    dressForWave(enemy, GAME_CONFIG.enemies[id]);
+    game.enemies.push(enemy);
+  }
 }
 
 // The wave timer: a warning 15 s before, then the wave

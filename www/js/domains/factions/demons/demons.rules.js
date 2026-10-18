@@ -5,6 +5,7 @@ import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../.
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction } from '../index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
+import { getBaseRadius } from '../../conflict/combat/index.js';
 
 // The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th...
 export function getPortalPairs() {
@@ -40,10 +41,11 @@ export function takePortal(entity, targetX, targetY) {
   return null;
 }
 
-// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall
+// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall: never in the
+// base (#250: awayTiles past its edge at least)
 export function openDemonPortal() {
   const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
-  const minDist = getEnemyFaction().minPortalTiles * TILE_SIZE;
+  const minDist = Math.max(getEnemyFaction().minPortalTiles * TILE_SIZE, getBaseRadius() + GAME_CONFIG.portalWave.awayTiles * TILE_SIZE);
   for (let attempt = 0; attempt < 200; attempt++) {
     const gx = BORDER_MARGIN + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN));
     const gy = BORDER_MARGIN + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN));
