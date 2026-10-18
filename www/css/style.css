@@ -1007,3 +1007,8 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .info-cost { color: #c9cdd6; }
 .info-cost b { color: #fff; font-variant-numeric: tabular-nums; }
 .info-cost.short, .info-cost.short b { color: #ff6b6b; }
+
+/* the save button says how the save went (#254) */
+#save-game-button.save-ok { background: #27ae60; color: #fff; }
+#save-game-button.save-no { background: #c0392b; color: #fff; }
+#pause-load { max-height: 40vh; overflow-y: auto; }

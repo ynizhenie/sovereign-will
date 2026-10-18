@@ -5,7 +5,7 @@ test('the demons: imps to start, their own units, a sacrificial circle and porta
   await openGame(page);
   expect(await sim(page, 'demonColony')).toEqual({
     startUnits: ['imp', 'imp'], hire: ['btn-hire-imp', 'btn-hire-demon', 'btn-upgrade'],
-    tent: false, circle: true, portal: true, fireImp: { type: 'fire_imp', weapon: 'bow', role: 'archer' }
+    tent: false, circle: true, portal: true, fireImp: { type: 'imp', weapon: 'bow', role: 'archer' } // (an imp with a bow, #249)
   });
 });
 

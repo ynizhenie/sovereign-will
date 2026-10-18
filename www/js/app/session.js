@@ -67,6 +67,13 @@ export function exitToMainMenu() {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initSession() {
   onTap(document.getElementById('resume-button'), () => setPaused(false));
+  // the Settings from the pause menu (#254): the main menu's settings screen over the game; Back comes back here
+  onTap(document.getElementById('pause-settings-button'), () => {
+    document.getElementById('pause-menu').hidden = true;
+    document.getElementById('main-menu').style.display = '';
+    document.getElementById('main-menu').dataset.fromPause = 'yes';
+    showMenuScreen('settings');
+  });
   // out of the pause menu: each mode leaves its own way
   onTap(document.getElementById('exit-to-menu-button'), () => {
     if (game.gameMode === 'battle') leaveBattleMode();

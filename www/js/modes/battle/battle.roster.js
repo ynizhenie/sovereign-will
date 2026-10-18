@@ -2,7 +2,6 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { t } from '../../engine/platform/index.js';
-import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { battle } from './battle.setup.js';
 
 // The panel's categories: the player's units (green side), enemies (red side), buildings (either side);
@@ -21,12 +20,12 @@ export const BATTLE_PLAYER_UNITS = {
   ],
   undead: [
     { id: 'zombie', type: 'zombie', weapon: 'fist' }, { id: 'zombie_club', type: 'zombie', weapon: 'club' },
-    { id: 'zombie_sword', type: 'zombie', weapon: 'sword' }, { id: 'skeleton', type: 'skeleton', weapon: 'bow' },
+    { id: 'zombie_sword', type: 'zombie', weapon: 'sword' }, { id: 'zombie_bow', type: 'zombie', weapon: 'bow' },
     { id: 'necromancer', type: 'zombie', weapon: 'fist', tool: 'necro_staff' }, { id: 'big_zombie', type: 'big_zombie', weapon: 'club' }
   ],
   demons: [
     { id: 'imp', type: 'imp', weapon: 'club' }, { id: 'imp_sword', type: 'imp', weapon: 'sword' },
-    { id: 'imp_spear', type: 'imp', weapon: 'spear' }, { id: 'fire_imp', type: 'fire_imp', weapon: 'bow' },
+    { id: 'imp_spear', type: 'imp', weapon: 'spear' }, { id: 'imp_bow', type: 'imp', weapon: 'bow' },
     { id: 'demon', type: 'demon', weapon: 'club' }, { id: 'demon_spear', type: 'demon', weapon: 'spear' }
   ]
 };
@@ -49,7 +48,7 @@ export function battlePresetLabel(preset) {
   if (preset.faction === 'humans') return t(`preset.${preset.id}`);
   const parts = [GAME_CONFIG.settlerTypes[preset.type].label];
   if (preset.tool) parts.push(getDefinition('tools', preset.tool).label);
-  else if (preset.weapon !== 'fist' && !isBowWeapon(preset.weapon)) parts.push(getDefinition('weapons', preset.weapon).label.toLowerCase());
+  else if (preset.weapon !== 'fist') parts.push(getDefinition('weapons', preset.weapon).label.toLowerCase()); // (a bow too, #249: no archer kinds of their own)
   return parts.join(', ');
 }
 

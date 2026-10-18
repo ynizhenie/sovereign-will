@@ -14,13 +14,9 @@ export const unitsConfig = {
     // raised zombies take population like hired ones
     zombie: { id: 'zombie', icon: 'zombie', hp: 100, speed: 0.85, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { bones: 8, rot: 3 } },
     big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 20, rot: 8 }, upgradeCost: { bones: 12, rot: 5 } },
-    // a zombie given a bow (bowUnits)
-    skeleton: { id: 'skeleton', icon: 'skeleton', hp: 70, speed: 1.0, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1 },
     // the demons'. eatsCorpses: heals by eating a corpse (eatSeconds) when not fighting.
     // fireArrows: its arrows set what they hit burning (see GAME_CONFIG.burning)
     imp: { id: 'imp', icon: 'imp', eatsCorpses: true, hp: 90, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
     demon: { id: 'demon', icon: 'demon', big: true, eatsCorpses: true, hp: 260, speed: 0.75, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.9, carryLoads: 2, hireCost: { food: 30, stone: 10 }, upgradeCost: { food: 15, stone: 10 } },
-    // an imp given a bow (bowUnits)
-    fire_imp: { id: 'fire_imp', icon: 'fire_imp', fireArrows: true, eatsCorpses: true, hp: 70, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1 }
   }
 };

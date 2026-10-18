@@ -161,8 +161,7 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt) {
   if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
     let angle = Math.atan2(target.y - en.y, target.x - en.x);
     playSound('bow', en);
-    game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1), life: ranged.arrowLife, fromEnemy: true, owner: en,
-      fire: !!getEnemyDef(en).fireArrows }); // burning arrows
+    game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1), life: ranged.arrowLife, fromEnemy: true, owner: en });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     en.attackCooldown = ranged.cooldown;
