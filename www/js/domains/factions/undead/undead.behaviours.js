@@ -22,7 +22,10 @@ export function necromancy(s, tick) {
 
   // it keeps behind its own (#199): an enemy closer than necroKeepBack, it steps back towards the town hall
   // (hit, it still strikes back: strikeBack comes first)
-  if (!s.isPossessed) {
+  // only with corpses about to raise: with none, it fights rather than run (#232)
+  const raisable = (s.raisesLeft || 0) > 0 && game.corpses.some(c => dist(c) <= necro.range &&
+    !game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - c.x, en.y - c.y) < GAME_CONFIG.morale.necroCorpseClear));
+  if (!s.isPossessed && raisable) {
     // (raising or healing, it holds on unless an enemy is right on it: no stepping back and forth, #232)
     const busy = (s.raiseTimer || 0) > 0 || (s.working || 0) > 0;
     const keep = busy ? 60 : GAME_CONFIG.morale.necroKeepBack;

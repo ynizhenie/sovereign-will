@@ -14,10 +14,19 @@ Object.assign(window.sim, (() => {
     en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1000;
     enemies = [en];
     const log = [];
-    const at = p => { en.x = p.x; en.y = p.y; window.sim.run(0.1); log.push([1000 - en.hp, trap.usesLeft]); };
-    at(on); at(on); at(off); at(on); // two visits so far
+    const at = p => { en.x = p.x; en.y = p.y; window.sim.run(0.1); log.push([Math.round(1000 - en.hp), trap.usesLeft]); };
+    at(on); at(on); at(off); at(on); // two visits so far, standing on it a while the first time
     for (let i = 0; i < 3; i++) { at(off); at(on); } // three more: the trap is used up
-    return { log, trapGone: !buildings.includes(trap) };
+    const usedUp = { stays: buildings.includes(trap), usesLeft: trap.usesLeft, hp: trap.hp };
+    const hpBroken = en.hp;
+    at(off); at(on); // broken: harmless
+    const harmless = en.hp === hpBroken;
+    // repaired (#232): whole again
+    trap.repairRequested = true; stock.wood = 50; stock.iron = 50;
+    settlers = [makeSettler(2, on.x - 40, on.y + 40)];
+    en.x = off.x + 200; en.y = off.y;
+    window.sim.run(12, { each: () => { settlers[0].hunger = 999; } });
+    return { log, usedUp, harmless, repaired: trap.usesLeft === 5 && trap.hp === 5 };
   }
 
   // A settler walking past a spike tile on an open map takes the path around it

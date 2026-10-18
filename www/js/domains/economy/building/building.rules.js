@@ -129,7 +129,8 @@ export function createBuildingBlueprint(type, x, y) {
   const blueprint = { type, x, y, progress: 0, maxProgress: build.maxProgress || 40 };
   if (build.hp) blueprint.hp = build.hp, blueprint.maxHp = build.hp;
   if (build.smelter) blueprint.smeltProgress = 0;
-  if (build.trap) blueprint.usesLeft = build.trap.uses;
+  // a trap's uses are its health: worn down step by step, repaired like any building (#232)
+  if (build.trap) blueprint.usesLeft = blueprint.hp = blueprint.maxHp = build.trap.uses;
   if (build.tower) {
     blueprint.tower = { ...build.tower };
     blueprint.arrows = 0;

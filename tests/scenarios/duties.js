@@ -71,16 +71,18 @@ Object.assign(window.sim, (() => {
   }
 
   // An enemy closing in: the colony's necromancer steps back towards the town hall
-  function keepBack({ seed = 'duty-keepback' } = {}) {
+  // with a corpse to raise behind it; with none it fights instead (#232: it ran)
+  function keepBack({ seed = 'duty-keepback', corpse = true } = {}) {
     asFaction('undead', seed);
     const necro = Object.assign(createSettler('zombie', 1, nearHall(8, 0).x, nearHall(8, 0).y), { tool: 'necro_staff' });
-    settlers = [necro];
+    settlers = [necro, createSettler('zombie', 2, townHall.x - 40, townHall.y + 40)];
     const en = createConfiguredEnemy({ x: necro.x + 70, y: necro.y }, 'raider');
-    en.speed = 0; en.damage = 0;
+    en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1000;
     enemies = [en];
+    corpses = corpse ? [{ x: necro.x - 120, y: necro.y + 30, radius: 10, side: 'enemy', kind: 'raider', age: 0 }] : [];
     run(3, { holdWaves: false, each: () => { waveTimer = 5; } });
     back();
-    return { away: Math.hypot(necro.x - en.x, necro.y - en.y) > 110, nearerHall: necro.x < en.x - 80 };
+    return { away: Math.hypot(necro.x - en.x, necro.y - en.y) > 110, nearerHall: necro.x < en.x - 80, fought: en.hp < 1000 };
   }
 
   // An archer out of arrows (#232): no hunting a boar, no training at a dummy

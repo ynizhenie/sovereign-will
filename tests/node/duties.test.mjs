@@ -20,8 +20,9 @@ test('between waves a necromancer takes the bones from a corpse; in a wave it ra
   expect(sim.dutyBones({ wave: true })).toMatchObject({ corpseGone: true, raised: true });
 });
 
-test('an enemy closing in: the colony\'s necromancer steps back towards the town hall', () => {
-  expect(sim.dutyKeepBack({})).toEqual({ away: true, nearerHall: true });
+test('an enemy closing in: the colony\'s necromancer steps back towards the town hall with a corpse to raise; with none it fights (#232)', () => {
+  expect(sim.dutyKeepBack({})).toMatchObject({ away: true, nearerHall: true });
+  expect(sim.dutyKeepBack({ corpse: false })).toMatchObject({ away: false, fought: true });
 });
 
 test('an archer out of arrows neither hunts nor trains at the dummy (#232)', () => {

@@ -51,7 +51,7 @@ export const mechanicsConfig = {
   // up to bagSize from the stock.
   // a medic's potion heals healPerPotion (a herb healPerHerb); between waves it brews one (#199): brew.herbs
   // herbs and water from the nearest water, boiled brew.seconds at a campfire, up to brew.max in the stock
-  medic: { healPerHerb: 30, healPerPotion: 75, healSeconds: 1.2, range: 26, bagSize: 5, brew: { herbs: 2, seconds: 4, max: 5 } },
+  medic: { healPerHerb: 30, healPerPotion: 75, healSeconds: 1.2, range: 26, bagSize: 5, brew: { herbs: 2, seconds: 4, max: 5, giveUpSeconds: 20, restSeconds: 30 } },
 
   // blood on a hurt unit, under it, and on the melee weapon that hit it: it starts to fade after
   // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less
@@ -68,9 +68,9 @@ export const mechanicsConfig = {
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
   // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
   // can't get to (walled off since, or stuck giveUpSeconds on the way): another one; after maxTries, where it is
-  // porters (#199): a load is taken off a gatherer more than relayTiles from any storage; corpses go
-  // corpseHeapTiles past the base's edge, carried at corpseSpeed of a settler's speed
-  porter: { relayTiles: 10, corpseHeapTiles: 4, corpseSpeed: 0.6 },
+  // corpses out of the base (#199, #232): to a heap corpseHeapTiles past its edge, carried at `speed` of a
+  // settler's speed
+  corpseHaul: { corpseHeapTiles: 4, speed: 0.6 },
   // a resource the player marked with Point is worked by up to this many at once (#232: one kind of mark)
   markWorkers: 2,
   // a boar takes this many times an item's damage (#232)

@@ -30,7 +30,7 @@ import { eatCorpse, goToSacrifice } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
-import { carryCorpse, porterWork } from './settlers.porter.js';
+import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 
 export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
@@ -231,7 +231,7 @@ export const SETTLER_BEHAVIOURS = [
   clearEnemyTents,
   relieve,
   build,
-  porterWork,
+  haulCorpses,
   emptyFishTrap,
   collectWorms,
   fish,

@@ -54,6 +54,13 @@ export function canSettlerHarvest(s, r, tick) {
   return s.tool === 'none' || hasPriority;
 }
 
+// A worker with nothing in hand that's free for a mark (#232): gathering, carrying in what it gathered, or
+// idle; not one building, cooking, making things...
+export function isFreeHands(o) {
+  return o.role === 'worker' && o.tool === 'none' && o.weapon === 'fist' && !o.isPossessed &&
+    (!o.activity || o.isIdle || o.activity === 'harvest' || o.activity === 'pickApples' || o.activity === 'deliverCarrying' || o.activity === 'deliverWhenNothingToDo');
+}
+
 // Player-marked resources first, otherwise the nearest one the settler can walk to. Of the marked: the one
 // it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
 // worker on one (up to getWorkPriority) — two on one while others waited made one of them stand about
@@ -66,8 +73,7 @@ export function pickResourceToHarvest(s, tick) {
   const workers = r => tick.workerAssignments.get(r) || 0;
   // something marked that needs no tool (sticks, pebbles, berries, apples) is for the free hands: one with a
   // tool takes it only while no worker with nothing in hand is free for it, and only one nobody's on (#232)
-  const freeHand = o => o.role === 'worker' && o.tool === 'none' && o.weapon === 'fist' && !o.isPossessed;
-  const handsFree = s.tool !== 'none' && game.settlers.some(o => o !== s && freeHand(o) && (!o.markTarget || !tick.markedResources.includes(o.markTarget)));
+  const handsFree = s.tool !== 'none' && game.settlers.some(o => o !== s && isFreeHands(o) && (!o.markTarget || !tick.markedResources.includes(o.markTarget)));
   const forHands = r => !getMapResourceDef(tick.resourceKind.get(r)).tool;
   const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) && !(handsFree && forHands(r)) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
     .filter(m => m.d < Infinity && workers(m.r) < getWorkPriority(m.r) &&
