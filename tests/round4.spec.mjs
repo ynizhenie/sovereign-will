@@ -8,6 +8,7 @@ test('Point on a tile with several things: a menu picks which one gets marked (#
   await page.click('#play-button');
   await page.evaluate(() => {
     isPaused = true;
+    window.sim.helpers.clearResources(); // (the map is random: nothing else lying there, it raced on CI)
     const x = townHall.x + 150, y = townHall.y + 15;
     window.stick = addMapResource('stick', x, y);
     window.pebble = addMapResource('pebble', x + 6, y + 4);
