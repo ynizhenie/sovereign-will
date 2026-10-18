@@ -4,6 +4,7 @@ import { game, getTileIndex } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawDung, drawSettlers } from '../domains/colony/settlers/index.js';
+import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
@@ -35,6 +36,7 @@ export function render() {
   drawRocks(terrain);
   drawSticksPebblesOre();
   drawLoot();
+  drawPiles(); // (#248)
   drawTownHall();
   drawTrees();
   drawCactiBouldersGrassBushes();
@@ -43,6 +45,7 @@ export function render() {
   drawPriorityMarks();
   drawBlueprints();
   drawBuildings();
+  drawStoreContents(); // (#248)
   drawEnemyTents();
   drawBloodOnGround();
   drawDung();

@@ -48,7 +48,7 @@ Object.assign(window.sim, (() => {
     clearResources();
     const z = createSettler('zombie', 1, townHall.x + 40, townHall.y);
     settlers = [z];
-    stock.wood = 50; stock.leather = 20;
+    stock.wood = 50; stock.leather = 20; stock.rope = 5;
     selectedSettler = z;
     window.sim.helpers.placeWorkshop();
     craftWeapon('bow');

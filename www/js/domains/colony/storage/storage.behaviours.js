@@ -6,6 +6,7 @@ import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall
 import { getPlayerFaction } from '../../factions/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { takeFishingBait } from '../../economy/fishing/index.js';
+import { findStorageWithRoom, storeInto } from './storage.stores.js';
 import { playSound } from '../../../app/index.js';
 
 // Carry whatever the settler holds to the town hall and add it to the stock. With room for more loads
@@ -25,15 +26,17 @@ export function deliverWhenNothingToDo(s, tick) {
 
 // To the nearest storage, the town hall or a warehouse, and into the stock
 export function goDeliver(s, tick) {
-  const storage = findNearestStorage(s);
+  // a pile carried in (#248): to a storage with room
+  const storage = (s.carrying.counted && findStorageWithRoom(s)) || findNearestStorage(s);
   if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return; }
+  if (s.carrying.counted) { storeInto(storage, s.carrying.type, s.carrying.amount); s.carrying = null; return; } // (in the stock already)
   const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot
   for (const item of s.carrying.items || [s.carrying]) {
     const isFood = isFoodKind(item.type) || ['food', 'rawMeat', 'rawFish', 'wheat'].includes(item.type);
     const type = into && isFood ? (into[item.type] || into.default) : item.type;
     if (type.startsWith('armory:')) game.armory[type.slice(7)] = (game.armory[type.slice(7)] || 0) + item.amount; // (loot, #261)
-    else if (GAME_CONFIG.resources[type]) stock[type] += item.amount;
-    else if (isFoodKind(type)) addFood(type, item.amount);
+    else if (GAME_CONFIG.resources[type]) { stock[type] += item.amount; storeInto(storage, type, item.amount); }
+    else if (isFoodKind(type)) { addFood(type, item.amount); storeInto(storage, 'food', item.amount); }
   }
   s.carrying = null;
   playSound('deliver', s);

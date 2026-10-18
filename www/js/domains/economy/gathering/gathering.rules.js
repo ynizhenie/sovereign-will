@@ -15,8 +15,8 @@ export function getPlacedResources(includeGrowingTrees = true) {
 }
 
 export function getHarvestableResources() {
-  // ore spawners are natural rock that can't be mined
-  return [...getPlacedResources(false).filter(r => !r.oreSpawner), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];
+  // ore spawners are natural rock that's never used up: only worked when marked, for its ore (#248)
+  return [...getPlacedResources(false), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];
 }
 
 // ---- Map resources (GAME_CONFIG.mapResources)

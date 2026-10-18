@@ -5,7 +5,7 @@
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
-import { formatCost } from '../domains/colony/storage/index.js';
+import { formatCost, storeCapacity, storedTotal } from '../domains/colony/storage/index.js';
 import { getRepairStep, toggleBuildingRepair } from '../domains/economy/building/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
 import { getSelectedSettler } from '../domains/colony/settlers/index.js';
@@ -55,7 +55,7 @@ export function renderBuildingCard() {
   const place = isHall ? 'hand' : def && def.crafts;
   const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
   const queueText = queue.map(o => `${GAME_CONFIG[o.category][o.id].label} ${o.stage === 'work' ? `${Math.floor(o.progress * 100)}%` : t('card.waiting')}`).join(', ');
-  const key = [queueText, isHall, b.type, b.baitLeft, b.bait, Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
+  const key = [queueText, isHall, b.type, b.baitLeft, b.bait, Math.floor(storedTotal(b)), Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
   if (key === shownKey) return;
   shownKey = key;
   const { name, icon } = isHall ? hallName() : { name: def ? def.label : b.type, icon: def ? def.icon : 'build' };
@@ -70,6 +70,7 @@ export function renderBuildingCard() {
   }
   if (b.type === 'dung_heap') info.push(t('card.dung', { n: b.dung || 0, max: GAME_CONFIG.buildings.dung_heap.dungCapacity })); // (#232)
   if (b.type === 'campfire') info.push(t('card.fuel', { n: Math.round(b.fuelLeft || 0) }));
+  if (isHall || b.type === 'warehouse') info.push(t('card.stored', { n: Math.floor(storedTotal(b)), max: storeCapacity(b) })); // (#248)
   if (b.type === 'smelter') info.push(t('card.smelter', { ore: b.oreLoaded || 0, coal: b.coalLoaded || 0, iron: b.ironProduced || 0 }));
   if (def && def.desc) info.push(def.desc);
   if (queueText) info.push(t('card.queue', { list: queueText }));

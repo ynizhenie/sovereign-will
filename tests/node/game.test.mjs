@@ -72,7 +72,7 @@ test('every map has iron and coal spawners with an ore reachable from the town h
   expect(await (seeds => window.sim.oreReport(seeds))(seeds)).toEqual([]);
 });
 
-test('mined ores grow back around their spawner, and spawners cannot be mined', async () => {
+test('mined ores grow back around their spawner; a spawner is never used up (#248: only worked when marked)', async () => {
   const r = await sim.oreRespawn('maze-137');
   for (const kind of ['iron', 'coal']) {
     expect(r[kind].rightAfter).toBe(0);
@@ -80,7 +80,7 @@ test('mined ores grow back around their spawner, and spawners cannot be mined', 
     expect(r[kind].allNearSpawner).toBe(true);
   }
   expect(r.spawnerSurvivesMining).toBe(true);
-  expect(r.spawnerHarvestable).toBe(false);
+  expect(r.spawnerHarvestable).toBe(true); // (marked only: natural rock is markOnly)
 });
 
 test('a wounded soldier under fire fights back instead of running to heal (#10)', async () => {

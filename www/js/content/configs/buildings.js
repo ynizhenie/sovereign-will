@@ -24,7 +24,7 @@ export const buildingsConfig = {
       ironTrap: { bait: [{ food: 1 }, { rawMeat: 1 }, { bones: 1 }], lureRange: 240, boarChance: 0.5, enemyDamage: 60, holdSeconds: 6, rearmSeconds: 4 }, build: { maxProgress: 40, hp: 80 } },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     // factions: only these factions build it; tents are the humans', graves the undead's
-    tent: { id: 'tent', group: 'homes', icon: 'tent', factions: ['humans'], cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
+    tent: { id: 'tent', group: 'homes', icon: 'tent', factions: ['humans'], cost: { wood: 10, leather: 2, rope: 1 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
     // a grave: the undead's tent, also where necromancers get their raises back; it makes bones
     // the demons': a sacrificial circle adds population, and a settler sent into it heals everyone;
     // portals come in pairs (the 1st with the 2nd, the 3rd with the 4th...) and settlers step through
@@ -36,7 +36,7 @@ export const buildingsConfig = {
       // holds at most maxOre ore and maxCoal coal; one ore + one coal make one iron every `seconds`, up to
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
-    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
+    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20, rope: 2 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
     // crafts: where things are made (#211, #248): the workshop everything without iron in it, the smithy
     // everything with
     workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 150 } },
@@ -48,7 +48,7 @@ export const buildingsConfig = {
     // every fishTrap.seconds, holding up to fishTrap.holds, and a bait (what a fisher uses,
     // GAME_CONFIG.fishing.bait) lasts baitCatches fish. Fishers empty it (anyone with free hands once it's
     // full) and bait it (anyone with free hands too)
-    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 8 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
+    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 6, rope: 1 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a place nearer than the town hall to bring resources to and fetch them from
     warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 150 } },
     // a compost heap (#232): settlers with nothing to do bring it the dung lying in the base, up to

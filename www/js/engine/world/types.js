@@ -22,7 +22,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -40,6 +40,7 @@
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)
+ * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
@@ -143,6 +144,7 @@
  * @property {number} [bait]         an iron trap's bait in it (#248)
  * @property {Object | null} [holding] what an iron trap holds: an enemy or a boar (#248)
  * @property {number} [rearm]        seconds till an iron trap is set again
+ * @property {Object<string, number>} [store] what a warehouse holds (#248)
  * @property {number} [fishTimer]
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
@@ -165,7 +167,7 @@
 
 /**
  * The town hall: a storage too, and what the enemies are after.
- * @typedef {{ x: number, y: number, radius: number, hp: number, maxHp: number, repairRequested: boolean }} TownHall
+ * @typedef {{ x: number, y: number, radius: number, hp: number, maxHp: number, repairRequested: boolean, store?: Object<string, number> }} TownHall
  */
 
 /**
@@ -217,6 +219,7 @@
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
+ * @property {{ x: number, y: number, type: string, amount: number }[]} piles  stock on the ground by a full storage (#248)
  * @property {Object<string, number>} armory  tools, weapons, gear in store, by '<category>:<id>'
  * @property {Object[]} ironOres
  * @property {Object[]} coalOres

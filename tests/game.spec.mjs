@@ -14,7 +14,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   await expect(page.locator('#farming-actions button')).toHaveCount(4); // with the compost heap (#232)
   // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
   // at a smithy
-  await expect(page.locator('#craft-tools .tile')).toHaveCount(7);
+  await expect(page.locator('#craft-tools .tile')).toHaveCount(8); // (rope, #248)
   await expect(page.locator('#craft-weapons .tile')).toHaveCount(7);
   await expect(page.locator('#craft-gear .tile')).toHaveCount(4);
   await expect(page.locator('#craft-weapons .panel-heading')).toHaveCount(3);
