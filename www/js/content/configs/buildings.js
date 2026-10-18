@@ -11,8 +11,17 @@ export const buildingsConfig = {
     // onto it uses one of its `uses` (standing doesn't), and with none left it's broken, harmless, until
     // repaired (#232, #248). Settlers walk around it; enemies too, unless there's no other way (then it's
     // cheaper for them than a wall)
-    spikes: { id: 'spikes', group: 'defense', icon: 'spikes', cost: { wood: 4, iron: 1 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5, standDps: 10 } }, arrowsPass: true },
-    door: { id: 'door', group: 'defense', icon: 'door', cost: { wood: 6 }, demolishRefund: { wood: 3 }, build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
+    spikes: { id: 'spikes', group: 'defense', icon: 'spikes', cost: { wood: 4, iron: 1 }, build: { maxProgress: 40, trap: { damage: 25, uses: 5, standDps: 10 } }, arrowsPass: true, walkable: true },
+    // door: settlers walk through it, enemies break it. upgrades: it can be built right on one of these,
+    // which it replaces once it's built (#248: a door into a wall, an iron door over a door)
+    door: { id: 'door', group: 'defense', icon: 'door', cost: { wood: 6 }, demolishRefund: { wood: 3 }, door: true, upgrades: ['wall_wood', 'wall_stone'], build: { maxProgress: 80, hp: 150 }, towerArrowsPass: true },
+    iron_door: { id: 'iron_door', group: 'defense', icon: 'iron_door', cost: { wood: 4, iron: 4 }, demolishRefund: { iron: 2 }, door: true, upgrades: ['wall_wood', 'wall_stone', 'door'], build: { maxProgress: 110, hp: 350 }, towerArrowsPass: true },
+    // an iron trap (#248): baited with the first of `bait` the stock has, it draws boars within lureRange and catches one at
+    // boarChance (otherwise the boar eats the bait); an enemy stepping on it takes enemyDamage and is held
+    // holdSeconds, then it's free and the trap sets itself again in rearmSeconds. Settlers walk round it,
+    // enemies don't see it
+    iron_trap: { id: 'iron_trap', group: 'defense', icon: 'iron_trap', cost: { wood: 2, iron: 3 }, demolishRefund: { iron: 1 }, walkable: true, arrowsPass: true,
+      ironTrap: { bait: [{ food: 1 }, { rawMeat: 1 }, { bones: 1 }], lureRange: 240, boarChance: 0.5, enemyDamage: 60, holdSeconds: 6, rearmSeconds: 4 }, build: { maxProgress: 40, hp: 80 } },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     // factions: only these factions build it; tents are the humans', graves the undead's
     tent: { id: 'tent', group: 'homes', icon: 'tent', factions: ['humans'], cost: { wood: 10, leather: 3 }, demolishRefund: { wood: 5 }, population: 3, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
@@ -35,9 +44,11 @@ export const buildingsConfig = {
     // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
     // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
     dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },
-    // a fish trap (#199): only on a tile next to water (nearWater); it catches a fish every fishTrap.seconds,
-    // holding up to fishTrap.holds; fishers empty it (anyone with free hands once it's full)
-    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 8 }, demolishRefund: { wood: 4 }, nearWater: true, fishTrap: { seconds: 25, holds: 4 }, build: { maxProgress: 50, hp: 60 } },
+    // a fish trap (#199): on a water tile a fisher could fish from (onWater, #248); baited, it catches a fish
+    // every fishTrap.seconds, holding up to fishTrap.holds, and a bait (what a fisher uses,
+    // GAME_CONFIG.fishing.bait) lasts baitCatches fish. Fishers empty it (anyone with free hands once it's
+    // full) and bait it (anyone with free hands too)
+    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 8 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a place nearer than the town hall to bring resources to and fetch them from
     warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 150 } },
     // a compost heap (#232): settlers with nothing to do bring it the dung lying in the base, up to

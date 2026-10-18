@@ -2,5 +2,6 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { huntBoar } from './hunting.behaviours.js';
+export { baitTrap, tickIronTraps } from './hunting.traps.js';
 export { drawBoars } from './hunting.draw.js';
 export { makeBoarFlee, tickBoarRespawn, tickBoars, woundBoar } from './hunting.rules.js';
