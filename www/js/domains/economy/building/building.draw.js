@@ -104,6 +104,7 @@ export function drawTownHall() {
 // Blueprints: their shape, the materials still to come, the work done
 export function drawBlueprints() {
   game.blueprints.forEach(bp => {
+    if (bp.replaces) return; // (an upgrade: over the building, drawUpgrades)
     ctx.save(); ctx.globalAlpha = 0.5;
     if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
     else if (bp.type === 'wall_wood') ctx.fillStyle = '#8e5a2b';
@@ -137,6 +138,31 @@ export function drawBlueprints() {
       ctx.fillStyle = '#fff'; ctx.fillRect(bp.x - 12, bp.y + 16, (bp.progress / bp.maxProgress) * 24, 3);
     }
   });
+}
+
+// An upgrade under way (a door on a wall, an iron door on a door, #248, #261): over the building it'll
+// replace, the new one faint, an up arrow in its corner, how far along in a bar under it, and what's still
+// to be brought
+export function drawUpgrades() {
+  for (const bp of game.blueprints) {
+    if (!bp.replaces) continue;
+    const def = getDefinition('buildings', bp.type) || {};
+    ctx.save();
+    ctx.globalAlpha = 0.55; drawIcon(ctx, def.icon || bp.type, bp.x, bp.y, 18);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(bp.x - 14, bp.y - 14, 28, 28);
+    ctx.setLineDash([]);
+    // the up arrow, on a dark disc
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; ctx.beginPath(); ctx.arc(bp.x + 10, bp.y - 10, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.moveTo(bp.x + 10, bp.y - 15); ctx.lineTo(bp.x + 14.5, bp.y - 9); ctx.lineTo(bp.x + 5.5, bp.y - 9); ctx.closePath(); ctx.fill();
+    ctx.fillRect(bp.x + 8.5, bp.y - 9.5, 3, 4);
+    // how far along, and the materials still to come
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(bp.x - 13, bp.y + 15, 26, 5);
+    ctx.fillStyle = '#2ecc71'; ctx.fillRect(bp.x - 12, bp.y + 16, 24 * Math.min(1, bp.progress / bp.maxProgress), 3);
+    const missing = Object.values(bp.needs || {}).reduce((a, b) => a + b, 0);
+    if (missing > 0) drawIcon(ctx, getResourceIconName(Object.keys(bp.needs || {})[0]), bp.x - 9, bp.y - 9, 11);
+    ctx.restore();
+  }
 }
 
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
