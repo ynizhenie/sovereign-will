@@ -72,14 +72,16 @@ function costHtml(category, item) {
 // when there's no such button (then a notice says it)
 export function showCostOnButton() {
   const button = pressedButton;
-  if (!button || performance.now() - pressedAt > 600 || !button.dataset.info) return false;
+  if (!button || performance.now() - pressedAt > 600 || !(button.dataset.info || button.closest('[data-item]'))) return false;
   if (!showInfo(button)) return false;
   answerPressedButton(false);
   return true;
 }
 
 function showInfo(button) {
-  const html = itemInfoHtml(button.dataset.info);
+  // (a row's own button: the row's thing, #248)
+  const row = /** @type {HTMLElement | null} */ (button.closest('[data-item]'));
+  const html = itemInfoHtml(button.dataset.info || (row && row.dataset.item) || '');
   const card = document.getElementById('info-card');
   if (!card || !html) return false;
   card.innerHTML = html;
@@ -114,7 +116,8 @@ export function initItemInfo() {
   // a mouse: the card while it's over a button; a click presses it at once
   area.addEventListener('pointerover', e => {
     if (e.pointerType !== 'mouse') return;
-    const button = buttonAt(e);
+    // (anywhere on a list's row, its thing's card, #248)
+    const button = buttonAt(e) || /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest('[data-item]'));
     if (button) showInfo(button); else hideInfo();
   });
   area.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideInfo(); });

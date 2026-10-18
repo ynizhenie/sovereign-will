@@ -8,7 +8,7 @@ import { addResources, canAfford, payCost, showCostError, stock } from '../stora
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
-import { craftPlace, onCraftMade, orderCraft } from './equipment.crafting.js';
+import { craftPlace, orderCraft } from './equipment.crafting.js';
 
 // A shield only helps a melee soldier: a worker or an archer doesn't fight with it
 export function canUseShield(s) {
@@ -55,7 +55,8 @@ export function orderGear(id, auto = false, forSettler = null) {
   return true;
 }
 
-// Not in the armory: ordered made at the town hall or the smithy (#211); true if it was
+// Not in the armory: ordered made at a workshop or the smithy (#211, #248); true if it was. Made, it waits
+// in the armory to be handed out (giveStored)
 function orderMade(category, id, auto, forSettler) {
   const item = GAME_CONFIG[category][id];
   const result = orderCraft(category, id);
@@ -63,14 +64,40 @@ function orderMade(category, id, auto, forSettler) {
     const order = game.craftOrders[game.craftOrders.length - 1];
     // who it's for is picked now, and that one makes it (#232), as a button would pick one to give it to
     order.for = forSettler || pickRecipient(category, id);
-    if (!auto) showNotification(t(craftPlace(category, id) === 'smithy' ? 'craft.atSmithy' : 'craft.atHall', { name: item.label }), false);
+    if (!auto) showNotification(t(craftPlace(category, id) === 'smithy' ? 'craft.atSmithy' : 'craft.atWorkshop', { name: item.label }), false);
     return true;
   }
   if (!auto) {
     if (result === 'noSmithy') showNotification(t('craft.needSmithy', { name: item.label }), true);
+    else if (result === 'noWorkshop') showNotification(t('craft.needWorkshop', { name: item.label }), true);
     else showCostError(item.cost || {}, t('cost.notEnough'));
   }
   return false;
+}
+
+// ---- The craft lists (#248): make one (into the armory), hand one out of it, or take a stored one apart
+
+// Make one: the selected settler makes it, or the one a button would give it to; into the armory
+export function makeToStore(category, id) {
+  return orderMade(category, id, false, getSelectedSettler() || getPossessed() || null);
+}
+
+// Hand a stored one out: to the selected settler if it can take it, otherwise as the button always did
+export function giveStored(category, id) {
+  if (!((game.armory[`${category}:${id}`] || 0) > 0)) return false;
+  if (category === 'tools') return assignTool(id);
+  if (category === 'weapons') return craftWeapon(id);
+  if (category === 'gear') return orderGear(id);
+  return false;
+}
+
+// Take a stored one apart: what it cost back in the stock
+export function takeApartStored(category, id) {
+  const key = `${category}:${id}`;
+  if (!takeFromArmory(key)) return false;
+  addResources(GAME_CONFIG[category][id].cost || {});
+  showNotification(t('craft.takenApart', { name: GAME_CONFIG[category][id].label }), false);
+  return true;
 }
 
 // Who a thing ordered without a settler picked would go to: a worker with nothing for a tool, the big or an
@@ -90,12 +117,6 @@ function pickRecipient(category, id) {
   return null;
 }
 
-// a made thing goes to whoever it was for, or a settler free to take it, the same as a button would
-onCraftMade(order => {
-  if (order.category === 'tools') assignTool(order.id, true, order.for);
-  else if (order.category === 'weapons') craftWeapon(order.id, true, order.for);
-  else if (order.category === 'gear') orderGear(order.id, true, order.for);
-});
 
 // Send the selected settler wearing it (or the first one) to the town hall to hand it back
 export function orderGearOff(id) {
@@ -289,7 +310,7 @@ export function craftArrows() {
   }
   payCost(recipe.cost);
   for (let i = 0; i < recipe.batches; i++) {
-    game.craftOrders.push({ key: 'recipes:arrows', category: 'recipes', id: 'arrows', crafter: null, stage: 'fetch', progress: 0, handOut: false, for: null,
+    game.craftOrders.push({ key: 'recipes:arrows', category: 'recipes', id: 'arrows', crafter: null, stage: 'fetch', progress: 0, for: null,
       yields: { arrows: recipe.produces.arrows / recipe.batches } });
   }
   showNotification(t('arrows.ordered', { count: recipe.produces.arrows }), false);

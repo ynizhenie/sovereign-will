@@ -17,8 +17,8 @@ Object.assign(window.sim, (() => {
     asUndead(seed);
     const ids = sel => [...document.querySelectorAll(sel)].filter(b => !b.hidden).map(b => b.id);
     const r = {
-      startUnits: settlers.map(s => s.type), hire: ids('#recruit-row button'),
-      tools: ids('#tool-actions button'), gear: ids('#tab-tools .gear-actions button'),
+      startUnits: settlers.map(s => s.type), hire: ids('#recruit-row .row-make'),
+      tools: ids('#workshop-list .row-make'), gear: ids('#workshop-list .row-make'),
       build: ids('#build-actions button'), farmingTab: !document.getElementById('tab-btn-farming').hidden,
       blightTab: !document.getElementById('tab-btn-blight').hidden, foodTile: !!document.getElementById('group-food') || !!document.getElementById(resourceHudId('food')) || !!document.getElementById(resourceHudId('rawMeat')),
       food: stock.food
@@ -50,8 +50,12 @@ Object.assign(window.sim, (() => {
     settlers = [z];
     stock.wood = 50; stock.leather = 20;
     selectedSettler = z;
+    window.sim.helpers.placeWorkshop();
     craftWeapon('bow');
-    run(20); // made at the town hall first (#211), then taken up
+    run(20); // made at a workshop first (#211, #248), into the store
+    selectedSettler = z;
+    giveStored('weapons', 'bow');
+    run(10); // then taken up
     const withBow = { type: z.type, weapon: z.weapon };
     selectedSettler = z;
     disarmSettler('weapon');

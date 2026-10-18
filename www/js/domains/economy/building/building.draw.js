@@ -205,6 +205,11 @@ export function drawBuildings() {
         ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(b.x - 6, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 16, b.x + 6, b.y + 4); ctx.fill();
         ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
       }
+    } else if (b.type === 'workshop') {
+      // a timber workshop with a bench and saw (#248)
+      ctx.fillStyle = '#7a5230'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = '#d4a373'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+      drawIcon(ctx, 'workshop', b.x, b.y, 20);
     } else if (b.type === 'smithy') {
       // a dark stone forge with an anvil (#211)
       ctx.fillStyle = '#3d3d44'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);

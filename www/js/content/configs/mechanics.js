@@ -33,8 +33,8 @@ export const mechanicsConfig = {
   // blow hits at most splashMax at once, the one it aims at and the nearest round it (#209)
   combatAI: { meleePerEnemy: 3, meleePerBig: 5, retreatShare: 0.35, coverRange: 150, splashMax: 3 },
   // making things (#211): seconds a worker works on one, by its kind, at the smithy (anything with iron in
-  // it); at the town hall hallShare of that (#232)
-  crafting: { seconds: { tools: 4, weapons: 6, gear: 6, recipes: 2 }, hallShare: 0.5 },
+  // it); at a workshop workshopShare of that (#232, #248)
+  crafting: { seconds: { tools: 4, weapons: 6, gear: 6, recipes: 2 }, workshopShare: 0.5 },
   defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock

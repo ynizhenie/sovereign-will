@@ -14,14 +14,17 @@ Object.assign(window.sim, (() => {
   function demonColony({ seed = 'demon-colony' } = {}) {
     asDemons(seed);
     const startUnits = settlers.map(s => s.type);
-    const hire = [...document.querySelectorAll('#recruit-row button')].map(b => b.id);
+    const hire = [...document.querySelectorAll('#recruit-row .row-make')].map(b => b.id); // (a list's Hire buttons, #248)
     const build = [...document.querySelectorAll('#build-actions button')].map(b => b.id);
     // an imp given a bow becomes a fire imp (#165)
     stock.wood = 100; stock.leather = 20;
     const imp = settlers[0];
     selectedSettler = imp;
+    window.sim.helpers.placeWorkshop();
     craftWeapon('bow');
-    run(20); // made at the town hall first (#211)
+    run(20); // made at the workshop first (#211, #248), into the store
+    giveStored('weapons', 'bow');
+    run(20);
     return {
       startUnits, hire, tent: build.includes('btn-tent'), circle: build.includes('btn-sacrifice_circle'), portal: build.includes('btn-portal'),
       fireImp: { type: imp.type, weapon: imp.weapon, role: imp.role }

@@ -18,9 +18,13 @@ Object.assign(window.sim, (() => {
     stock.iron = 20; stock.leather = 20; stock.wood = 20;
     const before = { iron: stock.iron, leather: stock.leather };
     if (GAME_CONFIG.gear[id].cost.iron) placeBuilding('smithy', hx + 15 - (hx % 30) + 90, hy + 15 - (hy % 30) + 90); // (#211)
+    else window.sim.helpers.placeWorkshop(); // (#248)
     document.getElementById(`btn-${id}`).click();
     const wornAtOnce = Object.values(all).some(s => hasGear(s, id));
-    run(30); // made (#211), then put on at the town hall
+    const noBoars = { each: () => { boars.length = 0; } }; // (they come back over a minute)
+    run(30, noBoars); // made (#211), into the store
+    document.querySelector(`[data-item="gear:${id}"] .row-give`).click(); // handed out (#248)
+    run(30, noBoars); // then put on at the town hall
     const who = Object.keys(all).find(k => settlers.includes(all[k]) && hasGear(all[k], id)) || null;
     return { who, wornAtOnce, worn: !!who, maxHp: who ? all[who].maxHp : null,
       paid: { iron: before.iron - stock.iron, leather: before.leather - stock.leather }, stored: window.game.armory[`gear:${id}`] || 0 };
@@ -64,9 +68,9 @@ Object.assign(window.sim, (() => {
       going: settlers[0].targetEquipment && settlers[0].targetEquipment.weapon };
   }
 
-  // Making things (#211): an axe ordered with none in the armory is paid for, made at the town hall by a
-  // worker (it fetches the materials, works a few seconds) and handed out; an iron sword can't be ordered
-  // without a smithy, and with one it's made there
+  // Making things (#211, #248): no workshop, no axe; with one, an axe ordered is paid for, made there by a
+  // worker (it fetches the materials, works a few seconds) and goes into the store, handed out from there;
+  // an iron sword can't be ordered without a smithy, and with one it's made there
   function crafting({ seed = 'crafting' } = {}) {
     start(seed);
     clearResources();
@@ -74,11 +78,16 @@ Object.assign(window.sim, (() => {
     settlers = [w];
     Object.assign(stock, { wood: 50, stone: 50, iron: 20 });
     window.game.armory = {};
-    assignTool('axe');
+    const noWorkshop = makeToStore('tools', 'axe') === false && window.game.craftOrders.length === 0 && stock.wood === 50;
+    window.sim.helpers.placeWorkshop();
+    makeToStore('tools', 'axe');
     const ordered = window.game.craftOrders.length === 1 && stock.wood === 45 && stock.stone === 45;
     let crafting = false;
     run(15, { each: () => { w.hunger = 999; if (w.activity === 'craftItem') crafting = true; } });
-    const axe = w.tool === 'axe';
+    const stored = window.game.armory['tools:axe'] === 1 && w.tool === 'none';
+    giveStored('tools', 'axe');
+    run(8, { each: () => { w.hunger = 999; } });
+    const axe = w.tool === 'axe' && stored && noWorkshop;
     const noSmithy = craftWeapon('iron_sword') === false && window.game.craftOrders.length === 0 && stock.iron === 20;
     const g = getGridPos(townHall.x, townHall.y);
     const smithy = placeBuilding('smithy', (g.gx + 6) * TILE_SIZE + 15, g.gy * TILE_SIZE + 15);
@@ -88,17 +97,20 @@ Object.assign(window.sim, (() => {
     craftWeapon('iron_sword');
     let atSmithy = false;
     run(25, { each: () => { settlers.forEach(s => { s.hunger = 999; }); const o = window.game.craftOrders[0]; if (o && o.stage === 'work' && o.crafter && Math.hypot(o.crafter.x - smithy.x, o.crafter.y - smithy.y) < 50) atSmithy = true; } });
+    giveStored('weapons', 'iron_sword');
+    run(10, { each: () => { settlers.forEach(s => { s.hunger = 999; }); } });
     const sword = settlers.some(s => s.weapon === 'iron_sword');
     return { ordered, crafting, axe, noSmithy, atSmithy, sword };
   }
 
-  // How long the making takes (#232): an axe at the town hall half its time (2 s), an iron sword at the
+  // How long the making takes (#232, #248): an axe at a workshop half its time (2 s), an iron sword at the
   // smithy all of it (6 s); while working it's drawn making it, with the materials in its hands before
   function craftTimes({ seed = 'craft-times' } = {}) {
     start(seed);
     clearResources();
     const g = getGridPos(townHall.x, townHall.y);
     placeBuilding('smithy', (g.gx + 6) * TILE_SIZE + 15, g.gy * TILE_SIZE + 15);
+    window.sim.helpers.placeWorkshop();
     invalidateAllPaths();
     const w = makeSettler(1, townHall.x + 60, townHall.y + 60);
     settlers = [w];
