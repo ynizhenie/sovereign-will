@@ -109,6 +109,9 @@ function chooseSettlerTarget(s, tick) {
   const attacker = getRecentAttacker(s);
   // a squad soldier goes for the enemy that came near its post (see holdPost)
   if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
+  // ...or the one its captain gave it (#248), unless the player marked one for it
+  if (s.captainTarget && !game.enemies.includes(s.captainTarget)) s.captainTarget = null;
+  if (!attacker && s.captainTarget && !(targetEnemy && targetEnemy.markedTarget)) targetEnemy = s.captainTarget;
   if (attacker) targetEnemy = attacker;
   // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
   if (targetEnemy && !attacker && !isBowWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {

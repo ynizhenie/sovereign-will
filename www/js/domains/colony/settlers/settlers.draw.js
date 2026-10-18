@@ -106,6 +106,36 @@ function drawCarriedInHands(s) {
   drawIcon(ctx, type === 'bundle' ? 'bundle' : type.startsWith('armory:') ? getResourceIconName(type) : (known ? known.icon : 'wheat'), x, y, 12);
 }
 
+// Eating (#248): its food held up to its face, raised and lowered a bite at a time, a crumb now and then
+function drawEating(s) {
+  const f = s.facing || 0, bite = Math.abs(Math.sin(performance.now() / 220 + s.id));
+  const r = s.visualRadius * (0.55 + 0.25 * bite);
+  drawIcon(ctx, s.eating.icon, Math.cos(f) * r, Math.sin(f) * r, 10);
+  if (bite < 0.15) { ctx.fillStyle = '#d4a373'; ctx.fillRect(Math.cos(f) * r + 3, Math.sin(f) * r + 5, 2, 2); }
+}
+
+// A smoke (white, its end glowing) or a wheat stalk (long, yellow) at its mouth, pointing out ahead (#248)
+function drawInMouth(s) {
+  const f = (s.facing || 0) + 0.35, r = s.visualRadius * 0.7;
+  const x = Math.cos(f) * r, y = Math.sin(f) * r;
+  const len = (s.straw || 0) > 0 ? 9 : 5;
+  ctx.strokeStyle = (s.straw || 0) > 0 ? '#e9c46a' : '#ecf0f1'; ctx.lineWidth = (s.straw || 0) > 0 ? 1.2 : 2;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(f) * len, y + Math.sin(f) * len); ctx.stroke();
+  if (!((s.straw || 0) > 0)) { ctx.fillStyle = '#e74c3c'; ctx.fillRect(x + Math.cos(f) * len - 1, y + Math.sin(f) * len - 1, 2, 2); }
+}
+
+// Its smoke: a few grey puffs rising off the end and fading
+function drawSmokePuffs(s) {
+  const f = (s.facing || 0) + 0.35, r = s.visualRadius * 0.7 + 5;
+  const x0 = s.x + Math.cos(f) * r, y0 = s.y + Math.sin(f) * r;
+  const t = performance.now() / 1000 + s.id;
+  for (let k = 0; k < 3; k++) {
+    const p = (t * 0.6 + k / 3) % 1;
+    ctx.fillStyle = `rgba(200, 200, 200, ${0.45 * (1 - p)})`;
+    ctx.beginPath(); ctx.arc(x0 + Math.sin(t * 2 + k) * 2, y0 - p * 14, 1.5 + p * 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
 // A hammer going up and down in its hand while it makes a thing
 function drawCraftHammer(s) {
   const beat = Math.abs(Math.sin(performance.now() / 160 + s.id));
@@ -250,7 +280,7 @@ export function drawSettlers() {
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.save();
-    if (isResting(s) || inHands || crafting) applyBackPose(s);
+    if (isResting(s) || inHands || crafting || s.eating) applyBackPose(s);
     else applyHeldItemPose(s);
     if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
@@ -277,6 +307,8 @@ export function drawSettlers() {
     ctx.restore(); // pose only moves the held item
     if (inHands) drawCarriedInHands(s);
     if (crafting) drawCraftHammer(s);
+    if (s.eating) drawEating(s);
+    else if ((s.smoking || 0) > 0 || (s.straw || 0) > 0) drawInMouth(s);
     if (s.armor === 'iron' || s.hasArmor) drawArmor(s.visualRadius);
     // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
     if (s.tool === 'hoe' && s.wateringCan) {
@@ -288,6 +320,13 @@ export function drawSettlers() {
       }
     }
     if (s.shield) drawShield(s.visualRadius);
+    // a commander's mark (#248): a whistle on a cord on its chest, a banner on a pole at its back
+    if (s.whistle) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, s.visualRadius - 6, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, s.visualRadius - 6, 2, 3); }
+    if (s.banner) {
+      ctx.fillStyle = '#6d4520'; ctx.fillRect(-s.visualRadius - 1, -s.visualRadius - 12, 2, s.visualRadius + 14);
+      ctx.fillStyle = getSettlerColor(s); ctx.fillRect(-s.visualRadius + 1, -s.visualRadius - 12, 9, 6);
+      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(-s.visualRadius + 1, -s.visualRadius - 12, 9, 6);
+    }
     if (s.quiver) {
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 3, -5, 4, 10);
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1;
@@ -296,6 +335,7 @@ export function drawSettlers() {
     ctx.restore();
 
     if (crafting) drawWorkpiece(s);
+    if ((s.smoking || 0) > 0 && !s.eating) drawSmokePuffs(s);
 
     if (s === game.selectedSettler) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
@@ -305,6 +345,13 @@ export function drawSettlers() {
     if (s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
     // an archer out of arrows (#232): a crossed-out arrow over it
     if (isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - s.visualRadius - 2, s.y - s.visualRadius - 16);
+    // an order given or taken (#248): its bubble, and the commander's line to the one it told
+    const line = s.orderLine;
+    if (line && line.until > game.pathTick) {
+      const to = game.settlers.find(o => o.id === line.toId);
+      if (to) { ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.setLineDash([]); }
+    }
+    if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + s.visualRadius, s.y - s.visualRadius - 18, s.orderBubble.icon);
     // "talking" in a knot (#199): now and then a speech bubble
     if (s.isIdle && s.idle && s.idle.act === 'talk' && Math.sin(performance.now() / 700 + s.id * 1.7) > 0.4) drawTalkBubble(s.x + s.visualRadius, s.y - s.visualRadius - 16);
 
@@ -324,6 +371,14 @@ export function drawNoArrows(x, y) {
 }
 
 // A speech bubble with "..." in it
+// An order (#248): a bubble with what it's about
+export function drawOrderBubble(x, y, icon) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.beginPath(); ctx.ellipse(x, y, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 5, y + 5); ctx.lineTo(x - 8, y + 11); ctx.lineTo(x - 1, y + 7); ctx.fill();
+  drawIcon(ctx, icon, x, y, 11);
+}
+
 export function drawTalkBubble(x, y) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
   ctx.beginPath(); ctx.ellipse(x, y, 9, 6, 0, 0, Math.PI * 2); ctx.fill();

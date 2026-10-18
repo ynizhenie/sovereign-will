@@ -11,7 +11,7 @@ import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, 
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising } from '../domains/factions/undead/index.js';
-import { drawGrassGround, drawMapBorder, drawRocks, drawSand, drawWater } from '../domains/world/index.js';
+import { drawGrassGround, drawMapBorder, drawPaths, drawRocks, drawSand, drawWater } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -24,6 +24,7 @@ export function render() {
   ctx.scale(viewScale, viewScale);
 
   drawGrassGround();
+  drawPaths(); // (#248)
 
   const terrain = getTileIndex();
   drawMapBorder();

@@ -26,7 +26,10 @@ export const GEAR_RULES = {
   backpack: { canWear: s => s.role !== 'archer', first: s => s.role === 'worker' && s.tool !== 'rod' },
   armor: { canWear: () => true, first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
-  wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true }
+  wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
+  // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
+  whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
+  banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' }
 };
 
 export function hasGear(s, id) {

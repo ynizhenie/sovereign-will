@@ -94,6 +94,11 @@ export function pickResourceToHarvest(s, tick) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building
     let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) &&
       !getMapResourceDef(tick.resourceKind.get(r)).markOnly && isInSafeArea(r.x, r.y));
+    // what its foreman said is needed most, first, while there's some of it (#248)
+    if (s.focus && s.focus.until > game.pathTick) {
+      const focused = availableRes.filter(r => ((r.yield || getMapResourceDef(tick.resourceKind.get(r)).yield || {})[s.focus.resource] || 0) > 0);
+      if (focused.length) availableRes = focused;
+    }
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
     let minDist = Infinity;
     availableRes.forEach(r => {

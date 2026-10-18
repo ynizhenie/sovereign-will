@@ -31,6 +31,8 @@ import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
+import { goEat } from './settlers.meals.js';
+import { captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
 
 export function createSettlerTick(dt) {
@@ -92,6 +94,10 @@ export function prepareSettler(s, dt) {
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) s.attackCooldown -= dt;
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
+  // a smoke or a wheat stalk in its mouth for a while, and then a while before the next (#248)
+  if (s.smoking > 0) s.smoking -= dt;
+  if (s.straw > 0) s.straw -= dt;
+  if (s.smokeRest > 0) s.smokeRest -= dt;
 }
 
 // ---- The possessed settler
@@ -203,6 +209,7 @@ export const SETTLER_BEHAVIOURS = [
   playerControlled,
   panic,
   strikeBack,
+  captainOrders,
   goToSacrifice,
   loadTowerArrows,
   collectSmelterIron,
@@ -213,6 +220,8 @@ export const SETTLER_BEHAVIOURS = [
   repairTownHall,
   repairBuilding,
   equip,
+  goEat,
+  foremanOrders,
   cook,
   fertilize,
   cleanDung,

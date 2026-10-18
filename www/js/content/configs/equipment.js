@@ -58,8 +58,17 @@ export const equipmentConfig = {
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
     // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows
     // growthFactor times as fast
-    wateringCan: { id: 'wateringCan', icon: 'wateringCan', factions: ['humans', 'demons'], cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 }
+    wateringCan: { id: 'wateringCan', icon: 'wateringCan', factions: ['humans', 'demons'], cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 },
+    // commanders (#248): a worker with a whistle is a foreman: it walks to each of its squad (the `squad`
+    // nearest workers) in turn, every `everySeconds`, and tells it what's needed most (focusSeconds: what it
+    // gathers first), and to swap its tool for one from the armory that does it. A soldier with a banner is a
+    // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
+    whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', cost: { wood: 2, rope: 1 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45 } },
+    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 1 }, commands: { squad: 5, everySeconds: 3, reach: 200 } }
   },
+  // what a foreman counts as needed most: the one furthest under its amount here (food only for those who
+  // eat; ore with a smelter)
+  needs: { wood: 80, stone: 50, food: 40, ironOre: 15 },
 
   // crafted at the town hall into the stock
   // made into the stock: kind: the Craft sub-tab it's in; made in `batches` quick jobs; arrows by archers
