@@ -536,6 +536,12 @@ export const ICONS = {
     icLine(c, '#6d4520', 1.2, [[13, 5], [13, 28]]); icLine(c, '#6d4520', 1.2, [[19, 5], [19, 28]]);
     icCircle(c, '#f39c12', 21.5, 17, 1.8);
   },
+  rope: c => {
+    // a coil of rope, its end hanging out (#248)
+    icRing(c, '#c8a46a', 3, 16, 15, 9);
+    icRing(c, '#a07d45', 2, 16, 15, 5);
+    icLine(c, '#c8a46a', 3, [[24, 18], [27, 27]]);
+  },
   iron_door: c => {
     // a plank door bound with iron bands and rivets (#248)
     icRound(c, '#8d5a34', 7, 4, 18, 25, 2);

@@ -309,21 +309,25 @@ export function takeFromArmory(key) {
   return true;
 }
 
-// Arrows are made, not conjured (#249): paid for at once, then `batches` jobs of produces/batches each at the
-// town hall, by the archers (anyone free while there are none); no archer needed to order them
-export function craftArrows() {
-  const recipe = GAME_CONFIG.recipes.arrows;
-  if (!canAfford(recipe.cost)) {
-    showCostError(recipe.cost, t('cost.needs', { name: recipe.label }));
-    return;
+// A recipe makes something for the stock, not conjured (#249): paid for at once, then `batches` jobs of
+// produces/batches each where it's made (craftPlace); arrows by the archers (anyone free while there are
+// none), rope by anyone (#248)
+export function craftRecipe(id) {
+  const recipe = GAME_CONFIG.recipes[id];
+  const result = orderCraft('recipes', id);
+  if (result === 'noSmithy' || result === 'noWorkshop') { showNotification(t(result === 'noSmithy' ? 'craft.needSmithy' : 'craft.needWorkshop', { name: recipe.label }), true); return; }
+  if (result !== 'ordered') { showCostError(recipe.cost, t('cost.needs', { name: recipe.label })); return; }
+  const batches = recipe.batches || 1;
+  const yields = Object.fromEntries(Object.entries(recipe.produces).map(([res, n]) => [res, n / batches]));
+  game.craftOrders[game.craftOrders.length - 1].yields = yields;
+  game.craftOrders[game.craftOrders.length - 1].for = null;
+  for (let i = 1; i < batches; i++) {
+    game.craftOrders.push({ key: `recipes:${id}`, category: 'recipes', id, crafter: null, stage: 'fetch', progress: 0, for: null, yields });
   }
-  payCost(recipe.cost);
-  for (let i = 0; i < recipe.batches; i++) {
-    game.craftOrders.push({ key: 'recipes:arrows', category: 'recipes', id: 'arrows', crafter: null, stage: 'fetch', progress: 0, for: null,
-      yields: { arrows: recipe.produces.arrows / recipe.batches } });
-  }
-  showNotification(t('arrows.ordered', { count: recipe.produces.arrows }), false);
+  showNotification(id === 'arrows' ? t('arrows.ordered', { count: recipe.produces.arrows }) : t(`craft.at${{ hand: 'Hall', workshop: 'Workshop', smithy: 'Smithy' }[craftPlace('recipes', id)]}`, { name: recipe.label }), false);
 }
+
+export function craftArrows() { craftRecipe('arrows'); }
 
 // keep (#248): what comes off goes into the armory whole; otherwise it's taken apart
 export function disarmSettler(type = 'all', keep = false) {

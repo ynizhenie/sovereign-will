@@ -43,7 +43,7 @@ test('a watchtower is repaired only when ordered, priced like any building (#106
     const tower = placeBuilding('watchtower', townHall.x + 90, townHall.y + 90);
     tower.hp = tower.maxHp / 2;
     settlers = [makeSettler(1, townHall.x - 40, townHall.y)];
-    stock.wood = stock.stone = 100;
+    stock.wood = stock.stone = stock.rope = 100;
     window.sim.run(8);
     const unordered = tower.hp / tower.maxHp;
     toggleBuildingRepair(tower);
@@ -52,7 +52,7 @@ test('a watchtower is repaired only when ordered, priced like any building (#106
   })();
   expect(r.unordered).toBe(0.5);
   expect(r.after).toBe(1);
-  expect(r.step).toEqual({ wood: 5, stone: 4 }); // 20% of 25 wood, 20 stone
+  expect(r.step).toEqual({ wood: 5, stone: 4, rope: 1 }); // 20% of 25 wood, 20 stone, 2 rope (#248)
 });
 
 test('ore spawners grow ore on free ground only, never over natural rock (#106)', async () => {

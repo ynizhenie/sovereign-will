@@ -17,7 +17,7 @@ Object.assign(window.sim, (() => {
     const hire = [...document.querySelectorAll('#recruit-row .tile')].map(b => b.id); // (the Hire tiles, #261)
     const build = [...document.querySelectorAll('#build-actions button')].map(b => b.id);
     // an imp given a bow becomes a fire imp (#165)
-    stock.wood = 100; stock.leather = 20;
+    stock.wood = 100; stock.leather = 20; stock.rope = 5;
     const imp = settlers[0];
     selectedSettler = imp;
     window.sim.helpers.placeWorkshop();

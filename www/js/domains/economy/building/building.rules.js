@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
-import { formatCost, getFreeStock } from '../../colony/storage/index.js';
+import { dropStoreContents, formatCost, getFreeStock } from '../../colony/storage/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getMapResourceDef } from '../gathering/index.js';
 import { isShelter } from '../../conflict/healing/index.js';
@@ -61,6 +61,7 @@ export function isBuildLocationAllowed(x, y) {
 export function removeBuilding(building) {
   const index = game.buildings.indexOf(building);
   if (index === -1) return;
+  dropStoreContents(building); // (a warehouse: what it held onto the ground, #248)
   game.buildings.splice(index, 1);
   playSound('collapse', building);
   invalidateAllPaths();
