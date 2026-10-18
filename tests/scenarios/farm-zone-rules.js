@@ -38,7 +38,7 @@ Object.assign(window.sim, (() => {
     toggleFarmZone(p.x, p.y, 'wheat');
     stock.wheatSeeds = 5;
     settlers = [makeSettler(1, townHall.x + 60, townHall.y, { tool: 'hoe' }), makeSettler(2, townHall.x - 60, townHall.y)];
-    run(seconds, { each: () => { pendingRespawns.length = 0; } });
+    run(seconds, { each: () => { pendingRespawns.length = 0; settlers.forEach(s => { s.hunger = 999; }); } }); // (no meals in the way, #248)
     return { grassGone: !grassList.some(g => g.x === p.x && g.y === p.y), planted: farmPlots.some(f => f.x === p.x && f.y === p.y) };
   }
 

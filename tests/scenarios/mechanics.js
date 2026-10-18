@@ -40,6 +40,8 @@ Object.assign(window.sim, (() => {
     for (let meal = 1; meal <= GAME_CONFIG.relief.mealsBefore; meal++) {
       settlers.forEach(o => { o.hunger = o === s ? 0.001 : 999; });
       update(1 / 60);
+      // it goes and eats (#248)
+      for (let f = 0; f < 600 && (s.wantsMeal || s.eating); f++) { settlers.forEach(o => { o.hunger = 999; }); update(1 / 60); }
       needsAfter.push(!!s.needsRelief);
     }
     return { distinct: new Set(clocks.map(c => c.toFixed(3))).size, eaten: food0 - stock.food, needsAfter };

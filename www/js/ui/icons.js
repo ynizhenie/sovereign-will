@@ -536,6 +536,18 @@ export const ICONS = {
     icLine(c, '#6d4520', 1.2, [[13, 5], [13, 28]]); icLine(c, '#6d4520', 1.2, [[19, 5], [19, 28]]);
     icCircle(c, '#f39c12', 21.5, 17, 1.8);
   },
+  whistle: c => {
+    // a whistle on a cord (#248)
+    icRing(c, '#c0392b', 1.5, 12, 11, 7, Math.PI * 0.9, Math.PI * 2.1);
+    icRound(c, '#bdc3c7', 12, 16, 16, 8, 3);
+    icRect(c, '#7f8c8d', 22, 17, 5, 6);
+    icCircle(c, '#2c3e50', 17, 20, 1.6);
+  },
+  banner: c => {
+    // a flag on a pole (#248)
+    icRect(c, '#6d4520', 7, 3, 3, 27);
+    icFill(c, '#c0392b', [[10, 4], [27, 7], [22, 12], [27, 17], [10, 17]]);
+  },
   rope: c => {
     // a coil of rope, its end hanging out (#248)
     icRing(c, '#c8a46a', 3, 16, 15, 9);

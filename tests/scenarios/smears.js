@@ -39,7 +39,10 @@ Object.assign(window.sim, (() => {
     const s = makeSettler(1, townHall.x + 50, townHall.y + 50);
     settlers = [s];
     stock.food = 100;
-    for (let meal = 0; meal < GAME_CONFIG.relief.mealsBefore; meal++) { s.hunger = 0.001; update(1 / 60); }
+    for (let meal = 0; meal < GAME_CONFIG.relief.mealsBefore; meal++) {
+      s.hunger = 0.001; update(1 / 60);
+      for (let f = 0; f < 600 && (s.wantsMeal || s.eating); f++) { s.hunger = 999; update(1 / 60); } // (it goes and eats, #248)
+    }
     const needs = !!s.needsRelief;
     let walled = null;
     if (walledOff) {

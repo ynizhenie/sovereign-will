@@ -62,8 +62,11 @@ export const mechanicsConfig = {
 
   // every settler eats once every `seconds` on a clock of its own: a big one eats 2 food, a short
   // colony eats worms. A new settler's first meal comes after firstShare..1 of that, so they don't all
-  // eat together
-  meals: { seconds: 25, firstShare: 0.3 },
+  // eat together. Hungry, it goes to a storage and eats there for eatSeconds (#248)
+  meals: { seconds: 25, firstShare: 0.3, eatSeconds: 2.5 },
+  // paths (#248): every everyTicks a settler walking (minStep px since) on a tile in the base wears it by
+  // `wear`, up to 1; every fadeTicks each worn tile loses `fade`; one past `shows` is drawn as a path
+  paths: { everyTicks: 20, minStep: 4, wear: 0.012, fadeTicks: 600, fade: 0.02, shows: 0.35 },
 
   // every mealsBefore meals a settler goes off to relieve itself: at least awayFromBuildings tiles
   // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
@@ -85,7 +88,10 @@ export const mechanicsConfig = {
   // necromancer takes `bones` bones from a corpse in boneSeconds
   idle: { seconds: [8, 16], campfireRing: 34, campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sharpenSeconds: 6, sharpenBonus: 1.5, sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
-    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
+    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3,
+    // a smoke or a stalk (#248): smokeTake s at the grass, the fire, the wheat; then it lasts smokeSeconds
+    // (a stalk strawSeconds), whatever it does; not again for smokeAgain after; smokeWalk s to get it done
+    smokeTake: 1.5, smokeSeconds: 40, strawSeconds: 60, smokeAgain: 90, smokeWalk: 40, strawGrowth: 60 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
