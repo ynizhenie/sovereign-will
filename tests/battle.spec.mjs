@@ -62,11 +62,11 @@ test('every category has faction sub-tabs: each faction its own units and buildi
     }
   }
   expect(await page.locator('[data-battle-category="own"]').innerText()).toBe('Игрок');
-  expect(r.undead.own).toEqual(['zombie', 'zombie_club', 'zombie_sword', 'skeleton', 'necromancer', 'big_zombie']);
-  expect(r.undead.enemy).toEqual(['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_skeleton', 'undead_necromancer']);
+  expect(r.undead.own).toEqual(['zombie', 'zombie_club', 'zombie_sword', 'zombie_bow', 'necromancer', 'big_zombie']);
+  expect(r.undead.enemy).toEqual(['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_zombie_archer', 'undead_necromancer']);
   expect(r.undead.buildings).toContain('grave');
-  expect(r.demons.own).toEqual(['imp', 'imp_sword', 'imp_spear', 'fire_imp', 'demon', 'demon_spear']);
-  expect(r.demons.enemy).toEqual(['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_fire_imp']);
+  expect(r.demons.own).toEqual(['imp', 'imp_sword', 'imp_spear', 'imp_bow', 'demon', 'demon_spear']);
+  expect(r.demons.enemy).toEqual(['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_imp_archer']);
   expect(r.demons.buildings).toEqual(expect.arrayContaining(['sacrifice_circle', 'portal']));
   expect(r.humans.buildings).not.toContain('grave');
 });

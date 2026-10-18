@@ -35,7 +35,7 @@ export function isBigBody(unit) {
   return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
 }
 
-// A settler turns into another kind of its faction (a zombie given a bow into a skeleton), keeping
+// A settler turns into another kind of its faction (a faction's bowUnits, if it has any), keeping
 // its share of hp, its armour and everything it holds
 export function changeSettlerType(s, type) {
   const t = GAME_CONFIG.settlerTypes[type];
@@ -46,7 +46,7 @@ export function changeSettlerType(s, type) {
   s.hp = s.maxHp * share;
 }
 
-// A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind (skeletons)
+// A new settler of a GAME_CONFIG.settlerTypes kind, unarmed, as a worker; an archer kind
 // comes with its bow and a full quiver, a necromancer with its raises
 /** @returns {import('../../../engine/world/types.js').Settler} */
 export function createSettler(typeKey, id, x, y, extra = {}) {

@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
-test('a zombie given a bow becomes a skeleton, and a zombie again without it (#164)', async () => {
-  expect(await sim.bowMakesSkeleton()).toEqual({ withBow: { type: 'skeleton', weapon: 'bow' }, without: { type: 'zombie', weapon: 'fist' } });
+test('a zombie given a bow stays a zombie, an archer (#164, #249: no skeletons)', async () => {
+  expect(await sim.bowMakesSkeleton()).toEqual({ withBow: { type: 'zombie', weapon: 'bow' }, without: { type: 'zombie', weapon: 'fist' } });
 });
 
 test('a necromancer (the staff) raises 5 corpses as temporary zombies, recharges at a grave; they crumble into rot (#164)', async () => {

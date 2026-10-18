@@ -5,7 +5,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, startSwing } from '../../colony/settlers/index.js';
-import { getReachSteps, getSettlerReach, invalidateAllPaths } from '../../../engine/movement/index.js';
+import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { tileVariantHash } from '../../world/index.js';
 import { playSound } from '../../../app/index.js';
@@ -69,8 +69,7 @@ export function performAttack(attacker, targetX, targetY) {
       damage: stats.damage * stats.multiplier,
       life: stats.projectileLife, 
       fromEnemy: false, 
-      owner: attacker,
-      fire: !!(getDefinition('settlerTypes', attacker.type) || {}).fireArrows // a fire imp's
+      owner: attacker
     });
     playSound('bow', attacker);
     if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles

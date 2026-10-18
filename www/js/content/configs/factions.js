@@ -17,16 +17,16 @@ export const factionsConfig = {
     // portalSpawns: its spawners are portals that open anywhere (but not within minPortalTiles of the
     // town hall) and its waves come out of them instead of the map's edge
     // bowUnits: what a kind becomes when it's given a bow (and back when the bow is taken)
-    demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon'], upgrades: { imp: 'demon' }, bowUnits: { imp: 'fire_imp' }, startUnits: 'imp', eats: true,
+    demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon'], upgrades: { imp: 'demon' }, startUnits: 'imp', eats: true,
       hall: 'hellgate', spawner: 'portal', portalSpawns: true, minPortalTiles: 8,
-      enemies: ['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_fire_imp'], summonEnemy: 'demon_imp',
+      enemies: ['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_imp_archer'], summonEnemy: 'demon_imp',
       music: { ambient: ['demons_embers', 'demons_brimstone', 'demons_abyss'], battle: ['demons_inferno', 'demons_drums', 'demons_hellfire'] } },
     // rotPerSecond: rot its hall and graves make; foodInto: what food turns into when it's brought in
-    undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie'], bowUnits: { zombie: 'skeleton' },
+    undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie'],
       upgrades: { zombie: 'big_zombie' }, startUnits: 'zombie', eats: false, hall: 'graveyard', shelter: 'grave', spawner: 'grave',
       startResources: { bones: 30, rot: 10 }, bonesPerSecond: { hall: 0.25, grave: 0.1 }, rotPerSecond: { hall: 0.05, grave: 0.1 },
       foodInto: { rawMeat: 'bones', rawFish: 'bones', default: 'rot' },
-      enemies: ['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_skeleton', 'undead_necromancer'], summonEnemy: 'undead_zombie',
+      enemies: ['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_zombie_archer', 'undead_necromancer'], summonEnemy: 'undead_zombie',
       music: { ambient: ['undead_crypt', 'undead_fog', 'undead_graves'], battle: ['undead_march', 'undead_bones', 'undead_dirge'] } }
   },
 

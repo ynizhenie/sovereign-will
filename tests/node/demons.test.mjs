@@ -35,6 +35,6 @@ test('an enemy never comes out of a portal into a tree (#177)', async () => {
   expect(await sim.portalInThicket()).toEqual({ blocked: 0 });
 });
 
-test('a fire imp is an imp with a bow, and its arrows set what they hit burning (#165)', async () => {
-  expect(await sim.fireArrows()).toEqual({ burnt: true, keptBurning: true, arrowsLeft: 0 });
+test('the demons\' archer is an imp with a bow, as the humans\': its arrows hit, nothing set burning (#165, #249)', async () => {
+  expect(await sim.fireArrows()).toEqual({ hit: true, burnt: false, keptBurning: false, arrowsLeft: 0, type: 'imp' });
 });

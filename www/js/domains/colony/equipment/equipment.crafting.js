@@ -5,7 +5,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { canAfford, findNearestStorage, isAtStorage, payCost, walkToStorage } from '../storage/index.js';
+import { canAfford, findNearestStorage, isAtStorage, payCost, stock, walkToStorage } from '../storage/index.js';
 import { faceTowards } from '../settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { playWorkSound } from '../../../app/index.js';
@@ -56,8 +56,11 @@ export function craftItem(s, tick) {
     if (s.carrying) return false;
     // its own first; one for someone else only once that one's gone (#232: who it's for makes it)
     const open = o => !o.crafter || !game.settlers.includes(o.crafter);
+    // arrows are the archers' to make while there are any (#249)
+    const archers = game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed);
+    const mine = o => !(o.yields && archers && s.role !== 'archer');
     order = game.craftOrders.find(o => open(o) && o.for === s) ||
-      game.craftOrders.find(o => open(o) && (!o.for || !game.settlers.includes(o.for)));
+      game.craftOrders.find(o => open(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
     if (!order) return false;
   }
   const place = findWorkplace(craftPlace(order.category, order.id), s);
@@ -91,6 +94,8 @@ export function craftItem(s, tick) {
   if (order.progress >= 1) {
     game.craftOrders.splice(game.craftOrders.indexOf(order), 1);
     s.carrying = null;
+    // arrows (#249) go into the stock; a thing into the armory, and on to whoever it's for
+    if (order.yields) { for (const [id, n] of Object.entries(order.yields)) stock[id] = (stock[id] || 0) + n; return true; }
     game.armory[order.key] = (game.armory[order.key] || 0) + 1;
     if (order.handOut && handOutMade) handOutMade(order);
   }
