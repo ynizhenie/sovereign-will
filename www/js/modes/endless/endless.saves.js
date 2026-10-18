@@ -7,7 +7,7 @@
 // load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
 // loading puts the real object back in its place.
 
-import { rebuildConfigHud, renderItemList, renderedFaction, setRichText, updateSeedHud } from '../../ui/index.js';
+import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, setRichText, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { WORLD_LISTS, createWorldSeed, game, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
 import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
@@ -138,16 +138,57 @@ function flashSaveButton(text, ok) {
   flashTimer = setTimeout(() => { setRichText(button, t('save.button')); button.classList.remove('save-ok', 'save-no'); }, 2200);
 }
 
-// A list of saves, newest first: in the Endless menu, and in the pause menu's Load (#254)
+// The saves as tiles, newest first (#254): its world in bold, its wave and when it was saved; tapped, it's
+// loaded; its × deletes it, asked first. In the Endless menu all of them; in the pause menu's Load only this
+// world's (its one slot)
 export function renderSaveList(listId = 'save-list') {
-  const saves = Object.entries(loadSaves()).sort((a, b) => b[1].savedAt - a[1].savedAt);
-  if (listId === 'save-list') document.getElementById('save-settings').hidden = saves.length === 0;
-  renderItemList(document.getElementById(listId), saves.map(([key, s]) => ({ id: key, label: s.name })), {
-    attr: 'save',
-    emptyText: t('save.none'),
-    onPick: key => { document.getElementById('pause-load').hidden = true; loadGame(loadSaves()[key].data); },
-    onDelete: key => { const all = loadSaves(); delete all[key]; storeSaves(all); renderSaveList(listId); }
-  });
+  const all = Object.entries(loadSaves()).sort((a, b) => b[1].savedAt - a[1].savedAt);
+  const thisWorld = listId !== 'save-list';
+  const saves = thisWorld ? all.filter(([, s]) => s.data && s.data.seed && game.worldSeed && s.data.seed.value === game.worldSeed.value) : all;
+  if (!thisWorld) document.getElementById('save-settings').hidden = saves.length === 0;
+  const list = document.getElementById(listId);
+  list.innerHTML = '';
+  list.className = 'tile-grid save-tiles';
+  if (!saves.length) {
+    const empty = document.createElement('div');
+    empty.className = 'item-list-empty';
+    empty.textContent = t(thisWorld ? 'save.noneHere' : 'save.none');
+    list.appendChild(empty);
+    return;
+  }
+  const pad = n => String(n).padStart(2, '0');
+  for (const [key, s] of saves) {
+    const wrap = document.createElement('div');
+    wrap.className = 'save-tile-wrap';
+    const tile = document.createElement('button');
+    tile.className = 'btn tile save-tile';
+    tile.dataset.save = key;
+    const d = s.data || {}, at = new Date(s.savedAt);
+    const world = d.seed ? d.seed.value : '';
+    const wave = d.clocks ? d.clocks.waveNum : '';
+    tile.title = s.name;
+    tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(t('save.world', { world }))}</b></span>` +
+      `<span class="tile-cost">${escapeHtml(t('save.wave', { wave }))} · ${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}</span>`;
+    onTap(tile, () => { document.getElementById('pause-load').hidden = true; loadGame(loadSaves()[key].data); });
+    const del = document.createElement('button');
+    del.className = 'btn tile-act save-delete';
+    del.dataset.deleteSave = key;
+    del.title = t('list.deleteQuestion', { name: s.name });
+    del.innerHTML = iconHtml('close');
+    // asked first: the × turns into "Delete?", tapped again it's gone
+    onTap(del, () => {
+      if (!del.classList.contains('asking')) {
+        del.classList.add('asking');
+        del.dataset.confirmDelete = key;
+        del.textContent = t('save.deleteAsk');
+        setTimeout(() => { if (del.isConnected) { del.classList.remove('asking'); delete del.dataset.confirmDelete; del.innerHTML = iconHtml('close'); } }, 3000);
+        return;
+      }
+      const left = loadSaves(); delete left[key]; storeSaves(left); renderSaveList(listId);
+    });
+    wrap.append(tile, del);
+    list.appendChild(wrap);
+  }
 }
 
 // What this file sets up as the game starts (called by app/boot.js)

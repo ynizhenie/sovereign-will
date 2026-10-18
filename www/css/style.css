@@ -1045,3 +1045,11 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 #pick-menu { position: fixed; z-index: 60; display: flex; flex-direction: column; gap: 3px; padding: 4px; min-width: 130px;
   background: rgba(24, 27, 34, 0.96); border: 1px solid #4a5160; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); }
 #pick-menu .btn { text-align: left; font-size: 12px; padding: 6px 8px; }
+
+/* the saves as tiles (#254): its world, its wave and time; a small × in the corner, red while it asks */
+.save-tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.save-tile-wrap { position: relative; min-width: 0; }
+.save-tile-wrap .save-tile { min-height: 44px; padding-right: 22px; }
+.save-tile-wrap .save-delete { position: absolute; top: 3px; right: 3px; min-height: 0; padding: 2px 4px; font-size: 10px; }
+.save-tile-wrap .save-delete.asking { background: #c0392b; border-color: #e74c3c; color: #fff; }
+#pause-load { margin: 4px 0; }

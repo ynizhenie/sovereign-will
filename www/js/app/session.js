@@ -55,6 +55,11 @@ export function setPaused(paused) {
   btn.title = game.isPaused ? t('pause.resumeHint') : t('pause.pauseHint');
   btn.classList.toggle('paused', game.isPaused);
   document.getElementById('pause-menu').hidden = !game.isPaused;
+  // saving and loading are Endless's: not in a battle (#254)
+  const endless = game.gameMode === 'endless';
+  document.getElementById('save-game-button').hidden = !endless;
+  document.getElementById('load-game-button').hidden = !endless;
+  document.getElementById('pause-load').hidden = true;
 }
 
 export function exitToMainMenu() {
