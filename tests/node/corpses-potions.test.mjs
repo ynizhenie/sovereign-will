@@ -8,6 +8,12 @@ test('the corpses in the base are carried out to a heap past its edge; the undea
   expect(sim.porterCorpses({ faction: 'undead' })).toMatchObject({ out: false }); // (one may rise on their blighted ground)
 });
 
+test('lots of corpses, three carriers: each corpse carried out once, none back and forth; rock where the heap would go: it goes elsewhere, out of the base; walled in: none carried (#261)', () => {
+  expect(sim.manyCorpses({})).toEqual({ total: true, mostCarries: 1, carried: 12, out: true, heapOut: true });
+  expect(sim.manyCorpses({ rocks: true })).toEqual({ total: true, mostCarries: 1, carried: 12, out: true, heapOut: true });
+  expect(sim.manyCorpses({ walled: true })).toEqual({ total: true, mostCarries: 0, carried: 0, out: false, heapOut: null });
+});
+
 test('a medic brews potions between waves: two herbs, water, a campfire', () => {
   expect(sim.medicBrew({})).toEqual({ potions: 2, herbs: 0, atWater: true, atFire: true });
 });

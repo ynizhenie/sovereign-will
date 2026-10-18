@@ -20,6 +20,49 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
+  // Lots of corpses in the base, three carriers (#261: they got stuck at the base's edge, carrying the same
+  // corpses back and forth): each corpse is carried once, and they all end up out of the base. rocks: the
+  // ground out on the side the heap would go is rock, so it has to go elsewhere, still out of the base;
+  // walled: the base is walled in, nowhere to take them: nobody carries one
+  function manyCorpses({ seed = 'many-corpses', rocks = false, walled = false } = {}) {
+    asFaction('humans', seed);
+    const { wallRing } = window.sim.helpers;
+    if (walled) wallRing(3);
+    const base = getBaseRadius(), r = base + GAME_CONFIG.corpseHaul.corpseHeapTiles * TILE_SIZE;
+    if (rocks) {
+      const edges = [[1, 0, WORLD_WIDTH - townHall.x], [-1, 0, townHall.x], [0, 1, WORLD_HEIGHT - townHall.y], [0, -1, townHall.y]].sort((a, b) => a[2] - b[2]);
+      const [dx, dy] = edges[0];
+      for (let k = -6; k <= 3; k++) {
+        for (let side = -4; side <= 4; side++) {
+          const g = getGridPos(townHall.x + dx * (r + k * TILE_SIZE) + dy * side * TILE_SIZE, townHall.y + dy * (r + k * TILE_SIZE) + dx * side * TILE_SIZE);
+          if (Math.hypot(g.gx * TILE_SIZE + 15 - townHall.x, g.gy * TILE_SIZE + 15 - townHall.y) > base + TILE_SIZE) naturalRocks.push({ x: g.gx * TILE_SIZE + 15, y: g.gy * TILE_SIZE + 15, hp: 999, maxHp: 999 });
+        }
+      }
+      invalidateAllPaths();
+    }
+    settlers = [makeSettler(1, townHall.x + 30, townHall.y + 40), makeSettler(2, townHall.x - 30, townHall.y + 40), makeSettler(3, townHall.x, townHall.y - 45)];
+    const spots = [];
+    for (let dx = -2; dx <= 2; dx++) for (const dy of [-2, 2]) spots.push(nearHall(dx, dy));
+    spots.push(nearHall(2, 0), nearHall(-2, 0));
+    corpses = spots.map(p => ({ ...p, radius: 10, side: 'enemy', kind: 'raider', age: 0 }));
+    const total = corpses.length;
+    const pickups = new Map();
+    run(150, { each: () => {
+      quiet();
+      corpses.forEach(c => { c.age = 0; }); // (they'd rot away meanwhile)
+      for (const s of settlers) {
+        const c = s.carrying && s.carrying.corpse;
+        if (c && s.lastCorpse !== c) { pickups.set(c, (pickups.get(c) || 0) + 1); }
+        s.lastCorpse = c || null;
+      }
+    } });
+    const heap = getCorpseHeap();
+    const edge = getBaseRadius() + TILE_SIZE;
+    return { total: corpses.length === total, mostCarries: Math.max(0, ...pickups.values()), carried: pickups.size,
+      out: corpses.every(c => Math.hypot(c.x - townHall.x, c.y - townHall.y) > edge),
+      heapOut: heap ? Math.hypot(heap.x - townHall.x, heap.y - townHall.y) > edge + TILE_SIZE : null };
+  }
+
   // A medic between waves brews potions: two herbs, water, a campfire; up to the most kept
   function brew({ seed = 'medic-brew' } = {}) {
     asFaction('humans', seed);
@@ -49,5 +92,5 @@ Object.assign(window.sim, (() => {
     return { hp: Math.round(patient.hp), potionsLeft: medic.bagPotions || 0, herbsLeft: medic.bagHerbs || 0 };
   }
 
-  return { porterCorpses: corpsesOut, medicBrew: brew, medicHeal: heal };
+  return { porterCorpses: corpsesOut, manyCorpses, medicBrew: brew, medicHeal: heal };
 })());
