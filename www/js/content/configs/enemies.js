@@ -61,9 +61,9 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
   },
 
-  // loot (#210): a fallen enemy drops a pile; for each thing it held (its weapon, armour, shield), itemChance
-  // of the thing itself (into the armory), else partChance of partShare of what it costs, as resources
-  loot: { itemChance: 0.12, partChance: 0.6, partShare: 0.5 },
+  // loot (#210, #232): for each thing a fallen enemy held (its weapon, armour, shield), itemChance it drops
+  // that thing itself, lying on the ground (into the armory once carried in)
+  loot: { itemChance: 0.35 },
 
   // armour and shields in waves (#203): once the player has made armour (a shield), each wave enemy from
   // wave fromWave wears it with a chance growing by perWave a wave, up to max. Shields: melee, not big
@@ -75,13 +75,14 @@ export const enemiesConfig = {
     summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
   },
 
-  // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves; each wave
+  // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves, a little each
+  // wave from growFromWave; the first is firstWave of that, rampPerWave more each wave up to full; each wave
   // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
-  // the first wave is firstWave of that; and every wave is scaled by the player's army: 1 at
+  // and every wave is scaled by the player's army: 1 at
   // army.base settlers, perUnit more (or less) for each one over (under) it, within min..max. A wave
   // always has at least one enemy.
   waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 },
-    firstWave: 0.5, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
+    firstWave: 0.8, rampPerWave: 0.07, growFromWave: 3, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
 
   attackGroups: [
     // base squad templates (for the starting difficulty)

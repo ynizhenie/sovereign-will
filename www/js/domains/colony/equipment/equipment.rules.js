@@ -61,7 +61,8 @@ function orderMade(category, id, auto, forSettler) {
   const result = orderCraft(category, id);
   if (result === 'ordered') {
     const order = game.craftOrders[game.craftOrders.length - 1];
-    order.for = forSettler || null;
+    // who it's for is picked now, and that one makes it (#232), as a button would pick one to give it to
+    order.for = forSettler || pickRecipient(category, id);
     if (!auto) showNotification(t(craftPlace(category, id) === 'smithy' ? 'craft.atSmithy' : 'craft.atHall', { name: item.label }), false);
     return true;
   }
@@ -70,6 +71,23 @@ function orderMade(category, id, auto, forSettler) {
     else showCostError(item.cost || {}, t('cost.notEnough'));
   }
   return false;
+}
+
+// Who a thing ordered without a settler picked would go to: a worker with nothing for a tool, the big or an
+// unarmed worker for a weapon; not one another order is already for (null: whoever's free when it's made)
+function pickRecipient(category, id) {
+  const promised = new Set(game.craftOrders.map(o => o.for).filter(Boolean));
+  const free = s => !s.targetEquipment && !s.isPossessed && !promised.has(s);
+  if (category === 'tools') {
+    return game.settlers.find(s => free(s) && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !(id === 'rod' && isBigBody(s))) ||
+      game.settlers.find(s => free(s) && s.role === 'worker' && s.tool !== id && !(id === 'rod' && isBigBody(s))) || null;
+  }
+  if (category === 'weapons') {
+    return game.settlers.find(s => free(s) && isBigBody(s) && s.weapon === 'fist') ||
+      game.settlers.find(s => free(s) && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist') ||
+      game.settlers.find(s => free(s) && s.weapon !== id) || null;
+  }
+  return null;
 }
 
 // a made thing goes to whoever it was for, or a settler free to take it, the same as a button would

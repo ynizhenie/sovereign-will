@@ -104,8 +104,7 @@ export function renderFactionPicker() {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessSetup() {
   waveOptions.forEach(button => {
-      const selectWave = (e) => {
-          e.preventDefault();
+      const selectWave = () => {
           const custom = button.dataset.waveInterval === 'custom';
           waveCustom.hidden = !custom;
           if (custom) applyCustomWave();
@@ -118,8 +117,7 @@ export function initEndlessSetup() {
           button.classList.add('active');
       };
 
-      button.addEventListener('click', selectWave);
-      button.addEventListener('touchend', selectWave);
+      onTap(button, selectWave); // (a scroll over it doesn't press it, #232)
   });
   waveCustom.addEventListener('change', applyCustomWave);
   mapOptions.forEach(button => {
@@ -138,8 +136,7 @@ export function initEndlessSetup() {
     game.gameDifficulty = /** @type {string} */ (button.dataset.difficulty);
     difficultyOptions.forEach(b => b.classList.toggle('active', b === button));
   }));
-  playButton.addEventListener('click', startGame);
-  playButton.addEventListener('touchend', startGame);
+  onTap(playButton, startGame);
   // the small button next to the seed: a new random seed
   onTap(document.getElementById('seed-reroll'), () => {
     document.getElementById('seed-input').value = createDefaultSeed();

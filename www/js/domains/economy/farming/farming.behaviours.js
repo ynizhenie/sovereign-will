@@ -8,7 +8,7 @@ import { hasToolFamily } from '../../colony/equipment/index.js';
 import { addCarryLoad, addResources, canAfford, giveResourceToSettler, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../building/index.js';
 import { isWaterReachable } from '../../world/index.js';
-import { getMapResourceDef, harvest } from '../gathering/index.js';
+import { getMapResourceDef, harvest, isFreeHands } from '../gathering/index.js';
 import { makeAppleTree } from './farming.rules.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { isInSafeArea } from '../../conflict/combat/index.js';
@@ -18,12 +18,17 @@ import { playSound } from '../../../app/index.js';
 // Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
 // one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)
 export function pickApples(s, tick) {
-  if (s.role !== 'worker' || s.tool !== 'none' || s.weapon !== 'fist' || s.isPossessed || tick.isWaveActive) return false;
+  if (s.role !== 'worker' || s.isPossessed || tick.isWaveActive) return false;
+  // one with a tool or weapon picks only a tree the player marked for its apples, and only while no
+  // worker with free hands is free for it (#232: they were left on the tree)
+  const handsOnly = s.tool !== 'none' || s.weapon !== 'fist';
+  if (handsOnly && game.settlers.some(o => o !== s && isFreeHands(o))) return false;
   if (s.carrying && !hasRoomToCarry(s)) return false;
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;
   for (const t of game.trees) {
     if (!t.apple || !t.applesReady || tick.appleAssignments.has(t)) continue;
+    if (handsOnly && !(t.markIntent === 'apples' && t.priority > 0)) continue;
     if (!(t.markIntent === 'apples' && t.priority > 0) && !isInSafeArea(t.x, t.y)) continue;
     const d = getReachDistanceToResource(reach, t) - (t.markIntent === 'apples' && t.priority > 0 ? 1000 : 0);
     if (d < best) { best = d; target = t; }

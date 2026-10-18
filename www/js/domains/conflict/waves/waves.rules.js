@@ -161,9 +161,12 @@ export function startNextWave() {
 
   let normalEnemies = [];
 
-  // squad size grows by growthPerDifficulty per difficulty level (+50%: wave 1-5 x1, 96-100 x10.5), with
-  // the player's army; the first wave is lighter
-  const multiplier = (1 + (difficulty * scaling.growthPerDifficulty)) * getWaveArmyFactor() * (game.waveNum === 1 ? scaling.firstWave : 1);
+  // squad size grows smoothly, wave by wave, growthPerDifficulty every wavesPerDifficulty waves (#232: it went
+  // up in steps, x3 from wave 1 to 2 and x2 at wave 6), with the player's army; the first waves are lighter,
+  // firstWave at wave 1 and rampPerWave more each wave after up to full
+  const growth = 1 + (Math.max(0, game.waveNum - scaling.growFromWave) / scaling.wavesPerDifficulty) * scaling.growthPerDifficulty;
+  const ramp = Math.min(1, scaling.firstWave + (game.waveNum - 1) * scaling.rampPerWave);
+  const multiplier = growth * getWaveArmyFactor() * ramp;
 
   // a random base squad from the config
   const baseGroups = GAME_CONFIG.attackGroups || [];
@@ -190,7 +193,10 @@ export function startNextWave() {
     // every enemy kind of the enemy's faction with a waveKey, in config order
     waveKinds.forEach(def => {
       const baseCount = /** @type {string[]} */ ([]).concat(def.waveKey).reduce((sum, key) => sum + Number(group[key] || 0), 0);
-      const count = Math.max(0, Math.floor(baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1)));
+      // rounded at random, half an enemy under: on average as many as rounding down gave, but without the
+      // small counts of a squad all jumping together once the multiplier passed 1 (#232)
+      const exact = Math.max(0, baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1) - 0.5);
+      const count = Math.floor(exact) + (rand() < exact - Math.floor(exact) ? 1 : 0);
       for (let i = 0; i < count; i++) spawnWaveEnemy(def);
     });
   }
@@ -256,7 +262,7 @@ export function tickEnemyTents(dt) {
   });
 }
 
-// What a fallen enemy drops (GAME_CONFIG.loot, #210): for each thing it held, now and then the thing
+// What a fallen enemy drops (GAME_CONFIG.loot, #210, #232): for each thing it held, now and then the thing
 // itself, more often part of what it costs; a pile on the ground the settlers pick up
 export function dropLoot(en) {
   if (game.gameMode !== 'endless') return;
@@ -265,20 +271,12 @@ export function dropLoot(en) {
   if (en.weapon && en.weapon !== 'fist' && GAME_CONFIG.weapons[en.weapon]) held.push(['weapons', en.weapon]);
   if (en.armor === 'iron') held.push(['gear', 'armor']);
   if (en.shield) held.push(['gear', 'shield']);
-  /** @type {Object<string, number>} */
-  const yieldOf = {};
-  const items = [];
-  for (const [category, id] of held) {
-    const roll = rand();
-    if (roll < loot.itemChance) { items.push(`${category}:${id}`); continue; }
-    if (roll >= loot.itemChance + loot.partChance) continue;
-    for (const [res, amount] of Object.entries(GAME_CONFIG[category][id].cost || {})) {
-      const part = Math.floor(amount * loot.partShare);
-      if (part > 0) yieldOf[res] = (yieldOf[res] || 0) + part;
-    }
-  }
-  if (!items.length && !Object.keys(yieldOf).length) return;
-  game.loot.push({ x: en.x, y: en.y, hp: 1, maxHp: 1, priority: 0, yield: yieldOf, items });
+  // the thing itself, each with itemChance, lying apart (#232: no more bundles of a share of their cost)
+  held.forEach(([category, id], i) => {
+    if (rand() >= loot.itemChance) return;
+    const a = i * 2.1;
+    game.loot.push({ x: en.x + Math.cos(a) * 8 * i, y: en.y + Math.sin(a) * 8 * i, hp: 1, maxHp: 1, priority: 0, yield: {}, items: [`${category}:${id}`] });
+  });
 }
 
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too

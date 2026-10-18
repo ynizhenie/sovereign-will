@@ -8,6 +8,7 @@ import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
 import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
+import { getNecromancy } from '../../factions/undead/index.js';
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
@@ -174,7 +175,8 @@ function restockArrows(s, dt) {
 function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
 
-  let isUnarmedOrRod = (s.weapon === 'fist');
+  // (a necromancer's staff fights: it doesn't shelter at the town hall, #232)
+  let isUnarmedOrRod = (s.weapon === 'fist') && !getNecromancy(s);
   let isToolWorker = isUnarmedOrRod && (hasAxeTool(s.tool) || hasPickaxeTool(s.tool));
   let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
   // tent-summoned enemies alone don't call workers off their work, unless they come close
@@ -287,7 +289,9 @@ function isFarOut(w) {
 // one each, keeping within guardRange of it on the base's side, facing out (an enemy coming at them it
 // fights, as ever: fightEnemies comes first)
 export function escortGatherers(s, tick) {
-  if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert()) {
+  // (an archer with no arrows guards nobody, #232)
+  if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert() ||
+    (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
     s.guardingId = null;
     return false;
   }

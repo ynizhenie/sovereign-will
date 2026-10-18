@@ -162,9 +162,10 @@ export function drawBuildings() {
       ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + 5, b.y + 14); ctx.lineTo(b.x - 5, b.y + 14); ctx.closePath(); ctx.fill();
 	  
     } else if (b.type === 'spikes') {
-      // wooden base with iron points; a dot per use left
+      // wooden base with iron points; a dot per use left; broken (none left): the points bent down, grey
+      const broken = !((b.usesLeft || 0) > 0);
       ctx.fillStyle = '#6d4c2f'; ctx.fillRect(b.x - 13, b.y - 13, 26, 26);
-      ctx.fillStyle = '#b0bec5';
+      ctx.fillStyle = broken ? '#5f6a6a' : '#b0bec5';
       for (const [px, py] of [[-7, -7], [5, -7], [-7, 5], [5, 5], [-1, -1]]) {
         ctx.beginPath(); ctx.moveTo(b.x + px - 3, b.y + py + 3); ctx.lineTo(b.x + px, b.y + py - 4); ctx.lineTo(b.x + px + 3, b.y + py + 3); ctx.closePath(); ctx.fill();
       }
