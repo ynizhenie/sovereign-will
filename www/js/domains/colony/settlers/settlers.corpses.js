@@ -49,7 +49,7 @@ const inBase = c => dist(c, townHall) < getBaseRadius() + TILE_SIZE;
 // A corpse on the way to the heap (before deliverCarrying would take it "home")
 export function carryCorpse(s, tick) {
   const load = s.carrying && s.carrying.type === 'corpse' ? s.carrying : null;
-  if (!load) return false;
+  if (!load || load.forPit) return false; // (the demons': to a corpse pit, tendCorpses)
   const heap = getCorpseHeap();
   s.patrolTarget = null;
   s.haulWalk = (s.haulWalk || 0) + tick.dt;
@@ -68,7 +68,8 @@ export function carryCorpse(s, tick) {
 
 // Between waves, one with nothing better to do goes for a corpse in the base, one each
 export function haulCorpses(s, tick) {
-  if (!isHauler(s) || s.carrying || tick.isWaveActive || getPlayerFaction().id === 'undead' || !getCorpseHeap()) { s.corpseTarget = null; return false; }
+  // (the undead keep theirs for the necromancers; the demons put theirs in pits or cut them up, #250)
+  if (!isHauler(s) || s.carrying || tick.isWaveActive || getPlayerFaction().id === 'undead' || getPlayerFaction().id === 'demons' || !getCorpseHeap()) { s.corpseTarget = null; return false; }
   const taken = new Set(game.settlers.filter(o => o !== s).map(o => o.corpseTarget).filter(Boolean));
   let corpse = s.corpseTarget;
   if (!corpse || !game.corpses.includes(corpse) || taken.has(corpse) || !inBase(corpse)) {

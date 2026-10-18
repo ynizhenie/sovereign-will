@@ -22,7 +22,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -53,6 +53,10 @@
  * @property {number | null} [orderTo] the one a foreman is walking to with an order
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it
  * @property {{ toId: number, until: number } | null} [orderLine] a commander's line to the one it told
+ * @property {Object | null} [catchTarget] the enemy it's catching for a cage (#250)
+ * @property {Object | null} [catchCage] the cage it's for
+ * @property {Object | null} [butcherTarget] the corpse it's cutting up (#250)
+ * @property {number} [butcherTimer]
  * @property {boolean} [wantsMeal]  hungry: going for its meal (goEat, #248)
  * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
@@ -89,6 +93,7 @@
  * @typedef {Object} Enemy
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {boolean} [trapped]    held in an iron trap (#248)
+ * @property {number} [toCatch]      the id of the settler catching it for a cage (#250)
  * @property {number} [trappedFor]   seconds till it's free
  * @property {string} type           'normal', 'big', 'archer'...
  * @property {number} x
@@ -161,6 +166,8 @@
  * @property {Object | null} [holding] what an iron trap holds: an enemy or a boar (#248)
  * @property {number} [rearm]        seconds till an iron trap is set again
  * @property {Object<string, number>} [store] what a warehouse holds (#248)
+ * @property {Object[]} [corpses]    a corpse pit's (#250)
+ * @property {Object | null} [captive] who's in a cage (#250)
  * @property {number} [fishTimer]
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
@@ -235,6 +242,8 @@
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
+ * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
+ * @property {number} portalTimer
  * @property {{ x: number, y: number, type: string, amount: number }[]} piles  stock on the ground by a full storage (#248)
  * @property {Object<string, number>} armory  tools, weapons, gear in store, by '<category>:<id>'
  * @property {Object[]} ironOres

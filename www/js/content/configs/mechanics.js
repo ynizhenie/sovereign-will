@@ -121,6 +121,13 @@ export const mechanicsConfig = {
 
   // demons eating a corpse to heal
   eatCorpseSeconds: 2,
+  // the demons after a wave (#250): soldiers cut up the corpses left (with nobody wounded to eat them, and no
+  // room in a pit) into raw meat, `meat` each (bigMeat a big one) in `seconds`. At a wave's end (down to
+  // lastFew enemies) one catches an enemy below catchBelow of its health for a free cage
+  demonCamp: { butcherSeconds: 3, meat: 3, bigMeat: 6, lastFew: 3, catchBelow: 0.25 },
+  // enemy demons come out of their portals a few at a time (#250): `batch` every `seconds`; portals open
+  // at least awayTiles past the base's edge
+  portalWave: { batch: 5, seconds: 2, awayTiles: 3 },
 
   // burning arrows: what they hit burns for seconds, losing dps hp a second
   burning: { seconds: 3, dps: 5 },

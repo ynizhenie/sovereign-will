@@ -2,5 +2,6 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { eatCorpse, goToSacrifice } from './demons.behaviours.js';
+export { carryCaptive, catchForCage, tendCorpses, tickDemonCamp } from './demons.camp.js';
 export { drawHorns, drawPortal } from './demons.draw.js';
 export { openDemonPortal, takePortal } from './demons.rules.js';
