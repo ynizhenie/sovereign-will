@@ -69,8 +69,8 @@ export const mechanicsConfig = {
   // from any building, near grass if it can; it takes `seconds`, and the dung stays dungSeconds. A spot it
   // can't get to (walled off since, or stuck giveUpSeconds on the way): another one; after maxTries, where it is
   // corpses out of the base (#199, #232): to a heap corpseHeapTiles past its edge, carried at `speed` of a
-  // settler's speed
-  corpseHaul: { corpseHeapTiles: 4, speed: 0.6 },
+  // settler's speed; one that can't get there in giveUpSeconds drops it and it's left be (#261)
+  corpseHaul: { corpseHeapTiles: 4, speed: 0.6, giveUpSeconds: 40 },
   // a resource the player marked with Point is worked by up to this many at once (#232: one kind of mark)
   markWorkers: 2,
   // a boar takes this many times an item's damage (#232)
