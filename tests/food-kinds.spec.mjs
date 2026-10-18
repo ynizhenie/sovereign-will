@@ -26,7 +26,7 @@ test('Food opens onto what it is made of; food without a kind tops up the scarce
 
 test('the watering can is made at the smithy (iron in it, #248), only for a farmer (#106)', async ({ page }) => {
   await openGame(page);
-  await expect(page.locator('#smithy-list #btn-wateringCan')).toHaveCount(1);
+  await expect(page.locator('#craft-gear #btn-wateringCan')).toHaveCount(1);
   await expect(page.locator('#tab-farming #btn-wateringCan')).toHaveCount(0);
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;

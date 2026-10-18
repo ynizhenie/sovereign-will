@@ -30,8 +30,8 @@ test('the Building tab is in sections, and the other tabs have headings (#181)',
     return { wall: sectionOf('wall_wood'), warehouse: sectionOf('warehouse') };
   });
   expect(where).toEqual({ wall: 0, warehouse: 2 });
-  expect(await page.locator('#tab-tools .panel-heading').count()).toBeGreaterThan(0);
-  expect(await page.locator('#tab-weapons .panel-heading').count()).toBeGreaterThan(0);
+  expect(await page.locator('#craft-tools .panel-heading').count()).toBeGreaterThan(0);
+  expect(await page.locator('#craft-weapons .panel-heading').count()).toBeGreaterThan(0);
 });
 
 test('the selected settler shows what it is doing, when it eats, and what it carries (#180)', async ({ page }) => {

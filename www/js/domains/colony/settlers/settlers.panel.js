@@ -1,7 +1,7 @@
 // The settlers in the panel: how many of each, and the selected one's info line
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { escapeHtml, getResourceIconName, iconHtml, labelButton, richText, setRichText } from '../../../ui/index.js';
+import { getResourceIconName, labelButton, makeTile, setRichText } from '../../../ui/index.js';
 import { camera, clampCamera, isTouchScreen, onTap, t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -59,39 +59,25 @@ export function updatePossessionView() {
   }
 }
 
-// Hiring at the town hall (#248): a list like the craft lists, a row each: the unit in its tile (icon, name,
-// cost) and on its right its description and Hire; the upgrade the same
+// Hiring at the town hall (#248, #261): a tile a unit, like every tab's (its icon, name and cost; a tap
+// hires one); the upgrade the same
 export function renderRecruitRow() {
   const recruit = document.getElementById('recruit-row');
-  recruit.classList.add('craft-list');
-  const row = (id, infoKey, tileHtml, buttonIcon, buttonTitle, action) => {
-    const r = document.createElement('div');
-    r.className = 'craft-row';
-    const tile = document.createElement('div');
-    tile.className = 'craft-tile';
-    tile.dataset.info = infoKey;
-    tile.innerHTML = tileHtml;
-    const info = document.createElement('button');
-    info.className = 'btn row-btn row-info';
-    info.title = t('craft.info');
-    info.dataset.info = infoKey;
-    setRichText(info, '[[hint]]');
-    const go = document.createElement('button');
-    go.className = 'btn row-btn row-make';
-    go.id = id;
-    go.title = buttonTitle;
-    setRichText(go, `[[${buttonIcon}]]`);
-    onTap(go, action);
-    r.append(tile, info, go);
-    recruit.appendChild(r);
+  recruit.classList.add('tile-grid');
+  const tile = (id, infoKey, item, action) => {
+    const b = makeTile(item);
+    b.id = id;
+    b.dataset.info = infoKey;
+    onTap(b, action);
+    recruit.appendChild(b);
   };
   for (const type of getPlayerFaction().units) {
     const unit = GAME_CONFIG.settlerTypes[type];
-    row(`btn-hire-${type}`, `settlerTypes:${type}`, `${iconHtml(unit.icon)} <b>${escapeHtml(unit.label)}</b> <span class="craft-cost">${richText(formatCost(unit.hireCost))}</span>`, 'plus', t('hire.hire'), () => spawnSettler(type));
+    tile(`btn-hire-${type}`, `settlerTypes:${type}`, { icon: unit.icon, label: unit.label, cost: unit.hireCost }, () => spawnSettler(type));
   }
   const upgrade = getUpgrade();
   if (upgrade) {
-    row('btn-upgrade', `settlerTypes:${upgrade.big.id}`, richText(t('btn.upgrade', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) })), 'plus', t('btn.upgrade', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) }).replace(/\[\[[^\]]*\]\]/g, ''), () => upgradeToBig());
+    tile('btn-upgrade', `settlerTypes:${upgrade.big.id}`, { icon: upgrade.big.icon, label: t('hire.upgrade', { name: upgrade.big.label }), cost: upgrade.big.upgradeCost }, () => upgradeToBig());
     labelButton('btn-upgrade-big', t('btn.upgradeWorker', { icon: upgrade.big.icon, cost: formatCost(upgrade.big.upgradeCost) }));
   }
 }

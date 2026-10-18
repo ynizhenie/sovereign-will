@@ -125,7 +125,9 @@ export function renderSheetStock(tabId) {
   const row = document.getElementById('sheet-stock');
   const pane = document.getElementById(tabId);
   if (!row || !pane) return;
-  const ids = [...new Set([...pane.querySelectorAll('.cost-part')].map(part => part.dataset.res || ''))].filter(id => GAME_CONFIG.resources[id]);
+  // (the sub-tab showing only, #261)
+  const parts = [...pane.querySelectorAll('.cost-part')].filter(part => !part.closest('[hidden]'));
+  const ids = [...new Set(parts.map(part => /** @type {HTMLElement} */ (part).dataset.res || ''))].filter(id => GAME_CONFIG.resources[id]);
   row.innerHTML = ids.map(id => `<span class="strip-chip" data-res="${id}" title="${escapeHtml(GAME_CONFIG.resources[id].label)}">${iconHtml(GAME_CONFIG.resources[id].icon)} <b>0</b></span>`).join('');
   row.hidden = ids.length === 0;
   updateSheetStock();
@@ -227,16 +229,23 @@ export function renderSelectedGear(s) {
   shownGear = key;
   box.hidden = !items.length;
   box.innerHTML = '';
+  // each: its name, then into the store whole, or taken apart (#248)
   for (const [action, arg, id] of items) {
     const def = getDefinition('tools', id) || getDefinition('weapons', id) || GAME_CONFIG.gear[id] || {};
-    const button = document.createElement('button');
-    button.className = 'btn btn-disarm';
-    button.dataset.action = action;
-    button.dataset.arg = arg;
-    button.title = t('gearOff.take', { name: def.label || id });
-    setRichText(button, `[[${def.icon || 'tools'}]] ${def.label || id} [[no]]`);
-    // (made after the page's buttons were wired: its own listener)
-    button.addEventListener('click', () => { if (action === 'disarmSettler') disarmSettler(arg); else orderGearOff(arg); shownGear = ''; });
-    box.appendChild(button);
+    const chip = document.createElement('span');
+    chip.className = 'gear-chip';
+    setRichText(chip, `[[${def.icon || 'tools'}]] ${def.label || id}`);
+    for (const keep of [true, false]) {
+      const button = document.createElement('button');
+      button.className = `btn btn-disarm ${keep ? 'btn-store' : 'btn-apart'}`;
+      button.dataset.action = action;
+      button.dataset.arg = arg;
+      button.title = t(keep ? 'gearOff.store' : 'gearOff.take', { name: def.label || id });
+      setRichText(button, keep ? '[[warehouse]]' : '[[no]]');
+      // (made after the page's buttons were wired: its own listener)
+      button.addEventListener('click', () => { if (action === 'disarmSettler') disarmSettler(arg, keep); else orderGearOff(arg, keep); shownGear = ''; });
+      chip.appendChild(button);
+    }
+    box.appendChild(chip);
   }
 }
