@@ -45,7 +45,7 @@ test('the panel has categories: your units, enemies, buildings; armour and shiel
   expect(await count()).toBe(5); // with the healer (#203)
   await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
   await showCategory(page, 'buildings');
-  expect(await count()).toBe(6); // walls, door, spikes, tower, and the humans' tent
+  expect(await count()).toBe(8); // walls, doors (an iron one, #248), spikes, the iron trap, tower, and the humans' tent
 });
 
 test('every category has faction sub-tabs: each faction its own units and buildings (#166)', async ({ page }) => {

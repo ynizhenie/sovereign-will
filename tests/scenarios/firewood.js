@@ -16,32 +16,34 @@ Object.assign(window.sim, (() => {
     return { wood: stock.wood, firewood: stock.firewood, fuel: Object.keys(GAME_CONFIG.cooking.fuel).sort() };
   }
 
-  // A fish trap by the water catches by itself; a fisher empties it and carries the fish home
-  function fishTrap({ seed = 'fish-trap' } = {}) {
+  // A fish trap on the water (#248): a fisher brings it a worm from the stock, then it catches by itself
+  // and the fisher empties it and carries the fish home; with no bait to be had, it catches nothing
+  function fishTrap({ seed = 'fish-trap', bait = true } = {}) {
     start(seed);
     clearResources();
     const w = nearHall(-4, 3);
     waterTiles.push({ x: w.x, y: w.y });
-    const trap = placeBuilding('fish_trap', w.x + TILE_SIZE, w.y);
+    const trap = placeBuilding('fish_trap', w.x, w.y);
     invalidateAllPaths();
     settlers = [makeSettler(1, townHall.x + 30, townHall.y + 40, { tool: 'rod' })];
-    stock.rawFish = 0;
-    let most = 0;
-    run(GAME_CONFIG.buildings.fish_trap.fishTrap.seconds * 2 + 1, { each: () => { quiet(); most = Math.max(most, trap.fish || 0); stock.wheatSeeds = 0; stock.worms = 0; stock.wheat = 0; } });
+    Object.assign(stock, { rawFish: 0, worms: bait ? 1 : 0, wheatSeeds: 0, wheat: 0 });
+    let most = 0, baited = false;
+    run(GAME_CONFIG.buildings.fish_trap.fishTrap.seconds * 2 + 12, { each: () => { quiet(); most = Math.max(most, trap.fish || 0); baited = baited || (trap.baitLeft || 0) > 0; } });
     run(20, { each: quiet });
-    return { caught: most >= 2, emptied: (trap.fish || 0) < 2, fishHome: stock.rawFish >= 2 };
+    return { baited, wormUsed: stock.worms === 0, caught: most >= 2, emptied: (trap.fish || 0) < 2, fishHome: stock.rawFish >= 2 };
   }
 
-  // A fish trap goes only on a tile next to water
+  // A fish trap goes on water a fisher could fish from (#248), not next to it, not on dry land
   function trapPlacement({ seed = 'fish-trap-place' } = {}) {
     start(seed);
     clearResources();
     const w = nearHall(-4, 3);
     waterTiles.push({ x: w.x, y: w.y });
+    invalidateAllPaths();
     stock.wood = 100;
     buildMode = 'fish_trap';
     const tapAt = p => { mouse.x = p.x; mouse.y = p.y; const n = blueprints.length; handleCanvasClick(); return blueprints.length > n; };
-    const r = { byWater: tapAt({ x: w.x + TILE_SIZE, y: w.y }), dryLand: tapAt(nearHall(5, -4)) };
+    const r = { byWater: tapAt({ x: w.x + TILE_SIZE, y: w.y }), onWater: tapAt(w), dryLand: tapAt(nearHall(5, -4)) };
     buildMode = 'interact';
     return r;
   }

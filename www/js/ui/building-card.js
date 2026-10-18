@@ -55,7 +55,7 @@ export function renderBuildingCard() {
   const place = isHall ? 'hand' : def && def.crafts;
   const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
   const queueText = queue.map(o => `${GAME_CONFIG[o.category][o.id].label} ${o.stage === 'work' ? `${Math.floor(o.progress * 100)}%` : t('card.waiting')}`).join(', ');
-  const key = [queueText, isHall, b.type, Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
+  const key = [queueText, isHall, b.type, b.baitLeft, b.bait, Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
   if (key === shownKey) return;
   shownKey = key;
   const { name, icon } = isHall ? hallName() : { name: def ? def.label : b.type, icon: def ? def.icon : 'build' };
@@ -63,6 +63,11 @@ export function renderBuildingCard() {
   const info = [t('card.hp', { hp: Math.max(0, Math.ceil(b.hp)), max: b.maxHp })];
   if (b.tower) info.push(t('card.arrows', { n: b.arrows || 0, max: b.tower.arrowCapacity }));
   if (b.type === 'fish_trap') info.push(t('card.fish', { n: b.fish || 0, max: GAME_CONFIG.buildings.fish_trap.fishTrap.holds })); // (#199)
+  // its bait (#248): a fish trap's catches left on it, an iron trap's food
+  if (b.type === 'fish_trap' || b.type === 'iron_trap') {
+    const bait = b.type === 'fish_trap' ? b.baitLeft || 0 : b.bait || 0;
+    info.push(bait > 0 ? t('card.bait', { n: bait }) : t('card.noBait'));
+  }
   if (b.type === 'dung_heap') info.push(t('card.dung', { n: b.dung || 0, max: GAME_CONFIG.buildings.dung_heap.dungCapacity })); // (#232)
   if (b.type === 'campfire') info.push(t('card.fuel', { n: Math.round(b.fuelLeft || 0) }));
   if (b.type === 'smelter') info.push(t('card.smelter', { ore: b.oreLoaded || 0, coal: b.coalLoaded || 0, iron: b.ironProduced || 0 }));

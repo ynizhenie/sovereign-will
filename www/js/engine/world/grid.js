@@ -26,7 +26,7 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
  * Tile keys ("x,y" of tile centres) of each kind of thing, and a signature that changes with them
  * @typedef {{ signature: number, rocks: Set<string>, water: Set<string>, trees: Set<string>, cacti: Set<string>,
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
- *   walls: Set<string>, spikes: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
+ *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
  *   towerArrowBuildings: Set<string> }} TileIndex
  */
 /** @type {TileIndex | null} */
@@ -56,8 +56,11 @@ export function getTileIndex() {
     rockAndOre: keys([...game.naturalRocks, ...game.ironOres, ...game.coalOres]), // rock tiles that draw joined up
     solids: keys([...game.boulders, ...game.cacti, ...game.ironOres, ...game.coalOres]),
     buildings: keys(game.buildings),
-    walls: keys(game.buildings.filter(b => b.type !== 'door' && b.type !== 'spikes')),
+    // (doors are walked through, spikes and traps walked over: none of them a wall)
+    walls: keys(game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable)),
     spikes: keys(game.buildings.filter(b => b.type === 'spikes')),
+    // iron traps (#248): settlers keep off them, enemies don't see them
+    traps: keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap)),
     // what stops arrows (see blocksArrows / arrowsPass / towerArrowsPass in GAME_CONFIG)
     arrowBlockers: keys(Object.values(GAME_CONFIG.mapResources).filter(def => def.blocksArrows)
       .flatMap(def => game[def.list].filter(o => !o.isGrowing))),
@@ -68,6 +71,11 @@ export function getTileIndex() {
     }))
   };
   return tileIndex;
+}
+
+// A door (a wooden or an iron one, #248): settlers walk through it
+export function isDoor(b) {
+  return !!(getDefinition('buildings', b.type) || {}).door;
 }
 
 export function isBorderZone(gx, gy) {

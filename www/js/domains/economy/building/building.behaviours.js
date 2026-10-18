@@ -219,6 +219,15 @@ export function workBlueprint(s, bp, dt) {
       const tree = { x: bp.x, y: bp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
       game.trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
     } else {
+      // built over the one it upgrades (a door on a wall, #248): that one comes down, its refund back
+      if (bp.replaces) {
+        const old = bp.replaces;
+        delete bp.replaces;
+        if (game.buildings.includes(old)) {
+          game.buildings.splice(game.buildings.indexOf(old), 1);
+          addResources((getDefinition('buildings', old.type) || {}).demolishRefund);
+        }
+      }
       game.buildings.push(bp);
       ejectEntitiesFromTile(bp.x, bp.y);
       invalidateAllPaths();

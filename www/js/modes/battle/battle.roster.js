@@ -36,7 +36,7 @@ export const BATTLE_PRESETS = [
 ];
 
 // buildings any faction has, then each faction's own (those with `factions` in GAME_CONFIG.buildings)
-export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'spikes', 'watchtower', 'tent', 'grave', 'sacrifice_circle', 'portal'];
+export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'watchtower', 'tent', 'grave', 'sacrifice_circle', 'portal'];
 
 export function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);

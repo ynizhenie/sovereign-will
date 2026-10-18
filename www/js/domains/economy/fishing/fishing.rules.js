@@ -24,13 +24,14 @@ export function corpseHasWorms(corpse) {
   return !corpse.wormsTaken && corpse.age >= GAME_CONFIG.corpses.seconds * GAME_CONFIG.worms.after;
 }
 
-// Fish traps (#199) catch by themselves: a fish every fishTrap.seconds, up to fishTrap.holds
+// Fish traps (#199) catch by themselves while baited (#248): a fish every fishTrap.seconds, up to
+// fishTrap.holds, each using up one of the bait's catches
 export function tickFishTraps(dt) {
   const trap = GAME_CONFIG.buildings.fish_trap.fishTrap;
   for (const b of game.buildings) {
-    if (b.type !== 'fish_trap' || (b.fish || 0) >= trap.holds) continue;
+    if (b.type !== 'fish_trap' || (b.fish || 0) >= trap.holds || !((b.baitLeft || 0) > 0)) continue;
     const timer = (b.fishTimer || 0) + dt;
     b.fishTimer = timer >= trap.seconds ? 0 : timer;
-    if (timer >= trap.seconds) b.fish = (b.fish || 0) + 1;
+    if (timer >= trap.seconds) { b.fish = (b.fish || 0) + 1; b.baitLeft = (b.baitLeft || 0) - 1; }
   }
 }
