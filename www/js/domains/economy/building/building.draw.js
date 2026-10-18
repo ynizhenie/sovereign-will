@@ -6,7 +6,7 @@ import { ctx, mouse, t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
 import { getSmelterLimits, needsRepair } from './building.rules.js';
-import { getPlayerFaction, sides } from '../../factions/index.js';
+import { getEnemyColor, getPlayerFaction, sides } from '../../factions/index.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
@@ -268,6 +268,17 @@ export function drawBuildings() {
       drawIcon(ctx, 'dummy', b.x, b.y, 28); // a training dummy (#199)
     } else if (b.type === 'warehouse') {
       drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed
+    } else if (b.type === 'demon_den') {
+      drawIcon(ctx, 'demon_den', b.x, b.y, 28); // the demons' den (#250)
+    } else if (b.type === 'corpse_pit') {
+      // a dark pit (#250), a grey body in it for each corpse it holds
+      ctx.fillStyle = '#3b2a20'; ctx.beginPath(); ctx.ellipse(b.x, b.y, 13, 11, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1b120d'; ctx.beginPath(); ctx.ellipse(b.x, b.y + 1, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
+      (b.corpses || []).forEach((c, i) => { ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.ellipse(b.x - 5 + i * 5, b.y + (i % 2 ? 2 : -1), 5, 3, 0.4 * (i - 1), 0, Math.PI * 2); ctx.fill(); });
+    } else if (b.type === 'cage') {
+      // a cage (#250): who's in it behind the bars, in the enemy's colour
+      if (b.captive) { ctx.fillStyle = getEnemyColor(); ctx.beginPath(); ctx.arc(b.x, b.y + 2, 8, 0, Math.PI * 2); ctx.fill(); }
+      drawIcon(ctx, 'cage', b.x, b.y, 28);
     } else if (b.type === 'smelter') {
 	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
 	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);

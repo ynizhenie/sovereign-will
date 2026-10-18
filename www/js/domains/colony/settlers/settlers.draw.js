@@ -9,7 +9,7 @@ import { game } from '../../../engine/world/index.js';
 import { isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx } from '../../../engine/platform/index.js';
-import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
+import { getEnemyColor, getPlayerFaction, getSettlerColor } from '../../factions/index.js';
 import { drawStaff, getNecromancy } from '../../factions/undead/index.js';
 import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/index.js';
 import { drawHorns } from '../../factions/demons/index.js';
@@ -95,6 +95,11 @@ function drawCarriedInHands(s) {
   const x = Math.cos(f) * (s.visualRadius + 3), y = Math.sin(f) * (s.visualRadius + 3);
   if (type === 'dung') {
     ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(x, y, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  if (type === 'captive') {
+    // an enemy caught for a cage (#250), across its arms, still in its colour
+    ctx.fillStyle = getEnemyColor(); ctx.beginPath(); ctx.ellipse(x * 1.2, y * 1.2, 9, 6, f + Math.PI / 2, 0, Math.PI * 2); ctx.fill();
     return;
   }
   if (type === 'corpse') {

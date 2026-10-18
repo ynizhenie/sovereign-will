@@ -64,6 +64,7 @@ export function strikeBack(s, tick) {
   if (s.isPossessed || s.towerAssignment || game.gameMode === 'menu') return false;
   const attacker = getRecentAttacker(s);
   if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
+  if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
   if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
   return engageEnemy(s, tick, attacker, attacker, tick.dt);
 }
@@ -94,6 +95,7 @@ function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
   game.enemies.forEach(en => {
+    if (en.toCatch && en.toCatch !== s.id) return; // (one being caught for a cage, #250)
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
     let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);

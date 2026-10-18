@@ -469,6 +469,22 @@ export const ICONS = {
     icFlame(c, 16, 29, 0.6);
     icFill(c, '#2c2c34', [[3, 8], [6, 1], [10, 8]]); icFill(c, '#2c2c34', [[29, 8], [26, 1], [22, 8]]);
   },
+  demon_den: c => {
+    // a low den of dark stone, a glowing mouth (#250)
+    icFill(c, '#4a2c2a', [[3, 28], [8, 12], [16, 6], [24, 12], [29, 28]]);
+    icFill(c, '#e8572a', [[11, 28], [13, 19], [16, 16], [19, 19], [21, 28]]);
+  },
+  corpse_pit: c => {
+    // a pit with a body in it (#250)
+    icCircle(c, '#3b2a20', 16, 17, 13);
+    icCircle(c, '#1b120d', 16, 18, 10);
+    icFill(c, '#7f8c8d', [[9, 19], [14, 15], [23, 17], [21, 21], [12, 22]]);
+  },
+  cage: c => {
+    // iron bars on a frame (#250)
+    icRect(c, '#5d4037', 4, 5, 24, 3); icRect(c, '#5d4037', 4, 25, 24, 3);
+    for (const x of [6, 11, 16, 21, 26]) icRect(c, '#95a5a6', x - 1, 7, 2, 19);
+  },
   sacrifice_circle: c => {
     icRing(c, '#c0392b', 2.5, 16, 16, 12); icRing(c, '#7b241c', 1.5, 16, 16, 8);
     for (let i = 0; i < 5; i++) {

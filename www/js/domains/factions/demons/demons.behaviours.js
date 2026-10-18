@@ -6,6 +6,7 @@ import { game, getGridPos } from '../../../engine/world/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
+import { campMeals } from './demons.camp.js';
 
 // A settler the player sent into a sacrificial circle walks there and dies in it; everyone else is
 // healed to full (see the circle tap in handleCanvasClick)
@@ -29,17 +30,18 @@ export function goToSacrifice(s, tick) {
 export function eatCorpse(s, tick) {
   if (!(getDefinition('settlerTypes', s.type) || {}).eatsCorpses || s.hp >= s.maxHp || tick.isWaveActive || s.carrying) return false;
   let corpse = null, best = Infinity;
-  // only one lying where it can walk to (#232: one in a wall had it trying for good)
+  // only one lying where it can walk to (#232: one in a wall had it trying for good); or one in a corpse pit
+  // or a cage (#250)
   const reach = getSettlerReach(s);
   const reachable = c => { const g = getGridPos(c.x, c.y); return getReachSteps(reach, g.gx, g.gy) >= 0; };
-  for (const c of game.corpses) {
+  for (const c of [...game.corpses, ...campMeals()]) {
     const d = Math.hypot(c.x - s.x, c.y - s.y);
-    if (d < best && !tick.raiseAssignments.has(c) && reachable(c)) { best = d; corpse = c; }
+    if (d < best && !tick.raiseAssignments.has(c) && (c.take || reachable(c))) { best = d; corpse = c; }
   }
   if (!corpse) return false;
   tick.raiseAssignments.add(corpse);
   s.patrolTarget = null;
-  if (best > 16) {
+  if (best > (corpse.take ? 30 : 16)) {
     moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, tick.dt);
     s.eatTimer = 0;
     return true;
@@ -50,7 +52,8 @@ export function eatCorpse(s, tick) {
   if (s.eatTimer >= GAME_CONFIG.eatCorpseSeconds) {
     s.eatTimer = 0;
     s.hp = s.maxHp;
-    game.corpses.splice(game.corpses.indexOf(corpse), 1);
+    if (corpse.take) corpse.take();
+    else game.corpses.splice(game.corpses.indexOf(corpse), 1);
   }
   return true;
 }
