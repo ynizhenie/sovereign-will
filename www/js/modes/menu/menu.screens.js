@@ -48,7 +48,15 @@ export function initMenuScreens() {
   setTimeout(() => document.getElementById('main-menu').classList.remove('intro'), 3500);
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
-  document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => showMenuScreen('home')));
+  document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => {
+    // opened from the pause menu (#254): back to it, over the game
+    if (mainMenu.dataset.fromPause === 'yes') {
+      delete mainMenu.dataset.fromPause;
+      mainMenu.style.display = 'none';
+      document.getElementById('pause-menu').hidden = false;
+    }
+    showMenuScreen('home');
+  }));
   exitButton.hidden = !nativeApp;
   onTap(exitButton, () => { if (nativeApp) nativeApp.exitApp(); });
   markFps();

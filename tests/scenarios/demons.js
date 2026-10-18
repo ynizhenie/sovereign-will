@@ -101,10 +101,11 @@ Object.assign(window.sim, (() => {
   }
 
   // A fire imp's arrow sets what it hits burning: the enemy keeps losing hp after the hit (#165)
+  // the demons' archer is an imp with a bow, as the humans' (#249): its arrows hit, but set nothing burning
   function fireArrows({ seed = 'demon-fire' } = {}) {
     asDemons(seed);
     clearResources();
-    const fireImp = Object.assign(createSettler('fire_imp', 1, nearHall(2, 0).x, nearHall(2, 0).y), { weapon: 'bow', role: 'archer', quiver: true, arrows: 1 });
+    const fireImp = Object.assign(createSettler('imp', 1, nearHall(2, 0).x, nearHall(2, 0).y), { weapon: 'bow', role: 'archer', quiver: true, arrows: 1 });
     settlers = [fireImp];
     const en = createConfiguredEnemy(nearHall(6, 0), 'raider');
     en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1000;
@@ -113,7 +114,7 @@ Object.assign(window.sim, (() => {
     const burnt = en.burning !== undefined;
     const hpAfterHit = en.hp;
     run(2, { each: () => { waveTimer = 50; } });
-    return { burnt, keptBurning: en.hp < hpAfterHit, arrowsLeft: fireImp.arrows };
+    return { hit: en.hp < 1000, burnt, keptBurning: en.hp < hpAfterHit, arrowsLeft: fireImp.arrows, type: fireImp.type };
   }
 
   return { demonColony, eatsCorpse, sacrifice, portals, demonWave, fireArrows };
