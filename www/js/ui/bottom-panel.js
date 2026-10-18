@@ -1,7 +1,7 @@
 // The bottom panel: its tabs, and the buttons made from the config (hire, build, farm, tools, weapons)
 
 import { GAME_CONFIG } from '../content/configs/index.js';
-import { escapeHtml, iconHtml, setRichText } from './icons.js';
+import { escapeHtml, iconHtml, richText } from './icons.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { renderCraftLists } from '../domains/colony/equipment/index.js';
@@ -42,20 +42,31 @@ export function switchTab(_button, tabId) {
   toggleSheet('colony', tabId);
 }
 
-// A button for a config item (category: its GAME_CONFIG section, for its card, #213)
-export function createConfigButton(item, action, category) {
+// A tile (#261): every tab's things look alike, a compact square-ish button with the thing's icon and name,
+// and its cost under them (and `extra` after it, e.g. what it makes)
+/** @returns {HTMLButtonElement} */
+export function makeTile(item, extra = '') {
   const button = document.createElement('button');
-  button.className = 'btn';
+  button.className = 'btn tile';
+  const cost = formatCost(item.cost || {}) + extra;
+  // (the spaces: its text reads "icon name cost" too)
+  button.innerHTML = `<span class="tile-name">${item.icon ? iconHtml(item.icon) : ''} <b>${escapeHtml(item.label)}</b></span>` +
+    (cost ? ` <span class="tile-cost">${richText(cost)}</span>` : '');
+  return button;
+}
+
+// A tile for a config item (category: its GAME_CONFIG section, for its card, #213)
+export function createConfigButton(item, action, category) {
+  const button = makeTile(item);
   button.id = `btn-${item.id}`;
   if (category) button.dataset.info = `${category}:${item.id}`;
-  setRichText(button, `${item.icon ? `[[${item.icon}]]` : ''} ${item.label} (${formatCost(item.cost || {})})`);
   button.addEventListener('click', () => action(item.id));
   return button;
 }
 
 // Rebuild the generated HUD and buttons, e.g. after a language change (setLanguage)
 export function rebuildConfigHud() {
-  for (const id of ['resource-strip', 'resources-hud', 'build-actions', 'farming-actions', 'workshop-list', 'smithy-list', 'recruit-row']) {
+  for (const id of ['resource-strip', 'resources-hud', 'build-actions', 'farming-actions', 'craft-tools', 'craft-weapons', 'craft-gear', 'recruit-row']) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   }

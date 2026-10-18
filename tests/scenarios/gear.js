@@ -60,11 +60,17 @@ Object.assign(window.sim, (() => {
     loot.itemChance = chance;
     const dropped = window.game.loot.length === 1 && window.game.loot[0].items.includes('weapons:sword');
     settlers = [makeSettler(1, townHall.x + 60, townHall.y + 40)];
-    run(15, { each: () => { settlers[0].hunger = 999; } });
+    // picked up, it's carried to the storage first, not in the armory at once (#261)
+    let carried = null;
+    run(15, { each: () => {
+      settlers[0].hunger = 999;
+      const c = settlers[0].carrying;
+      if (carried === null && window.game.loot.length === 0) carried = !!c && (c.items || [c]).some(i => i.type === 'armory:weapons:sword') && !window.game.armory['weapons:sword'];
+    } });
     const stored = window.game.armory['weapons:sword'] || 0;
     const wood = stock.wood = 0, stone = stock.stone = 0;
     craftWeapon('sword');
-    return { dropped, picked: window.game.loot.length === 0, stored, usedArmory: (window.game.armory['weapons:sword'] || 0) === stored - 1 && stock.wood === wood && stock.stone === stone,
+    return { dropped, picked: window.game.loot.length === 0, carried, stored, usedArmory: (window.game.armory['weapons:sword'] || 0) === stored - 1 && stock.wood === wood && stock.stone === stone,
       going: settlers[0].targetEquipment && settlers[0].targetEquipment.weapon };
   }
 

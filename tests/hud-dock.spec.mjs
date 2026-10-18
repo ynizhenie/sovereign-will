@@ -36,8 +36,8 @@ test('a dock button opens its sheet and closes it again; another tab swaps it; P
   await expect(build).not.toHaveClass(/active/);
 
   await build.click();
-  await page.click('[data-arg="tab-tools"]');
-  await expect(page.locator('#workshop-list')).toBeVisible(); // the Workshop's list (#248)
+  await page.click('[data-arg="tab-craft"]');
+  await expect(page.locator('#craft-tools')).toBeVisible(); // Craft, its Tools first (#261)
   await expect(page.locator('#build-actions')).toBeHidden();
   await page.click('#btn-interact');
   expect(await body(page)).toEqual({ sheet: false, placing: false, stock: false });
@@ -197,8 +197,11 @@ test('the open sheet shows the stock of what its prices ask for, by the prices (
   await expect(page.locator('#sheet-stock [data-res="leather"] b')).toHaveText('3'); // the tent
   await page.evaluate(() => { stock.wood = 7; updateUI(); });
   await expect(page.locator('#sheet-stock [data-res="wood"] b')).toHaveText('7');
-  await page.click('[data-arg="tab-tools"]'); // People: tools take wood and stone
+  await page.click('[data-arg="tab-craft"]'); // Craft's Tools: they take wood and stone
   await expect(page.locator('#sheet-stock [data-res="stone"]')).toBeVisible();
+  await expect(page.locator('#sheet-stock [data-res="iron"]')).toBeVisible(); // (the iron axe)
+  await page.click('#craft-tab-gear'); // the sub-tab's own: no stone in gear (#261)
+  await expect(page.locator('#sheet-stock [data-res="stone"]')).toHaveCount(0);
 });
 
 test('Point takes the selection off the settler (#232)', async ({ page }) => {

@@ -118,17 +118,19 @@ export function findFuel() {
 
 // A woodcutter with nothing to do (idle last tick), or any time the firewood is nearly out, chops firewood
 // at a storage: takes up to perTrip wood and splits each into `makes` firewood in `seconds`, while the
-// colony has a campfire and less firewood than `keep`. The wood is in its hands meanwhile
+// colony has a campfire and less firewood than `keep`. The wood is in its hands meanwhile. Once on its way
+// it keeps going (chopTrip): it isn't idle any more, and it flickered between this and idle each tick (#261)
 export function chopFirewood(s, tick) {
   const c = GAME_CONFIG.firewood;
   const load = s.carrying && s.carrying.forChop ? s.carrying : null;
   if (load && (tick.isWaveActive || s.isPossessed)) { stock.wood += load.amount; s.carrying = null; return false; }
   if (!load) {
-    if (s.role !== 'worker' || !hasAxeTool(s.tool) || s.isPossessed || s.carrying || tick.isWaveActive) return false;
-    if (!game.buildings.some(b => b.type === 'campfire') || stock.wood < 1 || (stock.firewood || 0) >= c.keep) return false;
-    if (!s.wasIdle && (stock.firewood || 0) >= c.low) return false;
+    const can = s.role === 'worker' && hasAxeTool(s.tool) && !s.isPossessed && !s.carrying && !tick.isWaveActive &&
+      game.buildings.some(b => b.type === 'campfire') && stock.wood >= 1 && (stock.firewood || 0) < c.keep;
+    if (!can || (!s.wasIdle && !s.chopTrip && (stock.firewood || 0) >= c.low)) { s.chopTrip = false; return false; }
     s.patrolTarget = null;
-    return fetchFromStorage(s, 'wood', tick.dt, () => { s.carrying = { type: 'wood', amount: takeStock('wood', c.perTrip), forChop: true }; s.chopTimer = 0; });
+    s.chopTrip = fetchFromStorage(s, 'wood', tick.dt, () => { s.carrying = { type: 'wood', amount: takeStock('wood', c.perTrip), forChop: true }; s.chopTimer = 0; });
+    return s.chopTrip;
   }
   // at the storage it took the wood from: split it there
   s.patrolTarget = null;

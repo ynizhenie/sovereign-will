@@ -64,7 +64,7 @@ function orderMade(category, id, auto, forSettler) {
     const order = game.craftOrders[game.craftOrders.length - 1];
     // who it's for is picked now, and that one makes it (#232), as a button would pick one to give it to
     order.for = forSettler || pickRecipient(category, id);
-    if (!auto) showNotification(t(craftPlace(category, id) === 'smithy' ? 'craft.atSmithy' : 'craft.atWorkshop', { name: item.label }), false);
+    if (!auto) showNotification(t({ smithy: 'craft.atSmithy', workshop: 'craft.atWorkshop', hand: 'craft.atHall' }[craftPlace(category, id)], { name: item.label }), false);
     return true;
   }
   if (!auto) {
@@ -119,7 +119,8 @@ function pickRecipient(category, id) {
 
 
 // Send the selected settler wearing it (or the first one) to the town hall to hand it back
-export function orderGearOff(id) {
+// keep (#248): into the armory whole; otherwise taken apart
+export function orderGearOff(id, keep = false) {
   const item = GAME_CONFIG.gear[id];
   const selected = getSelectedSettler() || getPossessed();
   const target = selected && hasGear(selected, id) && !selected.targetEquipment
@@ -129,7 +130,7 @@ export function orderGearOff(id) {
     showNotification(t('gear.noneHas', { name: item.label }), true);
     return;
   }
-  target.targetEquipment = { gearOff: id };
+  target.targetEquipment = { gearOff: id, keep };
   showNotification(t('gear.returning', { icon: item.icon, name: item.label }), false);
 }
 
@@ -145,7 +146,8 @@ export function putOnGear(s, id) {
   }
 }
 
-export function takeOffGear(s, id) {
+// keep (#248): whole into the armory; otherwise taken apart, its cost back in the stock
+export function takeOffGear(s, id, keep = false) {
   if (!hasGear(s, id)) return;
   if (id === 'armor') {
     s.armor = null;
@@ -154,7 +156,8 @@ export function takeOffGear(s, id) {
   } else {
     s[id] = false;
   }
-  addResources(GAME_CONFIG.gear[id].cost);
+  if (keep) game.armory[`gear:${id}`] = (game.armory[`gear:${id}`] || 0) + 1;
+  else addResources(GAME_CONFIG.gear[id].cost);
 }
 
 // weapon / tool families, from GAME_CONFIG
@@ -194,17 +197,23 @@ export function getWeaponStats(s, use) {
   return { ...stats, damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * trained * shaken };
 }
 
-export function refundEquipment(settler, includeArmor = false, includeQuiver = false) {
+/** What comes off goes back: the weapon and the tool (only those that come off: #261, taking the tool off
+ * paid the weapon back too), armour and quiver if asked. keep (#248): a weapon, tool or armour whole into the
+ * armory; otherwise taken apart, its cost back in the stock
+ * @param {any} settler
+ * @param {{ weapon?: boolean, tool?: boolean, armor?: boolean, quiver?: boolean, keep?: boolean }} [what] */
+export function refundEquipment(settler, { weapon = true, tool = true, armor = false, quiver = false, keep = false } = {}) {
   // a medic's herbs go back with the bag
-  if (settler.bagHerbs > 0) { stock.herbs += settler.bagHerbs; settler.bagHerbs = 0; }
-  if (settler.bagPotions > 0) { stock.potions += settler.bagPotions; settler.bagPotions = 0; } // (#199)
-  // refund exactly what the item cost, as defined in GAME_CONFIG
-  for (const item of [getDefinition('weapons', settler.weapon), getDefinition('tools', settler.tool)]) {
-    addResources((item && item.cost) || {});
+  if (tool && settler.bagHerbs > 0) { stock.herbs += settler.bagHerbs; settler.bagHerbs = 0; }
+  if (tool && settler.bagPotions > 0) { stock.potions += settler.bagPotions; settler.bagPotions = 0; } // (#199)
+  for (const [category, id, off] of [['weapons', settler.weapon, weapon], ['tools', settler.tool, tool]]) {
+    const item = off && getDefinition(category, id);
+    if (!item || !item.cost || !Object.keys(item.cost).length) continue; // (a fist, no tool)
+    if (keep) game.armory[`${category}:${id}`] = (game.armory[`${category}:${id}`] || 0) + 1;
+    else addResources(item.cost);
   }
-
-  if (includeArmor && settler.armor === 'iron') takeOffGear(settler, 'armor');
-  if (includeQuiver && settler.quiver) {
+  if (armor && settler.armor === 'iron') takeOffGear(settler, 'armor', keep);
+  if (quiver && settler.quiver) {
     stock.leather += 5;
     stock.arrows += settler.arrows || 0;
   }
@@ -316,7 +325,8 @@ export function craftArrows() {
   showNotification(t('arrows.ordered', { count: recipe.produces.arrows }), false);
 }
 
-export function disarmSettler(type = 'all') {
+// keep (#248): what comes off goes into the armory whole; otherwise it's taken apart
+export function disarmSettler(type = 'all', keep = false) {
   let target = getSelectedSettler() || getPossessed();
 
   const hasTargetItem = (s) => {
@@ -342,7 +352,8 @@ export function disarmSettler(type = 'all') {
       tool: isDisarmingTool ? 'none' : (target.tool || 'none'),
       role: isDisarmingWeapon ? 'worker' : (target.role || 'worker'),
       armor: target.armor || 'none', // armour has its own button now (orderGearOff)
-      quiver: isDisarmingWeapon ? false : (target.quiver || false)
+      quiver: isDisarmingWeapon ? false : (target.quiver || false),
+      keep
     };
 
     const notificationText = t(type === 'tool' ? 'disarm.tool' : type === 'weapon' ? 'disarm.weapon' : 'disarm.item');

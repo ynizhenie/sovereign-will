@@ -11,7 +11,7 @@ export function renderBuildTab() {
     if (buildSections[group]) return buildSections[group];
     const section = document.createElement('div');
     section.className = 'panel-section';
-    section.innerHTML = `<div class="panel-heading">${escapeHtml(t(`panel.${group}`))}</div><div class="btn-grid-2col"></div>`;
+    section.innerHTML = `<div class="panel-heading">${escapeHtml(t(`panel.${group}`))}</div><div class="tile-grid"></div>`;
     document.getElementById('build-actions').appendChild(section);
     return (buildSections[group] = section.lastChild);
   };

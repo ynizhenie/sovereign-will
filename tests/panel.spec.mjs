@@ -34,19 +34,23 @@ test('Tools and Weapons tiles count what settlers hold (#119)', async ({ page })
   await expect(page.locator('#held-weapons-fist-txt')).toHaveCount(0);
 });
 
-test('gear is made where its iron says (a backpack at a workshop; armour, a shield, a watering can at a smithy); taking things off is on the selected settler, one button per thing it holds (#119, #232, #248)', async ({ page }) => {
+test('gear is made where it says (a backpack by hand; armour, a shield, a watering can at a smithy); taking things off is on the selected settler, into the store or taken apart, for each thing it holds (#119, #232, #248, #261)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await expect(page.locator('#workshop-list [data-item="gear:backpack"]')).toHaveCount(1);
-  for (const id of ['armor', 'shield', 'wateringCan']) await expect(page.locator(`#smithy-list [data-item="gear:${id}"]`)).toHaveCount(1);
-  await expect(page.locator('#tab-tools .btn-disarm, #tab-weapons .btn-disarm')).toHaveCount(0); // none in the sheets
+  const section = id => page.evaluate(id => document.querySelector(`[data-item="gear:${id}"]`).parentElement.previousElementSibling.textContent, id);
+  expect(await section('backpack')).toBe('Вручную (в ратуше)');
+  for (const id of ['armor', 'shield', 'wateringCan']) expect(await section(id)).toBe('В кузнице (железо)');
+  await expect(page.locator('#tab-craft .btn-disarm')).toHaveCount(0); // none in the sheets
   await page.evaluate(() => { const s = settlers[0]; Object.assign(s, { weapon: 'sword', role: 'soldier', tool: 'none', armor: 'iron', backpack: true }); selectedSettler = s; isPaused = true; updateUI(); });
-  const chips = page.locator('#selected-gear button');
+  const chips = page.locator('#selected-gear .gear-chip');
   await expect(chips).toHaveCount(3);
-  expect(await iconText(page, '#selected-gear button')).toEqual(['[[sword]] Меч [[no]]', '[[armor]] Броня [[no]]', '[[backpack]] Рюкзак [[no]]']);
+  expect(await iconText(page, '#selected-gear .gear-chip')).toEqual(['[[sword]] Меч[[warehouse]][[no]]', '[[armor]] Броня[[warehouse]][[no]]', '[[backpack]] Рюкзак[[warehouse]][[no]]']);
   await page.evaluate(() => { isPaused = false; });
-  await chips.nth(1).click();
-  expect(await page.evaluate(() => settlers[0].targetEquipment)).toEqual({ gearOff: 'armor' });
+  await chips.nth(1).locator('.btn-apart').click();
+  expect(await page.evaluate(() => settlers[0].targetEquipment)).toEqual({ gearOff: 'armor', keep: false });
+  await page.evaluate(() => { settlers[0].targetEquipment = null; updateUI(); });
+  await chips.nth(1).locator('.btn-store').click();
+  expect(await page.evaluate(() => settlers[0].targetEquipment)).toEqual({ gearOff: 'armor', keep: true });
   // a worker with nothing: no buttons
   await page.evaluate(() => { const s = settlers[1]; Object.assign(s, { weapon: 'fist', tool: 'none' }); selectedSettler = s; updateUI(); });
   await expect(page.locator('#selected-gear')).toBeHidden();
@@ -57,7 +61,7 @@ test('an item\'s card shows its cost against the stock, what\'s left after or wh
   await page.click('#play-button');
   // paused: nobody brings wood in between (it raced on CI: 11/5)
   await page.evaluate(() => { isPaused = true; stock.wood = 10; stock.stone = 2; window.sim.helpers.placeWorkshop(); });
-  await page.click('[data-arg="tab-tools"]');
+  await page.click('[data-arg="tab-craft"]');
   const axe = page.locator('#btn-axe');
   await axe.hover();
   await expect(page.locator('#info-card')).toContainText('10/5');

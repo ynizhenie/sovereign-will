@@ -1,79 +1,105 @@
-// The Workshop and Smithy tabs (#248): a list of what's made there, a row each, scrolling: the thing in a tile
-// (icon, name, cost, how many wait in the armory) and on its right a button for its description, one to make
-// it, one to hand a stored one out, one to take a stored one apart. Everything without iron in it is made
-// at a workshop, everything with at a smithy (craftPlace).
+// The Craft tab (#248, #261): Tools, Weapons and Gear as sub-tabs, each in sections by where it's made (by
+// hand at the town hall, at a workshop, at a smithy), a compact tile each: its icon, name and cost, how many
+// wait in the armory. Tapping the tile makes one (into the armory); under a tile with some stored, a button
+// to hand one out and one to take one apart. Arrows are with the weapons.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { escapeHtml, iconHtml, richText } from '../../../ui/index.js';
+import { iconHtml, makeTile, renderSheetStock } from '../../../ui/index.js';
 import { onTap, t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
-import { formatCost, stock } from '../storage/index.js';
+import { stock } from '../storage/index.js';
 import { isForPlayerFaction } from '../../factions/index.js';
 import { craftArrows, giveStored, makeToStore, takeApartStored } from './equipment.rules.js';
 import { craftPlace } from './equipment.crafting.js';
 
-// What each list shows: [category, item] the player's faction makes there
+export const CRAFT_KINDS = ['tools', 'weapons', 'gear'];
+const PLACES = ['hand', 'workshop', 'smithy'];
+
+// What a sub-tab shows: [category, item] the player's faction makes
 /** @returns {[string, any][]} */
-function itemsMadeAt(place) {
-  /** @type {[string, any][]} */
-  const all = [];
-  const add = (category, items) => { for (const item of items) all.push([category, item]); };
-  add('tools', Object.values(GAME_CONFIG.tools).filter(isForPlayerFaction));
-  add('weapons', Object.values(GAME_CONFIG.weapons).filter(w => w.id !== 'fist' && !w.hidden));
-  add('gear', Object.values(GAME_CONFIG.gear).filter(isForPlayerFaction));
-  add('recipes', [GAME_CONFIG.recipes.arrows]);
-  return all.filter(([category, item]) => craftPlace(category, item.id) === place);
+function itemsOfKind(kind) {
+  if (kind === 'tools') return Object.values(GAME_CONFIG.tools).filter(isForPlayerFaction).map(i => ['tools', i]);
+  if (kind === 'gear') return Object.values(GAME_CONFIG.gear).filter(isForPlayerFaction).map(i => ['gear', i]);
+  return [
+    ...Object.values(GAME_CONFIG.weapons).filter(w => w.id !== 'fist' && !w.hidden).map(i => /** @type {[string, any]} */ (['weapons', i])),
+    ['recipes', GAME_CONFIG.recipes.arrows]
+  ];
 }
 
 // A small square button with an icon, its name in its tooltip
 function iconButton(icon, title, className, action) {
   const b = document.createElement('button');
-  b.className = `btn row-btn ${className}`;
+  b.className = `btn tile-act ${className}`;
   b.title = title;
   b.innerHTML = iconHtml(icon);
   onTap(b, action);
   return b;
 }
 
-/** @type {{ row: HTMLElement, key: string, count: HTMLElement, give: HTMLButtonElement | null, apart: HTMLButtonElement | null, recipe: boolean }[]} */
-let rows = [];
+/** @type {{ key: string, count: HTMLElement, acts: HTMLElement | null, give: HTMLButtonElement | null, apart: HTMLButtonElement | null, recipe: boolean }[]} */
+let tiles = [];
 
-// One list (place: 'workshop' or 'smithy') into its tab
-function renderCraftList(place, listId) {
-  const list = document.getElementById(listId);
-  if (!list) return;
-  list.innerHTML = '';
-  list.classList.add('craft-list');
-  for (const [category, item] of itemsMadeAt(place)) {
-    const key = `${category}:${item.id}`, recipe = category === 'recipes';
-    const row = document.createElement('div');
-    row.className = 'craft-row';
-    row.dataset.item = key;
-    const tile = document.createElement('div');
-    tile.className = 'craft-tile';
-    tile.dataset.info = key;
-    const made = recipe ? ` → ${item.produces.arrows}` : '';
-    tile.innerHTML = `${item.icon ? iconHtml(item.icon) : ''} <b>${escapeHtml(item.label)}</b> <span class="craft-cost">${richText(formatCost(item.cost || {}) + made)}</span>`;
-    const count = document.createElement('span');
-    count.className = 'craft-count';
-    tile.appendChild(count);
-    const info = iconButton('hint', t('craft.info'), 'row-info', () => {});
-    info.dataset.info = key;
-    const make = iconButton('hammer', t('craft.make'), 'row-make', () => (recipe ? craftArrows() : makeToStore(category, item.id)));
-    make.id = `btn-${item.id}`; // (as the old buttons were)
-    const give = recipe ? null : iconButton('ok', t('craft.give'), 'row-give', () => giveStored(category, item.id));
-    const apart = recipe ? null : iconButton('no', t('craft.takeApart'), 'row-apart', () => takeApartStored(category, item.id));
-    row.append(tile, info, make, ...(give ? [give] : []), ...(apart ? [apart] : []));
-    list.appendChild(row);
-    rows.push({ row, key, count, give, apart, recipe });
+// One sub-tab's sections into its pane
+function renderKind(kind) {
+  const pane = document.getElementById(`craft-${kind}`);
+  if (!pane) return;
+  pane.innerHTML = '';
+  const items = itemsOfKind(kind);
+  for (const place of PLACES) {
+    const here = items.filter(([category, item]) => craftPlace(category, item.id) === place);
+    if (!here.length) continue;
+    const heading = document.createElement('div');
+    heading.className = 'panel-heading';
+    heading.textContent = t(`craft.place.${place}`);
+    const grid = document.createElement('div');
+    grid.className = 'tile-grid';
+    for (const [category, item] of here) {
+      const key = `${category}:${item.id}`, recipe = category === 'recipes';
+      const wrap = document.createElement('div');
+      wrap.className = 'tile-wrap';
+      wrap.dataset.item = key;
+      const tile = makeTile(item, recipe ? ` → ${item.produces.arrows}` : '');
+      tile.dataset.info = key;
+      tile.id = `btn-${item.id}`; // (as the old buttons were)
+      onTap(tile, () => (recipe ? craftArrows() : makeToStore(category, item.id)));
+      const count = document.createElement('span');
+      count.className = 'tile-count';
+      tile.appendChild(count);
+      wrap.appendChild(tile);
+      let acts = null, give = null, apart = null;
+      if (!recipe) {
+        acts = document.createElement('div');
+        acts.className = 'tile-acts';
+        give = iconButton('ok', t('craft.give'), 'row-give', () => giveStored(category, item.id));
+        apart = iconButton('no', t('craft.takeApart'), 'row-apart', () => takeApartStored(category, item.id));
+        acts.append(give, apart);
+        wrap.appendChild(acts);
+      }
+      grid.appendChild(wrap);
+      tiles.push({ key, count, acts, give, apart, recipe });
+    }
+    pane.append(heading, grid);
   }
 }
 
 export function renderCraftLists() {
-  rows = [];
-  renderCraftList('workshop', 'workshop-list');
-  renderCraftList('smithy', 'smithy-list');
+  tiles = [];
+  for (const kind of CRAFT_KINDS) renderKind(kind);
+  showCraftKind(shownKind);
   updateCraftLists(true);
+}
+
+// The sub-tab showing (Tools, Weapons or Gear)
+let shownKind = 'tools';
+export function showCraftKind(kind) {
+  shownKind = kind;
+  for (const k of CRAFT_KINDS) {
+    const pane = document.getElementById(`craft-${k}`);
+    if (pane) pane.hidden = k !== kind;
+    const button = document.getElementById(`craft-tab-${k}`);
+    if (button) button.classList.toggle('on', k === kind); // (not 'active': setMode takes that off every button)
+  }
+  renderSheetStock('tab-craft'); // (what this sub-tab's prices ask for)
 }
 
 // Each frame (updateUI): how many wait in the armory, and whether there's one to hand out or take apart
@@ -82,10 +108,10 @@ export function updateCraftLists(force = false) {
   const key = JSON.stringify(game.armory) + '|' + (stock.arrows || 0);
   if (!force && key === shown) return;
   shown = key;
-  for (const r of rows) {
+  for (const r of tiles) {
     const stored = r.recipe ? Math.floor(stock.arrows || 0) : game.armory[r.key] || 0;
-    r.count.textContent = stored > 0 ? t('craft.stored', { n: stored }) : '';
-    if (r.give) r.give.disabled = stored <= 0;
-    if (r.apart) r.apart.disabled = stored <= 0;
+    r.count.textContent = stored > 0 ? `×${stored}` : '';
+    r.count.title = t('craft.stored', { n: stored });
+    if (r.acts) r.acts.hidden = stored <= 0;
   }
 }

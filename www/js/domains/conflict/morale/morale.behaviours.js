@@ -108,16 +108,11 @@ export function boarsPanic() {
   }
 }
 
-// The enemy's necromancer keeps behind its own (#207): not within keepBack px of a settler or the town hall,
-// a little behind the ally nearest the hall. True: it took the step
+// The enemy's necromancer keeps behind its own (#207), a little behind the ally nearest the hall. It doesn't
+// run from a settler that comes for it (#261: it led the soldiers far off and they went back to their
+// posts): one within keepBack px it fights, as any enemy. True: it took the step
 export function necromancerKeepsBack(en, dt) {
-  const keep = config().necroKeepBack;
-  const threat = [...game.settlers, townHall].find(o => Math.hypot(o.x - en.x, o.y - en.y) < keep);
-  if (threat) {
-    const d = Math.max(1, Math.hypot(en.x - threat.x, en.y - threat.y));
-    moveEntityTowards(en, en.x + (en.x - threat.x) / d * 80, en.y + (en.y - threat.y) / d * 80, en.speed, true, dt);
-    return true;
-  }
+  if (game.settlers.some(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroKeepBack)) return false;
   // amid its own, a little behind their middle (#232: behind the front one it was off on its own, its own
   // out of its reach and panicking): the allies within reach of it, else all of them
   const allies = game.enemies.filter(o => o !== en && o.hp > 0 && !getEnemyDef(o).necromancer);
