@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
 import { formatCost, getFreeStock } from '../../colony/storage/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getMapResourceDef } from '../gathering/index.js';
@@ -168,7 +168,7 @@ export function getMissingMaterial(bp) {
 // (trees, boulders, cacti, ore). Natural rock is left to the player to mark.
 export function findDoorBlockers(allResources, resourceKind) {
   const blockers = new Set();
-  const doors = game.buildings.filter(b => b.type === 'door');
+  const doors = game.buildings.filter(isDoor);
   if (doors.length === 0) return blockers;
   const beside = new Set();
   for (const door of doors) {

@@ -2,7 +2,7 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
@@ -300,7 +300,7 @@ export function getDefensePlan() {
     return { x, y };
   };
   const posts = [];
-  for (const door of game.buildings.filter(b => b.type === 'door' && facing(Math.atan2(b.y - townHall.y, b.x - townHall.x)))) {
+  for (const door of game.buildings.filter(b => isDoor(b) && facing(Math.atan2(b.y - townHall.y, b.x - townHall.x)))) {
     if (posts.length >= count) break;
     // just inside the door, on the town hall's side
     const angle = Math.atan2(door.y - townHall.y, door.x - townHall.x);

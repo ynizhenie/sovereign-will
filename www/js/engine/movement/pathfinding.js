@@ -33,7 +33,7 @@ export function computeTileBlockedForSettler(gx, gy) {
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
 
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.walls.has(k) || tiles.spikes.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  return tiles.walls.has(k) || tiles.spikes.has(k) || tiles.traps.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -93,7 +93,8 @@ export function isTileBlockedForEnemyStrict(gx, gy) {
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
   // route around buildings when possible; if walled in, the fallback search paths through them and enemies break them
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.buildings.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  // (an iron trap they don't see: they walk right onto it, #248)
+  return (tiles.buildings.has(k) && !tiles.traps.has(k)) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -228,7 +229,7 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
   const tiles = getTileIndex();
-  const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k);
+  const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k); // (traps unseen, #248)
   const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
   const PATH_COST = ENEMY_PATH_COST;
   const result = findGridPath(startG, endG, targetX, targetY, {

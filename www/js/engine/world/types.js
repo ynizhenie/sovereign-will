@@ -22,7 +22,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -71,6 +71,8 @@
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
  * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {boolean} [trapped]    held in an iron trap (#248)
+ * @property {number} [trappedFor]   seconds till it's free
  * @property {string} type           'normal', 'big', 'archer'...
  * @property {number} x
  * @property {number} y
@@ -117,6 +119,7 @@
  * @property {number} [maxHp]
  * @property {Object<string, number>} [needs]  materials still to be brought
  * @property {Building} [targetBuilding] what a demolition takes down
+ * @property {Building} [replaces]   what it's built over and replaces (a door on a wall, #248)
  */
 
 /**
@@ -136,6 +139,10 @@
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
  * @property {number} [fish]         a fish trap's catch waiting (#199)
+ * @property {number} [baitLeft]     a fish trap's catches left on its bait (#248)
+ * @property {number} [bait]         an iron trap's bait in it (#248)
+ * @property {Object | null} [holding] what an iron trap holds: an enemy or a boar (#248)
+ * @property {number} [rearm]        seconds till an iron trap is set again
  * @property {number} [fishTimer]
  * @property {number} [radius]
  * @property {boolean} [repairRequested]

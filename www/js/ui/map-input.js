@@ -107,11 +107,17 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
     showNotification(t('build.zoneHere'), true);
     return false;
   }
-  // a fish trap only by the water (#199)
   const item = getDefinition('buildings', game.buildMode);
-  if (item && item.nearWater && !game.waterTiles.some(w => Math.abs(w.x - gx) <= TILE_SIZE && Math.abs(w.y - gy) <= TILE_SIZE && (w.x !== gx || w.y !== gy))) {
-    showNotification(t('build.nearWater'), true);
-    return false;
+  // a door on a wall, an iron door on a door: built over it (#248)
+  if (item && upgradeTarget(item, gx, gy)) return true;
+  // a fish trap on water a fisher could fish from (#248)
+  if (item && item.onWater) {
+    const water = game.waterTiles.find(w => w.x === gx && w.y === gy);
+    if (!water || !isWaterReachable(water) || [...game.buildings, ...game.blueprints].some(b => b.x === gx && b.y === gy)) {
+      showNotification(t('build.onWater'), true);
+      return false;
+    }
+    return true;
   }
   if (!isBuildLocationAllowed(gx, gy)) {
     if (Math.hypot(gx - townHall.x, gy - townHall.y) < townHall.radius + 15) {
@@ -212,14 +218,24 @@ export function hidePickMenu() {
 
 // A building mode: a blueprint on the tile, if the stock can pay (its cost stays in storage until builders
 // bring it)
+// What a building that upgrades (a door, #248) would be built over on this tile: a building of a kind it
+// upgrades, with no blueprint on it already
+function upgradeTarget(item, gx, gy) {
+  if (!item.upgrades) return null;
+  const old = game.buildings.find(b => b.x === gx && b.y === gy && item.upgrades.includes(b.type));
+  return old && !game.blueprints.some(bp => bp.x === gx && bp.y === gy) ? old : null;
+}
+
 function placeBlueprint({ gx, gy }) {
   const building = getDefinition('buildings', game.buildMode);
+  const replaces = upgradeTarget(building, gx, gy);
   if (!canBuild(game.buildMode)) {
     showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
-  } else if (isBuildLocationAllowed(gx, gy)) {
+  } else if (replaces || building.onWater || isBuildLocationAllowed(gx, gy)) {
     // its cost stays in storage until builders bring it
     const bp = createBuildingBlueprint(game.buildMode, gx, gy);
     bp.needs = { ...(building.cost || {}) };
+    if (replaces) bp.replaces = replaces; // (it stands till the new one is built)
     game.blueprints.push(bp);
     // placed: back to Point, unless Shift is held to place another; on a touch screen the mode stays
     // (its chip's × puts it down)

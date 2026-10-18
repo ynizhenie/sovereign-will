@@ -45,7 +45,7 @@ test('gear is made where it says (a backpack by hand; armour, a shield, a wateri
   const chips = page.locator('#selected-gear .gear-chip');
   await expect(chips).toHaveCount(3);
   expect(await iconText(page, '#selected-gear .gear-chip')).toEqual(['[[sword]] Меч[[warehouse]][[no]]', '[[armor]] Броня[[warehouse]][[no]]', '[[backpack]] Рюкзак[[warehouse]][[no]]']);
-  await page.evaluate(() => { isPaused = false; });
+  // (still paused: by the town hall, it would carry the order out before it's read; it raced)
   await chips.nth(1).locator('.btn-apart').click();
   expect(await page.evaluate(() => settlers[0].targetEquipment)).toEqual({ gearOff: 'armor', keep: false });
   await page.evaluate(() => { settlers[0].targetEquipment = null; updateUI(); });

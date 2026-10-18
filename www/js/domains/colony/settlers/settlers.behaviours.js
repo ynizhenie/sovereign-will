@@ -31,6 +31,7 @@ import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
+import { baitTrap } from '../../economy/hunting/index.js';
 
 export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
@@ -74,7 +75,8 @@ export function createSettlerTick(dt) {
     meleeOn: new Map(),              // enemy -> settlers fighting it in melee this tick (#208)
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
-    activeWaterSpots: game.waterTiles.filter(w => w.isFishing && isWaterReachable(w)),
+    // (not one with a fish trap on it, #248)
+    activeWaterSpots: game.waterTiles.filter(w => w.isFishing && isWaterReachable(w) && !game.buildings.some(b => b.x === w.x && b.y === w.y)),
     assignedFishersCount: 0,
     defendersCount,
     // unarmed workers only help destroy enemy tents when there's nobody armed to do it
@@ -217,6 +219,7 @@ export const SETTLER_BEHAVIOURS = [
   carryCorpse,
   brewPotion,
   chopFirewood,
+  baitTrap,
   deliverMaterials,
   deliverCarrying,
   repairTent,

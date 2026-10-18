@@ -45,6 +45,7 @@ function enemyHeal(en, healer, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   clampEntityToBounds(en);
+  if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
   if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
 
@@ -175,7 +176,7 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt) {
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
   // spikes are walked over, not besieged
-  let touchingBuilding = game.buildings.find(b => b.type !== 'spikes' && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
+  let touchingBuilding = game.buildings.find(b => !(getDefinition('buildings', b.type) || {}).walkable && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
   if (touchingBuilding) {
     if (isShelter(touchingBuilding)) {
       breakBuilding(touchingBuilding, enemyDef, dt);
