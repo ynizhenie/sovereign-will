@@ -309,7 +309,8 @@ window.sim = (() => {
       const nearSpawner = o => spawners.some(sp => Math.max(Math.abs(sp.x - o.x), Math.abs(sp.y - o.y)) <= radius * TILE_SIZE);
       result[kind] = { before: before[kind], rightAfter: rightAfter[kind], after: list.length, allNearSpawner: list.every(nearSpawner) };
     }
-    // spawners themselves can't be mined or marked: a possessed miner told to mine one doesn't
+    // a spawner is never used up (#248: it can be marked and worked for its ore): a possessed miner told to
+    // mine one leaves it standing
     const spawner = getOreSpawners('iron')[0];
     const spawnerMiner = makeSettler(2, spawner.x + 25, spawner.y, { tool: 'iron_pickaxe', isPossessed: true });
     settlers = [spawnerMiner];

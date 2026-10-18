@@ -15,7 +15,7 @@ Object.assign(window.sim, (() => {
     };
     settlers = only ? only.map(k => all[k]) : Object.values(all);
     selectedSettler = null;
-    stock.iron = 20; stock.leather = 20; stock.wood = 20;
+    stock.iron = 20; stock.leather = 20; stock.wood = 20; stock.rope = 5;
     const before = { iron: stock.iron, leather: stock.leather };
     if (GAME_CONFIG.gear[id].cost.iron) placeBuilding('smithy', hx + 15 - (hx % 30) + 90, hy + 15 - (hy % 30) + 90); // (#211)
     else window.sim.helpers.placeWorkshop(); // (#248)

@@ -59,7 +59,7 @@ export function craftItem(s, tick) {
     const open = o => !o.crafter || !game.settlers.includes(o.crafter);
     // arrows are the archers' to make while there are any (#249)
     const archers = game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed);
-    const mine = o => !(o.yields && archers && s.role !== 'archer');
+    const mine = o => !(o.id === 'arrows' && archers && s.role !== 'archer');
     order = game.craftOrders.find(o => open(o) && o.for === s) ||
       game.craftOrders.find(o => open(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
     if (!order) return false;

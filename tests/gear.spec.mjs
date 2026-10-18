@@ -4,7 +4,7 @@ import { openGame, sim } from './helpers.mjs';
 test('a backpack goes to a worker, never an archer, and is put on at the town hall (#94)', async ({ page }) => {
   await openGame(page);
   expect(await sim(page, 'orderGearFor', { id: 'backpack' }))
-    .toEqual({ who: 'worker', wornAtOnce: false, worn: true, maxHp: 100, paid: { iron: 0, leather: 5 }, stored: 0 });
+    .toEqual({ who: 'worker', wornAtOnce: false, worn: true, maxHp: 100, paid: { iron: 0, leather: 4 }, stored: 0 }); // (and a rope, #248)
   // only an archer around: it's made all the same (#211), and waits in the armory
   expect(await sim(page, 'orderGearFor', { id: 'backpack', only: ['archer'] }))
     .toMatchObject({ who: null, stored: 1 });

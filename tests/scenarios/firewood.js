@@ -40,7 +40,7 @@ Object.assign(window.sim, (() => {
     const w = nearHall(-4, 3);
     waterTiles.push({ x: w.x, y: w.y });
     invalidateAllPaths();
-    stock.wood = 100;
+    stock.wood = 100; stock.rope = 10;
     buildMode = 'fish_trap';
     const tapAt = p => { mouse.x = p.x; mouse.y = p.y; const n = blueprints.length; handleCanvasClick(); return blueprints.length > n; };
     const r = { byWater: tapAt({ x: w.x + TILE_SIZE, y: w.y }), onWater: tapAt(w), dryLand: tapAt(nearHall(5, -4)) };
