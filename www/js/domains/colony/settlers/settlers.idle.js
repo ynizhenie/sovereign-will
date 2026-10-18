@@ -17,7 +17,7 @@ import { faceTowards, startSwing } from './settlers.draw.js';
 const config = () => GAME_CONFIG.idle;
 
 // the activity texts of the pastimes (activity.<name>)
-export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain', digWorms: 'idleDigWorms' };
+export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain', digWorms: 'idleDigWorms', smoke: 'idleSmoke', straw: 'idleStraw' };
 
 const byId = id => game.settlers.find(o => o.id === id) || null;
 const isMelee = s => s.weapon && s.weapon !== 'fist' && s.weapon !== 'bow';
@@ -44,6 +44,11 @@ function pickPastime(s) {
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
   if (faction === 'undead') options.push('sway', 'sway');
   if (s.tool === 'rod' && nearestGrass(s)) options.push('digWorms', 'digWorms'); // a fisher digs for worms (#199)
+  // a smoke (#248): some roll one from grass and light it at a campfire; a farmer takes a wheat stalk to
+  // chew instead. Now and then, not straight again
+  if (faction !== 'undead' && !((s.smokeRest || 0) > 0)) {
+    if (s.tool === 'hoe') { if (ripeWheat(s)) options.push('straw', 'straw'); } else if (s.id % 3 === 0 && fires.length && nearestGrass(s)) options.push('smoke', 'smoke');
+  }
   if (isFighter(s)) {
     options.push('patrolEdge', 'patrolEdge');
     if (freeDummy(s) && canTrain(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
@@ -70,6 +75,8 @@ function pickPastime(s) {
     idle.spot = { x: dummy.x, y: dummy.y };
   } else if (act === 'patrolEdge') {
     idle.left *= 2; // a round takes a while
+  } else if (act === 'smoke' || act === 'straw') {
+    idle.left = c.smokeWalk; // (time to get there)
   }
   return idle;
 }
@@ -154,6 +161,25 @@ export function idlePastime(s, tick) {
     case 'sway':
       s.swaying = true;
       return true;
+    case 'smoke':
+    case 'straw': {
+      // to the grass, then the fire to light it (a smoke); to ripe wheat (a stalk); a moment at each
+      if (!idle.stage) idle.stage = idle.act === 'smoke' ? 'grass' : 'wheat';
+      const at = idle.stage === 'grass' ? nearestGrass(s) : idle.stage === 'wheat' ? ripeWheat(s)
+        : campfires().sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+      if (!at) { idle.left = 0; return false; }
+      if (Math.hypot(at.x - s.x, at.y - s.y) > 32) { moveEntityTowards(s, at.x, at.y, s.speed, false, tick.dt); return true; } // (on its way: no stroll)
+      faceTowards(s, at.x, at.y);
+      s.working = 0.1;
+      idle.t = (idle.t || 0) + tick.dt;
+      if (idle.t < c.smokeTake) return true;
+      idle.t = 0;
+      if (idle.stage === 'grass') { idle.stage = 'fire'; return true; }
+      if (idle.act === 'smoke') s.smoking = c.smokeSeconds; else s.straw = c.strawSeconds;
+      s.smokeRest = (idle.act === 'smoke' ? c.smokeSeconds : c.strawSeconds) + c.smokeAgain;
+      idle.left = 0;
+      return true;
+    }
     case 'patrolEdge': {
       // round the base just past its edge, waypoint to waypoint (each soldier its own way round)
       const dir = Math.floor(s.id) % 2 ? 1 : -1;
@@ -194,6 +220,17 @@ function edgePoint(angle) {
 }
 
 // The nearest grass in the base (#199: a fisher digs for worms there)
+// Wheat grown tall near by, in the base (a farmer's stalk, #248): from strawGrowth on (ripe wheat a farmer
+// would be harvesting, not idle)
+function ripeWheat(s) {
+  let best = null, bestD = Infinity;
+  for (const f of game.farmPlots) {
+    const d = Math.hypot(f.x - s.x, f.y - s.y);
+    if (f.growth >= config().strawGrowth && d < bestD && isInSafeArea(f.x, f.y) && d < 400) { bestD = d; best = f; }
+  }
+  return best;
+}
+
 function nearestGrass(s) {
   let best = null, bestD = Infinity;
   for (const g of game.grassList) {

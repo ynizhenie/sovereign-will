@@ -51,12 +51,14 @@ export function updateUI() {
   if (selected) {
     const type = GAME_CONFIG.settlerTypes[selected.type] || GAME_CONFIG.settlerTypes.normal;
     let name = `[[${type.icon}]] ${type.label}`;
+    if (hasGear(selected, 'whistle')) name += ` · ${t('role.foreman')}`; // (a commander, #248)
+    if (hasGear(selected, 'banner')) name += ` · ${t('role.captain')}`;
     let wName = getDefinition('weapons', selected.weapon)?.label || selected.weapon;
     let tName = selected.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selected.tool)?.label || selected.tool);
     let aName = selected.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
     let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
     // the rest of what it wears
-    const gear = ['shield', 'backpack', 'wateringCan'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
+    const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
     renderSettlerInfo(selected);
     renderSelectedGear(selected);
@@ -222,7 +224,7 @@ export function renderSelectedGear(s) {
   if (s) {
     if (s.tool && s.tool !== 'none') items.push(['disarmSettler', 'tool', s.tool]);
     if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
-    for (const id of ['armor', 'shield', 'backpack', 'wateringCan']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
+    for (const id of ['armor', 'shield', 'backpack', 'wateringCan', 'whistle', 'banner']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
   }
   const key = `${s ? s.id : ''}|${items.map(i => i[2]).join(',')}|${s && s.targetEquipment ? 1 : 0}`;
   if (key === shownGear) return;

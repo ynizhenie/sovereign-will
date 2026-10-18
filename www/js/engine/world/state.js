@@ -73,7 +73,9 @@ export const game = {
   /** @type {{ armor: boolean, shield: boolean }} */
   playerGear: { armor: false, shield: false }, // armour / a shield the player has made: waves wear them too (#203)
   forests: [],          // forest centres, see placeForests()
-  pendingRespawns: []   // harvested resources waiting to grow back, see scheduleRespawn()
+  pendingRespawns: [],  // harvested resources waiting to grow back, see scheduleRespawn()
+  /** @type {Object<string, number>} */
+  paths: {}             // 'gx,gy' -> how worn that tile's ground is, 0..1 (#248, world.paths.js)
 };
 
 // the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns
