@@ -12,6 +12,7 @@ import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
 import { getEnemyDef } from '../waves/index.js';
+import { healAtTent } from '../healing/index.js';
 
 const config = () => GAME_CONFIG.morale;
 
@@ -40,7 +41,8 @@ function healOnAlly(unit, allies, dt) {
   return true;
 }
 
-// A settler in a panic (a behaviour, after the player's own control): to the town hall, out of the fight.
+// A settler in a panic (a behaviour, after the player's own control): wounded, to a tent to heal; else to
+// the town hall, out of the fight.
 // In battle mode, where there's no hall to run to, away from the nearest enemy
 export function panic(s, tick) {
   if (!s.panic || s.isPossessed) return false;
@@ -50,6 +52,11 @@ export function panic(s, tick) {
   const attacker = getRecentAttacker(s);
   if (attacker && game.pathTick - (s.lastAttackedTick || 0) < 60 && Math.hypot(attacker.x - s.x, attacker.y - s.y) < 45) return false;
   if (getPlayerFaction().id === 'demons' && healOnAlly(s, game.settlers, tick.dt)) return true;
+  // wounded, it runs to heal at a tent (a grave...), not just to the town hall (#232)
+  if (s.hp < s.maxHp && tick.tents.length > 0) {
+    s.healing = true;
+    if (healAtTent(s, tick)) return true;
+  }
   s.patrolTarget = null;
   if (game.gameMode === 'battle') {
     const foe = nearest(game.enemies, s);

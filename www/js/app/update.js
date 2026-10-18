@@ -54,7 +54,7 @@ export function update(dt) {
   ageBloodAndDung(dt);
   trackAllFootprints();
   for (const unit of game.enemies) tickAnimation(unit, dt);
-  applySpikeTraps();
+  applySpikeTraps(dt);
 
   removeDeadSettlers();
   removeDeadEnemies();

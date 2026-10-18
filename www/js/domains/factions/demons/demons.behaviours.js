@@ -2,9 +2,9 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game } from '../../../engine/world/index.js';
+import { game, getGridPos } from '../../../engine/world/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 
 // A settler the player sent into a sacrificial circle walks there and dies in it; everyone else is
@@ -29,9 +29,12 @@ export function goToSacrifice(s, tick) {
 export function eatCorpse(s, tick) {
   if (!(getDefinition('settlerTypes', s.type) || {}).eatsCorpses || s.hp >= s.maxHp || tick.isWaveActive || s.carrying) return false;
   let corpse = null, best = Infinity;
+  // only one lying where it can walk to (#232: one in a wall had it trying for good)
+  const reach = getSettlerReach(s);
+  const reachable = c => { const g = getGridPos(c.x, c.y); return getReachSteps(reach, g.gx, g.gy) >= 0; };
   for (const c of game.corpses) {
     const d = Math.hypot(c.x - s.x, c.y - s.y);
-    if (d < best && !tick.raiseAssignments.has(c)) { best = d; corpse = c; }
+    if (d < best && !tick.raiseAssignments.has(c) && reachable(c)) { best = d; corpse = c; }
   }
   if (!corpse) return false;
   tick.raiseAssignments.add(corpse);

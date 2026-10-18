@@ -104,8 +104,11 @@ export function repairTownHall(s, tick) {
 export function repairBuilding(s, tick) {
   if (s.role !== 'worker' || s.carrying || s.targetEquipment || s.isPossessed || s.towerAssignment) return false;
   let target = null, best = Infinity;
+  // only one it can walk up to (#232: a wall behind spikes had them trying for good)
+  const reach = getSettlerReach(s);
   for (const b of game.buildings) {
     if (!needsRepair(b) || (tick.repairAssignments.get(b) || 0) >= 2 || !canAfford(getRepairStep(b).cost)) continue;
+    if (getReachDistanceToResource(reach, b) === Infinity) continue;
     const d = Math.hypot(b.x - s.x, b.y - s.y);
     if (d < best) { best = d; target = b; }
   }
@@ -127,6 +130,7 @@ export function repairStep(b, dt) {
   if (b.repairTimer <= 0) {
     payCost(step.cost);
     b.hp = Math.min(b.maxHp, b.hp + step.hp);
+    if (b.usesLeft !== undefined) b.usesLeft = Math.floor(b.hp); // a trap's uses (#232)
     b.repairTimer = step.interval;
     if (b.hp >= b.maxHp) b.repairRequested = false;
   }

@@ -38,6 +38,12 @@ export function cook(s, tick) {
   if (s.role !== 'worker' && !soldier) return false;
   if (s.role !== 'worker' && (tick.isWaveActive || isDefenseAlert())) return false; // to arms
   const job = s.carrying && s.carrying.forFire;
+  // a boar the player marked comes before the fire: a soldier leaves the cooking to hunt it (#232); what
+  // it was carrying for the fire goes back
+  if (soldier && game.boars.some(b => b.priority > 0 && !b.isCarcass && !b.hidden)) {
+    if (job) { stock[s.carrying.type] = (stock[s.carrying.type] || 0) + s.carrying.amount; s.carrying = null; }
+    return false;
+  }
   // cooking is the idle soldiers' job between waves; workers' only where the soldiers don't cover every fire:
   // the free hands', and when the food runs low every worker's, tool in hand or in a wave too. "Low" leaves
   // room to hire with: meals for everyone plus GAME_CONFIG.cooking.hireReserve

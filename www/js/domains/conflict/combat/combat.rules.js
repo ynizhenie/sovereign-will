@@ -166,24 +166,24 @@ export function updateBurning(dt) {
 
 // Spike traps: a unit stepping onto a spike tile takes its damage once per visit; each visit uses one
 // of the trap's uses, and it breaks when they run out. Runs once a tick after movement.
-export function applySpikeTraps() {
+export function applySpikeTraps(dt = 1 / 60) {
   const tiles = getTileIndex();
   if (tiles.spikes.size === 0) return;
   const spikesAt = new Map(game.buildings.filter(b => b.type === 'spikes').map(b => [`${b.x},${b.y}`, b]));
+  const trapDef = getDefinition('buildings', 'spikes').build.trap;
   const step = (unit, hurt) => {
     const g = getGridPos(unit.x, unit.y);
     const key = `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`;
     const trap = spikesAt.get(key);
     if (!trap) { unit.spikeTile = null; return; }
     const usesLeft = trap.usesLeft || 0;
-    if (unit.spikeTile === key || usesLeft <= 0) return;
+    if (usesLeft <= 0) { unit.spikeTile = key; return; } // broken: harmless till repaired
+    // standing on them hurts all the while, without wearing them (#248)
+    if (unit.spikeTile === key) { hurt(trapDef.standDps * dt); return; }
+    // a step onto them: a full blow, and one use worn (#232: broken ones stay to be repaired)
     unit.spikeTile = key;
-    hurt(getDefinition('buildings', 'spikes').build.trap.damage);
-    trap.usesLeft = usesLeft - 1;
-    if (trap.usesLeft <= 0) {
-      game.buildings.splice(game.buildings.indexOf(trap), 1);
-      invalidateAllPaths();
-    }
+    hurt(trapDef.damage);
+    trap.usesLeft = trap.hp = usesLeft - 1;
   };
   for (const s of game.settlers) if (!s.towerAssignment) step(s, damage => damageSettler(s, damage));
   for (const en of game.enemies) step(en, damage => { damageEnemy(en, damage); bleed(en, null); });

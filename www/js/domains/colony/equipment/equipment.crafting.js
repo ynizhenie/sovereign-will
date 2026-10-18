@@ -54,7 +54,10 @@ export function craftItem(s, tick) {
   let order = game.craftOrders.find(o => o.crafter === s);
   if (!order) {
     if (s.carrying) return false;
-    order = game.craftOrders.find(o => !o.crafter || !game.settlers.includes(o.crafter));
+    // its own first; one for someone else only once that one's gone (#232: who it's for makes it)
+    const open = o => !o.crafter || !game.settlers.includes(o.crafter);
+    order = game.craftOrders.find(o => open(o) && o.for === s) ||
+      game.craftOrders.find(o => open(o) && (!o.for || !game.settlers.includes(o.for)));
     if (!order) return false;
   }
   const place = findWorkplace(craftPlace(order.category, order.id), s);

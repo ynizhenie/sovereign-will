@@ -1,4 +1,4 @@
-// Porters and medics' potions (#199)
+// Corpses out of the base, and medics' potions (#199, #232: no porter role any more)
 Object.assign(window.sim, (() => {
   const { start, run, helpers: { tileCenter, makeSettler, clearResources, placeBuilding } } = window.sim;
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
@@ -6,27 +6,8 @@ Object.assign(window.sim, (() => {
   const back = () => { sides.player.faction = 'humans'; };
   const quiet = () => { settlers.forEach(s => { s.hunger = 999; }); boars = []; boarRespawnTimer = 999; pendingRespawns = []; };
 
-  // A woodcutter far out with a load: a porter takes it off it and carries it in; the woodcutter goes on
-  function relay({ seed = 'porter-relay' } = {}) {
-    asFaction('humans', seed);
-    const far = nearHall(14, 0);
-    trees.push({ x: far.x, y: far.y, hp: 1e6, maxHp: 1e6 });
-    invalidateAllPaths();
-    const cutter = makeSettler(1, far.x - 25, far.y, { tool: 'axe' });
-    cutter.carrying = { type: 'wood', amount: 2, loads: 1 };
-    const porter = makeSettler(2, townHall.x + 30, townHall.y + 40);
-    settlers = [cutter, porter];
-    const wood0 = stock.wood;
-    let took = false, cutterWentHome = false;
-    run(40, { each: () => {
-      quiet();
-      if (porter.carrying && porter.carrying.type === 'wood') took = true;
-      if (Math.hypot(cutter.x - townHall.x, cutter.y - townHall.y) < 80) cutterWentHome = true;
-    } });
-    return { took, delivered: stock.wood > wood0, cutterWentHome };
-  }
-
-  // Corpses in the base: a porter carries them out to a heap past its edge; the undead's stay for the necromancers
+  // Corpses in the base: a worker with nothing in hand (or a soldier) carries them out to a heap past its
+  // edge; the undead's stay for the necromancers
   function corpsesOut({ seed = 'porter-corpses', faction = 'humans' } = {}) {
     asFaction(faction, seed);
     const porter = faction === 'undead' ? createSettler('zombie', 1, townHall.x + 30, townHall.y + 40) : makeSettler(1, townHall.x + 30, townHall.y + 40);
@@ -68,5 +49,5 @@ Object.assign(window.sim, (() => {
     return { hp: Math.round(patient.hp), potionsLeft: medic.bagPotions || 0, herbsLeft: medic.bagHerbs || 0 };
   }
 
-  return { porterRelay: relay, porterCorpses: corpsesOut, medicBrew: brew, medicHeal: heal };
+  return { porterCorpses: corpsesOut, medicBrew: brew, medicHeal: heal };
 })());
