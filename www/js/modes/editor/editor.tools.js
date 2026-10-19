@@ -253,10 +253,10 @@ export function updateHistoryButtons() {
 }
 
 // Everything off the map (the town hall stays), at a second press within a few seconds
-let clearAsked = 0;
+let clearAsked = -Infinity; // (not 0: a page a moment old would clear at the first press)
 export function clearEditorMap() {
   if (performance.now() - clearAsked > 3000) { clearAsked = performance.now(); showNotification(t('editor.clearAsk'), true); return false; }
-  clearAsked = 0;
+  clearAsked = -Infinity;
   remember();
   for (const list of EDITOR_LISTS) game[list] = [];
   resetTileIndex();
