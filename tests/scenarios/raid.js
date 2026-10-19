@@ -43,7 +43,7 @@ Object.assign(window.sim, (() => {
     const waveBefore = waveTimer, stockBefore = stock.wood;
     // held without orders: nobody walks off to fight
     step(3);
-    const held = settlers.every(s => Math.hypot(s.x - s.raidSpot.x, s.y - s.raidSpot.y) < 12);
+    const held = settlers.every(s => Math.hypot(s.x - s.orderSpot.x, s.y - s.orderSpot.y) < 12);
     if (win) {
       raidAction('auto');
       step(240, () => raid.phase !== 'fight');

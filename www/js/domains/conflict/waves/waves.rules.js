@@ -57,7 +57,7 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
   };
-  if (game.gameMode === 'endless' && getDifficulty().likePlayer) asStrongAsPlayers(enemy, definition);
+  if ((game.gameMode === 'endless' || game.gameMode === 'battle') && getDifficulty().likePlayer) asStrongAsPlayers(enemy, definition);
   if (definition.quiver) {
     enemy.arrows = definition.quiver.arrows;
     game.enemyArrowStock += definition.quiver.tentStock;
@@ -69,7 +69,7 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
 // a big one) gives the hp and the speed, its weapon in a settler's hands the damage (per second in melee, per
 // arrow and how often for an archer); whichever is more of the two, so it's never weaker than it was
 function asStrongAsPlayers(enemy, definition) {
-  const units = getEnemyFaction().units || ['normal', 'big'];
+  const units = enemyFactionOf(definition.id).units || ['normal', 'big'];
   const kind = GAME_CONFIG.settlerTypes[definition.type === 'big' ? units[1] || units[0] : units[0]] || GAME_CONFIG.settlerTypes.normal;
   const weapon = (getDefinition('weapons', enemy.weapon) || GAME_CONFIG.weapons.fist).combat;
   const hp = kind.hp * getDifficulty().enemyHp;
@@ -79,6 +79,20 @@ function asStrongAsPlayers(enemy, definition) {
     enemy.damage = Math.max(enemy.damage, weapon.damage * kind.damageMultiplier);
     enemy.shotCooldown = Math.min(definition.ranged.cooldown, weapon.cooldown);
   } else enemy.damage = Math.max(enemy.damage, (weapon.damage / weapon.cooldown) * kind.damageMultiplier);
+}
+
+// The faction an enemy kind is of (its list of enemies has it), else the enemy's
+export function enemyFactionOf(id) {
+  return Object.values(GAME_CONFIG.factions).find(f => (f.enemies || []).includes(id)) || getEnemyFaction();
+}
+
+// An enemy kind's hp and damage (per second in melee, per arrow for an archer) as it would come now, with
+// the difficulty (a battle's tiles show them, #255)
+export function enemyStats(id) {
+  const definition = getDefinition('enemies', id);
+  const enemy = { hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp, speed: definition.speed, damage: definition.damage, weapon: definition.weapon || 'sword' };
+  if ((game.gameMode === 'endless' || game.gameMode === 'battle') && getDifficulty().likePlayer) asStrongAsPlayers(enemy, definition);
+  return { hp: Math.round(enemy.hp), damage: Math.round(enemy.damage) };
 }
 
 export function createNormalEnemy(pos, enemyKey = 'raider') {

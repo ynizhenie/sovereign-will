@@ -595,6 +595,8 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: non
 .battle-row > * { flex: 1; }
 .battle-row .fps-option { padding: 6px 0; }
 #battle-panel:not([data-category="own"]) .battle-gear { display: none; }
+#battle-presets .tile-cost, #editor-tools .tile-cost { white-space: nowrap; }
+.tile-name .ic + .ic { margin-left: -6px; }
 .battle-hint {
   font-size: 11px;
   color: #8a91a0;
@@ -617,7 +619,12 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: non
 .editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
 .editor-toolbar #editor-name { flex: 1; min-width: 0; }
 .editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
-.editor-resize { display: grid; grid-template-columns: auto 26px 26px auto 26px 26px; gap: 3px 6px; align-items: center; font-size: 10px; color: #8a91a0; }
+.editor-resize { display: grid; grid-template-columns: auto 36px 36px auto 36px 36px; gap: 4px 8px; align-items: center; font-size: 11px; color: #aeb4c0; }
+.editor-resize .btn { min-height: 30px; padding: 0; font-size: 15px; }
+.editor-only { display: none; }
+body[data-hud="editor"] .editor-only { display: inline-flex; }
+.btn.editor-only:disabled { opacity: 0.35; }
+#editor-tools .panel-heading:first-child { margin-top: 0; }
 .editor-resize[hidden] { display: none; }
 .editor-resize .fps-option { padding: 2px 0; font-size: 12px; line-height: 1.1; }
 
@@ -765,16 +772,16 @@ body.defeated #dock, body.defeated #hud-bottom, body.defeated #resource-strip, b
   opacity: 0;
   transition: transform 0.35s ease-in, opacity 0.3s ease, visibility 0s 0.35s;
 }
-#top-bar, #resource-strip { transform: translateY(-140%); }
+#top-bar, #resource-strip, #battle-actions { transform: translateY(-140%); }
 #dock, #hud-bottom { transform: translateY(140%); }
-body[data-hud]:not(.menu-world) :is(#top-bar, #resource-strip, #dock, #hud-bottom) {
+body[data-hud]:not(.menu-world) :is(#top-bar, #resource-strip, #battle-actions, #dock, #hud-bottom) {
   visibility: visible;
   opacity: 1;
   transform: none;
   transition: transform 0.55s var(--ease-settle), opacity 0.3s ease, visibility 0s;
 }
 /* one after the other, as the menu's title and buttons do */
-body[data-hud]:not(.menu-world) #resource-strip { transition-delay: 0.12s; }
+body[data-hud]:not(.menu-world) :is(#resource-strip, #battle-actions) { transition-delay: 0.12s; }
 body[data-hud]:not(.menu-world) #hud-bottom { transition-delay: 0.12s; }
 
 /* ---- The top bar */
@@ -850,9 +857,15 @@ body[data-hud="endless"] .top-wave, body[data-hud="battle"] .top-battle, body[da
 #editor-map-label { overflow: hidden; text-overflow: ellipsis; }
 .top-actions { display: flex; align-items: center; gap: 6px; }
 .top-actions .btn { padding: 7px 10px; font-size: 13px; }
-#battle-fight, #battle-cancel { display: none; }
-body[data-hud="battle"][data-battle-phase="setup"] #battle-fight,
-body[data-hud="battle"][data-battle-phase="fight"] #battle-cancel { display: inline-block; }
+/* battle (#255): under the top bar, clearing each side round Fight! in the middle; in a fight the auto
+   battle and calling it off; nothing while the result shows */
+#battle-actions { top: calc(var(--top-h) + 6px); left: 50%; right: auto; translate: -50% 0; max-width: calc(100% - 16px);
+  display: flex; align-items: center; gap: 6px; }
+body:not([data-hud="battle"]) #battle-actions { display: none; }
+#battle-actions .btn { min-height: 34px; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+#battle-actions #battle-fight { font-size: 14px; padding: 6px 16px; }
+#battle-actions .btn.on { background: #1e8449; border-color: #27ae60; }
+body:not([data-battle-phase="setup"]) .battle-setup-only, body:not([data-battle-phase="fight"]) .battle-fight-only { display: none; }
 /* the eye (possess): not in the editor; in a battle only while fighting (#166) */
 body[data-hud="editor"] .btn-unpossess, body[data-hud="battle"]:not([data-battle-phase="fight"]) .btn-unpossess { display: none; }
 
@@ -1103,3 +1116,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .raid-unit.on { opacity: 1; box-shadow: 0 0 0 2px #e74c3c; }
 .raid-hp { font-size: 11px; color: #aeb4c0; margin-left: 3px; }
 .raid-picker-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+/* the battle's and the editor's sheets as Endless's (#255): long ones scroll; the brush sizes small, dragging wide */
+#battle-panel, #editor-panel { max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
+.editor-brush .sub-tab:last-child { flex: 2.2; }

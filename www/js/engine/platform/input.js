@@ -37,6 +37,19 @@ export let isTap = false;
 
 export let lastTouchEnd = 0;
 
+// A painter for drags on the map (the editor's brush, #255): painter(phase, x, y), phase 'start' as a press
+// begins, 'move' as it drags (true: it paints, the camera stays), 'end' as it's let go; x, y in the world
+/** @type {((phase: string, x: number, y: number) => boolean) | null} */
+let dragPainter = null;
+export function setDragPainter(painter) { dragPainter = painter; }
+// the press being let go painted: its release isn't a tap
+export let painted = false;
+const paint = (phase, clientX, clientY) => {
+  if (!dragPainter) return false;
+  updateInputPos(clientX, clientY);
+  return dragPainter(phase, mouse.x, mouse.y);
+};
+
 // What this file sets up as the game starts (called by app/boot.js)
 export function initInput() {
   bindKeyboard();
@@ -94,6 +107,7 @@ function bindJoystick() {
 // The mouse on the map: the pointer, the camera dragged with the middle or right button, the wheel to zoom
 function bindMouse() {
   canvas.addEventListener('mousemove', e => {
+    if ((e.buttons & 1) && paint('move', e.clientX, e.clientY)) painted = true;
     if (cameraDragging && !isCameraLocked()) {
       const { renderWidth, renderHeight } = getCanvasScreenCoords(e.clientX, e.clientY);
       camera.x -= (e.clientX - cameraDragPoint.x) * canvas.width / renderWidth / getViewScale();
@@ -119,6 +133,7 @@ function bindMouse() {
     updateInputPos(e.clientX, e.clientY);
   }, { passive: false });
   canvas.addEventListener('mousedown', e => {
+    if (e.button === 0) { painted = false; paint('start', e.clientX, e.clientY); }
     if (e.button === 1 || e.button === 2) {
       cameraDragging = true;
       cameraDragPoint = { x: e.clientX, y: e.clientY };
@@ -126,6 +141,7 @@ function bindMouse() {
     }
   });
   window.addEventListener('mouseup', e => {
+    if (e.button === 0) paint('end', e.clientX, e.clientY);
     if (e.button === 1 || e.button === 2) cameraDragging = false;
   });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -143,6 +159,8 @@ function bindTouch() {
       const touch = e.touches[0];
       isTouchDragging = true;
       isTap = true;
+      painted = false;
+      paint('start', touch.clientX, touch.clientY);
       touchDragPoint = { x: touch.clientX, y: touch.clientY };
       touchStartPos = { x: touch.clientX, y: touch.clientY };
       updateInputPos(touch.clientX, touch.clientY);
@@ -164,6 +182,7 @@ function bindTouch() {
       const touch = e.touches[0];
       const distMoved = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
       if (distMoved > 8) isTap = false;
+      if (distMoved > 8 && paint('move', touch.clientX, touch.clientY)) { painted = true; return; } // (painting, not looking around)
 
       const { renderWidth, renderHeight } = getCanvasScreenCoords(touch.clientX, touch.clientY);
       camera.x -= (touch.clientX - touchDragPoint.x) * canvas.width / renderWidth / getViewScale();
@@ -200,6 +219,7 @@ function bindTouch() {
   }, { passive: false });
   canvas.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
+      if (isTouchDragging && e.changedTouches[0]) paint('end', e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       isTouchDragging = false;
     }
   });

@@ -15,8 +15,9 @@
  * @property {string} type           GAME_CONFIG.settlerTypes key ('normal', 'big', 'zombie'...)
  * @property {string} role           'worker', 'soldier' or 'archer'
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
- * @property {Point} [raidSpot]      where it stands in a raid, when it's given nothing to fight
- * @property {Object | null} [raidTarget]  what the player told it to fight in a raid
+ * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
+ * @property {Point} [orderSpot]     where it stands in a fight under orders (a raid's camp, a battle), told nothing to fight
+ * @property {Object | null} [orderTarget]  what the player told it to fight there
  * @property {string} weapon         GAME_CONFIG.weapons key, 'fist' for none
  * @property {string} tool           GAME_CONFIG.tools key, 'none' for none
  * @property {number} hp
