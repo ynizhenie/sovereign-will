@@ -10,11 +10,12 @@ import { factionsConfig } from './factions.js';
 import { unitsConfig } from './units.js';
 import { difficultyConfig } from './difficulty.js';
 import { cardsConfig } from './cards.js';
+import { raidConfig } from './raid.js';
 import { mapConfig } from './map.js';
 import { mechanicsConfig } from './mechanics.js';
 import { musicConfig } from './music.js';
 
-export const GAME_CONFIG = { ...resourcesConfig, ...equipmentConfig, ...buildingsConfig, ...enemiesConfig, ...factionsConfig, ...unitsConfig, ...difficultyConfig, ...cardsConfig, ...mapConfig, ...mechanicsConfig, ...musicConfig };
+export const GAME_CONFIG = { ...resourcesConfig, ...equipmentConfig, ...buildingsConfig, ...enemiesConfig, ...factionsConfig, ...unitsConfig, ...difficultyConfig, ...cardsConfig, ...raidConfig, ...mapConfig, ...mechanicsConfig, ...musicConfig };
 
 globalThis.GAME_CONFIG = GAME_CONFIG;
 

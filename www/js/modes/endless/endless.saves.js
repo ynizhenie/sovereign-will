@@ -15,6 +15,7 @@ import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
 import { syncCards } from './endless.cards.js';
+import { isRaiding, resetRaid } from './endless.raid.js';
 
 // caches, worked out again after loading rather than saved
 export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
@@ -74,6 +75,7 @@ export function resolveRefs(root) {
 }
 
 export function loadGame(data) {
+  resetRaid(); // (#255)
   game.gameMode = 'endless';
   Object.assign(sides.player, data.sides.player);
   Object.assign(sides.enemy, data.sides.enemy);
@@ -91,6 +93,7 @@ export function loadGame(data) {
   for (const en of game.enemies) if (goneEnemies[en.enemyKey]) en.enemyKey = goneEnemies[en.enemyKey];
   Object.assign(townHall, { store: {} }, data.townHall); // (older saves: nothing in it, filled again from the stock)
   game.piles = game.piles || [];
+  game.raidCamp = game.raidCamp || null; game.raidCampWave = game.raidCampWave || 0;
   game.unlocked = game.unlocked || {}; game.cardsDue = game.cardsDue || 0; game.cardsWave = game.cardsWave || 0; game.cardOffer = game.cardOffer || null; // (older saves: no cards)
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
@@ -117,7 +120,7 @@ export const SAVE_SLOTS = 10;
 // From the pause menu: one slot a world (its seed), saved over each time; at most SAVE_SLOTS worlds. Says
 // how it went on the save button itself, not in a notice the pause menu hides (#254)
 export function saveCurrentGame() {
-  if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  if (game.gameMode !== 'endless' || !game.gameStarted || isRaiding()) return; // (not with a party out, #255)
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const seed = game.worldSeed.value;

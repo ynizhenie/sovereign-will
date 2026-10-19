@@ -15,6 +15,7 @@ import { drawDarkness, drawGrassGround, drawMapBorder, drawPaths, drawRocks, dra
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
+import { drawRaidZone } from '../modes/endless/index.js';
 
 export function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -28,6 +29,7 @@ export function render() {
 
   const terrain = getTileIndex();
   drawMapBorder();
+  drawRaidZone(); // (an enemy camp's zone beyond the edge, #255)
   if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing
   drawSand();
   drawBlight();

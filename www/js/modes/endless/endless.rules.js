@@ -6,10 +6,11 @@ import { camera, getBaseScale, getMaxZoom, onTap, screenPixelRatio, t } from '..
 import { game, townHall } from '../../engine/world/index.js';
 import { unpossess } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, playSound, resetGame } from '../../app/index.js';
+import { isInCamp } from './endless.raid.js';
 
 // Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
 export function isDefeated() {
-  return game.gameStarted && game.gameMode === 'endless' && (townHall.hp <= 0 || game.settlers.length === 0);
+  return game.gameStarted && game.gameMode === 'endless' && !isInCamp() && (townHall.hp <= 0 || game.settlers.length === 0); // (a party in a camp: the base waits, #255)
 }
 
 // ---- Defeat: the bottom panel and possession go dead, the camera flies to the base, zooms in and
