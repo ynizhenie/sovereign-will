@@ -2,4 +2,4 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { initMenuScreens, mainMenu, showMenuScreen } from './menu.screens.js';
-export { initMenuWorld, leaveMenuWorld, menuWorld, syncMenuWorld } from './menu.world.js';
+export { MENU_SCENES, enterMenuWorld, initMenuWorld, leaveMenuWorld, menuWorld, menuWorldTap, syncMenuWorld, tickMenuScene } from './menu.world.js';

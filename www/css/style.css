@@ -299,8 +299,8 @@ button.btn-no { animation: btn-no 0.35s ease; }
 }
 /* behind the main menu: a little world of the game's own (#193, menu-scene.js), the game's panels hidden */
 #main-menu { background: #0b0c0e; overflow-y: auto; }
-/* the world behind the menu steps back (out of focus, darker, duller, darker still at the edges) so the
-   menu stands out; slightly enlarged so the blur leaves no light rim at the screen's edges */
+/* the world behind the menu steps back (darker, duller, darker still at the edges) so the menu stands out;
+   no blur (#256) */
 body.menu-world #main-menu { background: transparent; }
 /* the dark edges: a layer of their own, faded in (a gradient itself can't be) */
 #main-menu::before {
@@ -310,8 +310,18 @@ body.menu-world #main-menu { background: transparent; }
 body.menu-world #main-menu::before { opacity: 1; transition: opacity 0.8s ease; }
 #gameCanvas { transition: filter 0.4s ease, transform 0.4s ease; }
 /* back into the menu from a game: it steps back in 0.8 s (into a game, sharp again in 0.4 s, above) */
-body.menu-world #gameCanvas { filter: blur(3px) brightness(0.72) saturate(0.8); transform: scale(1.03);
+body.menu-world #gameCanvas { filter: brightness(0.8) saturate(0.85);
   transition: filter 0.8s ease, transform 0.8s ease; }
+/* the menu put away to watch the scene (#256): its panels and title gone, the dark edges too; a little bar to
+   change the scene and bring the menu back */
+body.menu-ui-hidden #main-menu .main-menu-content, body.menu-ui-hidden #menu-title, body.menu-ui-hidden #menu-hide { display: none !important; }
+body.menu-ui-hidden #main-menu::before { opacity: 0; }
+body.menu-ui-hidden.menu-world #gameCanvas { filter: none; }
+#menu-hide { position: fixed; right: 12px; bottom: 12px; z-index: 5; width: 40px; height: 40px; padding: 0; border-radius: 50%;
+  display: none; align-items: center; justify-content: center; }
+body.menu-world #menu-hide { display: inline-flex; }
+#menu-scene-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: none; gap: 8px; }
+body.menu-ui-hidden #menu-scene-bar { display: flex; }
 
 /* ---- The game opening, as the page loads (#main-menu.intro, main.js; the curtain lifted, menu-scene.js):
    - dark at first: a curtain over everything while the world behind the menu is made;
