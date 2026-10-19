@@ -110,8 +110,17 @@ export function drawWaterTile(w, reachable, tiles) {
 
 // Natural rock (and the rock under ore): joins every rock and ore tile around it
 export function drawRockTile(x, y, tiles) {
-  const h = tileVariantHash(x, y);
-  drawJoinedTile(x, y, openSides(tiles.rockAndOre, x, y), '#1a252f', ROCK_SHADES[h % ROCK_SHADES.length]);
+  const h = tileVariantHash(x, y), open = openSides(tiles.rockAndOre, x, y);
+  drawJoinedTile(x, y, open, '#1a252f', ROCK_SHADES[h % ROCK_SHADES.length]);
+  // facets of the rock face, a little lighter, and a lit top edge and shaded bottom edge where the mass
+  // ends (#251: flat squares)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+  for (let k = 0; k < 2; k++) {
+    const v = h >>> (k * 9), fx = x - 12 + (v % 14), fy = y - 12 + ((v >>> 4) % 14);
+    ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx + 8 + (v % 4), fy + 2); ctx.lineTo(fx + 5, fy + 8 + ((v >>> 2) % 3)); ctx.lineTo(fx - 1, fy + 5); ctx.closePath(); ctx.fill();
+  }
+  if (open.n) { ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'; ctx.fillRect(x - 13, y - 13, TILE_SIZE - 4, 3); }
+  if (open.s) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(x - 13, y + 9, TILE_SIZE - 4, 4); }
   // a crack or a couple of speckles
   if (h % 4 === 0) {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)'; ctx.lineWidth = 1;

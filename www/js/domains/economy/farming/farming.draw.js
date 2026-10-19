@@ -3,6 +3,7 @@
 import { isTabShown } from '../../../ui/index.js';
 import { TILE_SIZE, game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
+import { drawFarmPlotArt } from '../gathering/index.js';
 
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
 export function drawFarmZones() {
@@ -19,15 +20,9 @@ export function drawFarmZones() {
 // Wheat plots: growing, ripe, being harvested
 export function drawFarmPlots() {
   game.farmPlots.forEach(f => {
-    ctx.fillStyle = '#5c4033'; ctx.fillRect(f.x - 13, f.y - 13, 26, 26);
-    if (f.fertilized) {
-      // fertilised: darker, richer soil round the edge (#201)
-      ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 3; ctx.strokeRect(f.x - 11.5, f.y - 11.5, 23, 23);
-    }
-    if (f.growth < 100) {
-      ctx.fillStyle = '#2ecc71'; ctx.fillRect(f.x - 6, f.y - 6, 12, 12);
-    } else {
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(f.x - 10, f.y - 10, 20, 20);
+    // furrowed soil, wheat in rows from shoots to golden ears (fertilised: richer, darker soil, #201, #251)
+    drawFarmPlotArt(f);
+    if (f.growth >= 100) {
       if (f.harvestProgress > 0) {
         ctx.fillStyle = '#e67e22'; ctx.fillRect(f.x - 10, f.y + 11, (f.harvestProgress / 2.5) * 20, 3);
       }
