@@ -82,7 +82,7 @@ export function tickIronTraps(dt) {
       damageEnemy(en, def.enemyDamage);
       if (en.hp > 0) { trap.holding = en; en.trapped = true; en.trappedFor = def.holdSeconds; }
       else trap.rearm = def.rearmSeconds;
-      playSound('hit', trap);
+      playSound('trapSnap', trap);
     }
   }
 }
@@ -110,7 +110,7 @@ export function boarToBait(b) {
   if (rand() < def.boarChance) {
     trap.holding = b;
     b.trapped = true;
-    playSound('hit', trap);
+    playSound('trapSnap', trap);
   }
   return !!b.trapped;
 }

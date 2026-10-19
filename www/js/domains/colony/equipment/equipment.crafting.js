@@ -8,7 +8,7 @@ import { game, townHall } from '../../../engine/world/index.js';
 import { canAfford, findNearestStorage, isAtStorage, payCost, stock, walkToStorage } from '../storage/index.js';
 import { faceTowards } from '../settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { playWorkSound } from '../../../app/index.js';
+import { playSound, playWorkSound } from '../../../app/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 
 // Where it's made: by hand (madeBy: 'hand', at the town hall, #261), the smithy if there's iron in it,
@@ -98,6 +98,7 @@ export function craftItem(s, tick) {
     // arrows (#249) go into the stock; a thing into the armory, and on to whoever it's for
     if (order.yields) { for (const [id, n] of Object.entries(order.yields)) stock[id] = (stock[id] || 0) + n; return true; }
     game.armory[order.key] = (game.armory[order.key] || 0) + 1;
+    playSound('craftDone', s); // (#252)
   }
   return true;
 }

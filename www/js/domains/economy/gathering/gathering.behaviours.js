@@ -10,7 +10,7 @@ import { ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { isInSafeArea } from '../../conflict/combat/index.js';
 import { huntBoar } from '../hunting/index.js';
-import { playWorkSound } from '../../../app/index.js';
+import { playSound, playWorkSound } from '../../../app/index.js';
 
 // Workers gather any time; soldiers only between waves (hunting boars, picking up carcasses)
 export function canGather(s, tick) {
@@ -138,6 +138,7 @@ export function workResource(s, assignedRes, tick) {
     }
   } else if (work.pickup) {
     finishHarvest(s, assignedRes, kind);
+    playSound('pickup', s); // (#252)
   } else if (work.seconds !== undefined) {
     const duration = typeof work.seconds === 'number' ? work.seconds : (work.seconds[s.tool] ?? Object.values(work.seconds)[0]);
     assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
