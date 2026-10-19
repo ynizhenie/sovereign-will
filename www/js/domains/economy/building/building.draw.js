@@ -268,6 +268,15 @@ export function drawBuildings() {
       drawIcon(ctx, 'dummy', b.x, b.y, 28); // a training dummy (#199)
     } else if (b.type === 'warehouse') {
       drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed
+    } else if (b.type === 'torch') {
+      // a torch post (#257): a stake, its head burning when lit
+      ctx.fillStyle = '#6d4520'; ctx.fillRect(b.x - 2, b.y - 6, 4, 18);
+      ctx.fillStyle = '#3e2723'; ctx.fillRect(b.x - 4, b.y - 9, 8, 4);
+      if (b.lit) {
+        const k = 1 + Math.sin(performance.now() / 90 + b.x) * 0.15;
+        ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 13, 4 * k, 6 * k, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 12, 2 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
+      }
     } else if (b.type === 'demon_den') {
       drawIcon(ctx, 'demon_den', b.x, b.y, 28); // the demons' den (#250)
     } else if (b.type === 'corpse_pit') {

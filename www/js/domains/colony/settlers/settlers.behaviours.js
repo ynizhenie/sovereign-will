@@ -32,6 +32,7 @@ import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
+import { lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
 
@@ -179,8 +180,8 @@ export function findReliefSpot(s) {
 // with an idle icon, see render())
 export function patrol(s, tick) {
   if (game.gameMode === 'battle') return true; // nothing to wander around: stand
-  // caught outside the base when the alert starts: straight back, not a stroll
-  if (!isInSafeArea(s.x, s.y)) {
+  // caught outside the base when the alert starts, or at night with no torch (#257): straight back
+  if (!isInSafeArea(s.x, s.y) || Math.hypot(s.x - townHall.x, s.y - townHall.y) > nightReach(s)) {
     s.patrolTarget = null;
     moveSettlerToTownHall(s, s.speed, tick.dt);
     return true;
@@ -209,6 +210,7 @@ export const SETTLER_BEHAVIOURS = [
   playerControlled,
   panic,
   strikeBack,
+  sleepAtNight,
   carryCaptive,
   captainOrders,
   goToSacrifice,
@@ -231,6 +233,7 @@ export const SETTLER_BEHAVIOURS = [
   carryCorpse,
   brewPotion,
   chopFirewood,
+  lightTorches,
   baitTrap,
   deliverMaterials,
   deliverCarrying,

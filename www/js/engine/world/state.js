@@ -22,7 +22,7 @@ export const game = {
   WORLD_WIDTH: DEFAULT_MAP_TILES * TILE_SIZE,
   WORLD_HEIGHT: DEFAULT_MAP_TILES * TILE_SIZE,
   // the clocks
-  waveInterval: 90,
+  waveInterval: 180,     // (#257: 120 / 180 / 240)
   waveTimer: 90,
   waveNum: 1,
   boarRespawnTimer: 25,
@@ -52,6 +52,9 @@ export const game = {
   pebbles: [],
   loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
   piles: [],
+  dayTime: 0,           // seconds into the day (#257, world.daytime.js); the game starts in the morning
+  nightId: 0,           // which night it is (a torch in hand taken once a night)
+  wasNight: false,
   autoBlight: false,    // the undead's necromancers blight by themselves (#253); autoBlightDone: none left to
   autoBlightDone: false,
   portalQueue: [],      // a wave's enemy demons still to come out of the portals (#250)

@@ -141,6 +141,28 @@ function drawSmokePuffs(s) {
   }
 }
 
+// A torch held out in front (#257), drawn round the unit's centre (after translate), its flame flickering
+export function drawHandTorch(facing, r) {
+  const f = (facing || 0) - 0.5, x = Math.cos(f) * (r + 2), y = Math.sin(f) * (r + 2);
+  ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(x - Math.cos(f) * 4, y - Math.sin(f) * 4); ctx.lineTo(x + Math.cos(f) * 5, y + Math.sin(f) * 5); ctx.stroke();
+  const fx = x + Math.cos(f) * 7, fy = y + Math.sin(f) * 7, k = 1 + Math.sin(performance.now() / 90 + r) * 0.15;
+  ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(fx, fy - 2, 3 * k, 4.5 * k, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(fx, fy - 1.5, 1.5 * k, 2.5 * k, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+// Asleep (#257): a few z's drifting up off it
+function drawSleepZs(x, y) {
+  const t = performance.now() / 1000;
+  ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+  for (let k = 0; k < 3; k++) {
+    const p = (t * 0.5 + k / 3) % 1;
+    ctx.globalAlpha = 1 - p;
+    ctx.fillText('z', x + p * 8 + k * 2, y - p * 14);
+  }
+  ctx.globalAlpha = 1;
+}
+
 // A hammer going up and down in its hand while it makes a thing
 function drawCraftHammer(s) {
   const beat = Math.abs(Math.sin(performance.now() / 160 + s.id));
@@ -261,7 +283,8 @@ export function drawSettlers() {
     // the whole body in the colony's colour; the possessed one ringed in white
     ctx.fillStyle = getSettlerColor(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill();
+    if (s.asleep) { ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.visualRadius * 1.15, s.visualRadius * 0.7, 0, 0, Math.PI * 2); ctx.fill(); } // (lying down, #257)
+    else { ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, s.visualRadius);
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
@@ -285,7 +308,7 @@ export function drawSettlers() {
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.save();
-    if (isResting(s) || inHands || crafting || s.eating) applyBackPose(s);
+    if (isResting(s) || inHands || crafting || s.eating || s.torchInHand || s.asleep) applyBackPose(s);
     else applyHeldItemPose(s);
     if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
@@ -312,6 +335,7 @@ export function drawSettlers() {
     ctx.restore(); // pose only moves the held item
     if (inHands) drawCarriedInHands(s);
     if (crafting) drawCraftHammer(s);
+    if (s.torchInHand && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
     if (s.eating) drawEating(s);
     else if ((s.smoking || 0) > 0 || (s.straw || 0) > 0) drawInMouth(s);
     if (s.armor === 'iron' || s.hasArmor) drawArmor(s.visualRadius);
@@ -340,6 +364,7 @@ export function drawSettlers() {
     ctx.restore();
 
     if (crafting) drawWorkpiece(s);
+    if (s.asleep) drawSleepZs(s.x + s.visualRadius, s.y - s.visualRadius - 4);
     if ((s.smoking || 0) > 0 && !s.eating) drawSmokePuffs(s);
 
     if (s === game.selectedSettler) {
