@@ -1,12 +1,12 @@
 // One step of the game: every mechanic's turn, in order
 
 import { game, resetTileIndex } from '../engine/world/index.js';
-import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickSettlers, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
+import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
 import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from '../domains/conflict/waves/index.js';
 import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
-import { tickPaths } from '../domains/world/index.js';
+import { tickDaytime, tickPaths } from '../domains/world/index.js';
 import { growCrops } from '../domains/economy/farming/index.js';
 import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, updateTemporaryZombies } from '../domains/factions/undead/index.js';
 import { separateSettlersFromEnemies } from '../engine/movement/index.js';
@@ -68,6 +68,8 @@ export function update(dt) {
 
   keepStoresInStep(); // what lies where, in step with the stock (#248)
   tickPaths(); // ground walked a lot wears into paths (#248)
+  tickDaytime(dt); // day and night (#257)
+  tickNight();
   updateUnitCounts();
   updateUI();
   refreshAffordability();

@@ -469,6 +469,12 @@ export const ICONS = {
     icFlame(c, 16, 29, 0.6);
     icFill(c, '#2c2c34', [[3, 8], [6, 1], [10, 8]]); icFill(c, '#2c2c34', [[29, 8], [26, 1], [22, 8]]);
   },
+  torch: c => {
+    // a torch on a stake (#257)
+    icRect(c, '#6d4520', 14, 12, 4, 18);
+    icRect(c, '#3e2723', 12, 10, 8, 4);
+    icFlame(c, 16, 11, 0.55);
+  },
   demon_den: c => {
     // a low den of dark stone, a glowing mouth (#250)
     icFill(c, '#4a2c2a', [[3, 28], [8, 12], [16, 6], [24, 12], [29, 28]]);
