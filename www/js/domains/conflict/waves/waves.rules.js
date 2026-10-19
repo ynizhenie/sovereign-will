@@ -57,11 +57,28 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
   };
+  if (game.gameMode === 'endless' && getDifficulty().likePlayer) asStrongAsPlayers(enemy, definition);
   if (definition.quiver) {
     enemy.arrows = definition.quiver.arrows;
     game.enemyArrowStock += definition.quiver.tentStock;
   }
   return enemy;
+}
+
+// Hard (#255): an enemy as strong as the player's own unit of its kind: its faction's settler type (big for
+// a big one) gives the hp and the speed, its weapon in a settler's hands the damage (per second in melee, per
+// arrow and how often for an archer); whichever is more of the two, so it's never weaker than it was
+function asStrongAsPlayers(enemy, definition) {
+  const units = getEnemyFaction().units || ['normal', 'big'];
+  const kind = GAME_CONFIG.settlerTypes[definition.type === 'big' ? units[1] || units[0] : units[0]] || GAME_CONFIG.settlerTypes.normal;
+  const weapon = (getDefinition('weapons', enemy.weapon) || GAME_CONFIG.weapons.fist).combat;
+  const hp = kind.hp * getDifficulty().enemyHp;
+  enemy.hp = enemy.maxHp = Math.max(enemy.hp, hp);
+  enemy.speed = Math.max(enemy.speed, kind.speed);
+  if (definition.ranged) {
+    enemy.damage = Math.max(enemy.damage, weapon.damage * kind.damageMultiplier);
+    enemy.shotCooldown = Math.min(definition.ranged.cooldown, weapon.cooldown);
+  } else enemy.damage = Math.max(enemy.damage, (weapon.damage / weapon.cooldown) * kind.damageMultiplier);
 }
 
 export function createNormalEnemy(pos, enemyKey = 'raider') {

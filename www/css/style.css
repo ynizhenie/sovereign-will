@@ -84,7 +84,7 @@ button {
 /* pressed: in at once, a little smaller and darker */
 button:not(:disabled):active { transform: scale(0.95); filter: brightness(0.85); transition-duration: 0.05s; }
 /* chosen (a faction, a difficulty, a tab...): a soft glow around it */
-.btn.active, .tab-btn.active, .fps-option.active, .difficulty-option.active, .faction-option.active,
+.btn.active, .tab-btn.active, .fps-option.active, .difficulty-option.active, .cards-option.active, .faction-option.active,
 .wave-option.active, .map-option.active, .item-row .item-name.active {
   box-shadow: 0 0 0 1px rgba(70, 184, 218, 0.6), 0 0 10px rgba(70, 184, 218, 0.45);
 }
@@ -98,7 +98,7 @@ button.btn-ok { animation: btn-ok 0.45s ease-out; }
 button.btn-no { animation: btn-no 0.35s ease; }
 /* on a phone, room for a finger: no button lower than this */
 @media (pointer: coarse) {
-  .btn, .tab-btn, .fps-option, .difficulty-option, .faction-option, .wave-option, .map-option { min-height: 36px; }
+  .btn, .tab-btn, .fps-option, .difficulty-option, .cards-option, .faction-option, .wave-option, .map-option { min-height: 36px; }
   .menu-button, #play-button { min-height: 44px; }
 }
 
@@ -490,7 +490,7 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: non
   font-size: 12px;
 }
 
-.difficulty-option, .fps-option {
+.difficulty-option, .cards-option, .fps-option {
   flex: 1;
   padding: 8px 0;
   background: #252830;
@@ -537,7 +537,7 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: non
 }
 
 .wave-option.active, .map-option.active, .map-source-option.active, .editor-size-option.active,
-.difficulty-option.active, .fps-option.active {
+.difficulty-option.active, .cards-option.active, .fps-option.active {
   background: #2e6da4;
   color: #fff;
   border-color: #46b8da;
@@ -1066,3 +1066,24 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 
 /* the blight-by-itself switch (#253) */
 #btn-auto-blight.on { background: #6c3483; border-color: #a569bd; }
+
+/* Cards (#255): a locked thing's tile greyed under a lock; three cards over the map after a wave beaten */
+.btn.tile.locked { opacity: 0.45; filter: grayscale(0.8); }
+.tile-lock { position: absolute; top: 2px; right: 3px; font-size: 13px; }
+#card-offer { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 16px; background: rgba(8, 10, 16, 0.72); }
+.card-offer-title { color: #f5f0e1; font-size: 18px; font-weight: 700; text-align: center; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.card-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 100%; }
+.card { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; min-height: 186px; padding: 10px 8px;
+  background: linear-gradient(180deg, #2b303b, #1d2028); border: 2px solid var(--card-edge); border-radius: 10px; color: #f5f0e1;
+  box-shadow: 0 0 14px var(--card-glow), 0 6px 16px rgba(0, 0, 0, 0.6); cursor: pointer; font: inherit; }
+.card:hover { transform: translateY(-3px); }
+.card-common { --card-edge: #95a5a6; --card-glow: rgba(149, 165, 166, 0.25); }
+.card-rare { --card-edge: #3498db; --card-glow: rgba(52, 152, 219, 0.45); }
+.card-legendary { --card-edge: #f1c40f; --card-glow: rgba(241, 196, 15, 0.55); }
+.card-rarity { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--card-edge); font-weight: 700; }
+.card-icon { font-size: 46px; line-height: 1; margin: 6px 0; }
+.card-name { font-size: 14px; text-align: center; }
+.card-kind { font-size: 11px; color: #aeb4c0; }
+.card-cost { font-size: 11px; color: #d5d8dc; margin-top: auto; }
+@media (max-width: 460px) { .card { width: 100px; min-height: 160px; } .card-icon { font-size: 36px; } }

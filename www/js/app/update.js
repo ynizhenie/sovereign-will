@@ -18,10 +18,12 @@ import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, 
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
+import { tickCards } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 
 export function update(dt) {
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
+  if (game.gameMode === 'endless' && game.cardOffer) return; // (the game waits for a card to be picked, #255)
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (game.gameMode === 'battle') {
     updateBattle(dt);
@@ -73,6 +75,7 @@ export function update(dt) {
   tickMenuScene(dt); // (the main menu's scene, #256)
   tickNight();
   tickVoices(dt); // (#252)
+  tickCards(); // (#255)
   updateUnitCounts();
   updateUI();
   refreshAffordability();

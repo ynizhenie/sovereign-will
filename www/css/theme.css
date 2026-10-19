@@ -43,7 +43,7 @@ html, body, button, input, select, textarea { font-family: var(--font); }
 
 /* ---- Planks: every button-like thing is a piece of wood; chosen ones are green with a glow */
 .btn, .menu-button, #play-button, .tab-btn, .wave-option, .map-option, .map-source-option, .editor-size-option,
-.difficulty-option, .fps-option, .faction-option, .menu-gear, #seed-reroll,
+.difficulty-option, .cards-option, .fps-option, .faction-option, .menu-gear, #seed-reroll,
 .item-row .item-name, .item-row .item-delete, .item-row .item-confirm, .item-row .item-cancel,
 .resources-grid div, .resource-group-members div {
   background: var(--plank) center / cover;
@@ -52,18 +52,18 @@ html, body, button, input, select, textarea { font-family: var(--font); }
   color: var(--text);
 }
 /* options and tabs not chosen are quieter */
-.tab-btn, .wave-option, .map-option, .map-source-option, .editor-size-option, .difficulty-option, .fps-option,
+.tab-btn, .wave-option, .map-option, .map-source-option, .editor-size-option, .difficulty-option, .cards-option, .fps-option,
 .faction-option { color: var(--text-dim); }
 @media (hover: hover) {
   .tab-btn:not(:disabled):hover, .wave-option:not(:disabled):hover, .map-option:not(:disabled):hover,
   .map-source-option:not(:disabled):hover, .editor-size-option:not(:disabled):hover,
-  .difficulty-option:not(:disabled):hover, .fps-option:not(:disabled):hover, .faction-option:not(:disabled):hover { color: var(--text); }
+  .difficulty-option:not(:disabled):hover, .cards-option:not(:disabled):hover, .fps-option:not(:disabled):hover, .faction-option:not(:disabled):hover { color: var(--text); }
   .btn:not(:disabled):hover, .menu-button:not(:disabled):hover { color: var(--text-bright); }
   /* the plank's own light, not a filter over the text too */
   button:not(:disabled):hover { filter: none; }
 }
 .btn.active, .tab-btn.active, .wave-option.active, .map-option.active, .map-source-option.active,
-.editor-size-option.active, .difficulty-option.active, .fps-option.active, .faction-option.active,
+.editor-size-option.active, .difficulty-option.active, .cards-option.active, .fps-option.active, .faction-option.active,
 .item-row .item-name.active, .resources-grid .resource-group.open, .menu-button-primary, #play-button {
   background: var(--plank-green) center / cover;
   border: none;

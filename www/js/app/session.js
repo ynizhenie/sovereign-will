@@ -11,6 +11,7 @@ import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
 import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
+import { syncCards } from '../modes/endless/index.js';
 
 export function resetGame(map) {
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu
@@ -25,7 +26,8 @@ export function resetGame(map) {
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (half way through the morning: it was dark as night as it began) townHall.store = {}; game.craftOrders = [];
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
+  townHall.store = {}; game.craftOrders = []; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
   
   if (map) loadCustomMap(map);
@@ -42,6 +44,7 @@ export function resetGame(map) {
   if (getPlayerFaction().startNecromancer) game.settlers.push(Object.assign(createSettler(getPlayerFaction().startUnits, 103, townHall.x, townHall.y + 45), { tool: 'necro_staff' }));
 
   updateUnitCounts();
+  syncCards(); // (#255: all locked again, or none out of Endless's cards)
 }
 
 export function togglePause() {

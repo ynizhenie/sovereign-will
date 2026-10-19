@@ -14,7 +14,7 @@ import { getPossessed, orderPossessed } from '../domains/colony/settlers/index.j
 import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
-import { isDefeated } from '../modes/endless/index.js';
+import { isDefeated, isLocked } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 
@@ -229,7 +229,9 @@ function upgradeTarget(item, gx, gy) {
 function placeBlueprint({ gx, gy }) {
   const building = getDefinition('buildings', game.buildMode);
   const replaces = upgradeTarget(building, gx, gy);
-  if (!canBuild(game.buildMode)) {
+  if (isLocked('buildings', game.buildMode)) {
+    showNotification(t('cards.locked', { name: building.label }), true);
+  } else if (!canBuild(game.buildMode)) {
     showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
   } else if (replaces || building.onWater || isBuildLocationAllowed(gx, gy)) {
     // its cost stays in storage until builders bring it
@@ -286,6 +288,11 @@ export function setMode(mode) {
 
   const item = getDefinition('buildings', mode);
   if (!item) return;
+  if (isLocked('buildings', mode)) { // (a card opens it, #255)
+    showNotification(t('cards.locked', { name: item.label }), true);
+    setMode('interact');
+    return;
+  }
 
   if (!canAfford(item.cost || {})) {
     const missing = getMissingCost(item.cost || {});

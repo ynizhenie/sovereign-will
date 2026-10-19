@@ -113,6 +113,7 @@
  * @property {number} speed
  * @property {number} damage
  * @property {string} weapon
+ * @property {number} [shotCooldown] seconds between its shots on Hard (#255), instead of its ranged.cooldown
  * @property {Object<string, number>} reward   what killing it adds to the stock
  * @property {Settler | null} [attackTarget]
  * @property {Object | null} buildTarget     the tent site it's building
@@ -217,6 +218,7 @@
  * @property {boolean} gameStarted
  * @property {boolean} isPaused
  * @property {string} gameDifficulty
+ * @property {boolean} cardMode  Endless with cards (#255)
  * @property {{ cols: number, rows: number }} mapSettings
  * @property {Object | null} customMap
  * @property {Object | null} worldSeed
@@ -280,6 +282,10 @@
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  * @property {Object<string, number>} paths  'gx,gy' -> how worn its ground is (#248)
+ * @property {Object<string, boolean>} unlocked  cards picked (#255): '<category>:<id>' -> opened
+ * @property {number} cardsDue   waves come whose card is still to be offered
+ * @property {number} cardsWave  waves counted for cards
+ * @property {string[] | null} cardOffer  the cards offered now
  */
 
 export {};

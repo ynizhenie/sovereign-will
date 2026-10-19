@@ -5,7 +5,7 @@ import { initIcons, initItemInfo, initMapInput, initPageActions, initSheets, ini
 import { initAudio, initCanvas, initI18n, initInput } from '../engine/platform/index.js';
 import { initRng } from '../engine/world/index.js';
 import { initSession } from './session.js';
-import { initEndlessGenerator, initEndlessRules, initEndlessSaves, initEndlessSetup } from '../modes/endless/index.js';
+import { initEndlessCards, initEndlessGenerator, initEndlessRules, initEndlessSaves, initEndlessSetup } from '../modes/endless/index.js';
 import { initMain } from './main.js';
 import { initMenuScreens, initMenuWorld } from '../modes/menu/index.js';
 import { initBattlePanel } from '../modes/battle/index.js';
@@ -24,6 +24,7 @@ initPageActions();
 initSheets();
 initItemInfo();
 initEndlessSetup();
+initEndlessCards();
 initEndlessRules();
 initAudio();
 initMain();
