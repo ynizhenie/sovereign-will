@@ -25,7 +25,7 @@ export function resetGame(map) {
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = 0; game.nightId = 0; townHall.store = {}; game.craftOrders = [];
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (half way through the morning: it was dark as night as it began) townHall.store = {}; game.craftOrders = [];
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
   
   if (map) loadCustomMap(map);

@@ -4,7 +4,7 @@ import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
 test('a day: morning (it starts in the morning), day, evening, night; dark at night, half dark half way through the morning; waves every 180 s by default (#257)', () => {
-  expect(sim.nightPhases({})).toEqual({ start: 'morning', startTime: 0, phases: ['morning', 'day', 'evening', 'night'], dark: { day: 0, night: 0.72, midMorning: 0.36 }, interval: 180, afterMorning: 'day' });
+  expect(sim.nightPhases({})).toEqual({ start: 'morning', startTime: true, phases: ['morning', 'day', 'evening', 'night'], dark: { day: 0, night: 0.72, midMorning: 0.36 }, interval: 180, afterMorning: 'day' });
 });
 
 test('at night workers sleep at the tent, hunger standing still; half the soldiers keep watch; in the morning they wake up hungry (#257)', () => {
