@@ -14,6 +14,9 @@
  * @property {number} y
  * @property {string} type           GAME_CONFIG.settlerTypes key ('normal', 'big', 'zombie'...)
  * @property {string} role           'worker', 'soldier' or 'archer'
+ * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
+ * @property {Point} [raidSpot]      where it stands in a raid, when it's given nothing to fight
+ * @property {Object | null} [raidTarget]  what the player told it to fight in a raid
  * @property {string} weapon         GAME_CONFIG.weapons key, 'fist' for none
  * @property {string} tool           GAME_CONFIG.tools key, 'none' for none
  * @property {number} hp
@@ -100,6 +103,7 @@
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
  * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [trapped]    held in an iron trap (#248)
  * @property {boolean} [torch]       an enemy with a torch, in a night wave (#257)
  * @property {number} [toCatch]      the id of the settler catching it for a cage (#250)
@@ -286,6 +290,8 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
+ * @property {{ side: string, timeLeft: number } | null} raidCamp  an enemy camp's zone open (#255)
+ * @property {number} raidCampWave  the waves beaten when the last one opened
  */
 
 export {};

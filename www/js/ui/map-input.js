@@ -14,7 +14,7 @@ import { getPossessed, orderPossessed } from '../domains/colony/settlers/index.j
 import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
-import { isDefeated, isLocked } from '../modes/endless/index.js';
+import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 
@@ -27,6 +27,7 @@ export function handleCanvasClick() {
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
   if (isDefeated()) return; // the defeat screen's own buttons
+  if (!getPossessed() && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
   if (game.buildMode === 'possess') { possessTapped(); return; }
 
   const p = getPossessed();

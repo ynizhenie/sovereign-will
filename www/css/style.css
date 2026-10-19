@@ -1087,3 +1087,19 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .card-kind { font-size: 11px; color: #aeb4c0; }
 .card-cost { font-size: 11px; color: #d5d8dc; margin-top: auto; }
 @media (max-width: 460px) { .card { width: 100px; min-height: 160px; } .card-icon { font-size: 36px; } }
+
+/* A raid on an enemy camp (#255): the bar under the top of the screen, the party picker */
+#raid-bar { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 6px;
+  max-width: calc(100vw - 16px); padding: 4px 6px; border-radius: 8px; background: rgba(24, 27, 34, 0.9); border: 1px solid #7b241c;
+  color: #f5f0e1; font-size: 12px; white-space: nowrap; }
+#raid-bar span { padding: 0 4px; overflow: hidden; text-overflow: ellipsis; }
+#raid-bar .btn { min-height: 30px; padding: 4px 8px; font-size: 12px; }
+#raid-bar .btn.on { background: #1e8449; border-color: #27ae60; }
+.btn.raid-go { background: #922b21; border-color: #e74c3c; color: #fff; }
+#raid-picker { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 16px; background: rgba(8, 10, 16, 0.75); }
+.raid-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 560px; max-height: 50vh; overflow-y: auto; }
+.raid-unit { display: flex; align-items: center; gap: 2px; padding: 6px 8px; font-size: 18px; opacity: 0.5; }
+.raid-unit.on { opacity: 1; box-shadow: 0 0 0 2px #e74c3c; }
+.raid-hp { font-size: 11px; color: #aeb4c0; margin-left: 3px; }
+.raid-picker-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
