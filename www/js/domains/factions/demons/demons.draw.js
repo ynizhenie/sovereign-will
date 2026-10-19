@@ -12,10 +12,11 @@ export function drawPortal(x, y, color) {
 
 // A demon's horns: two dark points on top of the body
 export function drawHorns(x, y, r) {
-  ctx.fillStyle = '#2c2c34';
+  // bone-pale with a dark edge: they show on a dark head too (#251)
+  ctx.fillStyle = '#e8d8b0'; ctx.strokeStyle = '#2c2c34'; ctx.lineWidth = 1;
   for (const side of [-1, 1]) {
     ctx.beginPath();
     ctx.moveTo(x + side * r * 0.35, y - r * 0.8); ctx.lineTo(x + side * r * 0.75, y - r * 1.45); ctx.lineTo(x + side * r * 0.8, y - r * 0.55);
-    ctx.closePath(); ctx.fill();
+    ctx.closePath(); ctx.fill(); ctx.stroke();
   }
 }
