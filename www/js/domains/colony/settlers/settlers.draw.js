@@ -25,6 +25,7 @@ export function tickAnimation(unit, dt) {
   if (unit.lastX !== undefined) {
     const dx = unit.x - unit.lastX, dy = unit.y - unit.lastY;
     if (Math.hypot(dx, dy) > 0.3 && !(unit.swingT > 0) && !(unit.working > 0)) unit.facing = Math.atan2(dy, dx);
+    unit.walk = ((unit.walk || 0) + Math.hypot(dx, dy)) % 1000; // (its steps, drawFigure)
   }
   unit.lastX = unit.x; unit.lastY = unit.y;
   if (unit.swingT > 0) unit.swingT = Math.max(0, unit.swingT - dt);
@@ -184,6 +185,103 @@ function drawWorkpiece(s) {
   ctx.fillStyle = '#f1c40f'; ctx.fillRect(x - 10, y - 12, 20 * s.crafting.progress, 3);
 }
 
+// ---- The figure (#251): a little person, not a circle. Legs that step as it walks, a body in its colours, a
+// round head (horns on a demon's), two arms: the right hand where its held item is (applyHeldItemPose), the
+// left at its side or behind its shield. Its middle is where the circle's was, so nothing about where it
+// stands or what hits it changes. Lying (asleep, or a corpse): turned on its side.
+
+export const SKIN = { humans: '#f5cba7', demons: '#922b21', undead: '#9fb38a' };
+
+// Where its right hand is now, round its middle (the held item's grip, as applyHeldItemPose puts it)
+function handAt(unit, r) {
+  const pose = getHeldItemPose(unit), a = (unit.facing || 0) + pose.angle;
+  const fx = pose.push + r * 0.25, fy = r * 0.5;
+  return { x: Math.cos(a) * fx - Math.sin(a) * fy, y: Math.sin(a) * fx + Math.cos(a) * fy };
+}
+
+/**
+ * The figure round (x, y), r its old circle's radius.
+ * @param {any} unit
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean }} o
+ */
+export function drawFigure(unit, o) {
+  const { x, y, r } = o;
+  ctx.save();
+  ctx.translate(x, y);
+  if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
+  const outline = 'rgba(0, 0, 0, 0.45)';
+  // its shadow on the ground
+  if (!o.lying) { ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'; ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.7, r * 0.22, 0, 0, Math.PI * 2); ctx.fill(); }
+  // legs, stepping while it walks
+  const step = o.lying || o.dead ? 0 : Math.sin((unit.walk || 0) * 0.35) * r * 0.16;
+  ctx.fillStyle = shade(o.body, -0.4);
+  for (const [lx, dy] of [[-0.3, step], [0.3, -step]]) { ctx.beginPath(); ctx.roundRect(r * lx - r * 0.17, r * 0.25 + dy, r * 0.34, r * 0.72, r * 0.12); ctx.fill(); }
+  // the body
+  ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
+  // arms: the right to its hand, the left down its side (or out to its shield)
+  ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
+  const hand = o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 };
+  const right = hand.x >= 0 ? 1 : -1;
+  ctx.beginPath(); ctx.moveTo(right * r * 0.5, -r * 0.3); ctx.lineTo(hand.x, hand.y); ctx.stroke();
+  const other = o.shield ? { x: -r + 1, y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
+  ctx.beginPath(); ctx.moveTo(-right * r * 0.5, -r * 0.3); ctx.lineTo(other.x, other.y); ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = o.skin;
+  for (const p of [hand, other]) { ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.15, 0, Math.PI * 2); ctx.fill(); }
+  // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
+  const hy = -r * 0.9, hr = r * 0.5;
+  ctx.fillStyle = o.skin; ctx.strokeStyle = outline;
+  ctx.beginPath(); ctx.arc(0, hy, hr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * 1.35);
+  const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
+  if (o.dead) {
+    ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2;
+    for (const sx of [-1, 1]) { const cx = sx * hr * 0.38, cy = hy; ctx.beginPath(); ctx.moveTo(cx - 1.6, cy - 1.6); ctx.lineTo(cx + 1.6, cy + 1.6); ctx.moveTo(cx + 1.6, cy - 1.6); ctx.lineTo(cx - 1.6, cy + 1.6); ctx.stroke(); }
+  } else if (Math.sin(f) > -0.5 && !o.lying) {
+    ctx.fillStyle = '#1b1b1f';
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.arc(ex + sx * hr * 0.3, hy + ey, Math.max(0.8, r * 0.07), 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+// A colour a little darker or lighter (amount -1..1)
+function shade(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = v => Math.max(0, Math.min(255, Math.round(amount < 0 ? v * (1 + amount) : v + (255 - v) * amount)));
+  return `rgb(${ch((n >> 16) & 255)}, ${ch((n >> 8) & 255)}, ${ch(n & 255)})`;
+}
+
+// What's on its back, turned with it (#251): behind it, on the side away from where it faces
+export function drawBackItems(s) {
+  const r = s.visualRadius, f = s.facing || 0;
+  const bx = -Math.cos(f) * r * 0.55, by = -Math.sin(f) * r * 0.55 - r * 0.15;
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(f + Math.PI / 2);
+  if (s.backpack) {
+    ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-6, -3.5, 12, 7);
+    ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(-6, -3.5, 12, 7);
+    const loads = (s.carrying && s.carrying.loads) || 0, full = Math.min(1, loads / getCarryCapacity(s));
+    ctx.fillStyle = '#f1c40f'; ctx.fillRect(-5, -2.5, 10 * full, 2);
+  }
+  if (s.quiver) {
+    ctx.fillStyle = '#8e5a2b'; ctx.fillRect(s.backpack ? 4 : -2, -5, 4, 10);
+    ctx.fillStyle = '#ecf0f1';
+    for (let i = 0; i < Math.min(4, Math.ceil((s.arrows || 0) / 3)); i++) ctx.fillRect((s.backpack ? 4 : -2) + i, -8, 1, 3);
+  }
+  if (s.tool === 'hoe' && s.wateringCan) {
+    if ((s.usingCan || 0) > 0) { ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-1, -9, 2, 15); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-3, -10, 6, 3); }
+    else drawWateringCan(0, 5, 0.7);
+  }
+  if (s.banner) {
+    ctx.fillStyle = '#6d4520'; ctx.fillRect(-1, -16, 2, 18);
+    ctx.fillStyle = getSettlerColor(s); ctx.fillRect(1, -16, 9, 6);
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(1, -16, 9, 6);
+  }
+  ctx.restore();
+}
+
 // The held item across the back: turned square to where the unit faces, behind it
 export function applyBackPose(unit) {
   ctx.rotate((unit.facing || 0) + Math.PI / 2);
@@ -192,10 +290,14 @@ export function applyBackPose(unit) {
 
 // Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
 // Shared by settlers and enemies. Returns false for no weapon (fists).
-// Iron armour: a grey ring round a body of that radius
+// Iron armour: a breastplate over the body of a figure of that radius
 export function drawArmor(radius) {
-  ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(0, 0, radius + 2, 0, Math.PI * 2); ctx.stroke();
+  // a breastplate over the figure's body (#251)
+  const r = radius;
+  ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#5d6d7e'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(-r * 0.56, -r * 0.44, r * 1.12, r * 0.8, r * 0.25); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.fillRect(-r * 0.4, -r * 0.36, r * 0.25, r * 0.55);
+  ctx.strokeStyle = '#7f8c8d'; ctx.beginPath(); ctx.moveTo(0, -r * 0.44); ctx.lineTo(0, r * 0.36); ctx.stroke();
 }
 
 // A round wooden shield with an iron rim and boss on the left arm of a body of that radius
@@ -280,25 +382,20 @@ export function drawSettlers() {
     // an idle undead sways where it stands (#199): drawn a little to and fro
     const sway = s.swaying ? Math.sin(performance.now() / 450 + s.id) * 2.5 : 0;
     if (sway) { ctx.save(); ctx.translate(sway, 0); }
-    // the whole body in the colony's colour; the possessed one ringed in white
-    ctx.fillStyle = getSettlerColor(s);
+    const r = s.visualRadius, top = s.y - r * 1.45; // (the top of its head)
+    // the possessed one: a white ring on the ground round its feet
+    if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(s.x, s.y + r * 0.95, r * 0.95, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke(); }
+    // what's on its back, behind it when it faces this way (#251)
+    const backBehind = Math.sin(s.facing || 0) > 0.2;
+    if (backBehind && !s.asleep) { ctx.save(); ctx.translate(s.x, s.y); drawBackItems(s); ctx.restore(); }
+    // the figure in the colony's colour (#251)
+    const faction = game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
-    if (s.asleep) { ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.visualRadius * 1.15, s.visualRadius * 0.7, 0, 0, Math.PI * 2); ctx.fill(); } // (lying down, #257)
-    else { ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius, 0, Math.PI * 2); ctx.fill(); }
+    if (s.asleep) ctx.globalAlpha = 0.85;
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield });
     ctx.globalAlpha = 1;
-    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, s.visualRadius);
-    if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); }
-    if (getPlayerFaction().id === 'demons' && game.gameMode !== 'battle') drawHorns(s.x, s.y, s.visualRadius);
-    drawBodyBlood(s, s.visualRadius);
-
-    // a backpack on the left side, with a bar for how full it is
-    if (s.backpack) {
-      const bx = s.x - s.visualRadius - 3, by = s.y - 6;
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(bx, by, 6, 12);
-      ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, 6, 12);
-      const loads = (s.carrying && s.carrying.loads) || 0;
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(bx + 1, by + 11 - 10 * Math.min(1, loads / getCarryCapacity(s)), 4, 10 * Math.min(1, loads / getCarryCapacity(s)));
-    }
+    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
+    drawBodyBlood(s, r);
 
     // what it carries is in its hands, what it held goes on its back (in a backpack it stays out of sight,
     // the bar above says how full); making a thing, a hammer in its hands (#232)
@@ -338,55 +435,38 @@ export function drawSettlers() {
     if (s.torchInHand && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
     if (s.eating) drawEating(s);
     else if ((s.smoking || 0) > 0 || (s.straw || 0) > 0) drawInMouth(s);
-    if (s.armor === 'iron' || s.hasArmor) drawArmor(s.visualRadius);
-    // whichever of the farmer's hoe and watering can isn't in hand is carried on its back
-    if (s.tool === 'hoe' && s.wateringCan) {
-      if ((s.usingCan || 0) > 0) {
-        ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 2, -8, 2, 15);
-        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-s.visualRadius - 4, -9, 6, 3);
-      } else {
-        drawWateringCan(-s.visualRadius, 4, 0.7);
-      }
-    }
-    if (s.shield) drawShield(s.visualRadius);
-    // a commander's mark (#248): a whistle on a cord on its chest, a banner on a pole at its back
-    if (s.whistle) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, s.visualRadius - 6, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, s.visualRadius - 6, 2, 3); }
-    if (s.banner) {
-      ctx.fillStyle = '#6d4520'; ctx.fillRect(-s.visualRadius - 1, -s.visualRadius - 12, 2, s.visualRadius + 14);
-      ctx.fillStyle = getSettlerColor(s); ctx.fillRect(-s.visualRadius + 1, -s.visualRadius - 12, 9, 6);
-      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(-s.visualRadius + 1, -s.visualRadius - 12, 9, 6);
-    }
-    if (s.quiver) {
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-s.visualRadius - 3, -5, 4, 10);
-      ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(-s.visualRadius - 2, -4); ctx.lineTo(-s.visualRadius - 2, -10); ctx.moveTo(-s.visualRadius, -4); ctx.lineTo(-s.visualRadius, -10); ctx.stroke();
-    }
+    if ((s.armor === 'iron' || s.hasArmor) && !s.asleep) drawArmor(r);
+    if (s.shield && !s.asleep) drawShield(r);
+    // a commander's whistle on a cord on its chest (#248); its banner goes on its back (drawBackItems)
+    if (s.whistle && !s.asleep) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
+    // what's on its back, in front of it when it faces away (#251)
+    if (!backBehind && !s.asleep) drawBackItems(s);
     ctx.restore();
 
     if (crafting) drawWorkpiece(s);
-    if (s.asleep) drawSleepZs(s.x + s.visualRadius, s.y - s.visualRadius - 4);
+    if (s.asleep) drawSleepZs(s.x + r, s.y - r);
     if ((s.smoking || 0) > 0 && !s.eating) drawSmokePuffs(s);
 
     if (s === game.selectedSettler) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.visualRadius + 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(s.x, s.y + r * 0.95, r + 3, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); // (round its feet)
     }
 
-    if (s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+    if (s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + r, top - 12);
     // an archer out of arrows (#232): a crossed-out arrow over it
-    if (isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - s.visualRadius - 2, s.y - s.visualRadius - 16);
+    if (isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - r - 2, top - 12);
     // an order given or taken (#248): its bubble, and the commander's line to the one it told
     const line = s.orderLine;
     if (line && line.until > game.pathTick) {
       const to = game.settlers.find(o => o.id === line.toId);
       if (to) { ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.setLineDash([]); }
     }
-    if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + s.visualRadius, s.y - s.visualRadius - 18, s.orderBubble.icon);
+    if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + r, top - 14, s.orderBubble.icon);
     // "talking" in a knot (#199): now and then a speech bubble
-    if (s.isIdle && s.idle && s.idle.act === 'talk' && Math.sin(performance.now() / 700 + s.id * 1.7) > 0.4) drawTalkBubble(s.x + s.visualRadius, s.y - s.visualRadius - 16);
+    if (s.isIdle && s.idle && s.idle.act === 'talk' && Math.sin(performance.now() / 700 + s.id * 1.7) > 0.4) drawTalkBubble(s.x + r, top - 12);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, 30, 4);
-    ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, s.y - s.visualRadius - 10, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, top - 6, 30, 4);
+    ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, top - 6, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
     if (sway) ctx.restore();
   });
 }

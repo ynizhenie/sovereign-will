@@ -1,31 +1,59 @@
 // Boars, and their carcasses
 
-import { drawIcon } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { ctx, drawProgressBar } from '../../../engine/platform/index.js';
 import { drawBodyBlood } from '../../conflict/combat/index.js';
+
+// A boar (#251), its side to us, facing the way it last went: a bristly body, legs stepping, its head with
+// snout, tusks and an ear, a curly tail. A carcass: on its back, legs up, a cross for its eye
+function drawBoarBody(b, dead) {
+  if (b.lastX !== undefined && Math.abs(b.x - b.lastX) > 0.05) b.faceX = b.x > b.lastX ? 1 : -1;
+  if (!dead) { b.step = ((b.step || 0) + Math.hypot(b.x - (b.lastX ?? b.x), b.y - (b.lastY ?? b.y))) % 1000; b.lastX = b.x; b.lastY = b.y; }
+  const d = b.faceX || 1;
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.scale(d, dead ? -1 : 1);
+  if (!dead) { ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; ctx.beginPath(); ctx.ellipse(0, 9, 12, 3.5, 0, 0, Math.PI * 2); ctx.fill(); }
+  // legs
+  const step = dead ? 0 : Math.sin((b.step || 0) * 0.5) * 1.6;
+  ctx.fillStyle = '#4e2f1f';
+  for (const [lx, dy] of [[-8, step], [-4, -step], [4, step], [8, -step]]) ctx.fillRect(lx - 1.3, 3 + dy * 0.5, 2.6, 6);
+  // the body, darker bristles along its back
+  ctx.fillStyle = '#8e5a3b'; ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(-1, 0, 12, 7.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#5d3a24'; ctx.lineWidth = 1;
+  for (let k = -9; k <= 5; k += 2.5) { ctx.beginPath(); ctx.moveTo(k, -6.5); ctx.lineTo(k + 1, -9); ctx.stroke(); }
+  // the tail
+  ctx.strokeStyle = '#5d3a24'; ctx.beginPath(); ctx.arc(-14, -2, 2, 0, Math.PI * 1.6); ctx.stroke();
+  // the head, snout, tusk, ear, eye
+  ctx.fillStyle = '#7a4b30'; ctx.strokeStyle = '#3e2723';
+  ctx.beginPath(); ctx.ellipse(11, -1, 6, 5, 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c08a6e'; ctx.beginPath(); ctx.ellipse(16.5, 0.5, 2.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3e2723'; ctx.fillRect(16.8, -0.2, 1, 1); ctx.fillRect(16.8, 1.2, 1, 1);
+  ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(14, 2.5); ctx.lineTo(15.5, -0.5); ctx.lineTo(15.5, 3); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#5d3a24'; ctx.beginPath(); ctx.moveTo(9, -4.5); ctx.lineTo(10.5, -9); ctx.lineTo(12.5, -4.5); ctx.closePath(); ctx.fill();
+  if (dead) {
+    ctx.strokeStyle = '#1b1b1f'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(11, -3); ctx.lineTo(14, 0); ctx.moveTo(14, -3); ctx.lineTo(11, 0); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#1b1b1f'; ctx.beginPath(); ctx.arc(12.5, -2, 0.9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
 
 // Boars (faded while hidden), and carcasses being butchered
 export function drawBoars() {
   game.boars.forEach(b => {
     ctx.save();
     if (b.isCarcass) {
-      ctx.fillStyle = '#633c2b';
-      ctx.beginPath(); ctx.ellipse(b.x, b.y + 3, 15, 9, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#3e2723';
-      ctx.beginPath(); ctx.arc(b.x + 11, b.y + 1, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#b85c4a';
-      ctx.fillRect(b.x - 4, b.y + 1, 5, 3);
-      ctx.strokeStyle = '#2b1b17'; ctx.lineWidth = 2; ctx.stroke();
+      drawBoarBody(b, true);
       drawBodyBlood(b, 9);
       if (b.butcher > 0) drawProgressBar(b.x, b.y - 14, b.butcher, 24);
       ctx.restore();
       return;
     }
     if (b.hidden) ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#a0522d'; ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.stroke();
-    drawIcon(ctx, 'boar', b.x, b.y, 17);
+    drawBoarBody(b, false);
     drawBodyBlood(b, 11);
     if (b.hp < b.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(b.x - 12, b.y - 16, 24, 3);

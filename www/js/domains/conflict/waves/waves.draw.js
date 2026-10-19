@@ -6,7 +6,7 @@ import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { applyHeldItemPose, drawArmor, drawHandTorch, drawHeldWeapon, drawMedbag, drawQuiver, drawShield } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawArmor, drawFigure, drawHandTorch, drawHeldWeapon, drawMedbag, drawQuiver, drawShield } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
@@ -65,11 +65,10 @@ export function drawEnemyTentSites() {
 // Enemies: body, weapon, quiver, the target mark, health
 export function drawEnemies() {
   game.enemies.forEach(en => {
-    // enemies in the enemy's colour (big ones darker), holding their weapon the way settlers do
-    ctx.fillStyle = getEnemyColor(en);
-    ctx.beginPath(); ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = shadeColor(getEnemyColor(), -0.45); ctx.lineWidth = 2; ctx.stroke();
-    if (en.enemyKey.startsWith('demon_')) drawHorns(en.x, en.y, en.radius);
+    // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
+    // (#251); their skin their faction's
+    const kin = en.enemyKey.startsWith('demon_') ? 'demons' : en.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
 
@@ -85,13 +84,14 @@ export function drawEnemies() {
     ctx.restore();
     if (en.armor === 'iron') drawArmor(en.radius);
     if (en.shield) drawShield(en.radius);
-    if ((en.arrows || 0) > 0) drawQuiver(-en.radius, en.arrows || 0);
+    if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
     if (en.torch) drawHandTorch(en.facing, en.radius); // (a night wave, #257)
     ctx.restore();
 
     if (en.markedTarget) drawTargetMark(en);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(en.x - 12, en.y - en.radius - 8, 24, 3);
-    ctx.fillStyle = '#e74c3c'; ctx.fillRect(en.x - 12, en.y - en.radius - 8, (Math.max(0, en.hp) / en.maxHp) * 24, 3);
+    const top = en.y - en.radius * 1.45; // (over its head)
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(en.x - 12, top - 5, 24, 3);
+    ctx.fillStyle = '#e74c3c'; ctx.fillRect(en.x - 12, top - 5, (Math.max(0, en.hp) / en.maxHp) * 24, 3);
   });
 }
