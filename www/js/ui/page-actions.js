@@ -2,6 +2,7 @@
 // calls the action with its argument (switchTab also gets the button)
 
 import { switchTab } from './bottom-panel.js';
+import { game } from '../engine/world/index.js';
 import { openHallCard } from './building-card.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
@@ -23,6 +24,8 @@ export const PAGE_ACTIONS = {
   disarmSettler: what => disarmSettler(what),
   switchTab: (tabId, button) => switchTab(button, tabId),
   showCraftKind: kind => showCraftKind(kind),
+  // the undead's blight spreading by itself (#253): on and off, till there's none left to blight
+  toggleAutoBlight: () => { if (!game.autoBlightDone) game.autoBlight = !game.autoBlight; },
   openHall: () => openHallCard(),
   // Point: back to selecting, nothing open and nobody selected (#232)
   pointMode: () => { setMode('interact'); closeOverlays(); deselectSettler(); },

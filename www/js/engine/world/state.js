@@ -52,6 +52,8 @@ export const game = {
   pebbles: [],
   loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
   piles: [],
+  autoBlight: false,    // the undead's necromancers blight by themselves (#253); autoBlightDone: none left to
+  autoBlightDone: false,
   portalQueue: [],      // a wave's enemy demons still to come out of the portals (#250)
   portalTimer: 0,            // { x, y, type, amount } stock on the ground by a full storage (#248, storage.stores.js)
   ironOres: [],
