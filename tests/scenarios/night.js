@@ -12,7 +12,7 @@ Object.assign(window.sim, (() => {
     start(seed); clearResources();
     settlers = [makeSettler(1, townHall.x + 40, townHall.y)];
     const at = t => { dayTime = t; return getDayPhase(); };
-    const r = { start: getDayPhase(), startTime: dayTime,
+    const r = { start: getDayPhase(), startTime: dayTime === day().morning / 2,
       phases: [at(10), at(100), at(220), at(300)],
       dark: { day: (dayTime = 100, getDarkness()), night: (dayTime = 300, getDarkness()), midMorning: (dayTime = day().morning / 2, Math.round(getDarkness() * 100) / 100) },
       interval: waveInterval };
