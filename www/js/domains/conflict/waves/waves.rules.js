@@ -5,12 +5,13 @@ import { t } from '../../../engine/platform/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
-import { getEnemyFaction } from '../../factions/index.js';
+import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { isNight } from '../../world/index.js';
+import { someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 
@@ -237,6 +238,7 @@ export function tickPortalWave(dt) {
   if (game.portalTimer > 0) return;
   const c = GAME_CONFIG.portalWave;
   game.portalTimer = c.seconds;
+  if (game.portalQueue.length) playSound('portal', game.enemyTents[0]); // (#252)
   for (const id of game.portalQueue.splice(0, c.batch)) {
     const enemy = createConfiguredEnemy(getWaveSpawnPos(), id);
     if (!enemy) continue;
@@ -252,7 +254,10 @@ export function tickWaveTimer(dt) {
   const before = game.waveTimer;
   game.waveTimer -= dt;
   // one warning, 15 s before the wave (holds of the timer in tests keep it above)
-  if (before > WAVE_WARNING_SECONDS && game.waveTimer <= WAVE_WARNING_SECONDS) showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
+  if (before > WAVE_WARNING_SECONDS && game.waveTimer <= WAVE_WARNING_SECONDS) {
+    showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
+    someoneSays(game.settlers.filter(s => !s.asleep), getPlayerFaction().id, 'wave', true); // (#252)
+  }
   if (game.waveTimer <= 0) {
     startNextWave();
     game.waveTimer = game.waveInterval;

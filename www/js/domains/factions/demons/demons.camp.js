@@ -10,6 +10,7 @@ import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engi
 import { faceTowards } from '../../colony/settlers/index.js';
 import { giveResourceToSettler } from '../../colony/storage/index.js';
 import { getPlayerFaction } from '../index.js';
+import { playSound } from '../../../app/index.js';
 
 const camp = () => GAME_CONFIG.demonCamp;
 const isDemons = () => getPlayerFaction().id === 'demons';
@@ -84,6 +85,7 @@ export function carryCaptive(s, tick) {
   const { enemy, ...captive } = load.captive;
   void enemy;
   cage.captive = captive;
+  playSound('cageLock', cage);
   s.carrying = null;
   return true;
 }
@@ -132,6 +134,7 @@ export function tendCorpses(s, tick) {
   s.butcherTimer = 0;
   game.corpses.splice(game.corpses.indexOf(corpse), 1);
   giveResourceToSettler(s, 'rawMeat', corpse.big ? camp().bigMeat : camp().meat);
+  playSound('butcher', s);
   if (s.carrying) s.carrying.loads = 99; // (straight home with it)
   s.butcherTarget = null;
   return true;

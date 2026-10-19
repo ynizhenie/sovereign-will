@@ -8,6 +8,7 @@ import { game } from '../../../engine/world/index.js';
 import { findNearestStorage, isAtStorage, stock, walkToStorage } from '../storage/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { eatMeal, isBigBody } from './settlers.rules.js';
+import { says } from './settlers.voices.js';
 
 // The kind of food most in the stock, to be seen eating it
 function foodLook() {
@@ -25,7 +26,10 @@ export function goEat(s, tick) {
   }
   if (!s.wantsMeal || s.isPossessed) return false;
   const cost = isBigBody(s) ? 2 : 1;
-  if (s.towerAssignment || (stock.food || 0) + (stock.worms || 0) < cost) { s.wantsMeal = false; eatMeal(s); return false; }
+  if (s.towerAssignment || (stock.food || 0) + (stock.worms || 0) < cost) {
+    if ((stock.food || 0) + (stock.worms || 0) < cost) says(s, 'hungry'); // (nothing to eat, #252)
+    s.wantsMeal = false; eatMeal(s); return false;
+  }
   if (tick.isWaveActive || isDefenseAlert() || s.carrying) return false; // (later: after the wave, its load home first)
   s.patrolTarget = null;
   const storage = findNearestStorage(s);

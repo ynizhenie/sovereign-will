@@ -1,7 +1,7 @@
 // One step of the game: every mechanic's turn, in order
 
 import { game, resetTileIndex } from '../engine/world/index.js';
-import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
+import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, tickVoices, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
 import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from '../domains/conflict/waves/index.js';
@@ -72,6 +72,7 @@ export function update(dt) {
   tickDaytime(dt); // day and night (#257)
   tickMenuScene(dt); // (the main menu's scene, #256)
   tickNight();
+  tickVoices(dt); // (#252)
   updateUnitCounts();
   updateUI();
   refreshAffordability();

@@ -8,7 +8,7 @@ import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, 
 import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
 import { makeAppleTree } from '../farming/index.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards } from '../../colony/settlers/index.js';
+import { faceTowards, says } from '../../colony/settlers/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 
 // Pick up smelted iron and carry it home
@@ -219,6 +219,7 @@ export function workBlueprint(s, bp, dt) {
       const tree = { x: bp.x, y: bp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
       game.trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
     } else {
+      says(s, 'built'); // (#252)
       // built over the one it upgrades (a door on a wall, #248): that one comes down, its refund back
       if (bp.replaces) {
         const old = bp.replaces;
