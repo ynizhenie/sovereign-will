@@ -7,10 +7,10 @@ test('a zombie given a bow stays a zombie, an archer (#164, #249: no skeletons)'
   expect(await sim.bowMakesSkeleton()).toEqual({ withBow: { type: 'zombie', weapon: 'bow' }, without: { type: 'zombie', weapon: 'fist' } });
 });
 
-test('a necromancer (the staff) raises 5 corpses as temporary zombies, recharges at a grave; they crumble into rot (#164)', async () => {
+test('a necromancer (the staff) raises 5 corpses as temporary zombies, recharges at a grave; they crumble into a little rot and bones on the ground (#164, #253)', async () => {
   expect(await sim.necromancerRaises()).toEqual({
     afterFirstRound: 5, recharged: true, raised: 7, corpsesLeft: 0, bigZombies: 1, popTaken: 0,
-    crumbled: true, rotFromThem: 7, corpsesFromThem: 0
+    crumbled: true, leftOnGround: { piles: 7, rot: 8, bones: 8 }, corpsesFromThem: 0
   });
 });
 

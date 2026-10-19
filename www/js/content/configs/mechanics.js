@@ -136,7 +136,13 @@ export const mechanicsConfig = {
   // hallTiles of the graveyard on every side and graveTiles of each grave, and on marked ground a
   // necromancer blighted; enemies on it go at slowFactor of their speed, and a corpse on it rises after
   // riseSeconds. A blighted zone the player takes away fades over clearSeconds, blighted till then.
-  temporaryZombie: { lifeSeconds: 60, rot: 1 },
+  // crumbled, a raised zombie of the colony's leaves `rot` and `bones` on the ground where it was (big:
+  // bigTimes as much, #253)
+  temporaryZombie: { lifeSeconds: 60, rot: 1, bones: 1, bigTimes: 2 },
+  // graves (#253): a necromancer works one for `bones` and `rot` in `seconds`, then it rests restSeconds;
+  // with a corpse lying by it (within nearTiles), no rest. Undead workers carry the corpses about to the
+  // graves, corpsesBy a grave at most
+  graveWork: { seconds: 5, restSeconds: 10, bones: 3, rot: 1, nearTiles: 1, corpsesBy: 2 },
 
   blight: { hallTiles: 2, graveTiles: 1, slowFactor: 0.6, riseSeconds: 4, clearSeconds: 5 }
 };

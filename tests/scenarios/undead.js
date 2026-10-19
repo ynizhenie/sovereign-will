@@ -17,7 +17,7 @@ Object.assign(window.sim, (() => {
     asUndead(seed);
     const ids = sel => [...document.querySelectorAll(sel)].filter(b => !b.hidden).map(b => b.id);
     const r = {
-      startUnits: settlers.map(s => s.type), hire: ids('#recruit-row .tile'),
+      startUnits: settlers.map(s => s.type), startStaffs: settlers.filter(s => s.tool === 'necro_staff').length, hire: ids('#recruit-row .tile'),
       tools: ids('#craft-tools .tile'), gear: ids('#craft-gear .tile'),
       build: ids('#build-actions button'), farmingTab: !document.getElementById('tab-btn-farming').hidden,
       blightTab: !document.getElementById('tab-btn-blight').hidden, foodTile: !!document.getElementById('group-food') || !!document.getElementById(resourceHudId('food')) || !!document.getElementById(resourceHudId('rawMeat')),
@@ -26,6 +26,7 @@ Object.assign(window.sim, (() => {
     clearResources();
     placeBuilding('grave', nearHall(-4, 0).x, nearHall(-4, 0).y);
     r.maxPop = getMaxPop();
+    settlers = settlers.filter(s => s.tool !== 'necro_staff'); // (the grave by itself: no necromancer working it, #253)
     const bones0 = stock.bones, rot0 = stock.rot;
     run(10);
     r.bonesMade = Math.round((stock.bones - bones0) * 10) / 10;
@@ -84,11 +85,13 @@ Object.assign(window.sim, (() => {
     const raised = settlers.filter(s => s.temporary !== undefined);
     const r = { afterFirstRound, recharged, raised: raised.length, corpsesLeft: corpses.length,
       bigZombies: raised.filter(s => s.type === 'big_zombie').length, popTaken: getCurrentPop() - 1 };
-    const rot0 = stock.rot;
+    loot = [];
     raised.forEach(s => { s.temporary = 0.01; });
+    settlers = [...settlers.filter(s => s.temporary !== undefined)]; // (nobody to pick it up)
     run(1);
-    r.crumbled = settlers.filter(s => s.temporary !== undefined).length === 0;
-    r.rotFromThem = Math.round(stock.rot - rot0 - 0.1);
+    r.crumbled = settlers.length === 0;
+    // on the ground where they were (#253): a little rot and bones each, more off a big one
+    r.leftOnGround = { piles: loot.length, rot: loot.reduce((a, l) => a + (l.yield.rot || 0), 0), bones: loot.reduce((a, l) => a + (l.yield.bones || 0), 0) };
     r.corpsesFromThem = corpses.length;
     return r;
   }
