@@ -125,7 +125,7 @@ test.describe('on a touch screen', () => {
     await openGame(page);
     await page.click('#play-button');
     const placed = await page.evaluate(() => {
-      for (const list of [trees, grassList, sticks, pebbles, berryBushes, boulders, naturalRocks, waterTiles]) list.length = 0;
+      window.sim.helpers.clearResources(); // (all of it: a cactus, ore or a boar on a tap tile raced on CI)
       resetTileIndex();
       stock.wood = 100;
       setMode('wall_wood');
