@@ -10,6 +10,7 @@ import { showNotification } from '../../../ui/index.js';
 import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
+import { isNight } from '../../world/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 
@@ -187,6 +188,7 @@ export function startNextWave() {
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
     dressForWave(enemy, def);
+    if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true; // (a night wave, #257)
     game.enemies.push(enemy);
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);
@@ -240,6 +242,7 @@ export function tickPortalWave(dt) {
     if (!enemy) continue;
     enemy.fromWave = true;
     dressForWave(enemy, GAME_CONFIG.enemies[id]);
+    if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true;
     game.enemies.push(enemy);
   }
 }
