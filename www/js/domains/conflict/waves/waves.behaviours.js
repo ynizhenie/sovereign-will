@@ -165,7 +165,7 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt) {
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1), life: ranged.arrowLife, fromEnemy: true, owner: en });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
-    en.attackCooldown = ranged.cooldown;
+    en.attackCooldown = en.shotCooldown || ranged.cooldown; // (Hard: a bow's rate in a settler's hands, #255)
     if (enemyDef.quiver && game.gameMode !== 'battle') en.arrows--;
   }
 }

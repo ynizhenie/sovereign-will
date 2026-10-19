@@ -71,7 +71,8 @@ function orderMade(category, id, auto, forSettler) {
     return true;
   }
   if (!auto) {
-    if (result === 'noSmithy') showNotification(t('craft.needSmithy', { name: item.label }), true);
+    if (result === 'locked') showNotification(t('cards.locked', { name: item.label }), true);
+    else if (result === 'noSmithy') showNotification(t('craft.needSmithy', { name: item.label }), true);
     else if (result === 'noWorkshop') showNotification(t('craft.needWorkshop', { name: item.label }), true);
     else showCostError(item.cost || {}, t('cost.notEnough'));
   }

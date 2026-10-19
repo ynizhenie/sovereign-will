@@ -13,6 +13,7 @@ export const game = {
   gameStarted: false,
   isPaused: false,
   gameDifficulty: 'normal', // GAME_CONFIG.difficulty key, set from the menu
+  cardMode: false,          // Endless with cards (#255, modes/endless/endless.cards.js), set from the menu
   mapSettings: { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }, // set from the menu, used by resetGame
   customMap: null,          // a saved map (modes/editor) Endless plays instead of a generated one
   worldSeed: null,          // the world's seed and its random sequence (rng.js)
@@ -82,7 +83,13 @@ export const game = {
   forests: [],          // forest centres, see placeForests()
   pendingRespawns: [],  // harvested resources waiting to grow back, see scheduleRespawn()
   /** @type {Object<string, number>} */
-  paths: {}             // 'gx,gy' -> how worn that tile's ground is, 0..1 (#248, world.paths.js)
+  paths: {},            // 'gx,gy' -> how worn that tile's ground is, 0..1 (#248, world.paths.js)
+  /** @type {Object<string, boolean>} */
+  unlocked: {},         // the cards picked (#255): '<category>:<id>' -> opened
+  cardsDue: 0,          // waves come whose card is still to be offered
+  cardsWave: 0,         // waves counted for cards
+  /** @type {string[] | null} */
+  cardOffer: null       // the cards offered now, waiting for a pick
 };
 
 // the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns

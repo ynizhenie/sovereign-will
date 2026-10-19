@@ -14,6 +14,7 @@ import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
+import { syncCards } from './endless.cards.js';
 
 // caches, worked out again after loading rather than saved
 export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
@@ -50,6 +51,7 @@ export function serializeGame() {
     armory: { ...game.armory },
     sides: JSON.parse(JSON.stringify(sides)),
     difficulty: game.gameDifficulty,
+    cardMode: game.cardMode,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
   };
@@ -76,6 +78,7 @@ export function loadGame(data) {
   Object.assign(sides.player, data.sides.player);
   Object.assign(sides.enemy, data.sides.enemy);
   game.gameDifficulty = data.difficulty;
+  game.cardMode = !!data.cardMode;
   setWorldSize(data.cols, data.rows);
   game.worldSeed = createWorldSeed(data.seed.value);
   game.worldSeed.setState(data.seed.state);
@@ -88,6 +91,7 @@ export function loadGame(data) {
   for (const en of game.enemies) if (goneEnemies[en.enemyKey]) en.enemyKey = goneEnemies[en.enemyKey];
   Object.assign(townHall, { store: {} }, data.townHall); // (older saves: nothing in it, filled again from the stock)
   game.piles = game.piles || [];
+  game.unlocked = game.unlocked || {}; game.cardsDue = game.cardsDue || 0; game.cardsWave = game.cardsWave || 0; game.cardOffer = game.cardOffer || null; // (older saves: no cards)
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
@@ -103,6 +107,7 @@ export function loadGame(data) {
   updateUnitCounts();
   game.gameStarted = true;
   setPaused(false);
+  syncCards(); // (an offer it was saved with shows again, #255)
   document.getElementById('main-menu').style.display = 'none';
 }
 

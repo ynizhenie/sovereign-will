@@ -10,6 +10,7 @@ import { faceTowards } from '../settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
+import { isLocked } from '../../../modes/endless/index.js';
 
 // Where it's made: by hand (madeBy: 'hand', at the town hall, #261), the smithy if there's iron in it,
 // otherwise the workshop
@@ -37,6 +38,7 @@ export function findWorkplace(place, from = townHall) {
 // Order one made: 'ordered', or why not ('noSmithy', 'noWorkshop', 'cantAfford'). Made, it waits in the
 // armory to be handed out (#248)
 export function orderCraft(category, id) {
+  if (isLocked(category, id)) return 'locked'; // (a card opens it, #255)
   const place = craftPlace(category, id);
   if (!findWorkplace(place)) return place === 'smithy' ? 'noSmithy' : 'noWorkshop'; // (by hand: always)
   const cost = GAME_CONFIG[category][id].cost || {};
