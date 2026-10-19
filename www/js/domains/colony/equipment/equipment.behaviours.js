@@ -6,6 +6,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { applyBowUnit, isBowWeapon, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
 import { addResources, moveSettlerToTownHall } from '../storage/index.js';
+import { says } from '../settlers/index.js';
 
 // Go to the town hall to swap weapon/tool/armour the player ordered
 export function equip(s, tick) {
@@ -25,6 +26,7 @@ export function equip(s, tick) {
         s.targetEquipment = null;
         return true;
       }
+      const handed = (equipment.tool !== undefined && equipment.tool !== 'none' && equipment.tool !== s.tool) || (equipment.weapon !== undefined && equipment.weapon !== 'fist' && equipment.weapon !== s.weapon);
       if (!equipment.armorOnly) {
         refundEquipment(s, {
           weapon: equipment.weapon !== undefined && equipment.weapon !== s.weapon,
@@ -44,6 +46,7 @@ export function equip(s, tick) {
       if (equipment.quiver !== undefined) s.quiver = equipment.quiver;
       // given a bow, the shield goes back to the stock; disarmed, it keeps it (#232: taking the spear off took
       // the shield too), of use again once it's given a melee weapon
+      if (handed) says(s, 'tool'); // (something new in its hands, #252)
       if (s.shield && isBowWeapon(s.weapon)) {
         addResources(GAME_CONFIG.gear.shield.cost);
         s.shield = false;

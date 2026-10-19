@@ -14,6 +14,8 @@ import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getLights, getDayPhase, isNight, nightProgress } from '../../world/index.js';
 import { faceTowards } from './settlers.draw.js';
+import { says, someoneSays } from './settlers.voices.js';
+import { playSound, playWorkSound } from '../../../app/index.js';
 
 const config = () => GAME_CONFIG.daytime;
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
@@ -47,8 +49,10 @@ export function nightReach(s) {
 export function tickNight() {
   if (game.gameMode !== 'endless') return;
   const night = isNight();
-  if (night && !game.wasNight) game.nightId = (game.nightId || 0) + 1;
+  if (night && !game.wasNight) { game.nightId = (game.nightId || 0) + 1; playSound('owl'); } // (#252)
   if (!night && game.wasNight) {
+    playSound('dawn');
+    someoneSays(game.settlers, getPlayerFaction().id, 'morning'); // (#252)
     for (const b of game.buildings) if (b.type === 'torch') b.lit = false;
     for (const s of game.settlers) {
       s.torchInHand = false;
@@ -68,6 +72,7 @@ export function tickNight() {
     if ((stock.firewood || 0) < config().torchFirewood) continue;
     takeStock('firewood', config().torchFirewood);
     s.torchInHand = true;
+    playSound('ignite', s);
     s.torchNight = game.nightId;
   }
 }
@@ -89,7 +94,7 @@ export function sleepAtNight(s, tick) {
   if (awake) {
     if (s.asleep) {
       s.asleep = false;
-      if (isNight() && waveDue()) s.orderBubble = { icon: 'warn', until: game.pathTick + 120 }; // (woken for the wave)
+      if (isNight() && waveDue()) { s.orderBubble = { icon: 'warn', until: game.pathTick + 120 }; playSound('alarm'); } // (woken for the wave)
       if (getPlayerFaction().eats) s.hunger = Math.min(s.hunger ?? 1, 1);
     }
     // on watch: walking the edge, or by the campfire (its pastime for the night)
@@ -115,7 +120,9 @@ export function sleepAtNight(s, tick) {
     else moveEntityTowards(s, s.sleepSpot.x, s.sleepSpot.y, s.speed, false, tick.dt);
     return true;
   }
+  if (!s.asleep && Math.random() < 0.3) says(s, 'sleep'); // (#252)
   s.asleep = true;
+  playWorkSound(s, 'snore', 3 + (s.id % 3)); // (#252)
   return true;
 }
 
@@ -140,6 +147,7 @@ export function lightTorches(s, tick) {
   if (Math.hypot(post.x - s.x, post.y - s.y) > 26) { moveEntityTowards(s, post.x, post.y, s.speed, false, tick.dt); return true; }
   faceTowards(s, post.x, post.y);
   post.lit = true;
+  playSound('ignite', post);
   s.carrying = null;
   return true;
 }
