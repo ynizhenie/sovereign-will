@@ -22,7 +22,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, captive?: Object } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -57,6 +57,8 @@
  * @property {Object | null} [catchCage] the cage it's for
  * @property {Object | null} [butcherTarget] the corpse it's cutting up (#250)
  * @property {number} [butcherTimer]
+ * @property {Object | null} [graveTarget] the grave a necromancer works (#253)
+ * @property {number} [graveTimer]
  * @property {boolean} [wantsMeal]  hungry: going for its meal (goEat, #248)
  * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
@@ -168,6 +170,7 @@
  * @property {Object<string, number>} [store] what a warehouse holds (#248)
  * @property {Object[]} [corpses]    a corpse pit's (#250)
  * @property {Object | null} [captive] who's in a cage (#250)
+ * @property {number} [rest]        seconds a grave rests before it can be worked again (#253)
  * @property {number} [fishTimer]
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
@@ -242,6 +245,8 @@
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
+ * @property {boolean} autoBlight   the undead's necromancers blight the nearest ground by themselves (#253)
+ * @property {boolean} autoBlightDone none left to blight: the switch is off for good
  * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
  * @property {number} portalTimer
  * @property {{ x: number, y: number, type: string, amount: number }[]} piles  stock on the ground by a full storage (#248)

@@ -49,7 +49,7 @@ const inBase = c => dist(c, townHall) < getBaseRadius() + TILE_SIZE;
 // A corpse on the way to the heap (before deliverCarrying would take it "home")
 export function carryCorpse(s, tick) {
   const load = s.carrying && s.carrying.type === 'corpse' ? s.carrying : null;
-  if (!load || load.forPit) return false; // (the demons': to a corpse pit, tendCorpses)
+  if (!load || load.forPit || load.forGrave) return false; // (the demons': to a corpse pit, tendCorpses; the undead's to a grave, #253)
   const heap = getCorpseHeap();
   s.patrolTarget = null;
   s.haulWalk = (s.haulWalk || 0) + tick.dt;

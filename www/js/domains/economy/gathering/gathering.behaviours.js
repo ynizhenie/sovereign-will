@@ -30,6 +30,7 @@ export function canSettlerHarvest(s, r, tick) {
   if (kind === 'boar') {
     if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
     if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool) || hasToolFamily(s.tool, 'hoe') || hasToolFamily(s.tool, 'medic')) return false;
+    if (hasToolFamily(s.tool, 'necro') && !((r.priority || 0) > 0)) return false; // a necromancer only one pointed at (#253)
     if (r.hidden || r.hideTarget) return false;
     let hasNothing = (s.tool === 'none' && s.weapon === 'fist');
     let hasRod = (s.tool === 'rod');
