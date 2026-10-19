@@ -11,6 +11,7 @@ import { isDefeated } from '../modes/endless/index.js';
 import { battle } from '../modes/battle/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../domains/factions/index.js';
+import { isNight } from '../domains/world/index.js';
 
 export const SOUND = {
   sfxVolume: 0.55, musicVolume: 0.3,
@@ -225,19 +226,27 @@ export const WORLD_SOUNDS = {
   chant: (o, t, chord, beat) => [12, 19].forEach(up => tone(o, t, { type: 'sawtooth', freq: midi(chord[0] + up), dur: beat * 2, gain: 0.03, attack: 0.1, filter: 900, q: 5 })),
   // (#252) drops of rain, a gust of wind
   rain: (o, t, chord, beat) => { for (let i = 0; i < 3; i++) tone(o, t + Math.random() * beat, { freq: 1800 + Math.random() * 1400, to: 900, dur: 0.05, gain: 0.025 }); },
-  wind: (o, t) => noise(o, t, { dur: 3, gain: 0.05, freq: 300, to: 900, q: 1.5, attack: 1.2 })
+  wind: (o, t) => noise(o, t, { dur: 3, gain: 0.05, freq: 300, to: 900, q: 1.5, attack: 1.2 }),
+  // (#252) an owl far off: two soft hoots
+  owl: (o, t) => [0, 0.45].forEach(d => tone(o, t + d, { type: 'sine', freq: 420, to: 380, dur: 0.35, gain: 0.04, attack: 0.06 }))
 };
 
 // Which tracks play: the colony's ambient (another after each wave) and the attacking faction's battle
 // track (one picked as each wave comes)
-export const musicPick = { ambient: '', ambientFaction: '', battle: '', fighting: false, ambientSince: 0 };
+export const musicPick = { ambient: '', ambientFaction: '', battle: '', fighting: false, ambientSince: 0, night: false };
 const AMBIENT_SECONDS = 180; // a new ambient after this long (#252), not one for the whole colony
 const pickOne = (list, not = '') => { const choice = list.filter(id => id !== not); return choice[Math.floor(Math.random() * choice.length)] || list[0]; };
 
+// The day's tracks or the night's (#252: the night has its own; only Endless has nights)
+const nightMusic = () => game.gameMode === 'endless' && isNight();
+const ambientsOf = faction => (nightMusic() && faction.music.nightAmbient) || faction.music.ambient;
+const battlesOf = faction => (nightMusic() && faction.music.nightBattle) || faction.music.battle;
+
 function ambientFor(faction) {
+  if (musicPick.night !== nightMusic()) { musicPick.night = nightMusic(); musicPick.ambient = ''; musicPick.battle = ''; } // (night fell, or day broke)
   if (musicPick.ambientFaction !== faction.id || !musicPick.ambient) {
     musicPick.ambientFaction = faction.id;
-    musicPick.ambient = pickOne(faction.music.ambient);
+    musicPick.ambient = pickOne(ambientsOf(faction));
     musicPick.ambientSince = performance.now() / 1000;
   }
   return musicPick.ambient;
@@ -245,14 +254,15 @@ function ambientFor(faction) {
 
 // fighting now or not: a new battle track as a fight starts, a new ambient as one ends
 function trackFor(fighting) {
-  if (fighting && !musicPick.fighting) musicPick.battle = pickOne(getEnemyFaction().music.battle);
+  ambientFor(getPlayerFaction()); // (the day's or the night's)
+  if (fighting && (!musicPick.fighting || !musicPick.battle)) musicPick.battle = pickOne(battlesOf(getEnemyFaction()));
   const now = performance.now() / 1000;
   if ((!fighting && musicPick.fighting) || (!fighting && musicPick.ambient && now - musicPick.ambientSince > AMBIENT_SECONDS)) {
-    musicPick.ambient = pickOne(getPlayerFaction().music.ambient, musicPick.ambient);
+    musicPick.ambient = pickOne(ambientsOf(getPlayerFaction()), musicPick.ambient);
     musicPick.ambientSince = now;
   }
   musicPick.fighting = fighting;
-  return fighting ? musicPick.battle || pickOne(getEnemyFaction().music.battle) : ambientFor(getPlayerFaction());
+  return fighting ? musicPick.battle || pickOne(battlesOf(getEnemyFaction())) : ambientFor(getPlayerFaction());
 }
 
 // Which music now, and how loud: { style: level }

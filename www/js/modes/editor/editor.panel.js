@@ -42,6 +42,7 @@ export function renderEditorPanel() {
   }
   document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('on', Number(b.dataset.brush) === editor.brush));
   document.getElementById('editor-drag').classList.toggle('on', editor.dragPaint);
+  document.querySelectorAll('[data-start-time]').forEach(b => b.classList.toggle('on', b.dataset.startTime === editor.startTime));
   setRichText(document.getElementById('editor-hint'), t(editor.dragPaint ? 'editor.hintDrag' : 'editor.hint'));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
   document.getElementById('editor-size').textContent = `${game.COLS}×${game.ROWS}`;
@@ -110,6 +111,7 @@ export function initEditorPanel() {
   onTap(document.getElementById('editor-redo'), redoEditor);
   onTap(document.getElementById('editor-play'), playEditorMap);
   onTap(document.getElementById('editor-clear'), clearEditorMap);
+  document.querySelectorAll('[data-start-time]').forEach(b => onTap(b, () => { editor.startTime = /** @type {string} */ (b.dataset.startTime); renderEditorPanel(); })); // (#257)
   document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
     const [side, delta] = /** @type {string} */ (button.dataset.resize).split(':');
     resizeEditorMap(side, Number(delta));

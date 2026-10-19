@@ -27,7 +27,7 @@ test('sound starts with the first tap; menu music in the menu, the ambient in En
     return { calm: one(calm, own.ambient), during: one(during, theirs.battle), tentsLeft: JSON.stringify(tentsLeft) === JSON.stringify(during),
       after: one(after, own.ambient), another: Object.keys(after)[0] !== Object.keys(calm)[0], layers: Object.keys(audio.layers).length };
   });
-  expect(r).toEqual({ calm: true, during: true, tentsLeft: true, after: true, another: true, layers: 31 }); // (the menu's and every faction's five and five, #252)
+  expect(r).toEqual({ calm: true, during: true, tentsLeft: true, after: true, another: true, layers: 61 }); // (the menu's and every faction's five and five, by day and by night, #252)
   await page.waitForTimeout(300);
   expect(errors).toEqual([]);
 });
@@ -57,15 +57,16 @@ test('sounds play where things happen on screen, not far off it, and not too oft
   expect(errors).toEqual([]);
 });
 
-test('every faction has five ambients and five battle tracks of its own, and each plays, phrase after phrase (#198, #252)', async ({ page }) => {
+test('every faction has five ambients and five battle tracks of its own, and as many for the night, and each plays, phrase after phrase (#198, #252)', async ({ page }) => {
   const errors = await openGame(page);
   await page.mouse.click(5, 5); // the first gesture: the audio starts
   await page.waitForTimeout(200);
   const r = await page.evaluate(() => {
     const out = {};
     for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
-      const tracks = [...faction.music.ambient, ...faction.music.battle];
-      out[faction.id] = { ambient: faction.music.ambient.length, battle: faction.music.battle.length, own: tracks.every(id => id.startsWith(faction.id + '_') && GAME_CONFIG.music[id]) };
+      const m = faction.music, tracks = [...m.ambient, ...m.battle, ...m.nightAmbient, ...m.nightBattle];
+      out[faction.id] = { ambient: m.ambient.length, battle: m.battle.length, nightAmbient: m.nightAmbient.length, nightBattle: m.nightBattle.length,
+        own: tracks.every(id => id.startsWith(faction.id + '_') && GAME_CONFIG.music[id]) && new Set(tracks).size === 20 };
       // two bars of each, scheduled into a silent node
       const sink = audio.ctx.createGain(); sink.gain.value = 0; sink.connect(audio.ctx.destination);
       for (const id of tracks) for (let step = 0; step < 32 * 8; step++) playTrack(GAME_CONFIG.music[id], sink, audio.ctx.currentTime + 0.1, step, 0.5);
@@ -79,7 +80,8 @@ test('every faction has five ambients and five battle tracks of its own, and eac
     return out;
   });
   expect(r).toEqual({
-    humans: { ambient: 5, battle: 5, own: true }, demons: { ambient: 5, battle: 5, own: true }, undead: { ambient: 5, battle: 5, own: true },
+    humans: { ambient: 5, battle: 5, nightAmbient: 5, nightBattle: 5, own: true }, demons: { ambient: 5, battle: 5, nightAmbient: 5, nightBattle: 5, own: true },
+    undead: { ambient: 5, battle: 5, nightAmbient: 5, nightBattle: 5, own: true },
     undeadWave: true
   });
   expect(errors).toEqual([]);

@@ -58,6 +58,7 @@ export const editor = {
   category: 'nature',
   brush: 1,     // 1, 3 or 5: a 3×3 (5×5) brush covers the tapped tile and the ones round it
   dragPaint: false, // a drag paints with the brush instead of moving the view (#255)
+  startTime: 'morning', // the time of day an Endless game on it starts at (#257): morning, day, evening, night
   name: '',     // the name it was opened or last saved as
   faction: 'humans' // whose map it is (the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
 };
@@ -306,10 +307,12 @@ export function startEditor(source) {
   if (source.map) {
     editor.name = source.map.name;
     editor.faction = source.map.faction || 'humans';
+    editor.startTime = source.map.startTime || 'morning';
     resetGame(source.map);
   } else {
     // a generated map uses the Endless seed and generator settings, at the size picked here
     editor.name = '';
+    editor.startTime = 'morning';
     const endlessSize = game.mapSettings;
     game.mapSettings = { cols: source.cols, rows: source.rows };
     applySeedFromUI();
