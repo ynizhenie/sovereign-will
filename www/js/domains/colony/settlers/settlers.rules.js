@@ -13,6 +13,7 @@ import { isDefeated } from '../../../modes/endless/index.js';
 import { battle } from '../../../modes/battle/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
+import { says } from './settlers.voices.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
@@ -73,7 +74,9 @@ export function spawnSettler(type = 'normal') {
     return;
   }
   payCost(settlerType.hireCost);
-  game.settlers.push(createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false }));
+  const hired = createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false });
+  game.settlers.push(hired);
+  says(hired, 'hired'); // (#252)
   showNotification(t('hire.done', { name: settlerType.label }), false);
   playSound('hire');
 }
@@ -119,8 +122,10 @@ export function upgradeToBig(target) {
 export function damageSettler(settler, amount, attacker = null) {
   let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
+  const wasWell = settler.hp >= settler.maxHp * 0.3;
   settler.hp -= damage;
   if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); shakeOnHit(settler); }
+  if (wasWell && settler.hp > 0 && settler.hp < settler.maxHp * 0.3) says(settler, 'hurt', true); // (#252)
   if (attacker) {
     settler.lastAttacker = attacker;
     settler.lastAttackedTick = game.pathTick;

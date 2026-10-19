@@ -1,5 +1,5 @@
 // The music (#198): every faction's tracks, made as they play by app/sounds.js (no sound files). Each
-// faction has three ambients for its colony and three battle tracks for its waves (factions.<id>.music).
+// faction has five ambients for its colony and five battle tracks for its waves (factions.<id>.music, #252).
 //
 // A track: bpm; chords, one a bar (MIDI notes: 60 is middle C); and its parts, each optional:
 // - pad: the bar's chord held (wave, gain, attack s, length in beats; filter: lowpass Hz; detune: a second
@@ -10,7 +10,10 @@
 // - drums: per eighth 'x' (or 'X', louder) in a string of 8 for kick, snare, hat and tom; fill: a tom run
 //   at the end of the last bar;
 // - extra: a sound of the faction's world now and then (chance per eighth): birds, crickets, toll (a bell),
-//   whispers, crackle (embers), growl, chant.
+//   whispers, crackle (embers), growl, chant, rain, wind.
+// - chordsB (#252): a second progression; a track's phrases (its chords once through) go A A B A.
+// Every track also varies as it plays (playTrack, #252): its key moves every few phrases, some phrases
+// drop parts (a quieter breakdown), and its lead plays a little motif that comes back through a phrase.
 
 export const musicConfig = {
   music: {
@@ -18,7 +21,20 @@ export const musicConfig = {
     humans_meadow: { bpm: 60, chords: [[50, 57, 62, 64], [46, 53, 58, 62], [53, 57, 60, 64], [48, 55, 60, 62]],
       pad: { wave: 'sine', gain: 0.1, attack: 1.4, length: 4.5 },
       lead: { wave: 'triangle', gain: 0.08, chance: 0.1, length: 1.8, scale: [74, 76, 77, 79, 81] },
+      chordsB: [[45, 52, 57, 60], [46, 53, 58, 62], [48, 55, 60, 64], [50, 57, 62, 65]],
       extra: { kind: 'birds', chance: 0.025 } },
+    // (#252) the harvest: bright, plucked, a little dance in it
+    humans_harvest: { bpm: 92, chords: [[48, 52, 55], [53, 57, 60], [55, 59, 62], [48, 52, 55]], chordsB: [[45, 48, 52], [53, 57, 60], [50, 53, 57], [55, 59, 62]],
+      pad: { wave: 'sine', gain: 0.06, attack: 0.4, length: 4 },
+      arp: { wave: 'triangle', gain: 0.055, pattern: [0, 2, 1, 2, 0, 2, 1, 2], octave: 12, length: 0.6 },
+      bass: { wave: 'triangle', gain: 0.09, pattern: [0, null, 7, null, 0, null, 7, 5], octave: -12, length: 0.9 },
+      lead: { wave: 'triangle', gain: 0.06, chance: 0.12, length: 0.8, scale: [72, 74, 76, 79, 81, 84] },
+      extra: { kind: 'birds', chance: 0.02 } },
+    // (#252) rain on the roofs: slow, minor, the drops
+    humans_rain: { bpm: 54, chords: [[45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 59], [40, 47, 52, 55]], chordsB: [[38, 45, 50, 53], [41, 48, 53, 57], [43, 50, 55, 59], [45, 52, 57, 60]],
+      pad: { wave: 'sine', gain: 0.09, attack: 1.8, length: 4.6 },
+      lead: { wave: 'sine', gain: 0.06, chance: 0.1, length: 2.4, scale: [69, 71, 72, 74, 76] },
+      extra: { kind: 'rain', chance: 0.2 } },
     humans_village: { bpm: 78, chords: [[55, 59, 62], [60, 64, 67], [52, 55, 59], [50, 54, 57]],
       pad: { wave: 'sine', gain: 0.07, attack: 0.6, length: 4.2 },
       arp: { wave: 'triangle', gain: 0.06, pattern: [0, 1, 2, 1, 0, 1, 2, 1], octave: 12, length: 0.8 },
@@ -42,6 +58,17 @@ export const musicConfig = {
       bass: { wave: 'sawtooth', gain: 0.07, pattern: [0, null, 0, 0, 0, null, 0, 0], octave: -12, length: 0.25, filter: 700 },
       lead: { wave: 'sawtooth', gain: 0.04, chance: 0.25, length: 0.5, filter: 1800, scale: [76, 79, 81, 83, 86] },
       drums: { kick: 'x..xx..x', snare: '..x...x.', hat: 'xxxxxxxx' } },
+    // (#252) the shield wall: slow and heavy, the drums as steps
+    humans_shieldwall: { bpm: 96, chords: [[45, 48, 52], [43, 47, 50], [41, 45, 48], [40, 44, 47]], chordsB: [[38, 41, 45], [40, 44, 47], [41, 45, 48], [43, 47, 50]],
+      pad: { wave: 'sawtooth', gain: 0.04, attack: 0.3, length: 3.8, filter: 800 },
+      bass: { wave: 'sawtooth', gain: 0.09, pattern: [0, null, null, 0, 0, null, null, null], octave: -12, length: 0.5, filter: 500 },
+      drums: { kick: 'X...X...', snare: '....x...', tom: '......xx', fill: true } },
+    // (#252) the banner forward: a fanfare over a quick march
+    humans_banner: { bpm: 128, chords: [[48, 52, 55], [53, 57, 60], [55, 59, 62], [48, 52, 55]], chordsB: [[45, 48, 52], [50, 53, 57], [55, 59, 62], [55, 59, 62]],
+      pad: { wave: 'square', gain: 0.025, attack: 0.05, length: 1.8, filter: 1600 },
+      bass: { wave: 'sawtooth', gain: 0.07, pattern: [0, null, 0, null, 7, null, 7, null], octave: -12, length: 0.35, filter: 700 },
+      lead: { wave: 'square', gain: 0.035, chance: 0.3, length: 0.35, filter: 2400, scale: [72, 76, 79, 84, 88] },
+      drums: { kick: 'x...x...', snare: '..x.x.xx', hat: 'x.x.x.x.' } },
 
     // ---- the undead: organs and bells, minor and diminished, fog and whispers
     undead_crypt: { bpm: 50, chords: [[48, 51, 55], [44, 48, 51], [46, 50, 53], [43, 47, 50]],
@@ -69,6 +96,28 @@ export const musicConfig = {
       bass: { wave: 'sine', gain: 0.14, pattern: [0, null, null, null, null, null, null, null], octave: -24, length: 3 },
       drums: { kick: 'x.......', tom: 'x..x..x.' },
       extra: { kind: 'toll', chance: 0.1 } },
+    // (#252) mist over the marsh: no beat, a wind and far bells
+    undead_mist: { bpm: 44, chords: [[47, 50, 53], [46, 49, 53], [44, 47, 50], [45, 48, 51]], chordsB: [[43, 46, 50], [44, 47, 50], [46, 49, 53], [47, 50, 53]],
+      pad: { wave: 'triangle', gain: 0.06, attack: 2.2, length: 4.8, filter: 800 },
+      lead: { wave: 'sine', gain: 0.035, chance: 0.08, length: 3, scale: [83, 86, 89, 92] },
+      extra: { kind: 'wind', chance: 0.04 } },
+    // (#252) the ossuary: bones for chimes, a slow arpeggio down
+    undead_ossuary: { bpm: 64, chords: [[45, 48, 52], [44, 47, 52], [43, 46, 50], [42, 45, 50]], chordsB: [[41, 44, 48], [43, 46, 50], [44, 47, 52], [40, 44, 47]],
+      pad: { wave: 'square', gain: 0.035, attack: 1, length: 4.4, filter: 650 },
+      arp: { wave: 'triangle', gain: 0.05, pattern: [2, null, 1, null, 0, null, 1, null], octave: 24, length: 1.2 },
+      extra: { kind: 'toll', chance: 0.03 } },
+    // (#252) the horde: a shuffling, driving pulse
+    undead_horde: { bpm: 110, chords: [[45, 48, 51], [44, 47, 50], [42, 45, 48], [44, 47, 50]], chordsB: [[41, 44, 47], [42, 45, 48], [44, 47, 50], [45, 48, 51]],
+      pad: { wave: 'square', gain: 0.03, attack: 0.1, length: 2, filter: 700 },
+      bass: { wave: 'sawtooth', gain: 0.09, pattern: [0, 0, null, 0, 0, null, 1, null], octave: -12, length: 0.25, filter: 450 },
+      drums: { kick: 'x..x..x.', snare: '....x...', tom: '.x....x.' },
+      extra: { kind: 'whispers', chance: 0.02 } },
+    // (#252) a requiem: an organ and a choir over a slow drum
+    undead_requiem: { bpm: 72, chords: [[50, 53, 57, 60], [48, 51, 55, 58], [46, 50, 53, 57], [45, 49, 52, 55]], chordsB: [[43, 46, 50, 53], [45, 49, 52, 55], [46, 50, 53, 57], [45, 49, 52, 57]],
+      pad: { wave: 'square', gain: 0.04, attack: 0.6, length: 4.2, filter: 900, detune: 0.004 },
+      bass: { wave: 'sine', gain: 0.12, pattern: [0, null, null, null, 0, null, null, null], octave: -24, length: 1.8 },
+      drums: { kick: 'X.......', tom: '....x...' },
+      extra: { kind: 'chant', chance: 0.04 } },
 
     // ---- the demons: low drones and tritones, embers and growls, pounding drums
     demons_embers: { bpm: 60, chords: [[41, 42, 48], [41, 44, 48], [42, 46, 49], [40, 44, 47]],
@@ -93,6 +142,27 @@ export const musicConfig = {
       bass: { wave: 'sawtooth', gain: 0.07, pattern: [0, 0, 0, 0, 6, 6, 1, 1], octave: -12, length: 0.22, filter: 900 },
       lead: { wave: 'sawtooth', gain: 0.035, chance: 0.2, length: 0.3, filter: 2000, scale: [71, 72, 77, 78, 83] },
       drums: { kick: 'x.x.x.x.', snare: '..x...x.', hat: 'xxxxxxxx' },
-      extra: { kind: 'crackle', chance: 0.05 } }
+      extra: { kind: 'crackle', chance: 0.05 } },
+    // (#252) ash falling: a slow drone that beats against itself
+    demons_ashfall: { bpm: 50, chords: [[40, 46, 52], [39, 45, 51], [41, 47, 53], [40, 46, 52]], chordsB: [[37, 43, 49], [38, 44, 50], [39, 45, 51], [41, 47, 53]],
+      pad: { wave: 'sawtooth', gain: 0.045, attack: 2, length: 4.8, filter: 450, detune: 0.012 },
+      lead: { wave: 'sine', gain: 0.04, chance: 0.06, length: 2.5, scale: [76, 77, 82, 83] },
+      extra: { kind: 'crackle', chance: 0.08 } },
+    // (#252) magma: a bubbling bass under a dark pad
+    demons_magma: { bpm: 66, chords: [[36, 43, 48], [37, 44, 49], [36, 42, 48], [35, 42, 47]], chordsB: [[33, 40, 45], [34, 41, 46], [36, 43, 48], [37, 44, 49]],
+      pad: { wave: 'sawtooth', gain: 0.035, attack: 1.4, length: 4.5, filter: 380 },
+      bass: { wave: 'sine', gain: 0.12, pattern: [0, null, 0, null, 1, null, 0, null], octave: 0, length: 0.7 },
+      extra: { kind: 'growl', chance: 0.03 } },
+    // (#252) the ritual: chanting over toms
+    demons_ritual: { bpm: 104, chords: [[38, 45, 50], [39, 46, 51], [38, 44, 50], [37, 44, 49]], chordsB: [[35, 42, 47], [36, 43, 48], [38, 45, 50], [39, 46, 51]],
+      pad: { wave: 'sawtooth', gain: 0.03, attack: 0.4, length: 4, filter: 600 },
+      drums: { kick: 'x..x....', snare: '......x.', tom: 'x.x.xx.x' },
+      extra: { kind: 'chant', chance: 0.08 } },
+    // (#252) rampage: fast and furious, a screaming lead
+    demons_rampage: { bpm: 164, chords: [[40, 43, 47], [41, 44, 48], [43, 46, 50], [41, 44, 48]], chordsB: [[38, 41, 45], [40, 43, 47], [41, 44, 48], [46, 49, 53]],
+      bass: { wave: 'sawtooth', gain: 0.075, pattern: [0, 0, 12, 0, 0, 1, 0, 6], octave: -12, length: 0.2, filter: 1000 },
+      lead: { wave: 'sawtooth', gain: 0.035, chance: 0.28, length: 0.25, filter: 2400, scale: [76, 77, 79, 82, 83, 88] },
+      drums: { kick: 'xxxxxxxx', snare: '..x...x.', hat: 'x.x.x.x.' },
+      extra: { kind: 'growl', chance: 0.02 } }
   }
 };
