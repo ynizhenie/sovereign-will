@@ -13,9 +13,9 @@ import { camera, clampCamera, ctx, onTap, t } from '../../engine/platform/index.
 import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, game, getGridPos, rand, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../engine/movement/index.js';
 import { addResources, formatCost, moveSettlerToTownHall } from '../../domains/colony/storage/index.js';
-import { faceTowards, getRecentAttacker } from '../../domains/colony/settlers/index.js';
-import { getWeaponStats, isBowWeapon } from '../../domains/colony/equipment/index.js';
-import { hasLineOfFire, performAttack } from '../../domains/conflict/combat/index.js';
+import { faceTowards } from '../../domains/colony/settlers/index.js';
+import { isBowWeapon } from '../../domains/colony/equipment/index.js';
+import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../domains/factions/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
@@ -153,7 +153,7 @@ export function startRaid(party) {
   Object.assign(raid, { phase: 'march', side: game.raidCamp.side, raiders: party, auto: false, won: false, timer: 0 });
   raid.gather = edgeSpot(raid.side, party[0]);
   party.forEach((s, i) => {
-    s.raider = true; s.raidTarget = null; s.isPossessed = false;
+    s.raider = true; s.isPossessed = false;
     s.raidSpot = lineUp(raid.gather, raid.side, i);
   });
   game.selectedSettler = null;
@@ -193,7 +193,7 @@ export function enterCamp() {
   const entry = edgeSpot(OPPOSITE[raid.side]);
   party.forEach((s, i) => {
     Object.assign(s, lineUp(entry, OPPOSITE[raid.side], i));
-    s.raidSpot = { x: s.x, y: s.y }; s.raidTarget = null; s.path = null; s.pathTarget = null; s.carrying = null;
+    s.orderSpot = { x: s.x, y: s.y }; s.orderTarget = null; s.path = null; s.pathTarget = null; s.carrying = null;
   });
   game.settlers = party;
   raid.raiders = party;
@@ -298,36 +298,11 @@ export function campDefenders(army) {
 
 // ---- Orders in the camp
 
-// A tap in the camp: a raider picks it (again: not); an enemy, a tent or the outpost is the target of the
-// picked one, or of everyone with none picked; a spot of ground, where the picked one goes to stand.
-// True: the tap was the raid's
+// A tap in the camp: orders (see combat.orders.js). True: the tap was the raid's
 export function raidTap(x, y) {
   if (!isInCamp()) return false;
-  const near = (o, r) => Math.hypot(o.x - x, o.y - y) < r;
-  const raider = nearest({ x, y }, game.settlers.filter(s => near(s, (s.visualRadius || s.radius) + 8))); // (the nearest: they stand close)
-  if (raider) { game.selectedSettler = game.selectedSettler === raider ? null : raider; return true; }
-  const target = game.enemies.find(en => near(en, en.radius + 12)) || game.enemyTents.find(et => near(et, et.outpost ? 30 : 20));
-  const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
-  if (target) {
-    for (const s of picked ? [picked] : game.settlers) s.raidTarget = target;
-    target.markedTarget = true;
-    return true;
-  }
-  if (picked) { picked.raidTarget = null; picked.raidSpot = { x, y }; }
+  orderTap(x, y);
   return true;
-}
-
-const alive = o => (game.enemies.includes(o) && o.hp > 0) || game.enemyTents.includes(o);
-const nearest = (s, list) => list.reduce((best, o) => (!best || dist(o, s) < dist(best, s) ? o : best), null);
-
-// Walk up to a target and strike it (an archer: from where it has a clear shot; a tent from its reach)
-function strike(s, target, dt) {
-  const combat = getWeaponStats(s, 'combat');
-  const tent = game.enemyTents.includes(target);
-  const reach = tent ? combat.tentReach + (target.outpost ? 10 : 0) : combat.approach + (target.radius || 10);
-  const bow = isBowWeapon(s.weapon);
-  if (dist(s, target) > reach || (bow && !hasLineOfFire(s.x, s.y, target.x, target.y))) moveEntityTowards(s, target.x, target.y, s.speed, false, dt);
-  else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y); }
 }
 
 // The rest of the base while a party is out on a raid: it rests by the hall
@@ -351,19 +326,7 @@ export function raidOrders(s, tick) {
     if (dist(s, townHall) > townHall.radius + 40) moveSettlerToTownHall(s, s.speed, dt);
     return true;
   }
-  // in the camp
-  if (s.raidTarget && !alive(s.raidTarget)) s.raidTarget = null;
-  const outOfArrows = isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0);
-  const attacker = getRecentAttacker(s);
-  const hitter = attacker && game.enemies.includes(attacker) ? attacker : null;
-  const close = nearest(s, game.enemies.filter(en => en.hp > 0 && dist(en, s) < 90));
-  let target = null;
-  if (!outOfArrows) {
-    if (raid.auto) target = s.raidTarget || hitter || nearest(s, game.enemies.filter(en => en.hp > 0)) || nearest(s, game.enemyTents);
-    else target = s.raidTarget || hitter || close;
-  }
-  if (target) { strike(s, target, dt); return true; }
-  if (s.raidSpot && dist(s, s.raidSpot) > 8) moveEntityTowards(s, s.raidSpot.x, s.raidSpot.y, s.speed, false, dt);
+  fightByOrders(s, dt, raid.auto); // (in the camp)
   return true;
 }
 
@@ -396,7 +359,7 @@ function restoreHome(survivors) {
   raid.gather = edgeSpot(raid.side);
   survivors.forEach((s, i) => {
     Object.assign(s, lineUp(raid.gather, raid.side, i));
-    s.path = null; s.pathTarget = null; s.raidTarget = null;
+    s.path = null; s.pathTarget = null; clearOrders(s);
   });
   game.settlers = [...game.settlers, ...survivors];
   game.selectedSettler = null;
@@ -436,14 +399,14 @@ function failRaid() {
 
 // Over: home (or never left). Won: the zone goes and the next wave waits twice as long
 export function endRaid(won) {
-  for (const s of raid.raiders) { delete s.raider; delete s.raidSpot; delete s.raidTarget; }
+  for (const s of raid.raiders) { delete s.raider; delete s.raidSpot; clearOrders(s); }
   if (raid.phase === 'return' || raid.phase === 'fight') game.raidCamp = null;
   if (won) game.waveTimer += game.waveInterval;
   resetRaidState();
 }
 
 function resetRaidState() {
-  for (const s of game.settlers) { delete s.raider; delete s.raidSpot; delete s.raidTarget; }
+  for (const s of game.settlers) { delete s.raider; delete s.raidSpot; clearOrders(s); }
   Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0 });
   updateRaidBar();
 }

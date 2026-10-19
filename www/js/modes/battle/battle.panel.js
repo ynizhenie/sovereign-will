@@ -1,22 +1,27 @@
 // The battle's panel: categories, factions, what to place, armour and shield; its buttons
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, hidePlacing, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
+import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, showPlacing, toggleSheet } from '../../ui/index.js';
+import { enemyFactionOf, enemyStats } from '../../domains/conflict/waves/index.js';
+import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
-import { battle, clearBattleSide, startBattleMode } from './battle.setup.js';
+import { battle, clearBattleSide, setBattleDifficulty, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
-  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('active', !!battle[/** @type {'armor' | 'shield'} */ (b.dataset.battleGear)]));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield'} */ (b.dataset.battleGear)]));
+  document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
+  document.querySelectorAll('[data-battle-auto]').forEach(b => b.classList.toggle('on', (b.dataset.battleAuto === 'on') === battle.auto));
+  document.getElementById('battle-auto').classList.toggle('on', battle.auto);
   // the faction sub-tabs
   const factions = document.getElementById('battle-factions');
   factions.innerHTML = '';
   for (const f of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
     const b = document.createElement('button');
-    b.className = 'fps-option' + (battle.faction === f.id ? ' active' : '');
+    b.className = 'btn sub-tab' + (battle.faction === f.id ? ' on' : '');
     b.dataset.battleFaction = f.id;
     b.textContent = f.label;
     onTap(b, () => setBattleFaction(f.id));
@@ -27,26 +32,25 @@ export function renderBattlePanel() {
   presets.innerHTML = '';
   // picked: the sheet steps aside for the field, the chip says what a tap places
   let chosen = '';
-  const add = (id, active, label, pick) => {
+  // a tile (as Endless's, #255): its icons and name, and under them what it is in a fight
+  const add = (id, active, icons, name, stats, pick) => {
     const button = document.createElement('button');
-    button.className = 'btn' + (active ? ' active' : '');
+    button.className = 'btn tile' + (active ? ' active' : '');
     button.dataset.preset = id;
-    setRichText(button, label);
+    button.innerHTML = `<span class="tile-name">${icons.map(i => iconHtml(i)).join('')} <b>${escapeHtml(name)}</b></span> <span class="tile-cost">${richText(stats)}</span>`;
     onTap(button, () => { pick(); closeSheet(); renderBattlePanel(); });
     presets.appendChild(button);
-    if (active) chosen = button.innerHTML;
+    if (active) chosen = /** @type {HTMLElement} */ (button.querySelector('.tile-name')).innerHTML;
   };
   if (battle.category === 'buildings') {
     for (const id of getBattleBuildings()) {
       const def = getDefinition('buildings', id);
-      add(id, battle.building === id, `[[${def.icon}]] ${def.label}`, () => { battle.building = id; });
+      add(id, battle.building === id, [def.icon], def.label, `[[heart]]${(def.build && def.build.hp) || ''}`, () => { battle.building = id; });
     }
   } else {
     for (const preset of getBattlePresetsShown()) {
-      const def = preset.enemy ? GAME_CONFIG.enemies[preset.enemy] : preset;
-      const weapon = getDefinition('weapons', def.weapon);
-      const icon = preset.tool ? getDefinition('tools', preset.tool).icon : weapon && weapon.icon;
-      add(preset.id, battle.preset === preset.id, `${icon ? `[[${icon}]]` : ''} ${battlePresetLabel(preset)}`, () => { battle.preset = preset.id; });
+      const { icons, hp, damage } = presetStats(preset);
+      add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(preset), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
     }
   }
   panel.dataset.phase = battle.phase;
@@ -54,6 +58,23 @@ export function renderBattlePanel() {
   if (battle.phase === 'setup') showPlacing(chosen);
   else { hidePlacing(); closeSheet(); }
   updateBattleTop();
+}
+
+// What a unit is: its icons (kind and weapon or tool), hp, and damage (a hit's; an enemy's per second in
+// melee, an arrow's), with the armour picked and the difficulty
+function presetStats(preset) {
+  if (preset.enemy) {
+    const def = GAME_CONFIG.enemies[preset.enemy], units = enemyFactionOf(preset.enemy).units || ['normal', 'big'];
+    const kind = GAME_CONFIG.settlerTypes[def.type === 'big' ? units[1] || units[0] : units[0]];
+    const weapon = getDefinition('weapons', def.weapon), tool = def.tool && getDefinition('tools', def.tool);
+    const look = def.necromancer ? 'necromancer' : kind && kind.icon;
+    return { icons: [look, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...enemyStats(preset.enemy) };
+  }
+  const kind = GAME_CONFIG.settlerTypes[preset.type], weapon = getDefinition('weapons', preset.weapon);
+  const tool = preset.tool && getDefinition('tools', preset.tool);
+  const hit = preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
+  const hp = kind.hp + (battle.armor && !isBowWeapon(preset.weapon) ? GAME_CONFIG.gear.armor.hpBonus : 0);
+  return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp, damage: Math.round(hit * kind.damageMultiplier) };
 }
 
 // The top bar's middle: placing, fighting or who won, and how many stand on each side
@@ -101,4 +122,8 @@ export function initBattlePanel() {
     toggleSheet('battle', b.dataset.battleCategory);
   }));
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { const gear = /** @type {'armor' | 'shield'} */ (b.dataset.battleGear); battle[gear] = !battle[gear]; renderBattlePanel(); }));
+  // the battle's settings (#255): the difficulty, the auto battle (also by Fight! once it's on)
+  document.querySelectorAll('[data-battle-difficulty]').forEach(b => onTap(b, () => { setBattleDifficulty(b.dataset.battleDifficulty); renderBattlePanel(); }));
+  document.querySelectorAll('[data-battle-auto]').forEach(b => onTap(b, () => { battle.auto = b.dataset.battleAuto === 'on'; renderBattlePanel(); }));
+  onTap(document.getElementById('battle-auto'), () => { battle.auto = !battle.auto; renderBattlePanel(); });
 }

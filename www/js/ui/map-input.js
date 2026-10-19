@@ -1,7 +1,7 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
-import { canvas, isTap, isTouchScreen, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
+import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
@@ -17,12 +17,14 @@ import { toggleBlightZone } from '../domains/factions/undead/index.js';
 import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
+import { orderTap } from '../domains/conflict/combat/index.js';
 
 export function handleCanvasClick() {
   // battle mode: placing while setting up; in a fight, orders for a possessed unit
   if (game.gameMode === 'battle') {
     if (battle.phase === 'setup') battleTap(mouse.x, mouse.y);
     else if (battle.phase === 'fight' && getPossessed()) orderPossessed(getPossessed(), mouse.x, mouse.y);
+    else if (battle.phase === 'fight') orderTap(mouse.x, mouse.y); // (orders, #255)
     return;
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
@@ -307,6 +309,7 @@ export function initMapInput() {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     if (e.pointerType === 'touch' && !isTap) return;
+    if (painted) return; // (a stroke of the editor's brush, not a tap, #255)
 
     closeOverlays(); // a tap on the map closes the open sheet (a drag to look around doesn't)
     processInteraction(e.clientX, e.clientY);

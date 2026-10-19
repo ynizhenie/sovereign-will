@@ -20,7 +20,8 @@ export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean,
  *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean, shield?: boolean }[],
- *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null }} */
+ *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
+ *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'own',    // the panel's category
@@ -33,7 +34,10 @@ export const battle = {
   winner: null,       // green / red / draw
   resultTimer: 0,
   nextId: 1,
-  savedMapSettings: null
+  savedMapSettings: null,
+  difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: on Hard the red units are as strong as yours
+  auto: true,           // (#255) yours fight by themselves; off: they hold, and go where they're told
+  savedDifficulty: null // the Endless choice, back when the battle's left
 };
 
 // The midline: left of it is green, right of it red
@@ -97,6 +101,8 @@ export function resetBattleUnits() {
 
 export function startBattleMode() {
   game.gameMode = 'battle';
+  battle.savedDifficulty = game.gameDifficulty;
+  game.gameDifficulty = battle.difficulty;
   battle.phase = 'setup';
   battle.lineup = [];
   battle.winner = null;
@@ -114,6 +120,7 @@ export function leaveBattleMode() {
   battle.phase = 'off';
   document.body.classList.remove('battle-mode');
   if (battle.savedMapSettings) game.mapSettings = battle.savedMapSettings; // the Endless choice comes back
+  if (battle.savedDifficulty) game.gameDifficulty = battle.savedDifficulty;
   exitToMainMenu();
 }
 
@@ -137,6 +144,13 @@ export function battleTap(x, y) {
       : { presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield });
   }
   resetBattleUnits();
+}
+
+// The difficulty (#255): the red side made again with it
+export function setBattleDifficulty(level) {
+  battle.difficulty = level;
+  game.gameDifficulty = level;
+  if (battle.phase === 'setup') resetBattleUnits();
 }
 
 // Take away everything placed on one side
