@@ -29,7 +29,7 @@ export function serializeMap(name) {
     resources[kind] = game[def.list].filter(r => !r.oreSpawner).map(tile);
   }
   return {
-    name, cols: game.COLS, rows: game.ROWS, faction: editor.faction,
+    name, cols: game.COLS, rows: game.ROWS, faction: editor.faction, startTime: editor.startTime,
     hall: [townHall.x, townHall.y],
     water: game.waterTiles.map(tile),
     sand: game.desertTiles.map(tile),
@@ -67,6 +67,9 @@ export function loadCustomMap(map) {
     game.buildings.push(makeBuilt(type, p.x, p.y));
   }
   placeBeaches();
+  // the time of day it starts at (#257): a little into that part of the day; the morning as ever by default
+  const c = GAME_CONFIG.daytime, startAt = { morning: c.morning / 2, day: c.morning + 1, evening: c.morning + c.day + 1, night: c.morning + c.day + c.evening + 1 };
+  game.dayTime = startAt[map.startTime] ?? startAt.morning;
   camera.x = townHall.x; camera.y = townHall.y;
 }
 
