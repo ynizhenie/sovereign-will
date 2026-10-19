@@ -44,7 +44,9 @@ export function drawLoot() {
     const [category, id] = key ? key.split(':') : [];
     const item = key && GAME_CONFIG[category] && GAME_CONFIG[category][id];
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(pile.x, pile.y + 5, 8, 3, 0, 0, Math.PI * 2); ctx.fill();
-    drawIcon(ctx, item ? item.icon : 'bundle', pile.x, pile.y, 18);
+    // (no thing in it: what it yields, as a crumbled zombie's rot and bones, #253)
+    const res = !item && Object.keys(pile.yield || {}).find(id => GAME_CONFIG.resources[id]);
+    drawIcon(ctx, item ? item.icon : res ? GAME_CONFIG.resources[res].icon : 'bundle', pile.x, pile.y, 18);
   }
 }
 

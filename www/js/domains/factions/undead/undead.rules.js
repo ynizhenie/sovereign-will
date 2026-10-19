@@ -78,7 +78,8 @@ export function toggleBlightZone(x, y, gx, gy, clearOnly) {
   game.blightZones.push({ x, y, done: false });
 }
 
-// Raised zombies crumble when their time is up; the player's leave rot behind
+// Raised zombies crumble when their time is up; the player's leave a little rot and bones on the ground
+// where they were (#253), picked up like loot
 export function updateTemporaryZombies(dt) {
   // gone at once: no corpse, no reward, and nothing can heal them back (a necromancer would)
   const crumbled = unit => unit.temporary !== undefined && (unit.temporary -= dt) <= 0;
@@ -86,16 +87,23 @@ export function updateTemporaryZombies(dt) {
   if (gone.length) {
     game.settlers = game.settlers.filter(s => !gone.includes(s));
     if (game.selectedSettler && gone.includes(game.selectedSettler)) game.selectedSettler = null;
-    stock.rot += gone.length * GAME_CONFIG.temporaryZombie.rot;
+    const z = GAME_CONFIG.temporaryZombie;
+    for (const s of gone) {
+      const times = s.type === 'big_zombie' ? z.bigTimes : 1;
+      game.loot.push({ x: s.x, y: s.y, hp: 1, maxHp: 1, priority: 0, yield: { rot: z.rot * times, bones: z.bones * times }, items: [] });
+    }
   }
   game.enemies = game.enemies.filter(en => !crumbled(en));
 }
 
-// A corpse on blighted ground rises as a temporary zombie after a while
+// A corpse on blighted ground rises as a temporary zombie after a while; not one lying by a grave: it's
+// there to keep the grave working (#253)
 export function raiseOnBlight(dt) {
   if (sides.player.faction !== 'undead') return;
+  const r = (GAME_CONFIG.graveWork.nearTiles + 0.5) * TILE_SIZE;
+  const graves = game.buildings.filter(b => b.type === 'grave');
   for (const corpse of [...game.corpses]) {
-    if (!isBlighted(corpse.x, corpse.y)) continue;
+    if (!isBlighted(corpse.x, corpse.y) || graves.some(g => Math.max(Math.abs(corpse.x - g.x), Math.abs(corpse.y - g.y)) <= r)) continue;
     corpse.blightAge = (corpse.blightAge || 0) + dt;
     if (corpse.blightAge >= GAME_CONFIG.blight.riseSeconds) raiseTemporaryZombie(corpse);
   }
@@ -156,16 +164,14 @@ export function enemyNecromancy(en, necro, dt) {
   return true;
 }
 
-// The undead make bones by themselves: their graveyard and each grave; and rot, from each grave
+// The undead's graveyard makes a little bones and rot by itself (graves don't any more: a necromancer works
+// them, workGrave, #253); and a grave's rest runs down
 export function makeBonesAndRot(dt) {
   const bonesRate = getPlayerFaction().bonesPerSecond;
-  if (bonesRate && game.gameMode === 'endless') {
-    stock.bones += dt * (bonesRate.hall + game.buildings.filter(b => b.type === 'grave').length * bonesRate.grave);
-  }
+  if (bonesRate && game.gameMode === 'endless') stock.bones += dt * bonesRate.hall;
   const rotRate = getPlayerFaction().rotPerSecond;
-  if (rotRate && game.gameMode === 'endless') {
-    stock.rot += dt * (rotRate.hall + game.buildings.filter(b => b.type === 'grave').length * rotRate.grave);
-  }
+  if (rotRate && game.gameMode === 'endless') stock.rot += dt * rotRate.hall;
+  for (const b of game.buildings) if (b.type === 'grave' && (b.rest || 0) > 0) b.rest = (b.rest || 0) - dt;
 }
 
 // Blighted zones taken away fade

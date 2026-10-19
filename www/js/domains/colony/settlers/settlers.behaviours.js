@@ -25,7 +25,7 @@ import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.j
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
-import { collectBones, necromancy } from '../../factions/undead/index.js';
+import { collectBones, corpsesToGraves, necromancy } from '../../factions/undead/index.js';
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
@@ -227,6 +227,7 @@ export const SETTLER_BEHAVIOURS = [
   fertilize,
   cleanDung,
   tendCorpses,
+  corpsesToGraves,
   carryCorpse,
   brewPotion,
   chopFirewood,
