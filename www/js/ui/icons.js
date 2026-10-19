@@ -111,6 +111,12 @@ export const ICONS = {
     icRect(c, '#95a5a6', 12, 22, 8, 3); icRect(c, '#7f8c8d', 12.5, 25.5, 7, 3);
     icLine(c, '#fff', 1.8, [[12, 11], [14, 8]]);
   },
+  lock: c => {
+    icLine(c, '#bdc3c7', 3.5, [[10, 15], [10, 11]]); icLine(c, '#bdc3c7', 3.5, [[22, 15], [22, 11]]);
+    icRing(c, '#bdc3c7', 3.5, 16, 11, 6, Math.PI, Math.PI * 2);
+    icRound(c, '#f1c40f', 6, 14, 20, 15, 3); icRound(c, '#d4ac0d', 6, 24, 20, 5, 2);
+    icCircle(c, '#7d6608', 16, 20, 2.3); icRect(c, '#7d6608', 15, 20, 2, 5);
+  },
   menu: c => { for (const y of [8, 15, 22]) icRound(c, '#ecf0f1', 5, y, 22, 3.5, 1.7); },
   pause: c => { icRound(c, '#ecf0f1', 8, 6, 6, 20, 1.5); icRound(c, '#ecf0f1', 18, 6, 6, 20, 1.5); },
   play: c => icFill(c, '#ecf0f1', [[9, 5], [26, 16], [9, 27]]),
