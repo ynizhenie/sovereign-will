@@ -48,6 +48,7 @@ export function tickEnemy(en, dt) {
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
   if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
+  if (en.guard && holdGuardPost(en, dt)) return; // (a defender of an enemy camp, #255)
 
   const enemyDef = getEnemyDef(en);
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
@@ -68,6 +69,15 @@ export function tickEnemy(en, dt) {
   const holdsGround = keepsAway || (inMelee && minDist < attackRange);
   walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt);
   if (inMelee && minDist < attackRange) enemyStrike(en, enemyDef, meleeDef, target, dt);
+}
+
+// A defender of an enemy camp (#255): at its post till a raider comes within guardTiles of it, or of itself.
+// True while it holds the post
+function holdGuardPost(en, dt) {
+  const reach = GAME_CONFIG.raid.guardTiles * 30;
+  if (game.settlers.some(s => Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6)) return false;
+  if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 6) moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
+  return true;
 }
 
 // A tent builder walks to its site and builds; the tent stands once the work is done

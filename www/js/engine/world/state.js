@@ -89,7 +89,10 @@ export const game = {
   cardsDue: 0,          // waves come whose card is still to be offered
   cardsWave: 0,         // waves counted for cards
   /** @type {string[] | null} */
-  cardOffer: null       // the cards offered now, waiting for a pick
+  cardOffer: null,      // the cards offered now, waiting for a pick
+  /** @type {{ side: string, timeLeft: number } | null} */
+  raidCamp: null,       // an enemy camp's zone open beyond a side of the map (#255, endless.raid.js)
+  raidCampWave: 0       // the waves beaten when the last one opened
 };
 
 // the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns
