@@ -7,6 +7,7 @@ import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/i
 import { formatCost } from '../../colony/storage/index.js';
 import { getSmelterLimits, needsRepair } from './building.rules.js';
 import { getEnemyColor, getPlayerFaction, sides } from '../../factions/index.js';
+import { drawDenArt, drawDoorArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawStoneWall, drawTentArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
@@ -71,23 +72,10 @@ export function drawBuildGrid() {
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
 // menu it's drawn as a warehouse, the storage it is there (#200)
 export function drawTownHall() {
-  if (game.gameMode === 'menu') { drawIcon(ctx, 'warehouse', townHall.x, townHall.y, 28); return; } // (as big as one in the game, #256)
-  if (getPlayerFaction().hall === 'hellgate') {
-    // the demons' Hell Gate: a dark stone gate with fire inside
-    ctx.fillStyle = '#3d1f1f'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4; ctx.stroke();
-    drawIcon(ctx, 'hellgate', townHall.x, townHall.y, townHall.radius * 1.4);
-  } else if (getPlayerFaction().hall === 'graveyard') {
-    // the undead's graveyard: a dark fenced plot with tombstones
-    ctx.fillStyle = '#2c2c34'; ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 4; ctx.stroke();
-    drawIcon(ctx, 'graveyard', townHall.x, townHall.y, townHall.radius * 1.4);
-  } else {
-    ctx.fillStyle = '#8b5a2b';
-    ctx.beginPath(); ctx.arc(townHall.x, townHall.y, townHall.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 4; ctx.stroke();
-  }
-  
+  if (game.gameMode === 'menu') { drawWarehouseArt(townHall.x, townHall.y); return; } // (as a warehouse in the game, #256)
+ // each faction's own, not round (building.art.js, #251)
+  drawHallArt(townHall.x, townHall.y);
+
   drawDamage(townHall.x, townHall.y, townHall.radius - 4, townHall.hp / townHall.maxHp);
   ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(townHall.x - 30, townHall.y - 45, 60, 8);
   ctx.fillStyle = townHall.hp > 40 ? '#2ecc71' : '#e74c3c';
@@ -168,16 +156,13 @@ export function drawUpgrades() {
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
 export function drawBuildings() {
   game.buildings.forEach(b => {
+    // (the look: building.art.js, #251)
     if (b.type === 'wall_wood') {
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = '#5c3a17'; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+      drawWoodWall(b.x, b.y);
     } else if (b.type === 'wall_stone') {
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
+      drawStoneWall(b.x, b.y);
     } else if (b.type === 'door' || b.type === 'iron_door') {
-      ctx.fillStyle = b.type === 'door' ? '#a0522d' : '#6e4a2e'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = b.type === 'door' ? '#3e2723' : '#5d6d7e'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-      drawIcon(ctx, b.type, b.x, b.y, 16);
+      drawDoorArt(b.x, b.y, b.type === 'iron_door');
     } else if (b.type === 'iron_trap') {
       // an iron trap (#248): open, with food in it when baited; shut on whoever it holds
       if (b.holding) {
@@ -191,11 +176,7 @@ export function drawBuildings() {
       if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour
       else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons'
     } else if (b.type === 'tent') {
-      ctx.fillStyle = '#d35400'; ctx.beginPath();
-      ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x + 14, b.y + 14); ctx.lineTo(b.x - 14, b.y + 14); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#4a2511'; ctx.beginPath();
-      ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + 5, b.y + 14); ctx.lineTo(b.x - 5, b.y + 14); ctx.closePath(); ctx.fill();
-	  
+      drawTentArt(b.x, b.y);
     } else if (b.type === 'spikes') {
       // wooden base with iron points; a dot per use left; broken (none left): the points bent down, grey
       const broken = !((b.usesLeft || 0) > 0);
@@ -207,16 +188,8 @@ export function drawBuildings() {
       ctx.fillStyle = '#e74c3c';
       for (let i = 0; i < Math.min(b.usesLeft || 0, 5); i++) ctx.fillRect(b.x - 12 + i * 5, b.y + 10, 3, 2);
     } else if (b.type === 'watchtower') {
-      // a wooden lookout seen from above: four posts with cross braces, and a plank platform with a
-      // railing, where its archer stands (drawn with the settlers)
-      ctx.fillStyle = '#5d3a1a';
-      for (const [px, py] of [[-13, -13], [9, -13], [-13, 9], [9, 9]]) ctx.fillRect(b.x + px, b.y + py, 4, 4);
-      ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(b.x - 11, b.y - 11); ctx.lineTo(b.x + 11, b.y + 11); ctx.moveTo(b.x + 11, b.y - 11); ctx.lineTo(b.x - 11, b.y + 11); ctx.stroke();
-      ctx.fillStyle = '#a47148'; ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
-      ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 1;
-      for (let i = -5; i <= 5; i += 5) { ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + i); ctx.lineTo(b.x + 10, b.y + i); ctx.stroke(); }
-      ctx.strokeStyle = '#4e2f14'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 10, b.y - 10, 20, 20);
+      // a wooden lookout, where its archer stands (drawn with the settlers)
+      drawWatchtowerArt(b.x, b.y);
       ctx.textAlign = 'center';
       // no count in battles: arrows don't run out there
       if (game.gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${/** @type {import('../../../engine/world/types.js').Watchtower} */ (b).tower.arrowCapacity}`, b.x, b.y - 22); }
@@ -241,15 +214,9 @@ export function drawBuildings() {
         ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
       }
     } else if (b.type === 'workshop') {
-      // a timber workshop with a bench and saw (#248)
-      ctx.fillStyle = '#7a5230'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = '#d4a373'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-      drawIcon(ctx, 'workshop', b.x, b.y, 20);
+      drawWorkshopArt(b.x, b.y); // (#248)
     } else if (b.type === 'smithy') {
-      // a dark stone forge with an anvil (#211)
-      ctx.fillStyle = '#3d3d44'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-      drawIcon(ctx, 'hammer', b.x, b.y, 18);
+      drawSmithyArt(b.x, b.y); // (#211)
     } else if (b.type === 'fish_trap') {
       // a fish trap (#199): a basket, a fish mark for each fish waiting in it
       drawIcon(ctx, 'fish_trap', b.x, b.y, 26);
@@ -267,7 +234,7 @@ export function drawBuildings() {
     } else if (b.type === 'dummy') {
       drawIcon(ctx, 'dummy', b.x, b.y, 28); // a training dummy (#199)
     } else if (b.type === 'warehouse') {
-      drawIcon(ctx, 'warehouse', b.x, b.y, 28); // a wooden shed
+      drawWarehouseArt(b.x, b.y);
     } else if (b.type === 'torch') {
       // a torch post (#257): a stake, its head burning when lit
       ctx.fillStyle = '#6d4520'; ctx.fillRect(b.x - 2, b.y - 6, 4, 18);
@@ -278,7 +245,7 @@ export function drawBuildings() {
         ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 12, 2 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
       }
     } else if (b.type === 'demon_den') {
-      drawIcon(ctx, 'demon_den', b.x, b.y, 28); // the demons' den (#250)
+      drawDenArt(b.x, b.y); // the demons' den (#250)
     } else if (b.type === 'corpse_pit') {
       // a dark pit (#250), a grey body in it for each corpse it holds
       ctx.fillStyle = '#3b2a20'; ctx.beginPath(); ctx.ellipse(b.x, b.y, 13, 11, 0, 0, Math.PI * 2); ctx.fill();
@@ -289,9 +256,7 @@ export function drawBuildings() {
       if (b.captive) { ctx.fillStyle = getEnemyColor(); ctx.beginPath(); ctx.arc(b.x, b.y + 2, 8, 0, Math.PI * 2); ctx.fill(); }
       drawIcon(ctx, 'cage', b.x, b.y, 28);
     } else if (b.type === 'smelter') {
-	  ctx.fillStyle = '#7f2d22'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-	  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.strokeRect(b.x - 14, b.y - 14, 28, 28);
-	  drawIcon(ctx, 'fire', b.x, b.y, 13);
+	  drawSmelterArt(b.x, b.y);
 	  if ((b.oreLoaded || 0) > 0) {
 		ctx.fillStyle = '#34495e'; ctx.fillRect(b.x - 13, b.y - 13, 12, 10);
 		ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
