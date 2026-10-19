@@ -17,19 +17,53 @@ export function tileVariantHash(gx, gy) {
   return (h ^ (h >>> 16)) >>> 0;
 }
 
-export function drawGrassGround() {
+// The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
+// shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes, so it's
+// drawn once into a picture of the whole map (half size on a big one) and that's laid down each frame
+/** @type {{ key: string, canvas: HTMLCanvasElement | null, scale: number }} */
+const grassCache = { key: '', canvas: null, scale: 1 };
+function paintGrass() {
+  const w = game.COLS * TILE_SIZE, h = game.ROWS * TILE_SIZE;
+  const scale = w * h > 4e6 ? 0.5 : 1;
+  const canvas = grassCache.canvas || document.createElement('canvas');
+  canvas.width = Math.ceil(w * scale); canvas.height = Math.ceil(h * scale);
+  const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+  g.setTransform(scale, 0, 0, scale, 0, 0);
+  g.fillStyle = '#2d4a22'; g.fillRect(0, 0, w, h);
   for (let gy = 0; gy < game.ROWS; gy++) {
     for (let gx = 0; gx < game.COLS; gx++) {
-      const h = tileVariantHash(gx, gy);
-      const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
-      ctx.fillStyle = GRASS_SHADES[h % GRASS_SHADES.length];
-      ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-      if (h % 7 === 0) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        ctx.fillRect(x + 4 + ((h >>> 8) % (TILE_SIZE - 10)), y + 4 + ((h >>> 14) % (TILE_SIZE - 10)), 3, 3);
+      const hsh = tileVariantHash(gx, gy), x = gx * TILE_SIZE, y = gy * TILE_SIZE;
+      // two patches, anywhere in the tile and spilling out of it
+      for (let k = 0; k < 2; k++) {
+        const v = k ? hsh >>> 11 : hsh;
+        g.globalAlpha = 0.45 + (v % 5) * 0.06;
+        g.fillStyle = GRASS_SHADES[(v >>> 3) % GRASS_SHADES.length];
+        g.beginPath();
+        g.ellipse(x + (v >>> 6) % TILE_SIZE, y + (v >>> 9) % TILE_SIZE, 9 + (v >>> 12) % 12, 7 + (v >>> 15) % 10, ((v >>> 18) % 6) / 2, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.globalAlpha = 1;
+      if (hsh % 5 === 0) {
+        // a tuft: a few blades
+        const tx = x + 6 + (hsh >>> 7) % 18, ty = y + 10 + (hsh >>> 13) % 14;
+        g.strokeStyle = hsh % 2 ? 'rgba(90, 140, 60, 0.55)' : 'rgba(20, 35, 15, 0.45)'; g.lineWidth = 1;
+        g.beginPath();
+        for (const dx of [-2, 0, 2]) { g.moveTo(tx + dx, ty); g.lineTo(tx + dx * 1.6, ty - 4 - Math.abs(dx)); }
+        g.stroke();
+      } else if (hsh % 7 === 0) {
+        g.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        g.fillRect(x + 4 + ((hsh >>> 8) % (TILE_SIZE - 10)), y + 4 + ((hsh >>> 14) % (TILE_SIZE - 10)), 3, 3);
       }
     }
   }
+  Object.assign(grassCache, { canvas, scale });
+}
+
+export function drawGrassGround() {
+  const key = `${game.COLS}x${game.ROWS}`;
+  if (grassCache.key !== key || !grassCache.canvas) { paintGrass(); grassCache.key = key; }
+  const c = /** @type {HTMLCanvasElement} */ (grassCache.canvas);
+  ctx.drawImage(c, 0, 0, c.width / grassCache.scale, c.height / grassCache.scale);
 }
 
 // ---- Terrain that joins up
@@ -52,7 +86,9 @@ export function openSides(keys, x, y) {
 
 // The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind
 export function drawJoinedTile(x, y, open, edgeColor, fillColor) {
-  ctx.fillStyle = fillColor; ctx.fillRect(x - 15, y - 15, TILE_SIZE, TILE_SIZE);
+  // half a pixel over every side, as sand: zoomed, a tile's soft edge let the light sand under it show as a
+  // rim round ore on sand (#251)
+  ctx.fillStyle = fillColor; ctx.fillRect(x - 15.5, y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
   ctx.fillStyle = edgeColor;
   if (open.n) ctx.fillRect(x - 15, y - 15, TILE_SIZE, 2);
   if (open.s) ctx.fillRect(x - 15, y + 13, TILE_SIZE, 2);

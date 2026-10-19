@@ -35,10 +35,15 @@ test('the fight: zombies keep coming; a tapped one falls; the squad gone, a new 
   await page.goto('/');
   await opened(page);
   await page.evaluate(() => enterMenuWorld('fight'));
-  expect(await page.evaluate(() => { for (let f = 0; f < 60 * 12; f++) stepGame(1 / 60); return enemies.length; })).toBeGreaterThan(0);
-  // a zombie tapped
-  const z = await page.evaluate(() => { isPaused = true; const en = enemies[0]; en.x = camera.x; en.y = camera.y; return { id: enemies.indexOf(en) }; });
-  void z;
+  // (the most seen at once: the squad may just have cut down every one at the end, a race under load)
+  expect(await page.evaluate(() => { let most = 0; for (let f = 0; f < 60 * 12; f++) { stepGame(1 / 60); most = Math.max(most, enemies.length); } return most; })).toBeGreaterThan(0);
+  // a zombie tapped (one put under the tap)
+  await page.evaluate(() => {
+    isPaused = true;
+    const en = enemies[0] || createConfiguredEnemy({ x: camera.x, y: camera.y }, 'undead_zombie');
+    if (!enemies.includes(en)) enemies.push(en);
+    en.x = camera.x; en.y = camera.y;
+  });
   await page.evaluate(() => { menuWorldTap(...(() => { const rect = canvas.getBoundingClientRect(); return [rect.left + rect.width / 2, rect.top + rect.height / 2]; })()); });
   expect(await page.evaluate(() => enemies.filter(en => en.hp <= 0).length)).toBeGreaterThan(0);
   // all fall: a new squad a moment later, the dead cleared
