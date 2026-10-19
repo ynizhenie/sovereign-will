@@ -20,6 +20,7 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await opened(page);
+  await page.evaluate(() => enterMenuWorld('hunt')); // (the boar hunt: one scene of the menu's, #256)
   const r = await page.evaluate(() => ({
     mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'),
     soldiers: settlers.map(s => [s.weapon, s.role]), buildings: buildings.length,
@@ -35,6 +36,7 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
 test('a tapped boar is marked and hunted, butchered and its meat carried to the warehouse; the soldier changes faction on a tap (#193)', async ({ page }) => {
   await page.goto('/');
   await opened(page);
+  await page.evaluate(() => enterMenuWorld('hunt')); // (the boar hunt: one scene of the menu's, #256)
   // the world stands still for the tap, and the boar tapped is one the menu's panel doesn't cover (the
   // world is a little different each time: a boar under the buttons took the tap); none free: one is put
   // where the menu shows the world
@@ -79,6 +81,7 @@ test('a tapped boar is marked and hunted, butchered and its meat carried to the 
 test('playing leaves the menu world for a real game, and the menu brings it back (#193)', async ({ page }) => {
   await page.goto('/');
   await opened(page);
+  await page.evaluate(() => enterMenuWorld('hunt')); // (the boar hunt: one scene of the menu's, #256)
   await page.click('#mode-endless');
   await page.click('#play-button');
   const game = await page.evaluate(() => ({ mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'), settlers: settlers.length, waveTimer: Number.isFinite(waveTimer) }));
@@ -86,5 +89,6 @@ test('playing leaves the menu world for a real game, and the menu brings it back
   await expect(page.locator('#dock')).toBeVisible();
   await page.evaluate(() => exitToMainMenu());
   await page.waitForTimeout(300);
-  expect(await page.evaluate(() => [gameMode, settlers.length, document.body.classList.contains('menu-world')])).toEqual(['menu', 1, true]);
+  // (a scene again, one at random, #256)
+  expect(await page.evaluate(() => [gameMode, MENU_SCENES.includes(menuWorld.scene), settlers.length > 0, document.body.classList.contains('menu-world')])).toEqual(['menu', true, true, true]);
 });

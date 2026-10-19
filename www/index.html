@@ -15,6 +15,12 @@
     <div id="intro-curtain"></div>
     <!-- the game's name, big, on top of the main menu's first screen -->
     <div class="menu-title" id="menu-title"><span>Sovereign Will</span></div>
+    <!-- put the menu away to watch the scene behind it; there, change the scene or bring the menu back (#256) -->
+    <button id="menu-hide" class="btn" data-i18n-title="menu.hideMenu" title="Hide the menu"><i class="ic ic-eye"></i></button>
+    <div id="menu-scene-bar">
+        <button id="menu-next-scene" class="btn" data-i18n="menu.nextScene">[[reroll]] Next scene</button>
+        <button id="menu-show" class="btn" data-i18n="menu.showMenu">[[menu]] Menu</button>
+    </div>
     <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless setup, Settings -->
     <div class="main-menu-content" data-screen="home">
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
