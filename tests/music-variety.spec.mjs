@@ -32,3 +32,43 @@ test('a track goes A A B A, its key moves, some phrases drop parts; the ambient 
   expect(r.next).not.toBe('humans_meadow');
   expect(r.next.startsWith('humans_')).toBe(true);
 });
+
+test('the night has its own music: the ambient changes as night falls and as day breaks; a night wave its battle tracks (#252)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    const m = GAME_CONFIG.factions[sides.player.faction].music, theirs = GAME_CONFIG.factions[sides.enemy.faction].music;
+    const c = GAME_CONFIG.daytime, now = () => Object.keys(musicMix())[0];
+    enemies = []; enemyTents = []; enemyTentBlueprints = [];
+    dayTime = c.morning + 1;
+    const day = now();
+    dayTime = c.morning + c.day + c.evening + 1; // night
+    const night = now();
+    enemies = [createConfiguredEnemy({ x: 100, y: 100 }, theirs === m ? 'raider' : GAME_CONFIG.factions[sides.enemy.faction].enemies[0])];
+    const nightFight = now();
+    enemies = [];
+    dayTime = 1; // morning
+    const morning = now();
+    return { day: m.ambient.includes(day), night: m.nightAmbient.includes(night), nightFight: theirs.nightBattle.includes(nightFight), morning: m.ambient.includes(morning) };
+  });
+  expect(r).toEqual({ day: true, night: true, nightFight: true, morning: true });
+});
+
+test('battles are always by day; a map from the editor starts at the time picked for it (#257)', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => localStorage.removeItem('sovereign-will-maps'));
+  const r = await page.evaluate(() => {
+    startBattleMode();
+    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 5;
+    for (let f = 0; f < 60; f++) stepGame(1 / 60);
+    const battleDay = [getDayPhase(), getDarkness()];
+    leaveBattleMode();
+    startEditor({ cols: 30, rows: 30, generate: false });
+    document.querySelector('[data-start-time="night"]').click();
+    document.getElementById('editor-name').value = 'Night map';
+    playEditorMap();
+    return { battleDay, phase: getDayPhase(), dark: getDarkness() > 0 };
+  });
+  expect(r).toEqual({ battleDay: ['day', 0], phase: 'night', dark: true });
+});
+
