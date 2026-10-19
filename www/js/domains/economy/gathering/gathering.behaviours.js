@@ -1,9 +1,9 @@
 // Workers gather: pick a resource (the player's marks first), walk to it, work it with the right tool
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/index.js';
+import { game, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
-import { faceTowards, isBigBody } from '../../colony/settlers/index.js';
+import { faceTowards, isBigBody, nightReach } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
 import { addCarryLoad, giveResourceToSettler } from '../../colony/storage/index.js';
 import { ORE_KINDS } from '../../world/index.js';
@@ -70,6 +70,8 @@ export function isFreeHands(o) {
 // (#232). Returns null if there's nothing to do.
 export function pickResourceToHarvest(s, tick) {
   const settlerReach = getSettlerReach(s);
+  // at night with no torch, nothing past the base (#257)
+  const night = nightReach(s), withinNight = r => night === Infinity || Math.hypot(r.x - townHall.x, r.y - townHall.y) <= night;
   // resources this settler recently found no spot next to (see harvest())
   const skipped = r => s.skippedResource === r && game.pathTick < s.skippedUntilTick;
   let assignedRes = null;
@@ -78,7 +80,7 @@ export function pickResourceToHarvest(s, tick) {
   // tool takes it only while no worker with nothing in hand is free for it, and only one nobody's on (#232)
   const handsFree = s.tool !== 'none' && game.settlers.some(o => o !== s && isFreeHands(o) && (!o.markTarget || !tick.markedResources.includes(o.markTarget)));
   const forHands = r => !getMapResourceDef(tick.resourceKind.get(r)).tool;
-  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) && !(handsFree && forHands(r)) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
+  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) && !(handsFree && forHands(r)) && withinNight(r) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
     .filter(m => m.d < Infinity && workers(m.r) < getWorkPriority(m.r) &&
       // (nor a second pair of hands on one someone's already going for)
       !(s.tool !== 'none' && forHands(m.r) && game.settlers.some(o => o !== s && o.markTarget === m.r)));
@@ -94,7 +96,7 @@ export function pickResourceToHarvest(s, tick) {
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building
     let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) &&
-      !getMapResourceDef(tick.resourceKind.get(r)).markOnly && isInSafeArea(r.x, r.y));
+      !getMapResourceDef(tick.resourceKind.get(r)).markOnly && isInSafeArea(r.x, r.y) && withinNight(r));
     // what its foreman said is needed most, first, while there's some of it (#248)
     if (s.focus && s.focus.until > game.pathTick) {
       const focused = availableRes.filter(r => ((r.yield || getMapResourceDef(tick.resourceKind.get(r)).yield || {})[s.focus.resource] || 0) > 0);

@@ -10,7 +10,7 @@ const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
-  await expect(page.locator('#build-actions button')).toHaveCount(15); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248)
+  await expect(page.locator('#build-actions button')).toHaveCount(16); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248), the torch (#257)
   await expect(page.locator('#farming-actions button')).toHaveCount(4); // with the compost heap (#232)
   // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
   // at a smithy
