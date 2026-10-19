@@ -250,10 +250,20 @@
     </div>
 
     <div class="top-actions">
-      <button class="btn btn-armor" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-      <button class="btn btn-disarm" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
+      <button class="btn editor-only" id="editor-undo" data-i18n-title="editor.undo" title="Undo" disabled><i class="ic ic-undo"></i></button>
+      <button class="btn editor-only" id="editor-redo" data-i18n-title="editor.redo" title="Redo" disabled><i class="ic ic-redo"></i></button>
       <button class="btn btn-unpossess" data-action="switchPossession" data-i18n-title="top.possess" title="Possess [Tab]"><i class="ic ic-eye"></i></button>
     </div>
+  </div>
+
+  <!-- battle: under the top bar, clearing each side round Fight! in the middle; in a fight the auto battle
+       and calling it off (#255) -->
+  <div id="battle-actions" class="hud-layer">
+    <button class="btn battle-setup-only" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
+    <button class="btn btn-armor battle-setup-only" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
+    <button class="btn battle-setup-only" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
+    <button class="btn battle-fight-only" id="battle-auto" data-i18n="battle.auto">Auto battle</button>
+    <button class="btn btn-disarm battle-fight-only" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
   </div>
 
   <!-- Endless: the main stock under the top bar; a tap drops down all of it -->
@@ -352,41 +362,58 @@
 
       <!-- battle mode (battle.js): who to place (the dock picks yours, the enemies or buildings) -->
       <div id="battle-panel" class="hud-sheet" data-sheet="battle">
+        <div class="sub-tabs" id="battle-factions"></div>
         <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: yours on the left, enemies on the right</div>
-        <div class="battle-row" id="battle-factions"></div>
-        <div class="battle-row battle-gear">
-          <button class="fps-option" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
-          <button class="fps-option" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
+        <div class="sub-tabs battle-gear">
+          <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
+          <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
         </div>
-        <div id="battle-presets" class="battle-presets"></div>
+        <div id="battle-presets" class="tile-grid"></div>
       </div>
-      <div class="hud-sheet" data-sheet="battle-clear">
-        <div class="battle-row">
-          <button class="btn" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
-          <button class="btn" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
+      <!-- the battle's own settings (#255): the difficulty, the auto battle -->
+      <div class="hud-sheet" data-sheet="battle-settings">
+        <div class="panel-heading" data-i18n="menu.difficulty">Difficulty:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-difficulty="normal" data-i18n="menu.normal">Normal</button>
+          <button class="btn sub-tab" data-battle-difficulty="hard" data-i18n="menu.hard">Hard</button>
         </div>
+        <div class="battle-hint" data-i18n="battle.hardHint">Hard: the red units are as strong as yours</div>
+        <div class="panel-heading" data-i18n="battle.autoHeading">Auto battle:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-auto="on" data-i18n="menu.on">On</button>
+          <button class="btn sub-tab" data-battle-auto="off" data-i18n="menu.off">Off</button>
+        </div>
+        <div class="battle-hint" data-i18n="battle.ordersHint">Off: yours hold their ground; tap an enemy to send them all at it, or tap one of yours, then an enemy or a spot</div>
       </div>
 
       <!-- the map editor: what to put down (the dock picks the category), and the map's own settings -->
       <div id="editor-panel" class="hud-sheet" data-sheet="editor">
-        <div class="battle-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
-        <div id="editor-tools" class="battle-presets"></div>
+        <div class="sub-tabs editor-brush">
+          <button class="btn sub-tab on" data-brush="1" data-i18n="editor.brush1">Brush 1</button>
+          <button class="btn sub-tab" data-brush="3">3×3</button>
+          <button class="btn sub-tab" data-brush="5">5×5</button>
+          <button class="btn sub-tab" id="editor-drag" data-i18n="editor.dragPaint">Drag to paint</button>
+        </div>
+        <div class="battle-hint" id="editor-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
+        <div id="editor-tools"></div>
       </div>
+      <!-- the map's own (#255): its name, saving and playing it; its size; clearing it -->
       <div class="hud-sheet" data-sheet="editor-map">
-        <div class="editor-toolbar">
-          <span class="editor-brush"><span data-i18n="editor.brush">Brush:</span>
-            <button class="fps-option active" data-brush="1">1</button><button class="fps-option" data-brush="3">3×3</button></span>
-          <button class="fps-option" id="editor-resize"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></button>
-        </div>
-        <div id="editor-resize-panel" class="editor-resize" hidden>
-          <span data-i18n="editor.side.top">Top</span><button class="fps-option" data-resize="top:1">+</button><button class="fps-option" data-resize="top:-1">−</button>
-          <span data-i18n="editor.side.bottom">Bottom</span><button class="fps-option" data-resize="bottom:1">+</button><button class="fps-option" data-resize="bottom:-1">−</button>
-          <span data-i18n="editor.side.left">Left</span><button class="fps-option" data-resize="left:1">+</button><button class="fps-option" data-resize="left:-1">−</button>
-          <span data-i18n="editor.side.right">Right</span><button class="fps-option" data-resize="right:1">+</button><button class="fps-option" data-resize="right:-1">−</button>
-        </div>
+        <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
         <div class="editor-toolbar">
           <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
-          <button class="fps-option" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
+          <button class="btn" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
+          <button class="btn btn-armor" id="editor-play" data-i18n="editor.play">[[play]] Play</button>
+        </div>
+        <div class="panel-heading"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></div>
+        <div id="editor-resize-panel" class="editor-resize">
+          <span data-i18n="editor.side.top">Top</span><button class="btn" data-resize="top:1">+</button><button class="btn" data-resize="top:-1">−</button>
+          <span data-i18n="editor.side.bottom">Bottom</span><button class="btn" data-resize="bottom:1">+</button><button class="btn" data-resize="bottom:-1">−</button>
+          <span data-i18n="editor.side.left">Left</span><button class="btn" data-resize="left:1">+</button><button class="btn" data-resize="left:-1">−</button>
+          <span data-i18n="editor.side.right">Right</span><button class="btn" data-resize="right:1">+</button><button class="btn" data-resize="right:-1">−</button>
+        </div>
+        <div class="editor-toolbar">
+          <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">[[broom]] Clear the map</button>
         </div>
       </div>
     </div>
@@ -406,12 +433,11 @@
       <button class="dock-btn" data-battle-category="own" data-dock="battle:own"><i class="ic ic-worker"></i><span data-i18n="battle.cat.own">Player</span></button>
       <button class="dock-btn" data-battle-category="enemy" data-dock="battle:enemy"><i class="ic ic-swords"></i><span data-i18n="battle.cat.enemy">Enemies</span></button>
       <button class="dock-btn" data-battle-category="buildings" data-dock="battle:buildings"><i class="ic ic-build"></i><span data-i18n="battle.cat.buildings">Buildings</span></button>
-      <button class="dock-btn" data-action="toggleSheet" data-arg="battle-clear" data-dock="battle-clear"><i class="ic ic-broom"></i><span data-i18n="dock.clear">Clear</span></button>
+      <button class="dock-btn" data-action="toggleSheet" data-arg="battle-settings" data-dock="battle-settings"><i class="ic ic-gear"></i><span data-i18n="dock.battle">Battle</span></button>
     </div>
     <div class="dock-row" data-hud-mode="editor">
       <button class="dock-btn" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
       <button class="dock-btn" data-editor-category="nature" data-dock="editor:nature"><i class="ic ic-tree"></i><span data-i18n="editor.cat.nature">Nature</span></button>
-      <button class="dock-btn" data-editor-category="ore" data-dock="editor:ore"><i class="ic ic-iron_ore"></i><span data-i18n="editor.cat.ore">Ore</span></button>
       <button class="dock-btn" data-editor-category="buildings" data-dock="editor:buildings"><i class="ic ic-build"></i><span data-i18n="editor.cat.buildings">Buildings</span></button>
       <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
       <button class="dock-btn" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>

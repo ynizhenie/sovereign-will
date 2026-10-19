@@ -3,30 +3,46 @@
 // ---- Panels
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
-import { onTap, t } from '../../engine/platform/index.js';
+import { closeSheet, escapeHtml, iconHtml, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
+import { onTap, setDragPainter, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
-import { EDITOR_TOOLS, editor, resizeEditorMap, saveEditorMap, startEditor } from './editor.tools.js';
+import { EDITOR_TOOLS, clearEditorMap, editor, editorPaint, playEditorMap, redoEditor, resizeEditorMap, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
 
 export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
   tools.innerHTML = '';
   let chosen = '';
   const forFaction = tl => !tl.building || !getDefinition('buildings', tl.building).factions || getDefinition('buildings', tl.building).factions.includes(editor.faction);
-  for (const tool of EDITOR_TOOLS.filter(tl => tl.category === editor.category && forFaction(tl))) {
-    const button = document.createElement('button');
-    button.className = 'btn' + (editor.tool === tool.id ? ' active' : '');
-    button.dataset.tool = tool.id;
-    const label = tool.building ? getDefinition('buildings', tool.building).label : t(`editor.tool.${tool.id}`);
-    setRichText(button, `[[${tool.icon}]] ${label}`);
-    // picked: the sheet steps aside for the map, the chip says what a tap puts down
-    onTap(button, () => { editor.tool = tool.id; closeSheet(); renderEditorPanel(); });
-    tools.appendChild(button);
-    if (editor.tool === tool.id) chosen = button.innerHTML;
+  // as Endless's (#255): the category's things as tiles, in sections
+  const shown = EDITOR_TOOLS.filter(tl => tl.category === editor.category && forFaction(tl));
+  const sections = [...new Set(shown.map(tl => tl.section || ''))];
+  for (const section of sections) {
+    if (sections.length > 1 || section) {
+      const heading = document.createElement('div');
+      heading.className = 'panel-heading';
+      heading.textContent = t(`editor.section.${section}`);
+      tools.appendChild(heading);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'tile-grid';
+    for (const tool of shown.filter(tl => (tl.section || '') === section)) {
+      const button = document.createElement('button');
+      button.className = 'btn tile' + (editor.tool === tool.id ? ' active' : '');
+      button.dataset.tool = tool.id;
+      const label = tool.building ? getDefinition('buildings', tool.building).label : t(`editor.tool.${tool.id}`);
+      button.innerHTML = `<span class="tile-name">${iconHtml(tool.icon)} <b>${escapeHtml(label)}</b></span>`;
+      // picked: the sheet steps aside for the map, the chip says what a tap puts down
+      onTap(button, () => { editor.tool = tool.id; closeSheet(); renderEditorPanel(); });
+      grid.appendChild(button);
+      if (editor.tool === tool.id) chosen = /** @type {HTMLElement} */ (button.querySelector('.tile-name')).innerHTML;
+    }
+    tools.appendChild(grid);
   }
-  document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('active', Number(b.dataset.brush) === editor.brush));
+  document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('on', Number(b.dataset.brush) === editor.brush));
+  document.getElementById('editor-drag').classList.toggle('on', editor.dragPaint);
+  setRichText(document.getElementById('editor-hint'), t(editor.dragPaint ? 'editor.hintDrag' : 'editor.hint'));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
   document.getElementById('editor-size').textContent = `${game.COLS}×${game.ROWS}`;
   document.getElementById('editor-top-size').textContent = `${game.COLS}×${game.ROWS}`;
@@ -87,7 +103,13 @@ export function initEditorPanel() {
   }));
   onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; closeSheet(); renderEditorPanel(); });
   document.getElementById('editor-name').addEventListener('input', updateEditorTitle);
-  onTap(document.getElementById('editor-resize'), () => { const panel = document.getElementById('editor-resize-panel'); panel.hidden = !panel.hidden; });
+  // (#255) a drag paints with the brush when that's on; undo, redo; play the map; clear it
+  setDragPainter(editorPaint);
+  onTap(document.getElementById('editor-drag'), () => { editor.dragPaint = !editor.dragPaint; renderEditorPanel(); });
+  onTap(document.getElementById('editor-undo'), undoEditor);
+  onTap(document.getElementById('editor-redo'), redoEditor);
+  onTap(document.getElementById('editor-play'), playEditorMap);
+  onTap(document.getElementById('editor-clear'), clearEditorMap);
   document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
     const [side, delta] = /** @type {string} */ (button.dataset.resize).split(':');
     resizeEditorMap(side, Number(delta));

@@ -36,6 +36,7 @@ import { lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
 import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
+import { battleOrders } from '../../../modes/battle/index.js';
 
 export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
@@ -211,6 +212,7 @@ export const SETTLER_BEHAVIOURS = [
   playerControlled,
   raidOrders, // (a raid on an enemy camp, #255: the party...)
   restWhileRaid, // (...and the base resting)
+  battleOrders, // (a battle with the auto battle off, #255)
   panic,
   strikeBack,
   sleepAtNight,
