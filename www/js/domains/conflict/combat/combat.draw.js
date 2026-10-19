@@ -6,6 +6,7 @@ import { ctx } from '../../../engine/platform/index.js';
 import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
 import { corpseHasWorms } from '../../economy/fishing/index.js';
 import { tileVariantHash } from '../../world/index.js';
+import { drawFigure } from '../../colony/settlers/index.js';
 
 // Blood on the blade of the held item, fading (see bleed)
 export function drawWeaponBlood(unit) {
@@ -75,14 +76,9 @@ export function drawCorpses() {
   game.corpses.forEach(c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
     ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
-    ctx.fillStyle = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
-    ctx.beginPath(); ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 2; ctx.stroke();
-    // a cross for the eyes
-    ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.5;
-    for (const ex of [-4, 4]) {
-      ctx.beginPath(); ctx.moveTo(c.x + ex - 2, c.y - 4); ctx.lineTo(c.x + ex + 2, c.y); ctx.moveTo(c.x + ex + 2, c.y - 4); ctx.lineTo(c.x + ex - 2, c.y); ctx.stroke();
-    }
+    // a grey figure lying on its side, crosses for its eyes (#251)
+    const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
+    drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: grey, skin: '#9a9a9a', lying: true, dead: true });
     if (corpseHasWorms(c)) {
       // worms: a few pink squiggles on it
       ctx.strokeStyle = '#e91e63'; ctx.lineWidth = 1.5;
