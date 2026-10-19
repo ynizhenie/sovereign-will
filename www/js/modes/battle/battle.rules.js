@@ -3,6 +3,7 @@
 import { t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { showNotification } from '../../ui/index.js';
+import { fightByOrders } from '../../domains/conflict/combat/index.js';
 import { BATTLE_RESULT_SECONDS, battle, resetBattleUnits } from './battle.setup.js';
 import { renderBattlePanel, updateBattleTop } from './battle.panel.js';
 
@@ -42,4 +43,12 @@ export function updateBattle(dt) {
       renderBattlePanel();
     }
   }
+}
+
+// Yours with the auto battle off (#255): they hold where they were placed and fight what they're told to (or
+// whatever comes at them); a behaviour of every settler's, after the possessed
+export function battleOrders(s, tick) {
+  if (game.gameMode !== 'battle' || battle.phase !== 'fight' || battle.auto) return false;
+  fightByOrders(s, tick.dt, false);
+  return true;
 }

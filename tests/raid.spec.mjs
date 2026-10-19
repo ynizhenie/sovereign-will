@@ -67,14 +67,14 @@ test('orders: an enemy tapped is everyone\'s target; a raider picked and a spot 
   const r = await page.evaluate(() => {
     const en = enemies[0];
     raidTap(en.x, en.y);
-    const all = settlers.every(s => s.raidTarget === en) && en.markedTarget;
+    const all = settlers.every(s => s.orderTarget === en) && en.markedTarget;
     const s = settlers[1];
     raidTap(s.x, s.y);
     // a spot of ground clear of everyone
     const spot = [[0, 90], [90, 0], [0, -90], [-90, 0]].map(([dx, dy]) => ({ x: s.x + dx, y: s.y + dy }))
       .find(p => [...settlers, ...enemies].every(o => Math.hypot(o.x - p.x, o.y - p.y) > 40));
     raidTap(spot.x, spot.y);
-    return { all, picked: selectedSettler === s, spot: s.raidSpot.x === spot.x && s.raidSpot.y === spot.y, cleared: s.raidTarget === null };
+    return { all, picked: selectedSettler === s, spot: s.orderSpot.x === spot.x && s.orderSpot.y === spot.y, cleared: s.orderTarget === null };
   });
   expect(r).toEqual({ all: true, picked: true, spot: true, cleared: true });
 });

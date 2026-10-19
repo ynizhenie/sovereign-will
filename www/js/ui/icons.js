@@ -111,6 +111,13 @@ export const ICONS = {
     icRect(c, '#95a5a6', 12, 22, 8, 3); icRect(c, '#7f8c8d', 12.5, 25.5, 7, 3);
     icLine(c, '#fff', 1.8, [[12, 11], [14, 8]]);
   },
+  heart: c => {
+    c.fillStyle = '#e74c3c'; c.beginPath(); c.moveTo(16, 28); c.bezierCurveTo(2, 18, 3, 6, 10, 6); c.bezierCurveTo(13, 6, 15, 8, 16, 11);
+    c.bezierCurveTo(17, 8, 19, 6, 22, 6); c.bezierCurveTo(29, 6, 30, 18, 16, 28); c.fill();
+    icCircle(c, '#f5b7b1', 10.5, 11, 2.2);
+  },
+  undo: c => { icRing(c, '#ecf0f1', 3.5, 17, 17, 9, Math.PI * 1.05, Math.PI * 2.6); icFill(c, '#ecf0f1', [[2, 14], [10, 8], [11, 19]]); },
+  redo: c => { icRing(c, '#ecf0f1', 3.5, 15, 17, 9, Math.PI * 0.4, Math.PI * 1.95); icFill(c, '#ecf0f1', [[30, 14], [22, 8], [21, 19]]); },
   lock: c => {
     icLine(c, '#bdc3c7', 3.5, [[10, 15], [10, 11]]); icLine(c, '#bdc3c7', 3.5, [[22, 15], [22, 11]]);
     icRing(c, '#bdc3c7', 3.5, 16, 11, 6, Math.PI, Math.PI * 2);

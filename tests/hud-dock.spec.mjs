@@ -161,9 +161,12 @@ test('battle: a category opens its sheet, picking a unit shows it on the chip; t
   });
   await expect(page.locator('#battle-count-green')).toHaveText('2');
   await expect(page.locator('#battle-count-red')).toHaveText('1');
-  await page.click('[data-dock="battle-clear"]');
+  // clearing each side round Fight!, under the top bar (#255)
   await expect(page.locator('#battle-clear-red')).toBeVisible();
+  await expect(page.locator('#battle-clear-green')).toBeVisible();
   await page.click('#battle-fight');
+  await expect(page.locator('#battle-clear-red')).toBeHidden();
+  await expect(page.locator('#battle-auto')).toBeVisible();
   await expect(page.locator('#placing-chip')).toBeHidden();
   await expect(page.locator('#sheet-frame')).toBeHidden();
   await expect(page.locator('#battle-cancel')).toBeVisible();
