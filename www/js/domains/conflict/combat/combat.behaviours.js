@@ -61,7 +61,7 @@ export function holdPost(s, tick) {
 // hit it in the last second and a half. Tower guards keep shooting from up there; an archer with no arrows
 // can't; the possessed are the player's
 export function strikeBack(s, tick) {
-  if (s.isPossessed || s.towerAssignment || game.gameMode === 'menu') return false;
+  if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
   const attacker = getRecentAttacker(s);
   if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
