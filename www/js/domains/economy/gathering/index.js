@@ -3,4 +3,5 @@
 
 export { canGather, getWorkPriority, isFreeHands, harvest, workResource } from './gathering.behaviours.js';
 export { drawCactiBouldersGrassBushes, drawHarvestProgress, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from './gathering.draw.js';
+export { drawFarmPlotArt } from './gathering.art.js';
 export { addMapResource, finishHarvest, getHarvestableResources, getMapResourceDef, getMapResourceKind, scheduleRespawn, updatePendingRespawns } from './gathering.rules.js';
