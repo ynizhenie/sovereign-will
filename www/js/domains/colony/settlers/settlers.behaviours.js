@@ -35,6 +35,7 @@ import { goEat } from './settlers.meals.js';
 import { lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
+import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
 
 export function createSettlerTick(dt) {
   const allResources = getHarvestableResources();
@@ -208,6 +209,8 @@ export function patrol(s, tick) {
 // Order = priority: the first behaviour that takes a settler's tick wins.
 export const SETTLER_BEHAVIOURS = [
   playerControlled,
+  raidOrders, // (a raid on an enemy camp, #255: the party...)
+  restWhileRaid, // (...and the base resting)
   panic,
   strikeBack,
   sleepAtNight,

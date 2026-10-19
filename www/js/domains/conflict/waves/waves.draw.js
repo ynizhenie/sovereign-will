@@ -14,7 +14,8 @@ import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
   game.enemyTents.forEach(et => {
-    if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
+    if (et.outpost) drawOutpost(et);
+    else if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
       // the undead's spawners are graves, the demons' portals, ringed in the enemy's colour
       ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
@@ -28,12 +29,31 @@ export function drawEnemyTents() {
       ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
     }
 
-    if (et.markedTarget) drawTargetMark({ x: et.x, y: et.y, radius: 16 }); // the player pointed at it (#203)
+    const size = et.outpost ? 26 : 16;
+    if (et.markedTarget) drawTargetMark({ x: et.x, y: et.y, radius: size }); // the player pointed at it (#203)
     if (et.hp < et.maxHp) {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(et.x - 14, et.y - 20, 28, 4);
-      ctx.fillStyle = '#e74c3c'; ctx.fillRect(et.x - 14, et.y - 20, (et.hp / et.maxHp) * 28, 4);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(et.x - size + 2, et.y - size - 6, (size - 2) * 2, 4);
+      ctx.fillStyle = '#e74c3c'; ctx.fillRect(et.x - size + 2, et.y - size - 6, (et.hp / et.maxHp) * (size - 2) * 2, 4);
     }
   });
+}
+
+// An enemy camp's outpost (#255): a squat log fort with a pointed roof, a banner in the enemy's colour
+function drawOutpost(et) {
+  const x = et.x, y = et.y, color = getEnemyColor();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(x + 4, y + 6, 26, 18, 0, 0, Math.PI * 2); ctx.fill();
+  // the log walls
+  ctx.fillStyle = '#6e4a2c'; ctx.fillRect(x - 20, y - 12, 40, 28);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; ctx.lineWidth = 1;
+  for (let k = -20; k <= 20; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, y - 12); ctx.lineTo(x + k, y + 16); ctx.stroke(); }
+  for (let k = -20; k <= 20; k += 5) { ctx.fillStyle = '#8a5d36'; ctx.beginPath(); ctx.moveTo(x + k - 2.5, y + 16); ctx.lineTo(x + k, y + 20); ctx.lineTo(x + k + 2.5, y + 16); ctx.fill(); }
+  // the roof
+  ctx.fillStyle = shadeColor(color, -0.45); ctx.beginPath(); ctx.moveTo(x - 24, y - 10); ctx.lineTo(x, y - 26); ctx.lineTo(x + 24, y - 10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = shadeColor(color, -0.65); ctx.lineWidth = 1.5; ctx.stroke();
+  // the door, and the banner on its pole
+  ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.roundRect(x - 5, y + 2, 10, 14, [5, 5, 0, 0]); ctx.fill();
+  ctx.strokeStyle = '#4a3020'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 14, y - 14); ctx.lineTo(x + 14, y - 38); ctx.stroke();
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x + 15, y - 38); ctx.lineTo(x + 30, y - 33); ctx.lineTo(x + 15, y - 28); ctx.closePath(); ctx.fill();
 }
 
 // Things fallen enemies dropped (#210, #232): the thing itself on the ground, a faint shadow under it (an old
