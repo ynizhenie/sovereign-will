@@ -4,6 +4,7 @@
 // A fight can be called off, and the player can possess one of theirs in it. Archers' arrows don't run
 // out. Green units are settlers and red ones enemies, driven by the usual AI.
 
+import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
 import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
@@ -40,6 +41,12 @@ export const battle = {
   savedDifficulty: null // the Endless choice, back when the battle's left
 };
 
+// An enemy kind that can carry a shield: one of normal size fighting hand to hand
+export function enemyCanShield(id) {
+  const def = GAME_CONFIG.enemies[id];
+  return !!def && def.type !== 'big' && !def.ranged && !def.healer && !def.necromancer;
+}
+
 // The midline: left of it is green, right of it red
 export function battleSide(x) {
   return x < game.WORLD_WIDTH / 2 ? 'green' : 'red';
@@ -50,6 +57,9 @@ export function makeBattleUnit(entry) {
   if (preset.enemy) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
+    // (#279) armour and a shield as yours can have (a shield: a melee one of normal size)
+    if (entry.armor) { en.armor = 'iron'; en.maxHp += GAME_CONFIG.gear.armor.hpBonus; en.hp = en.maxHp; }
+    if (entry.shield && enemyCanShield(preset.enemy)) en.shield = true;
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
     return;
@@ -140,8 +150,7 @@ export function battleTap(x, y) {
     const preset = getBattlePreset(battle.preset);
     const side = preset.enemy ? 'red' : 'green';
     if (battleSide(cx) !== side) { showNotification(t(`battle.only.${side}`), true); return; }
-    battle.lineup.push(preset.enemy ? { presetId: preset.id, x: cx, y: cy }
-      : { presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield });
+    battle.lineup.push({ presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield }); // (an enemy too, #279)
   }
   resetBattleUnits();
 }
