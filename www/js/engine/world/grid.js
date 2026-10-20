@@ -33,6 +33,11 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
 export let tileIndex = null;
 
 export function resetTileIndex() { tileIndex = null; }
+// (#298) the last one built: reset every tick, it was built again every tick (thousands of keys); with the
+// same signature, it's the same
+/** @type {TileIndex | null} */
+let lastIndex = null;
+const typeHash = type => { let h = 0; for (let i = 0; i < (type || '').length; i++) h = (h * 31 + type.charCodeAt(i)) | 0; return h; };
 
 /** @returns {TileIndex} */
 export function getTileIndex() {
@@ -43,8 +48,9 @@ export function getTileIndex() {
   let signature = game.COLS * 1000 + game.ROWS; // a new map size invalidates everything cached by signature
   for (const list of [game.naturalRocks, game.waterTiles, game.trees, game.cacti, game.boulders, game.ironOres, game.coalOres, game.buildings]) {
     signature = (signature * 31 + list.length) | 0;
-    for (const o of list) signature = (signature * 31 + o.x * 1601 + o.y + (o.isGrowing ? 7 : 0)) | 0;
+    for (const o of list) signature = (signature * 31 + o.x * 1601 + o.y + (o.isGrowing ? 7 : 0) + (o.type ? typeHash(o.type) : 0)) | 0;
   }
+  if (lastIndex && lastIndex.signature === signature) return (tileIndex = lastIndex);
   tileIndex = {
     signature,
     rocks: keys(game.naturalRocks),
@@ -70,6 +76,7 @@ export function getTileIndex() {
       return !def.arrowsPass && !def.towerArrowsPass;
     }))
   };
+  lastIndex = tileIndex;
   return tileIndex;
 }
 

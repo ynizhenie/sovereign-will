@@ -75,7 +75,7 @@ export function spawnSettler(type = 'normal') {
     return;
   }
   payCost(settlerType.hireCost);
-  const hired = createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: 'none', hasArmor: false });
+  const hired = createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: null, hasArmor: false }); // (#298: 'none' was taken for armour since leather)
   game.settlers.push(hired);
   says(hired, 'hired'); // (#252)
   showNotification(t('hire.done', { name: settlerType.label }), false);

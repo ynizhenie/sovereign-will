@@ -6,7 +6,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
-import { isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
+import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx } from '../../../engine/platform/index.js';
@@ -116,8 +116,9 @@ export function isCrafting(s) {
 }
 
 // The load in front of it, held in both hands (drawn around its centre, after translate)
-// where a load in its hands is, in front of it (#298: both its hands on it, drawFigure's carryPoint)
-const carryAt = s => ({ x: Math.cos(s.facing || 0) * (s.visualRadius + 3), y: Math.sin(s.facing || 0) * (s.visualRadius + 3) });
+// where a load in its hands is: held at its chest, a little out in front (#298: it hung in the air out past
+// its body, at its feet facing us; both its hands on it, drawFigure's carryPoint)
+const carryAt = s => ({ x: Math.cos(s.facing || 0) * s.visualRadius * 0.5, y: Math.sin(s.facing || 0) * s.visualRadius * 0.3 + s.visualRadius * 0.05 });
 function drawCarriedInHands(s) {
   const type = s.carrying.type;
   const f = s.facing || 0;
@@ -141,12 +142,16 @@ function drawCarriedInHands(s) {
 }
 
 
-// A torch held out in front (#257), drawn round the unit's centre (after translate), its flame flickering
+// A torch held up in its hand (#257), drawn round the unit's centre (after translate), its flame flickering.
+// (#298) From its hand (where drawFigure puts it at rest), its stick up and a little out: it hung in the air
+// out in front of it
 export function drawHandTorch(facing, r) {
-  const f = (facing || 0) - 0.5, x = Math.cos(f) * (r + 2), y = Math.sin(f) * (r + 2);
+  const f = facing || 0;
+  const hx = Math.cos(f) * r * 0.25 - Math.sin(f) * r * 0.5, hy = Math.sin(f) * r * 0.25 + Math.cos(f) * r * 0.5;
+  const tx = hx + Math.cos(f) * 3, ty = hy - 9;
   ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.moveTo(x - Math.cos(f) * 4, y - Math.sin(f) * 4); ctx.lineTo(x + Math.cos(f) * 5, y + Math.sin(f) * 5); ctx.stroke();
-  const fx = x + Math.cos(f) * 7, fy = y + Math.sin(f) * 7, k = 1 + Math.sin(performance.now() / 90 + r) * 0.15;
+  ctx.beginPath(); ctx.moveTo(hx, hy + 2); ctx.lineTo(tx, ty); ctx.stroke();
+  const fx = tx, fy = ty - 3, k = 1 + Math.sin(performance.now() / 90 + r) * 0.15;
   ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(fx, fy - 2, 3 * k, 4.5 * k, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(fx, fy - 1.5, 1.5 * k, 2.5 * k, 0, 0, Math.PI * 2); ctx.fill();
 }
@@ -214,7 +219,7 @@ function handAt(unit, r) {
 /**
  * The figure round (x, y), r its old circle's radius.
  * @param {any} unit
- * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number } }} o
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null }} o
  * (carryPoint: a load in both hands, both arms out to it, #298)
  * (#298) facing away from us, its arms (and what's in its hands, drawn by the caller) are behind its body
  */
@@ -232,9 +237,11 @@ export function drawFigure(unit, o) {
   for (const [lx, dy] of [[-0.3, step], [0.3, -step]]) { ctx.beginPath(); ctx.roundRect(r * lx - r * 0.17, r * 0.25 + dy, r * 0.34, r * 0.72, r * 0.12); ctx.fill(); }
   // arms: the right to its hand, the left down its side (or out to its shield, on the side away from the hand)
   const carry = !o.lying && !o.dead ? o.carryPoint : null;
-  const hand = carry ? { x: carry.x + 3, y: carry.y } : o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
+  // (a load: a hand on each side of it, across the way it faces)
+  const f0 = unit.facing || 0, across = { x: -Math.sin(f0) * r * 0.42, y: Math.cos(f0) * r * 0.42 };
+  const hand = carry ? { x: carry.x + across.x, y: carry.y + across.y } : o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
   const right = hand.x >= 0 ? 1 : -1;
-  const other = carry ? { x: carry.x - 3, y: carry.y } : o.shield ? { x: -right * (r - 1), y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
+  const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : o.shield ? { x: -right * (r - 1), y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
   const arm = (from, to) => {
     ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(from, -r * 0.3); ctx.lineTo(to.x, to.y); ctx.stroke();
@@ -247,6 +254,8 @@ export function drawFigure(unit, o) {
   // the body
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
+  // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
+  if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (!behind) arm(right * r * 0.5, hand);
   if (!(carry && behind)) arm(-right * r * 0.5, other);
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
@@ -331,25 +340,55 @@ export function applyBackPose(unit) {
   ctx.translate(-10, unit.visualRadius * 0.7); // (its grip a little off the middle of its back, #279)
 }
 
-// Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
-// Shared by settlers and enemies. Returns false for no weapon (fists).
-// Iron armour: a breastplate over the body of a figure of that radius
-export function drawArmor(radius, kind = 'iron') {
-  // a breastplate over the figure's body (#251); (#298) leather: brown, stitched, a few studs
-  const r = radius;
+// Armour on a figure of that radius, over its body and fitted to it (#298), seen from the front or (back) from
+// behind. Iron: a breastplate with a ridge down its middle, a shine, rounded plates on its shoulders and a row
+// of plates hanging below its belt. Leather: a jerkin laced up the front, stitched at its edges, a belt with a
+// buckle, studs on its shoulders
+export function drawArmor(radius, kind = 'iron', back = false) {
+  const r = radius, x0 = -r * 0.6, y0 = -r * 0.46, w = r * 1.2, h = r * 0.8;
+  const torso = () => { ctx.beginPath(); ctx.roundRect(x0, y0, w, h, [r * 0.3, r * 0.3, r * 0.14, r * 0.14]); };
+  const shoulders = (fill, edge) => {
+    for (const sx of [-1, 1]) { ctx.fillStyle = fill; ctx.strokeStyle = edge; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(sx * r * 0.48, -r * 0.38, r * 0.2, r * 0.13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  };
   if (kind === 'leather') {
-    ctx.fillStyle = '#8d5a35'; ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(-r * 0.54, -r * 0.42, r * 1.08, r * 0.76, r * 0.25); ctx.fill(); ctx.stroke();
-    ctx.setLineDash([1.5, 1.5]); ctx.strokeStyle = '#d4a373';
-    ctx.beginPath(); ctx.moveTo(-r * 0.4, -r * 0.1); ctx.lineTo(r * 0.4, -r * 0.1); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#8d5a35'; ctx.strokeStyle = '#4e3016'; ctx.lineWidth = 1;
+    torso(); ctx.fill(); ctx.stroke();
+    // stitching round its edge
+    ctx.setLineDash([1.2, 1.4]); ctx.strokeStyle = '#d4a373'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.roundRect(x0 + 1.2, y0 + 1.2, w - 2.4, h - 2.4, r * 0.24); ctx.stroke(); ctx.setLineDash([]);
+    if (!back) {
+      // laced up the front
+      ctx.strokeStyle = '#3e2716'; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(0, y0 + 1); ctx.lineTo(0, y0 + h * 0.75); ctx.stroke();
+      ctx.strokeStyle = '#e8d3b0';
+      for (let k = 0; k < 3; k++) { const ly = y0 + 2 + k * h * 0.2; ctx.beginPath(); ctx.moveTo(-r * 0.12, ly); ctx.lineTo(r * 0.12, ly + h * 0.1); ctx.moveTo(r * 0.12, ly); ctx.lineTo(-r * 0.12, ly + h * 0.1); ctx.stroke(); }
+    }
+    // a belt and its buckle
+    ctx.fillStyle = '#3e2716'; ctx.fillRect(x0, y0 + h - r * 0.18, w, r * 0.14);
+    if (!back) { ctx.strokeStyle = '#d4ac0d'; ctx.lineWidth = 0.8; ctx.strokeRect(-r * 0.1, y0 + h - r * 0.2, r * 0.2, r * 0.18); }
+    shoulders('#7a4b29', '#4e3016');
     ctx.fillStyle = '#d5dbdb';
-    for (const [sx, sy] of [[-0.3, 0.15], [0.3, 0.15], [0, -0.28]]) { ctx.beginPath(); ctx.arc(sx * r, sy * r, 0.9, 0, Math.PI * 2); ctx.fill(); }
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * r * 0.48, -r * 0.38, 0.8, 0, Math.PI * 2); ctx.fill(); }
     return;
   }
-  ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#5d6d7e'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(-r * 0.56, -r * 0.44, r * 1.12, r * 0.8, r * 0.25); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.fillRect(-r * 0.4, -r * 0.36, r * 0.25, r * 0.55);
-  ctx.strokeStyle = '#7f8c8d'; ctx.beginPath(); ctx.moveTo(0, -r * 0.44); ctx.lineTo(0, r * 0.36); ctx.stroke();
+  // iron
+  ctx.fillStyle = '#9aa7b1'; ctx.strokeStyle = '#4d5b66'; ctx.lineWidth = 1;
+  torso(); ctx.fill(); ctx.stroke();
+  // plates hanging below its belt
+  ctx.fillStyle = '#7f8c8d';
+  for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.roundRect(x0 + 1 + k * (w - 2) / 4, y0 + h - r * 0.06, (w - 2) / 4 - 0.6, r * 0.2, 1); ctx.fill(); }
+  if (!back) {
+    // a ridge down its middle and a shine on one side
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(0, y0 + 1.5); ctx.lineTo(0, y0 + h - 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)'; ctx.beginPath(); ctx.roundRect(x0 + r * 0.14, y0 + r * 0.12, r * 0.22, h * 0.55, r * 0.1); ctx.fill();
+  } else {
+    // its back plate: two straps across
+    ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0 + 2, y0 + 2); ctx.lineTo(x0 + w - 2, y0 + h - 3); ctx.moveTo(x0 + w - 2, y0 + 2); ctx.lineTo(x0 + 2, y0 + h - 3); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; ctx.fillRect(x0 + 1, y0 + h - r * 0.12, w - 2, r * 0.06);
+  shoulders('#b0bec5', '#4d5b66');
 }
 
 // A round wooden shield with an iron rim and boss on the other arm of a body of that radius (#298: side, the
@@ -482,12 +521,11 @@ export function drawSettlers() {
     const faction = game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     if (s.asleep) ctx.globalAlpha = 0.85;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined });
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, armor: !s.asleep && armorOf(s) ? String(s.armor) : null });
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);
     at(() => {
-      if ((s.armor || s.hasArmor) && !s.asleep) drawArmor(r, typeof s.armor === 'string' ? s.armor : 'iron');
       // a commander's whistle on a cord on its chest (#248), seen from the front
       if (s.whistle && !s.asleep && !away) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
       if (s.shield && !s.asleep) drawShield(r, side); // (on its other arm, in front)
