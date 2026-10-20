@@ -205,7 +205,7 @@ export function build(s, tick) {
 // Work on a blueprint the settler is standing at; finished, it becomes what it was for
 export function workBlueprint(s, bp, dt) {
   bp.progress += dt * 40;
-  s.working = 0.1;
+  s.working = 0.1; s.workKind = 'build'; // (a hammer in its hand, #279)
   faceTowards(s, bp.x, bp.y);
   playWorkSound(s, 'hammer', 0.45);
   if (bp.progress >= bp.maxProgress) {

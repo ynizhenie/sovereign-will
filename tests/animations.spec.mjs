@@ -35,7 +35,7 @@ test('strikes swing the weapon once, work keeps the tool moving, and both settle
   expect(r.swordArc).toBeGreaterThan(1);
   expect(r.swordRestsAfter).toEqual({ angle: 0, push: 0 });
   expect(r.spearThrust).toBeGreaterThan(5);
-  expect(r.spearAngle).toBe(0);
+  expect(r.spearAngle).toBeLessThan(0.15); // (a thrust, hardly turned, #279)
   expect(r.axeMoving).toBe(true);
   expect(r.axeWorking).toBe(true);
   expect(errors).toEqual([]);

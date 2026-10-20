@@ -128,7 +128,7 @@ export function tendCorpses(s, tick) {
   }
   // cut up: a while at it, then the meat in its hands
   faceTowards(s, corpse.x, corpse.y);
-  s.working = 0.1;
+  s.working = 0.1; s.workKind = 'butcher'; // (#279)
   s.butcherTimer = (s.butcherTimer || 0) + tick.dt;
   if (s.butcherTimer < camp().butcherSeconds) return true;
   s.butcherTimer = 0;

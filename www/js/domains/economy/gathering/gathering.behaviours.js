@@ -124,6 +124,7 @@ export function workResource(s, assignedRes, tick) {
   }
   if (def.tool && (!hasToolFamily(s.tool, def.tool) || assignedRes.isGrowing)) return;
   s.working = 0.1; // animated while at it (see getHeldItemPose)
+  s.workKind = kind === 'berry_bush' ? 'pick' : null; // (berries picked by hand, #279)
   faceTowards(s, assignedRes.x, assignedRes.y);
   const work = def.work;
   playWorkSound(s, def.tool === 'axe' ? 'chop' : def.tool === 'pickaxe' ? 'mine' : 'rustle', def.tool ? 0.5 : 0.7);

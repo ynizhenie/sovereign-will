@@ -6,7 +6,7 @@ import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawArmor, drawFigure, drawHandTorch, drawHeldWeapon, drawMedbag, drawOrderBubble, drawQuiver, drawShield } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawArmor, drawFigure, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
@@ -100,12 +100,11 @@ export function drawEnemy(en) {
 
     ctx.save();
     ctx.translate(en.x, en.y);
-    if (en.type === 'big') ctx.translate(en.radius - 11, 0); // hands at the edge of the larger body
     ctx.save();
     applyHeldItemPose(en);
     if (getEnemyDef(en).necromancer) drawStaff();
-    else if (getEnemyDef(en).tool === 'medbag') drawMedbag(1);
-    else drawHeldWeapon(en.weapon);
+    else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
+    else drawHeldWeapon(en.weapon, itemScale(en)); // (in its hand, as big as it, #279)
     drawWeaponBlood(en);
     ctx.restore();
     if (en.armor === 'iron') drawArmor(en.radius);
