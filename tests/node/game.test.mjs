@@ -107,11 +107,15 @@ test('the ground uses more than one grass shade, not one flat repeating fill (#6
   expect(r.shadeCount).toBe(r.totalShades);
 });
 
-test('a boar takes twice the wielded weapon\'s damage, not a fixed amount (#62, #232)', async () => {
+test('a boar takes the wielded weapon\'s damage (#62; #298: not twice it); one blow of a sword or a spear doesn\'t kill it, an arrow or iron does', async () => {
   const fistDmg = await sim.boarHuntDamage({ weapon: 'fist' });
   const swordDmg = await sim.boarHuntDamage({ weapon: 'sword' });
-  expect(fistDmg).toBe(12); // 6 × 2
-  expect(swordDmg).toBe(40); // 20 × 2
+  expect(fistDmg).toBe(6);
+  expect(swordDmg).toBe(20);
+  const hp = await (() => GAME_CONFIG.mapResources.boar.hp)();
+  const dmg = id => GAME_CONFIG.weapons[id].combat.damage;
+  for (const one of ['club', 'sword', 'spear']) expect(dmg(one) < hp).toBe(true);
+  for (const kills of ['bow', 'iron_sword', 'iron_spear']) expect(dmg(kills) >= hp).toBe(true);
 });
 
 test('a boar flees a settler that gets close, even before being attacked (#62)', async () => {

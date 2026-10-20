@@ -2,7 +2,7 @@
 
 export const equipmentConfig = {
   // family: axe / pickaxe / rod — what it can gather (see mapResources `tool`).
-  // combatDamage: what an unarmed settler carrying it hits for (a boar: twice that, GAME_CONFIG.boarDamageFactor).
+  // combatDamage: what an unarmed settler carrying it hits for (a boar too, #298).
   // madeBy: 'hand': made at the town hall, no workshop needed (#261); otherwise a workshop, a smithy with iron.
   tools: {
     axe: { id: 'axe', icon: 'axe', cost: { wood: 5, stone: 5 }, family: 'axe', combatDamage: 15 },
@@ -27,7 +27,7 @@ export const equipmentConfig = {
   // combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the settler
   //   walks to an enemy before striking (bow: shooting distance), tentReach: same for enemy tents;
   //   bows also: projectileSpeed, projectileLife (ticks).
-  // Hunting a boar uses the same, the damage times GAME_CONFIG.boarDamageFactor (#232).
+  // Hunting a boar uses the same (#298: not doubled).
   // Fists hit with the tool the settler carries (tools' combatDamage), bare hands otherwise.
   // settlerTypes' damageMultiplier applies on top.
   weapons: {
