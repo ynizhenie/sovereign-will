@@ -22,7 +22,14 @@ export function orderTap(x, y) {
   const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && near(en, en.radius + 12)), ...game.enemyTents.filter(et => near(et, et.outpost ? 30 : 20))]);
   const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
   if (target) {
-    for (const s of picked ? [picked] : game.settlers) s.orderTarget = target;
+    const told = picked ? [picked] : game.settlers;
+    // (#279) tapped again, the one it was already given to (or all of them): the order's taken off
+    if (target.markedTarget && told.every(s => s.orderTarget === target)) {
+      for (const s of told) s.orderTarget = null;
+      target.markedTarget = game.settlers.some(s => s.orderTarget === target);
+      return true;
+    }
+    for (const s of told) s.orderTarget = target;
     target.markedTarget = true;
     return true;
   }

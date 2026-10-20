@@ -15,7 +15,7 @@ test('a wave gathers where it came in before it attacks, and a big one has a com
 test('scouts between waves walk the red band, aren\'t enemies; pointed at, one is hunted and runs off (#279, 23)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'scoutsBetweenWaves', {});
-  expect(r).toEqual({ count: 1, inBand: true, notEnemy: true, hunted: true, goneOff: true });
+  expect(r).toEqual({ count: 1, inBand: true, notEnemy: true, hunted: true, stays: true, goneOff: true });
 });
 
 test('every camp layout builds, the same camp for its seed; the party starts past the camp\'s red line (#279, 34, 37)', async ({ page }) => {
