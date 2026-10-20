@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, rand, townHall } from '../../../engine/world/index.js';
-import { hasWorkingShield } from '../equipment/index.js';
+import { armorOf, hasGear, hasWorkingShield } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
@@ -43,7 +43,7 @@ export function changeSettlerType(s, type) {
   const t = GAME_CONFIG.settlerTypes[type];
   if (!t || s.type === type) return;
   const share = s.hp / s.maxHp;
-  const bonus = s.armor === 'iron' ? GAME_CONFIG.gear.armor.hpBonus : 0;
+  const bonus = armorOf(s) ? armorOf(s).hpBonus : 0;
   Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, maxHp: t.hp + bonus });
   s.hp = s.maxHp * share;
 }
@@ -121,7 +121,7 @@ export function upgradeToBig(target) {
 
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
 export function damageSettler(settler, amount, attacker = null) {
-  let damage = settler.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
+  let damage = armorOf(settler) ? amount * (1 - armorOf(settler).damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   const wasWell = settler.hp >= settler.maxHp * 0.3;
   settler.hp -= damage;
@@ -227,7 +227,7 @@ export function dropSettlerLoot(s) {
   const held = [];
   if (s.weapon && s.weapon !== 'fist' && getDefinition('weapons', s.weapon)) held.push(`weapons:${s.weapon}`);
   if (s.tool && s.tool !== 'none' && getDefinition('tools', s.tool)) held.push(`tools:${s.tool}`);
-  for (const id of Object.keys(GAME_CONFIG.gear)) if ((id === 'armor' ? s.armor === 'iron' : s[id]) && getDefinition('gear', id)) held.push(`gear:${id}`);
+  for (const id of Object.keys(GAME_CONFIG.gear)) if (hasGear(s, id) && getDefinition('gear', id)) held.push(`gear:${id}`);
   held.forEach((key, i) => {
     if (rand() >= GAME_CONFIG.loot.itemChance) return;
     const a = i * 2.1;

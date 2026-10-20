@@ -107,7 +107,7 @@ export function drawEnemy(en) {
     else drawHeldWeapon(en.weapon, itemScale(en)); // (in its hand, as big as it, #279)
     drawWeaponBlood(en);
     ctx.restore();
-    if (en.armor === 'iron') drawArmor(en.radius);
+    if (en.armor) drawArmor(en.radius, en.armor);
     if (en.shield) drawShield(en.radius);
     if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
     if (en.torch) drawHandTorch(en.facing, en.radius); // (a night wave, #257)

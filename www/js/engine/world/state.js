@@ -51,6 +51,7 @@ export const game = {
   beachTiles: [],       // sand on part of each lake's shore; only drawn, see placeBeaches()
   sticks: [],
   pebbles: [],
+  logs: [],             // pieces of a felled tree's log lying about (#298)
   loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
   piles: [],
   dayTime: 0,           // seconds into the day (#257, world.daytime.js); the game starts in the morning
@@ -78,8 +79,8 @@ export const game = {
   waveSize: 0,          // how many the last wave brought (morale: a wave that's lost most of them runs, #207)
   waveRouted: false,
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
-  /** @type {{ armor: boolean, shield: boolean }} */
-  playerGear: { armor: false, shield: false }, // armour / a shield the player has made: waves wear them too (#203)
+  /** @type {{ armor: boolean, shield: boolean, leather?: boolean }} */
+  playerGear: { armor: false, shield: false, leather: false }, // armour / a shield the player has made: waves wear them too (#203)
   forests: [],          // forest centres, see placeForests()
   pendingRespawns: [],  // harvested resources waiting to grow back, see scheduleRespawn()
   /** @type {Object<string, number>} */

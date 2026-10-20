@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
+import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
@@ -203,7 +203,7 @@ export function updateCorpses(dt) {
 
 // Damage to an enemy, less what its armour and shield take, as a settler's (#203)
 export function damageEnemy(en, amount) {
-  let damage = en.armor === 'iron' ? amount * (1 - GAME_CONFIG.gear.armor.damageReduction) : amount;
+  let damage = armorOf(en) ? amount * (1 - armorOf(en).damageReduction) : amount;
   if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   en.hp -= damage;
   if (damage > 0) shakeOnHit(en); // (#207)

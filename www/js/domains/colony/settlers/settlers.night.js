@@ -16,6 +16,7 @@ import { getLights, getDayPhase, isNight, nightProgress } from '../../world/inde
 import { faceTowards } from './settlers.draw.js';
 import { says, someoneSays } from './settlers.voices.js';
 import { hasPlayerOrderFor } from './settlers.corpses.js';
+import { freeCampfireSeat } from './settlers.idle.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -155,8 +156,8 @@ export function sleepAtNight(s, tick) {
     }
     // on watch: walking the edge, or by the campfire (its pastime for the night)
     if (onWatch(s) && !tick.isWaveActive && (!s.idle || (s.idle.act !== 'patrolEdge' && s.idle.act !== 'campfire'))) {
-      const fire = game.buildings.find(b => b.type === 'campfire');
-      s.idle = fire && s.id % 2 ? { act: 'campfire', left: 999, spot: { x: fire.x, y: fire.y }, partnerId: null } : { act: 'patrolEdge', left: 999, spot: null, partnerId: null };
+      const free = s.id % 2 ? freeCampfireSeat(s) : null; // (#298: a seat at it free, or on patrol)
+      s.idle = free ? { act: 'campfire', left: 999, spot: { x: free.fire.x, y: free.fire.y }, partnerId: null, seat: free.seat } : { act: 'patrolEdge', left: 999, spot: null, partnerId: null };
     }
     return false;
   }

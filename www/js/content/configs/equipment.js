@@ -55,7 +55,9 @@ export const equipmentConfig = {
   gear: {
     backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, herbs: 2 }, extraLoads: 1 },
     shield: { id: 'shield', icon: 'shield', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
-    armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
+    armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35, armorKind: 'iron' },
+    // (#298) leather armour: weaker than iron (armorKind: what `armor` a unit wearing it has), made at a workshop
+    leather_armor: { id: 'leather_armor', icon: 'leather_armor', cost: { leather: 6 }, hpBonus: 25, damageReduction: 0.18, armorKind: 'leather' },
     // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows
     // growthFactor times as fast
     wateringCan: { id: 'wateringCan', icon: 'wateringCan', factions: ['humans', 'demons'], cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 },

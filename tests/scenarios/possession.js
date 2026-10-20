@@ -41,6 +41,9 @@ Object.assign(window.sim, (() => {
     tap(tree.x, tree.y);
     const ordered = !!s.order;
     run(15);
+    // (#298) felled and cut into pieces: the bigger one tapped, picked up
+    const piece = logs.slice().sort((a, b) => b.yield.wood - a.yield.wood)[0];
+    if (piece) { tap(piece.x, piece.y); run(6); }
     const carried = s.carrying ? { type: s.carrying.type, amount: s.carrying.amount } : null;
     const wood0 = stock.wood;
     tap(townHall.x, townHall.y);

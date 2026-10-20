@@ -8,7 +8,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
-import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getBaseRadius, isInSafeArea } from '../../conflict/combat/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -24,6 +24,26 @@ const byId = id => game.settlers.find(o => o.id === id) || null;
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfires = () => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y));
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
+
+// (#298) the places to sit by a campfire: on each of its four sides, a tile that's free and that `s` can get
+// to; four at most round one fire
+const SIDES = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+function seatsOf(fire, s) {
+  const g = getGridPos(fire.x, fire.y), reach = s ? getSettlerReach(s) : null;
+  return SIDES.map(([dx, dy], seat) => ({ seat, gx: g.gx + dx, gy: g.gy + dy }))
+    .filter(p => !isTileBlockedForSettler(p.gx, p.gy) && (!reach || getReachSteps(reach, p.gx, p.gy) !== -1))
+    .map(p => ({ seat: p.seat, x: p.gx * TILE_SIZE + 15, y: p.gy * TILE_SIZE + 15 }));
+}
+const seatTaken = (fire, seat, s) => game.settlers.some(o => o !== s && o.idle && o.idle.act === 'campfire' && o.idle.seat === seat &&
+  o.idle.spot && Math.hypot(o.idle.spot.x - fire.x, o.idle.spot.y - fire.y) < 1);
+// A free seat for `s` at a campfire, the nearest fire's first: { fire, seat } or null
+export function freeCampfireSeat(s) {
+  for (const fire of campfires().sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
+    const free = seatsOf(fire, s).filter(p => !seatTaken(fire, p.seat, s)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (free) return { fire, seat: free.seat };
+  }
+  return null;
+}
 // an archer out of arrows doesn't train (#232)
 const canTrain = s => !(s.weapon === 'bow' && (!s.quiver || (s.arrows || 0) <= 0));
 // a training dummy with room for one more
@@ -36,8 +56,8 @@ function pickPastime(s) {
   const c = config();
   const faction = getPlayerFaction().id;
   const options = ['wander'];
-  const fires = campfires();
-  if (fires.length) options.push('campfire');
+  const seat = freeCampfireSeat(s);
+  if (seat) options.push('campfire');
   if (game.settlers.some(o => isFreeCompany(s, o) && Math.hypot(o.x - s.x, o.y - s.y) < c.companyRange)) options.push('talk');
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
   if (faction === 'undead') options.push('sway', 'sway');
@@ -48,11 +68,11 @@ function pickPastime(s) {
   }
   const act = options[Math.floor(rand() * options.length)];
   const seconds = c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
-  /** @type {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null }} */
+  /** @type {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, seat?: number }} */
   const idle = { act, left: seconds, spot: null, partnerId: null };
-  if (act === 'campfire') {
-    const fire = fires.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
-    idle.spot = { x: fire.x, y: fire.y };
+  if (act === 'campfire' && seat) {
+    idle.spot = { x: seat.fire.x, y: seat.fire.y };
+    idle.seat = seat.seat;
   } else if (act === 'talk') {
     // the nearest free company; if it's in a knot already, this one joins it, else they start one
     const other = game.settlers.filter(o => isFreeCompany(s, o)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
@@ -103,9 +123,15 @@ export function idlePastime(s, tick) {
   s.swaying = false;
   switch (idle.act) {
     case 'campfire': {
-      const fire = campfires().find(b => Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
-      if (!fire) { idle.left = 0; return false; }
-      const place = ringPlace(s, fire, c.campfireRing, 'campfire');
+      let fire = idle.spot && campfires().find(b => Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
+      // (#298) its seat: one of the fire's four sides; none given (the night watch) or taken, another free one
+      if (!fire || idle.seat === undefined || seatTaken(fire, idle.seat, s)) {
+        const free = freeCampfireSeat(s);
+        if (!free) { idle.left = 0; return false; }
+        fire = free.fire; idle.spot = { x: fire.x, y: fire.y }; idle.seat = free.seat;
+      }
+      const place = seatsOf(fire, null).find(p => p.seat === idle.seat);
+      if (!place) { idle.left = 0; return false; }
       goStand(s, place, tick.dt, fire);
       if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) {
         cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);

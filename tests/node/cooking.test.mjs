@@ -4,14 +4,14 @@ import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
 test('a worker carries fuel to the campfire, cooks all the raw food and carries it home (#30, #106)', async () => {
-  // 7 raw pieces -> 7 food; 5 pieces per fuel -> 2 firewood, fetched in 2 trips
+  // 7 raw pieces -> 7 food; (#298) a firewood burns 30 s by itself, long enough for all 7 (1.5 s each): 1 trip
   expect(await sim.cookingRun({}))
-    .toEqual({ food: 12, rawMeat: 0, rawFish: 0, wheat: 0, firewood: 0, coal: 0, maxCooks: 1, carriedFood: true, fuelTrips: 2, cooks: ['worker'] });
+    .toEqual({ food: 12, rawMeat: 0, rawFish: 0, wheat: 0, firewood: 1, coal: 0, maxCooks: 1, carriedFood: true, fuelTrips: 1, cooks: ['worker'] });
 });
 
 test('coal burns first (#30)', async () => {
   const r = await sim.cookingRun({ raw: { rawMeat: 8 }, fuel: { firewood: 3, coal: 1 } });
-  expect(r).toMatchObject({ food: 13, rawMeat: 0, coal: 0, firewood: 2 });
+  expect(r).toMatchObject({ food: 13, rawMeat: 0, coal: 0, firewood: 3 }); // (the coal enough for all 8, #298)
 });
 
 test('all raw food gets cooked even with plenty of food; nothing without fuel (#106)', async () => {
