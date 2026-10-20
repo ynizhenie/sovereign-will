@@ -13,7 +13,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { joystick, keys, t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/index.js';
-import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, takeStock } from '../storage/index.js';
+import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, stock, takeStock } from '../storage/index.js';
 import { deliverMaterials, getMissingMaterial, getRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getPossessed } from './settlers.rules.js';
@@ -23,7 +23,13 @@ import { performAttack } from '../../conflict/combat/index.js';
 import { faceTowards } from './settlers.draw.js';
 import { fetchBait, fishAt, getFishingBait } from '../../economy/fishing/index.js';
 import { huntBoar } from '../../economy/hunting/index.js';
-import { pickApplesFrom } from '../../economy/farming/index.js';
+import { pickApplesFrom, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
+import { cook } from '../../economy/cooking/index.js';
+import { craftItem } from '../equipment/index.js';
+import { getNecromancy, raiseTemporaryZombie } from '../../factions/undead/index.js';
+import { getCorpseHeap } from './settlers.corpses.js';
+import { lightTorches } from './settlers.night.js';
+import { cleanDung } from './settlers.idle.js';
 
 export const handsFull = p => p.carrying && !hasRoomToCarry(p);
 export const walkTo = (s, x, y, tick) => moveEntityTowards(s, x, y, s.speed, false, tick.dt);
@@ -137,6 +143,103 @@ export const ORDERS = [
       if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) walkTo(s, spot.x, spot.y, tick);
       else workResource(s, target, tick);
       return true;
+    }
+  },
+  // (#279) the rest of what a settler does by itself, by hand too
+  {
+    // a medic: a hurt one tapped, healed with herbs from its bag (filled at a storage first)
+    kind: 'heal',
+    find: (p, near) => (hasToolFamily(p.tool, 'medic') ? game.settlers.find(o => o !== p && near(o, (o.visualRadius || o.radius) + 6) && o.hp < o.maxHp) : null),
+    check: p => (!(p.bagHerbs > 0) && !(stock.herbs > 0) ? 'possess.noHerbs' : null),
+    step: (s, target, tick) => {
+      if (!game.settlers.includes(target) || target.hp >= target.maxHp) return false;
+      const medic = GAME_CONFIG.medic;
+      if (!(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
+      if (Math.hypot(target.x - s.x, target.y - s.y) > medic.range + target.radius) { walkTo(s, target.x, target.y, tick); return true; }
+      s.working = 0.1; faceTowards(s, target.x, target.y);
+      s.healTimer = (s.healTimer || 0) + tick.dt;
+      if (s.healTimer >= medic.healSeconds) { s.healTimer = 0; s.bagHerbs--; target.hp = Math.min(target.maxHp, target.hp + medic.healPerHerb); }
+      return true;
+    }
+  },
+  {
+    // a necromancer: a corpse tapped, raised (one of its raises)
+    kind: 'raise',
+    find: (p, near) => (getNecromancy(p) ? game.corpses.find(c => near(c, 18)) : null),
+    check: p => ((p.raisesLeft ?? 1) > 0 ? null : 'possess.noRaises'),
+    step: (s, target, tick) => {
+      const necro = getNecromancy(s);
+      if (!necro || !game.corpses.includes(target) || (s.raisesLeft ?? necro.raises) <= 0) return false;
+      if (Math.hypot(target.x - s.x, target.y - s.y) > necro.raiseReach) { walkTo(s, target.x, target.y, tick); return true; }
+      s.working = 0.1; faceTowards(s, target.x, target.y);
+      s.raising = { x: target.x, y: target.y, until: game.pathTick + 2 };
+      s.raiseTimer = (s.raiseTimer || 0) + tick.dt;
+      if (s.raiseTimer < necro.raiseSeconds) return true;
+      s.raiseTimer = 0; s.raisesLeft = (s.raisesLeft ?? necro.raises) - 1;
+      raiseTemporaryZombie(target);
+      return false;
+    }
+  },
+  {
+    // a corpse tapped: carried out of the base to the heap
+    kind: 'corpse',
+    find: (p, near) => (!p.carrying ? game.corpses.find(c => near(c, 16)) : null),
+    step: (s, target, tick) => {
+      if (!(s.carrying && s.carrying.type === 'corpse')) {
+        if (!game.corpses.includes(target) || s.carrying) return false;
+        if (Math.hypot(target.x - s.x, target.y - s.y) > 14) { walkTo(s, target.x, target.y, tick); return true; }
+        game.corpses.splice(game.corpses.indexOf(target), 1);
+        s.carrying = { type: 'corpse', amount: 1, corpse: target };
+        return true;
+      }
+      const heap = getCorpseHeap();
+      if (heap && Math.hypot(heap.x - s.x, heap.y - s.y) > 14) { walkTo(s, heap.x, heap.y, tick); return true; }
+      game.corpses.push(Object.assign(s.carrying.corpse, { x: s.x, y: s.y }));
+      s.carrying = null;
+      return false;
+    }
+  },
+  {
+    // a pack lying by a storage: carried into one with room
+    kind: 'pile',
+    find: (p, near) => (!p.carrying ? game.piles.find(pl => near(pl, 10)) : null),
+    step: (s, target, tick) => {
+      if (s.carrying) { if (!s.carrying.counted) return false; goDeliver(s, tick); return !!s.carrying; }
+      if (!game.piles.includes(target)) return false;
+      if (Math.hypot(target.x - s.x, target.y - s.y) > 14) { walkTo(s, target.x, target.y, tick); return true; }
+      const amount = Math.min(target.amount, GAME_CONFIG.storage.carryMaterials);
+      target.amount -= amount;
+      if (target.amount <= 1e-6) game.piles.splice(game.piles.indexOf(target), 1);
+      s.carrying = { type: target.type, amount, counted: true, loads: 99 };
+      return true;
+    }
+  },
+  {
+    // a building's work tapped: done as the settler does it by itself (cooking at a campfire, planting a farm
+    // zone, watering the crops, lighting a torch post, carrying dung to the heap, making what's ordered at a
+    // workshop or a smithy), till there's no more of it
+    kind: 'job',
+    find: (p, near) => {
+      const b = game.buildings.find(o => near(o, 18));
+      if (b && b.type === 'campfire') return { job: cook };
+      if (b && b.type === 'torch' && !b.lit) return { job: lightTorches };
+      if (b && b.type === 'dung_heap') return { job: cleanDung };
+      if (b && GAME_CONFIG.buildings[b.type] && GAME_CONFIG.buildings[b.type].crafts) return { job: craftItem };
+      const zone = game.farmZones.find(z => near(z, 15));
+      if (zone && hasToolFamily(p.tool, 'hoe')) return { job: tendFarmZones };
+      const plot = game.farmPlots.find(f => near(f, 15) && f.growth < 100);
+      if (plot && p.wateringCan) return { job: waterCrops };
+      return null;
+    },
+    // (its behaviour runs with the AI's hands for a moment: as if not possessed)
+    step: (s, target, tick) => {
+      s.isPossessed = false; s.wasIdle = true;
+      const going = target.job(s, tick);
+      s.isPossessed = true;
+      if (going) return true;
+      // the work done, what came of it (food off the fire...) taken home
+      if (s.carrying && s.carrying.type !== 'corpse') { goDeliver(s, tick); return true; }
+      return false;
     }
   },
   {

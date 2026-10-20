@@ -5,7 +5,7 @@ import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
-import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo } from '../domains/colony/settlers/index.js';
+import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo, roleTitle } from '../domains/colony/settlers/index.js';
 import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
@@ -54,8 +54,7 @@ export function updateUI() {
   if (selected) {
     const type = GAME_CONFIG.settlerTypes[selected.type] || GAME_CONFIG.settlerTypes.normal;
     let name = `[[${type.icon}]] ${type.label}`;
-    if (hasGear(selected, 'whistle')) name += ` · ${t('role.foreman')}`; // (a commander, #248)
-    if (hasGear(selected, 'banner')) name += ` · ${t('role.captain')}`;
+    name += ` · ${roleTitle(selected)}`; // (what it is by what it holds, #279; a commander, #248)
     let wName = getDefinition('weapons', selected.weapon)?.label || selected.weapon;
     let tName = selected.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selected.tool)?.label || selected.tool);
     let aName = selected.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
