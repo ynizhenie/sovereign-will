@@ -3,4 +3,4 @@
 
 export { collectBones, corpsesToGraves, necromancy, nextAutoBlightTile } from './undead.behaviours.js';
 export { drawBlight, drawRaising, drawStaff } from './undead.draw.js';
-export { enemyNecromancy, fadeClearedBlight, getNecromancy, isBlighted, makeBonesAndRot, raiseOnBlight, toggleBlightZone, updateTemporaryZombies } from './undead.rules.js';
+export { enemyNecromancy, fadeClearedBlight, getNecromancy, raiseTemporaryZombie, isBlighted, makeBonesAndRot, raiseOnBlight, toggleBlightZone, updateTemporaryZombies } from './undead.rules.js';
