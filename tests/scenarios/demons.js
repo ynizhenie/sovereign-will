@@ -141,8 +141,8 @@ Object.assign(window.sim, (() => {
         if (isTileBlockedForEnemyStrict(g.gx, g.gy)) onFreeTiles = false;
         en.start = { x: en.x, y: en.y };
       }
-      run(3, { each: () => { waveTimer = 50; } });
-      if (enemies.some(en => Math.hypot(en.x - en.start.x, en.y - en.start.y) < 20)) allMoved = false;
+      run(9, { each: () => { waveTimer = 50; } }); // (past the muster, #279)
+      if (enemies.some(en => en.start && Math.hypot(en.x - en.start.x, en.y - en.start.y) < 20)) allMoved = false; // (the ones out at first)
       counts.push(enemyTents.length);
     }
     return { onFreeTiles, allMoved, portals: counts };

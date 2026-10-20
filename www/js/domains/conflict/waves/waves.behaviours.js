@@ -5,7 +5,7 @@ import { game, townHall } from '../../../engine/world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
-import { damageSettler, faceTowards, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, speak, startSwing } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
@@ -49,6 +49,9 @@ export function tickEnemy(en, dt) {
   if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.guard && holdGuardPost(en, dt)) return; // (a defender of an enemy camp, #255)
+  if (en.scout) { scoutFlees(en, dt); return; } // (a scout the player pointed at: it only runs, #279)
+  if (en.captain) captainOrdersEnemies(en, dt); // (gathering too: the one it tells goes at once)
+  if (en.musterUntil && musterHold(en, dt)) return; // (a wave gathering first, #279)
 
   const enemyDef = getEnemyDef(en);
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
@@ -78,6 +81,48 @@ function holdGuardPost(en, dt) {
   if (game.settlers.some(s => Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6)) return false;
   if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 6) moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
   return true;
+}
+
+// (#279) a wave's enemy gathering where it came in before it attacks: it stands facing the base and shouts at
+// the settlers now and then; a settler coming close, or the time up, and it's off. True while it gathers
+function musterHold(en, dt) {
+  const m = GAME_CONFIG.waveMuster;
+  if (game.pathTick >= en.musterUntil || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < m.musterBreak) || en.hp < en.maxHp) {
+    en.musterUntil = 0;
+    return false;
+  }
+  if (Math.hypot(en.muster.x - en.x, en.muster.y - en.y) > 6) moveEntityTowards(en, en.muster.x, en.muster.y, en.speed, true, dt);
+  else faceTowards(en, townHall.x, townHall.y);
+  if (Math.random() < dt * 0.12) speak(en, getEnemyFaction().id, 'taunt');
+  return true;
+}
+
+// (#279) an enemy commander: every everySeconds it tells one of its own within reach, in turn, which settler
+// to go for, one each, the nearest to it first (as the player's captain does, settlers.commanders.js)
+function captainOrdersEnemies(en, dt) {
+  const c = GAME_CONFIG.waveMuster.captain;
+  en.orderIn = (en.orderIn ?? 0) - dt;
+  if (en.orderIn > 0) return;
+  en.orderIn = c.everySeconds;
+  const squad = game.enemies.filter(o => o !== en && o.hp > 0 && !o.scout && Math.hypot(o.x - en.x, o.y - en.y) < c.reach);
+  if (!squad.length) return;
+  en.orderTurn = ((en.orderTurn || 0) + 1) % squad.length;
+  const to = squad[en.orderTurn];
+  const taken = new Set(squad.filter(o => o !== to).map(o => o.attackTarget).filter(Boolean));
+  const target = game.settlers.filter(s => !taken.has(s)).sort((a, b) => Math.hypot(a.x - en.x, a.y - en.y) - Math.hypot(b.x - en.x, b.y - en.y))[0];
+  if (!target) return;
+  to.attackTarget = target;
+  to.musterUntil = 0; // (told: it goes)
+  to.orderBubble = { icon: 'swords', until: game.pathTick + 60 };
+  en.orderBubble = { icon: 'swords', until: game.pathTick + 40 };
+}
+
+// (#279) a scout the player pointed at: off to the nearest edge of the map as fast as it can, gone there
+function scoutFlees(en, dt) {
+  const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
+  const out = [{ x: -40, y: en.y, d: en.x }, { x: W + 40, y: en.y, d: W - en.x }, { x: en.x, y: -40, d: en.y }, { x: en.x, y: H + 40, d: H - en.y }].sort((a, b) => a.d - b.d)[0];
+  moveEntityTowards(en, out.x, out.y, en.speed * 1.2, true, dt);
+  if (en.x < 18 || en.y < 18 || en.x > W - 18 || en.y > H - 18) { en.fled = true; en.crumbled = true; en.hp = 0; } // (gone: no corpse, no spoils)
 }
 
 // A tent builder walks to its site and builds; the tent stands once the work is done

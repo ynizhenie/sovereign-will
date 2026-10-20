@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
@@ -220,6 +220,7 @@ export function startNextWave() {
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
     dressForWave(enemy, def);
+    musterAt(enemy); // (it gathers first, #279)
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true; // (a night wave, #257)
     game.enemies.push(enemy);
     spawned++;
@@ -257,6 +258,8 @@ export function startNextWave() {
   }
 
   if (queued) { game.portalTimer = 0; tickPortalWave(0); } // (the first of them at once)
+  regroupBySide(); // (#279: those of a side gather together)
+  pickCaptain(spawned);
   game.waveSize = game.enemies.filter(en => en.fromWave).length + game.portalQueue.length; // (morale: a wave that's lost most of them runs)
   game.waveRouted = false;
   game.waveNum++;
@@ -276,8 +279,42 @@ export function tickPortalWave(dt) {
     enemy.fromWave = true;
     dressForWave(enemy, GAME_CONFIG.enemies[id]);
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true;
+    musterAt(enemy); // (#279)
     game.enemies.push(enemy);
   }
+  pickCaptain(game.waveSize);
+}
+
+// (#279) a wave's enemy gathers first, a little in from where it came, for musterSeconds
+function musterAt(enemy) {
+  const m = GAME_CONFIG.waveMuster, d = Math.max(1, Math.hypot(townHall.x - enemy.x, townHall.y - enemy.y));
+  enemy.musterUntil = game.pathTick + Math.round(m.musterSeconds * 60);
+  enemy.muster = { x: enemy.x + (townHall.x - enemy.x) / d * TILE_SIZE * 1.5, y: enemy.y + (townHall.y - enemy.y) / d * TILE_SIZE * 1.5 };
+}
+
+// (#279) a wave's enemies that came in on the same side of the map gather together: at the middle of where
+// they came in, a tile and a half in from the edge
+function regroupBySide() {
+  const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
+  const sideOf = en => [['left', en.x], ['right', W - en.x], ['top', en.y], ['bottom', H - en.y]].sort((a, b) => a[1] - b[1])[0][0];
+  const groups = {};
+  for (const en of game.enemies) if (en.fromWave && en.musterUntil && !en.buildTarget) (groups[sideOf(en)] = groups[sideOf(en)] || []).push(en);
+  for (const [side, group] of Object.entries(groups)) {
+    const cx = group.reduce((sum, en) => sum + en.x, 0) / group.length, cy = group.reduce((sum, en) => sum + en.y, 0) / group.length;
+    const inset = (BORDER_MARGIN + 1.5) * TILE_SIZE;
+    const at = side === 'left' ? { x: inset, y: cy } : side === 'right' ? { x: W - inset, y: cy } : side === 'top' ? { x: cx, y: inset } : { x: cx, y: H - inset };
+    group.forEach((en, i) => { const a = i * 2.4; en.muster = { x: at.x + Math.cos(a) * 14 * Math.sqrt(i), y: at.y + Math.sin(a) * 14 * Math.sqrt(i) }; });
+  }
+}
+
+// (#279) a wave big enough has a commander: one of its melee enemies (not big, not a healer), with a banner
+function pickCaptain(size) {
+  if (size < GAME_CONFIG.waveMuster.captainFrom || game.enemies.some(en => en.captain && en.hp > 0)) return;
+  // (in the biggest group gathering, so it has its own about it; not one off building a tent)
+  const pick = game.enemies.filter(en => en.fromWave && !en.buildTarget && en.type === 'normal' && !getEnemyDef(en).healer && !getEnemyDef(en).necromancer && !getEnemyDef(en).ranged)
+    .map(en => ({ en, near: game.enemies.filter(o => o.muster && en.muster && Math.hypot(o.muster.x - en.muster.x, o.muster.y - en.muster.y) < 120).length }))
+    .sort((a, b) => b.near - a.near)[0];
+  if (pick) pick.en.captain = true;
 }
 
 // The wave timer: a warning 15 s before, then the wave

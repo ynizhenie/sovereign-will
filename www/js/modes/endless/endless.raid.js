@@ -10,10 +10,10 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { camera, clampCamera, ctx, onTap, t } from '../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, game, getGridPos, rand, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, createWorldSeed, game, getGridPos, rand, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../engine/movement/index.js';
 import { addResources, formatCost, moveSettlerToTownHall } from '../../domains/colony/storage/index.js';
-import { faceTowards } from '../../domains/colony/settlers/index.js';
+import { faceTowards, someoneSays } from '../../domains/colony/settlers/index.js';
 import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
@@ -43,6 +43,7 @@ export const raid = {
   timer: 0,
   defenders: 0,
   still: 0,     // seconds the party on its way home hasn't moved
+  scouting: false, // (#279) one sent only to look at the camp: it isn't fought, and stays
   picking: false
 };
 
@@ -64,9 +65,9 @@ const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) || (game.
 
 // A free tile by a side of the map, near its middle, `depth` tiles in (one the settler `from` can walk
 // to, if given)
-function edgeSpot(side, from = null) {
+function edgeSpot(side, from = null, firstDepth = BORDER_MARGIN) {
   const reach = from ? getSettlerReach(from) : null;
-  for (let depth = BORDER_MARGIN; depth < BORDER_MARGIN + 6; depth++) {
+  for (let depth = firstDepth; depth < BORDER_MARGIN + 6; depth++) {
     for (let k = 0; k < 24; k++) {
       const offset = (k % 2 ? 1 : -1) * Math.ceil(k / 2);
       const along = (side === 'left' || side === 'right' ? game.ROWS : game.COLS) / 2 + offset;
@@ -93,7 +94,7 @@ export function tickRaidCamp(dt) {
   if (game.gameMode !== 'endless' || !game.gameStarted || isRaiding()) return;
   const c = config(), beaten = game.waveNum - 1;
   if (!game.raidCamp && beaten >= c.fromWave && beaten - (game.raidCampWave || 0) >= c.everyWaves && !waveOn()) {
-    game.raidCamp = { side: SIDES[Math.floor(rand() * SIDES.length)], timeLeft: c.seconds };
+    game.raidCamp = { side: SIDES[Math.floor(rand() * SIDES.length)], timeLeft: c.seconds, seed: Math.floor(rand() * 1e9), layout: c.layouts[Math.floor(rand() * c.layouts.length)] };
     game.raidCampWave = beaten;
     showNotification(t('raid.appeared'), false);
     playSound('horn');
@@ -149,9 +150,9 @@ function closeRaidPicker() {
 }
 
 // The party sets out for the zone's side; the rest of the base rests
-export function startRaid(party) {
+export function startRaid(party, scouting = false) {
   if (!game.raidCamp || isRaiding() || !party.length) return false;
-  Object.assign(raid, { phase: 'march', side: game.raidCamp.side, raiders: party, auto: false, won: false, timer: 0 });
+  Object.assign(raid, { phase: 'march', side: game.raidCamp.side, raiders: party, auto: false, won: false, timer: 0, scouting });
   raid.gather = edgeSpot(raid.side, party[0]);
   party.forEach((s, i) => {
     s.raider = true; s.isPossessed = false;
@@ -159,6 +160,18 @@ export function startRaid(party) {
   });
   game.selectedSettler = null;
   updateRaidBar();
+  return true;
+}
+
+// (#279) a scout sent to look at the camp: the settler picked, else one with nothing to do (soldiers last)
+export function sendScout() {
+  if (!game.raidCamp || isRaiding()) return false;
+  if (waveOn()) { showNotification(t('raid.waveOn'), true); return false; }
+  const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) && canGo(game.selectedSettler) ? game.selectedSettler : null;
+  const scout = picked || game.settlers.filter(canGo).sort((a, b) => (b.isIdle ? 1 : 0) - (a.isIdle ? 1 : 0) || (a.role === 'worker' ? -1 : 1))[0];
+  if (!scout) { showNotification(t('raid.none'), true); return false; }
+  startRaid([scout], true);
+  showNotification(t('raid.scoutOff'), false);
   return true;
 }
 
@@ -187,11 +200,12 @@ export function enterCamp() {
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
   };
   raid.home.lists.settlers = game.settlers.filter(s => !party.includes(s));
+  const camp = game.raidCamp || { side: raid.side }; // (taken before the lists are emptied: it's one of them)
   for (const k of WORLD_LISTS) game[k] = emptyLike(game[k]);
   game.selectedSettler = null;
-  buildCamp(army);
-  // the party at the zone's near edge, waiting for orders
-  const entry = edgeSpot(OPPOSITE[raid.side]);
+  buildCamp(army, camp);
+  // the party at the zone's near edge, out past its red line (#279), waiting for orders
+  const entry = edgeSpot(OPPOSITE[raid.side], null, 0);
   party.forEach((s, i) => {
     Object.assign(s, lineUp(entry, OPPOSITE[raid.side], i));
     s.orderSpot = { x: s.x, y: s.y }; s.orderTarget = null; s.path = null; s.pathTarget = null; s.carrying = null;
@@ -199,68 +213,106 @@ export function enterCamp() {
   game.settlers = party;
   raid.raiders = party;
   raid.phase = 'fight';
-  Object.assign(camera, { x: entry.x, y: entry.y });
+  raid.timer = 0;
+  // a scout looks over the camp: the view on it (#279); a party sees where it stands
+  const look = raid.scouting ? { x: game.WORLD_WIDTH / 2 * 0.6 + entry.x * 0.4, y: game.WORLD_HEIGHT / 2 * 0.6 + entry.y * 0.4 } : entry;
+  Object.assign(camera, { x: look.x, y: look.y });
   clampCamera();
   invalidateAllPaths();
-  playSound('horn');
+  if (!raid.scouting) playSound('horn');
   updateRaidBar();
 }
 
-// The camp's map: the ground as any (made for it), cleared round its middle; a palisade with gaps, the
-// outpost in the middle, tents (calling more out in the fight) and campfires by it, the defenders at their posts
-function buildCamp(army) {
+// The camp's map (#279: of its own seed, the same every time it's seen, so a scout's look holds for the raid):
+// the ground as any (made for it), cleared round its middle; the outpost in the middle, round it as its layout
+// has it (a square palisade, a round one, a fort of two rings, or no walls but spikes), tents (calling more out
+// in the fight), campfires and its faction's own buildings, the defenders at their posts
+function buildCamp(army, camp) {
   const c = config();
-  setWorldSize(c.zoneTiles, c.zoneTiles);
-  generateMap();
-  game.boars = [];
+  const worldSeed = game.worldSeed;
+  game.worldSeed = createWorldSeed(`camp-${camp.seed || 0}`);
+  try {
+    setWorldSize(c.zoneTiles, c.zoneTiles);
+    generateMap();
+    game.boars = [];
+    layCamp(army, camp.layout || 'square');
+  } finally { game.worldSeed = worldSeed; }
+  // the base's hall isn't here
+  townHall.x = townHall.y = -100000;
+  resetTileIndex();
+}
+
+// Tiles of a ring round the middle: a square one (the Chebyshev distance r) or a round one
+function ringTiles(mid, r, round) {
+  const out = [];
+  for (let gy = mid - r - 1; gy <= mid + r + 1; gy++) {
+    for (let gx = mid - r - 1; gx <= mid + r + 1; gx++) {
+      const d = round ? Math.hypot(gx - mid, gy - mid) : Math.max(Math.abs(gx - mid), Math.abs(gy - mid));
+      if (round ? Math.abs(d - r) < 0.55 : d === r) out.push([gx, gy]);
+    }
+  }
+  return out;
+}
+
+function layCamp(army, layout) {
+  const c = config();
   const mid = Math.floor(c.zoneTiles / 2), R = c.wallTiles, centre = tileCenter(mid, mid);
-  // nothing natural inside the palisade or on it
-  const clear = R + 2;
+  const round = layout === 'round', open = layout === 'scattered', fort = layout === 'fort';
+  const span = open ? R + 1 : R;
+  // nothing natural inside the camp or on its walls
+  const clear = span + 2;
   const inside = o => Math.abs(getGridPos(o.x, o.y).gx - mid) <= clear && Math.abs(getGridPos(o.x, o.y).gy - mid) <= clear;
   for (const list of ['trees', 'cacti', 'boulders', 'naturalRocks', 'waterTiles', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres', 'beachTiles']) {
     game[list] = game[list].filter(o => !inside(o));
   }
-  // the palisade: a square ring, with a way in on the side the party comes from and more at random
-  const ring = [];
-  for (let d = -R; d <= R; d++) ring.push([mid + d, mid - R], [mid + d, mid + R], [mid - R, mid + d], [mid + R, mid + d]);
-  const unique = [...new Map(ring.map(p => [p.join(','), p])).values()];
-  const facing = { left: [mid - R, mid], right: [mid + R, mid], top: [mid, mid - R], bottom: [mid, mid + R] };
-  const gaps = [facing[OPPOSITE[raid.side]]];
-  while (gaps.length < c.gaps + 1) {
-    const side = facing[SIDES[Math.floor(rand() * 4)]], shift = Math.floor(rand() * (R - 1)) - Math.floor((R - 1) / 2);
-    gaps.push(side[0] === mid ? [mid + shift, side[1]] : [side[0], mid + shift]);
-  }
-  const isGap = (gx, gy) => gaps.some(([x, y]) => (x === gx && Math.abs(y - gy) <= 1 && Math.abs(x - mid) === R) || (y === gy && Math.abs(x - gx) <= 1 && Math.abs(y - mid) === R));
-  const wall = game.waveNum >= c.stoneFromWave ? 'wall_stone' : 'wall_wood';
-  for (const [gx, gy] of unique) {
-    if (isGap(gx, gy)) continue;
-    game.buildings.push(standing(wall, tileCenter(gx, gy)));
-  }
-  // torches by each way in, two campfires inside
-  for (const [gx, gy] of gaps) {
-    const along = Math.abs(gx - mid) === R ? [[gx, gy - 2], [gx, gy + 2]] : [[gx - 2, gy], [gx + 2, gy]];
-    for (const [tx, ty] of along) {
-      const at = tileCenter(tx, ty), spot = game.buildings.findIndex(b => b.x === at.x && b.y === at.y);
-      if (spot >= 0) game.buildings[spot] = standing('torch', at, { lit: true });
+  const entryAngle = { left: Math.PI, right: 0, top: -Math.PI / 2, bottom: Math.PI / 2 }[OPPOSITE[raid.side]];
+  // a ring of wall with ways in: one towards where the party comes from, `gaps` more at random
+  const wallRing = (r, type, gapCount, torches = true) => {
+    const ring = ringTiles(mid, r, round);
+    const angles = [entryAngle];
+    for (let i = 0; i < gapCount; i++) angles.push(rand() * Math.PI * 2);
+    const toward = a => p => Math.hypot(p[0] - (mid + Math.cos(a) * r), p[1] - (mid + Math.sin(a) * r));
+    /** @type {number[][]} */
+    const gapAt = angles.map(a => [...ring].sort((p, q) => toward(a)(p) - toward(a)(q))[0]);
+    const isGap = p => { const [gx, gy] = p; return gapAt.some(([x, y]) => Math.hypot(gx - x, gy - y) < 1.5); };
+    for (const p of ring) if (!isGap(p)) game.buildings.push(standing(type, tileCenter(p[0], p[1])));
+    // torches by each way in
+    if (torches) for (const [gx, gy] of gapAt) {
+      for (const p of ring.filter(q => Math.abs(Math.hypot(q[0] - gx, q[1] - gy) - 2) < 0.6).slice(0, 2)) {
+        const at = tileCenter(p[0], p[1]), k = game.buildings.findIndex(b => b.x === at.x && b.y === at.y);
+        if (k >= 0) game.buildings[k] = standing('torch', at, { lit: true });
+      }
+    }
+  };
+  const stone = game.waveNum >= c.stoneFromWave;
+  if (fort) { wallRing(R, 'wall_stone', c.gaps); wallRing(R - 2, 'wall_wood', 0, false); } // (the inner ring: one way in, the party's side)
+  else if (!open) wallRing(R, stone ? 'wall_stone' : 'wall_wood', c.gaps);
+  // what's free inside: not the outpost's tile, not a wall
+  const taken = new Set(game.buildings.map(b => `${getGridPos(b.x, b.y).gx},${getGridPos(b.x, b.y).gy}`));
+  const free = [];
+  for (let gy = mid - span + 1; gy <= mid + span - 1; gy++) {
+    for (let gx = mid - span + 1; gx <= mid + span - 1; gx++) {
+      if ((gx === mid && gy === mid) || taken.has(`${gx},${gy}`)) continue;
+      if (round && Math.hypot(gx - mid, gy - mid) > R - 0.6) continue;
+      free.push([gx, gy]);
     }
   }
-  const free = [];
-  for (let gy = mid - R + 1; gy <= mid + R - 1; gy++) for (let gx = mid - R + 1; gx <= mid + R - 1; gx++) if (gx !== mid || gy !== mid) free.push([gx, gy]);
-  const takeFree = (near = Infinity) => {
-    const ok = free.filter(([gx, gy]) => Math.max(Math.abs(gx - mid), Math.abs(gy - mid)) <= near);
-    const pick = (ok.length ? ok : free)[Math.floor(rand() * (ok.length ? ok : free).length)];
+  const takeFree = (near = Infinity, far = 0) => {
+    const ok = free.filter(([gx, gy]) => { const d = Math.max(Math.abs(gx - mid), Math.abs(gy - mid)); return d <= near && d >= far; });
+    const from = ok.length ? ok : free;
+    const pick = from[Math.floor(rand() * from.length)];
     free.splice(free.indexOf(pick), 1);
     return tileCenter(pick[0], pick[1]);
   };
-  for (let i = 0; i < 2; i++) {
-    const at = takeFree(R - 2);
-    game.buildings.push(standing('campfire', at, { fuelLeft: 1e6 }));
-  }
+  // fires (more in a camp with no walls), spikes round an open one, and its faction's own buildings
+  for (let i = 0; i < (open ? 3 : 2); i++) game.buildings.push(standing('campfire', takeFree(span - 2), { fuelLeft: 1e6 }));
+  if (open) for (let i = 0; i < 8; i++) game.buildings.push(standing('spikes', takeFree(span, span - 1)));
+  for (const type of (c.decor[getEnemyFaction().id] || [])) game.buildings.push(standing(type, takeFree(span - 1, 2)));
   // the outpost, and the tents
   game.enemyTents.push({ x: centre.x, y: centre.y, hp: c.outpostHp, maxHp: c.outpostHp, outpost: true, summonTimer: 0, summonsLeft: 0 });
-  const tents = c.tents.min + Math.floor(rand() * (c.tents.max - c.tents.min + 1));
+  const tents = c.tents.min + Math.floor(rand() * (c.tents.max - c.tents.min + 1)) + (open ? 1 : 0);
   for (let i = 0; i < tents; i++) {
-    const at = takeFree(R - 2);
+    const at = takeFree(fort ? R - 3 : span - 2);
     game.enemyTents.push({ x: at.x, y: at.y, hp: GAME_CONFIG.enemyTents.hp, maxHp: GAME_CONFIG.enemyTents.hp, summonTimer: 0, summonsLeft: c.tentSummons });
   }
   // the defenders, mirroring the player's army
@@ -275,9 +327,6 @@ function buildCamp(army) {
     en.guard = { x: at.x, y: at.y };
     game.enemies.push(en);
   }
-  // the base's hall isn't here
-  townHall.x = townHall.y = -100000;
-  resetTileIndex();
 }
 
 // The camp's defenders: one for each of the player's armed (its kind by the weapon and the body, its
@@ -327,6 +376,7 @@ export function raidOrders(s, tick) {
     if (dist(s, townHall) > townHall.radius + 40) moveSettlerToTownHall(s, s.speed, dt);
     return true;
   }
+  if (raid.scouting) { faceTowards(s, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT / 2); return true; } // (a scout looks, #279)
   fightByOrders(s, dt, raid.auto); // (in the camp)
   return true;
 }
@@ -339,8 +389,17 @@ export function tickRaid(dt) {
   if (raid.phase === 'march') {
     raid.raiders = raid.raiders.filter(s => game.settlers.includes(s));
     if (!raid.raiders.length) endRaid(false);
+    else if (raid.scouting && (arrived() >= raid.raiders.length || raid.timer >= config().marchSeconds)) enterCamp(); // (a scout looks at once)
   } else if (raid.phase === 'fight') {
     if (!game.settlers.length) failRaid();
+    else if (raid.scouting) {
+      // a scout is spotted after a while, or as soon as one of them comes for it: it runs home (#279)
+      const scout = game.settlers[0];
+      if (raid.timer >= config().scoutSeconds || game.enemies.some(en => en.hp > 0 && dist(en, scout) < 140) || scout.hp < scout.maxHp) {
+        someoneSays(game.enemies, getEnemyFaction().id, 'charge', true);
+        leaveCamp(false);
+      }
+    }
     else if (!game.enemies.some(en => en.hp > 0) && !game.enemyTents.length) leaveCamp(true);
   } else if (raid.phase === 'return') {
     // home: all near the hall (#279: one pushed a little out by the rest kept it from ending), or none of
@@ -389,12 +448,13 @@ export function leaveCamp(won) {
     addResources(reward);
     showNotification(t('raid.won', { reward: formatCost(reward) }), false);
     playSound('craftDone');
-  } else showNotification(t('raid.retreated'), true);
+  } else showNotification(t(raid.scouting ? 'raid.scoutSpotted' : 'raid.retreated'), true);
   updateRaidBar();
 }
 
 // The whole party down: the camp goes at once, the base is back, a wave comes soon
 function failRaid() {
+  if (raid.scouting) { restoreHome([]); showNotification(t('raid.scoutLost'), true); resetRaidState(); return; } // (the camp stays, no wave sent)
   restoreHome([]);
   game.raidCamp = null;
   game.waveTimer = Math.min(game.waveTimer, config().failWaveSeconds);
@@ -406,14 +466,14 @@ function failRaid() {
 // Over: home (or never left). Won: the zone goes and the next wave waits twice as long
 export function endRaid(won) {
   for (const s of raid.raiders) { delete s.raider; delete s.raidSpot; delete s.lastStep; clearOrders(s); }
-  if (raid.phase === 'return' || raid.phase === 'fight') game.raidCamp = null;
+  if (!raid.scouting && (raid.phase === 'return' || raid.phase === 'fight')) game.raidCamp = null; // (a scout's look leaves it there)
   if (won) game.waveTimer += game.waveInterval;
   resetRaidState();
 }
 
 function resetRaidState() {
   for (const s of game.settlers) { delete s.raider; delete s.raidSpot; clearOrders(s); }
-  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0 });
+  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0, scouting: false });
   updateRaidBar();
 }
 
@@ -461,8 +521,13 @@ export function updateRaidBar() {
   if (!show) { if (bar) bar.remove(); barKey = ''; return; }
   const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   let html = '';
-  if (!isRaiding()) html = `<button class="btn" data-raid-act="open">${richText(t('raid.button', { time: fmt(Math.max(0, game.raidCamp ? game.raidCamp.timeLeft : 0)) }))}</button>`;
-  else if (raid.phase === 'march') {
+  if (!isRaiding()) {
+    html = `<button class="btn" data-raid-act="open">${richText(t('raid.button', { time: fmt(Math.max(0, game.raidCamp ? game.raidCamp.timeLeft : 0)) }))}</button>` +
+      `<button class="btn" data-raid-act="scout">${richText(t('raid.scout'))}</button>`;
+  } else if (raid.scouting) {
+    html = `<span>${escapeHtml(t(raid.phase === 'march' ? 'raid.scoutGoing' : raid.phase === 'fight' ? 'raid.scoutLooking' : 'raid.returning'))}</span>` +
+      (raid.phase === 'march' ? `<button class="btn" data-raid-act="call-off">${escapeHtml(t('raid.cancel'))}</button>` : '');
+  } else if (raid.phase === 'march') {
     const ready = arrived() >= raid.raiders.length || raid.timer >= config().marchSeconds;
     html = `<span>${escapeHtml(t('raid.marching', { n: arrived(), m: raid.raiders.length }))}</span>` +
       `<button class="btn raid-go" data-raid-act="attack"${ready ? '' : ' disabled'}>${richText(t('raid.attack'))}</button>` +
@@ -475,13 +540,15 @@ export function updateRaidBar() {
   } else html = `<span>${escapeHtml(t('raid.returning'))}</span>`;
   if (html === barKey && bar) return;
   barKey = html;
-  if (!bar) { bar = document.createElement('div'); bar.id = 'raid-bar'; document.body.appendChild(bar); }
+  // (#279) over the bottom panel: first in the column over the dock, above the selected settler and the sheet
+  if (!bar) { bar = document.createElement('div'); bar.id = 'raid-bar'; const over = document.getElementById('hud-bottom'); if (over) over.prepend(bar); else document.body.appendChild(bar); }
   bar.innerHTML = html;
   bar.querySelectorAll('[data-raid-act]').forEach(b => onTap(/** @type {HTMLElement} */ (b), () => raidAction(/** @type {HTMLElement} */ (b).dataset.raidAct)));
 }
 
 export function raidAction(act) {
   if (act === 'open') openRaidPicker();
+  else if (act === 'scout') sendScout();
   else if (act === 'attack') enterCamp();
   else if (act === 'call-off' && raid.phase === 'march') endRaid(false);
   else if (act === 'auto') raid.auto = !raid.auto;

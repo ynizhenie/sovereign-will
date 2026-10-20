@@ -90,9 +90,11 @@ export const game = {
   cardsWave: 0,         // waves counted for cards
   /** @type {string[] | null} */
   cardOffer: null,      // the cards offered now, waiting for a pick
-  /** @type {{ side: string, timeLeft: number } | null} */
+  /** @type {{ side: string, timeLeft: number, seed?: number, layout?: string } | null} */
   raidCamp: null,       // an enemy camp's zone open beyond a side of the map (#255, endless.raid.js)
-  raidCampWave: 0       // the waves beaten when the last one opened
+  raidCampWave: 0,      // the waves beaten when the last one opened
+  scouts: [],           // enemy scouts between waves (#279, waves.scouts.js): not enemies till the player points at one
+  scoutClock: 0
 };
 
 // the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns

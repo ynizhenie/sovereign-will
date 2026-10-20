@@ -3,8 +3,8 @@
 
 export const cardsConfig = {
   // start: open from the start, by GAME_CONFIG section. Everything else in these sections is locked
-  // (recipes never are), and each lock is a card of its rarity (one of each offered, any rarity filling
-  // in when one has none left). A thing with iron in its cost is offered once the smelter is open, one
+  // (recipes never are), and each lock is a card of its rarity. Each of the three cards offered is of a
+  // rarity drawn by `chances` (#279: three common can come), another standing in for one with none left. A thing with iron in its cost is offered once the smelter is open, one
   // made at a smithy once the smithy is
   cards: {
     start: {
@@ -13,6 +13,7 @@ export const cardsConfig = {
       weapons: ['club'],
       gear: ['backpack']
     },
+    chances: { common: 60, rare: 30, legendary: 10 },
     rarity: {
       common: ['buildings:wall_stone', 'buildings:door', 'buildings:spikes', 'buildings:dummy', 'buildings:fish_trap', 'buildings:dung_heap', 'buildings:apple_sapling',
         'tools:medbag', 'weapons:sword', 'gear:wateringCan', 'gear:whistle'],

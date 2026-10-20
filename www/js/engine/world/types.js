@@ -106,8 +106,18 @@
 /**
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
+ * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
+ * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
+ * @property {Point} [muster]        where it gathers
+ * @property {boolean} [captain]     a commander with a banner, telling its own whom to go for (#279)
+ * @property {boolean} [scout]       a scout (#279): walks the edge, doesn't fight, runs from settlers
+ * @property {number} [leaveIn]      a scout's seconds till it goes
+ * @property {Point | null} [scoutTo] where a scout walks to
+ * @property {number} [lookFor]      a scout's seconds still looking where it stands
+ * @property {boolean} [leaving]     a scout on its way off the map
+ * @property {boolean} [gone]        a scout off the map
  * @property {boolean} [trapped]    held in an iron trap (#248)
  * @property {boolean} [torch]       an enemy with a torch, in a night wave (#257)
  * @property {number} [toCatch]      the id of the settler catching it for a cage (#250)
@@ -294,8 +304,10 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
- * @property {{ side: string, timeLeft: number } | null} raidCamp  an enemy camp's zone open (#255)
+ * @property {{ side: string, timeLeft: number, seed?: number, layout?: string } | null} raidCamp  an enemy camp's zone open (#255)
  * @property {number} raidCampWave  the waves beaten when the last one opened
+ * @property {Enemy[]} scouts  enemy scouts between waves (#279)
+ * @property {number} scoutClock
  */
 
 export {};

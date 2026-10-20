@@ -4,7 +4,7 @@ import { game, resetTileIndex } from '../engine/world/index.js';
 import { movePossessed, removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, tickVoices, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
-import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from '../domains/conflict/waves/index.js';
+import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickScouts, tickWaveTimer } from '../domains/conflict/waves/index.js';
 import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
 import { tickDaytime, tickPaths } from '../domains/world/index.js';
 import { tickMenuScene } from '../modes/menu/index.js';
@@ -54,6 +54,7 @@ export function update(dt) {
   tickSettlers(dt);
   tickEnemyTents(dt);
   tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
+  tickScouts(dt); // (scouts between waves, #279)
   tickDemonCamp(dt); // (their corpse pits and cages)
   tickProjectiles();
   tickEnemies(dt);
