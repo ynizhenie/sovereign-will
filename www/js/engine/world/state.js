@@ -93,6 +93,8 @@ export const game = {
   /** @type {{ side: string, timeLeft: number, seed?: number, layout?: string } | null} */
   raidCamp: null,       // an enemy camp's zone open beyond a side of the map (#255, endless.raid.js)
   raidCampWave: 0,      // the waves beaten when the last one opened
+  reliefZones: [],      // { x, y } tiles marked to relieve in (#279, world.zones.js)
+  postZones: [],        // { x, y } tiles marked for soldiers' posts before a wave
   scouts: [],           // enemy scouts between waves (#279, waves.scouts.js): not enemies till the player points at one
   scoutClock: 0
 };

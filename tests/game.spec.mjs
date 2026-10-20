@@ -11,7 +11,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(page.locator('#build-actions button')).toHaveCount(16); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248), the torch (#257)
-  await expect(page.locator('#farming-actions button')).toHaveCount(4); // with the compost heap (#232)
+  await expect(page.locator('#farming-actions button')).toHaveCount(1); // the compost heap (#232; #279: crops only in zones)
   // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
   // at a smithy
   await expect(page.locator('#craft-tools .tile')).toHaveCount(7); // (#279: no rope)
@@ -129,18 +129,12 @@ test('clicking an enemy with the Point tool marks and unmarks it (#35)', async (
   expect(await page.evaluate(() => enemies[0].markedTarget)).toBe(false);
 });
 
-test('wheat and saplings are planted from the Farming tab (#64)', async ({ page }) => {
+test('the Zones tab: the farm only by its zones (no crops placed one by one), relief zones and soldiers\' posts (#64, #279)', async ({ page }) => {
   await openGame(page);
-  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[dung_heap]] Компостная куча 6[[wood]]', '[[wheat]] Пшеница 1[[wheatSeeds]]', '[[saplings]] Саженец 1[[saplings]]', '[[appleSaplings]] Саженец яблони 1[[appleSaplings]]']);
-  await expect(page.locator('#build-actions #btn-wheat')).toHaveCount(0);
-  await expect(page.locator('#build-actions #btn-sapling')).toHaveCount(0);
-  // picking a crop in the Farming tab switches to placing it
-  const mode = await page.evaluate(() => {
-    switchTab(document.querySelector('.tab-btn[data-arg="tab-farming"]'), 'tab-farming');
-    setMode('wheat');
-    return buildMode;
-  });
-  expect(mode).toBe('wheat');
+  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[dung_heap]] Компостная куча 6[[wood]]']);
+  await expect(page.locator('#btn-wheat')).toHaveCount(0);
+  await expect(page.locator('#btn-sapling')).toHaveCount(0);
+  for (const id of ['zone_wheat', 'zone_sapling', 'zone_apple', 'zone_relief', 'zone_post', 'zone_clear']) await expect(page.locator(`#btn-${id}`)).toHaveCount(1);
 });
 
 test('soldiers push through to enemy tents past summoned raiders; workers keep working (#65)', async ({ page }) => {
