@@ -42,6 +42,8 @@
  * @property {boolean} [wateringCan]
  * @property {boolean} [whistle]     a foreman's (#248)
  * @property {boolean} [banner]      a captain's (#248)
+ * @property {number} [working]      seconds it's still shown at work (getHeldItemPose)
+ * @property {string | null} [workKind]  what work: 'build', 'butcher', 'pick' (drawn: a hammer, a knife, a hand, #279)
  * @property {boolean} [flute]       a wooden flute in its side slot (#279)
  * @property {number} [playingFlute] the tick it last played it, by a campfire
  * @property {number} [facing]       the angle its held item points at
