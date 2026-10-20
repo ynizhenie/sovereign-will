@@ -275,7 +275,7 @@ export function isWaterReachable(w) {
 
 export function generateMap() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
-  game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.ironOres = []; game.coalOres = []; game.boars = [];
+  game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = [];
 
   placeLakes();
   placeDeserts();

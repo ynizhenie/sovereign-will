@@ -29,7 +29,8 @@ function soldiersCoverFires(tick) {
 // Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a campfire is looked after,
 // one cook per fire: idle soldiers first between waves, then a worker with no tool if no soldier is free
 // for it (#200). It fetches fuel from the town hall when the fire is out, then a batch of
-// raw food, cooks it piece by piece and takes the food home. What it carries is ordinary stock (wood,
+// raw food (as much as the fire will burn long enough for, #298: the fire burns its fuel down by itself),
+// cooks it piece by piece and takes the food home. What it carries is ordinary stock (wood,
 // raw meat...) marked with the fire it's for, so if it's called away (a wave) it just goes back in stock.
 export function cook(s, tick) {
   if (s.isPossessed) return false;
@@ -69,8 +70,10 @@ export function cook(s, tick) {
     const needsFuel = !(fire.fuelLeft > 0);
     const want = needsFuel ? findFuel() : cooking.raw.find(r => stock[r] > 0);
     if (!want) return false;
+    // (the pieces the fire has left in it: its fuel's time over a piece's)
+    const pieces = Math.max(1, Math.floor(((fire.fuelLeft || 0) * cooking.fuelSeconds) / cooking.seconds));
     return fetchFromStorage(s, want, tick.dt, () => {
-      const amount = takeStock(want, needsFuel ? 1 : Math.min(cooking.batch, fire.fuelLeft));
+      const amount = takeStock(want, needsFuel ? 1 : Math.min(cooking.batch, pieces));
       s.carrying = { type: want, amount, forFire: fire };
     });
   }
@@ -93,14 +96,12 @@ export function cook(s, tick) {
   }
   s.working = 0.1;
   faceTowards(s, fire.x, fire.y);
-  fire.burning = 1; // drawn lit for a moment
   fire.cookProgress = (fire.cookProgress || 0) + tick.dt / cooking.seconds;
   if (fire.cookProgress >= 1) {
     fire.cookProgress = 0;
     playSound('sizzle', fire);
     noteDay(s, 'cooked', 'cooked', 0.3); // (#279)
-    fire.fuelLeft--;
-    load.amount--;
+    load.amount--; // (the fuel: burning down by itself, tickCampfires)
     s.cooked = (s.cooked || 0) + cooking.makes;
     if (load.amount <= 0) {
       s.carrying = { type: cooking.dish[load.type] || 'cookedMeat', amount: s.cooked }; // home with it (deliverCarrying)

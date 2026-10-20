@@ -11,8 +11,8 @@ test('tapping a tree sends a possessed woodcutter to chop it, tapping the hall h
   const r = await sim.possessChopAndDeliver();
   expect(r.ordered).toBe(true);
   expect(r.treeGone).toBe(true);
-  expect(r.carried).toEqual({ type: 'wood', amount: 3 });
-  expect(r.handedIn).toBe(3);
+  expect(r.carried).toEqual({ type: 'wood', amount: 2 }); // (#298: a piece of the cut-up tree)
+  expect(r.handedIn).toBe(2);
 });
 
 test('without the right tool a tapped resource is refused (#16)', async () => {

@@ -19,8 +19,8 @@ import { renderBattlePanel } from './battle.panel.js';
 
 export const BATTLE_RESULT_SECONDS = 4;
 
-/** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean,
- *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean, shield?: boolean }[],
+/** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean | string,
+ *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
 export const battle = {
@@ -41,6 +41,11 @@ export const battle = {
   savedDifficulty: null // the Endless choice, back when the battle's left
 };
 
+// (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
+export function battleArmor(armor) {
+  return armor === 'leather' ? GAME_CONFIG.gear.leather_armor : armor ? GAME_CONFIG.gear.armor : null;
+}
+
 // An enemy kind that can carry a shield: one of normal size fighting hand to hand
 export function enemyCanShield(id) {
   const def = GAME_CONFIG.enemies[id];
@@ -58,7 +63,8 @@ export function makeBattleUnit(entry) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
     // (#279) armour and a shield as yours can have (a shield: a melee one of normal size)
-    if (entry.armor) { en.armor = 'iron'; en.maxHp += GAME_CONFIG.gear.armor.hpBonus; en.hp = en.maxHp; }
+    const armour = battleArmor(entry.armor);
+    if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (entry.shield && enemyCanShield(preset.enemy)) en.shield = true;
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
@@ -71,7 +77,8 @@ export function makeBattleUnit(entry) {
     role: archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
   });
   s.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI;
-  if (entry.armor) putOnGear(s, 'armor');
+  const armour = battleArmor(entry.armor);
+  if (armour) putOnGear(s, armour.id);
   if (entry.shield && canUseShield(s)) s.shield = true;
   game.settlers.push(s);
 }
@@ -81,7 +88,7 @@ export function setUpBattleField() {
   battle.savedMapSettings = game.mapSettings;
   game.mapSettings = { cols: 40, rows: 26 };
   resetGame();
-  for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.ironOres, game.coalOres, game.boars,
+  for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs, game.ironOres, game.coalOres, game.boars,
     game.naturalRocks, game.waterTiles, game.farmPlots, game.desertTiles, game.beachTiles]) list.length = 0;
   game.desertRegion = null;
   game.forests = [];

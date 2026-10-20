@@ -16,7 +16,7 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
         s.carrying = null;
         finishHarvest(s, r, kind);
         if (r.fallen) finishHarvest(s, r, kind); // (a tree: felled, then its log cut up, #279)
-        for (const item of s.carrying.items || [s.carrying]) carried[item.type] = (carried[item.type] || 0) + item.amount;
+        if (s.carrying) for (const item of s.carrying.items || [s.carrying]) carried[item.type] = (carried[item.type] || 0) + item.amount;
       }
       const bonus = {};
       for (const k in stock) if (stock[k] !== before[k]) bonus[k] = (stock[k] - before[k]) / n;
@@ -38,19 +38,21 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
   expect(r.apple.bonus.saplings).toBeUndefined();
 });
 
-test('a felled tree falls first and gives part of its wood, then its log is cut up for the rest (#279)', async () => {
+test('a felled tree falls first, then its log is cut into two pieces lying there, its wood shared between them (#279, #298)', async () => {
   const r = await (() => {
     const { makeSettler } = window.sim.helpers;
     window.sim.start('fell-in-two');
     const s = makeSettler(1, 0, 0, { tool: 'axe' });
     const tree = { x: 40, y: 0, hp: 3, isGrowing: false };
     trees.push(tree);
+    logs.length = 0;
     finishHarvest(s, tree, 'tree');
-    const fell = { fallen: !!tree.fallen, standing: trees.includes(tree), wood: s.carrying.amount, hp: tree.hp };
+    const fell = { fallen: !!tree.fallen, standing: trees.includes(tree), carrying: s.carrying, hp: tree.hp };
     finishHarvest(s, tree, 'tree');
-    return { fell, gone: !trees.includes(tree), wood: s.carrying.amount };
+    return { fell, gone: !trees.includes(tree), carrying: s.carrying, pieces: logs.map(l => l.yield.wood).sort() };
   })();
-  expect(r.fell).toEqual({ fallen: true, standing: true, wood: 2, hp: 3 * 0.6 });
+  expect(r.fell).toEqual({ fallen: true, standing: true, carrying: null, hp: 3 * 0.6 });
   expect(r.gone).toBe(true);
-  expect(r.wood).toBe(3);
+  expect(r.carrying).toBe(null);
+  expect(r.pieces).toEqual([1, 2]);
 });

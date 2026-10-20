@@ -18,7 +18,7 @@ import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, createWorldSeed, game, getGridPo
 import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../engine/movement/index.js';
 import { addResources, canAfford, formatCost, moveSettlerToTownHall, payCost, showCostError, stock, takeStock } from '../../domains/colony/storage/index.js';
 import { faceTowards, someoneSays } from '../../domains/colony/settlers/index.js';
-import { isBowWeapon } from '../../domains/colony/equipment/index.js';
+import { armorOf, isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../domains/factions/index.js';
@@ -124,8 +124,8 @@ export function tickRaidCamp(dt) {
 
 // ---- Setting out
 
-// Who can go: anyone (the armed are picked to start with)
-const canGo = s => s.temporary === undefined && !s.asleep;
+// Who can go: anyone (the armed are picked to start with); (#298) asleep too: it's woken
+const canGo = s => s.temporary === undefined;
 
 // The picker: who goes on the raid (any number, and how many arrows they take, #279), or (scout) which one
 // goes to look, one only
@@ -148,7 +148,7 @@ export function openRaidPicker(scout = false) {
     const type = GAME_CONFIG.settlerTypes[s.type] || GAME_CONFIG.settlerTypes.normal;
     const weapon = getDefinition('weapons', s.weapon) || GAME_CONFIG.weapons.fist;
     const tool = s.weapon === 'fist' && s.tool && s.tool !== 'none' ? getDefinition('tools', s.tool) : null;
-    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${s.armor ? iconHtml('armor') : ''}${s.shield ? iconHtml('shield') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
+    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${armorOf(s) ? iconHtml(armorOf(s).icon) : ''}${s.shield ? iconHtml('shield') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
     onTap(b, () => {
       if (scout) roster.querySelectorAll('.raid-unit.on').forEach(o => { if (o !== b) o.classList.remove('on'); });
       b.classList.toggle('on');
@@ -193,6 +193,7 @@ export function startRaid(party, scouting = false, arrows = 0) {
   raid.gather = edgeSpot(raid.side, party[0]);
   party.forEach((s, i) => {
     s.raider = true; s.isPossessed = false;
+    if (s.asleep) { s.asleep = false; s.sleepSpot = null; } // (woken for it, #298)
     s.raidSpot = lineUp(raid.gather, raid.side, i);
   });
   game.selectedSettler = null;
@@ -386,7 +387,8 @@ function layCamp(army, layout, wave) {
     const at = takeFree();
     const en = createConfiguredEnemy(at, kind.id);
     if (!en) continue;
-    if (kind.armor) { en.armor = 'iron'; en.maxHp += GAME_CONFIG.gear.armor.hpBonus; en.hp = en.maxHp; }
+    const armour = armorOf({ armor: kind.armor === true ? 'iron' : kind.armor }); // (#298: its kind; an old save's true: iron)
+    if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (kind.shield) en.shield = true;
     en.guard = { x: at.x, y: at.y };
     game.enemies.push(en);
@@ -402,7 +404,7 @@ export function campDefenders(army, wave = game.waveNum) {
   const list = army.map(s => {
     const key = isBowWeapon(s.weapon) ? 'archer' : (GAME_CONFIG.settlerTypes[s.type] || {}).big ? 'brute' : s.weapon === 'fist' || s.weapon === 'club' ? 'club' : 'raider';
     const def = ofKey(key);
-    return { id: def.id, armor: !!s.armor, shield: !!s.shield && def.type === 'normal' && !def.ranged };
+    return { id: def.id, armor: s.armor || null, shield: !!s.shield && def.type === 'normal' && !def.ranged };
   });
   const count = Math.max(c.min, Math.round(army.length * c.perSoldier) + Math.floor((wave - 1) / c.extraEveryWaves));
   const out = [];

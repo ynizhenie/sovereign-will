@@ -16,10 +16,12 @@ Object.assign(window.sim, (() => {
     const s = settlers[0];
     const woodPerTree = GAME_CONFIG.mapResources.tree.yield.wood;
     const wood0 = stock.wood;
-    let firstTrip = null;
+    // (#298: a felled tree is cut into pieces, a load each: the loads it set off home with, counted)
+    let firstTrip = null, loads = 0;
     run(seconds, { each: () => {
       pendingRespawns.length = 0; // no regrowth: just these trees
-      if (firstTrip === null && stock.wood > wood0) firstTrip = (stock.wood - wood0) / woodPerTree;
+      if (s.carrying) loads = Math.max(loads, s.carrying.loads || 0);
+      if (firstTrip === null && stock.wood > wood0) firstTrip = loads;
     } });
     return { capacity: getCarryCapacity(s), firstTrip, allDelivered: (stock.wood - wood0) / woodPerTree, treesLeft: trees.length };
   }

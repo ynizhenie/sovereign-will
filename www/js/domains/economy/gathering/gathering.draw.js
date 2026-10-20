@@ -1,7 +1,7 @@
 // How far a resource is worked through
 
 import { TILE_SIZE, game } from '../../../engine/world/index.js';
-import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawPebblesArt, drawSaplingArt, drawStickArt, drawTreeArt } from './gathering.art.js';
+import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawPebblesArt, drawSaplingArt, drawStickArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar } from '../../../engine/platform/index.js';
 import { getHarvestableResources, getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawOreVeins } from '../../world/index.js';
@@ -22,6 +22,7 @@ export function drawSticksPebblesOre() {
   // (the look: gathering.art.js, #251)
   game.sticks.forEach(drawStickArt);
   game.pebbles.forEach(drawPebblesArt);
+  game.logs.forEach(drawLogArt); // (#298)
 
   // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)
   game.ironOres.forEach(ore => {
