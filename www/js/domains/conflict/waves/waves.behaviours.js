@@ -76,9 +76,12 @@ export function tickEnemy(en, dt) {
 
 // A defender of an enemy camp (#255): at its post till a raider comes within guardTiles of it, or of itself.
 // True while it holds the post
+// (#279) once off its post it goes after them, a retreat or a scout running too (guardOff), till the camp's
+// gone back to
 function holdGuardPost(en, dt) {
   const reach = GAME_CONFIG.raid.guardTiles * 30;
-  if (game.settlers.some(s => Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6)) return false;
+  if (en.guardOff) return false;
+  if (game.settlers.some(s => Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6)) { en.guardOff = true; return false; }
   if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 6) moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
   return true;
 }
@@ -118,7 +121,12 @@ function captainOrdersEnemies(en, dt) {
 }
 
 // (#279) a scout the player pointed at: off to the nearest edge of the map as fast as it can, gone there
+// (#279: not at once: it stays looking till one of them comes within fleeTiles of it, or it's hit)
 function scoutFlees(en, dt) {
+  if (!en.fleeing) {
+    if (en.hp < en.maxHp || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < GAME_CONFIG.scouts.fleeTiles * 30)) en.fleeing = true;
+    else { faceTowards(en, townHall.x, townHall.y); return; }
+  }
   const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
   const out = [{ x: -40, y: en.y, d: en.x }, { x: W + 40, y: en.y, d: W - en.x }, { x: en.x, y: -40, d: en.y }, { x: en.x, y: H + 40, d: H - en.y }].sort((a, b) => a.d - b.d)[0];
   moveEntityTowards(en, out.x, out.y, en.speed * 1.2, true, dt);

@@ -22,9 +22,15 @@ export const raidConfig = {
     // (#279) its layouts (one at random; each camp has a seed of its own, the same camp every time it's seen):
     // a square palisade, a round one, no walls but spikes and more fires, a fort of a stone ring and a wooden
     // one inside; decor: the enemy faction's own buildings in it; a scout looks at it scoutSeconds before
-    // it's spotted (or one of them comes for it) and runs home
+    // it's spotted (or one of them comes within scoutSeenTiles of it) and runs home, back the way it came
     layouts: ['square', 'round', 'scattered', 'fort'],
     decor: { humans: ['dummy', 'warehouse'], undead: ['grave', 'grave'], demons: ['corpse_pit', 'sacrifice_circle'] },
-    scoutSeconds: 10
+    scoutSeconds: 30, scoutSeenTiles: 3,
+    // (#279) a shelter pitched in the camp (the faction's tent, grave or den, paid from the stock): built in
+    // buildSeconds by one of the party; those within reach heal (healPerSecond) and archers fill their quivers
+    // from the arrows the party took (arrowsPerArcher offered for each archer picked); in the auto battle one
+    // under woundedShare of its hp goes to it till it's whole again
+    shelter: { buildSeconds: 10, healPerSecond: 15, reach: 45, woundedShare: 0.35 },
+    arrowsPerArcher: 12
   }
 };

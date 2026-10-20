@@ -7,12 +7,16 @@
 // which fights as the base's defenders would. The outpost and every enemy down: spoils, the party walks home,
 // the zone goes once they're back, and the next wave waits twice as long. The whole party down: the camp
 // goes at once, the base is back and a wave comes in a few seconds.
+// (#279) The camp is made as it'll be when it appears (its seed, the army it mirrors and the wave then), so what a
+// scout saw is what's attacked (kept as the scout left it). Retreat and a scout spotted:
+// they run back to the edge they came in by, the enemy after them. In the camp a shelter can be pitched: it
+// heals, and the archers fill their quivers there from the arrows taken on the raid.
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { camera, clampCamera, ctx, onTap, t } from '../../engine/platform/index.js';
 import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, createWorldSeed, game, getGridPos, rand, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../engine/movement/index.js';
-import { addResources, formatCost, moveSettlerToTownHall } from '../../domains/colony/storage/index.js';
+import { addResources, canAfford, formatCost, moveSettlerToTownHall, payCost, showCostError, stock, takeStock } from '../../domains/colony/storage/index.js';
 import { faceTowards, someoneSays } from '../../domains/colony/settlers/index.js';
 import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
@@ -44,7 +48,14 @@ export const raid = {
   defenders: 0,
   still: 0,     // seconds the party on its way home hasn't moved
   scouting: false, // (#279) one sent only to look at the camp: it isn't fought, and stays
-  picking: false
+  picking: false,
+  retreating: false, // (#279) running back to the edge: out of the camp once each is there
+  /** @type {any[]} */
+  escaped: [],     // those out of the camp already
+  entry: { x: 0, y: 0 },
+  campSeed: 0,
+  arrows: 0,       // the arrows the party took (#279)
+  placing: false   // the next tap in the camp pitches the shelter there
 };
 
 export const isRaiding = () => raid.phase !== null;
@@ -89,12 +100,17 @@ function lineUp(at, side, i) {
 
 // ---- The camp's zone, while it's there
 
+// The armed, as the camp's defenders mirror them (#279: taken when the camp appears, so it's the same camp
+// however the army changes after)
+const armyOf = settlers => settlers.filter(s => s.weapon !== 'fist' || s.role === 'soldier' || s.role === 'archer')
+  .map(s => ({ weapon: s.weapon, type: s.type, armor: s.armor || null, shield: !!s.shield }));
+
 // Each tick (Endless): a camp opens after a wave beaten, and goes when its time is up
 export function tickRaidCamp(dt) {
   if (game.gameMode !== 'endless' || !game.gameStarted || isRaiding()) return;
   const c = config(), beaten = game.waveNum - 1;
   if (!game.raidCamp && beaten >= c.fromWave && beaten - (game.raidCampWave || 0) >= c.everyWaves && !waveOn()) {
-    game.raidCamp = { side: SIDES[Math.floor(rand() * SIDES.length)], timeLeft: c.seconds, seed: Math.floor(rand() * 1e9), layout: c.layouts[Math.floor(rand() * c.layouts.length)] };
+    game.raidCamp = { side: SIDES[Math.floor(rand() * SIDES.length)], timeLeft: c.seconds, seed: Math.floor(rand() * 1e9), layout: c.layouts[Math.floor(rand() * c.layouts.length)], army: armyOf(game.settlers), wave: game.waveNum };
     game.raidCampWave = beaten;
     showNotification(t('raid.appeared'), false);
     playSound('horn');
@@ -111,34 +127,55 @@ export function tickRaidCamp(dt) {
 // Who can go: anyone (the armed are picked to start with)
 const canGo = s => s.temporary === undefined && !s.asleep;
 
-export function openRaidPicker() {
+// The picker: who goes on the raid (any number, and how many arrows they take, #279), or (scout) which one
+// goes to look, one only
+export function openRaidPicker(scout = false) {
   if (!game.raidCamp || isRaiding()) return;
   if (waveOn()) { showNotification(t('raid.waveOn'), true); return; }
   raid.picking = true;
   const el = document.createElement('div');
   el.id = 'raid-picker';
-  el.innerHTML = `<div class="card-offer-title">${escapeHtml(t('raid.pickTitle'))}</div><div class="raid-roster"></div>` +
-    `<div class="raid-picker-actions"><button class="btn" data-raid="all">${escapeHtml(t('raid.all'))}</button>` +
-    `<button class="btn raid-go" data-raid="go">${richText(t('raid.go'))}</button><button class="btn" data-raid="cancel">${escapeHtml(t('raid.cancel'))}</button></div>`;
+  el.innerHTML = `<div class="card-offer-title">${escapeHtml(t(scout ? 'raid.scoutPick' : 'raid.pickTitle'))}</div><div class="raid-roster"></div>` +
+    (scout ? '' : `<div class="raid-arrows"><button class="btn" data-raid="less">−</button><span class="raid-arrow-count"></span><button class="btn" data-raid="more">+</button></div>`) +
+    `<div class="raid-picker-actions">${scout ? '' : `<button class="btn" data-raid="all">${escapeHtml(t('raid.all'))}</button>`}` +
+    `<button class="btn raid-go" data-raid="go">${richText(t(scout ? 'raid.scoutSend' : 'raid.go'))}</button><button class="btn" data-raid="cancel">${escapeHtml(t('raid.cancel'))}</button></div>`;
   const roster = /** @type {HTMLElement} */ (el.querySelector('.raid-roster'));
+  const first = scout ? scoutChoice() : null;
   for (const s of game.settlers.filter(canGo)) {
     const b = document.createElement('button');
-    b.className = 'btn raid-unit' + (s.weapon !== 'fist' ? ' on' : '');
+    b.className = 'btn raid-unit' + ((scout ? s === first : s.weapon !== 'fist') ? ' on' : '');
     b.dataset.unit = String(s.id);
     const type = GAME_CONFIG.settlerTypes[s.type] || GAME_CONFIG.settlerTypes.normal;
     const weapon = getDefinition('weapons', s.weapon) || GAME_CONFIG.weapons.fist;
-    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(weapon.icon)}${s.armor ? iconHtml('armor') : ''}${s.shield ? iconHtml('shield') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
-    onTap(b, () => b.classList.toggle('on'));
+    const tool = s.weapon === 'fist' && s.tool && s.tool !== 'none' ? getDefinition('tools', s.tool) : null;
+    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${s.armor ? iconHtml('armor') : ''}${s.shield ? iconHtml('shield') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
+    onTap(b, () => {
+      if (scout) roster.querySelectorAll('.raid-unit.on').forEach(o => { if (o !== b) o.classList.remove('on'); });
+      b.classList.toggle('on');
+      if (!scout) offerArrows();
+    });
     roster.appendChild(b);
   }
-  const picked = () => [...roster.querySelectorAll('.raid-unit.on')].map(b => game.settlers.find(s => String(s.id) === b.dataset.unit)).filter(Boolean);
-  onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="all"]')), () => roster.querySelectorAll('.raid-unit').forEach(b => b.classList.add('on')));
+  /** @returns {any[]} */
+  const picked = () => [...roster.querySelectorAll('.raid-unit.on')].map(b => game.settlers.find(s => String(s.id) === /** @type {HTMLElement} */ (b).dataset.unit)).filter(s => !!s);
+  // the arrows to take: as many as the archers picked can use, as far as the stock goes; more or fewer by hand
+  let arrows = 0, touched = false;
+  const showArrows = () => { const n = el.querySelector('.raid-arrow-count'); if (n) n.innerHTML = richText(t('raid.arrows', { n: arrows })); };
+  const offerArrows = () => { if (!touched) arrows = Math.min(stock.arrows || 0, picked().filter(s => isBowWeapon(s.weapon)).length * config().arrowsPerArcher); showArrows(); };
+  const step = d => { touched = true; arrows = Math.max(0, Math.min(stock.arrows || 0, arrows + d)); showArrows(); };
+  if (!scout) {
+    onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="all"]')), () => { roster.querySelectorAll('.raid-unit').forEach(b => b.classList.add('on')); offerArrows(); });
+    onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="less"]')), () => step(-6));
+    onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="more"]')), () => step(6));
+    offerArrows();
+  }
   onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="cancel"]')), closeRaidPicker);
   onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="go"]')), () => {
     const party = picked();
     if (!party.length) { showNotification(t('raid.none'), true); return; }
     closeRaidPicker();
-    startRaid(party);
+    if (scout) { startRaid(party, true); showNotification(t('raid.scoutOff'), false); return; }
+    startRaid(party, false, takeStock('arrows', arrows));
   });
   document.body.appendChild(el);
 }
@@ -150,9 +187,9 @@ function closeRaidPicker() {
 }
 
 // The party sets out for the zone's side; the rest of the base rests
-export function startRaid(party, scouting = false) {
+export function startRaid(party, scouting = false, arrows = 0) {
   if (!game.raidCamp || isRaiding() || !party.length) return false;
-  Object.assign(raid, { phase: 'march', side: game.raidCamp.side, raiders: party, auto: false, won: false, timer: 0, scouting });
+  Object.assign(raid, { phase: 'march', side: game.raidCamp.side, raiders: party, auto: false, won: false, timer: 0, scouting, arrows, retreating: false, escaped: [], placing: false });
   raid.gather = edgeSpot(raid.side, party[0]);
   party.forEach((s, i) => {
     s.raider = true; s.isPossessed = false;
@@ -163,12 +200,17 @@ export function startRaid(party, scouting = false) {
   return true;
 }
 
-// (#279) a scout sent to look at the camp: the settler picked, else one with nothing to do (soldiers last)
+// (#279) a scout to look at the camp: the settler selected, else one with nothing to do (soldiers last)
+function scoutChoice() {
+  const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) && canGo(game.selectedSettler) ? game.selectedSettler : null;
+  return picked || game.settlers.filter(canGo).sort((a, b) => (b.isIdle ? 1 : 0) - (a.isIdle ? 1 : 0) || (a.role === 'worker' ? -1 : 1))[0] || null;
+}
+
+// Sent at once, the one scoutChoice gives (the bar's button opens the picker to choose which)
 export function sendScout() {
   if (!game.raidCamp || isRaiding()) return false;
   if (waveOn()) { showNotification(t('raid.waveOn'), true); return false; }
-  const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) && canGo(game.selectedSettler) ? game.selectedSettler : null;
-  const scout = picked || game.settlers.filter(canGo).sort((a, b) => (b.isIdle ? 1 : 0) - (a.isIdle ? 1 : 0) || (a.role === 'worker' ? -1 : 1))[0];
+  const scout = scoutChoice();
   if (!scout) { showNotification(t('raid.none'), true); return false; }
   startRaid([scout], true);
   showNotification(t('raid.scoutOff'), false);
@@ -192,7 +234,7 @@ export function enterCamp() {
   if (raid.phase !== 'march') return;
   const party = raid.raiders.filter(s => game.settlers.includes(s) && s.hp > 0);
   if (!party.length) { endRaid(false); return; }
-  const army = game.settlers.filter(s => s.weapon !== 'fist' || s.role === 'soldier' || s.role === 'archer');
+  const army = (game.raidCamp && game.raidCamp.army) || armyOf(game.settlers); // (as when it appeared, #279)
   raid.home = {
     lists: Object.fromEntries(WORLD_LISTS.map(k => [k, game[k]])),
     hall: { x: townHall.x, y: townHall.y },
@@ -200,12 +242,15 @@ export function enterCamp() {
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
   };
   raid.home.lists.settlers = game.settlers.filter(s => !party.includes(s));
+  /** @type {any} */
   const camp = game.raidCamp || { side: raid.side }; // (taken before the lists are emptied: it's one of them)
   for (const k of WORLD_LISTS) game[k] = emptyLike(game[k]);
   game.selectedSettler = null;
-  buildCamp(army, camp);
+  raid.campSeed = camp.seed || 0;
+  if (campCache && campCache.seed === raid.campSeed) restoreCamp(); else buildCamp(army, camp);
   // the party at the zone's near edge, out past its red line (#279), waiting for orders
   const entry = edgeSpot(OPPOSITE[raid.side], null, 0);
+  raid.entry = entry;
   party.forEach((s, i) => {
     Object.assign(s, lineUp(entry, OPPOSITE[raid.side], i));
     s.orderSpot = { x: s.x, y: s.y }; s.orderTarget = null; s.path = null; s.pathTarget = null; s.carrying = null;
@@ -235,10 +280,29 @@ function buildCamp(army, camp) {
     setWorldSize(c.zoneTiles, c.zoneTiles);
     generateMap();
     game.boars = [];
-    layCamp(army, camp.layout || 'square');
+    layCamp(army, camp.layout || 'square', camp.wave ?? game.waveNum);
   } finally { game.worldSeed = worldSeed; }
   // the base's hall isn't here
   townHall.x = townHall.y = -100000;
+  resetTileIndex();
+}
+
+// (#279) the camp as a scout left it: the same camp when the raid comes, any it fought still hurt, all back at
+// their posts. Not saved: after loading it's made again from its seed (and the army and wave it was made for)
+/** @type {{ seed: number, lists: Object<string, any>, defenders: number } | null} */
+let campCache = null;
+function keepCamp() {
+  const lists = Object.fromEntries(WORLD_LISTS.filter(k => k !== 'settlers' && game[k] && typeof game[k] === 'object').map(k => [k, game[k]]));
+  campCache = { seed: raid.campSeed, lists, defenders: raid.defenders };
+}
+function restoreCamp() {
+  if (!campCache) return;
+  for (const [k, v] of Object.entries(campCache.lists)) game[k] = v;
+  setWorldSize(config().zoneTiles, config().zoneTiles);
+  townHall.x = townHall.y = -100000;
+  raid.defenders = campCache.defenders;
+  game.projectiles = [];
+  for (const en of game.enemies) if (en.guard && en.hp > 0) { en.x = en.guard.x; en.y = en.guard.y; en.path = null; en.guardOff = false; }
   resetTileIndex();
 }
 
@@ -254,7 +318,7 @@ function ringTiles(mid, r, round) {
   return out;
 }
 
-function layCamp(army, layout) {
+function layCamp(army, layout, wave) {
   const c = config();
   const mid = Math.floor(c.zoneTiles / 2), R = c.wallTiles, centre = tileCenter(mid, mid);
   const round = layout === 'round', open = layout === 'scattered', fort = layout === 'fort';
@@ -284,7 +348,7 @@ function layCamp(army, layout) {
       }
     }
   };
-  const stone = game.waveNum >= c.stoneFromWave;
+  const stone = wave >= c.stoneFromWave;
   if (fort) { wallRing(R, 'wall_stone', c.gaps); wallRing(R - 2, 'wall_wood', 0, false); } // (the inner ring: one way in, the party's side)
   else if (!open) wallRing(R, stone ? 'wall_stone' : 'wall_wood', c.gaps);
   // what's free inside: not the outpost's tile, not a wall
@@ -316,7 +380,7 @@ function layCamp(army, layout) {
     game.enemyTents.push({ x: at.x, y: at.y, hp: GAME_CONFIG.enemyTents.hp, maxHp: GAME_CONFIG.enemyTents.hp, summonTimer: 0, summonsLeft: c.tentSummons });
   }
   // the defenders, mirroring the player's army
-  const defenders = campDefenders(army);
+  const defenders = campDefenders(army, wave);
   raid.defenders = defenders.length;
   for (const kind of defenders) {
     const at = takeFree();
@@ -331,7 +395,7 @@ function layCamp(army, layout) {
 
 // The camp's defenders: one for each of the player's armed (its kind by the weapon and the body, its
 // armour and shield as theirs), more with the waves
-export function campDefenders(army) {
+export function campDefenders(army, wave = game.waveNum) {
   const c = config().defenders;
   const kinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id));
   const ofKey = key => kinds.find(def => /** @type {string[]} */ ([]).concat(def.waveKey).includes(key) && !def.healer && !def.necromancer) || kinds[0];
@@ -340,7 +404,7 @@ export function campDefenders(army) {
     const def = ofKey(key);
     return { id: def.id, armor: !!s.armor, shield: !!s.shield && def.type === 'normal' && !def.ranged };
   });
-  const count = Math.max(c.min, Math.round(army.length * c.perSoldier) + Math.floor((game.waveNum - 1) / c.extraEveryWaves));
+  const count = Math.max(c.min, Math.round(army.length * c.perSoldier) + Math.floor((wave - 1) / c.extraEveryWaves));
   const out = [];
   for (let i = 0; i < count; i++) out.push(list.length ? list[i % list.length] : { id: ofKey('raider').id, armor: false, shield: false });
   return out;
@@ -351,8 +415,66 @@ export function campDefenders(army) {
 // A tap in the camp: orders (see combat.orders.js). True: the tap was the raid's
 export function raidTap(x, y) {
   if (!isInCamp()) return false;
+  if (raid.placing) { pitchShelter(x, y); return true; }
+  if (raid.retreating) return true;
+  // a scout: where it creeps to (#279)
+  if (raid.scouting) { const s = game.settlers[0]; if (s) s.orderSpot = { x, y }; return true; }
   orderTap(x, y);
   return true;
+}
+
+// ---- (#279) a shelter in the camp
+
+// The player's faction's: a tent, a grave, a den (the first of its homes)
+export function shelterType() {
+  const homes = Object.values(GAME_CONFIG.buildings).filter(def => def.group === 'homes' && def.population && (!def.factions || def.factions.includes(getPlayerFaction().id)));
+  return (homes.find(def => def.healPerSecond) || homes[0] || GAME_CONFIG.buildings.tent).id;
+}
+const shelters = () => game.buildings.filter(b => b.raidShelter);
+
+// Paid from the stock and put down where it was tapped (not on a wall, not in the enemy's reach): the nearest
+// of the party not fighting builds it
+function pitchShelter(x, y) {
+  raid.placing = false;
+  const type = shelterType(), def = GAME_CONFIG.buildings[type];
+  const g = getGridPos(x, y);
+  if (isTileBlockedForSettler(g.gx, g.gy) || game.enemies.some(en => en.hp > 0 && dist(en, { x, y }) < 60)) { showNotification(t('raid.shelterHere'), true); updateRaidBar(); return; }
+  if (!canAfford(def.cost)) { showCostError(def.cost, def.label); updateRaidBar(); return; }
+  payCost(def.cost);
+  const at = tileCenter(g.gx, g.gy);
+  const bp = /** @type {any} */ (createBuildingBlueprint(type, at.x, at.y));
+  bp.raidShelter = true;
+  const builder = [...game.settlers].sort((a, b) => (a.orderTarget ? 1 : 0) - (b.orderTarget ? 1 : 0) || dist(a, at) - dist(b, at))[0];
+  bp.builderId = builder ? builder.id : null;
+  game.blueprints.push(bp);
+  playSound('click');
+  updateRaidBar();
+}
+
+// The builder at its site: built a little; done, it stands
+function buildShelter(s, bp, dt) {
+  if (dist(s, bp) > 30) { moveEntityTowards(s, bp.x, bp.y, s.speed, false, dt); return; }
+  faceTowards(s, bp.x, bp.y);
+  s.working = 0.1; s.workKind = 'build';
+  bp.progress += dt * (bp.maxProgress / config().shelter.buildSeconds);
+  if (bp.progress < bp.maxProgress) return;
+  game.blueprints.splice(game.blueprints.indexOf(bp), 1);
+  game.buildings.push(standing(bp.type, bp, { raidShelter: true }));
+  invalidateAllPaths();
+  playSound('tentUp', bp);
+}
+
+// Each tick in the camp: by a shelter, one heals, and an archer fills its quiver from what the party took
+function tickShelters(dt) {
+  const c = config().shelter;
+  for (const b of shelters()) {
+    for (const s of game.settlers) {
+      if (dist(s, b) > c.reach) continue;
+      if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + c.healPerSecond * dt);
+      const room = (/** @type {any} */ (s).quiverCapacity || 12) - (s.arrows || 0);
+      if (isBowWeapon(s.weapon) && s.quiver && room > 0 && raid.arrows > 0) { const n = Math.min(room, raid.arrows); s.arrows = (s.arrows || 0) + n; raid.arrows -= n; }
+    }
+  }
 }
 
 // The rest of the base while a party is out on a raid: it rests by the hall
@@ -376,7 +498,30 @@ export function raidOrders(s, tick) {
     if (dist(s, townHall) > townHall.radius + 40) moveSettlerToTownHall(s, s.speed, dt);
     return true;
   }
-  if (raid.scouting) { faceTowards(s, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT / 2); return true; } // (a scout looks, #279)
+  // (#279) running back to the edge it came in by: out of the camp once there
+  if (raid.retreating) {
+    if (dist(s, s.exitSpot) > 10) moveEntityTowards(s, s.exitSpot.x, s.exitSpot.y, s.speed * 1.15, false, dt);
+    else { raid.escaped.push(s); game.settlers = game.settlers.filter(o => o !== s); if (game.selectedSettler === s) game.selectedSettler = null; }
+    return true;
+  }
+  // a scout creeps where it's told (from the edge, to start with), looking at the camp (#279)
+  if (raid.scouting) {
+    if (s.orderSpot && dist(s, s.orderSpot) > 6) moveEntityTowards(s, s.orderSpot.x, s.orderSpot.y, s.speed * 0.7, false, dt);
+    else faceTowards(s, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT / 2);
+    return true;
+  }
+  // the shelter: its builder builds it; in the auto battle the badly hurt go to it, and an archer out of
+  // arrows when there are some there (#279)
+  const site = game.blueprints.find(bp => bp.raidShelter && bp.builderId === s.id);
+  if (site && !s.orderTarget) { buildShelter(s, site, dt); return true; }
+  const shelter = shelters().sort((a, b) => dist(a, s) - dist(b, s))[0];
+  const empty = isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && raid.arrows > 0;
+  if (shelter && !s.orderTarget && ((raid.auto && (s.hp < s.maxHp * config().shelter.woundedShare || (s.healing && s.hp < s.maxHp * 0.9))) || empty)) {
+    s.healing = s.hp < s.maxHp * 0.9;
+    if (dist(s, shelter) > config().shelter.reach - 10) moveEntityTowards(s, shelter.x, shelter.y, s.speed, false, dt);
+    return true;
+  }
+  s.healing = false;
   fightByOrders(s, dt, raid.auto); // (in the camp)
   return true;
 }
@@ -391,13 +536,18 @@ export function tickRaid(dt) {
     if (!raid.raiders.length) endRaid(false);
     else if (raid.scouting && (arrived() >= raid.raiders.length || raid.timer >= config().marchSeconds)) enterCamp(); // (a scout looks at once)
   } else if (raid.phase === 'fight') {
-    if (!game.settlers.length) failRaid();
+    tickShelters(dt);
+    if (!game.settlers.length) { if (raid.escaped.length) leaveCamp(false); else failRaid(); } // (all out, or all down)
+    else if (raid.retreating) { /* (on their way out) */ }
     else if (raid.scouting) {
-      // a scout is spotted after a while, or as soon as one of them comes for it: it runs home (#279)
+      // a scout is spotted after a while, or as soon as one of them comes near it, or it's hit: it runs back
+      // the way it came, and they come after it (#279)
       const scout = game.settlers[0];
-      if (raid.timer >= config().scoutSeconds || game.enemies.some(en => en.hp > 0 && dist(en, scout) < 140) || scout.hp < scout.maxHp) {
+      if (raid.timer >= config().scoutSeconds || game.enemies.some(en => en.hp > 0 && dist(en, scout) < config().scoutSeenTiles * TILE_SIZE) || scout.hp < scout.maxHp) {
         someoneSays(game.enemies, getEnemyFaction().id, 'charge', true);
-        leaveCamp(false);
+        for (const en of game.enemies) if (en.guard && dist(en, scout) < 8 * TILE_SIZE) en.guardOff = true;
+        startRetreat();
+        showNotification(t('raid.scoutSpotted'), true);
       }
     }
     else if (!game.enemies.some(en => en.hp > 0) && !game.enemyTents.length) leaveCamp(true);
@@ -433,10 +583,27 @@ function restoreHome(survivors) {
 }
 
 // The camp beaten (won) or left (Retreat): the party walks home with what it took
+// Retreat (#279): not at once; each runs back to its spot on the edge it came in by (the enemy after it), and
+// once all who are left are out, the party's out of the camp
+function startRetreat() {
+  if (raid.phase !== 'fight' || raid.retreating) return;
+  raid.retreating = true;
+  raid.placing = false;
+  game.settlers.forEach((s, i) => { s.exitSpot = lineUp(raid.entry, OPPOSITE[raid.side], i); clearOrders(s); });
+  if (!raid.scouting) showNotification(t('raid.retreated'), true);
+  updateRaidBar();
+}
+
 export function leaveCamp(won) {
   if (raid.phase !== 'fight') return;
-  const survivors = game.settlers.filter(s => s.hp > 0);
+  const survivors = [...raid.escaped, ...game.settlers.filter(s => s.hp > 0)];
+  survivors.forEach(s => { delete s.exitSpot; delete s.healing; });
+  if (raid.scouting) keepCamp(); else campCache = null; // (a scout's look: the same camp for the raid, #279)
   restoreHome(survivors);
+  raid.escaped = [];
+  raid.retreating = false;
+  // the arrows not used, back in the stock
+  if (raid.arrows > 0 && survivors.length) { stock.arrows = (stock.arrows || 0) + raid.arrows; raid.arrows = 0; }
   raid.raiders = survivors;
   raid.won = won;
   raid.phase = 'return';
@@ -448,13 +615,14 @@ export function leaveCamp(won) {
     addResources(reward);
     showNotification(t('raid.won', { reward: formatCost(reward) }), false);
     playSound('craftDone');
-  } else showNotification(t(raid.scouting ? 'raid.scoutSpotted' : 'raid.retreated'), true);
+  }
   updateRaidBar();
 }
 
 // The whole party down: the camp goes at once, the base is back, a wave comes soon
 function failRaid() {
-  if (raid.scouting) { restoreHome([]); showNotification(t('raid.scoutLost'), true); resetRaidState(); return; } // (the camp stays, no wave sent)
+  if (raid.scouting) { keepCamp(); restoreHome([]); showNotification(t('raid.scoutLost'), true); resetRaidState(); return; } // (the camp stays, no wave sent)
+  campCache = null;
   restoreHome([]);
   game.raidCamp = null;
   game.waveTimer = Math.min(game.waveTimer, config().failWaveSeconds);
@@ -473,12 +641,13 @@ export function endRaid(won) {
 
 function resetRaidState() {
   for (const s of game.settlers) { delete s.raider; delete s.raidSpot; clearOrders(s); }
-  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0, scouting: false });
+  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0, scouting: false, retreating: false, escaped: [], arrows: 0, placing: false });
   updateRaidBar();
 }
 
 // A new game or one loaded: no raid going on (a party half way is back home, the base as it was)
 export function resetRaid() {
+  campCache = null;
   if (raid.home) {
     for (const k of WORLD_LISTS) game[k] = raid.home.lists[k];
     raid.home = null;
@@ -524,6 +693,8 @@ export function updateRaidBar() {
   if (!isRaiding()) {
     html = `<button class="btn" data-raid-act="open">${richText(t('raid.button', { time: fmt(Math.max(0, game.raidCamp ? game.raidCamp.timeLeft : 0)) }))}</button>` +
       `<button class="btn" data-raid-act="scout">${richText(t('raid.scout'))}</button>`;
+  } else if (raid.retreating) {
+    html = `<span>${escapeHtml(t(raid.scouting ? 'raid.scoutRunning' : 'raid.retreating'))}</span>`;
   } else if (raid.scouting) {
     html = `<span>${escapeHtml(t(raid.phase === 'march' ? 'raid.scoutGoing' : raid.phase === 'fight' ? 'raid.scoutLooking' : 'raid.returning'))}</span>` +
       (raid.phase === 'march' ? `<button class="btn" data-raid-act="call-off">${escapeHtml(t('raid.cancel'))}</button>` : '');
@@ -534,8 +705,11 @@ export function updateRaidBar() {
       `<button class="btn" data-raid-act="call-off">${escapeHtml(t('raid.cancel'))}</button>`;
   } else if (raid.phase === 'fight') {
     const outpost = game.enemyTents.find(et => et.outpost);
-    html = `<span>${escapeHtml(t('raid.left', { n: game.enemies.filter(en => en.hp > 0).length, hp: outpost ? Math.ceil(100 * outpost.hp / outpost.maxHp) : 0 }))}</span>` +
+    const def = GAME_CONFIG.buildings[shelterType()], pitched = game.blueprints.some(bp => bp.raidShelter) || shelters().length > 0;
+    html = `<span>${escapeHtml(t('raid.left', { n: game.enemies.filter(en => en.hp > 0).length, hp: outpost ? Math.ceil(100 * outpost.hp / outpost.maxHp) : 0 }))}` +
+      (raid.arrows > 0 ? ` · ${richText(t('raid.arrows', { n: raid.arrows }))}` : '') + `</span>` +
       `<button class="btn${raid.auto ? ' on' : ''}" data-raid-act="auto">${richText(t('raid.auto'))}</button>` +
+      (pitched ? '' : `<button class="btn${raid.placing ? ' on' : ''}" data-raid-act="shelter">${richText(`[[${def.icon}]] ${def.label}`)} <small>${richText(formatCost(def.cost))}</small></button>`) +
       `<button class="btn" data-raid-act="retreat">${escapeHtml(t('raid.retreat'))}</button>`;
   } else html = `<span>${escapeHtml(t('raid.returning'))}</span>`;
   if (html === barKey && bar) return;
@@ -548,11 +722,12 @@ export function updateRaidBar() {
 
 export function raidAction(act) {
   if (act === 'open') openRaidPicker();
-  else if (act === 'scout') sendScout();
+  else if (act === 'scout') openRaidPicker(true); // (which one goes, #279)
   else if (act === 'attack') enterCamp();
   else if (act === 'call-off' && raid.phase === 'march') endRaid(false);
   else if (act === 'auto') raid.auto = !raid.auto;
-  else if (act === 'retreat') leaveCamp(false);
+  else if (act === 'retreat') startRetreat();
+  else if (act === 'shelter' && isInCamp()) { raid.placing = !raid.placing; if (raid.placing) showNotification(t('raid.shelterTap'), false); }
   barKey = '';
   updateRaidBar();
 }
