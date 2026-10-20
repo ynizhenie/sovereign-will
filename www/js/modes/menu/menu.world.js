@@ -26,7 +26,8 @@ import { resetGame } from '../../app/index.js';
 
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
-  boars: 3, trees: 7, boulders: 4, grass: 7
+  boars: 3, trees: 7, boulders: 4, grass: 7,
+  warehouseHp: 300 // (the fight's: the zombies can break it, #279)
 };
 
 export const MENU_SCENES = ['hunt', 'fishing', 'fight', 'farm'];
@@ -144,7 +145,6 @@ export function enterMenuWorld(scene = '') {
     Object.assign(stock, { worms: 0, wheatSeeds: 0, wheat: 0, firewood: 99, food: 999 });
   } else if (sceneName === 'fight') {
     menuWorld.fight = { next: 2, gap: 5, down: 0 };
-    townHall.hp = townHall.maxHp = 1e9; // (it's the squad's, not the zombies')
     fightSquad();
   } else if (sceneName === 'farm') {
     const zone = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [3, 2]].map(([dx, dy]) => near(dx, dy));
@@ -163,11 +163,14 @@ export function enterMenuWorld(scene = '') {
   }
 }
 
-// The fight's squad (#256): two swords with shields, a medic in armour, by the hall
+// The fight's squad (#256): two swords with shields, a medic in armour, by the hall. (#279) They guard the
+// warehouse: the zombies can break it, and then the medic has no herbs to fill its bag with
 function fightSquad() {
   const h = { x: townHall.x, y: townHall.y };
+  townHall.hp = townHall.maxHp = MENU_WORLD.warehouseHp;
+  stock.herbs = 20;
   const sword = (id, dy) => Object.assign(createSettler('normal', id, h.x - 50, h.y + dy), { weapon: 'sword', role: 'soldier', shield: true });
-  const medic = Object.assign(createSettler('normal', 3, h.x - 70, h.y), { tool: 'medbag', bagHerbs: 99 });
+  const medic = Object.assign(createSettler('normal', 3, h.x - 70, h.y), { tool: 'medbag', bagHerbs: 3 });
   putOnGear(medic, 'armor');
   game.settlers = [sword(1, -20), sword(2, 20), medic];
 }
@@ -197,6 +200,8 @@ export function tickMenuScene(dt) {
       f.next = f.gap;
     }
     if (game.corpses.length > 12) game.corpses.splice(0, game.corpses.length - 12);
+    // herbs in the warehouse while it stands; broken, none (#279)
+    stock.herbs = townHall.hp > 0 ? Math.max(stock.herbs || 0, 10) : 0;
   } else if (menuWorld.scene === 'farm') {
     stock.wheatSeeds = Math.max(stock.wheatSeeds || 0, 10);
     for (const b of game.buildings) if (b.type === 'dung_heap') b.dung = Math.max(b.dung || 0, 3);

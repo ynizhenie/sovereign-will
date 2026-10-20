@@ -11,7 +11,7 @@ import { playSound } from '../../../app/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { isNight } from '../../world/index.js';
 
-const VOICE = { globalGap: 2.5, ownGap: 12, showTicks: 150, storyEvery: 20 };
+const VOICE = { globalGap: 2.5, ownGap: 12, showTicks: 150, storyEvery: 20, talkEvery: 7, replyAfter: 2.4 };
 // how each kind sounds: pitch (Hz), and a growl under it
 const PITCH = { normal: [210, false], big: [120, false], imp: [380, false], demon: [95, true], zombie: [150, true], big_zombie: [95, true] };
 let lastSpoke = -Infinity;
@@ -92,6 +92,7 @@ let wasFighting = false, idleClock = 0;
 export function tickVoices(dt) {
   clock += dt;
   tellStories(dt); // (#279)
+  talkInKnots(dt);
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
   const fighting = game.enemies.some(en => en.fromWave);
   if (fighting && !wasFighting) someoneSays(game.enemies.filter(en => en.fromWave), getEnemyFaction().id, 'charge', true);
@@ -131,4 +132,34 @@ function tellStories(dt) {
   const by = /** @type {any[]} */ (game.settlers).filter(s => !s.asleep && s.idle && s.idle.act === 'campfire' && clock - (s.spokeAt || -Infinity) >= VOICE.ownGap);
   const teller = by[Math.floor(Math.random() * by.length)];
   if (teller && clock - lastSpoke >= VOICE.globalGap) voice(teller, storyOf(teller));
+}
+
+// (#279) settlers talking in a knot: not dots but what they say. Now and then one tells the other of its day,
+// and a moment later the other answers (its faction's reply, or its own day)
+/** @type {{ unit: any, at: number, text: string }[]} */
+const replies = [];
+let talkClock = 0;
+const talking = s => !s.asleep && s.isIdle && s.idle && s.idle.act === 'talk';
+function talkInKnots(dt) {
+  for (let i = replies.length - 1; i >= 0; i--) {
+    const r = replies[i];
+    if (clock < r.at) continue;
+    replies.splice(i, 1);
+    if (game.settlers.includes(r.unit) && talking(r.unit)) voice(r.unit, r.text);
+  }
+  talkClock += dt;
+  if (talkClock < VOICE.talkEvery) return;
+  talkClock = 0;
+  if (clock - lastSpoke < VOICE.globalGap) return;
+  const knot = /** @type {any[]} */ (game.settlers).filter(talking);
+  const free = knot.filter(s => clock - (s.spokeAt || -Infinity) >= VOICE.ownGap);
+  const teller = free[Math.floor(Math.random() * free.length)];
+  if (!teller) return;
+  const other = knot.filter(o => o !== teller && Math.hypot(o.x - teller.x, o.y - teller.y) < 70)
+    .sort((a, b) => Math.hypot(a.x - teller.x, a.y - teller.y) - Math.hypot(b.x - teller.x, b.y - teller.y))[0];
+  voice(teller, storyOf(teller));
+  if (!other) return;
+  const key = `voice.${getPlayerFaction().id}.reply`, list = t(key) === key ? [] : t(key).split('|');
+  const text = list.length && Math.random() < 0.6 ? list[Math.floor(Math.random() * list.length)] : storyOf(other);
+  replies.push({ unit: other, at: clock + VOICE.replyAfter, text });
 }

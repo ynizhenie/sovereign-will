@@ -69,10 +69,30 @@ export function drawBuildGrid() {
   }
 }
 
+// (#279) the menu's warehouse: as one in the game, hurt as one is when the zombies get at it, and broken, a heap
+// of planks
+function drawMenuWarehouse() {
+  const x = townHall.x, y = townHall.y, share = Math.max(0, townHall.hp) / townHall.maxHp;
+  if (share <= 0) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(x, y + 4, 15, 9, 0, 0, Math.PI * 2); ctx.fill();
+    for (const [dx, dy, a, w] of [[-8, 2, 0.4, 16], [4, -3, -0.7, 14], [0, 6, 0.1, 18], [-3, -6, 1.2, 12], [8, 5, 0.9, 10]]) {
+      ctx.save(); ctx.translate(x + dx, y + dy); ctx.rotate(a); ctx.fillStyle = '#6d4520'; ctx.fillRect(-w / 2, -1.5, w, 3); ctx.restore();
+    }
+    ctx.fillStyle = '#7b241c'; ctx.fillRect(x - 6, y - 3, 9, 4);
+    return;
+  }
+  drawWarehouseArt(x, y);
+  if (share < 1) {
+    drawDamage(x, y, 13, share);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 15, y - 22, 30, 4);
+    ctx.fillStyle = share > 0.4 ? '#2ecc71' : '#e74c3c'; ctx.fillRect(x - 15, y - 22, share * 30, 4);
+  }
+}
+
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
 // menu it's drawn as a warehouse, the storage it is there (#200)
 export function drawTownHall() {
-  if (game.gameMode === 'menu') { drawWarehouseArt(townHall.x, townHall.y); return; } // (as a warehouse in the game, #256)
+  if (game.gameMode === 'menu') { drawMenuWarehouse(); return; } // (as a warehouse in the game, #256)
  // each faction's own, not round (building.art.js, #251)
   drawHallArt(townHall.x, townHall.y);
 

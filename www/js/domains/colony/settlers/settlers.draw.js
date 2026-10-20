@@ -479,8 +479,7 @@ export function drawSettlers() {
       if (to) { ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.setLineDash([]); }
     }
     if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + r, top - 14, s.orderBubble.icon);
-    // "talking" in a knot (#199): now and then a speech bubble
-    if (s.isIdle && s.idle && s.idle.act === 'talk' && Math.sin(performance.now() / 700 + s.id * 1.7) > 0.4) drawTalkBubble(s.x + r, top - 12);
+    // (talking in a knot: what they say, not dots, #279: settlers.voices.js talkInKnots)
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, top - 6, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, top - 6, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
@@ -497,19 +496,10 @@ export function drawNoArrows(x, y) {
   ctx.beginPath(); ctx.moveTo(x - 6, y + 6); ctx.lineTo(x + 6, y - 6); ctx.stroke();
 }
 
-// A speech bubble with "..." in it
 // An order (#248): a bubble with what it's about
 export function drawOrderBubble(x, y, icon) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
   ctx.beginPath(); ctx.ellipse(x, y, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.moveTo(x - 5, y + 5); ctx.lineTo(x - 8, y + 11); ctx.lineTo(x - 1, y + 7); ctx.fill();
   drawIcon(ctx, icon, x, y, 11);
-}
-
-export function drawTalkBubble(x, y) {
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  ctx.beginPath(); ctx.ellipse(x, y, 9, 6, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 8, y + 9); ctx.lineTo(x - 1, y + 5); ctx.fill();
-  ctx.fillStyle = '#34495e';
-  for (const dx of [-4, 0, 4]) { ctx.beginPath(); ctx.arc(x + dx, y, 1.2, 0, Math.PI * 2); ctx.fill(); }
 }
