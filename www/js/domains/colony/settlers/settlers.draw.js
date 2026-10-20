@@ -116,10 +116,12 @@ export function isCrafting(s) {
 }
 
 // The load in front of it, held in both hands (drawn around its centre, after translate)
+// where a load in its hands is, in front of it (#298: both its hands on it, drawFigure's carryPoint)
+const carryAt = s => ({ x: Math.cos(s.facing || 0) * (s.visualRadius + 3), y: Math.sin(s.facing || 0) * (s.visualRadius + 3) });
 function drawCarriedInHands(s) {
   const type = s.carrying.type;
   const f = s.facing || 0;
-  const x = Math.cos(f) * (s.visualRadius + 3), y = Math.sin(f) * (s.visualRadius + 3);
+  const { x, y } = carryAt(s);
   if (type === 'dung') {
     ctx.fillStyle = '#5c3d16'; ctx.beginPath(); ctx.ellipse(x, y, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
     return;
@@ -189,6 +191,19 @@ function drawWorkpiece(s) {
 
 export const SKIN = { humans: '#f5cba7', demons: '#922b21', undead: '#9fb38a' };
 
+// (#298) what's further up the screen is further from us, so behind the body. Facing away from us: its face
+// unseen (no whistle on its chest)
+export const facesAway = unit => Math.sin(unit.facing || 0) < -0.25;
+const radiusOf = unit => unit.visualRadius || unit.radius || 11;
+// its hand (and what's in it) up behind its body: facing away, or to the left (the hand's on its right)
+export const heldBehind = unit => !unit.eating && (unit.carrying && isCarryingInHands(unit)
+  ? Math.sin(unit.facing || 0) * (radiusOf(unit) + 3) < -radiusOf(unit) * 0.1
+  : handAt(unit, radiusOf(unit)).y < -radiusOf(unit) * 0.1);
+// what's on its back behind its body: facing us, or to a side
+export const backBehind = unit => Math.sin(unit.facing || 0) > -0.1;
+// which side its hand (and held item) is on, -1 left or 1 right: its shield on the other
+export const handSide = unit => (handAt(unit, radiusOf(unit)).x >= 0 ? 1 : -1);
+
 // Where its right hand is now, round its middle (the held item's grip, as applyHeldItemPose puts it)
 function handAt(unit, r) {
   const pose = getHeldItemPose(unit), a = (unit.facing || 0) + pose.angle;
@@ -199,7 +214,9 @@ function handAt(unit, r) {
 /**
  * The figure round (x, y), r its old circle's radius.
  * @param {any} unit
- * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number } }} o
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number } }} o
+ * (carryPoint: a load in both hands, both arms out to it, #298)
+ * (#298) facing away from us, its arms (and what's in its hands, drawn by the caller) are behind its body
  */
 export function drawFigure(unit, o) {
   const { x, y, r } = o;
@@ -213,19 +230,25 @@ export function drawFigure(unit, o) {
   const step = o.lying || o.dead ? 0 : Math.sin((unit.walk || 0) * 0.35) * r * 0.16;
   ctx.fillStyle = shade(o.body, -0.4);
   for (const [lx, dy] of [[-0.3, step], [0.3, -step]]) { ctx.beginPath(); ctx.roundRect(r * lx - r * 0.17, r * 0.25 + dy, r * 0.34, r * 0.72, r * 0.12); ctx.fill(); }
+  // arms: the right to its hand, the left down its side (or out to its shield, on the side away from the hand)
+  const carry = !o.lying && !o.dead ? o.carryPoint : null;
+  const hand = carry ? { x: carry.x + 3, y: carry.y } : o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
+  const right = hand.x >= 0 ? 1 : -1;
+  const other = carry ? { x: carry.x - 3, y: carry.y } : o.shield ? { x: -right * (r - 1), y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
+  const arm = (from, to) => {
+    ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(from, -r * 0.3); ctx.lineTo(to.x, to.y); ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(to.x, to.y, r * 0.15, 0, Math.PI * 2); ctx.fill();
+  };
+  // (#298) its hand's arm behind its body when the hand is up behind it (heldBehind); the other in front
+  const behind = !o.lying && !o.dead && (carry ? carry.y < -r * 0.1 : !o.handPoint && hand.y < -r * 0.1);
+  if (behind) { arm(right * r * 0.5, hand); if (carry) arm(-right * r * 0.5, other); }
   // the body
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
-  // arms: the right to its hand, the left down its side (or out to its shield)
-  ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
-  const hand = o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
-  const right = hand.x >= 0 ? 1 : -1;
-  ctx.beginPath(); ctx.moveTo(right * r * 0.5, -r * 0.3); ctx.lineTo(hand.x, hand.y); ctx.stroke();
-  const other = o.shield ? { x: -r + 1, y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
-  ctx.beginPath(); ctx.moveTo(-right * r * 0.5, -r * 0.3); ctx.lineTo(other.x, other.y); ctx.stroke();
-  ctx.lineCap = 'butt';
-  ctx.fillStyle = o.skin;
-  for (const p of [hand, other]) { ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.15, 0, Math.PI * 2); ctx.fill(); }
+  if (!behind) arm(right * r * 0.5, hand);
+  if (!(carry && behind)) arm(-right * r * 0.5, other);
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;
   ctx.fillStyle = o.skin; ctx.strokeStyle = outline;
@@ -273,12 +296,15 @@ export function drawBackItems(s) {
 }
 
 // Its side slot (#279): what hangs at its belt on the side away from its hand, turned with it: a watering
-// can, a captain's banner (its pole held up beside it)
-export function drawSideItems(s) {
+// can, a captain's banner (its pole held up beside it). (#298) Drawn before the body when that side is the far
+// one (up the screen), after it otherwise: `front` says which pass this is
+export function drawSideItems(s, front = true) {
   const r = s.visualRadius, f = s.facing || 0;
   const can = s.wateringCan && !((s.usingCan || 0) > 0), banner = !!s.banner;
   const playing = s.flute && game.pathTick - (s.playingFlute ?? -1e9) < 10;
-  if (s.flute) {
+  const far = a => Math.sin(a) < -0.15;
+  const fluteFar = playing ? facesAway(s) : far(f + 2.4);
+  if (s.flute && fluteFar !== front) {
     // a flute: held to its mouth, across its face, while it plays; else at its belt (#279)
     const fx = playing ? Math.cos(f) * (r * 0.55) : Math.cos(f + 2.4) * (r - 2), fy = playing ? Math.sin(f) * (r * 0.55) - r * 0.25 : Math.sin(f + 2.4) * (r - 2) + 2;
     const a = playing ? f + Math.PI / 2 : f + 1.2;
@@ -288,8 +314,8 @@ export function drawSideItems(s) {
     ctx.restore();
     if (playing && Math.floor(game.pathTick / 20) % 2) { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.font = 'bold 7px sans-serif'; ctx.fillText('♪', fx + 6, fy - 8 - (game.pathTick % 20) / 4); }
   }
-  if (!can && !banner) return;
   const side = f + 1.9, x = Math.cos(side) * (r - 1), y = Math.sin(side) * (r - 1);
+  if ((!can && !banner) || far(side) === front) return;
   if (can) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
   if (banner) {
     const bx = x - Math.cos(f) * 3, by = y - 2;
@@ -326,11 +352,13 @@ export function drawArmor(radius, kind = 'iron') {
   ctx.strokeStyle = '#7f8c8d'; ctx.beginPath(); ctx.moveTo(0, -r * 0.44); ctx.lineTo(0, r * 0.36); ctx.stroke();
 }
 
-// A round wooden shield with an iron rim and boss on the left arm of a body of that radius
-export function drawShield(radius) {
-  ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-radius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
+// A round wooden shield with an iron rim and boss on the other arm of a body of that radius (#298: side, the
+// hand's side; the shield on the other)
+export function drawShield(radius, side = 1) {
+  const x = -side * (radius - 1);
+  ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(x, 3, 6, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(-radius + 1, 3, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(x, 3, 1.8, 0, Math.PI * 2); ctx.fill();
 }
 
 // A watering can: a tin body, a handle on top and a long spout forward; `scale` for carrying it small
@@ -391,27 +419,10 @@ export function drawSettlers() {
     const r = s.visualRadius, top = s.y - r * 1.45; // (the top of its head)
     // the possessed one: a white ring on the ground round its feet
     if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(s.x, s.y + r * 0.95, r * 0.95, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke(); }
-    // what's on its back, behind it when it faces this way (#251)
-    const backBehind = Math.sin(s.facing || 0) > 0.2;
-    if (backBehind && !s.asleep) { ctx.save(); ctx.translate(s.x, s.y); drawBackItems(s); ctx.restore(); }
-    // the figure in the colony's colour (#251)
-    const faction = game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
-    if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
-    if (s.asleep) ctx.globalAlpha = 0.85;
-    const food = s.eating && !s.asleep ? eatingAt(s) : null;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined });
-    ctx.globalAlpha = 1;
-    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
-    drawBodyBlood(s, r);
-
     // what it carries is in its hands, what it held goes on its back (in a backpack it stays out of sight,
     // the bar above says how full); making a thing, a hammer in its hands (#232)
     const inHands = isCarryingInHands(s);
     const crafting = isCrafting(s);
-
-    ctx.save();
-    ctx.translate(s.x, s.y);
-    ctx.save();
     // (#279) fighting with a torch in hand and a weapon or tool: the torch goes to its side, it fights with that
     const torchAside = s.torchInHand && game.pathTick - (s.struckAt ?? -1e9) < 150 && (s.weapon !== 'fist' || s.tool !== 'none');
     const torchHeld = s.torchInHand && !torchAside;
@@ -421,31 +432,69 @@ export function drawSettlers() {
     const blade = isSwordWeapon(s.weapon) || isSpearWeapon(s.weapon);
     const workTool = s.asleep ? null : crafting || ((s.working || 0) > 0 && s.workKind === 'build') ? 'hammer' : (s.working || 0) > 0 && s.workKind === 'butcher' && !blade ? 'knife' : null;
     const picking = (s.working || 0) > 0 && s.workKind === 'pick';
-    if (isResting(s) || inHands || s.eating || torchHeld || s.asleep || workTool || picking) applyBackPose(s);
-    else applyHeldItemPose(s);
-    if (getNecromancy(s) && s.weapon === 'fist') {
-      drawStaff();
-    } else if (!drawHeldWeapon(s.weapon, k)) {
-      if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
-      else drawHeldTool(s.tool || 'none', k, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
-    }
-    drawWeaponBlood(s);
-    ctx.restore(); // pose only moves the held item
-    if (inHands) drawCarriedInHands(s);
-    if (workTool) { ctx.save(); applyHeldItemPose(s); drawWorkTool(workTool, k); ctx.restore(); }
-    // a berry in its hand as it draws it back from the bush (#279)
-    if (picking && Math.sin(game.pathTick * 0.3) < -0.3) { ctx.save(); applyHeldItemPose(s); ctx.fillStyle = '#5b6ee1'; ctx.beginPath(); ctx.arc(1, 0, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
-    if (torchHeld && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
-    else if (torchAside && !s.asleep) drawSideTorch(s.facing, s.visualRadius);
-    if (food && s.eating) { drawIcon(ctx, s.eating.icon, food.x, food.y - 2, 9); if (food.bite > 0.95) { ctx.fillStyle = '#d4a373'; ctx.fillRect(food.x + 3, food.y + 3, 2, 2); } }
-    if ((s.armor || s.hasArmor) && !s.asleep) drawArmor(r, typeof s.armor === 'string' ? s.armor : 'iron');
-    if (s.shield && !s.asleep) drawShield(r);
-    // a commander's whistle on a cord on its chest (#248); its banner goes on its back (drawBackItems)
-    if (s.whistle && !s.asleep) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
-    // what's on its back, in front of it when it faces away (#251)
-    if (!backBehind && !s.asleep) drawBackItems(s);
-    if (!s.asleep) drawSideItems(s); // (#279)
-    ctx.restore();
+    const onBack = isResting(s) || inHands || s.eating || torchHeld || s.asleep || workTool || picking;
+    const food = s.eating && !s.asleep ? eatingAt(s) : null;
+
+    // (#298) in layers, by how far from us each thing is (up the screen is further): its hand up behind it
+    // (facing away, or to the left), what's in it (and that arm, drawFigure) behind its body; what's on its
+    // back behind it when it faces us or a side, in front when it faces away. Its side slot as that side is
+    // near or far
+    const away = facesAway(s) && !s.asleep, side = handSide(s);
+    const handBack = heldBehind(s) && !s.asleep, backBack = backBehind(s);
+    // its weapon or tool, in its hand or across its back
+    const heldItem = () => {
+      ctx.save();
+      if (onBack) applyBackPose(s); else applyHeldItemPose(s);
+      if (getNecromancy(s) && s.weapon === 'fist') {
+        drawStaff();
+      } else if (!drawHeldWeapon(s.weapon, k)) {
+        if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
+        else drawHeldTool(s.tool || 'none', k, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
+      }
+      drawWeaponBlood(s);
+      ctx.restore(); // pose only moves the held item
+    };
+    // what's in its hands: its weapon or tool (unless on its back), a load, a hammer or knife, a berry, a torch,
+    // its food, its shield
+    const inHand = () => {
+      if (!onBack) heldItem();
+      if (inHands) drawCarriedInHands(s);
+      if (workTool) { ctx.save(); applyHeldItemPose(s); drawWorkTool(workTool, k); ctx.restore(); }
+      // a berry in its hand as it draws it back from the bush (#279)
+      if (picking && Math.sin(game.pathTick * 0.3) < -0.3) { ctx.save(); applyHeldItemPose(s); ctx.fillStyle = '#5b6ee1'; ctx.beginPath(); ctx.arc(1, 0, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      if (torchHeld && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
+      else if (torchAside && !s.asleep) drawSideTorch(s.facing, s.visualRadius);
+      if (food && s.eating) { drawIcon(ctx, s.eating.icon, food.x, food.y - 2, 9); if (food.bite > 0.95) { ctx.fillStyle = '#d4a373'; ctx.fillRect(food.x + 3, food.y + 3, 2, 2); } }
+    };
+    // what's on its back: a backpack, a quiver, its weapon or tool when its hands are busy
+    const onItsBack = () => {
+      if (s.asleep) return;
+      if (onBack) heldItem();
+      drawBackItems(s);
+    };
+    const at = fn => { ctx.save(); ctx.translate(s.x, s.y); fn(); ctx.restore(); };
+
+    if (s.asleep) at(heldItem); // (asleep: lying with it beside it)
+    if (backBack) at(onItsBack);
+    if (handBack) at(inHand);
+    if (!s.asleep) at(() => drawSideItems(s, false));
+    // the figure in the colony's colour (#251)
+    const faction = game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
+    if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
+    if (s.asleep) ctx.globalAlpha = 0.85;
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined });
+    ctx.globalAlpha = 1;
+    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
+    drawBodyBlood(s, r);
+    at(() => {
+      if ((s.armor || s.hasArmor) && !s.asleep) drawArmor(r, typeof s.armor === 'string' ? s.armor : 'iron');
+      // a commander's whistle on a cord on its chest (#248), seen from the front
+      if (s.whistle && !s.asleep && !away) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
+      if (s.shield && !s.asleep) drawShield(r, side); // (on its other arm, in front)
+    });
+    if (!backBack) at(onItsBack);
+    if (!handBack && !s.asleep) at(inHand);
+    if (!s.asleep) at(() => drawSideItems(s, true));
 
     if (crafting) drawWorkpiece(s);
     if (s.asleep) drawSleepZs(s.x + r, s.y - r);
