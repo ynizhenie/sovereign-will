@@ -118,6 +118,12 @@ export const ICONS = {
   },
   undo: c => { icRing(c, '#ecf0f1', 3.5, 17, 17, 9, Math.PI * 1.05, Math.PI * 2.6); icFill(c, '#ecf0f1', [[2, 14], [10, 8], [11, 19]]); },
   redo: c => { icRing(c, '#ecf0f1', 3.5, 15, 17, 9, Math.PI * 0.4, Math.PI * 1.95); icFill(c, '#ecf0f1', [[30, 14], [22, 8], [21, 19]]); },
+  flute: c => {
+    c.save(); c.translate(16, 16); c.rotate(-0.6);
+    icRound(c, '#b07a45', -13, -2.5, 26, 5, 2.5); icRound(c, '#8a5d36', -13, -2.5, 4, 5, 2);
+    for (const hx of [-3, 2, 7]) icCircle(c, '#3e2716', hx, 0, 1.1);
+    c.restore();
+  },
   sun: c => {
     for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; icLine(c, '#f9e79f', 2.5, [[16 + Math.cos(a) * 10, 16 + Math.sin(a) * 10], [16 + Math.cos(a) * 14, 16 + Math.sin(a) * 14]]); }
     icCircle(c, '#f4d03f', 16, 16, 8); icCircle(c, '#f9e79f', 14, 14, 3);

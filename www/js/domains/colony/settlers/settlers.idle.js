@@ -119,7 +119,10 @@ export function idlePastime(s, tick) {
       if (!fire) { idle.left = 0; return false; }
       const place = ringPlace(s, fire, c.campfireRing, 'campfire');
       goStand(s, place, tick.dt, fire);
-      if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
+      if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) {
+        cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
+        if (s.flute) s.playingFlute = game.pathTick; // (one with a flute plays it, #279)
+      }
       return true;
     }
     case 'talk': {

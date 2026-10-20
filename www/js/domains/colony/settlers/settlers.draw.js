@@ -290,6 +290,17 @@ export function drawBackItems(s) {
 export function drawSideItems(s) {
   const r = s.visualRadius, f = s.facing || 0;
   const can = s.wateringCan && !((s.usingCan || 0) > 0), banner = !!s.banner;
+  const playing = s.flute && game.pathTick - (s.playingFlute ?? -1e9) < 10;
+  if (s.flute) {
+    // a flute: held to its mouth, across its face, while it plays; else at its belt (#279)
+    const fx = playing ? Math.cos(f) * (r * 0.55) : Math.cos(f + 2.4) * (r - 2), fy = playing ? Math.sin(f) * (r * 0.55) - r * 0.25 : Math.sin(f + 2.4) * (r - 2) + 2;
+    const a = playing ? f + Math.PI / 2 : f + 1.2;
+    ctx.save(); ctx.translate(fx, fy); ctx.rotate(a);
+    ctx.fillStyle = '#b07a45'; ctx.fillRect(-6, -1, 12, 2);
+    ctx.fillStyle = '#5c3a17'; for (const hx of [-2, 1, 4]) ctx.fillRect(hx, -0.5, 1, 1);
+    ctx.restore();
+    if (playing && Math.floor(game.pathTick / 20) % 2) { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.font = 'bold 7px sans-serif'; ctx.fillText('♪', fx + 6, fy - 8 - (game.pathTick % 20) / 4); }
+  }
   if (!can && !banner) return;
   const side = f + 1.9, x = Math.cos(side) * (r - 1), y = Math.sin(side) * (r - 1);
   if (can) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
