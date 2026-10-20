@@ -15,7 +15,10 @@ export const mapConfig = {
   // work (settlers): pickup — taken at once; seconds — takes that long (per tool if an object);
   //   chop — loses hp per second by settler type, times toolBonus; drain — loses hp per second by tool.
   mapResources: {
+    // (#279) fellInTwo: felled, it falls (fallSeconds) and gives `first` of its yield; the log lying there is cut
+    // up (logHp of its hp) for the rest
     tree: { list: 'trees', blocksArrows: true, tool: 'axe', hp: 3, yield: { wood: 3 }, bonusChance: { saplings: 0.5 }, regrow: 'forest', forestShare: 1,
+      fellInTwo: { first: 2 / 3, logHp: 0.6, fallSeconds: 0.8 },
       work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } } },
     cactus: { list: 'cacti', blocksArrows: true, tool: 'axe', hp: 2, yield: { wood: 1 }, regrow: 'nearby',
       work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } } },
