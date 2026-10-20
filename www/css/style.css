@@ -934,6 +934,7 @@ body.placing:not(.sheet-open) #placing-chip { display: flex; animation: chip-pop
 .placing-close { border: none; color: #fff; padding: 0 14px; font-size: 14px; cursor: pointer; }
 .placing-close[hidden] { display: none; }
 /* the sheet's frame rises in and sinks away (display flips at the end of the way out) */
+/* (#279) the one scroll of a sheet: what's in it doesn't scroll by itself (two scroll bars) */
 #sheet-frame {
   display: none;
   width: min(760px, 100%);
@@ -1055,7 +1056,6 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .sub-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
 .btn.sub-tab { flex: 1; }
 .btn.sub-tab.on { background: #2e6da4; border-color: #46b8da; }
-#tab-craft { max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
 
 /* the stock's drop-down, one level (#248) */
 #resources-hud.res-lines { display: flex; flex-direction: column; gap: 4px; }
@@ -1118,7 +1118,6 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .raid-picker-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 
 /* the battle's and the editor's sheets as Endless's (#255): long ones scroll; the brush sizes small, dragging wide */
-#battle-panel, #editor-panel { max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
 .editor-brush .sub-tab:last-child { flex: 2.2; }
 
 /* the Craft tab in one (#279): a heading for each kind, its places under it */

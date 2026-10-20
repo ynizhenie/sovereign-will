@@ -7,7 +7,7 @@ import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
-import { createSettler, faceTowards } from '../../colony/settlers/index.js';
+import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -91,6 +91,7 @@ export function updateTemporaryZombies(dt) {
     for (const s of gone) {
       const times = s.type === 'big_zombie' ? z.bigTimes : 1;
       game.loot.push({ x: s.x, y: s.y, hp: 1, maxHp: 1, priority: 0, yield: { rot: z.rot * times, bones: z.bones * times }, items: [] });
+      dropSettlerLoot(s); // (what it held, as from any that falls, #279)
     }
   }
   game.enemies = game.enemies.filter(en => !crumbled(en));

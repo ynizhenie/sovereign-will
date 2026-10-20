@@ -29,7 +29,9 @@ export const GEAR_RULES = {
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
-  banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' }
+  banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' },
+  // (#279) a flute: anyone (a worker first: the soldiers' nights are on watch)
+  flute: { canWear: () => true, first: s => s.role === 'worker' }
 };
 
 export function hasGear(s, id) {
