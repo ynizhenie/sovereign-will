@@ -53,6 +53,7 @@ export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
 }
 
 export function performAttack(attacker, targetX, targetY) {
+  attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
   if (attacker.attackCooldown > 0) return;
   faceTowards(attacker, targetX, targetY);
 

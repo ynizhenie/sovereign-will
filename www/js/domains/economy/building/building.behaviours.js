@@ -10,6 +10,7 @@ import { makeAppleTree } from '../farming/index.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards, says } from '../../colony/settlers/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
+import { isNight } from '../../world/index.js';
 
 // Pick up smelted iron and carry it home
 export function collectSmelterIron(s, tick) {
@@ -157,12 +158,15 @@ export function deliverMaterials(s, tick) {
 // Build (or demolish) the nearest blueprint that has fewer than 3 builders
 export function build(s, tick) {
   const dt = tick.dt;
-  if (game.blueprints.length > 0 && !s.carrying && s.role === 'worker') {
+  // (#279) torch posts by night with no worker up to build them: a soldier awake does
+  const torchesOnly = s.role !== 'worker' && isNight() && !s.towerAssignment && !game.settlers.some(o => o.role === 'worker' && !o.asleep);
+  if (game.blueprints.length > 0 && !s.carrying && (s.role === 'worker' || torchesOnly)) {
     let hasNearbyEnemy = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
     if (!hasNearbyEnemy) {
       let bestBp = /** @type {import('../../../engine/world/types.js').Blueprint | null} */ (null);
       let minDist = Infinity;
       game.blueprints.forEach(bp => {
+        if (torchesOnly && bp.type !== 'torch') return;
         let assignedCount = tick.blueprintAssignments.get(bp) || 0;
         if (assignedCount < 3) {
           let d = Math.hypot(bp.x - s.x, bp.y - s.y);
