@@ -109,6 +109,7 @@ export function prepareSettler(s, dt) {
 // what it has in hand. Moving it by hand cancels the order. Gear the player picked is still fetched.
 export function playerControlled(s, tick) {
   if (!s.isPossessed) return false;
+  if (s.asleep) s.asleep = false; // (#279: possessed asleep, it walked about lying down)
   if (s.targetEquipment) return equip(s, tick);
   if (s.order && !followOrder(s, tick)) s.order = null;
   return true;

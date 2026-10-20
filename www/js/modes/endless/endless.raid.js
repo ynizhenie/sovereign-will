@@ -42,6 +42,7 @@ export const raid = {
   won: false,
   timer: 0,
   defenders: 0,
+  still: 0,     // seconds the party on its way home hasn't moved
   picking: false
 };
 
@@ -342,8 +343,13 @@ export function tickRaid(dt) {
     if (!game.settlers.length) failRaid();
     else if (!game.enemies.some(en => en.hp > 0) && !game.enemyTents.length) leaveCamp(true);
   } else if (raid.phase === 'return') {
+    // home: all near the hall (#279: one pushed a little out by the rest kept it from ending), or none of
+    // them going anywhere any more for a few seconds (stuck), or a minute gone
     const home = raid.raiders.filter(s => game.settlers.includes(s));
-    if (home.every(s => dist(s, townHall) < townHall.radius + 60) || raid.timer > 60) endRaid(raid.won);
+    const moved = home.reduce((sum, s) => sum + (s.lastStep ? dist(s, s.lastStep) : 1), 0);
+    home.forEach(s => { s.lastStep = { x: s.x, y: s.y }; });
+    raid.still = moved < 0.05 * home.length ? (raid.still || 0) + dt : 0;
+    if (home.every(s => dist(s, townHall) < townHall.radius + 110) || raid.still > 3 || raid.timer > 60) endRaid(raid.won);
   }
   updateRaidBar();
 }
@@ -399,7 +405,7 @@ function failRaid() {
 
 // Over: home (or never left). Won: the zone goes and the next wave waits twice as long
 export function endRaid(won) {
-  for (const s of raid.raiders) { delete s.raider; delete s.raidSpot; clearOrders(s); }
+  for (const s of raid.raiders) { delete s.raider; delete s.raidSpot; delete s.lastStep; clearOrders(s); }
   if (raid.phase === 'return' || raid.phase === 'fight') game.raidCamp = null;
   if (won) game.waveTimer += game.waveInterval;
   resetRaidState();
@@ -407,7 +413,7 @@ export function endRaid(won) {
 
 function resetRaidState() {
   for (const s of game.settlers) { delete s.raider; delete s.raidSpot; clearOrders(s); }
-  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0 });
+  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0 });
   updateRaidBar();
 }
 
