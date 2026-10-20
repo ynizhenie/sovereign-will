@@ -113,10 +113,10 @@ export function drawEnemy(en) {
     };
     if (backBack) at(onItsBack);
     if (handBack) at(inHand);
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield });
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
-    at(() => { if (en.armor) drawArmor(en.radius, en.armor); if (en.shield) drawShield(en.radius, handSide(en)); });
+    at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
     if (!backBack) at(onItsBack);
     if (!handBack) at(inHand);
     at(() => { if (en.captain) drawEnemyBanner(en); });

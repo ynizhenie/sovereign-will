@@ -3,7 +3,7 @@
 import { drawIcon } from '../../ui/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getTileIndex } from '../../engine/world/index.js';
 import { isWaterReachable } from './world.generator.js';
-import { ctx } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
@@ -76,6 +76,10 @@ export const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; /
 export const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
 export const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
 
+// (#298) where the tile functions below draw: the screen, or the terrain's picture while it's painted
+/** @type {CanvasRenderingContext2D | null} */
+let target = null;
+
 // Which sides of tile (x, y) have no neighbour in `keys` (a Set of "x,y" tile centres)
 export function openSides(keys, x, y) {
   return {
@@ -86,66 +90,70 @@ export function openSides(keys, x, y) {
 
 // The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind
 export function drawJoinedTile(x, y, open, edgeColor, fillColor) {
+  const G = target || ctx;
   // half a pixel over every side, as sand: zoomed, a tile's soft edge let the light sand under it show as a
   // rim round ore on sand (#251)
-  ctx.fillStyle = fillColor; ctx.fillRect(x - 15.5, y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
-  ctx.fillStyle = edgeColor;
-  if (open.n) ctx.fillRect(x - 15, y - 15, TILE_SIZE, 2);
-  if (open.s) ctx.fillRect(x - 15, y + 13, TILE_SIZE, 2);
-  if (open.w) ctx.fillRect(x - 15, y - 15, 2, TILE_SIZE);
-  if (open.e) ctx.fillRect(x + 13, y - 15, 2, TILE_SIZE);
+  G.fillStyle = fillColor; G.fillRect(x - 15.5, y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
+  G.fillStyle = edgeColor;
+  if (open.n) G.fillRect(x - 15, y - 15, TILE_SIZE, 2);
+  if (open.s) G.fillRect(x - 15, y + 13, TILE_SIZE, 2);
+  if (open.w) G.fillRect(x - 15, y - 15, 2, TILE_SIZE);
+  if (open.e) G.fillRect(x + 13, y - 15, 2, TILE_SIZE);
 }
 
 export function drawWaterTile(w, reachable, tiles) {
+  const G = target || ctx;
   const h = tileVariantHash(w.x, w.y);
   const shades = reachable ? WATER_SHADES : DEEP_WATER_SHADES;
   drawJoinedTile(w.x, w.y, openSides(tiles.water, w.x, w.y), reachable ? '#1f618d' : '#154360', shades[h % shades.length]);
   // a short light ripple on some tiles
   if (h % 3 === 0) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)'; ctx.lineWidth = 1.5;
+    G.strokeStyle = 'rgba(255, 255, 255, 0.18)'; G.lineWidth = 1.5;
     const rx = w.x - 6 + ((h >>> 5) % 10), ry = w.y - 6 + ((h >>> 9) % 12);
-    ctx.beginPath(); ctx.arc(rx, ry + 4, 5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    G.beginPath(); G.arc(rx, ry + 4, 5, Math.PI * 1.15, Math.PI * 1.85); G.stroke();
   }
 }
 
 // Natural rock (and the rock under ore): joins every rock and ore tile around it
 export function drawRockTile(x, y, tiles) {
+  const G = target || ctx;
   const h = tileVariantHash(x, y), open = openSides(tiles.rockAndOre, x, y);
   drawJoinedTile(x, y, open, '#1a252f', ROCK_SHADES[h % ROCK_SHADES.length]);
   // facets of the rock face, a little lighter, and a lit top edge and shaded bottom edge where the mass
   // ends (#251: flat squares)
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+  G.fillStyle = 'rgba(255, 255, 255, 0.07)';
   for (let k = 0; k < 2; k++) {
     const v = h >>> (k * 9), fx = x - 12 + (v % 14), fy = y - 12 + ((v >>> 4) % 14);
-    ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx + 8 + (v % 4), fy + 2); ctx.lineTo(fx + 5, fy + 8 + ((v >>> 2) % 3)); ctx.lineTo(fx - 1, fy + 5); ctx.closePath(); ctx.fill();
+    G.beginPath(); G.moveTo(fx, fy); G.lineTo(fx + 8 + (v % 4), fy + 2); G.lineTo(fx + 5, fy + 8 + ((v >>> 2) % 3)); G.lineTo(fx - 1, fy + 5); G.closePath(); G.fill();
   }
-  if (open.n) { ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'; ctx.fillRect(x - 13, y - 13, TILE_SIZE - 4, 3); }
-  if (open.s) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(x - 13, y + 9, TILE_SIZE - 4, 4); }
+  if (open.n) { G.fillStyle = 'rgba(255, 255, 255, 0.12)'; G.fillRect(x - 13, y - 13, TILE_SIZE - 4, 3); }
+  if (open.s) { G.fillStyle = 'rgba(0, 0, 0, 0.25)'; G.fillRect(x - 13, y + 9, TILE_SIZE - 4, 4); }
   // a crack or a couple of speckles
   if (h % 4 === 0) {
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)'; ctx.lineWidth = 1;
+    G.strokeStyle = 'rgba(0, 0, 0, 0.25)'; G.lineWidth = 1;
     const cx = x - 7 + ((h >>> 6) % 12), cy = y - 7 + ((h >>> 11) % 12);
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + 4, cy + 3); ctx.lineTo(cx + 3, cy + 8); ctx.stroke();
+    G.beginPath(); G.moveTo(cx, cy); G.lineTo(cx + 4, cy + 3); G.lineTo(cx + 3, cy + 8); G.stroke();
   } else if (h % 4 === 1) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-    ctx.fillRect(x - 8 + ((h >>> 6) % 14), y - 8 + ((h >>> 11) % 14), 3, 3);
-    ctx.fillRect(x - 4 + ((h >>> 16) % 10), y - 2 + ((h >>> 20) % 10), 2, 2);
+    G.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    G.fillRect(x - 8 + ((h >>> 6) % 14), y - 8 + ((h >>> 11) % 14), 3, 3);
+    G.fillRect(x - 4 + ((h >>> 16) % 10), y - 2 + ((h >>> 20) % 10), 2, 2);
   }
 }
 
 export function drawDesertTile(tile) {
+  const G = target || ctx;
   const h = tileVariantHash(tile.x, tile.y);
-  ctx.fillStyle = DESERT_SHADES[h % DESERT_SHADES.length];
-  ctx.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
-  ctx.fillStyle = 'rgba(255, 236, 179, 0.25)';
+  G.fillStyle = DESERT_SHADES[h % DESERT_SHADES.length];
+  G.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
+  G.fillStyle = 'rgba(255, 236, 179, 0.25)';
   if (h % 3 === 0) {
     // a dune ripple
-    ctx.strokeStyle = 'rgba(120, 90, 40, 0.25)'; ctx.lineWidth = 1;
+    G.strokeStyle = 'rgba(120, 90, 40, 0.25)'; G.lineWidth = 1;
     const ry = tile.y - 6 + ((h >>> 7) % 12);
-    ctx.beginPath(); ctx.moveTo(tile.x - 10, ry); ctx.quadraticCurveTo(tile.x, ry - 4, tile.x + 10, ry); ctx.stroke();
+    G.beginPath(); G.moveTo(tile.x - 10, ry); G.quadraticCurveTo(tile.x, ry - 4, tile.x + 10, ry); G.stroke();
   } else {
-    ctx.fillRect(tile.x - 10 + ((h >>> 5) % 16), tile.y - 8 + ((h >>> 9) % 14), 3, 2);
-    ctx.fillRect(tile.x - 6 + ((h >>> 13) % 14), tile.y - 4 + ((h >>> 17) % 14), 2, 2);
+    G.fillRect(tile.x - 10 + ((h >>> 5) % 16), tile.y - 8 + ((h >>> 9) % 14), 3, 2);
+    G.fillRect(tile.x - 6 + ((h >>> 13) % 14), tile.y - 4 + ((h >>> 17) % 14), 2, 2);
   }
 }
 
@@ -190,15 +198,61 @@ export function drawMapBorder() {
 }
 
 // Desert and beach sand
+// (#298) the ground that rarely changes (sand, water, natural rock): zoomed out, where thousands of tiles
+// show, drawn once into a picture of the whole map (as the grass, half size on a big one) and laid down each
+// frame, painted again only when one of them changes (or where the settlers can reach on the water); zoomed
+// in, only the tiles on screen are drawn. Zoomed out it drew every tile every frame: 180 fps down to 70
+const ZOOMED_OUT = 0.75;
+/** @type {{ key: string, canvas: HTMLCanvasElement | null, scale: number }} */
+const terrainCache = { key: '', canvas: null, scale: 1 };
+let view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity }, cached = false;
+const onScreen = o => o.x > view.x0 && o.x < view.x1 && o.y > view.y0 && o.y < view.y1;
+const isRock = r => !r.oreSpawner;
+function terrainKey(terrain) {
+  let reach = 0;
+  for (let i = 0; i < game.waterTiles.length; i++) if (isWaterReachable(game.waterTiles[i])) reach = (reach * 31 + i + 1) | 0;
+  return `${game.COLS}x${game.ROWS}|${terrain.signature}|${reach}|${game.desertTiles.length}|${game.beachTiles.length}`;
+}
+function paintTerrain(terrain) {
+  const w = game.COLS * TILE_SIZE, h = game.ROWS * TILE_SIZE;
+  const scale = w * h > 4e6 ? 0.5 : 1;
+  const canvas = terrainCache.canvas || document.createElement('canvas');
+  canvas.width = Math.ceil(w * scale); canvas.height = Math.ceil(h * scale);
+  const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+  g.setTransform(scale, 0, 0, scale, 0, 0);
+  target = g;
+  try {
+    game.desertTiles.forEach(drawDesertTile);
+    game.beachTiles.forEach(drawDesertTile);
+    game.waterTiles.forEach(t => drawWaterTile(t, isWaterReachable(t), terrain));
+    game.naturalRocks.forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); });
+  } finally { target = null; }
+  Object.assign(terrainCache, { canvas, scale });
+}
+
 export function drawSand() {
-  game.desertTiles.forEach(drawDesertTile);
-  game.beachTiles.forEach(drawDesertTile);
+  // this frame: zoomed out (the picture), or the tiles on screen (with a tile's margin)
+  const scale = getViewScale(), terrain = getTileIndex();
+  cached = scale < ZOOMED_OUT && typeof document !== 'undefined';
+  if (cached) {
+    view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity };
+    const key = terrainKey(terrain);
+    if (terrainCache.key !== key || !terrainCache.canvas) { paintTerrain(terrain); terrainCache.key = key; }
+    const c = /** @type {HTMLCanvasElement} */ (terrainCache.canvas);
+    ctx.drawImage(c, 0, 0, c.width / terrainCache.scale, c.height / terrainCache.scale);
+    return;
+  }
+  const halfW = canvas.width / 2 / scale + TILE_SIZE, halfH = canvas.height / 2 / scale + TILE_SIZE;
+  view = { x0: camera.x - halfW, y0: camera.y - halfH, x1: camera.x + halfW, y1: camera.y + halfH };
+  for (const t of game.desertTiles) if (onScreen(t)) drawDesertTile(t);
+  for (const t of game.beachTiles) if (onScreen(t)) drawDesertTile(t);
 }
 
 // Water, and the fishing spots marked on it
 export function drawWater(terrain) {
   game.waterTiles.forEach(w => {
-    drawWaterTile(w, isWaterReachable(w), terrain);
+    if (!onScreen(w)) return;
+    if (!cached) drawWaterTile(w, isWaterReachable(w), terrain);
     if (w.isFishing) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
       ctx.strokeRect(w.x - 14, w.y - 14, 28, 28);
@@ -216,9 +270,10 @@ export function drawWater(terrain) {
 // Natural rock and ore spawners
 export function drawRocks(terrain) {
   game.naturalRocks.forEach(r => {
+    if (!onScreen(r)) return;
     if (r.oreSpawner) {
       drawOreSpawner(r.x, r.y, r.oreSpawner);
-    } else {
+    } else if (!cached) {
       drawRockTile(r.x, r.y, terrain);
     }
     drawHarvestProgress(r, 36);

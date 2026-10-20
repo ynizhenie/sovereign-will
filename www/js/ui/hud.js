@@ -6,7 +6,7 @@ import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo, roleTitle } from '../domains/colony/settlers/index.js';
-import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
+import { armorOf, countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 import { getDayPhase } from '../domains/world/index.js';
@@ -59,7 +59,7 @@ export function updateUI() {
     name += ` · ${roleTitle(selected)}`; // (what it is by what it holds, #279; a commander, #248)
     let wName = getDefinition('weapons', selected.weapon)?.label || selected.weapon;
     let tName = selected.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selected.tool)?.label || selected.tool);
-    let aName = selected.armor ? ` / ${t(selected.armor === 'leather' ? 'hud.leatherArmor' : 'hud.ironArmor')}` : '';
+    let aName = armorOf(selected) ? ` / ${t(selected.armor === 'leather' ? 'hud.leatherArmor' : 'hud.ironArmor')}` : '';
     let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
     // the rest of what it wears
     const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'flute'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
