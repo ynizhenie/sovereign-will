@@ -11,8 +11,8 @@ test('a worker with nothing to do carries a pile into a warehouse with room; a f
   expect(sim.storeHaulAndFall({})).toEqual({ pileBefore: true, carried: true, pileLess: true, stockSame: true, warehouseFull: true, droppedWhereItStood: true, stockAfterFall: true });
 });
 
-test('a load brought home goes into the storage it\'s brought to (#248)', () => {
-  expect(sim.storeDeliverInto({})).toEqual({ inWarehouse: 5 });
+test('a load brought home goes into its own storage (#248, #279)', () => {
+  expect(sim.storeDeliverInto({})).toEqual({ inWarehouse: 5, toItsPlace: true });
 });
 
 test('what lies where is saved and loaded (#248)', () => {
