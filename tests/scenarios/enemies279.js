@@ -35,9 +35,14 @@ Object.assign(window.sim, (() => {
     // pointed at: an enemy now, marked, running off
     scoutTapped(scout.x, scout.y);
     const hunted = enemies.includes(scout) && scout.markedTarget;
+    // (#279, c1.11) not off at once: only once one of them comes near it
+    settlers.forEach(s => { s.speed = 0; });
+    step(3, () => { waveTimer = 999; });
+    const stays = enemies.includes(scout) && !scout.fleeing;
+    settlers[0].x = scout.x + (scout.x < WORLD_WIDTH / 2 ? 60 : -60); settlers[0].y = scout.y;
     step(12, () => { waveTimer = 999; });
     GAME_CONFIG.scouts.chance = 0.5;
-    return { count, inBand, notEnemy, hunted, goneOff: !enemies.includes(scout) };
+    return { count, inBand, notEnemy, hunted, stays, goneOff: !enemies.includes(scout) };
   }
 
   // Each camp layout builds, the same camp every time for a seed; the party starts past the camp's red line (34, 37)
@@ -71,7 +76,7 @@ Object.assign(window.sim, (() => {
     const camp = { ...raidCamp };
     const sent = sendScout();
     let looked = false, cols = 0;
-    step(80, () => { waveTimer = 999; if (raid.phase === 'fight') { looked = true; cols = COLS; } return looked && raid.phase === null; });
+    step(150, () => { waveTimer = 999; if (raid.phase === 'fight') { looked = true; cols = COLS; } return looked && raid.phase === null; });
     return { sent, looked, cols, campStays: !!raidCamp && raidCamp.seed === camp.seed, phase: raid.phase, home: settlers.length };
   }
 

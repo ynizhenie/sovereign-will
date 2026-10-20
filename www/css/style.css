@@ -1145,3 +1145,6 @@ body[data-hud="endless"] .day-clock { display: block; }
 .res-chip .res-name { color: #8a91a0; font-size: 10px; }
 .res-chip .res-rate { font-style: normal; font-size: 10px; color: #58d68d; }
 .res-chip .res-rate.down { color: #ec7063; }
+/* the arrows a raid takes (#279) */
+.raid-arrows { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 6px 0; }
+.raid-arrows .btn { min-width: 34px; }

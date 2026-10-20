@@ -19,6 +19,8 @@
  * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
+ * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
+ * @property {boolean} [healing]     at the camp's shelter till it's mended (#279)
  * @property {Point} [orderSpot]     where it stands in a fight under orders (a raid's camp, a battle), told nothing to fight
  * @property {Object | null} [orderTarget]  what the player told it to fight there
  * @property {string} weapon         GAME_CONFIG.weapons key, 'fist' for none
@@ -115,6 +117,8 @@
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
+ * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
+ * @property {boolean} [fleeing]    a scout pointed at, running now (one came near it, or it was hit, #279)
  * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
  * @property {Point} [muster]        where it gathers
  * @property {boolean} [captain]     a commander with a banner, telling its own whom to go for (#279)
@@ -167,6 +171,8 @@
  * game.blueprints; finished, it goes to game.buildings as a Building.
  * @typedef {Object} Blueprint
  * @property {string} type           GAME_CONFIG.buildings key, or 'demolish_building'
+ * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} progress       building work done, of maxProgress
@@ -182,6 +188,7 @@
  * A building standing on the map (game.buildings).
  * @typedef {Object} Building
  * @property {string} type           GAME_CONFIG.buildings key
+ * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} [progress]
@@ -310,7 +317,7 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
- * @property {{ side: string, timeLeft: number, seed?: number, layout?: string } | null} raidCamp  an enemy camp's zone open (#255)
+ * @property {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} raidCamp  an enemy camp's zone open (#255; #279: the army it mirrors and the wave, as when it appeared)
  * @property {number} raidCampWave  the waves beaten when the last one opened
  * @property {Enemy[]} scouts  enemy scouts between waves (#279)
  * @property {Point[]} reliefZones  tiles marked to relieve in (#279)
