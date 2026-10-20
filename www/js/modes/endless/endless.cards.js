@@ -1,7 +1,7 @@
 // Cards (#255): an Endless setting, off by default. On, most buildings, tools, weapons and gear start locked
 // (all but GAME_CONFIG.cards.start, what it takes to live), their tiles greyed under a lock. Each wave beaten
-// (its enemies down, their tents and portals too) offers three cards, a common, a rare and a legendary
-// thing, and the game waits while the player picks one: that one opens for good. Till all are open.
+// (its enemies down, their tents and portals too) offers three cards, each a thing of a rarity drawn by
+// its chance (common, rare, legendary), and the game waits while the player picks one: that one opens for good. Till all are open.
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
@@ -41,16 +41,22 @@ function offerable() {
   return keys;
 }
 
-// Three cards: one of each rarity, another of any filling in for a rarity with none left
+// Three cards, each of a rarity drawn by its chance (#279: not always one of each; three common can come),
+// another rarity standing in for one with none left
 export function drawCards(random = Math.random) {
   const pool = offerable();
-  const pick = list => list.splice(Math.floor(random() * list.length), 1)[0];
   const cards = [];
-  for (const rarity of RARITIES) {
-    const of = pool.filter(k => rarityOf(k) === rarity);
-    if (of.length) { const key = pick(of); pool.splice(pool.indexOf(key), 1); cards.push(key); }
+  const chances = config().chances;
+  while (cards.length < 3 && pool.length) {
+    let roll = random() * RARITIES.reduce((sum, r) => sum + chances[r], 0), rarity = RARITIES[0];
+    for (const r of RARITIES) { if (roll < chances[r]) { rarity = r; break; } roll -= chances[r]; }
+    // none of that rarity left: the nearest that has some, the commoner first
+    const order = [rarity, ...RARITIES.filter(r => r !== rarity).sort((a, b) => Math.abs(RARITIES.indexOf(a) - RARITIES.indexOf(rarity)) - Math.abs(RARITIES.indexOf(b) - RARITIES.indexOf(rarity)) || RARITIES.indexOf(a) - RARITIES.indexOf(b))];
+    const of = pool.filter(k => rarityOf(k) === order.find(r => pool.some(k2 => rarityOf(k2) === r)));
+    const key = of[Math.floor(random() * of.length)];
+    pool.splice(pool.indexOf(key), 1);
+    cards.push(key);
   }
-  while (cards.length < 3 && pool.length) cards.push(pick(pool));
   return cards.sort((a, b) => RARITIES.indexOf(rarityOf(a)) - RARITIES.indexOf(rarityOf(b)));
 }
 

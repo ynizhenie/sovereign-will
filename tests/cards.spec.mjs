@@ -38,7 +38,7 @@ test('on: only what it takes to live is open; a locked thing can\'t be built or 
   expect(errors).toEqual([]);
 });
 
-test('a wave beaten: three cards, common, rare, legendary; the game waits; the one picked opens (#255)', async ({ page }) => {
+test('a wave beaten: three cards; the game waits; the one picked opens (#255)', async ({ page }) => {
   const errors = await openGame(page);
   await startWithCards(page);
   // a wave comes: no cards while it's on
@@ -60,7 +60,7 @@ test('a wave beaten: three cards, common, rare, legendary; the game waits; the o
     };
   });
   expect(offer.cards).toHaveLength(3);
-  expect(offer.shown).toEqual(['common', 'rare', 'legendary']);
+  expect(offer.shown.every(r => ['common', 'rare', 'legendary'].includes(r))).toBe(true); // (each by its chance, #279)
   expect(offer.waited).toBe(true);
   // nothing with iron before the smelter, nothing from the smithy before it
   expect(await page.evaluate(() => cardOffer.every(k => { const [c, id] = k.split(':'); return !(GAME_CONFIG[c][id].cost || {}).iron; }))).toBe(true);
@@ -110,4 +110,23 @@ test('saved and loaded: what\'s open, and an offer waiting (#255)', async ({ pag
     return { mode: cardMode, tower: isLocked('buildings', 'watchtower'), spear: isLocked('weapons', 'spear'), offer: cardOffer, overlay: document.querySelectorAll('#card-offer .card').length };
   }, saved.data);
   expect(r).toEqual({ mode: true, tower: false, spear: true, offer: saved.offer, overlay: 3 });
+});
+
+test('each card\'s rarity by its chance: three common can come, legendary ones seldom (#279, 40)', async ({ page }) => {
+  await openGame(page);
+  await startWithCards(page);
+  const r = await page.evaluate(() => {
+    const count = { common: 0, rare: 0, legendary: 0 }; let allCommon = 0;
+    for (let i = 0; i < 400; i++) {
+      const cards = drawCards();
+      const rs = cards.map(k => GAME_CONFIG.cards.rarity.rare.includes(k) ? 'rare' : GAME_CONFIG.cards.rarity.legendary.includes(k) ? 'legendary' : 'common');
+      rs.forEach(x => count[x]++);
+      if (rs.every(x => x === 'common')) allCommon++;
+    }
+    return { count, allCommon, three: drawCards().length };
+  });
+  expect(r.three).toBe(3);
+  expect(r.allCommon).toBeGreaterThan(20);
+  expect(r.count.common).toBeGreaterThan(r.count.rare);
+  expect(r.count.rare).toBeGreaterThan(r.count.legendary);
 });

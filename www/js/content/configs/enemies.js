@@ -63,6 +63,16 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'demon_imp' } }
   },
 
+  // (#279) a wave as it comes: its enemies first gather by where they came in for musterSeconds (shouting at the
+  // settlers; one that a settler comes within musterBreak px of fights at once), then attack. A wave of at least
+  // captainFrom enemies has a commander with a banner: every everySeconds it tells one of its own within reach
+  // px which settler to go for, one each, the nearest to it first
+  waveMuster: { musterSeconds: 6, musterBreak: 140, captainFrom: 6, captain: { everySeconds: 2, reach: 260 } },
+  // (#279) scouts: between waves (from wave fromWave), every checkSeconds a chance of one (at most max at a time)
+  // walking the map's edge for staySeconds, never past it; they don't fight and settlers leave them be. One the
+  // player points at is hunted; any settler within fleeTiles of one, it runs off the map
+  scouts: { fromWave: 2, checkSeconds: 40, chance: 0.5, max: 2, staySeconds: 40, fleeTiles: 5 },
+
   // loot (#210, #232): for each thing a fallen enemy held (its weapon, armour, shield), itemChance it drops
   // that thing itself, lying on the ground (into the armory once carried in)
   loot: { itemChance: 0.35 },
