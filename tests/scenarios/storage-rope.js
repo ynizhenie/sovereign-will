@@ -46,11 +46,12 @@ Object.assign(window.sim, (() => {
     warehouse.hp = 0;
     removeBuilding(warehouse);
     run(0.1, { each: quiet });
-    const where = piles.filter(p => p.x === warehouse.x && p.y === warehouse.y && p.type === 'stone');
-    return { ...r, droppedWhereItStood: where.length === 1 && round(where[0].amount) >= round(inWarehouse) - 0.01, stockAfterFall: stock.stone === stone };
+    // (#279: in packs round where it stood)
+    const where = piles.filter(p => Math.max(Math.abs(p.x - warehouse.x), Math.abs(p.y - warehouse.y)) <= 50 && p.type === 'stone');
+    return { ...r, droppedWhereItStood: where.length > 0 && round(where.reduce((a, p) => a + p.amount, 0)) >= round(inWarehouse) - 0.01, stockAfterFall: stock.stone === stone };
   }
 
-  // A load brought home goes into the storage it's brought to
+  // A load brought home goes into its own storage (#279: with two, each group of resources has its own)
   function deliverInto({ seed = 'store-deliver' } = {}) {
     start(seed); clearResources();
     const w = nearHall(6, 0);
@@ -59,8 +60,13 @@ Object.assign(window.sim, (() => {
     const s = makeSettler(1, w.x + 20, w.y + 20);
     settlers = [s];
     s.carrying = { type: 'wood', amount: 5, loads: 9 };
-    run(5, { each: quiet });
-    return { inWarehouse: (warehouse.store || {}).wood || 0 };
+    keepStoresInStep(); // (the start's stock into the hall first)
+    const was = { hall: townHall.store.wood || 0 };
+    run(8, { each: quiet });
+    // its own storage (the town hall for wood), or with that full, the nearest with room
+    const hallGot = (townHall.store.wood || 0) - was.hall, warehouseGot = (warehouse.store || {}).wood || 0;
+    const home = storeHome('wood');
+    return { inWarehouse: Math.round(hallGot + warehouseGot), toItsPlace: roomIn(home) >= 1 ? (home === warehouse ? warehouseGot : hallGot) === 5 : warehouseGot === 5 || hallGot === 5 };
   }
 
   // Saved and loaded: what lies where comes back
