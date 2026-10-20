@@ -88,8 +88,6 @@ export const mechanicsConfig = {
   corpseHaul: { corpseHeapTiles: 4, speed: 0.6, giveUpSeconds: 40 },
   // a resource the player marked with Point is worked by up to this many at once (#232: one kind of mark)
   markWorkers: 2,
-  // a boar takes this many times an item's damage (#232)
-  boarDamageFactor: 2,
   // idle settlers' pastimes between waves (#199), each for `seconds` (from..to): by a campfire (morale up at
   // campfireMoralePerSecond, up to campfireAbove past its usual), talking in a knot (company within
   // companyRange px), demons sparring (morale up to sparAbove past its usual, health down to sparMinHp of
