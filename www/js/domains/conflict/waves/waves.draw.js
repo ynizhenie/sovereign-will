@@ -6,7 +6,7 @@ import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawArmor, drawFigure, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
@@ -94,25 +94,32 @@ export function drawEnemy(en) {
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
     // (#251); their skin their faction's
     const kin = en.enemyKey.startsWith('demon_') ? 'demons' : en.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
+    // (#298) in layers by the way it faces, as a settler: facing away, its weapon, shield and torch behind its
+    // body and its quiver in front; facing us, the other way round
+    const handBack = heldBehind(en), backBack = backBehind(en);
+    const at = fn => { ctx.save(); ctx.translate(en.x, en.y); fn(); ctx.restore(); };
+    const inHand = () => {
+      ctx.save();
+      applyHeldItemPose(en);
+      if (getEnemyDef(en).necromancer) drawStaff();
+      else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
+      else drawHeldWeapon(en.weapon, itemScale(en)); // (in its hand, as big as it, #279)
+      drawWeaponBlood(en);
+      ctx.restore();
+      if (en.torch) drawHandTorch(en.facing, en.radius); // (a night wave, #257)
+    };
+    const onItsBack = () => {
+      if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
+    };
+    if (backBack) at(onItsBack);
+    if (handBack) at(inHand);
     drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
-
-    ctx.save();
-    ctx.translate(en.x, en.y);
-    ctx.save();
-    applyHeldItemPose(en);
-    if (getEnemyDef(en).necromancer) drawStaff();
-    else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
-    else drawHeldWeapon(en.weapon, itemScale(en)); // (in its hand, as big as it, #279)
-    drawWeaponBlood(en);
-    ctx.restore();
-    if (en.armor) drawArmor(en.radius, en.armor);
-    if (en.shield) drawShield(en.radius);
-    if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
-    if (en.torch) drawHandTorch(en.facing, en.radius); // (a night wave, #257)
-    if (en.captain) drawEnemyBanner(en);
-    ctx.restore();
+    at(() => { if (en.armor) drawArmor(en.radius, en.armor); if (en.shield) drawShield(en.radius, handSide(en)); });
+    if (!backBack) at(onItsBack);
+    if (!handBack) at(inHand);
+    at(() => { if (en.captain) drawEnemyBanner(en); });
     if (en.orderBubble && en.orderBubble.until > game.pathTick) drawOrderBubble(en.x + en.radius, en.y - en.radius * 1.45 - 14, en.orderBubble.icon);
 
     if (en.markedTarget) drawTargetMark(en);
