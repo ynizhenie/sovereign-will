@@ -15,6 +15,7 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
         const r = make(); game[GAME_CONFIG.mapResources[kind].list].push(r);
         s.carrying = null;
         finishHarvest(s, r, kind);
+        if (r.fallen) finishHarvest(s, r, kind); // (a tree: felled, then its log cut up, #279)
         for (const item of s.carrying.items || [s.carrying]) carried[item.type] = (carried[item.type] || 0) + item.amount;
       }
       const bonus = {};
@@ -35,4 +36,21 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
   expect(r.apple.bonus.appleSaplings).toBeGreaterThan(0.4);
   expect(r.apple.bonus.appleSaplings).toBeLessThan(0.6);
   expect(r.apple.bonus.saplings).toBeUndefined();
+});
+
+test('a felled tree falls first and gives part of its wood, then its log is cut up for the rest (#279)', async () => {
+  const r = await (() => {
+    const { makeSettler } = window.sim.helpers;
+    window.sim.start('fell-in-two');
+    const s = makeSettler(1, 0, 0, { tool: 'axe' });
+    const tree = { x: 40, y: 0, hp: 3, isGrowing: false };
+    trees.push(tree);
+    finishHarvest(s, tree, 'tree');
+    const fell = { fallen: !!tree.fallen, standing: trees.includes(tree), wood: s.carrying.amount, hp: tree.hp };
+    finishHarvest(s, tree, 'tree');
+    return { fell, gone: !trees.includes(tree), wood: s.carrying.amount };
+  })();
+  expect(r.fell).toEqual({ fallen: true, standing: true, wood: 2, hp: 3 * 0.6 });
+  expect(r.gone).toBe(true);
+  expect(r.wood).toBe(3);
 });

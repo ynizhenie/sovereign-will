@@ -271,11 +271,16 @@ export const ICONS = {
   pebble: c => {
     icEllipse(c, '#95a5a6', 11, 20, 6, 4.5); icEllipse(c, '#bdc3c7', 21, 15, 5, 4); icEllipse(c, '#7f8c8d', 22, 24, 4, 3);
   },
-  iron_ore: c => { icTile(c, '#34495e', '#22313f'); for (const [x, y, s] of [[8, 8, 7], [17, 12, 8], [10, 20, 6]]) icRect(c, '#aab7c3', x, y, s, s); },
+  // (#279) iron ore: rusty red-brown lumps in grey rock, with a glint of metal
+  iron_ore: c => {
+    icTile(c, '#5d6d7e', '#34495e');
+    for (const [x, y, k] of [[11, 11, 0.55], [21, 15, 0.6], [12, 22, 0.5]]) icRockLump(c, x, y, k, '#a0522d', '#6e2c12');
+    for (const [x, y] of [[9, 9], [20, 13], [11, 21]]) icRect(c, '#e5e8e8', x, y, 2, 2);
+  },
   coal_ore: c => { icTile(c, '#34495e', '#22313f'); for (const [x, y, s] of [[8, 8, 7], [17, 12, 8], [10, 20, 6]]) icRect(c, '#050608', x, y, s, s); },
   iron_spawner: c => {
-    icTile(c, '#34495e', '#aab7c3');
-    icFill(c, '#aab7c3', [[16, 7], [22, 16], [16, 25], [10, 16]]); icRect(c, '#dfe6ed', 15, 11, 2, 5);
+    icTile(c, '#5d6d7e', '#a0522d');
+    icFill(c, '#a0522d', [[16, 7], [22, 16], [16, 25], [10, 16]]); icRect(c, '#e5e8e8', 15, 11, 2, 5);
   },
   coal_spawner: c => {
     icTile(c, '#34495e', '#050608');
@@ -333,9 +338,14 @@ export const ICONS = {
   coal: c => {
     for (const [x, y, r] of [[10, 21, 6.5], [22, 21, 6.5], [16, 12, 6.5]]) { icCircle(c, '#1e272e', x, y, r); icCircle(c, '#566573', x - 2, y - 2, 1.6); }
   },
+  // (#279) a lump of iron ore: dark red-brown, patches of rust on its faces, a few silvery flecks of metal
   ironOre: c => {
-    icRockLump(c, 16, 18, 1.5, '#6c5f57', '#4d433d');
-    for (const [x, y] of [[11, 15], [18, 12], [20, 19], [13, 20]]) icRect(c, '#d35400', x, y, 3, 3);
+    icRockLump(c, 16, 18, 1.5, '#7b3f22', '#4a2312');
+    icFill(c, '#a9502a', [[9, 15], [14, 11], [17, 14], [12, 18]]);
+    icFill(c, '#c0622f', [[18, 11], [23, 12], [21, 16]]);
+    icFill(c, '#93431f', [[15, 20], [21, 19], [19, 23]]);
+    for (const [x, y] of [[11, 21], [20, 13], [23, 19], [16, 16]]) icRect(c, '#d5dbdb', x, y, 2, 1.5);
+    icRect(c, '#ffffff', 20, 13, 1, 1);
   },
   iron: c => {
     icFill(c, '#95a5a6', [[3, 24], [8, 13], [24, 13], [29, 24]]);

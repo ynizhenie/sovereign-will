@@ -4,18 +4,76 @@
 
 import { ctx } from '../../../engine/platform/index.js';
 import { tileVariantHash } from '../../world/index.js';
+import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { game } from '../../../engine/world/index.js';
 
 const variant = o => tileVariantHash(Math.round(o.x), Math.round(o.y));
 const blob = (x, y, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
 const groundShadow = (x, y, rx, ry) => { ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'; ctx.beginPath(); ctx.ellipse(x + 3, y + 4, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); };
 
-// A tree: its shadow, a bit of trunk under a crown of overlapping leafy clumps, lit from the top left
+// A tree: its shadow, a bit of trunk under a crown of overlapping leafy clumps, lit from the top left.
+// (#279) Felled, it falls over away from its cutter (turned about its foot), and lies there, a log with its
+// crown, the crown thinning as the log's cut up
 export function drawTreeArt(t) {
+  if (t.fallen) { drawFallenTree(t); return; }
+  drawStandingTree(t);
+}
+
+function drawFallenTree(t) {
+  const fall = GAME_CONFIG.mapResources.tree.fellInTwo;
+  const p = Math.min(1, (game.pathTick - (t.fallAt || 0)) / (fall.fallSeconds * 60));
+  const side = Math.cos(t.fallAngle || 0) >= 0 ? 1 : -1; // (seen from above: it falls to the right or the left)
+  const footX = t.x, footY = t.y + 12;
+  if (p < 1) {
+    // tipping over about its foot, faster as it goes
+    ctx.save();
+    ctx.translate(footX, footY); ctx.rotate(side * p * p * Math.PI / 2); ctx.translate(-footX, -footY);
+    drawStandingTree(t, true);
+    ctx.restore();
+  } else drawLyingTree(t, side, footX, footY, 1 - Math.max(0, t.hp) / (GAME_CONFIG.mapResources.tree.hp * fall.logHp));
+  // the stump where it stood
+  ctx.fillStyle = '#6d4c2f'; ctx.beginPath(); ctx.ellipse(footX, footY - 2, 3.5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(footX, footY - 2.6, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+// On the ground: a log along the ground from its stump, its crown at the far end squashed flat; cut up (cut,
+// 0..1), the crown's lopped off first and the log gets shorter, its cut end showing
+function drawLyingTree(t, side, footX, footY, cut) {
+  const h = variant(t), y = footY - 2;
+  const len = 24 * (1 - 0.6 * cut), x0 = footX + side * 4, x1 = x0 + side * len;
+  groundShadow((x0 + x1) / 2, y + 3, len / 2 + 2, 3);
+  if (cut < 0.5) {
+    const cx = x0 + side * 30, a = 1 - cut * 2;
+    ctx.save(); ctx.globalAlpha = a;
+    groundShadow(cx, y + 4, 12, 5);
+    const dark = t.apple ? '#27501a' : ['#1e3d14', '#1b3912', '#21421a'][h % 3];
+    const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
+    const light = t.apple ? '#5a9a3c' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
+    for (let k = 0; k < 5; k++) blob(cx + side * (k - 2) * 4, y + ((h >>> k) % 3) - 1, 6, dark);
+    blob(cx, y - 1, 7, mid);
+    for (let k = 0; k < 3; k++) blob(cx + side * (k * 4 - 4), y - 3 + ((h >>> (k * 4)) % 3), 3, light);
+    ctx.restore();
+  }
+  ctx.fillStyle = '#5d4037'; ctx.fillRect(Math.min(x0, x1), y - 2.5, len, 5);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(Math.min(x0, x1), y + 1, len, 1.5);
+  ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 0.7;
+  for (let k = 5; k < len - 2; k += 5) { const bx = x0 + side * k; ctx.beginPath(); ctx.moveTo(bx, y - 2); ctx.lineTo(bx + side * 2, y + 1); ctx.stroke(); }
+  // its cut end (or the broken top before it's cut)
+  ctx.fillStyle = cut > 0 ? '#c8a46a' : '#6d4c2f'; ctx.beginPath(); ctx.ellipse(x1, y, 1.6, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+  // logs cut off it, stacked by it
+  for (let k = 0; k < Math.floor(cut * 3); k++) {
+    const lx = footX - side * 8, ly = y + 6 - k * 3;
+    ctx.fillStyle = '#5d4037'; ctx.fillRect(lx - 4, ly - 1.5, 8, 3);
+    ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(lx + 4, ly, 1, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawStandingTree(t, lying = false) {
   const h = variant(t), x = t.x, y = t.y;
   const dark = t.apple ? '#27501a' : ['#1e3d14', '#1b3912', '#21421a'][h % 3];
   const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
   const light = t.apple ? '#5a9a3c' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
-  groundShadow(x, y, 14, 10);
+  if (!lying) groundShadow(x, y, 14, 10);
   ctx.fillStyle = '#5d4037'; ctx.fillRect(x - 2, y + 4, 4, 9);
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2 + (h % 7) * 0.3;
