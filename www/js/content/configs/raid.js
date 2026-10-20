@@ -18,6 +18,13 @@ export const raidConfig = {
     defenders: { perSoldier: 2, extraEveryWaves: 3, min: 4 },
     guardTiles: 7,
     reward: { wood: 30, stone: 20, iron: 6, leather: 6, food: 25 }, rewardPerDefender: 0.1,
-    failWaveSeconds: 15, marchSeconds: 45
+    failWaveSeconds: 15, marchSeconds: 45,
+    // (#279) its layouts (one at random; each camp has a seed of its own, the same camp every time it's seen):
+    // a square palisade, a round one, no walls but spikes and more fires, a fort of a stone ring and a wooden
+    // one inside; decor: the enemy faction's own buildings in it; a scout looks at it scoutSeconds before
+    // it's spotted (or one of them comes for it) and runs home
+    layouts: ['square', 'round', 'scattered', 'fort'],
+    decor: { humans: ['dummy', 'warehouse'], undead: ['grave', 'grave'], demons: ['corpse_pit', 'sacrifice_circle'] },
+    scoutSeconds: 10
   }
 };

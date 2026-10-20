@@ -15,6 +15,7 @@ Object.assign(window.sim, (() => {
   // The party set out and in the camp
   function intoCamp(opts = {}) {
     const opened = campOpens(opts);
+    raidCamp.layout = opts.layout || 'square';
     const homeBefore = settlers.length;
     openRaidPicker();
     const preselected = document.querySelectorAll('#raid-picker .raid-unit.on').length;

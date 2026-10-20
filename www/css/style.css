@@ -1102,7 +1102,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 @media (max-width: 460px) { .card { width: 100px; min-height: 160px; } .card-icon { font-size: 36px; } }
 
 /* A raid on an enemy camp (#255): the bar under the top of the screen, the party picker */
-#raid-bar { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 6px;
+#raid-bar { display: flex; align-items: center; gap: 6px; pointer-events: auto;
   max-width: calc(100vw - 16px); padding: 4px 6px; border-radius: 8px; background: rgba(24, 27, 34, 0.9); border: 1px solid #7b241c;
   color: #f5f0e1; font-size: 12px; white-space: nowrap; }
 #raid-bar span { padding: 0 4px; overflow: hidden; text-overflow: ellipsis; }
