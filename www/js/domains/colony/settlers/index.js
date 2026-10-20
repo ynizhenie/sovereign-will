@@ -9,3 +9,4 @@ export { changeSettlerType, createSettler, damageSettler, deselectSettler, getCu
 export { lightTorches, needsTorches, nightReach, onFuelDuty, onWatch, sleepAtNight, tickNight } from './settlers.night.js';
 export { drawAllSpeech, drawSpeech, says, someoneSays, speak, tickVoices } from './settlers.voices.js';
 export { hasPlayerOrderFor } from './settlers.corpses.js';
+export { roleTitle } from './settlers.commanders.js';
