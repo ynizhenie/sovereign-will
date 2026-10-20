@@ -15,7 +15,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, haulPiles, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
-import { isWaterReachable } from '../../world/index.js';
+import { inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
@@ -122,7 +122,7 @@ export function playerControlled(s, tick) {
 export function relieve(s, tick) {
   if (!s.needsRelief || s.isPossessed || isDefenseAlert() || tick.isWaveActive || s.towerAssignment) return false;
   const relief = GAME_CONFIG.relief;
-  if (!s.reliefSpot) s.reliefSpot = findReliefSpot(s);
+  if (!s.reliefSpot) s.reliefSpot = reliefZoneSpot(s, z => canReach(s, z)) || findReliefSpot(s); // (a relief zone with room first, #279)
   const spot = s.reliefSpot;
   s.patrolTarget = null;
   if (Math.hypot(spot.x - s.x, spot.y - s.y) > 12) {
@@ -141,7 +141,7 @@ export function relieve(s, tick) {
   }
   s.reliefTimer = (s.reliefTimer || 0) + tick.dt;
   if (s.reliefTimer >= relief.seconds) {
-    game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false });
+    game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false, inZone: inReliefZone(s.x, s.y) }); // (in a zone: not smeared, #279)
     s.needsRelief = false; s.meals = 0; s.reliefSpot = null; s.reliefTimer = 0;
     s.reliefWalk = 0; s.reliefTries = 0; s.reliefAvoid = null;
   }

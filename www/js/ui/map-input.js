@@ -5,7 +5,7 @@ import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInput
 import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
-import { isWaterReachable } from '../domains/world/index.js';
+import { isWaterReachable, toggleZone } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
@@ -54,7 +54,11 @@ export function handleCanvasClick() {
   }
   // Farming tab: paint (or clear) farm zone tiles
   if (game.buildMode.startsWith('zone_')) {
-    if (!isBorderZone(tile.gxIdx, tile.gyIdx)) toggleFarmZone(tile.gx, tile.gy, game.buildMode.slice('zone_'.length));
+    const kind = game.buildMode.slice('zone_'.length);
+    if (isBorderZone(tile.gxIdx, tile.gyIdx)) return;
+    // (#279) relief and post zones; Remove zone takes any off
+    if (kind === 'relief' || kind === 'post') toggleZone(tile.gx, tile.gy, kind);
+    else { if (kind === 'clear') toggleZone(tile.gx, tile.gy, 'clear'); toggleFarmZone(tile.gx, tile.gy, kind); }
     return;
   }
   if (game.buildMode !== 'interact' && game.buildMode !== 'possess' && game.buildMode !== 'demolish' && !canPlaceHere(tile)) return;

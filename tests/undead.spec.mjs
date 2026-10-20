@@ -12,7 +12,7 @@ test('the undead: zombies only to hire, the staff, no farming or food, blight; g
   expect(r.tools).not.toContain('btn-medbag');
   expect(r.gear).not.toContain('btn-wateringCan');
   expect(r.build).not.toContain('btn-campfire');
-  expect(r).toMatchObject({ farmingTab: false, blightTab: true, foodTile: false, food: 0, foodAfter: 0 });
+  expect(r).toMatchObject({ farmingTab: false, zonesTab: true, blightTab: true, foodTile: false, food: 0, foodAfter: 0 });
   expect(r.maxPop).toBe(await page.evaluate(() => GAME_CONFIG.start.population) + 1);
   expect(r.bonesMade).toBe(2.5); // graveyard 0.25 a second, 10 s; a grave makes none by itself (#253)
   expect(r.rotMade).toBe(0.5);   // graveyard 0.05 a second

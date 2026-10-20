@@ -28,7 +28,7 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
   await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Робітник 15[[food]]']);
   await expect.poll(() => iconText(page, '#btn-wall_wood')).toEqual(['[[wall_wood]] Дерев\'яна стіна 5[[wood]]']);
-  await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[wheat]]Ферма']);
+  await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[wheat]]Зони']);
   await expect(page.locator('#seed-reroll')).toHaveAttribute('title', 'Новий випадковий сід');
   await page.click('#play-button');
   await expect(page.locator('#group-materials')).toContainText('Матеріали');
