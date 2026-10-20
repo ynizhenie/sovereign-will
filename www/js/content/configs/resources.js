@@ -17,14 +17,10 @@ export const resourcesConfig = {
     wheatSeeds: { id: 'wheatSeeds', icon: 'wheatSeeds', type: 'resource' },
     saplings: { id: 'saplings', icon: 'saplings', type: 'resource' },
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
-    // rope (#248): twisted from grass (herbs) by hand; in what's tied together
-    rope: { id: 'rope', icon: 'rope', type: 'resource' },
     // campfire fuel (#199): a woodcutter chops it from wood; campfires burn it (or coal), not the wood
     firewood: { id: 'firewood', icon: 'firewood', type: 'resource', factions: ['humans', 'demons'] },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
-    // a medic's potion (#199): brewed from herbs and water at a campfire, heals more than a herb
-    potions: { id: 'potions', icon: 'potions', type: 'resource', factions: ['humans', 'demons'] },
     // factions: only shown to these factions
     bones: { id: 'bones', icon: 'bones', type: 'resource', factions: ['undead'] },
     // the undead's other hiring resource: food brought in turns into it (meat and fish into bones)
@@ -43,8 +39,8 @@ export const resourcesConfig = {
     { id: 'wood', members: ['wood'], pinned: true },
     { id: 'stone', members: ['stone'], pinned: true },
     { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
-    { id: 'materials', icon: 'stone', members: ['firewood', 'coal', 'ironOre', 'iron', 'leather', 'rope'] },
-    { id: 'supplies', icon: 'arrows', members: ['arrows', 'potions'] },
+    { id: 'materials', icon: 'stone', members: ['firewood', 'coal', 'ironOre', 'iron', 'leather'] },
+    { id: 'supplies', icon: 'arrows', members: ['arrows'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
     { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan', 'whistle'] } },
     { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'shield', 'banner'] } }
@@ -66,7 +62,7 @@ export const resourcesConfig = {
 
   start: {
     // stock at the start of a game (ids from `resources`)
-    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0, rope: 0 },
+    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0 },
     // population limit before tents (each tent adds buildings.tent.population)
     population: 5
   }

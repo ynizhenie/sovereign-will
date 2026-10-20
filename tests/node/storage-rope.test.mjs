@@ -19,10 +19,6 @@ test('what lies where is saved and loaded (#248)', () => {
   expect(sim.storesSaved({})).toEqual({ same: true });
 });
 
-test('rope is twisted from two herbs by hand at the town hall (#248)', () => {
-  expect(sim.ropeByHand({})).toEqual({ ordered: true, rope: 1, place: 'hand' });
-});
-
 test('an ore spawner marked with Point is mined for its ore and never used up; unmarked, nobody mines it (#248)', () => {
   expect(sim.mineSpawner({})).toEqual({ ore: true, standing: true });
   expect(sim.mineSpawner({ marked: false })).toEqual({ ore: false, standing: true });

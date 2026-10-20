@@ -280,16 +280,25 @@ export function drawBackItems(s) {
     ctx.fillStyle = '#ecf0f1';
     for (let i = 0; i < Math.min(4, Math.ceil((s.arrows || 0) / 3)); i++) ctx.fillRect((s.backpack ? 4 : -2) + i, -8, 1, 3);
   }
-  if (s.tool === 'hoe' && s.wateringCan) {
-    if ((s.usingCan || 0) > 0) { ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-1, -9, 2, 15); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-3, -10, 6, 3); }
-    else drawWateringCan(0, 5, 0.7);
-  }
-  if (s.banner) {
-    ctx.fillStyle = '#6d4520'; ctx.fillRect(-1, -16, 2, 18);
-    ctx.fillStyle = getSettlerColor(s); ctx.fillRect(1, -16, 9, 6);
-    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(1, -16, 9, 6);
-  }
+  // watering: the hoe on its back while the can's in its hand (the can's own place is its side, #279)
+  if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) { ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-1, -9, 2, 15); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-3, -10, 6, 3); }
   ctx.restore();
+}
+
+// Its side slot (#279): what hangs at its belt on the side away from its hand, turned with it: a watering
+// can, a captain's banner (its pole held up beside it)
+export function drawSideItems(s) {
+  const r = s.visualRadius, f = s.facing || 0;
+  const can = s.wateringCan && !((s.usingCan || 0) > 0), banner = !!s.banner;
+  if (!can && !banner) return;
+  const side = f + 1.9, x = Math.cos(side) * (r - 1), y = Math.sin(side) * (r - 1);
+  if (can) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
+  if (banner) {
+    const bx = x - Math.cos(f) * 3, by = y - 2;
+    ctx.fillStyle = '#6d4520'; ctx.fillRect(bx - 1, by - 20, 2, 22);
+    ctx.fillStyle = getSettlerColor(s); ctx.fillRect(bx + 1, by - 20, 9, 6);
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(bx + 1, by - 20, 9, 6);
+  }
 }
 
 // The held item across the back: turned square to where the unit faces, behind it
@@ -432,7 +441,7 @@ export function drawSettlers() {
     } else if (s.tool === 'rod') {
       ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
     } else if (s.tool === 'medbag') {
-      drawMedbag(Math.min(1, ((s.bagHerbs || 0) + (s.bagPotions || 0)) / GAME_CONFIG.medic.bagSize));
+      drawMedbag(Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
     } else if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) {
       drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
     } else if (s.tool === 'hoe') {
@@ -455,6 +464,7 @@ export function drawSettlers() {
     if (s.whistle && !s.asleep) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
     // what's on its back, in front of it when it faces away (#251)
     if (!backBehind && !s.asleep) drawBackItems(s);
+    if (!s.asleep) drawSideItems(s); // (#279)
     ctx.restore();
 
     if (crafting) drawWorkpiece(s);

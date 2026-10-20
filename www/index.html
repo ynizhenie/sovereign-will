@@ -347,14 +347,10 @@
 
           <!-- making things (#248, #261): tools, weapons, gear, each by where it's made (equipment.panel.js) -->
           <div id="tab-craft" class="tab-pane">
-            <div class="sub-tabs">
-              <button class="btn sub-tab on" id="craft-tab-tools" data-action="showCraftKind" data-arg="tools" data-i18n="craft.kind.tools">Tools</button>
-              <button class="btn sub-tab" id="craft-tab-weapons" data-action="showCraftKind" data-arg="weapons" data-i18n="craft.kind.weapons">Weapons</button>
-              <button class="btn sub-tab" id="craft-tab-gear" data-action="showCraftKind" data-arg="gear" data-i18n="craft.kind.gear">Gear</button>
-            </div>
+            <!-- (#279) no sub-tabs: tools, weapons and gear one after the other, each by where it's made -->
             <div id="craft-tools"></div>
-            <div id="craft-weapons" hidden></div>
-            <div id="craft-gear" hidden></div>
+            <div id="craft-weapons"></div>
+            <div id="craft-gear"></div>
           </div>
 
         </div>

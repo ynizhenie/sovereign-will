@@ -203,8 +203,7 @@ test('the open sheet shows the stock of what its prices ask for, by the prices (
   await page.click('[data-arg="tab-craft"]'); // Craft's Tools: they take wood and stone
   await expect(page.locator('#sheet-stock [data-res="stone"]')).toBeVisible();
   await expect(page.locator('#sheet-stock [data-res="iron"]')).toBeVisible(); // (the iron axe)
-  await page.click('#craft-tab-gear'); // the sub-tab's own: no stone in gear (#261)
-  await expect(page.locator('#sheet-stock [data-res="stone"]')).toHaveCount(0);
+  await expect(page.locator('#sheet-stock [data-res="leather"]')).toBeVisible(); // (gear too, all in one, #279)
 });
 
 test('Point takes the selection off the settler (#232)', async ({ page }) => {
