@@ -99,9 +99,9 @@ export function applyHeldItemPose(unit) {
 }
 
 // Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)
-// (a pastime too, but sharpening, sparring, training or on patrol it holds its weapon, #199)
+// (a pastime too, but sparring, training or on patrol it holds its weapon, #199)
 export function isResting(s) {
-  const pastime = s.isIdle && s.idle && !['sharpen', 'spar', 'train', 'patrolEdge'].includes(s.idle.act);
+  const pastime = s.isIdle && s.idle && !['spar', 'train', 'patrolEdge'].includes(s.idle.act);
   return (s.activity === 'patrol' || pastime) && !s.isPossessed && !(s.swingT > 0) && game.gameMode !== 'battle';
 }
 
@@ -138,27 +138,6 @@ function drawCarriedInHands(s) {
   drawIcon(ctx, type === 'bundle' ? 'bundle' : type.startsWith('armory:') ? getResourceIconName(type) : (known ? known.icon : 'wheat'), x, y, 12);
 }
 
-// A smoke (white, its end glowing) or a wheat stalk (long, yellow) at its mouth, pointing out ahead (#248)
-function drawInMouth(s) {
-  const f = (s.facing || 0) + 0.35, r = s.visualRadius * 0.7;
-  const x = Math.cos(f) * r, y = Math.sin(f) * r;
-  const len = (s.straw || 0) > 0 ? 9 : 5;
-  ctx.strokeStyle = (s.straw || 0) > 0 ? '#e9c46a' : '#ecf0f1'; ctx.lineWidth = (s.straw || 0) > 0 ? 1.2 : 2;
-  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(f) * len, y + Math.sin(f) * len); ctx.stroke();
-  if (!((s.straw || 0) > 0)) { ctx.fillStyle = '#e74c3c'; ctx.fillRect(x + Math.cos(f) * len - 1, y + Math.sin(f) * len - 1, 2, 2); }
-}
-
-// Its smoke: a few grey puffs rising off the end and fading
-function drawSmokePuffs(s) {
-  const f = (s.facing || 0) + 0.35, r = s.visualRadius * 0.7 + 5;
-  const x0 = s.x + Math.cos(f) * r, y0 = s.y + Math.sin(f) * r;
-  const t = performance.now() / 1000 + s.id;
-  for (let k = 0; k < 3; k++) {
-    const p = (t * 0.6 + k / 3) % 1;
-    ctx.fillStyle = `rgba(200, 200, 200, ${0.45 * (1 - p)})`;
-    ctx.beginPath(); ctx.arc(x0 + Math.sin(t * 2 + k) * 2, y0 - p * 14, 1.5 + p * 2.5, 0, Math.PI * 2); ctx.fill();
-  }
-}
 
 // A torch held out in front (#257), drawn round the unit's centre (after translate), its flame flickering
 export function drawHandTorch(facing, r) {
@@ -450,7 +429,6 @@ export function drawSettlers() {
     if (torchHeld && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
     else if (torchAside && !s.asleep) drawSideTorch(s.facing, s.visualRadius);
     if (food && s.eating) { drawIcon(ctx, s.eating.icon, food.x, food.y - 2, 9); if (food.bite > 0.95) { ctx.fillStyle = '#d4a373'; ctx.fillRect(food.x + 3, food.y + 3, 2, 2); } }
-    else if ((s.smoking || 0) > 0 || (s.straw || 0) > 0) drawInMouth(s);
     if ((s.armor === 'iron' || s.hasArmor) && !s.asleep) drawArmor(r);
     if (s.shield && !s.asleep) drawShield(r);
     // a commander's whistle on a cord on its chest (#248); its banner goes on its back (drawBackItems)
@@ -462,7 +440,6 @@ export function drawSettlers() {
 
     if (crafting) drawWorkpiece(s);
     if (s.asleep) drawSleepZs(s.x + r, s.y - r);
-    if ((s.smoking || 0) > 0 && !s.eating) drawSmokePuffs(s);
 
     if (s === game.selectedSettler) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
@@ -480,6 +457,8 @@ export function drawSettlers() {
     }
     if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + r, top - 14, s.orderBubble.icon);
     // (talking in a knot: what they say, not dots, #279: settlers.voices.js talkInKnots)
+
+    if (s.needsRelief && (s.reliefTimer || 0) > 0) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, top - 6, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, top - 6, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
@@ -503,3 +482,20 @@ export function drawOrderBubble(x, y, icon) {
   ctx.beginPath(); ctx.moveTo(x - 5, y + 5); ctx.lineTo(x - 8, y + 11); ctx.lineTo(x - 1, y + 7); ctx.fill();
   drawIcon(ctx, icon, x, y, 11);
 }
+
+// (#298) relieving itself: a censor's mosaic over its back half, squares of its skin and clothes in a jumble
+// that shifts a few times a second
+function drawCensor(s, r, skin) {
+  const f = s.facing || 0, cell = Math.max(2.5, r * 0.28), n = 4;
+  const cx = s.x - Math.cos(f) * r * 0.35, cy = s.y - Math.sin(f) * r * 0.35 + r * 0.15;
+  const colours = [skin, getSettlerColor(s), '#5d4037', '#d7ccc8', skin];
+  const beat = Math.floor(game.pathTick / 12);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const h = Math.abs(Math.sin((i * 7 + j * 13 + s.id * 3 + beat) * 12.9898)) * 43758.5453;
+      ctx.fillStyle = colours[Math.floor(h) % colours.length];
+      ctx.fillRect(cx - (n / 2) * cell + i * cell, cy - (n / 2) * cell + j * cell, cell, cell);
+    }
+  }
+}
+

@@ -32,28 +32,6 @@ Object.assign(window.sim, (() => {
     return { knot };
   }
 
-  // An idle swordsman sharpens its blade: its next blow that lands does half as much again, then it's blunt
-  function sharpen({ seed = 'idle-sharpen' } = {}) {
-    asFaction('humans', seed);
-    const s = makeSettler(1, townHall.x + 60, townHall.y + 60, { weapon: 'sword', role: 'soldier' });
-    settlers = [s];
-    run(0.5, { each: fed });
-    s.idle = { act: 'sharpen', left: 30, spot: null, partnerId: null };
-    run(8, { each: fed });
-    const sharpened = !!s.sharpened;
-    const blow = () => {
-      const en = createConfiguredEnemy({ x: s.x + 15, y: s.y }, 'raider');
-      en.hp = en.maxHp = 1000;
-      enemies = [en];
-      s.attackCooldown = 0;
-      performAttack(s, en.x, en.y);
-      return 1000 - en.hp;
-    };
-    const first = blow(), second = blow();
-    enemies = [];
-    return { sharpened, ratio: Math.round(first / second * 100) / 100, bluntAfter: !s.sharpened };
-  }
-
   // Two idle demons spar: health a little down (never below 70%), morale up past their usual
   function spar({ seed = 'idle-spar' } = {}) {
     asFaction('demons', seed);
@@ -95,5 +73,5 @@ Object.assign(window.sim, (() => {
     return { onGround: dung.length, inHeap: heap ? heap.dung || 0 : null, activity: [...carried][0] || null };
   }
 
-  return { idleCampfire: campfire, idleTalk: talk, idleSharpen: sharpen, idleSpar: spar, idleSway: sway, idleDungHeap: dungHeap };
+  return { idleCampfire: campfire, idleTalk: talk, idleSpar: spar, idleSway: sway, idleDungHeap: dungHeap };
 })());
