@@ -1,6 +1,6 @@
 // A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
-import { iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
+import { closeSheet, hidePlacing, iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
@@ -71,6 +71,7 @@ export function setPaused(paused) {
 export function exitToMainMenu() {
   setPaused(false);
   resetRaid(); // (#255)
+  hidePlacing(); closeSheet(); // (#279: the editor's or a battle's pick stayed on the chip in the next game)
   game.gameStarted = false;
   document.getElementById('main-menu').style.display = '';
   showMenuScreen('home');

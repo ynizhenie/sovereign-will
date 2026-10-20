@@ -47,7 +47,7 @@ export function getSettlerAvoidance(entity) {
   let avoidX = 0;
   let avoidY = 0;
   game.settlers.forEach(other => {
-    if (other === entity) return;
+    if (other === entity || other.asleep) return; // (#279: one asleep lies on the ground: stepped over, not walked round; round a tent they hemmed everyone in)
     let dx = entity.x - other.x;
     let dy = entity.y - other.y;
     let distance = Math.hypot(dx, dy);

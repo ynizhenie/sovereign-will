@@ -7,7 +7,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos } from '../../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards } from '../../colony/settlers/index.js';
+import { faceTowards, hasPlayerOrderFor } from '../../colony/settlers/index.js';
 import { giveResourceToSettler } from '../../colony/storage/index.js';
 import { getPlayerFaction } from '../index.js';
 import { playSound } from '../../../app/index.js';
@@ -106,7 +106,7 @@ export function tendCorpses(s, tick) {
     s.carrying = null;
     return true;
   }
-  if (s.carrying) return false;
+  if (s.carrying || hasPlayerOrderFor(s, tick)) return false; // (an order of the player's first, #279)
   const wounded = game.settlers.some(o => (getDefinition('settlerTypes', o.type) || {}).eatsCorpses && o.hp < o.maxHp);
   if (wounded) { s.butcherTarget = null; return false; } // (theirs to eat)
   let corpse = s.butcherTarget && game.corpses.includes(s.butcherTarget) ? s.butcherTarget : null;

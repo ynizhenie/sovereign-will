@@ -8,3 +8,4 @@ export { renderRecruitRow, renderSettlerInfo, updatePossessionView, updateUnitCo
 export { changeSettlerType, createSettler, damageSettler, deselectSettler, getCurrentPop, getMaxPop, getPossessed, getRecentAttacker, getSelectedSettler, getUpgrade, isBigBody, removeDeadSettlers, spawnSettler, switchPossession, tickMeals, unpossess, upgradeToBig } from './settlers.rules.js';
 export { lightTorches, needsTorches, nightReach, onFuelDuty, onWatch, sleepAtNight, tickNight } from './settlers.night.js';
 export { drawAllSpeech, drawSpeech, says, someoneSays, speak, tickVoices } from './settlers.voices.js';
+export { hasPlayerOrderFor } from './settlers.corpses.js';
