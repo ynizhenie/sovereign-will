@@ -91,8 +91,16 @@ export function fightEnemies(s, tick) {
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, dt);
     return true;
   }
+  // (#279) the menu's fight: the squad keeps by the warehouse, guarding it, and lets those further off come
+  if (game.gameMode === 'menu' && !targetEnemy && game.enemies.length) {
+    s.patrolTarget = null;
+    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > MENU_GUARD * 0.5) moveSettlerToTownHall(s, s.speed, dt);
+    return true;
+  }
   return engageEnemy(s, tick, targetEnemy, attacker, dt);
 }
+
+const MENU_GUARD = 4 * 30; // (how far from the menu's warehouse its squad goes for a zombie)
 
 // The enemy a settler fights: the one most dangerous to the base, an enemy the player marked, the one near
 // its post, or whoever is hitting it right now. On the way to the enemy tents, only what's in the way
@@ -140,6 +148,7 @@ function chooseSettlerTarget(s, tick) {
     });
     if (!targetEnemy) return null;
   }
+  if (game.gameMode === 'menu' && targetEnemy && !attacker && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) > MENU_GUARD) targetEnemy = null; // (#279)
   return { targetEnemy, attacker };
 }
 
