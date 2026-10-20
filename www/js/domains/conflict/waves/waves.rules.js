@@ -296,16 +296,22 @@ function musterAt(enemy) {
 }
 
 // (#279) a wave's enemies that came in on the same side of the map gather together: at the middle of where
-// they came in, a tile and a half in from the edge
+// they came in, a tile and a half in from the edge. (#298) Out of portals (the demons), by the portal each
+// came out of: a tile and a half from it towards the base, not off to the map's edge
 function regroupBySide() {
   const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
-  const sideOf = en => [['left', en.x], ['right', W - en.x], ['top', en.y], ['bottom', H - en.y]].sort((a, b) => a[1] - b[1])[0][0];
+  const portals = getEnemyFaction().portalSpawns ? game.enemyTents.filter(et => !et.outpost && et.hp > 0) : [];
+  const nearestPortal = en => portals.reduce((best, p) => (!best || Math.hypot(p.x - en.x, p.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? p : best), null);
+  const sideOf = en => portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : [['left', en.x], ['right', W - en.x], ['top', en.y], ['bottom', H - en.y]].sort((a, b) => a[1] - b[1])[0][0];
   const groups = {};
   for (const en of game.enemies) if (en.fromWave && en.musterUntil && !en.buildTarget) (groups[sideOf(en)] = groups[sideOf(en)] || []).push(en);
   for (const [side, group] of Object.entries(groups)) {
     const cx = group.reduce((sum, en) => sum + en.x, 0) / group.length, cy = group.reduce((sum, en) => sum + en.y, 0) / group.length;
     const inset = (BORDER_MARGIN + 1.5) * TILE_SIZE;
-    const at = side === 'left' ? { x: inset, y: cy } : side === 'right' ? { x: W - inset, y: cy } : side === 'top' ? { x: cx, y: inset } : { x: cx, y: H - inset };
+    const portal = side.startsWith('portal:') ? portals[Number(side.slice(7))] : null;
+    const toHall = portal ? Math.max(1, Math.hypot(townHall.x - portal.x, townHall.y - portal.y)) : 1;
+    const at = portal ? { x: portal.x + (townHall.x - portal.x) / toHall * TILE_SIZE * 1.5, y: portal.y + (townHall.y - portal.y) / toHall * TILE_SIZE * 1.5 }
+      : side === 'left' ? { x: inset, y: cy } : side === 'right' ? { x: W - inset, y: cy } : side === 'top' ? { x: cx, y: inset } : { x: cx, y: H - inset };
     group.forEach((en, i) => { const a = i * 2.4; en.muster = { x: at.x + Math.cos(a) * 14 * Math.sqrt(i), y: at.y + Math.sin(a) * 14 * Math.sqrt(i) }; });
   }
 }
