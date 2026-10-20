@@ -1,31 +1,47 @@
-// What's where, drawn (#248): a pile on the ground per kind, the thing itself; what a warehouse holds on its
-// tile and what the town hall holds round it, one of each kind (the most first), however many there are
+// What's where, drawn (#248; #279): packs on the ground by a storage, the thing itself small and tied, a
+// second layer on top a little up; what a warehouse holds on its floor under its roof, and what the town hall
+// holds in its storeroom, a bay in its front: a stack for each kind, the more the higher
 
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
+import { storeCapacity } from './storage.stores.js';
 
-// the kinds it holds, the most first
-const kinds = store => Object.entries(store || {}).filter(([, n]) => n >= 1).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+// the kinds it holds, the most first, with how many
+const kinds = store => Object.entries(store || {}).filter(([, n]) => n >= 1).sort((a, b) => b[1] - a[1]);
 
 export function drawPiles() {
-  for (const p of game.piles) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 6, 9, 3.5, 0, 0, Math.PI * 2); ctx.fill();
-    drawIcon(ctx, getResourceIconName(p.type), p.x, p.y, 17);
+  for (const layer of [0, 1, 2]) {
+    for (const p of game.piles) {
+      if ((p.layer || 0) !== layer) continue;
+      const y = p.y - layer * 4;
+      if (!layer) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 3.5, 4.5, 2, 0, 0, Math.PI * 2); ctx.fill(); }
+      drawIcon(ctx, getResourceIconName(p.type), p.x, y, 9);
+      // the cord round it
+      ctx.strokeStyle = 'rgba(92, 58, 23, 0.85)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p.x - 4, y); ctx.lineTo(p.x + 4, y); ctx.stroke();
+    }
   }
 }
 
-// After the buildings: a warehouse's kinds in its tile's corners (four at most), the town hall's round its
-// walls (ten at most)
+// A stack of a kind: one to three of its icon, by how much there is of the store's room
+function stack(id, n, x, y, size, room) {
+  const count = Math.max(1, Math.min(3, Math.ceil((n / room) * 3)));
+  for (let k = 0; k < count; k++) drawIcon(ctx, getResourceIconName(id), x, y - k * size * 0.45, size);
+}
+
+// After the buildings: a warehouse's kinds on its floor (six at most), the town hall's in its storeroom
 export function drawStoreContents() {
   for (const b of game.buildings) {
     if (b.type !== 'warehouse') continue;
-    kinds(b.store).slice(0, 4).forEach((id, i) => drawIcon(ctx, getResourceIconName(id), b.x + (i % 2 ? 8 : -8), b.y + (i < 2 ? -8 : 8), 9));
+    const room = storeCapacity(b) / 4;
+    kinds(b.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, b.x - 8 + (i % 3) * 8, b.y + 3 + Math.floor(i / 3) * 7, 7, room));
   }
-  const around = kinds(townHall.store).slice(0, 10);
-  around.forEach((id, i) => {
-    // spread over its lower half (its health bar is over it), from the right to the left
-    const a = (around.length === 1 ? 90 : 25 + 130 * i / (around.length - 1)) * Math.PI / 180, r = townHall.radius - 6;
-    drawIcon(ctx, getResourceIconName(id), townHall.x + Math.cos(a) * r, townHall.y + Math.sin(a) * r, 13);
-  });
+  // the storeroom: an open bay in the hall's front, to the right of its door
+  const x = townHall.x + 7, y = townHall.y + 6, w = 21, h = 15;
+  ctx.fillStyle = '#3b2615'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y + h * 0.55); ctx.lineTo(x + w, y + h * 0.55); ctx.stroke();
+  const room = storeCapacity(townHall) / 6;
+  kinds(townHall.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, x + 4 + (i % 3) * 6.5, y + 6 + Math.floor(i / 3) * 6.5, 6, room));
 }

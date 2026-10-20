@@ -5,13 +5,13 @@
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
-import { formatCost, storeCapacity, storedTotal } from '../domains/colony/storage/index.js';
+import { formatCost, storeCapacity, storeHome, storedTotal } from '../domains/colony/storage/index.js';
 import { getRepairStep, toggleBuildingRepair } from '../domains/economy/building/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
 import { getSelectedSettler } from '../domains/colony/settlers/index.js';
 import { craftPlace } from '../domains/colony/equipment/index.js';
 import { isShelter } from '../domains/conflict/healing/index.js';
-import { escapeHtml, iconHtml, setRichText } from './icons.js';
+import { escapeHtml, getResourceIconName, iconHtml, setRichText } from './icons.js';
 import { getOpenSheet, openSheet } from './sheets.js';
 import { showNotification } from './toasts.js';
 
@@ -44,6 +44,35 @@ export function sacrificeSelected(circle) {
   showNotification(t('sacrifice.going', { name: GAME_CONFIG.settlerTypes[victim.type].label }), false);
 }
 
+// (#279) what lies in a storage, kind by kind, the most first; what lies by it in packs; and with more than
+// one storage, what it keeps
+function renderStoreContents(b, isStorage) {
+  const el = document.getElementById('card-store');
+  if (!el) return;
+  el.hidden = !isStorage;
+  if (!isStorage) { el.innerHTML = ''; return; }
+  const chip = (id, n) => `<span class="res-chip">${iconHtml(getResourceIconName(id))} ${Math.floor(n)}</span>`;
+  const inside = Object.entries(b.store || {}).filter(([, n]) => n >= 1).sort((a, c) => c[1] - a[1]);
+  const by = packsBy(b);
+  const keeps = Object.keys(GAME_CONFIG.resources).filter(id => storeHome(id) === b && GAME_CONFIG.resources[id] && (!GAME_CONFIG.resources[id].factions || GAME_CONFIG.resources[id].factions.includes(getPlayerFaction().id)));
+  el.innerHTML = `<div class="card-store-line"><b>${escapeHtml(t('card.storeInside'))}</b> ${inside.length ? inside.map(([id, n]) => chip(id, n)).join(' ') : escapeHtml(t('card.storeEmpty'))}</div>` +
+    (by.length ? `<div class="card-store-line"><b>${escapeHtml(t('card.storeBy'))}</b> ${by.map(([id, n, packs]) => `${chip(id, n)}<small>×${packs}</small>`).join(' ')}</div>` : '') +
+    (keeps.length ? `<div class="card-store-line"><b>${escapeHtml(t('card.storeKeeps'))}</b> ${keeps.map(id => iconHtml(getResourceIconName(id))).join(' ')}</div>` : '');
+}
+
+// The packs lying by a storage, kind by kind: [id, how much, how many packs]
+function packsBy(b) {
+  const reach = (b === townHall ? townHall.radius : 15) + 50;
+  /** @type {Object<string, [number, number]>} */
+  const sums = {};
+  for (const p of game.piles) {
+    if (Math.max(Math.abs(p.x - b.x), Math.abs(p.y - b.y)) > reach) continue;
+    const s = sums[p.type] = sums[p.type] || [0, 0];
+    s[0] += p.amount; s[1]++;
+  }
+  return Object.entries(sums).filter(([, v]) => v[0] >= 1).sort((a, c) => c[1][0] - a[1][0]).map(([id, v]) => [id, v[0], v[1]]);
+}
+
 // Redrawn as it changes (each frame from updateUI while it's open)
 export function renderBuildingCard() {
   if (getOpenSheet() !== 'building' || !shown) return;
@@ -55,7 +84,8 @@ export function renderBuildingCard() {
   const place = isHall ? 'hand' : def && def.crafts;
   const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
   const queueText = queue.map(o => `${GAME_CONFIG[o.category][o.id].label} ${o.stage === 'work' ? `${Math.floor(o.progress * 100)}%` : t('card.waiting')}`).join(', ');
-  const key = [queueText, isHall, b.type, b.baitLeft, b.bait, Math.floor(storedTotal(b)), Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
+  const storeKey = isHall || b.type === 'warehouse' ? JSON.stringify(b.store || {}) + packsBy(b).map(p => p.join(':')).join(',') : '';
+  const key = [queueText, storeKey, isHall, b.type, b.baitLeft, b.bait, Math.floor(storedTotal(b)), Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
   if (key === shownKey) return;
   shownKey = key;
   const { name, icon } = isHall ? hallName() : { name: def ? def.label : b.type, icon: def ? def.icon : 'build' };
@@ -75,6 +105,7 @@ export function renderBuildingCard() {
   if (def && def.desc) info.push(def.desc);
   if (queueText) info.push(t('card.queue', { list: queueText }));
   setRichText(document.getElementById('card-info'), info.join(' · '));
+  renderStoreContents(b, isHall || b.type === 'warehouse');
   document.getElementById('card-hall').hidden = !isHall;
   // actions
   const actions = document.getElementById('card-actions');
