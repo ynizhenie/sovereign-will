@@ -31,7 +31,8 @@ export function equip(s, tick) {
         refundEquipment(s, {
           weapon: equipment.weapon !== undefined && equipment.weapon !== s.weapon,
           tool: equipment.tool !== undefined && equipment.tool !== s.tool,
-          armor: equipment.armor === 'none', quiver: equipment.quiver === false, keep: !!equipment.keep
+          // (#279) what it held, given something else: into the store whole, not taken apart
+          armor: equipment.armor === 'none', quiver: equipment.quiver === false, keep: !!equipment.keep || handed
         });
       }
       if (equipment.weapon !== undefined) { s.weapon = equipment.weapon; applyBowUnit(s); }
@@ -48,7 +49,7 @@ export function equip(s, tick) {
       // the shield too), of use again once it's given a melee weapon
       if (handed) says(s, 'tool'); // (something new in its hands, #252)
       if (s.shield && isBowWeapon(s.weapon)) {
-        addResources(GAME_CONFIG.gear.shield.cost);
+        game.armory['gear:shield'] = (game.armory['gear:shield'] || 0) + 1; // (into the store whole, #279)
         s.shield = false;
       }
       s.targetEquipment = null;

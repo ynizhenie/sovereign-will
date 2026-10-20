@@ -44,6 +44,7 @@ test('won by the auto battle: spoils, the party walks home, the zone goes, the n
   expect(r.back.homeSettlers).toBe(r.homeSettlers);
   expect(r.back.survivors).toBeGreaterThan(0);
   expect(r.end.phase).toBe(null);
+  expect(r.homeIn).toBeLessThan(30); // (#279: home, not stuck on the way till the minute's up)
   expect(r.end.camp).toBe(null);
   expect(r.end.raiders).toBe(0);
   expect(r.end.waveTimer).toBeGreaterThan(r.waveBefore + 100);

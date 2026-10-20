@@ -52,8 +52,9 @@ Object.assign(window.sim, (() => {
       step(0.2);
     }
     const back = { phase: raid.phase, cols: COLS, hallHome: townHall.x > 0, wood: stock.wood - stockBefore, homeSettlers: settlers.filter(s => !s.raider).length, survivors: settlers.filter(s => s.raider).length, waveTimer };
-    if (win) step(70, () => raid.phase === null);
-    return { inCamp, held, homeSettlers, waveBefore, back, end: { phase: raid.phase, camp: raidCamp, waveTimer, raiders: settlers.filter(s => s.raider).length } };
+    let homeIn = 0;
+    if (win) step(70, () => { homeIn += 1 / 60; return raid.phase === null; });
+    return { inCamp, held, homeSettlers, waveBefore, back, homeIn, end: { phase: raid.phase, camp: raidCamp, waveTimer, raiders: settlers.filter(s => s.raider).length } };
   }
 
   return { campOpens, intoCamp, raidOutcome };
