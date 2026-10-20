@@ -43,7 +43,8 @@ export const mapConfig = {
     farm: { list: 'farmPlots', yield: { wheat: 4, wheatSeeds: 1 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
     // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
-    boar: { list: 'boars', hp: 40, yield: { rawMeat: 6, leather: 2 }, clearsPath: true,
+    // (#298) hp 30, hit for an item's damage (no ×2 any more): not down in one blow, but by an arrow or iron
+    boar: { list: 'boars', hp: 30, yield: { rawMeat: 6, leather: 2 }, clearsPath: true,
       // wary: backs off from a settler this close, at waryFleeSpeed (slower than settlers, so it can be
       // caught); fleeSpeed: its sprint once it's actually hit
       wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35,
