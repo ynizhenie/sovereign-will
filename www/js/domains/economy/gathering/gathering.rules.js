@@ -6,6 +6,7 @@ import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/
 import { ORE_KINDS, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, placeOre, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
+import { playSound } from '../../../app/index.js';
 
 export function getPlacedResources(includeGrowingTrees = true) {
   return [
@@ -47,7 +48,21 @@ export function addMapResource(kind, x, y) {
 export function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
   const factor = resource.fertilized ? GAME_CONFIG.fertilizer.yieldFactor : 1;
-  for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
+  // (#279) a tree felled falls first, away from its cutter, and gives part of its wood; the log is cut up next
+  const two = def.fellInTwo;
+  if (two && !resource.fallen) {
+    for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, Math.round(amount * two.first) * factor);
+    // (not a load of its own: the log's still to be cut, the whole tree's one load)
+    if (settler.carrying) settler.carrying.loads = settler.carrying.loads || 0;
+    noteDay(settler, 'gathered');
+    Object.assign(resource, { fallen: true, fallAt: game.pathTick, fallAngle: Math.atan2(resource.y - settler.y, resource.x - settler.x), applesReady: false });
+    resource.hp = def.hp * two.logHp;
+    resource.harvestProgress = 0;
+    playSound('collapse', resource);
+    return;
+  }
+  const share = two ? 1 - Math.round((def.yield.wood || 0) * two.first) / (def.yield.wood || 1) : 1; // (the log: what's left)
+  for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, Math.round(amount * share) * factor);
   // loot's things are carried to a storage whole, into the armory there (#210; #261: not at once)
   for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
   addCarryLoad(settler);

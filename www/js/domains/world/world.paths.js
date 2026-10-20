@@ -37,26 +37,54 @@ export function tickPaths() {
   }
 }
 
-// Under everything but the grass: a worn tile a dry, trodden patch, joined to the worn tiles beside it so a
-// run of them reads as one path; the more worn, the plainer
+// Under everything but the grass: worn tiles joined into one trodden path (#279: drawn as one stroke, so
+// where it runs on or crosses itself it doesn't come out in darker blotches and squares). A darker worn edge, a
+// dry earth body, and a bare middle where it's walked most; each tile's centre nudged a little so the path
+// wanders, a few pebbles on the worn bits
 export function drawPaths() {
   const shows = config().shows;
   const worn = game.paths || {};
   const strength = (gx, gy) => { const w = worn[`${gx},${gy}`] || 0; return w < shows ? 0 : Math.min(1, (w - shows) / (1 - shows)); };
+  const at = (gx, gy) => { const h = tileVariantHash(gx, gy); return { x: gx * TILE_SIZE + 15 + (h % 7) - 3, y: gy * TILE_SIZE + 15 + ((h >> 3) % 7) - 3 }; };
+  const tiles = [];
   for (const key of Object.keys(worn)) {
     const [gx, gy] = key.split(',').map(Number);
     const a = strength(gx, gy);
-    if (!a) continue;
-    const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15, w = 9 + (tileVariantHash(gx, gy) % 3);
-    ctx.fillStyle = `rgba(160, 135, 85, ${0.3 + 0.4 * a})`;
-    ctx.beginPath(); ctx.arc(cx, cy, w, 0, Math.PI * 2); ctx.fill();
-    // a bridge to a worn tile to the right and below (each pair once), as strong as the weaker
-    for (const [dx, dy] of [[1, 0], [0, 1]]) {
-      const b = Math.min(a, strength(gx + dx, gy + dy));
+    if (a) tiles.push({ gx, gy, a });
+  }
+  if (!tiles.length) return;
+  // one path of segments to each worn neighbour (right, below; a diagonal only where no corner joins them)
+  /** @type {number[][]} */
+  const all = [], core = [];
+  for (const { gx, gy, a } of tiles) {
+    const p = at(gx, gy);
+    all.push([p.x, p.y, p.x + 0.01, p.y]); // (a lone tile: a round dot)
+    for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [-1, 1]]) {
+      const b = strength(gx + dx, gy + dy);
       if (!b) continue;
-      ctx.fillStyle = `rgba(160, 135, 85, ${0.3 + 0.4 * b})`;
-      if (dx) ctx.fillRect(cx, cy - w + 2, TILE_SIZE, (w - 2) * 2);
-      else ctx.fillRect(cx - w + 2, cy, (w - 2) * 2, TILE_SIZE);
+      if (dx && dy && (strength(gx + dx, gy) || strength(gx, gy + dy))) continue;
+      const q = at(gx + dx, gy + dy);
+      all.push([p.x, p.y, q.x, q.y]);
+      if (Math.min(a, b) > 0.5) core.push([p.x, p.y, q.x, q.y]);
     }
   }
+  const stroke = (segments, color, width) => {
+    ctx.beginPath();
+    for (const [x1, y1, x2, y2] of segments) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); }
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+  };
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  stroke(all, 'rgba(105, 85, 50, 0.32)', 22);
+  stroke(all, 'rgba(176, 150, 98, 0.55)', 16);
+  if (core.length) stroke(core, 'rgba(196, 172, 122, 0.45)', 7);
+  ctx.fillStyle = 'rgba(120, 104, 80, 0.55)';
+  for (const { gx, gy, a } of tiles) {
+    const h = tileVariantHash(gx, gy);
+    if (a < 0.4 || h % 3) continue;
+    const p = at(gx, gy);
+    ctx.fillRect(p.x + (h % 11) - 5, p.y + ((h >> 4) % 9) - 4, 1.6, 1.4);
+    ctx.fillRect(p.x - (h % 5) + 1, p.y + ((h >> 2) % 7) - 6, 1.2, 1.2);
+  }
+  ctx.restore();
 }

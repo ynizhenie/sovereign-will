@@ -152,7 +152,7 @@ export function drawDesertTile(tile) {
 // Rock with ore veins, shared by ore tiles and ore spawners so they read as the same material.
 // half: half the square's size (a full rock tile is 14)
 export const ORE_COLORS = {
-  iron: { body: '#aab7c3', shine: '#dfe6ed' },
+  iron: { body: '#9c4a26', shine: '#d5dbdb' }, // (rusty red-brown with flecks of metal, #279)
   coal: { body: '#050608', shine: '#6b7785' }
 };
 
