@@ -7,7 +7,7 @@ import { game } from '../engine/world/index.js';
 import { renderCraftLists } from '../domains/colony/equipment/index.js';
 import { formatCost } from '../domains/colony/storage/index.js';
 import { renderResourceStrip, renderResourceTiles, renderSheetStock, updateUI } from './hud.js';
-import { getPlayerFaction, sides } from '../domains/factions/index.js';
+import { applyFactionCosts, getPlayerFaction, sides } from '../domains/factions/index.js';
 import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
 import { setMode } from './map-input.js';
@@ -83,16 +83,16 @@ export let renderedFaction = null; // whose units and buildings the HUD shows
 export function renderConfigHud() {
   // only what the player's faction has: its resources, buildings, units to hire and upgrade
   renderedFaction = sides.player.faction;
+  applyFactionCosts(); // (the undead's bones on every building, #279)
   renderResourceTiles();
   renderResourceStrip();
   renderBuildTab();
   renderRecruitRow();
   renderCraftLists();
-  // the undead blight the ground instead of farming
   // (#279) the Zones tab for everyone: its farm and relief zones for those who eat
   const eats = getPlayerFaction().eats;
   document.querySelectorAll('#tab-farming .farm-only, #tab-farming .eats-only').forEach(el => { /** @type {HTMLElement} */ (el).hidden = !eats; });
-  document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
+  document.querySelectorAll('#tab-farming .undead-only').forEach(el => { /** @type {HTMLElement} */ (el).hidden = sides.player.faction !== 'undead'; }); // (the blight, #279)
   renderSheetStock(activeTab);
   // the tab left open was another faction's (Farming for the undead): back to Building (#200)
   if (document.querySelector(`.tab-btn[data-arg="${activeTab}"]`)?.hidden) openTab('tab-build');

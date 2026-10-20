@@ -35,7 +35,7 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.afterRemove).toBe(0);
 });
 
-test('the panel has categories: your units, enemies, buildings; armour and shield only for yours (#142)', async ({ page }) => {
+test('the panel has categories: your units, enemies, buildings; armour and shield for units, yours and the enemy\'s (#142, #279)', async ({ page }) => {
   await openBattle(page);
   const count = () => page.locator('#battle-presets button').count();
   await showCategory(page, 'own');
@@ -43,9 +43,10 @@ test('the panel has categories: your units, enemies, buildings; armour and shiel
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
   await showCategory(page, 'enemy');
   expect(await count()).toBe(5); // with the healer (#203)
-  await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
+  await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible(); // (the enemy's too, #279)
   await showCategory(page, 'buildings');
-  expect(await count()).toBe(8); // walls, doors (an iron one, #248), spikes, the iron trap, tower, and the humans' tent
+  await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
+  expect(await count()).toBe(16); // (#279: all of them the humans have, but a fish trap and crops)
 });
 
 test('every category has faction sub-tabs: each faction its own units and buildings (#166)', async ({ page }) => {
@@ -113,7 +114,7 @@ test('your units only on the green side, enemies only on the red; armour, shield
     const out = {
       refused,
       sword: { armor: sword.armor, shield: !!sword.shield, hp: sword.maxHp }, bowShield: !!bow.shield,
-      raider: { weapon: enemies[0].weapon, hp: enemies[0].maxHp },
+      raider: { weapon: enemies[0].weapon, hp: enemies[0].maxHp, armor: enemies[0].armor, shield: !!enemies[0].shield },
       walls: buildings.filter(b => b.type === 'wall_stone').length
     };
     clearBattleSide('green');
@@ -123,7 +124,7 @@ test('your units only on the green side, enemies only on the red; armour, shield
   expect(r).toEqual({
     refused: true,
     sword: { armor: 'iron', shield: true, hp: 150 }, bowShield: false,
-    raider: { weapon: 'sword', hp: 70 },
+    raider: { weapon: 'sword', hp: 120, armor: 'iron', shield: true }, // (armour and a shield for the enemy too, #279)
     walls: 2,
     afterClearGreen: { settlers: 0, enemies: 1, walls: 1 }
   });

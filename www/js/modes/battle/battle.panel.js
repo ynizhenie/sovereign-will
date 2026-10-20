@@ -68,7 +68,9 @@ function presetStats(preset) {
     const kind = GAME_CONFIG.settlerTypes[def.type === 'big' ? units[1] || units[0] : units[0]];
     const weapon = getDefinition('weapons', def.weapon), tool = def.tool && getDefinition('tools', def.tool);
     const look = def.necromancer ? 'necromancer' : kind && kind.icon;
-    return { icons: [look, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...enemyStats(preset.enemy) };
+    const stats = enemyStats(preset.enemy);
+    if (battle.armor) stats.hp += GAME_CONFIG.gear.armor.hpBonus; // (#279)
+    return { icons: [look, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...stats };
   }
   const kind = GAME_CONFIG.settlerTypes[preset.type], weapon = getDefinition('weapons', preset.weapon);
   const tool = preset.tool && getDefinition('tools', preset.tool);
