@@ -9,7 +9,7 @@ export const equipmentConfig = {
     pickaxe: { id: 'pickaxe', icon: 'pickaxe', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10 },
     iron_axe: { id: 'iron_axe', icon: 'iron_axe', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18 },
     iron_pickaxe: { id: 'iron_pickaxe', icon: 'iron_pickaxe', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13 },
-    rod: { id: 'rod', icon: 'rod', madeBy: 'hand', cost: { wood: 8, rope: 2 }, family: 'rod', combatDamage: 6 },
+    rod: { id: 'rod', icon: 'rod', madeBy: 'hand', cost: { wood: 8, herbs: 4 }, family: 'rod', combatDamage: 6 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
     // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
     // factions: only these factions have it (the undead don't farm or heal with herbs)
@@ -43,7 +43,7 @@ export const equipmentConfig = {
       combat: { damage: 30, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 } },
     iron_spear: { id: 'iron_spear', icon: 'iron_spear', cost: { wood: 10, iron: 5 }, family: 'spear',
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 } },
-    bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, rope: 1 }, family: 'bow',
+    bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, herbs: 2 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 } },
     // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },
@@ -53,7 +53,7 @@ export const equipmentConfig = {
   // loads (never an archer: the quiver is on its back). armor: +hpBonus, damageReduction off every hit,
   // melee soldiers first. shield: melee soldiers only, damageReduction off every hit, on top of armour.
   gear: {
-    backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, rope: 1 }, extraLoads: 1 },
+    backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, herbs: 2 }, extraLoads: 1 },
     shield: { id: 'shield', icon: 'shield', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35 },
     // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows
@@ -63,8 +63,8 @@ export const equipmentConfig = {
     // nearest workers) in turn, every `everySeconds`, and tells it what's needed most (focusSeconds: what it
     // gathers first), and to swap its tool for one from the armory that does it. A soldier with a banner is a
     // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
-    whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', cost: { wood: 2, rope: 1 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45 } },
-    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 1 }, commands: { squad: 5, everySeconds: 3, reach: 200 } }
+    whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', cost: { wood: 2, herbs: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45 } },
+    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, herbs: 2 }, commands: { squad: 5, everySeconds: 3, reach: 200 } }
   },
   // what a foreman counts as needed most: the one furthest under its amount here (food only for those who
   // eat; ore with a smelter)
@@ -74,8 +74,6 @@ export const equipmentConfig = {
   // made into the stock: kind: the Craft sub-tab it's in; made in `batches` quick jobs; arrows by archers
   // while there are any (#249)
   recipes: {
-    arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3 },
-    // rope (#248): twisted from grass by hand
-    rope: { id: 'rope', icon: 'rope', kind: 'tools', madeBy: 'hand', cost: { herbs: 2 }, produces: { rope: 1 }, batches: 1 }
+    arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3 }
   }
 };

@@ -1,4 +1,4 @@
-// corpses out of the base and medics' potions (#199, #232): the game's logic, run in Node (see tests/node/game.mjs)
+// corpses out of the base and medics' herbs (#199, #232, #279): the game's logic, run in Node (see tests/node/game.mjs)
 import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
@@ -14,11 +14,7 @@ test('lots of corpses, three carriers: each corpse carried out once, none back a
   expect(sim.manyCorpses({ walled: true })).toEqual({ total: true, mostCarries: 0, carried: 0, out: false, heapOut: null });
 });
 
-test('a medic brews potions between waves: two herbs, water, a campfire', () => {
-  expect(sim.medicBrew({})).toEqual({ potions: 2, herbs: 0, atWater: true, atFire: true });
-});
-
-test('in a wave a medic heals with a potion first (75 hp); with the wave beaten and a tent it keeps its herbs', () => {
-  expect(sim.medicHeal({})).toEqual({ hp: 85, potionsLeft: 0, herbsLeft: 1 });
-  expect(sim.medicHeal({ waveOver: true })).toEqual({ hp: 10, potionsLeft: 1, herbsLeft: 1 });
+test('in a wave a medic heals with its herbs (30 hp each); with the wave beaten and a tent it keeps them (#279: no potions)', () => {
+  expect(sim.medicHeal({})).toEqual({ hp: 40, herbsLeft: 1 });
+  expect(sim.medicHeal({ waveOver: true })).toEqual({ hp: 10, herbsLeft: 2 });
 });

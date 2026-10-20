@@ -21,7 +21,7 @@ test('on: only what it takes to live is open; a locked thing can\'t be built or 
   const errors = await openGame(page);
   await startWithCards(page);
   const r = await page.evaluate(() => {
-    stock.wood = 500; stock.stone = 500; stock.iron = 500; stock.rope = 50;
+    stock.wood = 500; stock.stone = 500; stock.iron = 500; stock.herbs = 100;
     refreshLocks();
     setMode('watchtower');
     const mode = buildMode;

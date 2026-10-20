@@ -49,9 +49,8 @@ export const mechanicsConfig = {
   // medics (medbag): during an attack, heal the nearest wounded settler (soldiers first) within `range`,
   // healPerHerb hp for one herb every healSeconds. Herbs come from the bag, filled at the town hall with
   // up to bagSize from the stock.
-  // a medic's potion heals healPerPotion (a herb healPerHerb); between waves it brews one (#199): brew.herbs
-  // herbs and water from the nearest water, boiled brew.seconds at a campfire, up to brew.max in the stock
-  medic: { healPerHerb: 30, healPerPotion: 75, healSeconds: 1.2, range: 26, bagSize: 5, brew: { herbs: 2, seconds: 4, max: 5, giveUpSeconds: 20, restSeconds: 30 } },
+  // a medic's herb heals healPerHerb (#279: no more potions)
+  medic: { healPerHerb: 30, healSeconds: 1.2, range: 26, bagSize: 5 },
 
   // blood on a hurt unit, under it, and on the melee weapon that hit it: it starts to fade after
   // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less

@@ -1,4 +1,4 @@
-// Corpses out of the base, and medics' potions (#199, #232: no porter role any more)
+// Corpses out of the base, and medics' herbs (#199, #232: no porter role any more; #279: no potions)
 Object.assign(window.sim, (() => {
   const { start, run, helpers: { tileCenter, makeSettler, clearResources, placeBuilding } } = window.sim;
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
@@ -63,34 +63,19 @@ Object.assign(window.sim, (() => {
       heapOut: heap ? Math.hypot(heap.x - townHall.x, heap.y - townHall.y) > edge + TILE_SIZE : null };
   }
 
-  // A medic between waves brews potions: two herbs, water, a campfire; up to the most kept
-  function brew({ seed = 'medic-brew' } = {}) {
-    asFaction('humans', seed);
-    const fire = placeBuilding('campfire', nearHall(3, 0).x, nearHall(3, 0).y);
-    const w = nearHall(-5, 3);
-    waterTiles.push({ x: w.x, y: w.y });
-    invalidateAllPaths();
-    const medic = makeSettler(1, townHall.x + 30, townHall.y + 40, { tool: 'medbag' });
-    settlers = [medic];
-    Object.assign(stock, { herbs: 4, potions: 0 });
-    let atWater = false, atFire = false;
-    run(40, { each: () => { quiet(); if (Math.hypot(medic.x - w.x, medic.y - w.y) < 35) atWater = true; if (medic.brewTimer > 0 && Math.hypot(medic.x - fire.x, medic.y - fire.y) < 40) atFire = true; } });
-    return { potions: stock.potions, herbs: stock.herbs, atWater, atFire };
-  }
-
-  // In a wave a medic heals with a potion first: 75 hp, a herb 30. With the wave beaten and a tent, it keeps its herbs
+  // In a wave a medic heals with its herbs, 30 each (#279: no potions). With the wave beaten and a tent, it keeps its herbs
   function heal({ seed = 'medic-heal', waveOver = false } = {}) {
     asFaction('humans', seed);
     if (waveOver) placeBuilding('tent', nearHall(-4, 0).x, nearHall(-4, 0).y);
-    const medic = makeSettler(1, townHall.x + 30, townHall.y + 40, { tool: 'medbag', bagPotions: 1, bagHerbs: 1 });
+    const medic = makeSettler(1, townHall.x + 30, townHall.y + 40, { tool: 'medbag', bagHerbs: 2 });
     const patient = makeSettler(2, townHall.x + 50, townHall.y + 40, { weapon: 'sword', role: 'soldier', hp: 10, speed: 0 });
     settlers = [medic, patient];
     const en = createConfiguredEnemy(nearHall(-25, -20), 'raider');
     en.speed = 0; en.damage = 0; en.fromWave = !waveOver;
     enemies = [en];
     run(1.5, { each: () => { quiet(); patient.speed = 0; } });
-    return { hp: Math.round(patient.hp), potionsLeft: medic.bagPotions || 0, herbsLeft: medic.bagHerbs || 0 };
+    return { hp: Math.round(patient.hp), herbsLeft: medic.bagHerbs || 0 };
   }
 
-  return { porterCorpses: corpsesOut, manyCorpses, medicBrew: brew, medicHeal: heal };
+  return { porterCorpses: corpsesOut, manyCorpses, medicHeal: heal };
 })());

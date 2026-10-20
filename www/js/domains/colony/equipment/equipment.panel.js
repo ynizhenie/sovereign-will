@@ -1,8 +1,8 @@
-// The Craft tab (#248, #261): Tools, Weapons and Gear as sub-tabs, each in sections by where it's made (by
+// The Craft tab (#248, #261; #279: no sub-tabs): Tools, Weapons and Gear one after the other, each headed, in sections by where it's made (by
 // hand at the town hall, at a workshop, at a smithy), a compact tile each: its icon, name and cost, how many
 // wait in the armory. Tapping the tile makes one (into the armory); under a tile with some stored, a button
 // to hand one out and one to take one apart. Recipes (into the stock) by their kind: arrows with the
-// weapons, rope with the tools (#248).
+// weapons (#248; #279: no rope any more, grass instead in what it went into).
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { iconHtml, makeTile, renderSheetStock } from '../../../ui/index.js';
@@ -44,6 +44,10 @@ function renderKind(kind) {
   const pane = document.getElementById(`craft-${kind}`);
   if (!pane) return;
   pane.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'craft-kind';
+  title.textContent = t(`craft.kind.${kind}`);
+  pane.appendChild(title);
   const items = itemsOfKind(kind);
   for (const place of PLACES) {
     const here = items.filter(([category, item]) => craftPlace(category, item.id) === place);
@@ -85,27 +89,20 @@ function renderKind(kind) {
 export function renderCraftLists() {
   tiles = [];
   for (const kind of CRAFT_KINDS) renderKind(kind);
-  showCraftKind(shownKind);
+  renderSheetStock('tab-craft'); // (what its prices ask for)
   updateCraftLists(true);
 }
 
-// The sub-tab showing (Tools, Weapons or Gear)
-let shownKind = 'tools';
+// A kind's section brought into view (Tools, Weapons or Gear; there are no sub-tabs any more, #279)
 export function showCraftKind(kind) {
-  shownKind = kind;
-  for (const k of CRAFT_KINDS) {
-    const pane = document.getElementById(`craft-${k}`);
-    if (pane) pane.hidden = k !== kind;
-    const button = document.getElementById(`craft-tab-${k}`);
-    if (button) button.classList.toggle('on', k === kind); // (not 'active': setMode takes that off every button)
-  }
-  renderSheetStock('tab-craft'); // (what this sub-tab's prices ask for)
+  const pane = document.getElementById(`craft-${kind}`);
+  if (pane && pane.scrollIntoView) pane.scrollIntoView({ block: 'start' });
 }
 
 // Each frame (updateUI): how many wait in the armory, and whether there's one to hand out or take apart
 let shown = '';
 export function updateCraftLists(force = false) {
-  const key = JSON.stringify(game.armory) + '|' + (stock.arrows || 0) + '|' + (stock.rope || 0);
+  const key = JSON.stringify(game.armory) + '|' + (stock.arrows || 0);
   if (!force && key === shown) return;
   shown = key;
   for (const r of tiles) {
