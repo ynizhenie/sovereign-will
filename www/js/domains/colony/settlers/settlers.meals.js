@@ -18,12 +18,7 @@ function foodLook() {
 }
 
 export function goEat(s, tick) {
-  if (s.eating) {
-    s.eating.left -= tick.dt;
-    s.patrolTarget = null;
-    if (s.eating.left <= 0) s.eating = null;
-    return true;
-  }
+  if (s.eating) { s.patrolTarget = null; return true; } // (counted down in tickMeals)
   if (!s.wantsMeal || s.isPossessed) return false;
   const cost = isBigBody(s) ? 2 : 1;
   if (s.towerAssignment || (stock.food || 0) + (stock.worms || 0) < cost) {

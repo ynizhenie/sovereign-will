@@ -90,7 +90,9 @@ export function craftItem(s, tick) {
   s.working = 0.1;
   playWorkSound(s, 'hammer', 0.5);
   // quicker at a workshop: nothing with iron is made there (#232)
-  const seconds = (GAME_CONFIG.crafting.seconds[order.category] || 5) * (craftPlace(order.category, order.id) === 'workshop' ? GAME_CONFIG.crafting.workshopShare : 1);
+  // (#279) a small thing made by hand has its own time (craftSeconds: a whistle, a flute)
+  const own = (GAME_CONFIG[order.category][order.id] || {}).craftSeconds;
+  const seconds = own ?? (GAME_CONFIG.crafting.seconds[order.category] || 5) * (craftPlace(order.category, order.id) === 'workshop' ? GAME_CONFIG.crafting.workshopShare : 1);
   order.progress += tick.dt / seconds;
   // what's drawn: a hammer in its hands, the thing on an anvil in front of it, how far along (#232)
   s.crafting = { icon: (GAME_CONFIG[order.category][order.id] || {}).icon, progress: Math.min(1, order.progress), until: game.pathTick + 2 };
