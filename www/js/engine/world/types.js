@@ -29,7 +29,7 @@
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, forBrew?: string, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -86,10 +86,6 @@
  * @property {boolean} [hasArmor]
  * @property {number} [usingCan]     seconds left of watering with the can
  * @property {number} [bagHerbs]     a medic's herbs
- * @property {number} [bagPotions]   a medic's potions (#199)
- * @property {number} [brewTimer]    a medic brewing a potion
- * @property {number} [brewWalk]     seconds walking for a brew (gives up past brew.giveUpSeconds)
- * @property {number} [brewRestUntil]  the tick it may try brewing again
  * @property {number} [chopTimer]    a woodcutter chopping firewood
  * @property {Object | null} [markTarget]  the marked resource it's working (kept till done, #232)
  * @property {Object | null} [corpseTarget]  the corpse it's going to carry out of the base (#199)

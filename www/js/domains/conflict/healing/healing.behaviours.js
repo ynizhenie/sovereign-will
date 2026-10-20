@@ -75,14 +75,14 @@ export function healAtTent(s, tick) {
 // ---- Fighting
 
 // Medics (a worker with a medbag) heal the wounded while enemies are about: the nearest wounded settler,
-// soldiers before workers, one medic per patient, a potion (healPerPotion hp) or else a herb (healPerHerb)
+// soldiers before workers, one medic per patient, a herb (healPerHerb hp) each (#279: no more potions)
 // from its bag, filled at a storage. With the wave beaten and a tent (grave) to heal at for free, it keeps
 // its herbs (#199)
 export function treatWounded(s, tick) {
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive) return false;
   if (tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
   const medic = GAME_CONFIG.medic;
-  if (!(s.bagHerbs > 0) && !(s.bagPotions > 0) && stock.herbs <= 0 && !(stock.potions > 0)) return false;
+  if (!(s.bagHerbs > 0) && stock.herbs <= 0) return false;
   let patient = null, best = Infinity;
   for (const other of game.settlers) {
     if (other === s || other.hp >= other.maxHp || other.towerAssignment || tick.patients.has(other)) continue;
@@ -92,13 +92,8 @@ export function treatWounded(s, tick) {
   if (!patient && s.hp < s.maxHp && !tick.patients.has(s)) patient = s; // itself last of all (#279)
   if (!patient) { s.healTimer = 0; return false; }
   s.patrolTarget = null;
-  // an empty bag gets filled at the nearest storage first: potions, then herbs for the room left
-  if (!(s.bagHerbs > 0) && !(s.bagPotions > 0)) {
-    return fetchFromStorage(s, stock.potions > 0 ? 'potions' : 'herbs', tick.dt, () => {
-      s.bagPotions = takeStock('potions', medic.bagSize);
-      s.bagHerbs = takeStock('herbs', medic.bagSize - s.bagPotions);
-    });
-  }
+  // an empty bag gets filled with herbs at the nearest storage first
+  if (!(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
   tick.patients.add(patient);
   if (patient !== s && Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
     moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
@@ -108,9 +103,8 @@ export function treatWounded(s, tick) {
     if (patient !== s) faceTowards(s, patient.x, patient.y);
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;
-      const potion = s.bagPotions > 0;
-      if (potion) s.bagPotions--; else s.bagHerbs--;
-      patient.hp = Math.min(patient.maxHp, patient.hp + (potion ? medic.healPerPotion : medic.healPerHerb));
+      s.bagHerbs--;
+      patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
       playSound('heal', patient);
     }
   }
@@ -118,44 +112,4 @@ export function treatWounded(s, tick) {
   return true;
 }
 
-// ---- Potions (#199)
-
-// Between waves a medic brews a potion: brew.herbs herbs from a storage, water from the nearest water, and
-// brew.seconds over a campfire; while the stock has fewer than brew.max. The herbs and water go in its hands
-export function brewPotion(s, tick) {
-  const brew = GAME_CONFIG.medic.brew;
-  const load = s.carrying && s.carrying.forBrew ? s.carrying : null;
-  if (load && (tick.isWaveActive || s.isPossessed)) { addResourcesBack(load); s.carrying = null; return false; }
-  if (!load && (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || s.isPossessed || s.carrying || tick.isWaveActive ||
-    stock.herbs < brew.herbs || (stock.potions || 0) + game.settlers.filter(o => o.carrying && o.carrying.forBrew).length >= brew.max ||
-    game.pathTick < (s.brewRestUntil || 0))) return false;
-  // the nearest fire and water it can walk to (#232: water across rock it stood facing for good)
-  const reach = getSettlerReach(s);
-  const walk = o => getReachDistanceToResource(reach, o);
-  const nearestWalk = list => list.map(o => ({ o, d: walk(o) })).filter(m => m.d < Infinity).sort((a, b) => a.d - b.d)[0]?.o || null;
-  const fire = nearestWalk(game.buildings.filter(b => b.type === 'campfire'));
-  const water = nearestWalk(game.waterTiles.filter(w => isWaterReachable(w)));
-  const giveUp = () => { if (load) { addResourcesBack(load); s.carrying = null; } s.brewWalk = 0; };
-  if (!fire || !water) { giveUp(); return false; }
-  s.patrolTarget = null;
-  if (!load) { s.brewWalk = 0; return fetchFromStorage(s, 'herbs', tick.dt, () => { s.carrying = { type: 'herbs', amount: takeStock('herbs', brew.herbs), forBrew: 'water' }; }); }
-  // walking for too long without getting there: not now, it tries again in a while
-  s.brewWalk = (s.brewWalk || 0) + tick.dt;
-  if (s.brewWalk > brew.giveUpSeconds) { giveUp(); s.brewRestUntil = game.pathTick + brew.restSeconds * 60; return false; }
-  if (load.forBrew === 'water') {
-    if (Math.hypot(water.x - s.x, water.y - s.y) > 30) moveEntityTowards(s, water.x, water.y, s.speed, false, tick.dt);
-    else { s.working = 0.1; load.forBrew = 'fire'; s.brewWalk = 0; }
-    return true;
-  }
-  if (Math.hypot(fire.x - s.x, fire.y - s.y) > 32) { moveEntityTowards(s, fire.x, fire.y, s.speed, false, tick.dt); s.brewTimer = 0; return true; }
-  s.brewWalk = 0;
-  faceTowards(s, fire.x, fire.y);
-  s.working = 0.1;
-  s.brewTimer = (s.brewTimer || 0) + tick.dt;
-  if (s.brewTimer >= brew.seconds) { s.brewTimer = 0; s.carrying = null; stock.potions = (stock.potions || 0) + 1; }
-  return true;
-}
-
-// the herbs back into the stock (a brew dropped half way)
-function addResourcesBack(load) { stock.herbs += load.amount || 0; }
 

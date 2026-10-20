@@ -17,7 +17,7 @@ import { deliverCarrying, deliverWhenNothingToDo, haulPiles, moveSettlerToTownHa
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { isWaterReachable } from '../../world/index.js';
 import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
-import { brewPotion, healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
+import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
@@ -237,7 +237,6 @@ export const SETTLER_BEHAVIOURS = [
   tendCorpses,
   corpsesToGraves,
   carryCorpse,
-  brewPotion,
   chopFirewood,
   lightTorches,
   baitTrap,

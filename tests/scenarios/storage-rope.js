@@ -78,15 +78,7 @@ Object.assign(window.sim, (() => {
   }
 
   // Rope: twisted from two herbs by hand at the town hall, no workshop needed
-  function rope({ seed = 'rope' } = {}) {
-    start(seed); clearResources();
-    settlers = [makeSettler(1, townHall.x + 40, townHall.y + 40)];
-    Object.assign(stock, { herbs: 4, rope: 0 });
-    craftRecipe('rope');
-    const ordered = craftOrders.length === 1 && stock.herbs === 2;
-    run(10, { each: quiet });
-    return { ordered, rope: stock.rope, place: craftPlace('recipes', 'rope') };
-  }
+
 
   // An ore spawner marked with Point: a miner works it for its ore, one at a time, and it's still there;
   // unmarked, nobody touches it
@@ -103,5 +95,5 @@ Object.assign(window.sim, (() => {
     return { ore: stock.ironOre + carried >= 2, standing: naturalRocks.includes(spawner) };
   }
 
-  return { storeHallFull: hallFull, storeHaulAndFall: haulAndFall, storeDeliverInto: deliverInto, storesSaved, ropeByHand: rope, mineSpawner };
+  return { storeHallFull: hallFull, storeHaulAndFall: haulAndFall, storeDeliverInto: deliverInto, storesSaved, mineSpawner };
 })());

@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, rand, townHall } from '../../../engine/world/index.js';
-import { hasWorkingShield, refundEquipment } from '../equipment/index.js';
+import { hasWorkingShield } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
@@ -214,13 +214,30 @@ export function tickMeals(dt) {
   }
 }
 
-// Dead settlers: their equipment back to the stock, a corpse, and off the list
+// What a fallen settler held (#279): each thing, with the same chance as an enemy's (GAME_CONFIG.loot), lies
+// where it fell for the others to pick up (into the armory); the rest is lost. A medic's herbs go back to the
+// stock. Endless only (a battle's units come back as they were placed)
+function dropSettlerLoot(s) {
+  if (s.bagHerbs > 0) { stock.herbs += s.bagHerbs; s.bagHerbs = 0; }
+  if (game.gameMode !== 'endless') return;
+  const held = [];
+  if (s.weapon && s.weapon !== 'fist' && getDefinition('weapons', s.weapon)) held.push(`weapons:${s.weapon}`);
+  if (s.tool && s.tool !== 'none' && getDefinition('tools', s.tool)) held.push(`tools:${s.tool}`);
+  for (const id of Object.keys(GAME_CONFIG.gear)) if ((id === 'armor' ? s.armor === 'iron' : s[id]) && getDefinition('gear', id)) held.push(`gear:${id}`);
+  held.forEach((key, i) => {
+    if (rand() >= GAME_CONFIG.loot.itemChance) return;
+    const a = i * 2.1;
+    game.loot.push({ x: s.x + Math.cos(a) * 8 * i, y: s.y + Math.sin(a) * 8 * i, hp: 1, maxHp: 1, priority: 0, yield: {}, items: [key] });
+  });
+}
+
+// Dead settlers: what they held dropped (or lost), a corpse, and off the list
 export function removeDeadSettlers() {
   game.settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       onUnitDeath(s, 'settler');
-      refundEquipment(s);
+      dropSettlerLoot(s);
       if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot
       if (game.selectedSettler === s) game.selectedSettler = null;
     }

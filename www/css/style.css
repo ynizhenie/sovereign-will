@@ -1120,3 +1120,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 /* the battle's and the editor's sheets as Endless's (#255): long ones scroll; the brush sizes small, dragging wide */
 #battle-panel, #editor-panel { max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
 .editor-brush .sub-tab:last-child { flex: 2.2; }
+
+/* the Craft tab in one (#279): a heading for each kind, its places under it */
+.craft-kind { margin: 8px 0 2px; padding-bottom: 2px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); color: #f5f0e1; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+#craft-tools .craft-kind { margin-top: 0; }
