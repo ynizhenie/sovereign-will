@@ -114,9 +114,10 @@ function pickRecipient(category, id) {
       game.settlers.find(s => free(s) && s.role === 'worker' && s.tool !== id && !(id === 'rod' && isBigBody(s))) || null;
   }
   if (category === 'weapons') {
-    return game.settlers.find(s => free(s) && isBigBody(s) && s.weapon === 'fist') ||
-      game.settlers.find(s => free(s) && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist') ||
-      game.settlers.find(s => free(s) && s.weapon !== id) || null;
+    const armable = s => free(s) && !s.whistle; // (a foreman takes no weapon, #279)
+    return game.settlers.find(s => armable(s) && isBigBody(s) && s.weapon === 'fist') ||
+      game.settlers.find(s => armable(s) && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist') ||
+      game.settlers.find(s => armable(s) && s.weapon !== id) || null;
   }
   return null;
 }
@@ -282,13 +283,14 @@ export function craftWeapon(type, auto = false, forSettler = null) {
   if (target) {
     // (the one it's for)
   } else if (auto) {
-    target = game.settlers.find(s => isBigBody(s) && s.weapon === 'fist' && s.tool === 'none' && !s.targetEquipment && !s.isPossessed) ||
-             game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment && !s.isPossessed) || null;
+    target = game.settlers.find(s => !s.whistle && isBigBody(s) && s.weapon === 'fist' && s.tool === 'none' && !s.targetEquipment && !s.isPossessed) ||
+             game.settlers.find(s => !s.whistle && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment && !s.isPossessed) || null;
   } else if (!target) {
-    target = game.settlers.find(s => isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
-             game.settlers.find(s => s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
-             game.settlers.find(s => s.weapon !== type && !s.targetEquipment);
+    target = game.settlers.find(s => !s.whistle && isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
+             game.settlers.find(s => !s.whistle && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
+             game.settlers.find(s => !s.whistle && s.weapon !== type && !s.targetEquipment);
   }
+  if (target && target.whistle) { if (!auto) showNotification(t('weapon.foreman'), true); return false; } // (#279)
 
   if (!target) {
     if (!auto) showNotification(t('weapon.nobody'), true);

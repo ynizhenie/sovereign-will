@@ -56,6 +56,8 @@
  * @property {Object | null} [captainTarget] the enemy its captain gave it (#248)
  * @property {number[]} [squadIds]   a commander's squad
  * @property {number} [orderIn]      seconds till a commander's next order
+ * @property {number} [armIn]        seconds till a captain's next arming order (#279)
+ * @property {number} [lentBy]       the captain that lent it its weapon for a wave (#279)
  * @property {number} [orderTurn]    whose turn in its squad it is
  * @property {number | null} [orderTo] the one a foreman is walking to with an order
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it

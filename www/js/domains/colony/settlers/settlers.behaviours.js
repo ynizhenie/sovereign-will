@@ -27,13 +27,13 @@ import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZo
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
 import { collectBones, corpsesToGraves, necromancy } from '../../factions/undead/index.js';
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
-import { craftItem, equip } from '../equipment/index.js';
+import { craftItem, equip, isBowWeapon } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
 import { lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
-import { captainOrders, foremanOrders } from './settlers.commanders.js';
+import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
 import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
 import { battleOrders } from '../../../modes/battle/index.js';
@@ -94,6 +94,12 @@ export function createSettlerTick(dt) {
 // Housekeeping every settler gets each tick, before any behaviour
 export function prepareSettler(s, dt) {
   clampEntityToBounds(s);
+  // (#279) a worker with a weapon is a soldier (with a bow, an archer); a foreman takes no weapon: one it has
+  // goes back to the store
+  if (s.weapon !== 'fist' && s.temporary === undefined) {
+    if (s.whistle) { if (!s.targetEquipment && game.gameMode === 'endless') s.targetEquipment = { weapon: 'fist', role: 'worker', keep: true }; }
+    else if (s.role === 'worker') s.role = isBowWeapon(s.weapon) ? 'archer' : 'soldier';
+  }
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) s.attackCooldown -= dt;
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
@@ -219,6 +225,7 @@ export const SETTLER_BEHAVIOURS = [
   sleepAtNight,
   carryCaptive,
   captainOrders,
+  captainArms, // (#279: weapons lent before a wave, back after)
   goToSacrifice,
   loadTowerArrows,
   collectSmelterIron,

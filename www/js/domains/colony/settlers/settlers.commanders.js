@@ -9,6 +9,7 @@
 // none of them is on yet (`captainTarget`, see chooseSettlerTarget).
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { getToolFamily, hasGear, takeFromArmory } from '../equipment/index.js';
@@ -115,4 +116,51 @@ export function captainOrders(s, tick) {
   to.captainTarget = enemy;
   showOrder(s, to, 'swords');
   return false;
+}
+
+// (#279) a captain arms the unarmed before a wave: from armSeconds before it (or with the alert, or in it),
+// every everySeconds it tells the next within reach with no tool and no weapon to take a melee weapon from the
+// store (the best there is), lent; once the wave's over, in turn, it tells each it lent one to (wherever it
+// is) to put it back
+export function captainArms(s, tick) {
+  if (!isCaptain(s) || s.isPossessed || game.gameMode !== 'endless') return false;
+  const c = GAME_CONFIG.gear.banner.commands;
+  s.armIn = (s.armIn ?? 0) - tick.dt;
+  if (s.armIn > 0) return false;
+  s.armIn = c.everySeconds;
+  const near = o => o !== s && !o.isPossessed && !o.targetEquipment && Math.hypot(o.x - s.x, o.y - s.y) <= c.reach;
+  const arming = tick.isWaveActive || isDefenseAlert() || game.waveTimer <= c.armSeconds;
+  if (arming) {
+    const to = game.settlers.find(o => near(o) && o.role === 'worker' && o.weapon === 'fist' && o.tool === 'none' && !o.whistle && o.temporary === undefined);
+    const weapon = to && bestStoredWeapon();
+    if (!weapon || !takeFromArmory(`weapons:${weapon}`)) return false;
+    to.targetEquipment = { weapon, tool: 'none', role: 'soldier', keep: true };
+    to.lentBy = s.id;
+    showOrder(s, to, 'swords');
+  } else {
+    const to = game.settlers.find(o => o.lentBy === s.id && !o.isPossessed && !o.targetEquipment); // (heard wherever it is)
+    if (!to) return false;
+    to.targetEquipment = { weapon: 'fist', tool: 'none', role: 'worker', keep: true }; // (into the store whole)
+    delete to.lentBy;
+    showOrder(s, to, 'ok');
+  }
+  return false;
+}
+
+// The best melee weapon in the store: the most damage a hit
+function bestStoredWeapon() {
+  return Object.values(GAME_CONFIG.weapons).filter(w => w.id !== 'fist' && w.family !== 'bow' && (game.armory[`weapons:${w.id}`] || 0) > 0)
+    .sort((a, b) => b.combat.damage - a.combat.damage)[0]?.id || null;
+}
+
+// (#279) what a settler is, by what it holds: a foreman, a captain, a necromancer, an archer, a soldier, by its
+// tool a woodcutter, a miner, a fisher, a farmer, a medic; nothing in its hands, a handyman
+export function roleTitle(s) {
+  if (s.whistle) return t('role.foreman');
+  if (s.banner) return t('role.captain');
+  const family = getToolFamily(s.tool);
+  if (family === 'necro') return t('role.necromancer');
+  if (s.weapon !== 'fist') return t(s.role === 'archer' || s.weapon === 'bow' ? 'role.archer' : 'role.soldier');
+  const byTool = { axe: 'woodcutter', pickaxe: 'miner', rod: 'fisher', hoe: 'farmer', medic: 'medic' }[family];
+  return t(`role.${byTool || 'handyman'}`);
 }
