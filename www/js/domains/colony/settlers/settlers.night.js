@@ -99,7 +99,39 @@ function upForOrder(s, tick) {
   // torch posts alone: a soldier on watch builds those (build), no one's got up for them
   if (s.role === 'worker' && game.blueprints.length && game.blueprints.every(bp => bp.type === 'torch') &&
     !tick.markedResources.some(r => (r.priority || 0) > 0) && game.settlers.some(onWatch)) return false;
-  return hasPlayerOrderFor(s, tick);
+  return hasPlayerOrderFor(s, tick) && nightCrew(tick).has(s);
+}
+
+// (#279) who's up for the player's orders at night: one for each, not everyone. For each blueprint and
+// each marked thing, the nearest one fit for it (a worker to build; one with the tool it needs for a
+// resource; a fighter for a boar), one already up first. Worked out once a tick
+/** @type {{ tick: number, crew: Set<object> }} */
+let crewCache = { tick: -1, crew: new Set() };
+function nightCrew(tick) {
+  if (crewCache.tick === game.pathTick) return crewCache.crew;
+  const crew = new Set();
+  const free = game.settlers.filter(o => !o.isPossessed && !onWatch(o) && o.temporary === undefined); // (one bringing what's needed for it, too)
+  const fits = (o, need) => {
+    if (need === 'boar') return isFighter(o);
+    if (o.role !== 'worker') return false;
+    if (!need) return true;
+    const tool = getDefinition('tools', o.tool);
+    return !!tool && (tool.family || o.tool) === need;
+  };
+  const take = (x, y, need) => {
+    const pick = free.filter(o => !crew.has(o) && fits(o, need))
+      .sort((a, b) => (a.asleep ? 1 : 0) - (b.asleep ? 1 : 0) || Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
+    if (pick) crew.add(pick);
+  };
+  for (const bp of game.blueprints) take(bp.x, bp.y, null);
+  for (const r of tick.markedResources) {
+    if (!((r.priority || 0) > 0)) continue;
+    if (game.boars.includes(r)) { take(r.x, r.y, 'boar'); continue; }
+    const def = GAME_CONFIG.mapResources[tick.resourceKind.get(r)];
+    take(r.x, r.y, def ? def.tool || null : null);
+  }
+  crewCache = { tick: game.pathTick, crew };
+  return crew;
 }
 
 // The shelter it sleeps at: the nearest of its faction's homes, or the town hall
