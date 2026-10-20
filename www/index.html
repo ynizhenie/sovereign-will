@@ -346,15 +346,16 @@
               <button class="btn tile" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
             </div>
             <div class="battle-hint" data-i18n="zone.hint">A relief zone holds 5 heaps; a post is one soldier's before a wave</div>
-          </div>
-
-          <div id="tab-blight" class="tab-pane">
-            <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
-            <div class="tile-grid">
-              <button class="btn tile" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
-              <button class="btn tile" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
-              <!-- necromancers spread it by themselves, nearest the base first (#253) -->
-              <button class="btn tile" id="btn-auto-blight" data-action="toggleAutoBlight" data-i18n="btn.autoBlight">[[rot]] Spread by itself</button>
+            <!-- (#279) the undead's blight, here (no tab of its own) -->
+            <div class="undead-only">
+              <div class="panel-heading" data-i18n="dock.blight">Blight</div>
+              <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
+              <div class="tile-grid">
+                <button class="btn tile" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
+                <button class="btn tile" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
+                <!-- necromancers spread it by themselves, nearest the base first (#253) -->
+                <button class="btn tile" id="btn-auto-blight" data-action="toggleAutoBlight" data-i18n="btn.autoBlight">[[rot]] Spread by itself</button>
+              </div>
             </div>
           </div>
 
@@ -441,7 +442,6 @@
     <div class="dock-row" data-hud-mode="endless">
       <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-build" data-dock="colony:tab-build"><i class="ic ic-build"></i><span data-i18n="dock.build">Build</span></button>
       <button class="tab-btn dock-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-dock="colony:tab-farming"><i class="ic ic-wheat"></i><span data-i18n="dock.farming">Farm</span></button>
-      <button class="tab-btn dock-btn" id="tab-btn-blight" data-action="switchTab" data-arg="tab-blight" data-dock="colony:tab-blight" hidden><i class="ic ic-rot"></i><span data-i18n="dock.blight">Blight</span></button>
       <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-craft" data-dock="colony:tab-craft"><i class="ic ic-hammer"></i><span data-i18n="dock.craft">Craft</span></button>
       <button class="dock-btn dock-point active" id="btn-interact" data-action="pointMode"><i class="ic ic-point"></i><span data-i18n="top.point">Point</span></button>
     </div>

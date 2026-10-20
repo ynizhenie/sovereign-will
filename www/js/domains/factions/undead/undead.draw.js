@@ -40,7 +40,7 @@ export function drawBlight() {
     ctx.fillStyle = `rgba(74, 35, 90, ${0.28 * Math.max(0, share)})`;
     ctx.fillRect(bx - 15, by - 15, TILE_SIZE, TILE_SIZE);
   }
-  if (isTabShown('tab-blight')) game.blightZones.forEach(z => {
+  if (isTabShown('tab-farming')) game.blightZones.forEach(z => {
     if (z.done) return;
     ctx.strokeStyle = 'rgba(187, 143, 206, 0.8)'; ctx.lineWidth = 1;
     ctx.strokeRect(z.x - 13.5, z.y - 13.5, TILE_SIZE - 3, TILE_SIZE - 3);

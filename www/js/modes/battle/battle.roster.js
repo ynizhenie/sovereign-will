@@ -35,8 +35,10 @@ export const BATTLE_PRESETS = [
   ...Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.enemies).flatMap(f => f.enemies.map(id => ({ id, enemy: id, faction: f.id })))
 ];
 
-// buildings any faction has, then each faction's own (those with `factions` in GAME_CONFIG.buildings)
-export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'watchtower', 'tent', 'grave', 'sacrifice_circle', 'portal'];
+// buildings any faction has, then each faction's own (those with `factions` in GAME_CONFIG.buildings); (#279)
+// all of them now, but a fish trap (on water) and crops
+export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'watchtower', 'dummy', 'warehouse', 'workshop', 'smithy', 'smelter',
+  'tent', 'campfire', 'torch', 'dung_heap', 'grave', 'demon_den', 'sacrifice_circle', 'portal', 'corpse_pit', 'cage'];
 
 export function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);

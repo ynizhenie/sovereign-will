@@ -89,3 +89,16 @@ export function loadSides() {
 export function isForPlayerFaction(item) {
   return !item.factions || item.factions.includes(sides.player.faction);
 }
+
+// (#279) what a building costs the player's faction: as in GAME_CONFIG, and for one with buildBones (the undead)
+// bones on top, a share of the rest. Set on each building's `cost` (its own kept as `baseCost`) when the HUD is
+// made for the faction (renderConfigHud), so whatever reads a cost reads the faction's
+export function applyFactionCosts() {
+  const extra = (GAME_CONFIG.factions[sides.player.faction] || {}).buildBones;
+  for (const def of Object.values(GAME_CONFIG.buildings)) {
+    if (!def.cost && !def.baseCost) continue;
+    if (!def.baseCost) def.baseCost = def.cost;
+    const base = def.baseCost, rest = Object.values(base).reduce((sum, n) => sum + n, 0);
+    def.cost = extra && rest > 0 && !base.bones ? { ...base, bones: Math.max(extra.min, Math.round(rest * extra.share)) } : base;
+  }
+}
