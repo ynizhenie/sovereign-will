@@ -1,4 +1,4 @@
-// #248 (part four): meals eaten at a storage, a smoke and a wheat stalk, paths, foremen and captains
+// #248 (part four): meals eaten at a storage, paths, foremen and captains
 Object.assign(window.sim, (() => {
   const { start, run, helpers: { tileCenter, makeSettler, placeBuilding, clearResources } } = window.sim;
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
@@ -18,32 +18,6 @@ Object.assign(window.sim, (() => {
     let ateAt = null, ate = false;
     run(12, { each: () => { calm(); if (s.eating && !ateAt) ateAt = Math.hypot(s.x - townHall.x, s.y - townHall.y); if (s.eating) ate = true; if (s.hunger < 5) s.hunger = 50; } });
     return { ate, atHall: ateAt !== null && ateAt < townHall.radius + 40, food: stock.food, stillWants: !!s.wantsMeal };
-  }
-
-  // A smoker (every third) at a loose end: to the grass, to the campfire, then a smoke for a while; a
-  // farmer takes a stalk from ripe wheat
-  function smoke({ seed = 'smoke', farmer = false } = {}) {
-    start(seed); clearResources();
-    const fire = placeBuilding('campfire', nearHall(4, 0).x, nearHall(4, 0).y);
-    const g = nearHall(-4, 3);
-    grassList.push({ x: g.x, y: g.y, hp: 1, maxHp: 1 });
-    const w = nearHall(-3, -3);
-    farmPlots.push({ x: w.x, y: w.y, growth: 70, priority: 0, harvestProgress: 0 }); // (tall, not ripe: ripe it'd be harvested)
-    invalidateAllPaths();
-    // (a soldier smokes: a worker with free hands would go and gather the grass itself)
-    const s = makeSettler(3, townHall.x + 40, townHall.y + 40, farmer ? { tool: 'hoe' } : { weapon: 'sword', role: 'soldier' });
-    settlers = [s];
-    s.idle = { act: farmer ? 'straw' : 'smoke', left: 40, spot: null, partnerId: null };
-    let byGrass = false, byFire = false, byWheat = false;
-    run(30, { each: () => {
-      calm(); s.hunger = 999; farmPlots.forEach(f => { f.growth = 70; });
-      if (Math.hypot(s.x - g.x, s.y - g.y) < 40) byGrass = true;
-      if (Math.hypot(s.x - fire.x, s.y - fire.y) < 40 && byGrass) byFire = true;
-      if (Math.hypot(s.x - w.x, s.y - w.y) < 40) byWheat = true;
-      if ((s.smoking || s.straw) > 0 && s.idle && s.idle.act === (farmer ? 'straw' : 'smoke')) s.idle.left = 0;
-    } });
-    return farmer ? { byWheat, straw: (s.straw || 0) > 0, resting: (s.smokeRest || 0) > 0, wheatLeft: farmPlots.length === 1 }
-      : { byGrass, byFire, smoking: (s.smoking || 0) > 0, resting: (s.smokeRest || 0) > 0, grassLeft: grassList.length === 1 };
   }
 
   // Settlers walking the same way in the base over and over wear a path; out of the base, none; left be, it
@@ -101,5 +75,5 @@ Object.assign(window.sim, (() => {
     return { given: targets.every(i => i >= 0), different: new Set(targets).size === targets.length, nearest: targets.includes(0) };
   }
 
-  return { eatAtStorage, smoke, pathsWear, foreman, captain };
+  return { eatAtStorage, pathsWear, foreman, captain };
 })());

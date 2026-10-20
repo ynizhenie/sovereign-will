@@ -11,10 +11,6 @@ test('idle settlers with nothing to do get together in a knot "talking"', () => 
   expect(sim.idleTalk({})).toEqual({ knot: true });
 });
 
-test('an idle human sharpens its blade: the next blow that lands does half as much again, then it\'s blunt', () => {
-  expect(sim.idleSharpen({})).toEqual({ sharpened: true, ratio: 1.5, bluntAfter: true });
-});
-
 test('idle demons spar: a little health down, never below 70%, morale up', () => {
   expect(sim.idleSpar({})).toEqual({ hurt: true, notBelow: true, moraleUp: true, close: true });
 });

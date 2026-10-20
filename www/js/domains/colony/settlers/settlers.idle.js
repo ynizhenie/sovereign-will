@@ -1,7 +1,7 @@
 // What settlers do with nothing to do (#199): between waves, instead of wandering round the town hall,
 // an idle settler sits by a campfire (its morale rises faster, and a little past its usual), stands with
-// others in a knot "talking", or does its faction's own thing: humans sharpen their blade (the next blow
-// hits harder), demons spar in pairs (morale up, a little health down), the undead stand and sway; soldiers
+// others in a knot "talking", or does its faction's own thing: demons spar in pairs (morale up, a little
+// health down), the undead stand and sway (#298: no sharpening, smoking or wheat stalk any more); soldiers
 // and archers also walk the edge of the base on patrol, or train at a dummy (their damage grows). Each
 // pastime lasts a while (GAME_CONFIG.idle.seconds), then another is picked. And any settler free between
 // waves a farmer with a backpack carries dung lying about the base to a compost heap, to fertilise from.
@@ -12,21 +12,17 @@ import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/move
 import { getBaseRadius, isInSafeArea } from '../../conflict/combat/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
-import { moveSettlerToTownHall } from '../storage/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
 
 const config = () => GAME_CONFIG.idle;
 
 // the activity texts of the pastimes (activity.<name>)
-export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', sharpen: 'idleSharpen', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain', digWorms: 'idleDigWorms', smoke: 'idleSmoke', straw: 'idleStraw' };
+export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', spar: 'idleSpar', sway: 'idleSway', patrolEdge: 'idlePatrol', train: 'idleTrain', digWorms: 'idleDigWorms' };
 
 const byId = id => game.settlers.find(o => o.id === id) || null;
-const isMelee = s => s.weapon && s.weapon !== 'fist' && s.weapon !== 'bow';
 // another idle settler free for company: wandering, or already in a knot
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfires = () => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y));
-// where a smoke is lit (#279: not a campfire only, it was seldom seen): a campfire, a lit torch post, the town hall's hearth
-const lights = () => [...campfires(), ...game.buildings.filter(b => b.type === 'torch' && b.lit && isInSafeArea(b.x, b.y)), townHall];
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
 // an archer out of arrows doesn't train (#232)
 const canTrain = s => !(s.weapon === 'bow' && (!s.quiver || (s.arrows || 0) <= 0));
@@ -43,15 +39,9 @@ function pickPastime(s) {
   const fires = campfires();
   if (fires.length) options.push('campfire');
   if (game.settlers.some(o => isFreeCompany(s, o) && Math.hypot(o.x - s.x, o.y - s.y) < c.companyRange)) options.push('talk');
-  if (faction === 'humans' && isMelee(s) && !s.sharpened) options.push('sharpen', 'sharpen');
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
   if (faction === 'undead') options.push('sway', 'sway');
   if (s.tool === 'rod' && nearestGrass(s)) options.push('digWorms', 'digWorms'); // a fisher digs for worms (#199)
-  // a smoke (#248): some roll one from grass and light it at a campfire; a farmer takes a wheat stalk to
-  // chew instead. Now and then, not straight again
-  if (faction !== 'undead' && !((s.smokeRest || 0) > 0)) {
-    if (s.tool === 'hoe') { if (ripeWheat(s)) options.push('straw', 'straw'); } else if (s.id % 3 === 0 && nearestGrass(s)) options.push('smoke', 'smoke');
-  }
   if (isFighter(s)) {
     options.push('patrolEdge', 'patrolEdge');
     if (freeDummy(s) && canTrain(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
@@ -78,8 +68,6 @@ function pickPastime(s) {
     idle.spot = { x: dummy.x, y: dummy.y };
   } else if (act === 'patrolEdge') {
     idle.left *= 2; // a round takes a while
-  } else if (act === 'smoke' || act === 'straw') {
-    idle.left = c.smokeWalk; // (time to get there)
   }
   return idle;
 }
@@ -132,12 +120,6 @@ export function idlePastime(s, tick) {
       if (!game.settlers.some(o => o !== s && o.idle && o.idle.act === 'talk' && o.idle.spot && Math.hypot(o.idle.spot.x - idle.spot.x, o.idle.spot.y - idle.spot.y) < 1)) idle.left = Math.min(idle.left, 1);
       return true;
     }
-    case 'sharpen': {
-      s.working = 0.1;
-      idle.sharpened = (idle.sharpened || 0) + tick.dt;
-      if (idle.sharpened >= c.sharpenSeconds) { s.sharpened = true; idle.left = 0; }
-      return true;
-    }
     case 'spar': {
       const other = byId(idle.partnerId);
       if (!other || !other.idle || other.idle.act !== 'spar' || other.idle.partnerId !== s.id) { idle.left = 0; return false; }
@@ -167,26 +149,6 @@ export function idlePastime(s, tick) {
     case 'sway':
       s.swaying = true;
       return true;
-    case 'smoke':
-    case 'straw': {
-      // to the grass, then the fire to light it (a smoke); to ripe wheat (a stalk); a moment at each
-      if (!idle.stage) idle.stage = idle.act === 'smoke' ? 'grass' : 'wheat';
-      const at = idle.stage === 'grass' ? nearestGrass(s) : idle.stage === 'wheat' ? ripeWheat(s)
-        : lights().sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
-      if (!at) { idle.left = 0; return false; }
-      const reach = at === townHall ? townHall.radius + s.radius + 6 : 32;
-      if (Math.hypot(at.x - s.x, at.y - s.y) > reach) { if (at === townHall) moveSettlerToTownHall(s, s.speed, tick.dt); else moveEntityTowards(s, at.x, at.y, s.speed, false, tick.dt); return true; } // (on its way: no stroll)
-      faceTowards(s, at.x, at.y);
-      s.working = 0.1;
-      idle.t = (idle.t || 0) + tick.dt;
-      if (idle.t < c.smokeTake) return true;
-      idle.t = 0;
-      if (idle.stage === 'grass') { idle.stage = 'fire'; return true; }
-      if (idle.act === 'smoke') s.smoking = c.smokeSeconds; else s.straw = c.strawSeconds;
-      s.smokeRest = (idle.act === 'smoke' ? c.smokeSeconds : c.strawSeconds) + c.smokeAgain;
-      idle.left = 0;
-      return true;
-    }
     case 'patrolEdge': {
       // round the base just past its edge, waypoint to waypoint (each soldier its own way round)
       const dir = Math.floor(s.id) % 2 ? 1 : -1;
@@ -227,17 +189,6 @@ function edgePoint(angle) {
 }
 
 // The nearest grass in the base (#199: a fisher digs for worms there)
-// Wheat grown tall near by, in the base (a farmer's stalk, #248): from strawGrowth on (ripe wheat a farmer
-// would be harvesting, not idle)
-function ripeWheat(s) {
-  let best = null, bestD = Infinity;
-  for (const f of game.farmPlots) {
-    const d = Math.hypot(f.x - s.x, f.y - s.y);
-    if (f.growth >= config().strawGrowth && d < bestD && isInSafeArea(f.x, f.y) && d < 400) { bestD = d; best = f; }
-  }
-  return best;
-}
-
 function nearestGrass(s) {
   let best = null, bestD = Infinity;
   for (const g of game.grassList) {

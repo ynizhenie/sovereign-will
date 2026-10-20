@@ -18,14 +18,11 @@ test('a felled tree falling and lying, paths and iron ore all drawn, with no err
     trees.push(makeAppleTree(at(7, { fallen: true, fallAt: -999, fallAngle: 0, hp: 0.1 })));
     drawPaths();
     for (const t of trees) drawTreeArt(t);
-    // the iron ore icon reads as red-brown, not grey
+    // (the iron ore icon: its colour checked in p298-small.spec.mjs, #298 7)
     const c = document.createElement('canvas'); c.width = c.height = 32;
-    const x = c.getContext('2d');
-    drawIcon(x, 'ironOre', 16, 16, 32);
-    const px = x.getImageData(16, 18, 1, 1).data;
-    return { red: px[0] > px[2] + 30 };
+    drawIcon(c.getContext('2d'), 'ironOre', 16, 16, 32);
+    return {};
   });
   await page.waitForTimeout(300);
-  expect(r.red).toBe(true);
   expect(errors).toEqual([]);
 });
