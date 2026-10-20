@@ -90,7 +90,7 @@ export const game = {
   cardsWave: 0,         // waves counted for cards
   /** @type {string[] | null} */
   cardOffer: null,      // the cards offered now, waiting for a pick
-  /** @type {{ side: string, timeLeft: number, seed?: number, layout?: string } | null} */
+  /** @type {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} */
   raidCamp: null,       // an enemy camp's zone open beyond a side of the map (#255, endless.raid.js)
   raidCampWave: 0,      // the waves beaten when the last one opened
   reliefZones: [],      // { x, y } tiles marked to relieve in (#279, world.zones.js)
