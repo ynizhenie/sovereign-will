@@ -19,7 +19,7 @@ Object.assign(window.sim, (() => {
     const r = {
       startUnits: settlers.map(s => s.type), startStaffs: settlers.filter(s => s.tool === 'necro_staff').length, hire: ids('#recruit-row .tile'),
       tools: ids('#craft-tools .tile'), gear: ids('#craft-gear .tile'),
-      build: ids('#build-actions button'), farmingTab: !document.getElementById('tab-btn-farming').hidden,
+      build: ids('#build-actions button'), farmingTab: !document.querySelector('#tab-farming .farm-only').hidden, zonesTab: !document.getElementById('tab-btn-farming').hidden, // (#279: Zones for all, its farm not the undead's)
       blightTab: !document.getElementById('tab-btn-blight').hidden, foodTile: !!document.getElementById('group-food') || !!document.getElementById(resourceHudId('food')) || !!document.getElementById(resourceHudId('rawMeat')),
       food: stock.food
     };

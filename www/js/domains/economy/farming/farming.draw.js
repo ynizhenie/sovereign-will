@@ -1,6 +1,6 @@
 // Farm zones and wheat plots
 
-import { isTabShown } from '../../../ui/index.js';
+import { drawIcon, isTabShown } from '../../../ui/index.js';
 import { TILE_SIZE, game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { drawFarmPlotArt } from '../gathering/index.js';
@@ -8,7 +8,18 @@ import { drawFarmPlotArt } from '../gathering/index.js';
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
 export function drawFarmZones() {
   const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
-  if (isTabShown('tab-farming')) game.farmZones.forEach(z => {
+  if (!isTabShown('tab-farming')) return;
+  // (#279) relief zones brown, soldiers' posts blue, with a mark of what they are
+  /** @type {[{ x: number, y: number }[], string, string][]} */
+  const kinds = [[game.reliefZones, '160, 110, 60', 'dung_heap'], [game.postZones, '52, 152, 219', 'shield']];
+  for (const [list, rgb, icon] of kinds) {
+    for (const z of list || []) {
+      ctx.fillStyle = `rgba(${rgb}, 0.18)`; ctx.fillRect(z.x - 15, z.y - 15, TILE_SIZE, TILE_SIZE);
+      ctx.strokeStyle = `rgba(${rgb}, 0.7)`; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(z.x - 13.5, z.y - 13.5, TILE_SIZE - 3, TILE_SIZE - 3); ctx.setLineDash([]);
+      ctx.globalAlpha = 0.55; drawIcon(ctx, icon, z.x, z.y, 12); ctx.globalAlpha = 1;
+    }
+  }
+  game.farmZones.forEach(z => {
     const rgb = ZONE_COLORS[z.crop] || ZONE_COLORS.sapling;
     ctx.fillStyle = `rgba(${rgb}, 0.14)`;
     ctx.fillRect(z.x - 15, z.y - 15, TILE_SIZE, TILE_SIZE);

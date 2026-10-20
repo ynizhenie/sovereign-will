@@ -7,7 +7,7 @@ import { game } from '../engine/world/index.js';
 import { renderCraftLists } from '../domains/colony/equipment/index.js';
 import { formatCost } from '../domains/colony/storage/index.js';
 import { renderResourceStrip, renderResourceTiles, renderSheetStock, updateUI } from './hud.js';
-import { sides } from '../domains/factions/index.js';
+import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
 import { setMode } from './map-input.js';
@@ -89,7 +89,9 @@ export function renderConfigHud() {
   renderRecruitRow();
   renderCraftLists();
   // the undead blight the ground instead of farming
-  document.getElementById('tab-btn-farming').hidden = sides.player.faction === 'undead';
+  // (#279) the Zones tab for everyone: its farm and relief zones for those who eat
+  const eats = getPlayerFaction().eats;
+  document.querySelectorAll('#tab-farming .farm-only, #tab-farming .eats-only').forEach(el => { /** @type {HTMLElement} */ (el).hidden = !eats; });
   document.getElementById('tab-btn-blight').hidden = sides.player.faction !== 'undead';
   renderSheetStock(activeTab);
   // the tab left open was another faction's (Farming for the undead): back to Building (#200)

@@ -63,6 +63,8 @@ export const mechanicsConfig = {
   // colony eats worms. A new settler's first meal comes after firstShare..1 of that, so they don't all
   // eat together. Hungry, it goes to a storage and eats there for eatSeconds (#248). Awake at night it gets
   // hungry nightFactor as fast (#279: half)
+  // zones the player marks (#279, world.zones.js): a relief zone holds reliefMax dung at most
+  zones: { reliefMax: 5 },
   meals: { seconds: 33, firstShare: 0.3, eatSeconds: 2.5, nightFactor: 0.5 },
   // day and night (#257): a day is morning + day + evening + night seconds, Endless starting in the morning;
   // at night it's `darkness` dark; light reaches (tiles) round the town hall, a lit torch, a lit campfire, a

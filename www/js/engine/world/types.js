@@ -75,6 +75,7 @@
  * @property {boolean} [wantsMeal]  hungry: going for its meal (goEat, #248)
  * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
+ * @property {Point | null} [reliefSpot] where it's going to relieve itself
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
@@ -304,6 +305,8 @@
  * @property {{ side: string, timeLeft: number, seed?: number, layout?: string } | null} raidCamp  an enemy camp's zone open (#255)
  * @property {number} raidCampWave  the waves beaten when the last one opened
  * @property {Enemy[]} scouts  enemy scouts between waves (#279)
+ * @property {Point[]} reliefZones  tiles marked to relieve in (#279)
+ * @property {Point[]} postZones    tiles marked for soldiers' posts
  * @property {number} scoutClock
  */
 

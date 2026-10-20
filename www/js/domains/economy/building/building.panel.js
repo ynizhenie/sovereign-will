@@ -16,7 +16,9 @@ export function renderBuildTab() {
     return (buildSections[group] = section.lastChild);
   };
   for (const group of ['defense', 'homes', 'economy']) sectionFor(group);
-  Object.values(GAME_CONFIG.buildings).filter(isForPlayerFaction).forEach(item => {
+  // (#279) crops aren't placed one by one any more: a farmer with a hoe plants them in the farm's zones
+  const crops = Object.values(GAME_CONFIG.farming.crops);
+  Object.values(GAME_CONFIG.buildings).filter(isForPlayerFaction).filter(item => !crops.includes(item.id)).forEach(item => {
     const actions = item.tab ? document.getElementById(`${item.tab}-actions`) : sectionFor(item.group || 'economy');
     if (actions) actions.appendChild(createConfigButton(item, setMode, 'buildings'));
   });
