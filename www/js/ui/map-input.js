@@ -18,6 +18,7 @@ import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 import { orderTap } from '../domains/conflict/combat/index.js';
+import { scoutTapped } from '../domains/conflict/waves/index.js';
 
 export function handleCanvasClick() {
   // battle mode: placing while setting up; in a fight, orders for a possessed unit
@@ -34,6 +35,7 @@ export function handleCanvasClick() {
 
   const p = getPossessed();
   if (p && orderPossessed(p, mouse.x, mouse.y)) return;
+  if (game.buildMode === 'interact' && scoutTapped(mouse.x, mouse.y)) return; // (a scout pointed at: hunted, #279)
   if (game.buildMode === 'interact' && enemyTapped()) return;
   if (game.buildMode === 'interact' && selectTapped()) return;
 

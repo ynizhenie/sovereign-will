@@ -28,7 +28,7 @@ export function resetGame(map) {
   townHall.repairRequested = false;
   resetRaid(); // (#255: a party out on a raid: the base back first, then all of it reset)
   game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
-  townHall.store = {}; game.craftOrders = []; game.raidCamp = null; game.raidCampWave = 0; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
+  townHall.store = {}; game.craftOrders = []; game.raidCamp = null; game.raidCampWave = 0; game.scouts = []; game.scoutClock = 0; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
   
   if (map) loadCustomMap(map);
