@@ -74,7 +74,7 @@ export const enemiesConfig = {
   scouts: { fromWave: 2, checkSeconds: 40, chance: 0.5, max: 2, staySeconds: 40, fleeTiles: 5 },
 
   // loot (#210, #232): for each thing a fallen enemy held (its weapon, armour, shield), itemChance it drops
-  // that thing itself, lying on the ground (into the armory once carried in)
+  // that thing itself, lying on the ground (into the armory once carried in); a fallen settler's too (#279)
   loot: { itemChance: 0.35 },
 
   // armour and shields in waves (#203): once the player has made armour (a shield), each wave enemy from

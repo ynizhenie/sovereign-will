@@ -209,7 +209,6 @@ export function getWeaponStats(s, use) {
 export function refundEquipment(settler, { weapon = true, tool = true, armor = false, quiver = false, keep = false } = {}) {
   // a medic's herbs go back with the bag
   if (tool && settler.bagHerbs > 0) { stock.herbs += settler.bagHerbs; settler.bagHerbs = 0; }
-  if (tool && settler.bagPotions > 0) { stock.potions += settler.bagPotions; settler.bagPotions = 0; } // (#199)
   for (const [category, id, off] of [['weapons', settler.weapon, weapon], ['tools', settler.tool, tool]]) {
     const item = off && getDefinition(category, id);
     if (!item || !item.cost || !Object.keys(item.cost).length) continue; // (a fist, no tool)
@@ -315,7 +314,7 @@ export function takeFromArmory(key) {
 
 // A recipe makes something for the stock, not conjured (#249): paid for at once, then `batches` jobs of
 // produces/batches each where it's made (craftPlace); arrows by the archers (anyone free while there are
-// none), rope by anyone (#248)
+// none)
 export function craftRecipe(id) {
   const recipe = GAME_CONFIG.recipes[id];
   const result = orderCraft('recipes', id);

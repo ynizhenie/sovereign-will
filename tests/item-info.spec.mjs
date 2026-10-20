@@ -7,14 +7,12 @@ test('pointing at a button in a sheet shows what it is: its name, a line about i
   await openGame(page);
   await page.click('#play-button');
   await page.click('[data-arg="tab-craft"]');
-  await page.click('#craft-tab-weapons'); // (#261)
   await page.hover('#btn-spear');
   const card = page.locator('#info-card');
   await expect(card).toBeVisible();
   await expect(card).toContainText('Копье');
   await expect(card).toContainText('Бьёт дальше');
   await expect(card).toContainText('Урон: 25');
-  await page.click('#craft-tab-gear');
   await page.hover('#btn-armor');
   await expect(card).toContainText('Здоровье: +50');
   await expect(card).toContainText('Урон по носящему: −35%');
