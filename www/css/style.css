@@ -1131,3 +1131,18 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .card-store-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .card-store-line b { color: #aeb4c0; font-weight: 600; font-size: 11px; }
 .card-store-line small { color: #8a91a0; margin-left: -4px; }
+
+/* the time of day (#279): a dial of morning, day, evening and night, a hand on now, the sun or the moon */
+.day-clock { display: none; position: relative; width: 34px; height: 34px; border-radius: 50%; margin-right: 6px; flex: none;
+  border: 2px solid rgba(0, 0, 0, 0.55); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); align-self: center; }
+body[data-hud="endless"] .day-clock { display: block; }
+.day-hand { position: absolute; left: 50%; top: 50%; width: 2px; height: 15px; margin-left: -1px; background: #fff; border-radius: 1px;
+  transform-origin: 50% 0; box-shadow: 0 0 2px #000; }
+.day-face { position: absolute; inset: 9px; border-radius: 50%; background: rgba(15, 18, 30, 0.85); display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.day-face .ic { width: 13px; height: 13px; }
+
+/* the stock's drop-down (#279): names by the numbers, how it's changed in a minute, nothing of a thing hidden */
+.res-chip[hidden], .res-line[hidden] { display: none; }
+.res-chip .res-name { color: #8a91a0; font-size: 10px; }
+.res-chip .res-rate { font-style: normal; font-size: 10px; color: #58d68d; }
+.res-chip .res-rate.down { color: #ec7063; }

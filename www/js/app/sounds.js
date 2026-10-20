@@ -18,7 +18,7 @@ export const SOUND = {
   menuWorldShare: 0.35,  // the world behind the main menu is quieter
   fadeSeconds: 1.2,      // the music's crossfades: a time constant, so about 4x this to the end
   // a sound plays at most once in this many seconds (the same name), so crowds don't drown everything
-  minGap: { click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
+  minGap: { built: 0.3, hire: 0.2, horn: 1.5, defeat: 2, tentUp: 0.4, click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
     hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3,
     eat: 0.2, sizzle: 0.3, dig: 0.2, splash: 0.2, drip: 0.1, catch: 0.3, heal: 0.3, raise: 0.3, collapse: 0.2, smelt: 0.3, ignite: 0.2,
     trapSnap: 0.2, craftDone: 0.3, cageLock: 0.3, butcher: 0.25, pickup: 0.12, portal: 0.5, dawn: 5, owl: 5, snore: 0.8, alarm: 2, voice: 0.12 }
@@ -276,7 +276,15 @@ export function musicMix() {
   const pause = game.isPaused ? 0.4 : 1;
   // a wave is on until the last enemy and enemy tent are gone
   const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
-  return { [trackFor(fighting)]: pause };
+  const mix = { [trackFor(fighting)]: pause };
+  // (#279) one playing a flute by a campfire, in view: its tune over the music, softer the farther it is
+  const flutes = Object.keys(GAME_CONFIG.music).filter(id => id.startsWith('flute_'));
+  const player = !fighting && game.settlers.find(s => s.flute && game.pathTick - (s.playingFlute ?? -1e9) < 10);
+  if (player && flutes.length) {
+    const d = Math.hypot(player.x - camera.x, player.y - camera.y);
+    if (d < 600) mix[flutes[player.id % flutes.length]] = pause * Math.max(0.25, 1 - d / 600);
+  }
+  return mix;
 }
 
 // Every frame: fade the styles to the mix, and schedule the notes of those that can be heard

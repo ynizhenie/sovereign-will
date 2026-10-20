@@ -5,6 +5,7 @@ import { game, rand } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
 import { ORE_KINDS, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, placeOre, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
+import { noteDay } from '../../colony/settlers/index.js';
 
 export function getPlacedResources(includeGrowingTrees = true) {
   return [
@@ -50,6 +51,7 @@ export function finishHarvest(settler, resource, kind) {
   // loot's things are carried to a storage whole, into the armory there (#210; #261: not at once)
   for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
   addCarryLoad(settler);
+  noteDay(settler, 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279)
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {
     if (rand() < chance) addResources({ [item]: 1 });

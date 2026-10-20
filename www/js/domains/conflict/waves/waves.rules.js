@@ -11,7 +11,7 @@ import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { isNight } from '../../world/index.js';
-import { someoneSays } from '../../colony/settlers/index.js';
+import { noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 
@@ -379,7 +379,7 @@ export function dropLoot(en) {
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
 export function removeDeadEnemies() {
   game.enemies.forEach(en => {
-    if (en.hp <= 0 && !en.fled && !en.deadNoted) { en.deadNoted = true; onUnitDeath(en, 'enemy'); }
+    if (en.hp <= 0 && !en.fled && !en.deadNoted) { en.deadNoted = true; onUnitDeath(en, 'enemy'); noteDay(en.lastHitBy, 'kills', 'kill', 0.25); } // (its slayer's day, #279)
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
       if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); dropLoot(en); }

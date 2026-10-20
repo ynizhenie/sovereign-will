@@ -9,9 +9,11 @@ import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettler
 import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
+import { getDayPhase } from '../domains/world/index.js';
 
 export function updateUI() {
   updateWave();
+  updateResourcePanel(); // (#279)
   renderBuildingCard();
   updateCraftLists();
   // the blight-by-itself switch (#253): lit while on, greyed for good with none left
@@ -60,7 +62,7 @@ export function updateUI() {
     let aName = selected.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
     let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
     // the rest of what it wears
-    const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
+    const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'flute'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
     setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
     renderSettlerInfo(selected);
     renderSelectedGear(selected);
@@ -86,7 +88,37 @@ export function updateUI() {
 // The wave in the middle of the top bar: its number, the time to the next as m:ss, a bar running down to
 // it; the last seconds pulse, and a new wave shakes it
 let shownWave = 0;
+// (#279) the dial of the day: its parts as wedges in their colours (once), the hand on now, the sun by day
+// and the moon at night in the middle; hovered, what part of the day it is and how long till the next
+let dialFor = '';
+function updateDayClock() {
+  const clock = document.getElementById('day-clock');
+  if (!clock || game.gameMode !== 'endless') return;
+  const c = GAME_CONFIG.daytime;
+  /** @type {[string, number, string][]} */
+  const parts = [['morning', c.morning, '#f5b041'], ['day', c.day, '#5dade2'], ['evening', c.evening, '#a569bd'], ['night', c.night, '#1b2631']];
+  const length = parts.reduce((sum, p) => sum + p[1], 0);
+  const key = parts.map(p => p[1]).join(',');
+  if (dialFor !== key) {
+    dialFor = key;
+    let at = 0;
+    clock.style.background = `conic-gradient(${parts.map(([, len, color]) => { const from = at; at += len / length * 360; return `${color} ${from}deg ${at}deg`; }).join(', ')})`;
+  }
+  const now = ((game.dayTime || 0) % length + length) % length;
+  document.getElementById('day-hand').style.transform = `rotate(${now / length * 360 + 180}deg)`;
+  const phase = getDayPhase();
+  const face = document.getElementById('day-face');
+  const icon = phase === 'night' ? 'moon' : 'sun';
+  if (face.dataset.icon !== icon) { face.dataset.icon = icon; face.innerHTML = iconHtml(icon); }
+  let end = 0;
+  for (const [id, len] of parts) { end += len; if (id === phase) break; }
+  const next = parts[(parts.findIndex(p => p[0] === phase) + 1) % parts.length][0];
+  const left = Math.max(0, Math.ceil(end - now));
+  clock.title = t('daytime.clock', { now: t(`daytime.${phase}`), next: t(`daytime.${next}`).toLowerCase(), time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` });
+}
+
 function updateWave() {
+  updateDayClock();
   const left = Math.max(0, Math.ceil(game.waveTimer));
   document.getElementById('wave-num').innerText = String(game.waveNum);
   document.getElementById('wave-timer').innerText = Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
@@ -155,6 +187,36 @@ export function updateSeedHud() {
   }
 }
 
+// (#279) the drop-down made plainer: a thing there's none of is hidden (and a group with none of anything);
+// each resource says how much it's gone up or down in the last minute of play
+/** @type {{ t: number, stock: Object<string, number> }[]} */
+const samples = [];
+function updateResourcePanel() {
+  const now = game.pathTick / 60;
+  if (!samples.length || now - samples[samples.length - 1].t >= 10) {
+    samples.push({ t: now, stock: { ...stock } });
+    while (samples.length > 7) samples.shift();
+  }
+  if (!document.body.classList.contains('resources-open')) return;
+  const old = samples[0];
+  for (const em of document.querySelectorAll('#resources-hud .res-rate')) {
+    const id = /** @type {HTMLElement} */ (em).dataset.rate || '';
+    const span = now - old.t, change = span >= 20 ? Math.round(((stock[id] || 0) - (old.stock[id] || 0)) * 60 / span) : 0;
+    em.textContent = change ? `${change > 0 ? '+' : '−'}${Math.abs(change)}/${t('hud.perMinute')}` : '';
+    em.classList.toggle('down', change < 0);
+  }
+  for (const line of document.querySelectorAll('#resources-hud .res-line')) {
+    if (line.parentElement && line === line.parentElement.firstElementChild) continue; // (the base and the people, always)
+    let any = false;
+    for (const c of line.querySelectorAll('.res-chip')) {
+      const b = c.querySelector('b'), zero = !b || b.textContent === '0';
+      /** @type {HTMLElement} */ (c).hidden = zero;
+      if (!zero) any = true;
+    }
+    /** @type {HTMLElement} */ (line).hidden = !any;
+  }
+}
+
 // The stock's drop-down (#248: a drop-down of tiles that opened rows of their own was a menu in a menu in a
 // menu): the base and the population, then one line a group (GAME_CONFIG.resourceGroups) with its name and
 // every resource in it, an icon and a number each, all in sight at once
@@ -170,11 +232,12 @@ export function renderResourceTiles() {
     resourcesHud.appendChild(el);
     return el;
   };
-  const chip = (parent, icon, label, id) => {
+  // (#279) each with its name, and for a resource how it's changed in the last minute; none of it: hidden
+  const chip = (parent, icon, label, id, res = '') => {
     const c = document.createElement('span');
     c.className = 'res-chip';
     c.title = label;
-    c.innerHTML = `${icon ? iconHtml(icon) : ''} <b id="${id}">0</b>`;
+    c.innerHTML = `${icon ? iconHtml(icon) : ''} <b id="${id}">0</b> <small class="res-name">${escapeHtml(label)}</small>` + (res ? ` <em class="res-rate" data-rate="${res}"></em>` : '');
     parent.appendChild(c);
   };
   const top = line('');
@@ -190,7 +253,7 @@ export function renderResourceTiles() {
       // food, and what it's made of
       const resource = GAME_CONFIG.resources[members[0]];
       const row = line(resource.label, group.id);
-      chip(row, resource.icon, resource.label, resourceHudId(resource.id));
+      chip(row, resource.icon, resource.label, resourceHudId(resource.id), resource.id);
       for (const kind of Object.values(GAME_CONFIG[group.kinds])) chip(row, kind.icon, kind.label, `food-kind-${kind.id}-txt`);
       continue;
     }
@@ -202,7 +265,7 @@ export function renderResourceTiles() {
     }
     if (members.length === 1) { singles.push(GAME_CONFIG.resources[members[0]]); continue; }
     const row = line(group.label, group.id);
-    members.filter(id => isForPlayerFaction(GAME_CONFIG.resources[id])).forEach(id => chip(row, GAME_CONFIG.resources[id].icon, GAME_CONFIG.resources[id].label, resourceHudId(id)));
+    members.filter(id => isForPlayerFaction(GAME_CONFIG.resources[id])).forEach(id => chip(row, GAME_CONFIG.resources[id].icon, GAME_CONFIG.resources[id].label, resourceHudId(id), id));
     // (its total, as before, for whoever reads it)
     const total = document.createElement('b'); total.id = `group-${group.id}-txt`; total.hidden = true; row.appendChild(total);
   }
@@ -210,7 +273,7 @@ export function renderResourceTiles() {
   if (singles.length) {
     const row = line('');
     resourcesHud.insertBefore(row, resourcesHud.children[1] || null);
-    singles.forEach(r => chip(row, r.icon, r.label, resourceHudId(r.id)));
+    singles.forEach(r => chip(row, r.icon, r.label, resourceHudId(r.id), r.id));
   }
 }
 

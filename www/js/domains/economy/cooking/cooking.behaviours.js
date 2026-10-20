@@ -9,7 +9,7 @@ import { hasAxeTool } from '../../colony/equipment/index.js';
 import { playWorkSound } from '../../../app/index.js';
 import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards } from '../../colony/settlers/index.js';
+import { faceTowards, noteDay } from '../../colony/settlers/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -98,6 +98,7 @@ export function cook(s, tick) {
   if (fire.cookProgress >= 1) {
     fire.cookProgress = 0;
     playSound('sizzle', fire);
+    noteDay(s, 'cooked', 'cooked', 0.3); // (#279)
     fire.fuelLeft--;
     load.amount--;
     s.cooked = (s.cooked || 0) + cooking.makes;
