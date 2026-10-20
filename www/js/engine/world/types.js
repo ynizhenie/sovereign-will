@@ -83,6 +83,7 @@
  * @property {Point | null} [reliefSpot] where it's going to relieve itself
  * @property {boolean} [needsRelief] it has to go (#248)
  * @property {number} [reliefTimer] seconds it's been at it, at its spot
+ * @property {number} [relievingAt] the tick it was last at it (the censor, #298)
  * @property {Object<string, number>} [today]  what it did today, for its story by the fire (#279)
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
