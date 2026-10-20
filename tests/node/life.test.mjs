@@ -1,4 +1,4 @@
-// #248 (part four): meals, a smoke, paths, commanders: the game's logic, run in Node
+// #248 (part four): meals, paths, commanders: the game's logic, run in Node
 import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
@@ -6,11 +6,6 @@ import { sim } from './game.mjs';
 test('a hungry settler walks to the town hall and eats there; in a wave the meal waits (#248)', () => {
   expect(sim.eatAtStorage({})).toEqual({ ate: true, atHall: true, food: 9, stillWants: false });
   expect(sim.eatAtStorage({ wave: true })).toEqual({ ate: false, atHall: false, food: 10, stillWants: true });
-});
-
-test('a smoker rolls one from grass and lights it at a campfire, a farmer takes a stalk of ripe wheat; nothing used up, not again straight away (#248)', () => {
-  expect(sim.smoke({})).toEqual({ byGrass: true, byFire: true, smoking: true, resting: true, grassLeft: true });
-  expect(sim.smoke({ farmer: true })).toEqual({ byWheat: true, straw: true, resting: true, wheatLeft: true });
 });
 
 test('ground walked over and over in the base wears into a path, never out of it; left be, it fades (#248)', () => {

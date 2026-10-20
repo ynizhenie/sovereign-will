@@ -78,8 +78,7 @@ export function performAttack(attacker, targetX, targetY) {
     startSwing(attacker, 0.3);
   } else {
     const range = stats.range;
-    // a blade sharpened while idle (#199): its next blow that lands hits harder
-    const dmg = stats.damage * stats.multiplier * (attacker.sharpened ? GAME_CONFIG.idle.sharpenBonus : 1);
+    const dmg = stats.damage * stats.multiplier;
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
@@ -95,7 +94,6 @@ export function performAttack(attacker, targetX, targetY) {
     const toAim = target => Math.hypot(target.at.x - targetX, target.at.y - targetY);
     if (isBigBody(attacker)) struck.sort((a, b) => toAim(a) - toAim(b)).slice(0, GAME_CONFIG.combatAI.splashMax).forEach(target => target.hit());
     else if (struck.length > 0) struck.reduce((best, target) => (toAim(target) < toAim(best) ? target : best)).hit();
-    if (struck.length > 0) attacker.sharpened = false;
 
     attacker.attackCooldown = stats.cooldown;
     startSwing(attacker, Math.min(0.35, stats.cooldown * 0.8));

@@ -55,9 +55,6 @@
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)
- * @property {number} [smoking]     seconds left of its smoke (#248)
- * @property {number} [straw]       seconds left of the wheat stalk in its mouth (#248)
- * @property {number} [smokeRest]   seconds till it may have another
  * @property {{ resource: string, until: number } | null} [focus] what its foreman said to gather first (#248)
  * @property {Object | null} [captainTarget] the enemy its captain gave it (#248)
  * @property {number[]} [squadIds]   a commander's squad
@@ -84,15 +81,16 @@
  * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
  * @property {Point | null} [reliefSpot] where it's going to relieve itself
+ * @property {boolean} [needsRelief] it has to go (#248)
+ * @property {number} [reliefTimer] seconds it's been at it, at its spot
  * @property {Object<string, number>} [today]  what it did today, for its story by the fire (#279)
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
- * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
  * @property {number | null} [guardingId]  the gatherer it guards (escortGatherers)
- * @property {boolean} [sharpened]   its blade sharpened: the next blow that lands hits harder
  * @property {Object | null} [dungTarget]  the pile of dung it's going for (cleanDung)
  * @property {boolean} [hasArmor]
  * @property {number} [usingCan]     seconds left of watering with the can
