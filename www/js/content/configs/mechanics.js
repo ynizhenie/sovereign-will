@@ -97,7 +97,7 @@ export const mechanicsConfig = {
   // train at a dummy (their damage up trainPerSecond of itself a second, up to trainMax); a soldier guards a
   // gatherer more than guardBeyondTiles past the base's edge, keeping within guardRange px; an idle
   // necromancer takes `bones` bones from a corpse in boneSeconds
-  idle: { seconds: [8, 16], campfireRing: 34, campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
+  idle: { seconds: [8, 16], campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
     trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
@@ -124,7 +124,8 @@ export const mechanicsConfig = {
   // fetches up to `batch` raw pieces, cooks each in `seconds` into `makes` food, and carries the food home.
   // Under lowFood meals per settler plus hireReserve (enough to hire a giant), any worker cooks, tool in
   // hand or in a wave too
-  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, firewood: 5 }, lowFood: 2, hireReserve: 30,
+  // (#298) a lit campfire burns its fuel down by itself, one unit every fuelSeconds, cooking or not
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, firewood: 5 }, fuelSeconds: 6, lowFood: 2, hireReserve: 30,
     dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
 
   // demons eating a corpse to heal

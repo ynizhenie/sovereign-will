@@ -219,7 +219,7 @@ export function drawBuildings() {
       }
 
     } else if (b.type === 'campfire') {
-      // crossed logs, a flame while someone cooks
+      // crossed logs, a flame while it burns (#298: while it has fuel)
       ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + 8); ctx.lineTo(b.x + 10, b.y - 2); ctx.moveTo(b.x + 10, b.y + 8); ctx.lineTo(b.x - 10, b.y - 2); ctx.stroke();
       ctx.fillStyle = '#7f8c8d';

@@ -25,6 +25,8 @@ export function hasWorkingShield(s) {
 export const GEAR_RULES = {
   backpack: { canWear: s => s.role !== 'archer', first: s => s.role === 'worker' && s.tool !== 'rod' },
   armor: { canWear: () => true, first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
+  // (#298) not over iron
+  leather_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
@@ -34,8 +36,14 @@ export const GEAR_RULES = {
   flute: { canWear: () => true, first: s => s.role === 'worker' }
 };
 
+// (#298) armour, of a kind: the gear a unit's `armor` ('iron', 'leather') is, or null
+export function armorOf(unit) {
+  return (unit && unit.armor && Object.values(GAME_CONFIG.gear).find(g => g.armorKind === unit.armor)) || null;
+}
+export const isArmorGear = id => !!(GAME_CONFIG.gear[id] && GAME_CONFIG.gear[id].armorKind);
+
 export function hasGear(s, id) {
-  return id === 'armor' ? s.armor === 'iron' : !!s[id];
+  return isArmorGear(id) ? s.armor === GAME_CONFIG.gear[id].armorKind : !!s[id];
 }
 
 // Pay for a piece of gear and send a settler to pick it up at the town hall: the selected one if it can
@@ -143,11 +151,13 @@ export function orderGearOff(id, keep = false) {
 
 // At the town hall (see equip()): put a piece on, or take it off and put its cost back in the stock
 export function putOnGear(s, id) {
-  if (id === 'armor') {
-    s.armor = 'iron';
-    const bonus = GAME_CONFIG.gear.armor.hpBonus;
-    s.maxHp = (s.maxHp || 100) + bonus;
-    s.hp += bonus;
+  if (isArmorGear(id)) {
+    const old = armorOf(s);
+    if (old) takeOffGear(s, old.id, true); // (the other kind off first, into the armory)
+    const def = GAME_CONFIG.gear[id];
+    s.armor = def.armorKind;
+    s.maxHp = (s.maxHp || 100) + def.hpBonus;
+    s.hp += def.hpBonus;
   } else {
     s[id] = true;
   }
@@ -156,9 +166,9 @@ export function putOnGear(s, id) {
 // keep (#248): whole into the armory; otherwise taken apart, its cost back in the stock
 export function takeOffGear(s, id, keep = false) {
   if (!hasGear(s, id)) return;
-  if (id === 'armor') {
+  if (isArmorGear(id)) {
     s.armor = null;
-    s.maxHp -= GAME_CONFIG.gear.armor.hpBonus;
+    s.maxHp -= GAME_CONFIG.gear[id].hpBonus;
     s.hp = Math.min(s.hp, s.maxHp);
   } else {
     s[id] = false;
@@ -218,7 +228,7 @@ export function refundEquipment(settler, { weapon = true, tool = true, armor = f
     if (keep) game.armory[`${category}:${id}`] = (game.armory[`${category}:${id}`] || 0) + 1;
     else addResources(item.cost);
   }
-  if (armor && settler.armor === 'iron') takeOffGear(settler, 'armor', keep);
+  if (armor && armorOf(settler)) takeOffGear(settler, armorOf(settler).id, keep);
   if (quiver && settler.quiver) {
     stock.leather += 5;
     stock.arrows += settler.arrows || 0;

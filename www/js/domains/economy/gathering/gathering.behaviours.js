@@ -53,6 +53,7 @@ export function canSettlerHarvest(s, r, tick) {
   // gathered by hand: settlers without a tool, or anyone if the player marked it
   if (kind === 'farm' && !(r.growth >= 100)) return false;
   if (kind === 'farm' && hasToolFamily(s.tool, 'hoe')) return true; // farmers harvest ripe wheat
+  if (kind === 'log' && hasToolFamily(s.tool, 'axe')) return true; // a woodcutter carries the logs it cut (#298)
   let hasPriority = (r.priority || 0) > 0;
   return s.tool === 'none' || hasPriority;
 }
@@ -92,6 +93,7 @@ export function pickResourceToHarvest(s, tick) {
     tick.workerAssignments.set(pick.r, workers(pick.r) + 1);
   }
   s.markTarget = assignedRes;
+  if (!assignedRes && s.drowsy) return null; // (up at night for what was marked: only that, #298)
 
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building

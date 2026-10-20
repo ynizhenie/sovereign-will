@@ -12,7 +12,7 @@ export function getPlacedResources(includeGrowingTrees = true) {
   return [
     ...(includeGrowingTrees ? game.trees : game.trees.filter(tree => !tree.isGrowing)),
     ...game.cacti, ...game.boulders, ...game.grassList, ...game.berryBushes,
-    ...game.sticks, ...game.pebbles, ...game.loot, ...game.ironOres, ...game.coalOres, ...game.naturalRocks
+    ...game.sticks, ...game.pebbles, ...game.logs, ...game.loot, ...game.ironOres, ...game.coalOres, ...game.naturalRocks
   ];
 }
 
@@ -48,25 +48,24 @@ export function addMapResource(kind, x, y) {
 export function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
   const factor = resource.fertilized ? GAME_CONFIG.fertilizer.yieldFactor : 1;
-  // (#279) a tree felled falls first, away from its cutter, and gives part of its wood; the log is cut up next
+  // (#279) a tree felled falls first, away from its cutter; (#298) nothing in hand yet: the log is cut up next
   const two = def.fellInTwo;
   if (two && !resource.fallen) {
-    for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, Math.round(amount * two.first) * factor);
-    // (not a load of its own: the log's still to be cut, the whole tree's one load)
-    if (settler.carrying) settler.carrying.loads = settler.carrying.loads || 0;
-    noteDay(settler, 'gathered');
     Object.assign(resource, { fallen: true, fallAt: game.pathTick, fallAngle: Math.atan2(resource.y - settler.y, resource.x - settler.x), applesReady: false });
     resource.hp = def.hp * two.logHp;
     resource.harvestProgress = 0;
     playSound('collapse', resource);
     return;
   }
-  const share = two ? 1 - Math.round((def.yield.wood || 0) * two.first) / (def.yield.wood || 1) : 1; // (the log: what's left)
-  for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, Math.round(amount * share) * factor);
+  // (#298) the log cut up: its pieces lie along where it fell, each its share of the wood, to be carried off
+  if (two) cutIntoLogs(resource, def, two, factor);
+  else for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
   // loot's things are carried to a storage whole, into the armory there (#210; #261: not at once)
   for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
-  addCarryLoad(settler);
-  noteDay(settler, 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279)
+  if (!two) {
+    addCarryLoad(settler);
+    noteDay(settler, 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279)
+  }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {
     if (rand() < chance) addResources({ [item]: 1 });
@@ -76,6 +75,18 @@ export function finishHarvest(settler, resource, kind) {
   if (index !== -1) list.splice(index, 1);
   if (def.regrow) scheduleRespawn(kind, resource.x, resource.y);
   if (def.clearsPath) invalidateAllPaths();
+}
+
+// The pieces of a felled tree's log (#298): its wood shared out in whole pieces (3 into 2: 2 and 1), laid along
+// the way it fell
+function cutIntoLogs(tree, def, two, factor) {
+  const total = Math.round((((tree.yield || def.yield || {}).wood) || 0) * factor);
+  const n = Math.max(1, Math.min(two.pieces, total));
+  const side = Math.cos(tree.fallAngle || 0) >= 0 ? 1 : -1;
+  for (let i = 0; i < n; i++) {
+    const wood = Math.floor(total / n) + (i < total % n ? 1 : 0);
+    game.logs.push({ x: tree.x + side * (8 + i * 12), y: tree.y + 10, hp: 1, maxHp: 1, priority: 0, yield: { wood }, side });
+  }
 }
 
 // ---- Delayed regrowth

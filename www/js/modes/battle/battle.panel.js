@@ -1,18 +1,21 @@
 // The battle's panel: categories, factions, what to place, armour and shield; its buttons
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, showPlacing, toggleSheet } from '../../ui/index.js';
+import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
 import { enemyFactionOf, enemyStats } from '../../domains/conflict/waves/index.js';
 import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
-import { battle, clearBattleSide, setBattleDifficulty, startBattleMode } from './battle.setup.js';
+import { battle, battleArmor, clearBattleSide, setBattleDifficulty, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield'} */ (b.dataset.battleGear)]));
+  // (#298) the armour button says which: leather, iron, or just "armour" off
+  const armourButton = document.querySelector('[data-battle-gear="armor"]');
+  if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.armor'));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
   document.querySelectorAll('[data-battle-auto]').forEach(b => b.classList.toggle('on', (b.dataset.battleAuto === 'on') === battle.auto));
   document.getElementById('battle-auto').classList.toggle('on', battle.auto);
@@ -69,13 +72,15 @@ function presetStats(preset) {
     const weapon = getDefinition('weapons', def.weapon), tool = def.tool && getDefinition('tools', def.tool);
     const look = def.necromancer ? 'necromancer' : kind && kind.icon;
     const stats = enemyStats(preset.enemy);
-    if (battle.armor) stats.hp += GAME_CONFIG.gear.armor.hpBonus; // (#279)
+    const armour = battleArmor(battle.armor);
+    if (armour) stats.hp += armour.hpBonus; // (#279; #298 its kind's)
     return { icons: [look, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...stats };
   }
   const kind = GAME_CONFIG.settlerTypes[preset.type], weapon = getDefinition('weapons', preset.weapon);
   const tool = preset.tool && getDefinition('tools', preset.tool);
   const hit = preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
-  const hp = kind.hp + (battle.armor && !isBowWeapon(preset.weapon) ? GAME_CONFIG.gear.armor.hpBonus : 0);
+  const armour = battleArmor(battle.armor);
+  const hp = kind.hp + (armour && !isBowWeapon(preset.weapon) ? armour.hpBonus : 0);
   return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp, damage: Math.round(hit * kind.damageMultiplier) };
 }
 
@@ -123,7 +128,13 @@ export function initBattlePanel() {
     setBattleCategory(b.dataset.battleCategory);
     toggleSheet('battle', b.dataset.battleCategory);
   }));
-  document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => { const gear = /** @type {'armor' | 'shield'} */ (b.dataset.battleGear); battle[gear] = !battle[gear]; renderBattlePanel(); }));
+  // (the armour: off, leather, iron, off again; the shield: on or off, #298)
+  document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
+    const gear = /** @type {'armor' | 'shield'} */ (b.dataset.battleGear);
+    if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
+    else battle.shield = !battle.shield;
+    renderBattlePanel();
+  }));
   // the battle's settings (#255): the difficulty, the auto battle (also by Fight! once it's on)
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => onTap(b, () => { setBattleDifficulty(b.dataset.battleDifficulty); renderBattlePanel(); }));
   document.querySelectorAll('[data-battle-auto]').forEach(b => onTap(b, () => { battle.auto = b.dataset.battleAuto === 'on'; renderBattlePanel(); }));

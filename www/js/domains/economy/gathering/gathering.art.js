@@ -161,6 +161,17 @@ export function drawStickArt(st) {
   ctx.lineCap = 'butt';
 }
 
+// A piece of a felled tree's log (#298): a short length of trunk, bark lines, its cut ends pale
+export function drawLogArt(lg) {
+  const x = lg.x, y = lg.y, w = 11;
+  groundShadow(x, y + 3, 7, 2.5);
+  ctx.fillStyle = '#5d4037'; ctx.fillRect(x - w / 2, y - 2.5, w, 5);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(x - w / 2, y + 1, w, 1.5);
+  ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 0.7;
+  for (const k of [-2, 2]) { ctx.beginPath(); ctx.moveTo(x + k, y - 2); ctx.lineTo(x + k + 1.5, y + 1); ctx.stroke(); }
+  for (const ex of [x - w / 2, x + w / 2]) { ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(ex, y, 1.4, 2.5, 0, 0, Math.PI * 2); ctx.fill(); }
+}
+
 // Pebbles: two or three small stones, lit on top
 export function drawPebblesArt(pe) {
   const h = variant(pe), x = pe.x, y = pe.y;

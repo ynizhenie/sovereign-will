@@ -6,7 +6,7 @@ import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall
 import { getPlayerFaction } from '../../factions/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { takeFishingBait } from '../../economy/fishing/index.js';
-import { deliveryStorage, findStorageWithRoom, storeInto } from './storage.stores.js';
+import { deliveryStorage, findStorageWithRoom, roomIn, storeInto } from './storage.stores.js';
 import { playSound } from '../../../app/index.js';
 
 // Carry whatever the settler holds to the town hall and add it to the stock. With room for more loads
@@ -29,7 +29,12 @@ export function goDeliver(s, tick) {
   // a pile carried in (#248): to a storage with room
   // (#279) a load of one kind to its own storage (with more than one), else the nearest with room
   const t = s.carrying.type, one = s.carrying.items ? null : GAME_CONFIG.resources[t] ? t : isFoodKind(t) ? 'food' : null;
-  const storage = deliveryStorage(s, one) || findNearestStorage(s);
+  // (#298) the one it set off for, while it has room: chosen afresh each step, halfway between two it turned
+  // back and forth and went nowhere (a mixed load: the nearest with room)
+  const kept = storageChoice.get(s);
+  const storage = kept && game.pathTick - kept.tick <= 60 && getStorages().includes(kept.storage) && roomIn(kept.storage) >= 1
+    ? kept.storage : deliveryStorage(s, one) || findNearestStorage(s);
+  storageChoice.set(s, { storage, tick: game.pathTick });
   if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return; }
   if (s.carrying.counted) { storeInto(storage, s.carrying.type, s.carrying.amount); s.carrying = null; return; } // (in the stock already)
   const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot

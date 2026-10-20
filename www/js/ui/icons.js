@@ -418,6 +418,13 @@ export const ICONS = {
     icFill(c, '#bdc3c7', [[13, 6], [19, 6], [16, 13]]);
     icLine(c, '#707b7c', 1.2, [[16, 13], [16, 27]]);
   },
+  // (#298) leather armour: a brown jerkin, stitched, studs
+  leather_armor: c => {
+    icFill(c, '#8d5a35', [[9, 4], [13, 6], [19, 6], [23, 4], [29, 9], [25, 14], [25, 28], [7, 28], [7, 14], [3, 9]]);
+    icFill(c, '#a9714a', [[13, 6], [19, 6], [16, 12]]);
+    icLine(c, '#d4a373', 1, [[9, 17], [23, 17]]);
+    for (const [x, y] of [[11, 22], [21, 22], [16, 25]]) icRect(c, '#d5dbdb', x, y, 1.6, 1.6);
+  },
   wateringCan: c => {
     icRound(c, '#7fa7c9', 5, 13, 16, 13, 2);
     icRing(c, '#4f7a9e', 2.5, 13, 13, 5, Math.PI, 0);
