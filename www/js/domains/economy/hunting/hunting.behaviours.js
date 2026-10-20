@@ -20,7 +20,7 @@ export function huntBoar(s, boar, tick) {
     } else {
       // butchered where it lies, the blade going
       boar.collector = s;
-      s.working = 0.1;
+      s.working = 0.1; s.workKind = 'butcher'; // (a knife, #279)
       faceTowards(s, boar.x, boar.y);
       boar.butcher = (boar.butcher || 0) + dt / GAME_CONFIG.mapResources.boar.butcherSeconds;
       playWorkSound(s, 'chop', 0.4);
