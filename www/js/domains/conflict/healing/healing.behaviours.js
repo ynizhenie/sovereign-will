@@ -89,6 +89,7 @@ export function treatWounded(s, tick) {
     const d = Math.hypot(other.x - s.x, other.y - s.y) + (other.role === 'worker' ? 10000 : 0); // soldiers first
     if (d < best) { best = d; patient = other; }
   }
+  if (!patient && s.hp < s.maxHp && !tick.patients.has(s)) patient = s; // itself last of all (#279)
   if (!patient) { s.healTimer = 0; return false; }
   s.patrolTarget = null;
   // an empty bag gets filled at the nearest storage first: potions, then herbs for the room left
@@ -99,12 +100,12 @@ export function treatWounded(s, tick) {
     });
   }
   tick.patients.add(patient);
-  if (Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
+  if (patient !== s && Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
     moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
   } else {
     s.healTimer = (s.healTimer || 0) + tick.dt;
     s.working = 0.1;
-    faceTowards(s, patient.x, patient.y);
+    if (patient !== s) faceTowards(s, patient.x, patient.y);
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;
       const potion = s.bagPotions > 0;

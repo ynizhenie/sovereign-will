@@ -277,12 +277,15 @@ export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
   assignTowerArchers();
 
+  // one ordered to work at night goes at half its pace (#279), the rest of its tick as anyone's
+  let drowsyTick = null;
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
+    const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
-      if (behaviour(s, settlerTick)) {
+      if (behaviour(s, tick)) {
         s.isIdle = behaviour === patrol;
         if (!s.isIdle) { s.idle = null; s.swaying = false; }
         // what it's doing, for the selected settler's info (a pastime: its own text)
