@@ -64,7 +64,9 @@ export const equipmentConfig = {
     // gathers first), and to swap its tool for one from the armory that does it. A soldier with a banner is a
     // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
     whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', cost: { wood: 2, herbs: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45 } },
-    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, herbs: 2 }, commands: { squad: 5, everySeconds: 3, reach: 200, armSeconds: 25 } }
+    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, herbs: 2 }, commands: { squad: 5, everySeconds: 3, reach: 200, armSeconds: 25 } },
+    // (#279) a wooden flute in its side slot: sitting by a campfire it plays one of the flute tunes (music.js)
+    flute: { id: 'flute', icon: 'flute', madeBy: 'hand', cost: { wood: 3 } }
   },
   // what a foreman counts as needed most: the one furthest under its amount here (food only for those who
   // eat; ore with a smelter)

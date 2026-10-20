@@ -42,6 +42,8 @@
  * @property {boolean} [wateringCan]
  * @property {boolean} [whistle]     a foreman's (#248)
  * @property {boolean} [banner]      a captain's (#248)
+ * @property {boolean} [flute]       a wooden flute in its side slot (#279)
+ * @property {number} [playingFlute] the tick it last played it, by a campfire
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
