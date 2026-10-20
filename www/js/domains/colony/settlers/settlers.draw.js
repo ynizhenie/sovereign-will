@@ -6,7 +6,8 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
-import { isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
+import { isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
+import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { getEnemyColor, getPlayerFaction, getSettlerColor } from '../../factions/index.js';
@@ -29,7 +30,7 @@ export function tickAnimation(unit, dt) {
   }
   unit.lastX = unit.x; unit.lastY = unit.y;
   if (unit.swingT > 0) unit.swingT = Math.max(0, unit.swingT - dt);
-  if (unit.working > 0) unit.working = Math.max(0, unit.working - dt);
+  if (unit.working > 0) { unit.working = Math.max(0, unit.working - dt); if (!unit.working) unit.workKind = null; }
   if (unit.usingCan > 0) unit.usingCan = Math.max(0, unit.usingCan - dt);
   if (unit.bloodAge !== undefined) unit.bloodAge += dt;
   if (unit.weaponBloodAge !== undefined) unit.weaponBloodAge += dt;
@@ -41,27 +42,52 @@ export function faceTowards(unit, x, y) {
 }
 
 // How the held weapon or tool is posed right now: a rotation around the body and a push forward.
-// A strike (swingT): swords, clubs, fists and tools sweep an arc, spears thrust, bows recoil. Working
-// (chopping, mining, planting...): a steady chop in time with the game's ticks, so replays look the same.
+// A strike (swingT), by the weapon (#279): a sword slashes across, a club or a tool comes down from overhead
+// gathering speed, a spear thrusts, a bow recoils; bare hands: a human punches, a demon rakes with its claws, an
+// undead swipes slow and wide. A big one's blows are wider and longer. Working: a steady beat in time with the
+// game's ticks, by the work: a hammer's (building, making), a knife's sawing (butchering), a hand reaching into
+// a bush (berries), an axe's or a pickaxe's chop, a hoe's dig, a rod's bob.
 export function getHeldItemPose(unit) {
   const item = unit.weapon && unit.weapon !== 'fist' ? unit.weapon : (unit.tool && unit.tool !== 'none' ? unit.tool : 'fist');
+  const big = (unit.visualRadius || unit.radius || 11) > 14 ? 1.3 : 1;
   if (unit.swingT > 0) {
     const p = 1 - unit.swingT / (unit.swingLen || 0.3);
     const arc = Math.sin(Math.PI * p);
-    if (isBowWeapon(item)) return { angle: 0, push: -3 * arc };
-    if (isSpearWeapon(item)) return { angle: 0, push: 8 * arc };
-    return { angle: -0.9 + 1.8 * p, push: 0 };
+    if (isBowWeapon(item)) return { angle: 0.05 * arc, push: -4 * arc };
+    if (isSpearWeapon(item)) return { angle: 0.08 * arc * big, push: 10 * arc * big };
+    if (isSwordWeapon(item)) return { angle: (-1.1 + 2.2 * p) * big, push: 2 * arc };
+    if (item === 'fist') {
+      const kin = unitKin(unit);
+      if (kin === 'demons') return { angle: (-1.3 + 2.6 * p) * big, push: 3 * arc }; // (claws)
+      if (kin === 'undead') return { angle: (-0.7 + 1.4 * p) * big, push: 4 * arc }; // (a slow swipe)
+      return { angle: 0.15 * arc, push: 7 * arc * big }; // (a punch)
+    }
+    // a club, or a tool for a weapon: overhead, faster as it comes down
+    return { angle: (-1.6 + 2.3 * p * p) * big, push: 3 * arc };
   }
   if (unit.working > 0) {
     const beat = Math.sin(game.pathTick * 0.3);
+    if (unit.workKind === 'build' || isCrafting(unit)) return { angle: -0.9 + 0.9 * Math.abs(beat), push: 1 };
+    if (unit.workKind === 'butcher') return { angle: 0.35, push: 4 + 3 * beat };
+    if (unit.workKind === 'pick') return { angle: 0.2 * beat, push: 6 + 4 * Math.abs(beat) };
     if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
     if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
+    if (item === 'hoe') return { angle: 0.4 * beat + 0.2, push: 2 + 2 * beat };
     // a blade (butchering a carcass): it cuts into what's in front, not chops at it like an axe
     if (isSwordWeapon(item) || isSpearWeapon(item)) return { angle: 0.15 * beat, push: 3 + 3 * beat };
-    return { angle: 0.7 * beat - 0.2, push: 0 };
+    return { angle: 0.8 * beat - 0.3, push: 0 };
   }
   return { angle: 0, push: 0 };
 }
+
+// Whose kind of body: a settler's faction, an enemy's by its kind
+function unitKin(unit) {
+  if (unit.enemyKey) return unit.enemyKey.startsWith('demon_') ? 'demons' : unit.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
+  return game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
+}
+
+// How big what it holds is drawn: as the hand holding it (a big one's bigger)
+export const itemScale = unit => Math.max(1, Math.min(1.45, (unit.visualRadius || unit.radius || 11) / 11));
 
 // The held item points where the unit faces (faceTowards), posed on top of that; held in the right hand
 // at the body's side, not coming out of its middle
@@ -110,14 +136,6 @@ function drawCarriedInHands(s) {
   }
   const known = GAME_CONFIG.resources[type] || GAME_CONFIG.foodKinds[type];
   drawIcon(ctx, type === 'bundle' ? 'bundle' : type.startsWith('armory:') ? getResourceIconName(type) : (known ? known.icon : 'wheat'), x, y, 12);
-}
-
-// Eating (#248): its food held up to its face, raised and lowered a bite at a time, a crumb now and then
-function drawEating(s) {
-  const f = s.facing || 0, bite = Math.abs(Math.sin(performance.now() / 220 + s.id));
-  const r = s.visualRadius * (0.55 + 0.25 * bite);
-  drawIcon(ctx, s.eating.icon, Math.cos(f) * r, Math.sin(f) * r, 10);
-  if (bite < 0.15) { ctx.fillStyle = '#d4a373'; ctx.fillRect(Math.cos(f) * r + 3, Math.sin(f) * r + 5, 2, 2); }
 }
 
 // A smoke (white, its end glowing) or a wheat stalk (long, yellow) at its mouth, pointing out ahead (#248)
@@ -174,16 +192,6 @@ function drawSleepZs(x, y) {
   ctx.globalAlpha = 1;
 }
 
-// A hammer going up and down in its hand while it makes a thing
-function drawCraftHammer(s) {
-  const beat = Math.abs(Math.sin(performance.now() / 160 + s.id));
-  ctx.save();
-  ctx.rotate((s.facing || 0) - 0.9 + beat * 0.9);
-  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(4, -1.5, 14, 3);
-  ctx.fillStyle = '#7f8c8d'; ctx.fillRect(15, -5, 5, 10);
-  ctx.restore();
-}
-
 // The thing being made, on a little anvil in front of it, and how far along it is
 function drawWorkpiece(s) {
   const f = s.facing || 0;
@@ -212,7 +220,7 @@ function handAt(unit, r) {
 /**
  * The figure round (x, y), r its old circle's radius.
  * @param {any} unit
- * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean }} o
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number } }} o
  */
 export function drawFigure(unit, o) {
   const { x, y, r } = o;
@@ -231,7 +239,7 @@ export function drawFigure(unit, o) {
   ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
   // arms: the right to its hand, the left down its side (or out to its shield)
   ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
-  const hand = o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 };
+  const hand = o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
   const right = hand.x >= 0 ? 1 : -1;
   ctx.beginPath(); ctx.moveTo(right * r * 0.5, -r * 0.3); ctx.lineTo(hand.x, hand.y); ctx.stroke();
   const other = o.shield ? { x: -r + 1, y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
@@ -315,7 +323,7 @@ export function drawSideItems(s) {
 // The held item across the back: turned square to where the unit faces, behind it
 export function applyBackPose(unit) {
   ctx.rotate((unit.facing || 0) + Math.PI / 2);
-  ctx.translate(-15, unit.visualRadius * 0.7);
+  ctx.translate(-10, unit.visualRadius * 0.7); // (its grip a little off the middle of its back, #279)
 }
 
 // Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
@@ -335,33 +343,6 @@ export function drawShield(radius) {
   ctx.fillStyle = '#8e5a2b'; ctx.beginPath(); ctx.arc(-radius + 1, 3, 6, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.arc(-radius + 1, 3, 1.8, 0, Math.PI * 2); ctx.fill();
-}
-
-// A medic's bag in hand: leather with a small green cross; the green inside rises with its herbs (full, 0..1)
-export function drawMedbag(full) {
-  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(7, -5, 10, 10);
-  ctx.fillStyle = '#27ae60'; ctx.fillRect(8, 4 - 8 * full, 8, 8 * full);
-  ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(7, -5, 10, 10);
-  ctx.fillStyle = '#2ecc71'; ctx.fillRect(11, -4, 2, 5); ctx.fillRect(9.5, -2.5, 5, 2);
-}
-
-export function drawHeldWeapon(weapon) {
-  if (isSwordWeapon(weapon)) {
-    ctx.fillStyle = weapon === 'iron_sword' ? '#b0bec5' : '#e0e0e0'; ctx.fillRect(8, -2, 14, 4);
-    ctx.fillStyle = '#f39c12'; ctx.fillRect(6, -4, 2, 8);
-  } else if (isClubWeapon(weapon)) {
-    ctx.fillStyle = '#7a4b21'; ctx.fillRect(6, -2, 8, 4);
-    ctx.fillRect(14, -3, 6, 6);
-  } else if (isSpearWeapon(weapon)) {
-    ctx.fillStyle = weapon === 'iron_spear' ? '#7f8c8d' : '#8e5a2b'; ctx.fillRect(6, -1, 22, 3);
-    ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(28, -3); ctx.lineTo(35, 0); ctx.lineTo(28, 3); ctx.fill();
-  } else if (weapon === 'bow') {
-    ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(10, 0, 10, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-
-  } else {
-    return false;
-  }
-  return true;
 }
 
 // A watering can: a tin body, a handle on top and a long spout forward; `scale` for carrying it small
@@ -407,6 +388,13 @@ export function drawDung() {
 }
 
 // Settlers: body, what they hold and carry, armour, shield, quiver, rings, health
+// Eating (#248; #279): its food in its hand, brought up to its mouth and down again a bite at a time
+function eatingAt(s) {
+  const f = s.facing || 0, r = s.visualRadius, bite = Math.abs(Math.sin(performance.now() / 380 + s.id));
+  const rest = { x: Math.cos(f) * r * 0.6, y: Math.sin(f) * r * 0.5 + r * 0.25 }, mouth = { x: Math.cos(f) * r * 0.3, y: -r * 0.72 };
+  return { x: rest.x + (mouth.x - rest.x) * bite, y: rest.y + (mouth.y - rest.y) * bite, bite };
+}
+
 export function drawSettlers() {
   game.settlers.forEach(s => {
     // an idle undead sways where it stands (#199): drawn a little to and fro
@@ -422,7 +410,8 @@ export function drawSettlers() {
     const faction = game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     if (s.asleep) ctx.globalAlpha = 0.85;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield });
+    const food = s.eating && !s.asleep ? eatingAt(s) : null;
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined });
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);
@@ -438,36 +427,29 @@ export function drawSettlers() {
     // (#279) fighting with a torch in hand and a weapon or tool: the torch goes to its side, it fights with that
     const torchAside = s.torchInHand && game.pathTick - (s.struckAt ?? -1e9) < 150 && (s.weapon !== 'fist' || s.tool !== 'none');
     const torchHeld = s.torchInHand && !torchAside;
-    if (isResting(s) || inHands || crafting || s.eating || torchHeld || s.asleep) applyBackPose(s);
+    // (#279) at work with a hammer (building, making) or a knife (butchering, with no blade of its own), or
+    // reaching into a bush: what it holds goes on its back, the hand's for the work
+    const k = itemScale(s);
+    const blade = isSwordWeapon(s.weapon) || isSpearWeapon(s.weapon);
+    const workTool = s.asleep ? null : crafting || ((s.working || 0) > 0 && s.workKind === 'build') ? 'hammer' : (s.working || 0) > 0 && s.workKind === 'butcher' && !blade ? 'knife' : null;
+    const picking = (s.working || 0) > 0 && s.workKind === 'pick';
+    if (isResting(s) || inHands || s.eating || torchHeld || s.asleep || workTool || picking) applyBackPose(s);
     else applyHeldItemPose(s);
     if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
-    } else if (!drawHeldWeapon(s.weapon)) {
-    if (s.tool === 'axe' || s.tool === 'iron_axe') {
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
-      ctx.fillStyle = s.tool === 'iron_axe' ? '#cfd8dc' : '#7f8c8d'; ctx.fillRect(16, -5, 5, 10);
-    } else if (s.tool === 'pickaxe' || s.tool === 'iron_pickaxe') {
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 12, 3);
-      ctx.fillStyle = s.tool === 'iron_pickaxe' ? '#cfd8dc' : '#7f8c8d'; ctx.beginPath(); ctx.arc(18, 0, 7, -Math.PI/2, Math.PI/2); ctx.fill();
-    } else if (s.tool === 'rod') {
-      ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(22, -10); ctx.stroke();
-    } else if (s.tool === 'medbag') {
-      drawMedbag(Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
-    } else if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) {
-      drawWateringCan(12, 0, 1); // watering: the can in hand (the hoe goes on its back, below)
-    } else if (s.tool === 'hoe') {
-      // a long handle with a flat blade turned down at the end
-      ctx.fillStyle = '#8e5a2b'; ctx.fillRect(6, -1, 15, 2);
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(19, -1, 3, 7);
-    }
+    } else if (!drawHeldWeapon(s.weapon, k)) {
+      if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
+      else drawHeldTool(s.tool || 'none', k, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
     }
     drawWeaponBlood(s);
     ctx.restore(); // pose only moves the held item
     if (inHands) drawCarriedInHands(s);
-    if (crafting) drawCraftHammer(s);
+    if (workTool) { ctx.save(); applyHeldItemPose(s); drawWorkTool(workTool, k); ctx.restore(); }
+    // a berry in its hand as it draws it back from the bush (#279)
+    if (picking && Math.sin(game.pathTick * 0.3) < -0.3) { ctx.save(); applyHeldItemPose(s); ctx.fillStyle = '#5b6ee1'; ctx.beginPath(); ctx.arc(1, 0, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     if (torchHeld && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
     else if (torchAside && !s.asleep) drawSideTorch(s.facing, s.visualRadius);
-    if (s.eating) drawEating(s);
+    if (food && s.eating) { drawIcon(ctx, s.eating.icon, food.x, food.y - 2, 9); if (food.bite > 0.95) { ctx.fillStyle = '#d4a373'; ctx.fillRect(food.x + 3, food.y + 3, 2, 2); } }
     else if ((s.smoking || 0) > 0 || (s.straw || 0) > 0) drawInMouth(s);
     if ((s.armor === 'iron' || s.hasArmor) && !s.asleep) drawArmor(r);
     if (s.shield && !s.asleep) drawShield(r);

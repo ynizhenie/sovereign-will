@@ -8,9 +8,11 @@ import { updateBlightCache } from './undead.rules.js';
 
 // A necromancer's staff, a pale purple orb at its top
 export function drawStaff() {
-  ctx.fillStyle = '#6d4520'; ctx.fillRect(4, -1, 20, 3);
-  ctx.fillStyle = '#bb8fce'; ctx.beginPath(); ctx.arc(25, 0, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#e8daef'; ctx.beginPath(); ctx.arc(24, -1, 1.5, 0, Math.PI * 2); ctx.fill();
+  // held a third of the way up (#279: from the hand, not floating past it)
+  ctx.fillStyle = '#6d4520'; ctx.fillRect(-7, -1.2, 26, 2.4);
+  ctx.fillStyle = '#4a2f17'; ctx.fillRect(17, -2, 2, 4);
+  ctx.fillStyle = '#bb8fce'; ctx.beginPath(); ctx.arc(21, 0, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e8daef'; ctx.beginPath(); ctx.arc(20, -1, 1.5, 0, Math.PI * 2); ctx.fill();
 }
 
 // A necromancer raising a corpse from afar: a wavering dark purple thread from it to the corpse (#203)
