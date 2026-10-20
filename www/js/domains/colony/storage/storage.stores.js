@@ -188,8 +188,8 @@ function takeOff(id, amount, storages) {
 
 // A settler with nothing to do carries a pile into a storage with room: up to carryMaterials of it, already
 // counted in the stock (`counted`: goDeliver only moves it in)
-export function haulPiles(s, tick) {
-  if (s.role !== 'worker' || s.isPossessed || s.carrying || tick.isWaveActive || (!s.wasIdle && !s.pileTarget && !s.sortJob) || game.gameMode !== 'endless') { s.pileTarget = null; s.sortJob = null; return false; }
+export function haulPiles(s, tick, chosen = false) {
+  if (s.role !== 'worker' || s.isPossessed || s.carrying || tick.isWaveActive || (!chosen && !s.wasIdle && !s.pileTarget && !s.sortJob) || game.gameMode !== 'endless') { s.pileTarget = null; s.sortJob = null; return false; }
   let pile = s.pileTarget && game.piles.includes(s.pileTarget) ? s.pileTarget : null;
   const taken = new Set(game.settlers.filter(o => o !== s && o.pileTarget).map(o => o.pileTarget));
   if (!pile) {
@@ -211,6 +211,34 @@ export function haulPiles(s, tick) {
   s.carrying = { type: pile.type, amount, counted: true, loads: 99 };
   s.pileTarget = null;
   return true;
+}
+
+// (#279) piles lying about while a storage somewhere has room for them: one worker (two with more than
+// haulersFrom piles), the nearest not carrying anything, carries them in before going back to its work, not
+// only one with nothing to do (they always had something); never the colony's only worker. Worked out once a
+// tick
+/** @type {{ tick: number, set: Set<object> }} */
+let haulers = { tick: -1, set: new Set() };
+function pileHaulers() {
+  if (haulers.tick === game.pathTick) return haulers.set;
+  const set = new Set();
+  const movable = game.piles.filter(p => findStorageWithRoom(p));
+  if (movable.length) {
+    const near = s => Math.min(...movable.map(p => Math.hypot(p.x - s.x, p.y - s.y)));
+    const workers = game.settlers.filter(s => s.role === 'worker' && !s.isPossessed && !s.asleep && !s.drowsy && (!s.carrying || s.pileTarget))
+      .sort((a, b) => (b.pileTarget ? 1 : 0) - (a.pileTarget ? 1 : 0) || near(a) - near(b));
+    // (never the only worker there is: it keeps gathering, and carries piles when it has nothing to do)
+    const all = game.settlers.filter(s => s.role === 'worker').length;
+    workers.slice(0, Math.min(all - 1, movable.length > config().haulersFrom ? 2 : 1)).forEach(s => set.add(s));
+  }
+  haulers = { tick: game.pathTick, set };
+  return set;
+}
+
+// A behaviour, before gathering: one of those (pileHaulers) carries a pile in
+export function haulPilesFirst(s, tick) {
+  if (!pileHaulers().has(s)) return false;
+  return haulPiles(s, tick, true);
 }
 
 // (#279) one with nothing to do carries what lies in a storage that isn't its home over to its home: up to

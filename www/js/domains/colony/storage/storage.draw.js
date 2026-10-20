@@ -3,7 +3,8 @@
 // the more the higher (the town hall's storeroom no longer shown, #279)
 
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
-import { game } from '../../../engine/world/index.js';
+import { game, townHall } from '../../../engine/world/index.js';
+import { stock } from './storage.rules.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { storeCapacity } from './storage.stores.js';
 
@@ -37,5 +38,10 @@ export function drawStoreContents() {
     const room = storeCapacity(b) / 4;
     kinds(b.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, b.x - 8 + (i % 3) * 8, b.y + 3 + Math.floor(i / 3) * 7, 7, room));
   }
-  // (#279) not the town hall's: what's put in it isn't shown
+  // (#279) not the town hall's: what's put in it isn't shown. Behind the main menu, where the hall is a warehouse,
+  // it shows what's in stock as a warehouse in the game does (while it stands)
+  if (game.gameMode === 'menu' && townHall.hp > 0) {
+    const store = Object.fromEntries(Object.entries(stock).filter(([id]) => id !== 'food' && id !== 'firewood'));
+    kinds(store).slice(0, 6).forEach(([id, n], i) => stack(id, n, townHall.x - 8 + (i % 3) * 8, townHall.y + 3 + Math.floor(i / 3) * 7, 7, 10));
+  }
 }

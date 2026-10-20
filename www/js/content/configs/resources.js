@@ -58,8 +58,9 @@ export const resourcesConfig = {
 
   // builders bring a building's cost from the nearest storage, carryMaterials at a time. capacity (#248): how
   // much the town hall and a warehouse hold, all resources together; more lies on the ground by them, in packs
-  // (#279) of pack.size, pack.perTile to a tile round the storage, `layers` deep
-  storage: { carryMaterials: 10, capacity: { hall: 300, warehouse: 120 }, pack: { size: 10, perTile: 9, layers: 2 } },
+  // (#279) of pack.size, pack.perTile to a tile round the storage, `layers` deep; haulersFrom: more packs than
+  // this that could go into a storage with room, two workers carry them in, otherwise one (storage.stores.js)
+  storage: { carryMaterials: 10, capacity: { hall: 300, warehouse: 120 }, pack: { size: 10, perTile: 9, layers: 2 }, haulersFrom: 6 },
 
   start: {
     // stock at the start of a game (ids from `resources`)
