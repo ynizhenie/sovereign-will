@@ -15,9 +15,9 @@ import { boarToBait } from './hunting.traps.js';
 // settler just comes close. Never into the strip along the map edge, where it would get cornered.
 // A blow or an arrow: the boar bleeds (on itself and the ground), sometimes leaves dung out of
 // fright, and runs; killed, it drops as a carcass for `collector` to butcher (see huntBoar). `damage`: the
-// item's, a boar takes boarDamageFactor times it (#232)
+// item's, as it is (#298: not twice it)
 export function woundBoar(boar, damage, attacker, fromX, fromY) {
-  boar.hp -= damage * GAME_CONFIG.boarDamageFactor;
+  boar.hp -= damage;
   bleed(boar, attacker);
   playSound('boar', boar);
   if (rand() < GAME_CONFIG.mapResources.boar.dungChance) game.dung.push({ x: boar.x, y: boar.y, age: 0, by: null, byLeft: true });
