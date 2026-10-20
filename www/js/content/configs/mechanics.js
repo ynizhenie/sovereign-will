@@ -62,15 +62,19 @@ export const mechanicsConfig = {
 
   // every settler eats once every `seconds` on a clock of its own: a big one eats 2 food, a short
   // colony eats worms. A new settler's first meal comes after firstShare..1 of that, so they don't all
-  // eat together. Hungry, it goes to a storage and eats there for eatSeconds (#248)
-  meals: { seconds: 25, firstShare: 0.3, eatSeconds: 2.5 },
+  // eat together. Hungry, it goes to a storage and eats there for eatSeconds (#248). Awake at night it gets
+  // hungry nightFactor as fast (#279: half)
+  meals: { seconds: 33, firstShare: 0.3, eatSeconds: 2.5, nightFactor: 0.5 },
   // day and night (#257): a day is morning + day + evening + night seconds, Endless starting in the morning;
   // at night it's `darkness` dark; light reaches (tiles) round the town hall, a lit torch, a lit campfire, a
   // torch in hand, a portal, a necromancer's staff. Night: settlers sleep at their shelters (hunger stopped),
   // soldiers half on watch at a time; woken wakeSeconds before a wave. A torch in hand takes torchFirewood
-  // for the night; a torch post is lit with postFirewood
+  // for the night; a torch post is lit with postFirewood. (#279) Asleep it mends as its shelter heals
+  // (sleepHealPerSecond at the town hall); a corpse within sleepCorpseTiles of where it sleeps is taken away
+  // first; one ordered to work at night does it at drowsyPace
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
-    handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, torchFirewood: 1, postFirewood: 1, enemyTorchShare: 0.3 },
+    handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, torchFirewood: 1, postFirewood: 1, enemyTorchShare: 0.3,
+    sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5 },
   // paths (#248): every everyTicks a settler walking (minStep px since) on a tile in the base wears it by
   // `wear`, up to 1; every fadeTicks each worn tile loses `fade`; one past `shows` is drawn as a path
   paths: { everyTicks: 20, minStep: 4, wear: 0.012, fadeTicks: 600, fade: 0.02, shows: 0.35 },

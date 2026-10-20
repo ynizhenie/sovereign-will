@@ -15,6 +15,7 @@ import { getPlayerFaction } from '../../factions/index.js';
 import { getLights, getDayPhase, isNight, nightProgress } from '../../world/index.js';
 import { faceTowards } from './settlers.draw.js';
 import { says, someoneSays } from './settlers.voices.js';
+import { hasPlayerOrderFor } from './settlers.corpses.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -66,7 +67,7 @@ export function tickNight() {
   for (const s of game.settlers) {
     if (s.asleep || s.torchInHand || s.torchNight === game.nightId) continue;
     // only one staying up (on watch, on fuel duty, or with a wave due): not one on its way to bed
-    if (!(onWatch(s) || onFuelDuty(s) || waveDue())) continue;
+    if (!(onWatch(s) || onFuelDuty(s) || waveDue() || upForTents(s) || s.drowsy)) continue;
     const lit = lights.some(l => Math.hypot(l.x - s.x, l.y - s.y) < l.r * 0.8);
     if (lit || s.isPossessed) continue;
     if ((stock.firewood || 0) < config().torchFirewood) continue;
@@ -82,6 +83,24 @@ function waveDue() {
   return game.waveTimer <= config().wakeSeconds || isDefenseAlert() || game.enemies.length > 0;
 }
 
+// (#279) the enemy's tents or portals still standing at night: the soldiers stay up to go and break them, or
+// with no soldiers, everyone
+function upForTents(s) {
+  if (!game.enemyTents.length && !game.enemyTentBlueprints.length) return false;
+  return isFighter(s) || !game.settlers.some(isFighter);
+}
+
+// (#279) the player ordered something done at night (a build, a resource or a boar marked): one it's for
+// stays up to do it, slowly (drowsy, half its pace) and grumbling it wants to sleep
+function upForOrder(s, tick) {
+  if (s.isPossessed) return false;
+  if (s.drowsy && s.carrying) return true; // (what it was bringing, first)
+  // torch posts alone: a soldier on watch builds those (build), no one's got up for them
+  if (s.role === 'worker' && game.blueprints.length && game.blueprints.every(bp => bp.type === 'torch') &&
+    !tick.markedResources.some(r => (r.priority || 0) > 0) && game.settlers.some(onWatch)) return false;
+  return hasPlayerOrderFor(s, tick);
+}
+
 // The shelter it sleeps at: the nearest of its faction's homes, or the town hall
 function shelterFor(s) {
   const homes = game.buildings.filter(b => { const def = getDefinition('buildings', b.type) || {}; return def.population || def.healPerSecond; });
@@ -90,8 +109,12 @@ function shelterFor(s) {
 
 // At night (a behaviour, early): to bed, unless on watch, on fuel duty, possessed or with a wave coming
 export function sleepAtNight(s, tick) {
-  const awake = !isNight() || waveDue() || s.isPossessed || onWatch(s) || onFuelDuty(s) || s.temporary !== undefined;
+  const ordered = isNight() && !waveDue() && !onWatch(s) && !onFuelDuty(s) && upForOrder(s, tick);
+  s.drowsy = ordered;
+  if (ordered && !s.asleep && game.pathTick - (s.grumbledAt || -1e9) > 60 * 25 && says(s, 'sleepy')) s.grumbledAt = game.pathTick; // (once said, not again for a while)
+  const awake = !isNight() || waveDue() || s.isPossessed || onWatch(s) || onFuelDuty(s) || s.temporary !== undefined || upForTents(s) || ordered;
   if (awake) {
+    s.sleepSpot = null; // (a new one when it goes to bed again, from where it is then)
     if (s.asleep) {
       s.asleep = false;
       if (isNight() && waveDue()) { s.orderBubble = { icon: 'warn', until: game.pathTick + 120 }; playSound('alarm'); } // (woken for the wave)
@@ -107,11 +130,14 @@ export function sleepAtNight(s, tick) {
   if (s.carrying || tick.isWaveActive) return false; // (its load home first)
   const home = shelterFor(s);
   s.patrolTarget = null;
+  // (#279) a corpse lying by where it sleeps: taken away first (carryCorpse takes it on to the heap)
+  if (!s.asleep && clearSleepingPlace(s, home, tick)) return true;
   // round its shelter, each its own place
   const sleepers = game.settlers.filter(o => o.asleep && o.sleepAt === home).length;
   if (!s.sleepSpot || s.sleepAt !== home) {
-    // (out past its tile's edge: a body can't get into the building)
-    const a = (s.id * 2.4) % (Math.PI * 2), r = (home === townHall ? townHall.radius + 14 : 32) + (sleepers % 3) * 4;
+    // (out past its tile's edge: a body can't get into the building), on the side it comes from (#279: a
+    // place by its id could be round the far side of the town hall, and it stood at the hall's wall)
+    const a = Math.atan2(s.y - home.y, s.x - home.x) + ((s.id % 5) - 2) * 0.25, r = (home === townHall ? townHall.radius + 14 : 32) + (sleepers % 3) * 4;
     s.sleepSpot = { x: home.x + Math.cos(a) * r, y: home.y + Math.sin(a) * r };
     s.sleepAt = home;
   }
@@ -122,7 +148,28 @@ export function sleepAtNight(s, tick) {
   }
   if (!s.asleep && Math.random() < 0.3) says(s, 'sleep'); // (#252)
   s.asleep = true;
+  // sleep mends it (#279): as its shelter would (the town hall: sleepHealPerSecond)
+  const mend = (getDefinition('buildings', home.type) || {}).healPerSecond || config().sleepHealPerSecond;
+  if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + mend * tick.dt);
   playWorkSound(s, 'snore', 3 + (s.id % 3)); // (#252)
+  return true;
+}
+
+// A corpse by its shelter (within sleepCorpseTiles), no one else going for it: it goes and picks it up.
+// True while it does
+function clearSleepingPlace(s, home, tick) {
+  const reach = config().sleepCorpseTiles * TILE_SIZE;
+  const taken = new Set(game.settlers.filter(o => o !== s).map(o => o.corpseTarget).filter(Boolean));
+  let corpse = s.corpseTarget && game.corpses.includes(s.corpseTarget) ? s.corpseTarget : null;
+  if (!corpse) corpse = game.corpses.filter(c => !taken.has(c) && Math.hypot(c.x - home.x, c.y - home.y) < reach)
+    .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+  s.corpseTarget = corpse;
+  if (!corpse) return false;
+  if (Math.hypot(corpse.x - s.x, corpse.y - s.y) > 14) { moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, tick.dt); return true; }
+  game.corpses.splice(game.corpses.indexOf(corpse), 1);
+  s.carrying = { type: 'corpse', amount: 1, corpse };
+  s.corpseTarget = null;
+  s.haulWalk = 0;
   return true;
 }
 

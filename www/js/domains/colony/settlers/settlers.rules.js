@@ -14,6 +14,7 @@ import { battle } from '../../../modes/battle/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 import { says } from './settlers.voices.js';
+import { isNight } from '../../world/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
@@ -206,7 +207,7 @@ export function tickMeals(dt) {
     for (const s of game.settlers) {
       if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
       if (s.asleep) continue; // (it stands still in its sleep, #257)
-      s.hunger -= dt;
+      s.hunger -= dt * (isNight() ? meals.nightFactor : 1); // (awake at night, slower, #279)
       // hungry: it goes and gets its meal (goEat, #248); the last one still not eaten, it's eaten on the go
       if (s.hunger <= 0) { s.hunger = meals.seconds; if (s.wantsMeal) eatMeal(s); else s.wantsMeal = true; }
     }

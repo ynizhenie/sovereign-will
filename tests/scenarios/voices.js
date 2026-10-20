@@ -1,7 +1,7 @@
 // Voices (#252): phrases in bubbles, not too many
 Object.assign(window.sim, (() => {
   const { start, run, helpers: { makeSettler, clearResources } } = window.sim;
-  const EVENTS = ['hired', 'tool', 'wave', 'hurt', 'won', 'built', 'sleep', 'morning', 'hungry', 'idle', 'charge'];
+  const EVENTS = ['hired', 'tool', 'wave', 'hurt', 'won', 'built', 'sleep', 'morning', 'hungry', 'idle', 'charge', 'sleepy'];
 
   // every faction has phrases for every event, in every language
   function phrasesEverywhere() {
