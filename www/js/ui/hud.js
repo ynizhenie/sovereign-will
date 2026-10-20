@@ -59,7 +59,7 @@ export function updateUI() {
     name += ` · ${roleTitle(selected)}`; // (what it is by what it holds, #279; a commander, #248)
     let wName = getDefinition('weapons', selected.weapon)?.label || selected.weapon;
     let tName = selected.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selected.tool)?.label || selected.tool);
-    let aName = selected.armor === 'iron' ? ` / ${t('hud.ironArmor')}` : '';
+    let aName = selected.armor ? ` / ${t(selected.armor === 'leather' ? 'hud.leatherArmor' : 'hud.ironArmor')}` : '';
     let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
     // the rest of what it wears
     const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'flute'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
@@ -289,7 +289,7 @@ export function renderSelectedGear(s) {
   if (s) {
     if (s.tool && s.tool !== 'none') items.push(['disarmSettler', 'tool', s.tool]);
     if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
-    for (const id of ['armor', 'shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'flute']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
+    for (const id of ['armor', 'leather_armor', 'shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'flute']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
   }
   const key = `${s ? s.id : ''}|${items.map(i => i[2]).join(',')}|${s && s.targetEquipment ? 1 : 0}`;
   if (key === shownGear) return;

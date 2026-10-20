@@ -7,6 +7,7 @@ import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
+import { armorOf } from '../../colony/equipment/index.js';
 import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
@@ -160,9 +161,11 @@ function dressForWave(enemy, def) {
   const gear = GAME_CONFIG.enemyGear;
   const chance = Math.min(gear.max, (game.waveNum - gear.fromWave + 1) * gear.perWave);
   if (chance <= 0) return;
-  if (game.playerGear.armor && rand() < chance) {
-    enemy.armor = 'iron';
-    enemy.maxHp += GAME_CONFIG.gear.armor.hpBonus;
+  // (the best the player has made: iron, else leather, #298)
+  const armour = game.playerGear.armor ? GAME_CONFIG.gear.armor : game.playerGear.leather ? GAME_CONFIG.gear.leather_armor : null;
+  if (armour && rand() < chance) {
+    enemy.armor = armour.armorKind;
+    enemy.maxHp += armour.hpBonus;
     enemy.hp = enemy.maxHp;
   }
   if (game.playerGear.shield && def.type === 'normal' && !def.ranged && !def.healer && !def.necromancer && rand() < chance) enemy.shield = true;
@@ -366,7 +369,7 @@ export function dropLoot(en) {
   const loot = GAME_CONFIG.loot;
   const held = [];
   if (en.weapon && en.weapon !== 'fist' && GAME_CONFIG.weapons[en.weapon]) held.push(['weapons', en.weapon]);
-  if (en.armor === 'iron') held.push(['gear', 'armor']);
+  if (armorOf(en)) held.push(['gear', armorOf(en).id]);
   if (en.shield) held.push(['gear', 'shield']);
   // the thing itself, each with itemChance, lying apart (#232: no more bundles of a share of their cost)
   held.forEach(([category, id], i) => {

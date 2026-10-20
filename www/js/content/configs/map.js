@@ -18,7 +18,7 @@ export const mapConfig = {
     // (#279) fellInTwo: felled, it falls (fallSeconds) and gives `first` of its yield; the log lying there is cut
     // up (logHp of its hp) for the rest
     tree: { list: 'trees', blocksArrows: true, tool: 'axe', hp: 3, yield: { wood: 3 }, bonusChance: { saplings: 0.5 }, regrow: 'forest', forestShare: 1,
-      fellInTwo: { first: 2 / 3, logHp: 0.6, fallSeconds: 0.8 },
+      fellInTwo: { logHp: 0.6, fallSeconds: 0.8, pieces: 2 },
       work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } } },
     cactus: { list: 'cacti', blocksArrows: true, tool: 'axe', hp: 2, yield: { wood: 1 }, regrow: 'nearby',
       work: { chop: { normal: 1.5, big: 2.5 }, toolBonus: { iron_axe: 1.9 } } },
@@ -34,6 +34,8 @@ export const mapConfig = {
       work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, spawnerWork: { seconds: { pickaxe: 9, iron_pickaxe: 6 } } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
     pebble: { list: 'pebbles', hp: 1, yield: { stone: 1 }, regrow: 'anywhere', work: { pickup: true } },
+    // a piece of a felled tree's log (#298): picked up, its own yield (its share of the tree's wood); no regrowth
+    log: { list: 'logs', hp: 1, yield: { wood: 1 }, work: { pickup: true } },
     // what a fallen enemy dropped (#210): picked up like a stick; its yield and items are its own
     loot: { list: 'loot', hp: 1, yield: {}, work: { pickup: true } },
     grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },

@@ -86,7 +86,7 @@
  * @property {Object<string, number>} [today]  what it did today, for its story by the fire (#279)
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
- * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
@@ -283,6 +283,7 @@
  * @property {Object[]} beachTiles
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
+ * @property {Object[]} logs
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
  * @property {number} dayTime      seconds into the day (#257)
  * @property {number} nightId      which night it is
@@ -307,7 +308,7 @@
  * @property {number} enemyArrowStock
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
- * @property {{ armor: boolean, shield: boolean }} playerGear  armour / a shield the player has made
+ * @property {{ armor: boolean, shield: boolean, leather?: boolean }} playerGear  armour / a shield the player has made
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  * @property {Object<string, number>} paths  'gx,gy' -> how worn its ground is (#248)

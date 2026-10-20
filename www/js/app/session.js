@@ -11,7 +11,7 @@ import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
 import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
-import { isRaiding, resetRaid, syncCards } from '../modes/endless/index.js';
+import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
 
 export function resetGame(map) {
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu
@@ -27,7 +27,7 @@ export function resetGame(map) {
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
   resetRaid(); // (#255: a party out on a raid: the base back first, then all of it reset)
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
   townHall.store = {}; game.craftOrders = []; game.raidCamp = null; game.raidCampWave = 0; game.scouts = []; game.scoutClock = 0; game.reliefZones = []; game.postZones = []; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
   
@@ -63,7 +63,7 @@ export function setPaused(paused) {
   document.getElementById('pause-menu').hidden = !game.isPaused;
   // saving and loading are Endless's: not in a battle (#254)
   const endless = game.gameMode === 'endless';
-  document.getElementById('save-game-button').hidden = !endless || isRaiding(); // (not with a party out on a raid, #255)
+  document.getElementById('save-game-button').hidden = !endless || isInCamp(); // (not in a raid's camp, #255; on the way there or back it saves, #298)
   document.getElementById('load-game-button').hidden = !endless;
   document.getElementById('pause-load').hidden = true;
 }

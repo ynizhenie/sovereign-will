@@ -15,10 +15,11 @@ import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
 import { syncCards } from './endless.cards.js';
-import { isRaiding, resetRaid } from './endless.raid.js';
+import { isInCamp, resetRaid } from './endless.raid.js';
 
 // caches, worked out again after loading rather than saved
-export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache']);
+// (#298) and a raid's marks on its party: saved on the way, loaded they're home, the raid over
+export const UNSAVED_FIELDS = new Set(['reachCache', 'approachCache', 'raider', 'raidSpot', 'exitSpot', 'lastStep']);
 
 export function loadSaves() {
   return loadData('saves', {});
@@ -33,14 +34,31 @@ export function serializeGame() {
   for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) {
     if (Array.isArray(value)) value.forEach((o, i) => { if (o && typeof o === 'object') refs.set(o, `${list}:${i}`); });
   }
-  // an object as plain data: what it points at as references, itself (the root) in full
-  const encode = value => JSON.parse(JSON.stringify(value, function (key, v) {
-    if (UNSAVED_FIELDS.has(key)) return undefined;
-    if (key !== '' && v && typeof v === 'object' && refs.has(v)) return { $ref: refs.get(v) };
-    return v;
-  }));
+  // an object as plain data: what it points at as references, itself (the root) in full. (#298) A loop
+  // through things no longer on the map (a fallen settler and the fallen enemy each remembering the other,
+  // one still alive remembering one of them) is cut there: JSON threw on it and the save silently failed
+  const encode = (value, root = true, path = new Set()) => {
+    if (value === null || value === undefined) return value === null ? null : undefined;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'object') return typeof value === 'function' ? undefined : value;
+    if (!root && refs.has(value)) return { $ref: refs.get(value) };
+    if (path.has(value)) return null;
+    path.add(value);
+    let out;
+    if (Array.isArray(value)) out = value.map(v => { const e = encode(v, false, path); return e === undefined ? null : e; });
+    else {
+      out = {};
+      for (const [k, v] of Object.entries(value)) {
+        if (UNSAVED_FIELDS.has(k)) continue;
+        const e = encode(v, false, path);
+        if (e !== undefined) out[k] = e;
+      }
+    }
+    path.delete(value);
+    return out;
+  };
   const world = {};
-  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? value.map(encode) : encode(value);
+  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? value.map(o => encode(o)) : encode(value);
   return {
     version: 1,
     world,
@@ -85,6 +103,7 @@ export function loadGame(data) {
   game.worldSeed = createWorldSeed(data.seed.value);
   game.worldSeed.setState(data.seed.state);
   for (const [list, value] of Object.entries(data.world)) game[list] = value;
+  if (!data.world.logs) game.logs = []; // (a save from before #298)
   for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
   // older saves' archer kinds, gone (#249): a skeleton is a zombie with its bow, a fire imp an imp
   const goneKinds = { skeleton: 'zombie', fire_imp: 'imp' };
@@ -120,7 +139,14 @@ export const SAVE_SLOTS = 10;
 // From the pause menu: one slot a world (its seed), saved over each time; at most SAVE_SLOTS worlds. Says
 // how it went on the save button itself, not in a notice the pause menu hides (#254)
 export function saveCurrentGame() {
-  if (game.gameMode !== 'endless' || !game.gameStarted || isRaiding()) return; // (not with a party out, #255)
+  if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  // (#298) with a party on its way to a camp or home it saves (the base is there; loaded, they're home);
+  // in the camp itself, not: it says so, it used to do nothing at all
+  if (isInCamp()) { flashSaveButton(t('save.inCamp'), false); return; }
+  try { saveNow(); } catch (e) { console.error(e); flashSaveButton(t('save.failed'), false); }
+}
+
+function saveNow() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const seed = game.worldSeed.value;

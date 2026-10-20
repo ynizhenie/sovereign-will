@@ -21,9 +21,9 @@ Object.assign(window.sim, (() => {
     const s = makeSettler(1, nearHall(8, 3).x, nearHall(8, 3).y, { tool: 'axe' });
     settlers = [s];
     let atWarehouse = false, atHall = false;
-    run(20, { each: () => {
+    run(30, { each: () => { // (#298: the tree's two pieces, a trip each)
       pendingRespawns.length = 0;
-      if (stock.wood > 1000) return; // delivered: idle after that, near the hall
+      if (stock.wood >= 1003) return; // delivered: idle after that, near the hall
       if (near(s, warehouse, 40)) atWarehouse = true;
       if (near(s, townHall, townHall.radius + 20)) atHall = true;
     } });

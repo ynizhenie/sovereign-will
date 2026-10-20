@@ -275,6 +275,11 @@ export const SETTLER_BEHAVIOURS = [
   patrol
 ];
 
+// (#298) one got up at night for the player's order does that and nothing else: what was marked, the build,
+// bringing it what it needs; the rest (cooking, firewood, gathering what wasn't marked...) waits for the day
+const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, battleOrders, panic, strikeBack, sleepAtNight,
+  deliverMaterials, deliverCarrying, fightEnemies, build, harvest, patrol]);
+
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
@@ -288,6 +293,7 @@ export function tickSettlers(dt) {
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
+      if (s.drowsy && !NIGHT_ORDER_ONLY.has(behaviour)) continue;
       if (behaviour(s, tick)) {
         s.isIdle = behaviour === patrol;
         if (!s.isIdle) { s.idle = null; s.swaying = false; }

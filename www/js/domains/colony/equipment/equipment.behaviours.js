@@ -21,6 +21,7 @@ export function equip(s, tick) {
         if (equipment.gear) {
           putOnGear(s, equipment.gear);
           if (equipment.gear === 'armor' || equipment.gear === 'shield') game.playerGear[equipment.gear] = true; // waves answer it (#203)
+          if (equipment.gear === 'leather_armor') game.playerGear.leather = true; // (#298)
         }
         else takeOffGear(s, equipment.gearOff, !!equipment.keep);
         s.targetEquipment = null;

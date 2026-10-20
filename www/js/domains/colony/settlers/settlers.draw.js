@@ -308,9 +308,18 @@ export function applyBackPose(unit) {
 // Weapon held in the right hand, drawn around (0, 0) = the unit's centre (translate first).
 // Shared by settlers and enemies. Returns false for no weapon (fists).
 // Iron armour: a breastplate over the body of a figure of that radius
-export function drawArmor(radius) {
-  // a breastplate over the figure's body (#251)
+export function drawArmor(radius, kind = 'iron') {
+  // a breastplate over the figure's body (#251); (#298) leather: brown, stitched, a few studs
   const r = radius;
+  if (kind === 'leather') {
+    ctx.fillStyle = '#8d5a35'; ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(-r * 0.54, -r * 0.42, r * 1.08, r * 0.76, r * 0.25); ctx.fill(); ctx.stroke();
+    ctx.setLineDash([1.5, 1.5]); ctx.strokeStyle = '#d4a373';
+    ctx.beginPath(); ctx.moveTo(-r * 0.4, -r * 0.1); ctx.lineTo(r * 0.4, -r * 0.1); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#d5dbdb';
+    for (const [sx, sy] of [[-0.3, 0.15], [0.3, 0.15], [0, -0.28]]) { ctx.beginPath(); ctx.arc(sx * r, sy * r, 0.9, 0, Math.PI * 2); ctx.fill(); }
+    return;
+  }
   ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#5d6d7e'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(-r * 0.56, -r * 0.44, r * 1.12, r * 0.8, r * 0.25); ctx.fill(); ctx.stroke();
   ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.fillRect(-r * 0.4, -r * 0.36, r * 0.25, r * 0.55);
@@ -429,7 +438,7 @@ export function drawSettlers() {
     if (torchHeld && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
     else if (torchAside && !s.asleep) drawSideTorch(s.facing, s.visualRadius);
     if (food && s.eating) { drawIcon(ctx, s.eating.icon, food.x, food.y - 2, 9); if (food.bite > 0.95) { ctx.fillStyle = '#d4a373'; ctx.fillRect(food.x + 3, food.y + 3, 2, 2); } }
-    if ((s.armor === 'iron' || s.hasArmor) && !s.asleep) drawArmor(r);
+    if ((s.armor || s.hasArmor) && !s.asleep) drawArmor(r, typeof s.armor === 'string' ? s.armor : 'iron');
     if (s.shield && !s.asleep) drawShield(r);
     // a commander's whistle on a cord on its chest (#248); its banner goes on its back (drawBackItems)
     if (s.whistle && !s.asleep) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
