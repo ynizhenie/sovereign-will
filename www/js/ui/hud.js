@@ -9,6 +9,7 @@ import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettler
 import { countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
+import { getDayPhase } from '../domains/world/index.js';
 
 export function updateUI() {
   updateWave();
@@ -86,7 +87,37 @@ export function updateUI() {
 // The wave in the middle of the top bar: its number, the time to the next as m:ss, a bar running down to
 // it; the last seconds pulse, and a new wave shakes it
 let shownWave = 0;
+// (#279) the dial of the day: its parts as wedges in their colours (once), the hand on now, the sun by day
+// and the moon at night in the middle; hovered, what part of the day it is and how long till the next
+let dialFor = '';
+function updateDayClock() {
+  const clock = document.getElementById('day-clock');
+  if (!clock || game.gameMode !== 'endless') return;
+  const c = GAME_CONFIG.daytime;
+  /** @type {[string, number, string][]} */
+  const parts = [['morning', c.morning, '#f5b041'], ['day', c.day, '#5dade2'], ['evening', c.evening, '#a569bd'], ['night', c.night, '#1b2631']];
+  const length = parts.reduce((sum, p) => sum + p[1], 0);
+  const key = parts.map(p => p[1]).join(',');
+  if (dialFor !== key) {
+    dialFor = key;
+    let at = 0;
+    clock.style.background = `conic-gradient(${parts.map(([, len, color]) => { const from = at; at += len / length * 360; return `${color} ${from}deg ${at}deg`; }).join(', ')})`;
+  }
+  const now = ((game.dayTime || 0) % length + length) % length;
+  document.getElementById('day-hand').style.transform = `rotate(${now / length * 360 + 180}deg)`;
+  const phase = getDayPhase();
+  const face = document.getElementById('day-face');
+  const icon = phase === 'night' ? 'moon' : 'sun';
+  if (face.dataset.icon !== icon) { face.dataset.icon = icon; face.innerHTML = iconHtml(icon); }
+  let end = 0;
+  for (const [id, len] of parts) { end += len; if (id === phase) break; }
+  const next = parts[(parts.findIndex(p => p[0] === phase) + 1) % parts.length][0];
+  const left = Math.max(0, Math.ceil(end - now));
+  clock.title = t('daytime.clock', { now: t(`daytime.${phase}`), next: t(`daytime.${next}`).toLowerCase(), time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` });
+}
+
 function updateWave() {
+  updateDayClock();
   const left = Math.max(0, Math.ceil(game.waveTimer));
   document.getElementById('wave-num').innerText = String(game.waveNum);
   document.getElementById('wave-timer').innerText = Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
