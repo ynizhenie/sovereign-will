@@ -152,6 +152,16 @@ export function drawHandTorch(facing, r) {
   ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(fx, fy - 1.5, 1.5 * k, 2.5 * k, 0, 0, Math.PI * 2); ctx.fill();
 }
 
+// A torch put to its side for a fight (#279): hung at its belt on the other side, angled down, still lit
+function drawSideTorch(facing, r) {
+  const f = (facing || 0) + 1.9, x = Math.cos(f) * (r - 2), y = Math.sin(f) * (r - 2);
+  ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2, y + 7); ctx.stroke();
+  const k = 1 + Math.sin(performance.now() / 90 + r) * 0.15;
+  ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(x - 0.5, y - 2, 2.2 * k, 3.4 * k, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(x - 0.5, y - 1.6, 1.1 * k, 1.8 * k, 0, 0, Math.PI * 2); ctx.fill();
+}
+
 // Asleep (#257): a few z's drifting up off it
 function drawSleepZs(x, y) {
   const t = performance.now() / 1000;
@@ -405,7 +415,10 @@ export function drawSettlers() {
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.save();
-    if (isResting(s) || inHands || crafting || s.eating || s.torchInHand || s.asleep) applyBackPose(s);
+    // (#279) fighting with a torch in hand and a weapon or tool: the torch goes to its side, it fights with that
+    const torchAside = s.torchInHand && game.pathTick - (s.struckAt ?? -1e9) < 150 && (s.weapon !== 'fist' || s.tool !== 'none');
+    const torchHeld = s.torchInHand && !torchAside;
+    if (isResting(s) || inHands || crafting || s.eating || torchHeld || s.asleep) applyBackPose(s);
     else applyHeldItemPose(s);
     if (getNecromancy(s) && s.weapon === 'fist') {
       drawStaff();
@@ -432,7 +445,8 @@ export function drawSettlers() {
     ctx.restore(); // pose only moves the held item
     if (inHands) drawCarriedInHands(s);
     if (crafting) drawCraftHammer(s);
-    if (s.torchInHand && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
+    if (torchHeld && !s.asleep) drawHandTorch(s.facing, s.visualRadius);
+    else if (torchAside && !s.asleep) drawSideTorch(s.facing, s.visualRadius);
     if (s.eating) drawEating(s);
     else if ((s.smoking || 0) > 0 || (s.straw || 0) > 0) drawInMouth(s);
     if ((s.armor === 'iron' || s.hasArmor) && !s.asleep) drawArmor(r);

@@ -14,6 +14,9 @@
  * @property {number} y
  * @property {string} type           GAME_CONFIG.settlerTypes key ('normal', 'big', 'zombie'...)
  * @property {string} role           'worker', 'soldier' or 'archer'
+ * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
+ * @property {number} [grumbledAt]   the tick it last said it wants to sleep
+ * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
  * @property {Point} [orderSpot]     where it stands in a fight under orders (a raid's camp, a battle), told nothing to fight
