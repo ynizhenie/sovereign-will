@@ -103,10 +103,6 @@ export function prepareSettler(s, dt) {
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) s.attackCooldown -= dt;
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
-  // a smoke or a wheat stalk in its mouth for a while, and then a while before the next (#248)
-  if (s.smoking > 0) s.smoking -= dt;
-  if (s.straw > 0) s.straw -= dt;
-  if (s.smokeRest > 0) s.smokeRest -= dt;
 }
 
 // ---- The possessed settler

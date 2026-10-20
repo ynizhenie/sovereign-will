@@ -92,18 +92,14 @@ export const mechanicsConfig = {
   boarDamageFactor: 2,
   // idle settlers' pastimes between waves (#199), each for `seconds` (from..to): by a campfire (morale up at
   // campfireMoralePerSecond, up to campfireAbove past its usual), talking in a knot (company within
-  // companyRange px), humans sharpening a blade (sharpenSeconds; the next blow that lands does sharpenBonus
-  // times the damage), demons sparring (morale up to sparAbove past its usual, health down to sparMinHp of
+  // companyRange px), demons sparring (morale up to sparAbove past its usual, health down to sparMinHp of
   // its most); soldiers and archers also patrol the edge of the base (patrolStep radians a waypoint) and
   // train at a dummy (their damage up trainPerSecond of itself a second, up to trainMax); a soldier guards a
   // gatherer more than guardBeyondTiles past the base's edge, keeping within guardRange px; an idle
   // necromancer takes `bones` bones from a corpse in boneSeconds
   idle: { seconds: [8, 16], campfireRing: 34, campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
-    sharpenSeconds: 6, sharpenBonus: 1.5, sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
-    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3,
-    // a smoke or a stalk (#248): smokeTake s at the grass, the fire, the wheat; then it lasts smokeSeconds
-    // (a stalk strawSeconds), whatever it does; not again for smokeAgain after; smokeWalk s to get it done
-    smokeTake: 1.5, smokeSeconds: 40, strawSeconds: 60, smokeAgain: 90, smokeWalk: 40, strawGrowth: 60 },
+    sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
+    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
