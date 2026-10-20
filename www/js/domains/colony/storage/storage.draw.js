@@ -1,9 +1,9 @@
 // What's where, drawn (#248; #279): packs on the ground by a storage, the thing itself small and tied, a
-// second layer on top a little up; what a warehouse holds on its floor under its roof, and what the town hall
-// holds in its storeroom, a bay in its front: a stack for each kind, the more the higher
+// second layer on top a little up; what a warehouse holds on its floor under its roof: a stack for each kind,
+// the more the higher (the town hall's storeroom no longer shown, #279)
 
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { storeCapacity } from './storage.stores.js';
 
@@ -30,18 +30,12 @@ function stack(id, n, x, y, size, room) {
   for (let k = 0; k < count; k++) drawIcon(ctx, getResourceIconName(id), x, y - k * size * 0.45, size);
 }
 
-// After the buildings: a warehouse's kinds on its floor (six at most), the town hall's in its storeroom
+// After the buildings: a warehouse's kinds on its floor (six at most)
 export function drawStoreContents() {
   for (const b of game.buildings) {
     if (b.type !== 'warehouse') continue;
     const room = storeCapacity(b) / 4;
     kinds(b.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, b.x - 8 + (i % 3) * 8, b.y + 3 + Math.floor(i / 3) * 7, 7, room));
   }
-  // the storeroom: an open bay in the hall's front, to the right of its door
-  const x = townHall.x + 7, y = townHall.y + 6, w = 21, h = 15;
-  ctx.fillStyle = '#3b2615'; ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y + h * 0.55); ctx.lineTo(x + w, y + h * 0.55); ctx.stroke();
-  const room = storeCapacity(townHall) / 6;
-  kinds(townHall.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, x + 4 + (i % 3) * 6.5, y + 6 + Math.floor(i / 3) * 6.5, 6, room));
+  // (#279) not the town hall's: what's put in it isn't shown
 }

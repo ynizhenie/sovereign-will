@@ -10,7 +10,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { getToolFamily, hasGear, takeFromArmory } from '../equipment/index.js';
 import { stock } from '../storage/index.js';
@@ -63,6 +63,9 @@ function storedTool(family) {
   return ids.sort((a, b) => (b.startsWith('iron') ? 1 : 0) - (a.startsWith('iron') ? 1 : 0))[0] || null;
 }
 
+// (#279) a commander's orders go no further than rangeTiles from it: not across half the map
+const inRange = (s, o, c) => Math.hypot(o.x - s.x, o.y - s.y) <= c.rangeTiles * TILE_SIZE;
+
 const isForeman = s => hasGear(s, 'whistle') && s.role === 'worker';
 const isCaptain = s => hasGear(s, 'banner') && (s.role === 'soldier' || s.role === 'archer');
 
@@ -72,7 +75,7 @@ export function foremanOrders(s, tick) {
   const c = GAME_CONFIG.gear.whistle.commands;
   s.orderIn = (s.orderIn ?? c.everySeconds) - tick.dt;
   if (s.orderIn > 0 && !s.orderTo) return false;
-  const squad = squadOf(s, c.squad, o => o.role === 'worker' && !isForeman(o) && !o.isPossessed);
+  const squad = squadOf(s, c.squad, o => o.role === 'worker' && !isForeman(o) && !o.isPossessed && inRange(s, o, c));
   if (!squad.length) { s.orderIn = c.everySeconds; return false; }
   let to = s.orderTo ? squad.find(o => o.id === s.orderTo) : null;
   if (!to) {
@@ -104,7 +107,7 @@ export function captainOrders(s, tick) {
   s.orderIn = (s.orderIn ?? 0) - tick.dt;
   if (s.orderIn > 0) return false;
   s.orderIn = c.everySeconds;
-  const squad = squadOf(s, c.squad, o => (o.role === 'soldier' || o.role === 'archer') && !isCaptain(o) && !o.isPossessed && !o.towerAssignment);
+  const squad = squadOf(s, c.squad, o => (o.role === 'soldier' || o.role === 'archer') && !isCaptain(o) && !o.isPossessed && !o.towerAssignment && inRange(s, o, c));
   if (!squad.length) return false;
   s.orderTurn = ((s.orderTurn || 0) + 1) % squad.length;
   const to = squad[s.orderTurn];
@@ -128,7 +131,7 @@ export function captainArms(s, tick) {
   s.armIn = (s.armIn ?? 0) - tick.dt;
   if (s.armIn > 0) return false;
   s.armIn = c.everySeconds;
-  const near = o => o !== s && !o.isPossessed && !o.targetEquipment && Math.hypot(o.x - s.x, o.y - s.y) <= c.reach;
+  const near = o => o !== s && !o.isPossessed && !o.targetEquipment && Math.hypot(o.x - s.x, o.y - s.y) <= Math.min(c.reach, c.rangeTiles * TILE_SIZE);
   const arming = tick.isWaveActive || isDefenseAlert() || game.waveTimer <= c.armSeconds;
   if (arming) {
     const to = game.settlers.find(o => near(o) && o.role === 'worker' && o.weapon === 'fist' && o.tool === 'none' && !o.whistle && o.temporary === undefined);
@@ -138,11 +141,13 @@ export function captainArms(s, tick) {
     to.lentBy = s.id;
     showOrder(s, to, 'swords');
   } else {
-    const to = game.settlers.find(o => o.lentBy === s.id && !o.isPossessed && !o.targetEquipment); // (heard wherever it is)
+    // (lent till the wave's over: it brings it back by itself, no order across the map; one near is told, #279)
+    const to = game.settlers.find(o => o.lentBy === s.id && !o.isPossessed && !o.targetEquipment);
     if (!to) return false;
     to.targetEquipment = { weapon: 'fist', tool: 'none', role: 'worker', keep: true }; // (into the store whole)
     delete to.lentBy;
-    showOrder(s, to, 'ok');
+    if (inRange(s, to, c)) showOrder(s, to, 'ok');
+    else to.orderBubble = { icon: 'ok', until: game.pathTick + SHOW_TICKS };
   }
   return false;
 }

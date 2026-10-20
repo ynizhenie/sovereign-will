@@ -207,6 +207,9 @@ export function tickMeals(dt) {
     const meals = GAME_CONFIG.meals;
     for (const s of game.settlers) {
       if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
+      // its meal eaten here, not only while goEat runs: put to bed, called away or in a wave, it's done in its time
+      // and doesn't stay frozen at its mouth (#279); asleep, it's put away
+      if (s.eating) { s.eating.left -= dt; if (s.eating.left <= 0 || s.asleep) s.eating = null; }
       if (s.asleep) continue; // (it stands still in its sleep, #257)
       s.hunger -= dt * (isNight() ? meals.nightFactor : 1); // (awake at night, slower, #279)
       // hungry: it goes and gets its meal (goEat, #248); the last one still not eaten, it's eaten on the go
@@ -218,7 +221,7 @@ export function tickMeals(dt) {
 // What a fallen settler held (#279): each thing, with the same chance as an enemy's (GAME_CONFIG.loot), lies
 // where it fell for the others to pick up (into the armory); the rest is lost. A medic's herbs go back to the
 // stock. Endless only (a battle's units come back as they were placed)
-function dropSettlerLoot(s) {
+export function dropSettlerLoot(s) {
   if (s.bagHerbs > 0) { stock.herbs += s.bagHerbs; s.bagHerbs = 0; }
   if (game.gameMode !== 'endless') return;
   const held = [];
