@@ -594,7 +594,7 @@ body.menu-world #mobile-joystick, body.menu-world #defeat-overlay { display: non
 .battle-row { display: flex; gap: 4px; }
 .battle-row > * { flex: 1; }
 .battle-row .fps-option { padding: 6px 0; }
-#battle-panel:not([data-category="own"]) .battle-gear { display: none; }
+#battle-panel[data-category="buildings"] .battle-gear { display: none; } /* (#279: the enemy can have them too) */
 #battle-presets .tile-cost, #editor-tools .tile-cost { white-space: nowrap; }
 .tile-name .ic + .ic { margin-left: -6px; }
 .battle-hint {
@@ -1148,3 +1148,6 @@ body[data-hud="endless"] .day-clock { display: block; }
 /* the arrows a raid takes (#279) */
 .raid-arrows { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 6px 0; }
 .raid-arrows .btn { min-width: 34px; }
+/* (#279) what's not the faction's in the Zones tab stays hidden (a tile's display would show it) */
+#tab-farming .eats-only[hidden], #tab-farming .farm-only[hidden], #tab-farming .undead-only[hidden] { display: none !important; }
+#tab-farming .undead-only { margin-top: 6px; }

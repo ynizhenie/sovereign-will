@@ -24,10 +24,11 @@ export const factionsConfig = {
       music: { ambient: ['demons_embers', 'demons_brimstone', 'demons_abyss', 'demons_ashfall', 'demons_magma'], battle: ['demons_inferno', 'demons_drums', 'demons_hellfire', 'demons_ritual', 'demons_rampage'],
         nightAmbient: ['demons_blackfire', 'demons_nightmare', 'demons_smolder', 'demons_hollow', 'demons_coven'], nightBattle: ['demons_nightfire', 'demons_bloodmoon', 'demons_hunt', 'demons_pyre', 'demons_eclipse'] } },
     // rotPerSecond: rot its hall makes; startNecromancer: one more to start with, with the staff (#253); foodInto: what food turns into when it's brought in
+    // buildBones (#279): every building costs bones too, `share` of the rest of its cost (at least `min`)
     undead: { id: 'undead', color: '#9b59b6', ready: true, units: ['zombie', 'big_zombie'],
       upgrades: { zombie: 'big_zombie' }, startUnits: 'zombie', eats: false, hall: 'graveyard', shelter: 'grave', spawner: 'grave',
       startResources: { bones: 30, rot: 10 }, bonesPerSecond: { hall: 0.25 }, rotPerSecond: { hall: 0.05 }, startNecromancer: true,
-      foodInto: { rawMeat: 'bones', rawFish: 'bones', default: 'rot' },
+      foodInto: { rawMeat: 'bones', rawFish: 'bones', default: 'rot' }, buildBones: { share: 0.3, min: 2 },
       enemies: ['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_zombie_archer', 'undead_necromancer'], summonEnemy: 'undead_zombie',
       music: { ambient: ['undead_crypt', 'undead_fog', 'undead_graves', 'undead_mist', 'undead_ossuary'], battle: ['undead_march', 'undead_bones', 'undead_dirge', 'undead_horde', 'undead_requiem'],
         nightAmbient: ['undead_midnight', 'undead_moonrise', 'undead_wraiths', 'undead_coffin', 'undead_cold'], nightBattle: ['undead_nighthorde', 'undead_gravedigger', 'undead_bonestorm', 'undead_blackmass', 'undead_deathknell'] } }
