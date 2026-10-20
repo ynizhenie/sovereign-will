@@ -16,7 +16,7 @@ import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../.
 import { deliverCarrying, deliverWhenNothingToDo, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
-import { getHarvestableResources, getWorkPriority, harvest } from '../../economy/gathering/index.js';
+import { getHarvestableResources, getWorkPriority, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
@@ -142,6 +142,7 @@ export function relieve(s, tick) {
     return true;
   }
   s.reliefTimer = (s.reliefTimer || 0) + tick.dt;
+  s.relievingAt = game.pathTick; // (at it this tick: the censor shows only while it is, #298)
   if (s.reliefTimer >= relief.seconds) {
     game.dung.push({ x: s.x, y: s.y, age: 0, by: s, byLeft: false, inZone: inReliefZone(s.x, s.y) }); // (in a zone: not smeared, #279)
     s.needsRelief = false; s.meals = 0; s.reliefSpot = null; s.reliefTimer = 0;
@@ -234,6 +235,7 @@ export const SETTLER_BEHAVIOURS = [
   equip,
   goEat,
   foremanOrders,
+  harvestMarked, // (the player's marks before the chores, #298)
   cook,
   fertilize,
   cleanDung,
@@ -278,7 +280,7 @@ export const SETTLER_BEHAVIOURS = [
 // (#298) one got up at night for the player's order does that and nothing else: what was marked, the build,
 // bringing it what it needs; the rest (cooking, firewood, gathering what wasn't marked...) waits for the day
 const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, battleOrders, panic, strikeBack, sleepAtNight,
-  deliverMaterials, deliverCarrying, fightEnemies, build, harvest, patrol]);
+  deliverMaterials, deliverCarrying, fightEnemies, build, harvestMarked, harvest, patrol]);
 
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {

@@ -5,7 +5,7 @@ import { game, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody, nightReach } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
-import { addCarryLoad, giveResourceToSettler } from '../../colony/storage/index.js';
+import { addCarryLoad, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { isInSafeArea } from '../../conflict/combat/index.js';
@@ -69,7 +69,7 @@ export function isFreeHands(o) {
 // it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
 // worker on one (up to getWorkPriority) — two on one while others waited made one of them stand about
 // (#232). Returns null if there's nothing to do.
-export function pickResourceToHarvest(s, tick) {
+export function pickResourceToHarvest(s, tick, markedOnly = false) {
   const settlerReach = getSettlerReach(s);
   // at night with no torch, nothing past the base (#257)
   const night = nightReach(s), withinNight = r => night === Infinity || Math.hypot(r.x - townHall.x, r.y - townHall.y) <= night;
@@ -93,7 +93,7 @@ export function pickResourceToHarvest(s, tick) {
     tick.workerAssignments.set(pick.r, workers(pick.r) + 1);
   }
   s.markTarget = assignedRes;
-  if (!assignedRes && s.drowsy) return null; // (up at night for what was marked: only that, #298)
+  if (!assignedRes && (s.drowsy || markedOnly)) return null; // (up at night for what was marked, or the marks first: only that, #298)
 
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building
@@ -161,10 +161,20 @@ export function workResource(s, assignedRes, tick) {
   s.patrolTarget = null;
 }
 
+// (#298) the player's marks first: something marked, and one fit for it goes for it before its chores
+// (cooking, dung, corpses, firewood, piles...), which kept it from them for long ("marks ignored"). With its
+// load full it takes that home first
+export function harvestMarked(s, tick) {
+  if (s.carrying && !hasRoomToCarry(s)) return false;
+  if (s.carrying && (s.carrying.forFire || s.carrying.type === 'corpse' || s.carrying.counted)) return false;
+  if (!tick.markedResources.some(r => (r.priority || 0) > 0)) return false;
+  return harvest(s, tick, true);
+}
+
 // Gather: pick a resource, walk to a free spot next to it, work it
-export function harvest(s, tick) {
+export function harvest(s, tick, markedOnly = false) {
   if (!canGather(s, tick)) return false;
-  const assignedRes = pickResourceToHarvest(s, tick);
+  const assignedRes = pickResourceToHarvest(s, tick, markedOnly);
   if (!assignedRes) return false;
 
   let approachPos = getResourceApproachPoint(s, assignedRes);

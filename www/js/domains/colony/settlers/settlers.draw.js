@@ -516,7 +516,7 @@ export function drawSettlers() {
     if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + r, top - 14, s.orderBubble.icon);
     // (talking in a knot: what they say, not dots, #279: settlers.voices.js talkInKnots)
 
-    if (s.needsRelief && (s.reliefTimer || 0) > 0) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
+    if (isCensored(s)) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, top - 6, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, top - 6, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
@@ -540,6 +540,10 @@ export function drawOrderBubble(x, y, icon) {
   ctx.beginPath(); ctx.moveTo(x - 5, y + 5); ctx.lineTo(x - 8, y + 11); ctx.lineTo(x - 1, y + 7); ctx.fill();
   drawIcon(ctx, icon, x, y, 11);
 }
+
+// (#298) censored only while it's at it this very moment: called away half way (a wave, the night), it went
+// about with the mosaic still on it
+export const isCensored = s => !!s.needsRelief && game.pathTick - (s.relievingAt ?? -1e9) <= 2 && !s.asleep;
 
 // (#298) relieving itself: a censor's mosaic over its back half, squares of its skin and clothes in a jumble
 // that shifts a few times a second
