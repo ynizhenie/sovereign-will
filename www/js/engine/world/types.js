@@ -75,6 +75,7 @@
  * @property {boolean} [wantsMeal]  hungry: going for its meal (goEat, #248)
  * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
+ * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
@@ -276,7 +277,7 @@
  * @property {boolean} autoBlightDone none left to blight: the switch is off for good
  * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
  * @property {number} portalTimer
- * @property {{ x: number, y: number, type: string, amount: number }[]} piles  stock on the ground by a full storage (#248)
+ * @property {{ x: number, y: number, type: string, amount: number, layer?: number }[]} piles  stock on the ground by a full storage (#248), in packs (#279)
  * @property {Object<string, number>} armory  tools, weapons, gear in store, by '<category>:<id>'
  * @property {Object[]} ironOres
  * @property {Object[]} coalOres

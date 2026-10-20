@@ -127,10 +127,18 @@ export function drawSmelterArt(x, y) {
   ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.arc(x, y + 3, 2.5, 0, Math.PI * 2); ctx.fill();
 }
 
-// The warehouse: a barn, wide doors, crates stacked at its side
+// The warehouse (#279): an open storehouse, all one bay: a plank floor, a back wall, four posts and a roof over
+// its back half; what it holds stands on the floor under it (drawStoreContents)
 export function drawWarehouseArt(x, y) {
-  house(x - 2, y - 2, 24, 22, { roof: '#7b241c', roofDark: '#641e16', wall: '#a47148', wallDark: '#6d4520', door: '#4e3016' });
-  for (const [cx, cy] of [[9, 7], [9, 12], [13, 10]]) { rect(x + cx - 2.5, y + cy - 2.5, 5, 5, '#c8a46a', '#7a5230'); line(x + cx - 2.5, y + cy, x + cx + 2.5, y + cy, '#7a5230'); }
+  shadow(x, y, 28, 26);
+  rect(x - 13, y - 12, 26, 25, '#8a6a45', '#5c3a17'); // the floor
+  for (let k = -8; k <= 8; k += 4) line(x - 13, y + k, x + 13, y + k, 'rgba(0, 0, 0, 0.18)', 1);
+  rect(x - 13, y - 13, 26, 4, '#6d4520', '#3e2716'); // the back wall
+  for (const [px, py] of [[-12, -12], [11, -12], [-12, 10], [11, 10]]) rect(x + px, y + py, 2.5, 3, '#4e3016');
+  // the roof over the back half, its eaves a little out
+  poly([[x - 15, y - 15], [x + 15, y - 15], [x + 15, y - 2], [x - 15, y - 2]], '#7b241c', '#4a1410');
+  line(x - 15, y - 8.5, x + 15, y - 8.5, 'rgba(0, 0, 0, 0.3)', 1);
+  for (let k = -10; k <= 10; k += 5) line(x + k, y - 15, x + k, y - 2, 'rgba(0, 0, 0, 0.12)', 1);
 }
 
 // The lookout: four posts and braces under a plank platform with a railing, a little roof over a corner

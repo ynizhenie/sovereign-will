@@ -1,6 +1,10 @@
 // What's where (#248): the stock is one number per resource, as ever, but it lies somewhere: in the town
-// hall (the most room) or a warehouse (less), `store` on each; what doesn't fit lies on the ground by it, a
-// pile per kind (game.piles), and counts all the same, so it's never "too full to build". What's spent
+// hall (the most room) or a warehouse (less), `store` on each; what doesn't fit lies on the ground by it
+// (game.piles) and counts all the same, so it's never "too full to build". (#279) It lies in packs of
+// pack.size of one kind, pack.perTile to a tile (3 by 3) on the tiles round the storage, a second layer on
+// top once those are full; all of them full, the packs there of that kind take any more. With more than one
+// storage each group of resources has one of its own (storeHome): it's brought there, and one with nothing
+// to do carries what lies in the wrong one over. What's spent
 // comes off the piles first (they take what lies about), then the warehouses, then the hall. A settler with
 // nothing to do carries piles into a storage with room. A warehouse that's gone drops what it held.
 // keepStoresInStep() puts any change of the stock made without a place (a cost paid, a refund) in step.
@@ -8,7 +12,8 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { getStorages, stock } from './storage.rules.js';
+import { getStorages, moveSettlerToTownHall, stock } from './storage.rules.js';
+import { getPlayerFaction } from '../../factions/index.js';
 
 const EPS = 1e-6;
 const config = () => GAME_CONFIG.storage;
@@ -49,43 +54,104 @@ export function storeInto(storage, id, amount) {
   if (amount - into > EPS) dropPile(storage, id, amount - into);
 }
 
-// A pile of `id` by `near` (a storage, a fallen warehouse): onto the one of that kind already by it, or a
-// new one on free ground close by
+// Packs of `id` by `near` (a storage, a fallen warehouse): the packs of that kind there filled up first, then
+// new ones in the free places round it (the ground layer, then on top); none free, onto the packs of that
+// kind there (or the nearest pack) past their size
 export function dropPile(near, id, amount) {
-  const reach = (near === townHall ? townHall.radius : 0) + 2 * TILE_SIZE;
-  const same = game.piles.find(p => p.type === id && Math.hypot(p.x - near.x, p.y - near.y) <= reach);
-  if (same) { same.amount += amount; return; }
-  const spot = freeSpotBy(near);
-  game.piles.push({ x: spot.x, y: spot.y, type: id, amount });
+  const c = config().pack;
+  const here = packPlaces(near);
+  const by = p => here.some(q => q.x === p.x && q.y === p.y && q.layer === (p.layer || 0));
+  let left = amount;
+  for (const p of game.piles) {
+    if (left <= EPS) return;
+    if (p.type !== id || p.amount >= c.size - EPS || !by(p)) continue;
+    const add = Math.min(left, c.size - p.amount);
+    p.amount += add; left -= add;
+  }
+  for (const place of here) {
+    if (left <= EPS) return;
+    if (game.piles.some(p => p.x === place.x && p.y === place.y && (p.layer || 0) === place.layer)) continue;
+    const add = Math.min(left, c.size);
+    game.piles.push({ x: place.x, y: place.y, type: id, amount: add, layer: place.layer });
+    left -= add;
+  }
+  if (left <= EPS) return;
+  const same = game.piles.filter(p => p.type === id && by(p));
+  const onto = same[same.length - 1] || null;
+  if (onto) onto.amount += left;
+  else game.piles.push({ x: near.x, y: near.y + TILE_SIZE, type: id, amount: left, layer: 0 });
 }
 
-// A free tile next to it (out from the town hall's walls), with no pile on it yet if there's one like that
-function freeSpotBy(near) {
+// The places for packs by a storage: on each free tile within a tile of it (the town hall: of its walls), 3 by
+// 3 to a tile, the ground layer first, then the one on top; the nearest tiles first
+function packPlaces(near) {
+  const c = config().pack;
   const g = getGridPos(near.x, near.y);
-  const ring0 = near === townHall ? Math.ceil(townHall.radius / TILE_SIZE) + 1 : 1;
+  const body = near === townHall ? townHall.radius : TILE_SIZE / 2;
   const tiles = getTileIndex();
-  let fallback = null;
-  for (let ring = ring0; ring <= ring0 + 3; ring++) {
-    for (let dy = -ring; dy <= ring; dy++) {
-      for (let dx = -ring; dx <= ring; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
-        const x = (g.gx + dx) * TILE_SIZE + 15, y = (g.gy + dy) * TILE_SIZE + 15;
-        if (isTileBlockedForSettler(g.gx + dx, g.gy + dy) || tiles.buildings.has(`${x},${y}`)) continue;
-        if (!game.piles.some(p => p.x === x && p.y === y)) return { x, y };
-        fallback = fallback || { x, y };
+  const free = [];
+  const span = Math.ceil(body / TILE_SIZE) + 1;
+  for (let dy = -span - 1; dy <= span + 1; dy++) {
+    for (let dx = -span - 1; dx <= span + 1; dx++) {
+      const gx = g.gx + dx, gy = g.gy + dy, x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+      const d = Math.max(Math.abs(x - near.x), Math.abs(y - near.y));
+      if (d <= body || d > body + TILE_SIZE * 1.05) continue; // (round it, a tile out at most)
+      if (isTileBlockedForSettler(gx, gy) || tiles.buildings.has(`${x},${y}`)) continue;
+      free.push({ x, y, d: Math.hypot(x - near.x, y - near.y) });
+    }
+  }
+  free.sort((a, b) => a.d - b.d);
+  const side = Math.round(Math.sqrt(c.perTile)), step = 9;
+  const out = [];
+  for (let layer = 0; layer < c.layers; layer++) {
+    for (const t of free) {
+      for (let k = 0; k < c.perTile; k++) {
+        out.push({ x: t.x + ((k % side) - (side - 1) / 2) * step, y: t.y + (Math.floor(k / side) - (side - 1) / 2) * step, layer });
       }
     }
   }
-  return fallback || { x: near.x, y: near.y + TILE_SIZE };
+  return out;
 }
 
-// What a fallen or demolished warehouse held: onto the ground where it stood
+// What a fallen or demolished warehouse held: in packs where it stood
 /** @param {any} building */
 export function dropStoreContents(building) {
-  for (const [id, amount] of Object.entries(building.store || {})) {
-    if (amount > EPS) game.piles.push({ x: building.x, y: building.y, type: id, amount });
-  }
+  const at = { x: building.x, y: building.y };
+  for (const [id, amount] of Object.entries(building.store || {})) if (amount > EPS) dropPile(at, id, amount);
   building.store = {};
+}
+
+// ---- (#279) each group of resources a storage of its own, with more than one
+
+// The storage a resource belongs in: with one storage, null (anywhere); with more, its group's (the groups
+// of GAME_CONFIG.resourceGroups shared out over the storages in turn: the town hall first, then the
+// warehouses as they were built)
+export function storeHome(id) {
+  const storages = getStorages();
+  if (storages.length < 2) return null;
+  const faction = getPlayerFaction().id;
+  const groups = GAME_CONFIG.resourceGroups.filter(gr => !gr.held && gr.members.length && (!gr.factions || gr.factions.includes(faction)));
+  const k = groups.findIndex(gr => /** @type {string[]} */ (gr.members).includes(id));
+  return storages[(k < 0 ? 0 : k) % storages.length];
+}
+
+// Where a load of `id` goes: its home if there's room, else the nearest with room, else the nearest
+export function deliveryStorage(s, id) {
+  const home = id ? storeHome(id) : null;
+  if (home && roomIn(home) >= 1) return home;
+  return findStorageWithRoom(s) || null;
+}
+
+// Something lying in a storage that isn't its home, where its home has room: [from, id] or null
+function misplaced(taken) {
+  for (const storage of getStorages()) {
+    for (const [id, n] of Object.entries(storage.store || {})) {
+      if (n < 1 || taken.has(`${id}@${getStorages().indexOf(storage)}`)) continue;
+      const home = storeHome(id);
+      if (home && home !== storage && roomIn(home) >= 1) return { from: storage, id };
+    }
+  }
+  return null;
 }
 
 // Keep what lies where in step with the stock (Endless only): more in the stock than lies anywhere (a
@@ -123,7 +189,7 @@ function takeOff(id, amount, storages) {
 // A settler with nothing to do carries a pile into a storage with room: up to carryMaterials of it, already
 // counted in the stock (`counted`: goDeliver only moves it in)
 export function haulPiles(s, tick) {
-  if (s.role !== 'worker' || s.isPossessed || s.carrying || tick.isWaveActive || !s.wasIdle && !s.pileTarget || game.gameMode !== 'endless') { s.pileTarget = null; return false; }
+  if (s.role !== 'worker' || s.isPossessed || s.carrying || tick.isWaveActive || (!s.wasIdle && !s.pileTarget && !s.sortJob) || game.gameMode !== 'endless') { s.pileTarget = null; s.sortJob = null; return false; }
   let pile = s.pileTarget && game.piles.includes(s.pileTarget) ? s.pileTarget : null;
   const taken = new Set(game.settlers.filter(o => o !== s && o.pileTarget).map(o => o.pileTarget));
   if (!pile) {
@@ -136,7 +202,7 @@ export function haulPiles(s, tick) {
     }
   }
   s.pileTarget = pile;
-  if (!pile) return false;
+  if (!pile) return sortStores(s, tick);
   s.patrolTarget = null;
   if (Math.hypot(pile.x - s.x, pile.y - s.y) > 14) { moveEntityTowards(s, pile.x, pile.y, s.speed, false, tick.dt); return true; }
   const amount = Math.min(pile.amount, config().carryMaterials);
@@ -144,5 +210,24 @@ export function haulPiles(s, tick) {
   if (pile.amount <= EPS) game.piles.splice(game.piles.indexOf(pile), 1);
   s.carrying = { type: pile.type, amount, counted: true, loads: 99 };
   s.pileTarget = null;
+  return true;
+}
+
+// (#279) one with nothing to do carries what lies in a storage that isn't its home over to its home: up to
+// carryMaterials of it, already counted in the stock
+function sortStores(s, tick) {
+  const taken = new Set(game.settlers.map(o => (o !== s ? o.sortJob : null)).map(j => (j ? `${j.id}@${getStorages().indexOf(j.from)}` : '')).filter(Boolean));
+  let job = s.sortJob && getStorages().includes(s.sortJob.from) && (s.sortJob.from.store || {})[s.sortJob.id] >= 1 ? s.sortJob : null;
+  if (!job) job = misplaced(taken);
+  s.sortJob = job;
+  if (!job) return false;
+  s.patrolTarget = null;
+  const at = job.from === townHall ? Math.hypot(townHall.x - s.x, townHall.y - s.y) <= townHall.radius + s.radius + 4 : Math.hypot(job.from.x - s.x, job.from.y - s.y) <= 34;
+  if (!at) { if (job.from === townHall) moveSettlerToTownHall(s, s.speed, tick.dt); else moveEntityTowards(s, job.from.x, job.from.y, s.speed, false, tick.dt); return true; }
+  const store = job.from.store, amount = Math.min(store[job.id], config().carryMaterials);
+  store[job.id] -= amount;
+  if (store[job.id] <= EPS) delete store[job.id];
+  s.carrying = { type: job.id, amount, counted: true, loads: 99 };
+  s.sortJob = null;
   return true;
 }

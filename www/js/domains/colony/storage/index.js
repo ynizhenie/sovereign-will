@@ -3,5 +3,5 @@
 
 export { deliverCarrying, deliverWhenNothingToDo, fetchFromStorage, findNearestStorage, goDeliver, isAtStorage, walkToStorage } from './storage.behaviours.js';
 export { addCarryLoad, addResources, canAfford, formatCost, getCarryCapacity, getFreeStock, getMissingCost, getResourceAmount, giveResourceToSettler, hasRoomToCarry, mixStartFood, moveSettlerToTownHall, payCost, showCostError, stock, syncFoodMix, takeStock } from './storage.rules.js';
-export { dropStoreContents, haulPiles, keepStoresInStep, roomIn, storeCapacity, storedTotal } from './storage.stores.js';
+export { dropStoreContents, haulPiles, keepStoresInStep, roomIn, storeCapacity, storeHome, storedTotal } from './storage.stores.js';
 export { drawPiles, drawStoreContents } from './storage.draw.js';
