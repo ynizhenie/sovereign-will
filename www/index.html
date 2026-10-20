@@ -325,16 +325,25 @@
             </div>
           </div>
 
+          <!-- (#279) the Zones tab (was Farming): the farm (a farmer with a hoe plants only in its zones), where
+               they relieve themselves, where soldiers stand before a wave -->
           <div id="tab-farming" class="tab-pane">
-            <div class="panel-heading" data-i18n="panel.plant">Plant</div>
-            <div class="tile-grid" id="farming-actions"></div>
-            <div class="panel-heading" data-i18n="panel.zones">Farm zones</div>
+            <div class="farm-only">
+              <div class="panel-heading" data-i18n="panel.farm">Farm</div>
+              <div class="tile-grid" id="farming-actions"></div>
+              <div class="tile-grid">
+                <button class="btn tile" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
+                <button class="btn tile" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
+                <button class="btn tile" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
+              </div>
+            </div>
+            <div class="panel-heading" data-i18n="panel.zones">Zones</div>
             <div class="tile-grid">
-              <button class="btn tile" id="btn-zone_wheat" data-action="setMode" data-arg="zone_wheat" data-i18n="btn.zoneWheat">[[zone_wheat]] Wheat zone</button>
-              <button class="btn tile" id="btn-zone_sapling" data-action="setMode" data-arg="zone_sapling" data-i18n="btn.zoneSapling">[[zone_sapling]] Sapling zone</button>
-              <button class="btn tile" id="btn-zone_apple" data-action="setMode" data-arg="zone_apple" data-i18n="btn.zoneApple">[[zone_apple]] Apple zone</button>
+              <button class="btn tile eats-only" id="btn-zone_relief" data-action="setMode" data-arg="zone_relief" data-i18n="btn.zoneRelief">[[dung_heap]] Relief zone</button>
+              <button class="btn tile" id="btn-zone_post" data-action="setMode" data-arg="zone_post" data-i18n="btn.zonePost">[[shield]] Soldiers' posts</button>
               <button class="btn tile" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
             </div>
+            <div class="battle-hint" data-i18n="zone.hint">A relief zone holds 5 heaps; a post is one soldier's before a wave</div>
           </div>
 
           <div id="tab-blight" class="tab-pane">

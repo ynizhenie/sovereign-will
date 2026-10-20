@@ -123,7 +123,7 @@ export function trackFootprints(unit) {
   }
   if (!unit.smear || unit.smear.steps <= 0) {
     const pool = game.bloodSplats.find(b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4);
-    const pile = game.dung.find(p => (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9);
+    const pile = game.dung.find(p => !p.inZone && (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9); // (not in a relief zone, #279)
     if (pool || pile) unit.smear = { color: pile ? 'dung' : 'blood', steps: GAME_CONFIG.smears.steps, x: unit.x, y: unit.y };
     return;
   }
@@ -277,12 +277,23 @@ export function isInsideBase(en) {
 // the wave is on the map, only on the side it comes from (getThreatArc, #202): doors on that side, the rest
 // spread along that arc
 export function getDefensePlan() {
-  const melee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
-  const archers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
+  const allMelee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
+  const allArchers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
   const arc = getThreatArc();
   const facing = a => !arc || Math.abs(Math.atan2(Math.sin(a - arc.centre), Math.cos(a - arc.centre))) <= arc.half;
-  const key = [...melee, ...archers].map(s => s.id).join(',') + '|' + game.buildings.length + '|' + (arc ? `${arc.centre},${arc.half}` : 'all');
+  const zones = game.postZones || [];
+  const key = [...allMelee, ...allArchers].map(s => s.id).join(',') + '|' + game.buildings.length + '|' + (arc ? `${arc.centre},${arc.half}` : 'all') + '|' + zones.map(z => `${z.x},${z.y}`).join(';');
   if (game.defensePlan && game.defensePlan.key === key) return game.defensePlan;
+  // (#279) the tiles marked as posts first: one soldier each, the nearest free one (melee before archers);
+  // those left over get posts as ever
+  const zoned = new Map();
+  for (const z of zones) {
+    const free = [...allMelee, ...allArchers].filter(s => !zoned.has(s));
+    if (!free.length) break;
+    const s = free.sort((a, b) => Math.hypot(a.x - z.x, a.y - z.y) - Math.hypot(b.x - z.x, b.y - z.y))[0];
+    zoned.set(s, { post: { x: z.x, y: z.y }, slot: 0 });
+  }
+  const melee = allMelee.filter(s => !zoned.has(s)), archers = allArchers.filter(s => !zoned.has(s));
   const size = GAME_CONFIG.defense.squadSize;
   // too few for two squads: everyone on a post of their own round the base
   const singles = melee.length < 2 * size;
@@ -320,6 +331,7 @@ export function getDefensePlan() {
     melee.forEach((s, i) => squadOf.set(s, { post: posts[Math.floor(i / size)], slot: i % size }));
     archers.forEach((s, i) => squadOf.set(s, { post: posts[i % posts.length], slot: size + Math.floor(i / posts.length) }));
   }
+  for (const [s, place] of zoned) { squadOf.set(s, place); posts.push(place.post); }
   game.defensePlan = { key, posts, squadOf };
   return game.defensePlan;
 }
