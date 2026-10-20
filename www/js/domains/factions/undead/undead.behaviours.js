@@ -7,7 +7,7 @@ import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../../en
 import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
 import { getBlightKeys, getNecromancy, raiseTemporaryZombie } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
 import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../index.js';
 
@@ -21,43 +21,8 @@ export function necromancy(s, tick) {
   const dt = tick.dt;
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
 
-  // it keeps behind its own (#199): an enemy closer than necroKeepBack, it steps back towards the town hall
-  // (hit, it still strikes back: strikeBack comes first)
-  // only with corpses about to raise: with none, it fights rather than run (#232)
-  const raisable = (s.raisesLeft || 0) > 0 && game.corpses.some(c => dist(c) <= necro.range &&
-    !game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - c.x, en.y - c.y) < GAME_CONFIG.morale.necroCorpseClear));
-  if (!s.isPossessed && raisable) {
-    // (raising or healing, it holds on unless an enemy is right on it: no stepping back and forth, #232)
-    const busy = (s.raiseTimer || 0) > 0 || (s.working || 0) > 0;
-    const keep = busy ? 60 : GAME_CONFIG.morale.necroKeepBack;
-    const threat = game.enemies.filter(en => en.hp > 0 && dist(en) < keep).sort((a, b) => dist(a) - dist(b))[0];
-    if (threat && dist(townHall) > townHall.radius + s.radius + 10) {
-      const d = Math.max(1, dist(threat));
-      const away = { x: s.x + (s.x - threat.x) / d * 60, y: s.y + (s.y - threat.y) / d * 60 };
-      // away from it, leaning towards the hall, behind its own
-      const h = Math.max(1, dist(townHall));
-      s.patrolTarget = null;
-      moveEntityTowards(s, (away.x + s.x + (townHall.x - s.x) / h * 60) / 2, (away.y + s.y + (townHall.y - s.y) / h * 60) / 2, s.speed, false, dt);
-      return true;
-    }
-  }
-
-  let patient = null;
-  for (const other of game.settlers) {
-    if (other !== s && other.hp < other.maxHp && dist(other) < necro.range / 2 && (!patient || dist(other) < dist(patient))) patient = other;
-  }
-  if (patient) {
-    s.patrolTarget = null;
-    if (dist(patient) > necro.healRange) {
-      moveEntityTowards(s, patient.x, patient.y, s.speed, false, dt);
-    } else {
-      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
-      s.working = 0.1;
-      faceTowards(s, patient.x, patient.y);
-    }
-    return true;
-  }
-
+  // (#279: no more stepping back from an enemy close by: it stepped back, went to heal one of its own
+  // among the enemies, stepped back again... It keeps calmly to its work; hit, it strikes back, strikeBack)
   let corpse = null;
   const zombieType = c => (c.big ? 'big_zombie' : 'zombie');
   // raised in a fight; between waves the corpses give bones instead (collectBones, #199)
@@ -69,7 +34,7 @@ export function necromancy(s, tick) {
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
     }
   }
-  if (corpse) {
+  const raise = () => {
     tick.raiseAssignments.add(corpse);
     s.patrolTarget = null;
     // raised from a distance (raiseReach), not standing over it (#203)
@@ -87,6 +52,31 @@ export function necromancy(s, tick) {
       s.raisesLeft--;
       raiseTemporaryZombie(corpse);
     }
+    return true;
+  };
+  // a corpse within its reach first (no walking for it), then its wounded, then a corpse farther off
+  if (corpse && dist(corpse) <= necro.raiseReach) return raise();
+
+  let patient = null;
+  for (const other of game.settlers) {
+    if (other !== s && other.hp < other.maxHp && dist(other) < necro.range / 2 && (!patient || dist(other) < dist(patient))) patient = other;
+  }
+  if (patient) {
+    s.patrolTarget = null;
+    if (dist(patient) > necro.healRange) {
+      moveEntityTowards(s, patient.x, patient.y, s.speed, false, dt);
+    } else {
+      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      s.working = 0.1;
+      faceTowards(s, patient.x, patient.y);
+    }
+    return true;
+  }
+  if (corpse) return raise();
+  // itself last of all (#279), where it stands
+  if (s.hp < s.maxHp && (tick.isWaveActive || getRecentAttacker(s))) {
+    s.hp = Math.min(s.maxHp, s.hp + necro.healPerSecond * dt);
+    s.working = 0.1;
     return true;
   }
 
@@ -221,7 +211,7 @@ export function corpsesToGraves(s, tick) {
     s.carrying = null;
     return true;
   }
-  if (s.carrying || !graves.length) return false;
+  if (s.carrying || !graves.length || hasPlayerOrderFor(s, tick)) return false; // (an order of the player's first, #279)
   const coming = g => game.settlers.filter(o => o.carrying && o.carrying.forGrave === g).length;
   const room = g => game.corpses.filter(k => byGrave(k, g)).length + coming(g) < c.corpsesBy;
   const grave = graves.filter(room).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];

@@ -9,6 +9,7 @@ import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
 import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 import { getNecromancy } from '../../factions/undead/index.js';
+import { getEnemyDef } from '../waves/index.js';
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
@@ -34,10 +35,15 @@ export function holdPost(s, tick) {
   if (marked) { s.postTarget = marked; return false; }
   if (goForMarkedTent(s, tick)) return true; // a tent the player pointed at, too (#203)
   const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
-  let nearest = null, best = engage;
+  // an archer counts as near the post while it can shoot at it (#279: it stood off past the post's reach and
+  // shot, the soldiers ran at it, gave up half way as too far from the post, went back, and so on)
+  const reachOf = en => engage + (en.type === 'archer' ? ((getEnemyDef(en).ranged || {}).range || 0) : 0);
+  if (s.postTarget && game.enemies.includes(s.postTarget) && s.postTarget.type === 'archer' &&
+    Math.hypot(s.postTarget.x - place.post.x, s.postTarget.y - place.post.y) < reachOf(s.postTarget)) return false;
+  let nearest = null, best = Infinity;
   for (const en of game.enemies) {
     const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
-    if (d < best) { best = d; nearest = en; }
+    if (d < reachOf(en) && d < best) { best = d; nearest = en; }
   }
   // nothing near the post: the nearest enemy that got into the base, wherever that is
   if (!nearest) {

@@ -5,6 +5,7 @@
 // most every globalGap seconds, the same one speaking at most every ownGap.
 
 import { game } from '../../../engine/world/index.js';
+import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { playSound } from '../../../app/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
@@ -64,7 +65,9 @@ export function drawSpeech(ctx, unit, top) {
 
 // Every bubble, over everything else on the map (after all the units, so none stands over one)
 export function drawAllSpeech(ctx) {
-  for (const u of /** @type {any[]} */ ([...game.settlers, ...game.enemies])) drawSpeech(ctx, u, u.y - (u.visualRadius || u.radius || 11) * 1.45);
+  // (#279) over a panic's or a fright's mark, not under it
+  const marked = u => u.panic || (u.morale !== undefined && u.morale < GAME_CONFIG.morale.calmAbove);
+  for (const u of /** @type {any[]} */ ([...game.settlers, ...game.enemies])) drawSpeech(ctx, u, u.y - (u.visualRadius || u.radius || 11) * 1.45 - (marked(u) ? 14 : 0));
 }
 
 // A settler of the colony says it (its faction's phrases)

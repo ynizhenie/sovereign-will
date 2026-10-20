@@ -57,8 +57,8 @@ export function render() {
   drawEnemyTentSites();
   drawSettlers();
   drawEnemies();
-  drawAllSpeech(ctx); // what they say, over them all (#252)
   drawMoraleMarks();
+  drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
   drawProjectiles();
 

@@ -66,8 +66,18 @@ export function carryCorpse(s, tick) {
   return true;
 }
 
+// The player has work marked that this one could take (#279: an order comes before the corpses): for a
+// worker a build or a marked resource, for a soldier a marked boar to hunt. Not with something in its arms
+export function hasPlayerOrderFor(s, tick) {
+  if (s.carrying) return false;
+  const marked = tick.markedResources.filter(r => (r.priority || 0) > 0);
+  if (s.role === 'worker') return game.blueprints.length > 0 || marked.length > 0;
+  return marked.some(r => game.boars.includes(r));
+}
+
 // Between waves, one with nothing better to do goes for a corpse in the base, one each
 export function haulCorpses(s, tick) {
+  if (hasPlayerOrderFor(s, tick)) { s.corpseTarget = null; return false; }
   // (the undead keep theirs for the necromancers; the demons put theirs in pits or cut them up, #250)
   if (!isHauler(s) || s.carrying || tick.isWaveActive || getPlayerFaction().id === 'undead' || getPlayerFaction().id === 'demons' || !getCorpseHeap()) { s.corpseTarget = null; return false; }
   const taken = new Set(game.settlers.filter(o => o !== s).map(o => o.corpseTarget).filter(Boolean));
