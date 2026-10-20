@@ -118,6 +118,11 @@ export const ICONS = {
   },
   undo: c => { icRing(c, '#ecf0f1', 3.5, 17, 17, 9, Math.PI * 1.05, Math.PI * 2.6); icFill(c, '#ecf0f1', [[2, 14], [10, 8], [11, 19]]); },
   redo: c => { icRing(c, '#ecf0f1', 3.5, 15, 17, 9, Math.PI * 0.4, Math.PI * 1.95); icFill(c, '#ecf0f1', [[30, 14], [22, 8], [21, 19]]); },
+  sun: c => {
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; icLine(c, '#f9e79f', 2.5, [[16 + Math.cos(a) * 10, 16 + Math.sin(a) * 10], [16 + Math.cos(a) * 14, 16 + Math.sin(a) * 14]]); }
+    icCircle(c, '#f4d03f', 16, 16, 8); icCircle(c, '#f9e79f', 14, 14, 3);
+  },
+  moon: c => { icCircle(c, '#f4f6f7', 16, 16, 11); icCircle(c, '#1b2631', 21, 12, 9); icCircle(c, '#d5dbdb', 11, 20, 1.6); },
   lock: c => {
     icLine(c, '#bdc3c7', 3.5, [[10, 15], [10, 11]]); icLine(c, '#bdc3c7', 3.5, [[22, 15], [22, 11]]);
     icRing(c, '#bdc3c7', 3.5, 16, 11, 6, Math.PI, Math.PI * 2);

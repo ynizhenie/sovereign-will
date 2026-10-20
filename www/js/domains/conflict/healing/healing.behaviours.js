@@ -6,7 +6,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 import { hasToolFamily } from '../../colony/equipment/index.js';
 import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
-import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker, noteDay } from '../../colony/settlers/index.js';
 import { isShelter } from './healing.rules.js';
 import { getReachDistanceToResource, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { isWaterReachable } from '../../world/index.js';
@@ -105,6 +105,7 @@ export function treatWounded(s, tick) {
       s.healTimer = 0;
       s.bagHerbs--;
       patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
+      if (patient !== s) noteDay(s, 'healed'); // (#279)
       playSound('heal', patient);
     }
   }
