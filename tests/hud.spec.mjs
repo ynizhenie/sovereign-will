@@ -9,7 +9,10 @@ test('the stock drops down at one level: a line a group, its name and each resou
   const raw = page.locator('#resources-hud .res-line', { has: page.locator('#resource-rawMeat-txt') });
   await expect(raw).toBeVisible();
   await expect(raw.locator('.res-line-name')).toHaveText('Сырая еда');
-  await expect.poll(() => iconText(page, '#resources-hud .res-line:has(#resource-rawMeat-txt) .res-chip')).toEqual(['[[rawMeat]] 6', '[[rawFish]] 2', '[[wheat]] 4', '[[worms]] 0']);
+  // (#279) each with its name; none of a thing (the worms): hidden
+  await expect.poll(() => page.$$eval('#resources-hud .res-line:has(#resource-rawMeat-txt) .res-chip:not([hidden])', cs => cs.map(c => `${c.querySelector('b').textContent} ${c.querySelector('.res-name').textContent}`)))
+    .toEqual(['6 Сырое мясо', '2 Сырая рыба', '4 Зерно']);
+  await expect(page.locator('#resources-hud .res-chip:has(#resource-worms-txt)')).toBeHidden();
   // every resource has exactly one place, grouped or not (a faction's own only for it: no bones for the humans, #43)
   const places = await page.evaluate(() => Object.values(GAME_CONFIG.resources).filter(r => !r.factions || r.factions.includes(sides.player.faction))
     .map(r => document.querySelectorAll(`#${resourceHudId(r.id)}`).length));

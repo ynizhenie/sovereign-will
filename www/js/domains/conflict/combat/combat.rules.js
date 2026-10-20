@@ -83,7 +83,7 @@ export function performAttack(attacker, targetX, targetY) {
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); bleed(en, attacker); playSound('hit', en); } })),
+      ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; bleed(en, attacker); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {

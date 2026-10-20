@@ -21,7 +21,10 @@ test('Food opens onto what it is made of; food without a kind tops up the scarce
   expect(r.shown).toBe(String(r.spent.cookedMeat));
   await page.click('#resource-strip'); // all of the stock, dropped down from the strip: Food's line in sight (#248)
   await expect(page.locator('#resources-hud [id^="food-kind-"]')).toHaveCount(5); // no Provisions any more (#169)
-  await expect(page.locator('#food-kind-berries-txt')).toBeVisible();
+  await expect(page.locator('#food-kind-cookedMeat-txt')).toBeVisible();
+  // (#279: a kind there's none of is hidden)
+  await page.evaluate(() => { foodMix.berries = 0; updateUI(); });
+  await expect(page.locator('#resources-hud .res-chip:has(#food-kind-berries-txt)')).toBeHidden();
 });
 
 test('the watering can is made at the smithy (iron in it, #248), only for a farmer (#106)', async ({ page }) => {

@@ -6,8 +6,8 @@
 //    its faction, tapping a boar marks it, as in the game;
 //  - fishing: a fisher at the water digs worms for bait and fishes, carries the fish in; a cook at the
 //    campfire by it cooks them;
-//  - a fight: a small squad (two swords with shields, a medic in armour) against zombies that keep coming,
-//    faster and faster, till they fall, and a new squad comes; a tap on a zombie kills it;
+//  - a fight: a small squad (two swords with shields, a medic in armour) against zombies that keep coming
+//    in twos from the map's edge (#279), faster and faster, till they fall, and a new squad comes; a tap on a zombie kills it;
 //  - the farm: a farmer with a backpack, a hoe and a watering can plants a wheat field, waters it, brings
 //    it dung from the compost heap.
 // No waves come and nobody gets hungry. The world is made to fit the screen: its centre is the screen's,
@@ -36,7 +36,7 @@ export const menuWorld = {
   size: '',             // the screen it was made for: made again when that changes
   opened: false,        // the game's opening done: the curtain lifted (style.css)
   scene: '',            // which scene (MENU_SCENES): picked at random each time the menu opens
-  fight: { next: 0, gap: 0, down: 0, spawns: /** @type {{ x: number, y: number }[]} */ ([]) } // the fight's clock (tickMenuScene)
+  fight: { next: 0, gap: 0, down: 0 } // the fight's clock (tickMenuScene)
 };
 
 export function isMenuWorld() {
@@ -129,7 +129,6 @@ export function enterMenuWorld(scene = '') {
     map.water = [near(-3, 3)];
     map.buildings.push(['dung_heap', ...near(-3, 1)]);
   }
-  const fightSpawns = sceneName === 'fight' ? some(4) : [];
   game.gameMode = 'endless';
   resetGame(map);
   game.gameMode = 'menu';
@@ -144,7 +143,7 @@ export function enterMenuWorld(scene = '') {
     game.settlers = [Object.assign(createSettler('normal', 1, hall[0] + 45, hall[1]), { tool: 'rod' }), createSettler('normal', 2, hall[0] - 45, hall[1] + 20)];
     Object.assign(stock, { worms: 0, wheatSeeds: 0, wheat: 0, firewood: 99, food: 999 });
   } else if (sceneName === 'fight') {
-    menuWorld.fight = { next: 2, gap: 5, down: 0, spawns: fightSpawns.map(t => ({ x: /** @type {number[]} */ (t)[0] * TILE_SIZE + 15, y: /** @type {number[]} */ (t)[1] * TILE_SIZE + 15 })) };
+    menuWorld.fight = { next: 2, gap: 5, down: 0 };
     townHall.hp = townHall.maxHp = 1e9; // (it's the squad's, not the zombies')
     fightSquad();
   } else if (sceneName === 'farm') {
@@ -187,11 +186,14 @@ export function tickMenuScene(dt) {
       return;
     }
     f.next -= dt;
-    if (f.next <= 0 && f.spawns.length && game.enemies.length < 8) {
-      const at = f.spawns[Math.floor(Math.random() * f.spawns.length)];
-      const z = createConfiguredEnemy({ x: at.x, y: at.y }, 'undead_zombie');
-      if (z) game.enemies.push(z);
-      f.gap = Math.max(1.2, f.gap * 0.93);
+    // (#279) two at a time, coming in from the edge of the map
+    if (f.next <= 0 && game.enemies.length < 8) {
+      const at = edgeSpot();
+      for (const dx of [-12, 12]) {
+        const z = createConfiguredEnemy({ x: at.x + (at.side ? dx : 0), y: at.y + (at.side ? 0 : dx) }, 'undead_zombie');
+        if (z) game.enemies.push(z);
+      }
+      f.gap = Math.max(2.4, f.gap * 0.93);
       f.next = f.gap;
     }
     if (game.corpses.length > 12) game.corpses.splice(0, game.corpses.length - 12);
@@ -201,6 +203,12 @@ export function tickMenuScene(dt) {
   } else if (menuWorld.scene === 'fishing') {
     stock.firewood = Math.max(stock.firewood || 0, 50);
   }
+}
+
+// A spot at the map's edge, on its middle half (side: along the top or bottom edge)
+function edgeSpot() {
+  const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT, k = 0.25 + Math.random() * 0.5, e = 12;
+  return [{ x: e, y: H * k, side: false }, { x: W - e, y: H * k, side: false }, { x: W * k, y: e, side: true }, { x: W * k, y: H - e, side: true }][Math.floor(Math.random() * 4)];
 }
 
 // Back to an ordinary (not running) Endless before a real game, a battle or the editor is set up
@@ -227,7 +235,8 @@ export function menuWorldTap(clientX, clientY) {
   // the fight: a zombie tapped falls (#256)
   const zombie = game.enemies.find(en => Math.hypot(mouse.x - en.x, mouse.y - en.y) < en.radius + 12);
   if (zombie) { zombie.hp = 0; return; }
-  const boar = game.boars.find(b => !b.isCarcass && Math.hypot(mouse.x - b.x, mouse.y - b.y) < 22);
+  // a boar, only in the hunt (#279: a tap in the other scenes marked their boars to no end)
+  const boar = menuWorld.scene === 'hunt' ? game.boars.find(b => !b.isCarcass && Math.hypot(mouse.x - b.x, mouse.y - b.y) < 22) : null;
   if (boar) {
     // marked, as a tap marks it in the game: the one to hunt
     game.boars.forEach(b => { b.priority = 0; });

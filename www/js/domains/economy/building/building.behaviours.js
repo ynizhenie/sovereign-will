@@ -8,7 +8,7 @@ import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, 
 import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
 import { makeAppleTree } from '../farming/index.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, says } from '../../colony/settlers/index.js';
+import { faceTowards, noteDay, says } from '../../colony/settlers/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 import { isNight } from '../../world/index.js';
 
@@ -224,6 +224,7 @@ export function workBlueprint(s, bp, dt) {
       game.trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
     } else {
       says(s, 'built'); // (#252)
+      noteDay(s, 'built'); // (#279)
       // built over the one it upgrades (a door on a wall, #248): that one comes down, its refund back
       if (bp.replaces) {
         const old = bp.replaces;

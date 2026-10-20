@@ -42,6 +42,8 @@
  * @property {boolean} [wateringCan]
  * @property {boolean} [whistle]     a foreman's (#248)
  * @property {boolean} [banner]      a captain's (#248)
+ * @property {boolean} [flute]       a wooden flute in its side slot (#279)
+ * @property {number} [playingFlute] the tick it last played it, by a campfire
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
@@ -78,6 +80,7 @@
  * @property {{ left: number, icon: string } | null} [eating] eating its meal, what it eats (#248)
  * @property {Object | null} [pileTarget] the pile it's going to carry into a storage (#248)
  * @property {Point | null} [reliefSpot] where it's going to relieve itself
+ * @property {Object<string, number>} [today]  what it did today, for its story by the fire (#279)
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, sharpened?: number, angle?: number, onPoint?: number, dug?: number } | null} [idle]  its pastime (#199)
@@ -108,6 +111,7 @@
  * @typedef {Object} Enemy
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
  * @property {Point} [muster]        where it gathers

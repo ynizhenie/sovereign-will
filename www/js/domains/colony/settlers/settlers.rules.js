@@ -198,6 +198,7 @@ export function eatMeal(s) {
   stock.worms = Math.max(0, (stock.worms || 0) - short);
   s.meals = (s.meals || 0) + 1;
   if (s.meals >= GAME_CONFIG.relief.mealsBefore) s.needsRelief = true;
+  if (Math.random() < 0.12) says(s, 'ate'); // (#279)
 }
 
 // Meals, each settler on its own clock, for a faction that eats (the undead don't)

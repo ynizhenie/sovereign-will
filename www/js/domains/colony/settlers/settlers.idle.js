@@ -12,6 +12,7 @@ import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/move
 import { getBaseRadius, isInSafeArea } from '../../conflict/combat/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
+import { moveSettlerToTownHall } from '../storage/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
 
 const config = () => GAME_CONFIG.idle;
@@ -24,6 +25,8 @@ const isMelee = s => s.weapon && s.weapon !== 'fist' && s.weapon !== 'bow';
 // another idle settler free for company: wandering, or already in a knot
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfires = () => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y));
+// where a smoke is lit (#279: not a campfire only, it was seldom seen): a campfire, a lit torch post, the town hall's hearth
+const lights = () => [...campfires(), ...game.buildings.filter(b => b.type === 'torch' && b.lit && isInSafeArea(b.x, b.y)), townHall];
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
 // an archer out of arrows doesn't train (#232)
 const canTrain = s => !(s.weapon === 'bow' && (!s.quiver || (s.arrows || 0) <= 0));
@@ -47,7 +50,7 @@ function pickPastime(s) {
   // a smoke (#248): some roll one from grass and light it at a campfire; a farmer takes a wheat stalk to
   // chew instead. Now and then, not straight again
   if (faction !== 'undead' && !((s.smokeRest || 0) > 0)) {
-    if (s.tool === 'hoe') { if (ripeWheat(s)) options.push('straw', 'straw'); } else if (s.id % 3 === 0 && fires.length && nearestGrass(s)) options.push('smoke', 'smoke');
+    if (s.tool === 'hoe') { if (ripeWheat(s)) options.push('straw', 'straw'); } else if (s.id % 3 === 0 && nearestGrass(s)) options.push('smoke', 'smoke');
   }
   if (isFighter(s)) {
     options.push('patrolEdge', 'patrolEdge');
@@ -116,7 +119,10 @@ export function idlePastime(s, tick) {
       if (!fire) { idle.left = 0; return false; }
       const place = ringPlace(s, fire, c.campfireRing, 'campfire');
       goStand(s, place, tick.dt, fire);
-      if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
+      if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) {
+        cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
+        if (s.flute) s.playingFlute = game.pathTick; // (one with a flute plays it, #279)
+      }
       return true;
     }
     case 'talk': {
@@ -166,9 +172,10 @@ export function idlePastime(s, tick) {
       // to the grass, then the fire to light it (a smoke); to ripe wheat (a stalk); a moment at each
       if (!idle.stage) idle.stage = idle.act === 'smoke' ? 'grass' : 'wheat';
       const at = idle.stage === 'grass' ? nearestGrass(s) : idle.stage === 'wheat' ? ripeWheat(s)
-        : campfires().sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+        : lights().sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
       if (!at) { idle.left = 0; return false; }
-      if (Math.hypot(at.x - s.x, at.y - s.y) > 32) { moveEntityTowards(s, at.x, at.y, s.speed, false, tick.dt); return true; } // (on its way: no stroll)
+      const reach = at === townHall ? townHall.radius + s.radius + 6 : 32;
+      if (Math.hypot(at.x - s.x, at.y - s.y) > reach) { if (at === townHall) moveSettlerToTownHall(s, s.speed, tick.dt); else moveEntityTowards(s, at.x, at.y, s.speed, false, tick.dt); return true; } // (on its way: no stroll)
       faceTowards(s, at.x, at.y);
       s.working = 0.1;
       idle.t = (idle.t || 0) + tick.dt;

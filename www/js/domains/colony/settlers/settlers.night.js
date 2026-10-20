@@ -57,6 +57,7 @@ export function tickNight() {
     for (const b of game.buildings) if (b.type === 'torch') b.lit = false;
     for (const s of game.settlers) {
       s.torchInHand = false;
+      s.today = {}; // (a new day to tell of, #279)
       // awake: hungry (#257: hunger stood still in its sleep)
       if (s.asleep) { s.asleep = false; if (getPlayerFaction().eats) s.hunger = Math.min(s.hunger ?? 1, 1); }
     }
