@@ -372,6 +372,7 @@ window.sim = (() => {
     const tree = trees.find(t => !t.isGrowing);
     const lumberjack = makeSettler(1, tree.x, tree.y, { tool: 'axe' });
     finishHarvest(lumberjack, tree, 'tree');
+    finishHarvest(lumberjack, tree, 'tree'); // (felled, then the log cut up, #279)
     const rightAfter = trees.length;
     run(GAME_CONFIG.map.respawnDelay.min - 1);
     const beforeMinDelay = trees.length;
