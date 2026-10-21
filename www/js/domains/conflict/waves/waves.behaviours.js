@@ -229,6 +229,7 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt) {
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     en.attackCooldown = en.shotCooldown || ranged.cooldown; // (Hard: a bow's rate in a settler's hands, #255)
+    en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle') en.arrows--;
   }
 }

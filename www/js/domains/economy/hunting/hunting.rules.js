@@ -28,7 +28,18 @@ export function woundBoar(boar, damage, attacker, fromX, fromY) {
   Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
 
+// (#306) the ground boars have dug, darker where one lies and for a while after it's gone (not saved: only a look)
+/** @type {{ x: number, y: number, boar: any, age: number }[]} */
+export const boarWallows = [];
+function endRest(boar) {
+  if (!boar.rest) return;
+  const w = boarWallows.find(o => o.boar === boar);
+  if (w) w.boar = null;
+  boar.rest = null;
+}
+
 export function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
+  endRest(boar); // (up and off, #306)
   // already running: only a hit turns a wary back-off into a sprint
   if ((boar.fleeTimer || 0) > 0 && (wary || boar.sprinting)) return;
 
@@ -81,9 +92,15 @@ export function tickBoarRespawn(dt) {
 
 // Boars: hide in the grass, run from settlers that come near, wander
 export function tickBoars(dt) {
+  const c = GAME_CONFIG.mapResources.boar;
+  for (let i = boarWallows.length - 1; i >= 0; i--) {
+    const w = boarWallows[i];
+    if (w.boar && (!game.boars.includes(w.boar) || w.boar.isCarcass || w.boar.rest === null)) w.boar = null;
+    if (!w.boar && (w.age += dt) > c.wallowFade) boarWallows.splice(i, 1);
+  }
   game.boars.forEach(b => {
     if (b.bloodAge !== undefined) b.bloodAge += dt;
-    if (b.isCarcass) return;
+    if (b.isCarcass) { endRest(b); return; }
     // a baited iron trap near by: it goes for the food, and may be caught (#248)
     if (!b.hidden && !(b.fleeTimer > 0) && boarToBait(b)) return;
 
@@ -137,9 +154,25 @@ export function tickBoars(dt) {
       }
     }
 
+    // (#306) digging, then lying in what it dug: still, till its time's up or something scares it (makeBoarFlee)
+    if (b.rest) {
+      b.rest.left -= dt;
+      if (b.rest.left > 0) return;
+      if (b.rest.stage === 'dig') {
+        b.rest = { stage: 'lie', left: c.restSeconds[0] + rand() * (c.restSeconds[1] - c.restSeconds[0]) };
+        return;
+      }
+      endRest(b);
+    }
     b.wanderTimer = (b.wanderTimer || 0) + dt;
     if ((b.fleeTimer || 0) <= 0 && b.wanderTimer >= (b.wanderInterval || 4.0)) {
       b.wanderTimer = 0;
+      if (rand() < c.restChance) {
+        b.rest = { stage: 'dig', left: c.digSeconds };
+        b.targetX = b.x; b.targetY = b.y;
+        if (boarWallows.length < 16) boarWallows.push({ x: b.x, y: b.y + 4, boar: b, age: 0 });
+        return;
+      }
       b.wanderInterval = 3 + rand() * 3;
       let ang = rand() * Math.PI * 2;
       let dist = 15 + rand() * 35;
