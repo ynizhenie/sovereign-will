@@ -53,7 +53,7 @@ export const equipmentConfig = {
   // loads (never an archer: the quiver is on its back). armor: +hpBonus, damageReduction off every hit,
   // melee soldiers first. shield: melee soldiers only, damageReduction off every hit, on top of armour.
   gear: {
-    backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, herbs: 2 }, extraLoads: 1 },
+    backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, rope: 2 }, extraLoads: 1 },
     shield: { id: 'shield', icon: 'shield', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35, armorKind: 'iron' },
     // (#298) leather armour: weaker than iron (armorKind: what `armor` a unit wearing it has), made at a workshop
@@ -65,8 +65,8 @@ export const equipmentConfig = {
     // nearest workers) in turn, every `everySeconds`, and tells it what's needed most (focusSeconds: what it
     // gathers first), and to swap its tool for one from the armory that does it. A soldier with a banner is a
     // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
-    whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', craftSeconds: 2, cost: { wood: 2, herbs: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45, rangeTiles: 5 } },
-    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, herbs: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } },
+    whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', craftSeconds: 2, cost: { wood: 2, rope: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45, rangeTiles: 5 } },
+    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } },
     // (#279) a wooden flute in its side slot: sitting by a campfire it plays one of the flute tunes (music.js)
     flute: { id: 'flute', icon: 'flute', madeBy: 'hand', craftSeconds: 2, cost: { wood: 3 } }
   },
