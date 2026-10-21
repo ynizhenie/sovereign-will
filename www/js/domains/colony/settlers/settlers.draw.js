@@ -80,10 +80,12 @@ export function getHeldItemPose(unit) {
   return { angle: 0, push: 0 };
 }
 
-// Whose kind of body: a settler's faction, an enemy's by its kind
-function unitKin(unit) {
+// Whose kind of body: an enemy's by its kind, a settler's by its type's faction (#306: in Battles the undead's
+// and demons' were drawn as humans; a zombie raised is a zombie), else the colony's
+export function unitKin(unit) {
   if (unit.enemyKey) return unit.enemyKey.startsWith('demon_') ? 'demons' : unit.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
-  return game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
+  const own = Object.values(GAME_CONFIG.factions).find(f => (f.units || []).includes(unit.type));
+  return own ? own.id : game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
 }
 
 // How big what it holds is drawn: as the hand holding it (a big one's bigger)
@@ -518,10 +520,10 @@ export function drawSettlers() {
     if (handBack) at(inHand);
     if (!s.asleep) at(() => drawSideItems(s, false));
     // the figure in the colony's colour (#251)
-    const faction = game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
+    const faction = unitKin(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     if (s.asleep) ctx.globalAlpha = 0.85;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons' && game.gameMode !== 'battle', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, armor: !s.asleep && armorOf(s) ? String(s.armor) : null });
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, armor: !s.asleep && armorOf(s) ? String(s.armor) : null });
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);

@@ -78,6 +78,6 @@ export const equipmentConfig = {
   // made into the stock: kind: the Craft sub-tab it's in; made in `batches` quick jobs; arrows by archers
   // while there are any (#249)
   recipes: {
-    arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3 }
+    arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3, unlockedWith: 'weapons:bow' }
   }
 };

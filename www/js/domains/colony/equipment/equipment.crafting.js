@@ -6,7 +6,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { canAfford, findNearestStorage, isAtStorage, payCost, stock, walkToStorage } from '../storage/index.js';
-import { faceTowards } from '../settlers/index.js';
+import { faceTowards, noteDay } from '../settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
@@ -99,6 +99,7 @@ export function craftItem(s, tick) {
   if (order.progress >= 1) {
     game.craftOrders.splice(game.craftOrders.indexOf(order), 1);
     s.carrying = null;
+    noteDay(s, 'crafted'); // (its day, #306)
     // arrows (#249) go into the stock; a thing into the armory, and on to whoever it's for
     if (order.yields) { for (const [id, n] of Object.entries(order.yields)) stock[id] = (stock[id] || 0) + n; return true; }
     game.armory[order.key] = (game.armory[order.key] || 0) + 1;

@@ -35,5 +35,5 @@ export const factionsConfig = {
   },
 
   // the colours either side can pick from; the two sides never share one
-  factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1']
+  factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1', '#e74c3c']
 };

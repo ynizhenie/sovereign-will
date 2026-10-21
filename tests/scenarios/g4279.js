@@ -38,7 +38,8 @@ Object.assign(window.sim, (() => {
     } });
     const lines = [...said];
     // (which of them tells its day is by chance: either one's, or a quiet day's if a morning came between)
-    const stories = [t('voice.story.gathered', { n: 3 }), t('voice.story.built', { n: 2 }), t('voice.story.none')];
+    // (#306: each told one of a few ways, '|'; now and then a word after it)
+    const stories = [t('voice.story.gathered', { n: 3 }), t('voice.story.built', { n: 2 }), t('voice.story.none')].flatMap(st => st.split('|'));
     return { a: lines.some(l => l.startsWith('1:')), b: lines.some(l => l.startsWith('2:')), story: lines.some(l => stories.some(st => l.includes(st))) };
   }
 

@@ -40,7 +40,8 @@ export const mechanicsConfig = {
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
-  farming: { plantSeconds: 1.5, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
+  // (#306) growSeconds: from planted to ripe (was 20 s), watered faster (wateringCan.growthFactor)
+  farming: { plantSeconds: 1.5, growSeconds: 45, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
 
   // fertiliser (#201): a farmer with a backpack carries dung to a wheat plot that has none; its next
   // harvest yields yieldFactor times, once
