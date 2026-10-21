@@ -56,6 +56,8 @@ test('the ground a boar dug belongs to its world: a new game and the battle fiel
   const errors = await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
+    // a boar may have dug one already in the seconds this world has been running: only the ones dug from here on
+    boarWallows.length = 0;
     const dig = () => { boarWallows.push({ x: townHall.x + 300, y: townHall.y + 4, boar: null, age: 0 }); return boarWallows.length; };
     const dug = dig();
     resetGame(); // a new game (the pit of the world before it doesn't come along)
