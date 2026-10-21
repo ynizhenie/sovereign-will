@@ -14,8 +14,8 @@ const poly = (pts, fill, stroke) => {
 };
 const rect = (x, y, w, h, fill) => { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); };
 
-// A weapon; false if it's none of them (the fist)
-export function drawHeldWeapon(weapon, k = 1) {
+// A weapon; false if it's none of them (the fist). pull (0..1): a bow's string drawn back, an arrow on it (#306)
+export function drawHeldWeapon(weapon, k = 1, pull = 0) {
   ctx.save();
   ctx.scale(k, k);
   let drawn = true;
@@ -38,9 +38,17 @@ export function drawHeldWeapon(weapon, k = 1) {
     rect(21, -1.8, 2, 3.6, '#4e3016'); // the binding
     poly([[22.5, -3], [iron ? 33 : 30, 0], [22.5, 3], [24, 0]], iron ? '#9aa7b1' : '#ecf0f1', 'rgba(0, 0, 0, 0.4)');
   } else if (weapon === 'bow') {
+    // drawn, the limbs bend a little more
+    const bend = 10 + pull * 2, sx = -1 - pull * 9;
     ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-1, -13); ctx.quadraticCurveTo(10, 0, -1, 13); ctx.stroke();
-    ctx.strokeStyle = 'rgba(236, 240, 241, 0.85)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-1, -13); ctx.lineTo(-1, 13); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1, -13); ctx.quadraticCurveTo(bend, 0, -1, 13); ctx.stroke();
+    ctx.strokeStyle = 'rgba(236, 240, 241, 0.85)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-1, -13); ctx.lineTo(sx, 0); ctx.lineTo(-1, 13); ctx.stroke();
+    if (pull > 0) {
+      // the arrow on the string, its head past the bow
+      ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(13, 0); ctx.stroke();
+      poly([[13, -1.6], [16, 0], [13, 1.6]], '#bdc3c7');
+      ctx.fillStyle = '#ecf0f1'; ctx.fillRect(sx, -1.4, 2.5, 1); ctx.fillRect(sx, 0.4, 2.5, 1); // (its fletching)
+    }
     rect(2.2, -2, 2.4, 4, '#5c3a17'); // the grip
     ctx.lineCap = 'butt';
   } else drawn = false;

@@ -75,6 +75,7 @@ export function performAttack(attacker, targetX, targetY) {
     playSound('bow', attacker);
     if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles
     attacker.attackCooldown = stats.cooldown;
+    attacker.shotAt = game.pathTick; attacker.shotLen = stats.cooldown; // (its next arrow drawn, #306)
     startSwing(attacker, 0.3);
   } else {
     const range = stats.range;

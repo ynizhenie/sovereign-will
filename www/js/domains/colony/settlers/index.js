@@ -2,7 +2,7 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { tickSettlers } from './settlers.behaviours.js';
-export { SKIN, applyHeldItemPose, backBehind, facesAway, handSide, heldBehind, itemScale, drawArmor, drawDung, drawFigure, drawOrderBubble, drawHandTorch, drawShield, drawQuiver, drawSettlers, faceTowards, startSwing, tickAnimation } from './settlers.draw.js';
+export { SKIN, bowDraw, zombieReach, applyHeldItemPose, backBehind, facesAway, handSide, heldBehind, itemScale, drawArmor, drawDung, drawFigure, drawOrderBubble, drawHandTorch, drawShield, drawQuiver, drawSettlers, faceTowards, startSwing, tickAnimation } from './settlers.draw.js';
 export { movePossessed, orderPossessed } from './settlers.orders.js';
 export { renderRecruitRow, renderSettlerInfo, updatePossessionView, updateUnitCounts } from './settlers.panel.js';
 export { changeSettlerType, createSettler, damageSettler, deselectSettler, dropSettlerLoot, getCurrentPop, getMaxPop, getPossessed, getRecentAttacker, getSelectedSettler, getUpgrade, isBigBody, removeDeadSettlers, spawnSettler, switchPossession, tickMeals, unpossess, upgradeToBig } from './settlers.rules.js';

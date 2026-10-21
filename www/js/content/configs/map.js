@@ -48,6 +48,9 @@ export const mapConfig = {
       // wary: backs off from a settler this close, at waryFleeSpeed (slower than settlers, so it can be
       // caught); fleeSpeed: its sprint once it's actually hit
       wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35,
+      // (#306) left be, now and then (restChance at a stop) it digs the ground (digSeconds) and lies there a while
+      // (restSeconds, from..to); the ground it dug stays darker while it's there and wallowFade s after it's gone
+      restChance: 0.22, digSeconds: 3, restSeconds: [10, 22], wallowFade: 30,
       // a kill is butchered where it lies for butcherSeconds; a hit bleeds it, and now and then (dungChance)
       // the scared boar leaves dung
       butcherSeconds: 2, dungChance: 0.12 }
