@@ -4,5 +4,6 @@
 export { drawGrassGround, drawMapBorder, drawOreVeins, drawRocks, drawSand, drawWater, tileVariantHash } from './world.draw.js';
 export { drawPaths, tickPaths } from './world.paths.js';
 export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones.js';
+export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, tickWeather, windSway } from './world.weather.js';
 export { castShadow, drawDarkness, getDarkness, getDayPhase, getLights, getSun, isNight, nightProgress, tickDaytime } from './world.daytime.js';
 export { ORE_KINDS, generateMap, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, isDesertTile, isWaterReachable, placeBeaches, placeOre, spawnForestAware, spawnResource } from './world.generator.js';

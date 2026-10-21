@@ -74,6 +74,11 @@ export const mechanicsConfig = {
   // for the night; a torch post is lit with postFirewood. (#279) Asleep it mends as its shelter heals
   // (sleepHealPerSecond at the town hall); a corpse within sleepCorpseTiles of where it sleeps is taken away
   // first; one ordered to work at night does it at drowsyPace
+  // (#308) weather, Endless only: clear for firstClearSeconds, then spells of weather (weights, clear twice as
+  // likely after one), each seconds long (from..to), coming on and going off over `fade`; the wind's strength
+  // range for each; a storm's lightning every boltSeconds; rain makes the fires burn rainFireBurn times faster
+  weather: { firstClearSeconds: 150, seconds: [70, 160], fade: 10, weights: { clear: 40, rain: 26, fog: 18, storm: 12 },
+    wind: { clear: [0.15, 0.6], rain: [0.5, 0.9], fog: [0.02, 0.15], storm: [1.0, 1.5] }, boltSeconds: [4, 11], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
     handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, torchFirewood: 1, postFirewood: 1, enemyTorchShare: 0.3,
     sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5 },

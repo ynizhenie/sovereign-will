@@ -9,7 +9,7 @@ import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettler
 import { armorOf, countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
-import { getDayPhase } from '../domains/world/index.js';
+import { getDayPhase, getWeather } from '../domains/world/index.js';
 
 export function updateUI() {
   updateWave();
@@ -108,13 +108,15 @@ function updateDayClock() {
   document.getElementById('day-hand').style.transform = `rotate(${now / length * 360 + 180}deg)`;
   const phase = getDayPhase();
   const face = document.getElementById('day-face');
-  const icon = phase === 'night' ? 'moon' : 'sun';
+  const weather = getWeather(), wet = weather.kind !== 'clear' && weather.level > 0.3; // (#308: rain, fog, a storm on its face)
+  const icon = wet ? weather.kind : phase === 'night' ? 'moon' : 'sun';
   if (face.dataset.icon !== icon) { face.dataset.icon = icon; face.innerHTML = iconHtml(icon); }
   let end = 0;
   for (const [id, len] of parts) { end += len; if (id === phase) break; }
   const next = parts[(parts.findIndex(p => p[0] === phase) + 1) % parts.length][0];
   const left = Math.max(0, Math.ceil(end - now));
-  clock.title = t('daytime.clock', { now: t(`daytime.${phase}`), next: t(`daytime.${next}`).toLowerCase(), time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` });
+  clock.title = t('daytime.clock', { now: t(`daytime.${phase}`), next: t(`daytime.${next}`).toLowerCase(), time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` }) +
+    (wet ? ` · ${t(`weather.${weather.kind}`)}` : '');
 }
 
 function updateWave() {

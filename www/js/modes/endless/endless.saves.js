@@ -104,6 +104,7 @@ export function loadGame(data) {
   game.worldSeed.setState(data.seed.state);
   for (const [list, value] of Object.entries(data.world)) game[list] = value;
   if (!data.world.logs) game.logs = []; // (a save from before #298)
+  if (!data.world.weather) game.weather = null; // (#308)
   for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
   // older saves' archer kinds, gone (#249): a skeleton is a zombie with its bow, a fire imp an imp
   const goneKinds = { skeleton: 'zombie', fire_imp: 'imp' };

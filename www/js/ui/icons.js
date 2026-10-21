@@ -636,6 +636,18 @@ export const ICONS = {
     icCircle(c, '#5d6d7e', 16, 17, 2.5);
   },
   // (#306) as in the world: crossed logs in a ring of stones, burning
+  // (#308) the weather: a cloud with rain falling, fog's drifting bands, a cloud with a bolt
+  rain: c => {
+    icEllipse(c, '#bdc3c7', 16, 12, 11, 7); icEllipse(c, '#d5dbdb', 12, 10, 6, 5);
+    for (const [x, y] of [[9, 21], [15, 24], [21, 21], [12, 28], [19, 28]]) icLine(c, '#5dade2', 1.6, [[x, y], [x - 1.5, y + 3]]);
+  },
+  fog: c => {
+    for (const [y, w] of [[9, 20], [15, 24], [21, 20], [27, 16]]) icLine(c, '#d5dbdb', 2.5, [[16 - w / 2, y], [16 + w / 2, y]]);
+  },
+  storm: c => {
+    icEllipse(c, '#7f8c8d', 16, 11, 12, 7); icEllipse(c, '#95a5a6', 12, 9, 6, 5);
+    icFill(c, '#f4d03f', [[17, 15], [12, 23], [16, 23], [13, 30], [21, 20], [17, 20], [20, 15]]);
+  },
   campfire: c => {
     icLine(c, '#6d4520', 4, [[6, 25], [26, 15]]); icLine(c, '#6d4520', 4, [[26, 25], [6, 15]]);
     for (const [sx, sy] of [[4, 27], [11, 29], [19, 29], [27, 27]]) icCircle(c, '#7f8c8d', sx, sy, 2.5);
