@@ -27,13 +27,13 @@ test('Point on a tile with several things: a menu picks which one gets marked (#
   expect(await page.evaluate(() => window.stick.priority)).toBe(1);
 });
 
-test('Craft: Tools, Weapons and Gear one after the other, each by where it\'s made; a tap on a tile makes one (#261, #279)', async ({ page }) => {
+test('Craft: Tools, Weapons, Gear and Supplies one after the other, each by where it\'s made; a tap on a tile makes one (#261, #279, #306)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
   await page.evaluate(() => { isPaused = true; Object.assign(stock, { wood: 50, stone: 50 }); window.sim.helpers.placeWorkshop(); });
   await page.click('[data-arg="tab-craft"]');
   await expect(page.locator('#craft-tools')).toBeVisible();
-  expect(await page.locator('#tab-craft .craft-kind').allTextContents()).toEqual(['Инструменты', 'Оружие', 'Снаряжение']);
+  expect(await page.locator('#tab-craft .craft-kind').allTextContents()).toEqual(['Инструменты', 'Оружие', 'Снаряжение', 'Снабжение']);
   expect(await page.locator('#craft-tools .panel-heading').allTextContents()).toEqual(['Вручную (в ратуше)', 'В мастерской', 'В кузнице (железо)']);
   await page.click('#btn-axe');
   expect(await page.evaluate(() => craftOrders.map(o => o.key))).toEqual(['tools:axe']);
