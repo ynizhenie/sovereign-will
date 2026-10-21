@@ -8,6 +8,7 @@ import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
 import { drawHair, lookOf } from './settlers.looks.js';
+import { castShadow } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx } from '../../../engine/platform/index.js';
@@ -267,7 +268,7 @@ export function drawFigure(unit, o) {
   if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
   const outline = 'rgba(0, 0, 0, 0.45)';
   // its shadow on the ground
-  if (!o.lying) { ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'; ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.7, r * 0.22, 0, 0, Math.PI * 2); ctx.fill(); }
+  if (!o.lying) castShadow(ctx, 0, r * 1.02, r * 0.7, r * 0.22, r * 1.6); // (cast away from the sun, #307)
   // legs, stepping while it walks (#306: a woman a little shorter)
   const look = lookOf(unit);
   const step = o.lying || o.dead ? 0 : Math.sin((unit.walk || 0) * 0.35) * r * (look.female ? 0.12 : 0.16);

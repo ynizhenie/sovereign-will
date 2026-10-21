@@ -3,13 +3,14 @@
 // stamped over and over
 
 import { ctx } from '../../../engine/platform/index.js';
-import { tileVariantHash } from '../../world/index.js';
+import { castShadow, tileVariantHash } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 
 const variant = o => tileVariantHash(Math.round(o.x), Math.round(o.y));
 const blob = (x, y, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
-const groundShadow = (x, y, rx, ry) => { ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'; ctx.beginPath(); ctx.ellipse(x + 3, y + 4, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); };
+// (#307) cast away from the sun by the thing's height (about its size)
+const groundShadow = (x, y, rx, ry) => castShadow(ctx, x, y + 4, rx, ry, rx * 0.9);
 
 // A tree: its shadow, a bit of trunk under a crown of overlapping leafy clumps, lit from the top left.
 // (#279) Felled, it falls over away from its cutter (turned about its foot), and lies there, a log with its

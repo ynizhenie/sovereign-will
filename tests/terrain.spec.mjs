@@ -15,8 +15,8 @@ test('water and rock tiles join their own kind; rendering stays error-free (#79)
     for (const seed of ['maze-283', 'maze-137', 'shot']) { window.sim.start(seed); render(); }
     return { lone, middle, oreJoinsRock };
   });
-  expect(r.lone).toEqual({ n: true, s: true, w: true, e: true });
-  expect(r.middle).toEqual({ n: true, s: true, w: false, e: false });
+  expect(r.lone).toMatchObject({ n: true, s: true, w: true, e: true }); // (and its corners, #307)
+  expect(r.middle).toMatchObject({ n: true, s: true, w: false, e: false });
   expect(r.oreJoinsRock).toBe(true);
   expect(errors).toEqual([]);
 });
