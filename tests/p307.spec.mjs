@@ -10,13 +10,14 @@ test('outer corners rounded, inner corners joined; the sun\'s shadows by the tim
     const keys = new Set(['30,0', '0,30']); // (neighbours north... a tile at 30,30: west and north of it filled, its north-west corner not)
     const inner = openSides(keys, 30, 30);
     const lone = cornerRadii(openSides(new Set(), 0, 0));
+    const mixed = cornerRadii(openSides(new Set(), 0, 0), { nw: true });
     const c = GAME_CONFIG.daytime, at = t => { dayTime = t; return getSun(); };
     const morning = at(5), noon = at(c.morning + c.day / 2), evening = at(c.morning + c.day + c.evening - 5), night = at(c.morning + c.day + c.evening + 10);
     isPaused = true;
     setZoom(-99); render(); setZoom(99); render();
-    return { innerCorner: !inner.n && !inner.w && inner.nw, lone: [lone.nw, lone.ne, lone.se, lone.sw].every(k => k > 0),
+    return { innerCorner: !inner.n && !inner.w && inner.nw, lone: [lone.nw, lone.ne, lone.se, lone.sw].every(k => k > 0), mixedCorner: mixed.nw === 0,
       morning: morning.dx < -1, noon: Math.abs(noon.dx) < 0.1, evening: evening.dx > 1, night: night.alpha < 0.1 };
   });
-  expect(r).toEqual({ innerCorner: true, lone: true, morning: true, noon: true, evening: true, night: true });
+  expect(r).toEqual({ innerCorner: true, lone: true, mixedCorner: true, morning: true, noon: true, evening: true, night: true });
   expect(errors).toEqual([]);
 });

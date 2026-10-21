@@ -17,6 +17,8 @@ export const resourcesConfig = {
     wheatSeeds: { id: 'wheatSeeds', icon: 'wheatSeeds', type: 'resource' },
     saplings: { id: 'saplings', icon: 'saplings', type: 'resource' },
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
+    rope: { id: 'rope', icon: 'rope', type: 'resource' },
+    torches: { id: 'torches', icon: 'torch', type: 'resource', factions: ['humans', 'demons'] },
     // campfire fuel (#199): a woodcutter chops it from wood; campfires burn it (or coal), not the wood
     firewood: { id: 'firewood', icon: 'firewood', type: 'resource', factions: ['humans', 'demons'] },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
@@ -38,9 +40,9 @@ export const resourcesConfig = {
     { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food
     { id: 'wood', members: ['wood'], pinned: true },
     { id: 'stone', members: ['stone'], pinned: true },
-    { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs'] },
+    { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs', 'rope'] },
     { id: 'materials', icon: 'stone', members: ['firewood', 'coal', 'ironOre', 'iron', 'leather'] },
-    { id: 'supplies', icon: 'arrows', members: ['arrows'] },
+    { id: 'supplies', icon: 'arrows', members: ['arrows', 'torches'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
     { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan', 'whistle', 'flute'] } },
     { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'leather_armor', 'shield', 'banner'] } }
@@ -64,7 +66,7 @@ export const resourcesConfig = {
 
   start: {
     // stock at the start of a game (ids from `resources`)
-    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, food: 25, wheatSeeds: 3, saplings: 0 },
+    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, torches: 0, rope: 0, food: 25, wheatSeeds: 3, saplings: 0 },
     // population limit before tents (each tent adds buildings.tent.population)
     population: 5
   }

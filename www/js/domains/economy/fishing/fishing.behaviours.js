@@ -46,6 +46,11 @@ export function fishAt(s, fishSpot, dt) {
   if (dist > 32) {
     moveEntityTowards(s, fishSpot.x, fishSpot.y, s.speed, false, dt);
   } else {
+    if (!(fishSpot.fishCount > 0)) {
+      fishSpot.fishTimer = 0;
+      s.patrolTarget = null;
+      return;
+    }
     fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
     s.working = 0.1;
     faceTowards(s, fishSpot.x, fishSpot.y);
@@ -55,6 +60,7 @@ export function fishAt(s, fishSpot, dt) {
       noteDay(s, 'fished'); // (its day, #306)
       addCarryLoad(s);
       s.bait = false;
+      fishSpot.fishCount--;
       fishSpot.fishTimer = 0;
     }
   }

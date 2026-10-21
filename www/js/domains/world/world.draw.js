@@ -2,9 +2,9 @@
 
 import { drawIcon } from '../../ui/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getTileIndex } from '../../engine/world/index.js';
-import { isWaterReachable } from './world.generator.js';
 import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
+import { GAME_CONFIG } from '../../content/configs/index.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -72,7 +72,6 @@ export function drawGrassGround() {
 // outline only on sides with no neighbour of its kind, so lakes and rock masses read as shapes instead
 // of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
 export const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
-export const DEEP_WATER_SHADES = ['#1c5276', '#1b5074', '#1d5479', '#1a4e71']; // water no settler can reach
 export const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
 export const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
 
@@ -93,22 +92,26 @@ export function openSides(keys, x, y) {
 
 // (#307) a mass of tiles' outer corners rounded: a corner with no neighbour on either side of it
 const CORNER = 7;
-export function cornerRadii(open) {
-  return { nw: open.n && open.w ? CORNER : 0, ne: open.n && open.e ? CORNER : 0, se: open.s && open.e ? CORNER : 0, sw: open.s && open.w ? CORNER : 0 };
+export function cornerRadii(open, occupiedCorners = {}) {
+  return {
+    nw: open.n && open.w && open.nw && !occupiedCorners.nw ? CORNER : 0,
+    ne: open.n && open.e && open.ne && !occupiedCorners.ne ? CORNER : 0,
+    se: open.s && open.e && open.se && !occupiedCorners.se ? CORNER : 0,
+    sw: open.s && open.w && open.sw && !occupiedCorners.sw ? CORNER : 0
+  };
 }
 
-// The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind.
-// (#307) Its outer corners rounded (and the outline round them), and where its two sides have neighbours but
-// the corner between doesn't, the outline's ends joined (there was a gap there, a notch of the tile's shade)
-export function drawJoinedTile(x, y, open, edgeColor, fillColor) {
+function terrainCornerOccupancy(x, y, tiles) {
+  const sand = getSandKeys(), has = (dx, dy) => {
+    const key = `${x + dx * TILE_SIZE},${y + dy * TILE_SIZE}`;
+    return tiles.water.has(key) || tiles.rockAndOre.has(key) || sand.has(key);
+  };
+  return { nw: has(-1, -1), ne: has(1, -1), se: has(1, 1), sw: has(-1, 1) };
+}
+
+function drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners) {
   const G = target || ctx;
-  const k = cornerRadii(open), x0 = x - 15, y0 = y - 15, x1 = x + 15, y1 = y + 15;
-  // half a pixel over every side, as sand: zoomed, a tile's soft edge let the light sand under it show as a
-  // rim round ore on sand (#251)
-  G.fillStyle = fillColor;
-  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(x0 - 0.5, y0 - 0.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
-  else G.fillRect(x0 - 0.5, y0 - 0.5, TILE_SIZE + 1, TILE_SIZE + 1);
-  // the outline: along each open side, round each rounded corner
+  const k = cornerRadii(open, occupiedCorners), x0 = x - 15, y0 = y - 15, x1 = x + 15, y1 = y + 15;
   G.strokeStyle = edgeColor; G.lineWidth = 2;
   G.beginPath();
   if (open.n) { G.moveTo(x0 + k.nw, y0 + 1); G.lineTo(x1 - k.ne, y0 + 1); }
@@ -121,7 +124,6 @@ export function drawJoinedTile(x, y, open, edgeColor, fillColor) {
     G.arc(cx, cy, r - 1, from, from + Math.PI / 2);
   }
   G.stroke();
-  // the inner corners: the neighbours' outlines meet there
   G.fillStyle = edgeColor;
   if (!open.n && !open.w && open.nw) G.fillRect(x0, y0, 2, 2);
   if (!open.n && !open.e && open.ne) G.fillRect(x1 - 2, y0, 2, 2);
@@ -129,11 +131,24 @@ export function drawJoinedTile(x, y, open, edgeColor, fillColor) {
   if (!open.s && !open.e && open.se) G.fillRect(x1 - 2, y1 - 2, 2, 2);
 }
 
+// The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind.
+// (#307) Its outer corners rounded (and the outline round them), and where its two sides have neighbours but
+// the corner between doesn't, the outline's ends joined (there was a gap there, a notch of the tile's shade)
+export function drawJoinedTile(x, y, open, edgeColor, fillColor, outline = true, occupiedCorners = {}) {
+  const G = target || ctx;
+  const k = cornerRadii(open, occupiedCorners), x0 = x - 15, y0 = y - 15;
+  // Half a pixel over every side prevents light sand showing through soft edges when zoomed in (#251).
+  G.fillStyle = fillColor;
+  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(x0 - 0.5, y0 - 0.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
+  else G.fillRect(x0 - 0.5, y0 - 0.5, TILE_SIZE + 1, TILE_SIZE + 1);
+  if (outline) drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners);
+}
+
 // (#307) where land meets water or sand meets grass: a soft band, fading out from the tile's open sides
 // (`inside`: into the tile itself, clipped to its shape), its colour `rgb` at alpha `a` at the edge. `which`:
 // the open sides to band (a side's neighbour of the right kind)
-function edgeBand(G, x, y, open, which, rgb, a, width, inside) {
-  const x0 = x - 15, y0 = y - 15, T = TILE_SIZE, k = cornerRadii(open);
+function edgeBand(G, x, y, open, which, rgb, a, width, inside, occupiedCorners = {}) {
+  const x0 = x - 15, y0 = y - 15, T = TILE_SIZE, k = cornerRadii(open, occupiedCorners);
   const band = (gx0, gy0, gx1, gy1, rx, ry, rw, rh) => {
     const g = G.createLinearGradient(gx0, gy0, gx1, gy1);
     g.addColorStop(0, `rgba(${rgb}, ${a})`); g.addColorStop(1, `rgba(${rgb}, 0)`);
@@ -156,48 +171,34 @@ function edgeBand(G, x, y, open, which, rgb, a, width, inside) {
       if (!r || !on) continue;
       const g = G.createRadialGradient(cx, cy, r, cx, cy, r + width);
       g.addColorStop(0, `rgba(${rgb}, ${a})`); g.addColorStop(1, `rgba(${rgb}, 0)`);
-      G.fillStyle = g; G.beginPath(); G.moveTo(cx, cy); G.arc(cx, cy, r + width, from, from + Math.PI / 2); G.closePath(); G.fill();
+      G.fillStyle = g; G.beginPath();
+      G.arc(cx, cy, r + width, from, from + Math.PI / 2);
+      G.arc(cx, cy, r, from + Math.PI / 2, from, true);
+      G.closePath(); G.fill();
     }
   }
 }
 
-// The water the settlers can reach (shallow), as keys: once a tick
-let shallowKeys = { tick: -1, keys: new Set() };
-function getShallowKeys() {
-  if (shallowKeys.tick !== game.pathTick) shallowKeys = { tick: game.pathTick, keys: new Set(game.waterTiles.filter(t => isWaterReachable(t)).map(t => `${t.x},${t.y}`)) };
-  return shallowKeys.keys;
-}
-
 // The sand tiles (desert and beach) as keys, worked out again when there are more or fewer of them
-let sandKeys = { n: -1, keys: new Set() };
+let sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
 function getSandKeys() {
   const n = game.desertTiles.length * 100003 + game.beachTiles.length;
-  if (sandKeys.n !== n) sandKeys = { n, keys: new Set([...game.desertTiles, ...game.beachTiles].map(t => `${t.x},${t.y}`)) };
+  if (sandKeys.n !== n || sandKeys.desert !== game.desertTiles || sandKeys.beach !== game.beachTiles) {
+    sandKeys = { n, desert: game.desertTiles, beach: game.beachTiles, keys: new Set([...game.desertTiles, ...game.beachTiles].map(t => `${t.x},${t.y}`)) };
+  }
   return sandKeys.keys;
 }
 
-export function drawWaterTile(w, reachable, tiles) {
+export function drawWaterTile(w, tiles) {
   const G = target || ctx;
   const h = tileVariantHash(w.x, w.y);
-  const shades = reachable ? WATER_SHADES : DEEP_WATER_SHADES;
   const open = openSides(tiles.water, w.x, w.y);
-  drawJoinedTile(w.x, w.y, open, reachable ? '#1f618d' : '#154360', shades[0]); // (one shade: a tile's own made the lake a grid, #307)
-  // (#307) its shallows lighter along the shore, and the shore wet just outside it: darker sand, or mud on grass
-  // (not where rock or an ore meets it)
+  const occupiedCorners = terrainCornerOccupancy(w.x, w.y, tiles);
+  drawJoinedTile(w.x, w.y, open, '#2c83bd', WATER_SHADES[0], false, occupiedCorners);
   const land = side => open[side] && !tiles.rockAndOre.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
-  const sand = getSandKeys(), on = side => sand.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
   const shore = { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
-  edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.28, 7, true);
-  const toSand = { n: shore.n && on('n'), s: shore.s && on('s'), w: shore.w && on('w'), e: shore.e && on('e') };
-  const toGrass = { n: shore.n && !toSand.n, s: shore.s && !toSand.s, w: shore.w && !toSand.w, e: shore.e && !toSand.e };
-  // (#307) deep water shading into the shallow water beside it, not a hard square
-  if (!reachable) {
-    const shallow = getShallowKeys(), by = side => shallow.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
-    const n = parseInt(WATER_SHADES[0].slice(1), 16);
-    edgeBand(G, w.x, w.y, open, { n: by('n'), s: by('s'), w: by('w'), e: by('e') }, `${n >> 16}, ${(n >> 8) & 255}, ${n & 255}`, 0.9, 15, true);
-  }
-  edgeBand(G, w.x, w.y, open, toSand, '140, 110, 65', 0.55, 6, false);
-  edgeBand(G, w.x, w.y, open, toGrass, '45, 55, 30', 0.45, 6, false);
+  edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.24, 8, true, occupiedCorners);
+  edgeBand(G, w.x, w.y, open, shore, '44, 131, 189', 0.16, 7, false, occupiedCorners);
   // a short light ripple on some tiles
   if (h % 3 === 0) {
     G.strokeStyle = 'rgba(255, 255, 255, 0.18)'; G.lineWidth = 1.5;
@@ -210,7 +211,11 @@ export function drawWaterTile(w, reachable, tiles) {
 export function drawRockTile(x, y, tiles) {
   const G = target || ctx;
   const h = tileVariantHash(x, y), open = openSides(tiles.rockAndOre, x, y);
-  drawJoinedTile(x, y, open, '#1a252f', ROCK_SHADES[h % ROCK_SHADES.length]);
+  const edgeColor = '#1a252f', occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
+  drawJoinedTile(x, y, open, edgeColor, ROCK_SHADES[h % ROCK_SHADES.length], false, occupiedCorners);
+  G.save(); G.beginPath();
+  G.roundRect(x - 15.5, y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]);
+  G.clip();
   // facets of the rock face, a little lighter, and a lit top edge and shaded bottom edge where the mass
   // ends (#251: flat squares)
   G.fillStyle = 'rgba(255, 255, 255, 0.07)';
@@ -218,7 +223,6 @@ export function drawRockTile(x, y, tiles) {
     const v = h >>> (k * 9), fx = x - 12 + (v % 14), fy = y - 12 + ((v >>> 4) % 14);
     G.beginPath(); G.moveTo(fx, fy); G.lineTo(fx + 8 + (v % 4), fy + 2); G.lineTo(fx + 5, fy + 8 + ((v >>> 2) % 3)); G.lineTo(fx - 1, fy + 5); G.closePath(); G.fill();
   }
-  const k = cornerRadii(open);
   if (open.n) { G.fillStyle = 'rgba(255, 255, 255, 0.12)'; G.fillRect(x - 13 + Math.max(0, k.nw - 2), y - 13, TILE_SIZE - 4 - Math.max(0, k.nw - 2) - Math.max(0, k.ne - 2), 3); }
   if (open.s) { G.fillStyle = 'rgba(0, 0, 0, 0.25)'; G.fillRect(x - 13 + Math.max(0, k.sw - 2), y + 9, TILE_SIZE - 4 - Math.max(0, k.sw - 2) - Math.max(0, k.se - 2), 4); }
   // a crack or a couple of speckles
@@ -231,18 +235,21 @@ export function drawRockTile(x, y, tiles) {
     G.fillRect(x - 8 + ((h >>> 6) % 14), y - 8 + ((h >>> 11) % 14), 3, 3);
     G.fillRect(x - 4 + ((h >>> 16) % 10), y - 2 + ((h >>> 20) % 10), 2, 2);
   }
+  G.restore();
+  drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners);
 }
 
 export function drawDesertTile(tile) {
   const G = target || ctx;
   const h = tileVariantHash(tile.x, tile.y);
   // (#307) its outer corners rounded, and where grass meets it, the sand thinning out into it
-  const open = openSides(getSandKeys(), tile.x, tile.y), k = cornerRadii(open), shade = DESERT_SHADES[h % DESERT_SHADES.length];
+  const tiles = getTileIndex(), occupiedCorners = terrainCornerOccupancy(tile.x, tile.y, tiles);
+  const open = openSides(getSandKeys(), tile.x, tile.y), k = cornerRadii(open, occupiedCorners), shade = DESERT_SHADES[h % DESERT_SHADES.length];
   G.fillStyle = shade;
   if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
   else G.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
   const n = parseInt(shade.slice(1), 16), rgb = `${n >> 16}, ${(n >> 8) & 255}, ${n & 255}`;
-  edgeBand(G, tile.x, tile.y, open, open, rgb, 0.85, 7, false);
+  edgeBand(G, tile.x, tile.y, open, open, rgb, 0.85, 7, false, occupiedCorners);
   G.fillStyle = 'rgba(255, 236, 179, 0.25)';
   if (h % 3 === 0) {
     // a dune ripple
@@ -322,7 +329,7 @@ function paintTerrain(terrain) {
   try {
     game.desertTiles.forEach(drawDesertTile);
     game.beachTiles.forEach(drawDesertTile);
-    game.waterTiles.forEach(t => drawWaterTile(t, isWaterReachable(t), terrain));
+    game.waterTiles.forEach(t => drawWaterTile(t, terrain));
     game.naturalRocks.forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); });
   } finally { target = null; }
   Object.assign(terrainCache, { canvas, scale });
@@ -350,7 +357,22 @@ export function drawSand() {
 export function drawWater(terrain) {
   game.waterTiles.forEach(w => {
     if (!onScreen(w)) return;
-    if (!cached) drawWaterTile(w, isWaterReachable(w), terrain);
+    if (!cached) drawWaterTile(w, terrain);
+    const hash = tileVariantHash(w.x, w.y);
+    if ((w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && hash % 7 === 0) {
+      const phase = performance.now() / 850 + (hash % 100) / 13;
+      const swim = Math.sin(phase) * 6;
+      const fx = w.x + swim, fy = w.y + Math.cos(phase * 0.7) * 3;
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.scale(Math.cos(phase) < 0 ? -1 : 1, 1);
+      ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(-6, -2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(190, 229, 240, 0.75)';
+      ctx.beginPath(); ctx.arc(2, -0.5, 0.55, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
     if (w.isFishing) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
       ctx.strokeRect(w.x - 14, w.y - 14, 28, 28);

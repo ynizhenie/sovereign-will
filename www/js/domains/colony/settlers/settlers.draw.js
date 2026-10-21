@@ -7,7 +7,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
-import { drawHair, lookOf } from './settlers.looks.js';
+import { drawHeadTexture, lookOf } from './settlers.looks.js';
 import { castShadow } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
@@ -362,8 +362,13 @@ export function drawFigure(unit, o) {
   // the body (#306: a woman's narrower at the shoulders, a skirt's hem flaring over its legs)
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
   if (look.female) {
-    ctx.beginPath(); ctx.moveTo(-r * 0.5, -r * 0.48); ctx.lineTo(r * 0.5, -r * 0.48); ctx.lineTo(r * 0.7, r * 0.72); ctx.lineTo(-r * 0.7, r * 0.72); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = shade(o.body, -0.3); ctx.beginPath(); ctx.moveTo(-r * 0.66, r * 0.6); ctx.lineTo(r * 0.66, r * 0.6); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.48, -r * 0.48); ctx.lineTo(r * 0.48, -r * 0.48);
+    ctx.lineTo(r * 0.38, -r * 0.06); ctx.lineTo(r * 0.5, r * 0.36);
+    ctx.lineTo(-r * 0.5, r * 0.36); ctx.lineTo(-r * 0.38, -r * 0.06);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = shade(o.body, -0.3);
+    ctx.beginPath(); ctx.moveTo(-r * 0.38, r * 0.1); ctx.lineTo(r * 0.38, r * 0.1); ctx.stroke();
   } else {
     ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
   }
@@ -392,11 +397,9 @@ export function drawFigure(unit, o) {
   }
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;
-  ctx.fillStyle = o.skin; ctx.strokeStyle = outline;
-  ctx.beginPath(); ctx.arc(0, hy, hr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
-  // its hair (#306), then a demon's horns through it
-  drawHair(ctx, look, unitKin(unit), hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
+  drawHeadTexture(ctx, look, unitKin(unit), o.skin, 0, hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
+  // a demon's horns through its hair
   if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35));
   if (o.dead) {
     ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2;
@@ -732,4 +735,3 @@ function drawCensor(s, r, skin) {
     }
   }
 }
-

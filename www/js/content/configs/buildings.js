@@ -57,7 +57,7 @@ export const buildingsConfig = {
     // full) and bait it (anyone with free hands too)
     fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 6, herbs: 2 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a torch post (#257): lit at dusk by a worker (postFirewood), it lights the ground round it till morning
-    torch: { id: 'torch', group: 'defense', icon: 'torch', factions: ['humans', 'demons'], cost: { wood: 2 }, demolishRefund: { wood: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },
+    torch: { id: 'torch', group: 'defense', icon: 'torch', factions: ['humans', 'demons'], cost: { torches: 1 }, demolishRefund: { torches: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },
     // a place nearer than the town hall to bring resources to and fetch them from
     warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 150 } },
     // a compost heap (#232): settlers with nothing to do bring it the dung lying in the base, up to
