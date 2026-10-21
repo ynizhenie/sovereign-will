@@ -66,7 +66,7 @@ export function createConfigButton(item, action, category) {
 
 // Rebuild the generated HUD and buttons, e.g. after a language change (setLanguage)
 export function rebuildConfigHud() {
-  for (const id of ['resource-strip', 'resources-hud', 'build-actions', 'farming-actions', 'craft-tools', 'craft-weapons', 'craft-gear', 'recruit-row']) {
+  for (const id of ['resource-strip', 'resources-hud', 'build-actions', 'farming-actions', 'craft-tools', 'craft-weapons', 'craft-gear', 'craft-supplies', 'recruit-row']) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   }

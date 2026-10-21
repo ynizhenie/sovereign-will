@@ -84,6 +84,7 @@
  * @property {Object | null} [sleepAt] the shelter it sleeps at
  * @property {{ x: number, y: number } | null} [sleepSpot]
  * @property {boolean} [torchInHand] a torch in its hand for the night (#257)
+ * @property {boolean} [torchPickup] on its way to storage for a night torch (#257)
  * @property {number} [torchNight]   the night it took one
  * @property {Object | null} [torchTarget] the torch post it's going to light
  * @property {boolean} [wantsMeal]  hungry: going for its meal (goEat, #248)
@@ -289,6 +290,8 @@
  * @property {Object[]} blightZones
  * @property {Object[]} naturalRocks
  * @property {Object[]} waterTiles
+ * @property {number} [fishCount] fish remaining in this shoal
+ * @property {number} [fishRegrowTimer] seconds until another fish returns
  * @property {Object[]} desertTiles
  * @property {Object | null} desertRegion
  * @property {Object[]} beachTiles

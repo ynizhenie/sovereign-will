@@ -73,16 +73,15 @@ Object.assign(window.sim, (() => {
     return { ...r, outInTheMorning: !post.lit };
   }
 
-  // At night, a soldier on watch out of the light takes a torch for the night (a piece of firewood); with no
-  // firewood for one, settlers keep to the base
-  function handTorch({ seed = 'night-hand-torch', firewood = 5 } = {}) {
+  // At night, a soldier on watch out of the light fetches a crafted torch; without one it keeps to the base
+  function handTorch({ seed = 'night-hand-torch', torches = 1 } = {}) {
     start(seed); clearResources();
     const s = makeSettler(1, townHall.x + getBaseRadius(), townHall.y, { weapon: 'sword', role: 'soldier' });
     settlers = [s];
-    stock.firewood = firewood;
+    stock.torches = torches;
     dayTime = nightStart() + 1;
-    run(6, { each: calm });
-    return { torch: !!s.torchInHand, firewood: stock.firewood, reach: nightReach(makeSettler(9, 0, 0)) === Infinity ? 'any' : 'base' };
+    run(15, { each: calm });
+    return { torch: !!s.torchInHand, torches: stock.torches, reach: nightReach(s) === Infinity ? 'any' : 'base' };
   }
 
   // A night wave: some of its enemies carry torches; and what gives light at night

@@ -361,7 +361,7 @@ function placeLakes() {
 
         if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 160) {
           if (!game.waterTiles.some(w => w.x === tx && w.y === ty)) {
-            tempTiles.push({ x: tx, y: ty, isFishing: false, fishTimer: 0 });
+            tempTiles.push({ x: tx, y: ty, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
           }
         }
       }

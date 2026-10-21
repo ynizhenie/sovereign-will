@@ -19,9 +19,9 @@ test('a torch post is lit at dusk by a worker with a piece of firewood, and is o
   expect(sim.nightTorchPost({})).toEqual({ lit: true, firewood: 4, outInTheMorning: true });
 });
 
-test('at night a soldier out of the light takes a torch for the night; with no firewood for one, settlers keep to the base (#257)', () => {
-  expect(sim.nightHandTorch({})).toEqual({ torch: true, firewood: 4, reach: 'any' });
-  expect(sim.nightHandTorch({ firewood: 0 })).toEqual({ torch: false, firewood: 0, reach: 'base' });
+test('at night a soldier out of the light fetches a crafted torch; without one, settlers keep to the base (#257)', () => {
+  expect(sim.nightHandTorch({})).toEqual({ torch: true, torches: 0, reach: 'any' });
+  expect(sim.nightHandTorch({ torches: 0 })).toEqual({ torch: false, torches: 0, reach: 'base' });
 });
 
 test('a night wave: some of its enemies carry torches; the town hall, a torch, a portal, a necromancer\'s staff give light (#257)', () => {

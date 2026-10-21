@@ -9,7 +9,7 @@ export const equipmentConfig = {
     pickaxe: { id: 'pickaxe', icon: 'pickaxe', cost: { wood: 5, stone: 7 }, family: 'pickaxe', combatDamage: 10 },
     iron_axe: { id: 'iron_axe', icon: 'iron_axe', cost: {  wood: 5, iron: 5 }, family: 'axe', combatDamage: 18 },
     iron_pickaxe: { id: 'iron_pickaxe', icon: 'iron_pickaxe', cost: {  wood: 5, iron: 7 }, family: 'pickaxe', combatDamage: 13 },
-    rod: { id: 'rod', icon: 'rod', madeBy: 'hand', cost: { wood: 8, herbs: 4 }, family: 'rod', combatDamage: 6 },
+    rod: { id: 'rod', icon: 'rod', madeBy: 'hand', cost: { wood: 8, rope: 1 }, family: 'rod', combatDamage: 6 },
     // farmers: plant the farm zones (see farming) and harvest ripe wheat
     // medics: heal wounded settlers during attacks (see medic), gather grass for herbs otherwise
     // factions: only these factions have it (the undead don't farm or heal with herbs)
@@ -43,7 +43,7 @@ export const equipmentConfig = {
       combat: { damage: 30, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 } },
     iron_spear: { id: 'iron_spear', icon: 'iron_spear', cost: { wood: 10, iron: 5 }, family: 'spear',
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 } },
-    bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, herbs: 2 }, family: 'bow',
+    bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, rope: 2 }, family: 'bow',
       combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 } },
     // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },
@@ -78,6 +78,8 @@ export const equipmentConfig = {
   // made into the stock: kind: the Craft sub-tab it's in; made in `batches` quick jobs; arrows by archers
   // while there are any (#249)
   recipes: {
-    arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3, unlockedWith: 'weapons:bow' }
+    arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3, unlockedWith: 'weapons:bow' },
+    rope: { id: 'rope', icon: 'rope', kind: 'supplies', madeBy: 'hand', cost: { herbs: 2 }, produces: { rope: 2 }, disassemble: true },
+    torch: { id: 'torch', icon: 'torch', kind: 'supplies', factions: ['humans', 'demons'], madeBy: 'hand', cost: { wood: 1, rope: 1 }, produces: { torches: 1 }, disassemble: true }
   }
 };

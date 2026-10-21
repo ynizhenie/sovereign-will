@@ -84,10 +84,12 @@ export function drawWeatherWorld() {
   const scale = getViewScale(), halfW = canvas.width / 2 / scale + TILE_SIZE, halfH = canvas.height / 2 / scale + TILE_SIZE;
   const seen = o => o.x > camera.x - halfW && o.x < camera.x + halfW && o.y > camera.y - halfH && o.y < camera.y + halfH;
   const t = performance.now() / 1000, rain = rainLevel();
+  const lowDetail = canvas.width * canvas.height > 1_000_000;
   if (scale >= 0.75) {
     for (const tile of game.waterTiles) {
       if (!seen(tile)) continue;
       const h = (tile.x * 73856093) ^ (tile.y * 19349663);
+      if (lowDetail && (h & 1)) continue;
       // a light wavelet drifting across it
       const p = ((t * 0.25 + (h & 255) / 255) % 1);
       ctx.strokeStyle = `rgba(255, 255, 255, ${0.16 * Math.sin(p * Math.PI)})`; ctx.lineWidth = 1.2;
@@ -95,7 +97,7 @@ export function drawWeatherWorld() {
       ctx.beginPath(); ctx.moveTo(wx - 5, wy); ctx.quadraticCurveTo(wx, wy - 2, wx + 5, wy); ctx.stroke();
       // rain's rings, each spreading and fading
       if (rain > 0.05) {
-        for (let k = 0; k < 2; k++) {
+        for (let k = 0; k < (lowDetail ? 1 : 2); k++) {
           const q = (t * 1.3 + ((h >>> (k * 5)) & 63) / 63) % 1;
           ctx.strokeStyle = `rgba(220, 240, 255, ${0.45 * rain * (1 - q)})`; ctx.lineWidth = 0.8;
           ctx.beginPath(); ctx.ellipse(tile.x - 8 + ((h >>> (k * 7)) % 16), tile.y - 8 + ((h >>> (k * 9 + 3)) % 16), 1 + q * 5, 0.6 + q * 2.5, 0, 0, Math.PI * 2); ctx.stroke();
@@ -109,7 +111,7 @@ export function drawWeatherWorld() {
       for (const tile of game.desertTiles) {
         if (!seen(tile)) continue;
         const h = (tile.x * 2654435761) ^ tile.y;
-        if (h & 1) continue;
+        if (h & (lowDetail ? 3 : 1)) continue;
         const p = (t * 0.35 + ((h >>> 3) & 255) / 255) % 1, y = tile.y + 12 - p * 26;
         ctx.strokeStyle = `rgba(255, 245, 220, ${0.22 * heat * Math.sin(p * Math.PI)})`;
         ctx.beginPath();
