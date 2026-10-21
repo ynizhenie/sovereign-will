@@ -3,7 +3,7 @@
 
 // ---- Animation state (drawn by getHeldItemPose, below)
 
-import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
@@ -78,6 +78,36 @@ export function getHeldItemPose(unit) {
     return { angle: 0.8 * beat - 0.3, push: 0 };
   }
   return { angle: 0, push: 0 };
+}
+
+// (#306) an archer's shot, drawn: after one's loosed, its other hand goes back to its quiver for an arrow,
+// brings it to the bow (nock) and draws the string; ready, in a fight it holds it drawn. { pull, other } (other:
+// where its other hand is, round its middle), or null (no bow, or not shooting)
+export function bowDraw(unit) {
+  const bow = unit.weapon === 'bow' || (unit.enemyKey && (getDefinition('enemies', unit.enemyKey) || {}).ranged);
+  if (!bow || unit.asleep) return null;
+  const len = unit.shotLen || 0.8, since = (game.pathTick - (unit.shotAt ?? -1e9)) / 60;
+  if (since > len + 3) return null; // (not shooting: the bow at rest)
+  const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0, p = Math.min(1, since / len);
+  const quiver = { x: -Math.cos(f) * r * 0.55, y: -Math.sin(f) * r * 0.55 - r * 0.15 };
+  const pose = getHeldItemPose(unit), a = f + pose.angle;
+  const at = local => { const fx = pose.push + r * 0.25 + local * itemScale(unit), fy = r * 0.5; return { x: Math.cos(a) * fx - Math.sin(a) * fy, y: Math.sin(a) * fx + Math.cos(a) * fy }; };
+  if (p < 0.4) return { pull: 0, other: quiver };
+  if (p < 0.6) { const q = (p - 0.4) / 0.2, g = at(-1); return { pull: 0, other: { x: quiver.x + (g.x - quiver.x) * q, y: quiver.y + (g.y - quiver.y) * q } }; }
+  const pull = Math.min(1, (p - 0.6) / 0.4);
+  return { pull, other: at(-1 - pull * 9) };
+}
+
+// (#306) a zombie with no weapon: its arms out in front of it, reaching; striking, a lunge, its hands further
+// out, clawing. Where its hands reach to (round its middle), and how far it lunges, or null
+export function zombieReach(unit) {
+  if (unitKin(unit) !== 'undead' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', unit.tool || 'none') || unit.asleep) return null;
+  const def = unit.enemyKey ? getDefinition('enemies', unit.enemyKey) || {} : null;
+  if (def && (def.ranged || def.necromancer)) return null; // (an archer's bow, a necromancer's staff)
+  const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0;
+  const sw = unit.swingT > 0 ? Math.sin(Math.PI * (1 - unit.swingT / (unit.swingLen || 0.3))) : 0;
+  const reach = r * (0.75 + 0.5 * sw);
+  return { x: Math.cos(f) * reach, y: Math.sin(f) * reach * 0.7 + r * 0.05, lunge: sw * 3, sw };
 }
 
 // Whose kind of body: an enemy's by its kind, a settler's by its type's faction (#306: in Battles the undead's
@@ -221,7 +251,7 @@ function handAt(unit, r) {
 /**
  * The figure round (x, y), r its old circle's radius.
  * @param {any} unit
- * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null }} o
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null, otherPoint?: { x: number, y: number } | null }} o
  * (carryPoint: a load in both hands, both arms out to it, #298)
  * (#298) facing away from us, its arms (and what's in its hands, drawn by the caller) are behind its body
  */
@@ -229,6 +259,10 @@ export function drawFigure(unit, o) {
   const { x, y, r } = o;
   ctx.save();
   ctx.translate(x, y);
+  // (#306) a zombie lunges as it strikes
+  const z = !o.lying && !o.dead && !o.carryPoint ? zombieReach(unit) : null;
+  if (z && z.lunge) ctx.translate(Math.cos(unit.facing || 0) * z.lunge, Math.sin(unit.facing || 0) * z.lunge * 0.7);
+  if (z) o = { ...o, carryPoint: z };
   if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
   const outline = 'rgba(0, 0, 0, 0.45)';
   // its shadow on the ground
@@ -243,7 +277,7 @@ export function drawFigure(unit, o) {
   const f0 = unit.facing || 0, across = { x: -Math.sin(f0) * r * 0.42, y: Math.cos(f0) * r * 0.42 };
   const hand = carry ? { x: carry.x + across.x, y: carry.y + across.y } : o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
   const right = hand.x >= 0 ? 1 : -1;
-  const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : o.shield ? { x: -right * (r - 1), y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
+  const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : o.otherPoint && !o.lying && !o.dead ? o.otherPoint : o.shield ? { x: -right * (r - 1), y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
   const arm = (from, to) => {
     ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(from, -r * 0.3); ctx.lineTo(to.x, to.y); ctx.stroke();
@@ -260,6 +294,11 @@ export function drawFigure(unit, o) {
   if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (!behind) arm(right * r * 0.5, hand);
   if (!(carry && behind)) arm(-right * r * 0.5, other);
+  if (z && z.sw > 0.3) {
+    ctx.strokeStyle = 'rgba(30, 30, 30, 0.8)'; ctx.lineWidth = 0.8;
+    const f = unit.facing || 0;
+    for (const p of [hand, other]) for (const d of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(f + d) * 3, p.y + Math.sin(f + d) * 3); ctx.stroke(); }
+  }
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;
   ctx.fillStyle = o.skin; ctx.strokeStyle = outline;
@@ -488,7 +527,7 @@ export function drawSettlers() {
       if (onBack) applyBackPose(s); else applyHeldItemPose(s);
       if (getNecromancy(s) && s.weapon === 'fist') {
         drawStaff();
-      } else if (!drawHeldWeapon(s.weapon, k)) {
+      } else if (!drawHeldWeapon(s.weapon, k, onBack ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
         if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
         else drawHeldTool(s.tool || 'none', k, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
       }
@@ -523,7 +562,7 @@ export function drawSettlers() {
     const faction = unitKin(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     if (s.asleep) ctx.globalAlpha = 0.85;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, armor: !s.asleep && armorOf(s) ? String(s.armor) : null });
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, otherPoint: onBack ? null : (bowDraw(s) || {}).other || null, armor: !s.asleep && armorOf(s) ? String(s.armor) : null });
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);
