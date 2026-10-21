@@ -14,6 +14,7 @@ import { battle } from '../../../modes/battle/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 import { says } from './settlers.voices.js';
+import { newLook } from './settlers.looks.js';
 import { isNight } from '../../world/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
@@ -56,7 +57,8 @@ export function createSettler(typeKey, id, x, y, extra = {}) {
   const s = {
     id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
-    carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false
+    carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false,
+    look: extra.look || newLook() // (#306)
   };
   if (t.archer) Object.assign(s, { weapon: t.archerWeapon || 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
   return s;
