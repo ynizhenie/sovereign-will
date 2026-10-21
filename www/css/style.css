@@ -744,7 +744,7 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   #raid-bar { width: min(94vw, 420px); }
   #raid-bar span { flex-basis: 100%; }
   #raid-bar .btn { flex: 1 1 calc(50% - 6px); font-size: 11px; }
-  .selected-unit-box.has-settler { max-width: 94vw; }
+  .selected-unit-box.has-settler { max-width: 94vw; height: 91px; overflow-y: auto; }
   .selected-unit-box.has-settler #selected-info { max-width: 100%; }
 }
 
