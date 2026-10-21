@@ -314,9 +314,7 @@ let view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity }, cached 
 const onScreen = o => o.x > view.x0 && o.x < view.x1 && o.y > view.y0 && o.y < view.y1;
 const isRock = r => !r.oreSpawner;
 function terrainKey(terrain) {
-  let reach = 0;
-  for (let i = 0; i < game.waterTiles.length; i++) if (isWaterReachable(game.waterTiles[i])) reach = (reach * 31 + i + 1) | 0;
-  return `${game.COLS}x${game.ROWS}|${terrain.signature}|${reach}|${game.desertTiles.length}|${game.beachTiles.length}`;
+  return `${game.COLS}x${game.ROWS}|${terrain.signature}|${game.desertTiles.length}|${game.beachTiles.length}`;
 }
 function paintTerrain(terrain) {
   const w = game.COLS * TILE_SIZE, h = game.ROWS * TILE_SIZE;
