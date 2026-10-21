@@ -8,10 +8,12 @@ import { corpseHasWorms } from '../../economy/fishing/index.js';
 import { tileVariantHash } from '../../world/index.js';
 import { drawFigure } from '../../colony/settlers/index.js';
 
-// Blood on the blade of the held item, fading (see bleed)
+// Blood on the blade of the held item, fading (see bleed). A bare hand has no blade to bleed on: bleed gives
+// whoever struck in melee weapon blood, and with nothing drawn at the grip it hung in the air in front of it
 export function drawWeaponBlood(unit) {
   const alpha = bloodAlpha(unit.weaponBloodAge);
-  if (alpha <= 0) return;
+  const blade = !!(unit.weapon && unit.weapon !== 'fist') || !!(unit.tool && unit.tool !== 'none');
+  if (alpha <= 0 || !blade) return;
   ctx.fillStyle = `rgba(120, 0, 0, ${0.85 * alpha})`;
   ctx.fillRect(14, -2, 7, 4);
 }
@@ -71,6 +73,28 @@ export function drawBloodOnGround() {
   });
 }
 
+// Worms on a corpse (a fisher's bait, see corpseHasWorms): a few pink ones crawling over it, each its own way,
+// its body a wave that runs from tail to head as it inches along and its head now and then lifted. Its phase
+// comes of where the corpse lies, so no two of them wriggle in step
+const WORM_SPOTS = [[-5, 4, 1], [3, 6, -1], [5, -3, 1]]; // (where on the body, and which way it crawls)
+function drawWorms(c) {
+  const t = game.pathTick / 60, seed = c.x * 0.37 + c.y * 0.61;
+  ctx.save();
+  ctx.strokeStyle = '#e91e63'; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  WORM_SPOTS.forEach(([wx, wy, way], i) => {
+    const ph = t * 2.5 + seed + i * 2.1;
+    const x = c.x + wx + Math.sin(t * 0.45 + i * 1.7) * 2.2, y = c.y + wy + Math.cos(t * 0.33 + i * 0.9) * 0.9;
+    ctx.beginPath();
+    for (let k = 0; k <= 5; k++) {
+      const px = x + (k - 2.5) * 1.2 * way;
+      const py = y + Math.sin(ph - k * 1.5) * (0.7 + k * 0.22) - (k === 5 ? 1.1 + Math.sin(ph) * 0.6 : 0);
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
 // Corpses: grey, fading out over their last 10 seconds; worms on them
 export function drawCorpses() {
   game.corpses.forEach(c => {
@@ -79,13 +103,7 @@ export function drawCorpses() {
     // a grey figure lying on its side, crosses for its eyes (#251)
     const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
     drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: grey, skin: '#9a9a9a', lying: true, dead: true });
-    if (corpseHasWorms(c)) {
-      // worms: a few pink squiggles on it
-      ctx.strokeStyle = '#e91e63'; ctx.lineWidth = 1.5;
-      for (const [wx, wy] of [[-5, 4], [3, 6], [5, -3]]) {
-        ctx.beginPath(); ctx.moveTo(c.x + wx - 3, c.y + wy); ctx.quadraticCurveTo(c.x + wx, c.y + wy - 3, c.x + wx + 3, c.y + wy); ctx.stroke();
-      }
-    }
+    if (corpseHasWorms(c)) drawWorms(c);
     ctx.globalAlpha = 1;
   });
 }

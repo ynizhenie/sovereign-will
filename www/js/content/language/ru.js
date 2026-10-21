@@ -16,7 +16,7 @@ export const ruLanguage = {
         smithy: 'Кузница', workshop: 'Мастерская', fish_trap: 'Садок', dung_heap: 'Компостная куча', dummy: 'Чучело', wall_wood: 'Деревянная стена', wall_stone: 'Каменная стена', spikes: 'Шипы', door: 'Дверь', iron_door: 'Железная дверь', iron_trap: 'Железный капкан', tent: 'Палатка', campfire: 'Костёр',
         smelter: 'Плавильня', watchtower: 'Сторожевая башня', torch: 'Факел', warehouse: 'Склад', grave: 'Могила', demon_den: 'Логово', corpse_pit: 'Трупная яма', cage: 'Клетка', sacrifice_circle: 'Жертвенный круг', portal: 'Портал', wheat: 'Пшеница', sapling: 'Саженец', apple_sapling: 'Саженец яблони'
       },
-      enemies: { raider_medic: 'Лекарь', undead_zombie_sword: 'Зомби с мечом', demon_imp_sword: 'Чёрт с мечом', raider_club: 'Дикарь', raider: 'Разбойник', brute: 'Громила', raider_archer: 'Лучник', undead_zombie: 'Зомби', undead_big_zombie: 'Большой зомби', undead_zombie_archer: 'Зомби-лучник', undead_necromancer: 'Некромант', demon_imp: 'Чёрт', demon_brute: 'Демон', demon_imp_archer: 'Чёрт-лучник' },
+      enemies: { raider_medic: 'Лекарь', undead_zombie_sword: 'Зомби с мечом', demon_imp_sword: 'Чёрт с мечом', raider_club: 'Дикарь', raider_fist: 'Драчун', raider: 'Разбойник', brute: 'Громила', raider_archer: 'Лучник', undead_zombie: 'Зомби', undead_big_zombie: 'Большой зомби', undead_zombie_archer: 'Зомби-лучник', undead_necromancer: 'Некромант', demon_imp: 'Чёрт', demon_brute: 'Демон', demon_imp_archer: 'Чёрт-лучник' },
       factions: { humans: 'Люди', demons: 'Демоны', undead: 'Нежить' },
       settlerTypes: { normal: 'Рабочий', big: 'Богатырь', zombie: 'Зомби', big_zombie: 'Большой зомби', necromancer: 'Некромант', imp: 'Чёрт', demon: 'Демон' },
       gear: { leather_armor: 'Кожаная броня', backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лейка', whistle: 'Свисток бригадира', banner: 'Знамя', flute: 'Деревянная флейта' },
@@ -90,7 +90,7 @@ export const ruLanguage = {
       'editor.saveFailed': '[[no]] Не удалось сохранить карту на устройстве', 'editor.saved': '[[ok]] Карта сохранена: {name}',
       'editor.tool.erase': 'Ластик', 'editor.tool.water': 'Вода', 'editor.tool.rock': 'Скала', 'editor.tool.sand': 'Песок',
       'editor.tool.town_hall': 'Ратуша', 'editor.tool.tree': 'Дерево', 'editor.tool.apple_tree': 'Яблоня', 'editor.tool.cactus': 'Кактус',
-      'editor.tool.boulder': 'Валун', 'editor.tool.grass': 'Трава', 'editor.tool.berry_bush': 'Ягодный куст', 'editor.tool.stick': 'Палка',
+      'editor.tool.boulder': 'Валун', 'editor.tool.grass': 'Трава', 'editor.tool.berry_bush': 'Ягодный куст', 'editor.tool.stick': 'Палка', 'editor.tool.log': 'Бревно',
       'editor.tool.pebble': 'Камешек', 'editor.tool.iron_ore': 'Железная руда', 'editor.tool.coal_ore': 'Уголь', 'editor.tool.iron_spawner': 'Источник железа',
       'editor.tool.coal_spawner': 'Источник угля', 'editor.tool.boar': 'Кабан',
       'defeat.title': 'ПОРАЖЕНИЕ!', 'defeat.survived': 'Вы продержались {waves} волн', 'defeat.restart': 'Начать заново'

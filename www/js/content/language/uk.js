@@ -16,7 +16,7 @@ export const ukLanguage = {
         smithy: 'Кузня', workshop: 'Майстерня', fish_trap: 'Садок', dung_heap: 'Компостна купа', dummy: 'Опудало', wall_wood: 'Дерев\'яна стіна', wall_stone: 'Кам\'яна стіна', spikes: 'Шипи', door: 'Двері', iron_door: 'Залізні двері', iron_trap: 'Залізний капкан', tent: 'Намет', campfire: 'Багаття',
         smelter: 'Плавильня', watchtower: 'Сторожова вежа', torch: 'Смолоскип', warehouse: 'Склад', grave: 'Могила', demon_den: 'Лігво', corpse_pit: 'Трупна яма', cage: 'Клітка', sacrifice_circle: 'Жертовне коло', portal: 'Портал', wheat: 'Пшениця', sapling: 'Саджанець', apple_sapling: 'Саджанець яблуні'
       },
-      enemies: { raider_medic: 'Лікар', undead_zombie_sword: 'Зомбі з мечем', demon_imp_sword: 'Чорт з мечем', raider_club: 'Дикун', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник', undead_zombie: 'Зомбі', undead_big_zombie: 'Великий зомбі', undead_zombie_archer: 'Зомбі-лучник', undead_necromancer: 'Некромант', demon_imp: 'Чорт', demon_brute: 'Демон', demon_imp_archer: 'Чорт-лучник' },
+      enemies: { raider_medic: 'Лікар', undead_zombie_sword: 'Зомбі з мечем', demon_imp_sword: 'Чорт з мечем', raider_club: 'Дикун', raider_fist: 'Забіяка', raider: 'Розбійник', brute: 'Громило', raider_archer: 'Лучник', undead_zombie: 'Зомбі', undead_big_zombie: 'Великий зомбі', undead_zombie_archer: 'Зомбі-лучник', undead_necromancer: 'Некромант', demon_imp: 'Чорт', demon_brute: 'Демон', demon_imp_archer: 'Чорт-лучник' },
       factions: { humans: 'Люди', demons: 'Демони', undead: 'Нежить' },
       settlerTypes: { normal: 'Робітник', big: 'Богатир', zombie: 'Зомбі', big_zombie: 'Великий зомбі', necromancer: 'Некромант', imp: 'Чорт', demon: 'Демон' },
       gear: { leather_armor: 'Шкіряна броня', backpack: 'Рюкзак', shield: 'Щит', armor: 'Броня', wateringCan: 'Лійка', whistle: 'Свисток бригадира', banner: 'Прапор', flute: 'Дерев\'яна сопілка' },
@@ -90,7 +90,7 @@ export const ukLanguage = {
       'editor.saveFailed': '[[no]] Не вдалося зберегти мапу на пристрої', 'editor.saved': '[[ok]] Мапу збережено: {name}',
       'editor.tool.erase': 'Гумка', 'editor.tool.water': 'Вода', 'editor.tool.rock': 'Скеля', 'editor.tool.sand': 'Пісок',
       'editor.tool.town_hall': 'Ратуша', 'editor.tool.tree': 'Дерево', 'editor.tool.apple_tree': 'Яблуня', 'editor.tool.cactus': 'Кактус',
-      'editor.tool.boulder': 'Валун', 'editor.tool.grass': 'Трава', 'editor.tool.berry_bush': 'Ягідний кущ', 'editor.tool.stick': 'Палиця',
+      'editor.tool.boulder': 'Валун', 'editor.tool.grass': 'Трава', 'editor.tool.berry_bush': 'Ягідний кущ', 'editor.tool.stick': 'Палиця', 'editor.tool.log': 'Колода',
       'editor.tool.pebble': 'Камінець', 'editor.tool.iron_ore': 'Залізна руда', 'editor.tool.coal_ore': 'Вугілля', 'editor.tool.iron_spawner': 'Джерело заліза',
       'editor.tool.coal_spawner': 'Джерело вугілля', 'editor.tool.boar': 'Кабан',
       'defeat.title': 'ПОРАЗКА!', 'defeat.survived': 'Ви протрималися {waves} хвиль', 'defeat.restart': 'Почати знову'

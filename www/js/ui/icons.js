@@ -284,6 +284,12 @@ export const ICONS = {
     for (const [x, y] of [[10, 14], [17, 11], [21, 18], [13, 21], [19, 24]]) icCircle(c, '#5b6ee1', x, y, 2.4);
   },
   stick: c => { icLine(c, '#8e5a2b', 3.5, [[5, 25], [27, 8]]); icLine(c, '#8e5a2b', 2, [[17, 16], [20, 22]]); },
+  // a piece of a felled tree's log: a short length of trunk, both cut ends pale, as it lies on the map
+  log: c => {
+    icRound(c, '#5d4037', 5, 12, 22, 9, 4);
+    for (const x of [5, 27]) icEllipse(c, '#c8a46a', x, 16.5, 2.4, 4.2);
+    icLine(c, '#3e2723', 1.1, [[11, 14.5], [16, 17.5]]); icLine(c, '#3e2723', 1.1, [[13, 19.5], [18, 16.5]]);
+  },
   pebble: c => {
     icEllipse(c, '#95a5a6', 11, 20, 6, 4.5); icEllipse(c, '#bdc3c7', 21, 15, 5, 4); icEllipse(c, '#7f8c8d', 22, 24, 4, 3);
   },

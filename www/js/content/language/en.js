@@ -16,7 +16,7 @@ export const enLanguage = {
         smithy: 'Smithy', workshop: 'Workshop', fish_trap: 'Fish trap', dung_heap: 'Compost heap', dummy: 'Training dummy', wall_wood: 'Wooden wall', wall_stone: 'Stone wall', spikes: 'Spikes', door: 'Door', iron_door: 'Iron door', iron_trap: 'Iron trap', tent: 'Tent', campfire: 'Campfire',
         smelter: 'Smelter', watchtower: 'Watchtower', torch: 'Torch', warehouse: 'Warehouse', grave: 'Grave', demon_den: 'Den', corpse_pit: 'Corpse pit', cage: 'Cage', sacrifice_circle: 'Sacrificial circle', portal: 'Portal', wheat: 'Wheat', sapling: 'Sapling', apple_sapling: 'Apple sapling'
       },
-      enemies: { raider_medic: 'Healer', undead_zombie_sword: 'Zombie with a sword', demon_imp_sword: 'Imp with a sword', raider_club: 'Savage', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer', undead_zombie: 'Zombie', undead_big_zombie: 'Big zombie', undead_zombie_archer: 'Zombie archer', undead_necromancer: 'Necromancer', demon_imp: 'Imp', demon_brute: 'Demon', demon_imp_archer: 'Imp archer' },
+      enemies: { raider_medic: 'Healer', undead_zombie_sword: 'Zombie with a sword', demon_imp_sword: 'Imp with a sword', raider_club: 'Savage', raider_fist: 'Brawler', raider: 'Raider', brute: 'Brute', raider_archer: 'Archer', undead_zombie: 'Zombie', undead_big_zombie: 'Big zombie', undead_zombie_archer: 'Zombie archer', undead_necromancer: 'Necromancer', demon_imp: 'Imp', demon_brute: 'Demon', demon_imp_archer: 'Imp archer' },
       factions: { humans: 'Humans', demons: 'Demons', undead: 'Undead' },
       settlerTypes: { normal: 'Worker', big: 'Giant', zombie: 'Zombie', big_zombie: 'Big zombie', necromancer: 'Necromancer', imp: 'Imp', demon: 'Demon' },
       gear: { leather_armor: 'Leather armour', backpack: 'Backpack', shield: 'Shield', armor: 'Armour', wateringCan: 'Watering can', whistle: 'Foreman\'s whistle', banner: 'Banner', flute: 'Wooden flute' },
@@ -90,7 +90,7 @@ export const enLanguage = {
       'editor.saveFailed': '[[no]] Couldn\'t save the map on this device', 'editor.saved': '[[ok]] Map saved: {name}',
       'editor.tool.erase': 'Eraser', 'editor.tool.water': 'Water', 'editor.tool.rock': 'Rock', 'editor.tool.sand': 'Sand',
       'editor.tool.town_hall': 'Town hall', 'editor.tool.tree': 'Tree', 'editor.tool.apple_tree': 'Apple tree', 'editor.tool.cactus': 'Cactus',
-      'editor.tool.boulder': 'Boulder', 'editor.tool.grass': 'Grass', 'editor.tool.berry_bush': 'Berry bush', 'editor.tool.stick': 'Stick',
+      'editor.tool.boulder': 'Boulder', 'editor.tool.grass': 'Grass', 'editor.tool.berry_bush': 'Berry bush', 'editor.tool.stick': 'Stick', 'editor.tool.log': 'Log',
       'editor.tool.pebble': 'Pebble', 'editor.tool.iron_ore': 'Iron ore', 'editor.tool.coal_ore': 'Coal', 'editor.tool.iron_spawner': 'Iron source',
       'editor.tool.coal_spawner': 'Coal source', 'editor.tool.boar': 'Boar',
       'defeat.title': 'DEFEAT!', 'defeat.survived': 'You held out for {waves} waves', 'defeat.restart': 'Start again'

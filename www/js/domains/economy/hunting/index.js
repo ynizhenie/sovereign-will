@@ -4,4 +4,4 @@
 export { huntBoar } from './hunting.behaviours.js';
 export { baitTrap, tickIronTraps } from './hunting.traps.js';
 export { drawBoars } from './hunting.draw.js';
-export { makeBoarFlee, tickBoarRespawn, tickBoars, woundBoar } from './hunting.rules.js';
+export { clearBoarWallows, makeBoarFlee, tickBoarRespawn, tickBoars, woundBoar } from './hunting.rules.js';

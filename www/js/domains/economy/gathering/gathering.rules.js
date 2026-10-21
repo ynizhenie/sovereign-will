@@ -48,12 +48,16 @@ export function addMapResource(kind, x, y) {
 export function finishHarvest(settler, resource, kind) {
   const def = GAME_CONFIG.mapResources[kind];
   const factor = resource.fertilized ? GAME_CONFIG.fertilizer.yieldFactor : 1;
-  // (#279) a tree felled falls first, away from its cutter; (#298) nothing in hand yet: the log is cut up next
+  // (#279) a tree felled falls first, away from its cutter, and leaves its stump where it stood, till a tree
+  // grows again (anywhere); (#298) nothing in hand yet: the log is cut up next
   const two = def.fellInTwo;
   if (two && !resource.fallen) {
     Object.assign(resource, { fallen: true, fallAt: game.pathTick, fallAngle: Math.atan2(resource.y - settler.y, resource.x - settler.x), applesReady: false });
     resource.hp = def.hp * two.logHp;
+    resource.maxHp = def.hp * two.logHp; // (the lying log has its own bar, from empty: a little of it to cut up)
     resource.harvestProgress = 0;
+    resource.stump = { x: resource.x, y: resource.y + 10 };
+    game.stumps.push(resource.stump);
     playSound('collapse', resource);
     return;
   }
@@ -73,7 +77,7 @@ export function finishHarvest(settler, resource, kind) {
   const list = game[def.list];
   const index = list.indexOf(resource);
   if (index !== -1) list.splice(index, 1);
-  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y);
+  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y, resource.stump);
   if (def.clearsPath) invalidateAllPaths();
 }
 
@@ -85,18 +89,20 @@ function cutIntoLogs(tree, def, two, factor) {
   const side = Math.cos(tree.fallAngle || 0) >= 0 ? 1 : -1;
   for (let i = 0; i < n; i++) {
     const wood = Math.floor(total / n) + (i < total % n ? 1 : 0);
-    game.logs.push({ x: tree.x + side * (8 + i * 12), y: tree.y + 10, hp: 1, maxHp: 1, priority: 0, yield: { wood }, side });
+    // (clear of the stump: two pieces, not one long log over it)
+    game.logs.push({ x: tree.x + side * (14 + i * 14), y: tree.y + 10, hp: 1, maxHp: 1, priority: 0, yield: { wood }, side });
   }
 }
 
 // ---- Delayed regrowth
 // A harvested (or destroyed) resource doesn't reappear at once: it's queued and grows back after
-// respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti).
+// respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti). A tree hands
+// over the stump it was felled at: that goes once the tree's back, wherever it grew
 
-export function scheduleRespawn(type, nearX = null, nearY = null) {
+export function scheduleRespawn(type, nearX = null, nearY = null, stump = null) {
   const isOre = getMapResourceDef(type).regrow === 'spawner';
   const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
-  game.pendingRespawns.push({ type, nearX, nearY, timer: delay });
+  game.pendingRespawns.push({ type, nearX, nearY, stump, timer: delay });
 }
 
 export function updatePendingRespawns(dt) {
@@ -106,6 +112,11 @@ export function updatePendingRespawns(dt) {
     if (pending.timer > 0) continue;
     game.pendingRespawns.splice(i, 1);
     const def = getMapResourceDef(pending.type);
+    // it's back (wherever it grew): the stump left where it stood is gone
+    if (pending.stump) {
+      const at = game.stumps.indexOf(pending.stump);
+      if (at !== -1) game.stumps.splice(at, 1);
+    }
     if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type));
     else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
     else if (def.regrow === 'forest') spawnForestAware(pending.type);
