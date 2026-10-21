@@ -11,3 +11,4 @@ export { drawAllSpeech, drawSpeech, noteDay, says, someoneSays, speak, tickVoice
 export { hasPlayerOrderFor } from './settlers.corpses.js';
 export { roleTitle } from './settlers.commanders.js';
 export { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
+export { drawHair, lookOf, newLook } from './settlers.looks.js';

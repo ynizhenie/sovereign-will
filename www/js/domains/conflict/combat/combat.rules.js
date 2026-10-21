@@ -193,7 +193,7 @@ export function applySpikeTraps(dt = 1 / 60) {
 export function addCorpse(unit, side, kind) {
   playSound('death', unit, side === 'enemy');
   const big = isBigBody(unit);
-  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false });
+  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false, look: unit.look }); // (its look, #306)
 }
 
 export function updateCorpses(dt) {
