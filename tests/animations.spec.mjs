@@ -73,7 +73,7 @@ test('a bare-handed human in a fight boxes: a guard up, a punch out, a step into
       out: Math.max(...fists), back: Math.min(...fists), leanIn: Math.max(...leans),
       guardUp: guards.every(g => g.y < -man.visualRadius * 0.3), guardIn: Math.max(...guards.map(g => Math.abs(g.x))),
       herOut: Math.max(...hers),
-      noOthers: noOthers.map(p => p === null).every(Boolean), after
+      noOthers: noOthers.map(p => p === null), after
     };
   });
   expect(r.atRest).toBe(null);
