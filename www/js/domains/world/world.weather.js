@@ -10,6 +10,7 @@ import { TILE_SIZE, game, rand } from '../../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
+import { tileVariantHash } from './world.draw.js';
 
 const config = () => GAME_CONFIG.weather;
 /** @type {{ kind: string, level: number, left: number, wind: number, windTo: number, windAngle: number, flash: number, thunderIn: number, nextBolt: number, bolt: { x: number, seed: number } | null }} */
@@ -117,19 +118,41 @@ export function drawWeatherWorld() {
       }
     }
   }
-  // fog: soft banks drifting with the wind over a light haze
+  // fog: soft banks drifting with the wind over a light haze (#306: they lie on the map, each on its own cell
+  // of a lattice bobbing where it is, not on the screen, so zooming and panning don't drag them along)
   const w = getWeather();
   if (w.kind === 'fog' && w.level > 0) {
-    ctx.fillStyle = `rgba(210, 215, 220, ${0.22 * w.level})`;
+    ctx.fillStyle = `rgba(210, 215, 220, ${0.14 * w.level})`;
     ctx.fillRect(camera.x - halfW, camera.y - halfH, halfW * 2, halfH * 2);
-    const drift = t * 12 * (0.3 + w.wind);
-    for (let k = 0; k < 10; k++) {
-      const bx = camera.x - halfW + ((k * 397 + drift) % (halfW * 2 + 400)) - 200, by = camera.y - halfH + ((k * 271) % (halfH * 2));
-      const g = ctx.createRadialGradient(bx, by, 0, bx, by, 160);
-      g.addColorStop(0, `rgba(225, 230, 235, ${0.35 * w.level})`); g.addColorStop(1, 'rgba(225, 230, 235, 0)');
-      ctx.fillStyle = g; ctx.fillRect(bx - 160, by - 160, 320, 320);
+    const cell = 300, drift = 90 * w.wind, bank = fogBank();
+    ctx.save();
+    ctx.globalAlpha = 0.28 * w.level;
+    for (let gy = Math.floor((camera.y - halfH - cell) / cell); gy <= Math.ceil((camera.y + halfH + cell) / cell); gy++) {
+      for (let gx = Math.floor((camera.x - halfW - cell) / cell); gx <= Math.ceil((camera.x + halfW + cell) / cell); gx++) {
+        const h = tileVariantHash(gx, gy);
+        const bx = gx * cell + (h % cell) + Math.sin(t * 0.06 + (h % 628) / 100) * drift;
+        const by = gy * cell + ((h >>> 9) % cell) + Math.cos(t * 0.05 + (h % 314) / 100) * drift * 0.5;
+        ctx.drawImage(bank, bx - 170, by - 170);
+      }
     }
+    ctx.restore();
   }
+}
+
+// A fog bank: one soft round sprite, drawn again and again (made once)
+/** @type {HTMLCanvasElement | null} */
+let fogBankCanvas = null;
+function fogBank() {
+  if (!fogBankCanvas) {
+    fogBankCanvas = document.createElement('canvas');
+    fogBankCanvas.width = fogBankCanvas.height = 340;
+    const c = /** @type {CanvasRenderingContext2D} */ (fogBankCanvas.getContext('2d')), g = c.createRadialGradient(170, 170, 0, 170, 170, 170);
+    g.addColorStop(0, 'rgba(225, 230, 235, 1)');
+    g.addColorStop(1, 'rgba(225, 230, 235, 0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 340, 340);
+  }
+  return fogBankCanvas;
 }
 
 // Over the screen (after the darkness): rain's streaks slanting with the wind and a dimmer sky, a storm's
@@ -139,9 +162,9 @@ export function drawWeatherScreen() {
   if (rain <= 0 && !(w.flash > 0)) return;
   const W = canvas.width, H = canvas.height, t = performance.now() / 1000;
   if (rain > 0) {
-    ctx.fillStyle = `rgba(20, 30, 45, ${0.18 * rain * (w.kind === 'storm' ? 1.6 : 1)})`; ctx.fillRect(0, 0, W, H);
-    const slant = Math.cos(w.windAngle || 0) * w.wind * 0.6, n = Math.round((w.kind === 'storm' ? 260 : 160) * rain), len = H * 0.035;
-    ctx.strokeStyle = `rgba(200, 215, 230, ${0.35 + 0.15 * rain})`; ctx.lineWidth = Math.max(1, W / 1200);
+    ctx.fillStyle = `rgba(20, 30, 45, ${0.13 * rain * (w.kind === 'storm' ? 1.4 : 1)})`; ctx.fillRect(0, 0, W, H);
+    const slant = Math.cos(w.windAngle || 0) * w.wind * 0.6, n = Math.round((w.kind === 'storm' ? 170 : 110) * rain), len = H * 0.035;
+    ctx.strokeStyle = `rgba(200, 215, 230, ${0.28 + 0.12 * rain})`; ctx.lineWidth = Math.max(1, W / 1200);
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const sx = ((i * 7919) % 1000) / 1000, sp = 0.8 + ((i * 104729) % 100) / 250;

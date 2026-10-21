@@ -32,9 +32,13 @@ function drawFallenTree(t) {
     drawStandingTree(t, true);
     ctx.restore();
   } else drawLyingTree(t, side, footX, footY, 1 - Math.max(0, t.hp) / (GAME_CONFIG.mapResources.tree.hp * fall.logHp));
-  // the stump where it stood
-  ctx.fillStyle = '#6d4c2f'; ctx.beginPath(); ctx.ellipse(footX, footY - 2, 3.5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(footX, footY - 2.6, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+  // (the stump left at its foot is its own: game.stumps, see drawStumpArt — it outlives the log)
+}
+
+// The stump where a tree was felled: it stays till a tree grows again somewhere else (see finishHarvest)
+export function drawStumpArt(st) {
+  ctx.fillStyle = '#6d4c2f'; ctx.beginPath(); ctx.ellipse(st.x, st.y, 3.5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(st.x, st.y - 0.6, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
 }
 
 // On the ground: a log along the ground from its stump, its crown at the far end squashed flat; cut up (cut,

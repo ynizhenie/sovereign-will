@@ -12,7 +12,7 @@ export const factionsConfig = {
     // bonesPerSecond: bones its hall makes by itself (graves are worked by a necromancer, #253); music: its colony's ambients and its
     // waves' battle tracks (GAME_CONFIG.music), and the night's own of each (#252)
     humans: { id: 'humans', color: '#e9c46a', ready: true, units: ['normal', 'big'], upgrades: { normal: 'big' }, startUnits: 'normal', eats: true,
-      enemies: ['raider_club', 'raider', 'brute', 'raider_archer', 'raider_medic'], summonEnemy: 'raider',
+      enemies: ['raider_fist', 'raider_club', 'raider', 'brute', 'raider_archer', 'raider_medic'], summonEnemy: 'raider',
       music: { ambient: ['humans_meadow', 'humans_village', 'humans_dusk', 'humans_harvest', 'humans_rain'], battle: ['humans_battle', 'humans_march', 'humans_charge', 'humans_shieldwall', 'humans_banner'],
         nightAmbient: ['humans_starlight', 'humans_hearth', 'humans_moonlit', 'humans_lullaby', 'humans_watch'], nightBattle: ['humans_nightraid', 'humans_torches', 'humans_darkfight', 'humans_lastlight', 'humans_alarm'] } },
     // portalSpawns: its spawners are portals that open anywhere (but not within minPortalTiles of the
@@ -35,5 +35,5 @@ export const factionsConfig = {
   },
 
   // the colours either side can pick from; the two sides never share one
-  factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1', '#e74c3c']
+  factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1']
 };

@@ -29,7 +29,7 @@ import { collectBones, corpsesToGraves, necromancy } from '../../factions/undead
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip, isBowWeapon } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
-import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
+import { IDLE_ACTIVITIES, cleanDung, fluteBreak, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
 import { lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
@@ -247,6 +247,7 @@ export const SETTLER_BEHAVIOURS = [
   baitTrap,
   deliverMaterials,
   deliverCarrying,
+  fluteBreak, // (#306: a settler with a flute stops now and then for a tune by a campfire)
   repairTent,
   eatCorpse,
   healAtTent,
@@ -297,10 +298,10 @@ export function tickSettlers(dt) {
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (s.drowsy && !NIGHT_ORDER_ONLY.has(behaviour)) continue;
       if (behaviour(s, tick)) {
-        s.isIdle = behaviour === patrol;
+        s.isIdle = behaviour === patrol || behaviour === fluteBreak;
         if (!s.isIdle) { s.idle = null; s.swaying = false; }
-        // what it's doing, for the selected settler's info (a pastime: its own text)
-        s.activity = s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
+        // what it's doing, for the selected settler's info (a pastime: its own text; a flute break: the tune's)
+        s.activity = s.breaking ? 'fluteBreak' : s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
         return;
       }
     }

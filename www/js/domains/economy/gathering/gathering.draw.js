@@ -1,7 +1,7 @@
 // How far a resource is worked through
 
 import { TILE_SIZE, game } from '../../../engine/world/index.js';
-import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawPebblesArt, drawSaplingArt, drawStickArt, drawTreeArt } from './gathering.art.js';
+import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawPebblesArt, drawSaplingArt, drawStickArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar } from '../../../engine/platform/index.js';
 import { getHarvestableResources, getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawOreVeins } from '../../world/index.js';
@@ -36,8 +36,10 @@ export function drawSticksPebblesOre() {
   });
 }
 
-// Trees: saplings growing, grown trees, apple trees with their apples
+// Trees: saplings growing, grown trees, apple trees with their apples (and the stumps of those felled)
 export function drawTrees() {
+  // (before the trees: a tree grown there covers its own stump, a felled one's log covers it)
+  game.stumps.forEach(drawStumpArt);
   game.trees.forEach(t => {
     if (t.isGrowing) {
       drawSaplingArt(t);
