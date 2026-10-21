@@ -7,6 +7,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
+import { drawHair, lookOf } from './settlers.looks.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx } from '../../../engine/platform/index.js';
@@ -267,8 +268,9 @@ export function drawFigure(unit, o) {
   const outline = 'rgba(0, 0, 0, 0.45)';
   // its shadow on the ground
   if (!o.lying) { ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'; ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.7, r * 0.22, 0, 0, Math.PI * 2); ctx.fill(); }
-  // legs, stepping while it walks
-  const step = o.lying || o.dead ? 0 : Math.sin((unit.walk || 0) * 0.35) * r * 0.16;
+  // legs, stepping while it walks (#306: a woman a little shorter)
+  const look = lookOf(unit);
+  const step = o.lying || o.dead ? 0 : Math.sin((unit.walk || 0) * 0.35) * r * (look.female ? 0.12 : 0.16);
   ctx.fillStyle = shade(o.body, -0.4);
   for (const [lx, dy] of [[-0.3, step], [0.3, -step]]) { ctx.beginPath(); ctx.roundRect(r * lx - r * 0.17, r * 0.25 + dy, r * 0.34, r * 0.72, r * 0.12); ctx.fill(); }
   // arms: the right to its hand, the left down its side (or out to its shield, on the side away from the hand)
@@ -287,9 +289,14 @@ export function drawFigure(unit, o) {
   // (#298) its hand's arm behind its body when the hand is up behind it (heldBehind); the other in front
   const behind = !o.lying && !o.dead && (carry ? carry.y < -r * 0.1 : !o.handPoint && hand.y < -r * 0.1);
   if (behind) { arm(right * r * 0.5, hand); if (carry) arm(-right * r * 0.5, other); }
-  // the body
+  // the body (#306: a woman's narrower at the shoulders, a skirt's hem flaring over its legs)
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
+  if (look.female) {
+    ctx.beginPath(); ctx.moveTo(-r * 0.5, -r * 0.48); ctx.lineTo(r * 0.5, -r * 0.48); ctx.lineTo(r * 0.7, r * 0.72); ctx.lineTo(-r * 0.7, r * 0.72); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = shade(o.body, -0.3); ctx.beginPath(); ctx.moveTo(-r * 0.66, r * 0.6); ctx.lineTo(r * 0.66, r * 0.6); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
+  }
   // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
   if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (!behind) arm(right * r * 0.5, hand);
@@ -303,8 +310,10 @@ export function drawFigure(unit, o) {
   const hy = -r * 0.9, hr = r * 0.5;
   ctx.fillStyle = o.skin; ctx.strokeStyle = outline;
   ctx.beginPath(); ctx.arc(0, hy, hr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * 1.35);
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
+  // its hair (#306), then a demon's horns through it
+  drawHair(ctx, look, unitKin(unit), hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
+  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35));
   if (o.dead) {
     ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2;
     for (const sx of [-1, 1]) { const cx = sx * hr * 0.38, cy = hy; ctx.beginPath(); ctx.moveTo(cx - 1.6, cy - 1.6); ctx.lineTo(cx + 1.6, cy + 1.6); ctx.moveTo(cx + 1.6, cy - 1.6); ctx.lineTo(cx - 1.6, cy + 1.6); ctx.stroke(); }

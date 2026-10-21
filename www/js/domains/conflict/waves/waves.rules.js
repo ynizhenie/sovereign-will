@@ -12,7 +12,7 @@ import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { isNight } from '../../world/index.js';
-import { noteDay, someoneSays } from '../../colony/settlers/index.js';
+import { newLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 
@@ -52,6 +52,7 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
   const enemy = {
+    look: newLook(), // (#306: a man or a woman, one of their looks)
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
     hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,

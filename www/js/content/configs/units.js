@@ -1,6 +1,17 @@
 // The colony's unit kinds, and how fast everyone moves
 
 export const unitsConfig = {
+  // (#306) how they look: a woman femaleChance of the time; five looks each (male: cropped, bald, bearded, long
+  // tied back, hooded; female: long, a braid, a bun, a ponytail, a bob), the commoner the bigger its weight;
+  // their hair one of their kind's colours
+  looks: {
+    femaleChance: 0.4, male: [30, 18, 20, 18, 14], female: [28, 20, 20, 18, 14],
+    hair: {
+      humans: ['#3e2723', '#6d4c41', '#c49a6c', '#212121', '#a1887f', '#8d5524'],
+      undead: ['#6b6b5e', '#4f5b4a', '#8a8a7a', '#3d3d33'],
+      demons: ['#1b1b1f', '#5c1a1a', '#2c2c2c', '#7b241c']
+    }
+  },
   // how far everyone moves per game step, times their own speed (settlers, enemies, boars). 2 is the pace
   // the game was tuned at on a 120 Hz screen, before updates became a fixed 60 per second
   movementScale: 2,
