@@ -24,9 +24,10 @@ export const BATTLE_PLAYER_UNITS = {
     { id: 'necromancer', type: 'zombie', weapon: 'fist', tool: 'necro_staff' }, { id: 'big_zombie', type: 'big_zombie', weapon: 'club' }
   ],
   demons: [
-    { id: 'imp', type: 'imp', weapon: 'club' }, { id: 'imp_sword', type: 'imp', weapon: 'sword' },
-    { id: 'imp_spear', type: 'imp', weapon: 'spear' }, { id: 'imp_bow', type: 'imp', weapon: 'bow' },
-    { id: 'demon', type: 'demon', weapon: 'club' }, { id: 'demon_spear', type: 'demon', weapon: 'spear' }
+    { id: 'imp_fist', type: 'imp', weapon: 'fist' }, { id: 'imp', type: 'imp', weapon: 'club' },
+    { id: 'imp_sword', type: 'imp', weapon: 'sword' }, { id: 'imp_spear', type: 'imp', weapon: 'spear' },
+    { id: 'imp_bow', type: 'imp', weapon: 'bow' }, { id: 'demon', type: 'demon', weapon: 'club' },
+    { id: 'demon_spear', type: 'demon', weapon: 'spear' }
   ]
 };
 

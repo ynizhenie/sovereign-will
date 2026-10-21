@@ -44,7 +44,7 @@ export function serializeMap(name) {
 // Build the world from a saved map, in place of generateMap() (see resetGame)
 export function loadCustomMap(map) {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.beachTiles = []; game.forests = [];
-  game.trees = []; game.cacti = []; game.boulders = []; game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = [];
+  game.trees = []; game.cacti = []; game.boulders = []; game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.stumps = [];
   game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = [];
   const at = ([gx, gy]) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   if (map.hall) { townHall.x = map.hall[0]; townHall.y = map.hall[1]; }

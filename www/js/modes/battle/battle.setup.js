@@ -11,7 +11,7 @@ import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equip
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { closeOverlays, showNotification } from '../../ui/index.js';
-import { createSettler } from '../../domains/colony/settlers/index.js';
+import { createSettler, newLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { getBattlePreset } from './battle.roster.js';
@@ -20,7 +20,8 @@ import { renderBattlePanel } from './battle.panel.js';
 export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean }[],
+ *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean,
+ *   look?: { female: boolean, style: number, shade: number } }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
 export const battle = {
@@ -59,9 +60,13 @@ export function battleSide(x) {
 
 export function makeBattleUnit(entry) {
   const preset = getBattlePreset(entry.presetId);
+  // (#306) the look it was placed with, kept on its line-up entry: a tap makes the whole line-up again,
+  // and a new look every time would give every unit another face — and another man or a woman
+  const look = entry.look || (entry.look = newLook());
   if (preset.enemy) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
+    en.look = look;
     // (#279) armour and a shield as yours can have (a shield: a melee one of normal size)
     const armour = battleArmor(entry.armor);
     if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
@@ -71,7 +76,7 @@ export function makeBattleUnit(entry) {
     return;
   }
   const archer = isBowWeapon(preset.weapon);
-  const s = createSettler(preset.type, battle.nextId++, entry.x, entry.y);
+  const s = createSettler(preset.type, battle.nextId++, entry.x, entry.y, { look });
   Object.assign(s, {
     weapon: preset.weapon, tool: preset.tool || 'none',
     role: archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry

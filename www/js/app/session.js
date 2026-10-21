@@ -6,6 +6,7 @@ import { onTap, t } from '../engine/platform/index.js';
 import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
 import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
+import { clearBoarWallows } from '../domains/economy/hunting/index.js';
 import { generateMap } from '../domains/world/index.js';
 import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
@@ -27,9 +28,10 @@ export function resetGame(map) {
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
   resetRaid(); // (#255: a party out on a raid: the base back first, then all of it reset)
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.stumps = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
   townHall.store = {}; game.craftOrders = []; game.raidCamp = null; game.raidCampWave = 0; game.scouts = []; game.scoutClock = 0; game.weather = null; game.reliefZones = []; game.postZones = []; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
   game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
+  clearBoarWallows(); // (#306) the ground the last world's boars dug goes with that world
   
   if (map) loadCustomMap(map);
   else generateMap();
