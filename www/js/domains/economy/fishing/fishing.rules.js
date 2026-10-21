@@ -19,6 +19,20 @@ export function takeFishingBait(s) {
   }
 }
 
+// Fish replenish the marked shoals over time. A single fisher's catch rate is slower than regrowth.
+export function tickFishPopulation(dt) {
+  const { fishCapacity, fishRegrowSeconds } = GAME_CONFIG.fishing;
+  for (const tile of game.waterTiles) {
+    tile.fishCount = Math.min(fishCapacity, Math.max(0, tile.fishCount ?? fishCapacity));
+    if (tile.fishCount >= fishCapacity) { tile.fishRegrowTimer = 0; continue; }
+    tile.fishRegrowTimer = (tile.fishRegrowTimer || 0) + dt;
+    while (tile.fishRegrowTimer >= fishRegrowSeconds && tile.fishCount < fishCapacity) {
+      tile.fishCount++;
+      tile.fishRegrowTimer -= fishRegrowSeconds;
+    }
+  }
+}
+
 // Worms show up on a corpse that has lain for GAME_CONFIG.worms.after of its time, until a fisher takes them
 export function corpseHasWorms(corpse) {
   return !corpse.wormsTaken && corpse.age >= GAME_CONFIG.corpses.seconds * GAME_CONFIG.worms.after;

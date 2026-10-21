@@ -13,3 +13,7 @@ import { ukLanguage } from './uk.js';
 import { ruLanguage } from './ru.js';
 
 export const LANGUAGES = { ...enLanguage, ...ukLanguage, ...ruLanguage };
+
+LANGUAGES.en.text['craft.kind.supplies'] = 'Supplies';
+LANGUAGES.ru.text['craft.kind.supplies'] = 'Снабжение';
+LANGUAGES.uk.text['craft.kind.supplies'] = 'Припаси';

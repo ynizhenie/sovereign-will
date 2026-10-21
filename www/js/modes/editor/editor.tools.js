@@ -125,7 +125,7 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   clearEditorTile(x, y);
   if (tool.id === 'water') {
     game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
-    game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0 });
+    game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
   } else if (tool.id === 'rock') {
     addMapResource('natural_rock', x, y);
   } else if (tool.spawner) {

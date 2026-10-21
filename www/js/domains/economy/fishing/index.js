@@ -2,4 +2,4 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { collectWorms, emptyFishTrap, fetchBait, fish, fishAt } from './fishing.behaviours.js';
-export { corpseHasWorms, getFishingBait, takeFishingBait, tickFishTraps } from './fishing.rules.js';
+export { corpseHasWorms, getFishingBait, takeFishingBait, tickFishPopulation, tickFishTraps } from './fishing.rules.js';
