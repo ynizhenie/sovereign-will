@@ -323,6 +323,7 @@
  * @property {Point[]} reliefZones  tiles marked to relieve in (#279)
  * @property {Point[]} postZones    tiles marked for soldiers' posts
  * @property {number} scoutClock
+ * @property {any} weather  the weather now (#308, world.weather.js); null: none yet
  */
 
 export {};

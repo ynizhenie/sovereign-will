@@ -97,7 +97,9 @@ export const game = {
   reliefZones: [],      // { x, y } tiles marked to relieve in (#279, world.zones.js)
   postZones: [],        // { x, y } tiles marked for soldiers' posts before a wave
   scouts: [],           // enemy scouts between waves (#279, waves.scouts.js): not enemies till the player points at one
-  scoutClock: 0
+  scoutClock: 0,
+  /** @type {any} */
+  weather: null         // (#308) the weather now (world.weather.js); null: none yet (a new game, an old save)
 };
 
 // the fields that are the map's contents (saved with a game, endless.saves.js): settlers to pendingRespawns

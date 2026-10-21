@@ -6,7 +6,7 @@ import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
 import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickScouts, tickWaveTimer } from '../domains/conflict/waves/index.js';
 import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
-import { tickDaytime, tickPaths } from '../domains/world/index.js';
+import { tickDaytime, tickPaths, tickWeather } from '../domains/world/index.js';
 import { tickMenuScene } from '../modes/menu/index.js';
 import { growCrops } from '../domains/economy/farming/index.js';
 import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, updateTemporaryZombies } from '../domains/factions/undead/index.js';
@@ -74,6 +74,7 @@ export function update(dt) {
   keepStoresInStep(); // what lies where, in step with the stock (#248)
   tickPaths(); // ground walked a lot wears into paths (#248)
   tickDaytime(dt); // day and night (#257)
+  tickWeather(dt); // (#308)
   tickMenuScene(dt); // (the main menu's scene, #256)
   tickNight();
   tickVoices(dt); // (#252)
