@@ -95,3 +95,23 @@ export function drawDarkness() {
   }
   ctx.drawImage(sheet, 0, 0);
 }
+
+// (#307) the sun: shadows fall away from it, long in the morning (to the west, the sun in the east) and the
+// evening (to the east), short at midday (straight down the screen), and faint at night (the moon). dx/dy:
+// how far a shadow falls for each unit of a thing's height; alpha: how dark it is. Out of Endless: an afternoon
+export function getSun() {
+  const c = config(), light = c.morning + c.day + c.evening;
+  const t = game.gameMode === 'endless' ? (game.dayTime || 0) : c.morning + c.day * 0.7;
+  if (t >= light) return { dx: 0.15, dy: 0.4, alpha: 0.08 };
+  const x = (t / light - 0.5) * 2, len = 0.55 + Math.abs(x) * 1.7;
+  return { dx: x * len, dy: 0.45, alpha: 0.24 - Math.abs(x) * 0.07 };
+}
+
+// A thing's shadow on the ground: an ellipse round its foot (x, y) of rx by ry, cast away from the sun by its
+// height and stretched along the way it falls. c: where to draw
+export function castShadow(c, x, y, rx, ry, height = 10) {
+  const sun = getSun(), ox = sun.dx * height, oy = sun.dy * height;
+  c.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
+  c.beginPath(); c.ellipse(x + ox * 0.5, y + oy * 0.5, rx + Math.abs(ox) * 0.5, ry + Math.abs(oy) * 0.25, 0, 0, Math.PI * 2); c.fill();
+}
+
