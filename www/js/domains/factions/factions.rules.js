@@ -10,7 +10,8 @@ import { menuWorld } from '../../modes/menu/index.js';
 import { loadData, saveData } from '../../engine/platform/index.js';
 
 // the two sides: GAME_CONFIG.factions ids and the colours their units are drawn in
-export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' } };
+// (#306) battle: the colours of Battles' two sides, chosen in its settings
+export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' }, battle: { green: '#2ecc71', red: '#e8572a' } };
 
 // in the map editor, the faction the map is made for
 export function getPlayerFaction() {
@@ -24,12 +25,12 @@ export function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.fact
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour
 export function getSettlerColor(s) {
-  const color = game.gameMode === 'battle' ? '#27ae60' : game.gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
+  const color = game.gameMode === 'battle' ? sides.battle.green : game.gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
 }
 
 export function getEnemyColor(en) {
-  const color = game.gameMode === 'battle' ? '#e74c3c' : sides.enemy.color;
+  const color = game.gameMode === 'battle' ? sides.battle.red : sides.enemy.color;
   return en && en.type === 'big' ? shadeColor(color, -0.25) : color;
 }
 
@@ -82,6 +83,17 @@ export function loadSides() {
     if (s && GAME_CONFIG.factionColors.includes(s.color)) sides[side].color = s.color;
   }
   if (sides.enemy.color === sides.player.color) sides.enemy.color = freeColor(sides.enemy.color, sides.player.color);
+  const b = saved && saved.battle;
+  for (const side of ['green', 'red']) if (b && GAME_CONFIG.factionColors.includes(b[side])) sides.battle[side] = b[side];
+  if (sides.battle.red === sides.battle.green) sides.battle.red = freeColor(sides.battle.red, sides.battle.green);
+}
+
+// (#306) a colour for one of Battles' sides (not the other's)
+export function setBattleColor(side, color) {
+  const other = side === 'green' ? sides.battle.red : sides.battle.green;
+  if (color === other || !GAME_CONFIG.factionColors.includes(color)) return;
+  sides.battle[side] = color;
+  saveSides();
 }
 
 // Whether the player's faction has this (a resource, building, tool, gear...): yes unless the item names

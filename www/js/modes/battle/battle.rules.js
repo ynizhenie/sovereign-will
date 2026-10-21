@@ -1,5 +1,6 @@
 // The fight: started, called off, and over when a side has nobody left
 
+import { getDefinition } from '../../content/configs/index.js';
 import { t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { showNotification } from '../../ui/index.js';
@@ -49,6 +50,10 @@ export function updateBattle(dt) {
 // whatever comes at them); a behaviour of every settler's, after the possessed
 export function battleOrders(s, tick) {
   if (game.gameMode !== 'battle' || battle.phase !== 'fight' || battle.auto) return false;
+  // (#306) a necromancer or a medic does its own work (raising, healing) as in Endless, unless it was told
+  // to go for one: the orders took it over and it only fought
+  const healer = (getDefinition('tools', s.tool) || {}).necromancer || s.tool === 'medbag';
+  if (healer && !s.orderTarget && !s.orderSpot) return false;
   fightByOrders(s, tick.dt, false);
   return true;
 }

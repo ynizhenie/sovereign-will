@@ -332,6 +332,7 @@ export function takeFromArmory(key) {
 export function craftRecipe(id) {
   const recipe = GAME_CONFIG.recipes[id];
   const result = orderCraft('recipes', id);
+  if (result === 'locked') { showNotification(t('cards.locked', { name: recipe.label }), true); return; } // (#306)
   if (result === 'noSmithy' || result === 'noWorkshop') { showNotification(t(result === 'noSmithy' ? 'craft.needSmithy' : 'craft.needWorkshop', { name: recipe.label }), true); return; }
   if (result !== 'ordered') { showCostError(recipe.cost, t('cost.needs', { name: recipe.label })); return; }
   const batches = recipe.batches || 1;
