@@ -38,21 +38,24 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
   expect(r.apple.bonus.saplings).toBeUndefined();
 });
 
-test('a felled tree falls first, then its log is cut into two pieces lying there, its wood shared between them (#279, #298)', async () => {
+test('a felled tree falls first, leaving its stump till it grows again elsewhere, then its log is cut into two pieces lying there, its wood shared between them (#279, #298)', async () => {
   const r = await (() => {
     const { makeSettler } = window.sim.helpers;
     window.sim.start('fell-in-two');
     const s = makeSettler(1, 0, 0, { tool: 'axe' });
     const tree = { x: 40, y: 0, hp: 3, isGrowing: false };
     trees.push(tree);
-    logs.length = 0;
+    logs.length = 0; stumps.length = 0; pendingRespawns.length = 0;
     finishHarvest(s, tree, 'tree');
-    const fell = { fallen: !!tree.fallen, standing: trees.includes(tree), carrying: s.carrying, hp: tree.hp };
+    const fell = { fallen: !!tree.fallen, standing: trees.includes(tree), carrying: s.carrying, hp: tree.hp, bar: tree.maxHp, stump: stumps.map(st => [st.x, st.y]) };
     finishHarvest(s, tree, 'tree');
-    return { fell, gone: !trees.includes(tree), carrying: s.carrying, pieces: logs.map(l => l.yield.wood).sort() };
+    // the log's cut up and gone; its stump stays till a tree's grown again
+    const cut = { gone: !trees.includes(tree), carrying: s.carrying, pieces: logs.map(l => l.yield.wood).sort(), stump: stumps.length, waiting: pendingRespawns.length };
+    pendingRespawns.forEach(p => { p.timer = 0; });
+    updatePendingRespawns(0.1);
+    return { fell, cut, stumpAfter: stumps.length };
   })();
-  expect(r.fell).toEqual({ fallen: true, standing: true, carrying: null, hp: 3 * 0.6 });
-  expect(r.gone).toBe(true);
-  expect(r.carrying).toBe(null);
-  expect(r.pieces).toEqual([1, 2]);
+  expect(r.fell).toEqual({ fallen: true, standing: true, carrying: null, hp: 3 * 0.6, bar: 3 * 0.6, stump: [[40, 10]] });
+  expect(r.cut).toEqual({ gone: true, carrying: null, pieces: [1, 2], stump: 1, waiting: 1 });
+  expect(r.stumpAfter).toBe(0);
 });

@@ -31,6 +31,11 @@ export function woundBoar(boar, damage, attacker, fromX, fromY) {
 // (#306) the ground boars have dug, darker where one lies and for a while after it's gone (not saved: only a look)
 /** @type {{ x: number, y: number, boar: any, age: number }[]} */
 export const boarWallows = [];
+// A new world (resetGame): the ground the last one's boars dug goes with it — together with the boar it
+// belonged to, which no world but that one has (a look, so nothing of it is saved)
+export function clearBoarWallows() {
+  boarWallows.length = 0;
+}
 function endRest(boar) {
   if (!boar.rest) return;
   const w = boarWallows.find(o => o.boar === boar);

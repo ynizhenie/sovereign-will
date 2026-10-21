@@ -17,6 +17,10 @@ export const enemiesConfig = {
   enemies: {
     raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
+    // a savage with nothing in his hands: the battles' roster has him (bare-handed), no wave sends one
+    // (no waveKey, so the wave kinds leave him out)
+    raider_fist: { id: 'raider_fist', hp: 50, speed: 0.95, damage: 8, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, reach: 6, siege: { buildings: 5, resources: 1 } },
     raider: { id: 'raider', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
     brute: { id: 'brute', hp: 120, speed: 0.7, damage: 25, reward: { food: 2 }, weapon: 'spear',

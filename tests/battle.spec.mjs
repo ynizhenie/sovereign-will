@@ -42,7 +42,7 @@ test('the panel has categories: your units, enemies, buildings; armour and shiel
   expect(await count()).toBe(9);
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
   await showCategory(page, 'enemy');
-  expect(await count()).toBe(5); // with the healer (#203)
+  expect(await count()).toBe(6); // with the healer (#203) and the bare-handed savage
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible(); // (the enemy's too, #279)
   await showCategory(page, 'buildings');
   await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
@@ -66,9 +66,10 @@ test('every category has faction sub-tabs: each faction its own units and buildi
   expect(r.undead.own).toEqual(['zombie', 'zombie_club', 'zombie_sword', 'zombie_bow', 'necromancer', 'big_zombie']);
   expect(r.undead.enemy).toEqual(['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_zombie_archer', 'undead_necromancer']);
   expect(r.undead.buildings).toContain('grave');
-  expect(r.demons.own).toEqual(['imp', 'imp_sword', 'imp_spear', 'imp_bow', 'demon', 'demon_spear']);
+  expect(r.demons.own).toEqual(['imp_fist', 'imp', 'imp_sword', 'imp_spear', 'imp_bow', 'demon', 'demon_spear']);
   expect(r.demons.enemy).toEqual(['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_imp_archer']);
   expect(r.demons.buildings).toEqual(expect.arrayContaining(['sacrifice_circle', 'portal']));
+  expect(r.humans.enemy).toEqual(['raider_fist', 'raider_club', 'raider', 'brute', 'raider_archer', 'raider_medic']);
   expect(r.humans.buildings).not.toContain('grave');
 });
 
@@ -205,6 +206,29 @@ test('the line splitting the field shows while placing, not in the fight or the 
     return result;
   });
   expect(r).toEqual({ setup: 1, fight: 0, result: 0 });
+});
+
+test('every placed unit keeps its look, and a new one leaves the others theirs (#306)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    const look = u => `${u.look.female ? 'F' : 'M'}${u.look.style}/${u.look.shade}`;
+    const faces = () => ({ green: settlers.map(look), red: enemies.map(look) });
+    battle.preset = 'sword'; battleTap(at(10, 10).x, at(10, 10).y);
+    battle.preset = 'bow'; battleTap(at(10, 12).x, at(10, 12).y);
+    battle.preset = 'brute'; battleTap(at(30, 10).x, at(30, 10).y);
+    const before = faces();
+    battle.preset = 'spear'; battleTap(at(12, 10).x, at(12, 10).y); // the line-up made again: the three keep their looks
+    const placed = faces();
+    resetBattleUnits(); // as after a fight: made again
+    const rebuilt = faces();
+    return { before, placed, rebuilt, everyEntryHasOne: battle.lineup.every(e => e.look) };
+  });
+  expect(r.placed.green).toHaveLength(3);
+  expect(r.placed.green.slice(0, 2)).toEqual(r.before.green);
+  expect(r.placed.red).toEqual(r.before.red);
+  expect(r.rebuilt).toEqual(r.placed);
+  expect(r.everyEntryHasOne).toBe(true);
 });
 
 test('placed units face the other side, red ones too (playtest: the enemies stood facing away)', async ({ page }) => {

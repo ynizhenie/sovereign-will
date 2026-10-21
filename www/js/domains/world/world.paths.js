@@ -13,12 +13,20 @@ const config = () => GAME_CONFIG.paths;
 /** @type {WeakMap<object, { x: number, y: number }>} where each settler was at the last look */
 const lastSeen = new WeakMap();
 
+// (#306) a field is no road: the tiles of a plot or a marked zone take no wear and draw none, so no trodden
+// lanes come up between the wheat
+function fieldTiles() {
+  const keys = new Set();
+  for (const f of [...game.farmPlots, ...game.farmZones]) keys.add(`${Math.round((f.x - TILE_SIZE / 2) / TILE_SIZE)},${Math.round((f.y - TILE_SIZE / 2) / TILE_SIZE)}`);
+  return keys;
+}
+
 export function tickPaths() {
   if (game.gameMode !== 'endless') return;
   const c = config();
   game.paths = game.paths || {};
   if (game.pathTick % c.everyTicks === 0) {
-    const base = getBaseRadius(), tiles = getTileIndex();
+    const base = getBaseRadius(), tiles = getTileIndex(), fields = fieldTiles();
     for (const s of game.settlers) {
       const was = lastSeen.get(s);
       lastSeen.set(s, { x: s.x, y: s.y });
@@ -26,6 +34,7 @@ export function tickPaths() {
       if (Math.hypot(s.x - townHall.x, s.y - townHall.y) > base) continue; // (only in the base)
       const g = getGridPos(s.x, s.y), key = `${g.gx},${g.gy}`;
       if (tiles.buildings.has(`${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`)) continue;
+      if (fields.has(key)) continue;
       game.paths[key] = Math.min(1, (game.paths[key] || 0) + c.wear);
     }
   }
@@ -42,9 +51,9 @@ export function tickPaths() {
 // dry earth body, and a bare middle where it's walked most; each tile's centre nudged a little so the path
 // wanders, a few pebbles on the worn bits
 export function drawPaths() {
-  const shows = config().shows;
+  const shows = config().shows, fields = fieldTiles();
   const worn = game.paths || {};
-  const strength = (gx, gy) => { const w = worn[`${gx},${gy}`] || 0; return w < shows ? 0 : Math.min(1, (w - shows) / (1 - shows)); };
+  const strength = (gx, gy) => { if (fields.has(`${gx},${gy}`)) return 0; const w = worn[`${gx},${gy}`] || 0; return w < shows ? 0 : Math.min(1, (w - shows) / (1 - shows)); };
   const at = (gx, gy) => { const h = tileVariantHash(gx, gy); return { x: gx * TILE_SIZE + 15 + (h % 7) - 3, y: gy * TILE_SIZE + 15 + ((h >> 3) % 7) - 3 }; };
   const tiles = [];
   for (const key of Object.keys(worn)) {

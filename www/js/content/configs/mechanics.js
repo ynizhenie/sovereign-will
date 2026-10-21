@@ -75,10 +75,11 @@ export const mechanicsConfig = {
   // (sleepHealPerSecond at the town hall); a corpse within sleepCorpseTiles of where it sleeps is taken away
   // first; one ordered to work at night does it at drowsyPace
   // (#308) weather, Endless only: clear for firstClearSeconds, then spells of weather (weights, clear twice as
-  // likely after one), each seconds long (from..to), coming on and going off over `fade`; the wind's strength
-  // range for each; a storm's lightning every boltSeconds; rain makes the fires burn rainFireBurn times faster
-  weather: { firstClearSeconds: 150, seconds: [70, 160], fade: 10, weights: { clear: 40, rain: 26, fog: 18, storm: 12 },
-    wind: { clear: [0.15, 0.6], rain: [0.5, 0.9], fog: [0.02, 0.15], storm: [1.0, 1.5] }, boltSeconds: [4, 11], rainFireBurn: 1.5 },
+  // likely after one; #306: rarer and shorter), each seconds long (from..to), coming on and going off over
+  // `fade`; the wind's strength range for each; a storm's lightning every boltSeconds; rain makes the fires
+  // burn rainFireBurn times faster
+  weather: { firstClearSeconds: 240, seconds: [60, 130], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
+    wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
     handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, torchFirewood: 1, postFirewood: 1, enemyTorchShare: 0.3,
     sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5 },
@@ -100,10 +101,12 @@ export const mechanicsConfig = {
   // its most); soldiers and archers also patrol the edge of the base (patrolStep radians a waypoint) and
   // train at a dummy (their damage up trainPerSecond of itself a second, up to trainMax); a soldier guards a
   // gatherer more than guardBeyondTiles past the base's edge, keeping within guardRange px; an idle
-  // necromancer takes `bones` bones from a corpse in boneSeconds
+  // necromancer takes `bones` bones from a corpse in boneSeconds; one with a flute stops work now and then
+  // for a tune by a campfire (fluteEvery seconds, fluteSeconds at it; #306)
   idle: { seconds: [8, 16], campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
-    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
+    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3,
+    fluteEvery: [150, 300], fluteSeconds: [12, 26] },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used

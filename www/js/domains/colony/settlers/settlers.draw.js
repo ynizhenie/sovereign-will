@@ -92,8 +92,8 @@ export function bowDraw(unit) {
   if (since > len + 3) return null; // (not shooting: the bow at rest)
   const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0, p = Math.min(1, since / len);
   const quiver = { x: -Math.cos(f) * r * 0.55, y: -Math.sin(f) * r * 0.55 - r * 0.15 };
-  const pose = getHeldItemPose(unit), a = f + pose.angle;
-  const at = local => { const fx = pose.push + r * 0.25 + local * itemScale(unit), fy = r * 0.5; return { x: Math.cos(a) * fx - Math.sin(a) * fy, y: Math.sin(a) * fx + Math.cos(a) * fy }; };
+  const pose = getHeldItemPose(unit), a = f + pose.angle, grip = gripAt(r);
+  const at = local => { const fx = pose.push + grip.x + local * itemScale(unit), fy = grip.y; return { x: Math.cos(a) * fx - Math.sin(a) * fy, y: Math.sin(a) * fx + Math.cos(a) * fy }; };
   if (p < 0.4) return { pull: 0, other: quiver };
   if (p < 0.6) { const q = (p - 0.4) / 0.2, g = at(-1); return { pull: 0, other: { x: quiver.x + (g.x - quiver.x) * q, y: quiver.y + (g.y - quiver.y) * q } }; }
   const pull = Math.min(1, (p - 0.6) / 0.4);
@@ -101,7 +101,7 @@ export function bowDraw(unit) {
 }
 
 // (#306) a zombie with no weapon: its arms out in front of it, reaching; striking, a lunge, its hands further
-// out, clawing. Where its hands reach to (round its middle), and how far it lunges, or null
+// out, clawing. Where its two hands reach to (round its middle), and how far it lunges, or null
 export function zombieReach(unit) {
   if (unitKin(unit) !== 'undead' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', unit.tool || 'none') || unit.asleep) return null;
   const def = unit.enemyKey ? getDefinition('enemies', unit.enemyKey) || {} : null;
@@ -109,7 +109,32 @@ export function zombieReach(unit) {
   const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0;
   const sw = unit.swingT > 0 ? Math.sin(Math.PI * (1 - unit.swingT / (unit.swingLen || 0.3))) : 0;
   const reach = r * (0.75 + 0.5 * sw);
-  return { x: Math.cos(f) * reach, y: Math.sin(f) * reach * 0.7 + r * 0.05, lunge: sw * 3, sw };
+  // both arms out straight in front of it, a hand's width apart across its reach (a load's width when we see
+  // it front or back, where that's two arms reaching at us), near its shoulders' height: spread a load's
+  // width side-on, the lower hand ended up at its hip and that arm hung down its front
+  const apart = r * (0.42 - 0.24 * Math.abs(Math.cos(f)));
+  const out = { x: Math.cos(f) * reach, y: Math.sin(f) * reach * 0.7 - r * 0.25 };
+  return { hand: { x: out.x - Math.sin(f) * apart, y: out.y + Math.cos(f) * apart }, other: { x: out.x + Math.sin(f) * apart, y: out.y - Math.cos(f) * apart }, lunge: sw * 3, sw };
+}
+
+// A human with bare hands in a fight: a boxer's guard, its other fist up by its chin, and a straight punch as
+// it strikes, the body stepping into the blow. Where its two fists are (round its middle) and how far it steps
+// with the punch, or null (not a human, not bare-handed, asleep, not in a fight, or with a shield: its other
+// arm is the shield's)
+export function humanPunch(unit) {
+  if (unitKin(unit) !== 'humans' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', unit.tool || 'none') || unit.asleep || unit.shield) return null;
+  const since = t => game.pathTick - (t ?? -1e9);
+  // in a fight: striking now, or having struck or been struck not long ago
+  if (!(unit.swingT > 0) && since(unit.struckAt) > 150 && since(unit.lastAttackedTick) > 150) return null;
+  const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0;
+  const sw = unit.swingT > 0 ? Math.sin(Math.PI * (1 - unit.swingT / (unit.swingLen || 0.3))) : 0;
+  const bob = Math.sin(game.pathTick * 0.15) * r * 0.05; // (a light bounce up on its toes)
+  const reach = r * (0.5 + 0.9 * sw); // (the blow: out at its middle, furthest at its peak)
+  return {
+    hand: { x: Math.cos(f) * reach, y: Math.sin(f) * reach * 0.7 - r * 0.25 },
+    guard: { x: Math.cos(f) * r * 0.3, y: -r * 0.42 + Math.sin(f) * r * 0.15 + bob },
+    lean: sw * 2.2, sw
+  };
 }
 
 // Whose kind of body: an enemy's by its kind, a settler's by its type's faction (#306: in Battles the undead's
@@ -123,13 +148,22 @@ export function unitKin(unit) {
 // How big what it holds is drawn: as the hand holding it (a big one's bigger)
 export const itemScale = unit => Math.max(1, Math.min(1.45, (unit.visualRadius || unit.radius || 11) / 11));
 
+// Where its right hand holds what it holds (#298): down at the body's side, by its hip — as far out as an empty
+// hand rests (restingHand), so an arm carrying something isn't laid across its belly
+export const gripAt = r => ({ x: r * 0.72, y: r * 0.5 });
+
+// How far along a spear's own shaft, from the grip, its other hand goes (the item's own units, as its art is
+// drawn): long, it's carried in both hands, so its other hand is on the shaft too — back near its middle, the
+// arm to it hanging at its side rather than stretched across its body
+const spearGripBack = -10;
+
 // The held item points where the unit faces (faceTowards), posed on top of that; held in the right hand
-// at the body's side, not coming out of its middle
+// at the body's side (gripAt), not coming out of its middle
 export function applyHeldItemPose(unit) {
   const pose = getHeldItemPose(unit);
-  const r = unit.visualRadius || unit.radius || 11;
+  const r = unit.visualRadius || unit.radius || 11, grip = gripAt(r);
   ctx.rotate((unit.facing || 0) + pose.angle);
-  ctx.translate(pose.push + r * 0.25, r * 0.5);
+  ctx.translate(pose.push + grip.x, grip.y);
 }
 
 // Nothing to do: a settler puts what it holds on its back (not in a battle, where it waits to fight)
@@ -180,8 +214,8 @@ function drawCarriedInHands(s) {
 // (#298) From its hand (where drawFigure puts it at rest), its stick up and a little out: it hung in the air
 // out in front of it
 export function drawHandTorch(facing, r) {
-  const f = facing || 0;
-  const hx = Math.cos(f) * r * 0.25 - Math.sin(f) * r * 0.5, hy = Math.sin(f) * r * 0.25 + Math.cos(f) * r * 0.5;
+  const f = facing || 0, grip = gripAt(r);
+  const hx = Math.cos(f) * grip.x - Math.sin(f) * grip.y, hy = Math.sin(f) * grip.x + Math.cos(f) * grip.y;
   const tx = hx + Math.cos(f) * 3, ty = hy - 9;
   ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(hx, hy + 2); ctx.lineTo(tx, ty); ctx.stroke();
@@ -224,9 +258,10 @@ function drawWorkpiece(s) {
 }
 
 // ---- The figure (#251): a little person, not a circle. Legs that step as it walks, a body in its colours, a
-// round head (horns on a demon's), two arms: the right hand where its held item is (applyHeldItemPose), the
-// left at its side or behind its shield. Its middle is where the circle's was, so nothing about where it
-// stands or what hits it changes. Lying (asleep, or a corpse): turned on its side.
+// round head (horns on a demon's), two arms: the right hand where its held item is (applyHeldItemPose), or, with
+// nothing in it, resting at its side like the left one (which is at its side, or behind its shield). Its middle
+// is where the circle's was, so nothing about where it stands or what hits it changes. Lying (asleep, or a
+// corpse): turned on its side.
 
 export const SKIN = { humans: '#f5cba7', demons: '#922b21', undead: '#9fb38a' };
 
@@ -235,7 +270,8 @@ export const SKIN = { humans: '#f5cba7', demons: '#922b21', undead: '#9fb38a' };
 export const facesAway = unit => Math.sin(unit.facing || 0) < -0.25;
 const radiusOf = unit => unit.visualRadius || unit.radius || 11;
 // its hand (and what's in it) up behind its body: facing away, or to the left (the hand's on its right)
-export const heldBehind = unit => !unit.eating && (unit.carrying && isCarryingInHands(unit)
+// (eating, its food's at its mouth: in front of it, so behind its body only when its face is turned away)
+export const heldBehind = unit => unit.eating ? facesAway(unit) : (unit.carrying && isCarryingInHands(unit)
   ? Math.sin(unit.facing || 0) * (radiusOf(unit) + 3) < -radiusOf(unit) * 0.1
   : handAt(unit, radiusOf(unit)).y < -radiusOf(unit) * 0.1);
 // what's on its back behind its body: facing us, or to a side
@@ -243,11 +279,31 @@ export const backBehind = unit => Math.sin(unit.facing || 0) > -0.1;
 // which side its hand (and held item) is on, -1 left or 1 right: its shield on the other
 export const handSide = unit => (handAt(unit, radiusOf(unit)).x >= 0 ? 1 : -1);
 
-// Where its right hand is now, round its middle (the held item's grip, as applyHeldItemPose puts it)
-function handAt(unit, r) {
-  const pose = getHeldItemPose(unit), a = (unit.facing || 0) + pose.angle;
-  const fx = pose.push + r * 0.25, fy = r * 0.5;
+// Where its right hand is now, round its middle (the held item's grip, as applyHeldItemPose puts it); `local`:
+// how far along the item's own axis from the grip (in units of its art), where a second hand on it goes
+function handAt(unit, r, local = 0) {
+  const pose = getHeldItemPose(unit), a = (unit.facing || 0) + pose.angle, grip = gripAt(r);
+  const fx = pose.push + grip.x + local * itemScale(unit), fy = grip.y;
   return { x: Math.cos(a) * fx - Math.sin(a) * fy, y: Math.sin(a) * fx + Math.cos(a) * fy };
+}
+
+// Whether its right hand holds anything: its weapon or tool (for an enemy, its kind's: a medic's bag, a
+// necromancer's staff), a torch, what it works with. Striking or working the pose carries the hand along, so
+// then it's at the grip too, whatever's in it. Resting, it has put its weapon and tool on its back
+function handHolds(unit) {
+  if (unit.swingT > 0 || (unit.working || 0) > 0 || isCrafting(unit)) return true;
+  if (unit.torchInHand || unit.torch) return true;
+  if (isResting(unit)) return false;
+  const def = unit.enemyKey ? getDefinition('enemies', unit.enemyKey) || {} : null;
+  if (def && (def.necromancer || (def.tool && def.tool !== 'none'))) return true;
+  return !!(unit.weapon && unit.weapon !== 'fist') || !!(unit.tool && unit.tool !== 'none');
+}
+
+// Where an empty hand rests: down at its side, on the side a held thing's grip is on (so which arm is its
+// shield's doesn't change). It used to rest at the grip's place (then on its belly) — an arm reaching there
+// with nothing in it looked like an arm laid across its body
+function restingHand(unit, r) {
+  return { x: (handAt(unit, r).x >= 0 ? 1 : -1) * gripAt(r).x, y: r * 0.2 };
 }
 
 /**
@@ -255,6 +311,7 @@ function handAt(unit, r) {
  * @param {any} unit
  * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null, otherPoint?: { x: number, y: number } | null }} o
  * (carryPoint: a load in both hands, both arms out to it, #298)
+ * (handPoint: what its hand's at — the food it eats, a zombie's reaching hands, #298)
  * (#298) facing away from us, its arms (and what's in its hands, drawn by the caller) are behind its body
  */
 export function drawFigure(unit, o) {
@@ -264,7 +321,10 @@ export function drawFigure(unit, o) {
   // (#306) a zombie lunges as it strikes
   const z = !o.lying && !o.dead && !o.carryPoint ? zombieReach(unit) : null;
   if (z && z.lunge) ctx.translate(Math.cos(unit.facing || 0) * z.lunge, Math.sin(unit.facing || 0) * z.lunge * 0.7);
-  if (z) o = { ...o, carryPoint: z };
+  if (z) o = { ...o, handPoint: z.hand, otherPoint: z.other };
+  // a human fighting bare-handed: a boxer's guard, stepping into its punch
+  const box = !z && !o.lying && !o.dead && !o.carryPoint && !o.handPoint ? humanPunch(unit) : null;
+  if (box && box.lean) ctx.translate(Math.cos(unit.facing || 0) * box.lean, Math.sin(unit.facing || 0) * box.lean * 0.7);
   if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
   const outline = 'rgba(0, 0, 0, 0.45)';
   // its shadow on the ground
@@ -278,9 +338,17 @@ export function drawFigure(unit, o) {
   const carry = !o.lying && !o.dead ? o.carryPoint : null;
   // (a load: a hand on each side of it, across the way it faces)
   const f0 = unit.facing || 0, across = { x: -Math.sin(f0) * r * 0.42, y: Math.cos(f0) * r * 0.42 };
-  const hand = carry ? { x: carry.x + across.x, y: carry.y + across.y } : o.handPoint || (o.hand && !o.lying && !o.dead ? handAt(unit, r) : { x: r * 0.72, y: r * 0.2 });
+  // its hand: on a load, at its punch, at the food it eats, at what it holds — or, holding nothing, at its side
+  const hand = carry ? { x: carry.x + across.x, y: carry.y + across.y } : box ? box.hand
+    : o.handPoint || (o.hand && !o.lying && !o.dead ? (handHolds(unit) ? handAt(unit, r) : restingHand(unit, r)) : { x: r * 0.72, y: r * 0.2 });
+  // a spear it holds (in hand, as its first hand is): its other hand further back along the shaft, on it — unless
+  // that arm's taken by a shield or by the caller's own second hand (an archer's, at the string)
+  const shaft = !o.otherPoint && !o.shield && !carry && !box && !o.handPoint && o.hand && !o.lying && !o.dead
+    && isSpearWeapon(unit.weapon) && handHolds(unit) ? handAt(unit, r, spearGripBack) : null;
   const right = hand.x >= 0 ? 1 : -1;
-  const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : o.otherPoint && !o.lying && !o.dead ? o.otherPoint : o.shield ? { x: -right * (r - 1), y: 3 } : { x: -right * r * 0.72, y: r * 0.25 };
+  const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : box ? box.guard : o.otherPoint && !o.lying && !o.dead ? o.otherPoint : o.shield ? { x: -right * (r - 1), y: 3 } : shaft ? shaft : { x: -right * r * 0.72, y: r * 0.25 };
+  // (both hands out: a load, a boxer, a zombie reaching, a spearman — its other arm's drawn even when behind)
+  const both = !!(carry || box || z || shaft);
   const arm = (from, to) => {
     ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(from, -r * 0.3); ctx.lineTo(to.x, to.y); ctx.stroke();
@@ -288,8 +356,9 @@ export function drawFigure(unit, o) {
     ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(to.x, to.y, r * 0.15, 0, Math.PI * 2); ctx.fill();
   };
   // (#298) its hand's arm behind its body when the hand is up behind it (heldBehind); the other in front
-  const behind = !o.lying && !o.dead && (carry ? carry.y < -r * 0.1 : !o.handPoint && hand.y < -r * 0.1);
-  if (behind) { arm(right * r * 0.5, hand); if (carry) arm(-right * r * 0.5, other); }
+  // (a boxer's fists are in front of it, up behind its back when it faces away from us)
+  const behind = box ? Math.sin(f0) < -0.1 : !o.lying && !o.dead && (carry ? carry.y < -r * 0.1 : o.handPoint ? facesAway(unit) : hand.y < -r * 0.1);
+  if (behind) { arm(right * r * 0.5, hand); if (both) arm(-right * r * 0.5, other); }
   // the body (#306: a woman's narrower at the shoulders, a skirt's hem flaring over its legs)
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
   if (look.female) {
@@ -301,11 +370,25 @@ export function drawFigure(unit, o) {
   // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
   if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (!behind) arm(right * r * 0.5, hand);
-  if (!(carry && behind)) arm(-right * r * 0.5, other);
+  if (!(both && behind)) arm(-right * r * 0.5, other);
+  // its own stroke style, wrapped: what's drawn after (the head's outline) keeps the arms' width
   if (z && z.sw > 0.3) {
+    ctx.save();
     ctx.strokeStyle = 'rgba(30, 30, 30, 0.8)'; ctx.lineWidth = 0.8;
     const f = unit.facing || 0;
     for (const p of [hand, other]) for (const d of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(f + d) * 3, p.y + Math.sin(f + d) * 3); ctx.stroke(); }
+    ctx.restore();
+  }
+  // the punch landing: a short burst off the fist
+  if (box && box.sw > 0.5) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 1;
+    const bf = unit.facing || 0;
+    for (const d of [-0.6, 0, 0.6]) {
+      const a = bf + d, ax = hand.x + Math.cos(a) * r * 0.35, ay = hand.y + Math.sin(a) * r * 0.35;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + Math.cos(a) * r * 0.3, ay + Math.sin(a) * r * 0.3); ctx.stroke();
+    }
+    ctx.restore();
   }
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;
