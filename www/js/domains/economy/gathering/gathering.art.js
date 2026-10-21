@@ -3,7 +3,7 @@
 // stamped over and over
 
 import { ctx } from '../../../engine/platform/index.js';
-import { castShadow, tileVariantHash } from '../../world/index.js';
+import { castShadow, tileVariantHash, windSway } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 
@@ -135,7 +135,7 @@ export function drawGrassArt(g) {
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
   ctx.lineWidth = 1.6; ctx.lineCap = 'round';
   for (let k = 0; k < 7; k++) {
-    const bx = x - 7 + k * 2.3, lean = (((h >>> k) % 5) - 2) * 1.6, top = y - 7 - ((h >>> (k + 3)) % 6);
+    const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + windSway(bx, y, y + 7 - top); // (in the wind, #308)
     ctx.strokeStyle = greens[(h >>> (k * 2)) % 3];
     ctx.beginPath(); ctx.moveTo(bx, y + 7); ctx.quadraticCurveTo(bx + lean * 0.3, y, bx + lean, top); ctx.stroke();
   }
@@ -194,10 +194,10 @@ export function drawFarmPlotArt(f) {
   const ripe = g >= 1;
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
-      const sx = x - 9 + col * 6, sy = y - 8 + row * 6, tall = 2 + 7 * g;
+      const sx = x - 9 + col * 6, sy = y - 8 + row * 6, tall = 2 + 7 * g, sway = windSway(sx, sy, tall); // (in the wind, #308)
       ctx.strokeStyle = ripe ? '#d4ac0d' : g > 0.6 ? '#9acd32' : '#2ecc71'; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx, sy + 2 - tall); ctx.stroke();
-      if (ripe || g > 0.6) { ctx.fillStyle = ripe ? '#f4d03f' : '#c5e384'; ctx.beginPath(); ctx.ellipse(sx, sy + 1 - tall, 1.4, 2.6, 0, 0, Math.PI * 2); ctx.fill(); }
+      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.quadraticCurveTo(sx + sway * 0.3, sy + 2 - tall * 0.6, sx + sway, sy + 2 - tall); ctx.stroke();
+      if (ripe || g > 0.6) { ctx.fillStyle = ripe ? '#f4d03f' : '#c5e384'; ctx.beginPath(); ctx.ellipse(sx + sway, sy + 1 - tall, 1.4, 2.6, sway * 0.08, 0, Math.PI * 2); ctx.fill(); }
     }
   }
 }

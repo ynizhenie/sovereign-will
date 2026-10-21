@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { isDesertTile, tileVariantHash } from '../../world/index.js';
+import { isDesertTile, tileVariantHash, rainLevel } from '../../world/index.js';
 import { showNotification } from '../../../ui/index.js';
 
 // A farm zone goes only on grass ground (not sand, water, rock, a building or a blueprint) with nothing
@@ -53,7 +53,8 @@ export function makeAppleTree(tree) {
 // Wheat grows; saplings grow into trees; apple trees grow apples (faster watered)
 export function growCrops(dt) {
   game.farmPlots.forEach(f => {
-    if (f.growth < 100) f.growth += dt * (100 / GAME_CONFIG.farming.growSeconds) * (f.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1); // (#306: slower)
+    const wet = f.watered || rainLevel() > 0.5; // (rain waters them, #308)
+    if (f.growth < 100) f.growth += dt * (100 / GAME_CONFIG.farming.growSeconds) * (wet ? GAME_CONFIG.gear.wateringCan.growthFactor : 1); // (#306: slower)
   });
 
   game.trees.forEach(t => {

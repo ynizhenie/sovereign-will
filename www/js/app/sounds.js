@@ -21,7 +21,7 @@ export const SOUND = {
   minGap: { built: 0.3, hire: 0.2, horn: 1.5, defeat: 2, tentUp: 0.4, click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
     hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3,
     eat: 0.2, sizzle: 0.3, dig: 0.2, splash: 0.2, drip: 0.1, catch: 0.3, heal: 0.3, raise: 0.3, collapse: 0.2, smelt: 0.3, ignite: 0.2,
-    trapSnap: 0.2, craftDone: 0.3, cageLock: 0.3, butcher: 0.25, pickup: 0.12, portal: 0.5, dawn: 5, owl: 5, snore: 0.8, alarm: 2, voice: 0.12 }
+    trapSnap: 0.2, craftDone: 0.3, cageLock: 0.3, butcher: 0.25, pickup: 0.12, portal: 0.5, dawn: 5, owl: 5, snore: 0.8, alarm: 2, voice: 0.12, thunder: 2 }
 };
 
 // ---- Sound effects
@@ -56,6 +56,8 @@ export const SOUNDS = {
   catch: (o, t) => { noise(o, t, { dur: 0.2, gain: 0.2, freq: 1200, to: 500, q: 1.2 }); tone(o, t + 0.12, { type: 'triangle', freq: 880, to: 1320, dur: 0.15, gain: 0.08 }); },
   heal: (o, t) => { tone(o, t, { freq: 660, to: 990, dur: 0.25, gain: 0.06 }); tone(o, t + 0.1, { freq: 1320, dur: 0.2, gain: 0.04 }); },
   raise: (o, t) => { tone(o, t, { type: 'sawtooth', freq: 80, to: 160, dur: 0.9, gain: 0.15, attack: 0.2, filter: 400 }); noise(o, t, { dur: 0.8, gain: 0.06, freq: 600, to: 1800, q: 5, attack: 0.3 }); },
+  // (#308) thunder: a crack, then a long low rumble
+  thunder: (o, t) => { noise(o, t, { dur: 0.25, gain: 0.5, type: 'highpass', freq: 1500 }); noise(o, t + 0.05, { dur: 2.6, gain: 0.55, type: 'lowpass', freq: 220, to: 60, attack: 0.15 }); tone(o, t + 0.1, { freq: 45, to: 30, dur: 2.2, gain: 0.25 }); },
   collapse: (o, t) => { noise(o, t, { dur: 0.6, gain: 0.5, type: 'lowpass', freq: 500 }); tone(o, t, { freq: 70, to: 35, dur: 0.5, gain: 0.3 }); },
   smelt: (o, t) => { tone(o, t, { type: 'triangle', freq: 1200, dur: 0.25, gain: 0.08 }); tone(o, t, { type: 'triangle', freq: 1810, dur: 0.15, gain: 0.05 }); noise(o, t, { dur: 0.3, gain: 0.06, type: 'highpass', freq: 2500 }); },
   tentUp: (o, t) => tone(o, t, { type: 'sawtooth', freq: 110, dur: 0.6, gain: 0.12, attack: 0.1, filter: 500 }),
