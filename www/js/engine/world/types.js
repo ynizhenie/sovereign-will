@@ -278,7 +278,7 @@
  * @property {Settler[]} settlers
  * @property {Enemy[]} enemies
  * @property {Building[]} buildings
- * @property {Object[]} craftOrders   things being made: { key, category, id, crafter, stage, progress, for, yields? }
+ * @property {Object[]} craftOrders   things being made: { key, category, id, crafter, stage, progress, for, yields?, waitFor? }
  * @property {Blueprint[]} blueprints
  * @property {Object[]} trees         (things on the map: x, y, hp, priority... as each list's own)
  * @property {Object[]} cacti

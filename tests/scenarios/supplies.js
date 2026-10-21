@@ -19,5 +19,15 @@ Object.assign(window.sim, (() => {
     return { orderedRod, queuedRope, rodStored, leftoverRope, torchCrafted, dismantled, torches: stock.torches, rope: stock.rope };
   }
 
-  return { supplies };
+  function torchFromHerbs({ seed = 'torch-from-herbs-test' } = {}) {
+    start(seed); clearResources();
+    settlers = [makeSettler(1, townHall.x + 40, townHall.y + 40)];
+    Object.assign(stock, { wood: 20, herbs: 10, rope: 0, torches: 0 });
+    craftRecipe('torch');
+    const queuedRope = game.craftOrders.some(order => order.category === 'recipes' && order.id === 'rope');
+    run(30, { each: () => { settlers[0].hunger = 999; } });
+    return { queuedRope, torchCrafted: stock.torches === 1, ropeLeft: stock.rope, herbsLeft: stock.herbs };
+  }
+
+  return { supplies, torchFromHerbs };
 })());
