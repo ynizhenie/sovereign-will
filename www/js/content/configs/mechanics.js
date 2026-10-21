@@ -70,8 +70,8 @@ export const mechanicsConfig = {
   // day and night (#257): a day is morning + day + evening + night seconds, Endless starting in the morning;
   // at night it's `darkness` dark; light reaches (tiles) round the town hall, a lit torch, a lit campfire, a
   // torch in hand, a portal, a necromancer's staff. Night: settlers sleep at their shelters (hunger stopped),
-  // soldiers half on watch at a time; woken wakeSeconds before a wave. A torch in hand takes torchFirewood
-  // for the night; a torch post is lit with postFirewood. (#279) Asleep it mends as its shelter heals
+  // soldiers half on watch at a time; woken wakeSeconds before a wave. A torch in hand takes one crafted torch;
+  // a torch post is lit with postFirewood. (#279) Asleep it mends as its shelter heals
   // (sleepHealPerSecond at the town hall); a corpse within sleepCorpseTiles of where it sleeps is taken away
   // first; one ordered to work at night does it at drowsyPace
   // (#308) weather, Endless only: clear for firstClearSeconds, then spells of weather (weights, clear twice as
@@ -81,7 +81,7 @@ export const mechanicsConfig = {
   weather: { firstClearSeconds: 240, seconds: [60, 130], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
     wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
-    handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, torchFirewood: 1, postFirewood: 1, enemyTorchShare: 0.3,
+    handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, postFirewood: 1, enemyTorchShare: 0.3,
     sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5 },
   // paths (#248): every everyTicks a settler walking (minStep px since) on a tile in the base wears it by
   // `wear`, up to 1; every fadeTicks each worn tile loses `fade`; one past `shows` is drawn as a path
@@ -113,7 +113,7 @@ export const mechanicsConfig = {
   corpses: { seconds: 60 },
 
   // bait: the first of these the stock can pay for, per catch (worms first)
-  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { wheat: 1 }] },
+  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { wheat: 1 }], fishCapacity: 4, fishRegrowSeconds: 2.5 },
   // a woodcutter (an axe) with nothing to do, or with the firewood nearly out, chops firewood at a storage
   // (#199): each wood into `makes` firewood in `seconds`, up to `perTrip` wood a go, while the stock has
   // less than `keep`

@@ -16,7 +16,7 @@ import { keepStoresInStep } from '../domains/colony/storage/index.js';
 import { tickDemonCamp } from '../domains/factions/demons/index.js';
 import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
-import { tickFishTraps } from '../domains/economy/fishing/index.js';
+import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
 import { isInCamp, isRaidPicking, isRaiding, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
@@ -48,6 +48,7 @@ export function update(dt) {
   growCrops(dt);
   tickBoars(dt);
   tickCampfires(dt);
+  tickFishPopulation(dt);
   tickFishTraps(dt);
   tickSmelters(dt);
   movePossessed(dt);

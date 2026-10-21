@@ -57,6 +57,7 @@ export function drawHair(ctx, look, kin, hy, hr, f, away, walk) {
         if (away) back();
       }
     }
+
     return;
   }
   switch (look.style) {
@@ -82,4 +83,47 @@ export function drawHair(ctx, look, kin, hy, hr, f, away, walk) {
       if (away) back(); else cap(Math.PI * 0.9, Math.PI * 2.1);
       for (const sx of [-1, 1]) { ctx.fillStyle = hair; ctx.beginPath(); ctx.roundRect(sx * hr * 0.9 - hr * 0.2, hy - hr * 0.3, hr * 0.4, hr * 0.95, hr * 0.15); ctx.fill(); }
   }
+}
+
+const headTextures = new Map();
+
+export function drawHeadTexture(ctx, look, kin, skin, x, y, radius, facing, away, walk) {
+  const side = Math.cos(facing) < 0 ? -1 : 1;
+  const colours = config().hair[kin] || config().hair.humans;
+  const hair = colours[look.shade % colours.length];
+  const animated = look.female ? [0, 1, 3].includes(look.style) : !away && look.style === 3;
+  const sway = animated ? Math.round(Math.sin(walk * 0.35) * 4) / 4 : 0;
+  const walkPhase = animated ? Math.asin(sway) / 0.35 : 0;
+  const key = `${kin}|${skin}|${hair}|${look.female}|${look.style}|${side}|${away}|${sway}`;
+  let texture = headTextures.get(key);
+  if (!texture && typeof document !== 'undefined') {
+    texture = document.createElement('canvas');
+    texture.width = texture.height = 100;
+    const head = texture.getContext('2d');
+    if (!head) throw new Error('Could not create a character head texture');
+    head.fillStyle = skin;
+    head.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    head.lineWidth = 2;
+    head.beginPath();
+    head.arc(50, 50, 32, 0, Math.PI * 2);
+    head.fill();
+    head.stroke();
+    head.save();
+    head.translate(50, 0);
+    drawHair(head, look, kin, 50, 32, side < 0 ? Math.PI : 0, away, walkPhase);
+    head.restore();
+    headTextures.set(key, texture);
+  }
+  if (!texture) {
+    ctx.fillStyle = skin;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    drawHair(ctx, look, kin, y, radius, facing, away, walk);
+    return;
+  }
+  ctx.drawImage(texture, x - radius * 1.5625, y - radius * 1.5625, radius * 3.125, radius * 3.125);
 }

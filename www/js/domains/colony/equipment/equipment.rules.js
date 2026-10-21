@@ -8,7 +8,7 @@ import { addResources, canAfford, payCost, showCostError, stock } from '../stora
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
-import { craftPlace, orderCraft } from './equipment.crafting.js';
+import { craftPlace, getCraftOrderCost, orderCraft } from './equipment.crafting.js';
 
 // A shield only helps a melee soldier: a worker or an archer doesn't fight with it
 export function canUseShield(s) {
@@ -84,7 +84,7 @@ function orderMade(category, id, auto, forSettler) {
     if (result === 'locked') showNotification(t('cards.locked', { name: item.label }), true);
     else if (result === 'noSmithy') showNotification(t('craft.needSmithy', { name: item.label }), true);
     else if (result === 'noWorkshop') showNotification(t('craft.needWorkshop', { name: item.label }), true);
-    else showCostError(item.cost || {}, t('cost.notEnough'));
+    else showCostError(getCraftOrderCost(category, id), t('cost.notEnough'));
   }
   return false;
 }
@@ -111,6 +111,18 @@ export function takeApartStored(category, id) {
   if (!takeFromArmory(key)) return false;
   addResources(GAME_CONFIG[category][id].cost || {});
   showNotification(t('craft.takenApart', { name: GAME_CONFIG[category][id].label }), false);
+  return true;
+}
+
+export function takeApartRecipe(id) {
+  const recipe = GAME_CONFIG.recipes[id];
+  if (!recipe || !recipe.disassemble) return false;
+  const [resource, total] = Object.entries(recipe.produces)[0];
+  const batches = recipe.batches || 1, amount = total / batches;
+  if ((stock[resource] || 0) < amount) return false;
+  stock[resource] -= amount;
+  addResources(Object.fromEntries(Object.entries(recipe.cost || {}).map(([key, value]) => [key, value / batches])));
+  showNotification(t('craft.takenApart', { name: recipe.label }), false);
   return true;
 }
 
@@ -334,7 +346,7 @@ export function craftRecipe(id) {
   const result = orderCraft('recipes', id);
   if (result === 'locked') { showNotification(t('cards.locked', { name: recipe.label }), true); return; } // (#306)
   if (result === 'noSmithy' || result === 'noWorkshop') { showNotification(t(result === 'noSmithy' ? 'craft.needSmithy' : 'craft.needWorkshop', { name: recipe.label }), true); return; }
-  if (result !== 'ordered') { showCostError(recipe.cost, t('cost.needs', { name: recipe.label })); return; }
+  if (result !== 'ordered') { showCostError(getCraftOrderCost('recipes', id), t('cost.needs', { name: recipe.label })); return; }
   const batches = recipe.batches || 1;
   const yields = Object.fromEntries(Object.entries(recipe.produces).map(([res, n]) => [res, n / batches]));
   game.craftOrders[game.craftOrders.length - 1].yields = yields;

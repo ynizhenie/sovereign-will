@@ -48,7 +48,7 @@ export function loadCustomMap(map) {
   game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = [];
   const at = ([gx, gy]) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   if (map.hall) { townHall.x = map.hall[0]; townHall.y = map.hall[1]; }
-  for (const t of map.water || []) game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0 });
+  for (const t of map.water || []) game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
   for (const t of map.sand || []) game.desertTiles.push(at(t));
   for (const [kind, tiles] of Object.entries(map.resources || {})) {
     if (!GAME_CONFIG.mapResources[kind]) continue;

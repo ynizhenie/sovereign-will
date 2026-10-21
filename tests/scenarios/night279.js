@@ -31,6 +31,7 @@ Object.assign(window.sim, (() => {
     const s2 = makeSettler(602, townHall.x + 60, townHall.y + 60, { weapon: 'sword', role: 'soldier' });
     settlers.push(w, s1, s2);
     stock.wood = 20;
+    stock.torches = 2;
     night();
     step(8);
     const workerAsleep = !!w.asleep;

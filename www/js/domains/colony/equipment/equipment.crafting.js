@@ -35,16 +35,48 @@ export function findWorkplace(place, from = townHall) {
   return best;
 }
 
+function craftOrderPlan(category, id) {
+  const cost = { ...(GAME_CONFIG[category][id].cost || {}) };
+  const ropeNeeded = id === 'rope' ? 0 : Number(cost.rope || 0);
+  delete cost.rope;
+  const availableRope = Math.min(ropeNeeded, stock.rope || 0);
+  const ropeMissing = ropeNeeded - availableRope;
+  const ropeRecipe = GAME_CONFIG.recipes.rope;
+  const ropePerOrder = Object.values(ropeRecipe.produces)[0] / (ropeRecipe.batches || 1);
+  const ropeOrders = ropeMissing > 0 ? Math.ceil(ropeMissing / ropePerOrder) : 0;
+  const totalCost = { ...cost };
+  if (availableRope) totalCost.rope = availableRope;
+  if (ropeOrders) {
+    for (const [resource, amount] of Object.entries(ropeRecipe.cost || {})) {
+      totalCost[resource] = (totalCost[resource] || 0) + amount * ropeOrders / (ropeRecipe.batches || 1);
+    }
+  }
+  return { totalCost, ropeMissing, ropeOrders, ropeRecipe };
+}
+
+export function getCraftOrderCost(category, id) {
+  return craftOrderPlan(category, id).totalCost;
+}
+
 // Order one made: 'ordered', or why not ('noSmithy', 'noWorkshop', 'cantAfford'). Made, it waits in the
 // armory to be handed out (#248)
 export function orderCraft(category, id) {
   if (isLocked(category, id)) return 'locked'; // (a card opens it, #255)
   const place = craftPlace(category, id);
   if (!findWorkplace(place)) return place === 'smithy' ? 'noSmithy' : 'noWorkshop'; // (by hand: always)
-  const cost = GAME_CONFIG[category][id].cost || {};
-  if (!canAfford(cost)) return 'cantAfford';
-  payCost(cost);
-  game.craftOrders.push({ key: `${category}:${id}`, category, id, crafter: null, stage: 'fetch', progress: 0 });
+  const { totalCost, ropeMissing, ropeOrders, ropeRecipe } = craftOrderPlan(category, id);
+  if (!canAfford(totalCost)) return 'cantAfford';
+  payCost(totalCost);
+  for (let i = 0; i < ropeOrders; i++) {
+    game.craftOrders.push({
+      key: 'recipes:rope', category: 'recipes', id: 'rope', crafter: null, stage: 'fetch', progress: 0,
+      yields: Object.fromEntries(Object.entries(ropeRecipe.produces).map(([resource, amount]) => [resource, amount / (ropeRecipe.batches || 1)])),
+    });
+  }
+  game.craftOrders.push({
+    key: `${category}:${id}`, category, id, crafter: null, stage: ropeMissing ? 'waitRope' : 'fetch',
+    progress: 0, ropeNeeded: ropeMissing
+  });
   return 'ordered';
 }
 
@@ -62,9 +94,15 @@ export function craftItem(s, tick) {
     // arrows are the archers' to make while there are any (#249)
     const archers = game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed);
     const mine = o => !(o.id === 'arrows' && archers && s.role !== 'archer');
-    order = game.craftOrders.find(o => open(o) && o.for === s) ||
-      game.craftOrders.find(o => open(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
+    const ready = o => o.stage !== 'waitRope' || (stock.rope || 0) >= o.ropeNeeded;
+    order = game.craftOrders.find(o => open(o) && ready(o) && o.for === s) ||
+      game.craftOrders.find(o => open(o) && ready(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
     if (!order) return false;
+  }
+  if (order.stage === 'waitRope') {
+    if ((stock.rope || 0) < order.ropeNeeded) { order.crafter = null; return false; }
+    payCost({ rope: order.ropeNeeded });
+    order.stage = 'fetch';
   }
   const place = findWorkplace(craftPlace(order.category, order.id), s);
   if (!place) { order.crafter = null; return false; } // its smithy is gone: it waits for another

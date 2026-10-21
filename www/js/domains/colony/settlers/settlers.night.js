@@ -1,15 +1,14 @@
 // The colony at night (#257). Settlers go to sleep at their shelters (a tent, a grave, a den; the town hall
 // with none), hunger stopped till they wake, then hungry. Soldiers keep watch by halves (the first half of the
 // night one half, then the other): walking the base's edge, or by a campfire if there's one; the rest sleep.
-// A wave due at night: wakeSeconds before it, everyone's woken. Awake out of the light, a settler takes a
-// torch in hand for the night (torchFirewood), its tool or weapon on its back; with no firewood for one, it
-// keeps to the base. Torch posts are lit at dusk by a worker (postFirewood). With no firewood at all for the
-// fires and torches, one woodcutter stays up to get more, while a soldier keeps watch to guard it.
+// A wave due at night: wakeSeconds before it, everyone's woken. Awake out of the light, a settler fetches a
+// crafted torch for the night, its tool or weapon on its back; with no torch for one, it keeps to the base.
+// Torch posts are lit at dusk by a worker (postFirewood); a woodcutter gets firewood for the campfires.
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { fetchFromStorage, moveSettlerToTownHall, stock, takeStock } from '../storage/index.js';
+import { fetchFromStorage, findNearestStorage, getFreeStock, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../storage/index.js';
 import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getLights, getDayPhase, isNight, nightProgress } from '../../world/index.js';
@@ -44,7 +43,7 @@ export function onFuelDuty(s) {
 // How far a settler may go now: at night with no torch to be had, only the base (#257)
 export function nightReach(s) {
   if (!isNight() || !needsTorches() || (s && (s.torchInHand || onFuelDuty(s)))) return Infinity;
-  return (stock.firewood || 0) >= config().torchFirewood ? Infinity : getBaseRadius() + TILE_SIZE;
+  return getFreeStock('torches') > 0 ? Infinity : getBaseRadius() + TILE_SIZE;
 }
 
 // Each tick: a new night counted, the morning puts torches out; who's awake out of the light takes a torch
@@ -58,26 +57,37 @@ export function tickNight() {
     for (const b of game.buildings) if (b.type === 'torch') b.lit = false;
     for (const s of game.settlers) {
       s.torchInHand = false;
+      s.torchPickup = false;
       s.today = {}; // (a new day to tell of, #279)
       // awake: hungry (#257: hunger stood still in its sleep)
       if (s.asleep) { s.asleep = false; if (getPlayerFaction().eats) s.hunger = Math.min(s.hunger ?? 1, 1); }
     }
   }
   game.wasNight = night;
-  if (!night || !needsTorches()) return;
-  const lights = getLights().filter(l => l.r > 0);
-  for (const s of game.settlers) {
-    if (s.asleep || s.torchInHand || s.torchNight === game.nightId) continue;
-    // only one staying up (on watch, on fuel duty, or with a wave due): not one on its way to bed
-    if (!(onWatch(s) || onFuelDuty(s) || waveDue() || upForTents(s) || s.drowsy)) continue;
-    const lit = lights.some(l => Math.hypot(l.x - s.x, l.y - s.y) < l.r * 0.8);
-    if (lit || s.isPossessed) continue;
-    if ((stock.firewood || 0) < config().torchFirewood) continue;
-    takeStock('firewood', config().torchFirewood);
-    s.torchInHand = true;
-    playSound('ignite', s);
-    s.torchNight = game.nightId;
+}
+
+// Settlers awake outside the light go to a storage for a crafted torch before heading back out.
+export function fetchNightTorch(s, tick) {
+  if (!isNight() || !needsTorches() || s.asleep || s.torchInHand || s.torchNight === game.nightId ||
+    s.isPossessed || s.carrying || !(onWatch(s) || onFuelDuty(s) || waveDue() || upForTents(s) || s.drowsy || s.temporary !== undefined)) return false;
+  if (!s.torchPickup) {
+    const lit = getLights().some(l => l.r > 0 && Math.hypot(l.x - s.x, l.y - s.y) < l.r * 0.8);
+    if (lit || !(getFreeStock('torches') > 0)) return false;
+    s.torchPickup = true;
   }
+  if (!(getFreeStock('torches') > 0)) { s.torchPickup = false; return false; }
+  const storage = findNearestStorage(s);
+  s.patrolTarget = null;
+  if (!isAtStorage(s, storage)) {
+    walkToStorage(s, storage, tick.dt);
+    return true;
+  }
+  if (takeStock('torches', 1) !== 1) { s.torchPickup = false; return false; }
+  s.torchPickup = false;
+  s.torchInHand = true;
+  s.torchNight = game.nightId;
+  playSound('ignite', s);
+  return true;
 }
 
 // A wave coming at night: everyone woken (wakeSeconds before it)

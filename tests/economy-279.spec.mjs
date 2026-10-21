@@ -25,7 +25,7 @@ test('a fallen settler\'s things drop as an enemy\'s do: lying there by chance, 
   expect(r[0]).toEqual({ items: [], woodBack: 0 });
 });
 
-test('no potions, no rope: grass where rope went; a tent houses two (#279, 26, 29)', async ({ page }) => {
+test('no potions, but rope is back as a supply; a tent houses two (#279, 26, 29, 306)', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(() => ({
     potions: !!GAME_CONFIG.resources.potions, rope: !!GAME_CONFIG.resources.rope, ropeRecipe: !!GAME_CONFIG.recipes.rope,
@@ -33,5 +33,5 @@ test('no potions, no rope: grass where rope went; a tent houses two (#279, 26, 2
     bow: GAME_CONFIG.weapons.bow.cost, tent: GAME_CONFIG.buildings.tent.population,
     brew: SETTLER_BEHAVIOURS.some(b => b.name === 'brewPotion')
   }));
-  expect(r).toEqual({ potions: false, rope: false, ropeRecipe: false, anyRope: false, bow: { wood: 15, leather: 3, herbs: 2 }, tent: 2, brew: false });
+  expect(r).toEqual({ potions: false, rope: true, ropeRecipe: true, anyRope: true, bow: { wood: 15, leather: 3, rope: 2 }, tent: 2, brew: false });
 });
