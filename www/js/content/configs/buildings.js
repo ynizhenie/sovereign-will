@@ -47,7 +47,7 @@ export const buildingsConfig = {
     // crafts: where things are made (#211, #248): the workshop everything without iron in it, the smithy
     // everything with
     workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 150 } },
-    smithy: { id: 'smithy', group: 'economy', icon: 'hammer', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 180 } },
+    smithy: { id: 'smithy', group: 'economy', icon: 'smithy', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 180 } },
     // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
     // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
     dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },

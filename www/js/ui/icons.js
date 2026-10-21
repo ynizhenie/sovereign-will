@@ -62,6 +62,16 @@ export const icRockLump = (c, x, y, s, color, shade) => {
   icFill(c, color, [[x - 7 * s, y + 5 * s], [x - 8 * s, y - 1 * s], [x - 3 * s, y - 6 * s], [x + 4 * s, y - 6 * s], [x + 8 * s, y], [x + 6 * s, y + 5 * s]]);
   icFill(c, shade, [[x - 7 * s, y + 5 * s], [x + 6 * s, y + 5 * s], [x + 8 * s, y], [x + 2 * s, y + 2 * s]]);
 };
+// (#306) a house seen from above at a slant, as building.art.js draws them: a two-toned roof, its front wall and door
+export function icHouse(c, x, y, w, h, roof, roofDark, wall, wallDark, door) {
+  const top = y - h / 2, wallH = Math.round(h * 0.32), roofH = h - wallH;
+  icRect(c, wall, x - w / 2, top + roofH, w, wallH); c.strokeStyle = wallDark; c.lineWidth = 1; c.strokeRect(x - w / 2 + 0.5, top + roofH + 0.5, w - 1, wallH - 1);
+  icRect(c, door, x - 3, top + roofH + 2, 6, wallH - 2);
+  icRect(c, roofDark, x - w / 2 - 1, top + roofH / 2, w + 2, roofH / 2 + 1);
+  icRect(c, roof, x - w / 2 - 1, top, w + 2, roofH / 2);
+  icLine(c, 'rgba(0, 0, 0, 0.35)', 1.5, [[x - w / 2 - 1, top + roofH / 2], [x + w / 2 + 1, top + roofH / 2]]);
+  c.strokeStyle = 'rgba(0, 0, 0, 0.45)'; c.lineWidth = 1; c.strokeRect(x - w / 2 - 0.5, top - 0.5, w + 1, roofH + 1.5);
+}
 export const icTile = (c, color, edge) => { icRound(c, color, 3, 3, 26, 26, 4); c.strokeStyle = edge; c.lineWidth = 2; c.beginPath(); c.roundRect(3, 3, 26, 26, 4); c.stroke(); };
 export const icCrown = (c, color, shade) => {
   icRect(c, '#6d4c2f', 14, 18, 4, 11);
@@ -180,18 +190,24 @@ export const ICONS = {
     c.save(); icSword(c, '#dfe6e9', '#fff'); c.restore();
     c.save(); c.translate(32, 0); c.scale(-1, 1); icSword(c, '#dfe6e9', '#fff'); c.restore();
   },
+  // (#306) as in the world: a low wooden frame, a heap of dung on it
   dung_heap: c => {
-    // a heap of dung in a low wooden frame
-    icRound(c, '#8e5a2b', 3, 20, 26, 8, 2);
-    c.fillStyle = '#5c3d16'; c.beginPath(); c.ellipse(16, 20, 11, 8, 0, Math.PI, 0); c.fill();
-    c.fillStyle = '#6e4a1c'; c.beginPath(); c.ellipse(16, 14, 6, 4, 0, Math.PI, 0); c.fill();
+    icRect(c, '#8e5a2b', 2, 20, 28, 8); c.strokeStyle = '#5c3a17'; c.lineWidth = 1; c.strokeRect(2.5, 20.5, 27, 7);
+    c.fillStyle = '#5c3d16'; c.beginPath(); c.ellipse(16, 20, 11, 10, 0, Math.PI, 0); c.fill();
+    c.fillStyle = '#6e4a1c'; c.beginPath(); c.ellipse(15, 14, 5, 4, 0, Math.PI, 0); c.fill();
+  },
+  // (#306) as it stands in the world: a timber workshop, a bench with a saw and a log by it
+  // (#306) as in the world: dark stone, a slate roof, its chimney glowing, the anvil out in front
+  smithy: c => {
+    icHouse(c, 16, 13, 26, 20, '#4d5656', '#2c3e50', '#7f8c8d', '#34495e', '#1b2631');
+    icRect(c, '#5d6d7e', 21, 1, 5, 6); icRect(c, '#e67e22', 22, 1, 3, 2);
+    icFill(c, '#2c3e50', [[4, 25], [14, 25], [12, 27], [6, 27]]); icRect(c, '#2c3e50', 7, 27, 4, 3);
+    icLine(c, '#95a5a6', 1, [[4, 25], [14, 25]]);
   },
   workshop: c => {
-    // a workbench with a saw on it
-    icRound(c, '#8e5a2b', 3, 14, 26, 6, 2);
-    icRect(c, '#6d4c2f', 5, 20, 3, 9); icRect(c, '#6d4c2f', 24, 20, 3, 9);
-    icFill(c, '#bdc3c7', [[8, 13], [24, 13], [22, 7], [8, 9]]);
-    icRect(c, '#8e5a2b', 22, 6, 6, 4);
+    icHouse(c, 16, 13, 26, 20, '#a0522d', '#8b4513', '#c8a46a', '#7a5230', '#5d4037');
+    icRect(c, '#8e5a2b', 4, 25, 13, 4); icLine(c, '#bdc3c7', 2, [[7, 25], [14, 22]]);
+    icEllipse(c, '#9b6633', 24, 27, 5, 2.5); icEllipse(c, '#d4a373', 28, 27, 1.5, 2.5);
   },
   dummy: c => {
     // a straw dummy on a post, a crossbar for arms
@@ -576,9 +592,10 @@ export const ICONS = {
     for (const y of [13, 20]) { c.beginPath(); c.moveTo(4, y); c.lineTo(28, y); c.stroke(); }
     for (const [x, y] of [[12, 6], [22, 6], [8, 13], [17, 13], [12, 20], [22, 20]]) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 7); c.stroke(); }
   },
+  // (#306) as in the world: a wooden base, iron points on it
   spikes: c => {
-    icRect(c, '#6d4c2f', 3, 22, 26, 6);
-    for (const x of [8, 16, 24]) icFill(c, '#b0bec5', [[x - 4, 22], [x, 6], [x + 4, 22]]);
+    icRect(c, '#6d4c2f', 3, 3, 26, 26);
+    for (const [px, py] of [[-7, -7], [5, -7], [-7, 5], [5, 5], [-1, -1]]) icFill(c, '#b0bec5', [[16 + px - 3, 16 + py + 3], [16 + px, 16 + py - 4], [16 + px + 3, 16 + py + 3]]);
   },
   door: c => {
     icRound(c, '#a0522d', 7, 4, 18, 25, 2);
@@ -618,25 +635,38 @@ export const ICONS = {
     }
     icCircle(c, '#5d6d7e', 16, 17, 2.5);
   },
+  // (#306) as in the world: crossed logs in a ring of stones, burning
   campfire: c => {
-    icLine(c, '#6d4520', 3.5, [[5, 28], [27, 20]]); icLine(c, '#6d4520', 3.5, [[27, 28], [5, 20]]);
-    icFlame(c, 16, 23, 1);
+    icLine(c, '#6d4520', 4, [[6, 25], [26, 15]]); icLine(c, '#6d4520', 4, [[26, 25], [6, 15]]);
+    for (const [sx, sy] of [[4, 27], [11, 29], [19, 29], [27, 27]]) icCircle(c, '#7f8c8d', sx, sy, 2.5);
+    icFlame(c, 16, 21, 0.95);
   },
   fire: c => icFlame(c, 16, 29, 1.45),
+  // (#306) as in the world: a round stone furnace, its mouth glowing, a chimney at the back
   smelter: c => {
-    icRound(c, '#7f2d22', 5, 6, 22, 23, 3); icRect(c, '#5d4037', 12, 2, 8, 6);
-    icRound(c, '#1e272e', 10, 15, 12, 10, 5); icFlame(c, 16, 25, 0.5);
+    icCircle(c, '#6e2c00', 16, 18, 13);
+    for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; icCircle(c, k % 2 ? '#95a5a6' : '#7f8c8d', 16 + Math.cos(a) * 11, 18 + Math.sin(a) * 11, 3); }
+    icRect(c, '#5d6d7e', 12, 2, 8, 7); c.strokeStyle = '#2c3e50'; c.lineWidth = 1; c.strokeRect(12.5, 2.5, 7, 6);
+    icCircle(c, 'rgba(230, 126, 34, 0.85)', 16, 19, 6); icCircle(c, '#f9e79f', 16, 20, 2.5);
   },
+  // (#306) as in the world: an open storehouse, a plank floor, a back wall and a roof over its back half
   warehouse: c => {
-    icFill(c, '#7b4a22', [[2, 13], [16, 4], [30, 13]]);
-    icRect(c, '#a47148', 4, 13, 24, 16);
-    icRect(c, '#5d3a1a', 11, 18, 10, 11);
-    icLine(c, '#a47148', 1.2, [[11, 18], [21, 29]]); icLine(c, '#a47148', 1.2, [[21, 18], [11, 29]]);
+    icRect(c, '#8a6a45', 3, 4, 26, 25); c.strokeStyle = '#5c3a17'; c.lineWidth = 1; c.strokeRect(3.5, 4.5, 25, 24);
+    for (let k = -8; k <= 8; k += 4) icLine(c, 'rgba(0, 0, 0, 0.18)', 1, [[3, 16 + k], [29, 16 + k]]);
+    icRect(c, '#6d4520', 3, 3, 26, 4);
+    for (const [px, py] of [[4, 4], [27, 4], [4, 26], [27, 26]]) icRect(c, '#4e3016', px, py, 2.5, 3);
+    icFill(c, '#7b241c', [[1, 1], [31, 1], [31, 14], [1, 14]]);
+    icLine(c, 'rgba(0, 0, 0, 0.3)', 1, [[1, 7.5], [31, 7.5]]);
+    icRect(c, '#a47148', 8, 19, 5, 5); icRect(c, '#95a5a6', 17, 20, 5, 4); // (what it holds)
   },
+  // (#306) as in the world, from above: a plank platform on posts, braced, a railing round it
   watchtower: c => {
-    icLine(c, '#5d3a1a', 2.5, [[9, 29], [11, 12]]); icLine(c, '#5d3a1a', 2.5, [[23, 29], [21, 12]]);
-    icLine(c, '#6d4520', 1.5, [[10, 27], [22, 15]]); icLine(c, '#6d4520', 1.5, [[22, 27], [10, 15]]);
-    icRect(c, '#a47148', 6, 8, 20, 5); icFill(c, '#8b5a2b', [[5, 8], [16, 2], [27, 8]]);
+    for (const [px, py] of [[3, 3], [25, 3], [3, 25], [25, 25]]) icRect(c, '#5d3a1a', px, py, 4, 4);
+    icLine(c, '#6d4520', 2, [[5, 5], [27, 27]]); icLine(c, '#6d4520', 2, [[27, 5], [5, 27]]);
+    icRect(c, '#a47148', 5, 5, 22, 22);
+    for (let i = -6; i <= 6; i += 4) icLine(c, 'rgba(92, 58, 23, 0.55)', 1, [[5, 16 + i], [27, 16 + i]]);
+    c.strokeStyle = '#4e2f14'; c.lineWidth = 2; c.strokeRect(5, 5, 22, 22);
+    for (const [px, py] of [[5, 5], [27, 5], [5, 27], [27, 27]]) icCircle(c, '#3e2723', px, py, 2);
   }
 };
 

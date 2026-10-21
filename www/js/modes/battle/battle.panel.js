@@ -6,6 +6,7 @@ import { enemyFactionOf, enemyStats } from '../../domains/conflict/waves/index.j
 import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
+import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
 import { battle, battleArmor, clearBattleSide, setBattleDifficulty, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
@@ -18,6 +19,7 @@ export function renderBattlePanel() {
   if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.armor'));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
   document.querySelectorAll('[data-battle-auto]').forEach(b => b.classList.toggle('on', (b.dataset.battleAuto === 'on') === battle.auto));
+  renderBattleColors();
   document.getElementById('battle-auto').classList.toggle('on', battle.auto);
   // the faction sub-tabs
   const factions = document.getElementById('battle-factions');
@@ -112,6 +114,26 @@ export function pickShownPreset() {
     if (!getBattleBuildings().includes(battle.building)) battle.building = getBattleBuildings()[0];
   } else if (!getBattlePresetsShown().some(p => p.id === battle.preset)) {
     battle.preset = getBattlePresetsShown()[0].id;
+  }
+}
+
+// (#306) the sides' colours: a swatch each, the other side's taken
+function renderBattleColors() {
+  for (const side of /** @type {('green' | 'red')[]} */ (['green', 'red'])) {
+    const row = document.getElementById(`battle-colors-${side}`);
+    if (!row) continue;
+    const other = side === 'green' ? sides.battle.red : sides.battle.green;
+    row.innerHTML = '';
+    for (const color of GAME_CONFIG.factionColors) {
+      const swatch = document.createElement('button');
+      swatch.className = 'color-swatch' + (sides.battle[side] === color ? ' active' : '');
+      swatch.style.background = color;
+      swatch.dataset.color = color;
+      swatch.disabled = color === other;
+      swatch.setAttribute('aria-label', color);
+      onTap(swatch, () => { setBattleColor(side, color); renderBattlePanel(); });
+      row.appendChild(swatch);
+    }
   }
 }
 
