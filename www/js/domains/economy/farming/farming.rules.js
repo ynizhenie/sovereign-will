@@ -53,7 +53,7 @@ export function makeAppleTree(tree) {
 // Wheat grows; saplings grow into trees; apple trees grow apples (faster watered)
 export function growCrops(dt) {
   game.farmPlots.forEach(f => {
-    if (f.growth < 100) f.growth += dt * 5 * (f.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1);
+    if (f.growth < 100) f.growth += dt * (100 / GAME_CONFIG.farming.growSeconds) * (f.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1); // (#306: slower)
   });
 
   game.trees.forEach(t => {

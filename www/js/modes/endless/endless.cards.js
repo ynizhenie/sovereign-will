@@ -21,7 +21,10 @@ const rarityOf = key => RARITIES.find(r => config().rarity[r].includes(key)) || 
 
 // Can't be built or made yet: cards on, and not opened (from the start or by a card)
 export function isLocked(category, id) {
-  if (!isOn() || !LOCKABLE.includes(category) || id === 'fist') return false;
+  if (!isOn()) return false;
+  // (#306) a recipe opens with what it's for (arrows: with the bow)
+  if (category === 'recipes') { const w = (GAME_CONFIG.recipes[id] || {}).unlockedWith; return !!w && isLocked(w.split(':')[0], w.split(':')[1]); }
+  if (!LOCKABLE.includes(category) || id === 'fist') return false;
   return !isStart(category, id) && !game.unlocked[`${category}:${id}`];
 }
 

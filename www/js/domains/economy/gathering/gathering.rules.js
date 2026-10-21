@@ -64,7 +64,7 @@ export function finishHarvest(settler, resource, kind) {
   for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
   if (!two) {
     addCarryLoad(settler);
-    noteDay(settler, 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279)
+    noteDay(settler, kind === 'farm' ? 'farmed' : 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {

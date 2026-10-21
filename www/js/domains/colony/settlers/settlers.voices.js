@@ -116,11 +116,14 @@ export function noteDay(s, what, event = null, chance = 0) {
   if (event && Math.random() < chance) says(s, event);
 }
 
-// Its story of the day: the two things it did most, or that it had a quiet one
+// Its story of the day: the two things it did most, or that it had a quiet one. (#306) Each said one of a few
+// ways (a text's '|'), and now and then a word to end it
+const oneOf = text => { const list = String(text).split('|'); return list[Math.floor(Math.random() * list.length)]; };
 function storyOf(s) {
   const done = Object.entries(s.today || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 2);
-  if (!done.length) return t('voice.story.none');
-  return done.map(([what, n], i) => t(`voice.story.${what}${i ? '2' : ''}`, { n })).join(t('voice.story.and'));
+  if (!done.length) return oneOf(t('voice.story.none'));
+  const told = done.map(([what, n], i) => oneOf(t(`voice.story.${what}${i ? '2' : ''}`, { n }))).join(t('voice.story.and'));
+  return Math.random() < 0.35 ? `${told}. ${oneOf(t('voice.story.end'))}` : told;
 }
 
 // At night, now and then one sitting by a campfire tells its day
