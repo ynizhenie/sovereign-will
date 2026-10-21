@@ -180,6 +180,7 @@ function edgeBand(G, x, y, open, which, rgb, a, width, inside, occupiedCorners =
 }
 
 // The sand tiles (desert and beach) as keys, worked out again when there are more or fewer of them
+/** @type {{ n: number, desert: typeof game.desertTiles | null, beach: typeof game.beachTiles | null, keys: Set<string> }} */
 let sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
 function getSandKeys() {
   const n = game.desertTiles.length * 100003 + game.beachTiles.length;
