@@ -7,6 +7,12 @@
  */
 
 /**
+ * How a settler or an enemy looks (#306, settlers.looks.js): a man or a woman, one of the five looks of that
+ * kind, and a shade (its hair's colour, of the colours its kind has)
+ * @typedef {{ female: boolean, style: number, shade: number }} Look
+ */
+
+/**
  * A colony unit (GAME_CONFIG.settlerTypes): created by createSettler, driven by SETTLER_BEHAVIOURS.
  * @typedef {Object} Settler
  * @property {number} id
@@ -30,6 +36,7 @@
  * @property {number} speed
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
+ * @property {Look} [look]          a man or a woman, one of their looks: how it's drawn (#306)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
  * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
@@ -48,6 +55,8 @@
  * @property {string | null} [workKind]  what work: 'build', 'butcher', 'pick' (drawn: a hammer, a knife, a hand, #279)
  * @property {boolean} [flute]       a wooden flute in its side slot (#279)
  * @property {number} [playingFlute] the tick it last played it, by a campfire
+ * @property {boolean} [breaking]     it stepped away from work for a tune by a campfire (#306)
+ * @property {number} [fluteAt]       the tick it may take its next one
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
@@ -148,6 +157,7 @@
  * @property {Point | null} pathTarget
  * @property {number} [arrows]
  * @property {number} [facing]
+ * @property {Look} [look]         how it's drawn, given when it's made (#306)
  * @property {number} [burning]
  * @property {number} [temporary]
  * @property {boolean} [crumbled]
@@ -285,6 +295,7 @@
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
  * @property {Object[]} logs
+ * @property {Point[]} stumps       where a felled tree stood: its stump, till a tree grows again (#306)
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
  * @property {number} dayTime      seconds into the day (#257)
  * @property {number} nightId      which night it is

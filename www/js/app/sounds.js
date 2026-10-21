@@ -69,9 +69,17 @@ export const SOUNDS = {
   butcher: (o, t) => { noise(o, t, { dur: 0.12, gain: 0.3, type: 'lowpass', freq: 1100 }); tone(o, t, { freq: 200, to: 90, dur: 0.1, gain: 0.15 }); },
   pickup: (o, t) => tone(o, t, { type: 'triangle', freq: 600, to: 900, dur: 0.07, gain: 0.08 }),
   portal: (o, t) => { noise(o, t, { dur: 0.7, gain: 0.25, freq: 300, to: 1600, q: 2, attack: 0.2 }); tone(o, t, { type: 'sawtooth', freq: 60, to: 110, dur: 0.7, gain: 0.12, filter: 400 }); },
-  dawn: (o, t) => { [[700, 900], [900, 1300], [1300, 800]].forEach(([f, to], i) => tone(o, t + i * 0.18, { type: 'sawtooth', freq: f, to, dur: 0.2, gain: 0.05, filter: 2500 })); },
-  owl: (o, t) => [0, 0.45].forEach(d => tone(o, t + d, { freq: 420, to: 380, dur: 0.35, gain: 0.07, attack: 0.05 })),
-  snore: (o, t) => noise(o, t, { dur: 0.9, gain: 0.05, freq: 220, to: 120, q: 4, attack: 0.3 }),
+  // (#306) the morning: a cock's crow, birds answering it, a soft low swell under them
+  dawn: (o, t) => {
+    tone(o, t, { type: 'sawtooth', freq: 560, to: 780, dur: 0.16, gain: 0.09, filter: 2400, attack: 0.02 });
+    tone(o, t + 0.16, { type: 'sawtooth', freq: 780, to: 600, dur: 0.34, gain: 0.09, filter: 2400, attack: 0.02 });
+    [[880, 0.55], [1180, 0.66], [1320, 0.8]].forEach(([f, at]) => tone(o, t + at, { type: 'triangle', freq: f, to: f * 1.15, dur: 0.2, gain: 0.09 }));
+    tone(o, t + 0.3, { type: 'sine', freq: 110, dur: 1.4, gain: 0.1, attack: 0.5 });
+  },
+  // (#306) an owl at nightfall: two hoots, low and clear
+  owl: (o, t) => [0, 0.5].forEach((d, i) => { tone(o, t + d, { type: 'sine', freq: i ? 390 : 430, to: 335, dur: 0.45, gain: 0.16, attack: 0.06 }); noise(o, t + d, { dur: 0.4, gain: 0.03, type: 'lowpass', freq: 600, attack: 0.08 }); }),
+  // (#306) a sleeper's breath: a low swell through a wide band, in and out
+  snore: (o, t) => { noise(o, t, { dur: 1.0, gain: 0.22, type: 'lowpass', freq: 320, to: 150, q: 0.7, attack: 0.35 }); tone(o, t + 0.05, { freq: 78, to: 60, dur: 0.8, gain: 0.1, attack: 0.25 }); },
   alarm: (o, t) => [0, 0.25, 0.5].forEach(d => tone(o, t + d, { type: 'triangle', freq: 1046, dur: 0.18, gain: 0.12 })),
   // a voice (#252): syllables, each a buzz through a vowel (a resonant filter that moves), a breath between
   // some; pitched by who speaks, a growl under it for the rough ones (settlers.voices.js)
