@@ -11,6 +11,7 @@ import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { isLocked } from '../../../modes/endless/index.js';
+import { isForPlayerFaction } from '../../factions/index.js';
 
 // Where it's made: by hand (madeBy: 'hand', at the town hall, #261), the smithy if there's iron in it,
 // otherwise the workshop
@@ -35,23 +36,61 @@ export function findWorkplace(place, from = townHall) {
   return best;
 }
 
+// Expand missing recipe outputs into prerequisite jobs; their ingredients are paid for with the final order.
 function craftOrderPlan(category, id) {
-  const cost = { ...(GAME_CONFIG[category][id].cost || {}) };
-  const ropeNeeded = id === 'rope' ? 0 : Number(cost.rope || 0);
-  delete cost.rope;
-  const availableRope = Math.min(ropeNeeded, stock.rope || 0);
-  const ropeMissing = ropeNeeded - availableRope;
-  const ropeRecipe = GAME_CONFIG.recipes.rope;
-  const ropePerOrder = Object.values(ropeRecipe.produces)[0] / (ropeRecipe.batches || 1);
-  const ropeOrders = ropeMissing > 0 ? Math.ceil(ropeMissing / ropePerOrder) : 0;
-  const totalCost = { ...cost };
-  if (availableRope) totalCost.rope = availableRope;
-  if (ropeOrders) {
-    for (const [resource, amount] of Object.entries(ropeRecipe.cost || {})) {
-      totalCost[resource] = (totalCost[resource] || 0) + amount * ropeOrders / (ropeRecipe.batches || 1);
+  const totalCost = {}, available = { ...stock }, planned = {}, recipeOrders = [];
+  const resolveCost = (cost, waitFor, ancestors = new Set()) => {
+    for (const [resource, amount] of Object.entries(cost)) {
+      let missing = Number(amount || 0);
+      const fromStock = Math.min(missing, Number(available[resource] || 0));
+      if (fromStock > 0) {
+        available[resource] -= fromStock;
+        totalCost[resource] = (totalCost[resource] || 0) + fromStock;
+        missing -= fromStock;
+      }
+      const fromPlanned = Math.min(missing, Number(planned[resource] || 0));
+      if (fromPlanned > 0) {
+        planned[resource] -= fromPlanned;
+        waitFor[resource] = (waitFor[resource] || 0) + fromPlanned;
+        missing -= fromPlanned;
+      }
+      if (missing <= 0) continue;
+
+      const recipe = Object.values(GAME_CONFIG.recipes).find(candidate =>
+        candidate.produces[resource] && isForPlayerFaction(candidate) && !isLocked('recipes', candidate.id) &&
+        findWorkplace(craftPlace('recipes', candidate.id)));
+      const batches = recipe && (recipe.batches || 1);
+      const perJob = recipe && Number(recipe.produces[resource]) / batches;
+      if (!recipe || !perJob || ancestors.has(resource)) {
+        totalCost[resource] = (totalCost[resource] || 0) + missing;
+        continue;
+      }
+
+      const jobs = Math.ceil(missing / perJob);
+      for (let i = 0; i < jobs; i++) {
+        const nextAncestors = new Set(ancestors);
+        nextAncestors.add(resource);
+        const jobWait = {};
+        resolveCost(Object.fromEntries(Object.entries(recipe.cost || {}).map(([key, value]) => [key, value / batches])), jobWait, nextAncestors);
+        recipeOrders.push({
+          key: `recipes:${recipe.id}`, category: 'recipes', id: recipe.id, crafter: null,
+          stage: Object.keys(jobWait).length ? 'waitResources' : 'fetch', progress: 0, waitFor: jobWait,
+          yields: Object.fromEntries(Object.entries(recipe.produces).map(([key, value]) => [key, value / batches]))
+        });
+        planned[resource] = (planned[resource] || 0) + perJob;
+      }
+      const fromRecipes = Math.min(missing, Number(planned[resource] || 0));
+      if (fromRecipes > 0) {
+        planned[resource] -= fromRecipes;
+        waitFor[resource] = (waitFor[resource] || 0) + fromRecipes;
+        missing -= fromRecipes;
+      }
+      if (missing > 0) totalCost[resource] = (totalCost[resource] || 0) + missing;
     }
-  }
-  return { totalCost, ropeMissing, ropeOrders, ropeRecipe };
+  };
+  const waitFor = {};
+  resolveCost(GAME_CONFIG[category][id].cost || {}, waitFor);
+  return { totalCost, recipeOrders, waitFor };
 }
 
 export function getCraftOrderCost(category, id) {
@@ -64,18 +103,13 @@ export function orderCraft(category, id) {
   if (isLocked(category, id)) return 'locked'; // (a card opens it, #255)
   const place = craftPlace(category, id);
   if (!findWorkplace(place)) return place === 'smithy' ? 'noSmithy' : 'noWorkshop'; // (by hand: always)
-  const { totalCost, ropeMissing, ropeOrders, ropeRecipe } = craftOrderPlan(category, id);
+  const { totalCost, recipeOrders, waitFor } = craftOrderPlan(category, id);
   if (!canAfford(totalCost)) return 'cantAfford';
   payCost(totalCost);
-  for (let i = 0; i < ropeOrders; i++) {
-    game.craftOrders.push({
-      key: 'recipes:rope', category: 'recipes', id: 'rope', crafter: null, stage: 'fetch', progress: 0,
-      yields: Object.fromEntries(Object.entries(ropeRecipe.produces).map(([resource, amount]) => [resource, amount / (ropeRecipe.batches || 1)])),
-    });
-  }
+  game.craftOrders.push(...recipeOrders);
   game.craftOrders.push({
-    key: `${category}:${id}`, category, id, crafter: null, stage: ropeMissing ? 'waitRope' : 'fetch',
-    progress: 0, ropeNeeded: ropeMissing
+    key: `${category}:${id}`, category, id, crafter: null,
+    stage: Object.keys(waitFor).length ? 'waitResources' : 'fetch', progress: 0, waitFor
   });
   return 'ordered';
 }
@@ -94,12 +128,19 @@ export function craftItem(s, tick) {
     // arrows are the archers' to make while there are any (#249)
     const archers = game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed);
     const mine = o => !(o.id === 'arrows' && archers && s.role !== 'archer');
-    const ready = o => o.stage !== 'waitRope' || (stock.rope || 0) >= o.ropeNeeded;
+    const ready = o => o.stage === 'waitRope'
+      ? (stock.rope || 0) >= o.ropeNeeded
+      : o.stage !== 'waitResources' || Object.entries(o.waitFor || {}).every(([resource, amount]) => (stock[resource] || 0) >= amount);
     order = game.craftOrders.find(o => open(o) && ready(o) && o.for === s) ||
       game.craftOrders.find(o => open(o) && ready(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
     if (!order) return false;
   }
-  if (order.stage === 'waitRope') {
+  if (order.stage === 'waitResources') {
+    if (!Object.entries(order.waitFor || {}).every(([resource, amount]) => (stock[resource] || 0) >= amount)) { order.crafter = null; return false; }
+    payCost(order.waitFor);
+    order.waitFor = {};
+    order.stage = 'fetch';
+  } else if (order.stage === 'waitRope') {
     if ((stock.rope || 0) < order.ropeNeeded) { order.crafter = null; return false; }
     payCost({ rope: order.ropeNeeded });
     order.stage = 'fetch';

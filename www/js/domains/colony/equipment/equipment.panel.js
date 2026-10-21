@@ -11,7 +11,7 @@ import { game } from '../../../engine/world/index.js';
 import { stock } from '../storage/index.js';
 import { isForPlayerFaction } from '../../factions/index.js';
 import { craftRecipe, giveStored, makeToStore, takeApartRecipe, takeApartStored } from './equipment.rules.js';
-import { craftPlace } from './equipment.crafting.js';
+import { craftPlace, getCraftOrderCost } from './equipment.crafting.js';
 
 export const CRAFT_KINDS = ['tools', 'weapons', 'gear', 'supplies'];
 const PLACES = ['hand', 'workshop', 'smithy'];
@@ -37,7 +37,7 @@ function iconButton(icon, title, className, action) {
   return b;
 }
 
-/** @type {{ key: string, count: HTMLElement, acts: HTMLElement | null, give: HTMLButtonElement | null, apart: HTMLButtonElement | null, recipe: string | null }[]} */
+/** @type {{ key: string, category: string, id: string, button: HTMLButtonElement, count: HTMLElement, acts: HTMLElement | null, give: HTMLButtonElement | null, apart: HTMLButtonElement | null, recipe: string | null }[]} */
 let tiles = [];
 
 // One sub-tab's sections into its pane
@@ -87,7 +87,7 @@ function renderKind(kind) {
         wrap.appendChild(acts);
       }
       grid.appendChild(wrap);
-      tiles.push({ key, count, acts, give, apart, recipe: recipe ? Object.keys(item.produces)[0] : null });
+      tiles.push({ key, category, id: item.id, button: tile, count, acts, give, apart, recipe: recipe ? Object.keys(item.produces)[0] : null });
     }
     pane.append(heading, grid);
   }
@@ -109,10 +109,12 @@ export function showCraftKind(kind) {
 // Each frame (updateUI): how many wait in the armory, and whether there's one to hand out or take apart
 let shown = '';
 export function updateCraftLists(force = false) {
-  const key = JSON.stringify(game.armory) + '|' + tiles.map(r => r.recipe ? stock[r.recipe] || 0 : 0).join(',');
+  const key = JSON.stringify(game.armory) + '|' + JSON.stringify(stock);
   if (!force && key === shown) return;
   shown = key;
   for (const r of tiles) {
+    const cost = getCraftOrderCost(r.category, r.id);
+    r.button.dataset.craftCost = JSON.stringify(cost);
     const stored = r.recipe ? Math.floor(stock[r.recipe] || 0) : game.armory[r.key] || 0; // (a recipe: what it makes, in the stock)
     r.count.textContent = stored > 0 ? `×${stored}` : '';
     r.count.title = t('craft.stored', { n: stored });
