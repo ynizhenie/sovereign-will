@@ -5,6 +5,7 @@ import { ctx, drawProgressBar } from '../../../engine/platform/index.js';
 import { drawBodyBlood } from '../../conflict/combat/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { boarWallows } from './hunting.rules.js';
+import { castShadow } from '../../world/index.js';
 
 // A boar (#251), its side to us, facing the way it last went: a bristly body, legs stepping, its head with
 // snout, tusks and an ear, a curly tail. A carcass: on its back, legs up, a cross for its eye
@@ -17,7 +18,7 @@ function drawBoarBody(b, dead) {
   ctx.save();
   ctx.translate(b.x, b.y + (lying ? 4 : 0));
   ctx.scale(d, dead ? -1 : 1);
-  if (!dead) { ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; ctx.beginPath(); ctx.ellipse(0, lying ? 5 : 9, 12, 3.5, 0, 0, Math.PI * 2); ctx.fill(); }
+  if (!dead) { ctx.save(); ctx.scale(d, 1); castShadow(ctx, 0, lying ? 5 : 9, 12, 3.5, lying ? 6 : 12); ctx.restore(); } // (#307)
   // legs (folded under it lying)
   const step = dead || lying ? 0 : Math.sin((b.step || 0) * 0.5) * 1.6;
   ctx.fillStyle = '#4e2f1f';

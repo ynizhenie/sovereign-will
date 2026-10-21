@@ -10,6 +10,7 @@ import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, ha
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
+import { castShadow } from '../../world/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
@@ -41,7 +42,7 @@ export function drawEnemyTents() {
 // An enemy camp's outpost (#255): a squat log fort with a pointed roof, a banner in the enemy's colour
 function drawOutpost(et) {
   const x = et.x, y = et.y, color = getEnemyColor();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(x + 4, y + 6, 26, 18, 0, 0, Math.PI * 2); ctx.fill();
+  castShadow(ctx, x, y + 6, 24, 16, 26); // (#307)
   // the log walls
   ctx.fillStyle = '#6e4a2c'; ctx.fillRect(x - 20, y - 12, 40, 28);
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; ctx.lineWidth = 1;
