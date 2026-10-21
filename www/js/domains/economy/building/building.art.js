@@ -5,6 +5,7 @@
 
 import { ctx } from '../../../engine/platform/index.js';
 import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
+import { getSun } from '../../world/index.js';
 
 const rect = (x, y, w, h, fill, stroke, lw = 1) => {
   ctx.fillStyle = fill; ctx.fillRect(x, y, w, h);
@@ -17,10 +18,11 @@ const poly = (points, fill, stroke, lw = 1) => {
 };
 const line = (x0, y0, x1, y1, color, lw = 1) => { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); };
 
-// A soft shadow cast down and to the right
+// A soft shadow cast away from the sun (#307: by the time of day, getSun), long in the morning and evening
 export function shadow(x, y, w, h, r = 4) {
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-  ctx.beginPath(); ctx.roundRect(x - w / 2 + 3, y - h / 2 + 4, w, h, r); ctx.fill();
+  const sun = getSun(), H = h * 0.35, ox = sun.dx * H, oy = sun.dy * H;
+  ctx.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
+  ctx.beginPath(); ctx.roundRect(x - w / 2 + Math.min(0, ox) + Math.max(0, ox) * 0.5, y - h / 2 + oy, w + Math.abs(ox) * 0.5, h, r); ctx.fill();
 }
 
 // A house seen from above at a slant: a pitched roof (its far half lighter), its front wall below with a door
