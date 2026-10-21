@@ -67,7 +67,7 @@ export const game = {
   boars: [],
   blueprints: [],
   buildings: [],
-  craftOrders: [],      // { key, category, id, crafter, stage, progress, for, yields? } things being made (#211)
+  craftOrders: [],      // { key, category, id, crafter, stage, progress, for, yields?, waitFor? } things being made (#211)
   armorOrder: null,
   enemies: [],
   enemyTents: [],

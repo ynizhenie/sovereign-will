@@ -13,10 +13,16 @@ export function refreshAffordability(force = false) {
     const parts = button.querySelectorAll('.cost-part');
     if (!parts.length) continue;
     let short = false;
+    const craftCost = button.dataset.craftCost ? JSON.parse(button.dataset.craftCost) : null;
+    if (craftCost) {
+      for (const [resource, amount] of Object.entries(craftCost)) {
+        if (Number(stock[resource] || 0) < Number(amount)) short = true;
+      }
+    }
     for (const part of parts) {
       const missing = Number(stock[part.dataset.res || ''] || 0) < Number(part.dataset.amount);
-      part.classList.toggle('short', missing);
-      if (missing) short = true;
+      part.classList.toggle('short', craftCost ? short && missing : missing);
+      if (!craftCost && missing) short = true;
     }
     button.classList.toggle('cant-afford', short);
   }
