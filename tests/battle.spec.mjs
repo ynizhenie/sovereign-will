@@ -136,6 +136,32 @@ test('the battle settings pick the field: a glade or a desert, and the line-up s
   expect(glade).toEqual({ field: 'glade', sand: 0, units: 1 });
 });
 
+test('the desert field keeps the midline and the green and red halves of the glade (#279)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    setBattleField('desert');
+    render();
+    const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
+    const outsideX = Math.round(x + (20 - camera.x) * getViewScale()); // (the border beyond the red line)
+    const sample = (px, py) => [...ctx.getImageData(px, py, 1, 1).data];
+    const on = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
+    const phase = battle.phase;
+    battle.phase = 'fight'; // the same frame without the placing overlay
+    render();
+    const off = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
+    battle.phase = phase;
+    render();
+    return { on, off };
+  });
+  // the white midline is drawn over the sand
+  expect(r.on.line[2] - r.off.line[2]).toBeGreaterThan(20);
+  // the left half is tinted green, the right red
+  expect((r.on.left[1] - r.off.left[1]) - (r.on.left[0] - r.off.left[0])).toBeGreaterThan(3);
+  expect((r.on.right[0] - r.off.right[0]) - (r.on.right[1] - r.off.right[1])).toBeGreaterThan(3);
+  // and beyond the red line the sand goes on, not the dark green border of the other modes
+  expect(r.on.outside[0]).toBeGreaterThan(150);
+});
+
 test('a pet keeps its id and a ghost hovers where it was placed in a battle, not in the empty town hall (#314)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
