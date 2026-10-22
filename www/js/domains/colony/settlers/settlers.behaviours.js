@@ -16,7 +16,7 @@ import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../.
 import { deliverCarrying, deliverWhenNothingToDo, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
-import { getHarvestableResources, getWorkPriority, harvest, harvestMarked } from '../../economy/gathering/index.js';
+import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
@@ -39,12 +39,13 @@ import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
 import { battleOrders } from '../../../modes/battle/index.js';
 
 export function createSettlerTick(dt) {
-  const allResources = getHarvestableResources();
   // which GAME_CONFIG.mapResources kind each resource is, so canSettlerHarvest() doesn't scan every list
-  const resourceKind = new Map();
-  for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
-    for (const r of game[def.list]) resourceKind.set(r, kind);
-  }
+  // (#299: those to be worked, by the list each came from; another one asked about found out then)
+  const kindOfList = new Map(Object.entries(GAME_CONFIG.mapResources).map(([kind, def]) => [game[def.list], kind]));
+  const known = new Map();
+  // (#299) only on the base's land: settlers work nowhere else
+  const allResources = getWorkableResources((r, list) => known.set(r, kindOfList.get(list)));
+  const resourceKind = { get: r => { if (!known.has(r)) known.set(r, getMapResourceKind(r)); return known.get(r); } };
   // player-marked resources, then anything blocking a door (worked as if marked with priority 1)
   const doorBlockers = findDoorBlockers(allResources, resourceKind);
   const zoneBlockers = findZoneBlockers(allResources, resourceKind);

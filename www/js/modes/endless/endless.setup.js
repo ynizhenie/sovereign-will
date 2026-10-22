@@ -39,6 +39,9 @@ export const difficultyOptions = document.querySelectorAll('.difficulty-option')
 export const startGame = (e) => {
     if (e) e.preventDefault();
     applySeedFromUI();
+    // (#299) the size picked in the menu (its default one too, never tapped)
+    const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
+    if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
     resetGame();
     openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
     game.gameStarted = true;

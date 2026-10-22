@@ -25,6 +25,30 @@ export function loadSaves() {
   return loadData('saves', {});
 }
 
+// (#299) A save squeezed (gzip, kept as text), with its world and wave beside it for the list: a big map's
+// filled the device's room for saves in one or two. Where squeezing can't be done, as it was
+async function squeeze(data) {
+  const json = JSON.stringify(data);
+  if (typeof CompressionStream === 'undefined') return { data };
+  const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { z: btoa(text) };
+}
+
+// A save's game, squeezed or not
+export async function saveDataOf(save) {
+  if (save.data) return save.data;
+  const bytes = Uint8Array.from(atob(save.z), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+// Its world (the seed) and wave, kept beside it (inside it, in one from before #299)
+const seedOf = save => save.seed ?? (save.data && save.data.seed ? save.data.seed.value : undefined);
+const waveOf = save => save.wave ?? (save.data && save.data.clocks ? save.data.clocks.waveNum : '');
+
 export function storeSaves(saves) {
   return saveData('saves', saves);
 }
@@ -58,7 +82,7 @@ export function serializeGame() {
     return out;
   };
   const world = {};
-  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? value.map(o => encode(o)) : encode(value);
+  for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? packList(value.map(o => encode(o))) : encode(value);
   return {
     version: 1,
     world,
@@ -74,6 +98,33 @@ export function serializeGame() {
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
   };
+}
+
+// (#299) A long list of things alike (a big map's tens of thousands of rock and water tiles), each of
+// numbers, words and yes/no only, saved as its fields' names once and each thing's values in a row: the
+// names over and over were most of a save, too big for the device's room on a 512 map
+const PACK_FROM = 64;
+function packList(list) {
+  if (list.length < PACK_FROM) return list;
+  const cols = [], at = new Map();
+  for (const o of list) {
+    if (!o || typeof o !== 'object' || Array.isArray(o) || o.$ref) return list;
+    for (const [k, v] of Object.entries(o)) {
+      if (v === null || typeof v === 'object') return list;
+      if (!at.has(k)) { at.set(k, cols.length); cols.push(k); }
+    }
+  }
+  // (a field a thing hasn't: 0 in its row, and its place in $none)
+  const rows = list.map(o => cols.map(k => (k in o ? o[k] : 0)));
+  const none = list.flatMap((o, i) => cols.filter(k => !(k in o)).map(k => [i, at.get(k)]));
+  return { $cols: cols, $rows: rows, $none: none };
+}
+
+export function unpackList(value) {
+  if (!value || !Array.isArray(value.$cols)) return value;
+  const list = value.$rows.map(row => Object.fromEntries(value.$cols.map((k, j) => [k, row[j]])));
+  for (const [i, j] of value.$none || []) delete list[i][value.$cols[j]];
+  return list;
 }
 
 // Put every { $ref } back as the object it names
@@ -102,7 +153,7 @@ export function loadGame(data) {
   setWorldSize(data.cols, data.rows);
   game.worldSeed = createWorldSeed(data.seed.value);
   game.worldSeed.setState(data.seed.state);
-  for (const [list, value] of Object.entries(data.world)) game[list] = value;
+  for (const [list, value] of Object.entries(data.world)) game[list] = unpackList(value);
   if (!data.world.logs) game.logs = []; // (a save from before #298)
   if (!data.world.weather) game.weather = null; // (#308)
   for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
@@ -144,19 +195,20 @@ export function saveCurrentGame() {
   // (#298) with a party on its way to a camp or home it saves (the base is there; loaded, they're home);
   // in the camp itself, not: it says so, it used to do nothing at all
   if (isInCamp()) { flashSaveButton(t('save.inCamp'), false); return; }
-  try { saveNow(); } catch (e) { console.error(e); flashSaveButton(t('save.failed'), false); }
+  return saveNow().catch(e => { console.error(e); flashSaveButton(t('save.failed'), false); });
 }
 
-function saveNow() {
+async function saveNow() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const seed = game.worldSeed.value;
+  const name = t('save.name', { world: seed, wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
+  const save = { name, savedAt: now.getTime(), seed, wave: game.waveNum, ...(await squeeze(serializeGame())) };
   const saves = loadSaves();
   // this world's slot (older saves of it, one per save, go into it)
-  for (const [key, s] of Object.entries(saves)) if (s.data && s.data.seed && s.data.seed.value === seed) delete saves[key];
+  for (const [key, s] of Object.entries(saves)) if (seedOf(s) === seed) delete saves[key];
   if (Object.keys(saves).length >= SAVE_SLOTS) { flashSaveButton(t('save.full', { n: SAVE_SLOTS }), false); return; }
-  const name = t('save.name', { world: seed, wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
-  saves[`world:${seed}`] = { name, savedAt: now.getTime(), data: serializeGame() };
+  saves[`world:${seed}`] = save;
   if (!storeSaves(saves)) { flashSaveButton(t('save.failed'), false); return; }
   flashSaveButton(t('save.done'), true);
 }
@@ -179,7 +231,7 @@ function flashSaveButton(text, ok) {
 export function renderSaveList(listId = 'save-list') {
   const all = Object.entries(loadSaves()).sort((a, b) => b[1].savedAt - a[1].savedAt);
   const thisWorld = listId !== 'save-list';
-  const saves = thisWorld ? all.filter(([, s]) => s.data && s.data.seed && game.worldSeed && s.data.seed.value === game.worldSeed.value) : all;
+  const saves = thisWorld ? all.filter(([, s]) => game.worldSeed && seedOf(s) === game.worldSeed.value) : all;
   if (!thisWorld) document.getElementById('save-settings').hidden = saves.length === 0;
   const list = document.getElementById(listId);
   list.innerHTML = '';
@@ -198,13 +250,13 @@ export function renderSaveList(listId = 'save-list') {
     const tile = document.createElement('button');
     tile.className = 'btn tile save-tile';
     tile.dataset.save = key;
-    const d = s.data || {}, at = new Date(s.savedAt);
-    const world = d.seed ? d.seed.value : '';
-    const wave = d.clocks ? d.clocks.waveNum : '';
+    const at = new Date(s.savedAt);
+    const world = seedOf(s) ?? '';
+    const wave = waveOf(s);
     tile.title = s.name;
     tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(t('save.world', { world }))}</b></span>` +
       `<span class="tile-cost">${escapeHtml(t('save.wave', { wave }))} · ${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}</span>`;
-    onTap(tile, () => { document.getElementById('pause-load').hidden = true; loadGame(loadSaves()[key].data); });
+    onTap(tile, async () => { document.getElementById('pause-load').hidden = true; loadGame(await saveDataOf(loadSaves()[key])); });
     const del = document.createElement('button');
     del.className = 'btn tile-act save-delete';
     del.dataset.deleteSave = key;

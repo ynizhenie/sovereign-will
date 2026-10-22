@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { game, markTilesChanged, townHall } from '../../../engine/world/index.js';
 import { isDesertTile, tileVariantHash, rainLevel } from '../../world/index.js';
 import { showNotification } from '../../../ui/index.js';
 
@@ -63,6 +63,7 @@ export function growCrops(dt) {
       if (t.growProgress >= 20) {
         t.isGrowing = false;
         t.hp = 3;
+        markTilesChanged(); // (a tree now: it blocks its tile)
       }
     } else if (t.apple && !t.applesReady) {
       t.appleGrowth += dt / GAME_CONFIG.appleTrees.growSeconds;

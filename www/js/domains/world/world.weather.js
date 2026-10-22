@@ -6,7 +6,7 @@
 // the air shimmers over the desert, and the water's surface moves (zoomed in).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { TILE_SIZE, game, rand } from '../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, rand } from '../../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
@@ -82,12 +82,12 @@ export function windSway(x, y, h) {
 // the desert's shimmer by day, the fog
 export function drawWeatherWorld() {
   const scale = getViewScale(), halfW = canvas.width / 2 / scale + TILE_SIZE, halfH = canvas.height / 2 / scale + TILE_SIZE;
-  const seen = o => o.x > camera.x - halfW && o.x < camera.x + halfW && o.y > camera.y - halfH && o.y < camera.y + halfH;
+  // (#299) the tiles of a list on the screen, found by their tiles, not by going through all of a big map's
+  const seen = list => { const found = []; forEachInRect(list, camera.x - halfW, camera.y - halfH, camera.x + halfW, camera.y + halfH, o => { found.push(o); }); return found; };
   const t = performance.now() / 1000, rain = rainLevel();
   const lowDetail = canvas.width * canvas.height > 1_000_000;
   if (scale >= 0.75) {
-    for (const tile of game.waterTiles) {
-      if (!seen(tile)) continue;
+    for (const tile of seen(game.waterTiles)) {
       const h = (tile.x * 73856093) ^ (tile.y * 19349663);
       if (lowDetail && (h & 1)) continue;
       // a light wavelet drifting across it
@@ -108,8 +108,7 @@ export function drawWeatherWorld() {
     const heat = Math.max(0, getSun().alpha - 0.16) / 0.08 * (1 - rain);
     if (heat > 0.05) {
       ctx.lineWidth = 1;
-      for (const tile of game.desertTiles) {
-        if (!seen(tile)) continue;
+      for (const tile of seen(game.desertTiles)) {
         const h = (tile.x * 2654435761) ^ tile.y;
         if (h & (lowDetail ? 3 : 1)) continue;
         const p = (t * 0.35 + ((h >>> 3) & 255) / 255) % 1, y = tile.y + 12 - p * 26;

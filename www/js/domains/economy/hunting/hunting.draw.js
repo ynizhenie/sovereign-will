@@ -1,7 +1,7 @@
 // Boars, and their carcasses
 
 import { game } from '../../../engine/world/index.js';
-import { ctx, drawProgressBar } from '../../../engine/platform/index.js';
+import { ctx, drawProgressBar, getViewRect } from '../../../engine/platform/index.js';
 import { drawBodyBlood } from '../../conflict/combat/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { boarWallows } from './hunting.rules.js';
@@ -69,7 +69,9 @@ function drawWallows() {
 // Boars (faded while hidden), and carcasses being butchered
 export function drawBoars() {
   drawWallows();
+  const v = getViewRect(40); // (#299: those on the screen)
   game.boars.forEach(b => {
+    if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1) return;
     ctx.save();
     if (b.isCarcass) {
       drawBoarBody(b, true);
