@@ -14,6 +14,7 @@ import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
+import { exportFog, importFog } from '../../domains/world/index.js';
 import { syncCards } from './endless.cards.js';
 import { isInCamp, resetRaid } from './endless.raid.js';
 
@@ -96,7 +97,8 @@ export function serializeGame() {
     difficulty: game.gameDifficulty,
     cardMode: game.cardMode,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
-    camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
+    camera: { x: camera.x, y: camera.y, zoom: camera.zoom },
+    fog: exportFog() // (#299: what's been explored)
   };
 }
 
@@ -175,6 +177,7 @@ export function loadGame(data) {
   game.selectedSettler = null;
   game.defensePlan = null;
   resetTileIndex();
+  importFog(data.fog); // (#299; a save from before: the start land seen)
   Object.assign(camera, data.camera);
   clampCamera();
   updateSeedHud();

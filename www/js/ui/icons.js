@@ -152,6 +152,13 @@ export const ICONS = {
     c.fillStyle = '#ecf0f1'; c.beginPath(); c.moveTo(2, 16); c.quadraticCurveTo(16, 2, 30, 16); c.quadraticCurveTo(16, 30, 2, 16); c.fill();
     icCircle(c, '#2980b9', 16, 16, 6); icCircle(c, '#1e272e', 16, 16, 3); icCircle(c, '#fff', 14, 14, 1.3);
   },
+  // (#299) the world map: a folded map, land and water on it
+  worldmap: c => {
+    icFill(c, '#e8d9a8', [[4, 7], [12, 4], [20, 7], [28, 4], [28, 25], [20, 28], [12, 25], [4, 28]]);
+    icFill(c, '#5dade2', [[12, 4], [20, 7], [20, 16], [12, 13]]);
+    icFill(c, '#58a55c', [[4, 16], [12, 13], [20, 16], [20, 28], [12, 25], [4, 28]]);
+    icLine(c, '#8d6e3f', 1.2, [[12, 4], [12, 25]]); icLine(c, '#8d6e3f', 1.2, [[20, 7], [20, 28]]);
+  },
   plus: c => { icRound(c, '#2c3e50', 13.5, 5, 5, 22, 2); icRound(c, '#2c3e50', 5, 13.5, 22, 5, 2); },
   minus: c => icRound(c, '#2c3e50', 5, 13.5, 22, 5, 2),
   point: c => {

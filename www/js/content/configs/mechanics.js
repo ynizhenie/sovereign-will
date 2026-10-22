@@ -83,6 +83,9 @@ export const mechanicsConfig = {
   // only on it. waveTiles: how far past it the frontier is (getFrontier: waves come in there, as from the
   // map's edge before)
   territory: { startTiles: 40, buildingTiles: 6, waveTiles: 14, skip: ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'torch', 'wheat', 'sapling', 'apple_sapling'] },
+  // (#299) fog of war (Endless): how far round them the town hall, a building, a watchtower and a settler see
+  // (tiles); worked out every everySeconds; dim: how dark what's been seen but isn't now (0..1)
+  fog: { hallTiles: 12, buildingTiles: 5, towerTiles: 12, settlerTiles: 7, everySeconds: 0.25, dim: 0.55 },
   weather: { firstClearSeconds: 240, seconds: [60, 130], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
     wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,

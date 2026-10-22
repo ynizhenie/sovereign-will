@@ -254,7 +254,20 @@
     <div class="top-actions">
       <button class="btn editor-only" id="editor-undo" data-i18n-title="editor.undo" title="Undo" disabled><i class="ic ic-undo"></i></button>
       <button class="btn editor-only" id="editor-redo" data-i18n-title="editor.redo" title="Redo" disabled><i class="ic ic-redo"></i></button>
+      <button class="btn btn-worldmap" id="btn-world-map" data-action="openWorldMap" data-i18n-title="top.worldMap" title="World map [M]"><i class="ic ic-worldmap"></i></button>
       <button class="btn btn-unpossess" data-action="switchPossession" data-i18n-title="top.possess" title="Possess [Tab]"><i class="ic ic-eye"></i></button>
+    </div>
+  </div>
+
+  <!-- (#299) the world map: the whole map, explored and not; a tap takes the camera there -->
+  <div id="world-map" class="world-map" hidden>
+    <div class="world-map-box">
+      <div class="world-map-head">
+        <b data-i18n="worldMap.title">World map</b>
+        <button class="btn" id="world-map-home" data-i18n="worldMap.home">To the base</button>
+        <button class="btn" id="world-map-close"><i class="ic ic-close"></i></button>
+      </div>
+      <canvas id="world-map-canvas"></canvas>
     </div>
   </div>
 
