@@ -193,8 +193,8 @@ export function applySpikeTraps(dt = 1 / 60) {
 export function addCorpse(unit, side, kind) {
   playSound('death', unit, side === 'enemy');
   const big = isBigBody(unit);
-  // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's
-  const def = getDefinition('settlerTypes', unit.type) || getDefinition('enemies', unit.enemyKey) || {};
+  // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
+  const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
   game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false, look: unit.look, pet: def.pet }); // (its look, #306)
 }
 

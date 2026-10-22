@@ -9,7 +9,7 @@ import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js'
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
 import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
-import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
+import { createConfiguredEnemy, getEnemyDef } from '../../domains/conflict/waves/index.js';
 import { closeOverlays, showNotification } from '../../ui/index.js';
 import { createSettler, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
@@ -120,7 +120,19 @@ export function resetBattleUnits() {
       makeBattleUnit(entry);
     }
   }
+  pickBattleCaptain();
   invalidateAllPaths();
+}
+
+// (#279) a big enough enemy side has a commander with a banner, as a wave's: one of its melee, not a big
+// one, an archer, a healer, a necromancer or a pet
+function pickBattleCaptain() {
+  if (game.enemies.length < GAME_CONFIG.waveMuster.captainFrom || game.enemies.some(en => en.captain)) return;
+  const pick = game.enemies.find(en => {
+    const def = getEnemyDef(en);
+    return en.type === 'normal' && !def.pet && !def.ranged && !def.healer && !def.necromancer;
+  });
+  if (pick) pick.captain = true;
 }
 
 export function startBattleMode() {

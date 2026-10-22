@@ -105,7 +105,7 @@ export function drawEnemies() {
 // One enemy
 export function drawEnemy(en) {
   const pet = getEnemyDef(en).pet;
-  if (pet) { drawPet(en, pet); if (en.markedTarget) drawTargetMark(en); return; } // (#314: a dog, a hellhound, a ghost)
+  if (pet) { drawPet(en, pet, true); if (en.markedTarget) drawTargetMark(en); return; } // (#314: a dog, a hellhound, a ghost)
   {
     const simple = simpleUnit(); // (#306) zoomed out: its shape and colours, no gear
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
@@ -139,8 +139,8 @@ export function drawEnemy(en) {
       at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
       if (!backBack) at(onItsBack);
       if (!handBack) at(inHand);
-      at(() => { if (en.captain) drawEnemyBanner(en); });
     }
+    at(() => { if (en.captain) drawEnemyBanner(en); }); // (the flag shows even zoomed out)
     if (en.orderBubble && en.orderBubble.until > game.pathTick) drawOrderBubble(en.x + en.radius, en.y - en.radius * 1.45 - 14, en.orderBubble.icon);
 
     if (en.markedTarget) drawTargetMark(en);
