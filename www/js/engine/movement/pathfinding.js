@@ -129,6 +129,35 @@ export function isTileBlockedForEnemyStrict(gx, gy) {
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
+// (#299) Which tiles an enemy could get from to the town hall, breaking what it may break on the way (not
+// across water or rock): 1 in a grid (gy * COLS + gx), within the reach bounds. Kept till the world's
+// blocking tiles change. On a continent the frontier runs out to sea; waves come in on land joined to the base
+/** @type {{ signature: number | null, grid: Uint8Array | null }} */
+let enemyReach = { signature: null, grid: null };
+export function getEnemyReach() {
+  const signature = getTileIndex().signature;
+  if (enemyReach.signature === signature && enemyReach.grid && enemyReach.grid.length === game.COLS * game.ROWS) return enemyReach.grid;
+  const grid = new Uint8Array(game.COLS * game.ROWS), b = reachBounds() || { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
+  const hall = getGridPos(townHall.x, townHall.y), queue = [];
+  // (from the tiles round the hall: the hall's own are blocked)
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+    const gx = hall.gx + dx, gy = hall.gy + dy;
+    if (gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS && !isTileBlockedForEnemyPermissive(gx, gy)) { grid[gy * game.COLS + gx] = 1; queue.push(gy * game.COLS + gx); }
+  }
+  for (let i = 0; i < queue.length; i++) {
+    const c = queue[i], cx = c % game.COLS, cy = (c - cx) / game.COLS;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const gx = cx + dx, gy = cy + dy;
+      if (gx < b.gx0 || gy < b.gy0 || gx > b.gx1 || gy > b.gy1) continue;
+      const j = gy * game.COLS + gx;
+      if (grid[j] || isTileBlockedForEnemyPermissive(gx, gy)) continue;
+      grid[j] = 1; queue.push(j);
+    }
+  }
+  enemyReach = { signature, grid };
+  return grid;
+}
+
 export function isTileBlockedForEnemyPermissive(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
   let tx = gx * TILE_SIZE + 15;

@@ -1,7 +1,8 @@
 // Fishing bait, and worms on corpses
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/index.js';
+import { forEachInRect, game } from '../../../engine/world/index.js';
+import { getFrontier } from '../../world/index.js';
 import { canAfford, payCost } from '../../colony/storage/index.js';
 
 // A fisher at the town hall takes one seed as bait for the next catch
@@ -19,10 +20,13 @@ export function takeFishingBait(s) {
   }
 }
 
-// Fish replenish the marked shoals over time. A single fisher's catch rate is slower than regrowth.
+// Fish replenish the marked shoals over time. A single fisher's catch rate is slower than regrowth. (#299) The
+// water within the frontier only: fished nowhere else, and a continent's sea is tens of thousands of tiles
 export function tickFishPopulation(dt) {
   const { fishCapacity, fishRegrowSeconds } = GAME_CONFIG.fishing;
-  for (const tile of game.waterTiles) {
+  const f = getFrontier(), near = [];
+  forEachInRect(game.waterTiles, f.x0, f.y0, f.x1, f.y1, w => { near.push(w); });
+  for (const tile of near) {
     tile.fishCount = Math.min(fishCapacity, Math.max(0, tile.fishCount ?? fishCapacity));
     if (tile.fishCount >= fishCapacity) { tile.fishRegrowTimer = 0; continue; }
     tile.fishRegrowTimer = (tile.fishRegrowTimer || 0) + dt;

@@ -29,7 +29,7 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
  * @typedef {{ signature: number, rocks: Set<string>, water: Set<string>, trees: Set<string>, cacti: Set<string>,
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
  *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
- *   towerArrowBuildings: Set<string> }} TileIndex
+ *   towerArrowBuildings: Set<string>, stamps?: Record<string, string> }} TileIndex
  */
 /** @type {TileIndex | null} */
 export let tileIndex = null;
@@ -46,6 +46,7 @@ let nextId = 1;
 const idOf = o => { let id = ids.get(o); if (!id) ids.set(o, (id = nextId++)); return id; };
 // bumped by what changes a tile's blocking in place, without a list changing
 let tilesVersion = 0;
+const listStampOf = list => (list.length ? `${idOf(list)}:${list.length}:${idOf(list[0])}:${idOf(list[list.length - 1])}` : `${idOf(list)}:0`);
 export function markTilesChanged() { tilesVersion++; tileIndex = null; }
 
 /** @returns {TileIndex} */
@@ -65,31 +66,41 @@ export function getTileIndex() {
     if (list.length) signature = ((signature * 31 + idOf(list[0])) * 31 + idOf(list[list.length - 1])) | 0;
   }
   if (lastIndex && lastIndex.signature === signature) return (tileIndex = lastIndex);
-  tileIndex = {
-    signature,
-    rocks: keys(game.naturalRocks),
-    water: keys(game.waterTiles),
-    trees: keys(game.trees.filter(t => !t.isGrowing)),
-    cacti: keys(game.cacti),
-    boulders: keys(game.boulders),
-    ores: keys([...game.ironOres, ...game.coalOres]),
-    rockAndOre: keys([...game.naturalRocks, ...game.ironOres, ...game.coalOres]), // rock tiles that draw joined up
-    solids: keys([...game.boulders, ...game.cacti, ...game.ironOres, ...game.coalOres]),
-    buildings: keys(game.buildings),
+  // (#299) each set made again only when a list it's made from changed (a tree felled: not the tens of
+  // thousands of water tiles of a big map's sea again)
+  const blocksArrows = Object.values(GAME_CONFIG.mapResources).filter(def => def.blocksArrows).map(def => game[def.list]);
+  const size = game.COLS * 1000 + game.ROWS;
+  /** @type {Record<string, [any[], () => Set<string>]>} */
+  const sets = {
+    rocks: [[game.naturalRocks], () => keys(game.naturalRocks)],
+    water: [[game.waterTiles], () => keys(game.waterTiles)],
+    trees: [[game.trees, tilesVersion], () => keys(game.trees.filter(t => !t.isGrowing))],
+    cacti: [[game.cacti], () => keys(game.cacti)],
+    boulders: [[game.boulders], () => keys(game.boulders)],
+    ores: [[game.ironOres, game.coalOres], () => keys([...game.ironOres, ...game.coalOres])],
+    rockAndOre: [[game.naturalRocks, game.ironOres, game.coalOres], () => keys([...game.naturalRocks, ...game.ironOres, ...game.coalOres])], // rock tiles that draw joined up
+    solids: [[game.boulders, game.cacti, game.ironOres, game.coalOres], () => keys([...game.boulders, ...game.cacti, ...game.ironOres, ...game.coalOres])],
+    buildings: [[game.buildings], () => keys(game.buildings)],
     // (doors are walked through, spikes and traps walked over: none of them a wall)
-    walls: keys(game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable)),
-    spikes: keys(game.buildings.filter(b => b.type === 'spikes')),
+    walls: [[game.buildings], () => keys(game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable))],
+    spikes: [[game.buildings], () => keys(game.buildings.filter(b => b.type === 'spikes'))],
     // iron traps (#248): settlers keep off them, enemies don't see them
-    traps: keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap)),
+    traps: [[game.buildings], () => keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap))],
     // what stops arrows (see blocksArrows / arrowsPass / towerArrowsPass in GAME_CONFIG)
-    arrowBlockers: keys(Object.values(GAME_CONFIG.mapResources).filter(def => def.blocksArrows)
-      .flatMap(def => game[def.list].filter(o => !o.isGrowing))),
-    arrowBuildings: keys(game.buildings.filter(b => !(getDefinition('buildings', b.type) || {}).arrowsPass)),
-    towerArrowBuildings: keys(game.buildings.filter(b => {
+    arrowBlockers: [[...blocksArrows, tilesVersion], () => keys(blocksArrows.flatMap(list => list.filter(o => !o.isGrowing)))],
+    arrowBuildings: [[game.buildings], () => keys(game.buildings.filter(b => !(getDefinition('buildings', b.type) || {}).arrowsPass))],
+    towerArrowBuildings: [[game.buildings], () => keys(game.buildings.filter(b => {
       const def = getDefinition('buildings', b.type) || {};
       return !def.arrowsPass && !def.towerArrowsPass;
-    }))
+    }))]
   };
+  const made = /** @type {any} */ ({ signature, stamps: {} });
+  for (const [name, [from, make]] of Object.entries(sets)) {
+    const stamp = [size, ...from.map(f => (typeof f === 'number' ? f : listStampOf(f)))].join('|');
+    made.stamps[name] = stamp;
+    made[name] = lastIndex && lastIndex.stamps && lastIndex.stamps[name] === stamp ? lastIndex[name] : make();
+  }
+  tileIndex = /** @type {TileIndex} */ (made);
   lastIndex = tileIndex;
   return tileIndex;
 }

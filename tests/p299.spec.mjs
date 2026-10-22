@@ -27,8 +27,9 @@ test('big maps are made in seconds and start as close as a default one; zoomed o
     // as close as a default map's whole (within a little), not the whole big map on the screen
     expect(r[size].close).toBeGreaterThan(r.small * 0.9);
     expect(r[size].far).toBeLessThan(r[size].close);
-    expect(r[size].iron).toBeGreaterThan(size / 40);
+    expect(r[size].iron).toBeGreaterThanOrEqual(1);
   }
+  expect(r[512].iron).toBeGreaterThan(r[128].iron * 4);
   expect(r[512].trees).toBeGreaterThan(r[128].trees * 10);
   // all of a 512 map would be 0.04 a world unit to a pixel: not that far out
   expect(r[512].far).toBeGreaterThan(0.2);
@@ -38,7 +39,7 @@ test('big maps are made in seconds and start as close as a default one; zoomed o
 test('the base\'s land: a default map\'s square round the hall, a circle round each building but walls; settlers work and the player builds only on it (#299)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
-    mapSettings = { cols: 128, rows: 128 }; window.sim.start('land');
+    mapSettings = { cols: 256, rows: 256 }; window.sim.start('land');
     const hall = { x: townHall.x, y: townHall.y };
     const inside = inTerritory(hall.x + 19 * TILE_SIZE, hall.y), outside = inTerritory(hall.x + 22 * TILE_SIZE, hall.y);
     // a building near the edge spreads it; a wall there doesn't

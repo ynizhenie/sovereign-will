@@ -8,7 +8,7 @@ import { camera, clampCamera, getViewRect, onTap } from '../engine/platform/inde
 import { fogAt, getTerritoryBox, hasFog, inTerritory, isVisible } from '../domains/world/index.js';
 
 const COLORS = {
-  grass: [45, 74, 34], water: [44, 131, 189], sand: [201, 166, 107], rock: [52, 73, 94], iron: [170, 183, 195], coal: [20, 22, 26],
+  grass: [62, 96, 44], water: [44, 131, 189], sand: [201, 166, 107], rock: [52, 73, 94], iron: [170, 183, 195], coal: [20, 22, 26],
   tree: [24, 54, 22], building: [233, 196, 106], hall: [241, 196, 15]
 };
 const DARK = [11, 15, 20];

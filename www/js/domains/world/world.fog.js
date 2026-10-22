@@ -35,8 +35,8 @@ export function resetFog() {
     for (let gx = Math.max(0, Math.ceil(hall.gx - half)); gx < Math.min(cols, hall.gx + half); gx++) explored[gy * cols + gx] = 1;
   }
   seenBox = { gx0: 0, gy0: 0, gx1: -1, gy1: -1 };
-  clock = Infinity; // (worked out on the first tick)
   paintAll();
+  clock = Infinity; tickFog(0); // (what's seen at once, not after the first moment)
 }
 
 // For a save: what's been explored, as text (the tiles' 0s and 1s, eight to a letter)

@@ -8,7 +8,7 @@ import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { armorOf } from '../../colony/equipment/index.js';
-import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
+import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { getFrontier, getFrontierTiles, isNight, isOutskirts } from '../../world/index.js';
@@ -27,7 +27,9 @@ export function getRandomBorderPos() {
   const f = getFrontierTiles();
   let side = Math.floor(rand() * 4);
   let gx = 0, gy = 0;
-  for (let attempt = 0; attempt < 30; attempt++) {
+  const joined = getEnemyReach();
+  const ok = (x, y) => !isTileBlockedForEnemyStrict(x, y) && joined[y * game.COLS + x] === 1;
+  for (let attempt = 0; attempt < 60; attempt++) {
     if (attempt) side = Math.floor(rand() * 4);
     if (side === 0) {
       gx = f.gx0 + Math.floor(rand() * (f.gx1 - f.gx0 + 1));
@@ -42,9 +44,22 @@ export function getRandomBorderPos() {
       gx = f.gx1 - Math.floor(rand() * BORDER_MARGIN);
       gy = f.gy0 + Math.floor(rand() * (f.gy1 - f.gy0 + 1));
     }
-    // (out in the open on a big map: not inside a tree, rock or the water; a map's own edge is clear)
-    if (!isTileBlockedForEnemyStrict(gx, gy)) break;
+    // (out in the open on a big map, on land joined to the base: not inside a tree, rock or the sea; a map's
+    // own edge is clear)
+    if (ok(gx, gy)) return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
   }
+  // none found by chance (a frontier mostly sea): the band's tiles that will do, one of them
+  const band = [];
+  for (let y = f.gy0; y <= f.gy1; y++) for (let x = f.gx0; x <= f.gx1; x++) if (isOutskirts(x, y) && ok(x, y)) band.push({ x, y });
+  // (a base on a narrow neck of land, the sea all along the frontier: the shore farthest out it's joined to)
+  if (!band.length) {
+    const hall = getGridPos(townHall.x, townHall.y);
+    for (let y = f.gy0; y <= f.gy1; y++) for (let x = f.gx0; x <= f.gx1; x++) {
+      if (!ok(x, y) || Math.hypot(x - hall.gx, y - hall.gy) < 16) continue;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !joined[(y + dy) * game.COLS + x + dx])) band.push({ x, y });
+    }
+  }
+  if (band.length) { const t = band[Math.floor(rand() * band.length)]; return { x: t.x * TILE_SIZE + 15, y: t.y * TILE_SIZE + 15 }; }
   return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
 }
 
