@@ -46,9 +46,11 @@ test('marked fishing spots show moving fish, deplete when caught, and replenish 
   await page.click('#play-button');
   const result = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
-    // (the water nearest the base: fish come back within its frontier, #299; a continent's first tile is out at sea)
+    // Fish only come back within the frontier (#299).
     const near = w => Math.hypot(w.x - townHall.x, w.y - townHall.y);
-    const spot = game.waterTiles.reduce((best, w) => (!best || near(w) < near(best) ? w : best), null) || { x: townHall.x + 60, y: townHall.y + 60 };
+    const frontier = getFrontier();
+    const spot = game.waterTiles.filter(w => w.x >= frontier.x0 && w.x < frontier.x1 && w.y >= frontier.y0 && w.y < frontier.y1)
+      .reduce((best, w) => (!best || near(w) < near(best) ? w : best), null) || { x: townHall.x + 60, y: townHall.y + 60 };
     if (!game.waterTiles.includes(spot)) game.waterTiles.push(spot);
     spot.isFishing = true;
     spot.fishCount = GAME_CONFIG.fishing.fishCapacity;

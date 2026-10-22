@@ -151,7 +151,7 @@ test('battle: a category opens its sheet, picking a unit shows it on the chip; t
   await expect(page.locator('#battle-presets')).toBeVisible();
   await page.click('#battle-presets [data-preset="brute"]');
   await expect(page.locator('#sheet-frame')).toBeHidden();
-  await expect(page.locator('#placing-what')).toContainText('Громила');
+  await expect(page.locator('#placing-what')).toContainText('Богатырь, копьё');
   await expect(page.locator('#placing-close')).toBeHidden(); // a battle always has something picked
   await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });

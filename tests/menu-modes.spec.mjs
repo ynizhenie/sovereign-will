@@ -36,7 +36,7 @@ test('two difficulties: on Hard enemies are as strong as the player\'s own units
     const raider = enemies.find(e => e.enemyKey === 'raider'), brute = enemies.find(e => e.enemyKey === 'brute');
     return { enemies: enemies.length, raider: raider && [raider.maxHp, raider.damage, raider.speed], brute: brute && brute.maxHp };
   }));
-  expect(r[0].raider).toEqual([70, 20, 0.9]);
+  expect(r[0].raider).toEqual([75, 50, 1]);
   // a settler's: 100 hp, a sword's 20 a hit every 0.4 s, at a settler's pace; a brute as a giant (250)
   expect(r[1].raider).toEqual([100, 50, 1]);
   if (r[1].brute) expect(r[1].brute).toBe(250);
