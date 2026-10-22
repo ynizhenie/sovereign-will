@@ -8,7 +8,7 @@ import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
 import { addCarryLoad, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards, someEnemyNear } from '../../../engine/movement/index.js';
-import { isInSafeArea } from '../../conflict/combat/index.js';
+import { isInSafeArea, TENT_ASSAULT_FIGHT_DISTANCE } from '../../conflict/combat/index.js';
 import { huntBoar } from '../hunting/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 
@@ -122,7 +122,8 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
 
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building
-    const usable = r => !skipped(r) && (!r.priority || r.priority === 0) && isInSafeArea(r.x, r.y) && withinNight(r);
+    const usable = r => !skipped(r) && (!r.priority || r.priority === 0) && isInSafeArea(r.x, r.y) && withinNight(r) &&
+      isSafeFromTentAssault(s, r, tick);
     // (#306) from the list of what this gear can work, not from every resource on the base's land
     let availableRes = [];
     for (const r of workableWithGear(s, tick)) if (!getMapResourceDef(tick.resourceKind.get(r)).markOnly && usable(r)) availableRes.push(r);
@@ -145,6 +146,17 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
     }
   }
   return assignedRes;
+}
+
+function isSafeFromTentAssault(settler, resource, tick) {
+  if (!tick.tentAssault || settler.role !== 'worker' || settler.weapon !== 'fist' || tick.workersHelpTents) return true;
+  const dx = resource.x - settler.x, dy = resource.y - settler.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const safeDistance = TENT_ASSAULT_FIGHT_DISTANCE + TILE_SIZE;
+  return game.enemyTents.every(tent => {
+    const along = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((tent.x - settler.x) * dx + (tent.y - settler.y) * dy) / lengthSquared));
+    return Math.hypot(tent.x - (settler.x + along * dx), tent.y - (settler.y + along * dy)) >= safeDistance;
+  });
 }
 
 // Work a resource the settler is standing next to, the way its GAME_CONFIG.mapResources `work` says
