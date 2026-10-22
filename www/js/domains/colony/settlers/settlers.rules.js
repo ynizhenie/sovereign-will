@@ -28,9 +28,22 @@ function showPopLimit() {
   showNotification(home ? t('pop.limit', { name: getDefinition('buildings', home.id).label, icon: home.icon }) : t('pop.limitNoHome'), true);
 }
 
-// Raised zombies don't count: they're temporary
+// Raised zombies don't count: they're temporary; nor one let go, on its way out (#314)
 export function getCurrentPop() {
-  return game.settlers.reduce((sum, s) => sum + (s.temporary ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
+  return game.settlers.reduce((sum, s) => sum + (s.temporary || s.leaving ? 0 : GAME_CONFIG.settlerTypes[s.type].population), 0);
+}
+
+// (#314) Which pet it is (a dog, a beast, a ghost), or null for anyone else; a ghost can't be hurt or hit
+export function petKindOf(unit) {
+  return (getDefinition('settlerTypes', unit.type) || {}).pet || null;
+}
+export const isPet = unit => !!petKindOf(unit);
+export const isUntouchable = unit => petKindOf(unit) === 'ghost';
+
+// A pet's look: a female or a male (drawn a little smaller), one of its kind's coats
+export function newPetLook(kind) {
+  const c = GAME_CONFIG.pets;
+  return { female: Math.random() < c.femaleChance, coat: Math.floor(Math.random() * c.coats[kind].length), style: 0, shade: 0 };
 }
 
 // A big body: a giant or a big zombie (settlerTypes with big), or a big enemy
@@ -58,8 +71,10 @@ export function createSettler(typeKey, id, x, y, extra = {}) {
     id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false,
-    look: extra.look || newLook() // (#306)
+    look: extra.look || (t.pet ? newPetLook(t.pet) : newLook()) // (#306; a pet's its own, #314)
   };
+  if (t.pet) s.role = 'pet';
+  if (t.pet === 'ghost') Object.assign(s, { ghostly: true }); // (nobody pushes it or is pushed by it)
   if (t.archer) Object.assign(s, { weapon: t.archerWeapon || 'bow', role: 'archer', quiver: true, quiverCapacity: 12, arrows: 12 });
   return s;
 }
@@ -90,12 +105,24 @@ export function getUpgrade() {
   return from ? { from, to, normal: GAME_CONFIG.settlerTypes[from], big: GAME_CONFIG.settlerTypes[to] } : null;
 }
 
+// (#314) Who's turned big first: a soldier before a worker, then by its weapon (iron, then any, then fists) and
+// its armour (iron, then leather) and a shield
+const WEAPON_RANK = { iron: 3, plain: 2, club: 1, fist: 0 };
+export function upgradeRank(s) {
+  const weapon = s.weapon === 'fist' ? WEAPON_RANK.fist : s.weapon.startsWith('iron_') ? WEAPON_RANK.iron : s.weapon === 'club' ? WEAPON_RANK.club : WEAPON_RANK.plain;
+  const armour = armorOf(s) ? (armorOf(s).armorKind === 'iron' ? 2 : 1) : 0;
+  return (s.role !== 'worker' ? 100 : 0) + weapon * 10 + armour * 3 + (hasWorkingShield(s) ? 1 : 0);
+}
+
 export function upgradeToBig(target) {
   const upgrade = getUpgrade();
   if (!upgrade) return;
   const { normal, big } = upgrade;
   if (!target) target = getSelectedSettler() || getPossessed();
-  if (!target || target.type !== upgrade.from) target = game.settlers.find(s => s.type === upgrade.from);
+  // (#314) none picked: the best armed and armoured first, soldiers before workers
+  if (!target || target.type !== upgrade.from) {
+    target = game.settlers.filter(s => s.type === upgrade.from && !s.leaving).sort((a, b) => upgradeRank(b) - upgradeRank(a))[0];
+  }
 
   if (!target || target.type !== upgrade.from) {
     showNotification(t('upgrade.noone'), true);
@@ -121,8 +148,30 @@ export function upgradeToBig(target) {
   showNotification(t('upgrade.done', { name: big.label }), false);
 }
 
+// (#314) Let one go (reverse hiring): what it wears and holds into the store (and its load into the stock),
+// and it walks away out of the base's land and is gone (see leaveColony); its place in the population free
+// at once. A raised zombie can't be let go: it's not hired
+export function dismissSettler(s) {
+  if (!s || s.leaving || s.temporary || !game.settlers.includes(s)) return false;
+  const keep = (category, id) => { game.armory[`${category}:${id}`] = (game.armory[`${category}:${id}`] || 0) + 1; };
+  if (s.weapon && s.weapon !== 'fist') keep('weapons', s.weapon);
+  if (s.tool && s.tool !== 'none') keep('tools', s.tool);
+  const armour = armorOf(s);
+  if (armour) keep('gear', armour.id);
+  for (const id of Object.keys(GAME_CONFIG.gear)) if (!GAME_CONFIG.gear[id].armorKind && hasGear(s, id)) keep('gear', id);
+  if (s.carrying && s.carrying.type && stock[s.carrying.type] !== undefined) stock[s.carrying.type] += s.carrying.amount || 0;
+  Object.assign(s, { leaving: true, weapon: 'fist', tool: 'none', role: 'worker', armor: null, carrying: null, targetEquipment: null, isPossessed: false, markTarget: null, path: [], pathTarget: null });
+  for (const id of Object.keys(GAME_CONFIG.gear)) if (!GAME_CONFIG.gear[id].armorKind && s[id]) s[id] = false;
+  s.hp = Math.min(s.hp, s.maxHp = GAME_CONFIG.settlerTypes[s.type].hp);
+  if (game.selectedSettler === s) game.selectedSettler = null;
+  says(s, 'dismissed');
+  showNotification(t('dismiss.done', { name: GAME_CONFIG.settlerTypes[s.type].label }), false);
+  return true;
+}
+
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
 export function damageSettler(settler, amount, attacker = null) {
+  if (isUntouchable(settler)) return; // (a ghost, #314)
   let damage = armorOf(settler) ? amount * (1 - armorOf(settler).damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   const wasWell = settler.hp >= settler.maxHp * 0.3;
@@ -211,6 +260,7 @@ export function tickMeals(dt) {
       if (s.hunger === undefined) s.hunger = meals.seconds * (meals.firstShare + (1 - meals.firstShare) * rand());
       // its meal eaten here, not only while goEat runs: put to bed, called away or in a wave, it's done in its time
       // and doesn't stay frozen at its mouth (#279); asleep, it's put away
+      if (isPet(s)) continue; // (fed their own way, #314)
       if (s.eating) { s.eating.left -= dt; if (s.eating.left <= 0 || s.asleep) s.eating = null; }
       if (s.asleep) continue; // (it stands still in its sleep, #257)
       s.hunger -= dt * (isNight() ? meals.nightFactor : 1); // (awake at night, slower, #279)

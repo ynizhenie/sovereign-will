@@ -19,6 +19,14 @@ export const enemiesConfig = {
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
     // a savage with nothing in his hands: the battles' roster has him (bare-handed), no wave sends one
     // (no waveKey, so the wave kinds leave him out)
+    // (#314) each faction's pet on the enemy's side: in Battles, and now and then in a wave from fromWave
+    // (waveScale of its waveKey's count); a ghost flies into a settler (it panics) and is gone, and can't be hurt
+    raider_dog: { id: 'raider_dog', pet: 'dog', hp: 45, speed: 1.35, damage: 12, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 9, waveKey: 'raider', waveScale: 0.3, fromWave: 5, reach: 4, siege: { buildings: 3, resources: 0 } },
+    demon_beast: { id: 'demon_beast', pet: 'beast', hp: 60, speed: 1.3, damage: 14, reward: { food: 1 }, weapon: 'fist',
+      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.3, fromWave: 5, reach: 4, siege: { buildings: 3, resources: 0 } },
+    undead_ghost: { id: 'undead_ghost', pet: 'ghost', hp: 30, speed: 1.6, damage: 0, reward: {}, weapon: 'fist',
+      type: 'normal', radius: 8, waveKey: 'raider', waveScale: 0.25, fromWave: 5, reach: 4, siege: { buildings: 0, resources: 0 } },
     raider_fist: { id: 'raider_fist', hp: 50, speed: 0.95, damage: 8, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, reach: 6, siege: { buildings: 5, resources: 1 } },
     raider: { id: 'raider', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',

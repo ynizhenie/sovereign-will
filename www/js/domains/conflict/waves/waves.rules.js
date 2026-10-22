@@ -12,7 +12,7 @@ import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict } from '
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { getFrontier, getFrontierTiles, isNight, isOutskirts } from '../../world/index.js';
-import { newLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
+import { newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 
@@ -74,7 +74,8 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
   const enemy = {
-    look: newLook(), // (#306: a man or a woman, one of their looks)
+    look: definition.pet ? newPetLook(definition.pet) : newLook(), // (#306: a man or a woman, one of their looks; a pet's its own, #314)
+    ghostly: definition.pet === 'ghost', // (#314: through everyone)
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
     hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
@@ -252,7 +253,7 @@ export function startNextWave() {
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);
   };
-  const waveKinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id));
+  const waveKinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id) && (!def.fromWave || game.waveNum >= def.fromWave)); // (a pet from its wave on, #314)
 
   if (group) {
     // every enemy kind of the enemy's faction with a waveKey, in config order

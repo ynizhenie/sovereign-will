@@ -6,7 +6,9 @@ import { game } from '../engine/world/index.js';
 import { openHallCard } from './building-card.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
-import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { deselectSettler, dismissSettler, getSelectedSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { t } from '../engine/platform/index.js';
+import { setRichText } from './icons.js';
 import { togglePause } from '../app/index.js';
 import { setMode } from './map-input.js';
 import { closeOverlays, reopenSheet, stopPlacing, toggleResources, toggleSheet } from './sheets.js';
@@ -34,8 +36,23 @@ export const PAGE_ACTIONS = {
   reopenSheet: () => reopenSheet(),
   stopPlacing: () => stopPlacing(),
   toggleResources: () => toggleResources(),
-  openWorldMap: () => openWorldMap() // (#299)
+  openWorldMap: () => openWorldMap(), // (#299)
+  dismissSelected: (arg, button) => dismissSelected(button) // (#314)
 };
+
+// (#314) Letting the selected settler go: the first tap asks ("Let go?"), a second within 3 s does it
+function dismissSelected(button) {
+  const b = button || document.getElementById('btn-dismiss');
+  if (!b.classList.contains('asking')) {
+    b.classList.add('asking');
+    setRichText(b, t('btn.dismissAsk'));
+    setTimeout(() => { b.classList.remove('asking'); setRichText(b, t('btn.dismiss')); }, 3000);
+    return;
+  }
+  b.classList.remove('asking');
+  setRichText(b, t('btn.dismiss'));
+  dismissSettler(getSelectedSettler());
+}
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initPageActions() {

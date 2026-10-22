@@ -106,7 +106,7 @@ export function tickFog(dt) {
   const c = config();
   look(townHall.x, townHall.y, c.hallTiles);
   for (const b of game.buildings) look(b.x, b.y, b.type === 'watchtower' ? c.towerTiles : c.buildingTiles);
-  for (const s of game.settlers) if (s.hp > 0) look(s.x, s.y, c.settlerTiles);
+  for (const s of game.settlers) if (s.hp > 0 && !s.leaving) look(s.x, s.y, c.settlerTiles); // (not one let go, #314)
   seenBox = box;
   // painted again where it changed: the old box and the new
   paint(Math.min(before.gx0, box.gx0), Math.min(before.gy0, box.gy0), Math.max(before.gx1, box.gx1), Math.max(before.gy1, box.gy1));
