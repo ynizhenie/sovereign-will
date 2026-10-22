@@ -21,7 +21,7 @@ export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean | string,
  *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean,
- *   look?: { female: boolean, style: number, shade: number, coat?: number } }[],
+ *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
 export const battle = {
@@ -78,7 +78,8 @@ export function makeBattleUnit(entry) {
     return;
   }
   const archer = isBowWeapon(preset.weapon);
-  const s = createSettler(preset.type, battle.nextId++, entry.x, entry.y, { look });
+  const id = entry.id ?? (entry.id = battle.nextId++); // (kept: a tap re-makes the line-up, a pet's tail shouldn't jump)
+  const s = createSettler(preset.type, id, entry.x, entry.y, { look });
   Object.assign(s, {
     weapon: preset.weapon, tool: preset.tool || 'none',
     role: s.role === 'pet' ? 'pet' : archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
@@ -120,19 +121,27 @@ export function resetBattleUnits() {
       makeBattleUnit(entry);
     }
   }
-  pickBattleCaptain();
+  pickBattleCaptains();
   invalidateAllPaths();
 }
 
-// (#279) a big enough enemy side has a commander with a banner, as a wave's: one of its melee, not a big
-// one, an archer, a healer, a necromancer or a pet
-function pickBattleCaptain() {
-  if (game.enemies.length < GAME_CONFIG.waveMuster.captainFrom || game.enemies.some(en => en.captain)) return;
-  const pick = game.enemies.find(en => {
-    const def = getEnemyDef(en);
-    return en.type === 'normal' && !def.pet && !def.ranged && !def.healer && !def.necromancer;
-  });
-  if (pick) pick.captain = true;
+// (#279) a big enough side has a commander with a banner, as a wave's: the enemy one of its normal melee
+// (not a big one, an archer, a healer, a necromancer or a pet); the player's a soldier, or an archer with
+// none. Both sides here: a battle has no banner gear to hand out.
+function pickBattleCaptains() {
+  const from = GAME_CONFIG.waveMuster.captainFrom;
+  if (game.enemies.length >= from && !game.enemies.some(en => en.captain)) {
+    const pick = game.enemies.find(en => {
+      const def = getEnemyDef(en);
+      return en.type === 'normal' && !def.pet && !def.ranged && !def.healer && !def.necromancer;
+    });
+    if (pick) pick.captain = true;
+  }
+  if (game.settlers.length >= from && !game.settlers.some(s => s.banner)) {
+    const pick = game.settlers.find(s => s.role === 'soldier' && !s.isPossessed) ||
+      game.settlers.find(s => s.role === 'archer' && !s.isPossessed);
+    if (pick) pick.banner = true;
+  }
 }
 
 export function startBattleMode() {
