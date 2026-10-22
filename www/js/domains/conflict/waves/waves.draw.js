@@ -9,6 +9,7 @@ import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index
 import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
+import { drawPet } from '../../colony/pets/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 import { castShadow, isExplored, isVisible } from '../../world/index.js';
 
@@ -95,6 +96,8 @@ export function drawEnemies() {
 
 // One enemy
 export function drawEnemy(en) {
+  const pet = getEnemyDef(en).pet;
+  if (pet) { drawPet(en, pet); if (en.markedTarget) drawTargetMark(en); return; } // (#314: a dog, a hellhound, a ghost)
   {
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
     // (#251); their skin their faction's

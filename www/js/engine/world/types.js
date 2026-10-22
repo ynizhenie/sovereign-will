@@ -111,6 +111,16 @@
  * @property {Object | null} [corpseTarget]  the corpse it's going to carry out of the base (#199)
  * @property {number} [burning]      seconds left on fire
  * @property {number} [temporary]    a raised zombie's seconds left
+ * @property {boolean} [leaving]     let go (#314): walking away out of the colony
+ * @property {{ x: number, y: number }} [leaveTo]  where it's walking to, to be gone
+ * @property {boolean} [leftColony]  gone: taken off the list after the tick
+ * @property {number} [petHunger]   a pet's hunger (#314): 1 and more, hungry
+ * @property {boolean} [petHungry]
+ * @property {number} [petSleep]    a pet's sleep, seconds left
+ * @property {number} [ghostGone]   a ghost gone after flying into an enemy, seconds till it's back
+ * @property {any} [escort]          the necromancer a ghost goes to a fight with
+ * @property {any} [feeding]         the pet a settler is feeding
+ * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {boolean} [crumbled]
  * @property {boolean} [deadProcessed]
  * @property {Building} [sacrificeAt]
@@ -122,6 +132,7 @@
 /**
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
+ * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)

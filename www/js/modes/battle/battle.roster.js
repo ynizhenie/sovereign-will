@@ -16,18 +16,20 @@ export const BATTLE_PLAYER_UNITS = {
     { id: 'fist', type: 'normal', weapon: 'fist' }, { id: 'club', type: 'normal', weapon: 'club' },
     { id: 'sword', type: 'normal', weapon: 'sword' }, { id: 'spear', type: 'normal', weapon: 'spear' },
     { id: 'iron_sword', type: 'normal', weapon: 'iron_sword' }, { id: 'iron_spear', type: 'normal', weapon: 'iron_spear' },
-    { id: 'bow', type: 'normal', weapon: 'bow' }, { id: 'big_club', type: 'big', weapon: 'club' }, { id: 'big_spear', type: 'big', weapon: 'spear' }
+    { id: 'bow', type: 'normal', weapon: 'bow' }, { id: 'big_club', type: 'big', weapon: 'club' }, { id: 'big_spear', type: 'big', weapon: 'spear' },
+    { id: 'dog', type: 'dog', weapon: 'fist' } // (#314: the pets)
   ],
   undead: [
     { id: 'zombie', type: 'zombie', weapon: 'fist' }, { id: 'zombie_club', type: 'zombie', weapon: 'club' },
     { id: 'zombie_sword', type: 'zombie', weapon: 'sword' }, { id: 'zombie_bow', type: 'zombie', weapon: 'bow' },
-    { id: 'necromancer', type: 'zombie', weapon: 'fist', tool: 'necro_staff' }, { id: 'big_zombie', type: 'big_zombie', weapon: 'club' }
+    { id: 'necromancer', type: 'zombie', weapon: 'fist', tool: 'necro_staff' }, { id: 'big_zombie', type: 'big_zombie', weapon: 'club' },
+    { id: 'ghost', type: 'ghost', weapon: 'fist' }
   ],
   demons: [
     { id: 'imp_fist', type: 'imp', weapon: 'fist' }, { id: 'imp', type: 'imp', weapon: 'club' },
     { id: 'imp_sword', type: 'imp', weapon: 'sword' }, { id: 'imp_spear', type: 'imp', weapon: 'spear' },
     { id: 'imp_bow', type: 'imp', weapon: 'bow' }, { id: 'demon', type: 'demon', weapon: 'club' },
-    { id: 'demon_spear', type: 'demon', weapon: 'spear' }
+    { id: 'demon_spear', type: 'demon', weapon: 'spear' }, { id: 'beast', type: 'beast', weapon: 'fist' }
   ]
 };
 

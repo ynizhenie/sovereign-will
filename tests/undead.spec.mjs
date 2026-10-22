@@ -6,7 +6,7 @@ test('the undead: zombies only to hire, the staff, no farming or food, blight; g
   const r = await sim(page, 'undeadColony');
   expect(r.startUnits).toEqual(['zombie', 'zombie', 'zombie']);
   expect(r.startStaffs).toBe(1); // a necromancer to start with (#253)
-  expect(r.hire).toEqual(['btn-hire-zombie', 'btn-hire-big_zombie', 'btn-upgrade']);
+  expect(r.hire).toEqual(['btn-hire-zombie', 'btn-hire-big_zombie', 'btn-hire-ghost', 'btn-upgrade']); // (and their pet, #314)
   expect(r.tools).toContain('btn-necro_staff');
   expect(r.tools).not.toContain('btn-hoe');
   expect(r.tools).not.toContain('btn-medbag');

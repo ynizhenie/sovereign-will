@@ -506,6 +506,30 @@ export const ICONS = {
   },
   staff: c => { icLine(c, '#8e5a2b', 3, [[8, 28], [22, 8]]); icCircle(c, '#bb8fce', 23, 7, 4.5); icCircle(c, '#e8daef', 22, 6, 1.5); },
 
+  // (#314) the pets: a dog side on, a hellhound with horns and burning eyes, a ghost's pale sheet
+  dog: c => {
+    icLine(c, '#5d4037', 2.5, [[7, 15], [4, 9]]);
+    icEllipse(c, '#8d6e63', 14, 18, 9, 5.5);
+    for (const x of [8, 12, 17, 21]) icRect(c, '#5d4037', x - 1, 21, 2.5, 7);
+    icEllipse(c, '#8d6e63', 23, 12, 5.5, 4.5); icEllipse(c, '#8d6e63', 27.5, 14, 3, 2.2);
+    icEllipse(c, '#5d4037', 20.5, 12.5, 2, 4, 0.5); icCircle(c, '#1b1b1f', 29.5, 13.5, 1.1); icCircle(c, '#1b1b1f', 24.5, 11, 1);
+  },
+  beast: c => {
+    icLine(c, '#3b0f0b', 2.5, [[7, 15], [4, 9]]); icCircle(c, '#e8572a', 4, 9, 2);
+    icEllipse(c, '#7b241c', 14, 18, 9, 5.5);
+    for (const x of [9, 12.5, 16]) icFill(c, '#3b0f0b', [[x - 1.5, 13.5], [x, 9.5], [x + 1.5, 13.5]]);
+    for (const x of [8, 12, 17, 21]) icRect(c, '#3b0f0b', x - 1, 21, 2.5, 7);
+    icEllipse(c, '#7b241c', 23, 12, 5.5, 4.5); icEllipse(c, '#7b241c', 27.5, 14, 3, 2.2);
+    icFill(c, '#d5c4a1', [[21, 9], [24, 3], [25, 9]]); icCircle(c, '#ffb347', 24.5, 11, 1.4);
+  },
+  ghost: c => {
+    c.globalAlpha = 0.9;
+    c.fillStyle = '#ecf0f1'; c.beginPath(); c.moveTo(7, 16); c.arc(16, 13, 9, Math.PI, 0); c.lineTo(25, 26);
+    for (let k = 0; k <= 4; k++) c.lineTo(25 - k * 4.5, k % 2 ? 23 : 28);
+    c.closePath(); c.fill(); c.globalAlpha = 1;
+    icEllipse(c, '#2c3e50', 13, 13, 1.8, 2.6); icEllipse(c, '#2c3e50', 19, 13, 1.8, 2.6); icEllipse(c, '#2c3e50', 16, 19, 1.6, 2);
+  },
+
   // ---- The demons
   imp: c => {
     icFill(c, '#2c2c34', [[8, 8], [11, 2], [13, 9]]); icFill(c, '#2c2c34', [[24, 8], [21, 2], [19, 9]]);

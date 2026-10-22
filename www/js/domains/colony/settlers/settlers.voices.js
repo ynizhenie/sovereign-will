@@ -5,6 +5,7 @@
 // most every globalGap seconds, the same one speaking at most every ownGap.
 
 import { game } from '../../../engine/world/index.js';
+import { isPet } from './settlers.rules.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { playSound } from '../../../app/index.js';
@@ -27,7 +28,7 @@ function voiceOf(unit) {
 // A unit says something for `event` of `faction` ('humans', 'demons', 'undead'): true if it spoke. urgent
 // (a wave, badly hurt) waits less for others
 export function speak(unit, faction, event, urgent = false) {
-  if (!unit || game.gameMode === 'editor') return false;
+  if (!unit || game.gameMode === 'editor' || isPet(unit)) return false; // (a pet barks, it doesn't talk, #314)
   const now = clock;
   if (now - lastSpoke < (urgent ? VOICE.globalGap / 2 : VOICE.globalGap)) return false;
   if (now - (unit.spokeAt || -Infinity) < VOICE.ownGap) return false;
