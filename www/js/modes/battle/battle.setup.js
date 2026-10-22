@@ -11,7 +11,7 @@ import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equip
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { closeOverlays, showNotification } from '../../ui/index.js';
-import { createSettler, newLook } from '../../domains/colony/settlers/index.js';
+import { createSettler, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { getBattlePreset } from './battle.roster.js';
@@ -21,7 +21,7 @@ export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean | string,
  *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean,
- *   look?: { female: boolean, style: number, shade: number } }[],
+ *   look?: { female: boolean, style: number, shade: number, coat?: number } }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
 export const battle = {
@@ -37,7 +37,7 @@ export const battle = {
   resultTimer: 0,
   nextId: 1,
   savedMapSettings: null,
-  difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: on Hard the red units are as strong as yours
+  difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   auto: true,           // (#255) yours fight by themselves; off: they hold, and go where they're told
   savedDifficulty: null // the Endless choice, back when the battle's left
 };
@@ -62,7 +62,9 @@ export function makeBattleUnit(entry) {
   const preset = getBattlePreset(entry.presetId);
   // (#306) the look it was placed with, kept on its line-up entry: a tap makes the whole line-up again,
   // and a new look every time would give every unit another face — and another man or a woman
-  const look = entry.look || (entry.look = newLook());
+  // (#314) a pet's its own look: a coat of its kind, not a man's
+  const pet = (GAME_CONFIG.settlerTypes[preset.type] || GAME_CONFIG.enemies[preset.enemy] || {}).pet;
+  const look = entry.look || (entry.look = pet ? newPetLook(pet) : newLook());
   if (preset.enemy) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;

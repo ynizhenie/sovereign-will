@@ -77,12 +77,12 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
     look: definition.pet ? newPetLook(definition.pet) : newLook(), // (#306: a man or a woman, one of their looks; a pet's its own, #314)
     ghostly: definition.pet === 'ghost', // (#314: through everyone)
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
-    hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp,
+    hp: definition.hp, maxHp: definition.hp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
   };
-  if ((game.gameMode === 'endless' || game.gameMode === 'battle') && getDifficulty().likePlayer) asStrongAsPlayers(enemy, definition);
+  asPlayerUnit(enemy, definition); // (every mode, #255)
   if (definition.quiver) {
     enemy.arrows = definition.quiver.arrows;
     game.enemyArrowStock += definition.quiver.tentStock;
@@ -90,20 +90,48 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   return enemy;
 }
 
-// Hard (#255): an enemy as strong as the player's own unit of its kind: its faction's settler type (big for
-// a big one) gives the hp and the speed, its weapon in a settler's hands the damage (per second in melee, per
-// arrow and how often for an archer); whichever is more of the two, so it's never weaker than it was
-function asStrongAsPlayers(enemy, definition) {
-  const units = enemyFactionOf(definition.id).units || ['normal', 'big'];
-  const kind = GAME_CONFIG.settlerTypes[definition.type === 'big' ? units[1] || units[0] : units[0]] || GAME_CONFIG.settlerTypes.normal;
-  const weapon = (getDefinition('weapons', enemy.weapon) || GAME_CONFIG.weapons.fist).combat;
-  const hp = kind.hp * getDifficulty().enemyHp;
-  enemy.hp = enemy.maxHp = Math.max(enemy.hp, hp);
-  enemy.speed = Math.max(enemy.speed, kind.speed);
+// The player's own unit an enemy is: its faction's settler kind (a big one's the big kind, a pet's its
+// own) and what it carries; a necromancer's staff comes with its trade
+export function enemyPlayerUnit(definition) {
+  const faction = enemyFactionOf(definition.id);
+  const units = faction.units || ['normal', 'big'];
+  const type = definition.pet || (definition.type === 'big' ? units[1] || units[0] : units[0]);
+  const kind = GAME_CONFIG.settlerTypes[type] || GAME_CONFIG.settlerTypes.normal;
+  return { faction: faction.id, type: kind.id, weapon: definition.weapon || 'fist', tool: definition.tool || (definition.necromancer ? 'necro_staff' : null) };
+}
+
+// What the player's own unit of an enemy's kind hits for: a hit, and seconds between hits (a pet's bite)
+function unitHit(definition) {
+  const unit = enemyPlayerUnit(definition);
+  const kind = GAME_CONFIG.settlerTypes[unit.type];
+  if (kind.bite) return { kind, hit: kind.bite.damage, cooldown: kind.bite.cooldown };
+  if (kind.pet) return { kind, hit: 0, cooldown: 1 }; // (a ghost dives, it doesn't bite, #314)
+  const weapon = getDefinition('weapons', unit.weapon) || GAME_CONFIG.weapons.fist;
+  const tool = unit.tool ? getDefinition('tools', unit.tool) : null;
+  const hit = (unit.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage) * kind.damageMultiplier;
+  return { kind, hit, cooldown: weapon.combat.cooldown };
+}
+
+// (#255) Every enemy is exactly the player's own unit of its kind: its kind's speed, the damage in a
+// settler's hands (per second in melee, per arrow and how often for an archer); only the hp is the
+// difficulty's. hitDamage is a hit's, the number a tile shows
+function asPlayerUnit(enemy, definition) {
+  const hpFactor = getDifficulty().enemyHp;
+  const { kind, hit, cooldown } = unitHit(definition);
+  enemy.hp = enemy.maxHp = kind.hp * hpFactor;
+  enemy.speed = kind.speed;
+  enemy.hitDamage = hit;
   if (definition.ranged) {
-    enemy.damage = Math.max(enemy.damage, weapon.damage * kind.damageMultiplier);
-    enemy.shotCooldown = Math.min(definition.ranged.cooldown, weapon.cooldown);
-  } else enemy.damage = Math.max(enemy.damage, (weapon.damage / weapon.cooldown) * kind.damageMultiplier);
+    enemy.damage = hit;
+    enemy.shotCooldown = cooldown;
+  } else enemy.damage = hit / cooldown;
+}
+
+// An enemy kind's melee damage a second as the player's own unit of its kind would deal (an archer out of
+// arrows fights like its melee kind)
+export function enemyDamagePerSecond(definition) {
+  const { hit, cooldown } = unitHit(definition);
+  return hit / cooldown;
 }
 
 // The faction an enemy kind is of (its list of enemies has it), else the enemy's
@@ -111,13 +139,13 @@ export function enemyFactionOf(id) {
   return Object.values(GAME_CONFIG.factions).find(f => (f.enemies || []).includes(id)) || getEnemyFaction();
 }
 
-// An enemy kind's hp and damage (per second in melee, per arrow for an archer) as it would come now, with
-// the difficulty (a battle's tiles show them, #255)
+// An enemy kind's hp and a hit's damage (an arrow's for an archer) as it would come now, with the
+// difficulty (a battle's tiles show them, #255)
 export function enemyStats(id) {
   const definition = getDefinition('enemies', id);
-  const enemy = { hp: definition.hp * getDifficulty().enemyHp, maxHp: definition.hp * getDifficulty().enemyHp, speed: definition.speed, damage: definition.damage, weapon: definition.weapon || 'sword' };
-  if ((game.gameMode === 'endless' || game.gameMode === 'battle') && getDifficulty().likePlayer) asStrongAsPlayers(enemy, definition);
-  return { hp: Math.round(enemy.hp), damage: Math.round(enemy.damage) };
+  const enemy = { hp: definition.hp, maxHp: definition.hp, speed: definition.speed, damage: definition.damage, weapon: definition.weapon || 'sword' };
+  asPlayerUnit(enemy, definition);
+  return { hp: Math.round(enemy.hp), damage: Math.round(enemy.hitDamage) };
 }
 
 export function createNormalEnemy(pos, enemyKey = 'raider') {

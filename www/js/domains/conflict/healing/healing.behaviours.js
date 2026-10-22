@@ -8,7 +8,7 @@ import { hasToolFamily } from '../../colony/equipment/index.js';
 import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, noteDay } from '../../colony/settlers/index.js';
 import { isShelter } from './healing.rules.js';
-import { getReachDistanceToResource, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
+import { getReachDistanceToResource, getSettlerReach, moveEntityTowards, someEnemyNear, someSettlerNear } from '../../../engine/movement/index.js';
 import { isWaterReachable } from '../../world/index.js';
 import { joinsTentAssault } from '../combat/index.js';
 import { playSound } from '../../../app/index.js';
@@ -41,7 +41,7 @@ export function healAtTent(s, tick) {
   const tents = tick.tents;
   // badly wounded: below a quarter of its health; with an armed one near to hold the line, a little sooner (#208)
   const ai = GAME_CONFIG.combatAI;
-  const covered = game.settlers.some(o => o !== s && o.weapon !== 'fist' && !o.towerAssignment && Math.hypot(o.x - s.x, o.y - s.y) < ai.coverRange);
+  const covered = someSettlerNear(s.x, s.y, ai.coverRange, o => o !== s && o.weapon !== 'fist' && !o.towerAssignment); // (#306: those near it, not everyone)
   const badlyWounded = s.hp < s.maxHp * (covered ? ai.retreatShare : 0.25);
   // being hit right now: it turns on whoever hits it (fightEnemies) and heals once it has fought them off
   const hitNow = !!getRecentAttacker(s) && game.pathTick - s.lastAttackedTick < 90;
@@ -49,7 +49,7 @@ export function healAtTent(s, tick) {
   if (s.healing && (s.hp >= s.maxHp || tents.length === 0 || (getRecentAttacker(s) && !badlyWounded))) s.healing = false;
   const calm = game.enemies.length === 0 && !(tick.tentAssault && joinsTentAssault(s, tick));
   if (s.hp < s.maxHp && tents.length > 0 && !s.isPossessed && (calm || badlyWounded || s.healing)) {
-    let nearbyThreat = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 100);
+    let nearbyThreat = someEnemyNear(s.x, s.y, 100, () => true); // (#306: those near it, not everyone)
     if (!nearbyThreat || badlyWounded || s.healing) {
       let nearestTent = tents.reduce((closest, t) => {
         let d = Math.hypot(t.x - s.x, t.y - s.y);

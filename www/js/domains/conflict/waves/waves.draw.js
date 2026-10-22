@@ -3,10 +3,10 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { drawIcon } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
-import { ctx } from '../../../engine/platform/index.js';
+import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
@@ -88,10 +88,18 @@ export function drawEnemyTentSites() {
 
 // Enemies: body, weapon, quiver, the target mark, health
 export function drawEnemies() {
-  // (#299) only those the colony sees now
-  const seen = en => isVisible(en.x, en.y);
-  game.enemies.filter(seen).forEach(drawEnemy);
-  game.scouts.filter(seen).forEach(drawEnemy); // (scouts between waves, #279)
+  // (#299) only those the colony sees now, and only those on the screen (#306)
+  const view = getViewRect(60);
+  const shown = en => isVisible(en.x, en.y) && en.x > view.x0 && en.x < view.x1 && en.y > view.y0 && en.y < view.y1;
+  // (#306) zoomed out to one or two pixels apiece: a dab of their colour each
+  if (tinyUnit()) {
+    const dab = 1.6 / getViewScale();
+    for (const en of game.enemies) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
+    for (const en of game.scouts) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
+    return;
+  }
+  for (const en of game.enemies) if (shown(en)) drawEnemy(en);
+  for (const en of game.scouts) if (shown(en)) drawEnemy(en); // (scouts between waves, #279)
 }
 
 // One enemy
@@ -99,6 +107,7 @@ export function drawEnemy(en) {
   const pet = getEnemyDef(en).pet;
   if (pet) { drawPet(en, pet); if (en.markedTarget) drawTargetMark(en); return; } // (#314: a dog, a hellhound, a ghost)
   {
+    const simple = simpleUnit(); // (#306) zoomed out: its shape and colours, no gear
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
     // (#251); their skin their faction's
     const kin = en.enemyKey.startsWith('demon_') ? 'demons' : en.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
@@ -119,15 +128,19 @@ export function drawEnemy(en) {
     const onItsBack = () => {
       if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
     };
-    if (backBack) at(onItsBack);
-    if (handBack) at(inHand);
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null });
+    if (!simple) {
+      if (backBack) at(onItsBack);
+      if (handBack) at(inHand);
+    }
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
-    at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
-    if (!backBack) at(onItsBack);
-    if (!handBack) at(inHand);
-    at(() => { if (en.captain) drawEnemyBanner(en); });
+    if (!simple) {
+      at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
+      if (!backBack) at(onItsBack);
+      if (!handBack) at(inHand);
+      at(() => { if (en.captain) drawEnemyBanner(en); });
+    }
     if (en.orderBubble && en.orderBubble.until > game.pathTick) drawOrderBubble(en.x + en.radius, en.y - en.radius * 1.45 - 14, en.orderBubble.icon);
 
     if (en.markedTarget) drawTargetMark(en);

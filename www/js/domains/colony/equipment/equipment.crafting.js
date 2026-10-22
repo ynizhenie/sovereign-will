@@ -4,7 +4,7 @@
 // (GAME_CONFIG.crafting). Made, it goes into the armory, to be handed out from there.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { canAfford, findNearestStorage, isAtStorage, payCost, stock, walkToStorage } from '../storage/index.js';
 import { faceTowards, noteDay } from '../settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
@@ -117,6 +117,7 @@ export function orderCraft(category, id) {
 
 // A settler on an order (see SETTLER_BEHAVIOURS): to a storage for what it takes, to where
 // it's made, and at it until it's done
+const archersOnce = onceThisTick();
 export function craftItem(s, tick) {
   // a worker; a soldier or archer too between waves (a colony of soldiers still makes its things)
   if (s.isPossessed || s.towerAssignment || (s.role !== 'worker' && (tick.isWaveActive || isDefenseAlert()))) return false;
@@ -125,8 +126,8 @@ export function craftItem(s, tick) {
     if (s.carrying) return false;
     // its own first; one for someone else only once that one's gone (#232: who it's for makes it)
     const open = o => !o.crafter || !game.settlers.includes(o.crafter);
-    // arrows are the archers' to make while there are any (#249)
-    const archers = game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed);
+    // arrows are the archers' to make while there are any (#249; #306: looked for once a tick)
+    const archers = archersOnce(() => game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed));
     const mine = o => !(o.id === 'arrows' && archers && s.role !== 'archer');
     const ready = o => o.stage === 'waitRope'
       ? (stock.rope || 0) >= o.ropeNeeded

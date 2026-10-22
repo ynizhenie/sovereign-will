@@ -49,7 +49,7 @@ export const enemiesConfig = {
     // a zombie that picked up a sword (#203)
     undead_zombie_sword: { id: 'undead_zombie_sword', hp: 60, speed: 0.7, damage: 18, reward: { food: 1 }, weapon: 'sword',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.66, reach: 12, siege: { buildings: 10, resources: 2 } },
-    undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'fist',
+    undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'club',
       type: 'big', radius: 18, waveKey: 'brute', reach: 20, siege: { buildings: 25, resources: 4 }, splash: { radius: 60, share: 0.5 } },
     // an archer of theirs is a zombie with a bow (#249: no skeletons)
     undead_zombie_archer: { id: 'undead_zombie_archer', hp: 45, speed: 0.9, damage: 25, reward: { food: 1 }, weapon: 'bow',

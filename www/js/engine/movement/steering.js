@@ -6,6 +6,7 @@ import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
 import { isBlighted } from '../../domains/factions/undead/index.js';
 import { findPathAStar, findPathAStarPermissive, getReachSteps, getSettlerReach, hasClearEnemyLine, isTileBlockedForSettler, pathCrossesSpikes } from './pathfinding.js';
 import { clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
+import { someSettlerNear } from './neighbours.js';
 import { takePortal } from '../../domains/factions/demons/index.js';
 
 export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
@@ -293,7 +294,8 @@ export function getResourceApproachPoint(entity, resource) {
         if (steps === -1) continue;
         score += steps * TILE_SIZE;
         // spread settlers working the same resource around it instead of stacking them on one spot
-        if (game.settlers.some(other => other !== entity && Math.hypot(other.x - x, other.y - y) < entRadius * 2)) score += 1000;
+        // (#306: those near the spot, not everyone on the map)
+        if (someSettlerNear(x, y, entRadius * 2, other => other !== entity)) score += 1000;
       }
       if (score < bestScore) {
         bestScore = score;

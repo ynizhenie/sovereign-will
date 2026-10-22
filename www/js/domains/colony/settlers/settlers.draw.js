@@ -11,13 +11,24 @@ import { drawHeadTexture, lookOf } from './settlers.looks.js';
 import { castShadow } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
-import { ctx } from '../../../engine/platform/index.js';
+import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyColor, getPlayerFaction, getSettlerColor } from '../../factions/index.js';
 import { drawStaff, getNecromancy } from '../../factions/undead/index.js';
 import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/index.js';
 import { drawHorns } from '../../factions/demons/index.js';
 import { drawPet } from '../pets/index.js';
 import { isPet } from './settlers.rules.js';
+
+// (#306) Below this many screen px per world px a figure is a handful of pixels: its body, head and colours
+// are all that shows. Drawing its hands, gear, hair strands and idle signs on so little was most of what a
+// big colony cost to draw (and read as clutter)
+const SIMPLE_UNIT = 0.72;
+// (#306) Below this, a figure is one or two pixels: a dab of its colour is all there is to see
+const TINY_UNIT = 0.26;
+
+// Whether figures are drawn at that size now
+export const simpleUnit = () => getViewScale() < SIMPLE_UNIT;
+export const tinyUnit = () => getViewScale() < TINY_UNIT;
 
 // A strike: the held weapon or tool swings through once over `seconds`
 export function startSwing(unit, seconds) {
@@ -311,7 +322,7 @@ function restingHand(unit, r) {
 /**
  * The figure round (x, y), r its old circle's radius.
  * @param {any} unit
- * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null, otherPoint?: { x: number, y: number } | null }} o
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null, otherPoint?: { x: number, y: number } | null, simple?: boolean }} o
  * (carryPoint: a load in both hands, both arms out to it, #298)
  * (handPoint: what its hand's at — the food it eats, a zombie's reaching hands, #298)
  * (#298) facing away from us, its arms (and what's in its hands, drawn by the caller) are behind its body
@@ -320,6 +331,19 @@ export function drawFigure(unit, o) {
   const { x, y, r } = o;
   ctx.save();
   ctx.translate(x, y);
+  // (#306) zoomed out a figure is a handful of pixels: a shadow, its legs, its body and its head — the
+  // arms, hands, eyes, gear and idle signs would be sub-pixel clutter, and were most of a big colony's work
+  if (o.simple) {
+    if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
+    if (!o.lying) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.72, r * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = shade(o.body, -0.4);
+    ctx.beginPath(); ctx.roundRect(-r * 0.3, r * 0.25, r * 0.6, r * 0.72, r * 0.12); ctx.fill();
+    ctx.fillStyle = o.body;
+    ctx.beginPath(); ctx.roundRect(-r * 0.6, -r * 0.48, r * 1.2, r * 0.98, r * 0.32); ctx.fill();
+    drawHeadTexture(ctx, lookOf(unit), unitKin(unit), o.skin, 0, -r * 0.9, r * 0.5, unit.facing || 0, false, 0);
+    ctx.restore();
+    return;
+  }
   // (#306) a zombie lunges as it strikes
   const z = !o.lying && !o.dead && !o.carryPoint ? zombieReach(unit) : null;
   if (z && z.lunge) ctx.translate(Math.cos(unit.facing || 0) * z.lunge, Math.sin(unit.facing || 0) * z.lunge * 0.7);
@@ -590,8 +614,19 @@ function eatingAt(s) {
 }
 
 export function drawSettlers() {
+  // (#306) zoomed out: figures at their simplest, and what's off the screen not drawn at all
+  const simple = simpleUnit(), view = getViewRect(60), scale = getViewScale(), tiny = tinyUnit();
+  const dab = 1.6 / scale; // (a couple of screen px, in world units)
   game.settlers.forEach(s => {
+    if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) return;
     if (isPet(s)) { drawPet(s); return; } // (#314)
+    // (#306) one or two pixels on the screen: a dab of its colour, and the ring of the one picked
+    if (tiny) {
+      ctx.fillStyle = getSettlerColor(s);
+      ctx.fillRect(s.x - dab / 2, s.y - dab, dab, dab * 2);
+      if (s === game.selectedSettler) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = dab; ctx.beginPath(); ctx.ellipse(s.x, s.y + dab, dab * 1.4, dab * 0.8, 0, 0, Math.PI * 2); ctx.stroke(); }
+      return;
+    }
     // an idle undead sways where it stands (#199): drawn a little to and fro
     const sway = s.swaying ? Math.sin(performance.now() / 450 + s.id) * 2.5 : 0;
     if (sway) { ctx.save(); ctx.translate(sway, 0); }
@@ -653,26 +688,32 @@ export function drawSettlers() {
     };
     const at = fn => { ctx.save(); ctx.translate(s.x, s.y); fn(); ctx.restore(); };
 
-    if (s.asleep) at(heldItem); // (asleep: lying with it beside it)
-    if (backBack) at(onItsBack);
-    if (handBack) at(inHand);
-    if (!s.asleep) at(() => drawSideItems(s, false));
+    if (simple) {
+      // (#306) at this size only the figure (drawFigure), its health bar and what's on fire or marked
+    } else {
+      if (s.asleep) at(heldItem); // (asleep: lying with it beside it)
+      if (backBack) at(onItsBack);
+      if (handBack) at(inHand);
+      if (!s.asleep) at(() => drawSideItems(s, false));
+    }
     // the figure in the colony's colour (#251)
     const faction = unitKin(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     if (s.asleep) ctx.globalAlpha = 0.85;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, otherPoint: onBack ? null : (bowDraw(s) || {}).other || null, armor: !s.asleep && armorOf(s) ? String(s.armor) : null });
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, otherPoint: onBack ? null : (bowDraw(s) || {}).other || null, armor: !s.asleep && armorOf(s) ? String(s.armor) : null, simple });
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);
-    at(() => {
+    if (!simple) at(() => {
       // a commander's whistle on a cord on its chest (#248), seen from the front
       if (s.whistle && !s.asleep && !away) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
       if (s.shield && !s.asleep) drawShield(r, side); // (on its other arm, in front)
     });
-    if (!backBack) at(onItsBack);
-    if (!handBack && !s.asleep) at(inHand);
-    if (!s.asleep) at(() => drawSideItems(s, true));
+    if (!simple) {
+      if (!backBack) at(onItsBack);
+      if (!handBack && !s.asleep) at(inHand);
+      if (!s.asleep) at(() => drawSideItems(s, true));
+    }
 
     if (crafting) drawWorkpiece(s);
     if (s.asleep) drawSleepZs(s.x + r, s.y - r);
@@ -682,7 +723,7 @@ export function drawSettlers() {
       ctx.beginPath(); ctx.ellipse(s.x, s.y + r * 0.95, r + 3, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); // (round its feet)
     }
 
-    if (s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + r, top - 12);
+    if (!simple && s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + r, top - 12);
     // an archer out of arrows (#232): a crossed-out arrow over it
     if (isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - r - 2, top - 12);
     // an order given or taken (#248): its bubble, and the commander's line to the one it told
@@ -694,7 +735,7 @@ export function drawSettlers() {
     if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + r, top - 14, s.orderBubble.icon);
     // (talking in a knot: what they say, not dots, #279: settlers.voices.js talkInKnots)
 
-    if (isCensored(s)) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
+    if (!simple && isCensored(s)) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, top - 6, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, top - 6, (Math.max(0, s.hp) / s.maxHp) * 30, 4);

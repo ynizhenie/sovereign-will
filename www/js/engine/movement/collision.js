@@ -1,6 +1,7 @@
 // Bodies and what stops them: walls, water, natural obstacles, the map's edge, and units pushed apart
 
 import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
+import { forEachSettlerNear } from './neighbours.js';
 
 export function collidesWithBoxList(x, y, radius, objects, halfSize) {
   return objects.some(object => {
@@ -66,7 +67,9 @@ export function collidesWithWater(x, y, radius) {
 export function getSettlerAvoidance(entity) {
   let avoidX = 0;
   let avoidY = 0;
-  game.settlers.forEach(other => {
+  // (#306) only those close enough to push it, out of the tick's picture of where everyone is: asking all of
+  // them for each of them was the most expensive thing in a big colony's tick
+  forEachSettlerNear(entity.x, entity.y, 38, other => {
     if (other === entity || other.asleep) return; // (#279: one asleep lies on the ground: stepped over, not walked round; round a tent they hemmed everyone in)
     let dx = entity.x - other.x;
     let dy = entity.y - other.y;

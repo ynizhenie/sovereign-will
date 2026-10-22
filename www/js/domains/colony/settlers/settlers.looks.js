@@ -5,6 +5,7 @@
 // (an old save) gets one the first time it's drawn.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { getViewScale } from '../../../engine/platform/index.js';
 
 const config = () => GAME_CONFIG.looks;
 
@@ -94,13 +95,17 @@ export function drawHeadTexture(ctx, look, kin, skin, x, y, radius, facing, away
   const animated = look.female ? [0, 1, 3].includes(look.style) : !away && look.style === 3;
   const sway = animated ? Math.round(Math.sin(walk * 0.35) * 4) / 4 : 0;
   const walkPhase = animated ? Math.asin(sway) / 0.35 : 0;
-  const key = `${kin}|${skin}|${hair}|${look.female}|${look.style}|${side}|${away}|${sway}`;
+  // (#306) zoomed out a head is a few pixels: drawn into a small picture, not a 100 px one squeezed down
+  // (downscaling one of those for every figure was a good part of what a crowd cost to draw)
+  const size = getViewScale() < 1.2 ? 32 : 100;
+  const key = `${size}|${kin}|${skin}|${hair}|${look.female}|${look.style}|${side}|${away}|${sway}`;
   let texture = headTextures.get(key);
   if (!texture && typeof document !== 'undefined') {
     texture = document.createElement('canvas');
-    texture.width = texture.height = 100;
+    texture.width = texture.height = size;
     const head = texture.getContext('2d');
     if (!head) throw new Error('Could not create a character head texture');
+    head.scale(size / 100, size / 100);
     head.fillStyle = skin;
     head.strokeStyle = 'rgba(0, 0, 0, 0.45)';
     head.lineWidth = 2;
