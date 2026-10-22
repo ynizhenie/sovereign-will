@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
-import { enemyFactionOf, enemyStats } from '../../domains/conflict/waves/index.js';
+import { enemyPlayerUnit, enemyStats } from '../../domains/conflict/waves/index.js';
 import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
@@ -18,6 +18,12 @@ export function renderBattlePanel() {
   const armourButton = document.querySelector('[data-battle-gear="armor"]');
   if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.armor'));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
+  // what the chosen difficulty does to the red side (#255)
+  const hint = document.getElementById('battle-difficulty-hint');
+  if (hint) {
+    hint.dataset.i18n = battle.difficulty === 'hard' ? 'battle.hardHint' : 'battle.normalHint';
+    setRichText(hint, t(hint.dataset.i18n));
+  }
   document.querySelectorAll('[data-battle-auto]').forEach(b => b.classList.toggle('on', (b.dataset.battleAuto === 'on') === battle.auto));
   renderBattleColors();
   document.getElementById('battle-auto').classList.toggle('on', battle.auto);
@@ -65,13 +71,14 @@ export function renderBattlePanel() {
   updateBattleTop();
 }
 
-// What a unit is: its icons (kind and weapon or tool), hp, and damage (a hit's; an enemy's per second in
-// melee, an arrow's), with the armour picked and the difficulty
+// What a unit is: its icons (kind and weapon or tool), hp, and damage (a hit's, an arrow's), with the
+// armour picked and the difficulty
 function presetStats(preset) {
   if (preset.enemy) {
-    const def = GAME_CONFIG.enemies[preset.enemy], units = enemyFactionOf(preset.enemy).units || ['normal', 'big'];
-    const kind = GAME_CONFIG.settlerTypes[def.type === 'big' ? units[1] || units[0] : units[0]];
-    const weapon = getDefinition('weapons', def.weapon), tool = def.tool && getDefinition('tools', def.tool);
+    const def = GAME_CONFIG.enemies[preset.enemy];
+    const unit = enemyPlayerUnit(def);
+    const kind = GAME_CONFIG.settlerTypes[unit.type];
+    const weapon = getDefinition('weapons', unit.weapon), tool = unit.tool && getDefinition('tools', unit.tool);
     const look = def.necromancer ? 'necromancer' : kind && kind.icon;
     const stats = enemyStats(preset.enemy);
     const armour = battleArmor(battle.armor);
@@ -80,7 +87,7 @@ function presetStats(preset) {
   }
   const kind = GAME_CONFIG.settlerTypes[preset.type], weapon = getDefinition('weapons', preset.weapon);
   const tool = preset.tool && getDefinition('tools', preset.tool);
-  const hit = preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
+  const hit = kind.bite ? kind.bite.damage : kind.pet ? 0 : preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
   const armour = battleArmor(battle.armor);
   const hp = kind.hp + (armour && !isBowWeapon(preset.weapon) ? armour.hpBonus : 0);
   return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp, damage: Math.round(hit * kind.damageMultiplier) };

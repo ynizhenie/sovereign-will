@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall, stock } from './storage.rules.js';
+import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall, stock, stockLeft } from './storage.rules.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { takeFishingBait } from '../../economy/fishing/index.js';
@@ -82,7 +82,7 @@ export function walkToStorage(s, storage, dt) {
 
 // Walk to the nearest storage for some `id` from the stock; once there, take(). False if there's none.
 export function fetchFromStorage(s, id, dt, take) {
-  if (!(stock[id] > 0)) return false;
+  if (!(stockLeft(id) > 0)) return false;
   const storage = findNearestStorage(s);
   if (isAtStorage(s, storage)) take(storage);
   else walkToStorage(s, storage, dt);

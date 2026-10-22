@@ -159,9 +159,11 @@
  * @property {number} maxHp
  * @property {number} radius
  * @property {number} speed
- * @property {number} damage
+ * @property {number} damage      a second in melee, an arrow's for an archer
+ * @property {number} [hitDamage] a melee hit's, the player's own unit's (a battle tile shows it, #255)
+ * @property {number} [meleeDamage] an archer out of arrows' melee damage a second, its melee kind's (#255)
  * @property {string} weapon
- * @property {number} [shotCooldown] seconds between its shots on Hard (#255), instead of its ranged.cooldown
+ * @property {number} [shotCooldown] seconds between its shots, a bow's in a settler's hands (#255)
  * @property {Object<string, number>} reward   what killing it adds to the stock
  * @property {Settler | null} [attackTarget]
  * @property {Object | null} buildTarget     the tent site it's building

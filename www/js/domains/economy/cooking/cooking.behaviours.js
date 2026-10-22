@@ -3,7 +3,7 @@
 // ---- Cooking
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/index.js';
+import { game, onceThisTick } from '../../../engine/world/index.js';
 import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
 import { hasAxeTool } from '../../colony/equipment/index.js';
 import { playWorkSound } from '../../../app/index.js';
@@ -20,10 +20,13 @@ function isSoldierCook(s) {
 }
 
 // Enough soldiers free to cook at every campfire (between waves): the workers keep to their own work
+const campfiresOnce = onceThisTick();
+const soldiersCookOnce = onceThisTick();
 function soldiersCoverFires(tick) {
   if (tick.isWaveActive || isDefenseAlert()) return false;
-  const fires = game.buildings.filter(b => b.type === 'campfire').length;
-  return fires > 0 && game.settlers.filter(isSoldierCook).length >= fires;
+  // (#306) counted once a tick: it was counted again for every settler that came this way
+  const fires = campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire').length);
+  return fires > 0 && soldiersCookOnce(() => game.settlers.filter(isSoldierCook).length) >= fires;
 }
 
 // Campfire cooks (GAME_CONFIG.cooking): while there's raw food in the stock, a campfire is looked after,

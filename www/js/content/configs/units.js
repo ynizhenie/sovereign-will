@@ -45,11 +45,14 @@ export const unitsConfig = {
   // about now and then (sleepChance a second) sleeps sleepSeconds. A dog flushes a boar hidden in the grass
   // within flushTiles (every flushSeconds at most). A ghost hovers by a grave, goes with a necromancer to a
   // fight (`carry` to one), flies into an enemy within diveTiles (at diveSpeed, through anything): it panics,
-  // and the ghost is gone backSeconds, back by a grave. coats: each pet's colours; a female drawn femaleScale
+  // and the ghost is gone backSeconds, back by a grave. A pet fed mealsBefore times goes off awayFromBuildings
+  // tiles from the buildings, spotTiles away, and leaves a pile there (relief: seconds at it).
+  // coats: each pet's colours; a female drawn femaleScale
   pets: {
-    hungerSeconds: 120, hungryPace: 0.7, hungryBite: 0.6, foods: ['rawMeat', 'rawFish', 'cookedMeat', 'cookedFish', 'bread'],
+    hungerSeconds: 120, hungryPace: 0.7, hungryBite: 0.6, foods: ['rawMeat', 'rawFish', 'cookedMeat', 'cookedFish', 'bread', 'berries', 'apples'],
     followTiles: 1.5, guardTiles: 6, sleepChance: 0.015, sleepSeconds: [20, 40], flushTiles: 8, flushSeconds: 15, devourSeconds: 3,
     ghost: { diveTiles: 5, diveSpeed: 2.6, backSeconds: 30, carry: 3 },
+    relief: { mealsBefore: 2, seconds: 1.5, awayFromBuildings: 4, spotTiles: [3, 8] },
     coats: {
       dog: [['#8d6e63', '#5d4037'], ['#d7ccc8', '#8d6e63'], ['#424242', '#212121'], ['#c8a165', '#8a6a3a'], ['#eeeeee', '#9e9e9e']],
       beast: [['#7b241c', '#3b0f0b'], ['#2c2c2c', '#7b241c'], ['#5d4037', '#e8572a'], ['#4a1c40', '#c0392b']],

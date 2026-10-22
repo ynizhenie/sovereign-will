@@ -3,5 +3,5 @@
 
 export { tickEnemies } from './waves.behaviours.js';
 export { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from './waves.draw.js';
-export { createConfiguredEnemy, enemyFactionOf, enemyStats, dropLoot, getEnemyDef, removeDeadEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from './waves.rules.js';
+export { createConfiguredEnemy, enemyFactionOf, enemyPlayerUnit, enemyStats, dropLoot, getEnemyDef, removeDeadEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from './waves.rules.js';
 export { scoutTapped, tickScouts } from './waves.scouts.js';

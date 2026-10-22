@@ -4,7 +4,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getFrontier } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
-import { findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
+import { enemyDamagePerSecond, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
@@ -248,7 +248,7 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt) {
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1), life: ranged.arrowLife, fromEnemy: true, owner: en });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
-    en.attackCooldown = en.shotCooldown || ranged.cooldown; // (Hard: a bow's rate in a settler's hands, #255)
+    en.attackCooldown = en.shotCooldown || ranged.cooldown; // (a bow's rate in a settler's hands, #255)
     en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle') en.arrows--;
   }
@@ -346,9 +346,10 @@ function breakResource(en, blockedRes, enemyDef, dt) {
 // A melee strike at its target; a big one hits the nearest others round it (or the hall) too, up to
 // splashMax in all (#209)
 function enemyStrike(en, enemyDef, meleeDef, target, dt) {
-  // the undead fight on in a panic, weaker (#232: morale.panicDamage)
+  // the undead fight on in a panic, weaker (#232: morale.panicDamage); an archer out of arrows and tents
+  // fights at its melee kind's strength, as the player's own would (#255)
   const shaken = en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1;
-  const meleeDamage = (meleeDef === enemyDef ? en.damage : meleeDef.damage) * shaken;
+  const meleeDamage = (meleeDef === enemyDef ? en.damage : (en.meleeDamage ?? (en.meleeDamage = enemyDamagePerSecond(meleeDef)))) * shaken;
   faceTowards(en, target.x, target.y);
   if (!(en.swingT > 0)) startSwing(en, 0.5); // keeps swinging while it hits
   if (en.type === 'big') {

@@ -3,7 +3,7 @@
 // ---- Apple trees
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, getGridPos, rand, resetTileIndex } from '../../../engine/world/index.js';
+import { game, getGridPos, onceThisTick, rand, resetTileIndex } from '../../../engine/world/index.js';
 import { hasToolFamily } from '../../colony/equipment/index.js';
 import { addCarryLoad, addResources, canAfford, giveResourceToSettler, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../building/index.js';
@@ -17,17 +17,23 @@ import { playSound } from '../../../app/index.js';
 
 // Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
 // one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)
+const appleTreesOnce = onceThisTick();
 export function pickApples(s, tick) {
   if (s.role !== 'worker' || s.isPossessed || tick.isWaveActive) return false;
   // one with a tool or weapon picks only a tree the player marked for its apples, and only while no
   // worker with free hands is free for it (#232: they were left on the tree)
   const handsOnly = s.tool !== 'none' || s.weapon !== 'fist';
-  if (handsOnly && game.settlers.some(o => o !== s && isFreeHands(o))) return false;
+  // (#306) whether anyone has free hands: the same for all who don't, once a tick
+  const freeHandsOnce = onceThisTick();
+  if (handsOnly && freeHandsOnce(() => game.settlers.some(isFreeHands))) return false;
   if (s.carrying && !hasRoomToCarry(s)) return false;
+  // (#306) the apple trees of the map, not every tree on it (asked for by every worker, every tick)
+  const trees = appleTreesOnce(() => game.trees.filter(t => t.apple));
+  if (!trees.length) return false; // (no walking distances to work out then either)
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;
-  for (const t of game.trees) {
-    if (!t.apple || !t.applesReady || tick.appleAssignments.has(t)) continue;
+  for (const t of trees) {
+    if (!t.applesReady || tick.appleAssignments.has(t)) continue;
     if (handsOnly && !(t.markIntent === 'apples' && t.priority > 0)) continue;
     if (!(t.markIntent === 'apples' && t.priority > 0) && !isInSafeArea(t.x, t.y)) continue;
     const d = getReachDistanceToResource(reach, t) - (t.markIntent === 'apples' && t.priority > 0 ? 1000 : 0);
