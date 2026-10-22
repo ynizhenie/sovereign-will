@@ -393,11 +393,18 @@
         <div class="sub-tabs battle-gear">
           <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
           <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
+          <button class="btn sub-tab" data-battle-gear="banner" data-i18n="battle.banner">Banner</button>
         </div>
+        <div class="battle-hint battle-gear" data-i18n="battle.bannerHint">Banner: the next soldier or archer placed becomes a commander</div>
         <div id="battle-presets" class="tile-grid"></div>
       </div>
-      <!-- the battle's own settings (#255): the difficulty, the auto battle -->
+      <!-- the battle's own settings (#255): the field, the difficulty, the auto battle -->
       <div class="hud-sheet" data-sheet="battle-settings">
+        <div class="panel-heading" data-i18n="battle.fieldHeading">Battlefield:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-field="glade" data-i18n="battle.fieldGlade">Glade</button>
+          <button class="btn sub-tab" data-battle-field="desert" data-i18n="battle.fieldDesert">Desert</button>
+        </div>
         <div class="panel-heading" data-i18n="menu.difficulty">Difficulty:</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-difficulty="normal" data-i18n="menu.normal">Normal</button>

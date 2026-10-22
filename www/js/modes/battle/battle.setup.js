@@ -20,7 +20,8 @@ import { renderBattlePanel } from './battle.panel.js';
 export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean,
+ *   shield: boolean, banner: boolean, field: string,
+ *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
@@ -32,7 +33,9 @@ export const battle = {
   building: 'wall_wood',
   armor: false,       // colony units placed next get armour / a shield (melee only)
   shield: false,
-  lineup: [],         // { presetId, x, y, armor, shield } or { building, x, y }: what's placed, kept between fights
+  banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
+  field: 'glade',     // glade / desert: what the battle is fought on
+  lineup: [],         // { presetId, x, y, armor, shield, banner } or { building, x, y }: what's placed, kept between fights
   winner: null,       // green / red / draw
   resultTimer: 0,
   nextId: 1,
@@ -69,10 +72,13 @@ export function makeBattleUnit(entry) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
     en.battleEntry = entry;
     en.look = look;
-    // (#279) armour and a shield as yours can have (a shield: a melee one of normal size)
+    // (#279) armour and a shield as yours can have (a shield: a melee one of normal size); a banner too,
+    // given by the player, not picked by the game
     const armour = battleArmor(entry.armor);
     if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (entry.shield && enemyCanShield(preset.enemy)) en.shield = true;
+    const def = getEnemyDef(en);
+    if (entry.banner && en.type === 'normal' && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
     return;
@@ -88,18 +94,23 @@ export function makeBattleUnit(entry) {
   const armour = s.role === 'pet' ? null : battleArmor(entry.armor); // (a pet wears nothing, #314)
   if (armour) putOnGear(s, armour.id);
   if (entry.shield && canUseShield(s) && s.role !== 'pet') s.shield = true;
+  if (entry.banner && (s.role === 'soldier' || s.role === 'archer')) s.banner = true; // (#279) the player gave it
   game.settlers.push(s);
 }
 
-// An empty field: grass only, the town hall out of the way, no waves, no animals
+// A clear field: the ground picked in the settings, the town hall out of the way, no waves, no animals
 export function setUpBattleField() {
-  battle.savedMapSettings = game.mapSettings;
   game.mapSettings = { cols: 40, rows: 26 };
   resetGame();
   for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs, game.ironOres, game.coalOres, game.boars,
     game.naturalRocks, game.waterTiles, game.farmPlots, game.desertTiles, game.beachTiles]) list.length = 0;
   game.desertRegion = null;
   game.forests = [];
+  if (battle.field === 'desert') {
+    for (let gy = 0; gy < game.ROWS; gy++) {
+      for (let gx = 0; gx < game.COLS; gx++) game.desertTiles.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    }
+  }
   game.settlers = [];
   townHall.x = -10000; townHall.y = -10000; townHall.hp = townHall.maxHp = 1e9;
   game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
@@ -121,30 +132,11 @@ export function resetBattleUnits() {
       makeBattleUnit(entry);
     }
   }
-  pickBattleCaptains();
   invalidateAllPaths();
 }
 
-// (#279) a big enough side has a commander with a banner, as a wave's: the enemy one of its normal melee
-// (not a big one, an archer, a healer, a necromancer or a pet); the player's a soldier, or an archer with
-// none. Both sides here: a battle has no banner gear to hand out.
-function pickBattleCaptains() {
-  const from = GAME_CONFIG.waveMuster.captainFrom;
-  if (game.enemies.length >= from && !game.enemies.some(en => en.captain)) {
-    const pick = game.enemies.find(en => {
-      const def = getEnemyDef(en);
-      return en.type === 'normal' && !def.pet && !def.ranged && !def.healer && !def.necromancer;
-    });
-    if (pick) pick.captain = true;
-  }
-  if (game.settlers.length >= from && !game.settlers.some(s => s.banner)) {
-    const pick = game.settlers.find(s => s.role === 'soldier' && !s.isPossessed) ||
-      game.settlers.find(s => s.role === 'archer' && !s.isPossessed);
-    if (pick) pick.banner = true;
-  }
-}
-
 export function startBattleMode() {
+  if (game.gameMode !== 'battle') battle.savedMapSettings = game.mapSettings; // (the Endless choice comes back)
   game.gameMode = 'battle';
   battle.savedDifficulty = game.gameDifficulty;
   game.gameDifficulty = battle.difficulty;
@@ -164,7 +156,7 @@ export function leaveBattleMode() {
   game.gameMode = 'endless';
   battle.phase = 'off';
   document.body.classList.remove('battle-mode');
-  if (battle.savedMapSettings) game.mapSettings = battle.savedMapSettings; // the Endless choice comes back
+  if (battle.savedMapSettings) { game.mapSettings = battle.savedMapSettings; battle.savedMapSettings = null; } // the Endless choice comes back
   if (battle.savedDifficulty) game.gameDifficulty = battle.savedDifficulty;
   exitToMainMenu();
 }
@@ -185,7 +177,7 @@ export function battleTap(x, y) {
     const preset = getBattlePreset(battle.preset);
     const side = preset.enemy ? 'red' : 'green';
     if (battleSide(cx) !== side) { showNotification(t(`battle.only.${side}`), true); return; }
-    battle.lineup.push({ presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield }); // (an enemy too, #279)
+    battle.lineup.push({ presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner }); // (an enemy too, #279)
   }
   resetBattleUnits();
 }
@@ -195,6 +187,14 @@ export function setBattleDifficulty(level) {
   battle.difficulty = level;
   game.gameDifficulty = level;
   if (battle.phase === 'setup') resetBattleUnits();
+}
+
+// The ground the battle is fought on: the line-up stays, the field is made again
+export function setBattleField(field) {
+  if (battle.phase !== 'setup' || field === battle.field || (field !== 'glade' && field !== 'desert')) return;
+  battle.field = field;
+  setUpBattleField();
+  resetBattleUnits();
 }
 
 // Take away everything placed on one side
