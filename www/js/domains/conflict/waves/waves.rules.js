@@ -120,6 +120,7 @@ function asPlayerUnit(enemy, definition) {
   const { kind, hit, cooldown } = unitHit(definition);
   enemy.hp = enemy.maxHp = kind.hp * hpFactor;
   enemy.speed = kind.speed;
+  enemy.visualRadius = kind.visualRadius; // (drawn and lying as the player's own of its kind, #314)
   enemy.hitDamage = hit;
   if (definition.ranged) {
     enemy.damage = hit;

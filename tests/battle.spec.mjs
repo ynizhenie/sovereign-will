@@ -94,6 +94,38 @@ test('every enemy shows the very icons of the player\'s own unit of its kind (#2
   }
 });
 
+test('a big enough enemy side in a battle has a commander with a banner, as a wave\'s (#279)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'raider';
+    for (const gy of [8, 10, 12, 14, 16]) battleTap(at(30, gy).x, at(30, gy).y);
+    const five = enemies.filter(en => en.captain).length;
+    battleTap(at(30, 18).x, at(30, 18).y);
+    const six = enemies.filter(en => en.captain).length;
+    const captain = enemies.find(en => en.captain);
+    return { five, six, normal: captain && captain.type, enemyKey: captain && captain.enemyKey };
+  });
+  expect(r).toEqual({ five: 0, six: 1, normal: 'normal', enemyKey: 'raider' });
+});
+
+test('an enemy pet is the player\'s own and leaves its own body in a battle too (#314)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    setBattleDifficulty('hard');
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'dog'; battleTap(at(12, 12).x, at(12, 12).y);
+    battle.preset = 'raider_dog'; battleTap(at(30, 12).x, at(30, 12).y);
+    const own = settlers.find(s => s.type === 'dog'), foe = enemies.find(e => e.enemyKey === 'raider_dog');
+    const side = p => ({ hp: p.maxHp, speed: p.speed, radius: p.radius, visualRadius: p.visualRadius });
+    addCorpse(own, 'settler', own.type);
+    addCorpse(foe, 'enemy', foe.enemyKey);
+    return { own: side(own), foe: side(foe), bodies: corpses.map(c => [c.side, c.pet, c.radius]) };
+  });
+  expect(r.foe).toEqual(r.own);
+  expect(r.bodies).toEqual([['settler', 'dog', r.own.visualRadius], ['enemy', 'dog', r.own.visualRadius]]);
+});
+
 test('a fight can be cancelled back to the line-up; a unit can be possessed in it; arrows never run out (#166)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
@@ -107,6 +139,7 @@ test('a fight can be cancelled back to the line-up; a unit can be possessed in i
     switchPossession();
     const possessedInFight = !!getPossessed();
     const archer = settlers[0];
+    archer.hp = archer.maxHp = 1e5; // (the raider reaches it in four seconds; it must live to cancel)
     const arrows0 = archer.arrows;
     settlers.forEach(s => { s.isPossessed = false; });
     for (let f = 0; f < 240; f++) update(1 / 60);
@@ -146,7 +179,7 @@ test('your units only on the green side, enemies only on the red; armour, shield
   expect(r).toEqual({
     refused: true,
     sword: { armor: 'iron', shield: true, hp: 150 }, bowShield: false,
-    raider: { weapon: 'sword', hp: 120, armor: 'iron', shield: true }, // (armour and a shield for the enemy too, #279)
+    raider: { weapon: 'sword', hp: 125, armor: 'iron', shield: true }, // (armour and a shield for the enemy too, #279; 100 x 0.75 + 50)
     walls: 2,
     afterClearGreen: { settlers: 0, enemies: 1, walls: 1 }
   });
