@@ -8,15 +8,19 @@ import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
-import { battle, battleArmor, clearBattleSide, setBattleDifficulty, startBattleMode } from './battle.setup.js';
+import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
-  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield'} */ (b.dataset.battleGear)]));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'banner'} */ (b.dataset.battleGear)]));
   // (#298) the armour button says which: leather, iron, or just "armour" off
   const armourButton = document.querySelector('[data-battle-gear="armor"]');
   if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.armor'));
+  document.querySelectorAll('[data-battle-field]').forEach(b => {
+    b.classList.toggle('on', b.dataset.battleField === battle.field);
+    /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
+  });
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
   // what the chosen difficulty does to the red side (#255)
   const hint = document.getElementById('battle-difficulty-hint');
@@ -158,14 +162,16 @@ export function initBattlePanel() {
     setBattleCategory(b.dataset.battleCategory);
     toggleSheet('battle', b.dataset.battleCategory);
   }));
-  // (the armour: off, leather, iron, off again; the shield: on or off, #298)
+  // (the armour: off, leather, iron, off again; the shield and the banner: on or off, #298, #279)
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
-    const gear = /** @type {'armor' | 'shield'} */ (b.dataset.battleGear);
+    const gear = /** @type {'armor' | 'shield' | 'banner'} */ (b.dataset.battleGear);
     if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
-    else battle.shield = !battle.shield;
+    else if (gear === 'shield') battle.shield = !battle.shield;
+    else battle.banner = !battle.banner;
     renderBattlePanel();
   }));
-  // the battle's settings (#255): the difficulty, the auto battle (also by Fight! once it's on)
+  // the battle's settings (#255): the field, the difficulty, the auto battle (also by Fight! once it's on)
+  document.querySelectorAll('[data-battle-field]').forEach(b => onTap(b, () => { setBattleField(b.dataset.battleField); renderBattlePanel(); }));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => onTap(b, () => { setBattleDifficulty(b.dataset.battleDifficulty); renderBattlePanel(); }));
   document.querySelectorAll('[data-battle-auto]').forEach(b => onTap(b, () => { battle.auto = b.dataset.battleAuto === 'on'; renderBattlePanel(); }));
   onTap(document.getElementById('battle-auto'), () => { battle.auto = !battle.auto; renderBattlePanel(); });

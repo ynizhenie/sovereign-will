@@ -41,9 +41,11 @@ test('the panel has categories: your units, enemies, buildings; armour and shiel
   await showCategory(page, 'own');
   expect(await count()).toBe(10); // (the dog too, #314)
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
+  await expect(page.locator('[data-battle-gear="banner"]')).toBeVisible();
   await showCategory(page, 'enemy');
   expect(await count()).toBe(7); // with the healer (#203), the bare-handed savage and the war dog (#314)
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible(); // (the enemy's too, #279)
+  await expect(page.locator('[data-battle-gear="banner"]')).toBeVisible();
   await showCategory(page, 'buildings');
   await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
   expect(await count()).toBe(16); // (#279: all of them the humans have, but a fish trap and crops)
@@ -94,22 +96,44 @@ test('every enemy shows the very icons of the player\'s own unit of its kind (#2
   }
 });
 
-test('a big enough side in a battle has a commander with a banner, as a wave\'s (#279)', async ({ page }) => {
+test('a battle has no commander unless the player gives a banner (#279)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     battle.preset = 'sword';
-    for (const gy of [8, 10, 12, 14, 16]) battleTap(at(10, gy).x, at(10, gy).y);
+    for (const gy of [8, 10, 12, 14, 16, 18]) battleTap(at(10, gy).x, at(10, gy).y);
     battle.preset = 'raider';
-    for (const gy of [8, 10, 12, 14, 16]) battleTap(at(30, gy).x, at(30, gy).y);
-    const five = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
-    battle.category = 'own'; battle.preset = 'sword'; battleTap(at(10, 18).x, at(10, 18).y);
-    battle.category = 'enemy'; battle.preset = 'raider'; battleTap(at(30, 18).x, at(30, 18).y);
-    const six = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    for (const gy of [8, 10, 12, 14, 16, 18]) battleTap(at(30, gy).x, at(30, gy).y);
+    const auto = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    battle.banner = true;
+    battle.category = 'own'; battle.preset = 'sword'; battleTap(at(12, 18).x, at(12, 18).y);
+    battle.category = 'enemy'; battle.preset = 'raider'; battleTap(at(28, 18).x, at(28, 18).y);
+    const given = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
     const own = settlers.find(s => s.banner), foe = enemies.find(en => en.captain);
-    return { five, six, ownRole: own && own.role, ownType: own && own.type, foeType: foe && foe.type, foeKey: foe && foe.enemyKey };
+    battle.banner = false;
+    battle.category = 'own'; battle.preset = 'sword'; battleTap(at(14, 18).x, at(14, 18).y);
+    const after = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    return { auto, given, after, ownRole: own && own.role, ownType: own && own.type, foeType: foe && foe.type, foeKey: foe && foe.enemyKey,
+      entries: battle.lineup.filter(e => e.banner).length };
   });
-  expect(r).toEqual({ five: { green: 0, red: 0 }, six: { green: 1, red: 1 }, ownRole: 'soldier', ownType: 'normal', foeType: 'normal', foeKey: 'raider' });
+  expect(r).toEqual({ auto: { green: 0, red: 0 }, given: { green: 1, red: 1 }, after: { green: 1, red: 1 },
+    ownRole: 'soldier', ownType: 'normal', foeType: 'normal', foeKey: 'raider', entries: 2 });
+});
+
+test('the battle settings pick the field: a glade or a desert, and the line-up stays (#279)', async ({ page }) => {
+  await openBattle(page);
+  await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'sword'; battleTap(at(10, 10).x, at(10, 10).y);
+  });
+  await page.click('[data-dock="battle-settings"]');
+  await page.click('[data-battle-field="desert"]');
+  const desert = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, total: COLS * ROWS, units: settlers.length }));
+  await expect(page.locator('[data-battle-field="desert"]')).toHaveClass(/on/);
+  expect(desert).toEqual({ field: 'desert', sand: 40 * 26, total: 40 * 26, units: 1 });
+  await page.click('[data-battle-field="glade"]');
+  const glade = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, units: settlers.length }));
+  expect(glade).toEqual({ field: 'glade', sand: 0, units: 1 });
 });
 
 test('a pet keeps its id and a ghost hovers where it was placed in a battle, not in the empty town hall (#314)', async ({ page }) => {
