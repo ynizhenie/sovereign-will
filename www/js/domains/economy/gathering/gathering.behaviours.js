@@ -1,14 +1,14 @@
 // Workers gather: pick a resource (the player's marks first), walk to it, work it with the right tool
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody, nightReach } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
 import { addCarryLoad, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { ORE_KINDS } from '../../world/index.js';
-import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
-import { isInSafeArea } from '../../conflict/combat/index.js';
+import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards, someEnemyNear } from '../../../engine/movement/index.js';
+import { isInSafeArea, TENT_ASSAULT_FIGHT_DISTANCE } from '../../conflict/combat/index.js';
 import { huntBoar } from '../hunting/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 
@@ -39,7 +39,7 @@ export function canSettlerHarvest(s, r, tick) {
 
   if (kind === 'grass' && game.boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
   // loot (#210): not while an enemy is close to it
-  if (kind === 'loot' && game.enemies.some(en => Math.hypot(en.x - r.x, en.y - r.y) < 150)) return false;
+  if (kind === 'loot' && someEnemyNear(r.x, r.y, 150, () => true)) return false; // (#306: an enemy close to it)
   if (kind === 'grass' && hasToolFamily(s.tool, 'medic')) return true; // medics gather grass for herbs
   if (kind === 'grass' && tick.idleFarmer === s) return true; // so does a farmer with nothing else to do
 
@@ -65,12 +65,34 @@ export function isFreeHands(o) {
     (!o.activity || o.isIdle || o.activity === 'harvest' || o.activity === 'pickApples' || o.activity === 'deliverCarrying' || o.activity === 'deliverWhenNothingToDo');
 }
 
+// (#306) What a settler with this gear can work, worked out once a tick for all who carry the same: the same
+// bushes, trees and stones were gone over for every settler, every tick, which was a big colony's costliest
+// work (a carcass is left out: which settler may bring it in is its own)
+const gearListsOnce = onceThisTick();
+function workableWithGear(s, tick) {
+  const one = r => !r.isCarcass && canSettlerHarvest(s, r, tick);
+  // (the farmer gathering grass for herbs is the one a tick: its own list)
+  if (tick.idleFarmer === s) return tick.allResources.filter(one);
+  const bow = isBowWeapon(s.weapon) ? (s.quiver && (s.arrows || 0) > 0 ? 'bow' : 'noArrows') : '';
+  const key = `${s.role}|${s.tool}|${s.weapon}|${bow}`;
+  const lists = gearListsOnce(() => new Map());
+  let list = lists.get(key);
+  if (!list) {
+    list = tick.allResources.filter(one);
+    lists.set(key, list);
+  }
+  return list;
+}
+
 // Player-marked resources first, otherwise the nearest one the settler can walk to. Of the marked: the one
 // it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
 // worker on one (up to getWorkPriority) — two on one while others waited made one of them stand about
 // (#232). Returns null if there's nothing to do.
 export function pickResourceToHarvest(s, tick, markedOnly = false) {
-  const settlerReach = getSettlerReach(s);
+  // (#306) the settler's walking distances worked out only if there's something to walk to: that walk is the
+  // costliest thing in here, and it was made for every settler every tick, whether there was work or not
+  let settlerReach = null;
+  const reachOf = () => settlerReach || (settlerReach = getSettlerReach(s));
   // at night with no torch, nothing past the base (#257)
   const night = nightReach(s), withinNight = r => night === Infinity || Math.hypot(r.x - townHall.x, r.y - townHall.y) <= night;
   // resources this settler recently found no spot next to (see harvest())
@@ -79,9 +101,12 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
   const workers = r => tick.workerAssignments.get(r) || 0;
   // something marked that needs no tool (sticks, pebbles, berries, apples) is for the free hands: one with a
   // tool takes it only while no worker with nothing in hand is free for it, and only one nobody's on (#232)
-  const handsFree = s.tool !== 'none' && game.settlers.some(o => o !== s && isFreeHands(o) && (!o.markTarget || !tick.markedResources.includes(o.markTarget)));
+  // (#306) whether anyone with free hands is free for a mark: the same for all who carry a tool (one of those
+  // is never one of the free hands), worked out once a tick
+  const handsFreeOnce = onceThisTick();
+  const handsFree = s.tool !== 'none' && handsFreeOnce(() => game.settlers.some(o => isFreeHands(o) && (!o.markTarget || !tick.markedResources.includes(o.markTarget))));
   const forHands = r => !getMapResourceDef(tick.resourceKind.get(r)).tool;
-  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) && !(handsFree && forHands(r)) && withinNight(r) ? getReachDistanceToResource(settlerReach, r) : Infinity }))
+  const marked = tick.markedResources.map(r => ({ r, d: canSettlerHarvest(s, r, tick) && !skipped(r) && !(handsFree && forHands(r)) && withinNight(r) ? getReachDistanceToResource(reachOf(), r) : Infinity }))
     .filter(m => m.d < Infinity && workers(m.r) < getWorkPriority(m.r) &&
       // (nor a second pair of hands on one someone's already going for)
       !(s.tool !== 'none' && forHands(m.r) && game.settlers.some(o => o !== s && o.markTarget === m.r)));
@@ -97,21 +122,41 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
 
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building
-    let availableRes = tick.allResources.filter(r => canSettlerHarvest(s, r, tick) && !skipped(r) && (!r.priority || r.priority === 0) &&
-      !getMapResourceDef(tick.resourceKind.get(r)).markOnly && isInSafeArea(r.x, r.y) && withinNight(r));
+    const usable = r => !skipped(r) && (!r.priority || r.priority === 0) && isInSafeArea(r.x, r.y) && withinNight(r) &&
+      isSafeFromTentAssault(s, r, tick);
+    // (#306) from the list of what this gear can work, not from every resource on the base's land
+    let availableRes = [];
+    for (const r of workableWithGear(s, tick)) if (!getMapResourceDef(tick.resourceKind.get(r)).markOnly && usable(r)) availableRes.push(r);
+    // (the carcasses it was the one to bring in, one each, #199)
+    for (const b of game.boars) if (b.isCarcass && b.collector === s && usable(b)) availableRes.push(b);
     // what its foreman said is needed most, first, while there's some of it (#248)
     if (s.focus && s.focus.until > game.pathTick) {
       const focused = availableRes.filter(r => ((r.yield || getMapResourceDef(tick.resourceKind.get(r)).yield || {})[s.focus.resource] || 0) > 0);
       if (focused.length) availableRes = focused;
     }
-    // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off
+    // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off.
+    // (#306) Walking is never shorter than the straight way there in tiles, so what's farther off than the
+    // best so far can be left out before its distance is asked for
     let minDist = Infinity;
-    availableRes.forEach(r => {
-      let d = getReachDistanceToResource(settlerReach, r);
+    for (const r of availableRes) {
+      const offTiles = Math.max(Math.abs(r.x - s.x), Math.abs(r.y - s.y)) / TILE_SIZE;
+      if (offTiles >= minDist + 1) continue;
+      const d = getReachDistanceToResource(reachOf(), r);
       if (d < minDist) { minDist = d; assignedRes = r; }
-    });
+    }
   }
   return assignedRes;
+}
+
+function isSafeFromTentAssault(settler, resource, tick) {
+  if (!tick.tentAssault || settler.role !== 'worker' || settler.weapon !== 'fist' || tick.workersHelpTents) return true;
+  const dx = resource.x - settler.x, dy = resource.y - settler.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const safeDistance = TENT_ASSAULT_FIGHT_DISTANCE + TILE_SIZE;
+  return game.enemyTents.every(tent => {
+    const along = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((tent.x - settler.x) * dx + (tent.y - settler.y) * dy) / lengthSquared));
+    return Math.hypot(tent.x - (settler.x + along * dx), tent.y - (settler.y + along * dy)) >= safeDistance;
+  });
 }
 
 // Work a resource the settler is standing next to, the way its GAME_CONFIG.mapResources `work` says

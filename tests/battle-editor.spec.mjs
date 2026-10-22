@@ -13,7 +13,7 @@ const at = (gx, gy) => ({ x: gx * 30 + 15, y: gy * 30 + 15 });
 test('a battle\'s difficulty: on Hard the red side is as strong as yours, shown on its tiles; Endless\'s choice comes back (#255)', async ({ page }) => {
   await openBattle(page);
   const place = () => page.evaluate(([p]) => { battle.category = 'enemy'; battle.faction = 'humans'; battle.preset = 'raider'; battle.lineup = []; battleTap(p.x, p.y); return [enemies[0].maxHp, enemies[0].damage]; }, [at(30, 10)]);
-  expect(await place()).toEqual([70, 20]);
+  expect(await place()).toEqual([75, 50]);
   await page.click('[data-dock="battle-settings"]');
   await page.click('[data-battle-difficulty="hard"]');
   expect(await page.evaluate(() => [enemies[0].maxHp, enemies[0].damage])).toEqual([100, 50]); // (made again at once)

@@ -41,9 +41,11 @@ test('the panel has categories: your units, enemies, buildings; armour and shiel
   await showCategory(page, 'own');
   expect(await count()).toBe(10); // (the dog too, #314)
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
+  await expect(page.locator('[data-battle-gear="banner"]')).toBeVisible();
   await showCategory(page, 'enemy');
   expect(await count()).toBe(7); // with the healer (#203), the bare-handed savage and the war dog (#314)
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible(); // (the enemy's too, #279)
+  await expect(page.locator('[data-battle-gear="banner"]')).toBeVisible();
   await showCategory(page, 'buildings');
   await expect(page.locator('[data-battle-gear="armor"]')).toBeHidden();
   expect(await count()).toBe(16); // (#279: all of them the humans have, but a fish trap and crops)
@@ -74,6 +76,128 @@ test('every category has faction sub-tabs: each faction its own units and buildi
   expect(r.humans.buildings).not.toContain('grave');
 });
 
+test('every enemy shows the very icons of the player\'s own unit of its kind (#255)', async ({ page }) => {
+  await openBattle(page);
+  const tiles = async (faction, category) => {
+    await showCategory(page, category);
+    await page.click(`[data-battle-faction="${faction}"]`);
+    return page.$$eval('#battle-presets .tile', bs => bs.map(b => ({
+      name: b.querySelector('.tile-name b').textContent,
+      icons: [...b.querySelectorAll('.tile-name i.ic')].map(i => [...i.classList].find(c => c.startsWith('ic-')).slice(3))
+    })));
+  };
+  for (const faction of ['humans', 'undead', 'demons']) {
+    const own = new Map((await tiles(faction, 'own')).map(t => [t.name, t.icons]));
+    const foes = await tiles(faction, 'enemy');
+    const compared = foes.filter(f => own.has(f.name));
+    expect(compared.length).toBeGreaterThan(0);
+    expect(compared.map(f => [f.name, f.icons])).toEqual(compared.map(f => [f.name, own.get(f.name)]));
+    if (faction === 'undead') expect(compared).toContainEqual({ name: 'Зомби, Посох некроманта', icons: ['zombie', 'staff'] });
+  }
+});
+
+test('a battle has no commander unless the player gives a banner (#279)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'sword';
+    for (const gy of [8, 10, 12, 14, 16, 18]) battleTap(at(10, gy).x, at(10, gy).y);
+    battle.preset = 'raider';
+    for (const gy of [8, 10, 12, 14, 16, 18]) battleTap(at(30, gy).x, at(30, gy).y);
+    const auto = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    battle.banner = true;
+    battle.category = 'own'; battle.preset = 'sword'; battleTap(at(12, 18).x, at(12, 18).y);
+    battle.category = 'enemy'; battle.preset = 'raider'; battleTap(at(28, 18).x, at(28, 18).y);
+    const given = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    const own = settlers.find(s => s.banner), foe = enemies.find(en => en.captain);
+    battle.banner = false;
+    battle.category = 'own'; battle.preset = 'sword'; battleTap(at(14, 18).x, at(14, 18).y);
+    const after = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    return { auto, given, after, ownRole: own && own.role, ownType: own && own.type, foeType: foe && foe.type, foeKey: foe && foe.enemyKey,
+      entries: battle.lineup.filter(e => e.banner).length };
+  });
+  expect(r).toEqual({ auto: { green: 0, red: 0 }, given: { green: 1, red: 1 }, after: { green: 1, red: 1 },
+    ownRole: 'soldier', ownType: 'normal', foeType: 'normal', foeKey: 'raider', entries: 2 });
+});
+
+test('the battle settings pick the field: a glade or a desert, and the line-up stays (#279)', async ({ page }) => {
+  await openBattle(page);
+  await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'sword'; battleTap(at(10, 10).x, at(10, 10).y);
+  });
+  await page.click('[data-dock="battle-settings"]');
+  await page.click('[data-battle-field="desert"]');
+  const desert = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, total: COLS * ROWS, units: settlers.length }));
+  await expect(page.locator('[data-battle-field="desert"]')).toHaveClass(/on/);
+  expect(desert).toEqual({ field: 'desert', sand: 40 * 26, total: 40 * 26, units: 1 });
+  await page.click('[data-battle-field="glade"]');
+  const glade = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, units: settlers.length }));
+  expect(glade).toEqual({ field: 'glade', sand: 0, units: 1 });
+});
+
+test('the desert field keeps the midline and the green and red halves of the glade (#279)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    setBattleField('desert');
+    render();
+    const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
+    const outsideX = Math.round(x + (20 - camera.x) * getViewScale()); // (the border beyond the red line)
+    const sample = (px, py) => [...ctx.getImageData(px, py, 1, 1).data];
+    const on = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
+    const phase = battle.phase;
+    battle.phase = 'fight'; // the same frame without the placing overlay
+    render();
+    const off = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
+    battle.phase = phase;
+    render();
+    return { on, off };
+  });
+  // the white midline is drawn over the sand
+  expect(r.on.line[2] - r.off.line[2]).toBeGreaterThan(20);
+  // the left half is tinted green, the right red
+  expect((r.on.left[1] - r.off.left[1]) - (r.on.left[0] - r.off.left[0])).toBeGreaterThan(3);
+  expect((r.on.right[0] - r.off.right[0]) - (r.on.right[1] - r.off.right[1])).toBeGreaterThan(3);
+  // and beyond the red line the sand goes on, not the dark green border of the other modes
+  expect(r.on.outside[0]).toBeGreaterThan(150);
+});
+
+test('a pet keeps its id and a ghost hovers where it was placed in a battle, not in the empty town hall (#314)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'dog'; battleTap(at(10, 10).x, at(10, 10).y);
+    const dog0 = settlers.find(s => s.type === 'dog').id;
+    battle.preset = 'raider'; battleTap(at(34, 20).x, at(34, 20).y);
+    const dog1 = settlers.find(s => s.type === 'dog').id;
+    battle.category = 'own'; battle.preset = 'ghost'; battleTap(at(8, 8).x, at(8, 8).y);
+    const ghost = settlers.find(s => s.type === 'ghost'), spot = at(8, 8);
+    startBattleFight();
+    for (let f = 0; f < 120; f++) update(1 / 60);
+    return { sameId: dog0 === dog1, away: Math.hypot(ghost.x - spot.x, ghost.y - spot.y), phase: battle.phase };
+  });
+  expect(r.sameId).toBe(true);
+  expect(r.phase).toBe('fight');
+  expect(r.away).toBeLessThan(40); // (it hovers a little way off its spot)
+});
+
+test('an enemy pet is the player\'s own and leaves its own body in a battle too (#314)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    setBattleDifficulty('hard');
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'dog'; battleTap(at(12, 12).x, at(12, 12).y);
+    battle.preset = 'raider_dog'; battleTap(at(30, 12).x, at(30, 12).y);
+    const own = settlers.find(s => s.type === 'dog'), foe = enemies.find(e => e.enemyKey === 'raider_dog');
+    const side = p => ({ hp: p.maxHp, speed: p.speed, radius: p.radius, visualRadius: p.visualRadius });
+    addCorpse(own, 'settler', own.type);
+    addCorpse(foe, 'enemy', foe.enemyKey);
+    return { own: side(own), foe: side(foe), bodies: corpses.map(c => [c.side, c.pet, c.radius]) };
+  });
+  expect(r.foe).toEqual(r.own);
+  expect(r.bodies).toEqual([['settler', 'dog', r.own.visualRadius], ['enemy', 'dog', r.own.visualRadius]]);
+});
+
 test('a fight can be cancelled back to the line-up; a unit can be possessed in it; arrows never run out (#166)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
@@ -87,6 +211,7 @@ test('a fight can be cancelled back to the line-up; a unit can be possessed in i
     switchPossession();
     const possessedInFight = !!getPossessed();
     const archer = settlers[0];
+    archer.hp = archer.maxHp = 1e5; // (the raider reaches it in four seconds; it must live to cancel)
     const arrows0 = archer.arrows;
     settlers.forEach(s => { s.isPossessed = false; });
     for (let f = 0; f < 240; f++) update(1 / 60);
@@ -126,7 +251,7 @@ test('your units only on the green side, enemies only on the red; armour, shield
   expect(r).toEqual({
     refused: true,
     sword: { armor: 'iron', shield: true, hp: 150 }, bowShield: false,
-    raider: { weapon: 'sword', hp: 120, armor: 'iron', shield: true }, // (armour and a shield for the enemy too, #279)
+    raider: { weapon: 'sword', hp: 125, armor: 'iron', shield: true }, // (armour and a shield for the enemy too, #279; 100 x 0.75 + 50)
     walls: 2,
     afterClearGreen: { settlers: 0, enemies: 1, walls: 1 }
   });

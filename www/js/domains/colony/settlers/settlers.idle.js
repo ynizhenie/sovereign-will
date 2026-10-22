@@ -7,7 +7,7 @@
 // waves a farmer with a backpack carries dung lying about the base to a compost heap, to fertilise from.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getBaseRadius, isDefenseAlert, isInSafeArea } from '../../conflict/combat/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
@@ -22,7 +22,9 @@ export const IDLE_ACTIVITIES = { campfire: 'idleCampfire', talk: 'idleTalk', spa
 const byId = id => game.settlers.find(o => o.id === id) || null;
 // another idle settler free for company: wandering, or already in a knot
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
-const campfires = () => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y));
+const campfiresOnce = onceThisTick();
+// (#306) the fires looked for once a tick: isInSafeArea for every building, for every settler sitting by one
+const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y)));
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
 
 // (#298) the places to sit by a campfire: on each of its four sides, a tile that's free and that `s` can get
@@ -38,7 +40,7 @@ const seatTaken = (fire, seat, s) => game.settlers.some(o => o !== s && o.idle &
   o.idle.spot && Math.hypot(o.idle.spot.x - fire.x, o.idle.spot.y - fire.y) < 1);
 // A free seat for `s` at a campfire, the nearest fire's first: { fire, seat } or null
 export function freeCampfireSeat(s) {
-  for (const fire of campfires().sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
+  for (const fire of [...campfires()].sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
     const free = seatsOf(fire, s).filter(p => !seatTaken(fire, p.seat, s)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (free) return { fire, seat: free.seat };
   }
@@ -95,11 +97,25 @@ function pickPastime(s) {
 // Its place round a spot (a fire, a knot, a dummy): evenly round it with the others there for the same
 // pastime, in order of their ids, so no two stand in each other (#232)
 function ringPlace(s, spot, radius, act) {
-  const near = o => o.idle && o.idle.act === act && o.idle.spot && Math.hypot(o.idle.spot.x - spot.x, o.idle.spot.y - spot.y) < 1;
-  const here = game.settlers.filter(o => o === s || near(o)).sort((a, b) => a.id - b.id);
+  const here = ringGroup(spot, act);
   const k = Math.max(0, here.indexOf(s)), n = Math.max(1, here.length);
   const angle = (k / n) * Math.PI * 2 + (spot.x + spot.y) * 0.01;
   return { x: spot.x + Math.cos(angle) * radius, y: spot.y + Math.sin(angle) * radius };
+}
+
+// (#306) The others round the same spot at the same pastime, once a tick: gathering and sorting them again
+// for every settler in the knot was a good part of what a crowd of idle settlers cost
+const ringOnce = onceThisTick();
+function ringGroup(spot, act) {
+  const groups = ringOnce(() => new Map());
+  const key = `${act}|${Math.round(spot.x)}|${Math.round(spot.y)}`;
+  let here = groups.get(key);
+  if (!here) {
+    const near = o => o.idle && o.idle.act === act && o.idle.spot && Math.hypot(o.idle.spot.x - spot.x, o.idle.spot.y - spot.y) < 1;
+    here = game.settlers.filter(near).sort((a, b) => a.id - b.id);
+    groups.set(key, here);
+  }
+  return here;
 }
 
 // true: it walked or stood at it this tick
@@ -142,8 +158,8 @@ export function idlePastime(s, tick) {
     case 'talk': {
       const place = ringPlace(s, idle.spot, c.talkRing, 'talk');
       goStand(s, place, tick.dt, idle.spot);
-      // alone in its knot for long: off it goes
-      if (!game.settlers.some(o => o !== s && o.idle && o.idle.act === 'talk' && o.idle.spot && Math.hypot(o.idle.spot.x - idle.spot.x, o.idle.spot.y - idle.spot.y) < 1)) idle.left = Math.min(idle.left, 1);
+      // alone in its knot for long: off it goes (#306: the knot's group, already gathered)
+      if (ringGroup(idle.spot, 'talk').length <= 1) idle.left = Math.min(idle.left, 1);
       return true;
     }
     case 'spar': {
