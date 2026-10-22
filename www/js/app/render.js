@@ -11,7 +11,7 @@ import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, 
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising } from '../domains/factions/undead/index.js';
-import { drawDarkness, drawGrassGround, drawMapBorder, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
+import { drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -63,6 +63,7 @@ export function render() {
   drawRaising();
   drawProjectiles();
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)
+  drawFog(); // (what the colony hasn't seen dark, what it doesn't see now dimmed, #299)
 
   ctx.restore();
   drawDarkness(); // (night, with its lights, #257)
