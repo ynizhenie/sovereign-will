@@ -6,7 +6,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
 import { getFrontier } from '../../world/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { getEnemyReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 import { createConfiguredEnemy } from './waves.rules.js';
@@ -14,8 +14,18 @@ import { createConfiguredEnemy } from './waves.rules.js';
 const config = () => GAME_CONFIG.scouts;
 const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) || (game.portalQueue || []).length > 0;
 
-// A spot in the band along the side of the frontier nearest `from` (#299: getFrontier, a default map's edge)
+// A spot in the band along the side of the frontier nearest `from` (#299: getFrontier, a default map's edge),
+// on land joined to the base (a few tries; null with none found: over the sea)
 function bandSpot(from) {
+  const joined = getEnemyReach();
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const spot = bandSpotAnywhere(from);
+    const gx = Math.floor(spot.x / TILE_SIZE), gy = Math.floor(spot.y / TILE_SIZE);
+    if (gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS && joined[gy * game.COLS + gx]) return spot;
+  }
+  return null;
+}
+function bandSpotAnywhere(from) {
   const f = getFrontier(), W = f.x1 - f.x0, H = f.y1 - f.y0, band = (BORDER_MARGIN - 0.5) * TILE_SIZE;
   const side = /** @type {[string, number][]} */ ([['left', from.x - f.x0], ['right', f.x1 - from.x], ['top', from.y - f.y0], ['bottom', f.y1 - from.y]]).sort((a, b) => a[1] - b[1])[0][0];
   const along = (side === 'left' || side === 'right' ? H : W) * (0.1 + rand() * 0.8);
@@ -40,8 +50,8 @@ export function tickScouts(dt) {
     if (!waveOn() && game.waveNum - 1 >= c.fromWave && game.scouts.length < c.max && rand() < c.chance) {
       const f = getFrontier();
       const start = bandSpot({ x: f.x0 + rand() * (f.x1 - f.x0), y: rand() < 0.5 ? f.y0 : f.y1 });
-      const scout = createConfiguredEnemy(start, scoutKind());
-      if (scout) { Object.assign(scout, { scout: true, leaveIn: c.staySeconds, scoutTo: bandSpot(start) }); game.scouts.push(scout); }
+      const scout = start && createConfiguredEnemy(start, scoutKind());
+      if (scout) { Object.assign(scout, { scout: true, leaveIn: c.staySeconds, scoutTo: bandSpot(start) || start }); game.scouts.push(scout); }
     }
   }
   for (const s of game.scouts) {
@@ -60,7 +70,7 @@ export function tickScouts(dt) {
       // a while looking at the base, then on along the edge
       s.lookFor = (s.lookFor ?? 2 + rand() * 3) - dt;
       faceTowards(s, townHall.x, townHall.y);
-      if (s.lookFor <= 0) { s.lookFor = undefined; s.scoutTo = bandSpot(s); }
+      if (s.lookFor <= 0) { s.lookFor = undefined; s.scoutTo = bandSpot(s) || s.scoutTo; }
       continue;
     }
     moveEntityTowards(s, s.scoutTo.x, s.scoutTo.y, s.speed * 0.7, true, dt);

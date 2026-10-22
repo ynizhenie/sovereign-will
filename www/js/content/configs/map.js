@@ -107,5 +107,18 @@ export const mapConfig = {
     rockClusters: { min: 1, max: 20 },
     rockClusterWidth: { min: 1, max: 10 },
     rockClusterHeight: { min: 1, max: 10 }
-  }
+  },
+
+  // (#299) a map this big (tiles a side, the shorter) or bigger is a continent (world.continent.js): land
+  // in the sea, its shape by noise, sea all round (margin: the share of the map's side that's sea at least).
+  // Of the land: mountains (rock) the highest `mountains` share, desert the driest `desert`, forest the
+  // wettest `forest`, the rest grassland; lakes in the low wet hollows (`lakes` of the land). The start: on
+  // grassland, as far from the sea as startCoast tiles at least, rock and ore within startNear. grow: the chance
+  // of each thing on each biome's tile (the foot of the mountains its own)
+  continent: { from: 96, margin: 0.07, mountains: 0.07, desert: 0.16, forest: 0.3, lakes: 0.025, startCoast: 14, startNear: 24,
+    grow: {
+      grassland: { tree: 0.015, grass: 0.014, berry_bush: 0.005, stick: 0.009, pebble: 0.006, boulder: 0.01, boar: 0.0025 },
+      forest: { tree: 0.17, grass: 0.02, berry_bush: 0.012, stick: 0.016, boulder: 0.004, boar: 0.003 },
+      desert: { cactus: 0.025, pebble: 0.02, boulder: 0.004 },
+      foothills: { boulder: 0.05, pebble: 0.02 } } }
 };

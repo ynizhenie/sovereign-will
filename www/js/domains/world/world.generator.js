@@ -8,6 +8,7 @@ import { addMapResource, getMapResourceDef } from '../economy/gathering/index.js
 import { placeAppleTrees } from '../economy/farming/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/index.js';
 import { tileVariantHash } from './world.draw.js';
+import { generateContinent, isContinentMap } from './world.continent.js';
 
 // counts that grow with the map's area (see getMapAreaScale); the rest are sizes or per-cluster counts
 export const AREA_SCALED_COUNTS = new Set(['trees', 'boulders', 'grass', 'berryBushes', 'sticks', 'pebbles', 'boars',
@@ -103,7 +104,9 @@ export function placeRockOutcrop() {
   return false;
 }
 
-export function placeOreSpawners(kind, count) {
+// nearStart (#299): the first one there ({ x, y, r }), if any rock there will do
+/** @param {string} kind @param {number} count @param {{ x: number, y: number, r: number } | null} [nearStart] */
+export function placeOreSpawners(kind, count, nearStart = null) {
   const radius = getOreSpawnerRadius();
   // (#299) on a big map (hundreds of spawners, tens of thousands of rocks) the walk from the hall is worked
   // out once, not for each spawner, and whether a rock has room is kept, asked again only round the spawner
@@ -125,16 +128,21 @@ export function placeOreSpawners(kind, count) {
   for (let n = 0; n < count; n++) {
     if (!big || !reach) { resetTileIndex(); reach = getSettlerReach({ x: townHall.x, y: townHall.y }); }
     const walk = reach;
+    // (a big map's after the first: room round it is enough, it needn't be walked to from the hall yet)
+    const exposed = !big || n === 0 ? s => isOreSpotExposed(s, walk) : null;
     const hasRoom = r => {
-      if (!big) return getOreSpotsAround(r, radius, s => isOreSpotExposed(s, walk), 2).length >= 2;
-      if (!room.has(r)) room.set(r, getOreSpotsAround(r, radius, s => isOreSpotExposed(s, walk), 2).length >= 2);
-      return room.get(r);
+      if (!big) return getOreSpotsAround(r, radius, exposed, 2).length >= 2;
+      const key = n === 0 ? 'first' : 'rest';
+      if (!room.has(r) || room.get(r).key !== key) room.set(r, { key, ok: getOreSpotsAround(r, radius, exposed, 2).length >= 2 });
+      return room.get(r).ok;
     };
     // rock far from the hall and from other spawners, with room for ores and at least one reachable spot
     const candidates = game.naturalRocks.filter(r => !r.oreSpawner &&
       Math.hypot(r.x - townHall.x, r.y - townHall.y) > 220 &&
       !near[Math.floor(r.y / TILE_SIZE) * game.COLS + Math.floor(r.x / TILE_SIZE)] && hasRoom(r));
-    let spawner = candidates.length ? candidates[Math.floor(rand() * candidates.length)] : null;
+    const close = n === 0 && nearStart ? candidates.filter(r => Math.hypot(r.x - nearStart.x, r.y - nearStart.y) <= nearStart.r) : [];
+    const from = close.length ? close : candidates;
+    let spawner = from.length ? from[Math.floor(rand() * from.length)] : null;
     if (!spawner) {
       if (n > 0 || !placeRockOutcrop()) continue;
       spawner = game.naturalRocks[game.naturalRocks.length - 1];
@@ -143,10 +151,10 @@ export function placeOreSpawners(kind, count) {
     keepAway(spawner);
 
     const spots = getOreSpotsAround(spawner, radius);
-    const exposed = spots.filter(s => isOreSpotExposed(s, reach));
+    const reachable = spots.filter(s => isOreSpotExposed(s, reach));
     const ores = getMapCount('orePerSpawner', 5);
     // one ore is always reachable from the start; the rest land anywhere around the spawner
-    const first = exposed[Math.floor(rand() * exposed.length)];
+    const first = reachable[Math.floor(rand() * reachable.length)] || (big && n > 0 ? spots[Math.floor(rand() * spots.length)] : undefined);
     if (first) placeOre(kind, first);
     for (let i = 1; i < ores; i++) {
       const free = getOreSpotsAround(spawner, radius);
@@ -307,6 +315,7 @@ export function isWaterReachable(w) {
 export function generateMap() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
   game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = [];
+  if (isContinentMap()) { generateContinent(); return; } // (#299: a big map, a continent)
 
   placeLakes();
   placeDeserts();

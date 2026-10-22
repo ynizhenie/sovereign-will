@@ -17,19 +17,18 @@ export function collidesWithBoxList(x, y, radius, objects, halfSize) {
 // kinds: [[tileIndex set name, box half size], ...]
 // (#299) a kind's tiles as a grid (gy * COLS + gx), made from the tile index's set the first time it's asked
 // for and kept with that index: looking a tile up by a "x,y" string thousands of times a tick was slow
-/** @type {WeakMap<object, Map<string, Uint8Array>>} */
+// (keyed by the set itself: a set the index kept, its grid kept too)
+/** @type {WeakMap<Set<string>, Uint8Array>} */
 const kindGrids = new WeakMap();
 function kindGrid(tiles, set) {
-  let grids = kindGrids.get(tiles);
-  if (!grids) kindGrids.set(tiles, (grids = new Map()));
-  let grid = grids.get(set);
-  if (!grid) {
+  let grid = kindGrids.get(tiles[set]);
+  if (!grid || grid.length !== game.COLS * game.ROWS) {
     grid = new Uint8Array(game.COLS * game.ROWS);
     for (const key of tiles[set]) {
       const comma = key.indexOf(','), gx = (Number(key.slice(0, comma)) - 15) / TILE_SIZE, gy = (Number(key.slice(comma + 1)) - 15) / TILE_SIZE;
       if (Number.isInteger(gx) && Number.isInteger(gy) && gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS) grid[gy * game.COLS + gx] = 1;
     }
-    grids.set(set, grid);
+    kindGrids.set(tiles[set], grid);
   }
   return grid;
 }
