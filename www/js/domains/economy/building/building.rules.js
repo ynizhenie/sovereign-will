@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, anyWithin, game, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
 import { dropStoreContents, formatCost, getFreeStock } from '../../colony/storage/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getMapResourceDef } from '../gathering/index.js';
@@ -27,20 +27,12 @@ export function isBuildingSingle(building) {
 
 export function isTileOccupied(x, y) {
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return true;
-  return game.trees.some(t => Math.hypot(t.x - x, t.y - y) < 20) ||
-         game.cacti.some(c => Math.hypot(c.x - x, c.y - y) < 20) ||
-         game.boulders.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         game.grassList.some(g => Math.hypot(g.x - x, g.y - y) < 20) ||
-         game.sticks.some(s => Math.hypot(s.x - x, s.y - y) < 20) ||
-         game.pebbles.some(p => Math.hypot(p.x - x, p.y - y) < 20) ||
-         game.ironOres.some(i => Math.hypot(i.x - x, i.y - y) < 22) ||
-         game.coalOres.some(c => Math.hypot(c.x - x, c.y - y) < 22) ||
-         game.buildings.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         game.blueprints.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
-         game.naturalRocks.some(r => Math.hypot(r.x - x, r.y - y) < 24) ||
-         game.waterTiles.some(w => Math.hypot(w.x - x, w.y - y) < 20) ||
-         game.farmPlots.some(f => Math.hypot(f.x - x, f.y - y) < 20) ||
-         game.berryBushes.some(b => Math.hypot(b.x - x, b.y - y) < 20) ||
+  // (#299: by the tiles round it, anyWithin, not through every list: a big map has thousands)
+  return anyWithin(game.trees, x, y, 20) || anyWithin(game.cacti, x, y, 20) || anyWithin(game.boulders, x, y, 20) ||
+         anyWithin(game.grassList, x, y, 20) || anyWithin(game.sticks, x, y, 20) || anyWithin(game.pebbles, x, y, 20) ||
+         anyWithin(game.ironOres, x, y, 22) || anyWithin(game.coalOres, x, y, 22) || anyWithin(game.buildings, x, y, 20) ||
+         anyWithin(game.blueprints, x, y, 20) || anyWithin(game.naturalRocks, x, y, 24) || anyWithin(game.waterTiles, x, y, 20) ||
+         anyWithin(game.farmPlots, x, y, 20) || anyWithin(game.berryBushes, x, y, 20) ||
          game.boars.some(b => Math.hypot(b.x - x, b.y - y) < 20);
 }
 

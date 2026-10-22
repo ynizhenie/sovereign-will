@@ -4,6 +4,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { getFrontier, isOutskirts } from '../../world/index.js';
 import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getBaseRadius } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -27,14 +28,15 @@ export function getCorpseHeap() {
   hallHolder.x = townHall.x; hallHolder.y = townHall.y;
   const reach = getSettlerReach(hallHolder);
   const r = base + config().corpseHeapTiles * TILE_SIZE;
-  const edges = [[1, 0, game.WORLD_WIDTH - townHall.x], [-1, 0, townHall.x], [0, 1, game.WORLD_HEIGHT - townHall.y], [0, -1, townHall.y]].sort((a, b) => a[2] - b[2]);
+  const f = getFrontier(); // (#299: towards the frontier's nearest side, a default map's edge)
+  const edges = [[1, 0, f.x1 - townHall.x], [-1, 0, townHall.x - f.x0], [0, 1, f.y1 - townHall.y], [0, -1, townHall.y - f.y0]].sort((a, b) => a[2] - b[2]);
   let heap = null;
   for (let k = 0; k < 8 && !heap; k++) {
     for (const [dx, dy] of edges) {
       for (const side of [0, 1, -1, 2, -2, 3, -3]) {
         const x = townHall.x + dx * (r + k * TILE_SIZE) + dy * side * TILE_SIZE, y = townHall.y + dy * (r + k * TILE_SIZE) + dx * side * TILE_SIZE;
         const g = getGridPos(x, y);
-        if (g.gx <= BORDER_MARGIN || g.gy <= BORDER_MARGIN || g.gx >= game.COLS - BORDER_MARGIN - 1 || g.gy >= game.ROWS - BORDER_MARGIN - 1) continue;
+        if (isOutskirts(g.gx - 1, g.gy - 1) || isOutskirts(g.gx + 1, g.gy + 1)) continue;
         if (getReachSteps(reach, g.gx, g.gy) >= 0) { heap = { x: g.gx * TILE_SIZE + 15, y: g.gy * TILE_SIZE + 15 }; break; }
       }
       if (heap) break;

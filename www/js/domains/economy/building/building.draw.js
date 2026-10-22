@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/index.js';
-import { ctx, mouse, t } from '../../../engine/platform/index.js';
+import { ctx, mouse, t, getViewRect } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
 import { getSmelterLimits, needsRepair } from './building.rules.js';
@@ -50,12 +50,13 @@ export function drawBuildGrid() {
   if (game.buildMode !== 'interact' && game.buildMode !== 'possess') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < game.WORLD_WIDTH; x += TILE_SIZE) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, game.WORLD_HEIGHT); ctx.stroke();
-    }
-    for (let y = 0; y < game.WORLD_HEIGHT; y += TILE_SIZE) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(game.WORLD_WIDTH, y); ctx.stroke();
-    }
+    // (#299: the lines on the screen, in one path)
+    const v = getViewRect(TILE_SIZE);
+    const x0 = Math.max(0, Math.floor(v.x0 / TILE_SIZE) * TILE_SIZE), x1 = Math.min(game.WORLD_WIDTH, v.x1), y0 = Math.max(0, Math.floor(v.y0 / TILE_SIZE) * TILE_SIZE), y1 = Math.min(game.WORLD_HEIGHT, v.y1);
+    ctx.beginPath();
+    for (let x = x0; x < x1; x += TILE_SIZE) { ctx.moveTo(x, y0); ctx.lineTo(x, y1); }
+    for (let y = y0; y < y1; y += TILE_SIZE) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+    ctx.stroke();
     let gxIdx = Math.floor(mouse.x / TILE_SIZE);
     let gyIdx = Math.floor(mouse.y / TILE_SIZE);
     let gx = gxIdx * TILE_SIZE;

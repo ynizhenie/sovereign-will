@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand } from '../../../engine/world/index.js';
-import { spawnResource } from '../../world/index.js';
+import { getFrontier, hasTerritory, spawnResource } from '../../world/index.js';
 import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../../engine/movement/index.js';
 import { bleed } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
@@ -95,15 +95,20 @@ export function tickBoarRespawn(dt) {
   }
 }
 
-// Boars: hide in the grass, run from settlers that come near, wander
-export function tickBoars(dt) {
+// Boars: hide in the grass, run from settlers that come near, wander. (#299) One past the frontier, far from
+// anyone (getFrontier), lives on too, but in steps of farEvery ticks at once, by turns: a big map has hundreds
+export function tickBoars(tickDt) {
   const c = GAME_CONFIG.mapResources.boar;
   for (let i = boarWallows.length - 1; i >= 0; i--) {
     const w = boarWallows[i];
     if (w.boar && (!game.boars.includes(w.boar) || w.boar.isCarcass || w.boar.rest === null)) w.boar = null;
-    if (!w.boar && (w.age += dt) > c.wallowFade) boarWallows.splice(i, 1);
+    if (!w.boar && (w.age += tickDt) > c.wallowFade) boarWallows.splice(i, 1);
   }
-  game.boars.forEach(b => {
+  const f = hasTerritory() ? getFrontier() : null, every = c.farEvery;
+  game.boars.forEach((b, i) => {
+    const far = !!f && !b.isCarcass && (b.x < f.x0 || b.x > f.x1 || b.y < f.y0 || b.y > f.y1);
+    if (far && (i + game.pathTick) % every) return;
+    const k = far ? every : 1, dt = tickDt * k; // (its steps and its time, farEvery ticks' worth)
     if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) { endRest(b); return; }
     // a baited iron trap near by: it goes for the food, and may be caught (#248)
@@ -146,7 +151,7 @@ export function tickBoars(dt) {
         }
         let hideDx = (b.hideTarget.x - b.x) / hideDistance;
         let hideDy = (b.hideTarget.y - b.y) / hideDistance;
-        let hideSpeed = (b.fleeSpeed || 1.35) * GAME_CONFIG.movementScale;
+        let hideSpeed = (b.fleeSpeed || 1.35) * GAME_CONFIG.movementScale * k;
         if (!collidesWithWall(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12) &&
             !collidesWithWater(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12)) {
           b.x += hideDx * hideSpeed;
@@ -188,7 +193,7 @@ export function tickBoars(dt) {
     let dy = (b.targetY !== undefined ? b.targetY : b.y) - b.y;
     let dist = Math.hypot(dx, dy);
     if (dist > 2) {
-      let speed = (b.fleeTimer > 0 ? (b.fleeSpeed || 0.65) : 0.3) * GAME_CONFIG.movementScale;
+      let speed = (b.fleeTimer > 0 ? (b.fleeSpeed || 0.65) : 0.3) * GAME_CONFIG.movementScale * k;
       let vx = (dx / dist) * speed;
       let vy = (dy / dist) * speed;
       if (!collidesWithWall(b.x + vx, b.y + vy, 12) && !collidesWithWater(b.x + vx, b.y + vy, 12)) {

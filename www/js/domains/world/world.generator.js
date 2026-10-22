@@ -2,7 +2,7 @@
 // in the numbers GAME_CONFIG.map asks for (scaled to the map's size)
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getMapAreaScale, isBorderZone, rand, resetTileIndex, townHall } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, anyWithin, game, getGridPos, getMapAreaScale, isBorderZone, rand, resetTileIndex, someNear, thingAt, townHall } from '../../engine/world/index.js';
 import { isSpawnSpotFree, isTileOccupied } from '../economy/building/index.js';
 import { addMapResource, getMapResourceDef } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
@@ -37,7 +37,7 @@ export function getMapRange(key, fallbackMin, fallbackMax) {
 }
 
 export function isDesertTile(x, y) {
-  if (game.desertTiles.some(tile => tile.x === x && tile.y === y)) return true;
+  if (thingAt(game.desertTiles, x, y)) return true;
   if (!game.desertRegion) return false;
   return Math.hypot((x - game.desertRegion.x) / (TILE_SIZE * game.desertRegion.rx), (y - game.desertRegion.y) / (TILE_SIZE * game.desertRegion.ry)) <= 1;
 }
@@ -60,8 +60,10 @@ export function getOreSpawners(kind) {
   return game.naturalRocks.filter(r => r.oreSpawner === kind);
 }
 
-// Tiles around a spawner where an ore can appear; rock is set when the ore would replace natural rock
-export function getOreSpotsAround(spawner, radius) {
+// Tiles around a spawner where an ore can appear; rock is set when the ore would replace natural rock.
+// keep / enough (#299): only the spots keep() takes, and no more than enough of them (stops there)
+/** @param {any} spawner @param {number} radius @param {((spot: { x: number, y: number }) => boolean) | null} [keep] @param {number} [enough] */
+export function getOreSpotsAround(spawner, radius, keep = null, enough = Infinity) {
   const spots = [];
   const center = getGridPos(spawner.x, spawner.y);
   for (let gy = center.gy - radius; gy <= center.gy + radius; gy++) {
@@ -71,7 +73,8 @@ export function getOreSpotsAround(spawner, radius) {
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
       if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
       // free ground only: ore never replaces natural rock
-      if (!isDesertTile(x, y) && isSpawnSpotFree(x, y)) spots.push({ x, y });
+      if (keep && !keep({ x, y })) continue;
+      if (!isDesertTile(x, y) && isSpawnSpotFree(x, y) && spots.push({ x, y }) >= enough) return spots;
     }
   }
   return spots;
@@ -102,21 +105,42 @@ export function placeRockOutcrop() {
 
 export function placeOreSpawners(kind, count) {
   const radius = getOreSpawnerRadius();
+  // (#299) on a big map (hundreds of spawners, tens of thousands of rocks) the walk from the hall is worked
+  // out once, not for each spawner, and whether a rock has room is kept, asked again only round the spawner
+  // just placed: it took minutes
+  const big = game.COLS * game.ROWS > 6400, room = new Map();
+  // the tiles within six of a spawner (none goes there: spawners apart), marked as each is placed
+  const near = new Uint8Array(game.COLS * game.ROWS), apart = 6 * TILE_SIZE;
+  const keepAway = o => {
+    const g = getGridPos(o.x, o.y);
+    for (let dy = -6; dy <= 6; dy++) {
+      for (let dx = -6; dx <= 6; dx++) {
+        const gx = g.gx + dx, gy = g.gy + dy;
+        if (gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS && Math.hypot(dx * TILE_SIZE, dy * TILE_SIZE) <= apart) near[gy * game.COLS + gx] = 1;
+      }
+    }
+  };
+  game.naturalRocks.forEach(r => { if (r.oreSpawner) keepAway(r); });
+  let reach = null;
   for (let n = 0; n < count; n++) {
-    resetTileIndex();
-    const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
-    const others = game.naturalRocks.filter(r => r.oreSpawner);
+    if (!big || !reach) { resetTileIndex(); reach = getSettlerReach({ x: townHall.x, y: townHall.y }); }
+    const walk = reach;
+    const hasRoom = r => {
+      if (!big) return getOreSpotsAround(r, radius, s => isOreSpotExposed(s, walk), 2).length >= 2;
+      if (!room.has(r)) room.set(r, getOreSpotsAround(r, radius, s => isOreSpotExposed(s, walk), 2).length >= 2);
+      return room.get(r);
+    };
     // rock far from the hall and from other spawners, with room for ores and at least one reachable spot
     const candidates = game.naturalRocks.filter(r => !r.oreSpawner &&
       Math.hypot(r.x - townHall.x, r.y - townHall.y) > 220 &&
-      others.every(o => Math.hypot(o.x - r.x, o.y - r.y) > 6 * TILE_SIZE) &&
-      getOreSpotsAround(r, radius).filter(s => isOreSpotExposed(s, reach)).length >= 2);
+      !near[Math.floor(r.y / TILE_SIZE) * game.COLS + Math.floor(r.x / TILE_SIZE)] && hasRoom(r));
     let spawner = candidates.length ? candidates[Math.floor(rand() * candidates.length)] : null;
     if (!spawner) {
       if (n > 0 || !placeRockOutcrop()) continue;
       spawner = game.naturalRocks[game.naturalRocks.length - 1];
     }
     spawner.oreSpawner = kind;
+    keepAway(spawner);
 
     const spots = getOreSpotsAround(spawner, radius);
     const exposed = spots.filter(s => isOreSpotExposed(s, reach));
@@ -129,6 +153,7 @@ export function placeOreSpawners(kind, count) {
       if (free.length === 0) break;
       placeOre(kind, free[Math.floor(rand() * free.length)]);
     }
+    if (big) someNear(game.naturalRocks, spawner.x, spawner.y, (2 * radius + 2) * TILE_SIZE, r => { room.delete(r); });
   }
   resetTileIndex();
 }
@@ -186,16 +211,22 @@ export function getForestSpread() {
   return (getMapCount('forestRadius', 3) * 2 + 1) * TILE_SIZE;
 }
 
-export function spawnForestAware(type) {
+// area (#299): only there (a forest in it, a spot in it), when given
+/** @param {string} type @param {{ x0: number, y0: number, x1: number, y1: number } | null} [area] */
+export function spawnForestAware(type, area = null) {
   // trees (forestShare 1) always grow back in a forest, so forests don't thin out into a scatter
   const share = getMapResourceDef(type).forestShare ?? GAME_CONFIG.map.forestUndergrowthShare ?? 0.7;
-  if (game.forests.length > 0 && rand() < share) {
-    const forest = game.forests[Math.floor(rand() * game.forests.length)];
+  const forests = area ? game.forests.filter(f => f.x >= area.x0 && f.x <= area.x1 && f.y >= area.y0 && f.y <= area.y1) : game.forests;
+  if (forests.length > 0 && rand() < share) {
+    const forest = forests[Math.floor(rand() * forests.length)];
     spawnResource(type, forest.x, forest.y, getForestSpread(), () => pickForestPoint(forest));
   } else {
-    spawnResource(type);
+    spawnResource(type, null, null, 180, area ? pointIn(area) : null);
   }
 }
+
+// A random spot in an area, again each time it's asked
+export const pointIn = area => () => ({ x: area.x0 + rand() * (area.x1 - area.x0), y: area.y0 + rand() * (area.y1 - area.y0) });
 
 // A forest is a few overlapping round lobes around its centre, so it grows into an uneven blob rather
 // than a square
@@ -225,7 +256,7 @@ export function placeForests() {
       const y = (BORDER_MARGIN + 3 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 6))) * TILE_SIZE + 15;
       const valid = Math.hypot(x - townHall.x, y - townHall.y) > 180 &&
         !isDesertTile(x, y) &&
-        !game.waterTiles.some(wt => Math.hypot(wt.x - x, wt.y - y) < 90) &&
+        !anyWithin(game.waterTiles, x, y, 90) &&
         game.forests.every(f => Math.hypot(f.x - x, f.y - y) > 6 * TILE_SIZE);
       if (!valid) continue;
       const forest = { x, y, lobes: makeForestLobes(x, y) };
@@ -360,7 +391,7 @@ function placeLakes() {
         let dynamicThreshold = Math.max(0.75, 0.9 + Math.sin(angle * waves + phase) * amp);
 
         if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 160) {
-          if (!game.waterTiles.some(w => w.x === tx && w.y === ty)) {
+          if (!thingAt(game.waterTiles, tx, ty)) {
             tempTiles.push({ x: tx, y: ty, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
           }
         }
@@ -400,7 +431,7 @@ function placeDeserts() {
       desertCenterY = centerGy * TILE_SIZE + 15;
 
       desertPlaced = Math.hypot(desertCenterX - townHall.x, desertCenterY - townHall.y) > 200 &&
-        !game.waterTiles.some(w => Math.hypot(w.x - desertCenterX, w.y - desertCenterY) < 110) &&
+        !anyWithin(game.waterTiles, desertCenterX, desertCenterY, 110) &&
         desertCenters.every(dc => Math.hypot(dc.x - desertCenterX, dc.y - desertCenterY) > 150);
     }
 
@@ -434,8 +465,8 @@ function placeDeserts() {
           if (isInside &&
               tileX >= BORDER_MARGIN * TILE_SIZE + 15 && tileX < (game.COLS - BORDER_MARGIN) * TILE_SIZE - 15 &&
               tileY >= BORDER_MARGIN * TILE_SIZE + 15 && tileY < (game.ROWS - BORDER_MARGIN) * TILE_SIZE - 15 &&
-              !game.waterTiles.some(w => w.x === tileX && w.y === tileY) &&
-              !game.desertTiles.some(d => d.x === tileX && d.y === tileY)) {
+              !thingAt(game.waterTiles, tileX, tileY) &&
+              !thingAt(game.desertTiles, tileX, tileY)) {
             game.desertTiles.push({ x: tileX, y: tileY });
           }
         }

@@ -114,7 +114,7 @@ test('clicking an enemy with the Point tool marks and unmarks it (#35)', async (
     e.speed = 0;
     enemies = [e];
     isPaused = true;
-    camera.zoom = 1; camera.x = townHall.x; camera.y = townHall.y; clampCamera();
+    camera.zoom = Math.max(1, COLS / 40); camera.x = townHall.x; camera.y = townHall.y; clampCamera(); // (as close as a default map's, #299)
     // world -> canvas pixels -> page coordinates
     const rect = canvas.getBoundingClientRect();
     const toPage = rect.width / canvas.width;

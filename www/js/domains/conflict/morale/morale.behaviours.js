@@ -4,7 +4,8 @@
 // necromancer keeps behind its own
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
+import { getFrontier, isOutskirts } from '../../world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
@@ -87,14 +88,16 @@ export function enemyPanic(en, dt) {
   const edge = nearestEdge(en);
   moveEntityTowards(en, edge.x, edge.y, en.speed, true, dt);
   const g = getGridPos(en.x, en.y);
-  if (isBorderZone(g.gx, g.gy)) { en.hp = 0; en.crumbled = true; en.rewardGranted = true; en.fled = true; }
+  if (isOutskirts(g.gx, g.gy)) { en.hp = 0; en.crumbled = true; en.rewardGranted = true; en.fled = true; }
   return true;
 }
 
+// (#299: the frontier's, a default map's edge)
 function nearestEdge(unit) {
+  const f = getFrontier(), band = BORDER_MARGIN * TILE_SIZE;
   const edges = [
-    { x: unit.x, y: BORDER_MARGIN * TILE_SIZE - 10 }, { x: unit.x, y: game.WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE + 10 },
-    { x: BORDER_MARGIN * TILE_SIZE - 10, y: unit.y }, { x: game.WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE + 10, y: unit.y }
+    { x: unit.x, y: f.y0 + band - 10 }, { x: unit.x, y: f.y1 - band + 10 },
+    { x: f.x0 + band - 10, y: unit.y }, { x: f.x1 - band + 10, y: unit.y }
   ];
   return edges.reduce((a, b) => (Math.hypot(a.x - unit.x, a.y - unit.y) < Math.hypot(b.x - unit.x, b.y - unit.y) ? a : b));
 }

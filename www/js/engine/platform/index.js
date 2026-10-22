@@ -2,7 +2,7 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { audio, initAudio, midi, noise, setMusicOn, setSoundOn, startAudio, tone } from './audio.js';
-export { camera, clampCamera, getMaxZoom, setZoom, updateInputPos } from './camera.js';
+export { camera, clampCamera, getMaxZoom, getViewRect, setZoom, updateInputPos } from './camera.js';
 export { canvas, ctx, drawProgressBar, fitCanvasToScreen, getBaseScale, getViewScale, initCanvas, screenPixelRatio } from './canvas.js';
 export { onTap } from './dom.js';
 export { applyPageTexts, currentLanguage, initI18n, setLanguage, statLabel, t } from './i18n.js';

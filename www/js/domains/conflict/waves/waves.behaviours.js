@@ -2,6 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
+import { getFrontier } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
@@ -127,10 +128,11 @@ function scoutFlees(en, dt) {
     if (en.hp < en.maxHp || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < GAME_CONFIG.scouts.fleeTiles * 30)) en.fleeing = true;
     else { faceTowards(en, townHall.x, townHall.y); return; }
   }
-  const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
-  const out = [{ x: -40, y: en.y, d: en.x }, { x: W + 40, y: en.y, d: W - en.x }, { x: en.x, y: -40, d: en.y }, { x: en.x, y: H + 40, d: H - en.y }].sort((a, b) => a.d - b.d)[0];
+  // (#299: off past the frontier, a default map's edge)
+  const f = getFrontier(), X0 = f.x0, Y0 = f.y0, W = f.x1, H = f.y1;
+  const out = [{ x: X0 - 40, y: en.y, d: en.x - X0 }, { x: W + 40, y: en.y, d: W - en.x }, { x: en.x, y: Y0 - 40, d: en.y - Y0 }, { x: en.x, y: H + 40, d: H - en.y }].sort((a, b) => a.d - b.d)[0];
   moveEntityTowards(en, out.x, out.y, en.speed * 1.2, true, dt);
-  if (en.x < 18 || en.y < 18 || en.x > W - 18 || en.y > H - 18) { en.fled = true; en.crumbled = true; en.hp = 0; } // (gone: no corpse, no spoils)
+  if (en.x < X0 + 18 || en.y < Y0 + 18 || en.x > W - 18 || en.y > H - 18) { en.fled = true; en.crumbled = true; en.hp = 0; } // (gone: no corpse, no spoils)
 }
 
 // A tent builder walks to its site and builds; the tent stands once the work is done
