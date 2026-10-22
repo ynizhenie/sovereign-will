@@ -5,6 +5,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
+import { getFrontier } from '../../world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
@@ -13,12 +14,13 @@ import { createConfiguredEnemy } from './waves.rules.js';
 const config = () => GAME_CONFIG.scouts;
 const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) || (game.portalQueue || []).length > 0;
 
-// A spot in the red band along the side of the map nearest `from`
+// A spot in the band along the side of the frontier nearest `from` (#299: getFrontier, a default map's edge)
 function bandSpot(from) {
-  const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT, band = (BORDER_MARGIN - 0.5) * TILE_SIZE;
-  const side = [['left', from.x], ['right', W - from.x], ['top', from.y], ['bottom', H - from.y]].sort((a, b) => a[1] - b[1])[0][0];
+  const f = getFrontier(), W = f.x1 - f.x0, H = f.y1 - f.y0, band = (BORDER_MARGIN - 0.5) * TILE_SIZE;
+  const side = /** @type {[string, number][]} */ ([['left', from.x - f.x0], ['right', f.x1 - from.x], ['top', from.y - f.y0], ['bottom', f.y1 - from.y]]).sort((a, b) => a[1] - b[1])[0][0];
   const along = (side === 'left' || side === 'right' ? H : W) * (0.1 + rand() * 0.8);
-  return side === 'left' ? { x: band, y: along } : side === 'right' ? { x: W - band, y: along } : side === 'top' ? { x: along, y: band } : { x: along, y: H - band };
+  return side === 'left' ? { x: f.x0 + band, y: f.y0 + along } : side === 'right' ? { x: f.x1 - band, y: f.y0 + along }
+    : side === 'top' ? { x: f.x0 + along, y: f.y0 + band } : { x: f.x0 + along, y: f.y1 - band };
 }
 
 // The kind a scout is: the enemy faction's lightest, by its waveKey 'club'
@@ -36,7 +38,8 @@ export function tickScouts(dt) {
   if (game.scoutClock >= c.checkSeconds) {
     game.scoutClock = 0;
     if (!waveOn() && game.waveNum - 1 >= c.fromWave && game.scouts.length < c.max && rand() < c.chance) {
-      const start = bandSpot({ x: rand() * game.WORLD_WIDTH, y: rand() < 0.5 ? 0 : game.WORLD_HEIGHT });
+      const f = getFrontier();
+      const start = bandSpot({ x: f.x0 + rand() * (f.x1 - f.x0), y: rand() < 0.5 ? f.y0 : f.y1 });
       const scout = createConfiguredEnemy(start, scoutKind());
       if (scout) { Object.assign(scout, { scout: true, leaveIn: c.staySeconds, scoutTo: bandSpot(start) }); game.scouts.push(scout); }
     }
@@ -46,11 +49,11 @@ export function tickScouts(dt) {
     const scared = game.settlers.some(o => Math.hypot(o.x - s.x, o.y - s.y) < c.fleeTiles * TILE_SIZE);
     if (scared || (s.leaveIn ?? 0) <= 0 || waveOn()) s.leaving = true;
     if (s.leaving) {
-      // off the map at the nearest edge
-      const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
-      const out = [{ x: -40, y: s.y, d: s.x }, { x: W + 40, y: s.y, d: W - s.x }, { x: s.x, y: -40, d: s.y }, { x: s.x, y: H + 40, d: H - s.y }].sort((a, b) => a.d - b.d)[0];
+      // off past the frontier at its nearest side (a default map's edge)
+      const f = getFrontier(), X0 = f.x0, Y0 = f.y0, W = f.x1, H = f.y1;
+      const out = [{ x: X0 - 40, y: s.y, d: s.x - X0 }, { x: W + 40, y: s.y, d: W - s.x }, { x: s.x, y: Y0 - 40, d: s.y - Y0 }, { x: s.x, y: H + 40, d: H - s.y }].sort((a, b) => a.d - b.d)[0];
       moveEntityTowards(s, out.x, out.y, s.speed * (scared ? 1.2 : 1), true, dt);
-      if (s.x < 18 || s.y < 18 || s.x > W - 18 || s.y > H - 18) s.gone = true;
+      if (s.x < X0 + 18 || s.y < Y0 + 18 || s.x > W - 18 || s.y > H - 18) s.gone = true;
       continue;
     }
     if (!s.scoutTo || Math.hypot(s.scoutTo.x - s.x, s.scoutTo.y - s.y) < 10) {

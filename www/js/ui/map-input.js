@@ -2,10 +2,10 @@
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
-import { TILE_SIZE, game, isBorderZone, townHall } from '../engine/world/index.js';
+import { TILE_SIZE, game, isBorderZone, thingAt, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
-import { isWaterReachable, toggleZone } from '../domains/world/index.js';
+import { inTerritory, isWaterReachable, toggleZone } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
@@ -56,6 +56,8 @@ export function handleCanvasClick() {
   if (game.buildMode.startsWith('zone_')) {
     const kind = game.buildMode.slice('zone_'.length);
     if (isBorderZone(tile.gxIdx, tile.gyIdx)) return;
+    // (#299) only on the base's land (taking one off: anywhere)
+    if (kind !== 'clear' && !inTerritory(tile.gx, tile.gy)) { showNotification(t('build.outside'), true); return; }
     // (#279) relief and post zones; Remove zone takes any off
     if (kind === 'relief' || kind === 'post') toggleZone(tile.gx, tile.gy, kind);
     else { if (kind === 'clear') toggleZone(tile.gx, tile.gy, 'clear'); toggleFarmZone(tile.gx, tile.gy, kind); }
@@ -112,6 +114,10 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
   if (isBorderZone(gxIdx, gyIdx)) {
     return false;
   }
+  if (game.buildMode !== 'demolish' && !inTerritory(gx, gy)) { // (#299: built only on the base's land)
+    showNotification(t('build.outside'), true);
+    return false;
+  }
   if (game.farmZones.some(z => z.x === gx && z.y === gy)) {
     showNotification(t('build.zoneHere'), true);
     return false;
@@ -158,6 +164,11 @@ function enemyTapped() {
 // Point mode on the map: a fishing spot, or a resource marked "work here" (again: unmark). One kind of
 // mark, no levels (the 1-2-3 levels were confusing, #232)
 function markTapped() {
+  // (#299) settlers don't go beyond the base's land
+  if (!inTerritory(mouse.x, mouse.y)) {
+    if (getHarvestableResources().some(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22) || thingAt(game.waterTiles, Math.floor(mouse.x / TILE_SIZE) * TILE_SIZE + 15, Math.floor(mouse.y / TILE_SIZE) * TILE_SIZE + 15)) showNotification(t('mark.outside'), true);
+    return;
+  }
   let clickedWater = game.waterTiles.find(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 18);
   if (clickedWater) {
     if (isWaterReachable(clickedWater)) {

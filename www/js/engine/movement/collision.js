@@ -15,15 +15,36 @@ export function collidesWithBoxList(x, y, radius, objects, halfSize) {
 // Box collision against what occupies the tiles around (x, y). Everything solid sits on a tile center,
 // so only the few nearby tiles need checking instead of every object on the map.
 // kinds: [[tileIndex set name, box half size], ...]
+// (#299) a kind's tiles as a grid (gy * COLS + gx), made from the tile index's set the first time it's asked
+// for and kept with that index: looking a tile up by a "x,y" string thousands of times a tick was slow
+/** @type {WeakMap<object, Map<string, Uint8Array>>} */
+const kindGrids = new WeakMap();
+function kindGrid(tiles, set) {
+  let grids = kindGrids.get(tiles);
+  if (!grids) kindGrids.set(tiles, (grids = new Map()));
+  let grid = grids.get(set);
+  if (!grid) {
+    grid = new Uint8Array(game.COLS * game.ROWS);
+    for (const key of tiles[set]) {
+      const comma = key.indexOf(','), gx = (Number(key.slice(0, comma)) - 15) / TILE_SIZE, gy = (Number(key.slice(comma + 1)) - 15) / TILE_SIZE;
+      if (Number.isInteger(gx) && Number.isInteger(gy) && gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS) grid[gy * game.COLS + gx] = 1;
+    }
+    grids.set(set, grid);
+  }
+  return grid;
+}
+
 export function collidesWithTiles(x, y, radius, kinds) {
   const tiles = getTileIndex();
   const span = Math.ceil((radius + 15) / TILE_SIZE);
   const g = getGridPos(x, y);
   for (let gy = g.gy - span; gy <= g.gy + span; gy++) {
+    if (gy < 0 || gy >= game.ROWS) continue;
     for (let gx = g.gx - span; gx <= g.gx + span; gx++) {
-      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15, key = `${cx},${cy}`;
+      if (gx < 0 || gx >= game.COLS) continue;
+      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15, at = gy * game.COLS + gx;
       for (const [set, halfSize] of kinds) {
-        if (!tiles[set].has(key)) continue;
+        if (!kindGrid(tiles, set)[at]) continue;
         const dx = x - Math.max(cx - halfSize, Math.min(x, cx + halfSize));
         const dy = y - Math.max(cy - halfSize, Math.min(y, cy + halfSize));
         if (dx * dx + dy * dy < radius * radius) return true;

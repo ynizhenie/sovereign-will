@@ -1,6 +1,7 @@
 // Finding a way: which tiles block whom (settlers, enemies), walking distances, and A* paths
 
-import { TILE_SIZE, game, getGridPos, getTileIndex, resetTileIndex, townHall } from '../world/index.js';
+import { getDefinition } from '../../content/configs/index.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, resetTileIndex, townHall } from '../world/index.js';
 
 // isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
 // world's blocking tiles change. Settler path searches read this instead of re-checking each tile.
@@ -11,13 +12,34 @@ export let settlerBlockedGrid = { signature: null, grid: null };
 export function getSettlerBlockedGrid() {
   const signature = getTileIndex().signature;
   if (settlerBlockedGrid.signature !== signature || !settlerBlockedGrid.grid || settlerBlockedGrid.grid.length !== game.COLS * game.ROWS) {
-    const grid = new Uint8Array(game.COLS * game.ROWS);
-    for (let gy = 0; gy < game.ROWS; gy++) {
-      for (let gx = 0; gx < game.COLS; gx++) grid[gy * game.COLS + gx] = computeTileBlockedForSettler(gx, gy) ? 1 : 0;
-    }
-    settlerBlockedGrid = { signature, grid };
+    settlerBlockedGrid = { signature, grid: buildSettlerBlockedGrid() };
   }
   return /** @type {Uint8Array} */ (settlerBlockedGrid.grid);
+}
+
+// (#299) marked from the lists of what blocks, not by asking each tile of a big map: the same as
+// computeTileBlockedForSettler for every tile (something blocks the tile it stands in the middle of)
+function buildSettlerBlockedGrid() {
+  const grid = new Uint8Array(game.COLS * game.ROWS);
+  const mark = o => {
+    const gx = (o.x - 15) / TILE_SIZE, gy = (o.y - 15) / TILE_SIZE;
+    if (Number.isInteger(gx) && Number.isInteger(gy) && gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS) grid[gy * game.COLS + gx] = 1;
+  };
+  for (const b of game.buildings) {
+    const def = getDefinition('buildings', b.type) || {};
+    if ((!isDoor(b) && !def.walkable) || b.type === 'spikes' || def.ironTrap) mark(b);
+  }
+  for (const list of [game.naturalRocks, game.waterTiles, game.cacti, game.boulders, game.ironOres, game.coalOres]) list.forEach(mark);
+  for (const t of game.trees) if (!t.isGrowing) mark(t);
+  // round the town hall
+  const reach = Math.ceil((townHall.radius + 12) / TILE_SIZE) + 1, hall = getGridPos(townHall.x, townHall.y);
+  for (let gy = hall.gy - reach; gy <= hall.gy + reach; gy++) {
+    for (let gx = hall.gx - reach; gx <= hall.gx + reach; gx++) {
+      if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) continue;
+      if (Math.hypot(gx * TILE_SIZE + 15 - townHall.x, gy * TILE_SIZE + 15 - townHall.y) < townHall.radius + 12) grid[gy * game.COLS + gx] = 1;
+    }
+  }
+  return grid;
 }
 
 export function isTileBlockedForSettler(gx, gy) {
@@ -37,8 +59,15 @@ export function computeTileBlockedForSettler(gx, gy) {
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
+// (#299) how far a settler's walking distances are worked out: the frontier's box of tiles (set by
+// domains/world), not all of a big map; null: everywhere
+/** @type {() => ({ gx0: number, gy0: number, gx1: number, gy1: number } | null)} */
+let reachBounds = () => null;
+export function setReachBounds(fn) { reachBounds = fn; }
+
 // Walking distance (in tiles) from the settler's tile to every tile, as an Int16Array indexed gy * COLS + gx,
-// -1 where it can't get. Cached until the settler changes tile or the world's blocking tiles change.
+// -1 where it can't get (and past the reach bounds, unless it stands out there itself). Cached until the
+// settler changes tile or the world's blocking tiles change.
 export function getSettlerReach(settler) {
   const start = getGridPos(settler.x, settler.y);
   const startIndex = start.gy * game.COLS + start.gx;
@@ -48,6 +77,8 @@ export function getSettlerReach(settler) {
 
   const blocked = getSettlerBlockedGrid();
   const steps = new Int16Array(game.COLS * game.ROWS).fill(-1);
+  let b = reachBounds() || { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
+  if (start.gx < b.gx0 || start.gx > b.gx1 || start.gy < b.gy0 || start.gy > b.gy1) b = { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
   const queue = [startIndex];
   if (startIndex >= 0 && startIndex < steps.length) steps[startIndex] = 0;
   for (let i = 0; i < queue.length; i++) {
@@ -55,7 +86,7 @@ export function getSettlerReach(settler) {
     const cx = current % game.COLS, cy = (current - cx) / game.COLS;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const gx = cx + dx, gy = cy + dy;
-      if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) continue;
+      if (gx < b.gx0 || gy < b.gy0 || gx > b.gx1 || gy > b.gy1) continue;
       const index = gy * game.COLS + gx;
       if (steps[index] !== -1 || blocked[index]) continue;
       steps[index] = steps[current] + 1;
