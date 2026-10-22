@@ -2,6 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { t } from '../../engine/platform/index.js';
+import { enemyPlayerUnit } from '../../domains/conflict/waves/index.js';
 import { battle } from './battle.setup.js';
 
 // The panel's categories: the player's units (green side), enemies (red side), buildings (either side);
@@ -47,13 +48,19 @@ export function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);
 }
 
-// What a preset is called: a human one by its own name, an enemy by its kind, the others kind + weapon
+// What a preset is called: by the player's own unit of its kind and what it carries, an enemy by the very
+// same name; a human preset by its own (Unarmed, Club, Archer...)
 export function battlePresetLabel(preset) {
-  if (preset.enemy) return GAME_CONFIG.enemies[preset.enemy].label;
-  if (preset.faction === 'humans') return t(`preset.${preset.id}`);
-  const parts = [GAME_CONFIG.settlerTypes[preset.type].label];
-  if (preset.tool) parts.push(getDefinition('tools', preset.tool).label);
-  else if (preset.weapon !== 'fist') parts.push(getDefinition('weapons', preset.weapon).label.toLowerCase()); // (a bow too, #249: no archer kinds of their own)
+  const unit = preset.enemy ? enemyPlayerUnit(GAME_CONFIG.enemies[preset.enemy]) : preset;
+  const kind = GAME_CONFIG.settlerTypes[unit.type];
+  if (kind.pet) return kind.label; // (#314: a pet has no weapon to name it by)
+  const own = unit.faction === 'humans'
+    ? BATTLE_PLAYER_UNITS.humans.find(u => u.type === unit.type && u.weapon === unit.weapon && (u.tool || 'none') === (unit.tool || 'none'))
+    : null;
+  if (own) return t(`preset.${own.id}`);
+  const parts = [kind.label];
+  if (unit.tool) parts.push(getDefinition('tools', unit.tool).label);
+  else if (unit.weapon !== 'fist') parts.push(getDefinition('weapons', unit.weapon).label.toLowerCase()); // (a bow too, #249: no archer kinds of their own)
   return parts.join(', ');
 }
 

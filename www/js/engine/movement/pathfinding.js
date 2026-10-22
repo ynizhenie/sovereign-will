@@ -73,27 +73,35 @@ export function getSettlerReach(settler) {
   const startIndex = start.gy * game.COLS + start.gx;
   const signature = getTileIndex().signature;
   const cache = settler.reachCache;
-  if (cache && cache.startIndex === startIndex && cache.signature === signature) return cache.steps;
+  const size = game.COLS * game.ROWS;
+  if (cache && cache.startIndex === startIndex && cache.signature === signature && cache.steps.length === size) return cache.steps;
 
   const blocked = getSettlerBlockedGrid();
-  const steps = new Int16Array(game.COLS * game.ROWS).fill(-1);
+  // (#306) the settler's own array again, with only what its last walk set cleared: making a new map's worth
+  // of -1 for every settler that stepped onto a new tile was a tick's costliest work
+  let steps;
+  if (cache && cache.steps.length === size) {
+    steps = cache.steps;
+    for (const index of cache.visited) steps[index] = -1;
+  } else {
+    steps = new Int16Array(size).fill(-1);
+  }
   let b = reachBounds() || { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
   if (start.gx < b.gx0 || start.gx > b.gx1 || start.gy < b.gy0 || start.gy > b.gy1) b = { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
   const queue = [startIndex];
   if (startIndex >= 0 && startIndex < steps.length) steps[startIndex] = 0;
+  // (#306) the four ways on, written out: building a pair and a loop for each tile walked made a heap of
+  // garbage in the costliest loop of a big colony's tick
+  const cols = game.COLS;
   for (let i = 0; i < queue.length; i++) {
     const current = queue[i];
-    const cx = current % game.COLS, cy = (current - cx) / game.COLS;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const gx = cx + dx, gy = cy + dy;
-      if (gx < b.gx0 || gy < b.gy0 || gx > b.gx1 || gy > b.gy1) continue;
-      const index = gy * game.COLS + gx;
-      if (steps[index] !== -1 || blocked[index]) continue;
-      steps[index] = steps[current] + 1;
-      queue.push(index);
-    }
+    const cx = current % cols, cy = (current - cx) / cols, next = steps[current] + 1;
+    if (cx < b.gx1) { const index = current + 1; if (steps[index] === -1 && !blocked[index]) { steps[index] = next; queue.push(index); } }
+    if (cx > b.gx0) { const index = current - 1; if (steps[index] === -1 && !blocked[index]) { steps[index] = next; queue.push(index); } }
+    if (cy < b.gy1) { const index = current + cols; if (steps[index] === -1 && !blocked[index]) { steps[index] = next; queue.push(index); } }
+    if (cy > b.gy0) { const index = current - cols; if (steps[index] === -1 && !blocked[index]) { steps[index] = next; queue.push(index); } }
   }
-  settler.reachCache = { startIndex, signature, steps };
+  settler.reachCache = { startIndex, signature, steps, visited: queue };
   return steps;
 }
 

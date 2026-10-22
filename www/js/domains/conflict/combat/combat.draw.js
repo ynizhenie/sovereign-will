@@ -100,12 +100,43 @@ export function drawCorpses() {
   game.corpses.forEach(c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
     ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
-    // a grey figure lying on its side, crosses for its eyes (#251)
+    // a grey figure lying on its side, crosses for its eyes (#251); a pet's own body
     const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
-    drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: grey, skin: '#9a9a9a', lying: true, dead: true });
+    if (c.pet) drawPetCorpse(c, grey);
+    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: grey, skin: '#9a9a9a', lying: true, dead: true });
     if (corpseHasWorms(c)) drawWorms(c);
     ctx.globalAlpha = 1;
   });
+}
+
+// A dead dog or hellhound: on its side, its legs out stiff, its head down on the ground, its tail limp
+function drawPetCorpse(c, grey) {
+  const k = Math.min(c.radius, 14) / 10;
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  ctx.scale(k, k);
+  ctx.fillStyle = grey; ctx.strokeStyle = '#5f5f5f'; ctx.lineWidth = 1;
+  // the tail
+  ctx.strokeStyle = grey; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-9, 0); ctx.quadraticCurveTo(-13, 3, -14.5, 7); ctx.stroke();
+  // the legs, sticking out
+  ctx.strokeStyle = '#6f6f6f'; ctx.lineWidth = 2;
+  for (const [lx, ly] of [[-6, 7], [-2, 8], [3, 7], [7, 8]]) { ctx.beginPath(); ctx.moveTo(lx, 2); ctx.lineTo(lx + 1, ly); ctx.stroke(); }
+  // the body and the head, its snout on the ground
+  ctx.fillStyle = grey; ctx.strokeStyle = '#5f5f5f'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(0, 0, 10, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (c.pet === 'beast') { // a hellhound's ridge of spikes
+    ctx.fillStyle = '#5f5f5f';
+    for (let sx = -7; sx <= 2; sx += 3) { ctx.beginPath(); ctx.moveTo(sx - 1, -4); ctx.lineTo(sx + 0.5, -7); ctx.lineTo(sx + 1.5, -4); ctx.closePath(); ctx.fill(); }
+  }
+  ctx.fillStyle = grey;
+  ctx.beginPath(); ctx.ellipse(9, 2.5, 4.5, 3.5, 0.35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(12.5, 4, 2.5, 1.8, 0.2, 0, Math.PI * 2); ctx.fill();
+  // an ear, and an eye crossed out
+  ctx.fillStyle = '#6f6f6f'; ctx.beginPath(); ctx.ellipse(7, 0.5, 1.6, 3, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#4f4f4f'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(8.5, 1); ctx.lineTo(10.5, 3); ctx.moveTo(10.5, 1); ctx.lineTo(8.5, 3); ctx.stroke();
+  ctx.restore();
 }
 
 // Arrows and fireballs in flight

@@ -3,7 +3,7 @@
 // lives. Not the undead's: their necromancers want the corpses. (The porter role is gone, #232.)
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getFrontier, isOutskirts } from '../../world/index.js';
 import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getBaseRadius } from '../../conflict/combat/index.js';
@@ -13,6 +13,13 @@ const config = () => GAME_CONFIG.corpseHaul;
 // who carries them: a soldier or archer off a tower, or a worker with nothing in hand
 const isHauler = s => !s.isPossessed && !s.towerAssignment && (s.role === 'soldier' || s.role === 'archer' || (s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.backpack));
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+// (#306) who has gone for which corpse, worked out once a tick and added to as they take one: it was
+// gathered again for every settler that got this far, a tick
+const corpseTakersOnce = onceThisTick();
+const corpseTakers = () => corpseTakersOnce(() => new Map(game.settlers.filter(o => o.corpseTarget).map(o => [o.corpseTarget, o])));
+const markedForOrdersOnce = onceThisTick();
+const markedForOrders = tick => markedForOrdersOnce(() => tick.markedResources.filter(r => (r.priority || 0) > 0));
 
 // Where the corpses go: past the base's edge (corpseHeapTiles out, farther if that's taken) on ground a
 // settler can walk to from the town hall, the side of the map's nearest edge first. Null: nowhere to be
@@ -72,7 +79,7 @@ export function carryCorpse(s, tick) {
 // worker a build or a marked resource, for a soldier a marked boar to hunt. Not with something in its arms
 export function hasPlayerOrderFor(s, tick) {
   if (s.carrying) return false;
-  const marked = tick.markedResources.filter(r => (r.priority || 0) > 0);
+  const marked = markedForOrders(tick);
   if (s.role === 'worker') return game.blueprints.length > 0 || marked.length > 0;
   return marked.some(r => game.boars.includes(r));
 }
@@ -82,13 +89,22 @@ export function haulCorpses(s, tick) {
   if (hasPlayerOrderFor(s, tick)) { s.corpseTarget = null; return false; }
   // (the undead keep theirs for the necromancers; the demons put theirs in pits or cut them up, #250)
   if (!isHauler(s) || s.carrying || tick.isWaveActive || getPlayerFaction().id === 'undead' || getPlayerFaction().id === 'demons' || !getCorpseHeap()) { s.corpseTarget = null; return false; }
-  const taken = new Set(game.settlers.filter(o => o !== s).map(o => o.corpseTarget).filter(Boolean));
+  // (#306) which corpse is whose, out of the tick's picture: it was gathered again for every settler that got here
+  const taken = corpseTakers();
+  const otherTook = c => { const taker = taken.get(c); return !!taker && taker !== s; };
   let corpse = s.corpseTarget;
-  if (!corpse || !game.corpses.includes(corpse) || taken.has(corpse) || !inBase(corpse)) {
-    corpse = game.corpses.filter(c => inBase(c) && !c.leftBe && !taken.has(c)).sort((a, b) => dist(a, s) - dist(b, s))[0] || null;
+  if (!corpse || !game.corpses.includes(corpse) || otherTook(corpse) || !inBase(corpse)) {
+    corpse = null;
+    let nearest = Infinity;
+    for (const c of game.corpses) {
+      if (!inBase(c) || c.leftBe || otherTook(c)) continue;
+      const d = dist(c, s);
+      if (d < nearest) { nearest = d; corpse = c; }
+    }
   }
   s.corpseTarget = corpse;
   if (!corpse) return false;
+  taken.set(corpse, s);
   s.patrolTarget = null;
   if (dist(corpse, s) > 14) { moveEntityTowards(s, corpse.x, corpse.y, s.speed, false, tick.dt); return true; }
   game.corpses.splice(game.corpses.indexOf(corpse), 1);

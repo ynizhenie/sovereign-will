@@ -33,6 +33,27 @@ export function takeStock(id, amount) {
   return got;
 }
 
+// What there is of a resource to fetch: ready food of a kind lies in the mix (game.foodMix), not in the
+// stock by kind
+export function stockLeft(id) {
+  return isFoodKind(id) ? (game.foodMix[id] || 0) : (stock[id] || 0);
+}
+
+// Take ready food of a kind out of Food and the mix, or a raw thing out of the stock; returns how much
+export function takeFood(id, amount = 1) {
+  if (!isFoodKind(id)) return takeStock(id, amount);
+  const got = Math.max(0, Math.min(amount, game.foodMix[id] || 0, stock.food));
+  stock.food -= got;
+  game.foodMix[id] = (game.foodMix[id] || 0) - got;
+  return got;
+}
+
+// Back into the stock: ready food of a kind into Food and the mix, anything else into the stock
+export function returnFood(id, amount) {
+  if (isFoodKind(id)) addFood(id, amount);
+  else stock[id] = (stock[id] || 0) + amount;
+}
+
 // Shown in the HUD: the stock, plus for arrows the ones already loaded in towers and quivers
 export function getResourceAmount(resourceKey) {
   let amount = stock[resourceKey] || 0;

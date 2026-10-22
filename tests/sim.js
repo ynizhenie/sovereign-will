@@ -692,7 +692,11 @@ window.sim = (() => {
     for (const en of enemies) en.hp = en.maxHp = 1000; // a long brawl, not a quick win
     const fighters = [...enemies]; // the dead leave `enemies`
     let deepest = 0;
+    // remembered while they stand: a side wiped out by the end still traded blows
+    let settlersHurt = false, enemiesHurt = false;
     run(seconds, { each: () => {
+      if (!settlersHurt && settlers.some(s => s.hp < s.maxHp)) settlersHurt = true;
+      if (!enemiesHurt && fighters.some(en => en.hp < en.maxHp)) enemiesHurt = true;
       for (const s of settlers) {
         if (s.towerAssignment) continue;
         for (const en of enemies) {
@@ -701,8 +705,6 @@ window.sim = (() => {
         }
       }
     } });
-    const settlersHurt = settlers.some(s => s.hp < s.maxHp);
-    const enemiesHurt = fighters.some(en => en.hp < en.maxHp);
     return { deepest: Math.round(deepest * 100) / 100, settlersHurt, enemiesHurt };
   }
 

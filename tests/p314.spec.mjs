@@ -77,7 +77,7 @@ test('a hellhound eats a corpse by itself when hungry (#314)', async ({ page }) 
   const r = await page.evaluate(() => {
     spawnSettler('beast');
     const beast = settlers.find(s => s.type === 'beast');
-    beast.petHunger = 1; stock.food = 0; stock.rawMeat = 0; stock.cookedMeat = 0; stock.rawFish = 0; stock.cookedFish = 0; stock.bread = 0;
+    beast.petHunger = 1; foodMix = {}; stock.food = 0; stock.rawMeat = 0; stock.cookedMeat = 0; stock.rawFish = 0; stock.cookedFish = 0; stock.bread = 0; stock.berries = 0; stock.apples = 0; // (none at all: a settler would feed it first)
     const corpse = { x: beast.x + 70, y: beast.y + 10, age: 0, kind: 'raider', side: 'enemy' };
     corpses = [corpse];
     for (let f = 0; f < 60 * 15 && corpses.includes(corpse); f++) update(1 / 60);

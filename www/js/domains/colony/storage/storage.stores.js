@@ -10,7 +10,7 @@
 // keepStoresInStep() puts any change of the stock made without a place (a cost paid, a refund) in step.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getStorages, moveSettlerToTownHall, stock } from './storage.rules.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -143,10 +143,10 @@ export function deliveryStorage(s, id) {
 }
 
 // Something lying in a storage that isn't its home, where its home has room: [from, id] or null
-function misplaced(taken) {
-  for (const storage of getStorages()) {
+function misplaced(taken, storages) {
+  for (const storage of storages) {
     for (const [id, n] of Object.entries(storage.store || {})) {
-      if (n < 1 || taken.has(`${id}@${getStorages().indexOf(storage)}`)) continue;
+      if (n < 1 || taken.has(`${id}@${storages.indexOf(storage)}`)) continue;
       const home = storeHome(id);
       if (home && home !== storage && roomIn(home) >= 1) return { from: storage, id };
     }
@@ -188,20 +188,33 @@ function takeOff(id, amount, storages) {
 
 // A settler with nothing to do carries a pile into a storage with room: up to carryMaterials of it, already
 // counted in the stock (`counted`: goDeliver only moves it in)
+const pileTakersOnce = onceThisTick();
+const pileTakers = () => pileTakersOnce(() => new Set(game.settlers.filter(o => o.pileTarget).map(o => o.pileTarget)));
+const roomOnce = onceThisTick();
+// (#306) whether there's a storage with room for a pile, once a tick per pile: every settler looking for a
+// pile asked for every pile it passed
+function roomNear(pile) {
+  const byPile = roomOnce(() => new Map());
+  let found = byPile.get(pile);
+  if (found === undefined) { found = findStorageWithRoom(pile); byPile.set(pile, found); }
+  return found;
+}
 export function haulPiles(s, tick, chosen = false) {
   if (s.role !== 'worker' || s.isPossessed || s.carrying || tick.isWaveActive || (!chosen && !s.wasIdle && !s.pileTarget && !s.sortJob) || game.gameMode !== 'endless') { s.pileTarget = null; s.sortJob = null; return false; }
   let pile = s.pileTarget && game.piles.includes(s.pileTarget) ? s.pileTarget : null;
-  const taken = new Set(game.settlers.filter(o => o !== s && o.pileTarget).map(o => o.pileTarget));
+  // (#306) the piles others have gone for, once a tick: the list was made again for every settler
+  const taken = pileTakers();
   if (!pile) {
     let best = Infinity;
     for (const p of game.piles) {
       if (taken.has(p)) continue;
-      if (!findStorageWithRoom(p)) continue;
+      if (!roomNear(p)) continue;
       const d = Math.hypot(p.x - s.x, p.y - s.y);
       if (d < best) { best = d; pile = p; }
     }
   }
   s.pileTarget = pile;
+  if (pile) taken.add(pile);
   if (!pile) return sortStores(s, tick);
   s.patrolTarget = null;
   if (Math.hypot(pile.x - s.x, pile.y - s.y) > 14) { moveEntityTowards(s, pile.x, pile.y, s.speed, false, tick.dt); return true; }
@@ -243,12 +256,22 @@ export function haulPilesFirst(s, tick) {
 
 // (#279) one with nothing to do carries what lies in a storage that isn't its home over to its home: up to
 // carryMaterials of it, already counted in the stock
+const sortJobsOnce = onceThisTick();
+// (#306) the sorting jobs taken this tick, looked for once
+const sortJobsTaken = storages => sortJobsOnce(() => {
+  const taken = new Set();
+  for (const o of game.settlers) if (o.sortJob) taken.add(`${o.sortJob.id}@${storages.indexOf(o.sortJob.from)}`);
+  return taken;
+});
 function sortStores(s, tick) {
-  const taken = new Set(game.settlers.map(o => (o !== s ? o.sortJob : null)).map(j => (j ? `${j.id}@${getStorages().indexOf(j.from)}` : '')).filter(Boolean));
-  let job = s.sortJob && getStorages().includes(s.sortJob.from) && (s.sortJob.from.store || {})[s.sortJob.id] >= 1 ? s.sortJob : null;
-  if (!job) job = misplaced(taken);
+  // (#306) the storages and the jobs others have taken, once a tick: they were gathered again for every
+  // settler with nothing to do, and that gathering went through all the settlers itself
+  const storages = getStorages(), taken = sortJobsTaken(storages);
+  let job = s.sortJob && storages.includes(s.sortJob.from) && (s.sortJob.from.store || {})[s.sortJob.id] >= 1 ? s.sortJob : null;
+  if (!job) job = misplaced(taken, storages);
   s.sortJob = job;
   if (!job) return false;
+  taken.add(`${job.id}@${storages.indexOf(job.from)}`);
   s.patrolTarget = null;
   const at = job.from === townHall ? Math.hypot(townHall.x - s.x, townHall.y - s.y) <= townHall.radius + s.radius + 4 : Math.hypot(job.from.x - s.x, job.from.y - s.y) <= 34;
   if (!at) { if (job.from === townHall) moveSettlerToTownHall(s, s.speed, tick.dt); else moveEntityTowards(s, job.from.x, job.from.y, s.speed, false, tick.dt); return true; }

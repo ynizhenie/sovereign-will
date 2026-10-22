@@ -4,4 +4,5 @@
 export { getGridPos, getMapAreaScale, getTileIndex, isBorderZone, isDoor, markTilesChanged, resetTileIndex, setWorldSize } from './grid.js';
 export { applySeedFromUI, createDefaultSeed, createWorldSeed, initRng, rand } from './rng.js';
 export { BOAR_LIMIT, BORDER_MARGIN, DEFAULT_MAP_TILES, TILE_SIZE, TOWN_HALL_HP, WORLD_LISTS, game, townHall } from './state.js';
+export { onceThisTick } from './once.js';
 export { anyWithin, forEachInRect, listStamp, someNear, thingAt } from './spatial.js';

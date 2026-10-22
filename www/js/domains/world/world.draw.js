@@ -26,7 +26,7 @@ export function tileVariantHash(gx, gy) {
 export const CHUNK = 16;
 const MAX_CHUNKS = 96;
 
-/** @typedef {{ canvas: HTMLCanvasElement, stamp: string }} Chunk */
+/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string }} Chunk */
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
@@ -34,6 +34,9 @@ const chunkLayers = new Map();
 // Zoomed out, panning shows many new pieces at once: painted for at most this long a frame (ms), the rest
 // the next frames (an old picture meanwhile, or the plain ground: fill)
 const PAINT_MS = 4;
+// (#306) world px painted past a piece's edge: a patch of grass crossing the edge is whole on either side of it,
+// instead of being cut off at it
+const PAD = 6;
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
 // paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
@@ -43,6 +46,10 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
   const size = CHUNK * TILE_SIZE, v = getViewRect(), started = performance.now();
+  // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
+  // shows between two pieces, which read as square joins between them
+  const m = ctx.getTransform();
+  const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(Math.ceil(game.COLS / CHUNK) - 1, Math.floor(v.x1 / size));
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(Math.ceil(game.ROWS / CHUNK) - 1, Math.floor(v.y1 / size));
   for (let cy = cy0; cy <= cy1; cy++) {
@@ -51,27 +58,34 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
       let chunk = chunks.get(key);
       if (chunk) chunks.delete(key); // (to the end: the most recently shown)
       const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
+      const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
       if ((!chunk || chunk.stamp !== now) && res < 1 && performance.now() - started > PAINT_MS) {
-        if (chunk) { chunks.set(key, chunk); ctx.drawImage(chunk.canvas, x0, y0, x1 - x0, y1 - y0); } else if (fill) { ctx.fillStyle = fill; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); }
+        if (chunk) { chunks.set(key, chunk); } else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
+        if (chunk) ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
         continue;
       }
       if (!chunk || chunk.stamp !== now) {
         const canvas = chunk ? chunk.canvas : document.createElement('canvas');
-        canvas.width = Math.ceil((x1 - x0) * res); canvas.height = Math.ceil((y1 - y0) * res);
+        const pad = Math.ceil(PAD * res), bleed = pad / res;
+        const pw = Math.ceil((x1 - x0) * res), ph = Math.ceil((y1 - y0) * res);
+        canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
         const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
-        g.setTransform(res, 0, 0, res, -x0 * res, -y0 * res);
-        paint(g, x0, y0, x1, y1);
-        chunk = { canvas, stamp: now };
+        g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
+        paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
+        chunk = { canvas, pad, pw, ph, stamp: now };
       }
       chunks.set(key, chunk);
-      ctx.drawImage(chunk.canvas, x0, y0, x1 - x0, y1 - y0);
+      ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
     }
   }
   while (chunks.size > MAX_CHUNKS) chunks.delete(/** @type {string} */ (chunks.keys().next().value));
 }
 
 // full-size pictures zoomed in, half zoomed out
-const chunkRes = () => (getViewScale() < ZOOMED_OUT ? 0.5 : 1);
+// (#306) How fine a piece is painted: about what the screen shows, and no finer (a power of two, so a piece
+// isn't painted again for every little change of zoom). Zoomed out to the whole map it used to paint and lay
+// down sixteen times the pixels that showed, which was most of what that view cost
+const chunkRes = () => Math.min(1, 2 ** Math.floor(Math.log2(Math.max(getViewScale(), 0.0625))));
 
 // The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
 // shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes
@@ -347,11 +361,13 @@ export function drawMapBorder() {
   const v = getViewRect(TILE_SIZE), M = BORDER_MARGIN * TILE_SIZE, W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
   if (v.x0 > M && v.y0 > M && v.x1 < W - M && v.y1 < H - M) return;
   ctx.save(); ctx.beginPath(); ctx.rect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0); ctx.clip();
-  ctx.fillStyle = '#2d4a22';
-  ctx.fillRect(0, 0, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(0, game.WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
-  ctx.fillRect(game.WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  if (game.gameMode !== 'battle') { // (in a battle the ground outside the line is the field's: grass or sand)
+    ctx.fillStyle = '#2d4a22';
+    ctx.fillRect(0, 0, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+    ctx.fillRect(0, game.WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
+    ctx.fillRect(0, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+    ctx.fillRect(game.WORLD_WIDTH - BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  }
 
   ctx.strokeStyle = 'rgba(231, 76, 60, 0.4)';
   ctx.lineWidth = 2;
@@ -422,10 +438,12 @@ export function drawSand() {
 
 // Water, and the fishing spots marked on it
 export function drawWater(terrain) {
+  // (#306) zoomed out a fish is under a pixel: the shoals are drawn only when there's room to see them
+  const fishShown = getViewScale() >= 0.45;
   inView(game.waterTiles, w => {
     if (!cached) drawWaterTile(w, terrain);
     const hash = tileVariantHash(w.x, w.y);
-    if ((w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && hash % 7 === 0) {
+    if (fishShown && (w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && hash % 7 === 0) {
       const phase = performance.now() / 850 + (hash % 100) / 13;
       const swim = Math.sin(phase) * 6;
       const fx = w.x + swim, fy = w.y + Math.cos(phase * 0.7) * 3;
