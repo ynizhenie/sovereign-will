@@ -53,7 +53,7 @@ export function hasGear(s, id) {
 /** @param {string} id @param {boolean} [auto] @param {any} [forSettler] */
 export function orderGear(id, auto = false, forSettler = null) {
   const item = GAME_CONFIG.gear[id], rules = GEAR_RULES[id];
-  const free = s => rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment && game.settlers.includes(s);
+  const free = s => s.role !== 'pet' && rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment && game.settlers.includes(s); // (a pet wears nothing, #314)
   const selected = forSettler || (auto ? null : getSelectedSettler() || getPossessed());
   if (!((game.armory[`gear:${id}`] || 0) > 0)) return orderMade('gear', id, auto, selected);
   const target = (selected && free(selected) ? selected : null) ||
@@ -130,7 +130,7 @@ export function takeApartRecipe(id) {
 // unarmed worker for a weapon; not one another order is already for (null: whoever's free when it's made)
 function pickRecipient(category, id) {
   const promised = new Set(game.craftOrders.map(o => o.for).filter(Boolean));
-  const free = s => !s.targetEquipment && !s.isPossessed && !promised.has(s);
+  const free = s => s.role !== 'pet' && !s.targetEquipment && !s.isPossessed && !promised.has(s);
   if (category === 'tools') {
     return game.settlers.find(s => free(s) && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !(id === 'rod' && isBigBody(s))) ||
       game.settlers.find(s => free(s) && s.role === 'worker' && s.tool !== id && !(id === 'rod' && isBigBody(s))) || null;
@@ -219,6 +219,8 @@ export function getWeaponStats(s, use) {
     damage = tool && tool.combatDamage !== undefined && tool.combatDamage !== null ? tool.combatDamage : fist.combat.damage;
   }
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
+  // (#314) a pet bites (weaker hungry)
+  if (settlerType && settlerType.bite) return { ...settlerType.bite, multiplier: s.petHungry ? GAME_CONFIG.pets.hungryBite : 1 };
   // trained at a dummy (#199): a little more in a fight
   const trained = use === 'combat' ? 1 + (s.trained || 0) : 1;
   // the undead fight on in a panic, weaker (#232; the others run, hitting back at full strength if cornered)
@@ -261,6 +263,7 @@ export function assignTool(toolType, auto = false, forSettler = null) {
   if (!((game.armory[`tools:${toolType}`] || 0) > 0)) return orderMade('tools', toolType, auto, forSettler || (auto ? null : getSelectedSettler() || getPossessed()));
 
   let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : auto ? null : getSelectedSettler() || getPossessed();
+  if (target && target.role === 'pet') target = null; // (#314)
 
   if (target) {
     // (the one it's for)
@@ -303,6 +306,7 @@ export function craftWeapon(type, auto = false, forSettler = null) {
   if (!((game.armory[`weapons:${type}`] || 0) > 0)) return orderMade('weapons', type, auto, forSettler || (auto ? null : getSelectedSettler() || getPossessed()));
 
   let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : auto ? null : getSelectedSettler() || getPossessed();
+  if (target && target.role === 'pet') target = null; // (#314)
 
   if (target) {
     // (the one it's for)
@@ -312,7 +316,7 @@ export function craftWeapon(type, auto = false, forSettler = null) {
   } else if (!target) {
     target = game.settlers.find(s => !s.whistle && isBigBody(s) && s.weapon === 'fist' && !s.targetEquipment) ||
              game.settlers.find(s => !s.whistle && s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist' && !s.targetEquipment) ||
-             game.settlers.find(s => !s.whistle && s.weapon !== type && !s.targetEquipment);
+             game.settlers.find(s => !s.whistle && s.role !== 'pet' && s.weapon !== type && !s.targetEquipment);
   }
   if (target && target.whistle) { if (!auto) showNotification(t('weapon.foreman'), true); return false; } // (#279)
 
@@ -365,8 +369,8 @@ export function disarmSettler(type = 'all', keep = false) {
 
   const hasTargetItem = (s) => {
     if (type === 'tool') return s.tool && s.tool !== 'none';
-    if (type === 'weapon') return (s.weapon && s.weapon !== 'fist') || s.role !== 'worker';
-    return (s.tool !== 'none' || s.weapon !== 'fist' || s.role !== 'worker');
+    if (type === 'weapon') return s.role !== 'pet' && ((s.weapon && s.weapon !== 'fist') || s.role !== 'worker');
+    return s.role !== 'pet' && (s.tool !== 'none' || s.weapon !== 'fist' || s.role !== 'worker');
   };
 
   if (target && !hasTargetItem(target)) {

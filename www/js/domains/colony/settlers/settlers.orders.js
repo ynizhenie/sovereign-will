@@ -16,7 +16,8 @@ import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equip
 import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, stock, takeStock } from '../storage/index.js';
 import { deliverMaterials, getMissingMaterial, getRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { getPossessed } from './settlers.rules.js';
+import { getPossessed, petKindOf } from './settlers.rules.js';
+import { devour, haunt } from '../pets/index.js';
 import { getHarvestableResources, getMapResourceDef, getMapResourceKind, workResource } from '../../economy/gathering/index.js';
 import { collidesWithWall, getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
@@ -45,6 +46,24 @@ export const ORDERS = [
       const reach = game.enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
       if (Math.hypot(target.x - s.x, target.y - s.y) > reach) walkTo(s, target.x, target.y, tick);
       else performAttack(s, target.x, target.y);
+      return true;
+    }
+  },
+  // (#314) a pet's own: a hellhound eats a corpse; a ghost flies into an enemy
+  {
+    kind: 'devour',
+    find: (p, near) => (petKindOf(p) === 'beast' ? game.corpses.find(c => near(c, 18)) : null),
+    step: (s, target, tick) => devour(s, target, tick)
+  },
+  {
+    kind: 'dive',
+    find: (p, near) => (petKindOf(p) === 'ghost' ? game.enemies.find(en => near(en, en.radius + 15)) : null),
+    step: (s, target) => {
+      if (!game.enemies.includes(target) || s.ghostGone > 0) return false;
+      const d = Math.hypot(target.x - s.x, target.y - s.y), step = GAME_CONFIG.pets.ghost.diveSpeed * GAME_CONFIG.movementScale;
+      if (d <= Math.max(14, step)) { haunt(s, target); return false; }
+      s.x += (target.x - s.x) / d * step; s.y += (target.y - s.y) / d * step;
+      faceTowards(s, target.x, target.y);
       return true;
     }
   },
@@ -309,8 +328,9 @@ export function movePossessed(dt) {
       faceTowards(p, p.x + dx, p.y + dy);
       let vx = dx * p.speed * GAME_CONFIG.movementScale;
       let vy = dy * p.speed * GAME_CONFIG.movementScale;
-      if (!collidesWithWall(p.x + vx, p.y, p.radius)) p.x += vx;
-      if (!collidesWithWall(p.x, p.y + vy, p.radius)) p.y += vy;
+      const ghost = petKindOf(p) === 'ghost'; // (#314: through anything)
+      if (ghost || !collidesWithWall(p.x + vx, p.y, p.radius)) p.x += vx;
+      if (ghost || !collidesWithWall(p.x, p.y + vy, p.radius)) p.y += vy;
     }
   }
 }
