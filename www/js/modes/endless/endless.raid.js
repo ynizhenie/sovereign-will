@@ -23,7 +23,7 @@ import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/com
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../domains/factions/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
-import { generateMap } from '../../domains/world/index.js';
+import { generateMap, getFrontier, getFrontierTiles, setTerritoryEnabled } from '../../domains/world/index.js';
 import { drawIcon, escapeHtml, iconHtml, richText, showNotification } from '../../ui/index.js';
 import { playSound } from '../../app/index.js';
 
@@ -74,22 +74,22 @@ const standing = (type, at, extra = {}) => {
 };
 const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) || (game.portalQueue || []).length > 0;
 
-// A free tile by a side of the map, near its middle, `depth` tiles in (one the settler `from` can walk
-// to, if given)
+// A free tile by a side of the map (#299: of the frontier, getFrontier; a default map's own), near its
+// middle, `depth` tiles in (one the settler `from` can walk to, if given)
 function edgeSpot(side, from = null, firstDepth = BORDER_MARGIN) {
-  const reach = from ? getSettlerReach(from) : null;
+  const reach = from ? getSettlerReach(from) : null, f = getFrontierTiles();
   for (let depth = firstDepth; depth < BORDER_MARGIN + 6; depth++) {
     for (let k = 0; k < 24; k++) {
       const offset = (k % 2 ? 1 : -1) * Math.ceil(k / 2);
-      const along = (side === 'left' || side === 'right' ? game.ROWS : game.COLS) / 2 + offset;
-      const gx = side === 'left' ? depth : side === 'right' ? game.COLS - 1 - depth : Math.floor(along);
-      const gy = side === 'top' ? depth : side === 'bottom' ? game.ROWS - 1 - depth : Math.floor(along);
+      const along = (side === 'left' || side === 'right' ? f.gy0 + (f.gy1 - f.gy0 + 1) / 2 : f.gx0 + (f.gx1 - f.gx0 + 1) / 2) + offset;
+      const gx = side === 'left' ? f.gx0 + depth : side === 'right' ? f.gx1 - depth : Math.floor(along);
+      const gy = side === 'top' ? f.gy0 + depth : side === 'bottom' ? f.gy1 - depth : Math.floor(along);
       if (isTileBlockedForSettler(gx, gy)) continue;
       if (reach && getReachSteps(reach, gx, gy) === -1) continue;
       return tileCenter(gx, gy);
     }
   }
-  return tileCenter(Math.floor(game.COLS / 2), Math.floor(game.ROWS / 2));
+  return tileCenter(Math.floor((f.gx0 + f.gx1 + 1) / 2), Math.floor((f.gy0 + f.gy1 + 1) / 2));
 }
 
 // Spots for a party side by side along an edge, round `at`
@@ -247,6 +247,7 @@ export function enterCamp() {
   const camp = game.raidCamp || { side: raid.side }; // (taken before the lists are emptied: it's one of them)
   for (const k of WORLD_LISTS) game[k] = emptyLike(game[k]);
   game.selectedSettler = null;
+  setTerritoryEnabled(false); // (the camp's map: no base's land on it, #299)
   raid.campSeed = camp.seed || 0;
   if (campCache && campCache.seed === raid.campSeed) restoreCamp(); else buildCamp(army, camp);
   // the party at the zone's near edge, out past its red line (#279), waiting for orders
@@ -569,6 +570,7 @@ export function tickRaid(dt) {
 function restoreHome(survivors) {
   const home = raid.home;
   for (const k of WORLD_LISTS) game[k] = home.lists[k];
+  setTerritoryEnabled(true);
   setWorldSize(home.cols, home.rows);
   townHall.x = home.hall.x; townHall.y = home.hall.y;
   Object.assign(camera, home.camera);
@@ -642,6 +644,7 @@ export function endRaid(won) {
 }
 
 function resetRaidState() {
+  setTerritoryEnabled(true);
   for (const s of game.settlers) { delete s.raider; delete s.raidSpot; clearOrders(s); }
   Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0, scouting: false, retreating: false, escaped: [], arrows: 0, placing: false });
   updateRaidBar();
@@ -665,9 +668,10 @@ export function resetRaid() {
 export function drawRaidZone() {
   if (game.gameMode !== 'endless' || isInCamp() || (!game.raidCamp && raid.phase !== 'return')) return;
   const side = game.raidCamp ? game.raidCamp.side : raid.side;
-  const band = BORDER_MARGIN * TILE_SIZE, W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT, Z = config().zoneTiles * TILE_SIZE;
-  const edge = { left: [0, 0, band, H], right: [W - band, 0, band, H], top: [0, 0, W, band], bottom: [0, H - band, W, band] }[side];
-  const zone = { left: [-Z, H / 2 - Z / 2, Z, Z], right: [W, H / 2 - Z / 2, Z, Z], top: [W / 2 - Z / 2, -Z, Z, Z], bottom: [W / 2 - Z / 2, H, Z, Z] }[side];
+  // (#299: by the frontier, getFrontier; a default map's edge)
+  const f = getFrontier(), band = BORDER_MARGIN * TILE_SIZE, X = f.x0, Y = f.y0, W = f.x1 - f.x0, H = f.y1 - f.y0, Z = config().zoneTiles * TILE_SIZE;
+  const edge = { left: [X, Y, band, H], right: [X + W - band, Y, band, H], top: [X, Y, W, band], bottom: [X, Y + H - band, W, band] }[side];
+  const zone = { left: [X - Z, Y + H / 2 - Z / 2, Z, Z], right: [X + W, Y + H / 2 - Z / 2, Z, Z], top: [X + W / 2 - Z / 2, Y - Z, Z, Z], bottom: [X + W / 2 - Z / 2, Y + H, Z, Z] }[side];
   const pulse = 0.22 + 0.1 * Math.sin(game.pathTick / 20);
   ctx.fillStyle = `rgba(150, 20, 20, ${pulse})`;
   ctx.fillRect(edge[0], edge[1], edge[2], edge[3]);

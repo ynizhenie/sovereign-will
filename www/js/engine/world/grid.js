@@ -10,6 +10,8 @@ export function setWorldSize(cols, rows) {
   game.WORLD_WIDTH = cols * TILE_SIZE; game.WORLD_HEIGHT = rows * TILE_SIZE;
   townHall.x = game.WORLD_WIDTH / 2; townHall.y = game.WORLD_HEIGHT / 2;
   camera.x = townHall.x; camera.y = townHall.y;
+  // (#299) a big map starts as close as a default one: the town hall and round it, not the whole map
+  camera.zoom = Math.max(1, Math.min(cols, rows) / DEFAULT_MAP_TILES);
 }
 
 // how many times the default map's area this one is: counts on the map (forests, lakes...) scale by it
@@ -37,18 +39,30 @@ export function resetTileIndex() { tileIndex = null; }
 // same signature, it's the same
 /** @type {TileIndex | null} */
 let lastIndex = null;
-const typeHash = type => { let h = 0; for (let i = 0; i < (type || '').length; i++) h = (h * 31 + type.charCodeAt(i)) | 0; return h; };
+// (#299) a number for each list and thing, the same for as long as it lives (for the signature below)
+/** @type {WeakMap<object, number>} */
+const ids = new WeakMap();
+let nextId = 1;
+const idOf = o => { let id = ids.get(o); if (!id) ids.set(o, (id = nextId++)); return id; };
+// bumped by what changes a tile's blocking in place, without a list changing
+let tilesVersion = 0;
+export function markTilesChanged() { tilesVersion++; tileIndex = null; }
 
 /** @returns {TileIndex} */
 export function getTileIndex() {
   if (tileIndex) return tileIndex;
   const keys = list => new Set(list.map(o => `${o.x},${o.y}`));
-  // changes whenever anything that blocks a tile appears, disappears or moves; used to invalidate
-  // cached reachability without every harvest/build site having to remember to do it
+  // changes whenever anything that blocks a tile appears or disappears; used to invalidate cached
+  // reachability without every harvest/build site having to remember to do it. (#299) Worked out from each
+  // list's array, length, first and last (a thing taken out or put in changes one of them), not from every
+  // thing in it: on a big map that was tens of thousands every tick. What changes in place (a sapling grown
+  // into a tree) says so with markTilesChanged()
   let signature = game.COLS * 1000 + game.ROWS; // a new map size invalidates everything cached by signature
+  signature = (signature * 31 + tilesVersion) | 0;
   for (const list of [game.naturalRocks, game.waterTiles, game.trees, game.cacti, game.boulders, game.ironOres, game.coalOres, game.buildings]) {
+    signature = (signature * 31 + idOf(list)) | 0;
     signature = (signature * 31 + list.length) | 0;
-    for (const o of list) signature = (signature * 31 + o.x * 1601 + o.y + (o.isGrowing ? 7 : 0) + (o.type ? typeHash(o.type) : 0)) | 0;
+    if (list.length) signature = ((signature * 31 + idOf(list[0])) * 31 + idOf(list[list.length - 1])) | 0;
   }
   if (lastIndex && lastIndex.signature === signature) return (tileIndex = lastIndex);
   tileIndex = {

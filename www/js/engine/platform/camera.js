@@ -41,9 +41,13 @@ export function getMaxZoom() {
   return Math.max(MAX_ZOOM, MAX_CSS_SCALE * screenPixelRatio / getBaseScale());
 }
 
-// zoomed out this far, the whole world fits on the screen
+// (#299) zoomed out no farther than a world unit to MIN_CSS_SCALE CSS pixels: on a big map the whole of it
+// on the screen is thousands of things drawn every frame (the world map shows it all instead)
+export const MIN_CSS_SCALE = 0.3;
+
+// zoomed out this far, the whole world fits on the screen (a big map's: as far as MIN_CSS_SCALE)
 export function getMinZoom() {
-  return Math.min(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT) / getBaseScale();
+  return Math.max(Math.min(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT), MIN_CSS_SCALE * screenPixelRatio) / getBaseScale();
 }
 
 export function setZoom(zoom) {
@@ -64,4 +68,10 @@ export function clampCamera() {
   // edge, and zoomed all the way out it isn't pulled back to the middle
   camera.x = Math.max(0, Math.min(game.WORLD_WIDTH, camera.x));
   camera.y = Math.max(0, Math.min(game.WORLD_HEIGHT, camera.y));
+}
+
+// The part of the world on the screen now, widened by margin (world units) on every side: what's drawn
+export function getViewRect(margin = 0) {
+  const scale = getViewScale(), halfW = canvas.width / 2 / scale + margin, halfH = canvas.height / 2 / scale + margin;
+  return { x0: camera.x - halfW, y0: camera.y - halfH, x1: camera.x + halfW, y1: camera.y + halfH };
 }

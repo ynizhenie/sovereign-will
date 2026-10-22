@@ -14,6 +14,7 @@ test('save from the pause menu, then carry on from the Endless menu, or delete t
   // the same world again: its one slot, saved over (#254)
   await page.evaluate(() => { waveNum = 4; });
   await page.click('#save-game-button');
+  await expect(page.locator('#save-game-button')).toContainText('Сохранено');
   expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('sovereign-will-saves'))).length)).toBe(1);
   await page.click('#exit-to-menu-button');
   await page.evaluate(() => { resetGame(); }); // the stock's gone back to the start
@@ -23,7 +24,8 @@ test('save from the pause menu, then carry on from the Endless menu, or delete t
   await expect(save).toHaveCount(1);
   await expect(save).toContainText(/^Мир .*Волна 4 · /); // (a tile: its world, its wave and time, #254)
   await save.click();
-  expect(await page.evaluate(() => [stock.stone, waveNum, gameStarted])).toEqual([123, 4, true]);
+  // (#299: a save is squeezed, and opened again in a moment)
+  await expect.poll(() => page.evaluate(() => [stock.stone, waveNum, gameStarted])).toEqual([123, 4, true]);
   // delete it, asked first
   await page.evaluate(() => exitToMainMenu());
   await page.click('#mode-endless');
@@ -39,12 +41,13 @@ test('the pause menu loads a save and opens the settings, Back returns to it; te
   await page.click('#btn-pause-toggle');
   await page.evaluate(() => { stock.stone = 77; });
   await page.click('#save-game-button');
+  await expect(page.locator('#save-game-button')).toContainText('Сохранено');
   await page.evaluate(() => { stock.stone = 1; });
   // load
   await page.click('#load-game-button');
   await expect(page.locator('#pause-load-list [data-save]')).toHaveCount(1);
   await page.click('#pause-load-list [data-save]');
-  expect(await page.evaluate(() => [stock.stone, isPaused])).toEqual([77, false]);
+  await expect.poll(() => page.evaluate(() => [stock.stone, isPaused])).toEqual([77, false]);
   // settings and back
   await page.click('#btn-pause-toggle');
   await page.click('#pause-settings-button');
@@ -75,6 +78,7 @@ test('in the pause menu Load is this world\'s slot only; a battle has no saving 
   await expect(page.locator('#pause-load-list [data-save]')).toHaveCount(0); // (another world's)
   await expect(page.locator('#pause-load-list')).toContainText('Этот мир ещё не сохранён');
   await page.click('#save-game-button');
+  await expect(page.locator('#save-game-button')).toContainText('Сохранено');
   await page.click('#load-game-button'); // (shut)
   await page.click('#load-game-button');
   await expect(page.locator('#pause-load-list [data-save]')).toHaveCount(1);

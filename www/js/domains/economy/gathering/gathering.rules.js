@@ -1,9 +1,9 @@
 // Resources on the map: which can be gathered, adding one, what a finished one gives, and growing back
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game, rand } from '../../../engine/world/index.js';
+import { forEachInRect, game, rand } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
-import { ORE_KINDS, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, placeOre, spawnForestAware, spawnResource } from '../../world/index.js';
+import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -19,6 +19,24 @@ export function getPlacedResources(includeGrowingTrees = true) {
 export function getHarvestableResources() {
   // ore spawners are natural rock that's never used up: only worked when marked, for its ore (#248)
   return [...getPlacedResources(false), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];
+}
+
+// (#299) The same, only those on the base's land (inTerritory), found within the box round it: settlers
+// work only there, and a big map's thousands far off aren't gone through every tick. found(o, list): told
+// the list each one's from
+/** @param {(o: any, list: any[]) => void} [found] */
+export function getWorkableResources(found = () => {}) {
+  const box = getTerritoryBox(), all = [];
+  const take = list => o => { if (inTerritory(o.x, o.y)) { all.push(o); found(o, list); } };
+  for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs,
+    game.loot, game.ironOres, game.coalOres, game.naturalRocks]) {
+    const add = take(list);
+    forEachInRect(list, box.x0, box.y0, box.x1, box.y1, o => { if (list !== game.trees || !o.isGrowing) add(o); });
+  }
+  const plot = take(game.farmPlots), boar = take(game.boars);
+  for (const p of game.farmPlots) if (p.growth >= 100) plot(p);
+  game.boars.forEach(boar);
+  return all;
 }
 
 // ---- Map resources (GAME_CONFIG.mapResources)
@@ -117,18 +135,28 @@ export function updatePendingRespawns(dt) {
       const at = game.stumps.indexOf(pending.stump);
       if (at !== -1) game.stumps.splice(at, 1);
     }
-    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type));
+    // (#299) on a big map within the frontier, round the base it was taken from (a default map's is all of it)
+    const area = regrowArea();
+    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type), area);
     else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
-    else if (def.regrow === 'forest') spawnForestAware(pending.type);
-    else spawnResource(pending.type);
+    else if (def.regrow === 'forest') spawnForestAware(pending.type, area);
+    else spawnResource(pending.type, null, null, 180, area ? pointIn(area) : null);
     // things that need a tool to remove (trees, boulders, cacti, ore) block paths
     if (def.tool) invalidateAllPaths();
   }
 }
 
-// A mined ore grows back around a random spawner of its kind
-export function respawnOre(kind) {
-  const spawners = getOreSpawners(kind);
+// The frontier, when it isn't the whole map (a big map's): what's taken grows back in it
+function regrowArea() {
+  const f = getFrontier();
+  return f.x0 > 0 || f.y0 > 0 || f.x1 < game.WORLD_WIDTH || f.y1 < game.WORLD_HEIGHT ? f : null;
+}
+
+// A mined ore grows back around a random spawner of its kind (#299: one in the area, if there's one there)
+/** @param {string | undefined} kind @param {{ x0: number, y0: number, x1: number, y1: number } | null} [area] */
+export function respawnOre(kind, area = null) {
+  const all = getOreSpawners(kind), there = area ? all.filter(r => r.x >= area.x0 && r.x <= area.x1 && r.y >= area.y0 && r.y <= area.y1) : all;
+  const spawners = there.length ? there : all;
   if (spawners.length === 0) return;
   const spawner = spawners[Math.floor(rand() * spawners.length)];
   const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());

@@ -1,8 +1,8 @@
 // The ground: grass, water, rock, desert and ore, each joining its own kind
 
 import { drawIcon } from '../../ui/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getTileIndex } from '../../engine/world/index.js';
-import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
+import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp } from '../../engine/world/index.js';
+import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 
@@ -17,21 +17,71 @@ export function tileVariantHash(gx, gy) {
   return (h ^ (h >>> 16)) >>> 0;
 }
 
+// ---- The ground in pieces (#299)
+//
+// What rarely changes is drawn once into pictures of CHUNK x CHUNK tiles and those laid down each frame,
+// only the ones on the screen: a picture of a whole big map was too big for a phone, and repainting it all
+// for one change too slow. Two sizes of picture: full for zoomed in, half for zoomed out. Kept up to
+// MAX_CHUNKS of each, the least recently shown dropped first.
+export const CHUNK = 16;
+const MAX_CHUNKS = 96;
+
+/** @typedef {{ canvas: HTMLCanvasElement, stamp: string }} Chunk */
+// layer -> its pictures by "res|cx,cy"
+/** @type {Map<string, Map<string, Chunk>>} */
+const chunkLayers = new Map();
+
+// Zoomed out, panning shows many new pieces at once: painted for at most this long a frame (ms), the rest
+// the next frames (an old picture meanwhile, or the plain ground: fill)
+const PAINT_MS = 4;
+
+// The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
+// paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
+/** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {string | null} [fill] */
+function drawChunks(layer, res, stamp, paint, fill = null) {
+  if (typeof document === 'undefined') return;
+  let chunks = chunkLayers.get(layer);
+  if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
+  const size = CHUNK * TILE_SIZE, v = getViewRect(), started = performance.now();
+  const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(Math.ceil(game.COLS / CHUNK) - 1, Math.floor(v.x1 / size));
+  const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(Math.ceil(game.ROWS / CHUNK) - 1, Math.floor(v.y1 / size));
+  for (let cy = cy0; cy <= cy1; cy++) {
+    for (let cx = cx0; cx <= cx1; cx++) {
+      const key = `${res}|${cx},${cy}`, now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
+      let chunk = chunks.get(key);
+      if (chunk) chunks.delete(key); // (to the end: the most recently shown)
+      const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
+      if ((!chunk || chunk.stamp !== now) && res < 1 && performance.now() - started > PAINT_MS) {
+        if (chunk) { chunks.set(key, chunk); ctx.drawImage(chunk.canvas, x0, y0, x1 - x0, y1 - y0); } else if (fill) { ctx.fillStyle = fill; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); }
+        continue;
+      }
+      if (!chunk || chunk.stamp !== now) {
+        const canvas = chunk ? chunk.canvas : document.createElement('canvas');
+        canvas.width = Math.ceil((x1 - x0) * res); canvas.height = Math.ceil((y1 - y0) * res);
+        const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+        g.setTransform(res, 0, 0, res, -x0 * res, -y0 * res);
+        paint(g, x0, y0, x1, y1);
+        chunk = { canvas, stamp: now };
+      }
+      chunks.set(key, chunk);
+      ctx.drawImage(chunk.canvas, x0, y0, x1 - x0, y1 - y0);
+    }
+  }
+  while (chunks.size > MAX_CHUNKS) chunks.delete(/** @type {string} */ (chunks.keys().next().value));
+}
+
+// full-size pictures zoomed in, half zoomed out
+const chunkRes = () => (getViewScale() < ZOOMED_OUT ? 0.5 : 1);
+
 // The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
-// shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes, so it's
-// drawn once into a picture of the whole map (half size on a big one) and that's laid down each frame
-/** @type {{ key: string, canvas: HTMLCanvasElement | null, scale: number }} */
-const grassCache = { key: '', canvas: null, scale: 1 };
-function paintGrass() {
-  const w = game.COLS * TILE_SIZE, h = game.ROWS * TILE_SIZE;
-  const scale = w * h > 4e6 ? 0.5 : 1;
-  const canvas = grassCache.canvas || document.createElement('canvas');
-  canvas.width = Math.ceil(w * scale); canvas.height = Math.ceil(h * scale);
-  const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
-  g.setTransform(scale, 0, 0, scale, 0, 0);
-  g.fillStyle = '#2d4a22'; g.fillRect(0, 0, w, h);
-  for (let gy = 0; gy < game.ROWS; gy++) {
-    for (let gx = 0; gx < game.COLS; gx++) {
+// shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes
+// (the patches of the tiles round a piece too, for those spilling into it: the same either side of its edge)
+function paintGrass(g, x0, y0, x1, y1) {
+  g.fillStyle = '#2d4a22'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const gx0 = Math.max(0, x0 / TILE_SIZE - 1), gx1 = Math.min(game.COLS - 1, Math.ceil(x1 / TILE_SIZE));
+  const gy0 = Math.max(0, y0 / TILE_SIZE - 1), gy1 = Math.min(game.ROWS - 1, Math.ceil(y1 / TILE_SIZE));
+  for (let gy = gy0; gy <= gy1; gy++) {
+    for (let gx = gx0; gx <= gx1; gx++) {
       const hsh = tileVariantHash(gx, gy), x = gx * TILE_SIZE, y = gy * TILE_SIZE;
       // two patches, anywhere in the tile and spilling out of it
       for (let k = 0; k < 2; k++) {
@@ -56,14 +106,10 @@ function paintGrass() {
       }
     }
   }
-  Object.assign(grassCache, { canvas, scale });
 }
 
 export function drawGrassGround() {
-  const key = `${game.COLS}x${game.ROWS}`;
-  if (grassCache.key !== key || !grassCache.canvas) { paintGrass(); grassCache.key = key; }
-  const c = /** @type {HTMLCanvasElement} */ (grassCache.canvas);
-  ctx.drawImage(c, 0, 0, c.width / grassCache.scale, c.height / grassCache.scale);
+  drawChunks('grass', chunkRes(), () => '', paintGrass, '#2d4a22');
 }
 
 // ---- Terrain that joins up
@@ -271,27 +317,36 @@ export const ORE_COLORS = {
 };
 
 export function drawOreVeins(x, y, kind, half) {
+  const G = target || ctx;
   const c = ORE_COLORS[kind];
   const k = half / 14;
   drawRockTile(x, y, getTileIndex());
-  ctx.fillStyle = c.body;
-  ctx.fillRect(x - 10 * k, y - 10 * k, 8 * k, 8 * k); ctx.fillRect(x + 1 * k, y - 5 * k, 9 * k, 9 * k); ctx.fillRect(x - 7 * k, y + 3 * k, 7 * k, 7 * k);
-  ctx.fillStyle = c.shine;
-  ctx.fillRect(x - 8 * k, y - 8 * k, 3 * k, 3 * k); ctx.fillRect(x + 4 * k, y - 2 * k, 3 * k, 3 * k); ctx.fillRect(x - 5 * k, y + 5 * k, 2 * k, 2 * k);
+  G.fillStyle = c.body;
+  G.fillRect(x - 10 * k, y - 10 * k, 8 * k, 8 * k); G.fillRect(x + 1 * k, y - 5 * k, 9 * k, 9 * k); G.fillRect(x - 7 * k, y + 3 * k, 7 * k, 7 * k);
+  G.fillStyle = c.shine;
+  G.fillRect(x - 8 * k, y - 8 * k, 3 * k, 3 * k); G.fillRect(x + 4 * k, y - 2 * k, 3 * k, 3 * k); G.fillRect(x - 5 * k, y + 5 * k, 2 * k, 2 * k);
 }
 
 // Spawner: the same veined rock on a full tile, framed in the ore colour with a large crystal in the middle
 export function drawOreSpawner(x, y, kind) {
+  const G = target || ctx;
   const c = ORE_COLORS[kind];
   drawOreVeins(x, y, kind, 14);
-  ctx.strokeStyle = c.body; ctx.lineWidth = 2; ctx.strokeRect(x - 11, y - 11, 22, 22);
-  ctx.fillStyle = c.body;
-  ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = c.shine; ctx.fillRect(x - 1, y - 4, 2, 4);
+  G.strokeStyle = c.body; G.lineWidth = 2; G.strokeRect(x - 11, y - 11, 22, 22);
+  G.fillStyle = c.body;
+  G.beginPath(); G.moveTo(x, y - 7); G.lineTo(x + 5, y); G.lineTo(x, y + 7); G.lineTo(x - 5, y); G.closePath(); G.fill();
+  G.fillStyle = c.shine; G.fillRect(x - 1, y - 4, 2, 4);
 }
+
+// (#299) zoomed out this frame: rock, ore and their spawners are in the ground's pictures, not drawn one by one
+export const isGroundCached = () => cached;
 
 // The border zone round the map, and the line where it starts
 export function drawMapBorder() {
+  // (#299: only the part of it on the screen)
+  const v = getViewRect(TILE_SIZE), M = BORDER_MARGIN * TILE_SIZE, W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
+  if (v.x0 > M && v.y0 > M && v.x1 < W - M && v.y1 < H - M) return;
+  ctx.save(); ctx.beginPath(); ctx.rect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0); ctx.clip();
   ctx.fillStyle = '#2d4a22';
   ctx.fillRect(0, 0, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
   ctx.fillRect(0, game.WORLD_HEIGHT - BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH, BORDER_MARGIN * TILE_SIZE);
@@ -301,61 +356,73 @@ export function drawMapBorder() {
   ctx.strokeStyle = 'rgba(231, 76, 60, 0.4)';
   ctx.lineWidth = 2;
   ctx.strokeRect(BORDER_MARGIN * TILE_SIZE, BORDER_MARGIN * TILE_SIZE, game.WORLD_WIDTH - 2 * BORDER_MARGIN * TILE_SIZE, game.WORLD_HEIGHT - 2 * BORDER_MARGIN * TILE_SIZE);
+  ctx.restore();
 }
 
 // Desert and beach sand
 // (#298) the ground that rarely changes (sand, water, natural rock): zoomed out, where thousands of tiles
-// show, drawn once into a picture of the whole map (as the grass, half size on a big one) and laid down each
-// frame, painted again only when one of them changes (or where the settlers can reach on the water); zoomed
-// in, only the tiles on screen are drawn. Zoomed out it drew every tile every frame: 180 fps down to 70
+// show, drawn into pictures (#299: in pieces, drawChunks) laid down each frame, a piece painted again only
+// when a tile in it or next to it changes; zoomed in, only the tiles on screen are drawn. Zoomed out it drew
+// every tile every frame: 180 fps down to 70
 const ZOOMED_OUT = 0.75;
-/** @type {{ key: string, canvas: HTMLCanvasElement | null, scale: number }} */
-const terrainCache = { key: '', canvas: null, scale: 1 };
 let view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity }, cached = false;
-const onScreen = o => o.x > view.x0 && o.x < view.x1 && o.y > view.y0 && o.y < view.y1;
 const isRock = r => !r.oreSpawner;
-function terrainKey(terrain) {
-  return `${game.COLS}x${game.ROWS}|${terrain.signature}|${game.desertTiles.length}|${game.beachTiles.length}`;
-}
-function paintTerrain(terrain) {
-  const w = game.COLS * TILE_SIZE, h = game.ROWS * TILE_SIZE;
-  const scale = w * h > 4e6 ? 0.5 : 1;
-  const canvas = terrainCache.canvas || document.createElement('canvas');
-  canvas.width = Math.ceil(w * scale); canvas.height = Math.ceil(h * scale);
-  const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
-  g.setTransform(scale, 0, 0, scale, 0, 0);
-  target = g;
-  try {
-    game.desertTiles.forEach(drawDesertTile);
-    game.beachTiles.forEach(drawDesertTile);
-    game.waterTiles.forEach(t => drawWaterTile(t, terrain));
-    game.naturalRocks.forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); });
-  } finally { target = null; }
-  Object.assign(terrainCache, { canvas, scale });
+const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, game.naturalRocks, game.ironOres, game.coalOres];
+
+// What the terrain in and round a piece is like (any tile of it coming or going changes it); worked out
+// again only when one of the lists changed
+/** @type {{ lists: any[], stamps: Map<string, string> }} */
+let terrainStamps = { lists: [], stamps: new Map() };
+function terrainStamp(cx, cy) {
+  const lists = terrainLists().flatMap(listStamp);
+  if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map() };
+  const key = `${cx},${cy}`;
+  let stamp = terrainStamps.stamps.get(key);
+  if (stamp === undefined) {
+    const size = CHUNK * TILE_SIZE, x0 = cx * size - TILE_SIZE, y0 = cy * size - TILE_SIZE;
+    let h = 0;
+    terrainLists().forEach((list, n) => forEachInRect(list, x0, y0, x0 + size + 2 * TILE_SIZE, y0 + size + 2 * TILE_SIZE, o => {
+      h = (h * 31 + o.x * 7919 + o.y * 31 + n + (o.oreSpawner ? 1 : 0)) | 0;
+    }));
+    terrainStamps.stamps.set(key, (stamp = String(h)));
+  }
+  return stamp;
 }
 
+// The tiles of a list round a piece, in rows (the same order whichever piece paints them: no seam)
+function tilesAround(list, x0, y0, x1, y1) {
+  const found = [];
+  forEachInRect(list, x0 - TILE_SIZE, y0 - TILE_SIZE, x1 + TILE_SIZE, y1 + TILE_SIZE, o => { found.push(o); });
+  return found.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+function paintTerrain(g, x0, y0, x1, y1) {
+  const terrain = getTileIndex();
+  target = g;
+  try {
+    tilesAround(game.desertTiles, x0, y0, x1, y1).forEach(drawDesertTile);
+    tilesAround(game.beachTiles, x0, y0, x1, y1).forEach(drawDesertTile);
+    tilesAround(game.waterTiles, x0, y0, x1, y1).forEach(t => drawWaterTile(t, terrain));
+    tilesAround(game.naturalRocks, x0, y0, x1, y1).forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); else drawOreSpawner(r.x, r.y, r.oreSpawner); });
+    tilesAround(game.ironOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'iron', 14));
+    tilesAround(game.coalOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'coal', 14));
+  } finally { target = null; }
+}
+
+const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view.y1, fn);
+
 export function drawSand() {
-  // this frame: zoomed out (the picture), or the tiles on screen (with a tile's margin)
-  const scale = getViewScale(), terrain = getTileIndex();
-  cached = scale < ZOOMED_OUT && typeof document !== 'undefined';
-  if (cached) {
-    view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity };
-    const key = terrainKey(terrain);
-    if (terrainCache.key !== key || !terrainCache.canvas) { paintTerrain(terrain); terrainCache.key = key; }
-    const c = /** @type {HTMLCanvasElement} */ (terrainCache.canvas);
-    ctx.drawImage(c, 0, 0, c.width / terrainCache.scale, c.height / terrainCache.scale);
-    return;
-  }
-  const halfW = canvas.width / 2 / scale + TILE_SIZE, halfH = canvas.height / 2 / scale + TILE_SIZE;
-  view = { x0: camera.x - halfW, y0: camera.y - halfH, x1: camera.x + halfW, y1: camera.y + halfH };
-  for (const t of game.desertTiles) if (onScreen(t)) drawDesertTile(t);
-  for (const t of game.beachTiles) if (onScreen(t)) drawDesertTile(t);
+  // this frame: zoomed out (the pictures), or the tiles on screen (with a tile's margin)
+  view = getViewRect(TILE_SIZE);
+  cached = getViewScale() < ZOOMED_OUT && typeof document !== 'undefined';
+  if (cached) { drawChunks('terrain', chunkRes(), terrainStamp, paintTerrain); return; }
+  inView(game.desertTiles, drawDesertTile);
+  inView(game.beachTiles, drawDesertTile);
 }
 
 // Water, and the fishing spots marked on it
 export function drawWater(terrain) {
-  game.waterTiles.forEach(w => {
-    if (!onScreen(w)) return;
+  inView(game.waterTiles, w => {
     if (!cached) drawWaterTile(w, terrain);
     const hash = tileVariantHash(w.x, w.y);
     if ((w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && hash % 7 === 0) {
@@ -388,11 +455,11 @@ export function drawWater(terrain) {
 
 // Natural rock and ore spawners
 export function drawRocks(terrain) {
-  game.naturalRocks.forEach(r => {
-    if (!onScreen(r)) return;
+  inView(game.naturalRocks, r => {
+    if (cached) { drawHarvestProgress(r, 36); return; } // (the rock itself in the pictures)
     if (r.oreSpawner) {
       drawOreSpawner(r.x, r.y, r.oreSpawner);
-    } else if (!cached) {
+    } else {
       drawRockTile(r.x, r.y, terrain);
     }
     drawHarvestProgress(r, 36);

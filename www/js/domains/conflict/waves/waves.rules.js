@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
@@ -11,7 +11,7 @@ import { armorOf } from '../../colony/equipment/index.js';
 import { invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
-import { isNight } from '../../world/index.js';
+import { getFrontier, getFrontierTiles, isNight, isOutskirts } from '../../world/index.js';
 import { newLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
@@ -23,20 +23,27 @@ export function getDifficulty() {
 }
 
 export function getRandomBorderPos() {
+  // (#299) the frontier's band (getFrontier): a default map's edge, a big map's some way past the base
+  const f = getFrontierTiles();
   let side = Math.floor(rand() * 4);
-  let gx, gy;
-  if (side === 0) {
-    gx = Math.floor(rand() * game.COLS);
-    gy = Math.floor(rand() * BORDER_MARGIN);
-  } else if (side === 1) {
-    gx = Math.floor(rand() * game.COLS);
-    gy = game.ROWS - 1 - Math.floor(rand() * BORDER_MARGIN);
-  } else if (side === 2) {
-    gx = Math.floor(rand() * BORDER_MARGIN);
-    gy = Math.floor(rand() * game.ROWS);
-  } else {
-    gx = game.COLS - 1 - Math.floor(rand() * BORDER_MARGIN);
-    gy = Math.floor(rand() * game.ROWS);
+  let gx = 0, gy = 0;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    if (attempt) side = Math.floor(rand() * 4);
+    if (side === 0) {
+      gx = f.gx0 + Math.floor(rand() * (f.gx1 - f.gx0 + 1));
+      gy = f.gy0 + Math.floor(rand() * BORDER_MARGIN);
+    } else if (side === 1) {
+      gx = f.gx0 + Math.floor(rand() * (f.gx1 - f.gx0 + 1));
+      gy = f.gy1 - Math.floor(rand() * BORDER_MARGIN);
+    } else if (side === 2) {
+      gx = f.gx0 + Math.floor(rand() * BORDER_MARGIN);
+      gy = f.gy0 + Math.floor(rand() * (f.gy1 - f.gy0 + 1));
+    } else {
+      gx = f.gx1 - Math.floor(rand() * BORDER_MARGIN);
+      gy = f.gy0 + Math.floor(rand() * (f.gy1 - f.gy0 + 1));
+    }
+    // (out in the open on a big map: not inside a tree, rock or the water; a map's own edge is clear)
+    if (!isTileBlockedForEnemyStrict(gx, gy)) break;
   }
   return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
 }
@@ -128,7 +135,7 @@ export function getNearbyEnemyTentSite(origin) {
       game.enemyTents.some(t => t.x === x && t.y === y) ||
       game.enemyTentBlueprints.some(t => t.x === x && t.y === y);
 
-    if (isBorderZone(gx, gy) && !occupied && Math.hypot(x - origin.x, y - origin.y) <= 150) {
+    if (isOutskirts(gx, gy) && !occupied && Math.hypot(x - origin.x, y - origin.y) <= 150) {
       return { x: x, y: y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null };
     }
   }
@@ -300,10 +307,10 @@ function musterAt(enemy) {
 // they came in, a tile and a half in from the edge. (#298) Out of portals (the demons), by the portal each
 // came out of: a tile and a half from it towards the base, not off to the map's edge
 function regroupBySide() {
-  const W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
+  const f = getFrontier(), W = f.x1, H = f.y1; // (#299: the frontier's sides, a default map's own)
   const portals = getEnemyFaction().portalSpawns ? game.enemyTents.filter(et => !et.outpost && et.hp > 0) : [];
   const nearestPortal = en => portals.reduce((best, p) => (!best || Math.hypot(p.x - en.x, p.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? p : best), null);
-  const sideOf = en => portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : [['left', en.x], ['right', W - en.x], ['top', en.y], ['bottom', H - en.y]].sort((a, b) => a[1] - b[1])[0][0];
+  const sideOf = en => portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : /** @type {[string, number][]} */ ([['left', en.x - f.x0], ['right', W - en.x], ['top', en.y - f.y0], ['bottom', H - en.y]]).sort((a, b) => a[1] - b[1])[0][0];
   const groups = {};
   for (const en of game.enemies) if (en.fromWave && en.musterUntil && !en.buildTarget) (groups[sideOf(en)] = groups[sideOf(en)] || []).push(en);
   for (const [side, group] of Object.entries(groups)) {
@@ -312,7 +319,7 @@ function regroupBySide() {
     const portal = side.startsWith('portal:') ? portals[Number(side.slice(7))] : null;
     const toHall = portal ? Math.max(1, Math.hypot(townHall.x - portal.x, townHall.y - portal.y)) : 1;
     const at = portal ? { x: portal.x + (townHall.x - portal.x) / toHall * TILE_SIZE * 1.5, y: portal.y + (townHall.y - portal.y) / toHall * TILE_SIZE * 1.5 }
-      : side === 'left' ? { x: inset, y: cy } : side === 'right' ? { x: W - inset, y: cy } : side === 'top' ? { x: cx, y: inset } : { x: cx, y: H - inset };
+      : side === 'left' ? { x: f.x0 + inset, y: cy } : side === 'right' ? { x: W - inset, y: cy } : side === 'top' ? { x: cx, y: f.y0 + inset } : { x: cx, y: H - inset };
     group.forEach((en, i) => { const a = i * 2.4; en.muster = { x: at.x + Math.cos(a) * 14 * Math.sqrt(i), y: at.y + Math.sin(a) * 14 * Math.sqrt(i) }; });
   }
 }
