@@ -23,7 +23,7 @@ export function drawPet(s, kind = petKindOf(s), enemy = false) {
   const scale = s.look && s.look.female ? GAME_CONFIG.pets.femaleScale : 1;
   const d = Math.cos(s.facing ?? 0) < 0 ? -1 : 1;
   const r = s.visualRadius || s.radius || 11;
-  const id = s.id ?? s.x * 0.013 + s.y * 0.021; // (an enemy has none: a steady one from where it stands)
+  const id = s.id ?? (s.animSeed ??= s.x * 0.013 + s.y * 0.021); // (an enemy has none: one from where it first stands)
   ctx.save();
   ctx.translate(s.x, s.y);
   if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, r * 0.7, r * 1.2, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); }

@@ -45,11 +45,15 @@ function enemyHeal(en, healer, dt) {
 // (#314) An enemy ghost: straight at the nearest settler not in a panic, through anything; into it, it panics
 // and the ghost is gone (no corpse, no spoils)
 function enemyGhost(en) {
-  /** @type {{ x: number, y: number }} */
-  let target = townHall, best = Infinity;
+  /** @type {{ x: number, y: number } | null} */
+  let target = null, best = Infinity;
   for (const s of game.settlers) {
     const d = Math.hypot(s.x - en.x, s.y - en.y);
     if (!s.panic && !isUntouchable(s) && s.hp > 0 && d < best) { best = d; target = s; }
+  }
+  if (!target) {
+    if (game.gameMode === 'battle') return; // (no town hall in a battle: stay, don't fly off the field)
+    target = townHall;
   }
   const d = Math.hypot(target.x - en.x, target.y - en.y), step = GAME_CONFIG.pets.ghost.diveSpeed * GAME_CONFIG.movementScale;
   faceTowards(en, target.x, target.y);

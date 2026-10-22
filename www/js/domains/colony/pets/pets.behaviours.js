@@ -165,10 +165,11 @@ function petRelieve(s, tick) {
 
 // ---- A ghost
 
-// The graves it's kept by (the graveyard itself, with none)
-const ghostHomes = () => {
+// The graves it's kept by (the graveyard itself, with none; in a battle, where it was placed: no town hall)
+const ghostHomes = (s) => {
   const graves = game.buildings.filter(b => b.type === 'grave');
-  return graves.length ? graves : [townHall];
+  if (graves.length) return graves;
+  return s && s.battleEntry ? [s.battleEntry] : [townHall];
 };
 
 function tickGhost(s, tick) {
@@ -177,7 +178,7 @@ function tickGhost(s, tick) {
   if (s.ghostGone > 0) {
     s.ghostGone -= tick.dt;
     if (s.ghostGone <= 0) {
-      const home = ghostHomes()[Math.floor(rand() * ghostHomes().length)];
+      const homes = ghostHomes(s), home = homes[Math.floor(rand() * homes.length)];
       s.x = home.x + (rand() - 0.5) * 30; s.y = home.y - 10 + (rand() - 0.5) * 20; s.ghostGone = 0;
     }
     return 'ghostGone';
@@ -198,7 +199,7 @@ function tickGhost(s, tick) {
     return 'ghostDive';
   }
   // hovering round its necromancer, or its grave
-  const homes = ghostHomes(), home = s.escort || homes[Math.floor(Math.abs(s.id)) % homes.length];
+  const homes = ghostHomes(s), home = s.escort || homes[Math.floor(Math.abs(s.id)) % homes.length];
   const t = game.pathTick / 60 + s.id;
   fly(s, home.x + Math.cos(t * 0.8) * 26, home.y - 12 + Math.sin(t * 1.1) * 14, s.speed * 0.6);
   s.isIdle = !s.escort;

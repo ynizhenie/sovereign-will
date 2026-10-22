@@ -94,19 +94,41 @@ test('every enemy shows the very icons of the player\'s own unit of its kind (#2
   }
 });
 
-test('a big enough enemy side in a battle has a commander with a banner, as a wave\'s (#279)', async ({ page }) => {
+test('a big enough side in a battle has a commander with a banner, as a wave\'s (#279)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'sword';
+    for (const gy of [8, 10, 12, 14, 16]) battleTap(at(10, gy).x, at(10, gy).y);
     battle.preset = 'raider';
     for (const gy of [8, 10, 12, 14, 16]) battleTap(at(30, gy).x, at(30, gy).y);
-    const five = enemies.filter(en => en.captain).length;
-    battleTap(at(30, 18).x, at(30, 18).y);
-    const six = enemies.filter(en => en.captain).length;
-    const captain = enemies.find(en => en.captain);
-    return { five, six, normal: captain && captain.type, enemyKey: captain && captain.enemyKey };
+    const five = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    battle.category = 'own'; battle.preset = 'sword'; battleTap(at(10, 18).x, at(10, 18).y);
+    battle.category = 'enemy'; battle.preset = 'raider'; battleTap(at(30, 18).x, at(30, 18).y);
+    const six = { green: settlers.filter(s => s.banner).length, red: enemies.filter(en => en.captain).length };
+    const own = settlers.find(s => s.banner), foe = enemies.find(en => en.captain);
+    return { five, six, ownRole: own && own.role, ownType: own && own.type, foeType: foe && foe.type, foeKey: foe && foe.enemyKey };
   });
-  expect(r).toEqual({ five: 0, six: 1, normal: 'normal', enemyKey: 'raider' });
+  expect(r).toEqual({ five: { green: 0, red: 0 }, six: { green: 1, red: 1 }, ownRole: 'soldier', ownType: 'normal', foeType: 'normal', foeKey: 'raider' });
+});
+
+test('a pet keeps its id and a ghost hovers where it was placed in a battle, not in the empty town hall (#314)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'dog'; battleTap(at(10, 10).x, at(10, 10).y);
+    const dog0 = settlers.find(s => s.type === 'dog').id;
+    battle.preset = 'raider'; battleTap(at(34, 20).x, at(34, 20).y);
+    const dog1 = settlers.find(s => s.type === 'dog').id;
+    battle.category = 'own'; battle.preset = 'ghost'; battleTap(at(8, 8).x, at(8, 8).y);
+    const ghost = settlers.find(s => s.type === 'ghost'), spot = at(8, 8);
+    startBattleFight();
+    for (let f = 0; f < 120; f++) update(1 / 60);
+    return { sameId: dog0 === dog1, away: Math.hypot(ghost.x - spot.x, ghost.y - spot.y), phase: battle.phase };
+  });
+  expect(r.sameId).toBe(true);
+  expect(r.phase).toBe('fight');
+  expect(r.away).toBeLessThan(40); // (it hovers a little way off its spot)
 });
 
 test('an enemy pet is the player\'s own and leaves its own body in a battle too (#314)', async ({ page }) => {
