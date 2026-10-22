@@ -7,7 +7,7 @@ import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../e
 import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { clearBoarWallows } from '../domains/economy/hunting/index.js';
-import { generateMap } from '../domains/world/index.js';
+import { generateMap, resetFog } from '../domains/world/index.js';
 import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
@@ -37,6 +37,7 @@ export function resetGame(map) {
   else generateMap();
   mixStartFood(); // after the map, so the seeded map stays the same
   resetTileIndex();
+  resetFog(); // (#299: nothing seen yet but the start land)
   updateSeedHud();
 
   game.settlers.push(

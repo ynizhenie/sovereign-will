@@ -9,7 +9,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { playSound } from '../../../app/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
-import { isNight } from '../../world/index.js';
+import { isNight, isVisible } from '../../world/index.js';
 
 const VOICE = { globalGap: 2.5, ownGap: 12, showTicks: 150, storyEvery: 20, talkEvery: 7, replyAfter: 2.4 };
 // how each kind sounds: pitch (Hz), and a growl under it
@@ -80,7 +80,7 @@ export function drawSpeech(ctx, unit, top) {
 export function drawAllSpeech(ctx) {
   // (#279) over a panic's or a fright's mark, not under it
   const marked = u => u.panic || (u.morale !== undefined && u.morale < GAME_CONFIG.morale.calmAbove);
-  for (const u of /** @type {any[]} */ ([...game.settlers, ...game.enemies])) drawSpeech(ctx, u, u.y - (u.visualRadius || u.radius || 11) * 1.45 - (marked(u) ? 14 : 0));
+  for (const u of /** @type {any[]} */ ([...game.settlers, ...game.enemies.filter(en => isVisible(en.x, en.y))])) drawSpeech(ctx, u, u.y - (u.visualRadius || u.radius || 11) * 1.45 - (marked(u) ? 14 : 0));
 }
 
 // A settler of the colony says it (its faction's phrases)

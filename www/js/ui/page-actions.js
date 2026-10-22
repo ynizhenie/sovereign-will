@@ -10,6 +10,7 @@ import { deselectSettler, switchPossession, upgradeToBig } from '../domains/colo
 import { togglePause } from '../app/index.js';
 import { setMode } from './map-input.js';
 import { closeOverlays, reopenSheet, stopPlacing, toggleResources, toggleSheet } from './sheets.js';
+import { openWorldMap } from './world-map.js';
 
 export const PAGE_ACTIONS = {
   togglePause: () => togglePause(),
@@ -32,7 +33,8 @@ export const PAGE_ACTIONS = {
   toggleSheet: name => toggleSheet(name),
   reopenSheet: () => reopenSheet(),
   stopPlacing: () => stopPlacing(),
-  toggleResources: () => toggleResources()
+  toggleResources: () => toggleResources(),
+  openWorldMap: () => openWorldMap() // (#299)
 };
 
 // What this file sets up as the game starts (called by app/boot.js)

@@ -10,11 +10,12 @@ import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, ha
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
-import { castShadow } from '../../world/index.js';
+import { castShadow, isExplored, isVisible } from '../../world/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
   game.enemyTents.forEach(et => {
+    if (!isExplored(et.x, et.y)) return; // (#299: in the dark; once seen, a tent stays shown)
     if (et.outpost) drawOutpost(et);
     else if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
       // the undead's spawners are graves, the demons' portals, ringed in the enemy's colour
@@ -74,6 +75,7 @@ export function drawLoot() {
 // Tent sites enemies are building
 export function drawEnemyTentSites() {
   game.enemyTentBlueprints.forEach(site => {
+    if (!isVisible(site.x, site.y)) return; // (#299)
     ctx.fillStyle = 'rgba(192, 57, 43, 0.35)';
     ctx.beginPath();
     ctx.moveTo(site.x, site.y - 14); ctx.lineTo(site.x + 14, site.y + 14); ctx.lineTo(site.x - 14, site.y + 14); ctx.closePath(); ctx.fill();
@@ -85,8 +87,10 @@ export function drawEnemyTentSites() {
 
 // Enemies: body, weapon, quiver, the target mark, health
 export function drawEnemies() {
-  game.enemies.forEach(drawEnemy);
-  game.scouts.forEach(drawEnemy); // (scouts between waves, #279)
+  // (#299) only those the colony sees now
+  const seen = en => isVisible(en.x, en.y);
+  game.enemies.filter(seen).forEach(drawEnemy);
+  game.scouts.filter(seen).forEach(drawEnemy); // (scouts between waves, #279)
 }
 
 // One enemy

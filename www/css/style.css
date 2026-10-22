@@ -873,6 +873,17 @@ body:not([data-hud="battle"]) #battle-actions { display: none; }
 body:not([data-battle-phase="setup"]) .battle-setup-only, body:not([data-battle-phase="fight"]) .battle-fight-only { display: none; }
 /* the eye (possess): not in the editor; in a battle only while fighting (#166) */
 body[data-hud="editor"] .btn-unpossess, body[data-hud="battle"]:not([data-battle-phase="fight"]) .btn-unpossess { display: none; }
+/* (#299) the world map: Endless only */
+body:not([data-hud="endless"]) .btn-worldmap { display: none; }
+.btn-worldmap { background: #2c5f7a; text-align: center; }
+.world-map { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(5, 8, 12, 0.72); }
+.world-map[hidden] { display: none; }
+.world-map-box { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: rgba(20, 26, 32, 0.95); box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6); max-width: calc(100vw - 32px); }
+.world-map-head { display: flex; align-items: center; gap: 8px; color: #ecf0f1; font-size: 15px; }
+.world-map-head b { flex: 1; }
+/* (not the game's own canvas filling the screen: its side the room there is, a side shorter for a map not square) */
+#world-map-canvas { --side: min(calc(100vw - 52px), calc(100vh - 110px)); position: static; width: calc(var(--side) * var(--map-w, 1)) !important; height: calc(var(--side) * var(--map-h, 1)) !important;
+  image-rendering: pixelated; border-radius: 4px; touch-action: manipulation; }
 
 /* ---- Endless: the main stock under the top bar, and all of it dropped down */
 #resource-strip {

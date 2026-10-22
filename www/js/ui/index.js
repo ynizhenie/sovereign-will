@@ -11,3 +11,4 @@ export { hideInfo, initItemInfo, showCostOnButton } from './item-info.js';
 export { openBuildingCard, openHallCard, renderBuildingCard, sacrificeSelected } from './building-card.js';
 export { showNotification } from './toasts.js';
 export { initWidgets, labelButton, refreshAffordability, renderItemList } from './widgets.js';
+export { closeWorldMap, initWorldMap, isWorldMapOpen, openWorldMap } from './world-map.js';

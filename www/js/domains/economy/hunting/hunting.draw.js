@@ -5,7 +5,7 @@ import { ctx, drawProgressBar, getViewRect } from '../../../engine/platform/inde
 import { drawBodyBlood } from '../../conflict/combat/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { boarWallows } from './hunting.rules.js';
-import { castShadow } from '../../world/index.js';
+import { castShadow, isVisible } from '../../world/index.js';
 
 // A boar (#251), its side to us, facing the way it last went: a bristly body, legs stepping, its head with
 // snout, tusks and an ear, a curly tail. A carcass: on its back, legs up, a cross for its eye
@@ -71,7 +71,7 @@ export function drawBoars() {
   drawWallows();
   const v = getViewRect(40); // (#299: those on the screen)
   game.boars.forEach(b => {
-    if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1) return;
+    if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1 || !isVisible(b.x, b.y)) return; // (#299: and the colony sees it)
     ctx.save();
     if (b.isCarcass) {
       drawBoarBody(b, true);
