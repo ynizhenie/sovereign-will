@@ -74,6 +74,26 @@ test('every category has faction sub-tabs: each faction its own units and buildi
   expect(r.humans.buildings).not.toContain('grave');
 });
 
+test('every enemy shows the very icons of the player\'s own unit of its kind (#255)', async ({ page }) => {
+  await openBattle(page);
+  const tiles = async (faction, category) => {
+    await showCategory(page, category);
+    await page.click(`[data-battle-faction="${faction}"]`);
+    return page.$$eval('#battle-presets .tile', bs => bs.map(b => ({
+      name: b.querySelector('.tile-name b').textContent,
+      icons: [...b.querySelectorAll('.tile-name i.ic')].map(i => [...i.classList].find(c => c.startsWith('ic-')).slice(3))
+    })));
+  };
+  for (const faction of ['humans', 'undead', 'demons']) {
+    const own = new Map((await tiles(faction, 'own')).map(t => [t.name, t.icons]));
+    const foes = await tiles(faction, 'enemy');
+    const compared = foes.filter(f => own.has(f.name));
+    expect(compared.length).toBeGreaterThan(0);
+    expect(compared.map(f => [f.name, f.icons])).toEqual(compared.map(f => [f.name, own.get(f.name)]));
+    if (faction === 'undead') expect(compared).toContainEqual({ name: 'Зомби, Посох некроманта', icons: ['zombie', 'staff'] });
+  }
+});
+
 test('a fight can be cancelled back to the line-up; a unit can be possessed in it; arrows never run out (#166)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {

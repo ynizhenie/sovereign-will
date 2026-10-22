@@ -79,11 +79,12 @@ function presetStats(preset) {
     const unit = enemyPlayerUnit(def);
     const kind = GAME_CONFIG.settlerTypes[unit.type];
     const weapon = getDefinition('weapons', unit.weapon), tool = unit.tool && getDefinition('tools', unit.tool);
-    const look = def.necromancer ? 'necromancer' : kind && kind.icon;
+    // (#255) the very icons the player's own preset of that kind and weapon shows: the kind's, then the
+    // tool's or the weapon's (a necromancer's staff with its trade)
     const stats = enemyStats(preset.enemy);
     const armour = battleArmor(battle.armor);
     if (armour) stats.hp += armour.hpBonus; // (#279; #298 its kind's)
-    return { icons: [look, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...stats };
+    return { icons: [kind && kind.icon, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...stats };
   }
   const kind = GAME_CONFIG.settlerTypes[preset.type], weapon = getDefinition('weapons', preset.weapon);
   const tool = preset.tool && getDefinition('tools', preset.tool);
