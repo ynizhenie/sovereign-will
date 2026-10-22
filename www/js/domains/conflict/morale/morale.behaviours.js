@@ -5,7 +5,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
-import { getFrontier, isOutskirts } from '../../world/index.js';
+import { getFrontier, isOutskirts, isVisible } from '../../world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
@@ -88,7 +88,9 @@ export function enemyPanic(en, dt) {
   const edge = nearestEdge(en);
   moveEntityTowards(en, edge.x, edge.y, en.speed, true, dt);
   const g = getGridPos(en.x, en.y);
-  if (isOutskirts(g.gx, g.gy)) { en.hp = 0; en.crumbled = true; en.rewardGranted = true; en.fled = true; }
+  // (#299: on a big map, out of the colony's sight is gone too: the edge it runs for may be over the sea)
+  const f = getFrontier(), big = f.x0 > 0 || f.y0 > 0 || f.x1 < game.WORLD_WIDTH || f.y1 < game.WORLD_HEIGHT;
+  if (isOutskirts(g.gx, g.gy) || (big && !isVisible(en.x, en.y))) { en.hp = 0; en.crumbled = true; en.rewardGranted = true; en.fled = true; }
   return true;
 }
 
