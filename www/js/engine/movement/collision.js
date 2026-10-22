@@ -97,9 +97,10 @@ export function separateSettlersFromEnemies() {
 export function separateSettlersFromEnemiesOnce() {
   let moved = false;
   for (const s of game.settlers) {
-    if (s.towerAssignment) continue; // up in a watchtower
+    if (s.towerAssignment || s.ghostly) continue; // up in a watchtower; (#314) a ghost: through everyone
     const sRadius = s.visualRadius || s.radius;
     for (const en of game.enemies) {
+      if (en.ghostly) continue;
       let dx = s.x - en.x, dy = s.y - en.y;
       let dist = Math.hypot(dx, dy);
       const overlap = sRadius + en.radius - dist;

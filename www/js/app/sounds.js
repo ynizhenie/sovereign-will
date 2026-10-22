@@ -21,7 +21,7 @@ export const SOUND = {
   minGap: { built: 0.3, hire: 0.2, horn: 1.5, defeat: 2, tentUp: 0.4, click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
     hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3,
     eat: 0.2, sizzle: 0.3, dig: 0.2, splash: 0.2, drip: 0.1, catch: 0.3, heal: 0.3, raise: 0.3, collapse: 0.2, smelt: 0.3, ignite: 0.2,
-    trapSnap: 0.2, craftDone: 0.3, cageLock: 0.3, butcher: 0.25, pickup: 0.12, portal: 0.5, dawn: 5, owl: 5, snore: 0.8, alarm: 2, voice: 0.12, thunder: 2 }
+    trapSnap: 0.2, craftDone: 0.3, cageLock: 0.3, butcher: 0.25, pickup: 0.12, portal: 0.5, dawn: 5, owl: 5, snore: 0.8, alarm: 2, voice: 0.12, thunder: 2, bark: 1.2, ghost: 0.4 }
 };
 
 // ---- Sound effects
@@ -81,6 +81,9 @@ export const SOUNDS = {
   // (#306) a sleeper's breath: a low swell through a wide band, in and out
   snore: (o, t) => { noise(o, t, { dur: 1.0, gain: 0.22, type: 'lowpass', freq: 320, to: 150, q: 0.7, attack: 0.35 }); tone(o, t + 0.05, { freq: 78, to: 60, dur: 0.8, gain: 0.1, attack: 0.25 }); },
   alarm: (o, t) => [0, 0.25, 0.5].forEach(d => tone(o, t + d, { type: 'triangle', freq: 1046, dur: 0.18, gain: 0.12 })),
+  // (#314) a dog's bark: two short gruff yelps; a ghost going into an enemy: a rising whoosh and a cold moan
+  bark: (o, t) => [0, 0.16].forEach(d => { tone(o, t + d, { type: 'sawtooth', freq: 420, to: 260, dur: 0.09, gain: 0.2, filter: 1400, q: 3 }); noise(o, t + d, { dur: 0.06, gain: 0.08, type: 'bandpass', freq: 900 }); }),
+  ghost: (o, t) => { noise(o, t, { dur: 0.6, gain: 0.18, type: 'bandpass', freq: 500, to: 1800, q: 2, attack: 0.2 }); tone(o, t + 0.1, { type: 'sine', freq: 300, to: 180, dur: 0.7, gain: 0.12, attack: 0.15 }); },
   // a voice (#252): syllables, each a buzz through a vowel (a resonant filter that moves), a breath between
   // some; pitched by who speaks, a growl under it for the rough ones (settlers.voices.js)
   voice: (o, t, pitch = 210, syllables = 3, rough = false) => {

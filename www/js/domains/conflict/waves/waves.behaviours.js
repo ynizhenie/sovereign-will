@@ -6,14 +6,14 @@ import { getFrontier } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
-import { damageSettler, faceTowards, speak, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire } from '../combat/index.js';
 import { playSound } from '../../../app/index.js';
-import { enemyPanic, necromancerKeepsBack } from '../morale/index.js';
+import { enemyPanic, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
@@ -42,10 +42,27 @@ function enemyHeal(en, healer, dt) {
   return true;
 }
 
+// (#314) An enemy ghost: straight at the nearest settler not in a panic, through anything; into it, it panics
+// and the ghost is gone (no corpse, no spoils)
+function enemyGhost(en) {
+  /** @type {{ x: number, y: number }} */
+  let target = townHall, best = Infinity;
+  for (const s of game.settlers) {
+    const d = Math.hypot(s.x - en.x, s.y - en.y);
+    if (!s.panic && !isUntouchable(s) && s.hp > 0 && d < best) { best = d; target = s; }
+  }
+  const d = Math.hypot(target.x - en.x, target.y - en.y), step = GAME_CONFIG.pets.ghost.diveSpeed * GAME_CONFIG.movementScale;
+  faceTowards(en, target.x, target.y);
+  if (d > Math.max(14, step)) { en.x += (target.x - en.x) / d * step; en.y += (target.y - en.y) / d * step; return; }
+  if (target !== townHall) shakeMorale(target, 9999, 'settler', true);
+  Object.assign(en, { hp: 0, crumbled: true, rewardGranted: true, fled: true });
+}
+
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   clampEntityToBounds(en);
+  if (getEnemyDef(en).pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
   if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
@@ -168,12 +185,13 @@ function chooseEnemyTarget(en) {
   let closestSettler = /** @type {Settler | null} */ (null);
 
   game.settlers.forEach(s => {
+    if (isUntouchable(s)) return; // (a ghost: nothing to hit, #314)
     let d = Math.hypot(en.x - s.x, en.y - s.y);
     if (d < minDist) { minDist = d; closestSettler = s; }
   });
 
   let lockedTarget = en.attackTarget;
-  if (lockedTarget && !game.settlers.includes(lockedTarget)) lockedTarget = null;
+  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget))) lockedTarget = null;
   if (lockedTarget) {
     let lockedDist = Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y);
     if (!closestSettler || lockedDist <= minDist + 40) {

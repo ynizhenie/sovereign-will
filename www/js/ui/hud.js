@@ -63,7 +63,8 @@ export function updateUI() {
     let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
     // the rest of what it wears
     const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'flute'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
-    setRichText(document.getElementById('selected-settler-txt'), `${name} (${wName}${tName}${aName}${qName}${gear})`);
+    // (a pet: what it is and whether it's fed, nothing in its hands, #314)
+    setRichText(document.getElementById('selected-settler-txt'), selected.role === 'pet' ? name : `${name} (${wName}${tName}${aName}${qName}${gear})`);
     renderSettlerInfo(selected);
     renderSelectedGear(selected);
     document.getElementById('btn-deselect').style.display = 'inline-block';
@@ -71,8 +72,11 @@ export function updateUI() {
       const upgrade = getUpgrade();
       btnUpgrade.style.display = upgrade && selected.type === upgrade.from ? 'block' : 'none';
     }
+    // (#314) letting one go: in Endless, a hired one
+    document.getElementById('btn-dismiss').style.display = game.gameMode === 'endless' && !selected.temporary && !selected.leaving ? 'block' : 'none';
   } else {
     game.selectedSettler = null;
+    document.getElementById('btn-dismiss').style.display = 'none';
     document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
     document.getElementById('selected-info').hidden = true;
     renderSelectedGear(null);

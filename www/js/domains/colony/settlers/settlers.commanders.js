@@ -161,6 +161,7 @@ function bestStoredWeapon() {
 // (#279) what a settler is, by what it holds: a foreman, a captain, a necromancer, an archer, a soldier, by its
 // tool a woodcutter, a miner, a fisher, a farmer, a medic; nothing in its hands, a handyman
 export function roleTitle(s) {
+  if (s.role === 'pet') return `${t('role.pet')}, ${t((s.petHunger || 0) >= 1 ? 'pet.hungry' : 'pet.fed')}`; // (#314)
   if (s.whistle) return t('role.foreman');
   if (s.banner) return t('role.captain');
   const family = getToolFamily(s.tool);

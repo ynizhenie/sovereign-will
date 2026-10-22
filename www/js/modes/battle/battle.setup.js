@@ -79,12 +79,12 @@ export function makeBattleUnit(entry) {
   const s = createSettler(preset.type, battle.nextId++, entry.x, entry.y, { look });
   Object.assign(s, {
     weapon: preset.weapon, tool: preset.tool || 'none',
-    role: archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
+    role: s.role === 'pet' ? 'pet' : archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
   });
   s.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI;
-  const armour = battleArmor(entry.armor);
+  const armour = s.role === 'pet' ? null : battleArmor(entry.armor); // (a pet wears nothing, #314)
   if (armour) putOnGear(s, armour.id);
-  if (entry.shield && canUseShield(s)) s.shield = true;
+  if (entry.shield && canUseShield(s) && s.role !== 'pet') s.shield = true;
   game.settlers.push(s);
 }
 

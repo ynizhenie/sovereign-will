@@ -15,7 +15,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
-import { getTerritoryBox, inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
+import { getFrontier, getTerritoryBox, inReliefZone, inTerritory, isVisible, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
@@ -32,6 +32,8 @@ import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, fluteBreak, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
+import { isPet } from './settlers.rules.js';
+import { feedPet, tickPet } from '../pets/index.js';
 import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
@@ -223,7 +225,23 @@ export function patrol(s, tick) {
 }
 
 // Order = priority: the first behaviour that takes a settler's tick wins.
+// (#314) One let go walks away, out of the base's land and a few tiles past it, and is gone (taken off the list
+// after the tick: leftColony)
+function leaveColony(s, tick) {
+  if (!s.leaving) return false;
+  if (!s.leaveTo) {
+    const f = getFrontier(), edges = [{ x: f.x0 + 20, y: s.y }, { x: f.x1 - 20, y: s.y }, { x: s.x, y: f.y0 + 20 }, { x: s.x, y: f.y1 - 20 }];
+    s.leaveTo = edges.reduce((a, b) => (Math.hypot(a.x - s.x, a.y - s.y) < Math.hypot(b.x - s.x, b.y - s.y) ? a : b));
+  }
+  moveEntityTowards(s, s.leaveTo.x, s.leaveTo.y, s.speed, false, tick.dt);
+  const away = !isVisible(s.x, s.y) || Math.hypot(s.leaveTo.x - s.x, s.leaveTo.y - s.y) < 20 ||
+    (!inTerritory(s.x, s.y) && !inTerritory(s.x + 4 * TILE_SIZE, s.y) && !inTerritory(s.x - 4 * TILE_SIZE, s.y) && !inTerritory(s.x, s.y + 4 * TILE_SIZE) && !inTerritory(s.x, s.y - 4 * TILE_SIZE));
+  if (away) s.leftColony = true;
+  return true;
+}
+
 export const SETTLER_BEHAVIOURS = [
+  leaveColony,
   playerControlled,
   raidOrders, // (a raid on an enemy camp, #255: the party...)
   restWhileRaid, // (...and the base resting)
@@ -246,6 +264,7 @@ export const SETTLER_BEHAVIOURS = [
   repairBuilding,
   equip,
   goEat,
+  feedPet, // (#314: a hungry pet fed)
   foremanOrders,
   harvestMarked, // (the player's marks before the chores, #298)
   cook,
@@ -306,6 +325,7 @@ export function tickSettlers(dt) {
     prepareSettler(s, dt);
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
+    if (isPet(s)) { if (s.targetEquipment) s.targetEquipment = null; tickPet(s, tick); return; } // (its own ways, #314)
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (s.drowsy && !NIGHT_ORDER_ONLY.has(behaviour)) continue;
@@ -318,4 +338,5 @@ export function tickSettlers(dt) {
       }
     }
   });
+  if (game.settlers.some(s => s.leftColony)) game.settlers = game.settlers.filter(s => !s.leftColony); // (#314: let go, gone)
 }

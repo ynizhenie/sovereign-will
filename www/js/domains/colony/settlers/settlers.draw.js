@@ -16,6 +16,8 @@ import { getEnemyColor, getPlayerFaction, getSettlerColor } from '../../factions
 import { drawStaff, getNecromancy } from '../../factions/undead/index.js';
 import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/index.js';
 import { drawHorns } from '../../factions/demons/index.js';
+import { drawPet } from '../pets/index.js';
+import { isPet } from './settlers.rules.js';
 
 // A strike: the held weapon or tool swings through once over `seconds`
 export function startSwing(unit, seconds) {
@@ -589,6 +591,7 @@ function eatingAt(s) {
 
 export function drawSettlers() {
   game.settlers.forEach(s => {
+    if (isPet(s)) { drawPet(s); return; } // (#314)
     // an idle undead sways where it stands (#199): drawn a little to and fro
     const sway = s.swaying ? Math.sin(performance.now() / 450 + s.id) * 2.5 : 0;
     if (sway) { ctx.save(); ctx.translate(sway, 0); }

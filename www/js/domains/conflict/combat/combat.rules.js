@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
-import { damageSettler, faceTowards, isBigBody, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { tileVariantHash } from '../../world/index.js';
@@ -204,6 +204,7 @@ export function updateCorpses(dt) {
 
 // Damage to an enemy, less what its armour and shield take, as a settler's (#203)
 export function damageEnemy(en, amount) {
+  if (getDefinition('enemies', en.enemyKey)?.pet === 'ghost') return; // (a ghost, #314)
   let damage = armorOf(en) ? amount * (1 - armorOf(en).damageReduction) : amount;
   if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
   en.hp -= damage;
@@ -350,6 +351,7 @@ export function tickProjectiles() {
       }
       for (let s of game.settlers) {
         if (hit) break;
+        if (isUntouchable(s)) continue; // (through a ghost, #314)
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
           damageSettler(s, proj.damage, proj.owner);
           if (proj.fire) setBurning(s);
