@@ -1,6 +1,7 @@
 // Morale over heads (#207): a yellow "!" over a shaken unit, a red "!!" over a panicking one
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { isVisible } from '../../world/index.js';
 import { game } from '../../../engine/world/index.js';
 import { ctx } from '../../../engine/platform/index.js';
 import { baseMorale } from './morale.rules.js';
@@ -10,7 +11,7 @@ export function drawMoraleMarks() {
   ctx.save();
   ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
   for (const unit of [...game.settlers, ...game.enemies, ...game.boars]) {
-    if (unit.morale === undefined || unit.isCarcass) continue;
+    if (unit.morale === undefined || unit.isCarcass || !isVisible(unit.x, unit.y)) continue;
     // shaken: well below where it settles, and not steady yet
     const shaken = !unit.panic && unit.morale < c.calmAbove && unit.morale < baseMorale(unit) - 10;
     if (!unit.panic && !shaken) continue;
