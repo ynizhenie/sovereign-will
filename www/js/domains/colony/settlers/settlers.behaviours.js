@@ -12,10 +12,10 @@
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
-import { inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
+import { getTerritoryBox, inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
@@ -82,7 +82,8 @@ export function createSettlerTick(dt) {
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     // (not one with a fish trap on it, #248)
-    activeWaterSpots: game.waterTiles.filter(w => w.isFishing && isWaterReachable(w) && !game.buildings.some(b => b.x === w.x && b.y === w.y)),
+    // (#299: looked for on the base's land only, not through a continent's sea)
+    activeWaterSpots: fishingSpots(),
     assignedFishersCount: 0,
     defendersCount,
     // unarmed workers only help destroy enemy tents when there's nobody armed to do it
@@ -90,6 +91,15 @@ export function createSettlerTick(dt) {
     // what's left of the wave is down to a few enemies (tent-summoned ones don't count): go destroy the tents
     tentAssault: game.enemyTents.length > 0 && game.enemies.filter(en => !en.summoned).length <= 5
   };
+}
+
+// The fishing spots marked on the base's land (not one with a fish trap on it, #248)
+function fishingSpots() {
+  const box = getTerritoryBox(), spots = [];
+  forEachInRect(game.waterTiles, box.x0, box.y0, box.x1, box.y1, w => {
+    if (w.isFishing && isWaterReachable(w) && !game.buildings.some(b => b.x === w.x && b.y === w.y)) spots.push(w);
+  });
+  return spots;
 }
 
 // Housekeeping every settler gets each tick, before any behaviour

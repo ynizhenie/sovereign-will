@@ -39,10 +39,12 @@ test('a watchtower sees farther than a building; what\'s explored is saved and l
     const store = look('warehouse'), tower = look('watchtower');
     buildings = []; // (a bare tower: not one to keep, the game ticking on while it saves)
     // far off, explored by a settler sent there; saved, loaded
-    const far = { x: townHall.x + 50 * TILE_SIZE, y: townHall.y + 40 * TILE_SIZE };
+    // (towards the map's middle: the hall may be anywhere on a continent)
+    const toMiddle = (v, size) => (v < size / 2 ? 1 : -1);
+    const far = { x: townHall.x + toMiddle(townHall.x, WORLD_WIDTH) * 45 * TILE_SIZE, y: townHall.y + toMiddle(townHall.y, WORLD_HEIGHT) * 35 * TILE_SIZE };
     settlers = [window.sim.helpers.makeSettler(1, far.x, far.y)]; tickFog(1);
     await saveCurrentGame();
-    resetGame();
+    settlers = []; resetFog(); // (a new game's fog, on this same map, nobody out there)
     const afterReset = isExplored(far.x, far.y);
     await loadGame(await saveDataOf(loadSaves()[`world:${worldSeed.value}`]));
     const loaded = isExplored(far.x, far.y);
