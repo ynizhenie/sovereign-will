@@ -28,10 +28,10 @@ export function render() {
   drawPaths(); // (#248)
 
   const terrain = getTileIndex();
-  drawMapBorder();
+  drawSand(); // (the desert's tiles, over the ground they cover)
+  drawMapBorder(); // (over the sand: the field's edge is the same on a desert as on a glade)
   drawRaidZone(); // (an enemy camp's zone beyond the edge, #255)
-  if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing
-  drawSand();
+  if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing, over the sand too
   drawBlight();
   drawFarmZones();
   drawBuildGrid();
