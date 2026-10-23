@@ -16,7 +16,7 @@ import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
 import { exportFog, importFog } from '../../domains/world/index.js';
 import { syncCards } from './endless.cards.js';
-import { isInCamp, resetRaid } from './endless.raid.js';
+import { createRaidCamp, isInCamp, resetRaid } from './endless.raid.js';
 
 // caches, worked out again after loading rather than saved
 // (#298) and a raid's marks on its party: saved on the way, loaded they're home, the raid over
@@ -90,12 +90,14 @@ export function serializeGame() {
     stock: { ...stock },
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested, store: { ...(townHall.store || {}) } },
     cols: game.COLS, rows: game.ROWS,
-    clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
+    clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick, wavePrepared: game.wavePrepared },
     playerGear: { ...game.playerGear },
     armory: { ...game.armory },
     sides: JSON.parse(JSON.stringify(sides)),
     difficulty: game.gameDifficulty,
     cardMode: game.cardMode,
+    raidCamp: game.raidCamp ? { ...game.raidCamp } : null,
+    raidCampWave: game.raidCampWave,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom },
     fog: exportFog() // (#299: what's been explored)
@@ -166,11 +168,16 @@ export function loadGame(data) {
   for (const en of game.enemies) if (goneEnemies[en.enemyKey]) en.enemyKey = goneEnemies[en.enemyKey];
   Object.assign(townHall, { store: {} }, data.townHall); // (older saves: nothing in it, filled again from the stock)
   game.piles = game.piles || [];
-  game.raidCamp = game.raidCamp || null; game.raidCampWave = game.raidCampWave || 0; game.scouts = game.scouts || []; game.scoutClock = game.scoutClock || 0; game.reliefZones = game.reliefZones || []; game.postZones = game.postZones || [];
+  game.raidCamp = data.raidCamp || null; game.raidCampWave = data.raidCampWave || 0; game.scouts = game.scouts || []; game.scoutClock = game.scoutClock || 0; game.reliefZones = game.reliefZones || []; game.postZones = game.postZones || [];
+  game.waveMarchPaused = false;
   game.unlocked = game.unlocked || {}; game.cardsDue = game.cardsDue || 0; game.cardsWave = game.cardsWave || 0; game.cardOffer = game.cardOffer || null; // (older saves: no cards)
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
+  game.wavePrepared = data.clocks.wavePrepared ?? game.enemies.some(en => en.wavePrepared);
+  createRaidCamp(); // (older saves: no physical camp yet)
+  const outpost = game.enemyTents.find(et => et.outpost && et.hp > 0);
+  if (game.raidCamp && outpost) Object.assign(game.raidCamp, { id: outpost.campId, side: outpost.side, seed: outpost.seed, layout: outpost.layout, x: outpost.x, y: outpost.y });
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
   game.armory = { ...data.armory };
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();

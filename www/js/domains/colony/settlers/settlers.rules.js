@@ -3,7 +3,9 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isTownHallSpawnTile, rand, townHall } from '../../../engine/world/index.js';
+import { isSpawnSpotFree } from '../../economy/building/index.js';
+import { isTileBlockedForSettler } from '../../../engine/movement/index.js';
 import { armorOf, hasGear, hasWorkingShield } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
@@ -35,6 +37,7 @@ export function getCurrentPop() {
 
 // (#314) Which pet it is (a dog, a beast, a ghost), or null for anyone else; a ghost can't be hurt or hit
 export function petKindOf(unit) {
+  if (unit.enemyKey) return (getDefinition('enemies', unit.enemyKey) || {}).pet || null;
   return (getDefinition('settlerTypes', unit.type) || {}).pet || null;
 }
 export const isPet = unit => !!petKindOf(unit);
@@ -91,8 +94,22 @@ export function spawnSettler(type = 'normal') {
     showCostError(settlerType.hireCost, t('cost.needs', { name: settlerType.label }));
     return;
   }
+  const hall = getGridPos(townHall.x, townHall.y);
+  const freeSpots = [];
+  for (let gy = hall.gy - 3; gy <= hall.gy + 2; gy++) {
+    for (let gx = hall.gx - 3; gx <= hall.gx + 2; gx++) {
+      if (!isTownHallSpawnTile(gx, gy)) continue;
+      const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+      if (!isTileBlockedForSettler(gx, gy) && isSpawnSpotFree(x, y)) freeSpots.push({ x, y });
+    }
+  }
+  if (!freeSpots.length) {
+    showNotification(t('hire.noSpawn'), true);
+    return;
+  }
+  const spawn = freeSpots[Math.floor(rand() * freeSpots.length)];
   payCost(settlerType.hireCost);
-  const hired = createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: null, hasArmor: false }); // (#298: 'none' was taken for armour since leather)
+  const hired = createSettler(type, Date.now() + rand(), spawn.x, spawn.y, { armor: null, hasArmor: false }); // (#298: 'none' was taken for armour since leather)
   game.settlers.push(hired);
   says(hired, 'hired'); // (#252)
   showNotification(t('hire.done', { name: settlerType.label }), false);

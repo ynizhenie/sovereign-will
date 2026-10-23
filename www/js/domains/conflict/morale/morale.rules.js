@@ -5,6 +5,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
+import { countNear } from '../../../engine/movement/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { getNecromancy } from '../../factions/undead/index.js';
 import { getEnemyDef } from '../waves/index.js';
@@ -110,9 +111,8 @@ export function tickMorale(dt) {
       if (heldByNecromancer(unit, side)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side)), side); continue; }
       // a panic passes by itself, foes about or not
       if (unit.panic) { setMorale(unit, unit.morale + c.panicRecoverPerSecond * dt, side); continue; }
-      const around = list => list.filter(o => o.hp > 0 && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange).length;
-      const foesNear = side === 'boar' ? 0 : around(foes);
-      if (foesNear > 0 && foesNear > (around(units) + 1) * c.outnumbered) {
+      const foesNear = side === 'boar' ? 0 : countNear(foes, unit.x, unit.y, c.nearRange, o => o.hp > 0);
+      if (foesNear > 0 && foesNear > (countNear(units, unit.x, unit.y, c.nearRange, o => o.hp > 0) + 1) * c.outnumbered) {
         shakeMorale(unit, c.outnumberedPerSecond * dt, side);
       } else if (foesNear === 0) {
         const base = baseMorale(unit, side);

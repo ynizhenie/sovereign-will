@@ -2,12 +2,19 @@
 // different from the next of its kind (by where it stands: tileVariantHash), so a forest isn't one tree
 // stamped over and over
 
-import { ctx } from '../../../engine/platform/index.js';
+import { ctx, getViewScale, screenPixelRatio } from '../../../engine/platform/index.js';
 import { castShadow, tileVariantHash, windSway } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 
 const variant = o => tileVariantHash(Math.round(o.x), Math.round(o.y));
+
+// (#zoom) How much of a thing there's room to see: in screen pixels per world unit. Zoomed far out a tree or a
+// bush is a few pixels across, and the clumps of its crown are smaller than one: a shadow and two or three blobs
+// of its colours read the same as the whole art, at a fraction of what drawing a forest of it cost.
+const cssScale = () => getViewScale() / screenPixelRatio;
+const farDecor = () => cssScale() < 0.6;
+const tinyDecor = () => cssScale() < 0.34;
 const blob = (x, y, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
 // (#307) cast away from the sun by the thing's height (about its size)
 const groundShadow = (x, y, rx, ry) => castShadow(ctx, x, y + 4, rx, ry, rx * 0.9);
@@ -47,6 +54,12 @@ function drawLyingTree(t, side, footX, footY, cut) {
   const h = variant(t), y = footY - 2;
   const len = 24 * (1 - 0.6 * cut), x0 = footX + side * 4, x1 = x0 + side * len;
   groundShadow((x0 + x1) / 2, y + 3, len / 2 + 2, 3);
+  // (#zoom) far out: the log and, till its crown's cut off, a clump of it at the far end
+  if (farDecor()) {
+    if (cut < 0.5) { ctx.fillStyle = '#2e5d20'; ctx.beginPath(); ctx.ellipse(x0 + side * 24, y, 9, 5, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#5d4037'; ctx.fillRect(Math.min(x0, x1), y - 2.5, len, 5);
+    return;
+  }
   if (cut < 0.5) {
     const cx = x0 + side * 30, a = 1 - cut * 2;
     ctx.save(); ctx.globalAlpha = a;
@@ -79,6 +92,15 @@ function drawStandingTree(t, lying = false) {
   const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
   const light = t.apple ? '#5a9a3c' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
   if (!lying) groundShadow(x, y, 14, 10);
+  // (#zoom) far out: its crown's colours on its shadow, a lit clump on that — not its trunk and its ten clumps
+  const tiny = tinyDecor(), far = !tiny && farDecor();
+  if (tiny || far) {
+    if (!tiny) { ctx.fillStyle = '#5d4037'; ctx.fillRect(x - 2, y + 4, 4, 9); }
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.ellipse(x, y - 1, tiny ? 9 : 10.5, tiny ? 7.5 : 8.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = mid; ctx.beginPath(); ctx.ellipse(x - 1.5, y - 3.5, tiny ? 5.5 : 6.5, tiny ? 4.5 : 5, 0, 0, Math.PI * 2); ctx.fill();
+    if (!tiny) { ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(x - 3.5, y - 6, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill(); }
+    return;
+  }
   ctx.fillStyle = '#5d4037'; ctx.fillRect(x - 2, y + 4, 4, 9);
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2 + (h % 7) * 0.3;
@@ -105,6 +127,14 @@ export function drawSaplingArt(t) {
 export function drawCactusArt(c) {
   const h = variant(c), x = c.x, y = c.y, flip = h % 2 ? 1 : -1;
   groundShadow(x, y + 6, 8, 4);
+  // (#zoom) far out: the column and an arm, without its ribs and spines
+  if (farDecor()) {
+    ctx.fillStyle = '#2f8f46';
+    ctx.beginPath(); ctx.roundRect(x - 4, y - 13, 8, 26, 4); ctx.fill();
+    ctx.fillRect(x + flip * 3, y - 1, flip * 9, 4);
+    if (!tinyDecor()) { ctx.beginPath(); ctx.roundRect(x + flip * 10 - 2.5, y - 8, 5, 11, 2.5); ctx.fill(); }
+    return;
+  }
   const limb = (x0, y0, w, len) => { ctx.fillStyle = '#2f8f46'; ctx.beginPath(); ctx.roundRect(x0 - w / 2, y0 - len, w, len, w / 2); ctx.fill(); ctx.strokeStyle = '#1e6b33'; ctx.lineWidth = 1; ctx.stroke(); };
   limb(x, y + 13, 8, 26);
   // the arms: out, then up
@@ -120,6 +150,12 @@ export function drawCactusArt(c) {
 export function drawBoulderArt(b) {
   const h = variant(b), x = b.x, y = b.y;
   groundShadow(x, y + 2, 12, 8);
+  // (#zoom) far out: the stone and the light on its top
+  if (farDecor()) {
+    ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.ellipse(x, y, 10, 8.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#a4b0b5'; ctx.beginPath(); ctx.ellipse(x - 2, y - 3, 6, 3.5, -0.3, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
   const pts = [];
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2, rr = 10 + ((h >>> (k * 2)) % 4) - 1;
@@ -136,21 +172,34 @@ export function drawBoulderArt(b) {
 // A tuft of tall grass: curved blades in a few greens, now and then a small flower
 export function drawGrassArt(g) {
   const h = variant(g), x = g.x, y = g.y;
+  // (#zoom) far out a tuft is a dab of green; nearer, fewer blades (and its flower only close up)
+  if (tinyDecor()) {
+    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(x, y, 4.5, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  const far = farDecor();
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
   ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-  for (let k = 0; k < 7; k++) {
+  for (let k = 0; k < 7; k += far ? 2 : 1) {
     const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + windSway(bx, y, y + 7 - top); // (in the wind, #308)
     ctx.strokeStyle = greens[(h >>> (k * 2)) % 3];
     ctx.beginPath(); ctx.moveTo(bx, y + 7); ctx.quadraticCurveTo(bx + lean * 0.3, y, bx + lean, top); ctx.stroke();
   }
   ctx.lineCap = 'butt';
-  if (h % 4 === 0) { blob(x + 4, y - 9, 1.8, '#f9e79f'); blob(x + 4, y - 9, 0.8, '#e67e22'); }
+  if (!far && h % 4 === 0) { blob(x + 4, y - 9, 1.8, '#f9e79f'); blob(x + 4, y - 9, 0.8, '#e67e22'); }
 }
 
 // A berry bush: leafy clumps round a darker middle, blue berries on it
 export function drawBushArt(b) {
   const h = variant(b), x = b.x, y = b.y;
   groundShadow(x, y + 2, 11, 7);
+  // (#zoom) far out: its clumps as one, with a few berries on it; nearer, two clumps and the berries
+  if (farDecor()) {
+    blob(x, y, 7.5, '#1e824c');
+    blob(x - 2, y - 2.5, 5, '#28a060');
+    if (!tinyDecor()) for (const [bx, by] of [[-5, -3], [3, -2], [2, 4]]) blob(x + bx, y + by, 2.2, '#5b6ee1');
+    return;
+  }
   for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + (h % 5) * 0.2; blob(x + Math.cos(a) * 6, y + Math.sin(a) * 5, 6, '#1e824c'); }
   blob(x, y, 7, '#196f3d');
   blob(x - 3, y - 3, 3.5, '#28a060');
@@ -180,6 +229,7 @@ export function drawLogArt(lg) {
 // Pebbles: two or three small stones, lit on top
 export function drawPebblesArt(pe) {
   const h = variant(pe), x = pe.x, y = pe.y;
+  if (tinyDecor()) { blob(x, y, 2.6, '#95a5a6'); return; } // (#zoom) a few pixels of stone
   for (const [px, py, r] of [[-3, 0, 3], [3, 2, 2.2], [1, -3, 1.8]].slice(0, 2 + (h % 2))) {
     blob(x + px + 1, y + py + 1, r, 'rgba(0, 0, 0, 0.25)');
     blob(x + px, y + py, r, '#95a5a6');

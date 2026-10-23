@@ -25,7 +25,7 @@ const soldiersCookOnce = onceThisTick();
 function soldiersCoverFires(tick) {
   if (tick.isWaveActive || isDefenseAlert()) return false;
   // (#306) counted once a tick: it was counted again for every settler that came this way
-  const fires = campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire').length);
+  const fires = campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' && !b.campId).length);
   return fires > 0 && soldiersCookOnce(() => game.settlers.filter(isSoldierCook).length) >= fires;
 }
 
@@ -60,7 +60,8 @@ export function cook(s, tick) {
   if (!fire) {
     if (s.carrying) return false; // its fire is gone: deliverCarrying puts it back in the stock
     if (!cooking.raw.some(r => stock[r] > 0)) return false;
-    fire = game.buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && ((b.fuelLeft || 0) > 0 || findFuel()))
+    fire = game.buildings.filter(b => b.type === 'campfire' && !b.campId && isBuildingJobFree(b, 'cook', s) && isBuildingJobFree(b, 'light', s) &&
+      ((b.fuelLeft || 0) > 0 || findFuel()))
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (!fire) return false;
   }
@@ -131,7 +132,7 @@ export function chopFirewood(s, tick) {
   if (load && (tick.isWaveActive || s.isPossessed)) { stock.wood += load.amount; s.carrying = null; return false; }
   if (!load) {
     const can = s.role === 'worker' && hasAxeTool(s.tool) && !s.isPossessed && !s.carrying && !tick.isWaveActive &&
-      game.buildings.some(b => b.type === 'campfire') && stock.wood >= 1 && (stock.firewood || 0) < c.keep;
+      game.buildings.some(b => b.type === 'campfire' && !b.campId) && stock.wood >= 1 && (stock.firewood || 0) < c.keep;
     if (!can || (!s.wasIdle && !s.chopTrip && (stock.firewood || 0) >= c.low)) { s.chopTrip = false; return false; }
     s.patrolTarget = null;
     s.chopTrip = fetchFromStorage(s, 'wood', tick.dt, () => { s.carrying = { type: 'wood', amount: takeStock('wood', c.perTrip), forChop: true }; s.chopTimer = 0; });

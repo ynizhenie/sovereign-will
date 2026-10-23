@@ -67,12 +67,12 @@ test('every category has faction sub-tabs: each faction its own units and buildi
   expect(await page.locator('[data-battle-category="own"]').innerText()).toBe('Игрок');
   // (each faction's pet too, #314)
   expect(r.undead.own).toEqual(['zombie', 'zombie_club', 'zombie_sword', 'zombie_bow', 'necromancer', 'big_zombie', 'ghost']);
-  expect(r.undead.enemy).toEqual(['undead_zombie', 'undead_zombie_sword', 'undead_big_zombie', 'undead_zombie_archer', 'undead_necromancer', 'undead_ghost']);
+  expect(r.undead.enemy).toEqual(['undead_zombie', 'undead_zombie_sword', 'undead_zombie_archer', 'undead_necromancer', 'undead_big_zombie', 'undead_ghost']);
   expect(r.undead.buildings).toContain('grave');
   expect(r.demons.own).toEqual(['imp_fist', 'imp', 'imp_sword', 'imp_spear', 'imp_bow', 'demon', 'demon_spear', 'beast']);
-  expect(r.demons.enemy).toEqual(['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_imp_archer', 'demon_beast']);
+  expect(r.demons.enemy).toEqual(['demon_imp', 'demon_imp_sword', 'demon_imp_archer', 'demon_brute', 'demon_beast']);
   expect(r.demons.buildings).toEqual(expect.arrayContaining(['sacrifice_circle', 'portal']));
-  expect(r.humans.enemy).toEqual(['raider_fist', 'raider_club', 'raider', 'brute', 'raider_archer', 'raider_medic', 'raider_dog']);
+  expect(r.humans.enemy).toEqual(['raider_fist', 'raider_club', 'raider', 'raider_archer', 'brute', 'raider_dog', 'raider_medic']);
   expect(r.humans.buildings).not.toContain('grave');
 });
 

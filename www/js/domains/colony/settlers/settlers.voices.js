@@ -40,6 +40,7 @@ export function speak(unit, faction, event, urgent = false) {
 
 // What it says, shown and heard
 function voice(unit, text) {
+  if (!unit || isPet(unit)) return false;
   const now = clock;
   unit.say = { text, until: game.pathTick + VOICE.showTicks * (text.length > 34 ? 1.6 : 1) };
   unit.spokeAt = now;
@@ -58,7 +59,7 @@ export function someoneSays(units, faction, event, urgent = false) {
 
 // A bubble with what it says, over its head (top: the top of its head)
 export function drawSpeech(ctx, unit, top) {
-  if (!unit.say || unit.say.until < game.pathTick) return;
+  if (isPet(unit) || !unit.say || unit.say.until < game.pathTick) return;
   ctx.font = 'bold 8px sans-serif';
   // a long one (a story by the fire, #279) on two lines, broken at a space near its middle
   const full = unit.say.text.length > 70 ? `${unit.say.text.slice(0, 69)}…` : unit.say.text;

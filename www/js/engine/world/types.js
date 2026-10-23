@@ -38,7 +38,7 @@
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {Look} [look]          a man or a woman, one of their looks: how it's drawn (#306)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forCampfire?: Building, forBlueprint?: Building, forTower?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -138,6 +138,18 @@
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
+ * @property {string} [campId]       the enemy camp this unit belongs to
+ * @property {boolean} [campDefender] a permanent defender of its camp
+ * @property {boolean} [campUnlockDefender] a camp defender added after the player unlocks its kind
+ * @property {'wander' | 'cook' | 'eat' | 'talk'} [campActivity] what an idle camp defender is doing
+ * @property {number} [campActivityTimer] time left in its camp activity
+ * @property {Point} [campTarget] the spot an idle camp defender is walking to
+ * @property {{ rawMeat: number, firewood: number } | null} [campCarrying] supplies picked up from the camp outpost
+ * @property {number} [campFireX] x coordinate of the campfire this enemy is cooking at
+ * @property {number} [campFireY] y coordinate of the campfire this enemy is cooking at
+ * @property {boolean} [wavePrepared] marching toward the next wave's staging point
+ * @property {Point} [waveStart]      where a prepared wave unit returns when a raid pauses it
+ * @property {Point} [waveTarget]     the next wave's staging point
  * @property {boolean} [fleeing]    a scout pointed at, running now (one came near it, or it was hit, #279)
  * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
  * @property {Point} [muster]        where it gathers
@@ -184,6 +196,8 @@
  * @property {boolean} [panic]
  * @property {boolean} [fled]          ran off the map's edge
  * @property {boolean} [deadNoted]     its fall has shaken (and heartened) those around
+ * @property {number} [insideBaseTick] the tick isInsideBase last answered for it
+ * @property {boolean} [insideBaseAt]  and the answer
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
  * @property {boolean} [shield]
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
@@ -195,6 +209,7 @@
  * @typedef {Object} Blueprint
  * @property {string} type           GAME_CONFIG.buildings key, or 'demolish_building'
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {string} [campId]       the enemy camp this blueprint belongs to
  * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
  * @property {number} y
@@ -212,6 +227,8 @@
  * @typedef {Object} Building
  * @property {string} type           GAME_CONFIG.buildings key
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {string} [campId]       the enemy camp this building belongs to
+ * @property {'green' | 'red'} [side] in a battle: the side it stands on (each doesn't break its own)
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} [progress]
@@ -247,6 +264,8 @@
  * @property {number} [smeltProgress]
  * @property {Settler | null} [collector]
  * @property {number} [cookProgress] a campfire's piece cooking now, 0..1
+ * @property {number} [campCookerIndex] index of the camp defender currently cooking here
+ * @property {number} [campCookerTick] last tick the campfire cooker's claim was renewed
  */
 
 /**
@@ -283,11 +302,14 @@
  * @property {number} waveInterval
  * @property {number} waveTimer
  * @property {number} waveNum
+ * @property {boolean} wavePrepared whether the next wave is marching to its staging point
+ * @property {boolean} waveMarchPaused whether a raid has paused the prepared wave
  * @property {number} boarRespawnTimer
  * @property {number} pathTick
  * @property {string} buildMode
  * @property {Settler | null} selectedSettler
  * @property {Object | null} defensePlan
+ * @property {number} [defensePlanTick] the tick the plan was last worked out
  * @property {Settler[]} settlers
  * @property {Enemy[]} enemies
  * @property {Building[]} buildings
@@ -344,7 +366,7 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
- * @property {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} raidCamp  an enemy camp's zone open (#255; #279: the army it mirrors and the wave, as when it appeared)
+ * @property {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number, x?: number, y?: number, id?: string } | null} raidCamp  an enemy camp's raid offer on the main map (#255)
  * @property {number} raidCampWave  the waves beaten when the last one opened
  * @property {Enemy[]} scouts  enemy scouts between waves (#279)
  * @property {Point[]} reliefZones  tiles marked to relieve in (#279)

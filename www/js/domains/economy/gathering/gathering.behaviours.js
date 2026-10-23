@@ -134,6 +134,11 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
       const focused = availableRes.filter(r => ((r.yield || getMapResourceDef(tick.resourceKind.get(r)).yield || {})[s.focus.resource] || 0) > 0);
       if (focused.length) availableRes = focused;
     }
+    // A woodcutter finishes collecting the logs from the tree it felled before starting another tree.
+    if (hasAxeTool(s.tool) && !(s.focus && s.focus.until > game.pathTick)) {
+      const logs = availableRes.filter(r => tick.resourceKind.get(r) === 'log');
+      if (logs.some(r => getReachDistanceToResource(reachOf(), r) < Infinity)) availableRes = logs;
+    }
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off.
     // (#306) Walking is never shorter than the straight way there in tiles, so what's farther off than the
     // best so far can be left out before its distance is asked for

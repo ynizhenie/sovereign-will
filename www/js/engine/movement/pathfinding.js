@@ -1,7 +1,7 @@
 // Finding a way: which tiles block whom (settlers, enemies), walking distances, and A* paths
 
 import { getDefinition } from '../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, resetTileIndex, townHall } from '../world/index.js';
+import { STRUCTURE_COLLISION_HALF_SIZE, TILE_SIZE, game, getGridPos, getTileIndex, isDoor, resetTileIndex, townHall } from '../world/index.js';
 
 // isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
 // world's blocking tiles change. Settler path searches read this instead of re-checking each tile.
@@ -31,12 +31,19 @@ function buildSettlerBlockedGrid() {
   }
   for (const list of [game.naturalRocks, game.waterTiles, game.cacti, game.boulders, game.ironOres, game.coalOres]) list.forEach(mark);
   for (const t of game.trees) if (!t.isGrowing) mark(t);
-  // round the town hall
-  const reach = Math.ceil((townHall.radius + 12) / TILE_SIZE) + 1, hall = getGridPos(townHall.x, townHall.y);
-  for (let gy = hall.gy - reach; gy <= hall.gy + reach; gy++) {
-    for (let gx = hall.gx - reach; gx <= hall.gx + reach; gx++) {
+  for (const key of getTileIndex().outposts) {
+    const [x, y] = key.split(',').map(Number);
+    mark({ x, y });
+  }
+  // The town hall blocks only the tiles covered by its two-by-two-tile footprint.
+  const minGx = Math.floor((townHall.x - STRUCTURE_COLLISION_HALF_SIZE) / TILE_SIZE);
+  const maxGx = Math.floor((townHall.x + STRUCTURE_COLLISION_HALF_SIZE - 1) / TILE_SIZE);
+  const minGy = Math.floor((townHall.y - STRUCTURE_COLLISION_HALF_SIZE) / TILE_SIZE);
+  const maxGy = Math.floor((townHall.y + STRUCTURE_COLLISION_HALF_SIZE - 1) / TILE_SIZE);
+  for (let gy = minGy; gy <= maxGy; gy++) {
+    for (let gx = minGx; gx <= maxGx; gx++) {
       if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) continue;
-      if (Math.hypot(gx * TILE_SIZE + 15 - townHall.x, gy * TILE_SIZE + 15 - townHall.y) < townHall.radius + 12) grid[gy * game.COLS + gx] = 1;
+      grid[gy * game.COLS + gx] = 1;
     }
   }
   return grid;
@@ -52,12 +59,16 @@ export function computeTileBlockedForSettler(gx, gy) {
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
-  if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
+  if (tilesForStructure(tx, ty, townHall.x, townHall.y)) return true;
 
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.walls.has(k) || tiles.spikes.has(k) || tiles.traps.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  return tiles.outposts.has(k) || tiles.walls.has(k) || tiles.spikes.has(k) || tiles.traps.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
+
+const tilesForStructure = (x, y, structureX, structureY) =>
+  Math.abs(x - structureX) < STRUCTURE_COLLISION_HALF_SIZE &&
+  Math.abs(y - structureY) < STRUCTURE_COLLISION_HALF_SIZE;
 
 // (#299) how far a settler's walking distances are worked out: the frontier's box of tiles (set by
 // domains/world), not all of a big map; null: everywhere
@@ -129,11 +140,11 @@ export function isTileBlockedForEnemyStrict(gx, gy) {
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
-  if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
+  if (tilesForStructure(tx, ty, townHall.x, townHall.y)) return true;
   // route around buildings when possible; if walled in, the fallback search paths through them and enemies break them
   const tiles = getTileIndex(), k = `${tx},${ty}`;
   // (an iron trap they don't see: they walk right onto it, #248)
-  return (tiles.buildings.has(k) && !tiles.traps.has(k)) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  return tiles.outposts.has(k) || (tiles.buildings.has(k) && !tiles.traps.has(k)) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -172,7 +183,7 @@ export function isTileBlockedForEnemyPermissive(gx, gy) {
   let ty = gy * TILE_SIZE + 15;
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k);
+  return tiles.outposts.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k);
 }
 
 export const PATH_DIRECTIONS = [
@@ -280,7 +291,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
 // Enemies' way to their target: one search that weighs going round against breaking through, in
 // tiles of walking: breaking a building costs `building`, a tree or boulder `nature`, walking over spikes
 // `spikes`. Rock and water can't be crossed at all.
-export const ENEMY_PATH_COST = { building: 12, nature: 25, spikes: 2 };
+export const ENEMY_PATH_COST = { building: 0.5, nature: 25, spikes: 2 };
 
 // A path's length in tiles (diagonal steps count 1.41)
 export function pathCost(path) {
@@ -326,44 +337,58 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   return result;
 }
 
-export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
+// allowBreakthrough: enemies may fall back on the permissive search (through buildings, over spikes). A
+// camp's own defenders know their ground and must go round their own buildings instead (see steering.js).
+export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false, allowBreakthrough = true) {
   let startG = getGridPos(startX, startY);
   let endG = getGridPos(targetX, targetY);
 
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
 
-  if (startG.gx === endG.gx && startG.gy === endG.gy) {
+  const isBlocked = isEnemy ? isTileBlockedForEnemyStrict : isTileBlockedForSettler;
+  if (startG.gx === endG.gx && startG.gy === endG.gy && !isBlocked(endG.gx, endG.gy)) {
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: false };
   }
 
-  const isBlocked = isEnemy ? isTileBlockedForEnemyStrict : isTileBlockedForSettler;
-
+  let reachableBlockedTargetPath = null;
   if (isBlocked(endG.gx, endG.gy)) {
-    let neighbors = [
-      {gx: endG.gx+1, gy: endG.gy}, {gx: endG.gx-1, gy: endG.gy},
-      {gx: endG.gx, gy: endG.gy+1}, {gx: endG.gx, gy: endG.gy-1}
-    ];
-    let bestN = null;
-    let minD = Infinity;
-    for (let n of neighbors) {
-      if (!isBlocked(n.gx, n.gy)) {
-        let d = Math.hypot(n.gx - startG.gx, n.gy - startG.gy);
-        if (d < minD) { minD = d; bestN = n; }
+    for (let radius = 1; radius <= 3 && !reachableBlockedTargetPath; radius++) {
+      const neighbors = [];
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+          const gx = endG.gx + dx, gy = endG.gy + dy;
+          if (!isBlocked(gx, gy)) neighbors.push({ gx, gy });
+        }
+      }
+      neighbors.sort((a, b) => Math.hypot(a.gx - startG.gx, a.gy - startG.gy) - Math.hypot(b.gx - startG.gx, b.gy - startG.gy));
+      for (const n of neighbors) {
+        const x = n.gx * TILE_SIZE + 15, y = n.gy * TILE_SIZE + 15;
+        const candidatePath = findGridPath(startG, n, x, y, {
+          isBlocked,
+          allowCornerCutting: false,
+          isBlockedPath: false
+        });
+        if (candidatePath.path.length > 0) {
+          endG = n;
+          targetX = x;
+          targetY = y;
+          reachableBlockedTargetPath = candidatePath;
+          break;
+        }
       }
     }
-    if (bestN) endG = bestN;
   }
 
-  const result = findGridPath(startG, endG, targetX, targetY, {
+  const result = reachableBlockedTargetPath || findGridPath(startG, endG, targetX, targetY, {
     isBlocked,
     allowCornerCutting: false,
     isBlockedPath: false
   });
-  if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
-  // a long way round (to a far door, round a wall of spikes): breaking through, or walking the spikes,
-  // may be quicker; whichever costs less
-  if (isEnemy && pathCost(result.path) > 1.5 * Math.hypot(endG.gx - startG.gx, endG.gy - startG.gy) + 4) {
+  if (isEnemy && allowBreakthrough && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
+  // Compare the real detour with breaking buildings or crossing spikes on the direct route.
+  if (isEnemy && allowBreakthrough && pathCost(result.path) > Math.hypot(endG.gx - startG.gx, endG.gy - startG.gy) + 0.1) {
     const through = findPathAStarPermissive(startX, startY, targetX, targetY, true);
     if (through.path.length > 0 && through.cost < pathCost(result.path)) return through;
   }

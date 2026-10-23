@@ -24,7 +24,6 @@ import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 export function update(dt) {
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
   if (game.gameMode === 'endless' && (game.cardOffer || isRaidPicking())) return; // (the game waits for a card or a raid party to be picked, #255)
-  if (game.gameMode === 'endless' && isInCamp()) { updateCamp(dt); return; } // (a raid's camp: the base waits, #255)
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (game.gameMode === 'battle') {
     updateBattle(dt);
@@ -53,7 +52,7 @@ export function update(dt) {
   tickSmelters(dt);
   movePossessed(dt);
   tickSettlers(dt);
-  tickEnemyTents(dt);
+  tickEnemyTents(dt, isInCamp());
   tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
   tickScouts(dt); // (scouts between waves, #279)
   tickDemonCamp(dt); // (their corpse pits and cages)
@@ -84,31 +83,6 @@ export function update(dt) {
   tickRaidCamp(dt); // (#255)
   tickRaid(dt);
   updateUnitCounts();
-  updateUI();
-  refreshAffordability();
-}
-
-// A raid's camp (#255): only the fight goes on, the party against the camp; the base is put away
-function updateCamp(dt) {
-  resetTileIndex();
-  game.pathTick++;
-  updatePossessionView();
-  movePossessed(dt);
-  tickSettlers(dt);
-  tickEnemyTents(dt);
-  tickProjectiles();
-  tickEnemies(dt);
-  separateSettlersFromEnemies();
-  for (const unit of game.settlers) tickAnimation(unit, dt);
-  for (const unit of game.enemies) tickAnimation(unit, dt);
-  ageBloodAndDung(dt);
-  trackAllFootprints();
-  updateBurning(dt);
-  removeDeadSettlers();
-  removeDeadEnemies();
-  updateCorpses(dt);
-  tickVoices(dt);
-  tickRaid(dt);
   updateUI();
   refreshAffordability();
 }

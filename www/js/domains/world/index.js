@@ -7,5 +7,5 @@ export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones
 export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, tickWeather, windSway } from './world.weather.js';
 export { castShadow, drawDarkness, getDarkness, getDayPhase, getLights, getSun, isNight, nightProgress, tickDaytime } from './world.daytime.js';
 export { ORE_KINDS, generateMap, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, isDesertTile, isWaterReachable, placeBeaches, placeOre, pointIn, spawnForestAware, spawnResource } from './world.generator.js';
-export { drawTerritory, getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inTerritory, isOutskirts, setTerritoryEnabled } from './world.territory.js';
+export { drawTerritory, getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inTerritory, isOutskirts } from './world.territory.js';
 export { drawFog, exportFog, fogAt, hasFog, importFog, isExplored, isVisible, resetFog, tickFog } from './world.fog.js';

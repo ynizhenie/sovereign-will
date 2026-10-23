@@ -9,7 +9,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { fetchFromStorage, findNearestStorage, getFreeStock, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../storage/index.js';
-import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
+import { getBaseRadius, hasActiveWaveEnemy, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getLights, getDayPhase, isNight, nightProgress } from '../../world/index.js';
 import { faceTowards } from './settlers.draw.js';
@@ -34,7 +34,7 @@ export function onWatch(s) {
 // The one up getting firewood for the night (a woodcutter, while a soldier's on watch to guard it)
 export function onFuelDuty(s) {
   if (!isNight() || !needsTorches() || (stock.firewood || 0) >= 1) return false;
-  if (!game.buildings.some(b => b.type === 'torch' || b.type === 'campfire')) return false;
+  if (!game.buildings.some(b => !b.campId && (b.type === 'torch' || b.type === 'campfire'))) return false;
   if (!game.settlers.some(o => onWatch(o))) return false;
   const cutter = game.settlers.filter(o => o.role === 'worker' && getDefinition('tools', o.tool) && getDefinition('tools', o.tool).family === 'axe' && !o.isPossessed).sort((a, b) => a.id - b.id)[0];
   return cutter === s;
@@ -92,13 +92,15 @@ export function fetchNightTorch(s, tick) {
 
 // A wave coming at night: everyone woken (wakeSeconds before it)
 function waveDue() {
-  return game.waveTimer <= config().wakeSeconds || isDefenseAlert() || game.enemies.length > 0;
+  return game.waveTimer <= config().wakeSeconds || isDefenseAlert() || hasActiveWaveEnemy();
 }
 
 // (#279) the enemy's tents or portals still standing at night: the soldiers stay up to go and break them, or
 // with no soldiers, everyone
 function upForTents(s) {
-  if (!game.enemyTents.length && !game.enemyTentBlueprints.length) return false;
+  const activeTents = game.enemyTents.some(tent => !tent.outpost && !tent.campId) ||
+    game.enemyTentBlueprints.some(site => !site.campId);
+  if (!activeTents) return false;
   return isFighter(s) || !game.settlers.some(isFighter);
 }
 
@@ -147,7 +149,7 @@ function nightCrew(tick) {
 
 // The shelter it sleeps at: the nearest of its faction's homes, or the town hall
 function shelterFor(s) {
-  const homes = game.buildings.filter(b => { const def = getDefinition('buildings', b.type) || {}; return def.population || def.healPerSecond; });
+  const homes = game.buildings.filter(b => { const def = getDefinition('buildings', b.type) || {}; return !b.campId && (def.population || def.healPerSecond); });
   return homes.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || townHall;
 }
 
@@ -223,7 +225,7 @@ export function lightTorches(s, tick) {
   const phase = getDayPhase();
   if (phase !== 'evening' && phase !== 'night') return false;
   const load = s.carrying && s.carrying.forTorch ? s.carrying : null;
-  const want = b => b.type === 'torch' && !b.lit && !game.settlers.some(o => o !== s && o.carrying && o.carrying.forTorch === b);
+  const want = b => b.type === 'torch' && !b.campId && !b.lit && !game.settlers.some(o => o !== s && o.carrying && o.carrying.forTorch === b);
   if (!load) {
     if (s.carrying || (stock.firewood || 0) < config().postFirewood) return false;
     const post = game.buildings.filter(want).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];

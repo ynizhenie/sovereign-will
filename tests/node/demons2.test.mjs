@@ -22,7 +22,13 @@ test('the den gives the demons room for 2 more; the sacrificial circle none, it\
 });
 
 test('an enemy demon wave comes out of the portals a few at a time, and the portals open out of the base (#250)', () => {
-  expect(sim.demonPortalBatches({})).toEqual({ first: true, queued: true, second: true, allOut: true, outOfBase: true });
+  expect(sim.demonPortalBatches({})).toEqual({
+    first: true, queued: true, second: true, allOut: true, outOfBase: true, inTerritory: true, emergedAtPortal: true, advanced: true
+  });
+});
+
+test('a camp-bound demon wave keeps settlers from carrying enemy corpses', () => {
+  expect(sim.demonWaveCorpses({})).toEqual({ stillOnGround: true, notCarried: true });
 });
 
 test('at a wave\'s end a soldier catches the badly wounded enemy for the cage; left long it dies there; a wounded demon eats it (#250)', () => {

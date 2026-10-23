@@ -1,7 +1,7 @@
 // The demons, stage two (#250): corpses cut up or put in pits, the den, portals letting a wave out a few at a
 // time, cages
 Object.assign(window.sim, (() => {
-  const { start, run, helpers: { tileCenter, clearResources, placeBuilding } } = window.sim;
+  const { start, run, helpers: { tileCenter, clearResources, placeBuilding, makeSettler } } = window.sim;
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
   const asFactions = (player, enemy, seed) => { sides.player.faction = player; sides.enemy.faction = enemy; start(seed); clearResources(); invalidateAllPaths(); };
   const back = () => { sides.player.faction = 'humans'; sides.enemy.faction = 'humans'; };
@@ -67,14 +67,41 @@ Object.assign(window.sim, (() => {
     asFactions('humans', 'demons', seed);
     settlers = [];
     const c = GAME_CONFIG.portalWave;
+    game.enemyTents.push({
+      x: game.WORLD_WIDTH - TILE_SIZE * 6, y: game.WORLD_HEIGHT - TILE_SIZE * 6,
+      hp: 60, maxHp: 60, summonTimer: 0, summonsLeft: 0, outpost: true, campId: 'portal-wave-test'
+    });
     waveNum = 30; // (a big one)
     startNextWave();
-    const first = enemies.length, queued = portalQueue.length;
+    const first = enemies.filter(en => en.fromWave).length, queued = portalQueue.length;
+    const portals = enemyTents.filter(t => t.portal && t.hp > 0);
+    const firstWave = enemies.filter(en => en.fromWave);
+    const emergedAtPortal = firstWave.length > 0 && firstWave.every(en =>
+      portals.some(t => Math.hypot((en.waveStart || en).x - t.x, (en.waveStart || en).y - t.y) <= TILE_SIZE * 2));
     run(c.seconds + 0.1, { holdWaves: true, each: calm });
-    const second = enemies.length;
+    const second = enemies.filter(en => en.fromWave).length;
     run(c.seconds * Math.ceil(queued / c.batch) + 1, { each: calm });
     const outOfBase = enemyTents.every(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) > getBaseRadius() + c.awayTiles * TILE_SIZE - 1);
-    const r = { first: first <= c.batch && first > 0, queued: queued > 0, second: second > first && second <= first + c.batch, allOut: portalQueue.length === 0, outOfBase };
+    const insidePlayerZone = portals.length > 0 && portals.every(t => inTerritory(t.x, t.y));
+    const advanced = firstWave.some(en => game.enemies.includes(en) &&
+      Math.hypot(en.x - en.waveStart.x, en.y - en.waveStart.y) > TILE_SIZE * 2);
+    const r = { first: first <= c.batch && first > 0, queued: queued > 0, second: second > first && second <= first + c.batch,
+      allOut: portalQueue.length === 0, outOfBase, inTerritory: insidePlayerZone, emergedAtPortal, advanced };
+    back();
+    return r;
+  }
+
+  function noCorpseHaulingDuringCampWave({ seed = 'demon-wave-corpses' } = {}) {
+    asFactions('humans', 'demons', seed);
+    const settler = makeSettler(1, townHall.x + 30, townHall.y + 40);
+    settlers = [settler];
+    corpses = [{ x: settler.x, y: settler.y, radius: 11, side: 'enemy', kind: 'demon_imp', age: 0 }];
+    const waveEnemy = createConfiguredEnemy({ x: townHall.x + 300, y: townHall.y + 300 }, 'demon_imp');
+    Object.assign(waveEnemy, { fromWave: true, campId: 'enemy-camp' });
+    enemies = [waveEnemy];
+    portalQueue = [];
+    run(1 / 60);
+    const r = { stillOnGround: corpses.length === 1, notCarried: !settler.carrying };
     back();
     return r;
   }
@@ -88,7 +115,7 @@ Object.assign(window.sim, (() => {
     const s = soldier(1, nearHall(3, 1), { hp: 1e4, maxHp: 1e4 });
     settlers = [s];
     const en = createConfiguredEnemy(nearHall(5, 1), 'raider');
-    Object.assign(en, { speed: 0, damage: 0, hp: en.maxHp * 0.15 });
+    Object.assign(en, { speed: 0, damage: 0, hp: en.maxHp * 0.15, fromWave: true });
     enemies = [en];
     let caught = false;
     run(15, { each: () => { calm(); waveTimer = 50; if (s.carrying && s.carrying.type === 'captive') caught = true; } });
@@ -108,5 +135,6 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
-  return { demonButcher: butcher, demonEatFromPit: eatFromPit, demonDen: den, demonPortalBatches: portalBatches, demonCage: cage };
+  return { demonButcher: butcher, demonEatFromPit: eatFromPit, demonDen: den, demonPortalBatches: portalBatches,
+    demonWaveCorpses: noCorpseHaulingDuringCampWave, demonCage: cage };
 })());

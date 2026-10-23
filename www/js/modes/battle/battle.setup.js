@@ -123,10 +123,11 @@ export function resetBattleUnits() {
   game.settlers = []; game.enemies = []; game.projectiles = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
   for (const entry of battle.lineup) {
     if (entry.building) {
-      // built at once: a building, not a blueprint
+      // built at once: a building, not a blueprint; the side it stands on (each side doesn't break its own)
       const b = /** @type {any} */ (createBuildingBlueprint(entry.building, entry.x, entry.y));
       delete b.progress;
       delete b.maxProgress;
+      b.side = battleSide(entry.x);
       game.buildings.push(b);
     } else {
       makeBattleUnit(entry);

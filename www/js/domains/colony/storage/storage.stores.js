@@ -10,9 +10,9 @@
 // keepStoresInStep() puts any change of the stock made without a place (a cost paid, a refund) in step.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall } from '../../../engine/world/index.js';
+import { STRUCTURE_COLLISION_HALF_SIZE, TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { getStorages, moveSettlerToTownHall, stock } from './storage.rules.js';
+import { getStorages, isAtTownHall, moveSettlerToTownHall, stock } from './storage.rules.js';
 import { getPlayerFaction } from '../../factions/index.js';
 
 const EPS = 1e-6;
@@ -87,7 +87,7 @@ export function dropPile(near, id, amount) {
 function packPlaces(near) {
   const c = config().pack;
   const g = getGridPos(near.x, near.y);
-  const body = near === townHall ? townHall.radius : TILE_SIZE / 2;
+  const body = near === townHall ? STRUCTURE_COLLISION_HALF_SIZE : TILE_SIZE / 2;
   const tiles = getTileIndex();
   const free = [];
   const span = Math.ceil(body / TILE_SIZE) + 1;
@@ -273,7 +273,7 @@ function sortStores(s, tick) {
   if (!job) return false;
   taken.add(`${job.id}@${storages.indexOf(job.from)}`);
   s.patrolTarget = null;
-  const at = job.from === townHall ? Math.hypot(townHall.x - s.x, townHall.y - s.y) <= townHall.radius + s.radius + 4 : Math.hypot(job.from.x - s.x, job.from.y - s.y) <= 34;
+  const at = job.from === townHall ? isAtTownHall(s) : Math.hypot(job.from.x - s.x, job.from.y - s.y) <= 40;
   if (!at) { if (job.from === townHall) moveSettlerToTownHall(s, s.speed, tick.dt); else moveEntityTowards(s, job.from.x, job.from.y, s.speed, false, tick.dt); return true; }
   const store = job.from.store, amount = Math.min(store[job.id], config().carryMaterials);
   store[job.id] -= amount;

@@ -7,7 +7,7 @@ import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/i
 import { formatCost } from '../../colony/storage/index.js';
 import { getSmelterLimits, needsRepair } from './building.rules.js';
 import { getEnemyColor, getPlayerFaction, sides } from '../../factions/index.js';
-import { drawDenArt, drawDoorArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawStoneWall, drawTentArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt } from './building.art.js';
+import { drawDenArt, drawDoorArt, drawGraveArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawStoneWall, drawTentArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
@@ -195,7 +195,8 @@ export function drawBuildings() {
       }
     } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
       if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour
-      else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons'
+      else if (b.type === 'grave') drawGraveArt(b.x, b.y);
+      else drawIcon(ctx, b.type, b.x, b.y, 28); // (the demons' sacrificial circle)
     } else if (b.type === 'tent') {
       drawTentArt(b.x, b.y);
     } else if (b.type === 'spikes') {

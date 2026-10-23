@@ -2,6 +2,10 @@
 // selected, and every list of things on the map.
 
 export const TILE_SIZE = 30;
+export const STRUCTURE_COLLISION_HALF_SIZE = TILE_SIZE;
+export const OUTPOST_COLLISION_HALF_WIDTH = 24;
+export const OUTPOST_COLLISION_HALF_HEIGHT = 23;
+export const OUTPOST_COLLISION_OFFSET_Y = -3;
 export const BORDER_MARGIN = 2;
 // the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
 // (see fitCanvasToScreen)
@@ -26,6 +30,8 @@ export const game = {
   waveInterval: 180,     // (#257: 120 / 180 / 240)
   waveTimer: 90,
   waveNum: 1,
+  wavePrepared: false,
+  waveMarchPaused: false,
   boarRespawnTimer: 25,
   pathTick: 0,              // game ticks, for short-lived per-settler caches
   // the player's choices and the soldiers' plan
@@ -93,7 +99,7 @@ export const game = {
   /** @type {string[] | null} */
   cardOffer: null,      // the cards offered now, waiting for a pick
   /** @type {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} */
-  raidCamp: null,       // an enemy camp's zone open beyond a side of the map (#255, endless.raid.js)
+  raidCamp: null,       // an enemy camp's raid offer on the main map (#255, endless.raid.js)
   raidCampWave: 0,      // the waves beaten when the last one opened
   reliefZones: [],      // { x, y } tiles marked to relieve in (#279, world.zones.js)
   postZones: [],        // { x, y } tiles marked for soldiers' posts before a wave

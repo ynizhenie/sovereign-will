@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, anyWithin, game, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, anyWithin, game, getGridPos, getTileIndex, isDoor, isTownHallSpawnTile, townHall } from '../../../engine/world/index.js';
 import { dropStoreContents, formatCost, getFreeStock } from '../../colony/storage/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getMapResourceDef } from '../gathering/index.js';
@@ -40,12 +40,20 @@ export function isTileOccupied(x, y) {
 // and nobody on it, so a corpse raised there, or whoever stands there, isn't left inside it (#223)
 export function isSpawnSpotFree(x, y) {
   if (isTileOccupied(x, y)) return false;
+  const tile = getGridPos(x, y);
+  if (game.enemyTents.some(camp => {
+    if (!camp.outpost || camp.hp <= 0) return false;
+    const center = getGridPos(camp.x, camp.y), dx = Math.abs(tile.gx - center.gx), dy = Math.abs(tile.gy - center.gy);
+    const radius = GAME_CONFIG.raid.wallTiles;
+    return camp.layout === 'round' ? Math.hypot(dx, dy) <= radius + 0.5 : Math.max(dx, dy) <= radius;
+  })) return false;
   const near = p => Math.hypot(p.x - x, p.y - y) < 22;
   return !game.corpses.some(near) && !game.settlers.some(near) && !game.enemies.some(near) && !(game.enemyTents || []).some(near);
 }
 
 export function isBuildLocationAllowed(x, y) {
-  return !isTileOccupied(x, y);
+  const tile = getGridPos(x, y);
+  return !isTownHallSpawnTile(tile.gx, tile.gy) && !isTileOccupied(x, y);
 }
 
 // map: a saved map (modes/editor) to play instead of generating one; Endless plays the one chosen in its menu

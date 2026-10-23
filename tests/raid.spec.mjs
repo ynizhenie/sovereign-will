@@ -2,7 +2,7 @@ import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 // A raid on an enemy camp (#255)
-test('two waves beaten: a camp\'s zone opens for a while, a button to raid it (#255)', async ({ page }) => {
+test('two waves beaten: the camp opens for a while, a button to raid it (#255)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'campOpens', {});
   expect(r.camp.timeLeft).toBeGreaterThan(140);
@@ -13,7 +13,7 @@ test('two waves beaten: a camp\'s zone opens for a while, a button to raid it (#
   expect(errors).toEqual([]);
 });
 
-test('the party picked walks to the edge, the base waits; Attack! and only the camp is there (#255)', async ({ page }) => {
+test('the party reaches the camp on the main map while the wave clock pauses (#255)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'intoCamp', {});
   expect(r.preselected).toBe(4); // (the armed)
@@ -21,7 +21,7 @@ test('the party picked walks to the edge, the base waits; Attack! and only the c
   expect(r.got).toBe(true);
   expect(r.timerHeld).toBe(true);
   expect(r.resting).toBe(true);
-  expect(r).toMatchObject({ phase: 'fight', cols: 26, settlers: 4, hallAway: true, outpost: 1, guarded: true, saveHidden: true });
+  expect(r).toMatchObject({ phase: 'fight', cols: 40, settlers: 6, hallAway: true, outpost: 1, guarded: true, saveHidden: true });
   expect(r.tents).toBeGreaterThanOrEqual(2);
   expect(r.defenders).toBeGreaterThanOrEqual(4);
   expect(r.walls).toBeGreaterThan(20);
@@ -34,7 +34,7 @@ test('the defenders are like the player\'s army: in armour if it is (#255)', asy
   expect(r.armored).toBe(r.defenders);
 });
 
-test('won by the auto battle: spoils, the party walks home, the zone goes, the next wave waits twice as long (#255)', async ({ page }) => {
+test('won by the auto battle: spoils, the party returns across the main map, next wave waits twice as long (#255)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'raidOutcome', { win: true });
   expect(r.held).toBe(true);
@@ -51,12 +51,11 @@ test('won by the auto battle: spoils, the party walks home, the zone goes, the n
   expect(errors).toEqual([]);
 });
 
-test('the party all down: the base is back at once, the camp gone, a wave in 15 s (#255)', async ({ page }) => {
+test('the party all down: the expedition ends and a wave is scheduled in 15 s (#255)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'raidOutcome', { win: false });
-  expect(r.back).toMatchObject({ phase: null, hallHome: true, survivors: 0 });
+  expect(r.back).toMatchObject({ phase: null, hallHome: true, survivors: 0, cols: 40 });
   expect(r.back.homeSettlers).toBe(r.homeSettlers);
-  expect(r.back.cols).not.toBe(26);
   expect(r.end.camp).toBe(null);
   expect(r.end.waveTimer).toBeLessThanOrEqual(15);
   expect(errors).toEqual([]);
@@ -68,12 +67,12 @@ test('orders: an enemy tapped is everyone\'s target; a raider picked and a spot 
   const r = await page.evaluate(() => {
     const en = enemies[0];
     raidTap(en.x, en.y);
-    const all = settlers.every(s => s.orderTarget === en) && en.markedTarget;
-    const s = settlers[1];
+    const all = raid.raiders.every(s => s.orderTarget === en) && en.markedTarget;
+    const s = raid.raiders[1];
     raidTap(s.x, s.y);
     // a spot of ground clear of everyone
     const spot = [[0, 90], [90, 0], [0, -90], [-90, 0]].map(([dx, dy]) => ({ x: s.x + dx, y: s.y + dy }))
-      .find(p => [...settlers, ...enemies].every(o => Math.hypot(o.x - p.x, o.y - p.y) > 40));
+      .find(p => [...raid.raiders, ...enemies].every(o => Math.hypot(o.x - p.x, o.y - p.y) > 40));
     raidTap(spot.x, spot.y);
     return { all, picked: selectedSettler === s, spot: s.orderSpot.x === spot.x && s.orderSpot.y === spot.y, cleared: s.orderTarget === null };
   });

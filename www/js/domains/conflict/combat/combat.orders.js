@@ -4,7 +4,7 @@
 // whoever hits it or comes close, else holds its spot; or, with the auto battle on, the nearest enemy, then
 // the tents.
 
-import { game } from '../../../engine/world/index.js';
+import { OUTPOST_COLLISION_HALF_HEIGHT, OUTPOST_COLLISION_HALF_WIDTH, OUTPOST_COLLISION_OFFSET_Y, game } from '../../../engine/world/index.js';
 import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
@@ -15,18 +15,18 @@ const nearest = (from, list) => list.reduce((best, o) => (!best || dist(o, from)
 const alive = o => (game.enemies.includes(o) && o.hp > 0) || game.enemyTents.includes(o);
 
 // A tap in such a fight; true: it was an order
-export function orderTap(x, y) {
+export function orderTap(x, y, units = game.settlers) {
   const near = (o, r) => Math.hypot(o.x - x, o.y - y) < r;
-  const unit = nearest({ x, y }, game.settlers.filter(s => near(s, (s.visualRadius || s.radius) + 8))); // (the nearest: they stand close)
+  const unit = nearest({ x, y }, units.filter(s => near(s, (s.visualRadius || s.radius) + 8))); // (the nearest: they stand close)
   if (unit) { game.selectedSettler = game.selectedSettler === unit ? null : unit; return true; }
   const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && near(en, en.radius + 12)), ...game.enemyTents.filter(et => near(et, et.outpost ? 30 : 20))]);
-  const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
+  const picked = game.selectedSettler && units.includes(game.selectedSettler) ? game.selectedSettler : null;
   if (target) {
-    const told = picked ? [picked] : game.settlers;
+    const told = picked ? [picked] : units;
     // (#279) tapped again, the one it was already given to (or all of them): the order's taken off
     if (target.markedTarget && told.every(s => s.orderTarget === target)) {
       for (const s of told) s.orderTarget = null;
-      target.markedTarget = game.settlers.some(s => s.orderTarget === target);
+      target.markedTarget = units.some(s => s.orderTarget === target);
       return true;
     }
     for (const s of told) s.orderTarget = target;
@@ -41,9 +41,19 @@ export function orderTap(x, y) {
 function strike(s, target, dt) {
   const combat = getWeaponStats(s, 'combat');
   const tent = game.enemyTents.includes(target);
-  const reach = tent ? combat.tentReach + (target.outpost ? 10 : 0) : combat.approach + (target.radius || 10);
+  const reach = tent ? Math.max(combat.tentReach, target.outpost ? Math.ceil(Math.hypot(OUTPOST_COLLISION_HALF_WIDTH, OUTPOST_COLLISION_HALF_HEIGHT)) + Math.min(s.radius, 13) + 4 : 0) :
+    combat.approach + (target.radius || 10);
   const bow = isBowWeapon(s.weapon);
-  if (dist(s, target) > reach || (bow && !hasLineOfFire(s.x, s.y, target.x, target.y))) moveEntityTowards(s, target.x, target.y, s.speed, false, dt);
+  let moveTarget = target;
+  if (target.outpost && !bow) {
+    const dx = s.x - target.x, dy = s.y - (target.y + OUTPOST_COLLISION_OFFSET_Y);
+    const horizontalDistance = OUTPOST_COLLISION_HALF_WIDTH + Math.min(s.radius, 13) + 4;
+    const verticalDistance = OUTPOST_COLLISION_HALF_HEIGHT + Math.min(s.radius, 13) + 4;
+    moveTarget = Math.abs(dx) >= Math.abs(dy)
+      ? { x: target.x + Math.sign(dx || 1) * horizontalDistance, y: target.y + OUTPOST_COLLISION_OFFSET_Y }
+      : { x: target.x, y: target.y + OUTPOST_COLLISION_OFFSET_Y + Math.sign(dy || 1) * verticalDistance };
+  }
+  if (dist(s, target) > reach || (bow && !hasLineOfFire(s.x, s.y, target.x, target.y))) moveEntityTowards(s, moveTarget.x, moveTarget.y, s.speed, false, dt);
   else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y); }
 }
 

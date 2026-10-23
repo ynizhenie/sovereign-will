@@ -13,7 +13,7 @@ test('what the full hall can\'t hold lies by it in packs of 10, 9 to a tile with
 
 test('once the tiles round it are full, packs go on top, then the packs take more (#279, 7)', async ({ page }) => {
   await openGame(page);
-  const more = await sim(page, 'packs', { extra: 2500 });
+  const more = await sim(page, 'packs', { extra: 4000 });
   expect(more.layers).toEqual([0, 1]);
   expect(more.biggest).toBeGreaterThan(10);
   expect(more.near).toBe(true);
@@ -23,6 +23,13 @@ test('with two storages, what lies in the wrong one is carried to its own (#279,
   await openGame(page);
   const r = await sim(page, 'sorting', {});
   expect(r.moved).toBeGreaterThanOrEqual(10);
+});
+
+test('settlers reach a warehouse or the town hall without oscillating at blocked targets', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'approachesStorage', {});
+  expect(r.warehouseDelivered, JSON.stringify(r)).toBe(true);
+  expect(r.townHallDelivered, JSON.stringify(r)).toBe(true);
 });
 
 test('a storage\'s card shows what\'s in it, by it, and what it keeps (#279, 7)', async ({ page }) => {

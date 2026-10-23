@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { getResourceIcon, showCostOnButton, showNotification } from '../../../ui/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { STRUCTURE_COLLISION_HALF_SIZE, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { getReservedForBlueprints } from '../../economy/building/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 
@@ -175,7 +175,15 @@ export function hasRoomToCarry(s) {
   return !!s.carrying && s.carrying.loads !== undefined && s.carrying.loads < getCarryCapacity(s);
 }
 
+const townHallApproaches = new WeakMap();
+
 export function getTownHallApproachPoint(settler) {
+  const previous = townHallApproaches.get(settler);
+  if (previous) {
+    const g = getGridPos(previous.x, previous.y);
+    if (!isTileBlockedForSettler(g.gx, g.gy)) return previous;
+    townHallApproaches.delete(settler);
+  }
   let dx = settler.x - townHall.x;
   let dy = settler.y - townHall.y;
   let distance = Math.hypot(dx, dy);
@@ -184,19 +192,33 @@ export function getTownHallApproachPoint(settler) {
     dy = 0;
     distance = 1;
   }
-  let approachDistance = townHall.radius + settler.radius - 1;
-  // the side facing the settler, or the nearest side round from it that's free to stand on: spikes or a
-  // wall against the hall there and it would walk onto them
+  const approachDistance = STRUCTURE_COLLISION_HALF_SIZE + TILE_SIZE / 2 + 1;
+  // Approach a free tile outside the square footprint, favoring the side facing the settler.
   const angle = Math.atan2(dy, dx);
-  for (let turn = 0; turn <= 12; turn++) {
-    for (const sign of turn ? [1, -1] : [1]) {
-      const a = angle + sign * turn * Math.PI / 12;
-      const p = { x: townHall.x + Math.cos(a) * approachDistance, y: townHall.y + Math.sin(a) * approachDistance };
-      const g = getGridPos(p.x, p.y);
-      if (!isTileBlockedForSettler(g.gx, g.gy) || turn === 12) return p;
+  const sides = [
+    { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 },
+    { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 }, { x: 1, y: -1 }
+  ].sort((a, b) =>
+    (b.x * Math.cos(angle) + b.y * Math.sin(angle)) / Math.hypot(b.x, b.y) -
+    (a.x * Math.cos(angle) + a.y * Math.sin(angle)) / Math.hypot(a.x, a.y));
+  for (const side of sides) {
+    const p = { x: townHall.x + side.x * approachDistance, y: townHall.y + side.y * approachDistance };
+    const g = getGridPos(p.x, p.y);
+    if (!isTileBlockedForSettler(g.gx, g.gy)) {
+      townHallApproaches.set(settler, p);
+      return p;
     }
   }
-  return { x: townHall.x + (dx / distance) * approachDistance, y: townHall.y + (dy / distance) * approachDistance };
+  const fallback = { x: townHall.x + (dx / distance) * approachDistance, y: townHall.y + (dy / distance) * approachDistance };
+  townHallApproaches.set(settler, fallback);
+  return fallback;
+}
+
+export function isAtTownHall(settler) {
+  const at = Math.max(Math.abs(settler.x - townHall.x), Math.abs(settler.y - townHall.y)) <=
+    STRUCTURE_COLLISION_HALF_SIZE + TILE_SIZE / 2 + settler.radius + 4;
+  if (at) townHallApproaches.delete(settler);
+  return at;
 }
 
 export function moveSettlerToTownHall(settler, speed, dt) {

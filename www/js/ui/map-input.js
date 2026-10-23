@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
-import { TILE_SIZE, game, isBorderZone, thingAt, townHall } from '../engine/world/index.js';
+import { TILE_SIZE, game, isBorderZone, isTownHallSpawnTile, thingAt, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
 import { inTerritory, isWaterReachable, toggleZone } from '../domains/world/index.js';
@@ -14,7 +14,7 @@ import { getPossessed, orderPossessed } from '../domains/colony/settlers/index.j
 import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
-import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
+import { isDefeated, isInCamp, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 import { orderTap } from '../domains/conflict/combat/index.js';
@@ -114,6 +114,10 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
   if (isBorderZone(gxIdx, gyIdx)) {
     return false;
   }
+  if (isTownHallSpawnTile(gxIdx, gyIdx)) {
+    showNotification(t('build.spawnReserved'), true);
+    return false;
+  }
   if (game.buildMode !== 'demolish' && !inTerritory(gx, gy)) { // (#299: built only on the base's land)
     showNotification(t('build.outside'), true);
     return false;
@@ -153,7 +157,9 @@ function enemyTapped() {
   const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
   // an enemy tent (a grave, a portal) too: armed settlers go and destroy it (#203)
   const tentRadius = 20;
-  const enemy = [...game.enemies.filter(en => away(en) < en.radius + 12), ...game.enemyTents.filter(et => away(et) < tentRadius)]
+  const enemy = [...game.enemies.filter(en => away(en) < en.radius + 12 &&
+    (!en.campDefender && (!en.campId || en.fromWave || en.summoned) || isInCamp())),
+    ...game.enemyTents.filter(et => away(et) < tentRadius && (!et.campId || isInCamp()))]
     .sort((a, b) => away(a) - away(b))[0];
   if (!enemy) return false;
   if (game.settlers.some(s => away(s) < s.visualRadius + 8 && away(s) < away(enemy))) return false;

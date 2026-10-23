@@ -7,7 +7,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
 import { getFrontier, isOutskirts, isVisible } from '../../world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
-import { moveSettlerToTownHall } from '../../colony/storage/index.js';
+import { isAtTownHall, moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
@@ -64,7 +64,7 @@ export function panic(s, tick) {
     if (foe) moveEntityTowards(s, s.x + (s.x - foe.x), s.y + (s.y - foe.y), s.speed, false, tick.dt);
     return true;
   }
-  if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, tick.dt);
+  if (!isAtTownHall(s)) moveSettlerToTownHall(s, s.speed, tick.dt);
   return true;
 }
 

@@ -65,8 +65,10 @@ export function stepsOntoSpikes(entity, vx, vy) {
 export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   // the undead's blighted ground holds enemies back
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
-  if (!isEnemy && game.buildings.length) {
-    const via = takePortal(entity, targetX, targetY);
+  // portals: the settlers' everywhere, and in a battle the red side's own for its enemies too
+  const portalSide = game.gameMode === 'battle' ? (isEnemy ? 'red' : 'green') : null;
+  if ((!isEnemy || portalSide) && game.buildings.length) {
+    const via = takePortal(entity, targetX, targetY, portalSide);
     if (via === true) return;
     if (via) { targetX = via.x; targetY = via.y; }
   }
@@ -104,12 +106,14 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
   let canRetryPath = !(entity.pathRetryTimer > 0);
 
   if (needsPath && canRetryPath) {
+    // a camp's own defenders don't break through their own palisade: no way round, they stay put
+    const breakthrough = isEnemy && !entity.campDefender;
     // once the normal search found no way around (walled in), go straight to the breaking-through
     // search for a while instead of exploring the whole map again on every re-path
-    let res = isEnemy && entity.strictPathFailTimer > 0
+    let res = breakthrough && entity.strictPathFailTimer > 0
       ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY)
-      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy);
-    if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
+      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy, breakthrough);
+    if (breakthrough && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
     entity.isBlockedPath = res.isBlockedPath || false;
     if (isEnemy) entity.pathViaSpikes = pathCrossesSpikes(entity); // kept while the path is dropped and retried
@@ -184,12 +188,16 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
       dist = Math.hypot(dx, dy);
     } else {
       // there: onto the exact point, unless that's inside something it can't walk (a campfire it cooks
-      // at, a wall): it stays beside it then, never stuck inside
+      // at, a wall): then onto the last tile it can stand on, never stuck beside it (the path's own end
+      // can be a neighbour of a blocked target, a building it means to use)
       if (!isEnemy) {
         const t = getGridPos(targetX, targetY);
-        if (!isTileBlockedForSettler(t.gx, t.gy)) {
-          entity.x = targetX;
-          entity.y = targetY;
+        const spot = isTileBlockedForSettler(t.gx, t.gy) ? nextNode : { x: targetX, y: targetY };
+        const g = getGridPos(spot.x, spot.y);
+        if (!isTileBlockedForSettler(g.gx, g.gy) && !collidesWithWall(spot.x, spot.y, bodyRadius) &&
+            !collidesWithWater(spot.x, spot.y, bodyRadius)) {
+          entity.x = spot.x;
+          entity.y = spot.y;
         }
       }
       return;

@@ -2,10 +2,11 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
+import { OUTPOST_COLLISION_HALF_HEIGHT, OUTPOST_COLLISION_HALF_WIDTH, STRUCTURE_COLLISION_HALF_SIZE, TILE_SIZE, game, getGridPos, getTileIndex, isDoor, someNear, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
+import { removeBuilding } from '../../economy/building/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { tileVariantHash } from '../../world/index.js';
 import { playSound } from '../../../app/index.js';
@@ -84,7 +85,10 @@ export function performAttack(attacker, targetX, targetY) {
     // everything within reach of the blow, and what hitting it does
     const struck = [
       ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; bleed(en, attacker); playSound('hit', en); } })),
-      ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      ...game.enemyTents.filter(et => inReach(et, et.outpost ? Math.ceil(Math.hypot(OUTPOST_COLLISION_HALF_WIDTH, OUTPOST_COLLISION_HALF_HEIGHT)) + attacker.radius : 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      ...(game.gameMode === 'battle' ? game.buildings
+        .filter(b => b.side && b.side !== ((attacker.battleEntry ? attacker.battleEntry.x : attacker.x) < game.WORLD_WIDTH / 2 ? 'green' : 'red') && inReach(b, 20))
+        .map(b => ({ at: b, hit: () => { b.hp -= dmg; if (b.hp <= 0) removeBuilding(b); } })) : []),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
           woundBoar(b, dmg, attacker, attacker.x, attacker.y);
@@ -121,7 +125,8 @@ export function trackFootprints(unit) {
     if (pile.by === unit && !pile.byLeft && Math.hypot(unit.x - pile.x, unit.y - pile.y) > 20) pile.byLeft = true;
   }
   if (!unit.smear || unit.smear.steps <= 0) {
-    const pool = game.bloodSplats.find(b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4);
+    let pool = null;
+    someNear(game.bloodSplats, unit.x, unit.y, 12, b => b.kind !== 'trail' && Math.hypot(unit.x - b.x, unit.y - b.y) < b.r + 4 && !!(pool = b));
     const pile = game.dung.find(p => !p.inZone && (p.by !== unit || p.byLeft) && Math.hypot(unit.x - p.x, unit.y - p.y) < 9); // (not in a relief zone, #279)
     if (pool || pile) unit.smear = { color: pile ? 'dung' : 'blood', steps: GAME_CONFIG.smears.steps, x: unit.x, y: unit.y };
     return;
@@ -218,10 +223,31 @@ export const NORMAL_BODIES = 21;
 
 // ---- Pre-wave deployment
 
+// The answers below are asked for every resource a settler looks at, many times a tick. Each is worked out once
+// a tick (or when the wave timer or enemy list changes), not once per question.
+/** @type {{ tick: number, waveTimer: number, list: any[] | null, length: number, value: boolean }} */
+let alertCache = { tick: -1, waveTimer: NaN, list: null, length: -1, value: false };
+/** @type {{ tick: number, list: any[] | null, length: number, value: boolean }} */
+let waveEnemyCache = { tick: -1, list: null, length: -1, value: false };
+/** @type {{ tick: number, length: number, first: any, last: any, value: number }} */
+let baseRadiusCache = { tick: -1, length: -1, first: null, last: null, value: 0 };
+
 // From deploySeconds before a wave until its enemies are beaten, not in battle mode
 export function isDefenseAlert() {
   if (game.gameMode === 'battle' || !game.gameStarted) return false;
-  return game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave);
+  if (alertCache.tick === game.pathTick && alertCache.waveTimer === game.waveTimer &&
+      alertCache.list === game.enemies && alertCache.length === game.enemies.length) return alertCache.value;
+  const value = game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave);
+  alertCache = { tick: game.pathTick, waveTimer: game.waveTimer, list: game.enemies, length: game.enemies.length, value };
+  return value;
+}
+
+export function hasActiveWaveEnemy() {
+  if (waveEnemyCache.tick === game.pathTick && waveEnemyCache.list === game.enemies &&
+      waveEnemyCache.length === game.enemies.length) return waveEnemyCache.value;
+  const value = game.enemies.some(en => en.fromWave);
+  waveEnemyCache = { tick: game.pathTick, list: game.enemies, length: game.enemies.length, value };
+  return value;
 }
 
 // How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
@@ -230,6 +256,7 @@ export function isDefenseAlert() {
 export function baseRadiusToward(angle) {
   let far = 0;
   for (const b of game.buildings) {
+    if (b.campId) continue; // (an enemy camp's walls don't make the base reach further)
     const a = Math.atan2(b.y - townHall.y, b.x - townHall.x);
     if (Math.abs(Math.atan2(Math.sin(a - angle), Math.cos(a - angle))) <= Math.PI * 40 / 180) far = Math.max(far, Math.hypot(b.x - townHall.x, b.y - townHall.y));
   }
@@ -238,8 +265,13 @@ export function baseRadiusToward(angle) {
 
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
 export function getBaseRadius() {
-  const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
-  return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  const list = game.buildings;
+  if (baseRadiusCache.tick === game.pathTick && baseRadiusCache.length === list.length &&
+      baseRadiusCache.first === list[0] && baseRadiusCache.last === list[list.length - 1]) return baseRadiusCache.value;
+  const far = list.reduce((max, b) => b.campId ? max : Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
+  const value = Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  baseRadiusCache = { tick: game.pathTick, length: list.length, first: list[0], last: list[list.length - 1], value };
+  return value;
 }
 
 // From the warning until the wave is beaten, settlers go no farther from the town hall than the base's
@@ -266,11 +298,22 @@ export function getThreatArc() {
   return { centre: Math.round(centre / step) * step, half: Math.ceil(half / step) * step };
 }
 
-// An enemy inside the base, or next to one of its buildings or the town hall
+// An enemy inside the base, or next to one of its buildings or the town hall. Asked of every enemy by
+// every soldier many times over: the answer is kept for the tick (enemies move after the settlers act,
+// so within it the answer cannot change).
 export function isInsideBase(en) {
+  if (en.insideBaseTick === game.pathTick) return en.insideBaseAt;
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
-  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
-    game.buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
+  const dx = en.x - townHall.x, dy = en.y - townHall.y;
+  let inside = Math.sqrt(dx * dx + dy * dy) <= getBaseRadius() + near + townHall.radius ||
+    game.buildings.some(b => {
+      if (b.campId) return false; // (the camp's own walls aren't the base)
+      const bx = en.x - b.x, by = en.y - b.y;
+      return bx * bx + by * by <= near * near;
+    });
+  en.insideBaseTick = game.pathTick;
+  en.insideBaseAt = inside;
+  return inside;
 }
 
 // Squads and their posts, rebuilt when the soldiers, the buildings or the wave's side change: squads of
@@ -279,13 +322,15 @@ export function isInsideBase(en) {
 // the wave is on the map, only on the side it comes from (getThreatArc, #202): doors on that side, the rest
 // spread along that arc
 export function getDefensePlan() {
+  // Asked for by every soldier every tick: once a tick is enough (the posts don't move within it).
+  if (game.defensePlan && game.defensePlanTick === game.pathTick) return game.defensePlan;
   const allMelee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
   const allArchers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
   const arc = getThreatArc();
   const facing = a => !arc || Math.abs(Math.atan2(Math.sin(a - arc.centre), Math.cos(a - arc.centre))) <= arc.half;
   const zones = game.postZones || [];
   const key = [...allMelee, ...allArchers].map(s => s.id).join(',') + '|' + game.buildings.length + '|' + (arc ? `${arc.centre},${arc.half}` : 'all') + '|' + zones.map(z => `${z.x},${z.y}`).join(';');
-  if (game.defensePlan && game.defensePlan.key === key) return game.defensePlan;
+  if (game.defensePlan && game.defensePlan.key === key) { game.defensePlanTick = game.pathTick; return game.defensePlan; }
   // (#279) the tiles marked as posts first: one soldier each, the nearest free one (melee before archers);
   // those left over get posts as ever
   const zoned = new Map();
@@ -335,6 +380,7 @@ export function getDefensePlan() {
   }
   for (const [s, place] of zoned) { squadOf.set(s, place); posts.push(place.post); }
   game.defensePlan = { key, posts, squadOf };
+  game.defensePlanTick = game.pathTick;
   return game.defensePlan;
 }
 
@@ -376,6 +422,18 @@ export function tickProjectiles() {
         if (Math.hypot(et.x - proj.x, et.y - proj.y) < 18) {
           et.hp -= proj.damage;
           hit = true;
+        }
+      }
+      if (game.gameMode === 'battle' && proj.owner) {
+        const ownerX = proj.owner.battleEntry ? proj.owner.battleEntry.x : proj.owner.x;
+        const ownerSide = ownerX < game.WORLD_WIDTH / 2 ? 'green' : 'red';
+        for (let j = game.buildings.length - 1; j >= 0 && !hit; j--) {
+          const building = game.buildings[j];
+          if (building.side && building.side !== ownerSide && Math.hypot(building.x - proj.x, building.y - proj.y) < 20) {
+            building.hp -= proj.damage;
+            if (building.hp <= 0) removeBuilding(building);
+            hit = true;
+          }
         }
       }
       for (let j = game.boars.length - 1; j >= 0 && !hit; j--) {

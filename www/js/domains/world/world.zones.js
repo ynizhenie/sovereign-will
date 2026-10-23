@@ -6,7 +6,7 @@
 //   getDefensePlan().
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isTownHallSpawnTile, townHall } from '../../engine/world/index.js';
 import { isTileBlockedForSettler } from '../../engine/movement/index.js';
 import { showNotification } from '../../ui/index.js';
 import { t } from '../../engine/platform/index.js';
@@ -22,7 +22,7 @@ export function toggleZone(x, y, kind) {
   }
   if (kind === 'clear') return;
   const g = getGridPos(x, y);
-  if (isTileBlockedForSettler(g.gx, g.gy) || Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 10) { showNotification(t('zone.badTile'), true); return; }
+  if (isTownHallSpawnTile(g.gx, g.gy) || isTileBlockedForSettler(g.gx, g.gy) || Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 10) { showNotification(t('zone.badTile'), true); return; }
   // (one kind to a tile)
   for (const k of Object.keys(LISTS)) if (k !== kind) game[LISTS[k]] = game[LISTS[k]].filter(z => z.x !== x || z.y !== y);
   game[LISTS[kind]].push({ x, y });

@@ -2,7 +2,7 @@
 // each tile (rebuilt when something changes). The tile size itself is in state.js.
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { BORDER_MARGIN, DEFAULT_MAP_TILES, TILE_SIZE, game, townHall } from './state.js';
+import { BORDER_MARGIN, DEFAULT_MAP_TILES, OUTPOST_COLLISION_HALF_HEIGHT, OUTPOST_COLLISION_HALF_WIDTH, OUTPOST_COLLISION_OFFSET_Y, TILE_SIZE, game, townHall } from './state.js';
 import { camera } from '../platform/index.js';
 
 export function setWorldSize(cols, rows) {
@@ -21,6 +21,17 @@ export function getMapAreaScale() {
 
 export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: Math.floor(y / TILE_SIZE) }; }
 
+// The free one-tile ring around the town hall is reserved for newly hired units and pets.
+export function isTownHallSpawnTile(gx, gy) {
+  const minHallGx = Math.floor((townHall.x - TILE_SIZE) / TILE_SIZE);
+  const maxHallGx = Math.floor((townHall.x + TILE_SIZE - 1) / TILE_SIZE);
+  const minHallGy = Math.floor((townHall.y - TILE_SIZE) / TILE_SIZE);
+  const maxHallGy = Math.floor((townHall.y + TILE_SIZE - 1) / TILE_SIZE);
+  const inOneTileRing = gx >= minHallGx - 1 && gx <= maxHallGx + 1 && gy >= minHallGy - 1 && gy <= maxHallGy + 1;
+  const inHallFootprint = gx >= minHallGx && gx <= maxHallGx && gy >= minHallGy && gy <= maxHallGy;
+  return inOneTileRing && !inHallFootprint;
+}
+
 // What occupies each tile, keyed "x,y" by tile center. Path searches check thousands of tiles,
 // so they look tiles up here instead of scanning every object list. Rebuilt lazily after
 // resetTileIndex(), which runs every tick and whenever paths are invalidated.
@@ -28,7 +39,7 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
  * Tile keys ("x,y" of tile centres) of each kind of thing, and a signature that changes with them
  * @typedef {{ signature: number, rocks: Set<string>, water: Set<string>, trees: Set<string>, cacti: Set<string>,
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
- *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
+ *   outposts: Set<string>, walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
  *   towerArrowBuildings: Set<string>, stamps?: Record<string, string> }} TileIndex
  */
 /** @type {TileIndex | null} */
@@ -60,16 +71,40 @@ export function getTileIndex() {
   // into a tree) says so with markTilesChanged()
   let signature = game.COLS * 1000 + game.ROWS; // a new map size invalidates everything cached by signature
   signature = (signature * 31 + tilesVersion) | 0;
-  for (const list of [game.naturalRocks, game.waterTiles, game.trees, game.cacti, game.boulders, game.ironOres, game.coalOres, game.buildings]) {
+  for (const list of [game.naturalRocks, game.waterTiles, game.trees, game.cacti, game.boulders, game.ironOres, game.coalOres, game.buildings, game.enemyTents]) {
     signature = (signature * 31 + idOf(list)) | 0;
     signature = (signature * 31 + list.length) | 0;
     if (list.length) signature = ((signature * 31 + idOf(list[0])) * 31 + idOf(list[list.length - 1])) | 0;
   }
+  let outpostStamp = '';
+  for (const outpost of game.enemyTents) if (outpost.outpost)
+    outpostStamp += `${idOf(outpost)}:${outpost.hp > 0 ? 1 : 0}|`;
+  for (let i = 0; i < outpostStamp.length; i++) signature = (signature * 31 + outpostStamp.charCodeAt(i)) | 0;
   if (lastIndex && lastIndex.signature === signature) return (tileIndex = lastIndex);
   // (#299) each set made again only when a list it's made from changed (a tree felled: not the tens of
   // thousands of water tiles of a big map's sea again)
   const blocksArrows = Object.values(GAME_CONFIG.mapResources).filter(def => def.blocksArrows).map(def => game[def.list]);
   const size = game.COLS * 1000 + game.ROWS;
+  const outpostKeys = () => {
+    const outposts = new Set();
+    for (const outpost of game.enemyTents) {
+      if (!outpost.outpost || outpost.hp <= 0) continue;
+      const center = getGridPos(outpost.x, outpost.y);
+      // every tile the collider overlaps, not just the ones its centre lands on (a body walks a tile's
+      // middle, so a path through a tile the outpost's corner reaches is a path into the outpost: the
+      // enemy would bump it, drop the path, plan the same one again and stand there for good)
+      for (let gy = center.gy - 2; gy <= center.gy + 2; gy++) {
+        for (let gx = center.gx - 2; gx <= center.gx + 2; gx++) {
+          const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+          if (gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS &&
+            Math.abs(x - outpost.x) < OUTPOST_COLLISION_HALF_WIDTH + TILE_SIZE / 2 &&
+            Math.abs(y - (outpost.y + OUTPOST_COLLISION_OFFSET_Y)) < OUTPOST_COLLISION_HALF_HEIGHT + TILE_SIZE / 2)
+            outposts.add(`${x},${y}`);
+        }
+      }
+    }
+    return outposts;
+  };
   /** @type {Record<string, [any[], () => Set<string>]>} */
   const sets = {
     rocks: [[game.naturalRocks], () => keys(game.naturalRocks)],
@@ -80,6 +115,7 @@ export function getTileIndex() {
     ores: [[game.ironOres, game.coalOres], () => keys([...game.ironOres, ...game.coalOres])],
     rockAndOre: [[game.naturalRocks, game.ironOres, game.coalOres], () => keys([...game.naturalRocks, ...game.ironOres, ...game.coalOres])], // rock tiles that draw joined up
     solids: [[game.boulders, game.cacti, game.ironOres, game.coalOres], () => keys([...game.boulders, ...game.cacti, ...game.ironOres, ...game.coalOres])],
+    outposts: [[game.enemyTents, outpostStamp], outpostKeys],
     buildings: [[game.buildings], () => keys(game.buildings)],
     // (doors are walked through, spikes and traps walked over: none of them a wall)
     walls: [[game.buildings], () => keys(game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable))],
@@ -96,7 +132,7 @@ export function getTileIndex() {
   };
   const made = /** @type {any} */ ({ signature, stamps: {} });
   for (const [name, [from, make]] of Object.entries(sets)) {
-    const stamp = [size, ...from.map(f => (typeof f === 'number' ? f : listStampOf(f)))].join('|');
+    const stamp = [size, ...from.map(f => typeof f === 'number' || typeof f === 'string' ? f : listStampOf(f))].join('|');
     made.stamps[name] = stamp;
     made[name] = lastIndex && lastIndex.stamps && lastIndex.stamps[name] === stamp ? lastIndex[name] : make();
   }

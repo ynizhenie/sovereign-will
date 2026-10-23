@@ -8,7 +8,7 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, townHall } from '../../engine/world/index.js';
-import { ctx } from '../../engine/platform/index.js';
+import { ctx, getViewRect } from '../../engine/platform/index.js';
 import { hasTerritory } from './world.territory.js';
 
 const config = () => GAME_CONFIG.fog;
@@ -144,6 +144,13 @@ export function drawFog() {
   if (!ready() || !picture) return;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(picture, 0, 0, cols * TILE_SIZE, rows * TILE_SIZE);
+  // (#zoom) only the part of the map on the screen: the whole picture stretched over a big map is several
+  // times the screen's pixels, and the rasterizer goes through all of them
+  const v = getViewRect(TILE_SIZE);
+  const gx0 = Math.max(0, Math.floor(v.x0 / TILE_SIZE)), gy0 = Math.max(0, Math.floor(v.y0 / TILE_SIZE));
+  const gx1 = Math.min(cols, Math.ceil(v.x1 / TILE_SIZE)), gy1 = Math.min(rows, Math.ceil(v.y1 / TILE_SIZE));
+  if (gx1 > gx0 && gy1 > gy0) {
+    ctx.drawImage(picture, gx0, gy0, gx1 - gx0, gy1 - gy0, gx0 * TILE_SIZE, gy0 * TILE_SIZE, (gx1 - gx0) * TILE_SIZE, (gy1 - gy0) * TILE_SIZE);
+  }
   ctx.restore();
 }

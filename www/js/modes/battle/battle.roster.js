@@ -64,9 +64,23 @@ export function battlePresetLabel(preset) {
   return parts.join(', ');
 }
 
+// (#255) Where a preset stands in the player's own list, by kind and what it carries: the enemy tab keeps
+// to the same order, so a unit is looked for in the same place on either side. One the player has no match
+// for goes after them all (in its faction's own order).
+function playerUnitRank(preset) {
+  const unit = preset.enemy ? enemyPlayerUnit(GAME_CONFIG.enemies[preset.enemy]) : preset;
+  const order = BATTLE_PLAYER_UNITS[unit.faction] || [];
+  const at = order.findIndex(u => u.type === unit.type && u.weapon === unit.weapon && (u.tool || 'none') === (unit.tool || 'none'));
+  return at < 0 ? order.length : at;
+}
+
 // The presets the panel shows now: the category's side, the chosen faction's
 export function getBattlePresetsShown() {
-  return BATTLE_PRESETS.filter(p => !!p.enemy === (battle.category === 'enemy') && p.faction === battle.faction);
+  return BATTLE_PRESETS
+    .filter(p => !!p.enemy === (battle.category === 'enemy') && p.faction === battle.faction)
+    .map((preset, index) => ({ preset, index, rank: playerUnitRank(preset) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(entry => entry.preset);
 }
 
 export function getBattleBuildings() {

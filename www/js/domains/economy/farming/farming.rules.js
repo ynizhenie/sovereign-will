@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game, markTilesChanged, townHall } from '../../../engine/world/index.js';
+import { game, getGridPos, isTownHallSpawnTile, markTilesChanged, townHall } from '../../../engine/world/index.js';
 import { isDesertTile, tileVariantHash, rainLevel } from '../../world/index.js';
 import { showNotification } from '../../../ui/index.js';
 
@@ -10,6 +10,8 @@ import { showNotification } from '../../../ui/index.js';
 // on it that needs a tool (a grown tree, boulder, ore, cactus). What's gathered by hand (grass, sticks,
 // pebbles, bushes) is fine: workers clear it (see findZoneBlockers).
 export function canBeFarmZone(x, y) {
+  const tile = getGridPos(x, y);
+  if (isTownHallSpawnTile(tile.gx, tile.gy)) return false;
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return false;
   const at = o => o.x === x && o.y === y;
   if (isDesertTile(x, y) || game.beachTiles.some(at)) return false;

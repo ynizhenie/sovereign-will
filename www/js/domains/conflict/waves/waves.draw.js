@@ -6,31 +6,24 @@ import { game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit } from '../../colony/settlers/index.js';
+import { SKIN, applyBackPose, applyHeldItemPose, carryAt, drawArmor, drawCarriedInHands, drawFigure, drawSleepZs, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 import { castShadow, isExplored, isVisible } from '../../world/index.js';
+import { drawDenArt, drawGraveArt, drawTentArt } from '../../economy/building/index.js';
 
-// Enemy tents (the undead's graves, the demons' portals), with their health
+// Enemy tents (the undead's graves, the demons' dens), with their health
 export function drawEnemyTents() {
+  const spawner = getEnemyFaction().spawner;
   game.enemyTents.forEach(et => {
     if (!isExplored(et.x, et.y)) return; // (#299: in the dark; once seen, a tent stays shown)
     if (et.outpost) drawOutpost(et);
-    else if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
-      // the undead's spawners are graves, the demons' portals, ringed in the enemy's colour
-      ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
-      if (getEnemyFaction().spawner === 'portal') drawPortal(et.x, et.y, getEnemyColor());
-      else drawIcon(ctx, getEnemyFaction().spawner, et.x, et.y, 28);
-    } else {
-      ctx.fillStyle = '#641e16'; ctx.beginPath();
-      ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#1e272e'; ctx.beginPath();
-      ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
-    }
+    else if (et.portal) drawPortal(et.x, et.y, getEnemyColor()); // a demon wave's own portal
+    else if (spawner === 'grave') drawGraveArt(et.x, et.y); // the undead's home
+    else if (spawner === 'portal' || spawner === 'demon_den') drawDenArt(et.x, et.y); // the demons': a den, not a portal
+    else drawTentArt(et.x, et.y);
 
     const size = et.outpost ? 26 : 16;
     if (et.markedTarget) drawTargetMark({ x: et.x, y: et.y, radius: size }); // the player pointed at it (#203)
@@ -114,33 +107,49 @@ export function drawEnemy(en) {
     // (#298) in layers by the way it faces, as a settler: facing away, its weapon, shield and torch behind its
     // body and its quiver in front; facing us, the other way round
     const handBack = heldBehind(en), backBack = backBehind(en);
+    const carriedType = en.campCarrying && en.campCarrying.rawMeat > 0 ? 'rawMeat'
+      : en.campCarrying && en.campCarrying.firewood > 0 ? 'firewood' : null;
+    const carrying = !!carriedType;
     const at = fn => { ctx.save(); ctx.translate(en.x, en.y); fn(); ctx.restore(); };
-    const inHand = () => {
+    const drawHeldItem = onBack => {
       ctx.save();
-      applyHeldItemPose(en);
+      if (onBack) applyBackPose(en); else applyHeldItemPose(en);
       if (getEnemyDef(en).necromancer) drawStaff();
       else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
-      else drawHeldWeapon(en.weapon, itemScale(en), (bowDraw(en) || { pull: 0 }).pull); // (in its hand, as big as it, #279; drawn, #306)
+      else drawHeldWeapon(en.weapon, itemScale(en), onBack ? 0 : (bowDraw(en) || { pull: 0 }).pull);
       drawWeaponBlood(en);
       ctx.restore();
+    };
+    const inHand = () => {
+      if (carrying) drawCarriedInHands(en, { type: carriedType, amount: 1 });
+      else drawHeldItem(false); // (in its hand, as big as it, #279; drawn, #306)
       if (en.torch) drawHandTorch(en.facing, en.radius); // (a night wave, #257)
     };
     const onItsBack = () => {
+      if (en.asleep) return;
+      if (carrying) drawHeldItem(true);
       if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
     };
     if (!simple) {
+      if (en.asleep) at(() => drawHeldItem(true));
       if (backBack) at(onItsBack);
       if (handBack) at(inHand);
     }
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple });
+    ctx.save();
+    if (en.asleep) ctx.globalAlpha *= 0.85;
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, carryPoint: carrying && !en.asleep ? carryAt(en) : undefined, otherPoint: en.asleep || carrying ? null : (bowDraw(en) || {}).other || null, simple });
+    ctx.restore();
+    if (en.asleep) drawSleepZs(en.x + en.radius, en.y - en.radius);
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
     if (!simple) {
-      at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
-      if (!backBack) at(onItsBack);
-      if (!handBack) at(inHand);
+      if (!en.asleep) {
+        at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
+        if (!backBack) at(onItsBack);
+        if (!handBack) at(inHand);
+      }
     }
-    at(() => { if (en.captain) drawEnemyBanner(en); }); // (the flag shows even zoomed out)
+    if (!en.asleep) at(() => { if (en.captain) drawEnemyBanner(en); }); // (the flag shows even zoomed out)
     if (en.orderBubble && en.orderBubble.until > game.pathTick) drawOrderBubble(en.x + en.radius, en.y - en.radius * 1.45 - 14, en.orderBubble.icon);
 
     if (en.markedTarget) drawTargetMark(en);

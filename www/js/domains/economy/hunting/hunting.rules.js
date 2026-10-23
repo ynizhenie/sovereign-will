@@ -2,6 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand } from '../../../engine/world/index.js';
+import { getViewRect } from '../../../engine/platform/index.js';
 import { getFrontier, hasTerritory, spawnResource } from '../../world/index.js';
 import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../../engine/movement/index.js';
 import { bleed } from '../../conflict/combat/index.js';
@@ -104,9 +105,10 @@ export function tickBoars(tickDt) {
     if (w.boar && (!game.boars.includes(w.boar) || w.boar.isCarcass || w.boar.rest === null)) w.boar = null;
     if (!w.boar && (w.age += tickDt) > c.wallowFade) boarWallows.splice(i, 1);
   }
-  const f = hasTerritory() ? getFrontier() : null, every = c.farEvery;
+  const f = hasTerritory() ? getFrontier() : null, every = c.farEvery, view = getViewRect(20);
   game.boars.forEach((b, i) => {
-    const far = !!f && !b.isCarcass && (b.x < f.x0 || b.x > f.x1 || b.y < f.y0 || b.y > f.y1);
+    const onScreen = b.x >= view.x0 && b.x <= view.x1 && b.y >= view.y0 && b.y <= view.y1;
+    const far = !!f && !onScreen && !b.isCarcass && (b.x < f.x0 || b.x > f.x1 || b.y < f.y0 || b.y > f.y1);
     if (far && (i + game.pathTick) % every) return;
     const k = far ? every : 1, dt = tickDt * k; // (its steps and its time, farEvery ticks' worth)
     if (b.bloodAge !== undefined) b.bloodAge += dt;

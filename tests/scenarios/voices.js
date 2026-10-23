@@ -39,5 +39,22 @@ Object.assign(window.sim, (() => {
     return { said: !!(hired && hired.say && t('voice.humans.hired').split('|').includes(hired.say.text)) };
   }
 
-  return { voicePhrasesEverywhere: phrasesEverywhere, voiceSpeaking: speaking, voiceHiredSays: hiredSays };
+  function petsSilent({ seed = 'voices-pets' } = {}) {
+    start(seed);
+    const pets = ['dog', 'beast', 'ghost'].map((type, i) =>
+      makeSettler(i + 1, townHall.x + i * 30, townHall.y, { type, isIdle: true, idle: { act: 'campfire' } }));
+    settlers = pets;
+    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening;
+    tickVoices(20); // stories call the voice helper directly, bypassing speak()
+    const playerPetsSilent = pets.every(pet => !pet.say);
+    const enemyPets = ['raider_dog', 'demon_beast', 'undead_ghost'].map((key, i) =>
+      createConfiguredEnemy({ x: townHall.x + i * 30, y: townHall.y }, key));
+    const enemyPetsSilent = enemyPets.every(pet => {
+      speak(pet, 'humans', 'taunt');
+      return !pet.say;
+    });
+    return { playerPetsSilent, enemyPetsSilent };
+  }
+
+  return { voicePhrasesEverywhere: phrasesEverywhere, voiceSpeaking: speaking, voiceHiredSays: hiredSays, voicePetsSilent: petsSilent };
 })());

@@ -1,10 +1,10 @@
-// The colony's necromancer heals, raises and blights
+﻿// The colony's necromancer heals, raises and blights
 
 // ---- Necromancers
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../../engine/world/index.js';
-import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
+import { isAtTownHall, moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
 import { getBlightKeys, getNecromancy, raiseTemporaryZombie } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
@@ -106,10 +106,10 @@ export function necromancy(s, tick) {
   }
 
   if (s.raisesLeft < necro.raises) {
-    const graves = game.buildings.filter(b => b.type === 'grave');
+    const graves = game.buildings.filter(b => b.type === 'grave' && !b.campId);
     const grave = graves.length ? graves.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : townHall;
     s.patrolTarget = null;
-    if (grave === townHall ? dist(townHall) > townHall.radius + s.radius + 4 : dist(grave) > 32) {
+    if (grave === townHall ? !isAtTownHall(s) : dist(grave) > 32) {
       if (grave === townHall) moveSettlerToTownHall(s, s.speed, dt);
       else moveEntityTowards(s, grave.x, grave.y, s.speed, false, dt);
     } else {
@@ -132,7 +132,7 @@ export function collectBones(s, tick) {
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
   const reach = getBaseRadius() + 3 * TILE_SIZE;
   // (not one lying by a grave: it keeps the grave working, #253)
-  const graves = game.buildings.filter(b => b.type === 'grave');
+  const graves = game.buildings.filter(b => b.type === 'grave' && !b.campId);
   const corpse = game.corpses.filter(k => !tick.raiseAssignments.has(k) && Math.hypot(k.x - townHall.x, k.y - townHall.y) <= reach && !graves.some(g => liesBy(k, g)))
     .sort((a, b) => dist(a) - dist(b))[0];
   if (!corpse) { s.boneTimer = 0; return false; }
@@ -167,7 +167,7 @@ function corpseBy(grave) {
 function workGrave(s, tick) {
   const c = graveWork();
   const taken = new Set(game.settlers.filter(o => o !== s && o.graveTarget).map(o => o.graveTarget));
-  const ready = b => b.type === 'grave' && (!((b.rest || 0) > 0) || corpseBy(b)) && !taken.has(b);
+  const ready = b => b.type === 'grave' && !b.campId && (!((b.rest || 0) > 0) || corpseBy(b)) && !taken.has(b);
   let grave = s.graveTarget && game.buildings.includes(s.graveTarget) && ready(s.graveTarget) ? s.graveTarget : null;
   if (!grave) grave = game.buildings.filter(ready).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
   s.graveTarget = grave;
@@ -199,7 +199,7 @@ export function corpsesToGraves(s, tick) {
   if (getPlayerFaction().id !== 'undead' || s.isPossessed || tick.isWaveActive || isDefenseAlert() || s.temporary !== undefined || s.role !== 'worker' || s.tool !== 'none') return false;
   const c = graveWork();
   const byGrave = liesBy;
-  const graves = game.buildings.filter(b => b.type === 'grave');
+  const graves = game.buildings.filter(b => b.type === 'grave' && !b.campId);
   const load = s.carrying && s.carrying.type === 'corpse' && s.carrying.forGrave ? s.carrying : null;
   if (load) {
     const grave = load.forGrave;

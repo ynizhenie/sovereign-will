@@ -29,6 +29,22 @@ test('an enemy tent left at night: the soldiers go and break it (#279, 17)', asy
   expect(r.tentsLeft).toBe(0);
 });
 
+test('settlers sleep at night when a permanent enemy camp exists', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'sleepWithCamp', {})).toEqual({ asleep: true });
+});
+
+test('enemy camp defenders rotate night watch and wake at dawn', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'campGuardShifts', {});
+  expect(r.guards).toBeGreaterThanOrEqual(2);
+  expect(r.firstAwake.length).toBeGreaterThan(0);
+  expect(r.secondAwake.length).toBeGreaterThan(0);
+  expect(r.firstAwake.filter(id => r.secondAwake.includes(id))).toHaveLength(0);
+  expect(r.awakeAtDawn).toBe(r.guards);
+  expect(r.wokeForThreat).toBe(true);
+});
+
 test('a medic hurt with no one else to heal heals itself (#279, 21)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'medicSelf', {});

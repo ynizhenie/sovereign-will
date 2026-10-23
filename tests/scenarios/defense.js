@@ -121,5 +121,227 @@ Object.assign(window.sim, (() => {
     return { allInside: settlers.every(s => isInSafeArea(s.x, s.y)), leftBase, applesLeft: apple.applesReady };
   }
 
-  return { deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack };
+  function unarmedDefend({ seed = 'unarmed-defend-test', seconds = 15 }) {
+    sides.player.faction = 'humans';
+    sides.enemy.faction = 'demons';
+    start(seed);
+    clearResources();
+    const worker = makeSettler(1, townHall.x, townHall.y + 90, { tool: 'axe' });
+    settlers = [worker];
+    const enemy = createConfiguredEnemy({ x: townHall.x + 210, y: townHall.y }, 'demon_imp');
+    Object.assign(enemy, { fromWave: true, campId: 'portal-camp', speed: 0, damage: 0 });
+    enemies = [enemy];
+    run(seconds);
+    return { enemyHurt: enemy.hp < enemy.maxHp, workerMoved: Math.hypot(worker.x - (townHall.x), worker.y - (townHall.y + 90)) > 50 };
+  }
+
+  function noTentAssaultDuringCampLinkedWave({ seed = 'no-tent-assault-during-wave-test' }) {
+    start(seed);
+    clearResources();
+    enemyTents = [{ x: townHall.x + TILE_SIZE * 8, y: townHall.y, hp: 300, maxHp: 300 }];
+    const waveEnemy = createConfiguredEnemy({ x: townHall.x + TILE_SIZE * 10, y: townHall.y }, 'demon_imp');
+    Object.assign(waveEnemy, { fromWave: true, campId: 'enemy-camp', speed: 0 });
+    enemies = [waveEnemy];
+    game.portalQueue = [];
+    return { tentAssault: createSettlerTick(1 / 60).tentAssault };
+  }
+
+  function noTentAssaultDuringPreWaveWarning({ seed = 'no-tent-assault-before-wave-test' }) {
+    start(seed);
+    clearResources();
+    enemyTents = [{ x: townHall.x + TILE_SIZE * 8, y: townHall.y, hp: 300, maxHp: 300 }];
+    enemies = [];
+    game.portalQueue = [];
+    waveTimer = GAME_CONFIG.defense.deploySeconds;
+    return { defenseAlert: isDefenseAlert(), tentAssault: createSettlerTick(1 / 60).tentAssault };
+  }
+
+  function waitsForRegroupedWave({ seed = 'wait-for-regrouped-wave-test' }) {
+    start(seed);
+    clearResources();
+    const tent = { x: townHall.x + TILE_SIZE * 8, y: townHall.y, hp: 300, maxHp: 300 };
+    enemyTents = [tent];
+    const soldier = makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier' });
+    settlers = [soldier];
+    const enemy = createConfiguredEnemy({ x: townHall.x + TILE_SIZE * 7, y: townHall.y }, 'raider');
+    Object.assign(enemy, { fromWave: true, campId: 'enemy-camp', speed: 0, musterUntil: game.pathTick + 600 });
+    enemies = [enemy];
+    const x = soldier.x, y = soldier.y;
+    const acted = fightEnemies(soldier, createSettlerTick(1 / 60));
+    return { insideBase: isInsideBase(enemy), acted, moved: Math.hypot(soldier.x - x, soldier.y - y) > 1 };
+  }
+
+  function holdsDuringFactionWaveMuster() {
+    const previousPlayer = sides.player.faction, previousEnemy = sides.enemy.faction;
+    const cases = [
+      ['humans', 'raider'],
+      ['demons', 'demon_imp'],
+      ['undead', 'undead_zombie']
+    ];
+    const results = [];
+    for (const [faction, enemyType] of cases) {
+      sides.player.faction = 'humans';
+      sides.enemy.faction = faction;
+      start(`hold-${faction}-muster-test`);
+      clearResources();
+      waveTimer = 0;
+      const soldier = makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier' });
+      settlers = [soldier];
+      defensePlan = null;
+      const enemy = createConfiguredEnemy({ x: townHall.x + 110, y: townHall.y }, enemyType);
+      Object.assign(enemy, {
+        fromWave: true,
+        speed: 0,
+        damage: 0,
+        muster: { x: enemy.x, y: enemy.y },
+        musterUntil: game.pathTick + 600
+      });
+      enemies = [enemy];
+      soldier.postTarget = enemy;
+      soldier.captainTarget = enemy;
+
+      tickEnemies(1 / 60);
+      const heldAtPost = holdPost(soldier, createSettlerTick(1 / 60));
+      const x = soldier.x, y = soldier.y;
+      const acted = fightEnemies(soldier, createSettlerTick(1 / 60));
+      results.push({
+        faction,
+        regrouping: enemy.musterUntil > game.pathTick,
+        heldAtPost,
+        acted,
+        moved: Math.hypot(soldier.x - x, soldier.y - y) > 1,
+        assignedTargetsCleared: !soldier.postTarget && !soldier.captainTarget
+      });
+    }
+    sides.player.faction = previousPlayer;
+    sides.enemy.faction = previousEnemy;
+    return results;
+  }
+
+  function assaultOutpost({ seed = 'outpost-approach-test', seconds = 35 }) {
+    start(seed);
+    clearResources();
+    const outpost = { x: townHall.x + TILE_SIZE * 8, y: townHall.y, outpost: true, hp: 300, maxHp: 300 };
+    enemyTents = [outpost];
+    settlers = [makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier' })];
+    enemies = [];
+    invalidateAllPaths();
+    const before = outpost.hp;
+    run(seconds);
+    return { damaged: outpost.hp < before, destroyed: outpost.hp <= 0 };
+  }
+
+  function attackOutpostInTheWay({ seed = 'outpost-in-the-way-test', seconds = 20 }) {
+    start(seed);
+    clearResources();
+    const y = townHall.y + 180;
+    const outpost = { x: townHall.x + 120, y, outpost: true, hp: 300, maxHp: 300 };
+    enemyTents = [outpost];
+    const soldier = makeSettler(1, townHall.x - 180, y, { weapon: 'sword', role: 'soldier' });
+    settlers = [soldier];
+    const enemy = createConfiguredEnemy({ x: townHall.x + 360, y }, 'raider');
+    Object.assign(enemy, { speed: 0, damage: 0 });
+    enemies = [enemy];
+    invalidateAllPaths();
+    const before = outpost.hp;
+    run(seconds, { each: () => { waveTimer = Infinity; } });
+    return { damaged: outpost.hp < before };
+  }
+
+  function attackBattleBuildingInTheWay({ seed = 'battle-building-in-the-way-test', seconds = 30, weapon = 'sword' }) {
+    start(seed);
+    clearResources();
+    const previousMode = game.gameMode;
+    const previousBattlePhase = battle.phase;
+    const previousHall = { x: townHall.x, y: townHall.y };
+    game.gameMode = 'battle';
+    battle.phase = 'fight';
+    townHall.x = -10000;
+    townHall.y = -10000;
+    const wall = placeBuilding('wall_stone', 735, 615);
+    wall.side = 'red';
+    const soldier = makeSettler(1, 405, 615, {
+      weapon, role: weapon === 'bow' ? 'archer' : 'soldier', quiver: weapon === 'bow', arrows: 12, quiverCapacity: 12,
+      battleEntry: { x: 405, y: 615 }
+    });
+    settlers = [soldier];
+    const enemy = createConfiguredEnemy({ x: 1035, y: 615 }, 'raider');
+    Object.assign(enemy, { speed: 0, damage: 0, trapped: true });
+    enemies = [enemy];
+    invalidateAllPaths();
+    const before = wall.hp;
+    run(seconds);
+    const damaged = wall.hp < before;
+    game.gameMode = previousMode;
+    battle.phase = previousBattlePhase;
+    townHall.x = previousHall.x;
+    townHall.y = previousHall.y;
+    invalidateAllPaths();
+    return { damaged };
+  }
+
+  function enemyBreaksWallOnTheWay({ seed = 'enemy-breaks-wall-on-the-way-test', seconds = 60 }) {
+    start(seed);
+    clearResources();
+    settlers = [];
+    const hallTile = getGridPos(townHall.x, townHall.y);
+    const wallPos = tileCenter(hallTile.gx + 5, hallTile.gy);
+    const wall = placeBuilding('wall_stone', wallPos.x, wallPos.y);
+    const enemy = createConfiguredEnemy(tileCenter(hallTile.gx + 9, hallTile.gy), 'raider');
+    Object.assign(enemy, { fromWave: true, speed: 1.5 });
+    enemies = [enemy];
+    invalidateAllPaths();
+    const before = wall.hp;
+    run(seconds);
+    return { damaged: wall.hp < before };
+  }
+
+  function enemyRoutesAroundTree({ seed = 'enemy-routes-around-tree-test', seconds = 45 }) {
+    start(seed);
+    clearResources();
+    settlers = [];
+    const hallTile = getGridPos(townHall.x, townHall.y);
+    const treePos = tileCenter(hallTile.gx + 5, hallTile.gy);
+    const tree = { ...treePos, hp: 100, isGrowing: false, growProgress: 0 };
+    trees.push(tree);
+    const enemy = createConfiguredEnemy(tileCenter(hallTile.gx + 9, hallTile.gy), 'raider');
+    Object.assign(enemy, { fromWave: true, speed: 1.5 });
+    enemies = [enemy];
+    invalidateAllPaths();
+    const before = townHall.hp;
+    run(seconds);
+    return { damagedHall: townHall.hp < before, treeUntouched: trees.includes(tree) };
+  }
+
+  function enemyHitsHallCorner({ seed = 'hall-corner-hit-test', seconds = 2 }) {
+    start(seed);
+    clearResources();
+    settlers = [];
+    const enemy = createConfiguredEnemy({ x: townHall.x + 45, y: townHall.y + 45 }, 'raider');
+    Object.assign(enemy, { speed: 0, fromWave: true });
+    enemies = [enemy];
+    const before = townHall.hp;
+    run(seconds);
+    return { damaged: townHall.hp < before };
+  }
+
+  function enemyEscapesTree({ seed = 'enemy-tree-escape-test', seconds = 30 }) {
+    start(seed);
+    clearResources();
+    settlers = [];
+    const pos = { x: townHall.x + TILE_SIZE * 9, y: townHall.y };
+    trees.push({ ...pos, hp: 100, isGrowing: false, growProgress: 0 });
+    const enemy = createConfiguredEnemy(pos, 'raider');
+    Object.assign(enemy, { fromWave: true, speed: 1.5 });
+    enemies = [enemy];
+    invalidateAllPaths();
+    const before = townHall.hp;
+    run(seconds);
+    return { leftTree: Math.hypot(enemy.x - pos.x, enemy.y - pos.y) > TILE_SIZE, damagedHall: townHall.hp < before };
+  }
+
+  return { deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack,
+    unarmedDefend, noTentAssaultDuringCampLinkedWave, noTentAssaultDuringPreWaveWarning, waitsForRegroupedWave, holdsDuringFactionWaveMuster, assaultOutpost, attackOutpostInTheWay,
+    attackBattleBuildingInTheWay, enemyBreaksWallOnTheWay,
+    enemyRoutesAroundTree, enemyHitsHallCorner, enemyEscapesTree };
 })());

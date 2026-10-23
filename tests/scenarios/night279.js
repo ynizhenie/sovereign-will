@@ -1,8 +1,16 @@
 // The friend's batch of fixes (#279), part A2: the night and the AI
 Object.assign(window.sim, (() => {
   const { start, helpers: { makeSettler, clearResources, placeBuilding } } = window.sim;
-  const night = () => { const c = GAME_CONFIG.daytime; dayTime = c.morning + c.day + c.evening + 2; };
+  const night = () => { game.gameMode = 'endless'; const c = GAME_CONFIG.daytime; dayTime = c.morning + c.day + c.evening + 2; };
   const step = (seconds, each) => { for (let f = 0; f < seconds * 60; f++) { update(1 / 60); waveTimer = 999; if (each) each(); } };
+  const openCamp = seed => {
+    start(seed);
+    game.gameMode = 'endless';
+    settlers.length = 0;
+    waveNum = 3; waveTimer = 100;
+    step(0.1);
+    return enemyTents.find(tent => tent.outpost);
+  };
 
   // A corpse by the tent: taken away before anyone sleeps there (8); asleep, the hurt mend (31)
   function corpseBySleep({ seed = 'corpse-sleep' } = {}) {
@@ -77,11 +85,48 @@ Object.assign(window.sim, (() => {
     start(seed); clearResources();
     settlers.length = 0;
     for (let i = 0; i < 2; i++) settlers.push(makeSettler(700 + i, townHall.x + 40 * i, townHall.y + 60, { weapon: 'sword', role: 'soldier' }));
-    enemyTents.push({ x: townHall.x + 300, y: townHall.y, hp: 60, maxHp: 60, summonTimer: 0, summonsLeft: 0 });
+    const target = { x: townHall.x + 300, y: townHall.y, hp: 60, maxHp: 60, summonTimer: 0, summonsLeft: 0 };
+    enemyTents.push(target);
     stock.firewood = 10;
     night();
     step(40, () => {});
-    return { tentsLeft: enemyTents.length, asleep: settlers.filter(s => s.asleep).length };
+    return { tentsLeft: enemyTents.filter(tent => !tent.outpost && !tent.campId).length, asleep: settlers.filter(s => s.asleep).length };
+  }
+
+  // A permanent enemy camp does not keep the colony awake all night.
+  function sleepWithCamp({ seed = 'sleep-with-camp' } = {}) {
+    openCamp(seed);
+    clearResources();
+    settlers.length = 0;
+    const sleepX = townHall.x + townHall.radius + 14;
+    settlers.push(makeSettler(712, sleepX, townHall.y, {}));
+    waveTimer = 999;
+    night();
+    step(8);
+    return { asleep: !!settlers[0].asleep };
+  }
+
+  // Camp defenders rotate night watch halfway through the night and all wake at dawn.
+  function campGuardShifts({ seed = 'camp-guard-shifts' } = {}) {
+    const camp = openCamp(seed);
+    const guards = enemies.filter(enemy => enemy.campDefender && enemy.campId === camp.campId && enemy.hp > 0);
+    night();
+    step(1);
+    const firstAwake = guards.reduce((indices, guard, index) => { if (!guard.asleep) indices.push(index); return indices; }, []);
+    dayTime += GAME_CONFIG.daytime.night / 2 + 1;
+    step(0.1);
+    const secondAwake = guards.reduce((indices, guard, index) => { if (!guard.asleep) indices.push(index); return indices; }, []);
+    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + GAME_CONFIG.daytime.night + 1;
+    step(0.1);
+    const awakeAtDawn = guards.filter(guard => !guard.asleep).length;
+    night();
+    const sleepingGuard = guards.find(guard => guard.asleep);
+    if (sleepingGuard) {
+      settlers.push(makeSettler(801, sleepingGuard.x, sleepingGuard.y, {}));
+      step(0.1);
+    }
+    const wokeForThreat = !sleepingGuard || !sleepingGuard.asleep;
+    return { guards: guards.length, firstAwake, secondAwake, awakeAtDawn, wokeForThreat };
   }
 
   // A medic hurt, no one else: it heals itself (21); a torch held, a weapon in the other hand: the torch goes
@@ -108,5 +153,5 @@ Object.assign(window.sim, (() => {
     return { food: stock.food };
   }
 
-  return { nightCook, corpseBySleep, soldierTorch, nightOrder, nightHunger, nightTent, medicSelf };
+  return { nightCook, corpseBySleep, soldierTorch, nightOrder, nightHunger, nightTent, sleepWithCamp, campGuardShifts, medicSelf };
 })());

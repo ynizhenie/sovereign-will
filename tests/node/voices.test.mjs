@@ -14,3 +14,7 @@ test('a settler says a phrase of its faction\'s in a bubble; not again straight 
 test('one just hired says so (#252)', () => {
   expect(sim.voiceHiredSays({})).toEqual({ said: true });
 });
+
+test('dogs, hellhounds and ghosts do not speak, including at the campfire (#314)', () => {
+  expect(sim.voicePetsSilent({})).toEqual({ playerPetsSilent: true, enemyPetsSilent: true });
+});

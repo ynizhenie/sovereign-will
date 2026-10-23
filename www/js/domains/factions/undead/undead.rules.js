@@ -1,8 +1,8 @@
-// The undead: necromancy from the staff, blighted ground, raised zombies that crumble, the enemy's necromancer
+﻿// The undead: necromancy from the staff, blighted ground, raised zombies that crumble, the enemy's necromancer
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isBorderZone, isTownHallSpawnTile, rand, townHall } from '../../../engine/world/index.js';
 import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
@@ -32,7 +32,7 @@ export function updateBlightCache() {
         if (!isBorderZone(gx, gy)) base.add(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`);
       }
     };
-    // the graveyard stands on the 2×2 tiles round its centre, a tile corner (as far on every side)
+    // the graveyard stands on the 2Г—2 tiles round its centre, a tile corner (as far on every side)
     const hx = Math.round(townHall.x / TILE_SIZE), hy = Math.round(townHall.y / TILE_SIZE);
     around(hx - 1, hy - 1, hx, hy, b.hallTiles);
     for (const grave of game.buildings) {
@@ -73,7 +73,7 @@ export function toggleBlightZone(x, y, gx, gy, clearOnly) {
     else if (!clearOnly) delete existing.clearing;
     return;
   }
-  if (clearOnly || isBorderZone(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
+  if (clearOnly || isBorderZone(gx, gy) || isTownHallSpawnTile(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
   if (isBaseBlighted(x, y)) { showNotification(t('blight.already'), true); return; }
   game.blightZones.push({ x, y, done: false });
 }
@@ -102,7 +102,7 @@ export function updateTemporaryZombies(dt) {
 export function raiseOnBlight(dt) {
   if (sides.player.faction !== 'undead') return;
   const r = (GAME_CONFIG.graveWork.nearTiles + 0.5) * TILE_SIZE;
-  const graves = game.buildings.filter(b => b.type === 'grave');
+  const graves = game.buildings.filter(b => b.type === 'grave' && !b.campId);
   for (const corpse of [...game.corpses]) {
     if (!isBlighted(corpse.x, corpse.y) || graves.some(g => Math.max(Math.abs(corpse.x - g.x), Math.abs(corpse.y - g.y)) <= r)) continue;
     corpse.blightAge = (corpse.blightAge || 0) + dt;

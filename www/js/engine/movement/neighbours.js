@@ -24,6 +24,13 @@ function sortIntoBuckets(list, cols) {
   return buckets;
 }
 
+// Throws the picture away so the next look makes it again. For the few places that move units about
+// and then look again in the same tick (pushing bodies apart), a picture from before the push would
+// still have them where they no longer are.
+export function refreshNeighbourPicture() {
+  picture.tick = -1;
+}
+
 function current() {
   if (picture.tick !== game.pathTick || picture.settlers !== game.settlers || picture.enemies !== game.enemies) {
     const cols = Math.ceil(game.WORLD_WIDTH / CELL) + 3;
@@ -69,4 +76,33 @@ export function someSettlerNear(x, y, r, fn) {
 /** @param {number} x @param {number} y @param {number} r @param {(unit: any) => any} fn */
 export function someEnemyNear(x, y, r, fn) {
   return someNear('enemies', x, y, r, fn);
+}
+
+// Each enemy within r of (x, y)
+/** @param {number} x @param {number} y @param {number} r @param {(unit: any) => void} fn */
+export function forEachEnemyNear(x, y, r, fn) {
+  someNear('enemies', x, y, r, unit => { fn(unit); return false; });
+}
+
+// How many of the list are within r of (x, y) and as fn says. The two long lists (settlers, enemies) are
+// counted by their buckets; any other (a filtered list, boars) is gone through.
+/** @param {any[]} list @param {number} x @param {number} y @param {number} r @param {(unit: any) => any} fn */
+export function countNear(list, x, y, r, fn) {
+  const which = list === game.settlers ? 'settlers' : list === game.enemies ? 'enemies' : null;
+  const rr = r * r;
+  const test = unit => { const dx = unit.x - x, dy = unit.y - y; return dx * dx + dy * dy <= rr && fn(unit); };
+  if (!which) return list.reduce((count, unit) => count + (test(unit) ? 1 : 0), 0);
+  const now = current();
+  const buckets = which === 'settlers' ? now.settlerBuckets : now.enemyBuckets;
+  const cols = now.cols;
+  const gx0 = Math.floor((x - r) / CELL) + 1, gx1 = Math.floor((x + r) / CELL) + 1;
+  const gy0 = Math.floor((y - r) / CELL) + 1, gy1 = Math.floor((y + r) / CELL) + 1;
+  let count = 0;
+  for (let gy = gy0; gy <= gy1; gy++) {
+    for (let gx = gx0; gx <= gx1; gx++) {
+      const bucket = buckets.get(gy * cols + gx);
+      if (bucket) for (const unit of bucket) if (test(unit)) count++;
+    }
+  }
+  return count;
 }

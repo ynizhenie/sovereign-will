@@ -1,11 +1,11 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
+import { OUTPOST_COLLISION_HALF_HEIGHT, OUTPOST_COLLISION_HALF_WIDTH, OUTPOST_COLLISION_OFFSET_Y, TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../colony/equipment/index.js';
-import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
+import { findNearestStorage, isAtStorage, isAtTownHall, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { forEachEnemyNear, moveEntityTowards } from '../../../engine/movement/index.js';
 import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
 import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 import { getNecromancy } from '../../factions/undead/index.js';
@@ -38,20 +38,28 @@ export function holdPost(s, tick) {
   // an archer counts as near the post while it can shoot at it (#279: it stood off past the post's reach and
   // shot, the soldiers ran at it, gave up half way as too far from the post, went back, and so on)
   const reachOf = en => engage + (en.type === 'archer' ? ((getEnemyDef(en).ranged || {}).range || 0) : 0);
-  if (s.postTarget && game.enemies.includes(s.postTarget) && s.postTarget.type === 'archer' &&
-    Math.hypot(s.postTarget.x - place.post.x, s.postTarget.y - place.post.y) < reachOf(s.postTarget)) return false;
-  let nearest = null, best = Infinity;
-  for (const en of game.enemies) {
-    const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
-    if (d < reachOf(en) && d < best) { best = d; nearest = en; }
+  if (s.postTarget && (!game.enemies.includes(s.postTarget) || !canFightDuringDefense(s, tick, s.postTarget, null))) {
+    s.postTarget = null;
   }
+  if (s.postTarget && s.postTarget.type === 'archer' &&
+    distanceTo(s.postTarget, place.post.x, place.post.y) < reachOf(s.postTarget)) return false;
+  let nearest = null, best = Infinity;
+  // only what could be near enough to count, not every enemy on the map (the fewest a big wave has)
+  const reach = maxEnemyReach(tick);
+  forEachEnemyNear(place.post.x, place.post.y, reach, en => {
+    if (!canFightDuringDefense(s, tick, en, null)) return;
+    const d = distanceTo(en, place.post.x, place.post.y);
+    if (d < reachOf(en) && d < best) { best = d; nearest = en; }
+  });
   // nothing near the post: the nearest enemy that got into the base, wherever that is
   if (!nearest) {
     best = Infinity;
-    for (const en of game.enemies) {
-      const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
+    const baseReach = getBaseRadius() + GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE + townHall.radius;
+    forEachEnemyNear(townHall.x, townHall.y, baseReach, en => {
+      if (!canFightDuringDefense(s, tick, en, null)) return;
+      const d = distanceTo(en, place.post.x, place.post.y);
       if (d < best && isInsideBase(en)) { best = d; nearest = en; }
-    }
+    });
   }
   if (nearest) { s.postTarget = nearest; return false; }
   s.postTarget = null;
@@ -88,7 +96,7 @@ export function fightEnemies(s, tick) {
   // (#232: it went out to its post empty); with none, it gets on with its other work
   if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy) {
     s.patrolTarget = null;
-    if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, dt);
+    if (!isAtTownHall(s)) moveSettlerToTownHall(s, s.speed, dt);
     return true;
   }
   // (#279) the menu's fight: the squad keeps by the warehouse, guarding it, and lets those further off come
@@ -102,19 +110,54 @@ export function fightEnemies(s, tick) {
 
 const MENU_GUARD = 4 * 30; // (how far from the menu's warehouse its squad goes for a zombie)
 
+// Enemies ordered by how close they are to the town hall, worked out once a tick: a soldier's pick is
+// mostly about that order, and walking the whole list for every soldier was a large part of a big
+// fight's cost. An enemy further from the town hall than the best score so far cannot beat it, so the
+// list is left at that point.
+function enemiesByBaseDistance(tick) {
+  if (tick.enemiesByBase) return tick.enemiesByBase;
+  tick.enemiesByBase = game.enemies
+    .map(en => ({ en, d: Math.hypot(en.x - townHall.x, en.y - townHall.y) }))
+    .sort((a, b) => a.d - b.d);
+  return tick.enemiesByBase;
+}
+
+// Plain distance: Math.hypot is dear when asked a few hundred thousand times a second
+function distanceTo(unit, x, y) {
+  const dx = unit.x - x, dy = unit.y - y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+// The farthest an enemy on the map can reach from where it stands, worked out once a tick: a soldier at
+// its post only needs to look at enemies that could be that close to the post
+function maxEnemyReach(tick) {
+  if (tick.maxEnemyReach === undefined) {
+    const engage = GAME_CONFIG.defense.engageTiles * TILE_SIZE;
+    let max = engage;
+    for (const en of game.enemies) {
+      const reach = engage + (en.type === 'archer' ? ((getEnemyDef(en).ranged || {}).range || 0) : 0);
+      if (reach > max) max = reach;
+    }
+    tick.maxEnemyReach = max;
+  }
+  return tick.maxEnemyReach;
+}
+
 // The enemy a settler fights: the one most dangerous to the base, an enemy the player marked, the one near
 // its post, or whoever is hitting it right now. On the way to the enemy tents, only what's in the way
 // (null: nothing is). attacker: the one hitting it, if any.
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  game.enemies.forEach(en => {
-    if (en.toCatch && en.toCatch !== s.id) return; // (one being caught for a cage, #250)
-    let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
-    let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
-    let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
+  const attacker = getRecentAttacker(s);
+  for (const { en, d: dToTown } of enemiesByBaseDistance(tick)) {
+    if (dToTown > minBaseDist) break;
+    if (en.toCatch && en.toCatch !== s.id) continue; // (one being caught for a cage, #250)
+    if (!canFightDuringDefense(s, tick, en, attacker)) continue;
+    const dToSettler = distanceTo(en, s.x, s.y);
+    const score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
-  });
+  }
   // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
   // squad soldier already got its own from holdPost)...
   if (s.weapon !== 'fist' && !(s.postTarget && s.postTarget.markedTarget && game.enemies.includes(s.postTarget))) {
@@ -122,34 +165,60 @@ function chooseSettlerTarget(s, tick) {
     if (marked) targetEnemy = marked;
   }
   // ...but whoever is hitting this settler right now comes first of all
-  const attacker = getRecentAttacker(s);
   // a squad soldier goes for the enemy that came near its post (see holdPost)
-  if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
+  if (s.postTarget && (!game.enemies.includes(s.postTarget) ||
+      !canFightDuringDefense(s, tick, s.postTarget, attacker))) s.postTarget = null;
+  if (!attacker && s.postTarget) targetEnemy = s.postTarget;
   // ...or the one its captain gave it (#248), unless the player marked one for it
   if (s.captainTarget && !game.enemies.includes(s.captainTarget)) s.captainTarget = null;
+  if (s.captainTarget && !canFightDuringDefense(s, tick, s.captainTarget, attacker)) s.captainTarget = null;
   if (!attacker && s.captainTarget && !(targetEnemy && targetEnemy.markedTarget)) targetEnemy = s.captainTarget;
   if (attacker) targetEnemy = attacker;
+  if (targetEnemy && !canFightDuringDefense(s, tick, targetEnemy, attacker)) targetEnemy = null;
   // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
   if (targetEnemy && !attacker && !isBowWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
-    const others = game.enemies.filter(en => en !== targetEnemy && !meleeFull(en, tick));
-    const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
-    if (next && Math.hypot(next.x - s.x, next.y - s.y) < 300) targetEnemy = next;
+    let next = null, nearest = 300;
+    for (const en of game.enemies) {
+      if (en === targetEnemy || meleeFull(en, tick) ||
+          !canFightDuringDefense(s, tick, en, attacker)) continue;
+      const d = distanceTo(en, s.x, s.y);
+      if (d < nearest) { nearest = d; next = en; }
+    }
+    if (next) targetEnemy = next;
   }
   // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents); but an
   // enemy the player marked, or one at the base, comes first (#261: they went for the tents past both)
   const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
   if (assaulting && !attacker && !(targetEnemy && (targetEnemy.markedTarget || isInsideBase(targetEnemy)))) {
-    targetEnemy = game.enemies.filter(isInsideBase).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
-    if (targetEnemy) return { targetEnemy, attacker };
-    let nearest = TENT_ASSAULT_FIGHT_DISTANCE;
-    game.enemies.forEach(en => {
-      const d = Math.hypot(en.x - s.x, en.y - s.y);
+    let nearest = Infinity;
+    targetEnemy = null;
+    for (const en of game.enemies) {
+      if (!isInsideBase(en)) continue;
+      const d = distanceTo(en, s.x, s.y);
       if (d < nearest) { nearest = d; targetEnemy = en; }
+    }
+    if (targetEnemy) return { targetEnemy, attacker };
+    let nearestWay = TENT_ASSAULT_FIGHT_DISTANCE;
+    game.enemies.forEach(en => {
+      const d = distanceTo(en, s.x, s.y);
+      if (d < nearestWay) { nearestWay = d; targetEnemy = en; }
     });
     if (!targetEnemy) return null;
   }
   if (game.gameMode === 'menu' && targetEnemy && !attacker && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) > MENU_GUARD) targetEnemy = null; // (#279)
   return { targetEnemy, attacker };
+}
+
+function isCampEnemy(enemy) {
+  return enemy.campDefender || (enemy.campId && !enemy.fromWave);
+}
+
+function canFightDuringDefense(s, tick, enemy, attacker) {
+  if (enemy === attacker || enemy.markedTarget || s.raider) return true;
+  if (isCampEnemy(enemy) && !s.raider) return false;
+  if (!tick.isWaveActive && !isDefenseAlert()) return true;
+  if (enemy.fromWave && (enemy.wavePrepared || enemy.musterUntil > game.pathTick)) return false;
+  return isInsideBase(enemy);
 }
 
 // Enough settlers in melee on that enemy this tick already (GAME_CONFIG.combatAI)
@@ -203,17 +272,18 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
   // tent-summoned enemies alone don't call workers off their work, unless they come close
   // workers keep working through a wave and only react to an enemy close by
-  const alarm = tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
+  const alarm = tick.isWaveActive && tick.defendersCount === 0 ? Infinity
+    : tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
   if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker')) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)
     if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && game.gameMode !== 'battle') {
-      let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-      if (distToTown > townHall.radius + 15) {
+      if (!isAtTownHall(s)) {
         moveSettlerToTownHall(s, s.speed, dt);
       }
       s.patrolTarget = null;
       return true;
     }
+    if (attackHostileStructureOnPath(s, targetEnemy, dt)) return true;
 
     let dist = distToClosestEn;
     // approach: how close to walk before striking (bows: shoot from under this distance)
@@ -243,6 +313,46 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   return false;
 }
 
+function attackHostileStructureOnPath(s, target, dt) {
+  const dx = target.x - s.x, dy = target.y - s.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared < 1) return false;
+  const sideX = s.battleEntry ? s.battleEntry.x : s.x;
+  const side = sideX < game.WORLD_WIDTH / 2 ? 'green' : 'red';
+  const structures = game.gameMode === 'battle'
+    ? game.buildings.filter(b => b.side && b.side !== side)
+    : game.enemyTents.filter(b => b.hp > 0);
+  let blocker = null, nearest = Infinity;
+  for (const structure of structures) {
+    const x = structure.x;
+    const y = structure.y + (structure.outpost ? OUTPOST_COLLISION_OFFSET_Y : 0);
+    const along = ((x - s.x) * dx + (y - s.y) * dy) / lengthSquared;
+    if (along <= 0 || along >= 1) continue;
+    const distance = Math.hypot(x - (s.x + along * dx), y - (s.y + along * dy));
+    const width = structure.outpost ? OUTPOST_COLLISION_HALF_WIDTH : 15;
+    const height = structure.outpost ? OUTPOST_COLLISION_HALF_HEIGHT : 15;
+    if (distance > Math.hypot(width, height) + 12 || along >= nearest) continue;
+    nearest = along;
+    blocker = structure;
+  }
+  if (!blocker) return false;
+
+  const x = blocker.x;
+  const y = blocker.y + (blocker.outpost ? OUTPOST_COLLISION_OFFSET_Y : 0);
+  const weapon = getWeaponStats(s, 'combat');
+  const weaponRange = isBowWeapon(s.weapon) ? weapon.approach : weapon.range;
+  const reach = weaponRange + (blocker.outpost
+    ? Math.hypot(OUTPOST_COLLISION_HALF_WIDTH, OUTPOST_COLLISION_HALF_HEIGHT) + s.radius
+    : 20);
+  if (Math.hypot(x - s.x, y - s.y) <= reach) {
+    performAttack(s, x, y);
+  } else {
+    moveEntityTowards(s, x, y, s.speed, false, dt);
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
 // Who goes to destroy enemy tents: anyone armed, and unarmed workers only when nobody is armed
 export function joinsTentAssault(s, tick) {
   return s.role !== 'worker' || s.weapon !== 'fist' || tick.workersHelpTents;
@@ -259,6 +369,7 @@ export function clearEnemyTents(s, tick) {
   if (game.enemies.some(isInsideBase)) return false; // (they're fought first, #261)
   let tent = null, minDist = Infinity;
   game.enemyTents.forEach(et => {
+    if (et.campId) return; // (the enemy camp's tents are the raid's business, not the wave's)
     const d = Math.hypot(et.x - s.x, et.y - s.y);
     if (d < minDist) { minDist = d; tent = et; }
   });
@@ -279,8 +390,10 @@ export function goForMarkedTent(s, tick) {
 
 // Walk up to a tent and strike it (an archer: from where it has a clear shot)
 function attackTent(s, tent, tick) {
-  const dist = Math.hypot(tent.x - s.x, tent.y - s.y);
-  const attackDist = getWeaponStats(s, 'combat').tentReach;
+  const dx = tent.outpost ? Math.max(0, Math.abs(s.x - tent.x) - OUTPOST_COLLISION_HALF_WIDTH) : Math.abs(s.x - tent.x);
+  const dy = tent.outpost ? Math.max(0, Math.abs(s.y - (tent.y + OUTPOST_COLLISION_OFFSET_Y)) - OUTPOST_COLLISION_HALF_HEIGHT) : Math.abs(s.y - tent.y);
+  const dist = Math.hypot(dx, dy);
+  const attackDist = getWeaponStats(s, 'combat').tentReach + (tent.outpost ? s.radius : 0);
   const blockedShot = isBowWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
   if (dist > attackDist || blockedShot) {
     moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
@@ -305,7 +418,23 @@ function takeMarkedTent(s, tick) {
 
 // A worker far out: more than guardBeyondTiles past the edge of the base
 function isFarOut(w) {
-  return Math.hypot(w.x - townHall.x, w.y - townHall.y) > getBaseRadius() + GAME_CONFIG.idle.guardBeyondTiles * TILE_SIZE;
+  const dx = w.x - townHall.x, dy = w.y - townHall.y;
+  return Math.sqrt(dx * dx + dy * dy) > getBaseRadius() + GAME_CONFIG.idle.guardBeyondTiles * TILE_SIZE;
+}
+
+// Workers far out and the ids already guarded, worked out once a tick (a soldier looking for someone to
+// guard was going over every settler it passed, and a colony has many soldiers)
+function farOutWorkers(tick) {
+  if (!tick.farOutWorkers) tick.farOutWorkers = game.settlers.filter(o => o.role === 'worker' && !o.isIdle && !o.isPossessed && isFarOut(o));
+  return tick.farOutWorkers;
+}
+
+function guardedIds(tick) {
+  if (!tick.guardedIds) {
+    tick.guardedIds = new Set();
+    for (const o of game.settlers) if (o.guardingId) tick.guardedIds.add(o.guardingId);
+  }
+  return tick.guardedIds;
 }
 
 // Between waves, a soldier or archer with nothing else to do guards a worker gathering far out of the base:
@@ -315,16 +444,24 @@ export function escortGatherers(s, tick) {
   // (an archer with no arrows guards nobody, #232)
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert() ||
     (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
+    if (s.guardingId) guardedIds(tick).delete(s.guardingId);
     s.guardingId = null;
     return false;
   }
-  const guarded = new Set(game.settlers.filter(o => o !== s && o.guardingId).map(o => o.guardingId));
+  const guarded = guardedIds(tick);
   let w = s.guardingId ? game.settlers.find(o => o.id === s.guardingId) : null;
   if (!w || w.role !== 'worker' || w.isIdle || !isFarOut(w)) {
-    w = game.settlers.filter(o => o.role === 'worker' && !o.isIdle && !o.isPossessed && !guarded.has(o.id) && isFarOut(o))
-      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+    if (s.guardingId) guarded.delete(s.guardingId); // (it let that one go: it's free for another)
+    w = null;
+    let nearest = Infinity;
+    for (const o of farOutWorkers(tick)) {
+      if (guarded.has(o.id)) continue;
+      const d = distanceTo(o, s.x, s.y);
+      if (d < nearest) { nearest = d; w = o; }
+    }
   }
   s.guardingId = w ? w.id : null;
+  if (w) guarded.add(w.id);
   if (!w) return false;
   const range = GAME_CONFIG.idle.guardRange;
   const d = Math.max(1, Math.hypot(w.x - townHall.x, w.y - townHall.y));

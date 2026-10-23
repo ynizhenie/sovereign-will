@@ -14,7 +14,7 @@ Object.assign(window.sim, (() => {
     const stone = piles.filter(p => p.type === 'stone');
     const perTile = {};
     for (const p of stone) { const k = `${Math.floor(p.x / TILE_SIZE)},${Math.floor(p.y / TILE_SIZE)},${p.layer || 0}`; perTile[k] = (perTile[k] || 0) + 1; }
-    const body = townHall.radius;
+    const body = STRUCTURE_COLLISION_HALF_SIZE + TILE_SIZE + 10;
     return {
       total: Math.round(stone.reduce((a, p) => a + p.amount, 0)),
       biggest: Math.max(...stone.map(p => p.amount)),
@@ -31,7 +31,8 @@ Object.assign(window.sim, (() => {
     const g = getGridPos(townHall.x, townHall.y), w = tileCenter(g.gx + 5, g.gy);
     const warehouse = placeBuilding('warehouse', w.x, w.y);
     invalidateAllPaths();
-    settlers = [makeSettler(1, townHall.x + 40, townHall.y + 40)];
+    const settler = makeSettler(1, townHall.x + 100, townHall.y + 100);
+    settlers = [settler];
     keepStoresInStep();
     warehouse.store = warehouse.store || {};
     // something of the warehouse's lying in the hall (or the other way round): 20 moved over by hand
@@ -44,5 +45,30 @@ Object.assign(window.sim, (() => {
     return { moved: (home.store[id] || 0) - before };
   }
 
-  return { packs, sorting };
+  function approachesStorage({ seed = 'storage-approach' } = {}) {
+    start(seed); clearResources();
+    settlers = [];
+    const g = getGridPos(townHall.x, townHall.y), at = tileCenter(g.gx + 5, g.gy);
+    const warehouse = placeBuilding('warehouse', at.x, at.y);
+    invalidateAllPaths();
+    const carrier = makeSettler(1, warehouse.x + 150, warehouse.y + 90);
+    settlers = [carrier];
+    const resource = ['wood', 'stone', 'food'].find(id => storeHome(id) === warehouse) || 'wood';
+    carrier.carrying = { type: resource, amount: 1 };
+    for (let i = 0; i < 20 * 60 && carrier.carrying; i++) {
+      goDeliver(carrier, { dt: 1 / 60 });
+    }
+    const warehouseDelivered = !carrier.carrying && (warehouse.store[resource] || 0) > 0;
+    warehouse.store = { wood: GAME_CONFIG.storage.capacity.warehouse };
+    const hallCarrier = makeSettler(2, townHall.x + 240, townHall.y + 180);
+    settlers.push(hallCarrier);
+    hallCarrier.carrying = { type: 'wood', amount: 1 };
+    for (let i = 0; i < 20 * 60 && hallCarrier.carrying; i++) {
+      goDeliver(hallCarrier, { dt: 1 / 60 });
+    }
+    const townHallDelivered = !hallCarrier.carrying && isAtStorage(hallCarrier, townHall);
+    return { warehouseDelivered, townHallDelivered };
+  }
+
+  return { packs, sorting, approachesStorage };
 })());

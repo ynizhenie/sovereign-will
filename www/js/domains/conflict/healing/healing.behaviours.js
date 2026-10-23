@@ -16,7 +16,7 @@ import { playSound } from '../../../app/index.js';
 // Workers mend a damaged tent unless enemies are right next to it
 export function repairTent(s, tick) {
   if (s.role === 'worker' && !s.isPossessed) {
-    let damagedTent = game.buildings.find(b => isShelter(b) && b.hp < b.maxHp);
+    let damagedTent = game.buildings.find(b => !b.campId && isShelter(b) && b.hp < b.maxHp);
     if (damagedTent) {
       let tentThreatened = game.enemies.some(en => Math.hypot(en.x - damagedTent.x, en.y - damagedTent.y) < 120);
       if (!tentThreatened) {

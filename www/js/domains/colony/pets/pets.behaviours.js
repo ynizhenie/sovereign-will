@@ -1,4 +1,4 @@
-// (#314) Pets: each faction's own unit for hire (GAME_CONFIG.pets): the humans' dog, the demons' hellhound
+﻿// (#314) Pets: each faction's own unit for hire (GAME_CONFIG.pets): the humans' dog, the demons' hellhound
 // (a beast), the undead's ghost. They live in game.settlers like the rest, but on their own ways (tickPet):
 // - a dog / a beast: keeps by the nearest soldier (the hall, with none), goes for an enemy near it, gets
 //   hungry and is fed by a settler (feedPet), fed a few times goes off to relieve itself (petRelieve), sleeps
@@ -61,10 +61,15 @@ export function tickPet(s, tick) {
 
 function tickBeast(s, tick, kind) {
   const c = config(), speed = s.speed * (s.petHungry ? c.hungryPace : 1);
-  const keeper = nearest(game.settlers.filter(o => (o.role === 'soldier' || o.role === 'archer') && !o.leaving && o.hp > 0), s);
-  const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : townHall;
+  // (#255) in a battle there's no town hall or colony to keep by: with no soldier to follow, a dog or a
+  // beast goes at the enemy on its own, as the enemy's own do
+  const battle = game.gameMode === 'battle';
+  const keeper = battle ? null : nearest(game.settlers.filter(o => (o.role === 'soldier' || o.role === 'archer') && !o.leaving && o.hp > 0), s);
+  const anchor = battle ? (s.battleEntry || { x: s.x, y: s.y }) : keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : townHall;
   const guard = c.guardTiles * TILE_SIZE;
-  const foe = nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s);
+  const foe = battle && !keeper
+    ? nearest(game.enemies.filter(en => en.hp > 0 && !en.crumbled), s)
+    : nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s);
   // asleep: till an enemy comes near or a wave's on
   if (s.petSleep > 0) {
     if (foe || tick.isWaveActive) s.petSleep = 0;
@@ -167,7 +172,7 @@ function petRelieve(s, tick) {
 
 // The graves it's kept by (the graveyard itself, with none; in a battle, where it was placed: no town hall)
 const ghostHomes = (s) => {
-  const graves = game.buildings.filter(b => b.type === 'grave');
+  const graves = game.buildings.filter(b => b.type === 'grave' && !b.campId);
   if (graves.length) return graves;
   return s && s.battleEntry ? [s.battleEntry] : [townHall];
 };

@@ -26,10 +26,11 @@ export function tileVariantHash(gx, gy) {
 export const CHUNK = 16;
 const MAX_CHUNKS = 96;
 
-/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string }} Chunk */
+/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame?: number }} Chunk */
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
+let chunkFrame = 0; // (the frame a piece was last drawn in, see the trimming at the end of drawChunks)
 
 // Zoomed out, panning shows many new pieces at once: painted for at most this long a frame (ms), the rest
 // the next frames (an old picture meanwhile, or the plain ground: fill)
@@ -39,12 +40,13 @@ const PAINT_MS = 4;
 const PAD = 6;
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
-// paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
+// paint(g, x0, y0, x1, y1, res) when it's new or its stamp(cx, cy) changed
 /** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {string | null} [fill] */
 function drawChunks(layer, res, stamp, paint, fill = null) {
   if (typeof document === 'undefined') return;
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
+  chunkFrame++;
   const size = CHUNK * TILE_SIZE, v = getViewRect(), started = performance.now();
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
@@ -52,6 +54,10 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(Math.ceil(game.COLS / CHUNK) - 1, Math.floor(v.x1 / size));
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(Math.ceil(game.ROWS / CHUNK) - 1, Math.floor(v.y1 / size));
+  // (#zoom) the pictures land on the screen's pixels as they are, without filtering them: they're painted at
+  // the size they're shown at (or close to it), and the filtering was most of what laying a frame's ground cost
+  const smoothing = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
   for (let cy = cy0; cy <= cy1; cy++) {
     for (let cx = cx0; cx <= cx1; cx++) {
       const key = `${res}|${cx},${cy}`, now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
@@ -60,8 +66,12 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
       const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
       const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
       if ((!chunk || chunk.stamp !== now) && res < 1 && performance.now() - started > PAINT_MS) {
-        if (chunk) { chunks.set(key, chunk); } else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
-        if (chunk) ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
+        // out of this frame's painting time: the picture of this piece at another zoom meanwhile (a little soft,
+        // but no flash of bare ground), or the plain ground if it was never painted
+        const shown = chunk || chunkOfArea(chunks, cx, cy);
+        if (chunk) chunks.set(key, chunk);
+        if (shown) { shown.frame = chunkFrame; ctx.drawImage(shown.canvas, shown.pad, shown.pad, shown.pw, shown.ph, dx0, dy0, dw, dh); }
+        else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
         continue;
       }
       if (!chunk || chunk.stamp !== now) {
@@ -71,29 +81,72 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
         canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
         const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
         g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
-        paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
+        paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed, res);
         chunk = { canvas, pad, pw, ph, stamp: now };
       }
       chunks.set(key, chunk);
+      chunk.frame = chunkFrame;
       ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
     }
   }
-  while (chunks.size > MAX_CHUNKS) chunks.delete(/** @type {string} */ (chunks.keys().next().value));
+  ctx.imageSmoothingEnabled = smoothing;
+  // Full-size pieces are big (a megabyte or so each): fewer kept. What was drawn this frame is never
+  // dropped, though, or a screen holding more pieces than the cap would paint them again every frame.
+  const cap = res >= 1 ? 24 : MAX_CHUNKS;
+  if (chunks.size > cap) {
+    for (const key of chunks.keys()) {
+      if (chunks.size <= cap) break;
+      const chunk = chunks.get(key);
+      if (chunk && chunk.frame !== chunkFrame) chunks.delete(key);
+    }
+  }
+}
+
+// A picture of this piece of the map at another resolution (#zoom: what's drawn while this zoom's is being
+// painted), the finest there is
+/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy */
+function chunkOfArea(chunks, cx, cy) {
+  for (const res of [1, 0.5, 0.25, 0.125, 0.0625]) {
+    const chunk = chunks.get(`${res}|${cx},${cy}`);
+    if (chunk) return chunk;
+  }
+  return null;
 }
 
 // full-size pictures zoomed in, half zoomed out
 // (#306) How fine a piece is painted: about what the screen shows, and no finer (a power of two, so a piece
 // isn't painted again for every little change of zoom). Zoomed out to the whole map it used to paint and lay
-// down sixteen times the pixels that showed, which was most of what that view cost
-const chunkRes = () => Math.min(1, 2 ** Math.floor(Math.log2(Math.max(getViewScale(), 0.0625))));
+// down sixteen times the pixels that showed, which was most of what that view cost. Rounded (not ever
+// smaller) so the pictures reach a little past zoom 1 without going soft.
+const chunkRes = () => Math.min(1, 2 ** Math.round(Math.log2(Math.max(getViewScale(), 0.0625))));
 
 // The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
 // shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes
 // (the patches of the tiles round a piece too, for those spilling into it: the same either side of its edge)
-function paintGrass(g, x0, y0, x1, y1) {
+// Far out (res) a tile is a few pixels: its shade alone, the patches and tufts smaller than a pixel (#zoom)
+function paintGrass(g, x0, y0, x1, y1, res = 1) {
   g.fillStyle = '#2d4a22'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
   const gx0 = Math.max(0, x0 / TILE_SIZE - 1), gx1 = Math.min(game.COLS - 1, Math.ceil(x1 / TILE_SIZE));
   const gy0 = Math.max(0, y0 / TILE_SIZE - 1), gy1 = Math.min(game.ROWS - 1, Math.ceil(y1 / TILE_SIZE));
+  if (res < 0.4) {
+    // one path a shade (a fill and a colour change per tile was most of what painting a whole map cost)
+    /** @type {Map<string, number[]>} */
+    const byShade = new Map();
+    for (let gy = gy0; gy <= gy1; gy++) {
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const shade = GRASS_SHADES[tileVariantHash(gx, gy) % GRASS_SHADES.length];
+        let list = byShade.get(shade);
+        if (!list) byShade.set(shade, (list = []));
+        list.push(gx, gy);
+      }
+    }
+    for (const [shade, cells] of byShade) {
+      g.fillStyle = shade; g.beginPath();
+      for (let i = 0; i < cells.length; i += 2) g.rect(cells[i] * TILE_SIZE, cells[i + 1] * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      g.fill();
+    }
+    return;
+  }
   for (let gy = gy0; gy <= gy1; gy++) {
     for (let gx = gx0; gx <= gx1; gx++) {
       const hsh = tileVariantHash(gx, gy), x = gx * TILE_SIZE, y = gy * TILE_SIZE;
@@ -378,9 +431,11 @@ export function drawMapBorder() {
 // Desert and beach sand
 // (#298) the ground that rarely changes (sand, water, natural rock): zoomed out, where thousands of tiles
 // show, drawn into pictures (#299: in pieces, drawChunks) laid down each frame, a piece painted again only
-// when a tile in it or next to it changes; zoomed in, only the tiles on screen are drawn. Zoomed out it drew
-// every tile every frame: 180 fps down to 70
-const ZOOMED_OUT = 0.75;
+// when a tile in it or next to it changes; zoomed in further, only the tiles on screen are drawn. The
+// pictures go a little past zoom 1 too (a small map on a wide screen starts there): the rock faces and
+// water bands were the costliest thing drawn every frame, and a picture stretched by a few percent reads
+// as well as the tiles painted again.
+const CACHED_UP_TO = 1.15;
 let view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity }, cached = false;
 const isRock = r => !r.oreSpawner;
 const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, game.naturalRocks, game.ironOres, game.coalOres];
@@ -412,10 +467,11 @@ function tilesAround(list, x0, y0, x1, y1) {
   return found.sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
-function paintTerrain(g, x0, y0, x1, y1) {
+function paintTerrain(g, x0, y0, x1, y1, res = 1) {
   const terrain = getTileIndex();
   target = g;
   try {
+    if (res < 0.4) { paintTerrainFar(g, x0, y0, x1, y1); return; } // (#zoom) a far tile: its shade alone
     tilesAround(game.desertTiles, x0, y0, x1, y1).forEach(drawDesertTile);
     tilesAround(game.beachTiles, x0, y0, x1, y1).forEach(drawDesertTile);
     tilesAround(game.waterTiles, x0, y0, x1, y1).forEach(t => drawWaterTile(t, terrain));
@@ -425,12 +481,46 @@ function paintTerrain(g, x0, y0, x1, y1) {
   } finally { target = null; }
 }
 
+// Zoomed out to the whole map a tile is a few screen pixels: its own shade, and for ore a speck of the metal,
+// is all that shows. Painting the whole joined-edge art of every tile was most of what that view cost, and
+// the first fill of a whole map's worth of pictures made zooming out stutter (#zoom). One path a colour: a
+// fill and a colour change for every one of a map's tiles was most of what painting it still cost.
+function paintTerrainFar(g, x0, y0, x1, y1) {
+  /** @type {Map<string, number[]>} */
+  const areas = new Map();
+  const add = (color, x, y, size = TILE_SIZE) => {
+    let list = areas.get(color);
+    if (!list) areas.set(color, (list = []));
+    list.push(x - size / 2, y - size / 2, size);
+  };
+  const shadeOf = (list, shades) => tilesAround(list, x0, y0, x1, y1)
+    .forEach(t => add(shades[tileVariantHash(t.x, t.y) % shades.length], t.x, t.y));
+  shadeOf(game.desertTiles, DESERT_SHADES);
+  shadeOf(game.beachTiles, DESERT_SHADES);
+  shadeOf(game.waterTiles, WATER_SHADES);
+  const ore = (t, kind) => {
+    add(ROCK_SHADES[tileVariantHash(t.x, t.y) % ROCK_SHADES.length], t.x, t.y);
+    add(ORE_COLORS[kind].body, t.x, t.y, 10);
+  };
+  tilesAround(game.naturalRocks, x0, y0, x1, y1).forEach(r => {
+    if (isRock(r)) add(ROCK_SHADES[tileVariantHash(r.x, r.y) % ROCK_SHADES.length], r.x, r.y);
+    else ore(r, r.oreSpawner);
+  });
+  tilesAround(game.ironOres, x0, y0, x1, y1).forEach(o => ore(o, 'iron'));
+  tilesAround(game.coalOres, x0, y0, x1, y1).forEach(o => ore(o, 'coal'));
+  for (const [color, cells] of areas) {
+    g.fillStyle = color; g.beginPath();
+    for (let i = 0; i < cells.length; i += 3) g.rect(cells[i], cells[i + 1], cells[i + 2], cells[i + 2]);
+    g.fill();
+  }
+}
+
 const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view.y1, fn);
 
 export function drawSand() {
-  // this frame: zoomed out (the pictures), or the tiles on screen (with a tile's margin)
+  // this frame: the pictures (up to about zoom 1), or the tiles on screen (with a tile's margin)
   view = getViewRect(TILE_SIZE);
-  cached = getViewScale() < ZOOMED_OUT && typeof document !== 'undefined';
+  cached = getViewScale() <= CACHED_UP_TO && typeof document !== 'undefined';
   if (cached) { drawChunks('terrain', chunkRes(), terrainStamp, paintTerrain); return; }
   inView(game.desertTiles, drawDesertTile);
   inView(game.beachTiles, drawDesertTile);

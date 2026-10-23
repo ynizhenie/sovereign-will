@@ -7,6 +7,14 @@ test('an idle settler by a campfire: it stands by it and its morale rises past i
   expect(sim.idleCampfire({})).toEqual({ byFire: true, moraleAbove: true, activity: 'idleCampfire' });
 });
 
+test('an idle settler brings fuel to an unlit campfire before sitting beside it', () => {
+  expect(sim.idleLightsCampfire({})).toEqual({ lit: true, satOnlyWhenLit: true, broughtFuel: true });
+});
+
+test('an idle settler does not sit by an unlit campfire without fuel', () => {
+  expect(sim.idleLightsCampfire({ hasFuel: false })).toEqual({ lit: false, satOnlyWhenLit: true, broughtFuel: false });
+});
+
 test('idle settlers with nothing to do get together in a knot "talking"', () => {
   expect(sim.idleTalk({})).toEqual({ knot: true });
 });

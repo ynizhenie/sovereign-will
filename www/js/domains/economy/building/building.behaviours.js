@@ -3,7 +3,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats } from '../../colony/equipment/index.js';
-import { addResources, canAfford, fetchFromStorage, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
+import { addResources, canAfford, fetchFromStorage, isAtTownHall, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
 import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
 import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
 import { makeAppleTree } from '../farming/index.js';
@@ -85,8 +85,7 @@ export function repairTownHall(s, tick) {
   if (townHall.repairRequested && townHall.hp < townHall.maxHp && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed) {
     const repair = GAME_CONFIG.repairs.townHall;
     if (canAfford(repair.cost)) {
-      let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-      if (dist > townHall.radius + s.radius + 4) {
+      if (!isAtTownHall(s)) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
         return true;
       } else {

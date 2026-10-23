@@ -131,7 +131,7 @@ export function enterMenuWorld(scene = '') {
     map.buildings.push(['dung_heap', ...near(-3, 1)]);
   }
   game.gameMode = 'endless';
-  resetGame(map);
+  resetGame(map, false);
   game.gameMode = 'menu';
   game.settlers = [];
   if (sceneName === 'hunt') {

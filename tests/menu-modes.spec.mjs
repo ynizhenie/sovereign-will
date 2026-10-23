@@ -24,7 +24,7 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   expect(errors).toEqual([]);
 });
 
-test('two difficulties: on Hard enemies are as strong as the player\'s own units (#39, #255)', async ({ page }) => {
+test('two difficulties: fewer enemies on Normal; on Hard they are as strong as the player\'s units (#39, #255)', async ({ page }) => {
   await openFresh(page);
   await page.click('#mode-endless');
   expect(await page.locator('.difficulty-option').count()).toBe(2);
@@ -34,13 +34,14 @@ test('two difficulties: on Hard enemies are as strong as the player\'s own units
     applySeedFromUI(); resetGame();
     waveNum = 11; startNextWave();
     const raider = enemies.find(e => e.enemyKey === 'raider'), brute = enemies.find(e => e.enemyKey === 'brute');
-    return { enemies: enemies.length, raider: raider && [raider.maxHp, raider.damage, raider.speed], brute: brute && brute.maxHp };
+    return { enemies: enemies.length, enemyCount: getDifficulty().enemyCount, raider: raider && [raider.maxHp, raider.damage, raider.speed], brute: brute && brute.maxHp };
   }));
+  expect(r[0].enemyCount).toBe(0.75);
+  expect(r[1].enemyCount).toBe(0.9);
   expect(r[0].raider).toEqual([75, 50, 1]);
   // a settler's: 100 hp, a sword's 20 a hit every 0.4 s, at a settler's pace; a brute as a giant (250)
   expect(r[1].raider).toEqual([100, 50, 1]);
   if (r[1].brute) expect(r[1].brute).toBe(250);
-  expect(r[1].enemies).toBe(r[0].enemies);
 });
 
 test('the game runs at the same speed whatever the frame rate (#39)', async ({ page }) => {

@@ -1,7 +1,7 @@
 // (#299) The base's land, Endless only: settlers work and the player builds only on it. A square round the
 // town hall as big as a default map (GAME_CONFIG.territory.startTiles: the start as it was), and round each
-// building (but walls, doors, spikes, traps, torches and crops: `skip`) a circle of buildingTiles, so the base
-// spreads as it's built out. Elsewhere (Battles, the editor, the menu's world) all the map is the base's.
+// player building (but enemy camp structures and walls, doors, spikes, traps, torches and crops: `skip`) a
+// circle of buildingTiles, so the base spreads as it's built out. Elsewhere all the map is the base's.
 //
 // Kept as a tile mask, made again only when the buildings change, with the box round it (what's searched
 // for work: a big map's resources far off aren't even looked at).
@@ -16,15 +16,11 @@ const config = () => GAME_CONFIG.territory;
 /** @type {{ stamp: any[], mask: Uint8Array, box: { x0: number, y0: number, x1: number, y1: number } } | null} */
 let territory = null;
 
-// Off while the settlers are in an enemy camp (a raid's: its own small map, #255)
-let enabled = true;
-export function setTerritoryEnabled(on) { enabled = on; }
-
 // Whether there's a base's land at all (Endless, at home), or all the map counts
-export const hasTerritory = () => enabled && game.gameMode === 'endless';
+export const hasTerritory = () => game.gameMode === 'endless';
 
 function counts(b) {
-  return !config().skip.includes(b.type);
+  return !b.campId && !config().skip.includes(b.type);
 }
 
 export function getTerritory() {

@@ -12,6 +12,8 @@ import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowa
 import { getBaseRadius, isDefenseAlert, isInSafeArea } from '../../conflict/combat/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
+import { claimBuildingJob, isBuildingJobFree } from '../../economy/building/index.js';
+import { fetchFromStorage, stock, takeStock } from '../storage/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
 
 const config = () => GAME_CONFIG.idle;
@@ -24,8 +26,9 @@ const byId = id => game.settlers.find(o => o.id === id) || null;
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfiresOnce = onceThisTick();
 // (#306) the fires looked for once a tick: isInSafeArea for every building, for every settler sitting by one
-const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y)));
+const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' && !b.campId && isInSafeArea(b.x, b.y)));
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
+const fireFuel = () => Object.keys(GAME_CONFIG.cooking.fuel).find(id => stock[id] > 0) || null;
 
 // (#298) the places to sit by a campfire: on each of its four sides, a tile that's free and that `s` can get
 // to; four at most round one fire
@@ -40,7 +43,9 @@ const seatTaken = (fire, seat, s) => game.settlers.some(o => o !== s && o.idle &
   o.idle.spot && Math.hypot(o.idle.spot.x - fire.x, o.idle.spot.y - fire.y) < 1);
 // A free seat for `s` at a campfire, the nearest fire's first: { fire, seat } or null
 export function freeCampfireSeat(s) {
-  for (const fire of [...campfires()].sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
+  for (const fire of [...campfires()].filter(fire => (fire.fuelLeft || 0) > 0 ||
+    (fireFuel() && isBuildingJobFree(fire, 'cook', s) && isBuildingJobFree(fire, 'light', s)))
+    .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
     const free = seatsOf(fire, s).filter(p => !seatTaken(fire, p.seat, s)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (free) return { fire, seat: free.seat };
   }
@@ -148,6 +153,16 @@ export function idlePastime(s, tick) {
       }
       const place = seatsOf(fire, null).find(p => p.seat === idle.seat);
       if (!place) { idle.left = 0; return false; }
+      if (!((fire.fuelLeft || 0) > 0)) {
+        if (!isBuildingJobFree(fire, 'cook', s) || !claimBuildingJob(fire, 'light', s)) { idle.left = 0; return false; }
+        const fuel = fireFuel();
+        if (!fuel) { idle.left = 0; return false; }
+        idle.left += tick.dt;
+        return fetchFromStorage(s, fuel, tick.dt, () => {
+          const amount = takeStock(fuel, 1);
+          if (amount > 0) s.carrying = { type: fuel, amount, forCampfire: fire };
+        });
+      }
       goStand(s, place, tick.dt, fire);
       if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) {
         cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
@@ -216,6 +231,29 @@ export function idlePastime(s, tick) {
     default:
       return false;
   }
+}
+
+// Bring idle-time fuel to the fire before the general carrying behaviour returns it to storage.
+export function lightCampfire(s, tick) {
+  const load = s.carrying;
+  if (!load || !load.forCampfire) return false;
+  const fire = load.forCampfire;
+  if (!game.buildings.includes(fire) || !GAME_CONFIG.cooking.fuel[load.type]) {
+    delete load.forCampfire;
+    return false;
+  }
+  if (!claimBuildingJob(fire, 'light', s)) {
+    delete load.forCampfire;
+    return false;
+  }
+  if (Math.hypot(fire.x - s.x, fire.y - s.y) > 32) {
+    moveEntityTowards(s, fire.x, fire.y, s.speed, false, tick.dt);
+    return true;
+  }
+  fire.fuelLeft = (fire.fuelLeft || 0) + GAME_CONFIG.cooking.fuel[load.type] * load.amount;
+  fire.burning = 1;
+  s.carrying = null;
+  return true;
 }
 
 // (#306) A tune now and then: one carrying a flute stops what it's doing for a while and plays by a campfire

@@ -155,6 +155,23 @@ export function drawWatchtowerArt(x, y) {
   for (const [px, py] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]) { ctx.fillStyle = '#3e2723'; ctx.beginPath(); ctx.arc(x + px, y + py, 2, 0, Math.PI * 2); ctx.fill(); }
 }
 
+// A grave (the undead's home): a mound of dark earth, a round-topped headstone with a cross cut in it,
+// a bone at its foot
+export function drawGraveArt(x, y) {
+  shadow(x, y + 3, 24, 15, 8);
+  ctx.fillStyle = '#2f2a2e'; ctx.beginPath(); ctx.ellipse(x, y + 6, 13, 6.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3b3539'; ctx.beginPath(); ctx.ellipse(x, y + 5, 10, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+  // the headstone, its slab and the cross cut into it
+  ctx.fillStyle = '#95a5a6'; ctx.beginPath();
+  ctx.moveTo(x - 6, y + 7); ctx.lineTo(x - 6, y - 6); ctx.arc(x, y - 6, 6, Math.PI, 0); ctx.lineTo(x + 6, y + 7); ctx.closePath();
+  ctx.fill(); ctx.strokeStyle = '#5d6d7e'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = '#5d6d7e'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x, y - 1); ctx.moveTo(x - 3, y - 7.5); ctx.lineTo(x + 3, y - 7.5); ctx.stroke();
+  // a bone at its foot
+  ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 7, y + 9); ctx.lineTo(x + 12, y + 10.5); ctx.stroke();
+}
+
 // The demons' den: a mound of dark stone, horned at the top, its mouth glowing
 export function drawDenArt(x, y) {
   shadow(x, y + 2, 26, 20, 10);

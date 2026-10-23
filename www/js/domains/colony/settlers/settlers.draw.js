@@ -199,9 +199,12 @@ export function isCrafting(s) {
 // The load in front of it, held in both hands (drawn around its centre, after translate)
 // where a load in its hands is: held at its chest, a little out in front (#298: it hung in the air out past
 // its body, at its feet facing us; both its hands on it, drawFigure's carryPoint)
-const carryAt = s => ({ x: Math.cos(s.facing || 0) * s.visualRadius * 0.5, y: Math.sin(s.facing || 0) * s.visualRadius * 0.3 + s.visualRadius * 0.05 });
-function drawCarriedInHands(s) {
-  const type = s.carrying.type;
+export const carryAt = s => {
+  const radius = s.visualRadius || s.radius;
+  return { x: Math.cos(s.facing || 0) * radius * 0.5, y: Math.sin(s.facing || 0) * radius * 0.3 + radius * 0.05 };
+};
+export function drawCarriedInHands(s, carrying = s.carrying) {
+  const type = carrying.type;
   const f = s.facing || 0;
   const { x, y } = carryAt(s);
   if (type === 'dung') {
@@ -248,7 +251,7 @@ function drawSideTorch(facing, r) {
 }
 
 // Asleep (#257): a few z's drifting up off it
-function drawSleepZs(x, y) {
+export function drawSleepZs(x, y) {
   const t = performance.now() / 1000;
   ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
   for (let k = 0; k < 3; k++) {
@@ -284,7 +287,8 @@ export const facesAway = unit => Math.sin(unit.facing || 0) < -0.25;
 const radiusOf = unit => unit.visualRadius || unit.radius || 11;
 // its hand (and what's in it) up behind its body: facing away, or to the left (the hand's on its right)
 // (eating, its food's at its mouth: in front of it, so behind its body only when its face is turned away)
-export const heldBehind = unit => unit.eating ? facesAway(unit) : (unit.carrying && isCarryingInHands(unit)
+export const heldBehind = unit => unit.eating ? facesAway(unit) : ((unit.carrying && isCarryingInHands(unit)) ||
+  (unit.campCarrying && (unit.campCarrying.rawMeat > 0 || unit.campCarrying.firewood > 0))
   ? Math.sin(unit.facing || 0) * (radiusOf(unit) + 3) < -radiusOf(unit) * 0.1
   : handAt(unit, radiusOf(unit)).y < -radiusOf(unit) * 0.1);
 // what's on its back behind its body: facing us, or to a side
@@ -500,7 +504,7 @@ export function drawSideItems(s, front = true) {
 // The held item across the back: turned square to where the unit faces, behind it
 export function applyBackPose(unit) {
   ctx.rotate((unit.facing || 0) + Math.PI / 2);
-  ctx.translate(-10, unit.visualRadius * 0.7); // (its grip a little off the middle of its back, #279)
+  ctx.translate(-10, (unit.visualRadius || unit.radius || 11) * 0.7); // (its grip a little off the middle of its back, #279)
 }
 
 // Armour on a figure of that radius, over its body and fitted to it (#298), seen from the front or (back) from

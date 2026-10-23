@@ -10,6 +10,7 @@ Object.assign(window.sim, (() => {
   function campfire({ seed = 'idle-fire' } = {}) {
     asFaction('humans', seed);
     const fire = placeBuilding('campfire', nearHall(4, 0).x, nearHall(4, 0).y);
+    fire.fuelLeft = 5;
     const s = makeSettler(1, townHall.x - 40, townHall.y + 40);
     settlers = [s];
     run(0.5, { each: fed });
@@ -17,6 +18,26 @@ Object.assign(window.sim, (() => {
     s.morale = baseMorale(s, 'settler') - 20;
     run(15, { each: fed });
     return { byFire: Math.hypot(s.x - fire.x, s.y - fire.y) < 45, moraleAbove: s.morale > baseMorale(s, 'settler'), activity: s.activity };
+  }
+
+  // An idle settler brings fuel to an unlit campfire before sitting beside it.
+  function lightsCampfire({ seed = 'idle-light-fire', hasFuel = true } = {}) {
+    asFaction('humans', seed);
+    const fire = placeBuilding('campfire', nearHall(4, 0).x, nearHall(4, 0).y);
+    stock.firewood = hasFuel ? 1 : 0;
+    const s = makeSettler(1, townHall.x - 40, townHall.y + 40);
+    settlers = [s];
+    let satWhileUnlit = false;
+    run(30, { each: () => {
+      fed();
+      if (s.idle && s.idle.act === 'campfire' && Math.hypot(s.x - fire.x, s.y - fire.y) < 45 && !(fire.fuelLeft > 0)) satWhileUnlit = true;
+      if (!s.idle || s.idle.act !== 'campfire') s.idle = { act: 'campfire', left: 60, spot: { x: fire.x, y: fire.y }, partnerId: null, seat: 0 };
+    } });
+    return {
+      lit: fire.fuelLeft > 0,
+      satOnlyWhenLit: !satWhileUnlit,
+      broughtFuel: stock.firewood < (hasFuel ? 1 : 0)
+    };
   }
 
   // Three idle workers and nothing to do: before long two of them stand together "talking"
@@ -73,5 +94,5 @@ Object.assign(window.sim, (() => {
     return { onGround: dung.length, inHeap: heap ? heap.dung || 0 : null, activity: [...carried][0] || null };
   }
 
-  return { idleCampfire: campfire, idleTalk: talk, idleSpar: spar, idleSway: sway, idleDungHeap: dungHeap };
+  return { idleCampfire: campfire, idleLightsCampfire: lightsCampfire, idleTalk: talk, idleSpar: spar, idleSway: sway, idleDungHeap: dungHeap };
 })());

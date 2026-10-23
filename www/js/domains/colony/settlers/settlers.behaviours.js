@@ -19,7 +19,7 @@ import { getFrontier, getTerritoryBox, inReliefZone, inTerritory, isVisible, isW
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, escortGatherers, fightEnemies, hasActiveWaveEnemy, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
@@ -29,7 +29,7 @@ import { collectBones, corpsesToGraves, necromancy } from '../../factions/undead
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip, isBowWeapon } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
-import { IDLE_ACTIVITIES, cleanDung, fluteBreak, idlePastime } from './settlers.idle.js';
+import { IDLE_ACTIVITIES, cleanDung, fluteBreak, idlePastime, lightCampfire } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
 import { isPet } from './settlers.rules.js';
@@ -58,8 +58,8 @@ export function createSettlerTick(dt) {
 
   return {
     dt,
-    isWaveActive: game.enemies.length > 0 || (game.portalQueue || []).length > 0, // (demons still to come out, #250)
-    tents: game.buildings.filter(isShelter), // tents or graves
+    isWaveActive: hasActiveWaveEnemy() || (game.portalQueue || []).length > 0, // (demons still to come out, #250)
+    tents: game.buildings.filter(b => !b.campId && isShelter(b)), // tents or graves
     allResources,
     resourceKind,
     markedResources,
@@ -90,8 +90,10 @@ export function createSettlerTick(dt) {
     defendersCount,
     // unarmed workers only help destroy enemy tents when there's nobody armed to do it
     workersHelpTents: defendersCount === 0,
-    // what's left of the wave is down to a few enemies (tent-summoned ones don't count): go destroy the tents
-    tentAssault: game.enemyTents.length > 0 && game.enemies.filter(en => !en.summoned).length <= 5
+    // Only after the wave and its portal queue are fully cleared; raiding an enemy camp is a separate order.
+    tentAssault: !isDefenseAlert() && !hasActiveWaveEnemy() && !(game.portalQueue || []).length &&
+      game.enemyTents.some(et => !et.campId) &&
+      game.enemies.filter(en => !en.summoned && !en.campId && !en.campDefender).length <= 5
   };
 }
 
@@ -240,6 +242,11 @@ function leaveColony(s, tick) {
   return true;
 }
 
+function defendWithoutSoldiers(s, tick) {
+  if (!tick.isWaveActive || tick.defendersCount > 0 || s.isPossessed || s.towerAssignment || s.weapon !== 'fist') return false;
+  return fightEnemies(s, tick);
+}
+
 export const SETTLER_BEHAVIOURS = [
   leaveColony,
   playerControlled,
@@ -248,6 +255,7 @@ export const SETTLER_BEHAVIOURS = [
   battleOrders, // (a battle with the auto battle off, #255)
   panic,
   strikeBack,
+  defendWithoutSoldiers,
   sleepAtNight,
   fetchNightTorch,
   carryCaptive,
@@ -277,6 +285,7 @@ export const SETTLER_BEHAVIOURS = [
   lightTorches,
   baitTrap,
   deliverMaterials,
+  lightCampfire,
   deliverCarrying,
   fluteBreak, // (#306: a settler with a flute stops now and then for a tune by a campfire)
   repairTent,
@@ -311,8 +320,8 @@ export const SETTLER_BEHAVIOURS = [
 
 // (#298) one got up at night for the player's order does that and nothing else: what was marked, the build,
 // bringing it what it needs; the rest (cooking, firewood, gathering what wasn't marked...) waits for the day
-const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, battleOrders, panic, strikeBack, sleepAtNight,
-  fetchNightTorch, deliverMaterials, deliverCarrying, fightEnemies, build, harvestMarked, harvest, patrol]);
+const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, battleOrders, panic, strikeBack, defendWithoutSoldiers, sleepAtNight,
+  fetchNightTorch, deliverMaterials, lightCampfire, deliverCarrying, fightEnemies, build, harvestMarked, harvest, patrol]);
 
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {

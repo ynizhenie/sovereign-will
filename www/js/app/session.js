@@ -12,9 +12,9 @@ import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
 import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
-import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
+import { createRaidCamp, isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
 
-export function resetGame(map) {
+export function resetGame(map, createCamp = true) {
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu
   if (map === undefined) map = game.gameMode === 'endless' ? game.customMap : null;
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise
@@ -23,7 +23,7 @@ export function resetGame(map) {
   addResources(getPlayerFaction().startResources);
   if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food
   if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings
-  game.waveTimer = game.waveInterval; game.boarRespawnTimer = 25; game.waveNum = 1;
+  game.waveTimer = game.waveInterval; game.boarRespawnTimer = 25; game.waveNum = 1; game.wavePrepared = false; game.waveMarchPaused = false;
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
@@ -46,6 +46,7 @@ export function resetGame(map) {
   );
   // the undead start with a necromancer too: one more with the staff (#253)
   if (getPlayerFaction().startNecromancer) game.settlers.push(Object.assign(createSettler(getPlayerFaction().startUnits, 103, townHall.x, townHall.y + 45), { tool: 'necro_staff' }));
+  if (createCamp) createRaidCamp();
 
   updateUnitCounts();
   syncCards(); // (#255: all locked again, or none out of Endless's cards)

@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { addFood, getStorages, hasRoomToCarry, isFoodKind, moveSettlerToTownHall, stock, stockLeft } from './storage.rules.js';
+import { addFood, getStorages, hasRoomToCarry, isAtTownHall, isFoodKind, moveSettlerToTownHall, stock, stockLeft } from './storage.rules.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { takeFishingBait } from '../../economy/fishing/index.js';
@@ -71,7 +71,7 @@ export function findNearestStorage(s) {
 
 export function isAtStorage(s, storage) {
   const d = Math.hypot(storage.x - s.x, storage.y - s.y);
-  return storage === townHall ? d <= townHall.radius + s.radius + 4 : d <= 34;
+  return storage === townHall ? isAtTownHall(s) : d <= 40;
 }
 
 export function walkToStorage(s, storage, dt) {

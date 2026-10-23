@@ -3,16 +3,15 @@
 // ---- Equipment and hauling
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { game } from '../../../engine/world/index.js';
 import { applyBowUnit, isBowWeapon, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
-import { addResources, moveSettlerToTownHall } from '../storage/index.js';
+import { addResources, isAtTownHall, moveSettlerToTownHall } from '../storage/index.js';
 import { says } from '../settlers/index.js';
 
 // Go to the town hall to swap weapon/tool/armour the player ordered
 export function equip(s, tick) {
   if (s.targetEquipment) {
-    let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
-    if (dist > townHall.radius + s.radius) {
+    if (!isAtTownHall(s)) {
       moveSettlerToTownHall(s, s.speed, tick.dt);
     } else {
       let equipment = s.targetEquipment;

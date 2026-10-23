@@ -7,7 +7,7 @@
 
 import { game } from '../engine/world/index.js';
 import { audio, camera, canvas, getViewScale, midi, noise, screenPixelRatio, startAudio, tone } from '../engine/platform/index.js';
-import { isDefeated } from '../modes/endless/index.js';
+import { isDefeated, isRaiding } from '../modes/endless/index.js';
 import { battle } from '../modes/battle/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../domains/factions/index.js';
@@ -287,8 +287,11 @@ export function musicMix() {
   if (game.gameMode === 'battle') return battle.phase === 'fight' ? { [trackFor(true)]: 1 } : { [trackFor(false)]: 0.8 };
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
-  // a wave is on until the last enemy and enemy tent are gone
-  const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
+  // An inactive camp is scenery, not a battle. Its defenders and buildings count once a raid begins.
+  const fighting = game.enemies.some(en => en.hp > 0 &&
+    (!en.campDefender && (!en.campId || en.fromWave || en.summoned) || isRaiding())) ||
+    game.enemyTents.some(et => et.hp > 0 && (!et.campId || isRaiding())) ||
+    game.enemyTentBlueprints.some(bp => !bp.campId) || isRaiding();
   const mix = { [trackFor(fighting)]: pause };
   // (#279) one playing a flute by a campfire, in view: its tune over the music, softer the farther it is
   const flutes = Object.keys(GAME_CONFIG.music).filter(id => id.startsWith('flute_'));

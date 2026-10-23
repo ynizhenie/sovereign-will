@@ -1,16 +1,18 @@
 // The demons: portals in pairs, and the enemy's portals a wave comes through
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { getFrontierTiles } from '../../world/index.js';
+import { getFrontierTiles, inTerritory } from '../../world/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction } from '../index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
 import { getBaseRadius } from '../../conflict/combat/index.js';
 
-// The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th...
-export function getPortalPairs() {
-  const portals = game.buildings.filter(b => b.type === 'portal');
+// The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th... A side, in a battle,
+// pairs only its own (an endless colony's portals have no side: they all belong to it)
+/** @param {'green' | 'red' | null} [side] */
+export function getPortalPairs(side = null) {
+  const portals = game.buildings.filter(b => b.type === 'portal' && (!side || b.side === side));
   const pairs = [];
   for (let i = 0; i + 1 < portals.length; i += 2) pairs.push([portals[i], portals[i + 1]], [portals[i + 1], portals[i]]);
   return pairs;
@@ -20,9 +22,13 @@ export function getPortalPairs() {
 // the far one (next to it). Returns where to walk to instead, or null to go straight; true once stepped through.
 export const PORTAL_SAVING = 90; // px the way through must save to be worth it
 
-export function takePortal(entity, targetX, targetY) {
+/**
+ * @param {{ x: number, y: number, path?: { x: number, y: number }[] | null, pathTarget?: { x: number, y: number } | null }} entity
+ * @param {'green' | 'red' | null} [side] in a battle, only the portals of this side
+ */
+export function takePortal(entity, targetX, targetY, side = null) {
   const direct = Math.hypot(targetX - entity.x, targetY - entity.y);
-  for (const [near, far] of getPortalPairs()) {
+  for (const [near, far] of getPortalPairs(side)) {
     const toNear = Math.hypot(near.x - entity.x, near.y - entity.y);
     if (toNear + Math.hypot(targetX - far.x, targetY - far.y) + PORTAL_SAVING >= direct) continue;
     if (toNear > 30) return near;
@@ -42,8 +48,7 @@ export function takePortal(entity, targetX, targetY) {
   return null;
 }
 
-// A demon portal opens on a free tile the settlers can reach, anywhere but near the town hall: never in the
-// base (#250: awayTiles past its edge at least)
+// A demon portal opens on reachable player territory, past the town hall's base radius (#250).
 export function openDemonPortal() {
   const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
   const minDist = Math.max(getEnemyFaction().minPortalTiles * TILE_SIZE, getBaseRadius() + GAME_CONFIG.portalWave.awayTiles * TILE_SIZE);
@@ -52,7 +57,7 @@ export function openDemonPortal() {
     const gx = f.gx0 + BORDER_MARGIN + Math.floor(rand() * (f.gx1 - f.gx0 + 1 - 2 * BORDER_MARGIN));
     const gy = f.gy0 + BORDER_MARGIN + Math.floor(rand() * (f.gy1 - f.gy0 + 1 - 2 * BORDER_MARGIN));
     const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
-    if (Math.hypot(x - townHall.x, y - townHall.y) < minDist || isTileOccupied(x, y) || getReachSteps(reach, gx, gy) < 0) continue;
+    if (!inTerritory(x, y) || Math.hypot(x - townHall.x, y - townHall.y) < minDist || isTileOccupied(x, y) || getReachSteps(reach, gx, gy) < 0) continue;
     if (game.enemyTents.some(t => Math.hypot(t.x - x, t.y - y) < 4 * TILE_SIZE)) continue;
     const tents = GAME_CONFIG.enemyTents;
     game.enemyTents.push({ x, y, hp: tents.hp, maxHp: tents.hp, summonTimer: 0, summonsLeft: tents.summonsPerWave, portal: true });

@@ -6,7 +6,7 @@ export const difficultyConfig = {
   // a settler's hands, a bow's rate of fire. Only the hp differs: enemyHp times the player's own.
   // enemyCount: enemies per wave.
   difficulty: {
-    normal: { enemyCount: 1, enemyHp: 0.75 },
-    hard: { enemyCount: 1, enemyHp: 1 }
+    normal: { enemyCount: 0.75, enemyHp: 0.75 },
+    hard: { enemyCount: 0.9, enemyHp: 1 }
   }
 };

@@ -81,7 +81,7 @@ export function carryCaptive(s, tick) {
     return false;
   }
   s.patrolTarget = null;
-  if (near(cage, s) > 30) { moveEntityTowards(s, cage.x, cage.y, s.speed * GAME_CONFIG.corpseHaul.speed, false, tick.dt); return true; }
+  if (near(cage, s) > 50) { moveEntityTowards(s, cage.x, cage.y, s.speed * GAME_CONFIG.corpseHaul.speed, false, tick.dt); return true; }
   const { enemy, ...captive } = load.captive;
   void enemy;
   cage.captive = captive;
@@ -101,7 +101,7 @@ export function tendCorpses(s, tick) {
     const pit = load.forPit;
     if (!game.buildings.includes(pit) || pitRoom(pit) <= 0) { delete load.forPit; return false; } // (to the heap, carryCorpse)
     s.patrolTarget = null;
-    if (near(pit, s) > 30) { moveEntityTowards(s, pit.x, pit.y, s.speed * GAME_CONFIG.corpseHaul.speed, false, tick.dt); return true; }
+    if (near(pit, s) > 50) { moveEntityTowards(s, pit.x, pit.y, s.speed * GAME_CONFIG.corpseHaul.speed, false, tick.dt); return true; }
     (pit.corpses = pit.corpses || []).push(load.corpse);
     s.carrying = null;
     return true;
