@@ -23,7 +23,7 @@ test('a medic fills its bag with herbs at the town hall and gives them back with
     const soldier = makeSettler(1, townHall.x + 60, townHall.y, { weapon: 'sword', role: 'soldier', hp: 90, isPossessed: true });
     const medic = makeSettler(2, townHall.x, townHall.y + 60, { tool: 'medbag' });
     settlers = [soldier, medic];
-    const en = createConfiguredEnemy({ x: 3 * TILE_SIZE + 15, y: 3 * TILE_SIZE + 15 }, 'raider'); en.speed = 0; en.damage = 0;
+    const en = createConfiguredEnemy({ x: 3 * TILE_SIZE + 15, y: 3 * TILE_SIZE + 15 }, 'raider'); en.speed = 0; en.damage = 0; en.fromWave = true;
     enemies = [en];
     stock.herbs = 8;
     window.sim.run(3, { each: () => { keys.w = keys.a = keys.s = keys.d = false; } });

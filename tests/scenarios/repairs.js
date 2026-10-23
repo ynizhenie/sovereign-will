@@ -13,7 +13,7 @@ Object.assign(window.sim, (() => {
     run(10);
     const beforeOrder = wall.hp / wall.maxHp;
     toggleBuildingRepair(wall);
-    run(20);
+    run(4);
     return { beforeOrder, after: wall.hp / wall.maxHp, stillOrdered: !!wall.repairRequested, stoneSpent: 100 - stock.stone,
       stepCost: getRepairStep(wall).cost };
   }

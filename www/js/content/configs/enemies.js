@@ -47,7 +47,7 @@ export const enemiesConfig = {
     // a medic with a bag of herbs: heals the other raiders (#203)
     raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.5, reach: 6, siege: { buildings: 5, resources: 1 },
-      healer: { range: 220, healRange: 30, healPerSecond: 10 }, unlock: 'medbag' },
+      healer: { range: 220, healRange: 30, healPerSecond: 10 }, unlock: 'medbag', waveUnlock: 4 },
     // the undead: slow zombies, big zombies, zombie archers, and necromancers that raise the dead
     // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
     // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
@@ -113,7 +113,7 @@ export const enemiesConfig = {
   // army.base settlers, perUnit more (or less) for each one over (under) it, within min..max. A wave
   // always has at least one enemy.
   waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 },
-    firstWave: 0.8, rampPerWave: 0.07, growFromWave: 3, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
+    firstWave: 0.75, rampPerWave: 0.25, growFromWave: 3, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
 
   attackGroups: [
     // base squad templates (for the starting difficulty)

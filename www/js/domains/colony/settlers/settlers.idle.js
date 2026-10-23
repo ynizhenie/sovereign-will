@@ -198,7 +198,6 @@ export function idlePastime(s, tick) {
       idle.dug = (idle.dug || 0) + tick.dt;
       if (idle.dug >= GAME_CONFIG.digWorms.seconds) {
         idle.dug = 0;
-        idle.left = 0;
         if (rand() < GAME_CONFIG.digWorms.chance) s.carrying = { type: 'worms', amount: 1 };
       }
       return true;

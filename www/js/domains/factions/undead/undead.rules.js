@@ -73,8 +73,9 @@ export function toggleBlightZone(x, y, gx, gy, clearOnly) {
     else if (!clearOnly) delete existing.clearing;
     return;
   }
-  if (clearOnly || isBorderZone(gx, gy) || isTownHallSpawnTile(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
+  if (clearOnly) return;
   if (isBaseBlighted(x, y)) { showNotification(t('blight.already'), true); return; }
+  if (isBorderZone(gx, gy) || isTownHallSpawnTile(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
   game.blightZones.push({ x, y, done: false });
 }
 

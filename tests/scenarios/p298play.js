@@ -44,6 +44,7 @@ Object.assign(window.sim, (() => {
     putOnGear(s, 'armor');
     const swapped = { armor: s.armor, hp: s.maxHp - hp0, stored: armory['gear:leather_armor'] || 0 };
     playerGear = { armor: false, shield: false, leather: true };
+    s.armor = null;
     waveNum = 30;
     enemies = [];
     for (let i = 0; i < 3; i++) startNextWave();

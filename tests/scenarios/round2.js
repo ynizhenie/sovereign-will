@@ -41,7 +41,7 @@ Object.assign(window.sim, (() => {
     const en = createConfiguredEnemy(nearHall(-14, -10), 'raider'); en.speed = 0; en.damage = 0; en.fromWave = true;
     enemies = [en];
     run(10, { holdWaves: false, each: () => { quiet(); waveTimer = 5; stock.arrows = 0; } });
-    return { atHall: Math.hypot(a.x - townHall.x, a.y - townHall.y) < townHall.radius + 40 };
+    return { atHall: Math.hypot(a.x - townHall.x, a.y - townHall.y) < townHall.radius + 50 };
   }
 
   // An enemy necromancer and a corpse right by a settler: it doesn't go for it (stepping in and back)

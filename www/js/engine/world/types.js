@@ -310,6 +310,7 @@
  * @property {Settler | null} selectedSettler
  * @property {Object | null} defensePlan
  * @property {number} [defensePlanTick] the tick the plan was last worked out
+ * @property {Enemy[] | null} defensePlanEnemies the enemies used to work out the plan
  * @property {Settler[]} settlers
  * @property {Enemy[]} enemies
  * @property {Building[]} buildings

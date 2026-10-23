@@ -143,7 +143,7 @@ Object.assign(window.sim, (() => {
       }
       run(9, { each: () => { waveTimer = 50; } }); // (past the muster, #279)
       if (enemies.some(en => en.start && Math.hypot(en.x - en.start.x, en.y - en.start.y) < 20)) allMoved = false; // (the ones out at first)
-      counts.push(enemyTents.length);
+      counts.push(enemyTents.filter(tent => !tent.campId).length);
     }
     return { onFreeTiles, allMoved, portals: counts };
   }

@@ -341,7 +341,8 @@ Object.assign(window.sim, (() => {
   }
 
   return { deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack,
-    unarmedDefend, noTentAssaultDuringCampLinkedWave, noTentAssaultDuringPreWaveWarning, waitsForRegroupedWave, holdsDuringFactionWaveMuster, assaultOutpost, attackOutpostInTheWay,
+    unarmedDefend, noTentAssaultDuringCampLinkedWave, noTentAssaultDuringPreWaveWarning, waitsForRegroupedWave,
+    holdsDuringFactionWaveMuster, assaultOutpost, attackOutpostInTheWay,
     attackBattleBuildingInTheWay, enemyBreaksWallOnTheWay,
     enemyRoutesAroundTree, enemyHitsHallCorner, enemyEscapesTree };
 })());

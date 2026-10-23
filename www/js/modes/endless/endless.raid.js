@@ -120,9 +120,10 @@ function findRaidCampSite(wallTiles) {
   };
   const reach = getEnemyReach(), box = getTerritoryBox();
   const separation = (wallTiles + 3) * TILE_SIZE;
+  const safeFromHall = townHall.radius + (wallTiles + 1) * TILE_SIZE;
   /** @type {number[][]} */
   const clean = [], safe = [];
-  let fallback = null;
+  let fallbackWithoutSpawners = null;
   for (let gy = margin; gy < game.ROWS - margin; gy++) {
     for (let gx = margin; gx < game.COLS - margin; gx++) {
       if (inCamp(waterPrefix, gx, gy) !== 0) continue;
@@ -145,12 +146,15 @@ function findRaidCampSite(wallTiles) {
 
       const hallDistance = Math.hypot(towardHallX, towardHallY);
       const score = distanceFromTerritory * (distanceFromTerritory > 0 ? 1 : 0) + hallDistance / game.WORLD_WIDTH;
-      if (!fallback || score > fallback.score) fallback = { gx, gy, score };
+      if (hallDistance >= safeFromHall && inCamp(spawnerPrefix, gx, gy) === 0 &&
+        (!fallbackWithoutSpawners || score > fallbackWithoutSpawners.score)) {
+        fallbackWithoutSpawners = { gx, gy, score };
+      }
     }
   }
   const candidates = clean.length ? clean : safe;
   if (candidates.length) return candidates[Math.floor(rand() * candidates.length)];
-  return fallback ? [fallback.gx, fallback.gy] : null;
+  return fallbackWithoutSpawners ? [fallbackWithoutSpawners.gx, fallbackWithoutSpawners.gy] : null;
 }
 
 // Generate the enemy outpost in the main world.

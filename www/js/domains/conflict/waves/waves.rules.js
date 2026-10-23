@@ -70,6 +70,7 @@ export function getEnemyDef(enemy) {
 
 export function isEnemyKindUnlocked(def, faction = getEnemyFaction().id) {
   if ((GAME_CONFIG.enemyWaveBasics[faction] || []).includes(def.id)) return true;
+  if (def.waveUnlock && game.waveNum >= def.waveUnlock) return true;
   switch (def.unlock) {
     case 'pet':
       return game.settlers.some(s => (GAME_CONFIG.settlerTypes[s.type] || {}).pet);
@@ -288,6 +289,7 @@ export function getWaveArmyFactor() {
 // Armour and a shield on a wave enemy, by chance, once the player has made them (GAME_CONFIG.enemyGear)
 function dressForWave(enemy, def) {
   const gear = GAME_CONFIG.enemyGear;
+  if (game.waveNum < 4) return;
   const chance = Math.min(gear.max, game.waveNum * gear.perWave);
   if (chance <= 0) return;
   const ironArmorAvailable = game.playerGear.armor || (game.armory['gear:armor'] || 0) > 0 ||
@@ -402,6 +404,7 @@ export function startNextWave(preparing = false) {
   }
   // never an empty wave: one of the first kind
   if (spawned === 0 && waveKinds.length) spawnWaveEnemy(waveKinds[0]);
+  if (game.waveNum === 1 && spawned === 1 && waveKinds.length) spawnWaveEnemy(waveKinds[0]);
 
   // portals (the demons) have opened by themselves already; tents need builders
   if (getEnemyFaction().portalSpawns) normalEnemies = [];

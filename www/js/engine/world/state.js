@@ -38,6 +38,7 @@ export const game = {
   buildMode: 'interact',
   selectedSettler: null,
   defensePlan: null,        // squads and their posts (getDefensePlan)
+  defensePlanEnemies: null,
   /** @type {Object<string, number>} */
   armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)
   // the things on the map (WORLD_LISTS)

@@ -291,12 +291,12 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
 // Enemies' way to their target: one search that weighs going round against breaking through, in
 // tiles of walking: breaking a building costs `building`, a tree or boulder `nature`, walking over spikes
 // `spikes`. Rock and water can't be crossed at all.
-export const ENEMY_PATH_COST = { building: 0.5, nature: 25, spikes: 2 };
+export const ENEMY_PATH_COST = { building: 0.5, nature: 25, spikes: 0.25 };
 
 // A path's length in tiles (diagonal steps count 1.41)
 export function pathCost(path) {
   let cost = 0;
-  for (let i = 1; i < path.length - 1; i++) cost += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y) / TILE_SIZE;
+  for (let i = 1; i < path.length; i++) cost += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y) / TILE_SIZE;
   return cost;
 }
 
@@ -311,6 +311,15 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k); // (traps unseen, #248)
   const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
   const PATH_COST = ENEMY_PATH_COST;
+  const dx = targetX - startX, dy = targetY - startY;
+  const lengthSquared = dx * dx + dy * dy;
+  const spikeOnDirectRoute = lengthSquared > 0 && [...tiles.spikes].some(k => {
+    const [x, y] = k.split(',').map(Number);
+    const along = ((x + 15 - startX) * dx + (y + 15 - startY) * dy) / lengthSquared;
+    if (along <= 0 || along >= 1) return false;
+    return Math.hypot(x + 15 - (startX + along * dx), y + 15 - (startY + along * dy)) <= TILE_SIZE / 2;
+  });
+  const buildingCost = spikeOnDirectRoute ? Math.max(PATH_COST.building, 1) : PATH_COST.building;
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: natureBlocks
       ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy) || tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
@@ -322,7 +331,7 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
     // round (to a far door), spikes are walked over, trees and boulders mostly walked round
     extraCost: (x, y) => {
       const k = `${x},${y}`;
-      if (isBuilding(k)) return PATH_COST.building;
+      if (isBuilding(k)) return buildingCost;
       if (tiles.trees.has(k) || tiles.boulders.has(k)) return PATH_COST.nature;
       return tiles.spikes.has(k) ? PATH_COST.spikes : 0;
     }
@@ -332,7 +341,7 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   // what it costs in tiles of walking, breaking and spikes included
   result.cost = pathCost(result.path) + result.path.slice(0, -1).reduce((sum, p) => {
     const k = `${p.x},${p.y}`;
-    return sum + (isBuilding(k) ? PATH_COST.building : (tiles.trees.has(k) || tiles.boulders.has(k)) ? PATH_COST.nature : tiles.spikes.has(k) ? PATH_COST.spikes : 0);
+    return sum + (isBuilding(k) ? buildingCost : (tiles.trees.has(k) || tiles.boulders.has(k)) ? PATH_COST.nature : tiles.spikes.has(k) ? PATH_COST.spikes : 0);
   }, 0);
   return result;
 }
@@ -353,29 +362,42 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false,
 
   let reachableBlockedTargetPath = null;
   if (isBlocked(endG.gx, endG.gy)) {
-    for (let radius = 1; radius <= 3 && !reachableBlockedTargetPath; radius++) {
-      const neighbors = [];
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-          const gx = endG.gx + dx, gy = endG.gy + dy;
-          if (!isBlocked(gx, gy)) neighbors.push({ gx, gy });
-        }
+    if (isEnemy) {
+      const neighbors = [
+        { gx: endG.gx + 1, gy: endG.gy }, { gx: endG.gx - 1, gy: endG.gy },
+        { gx: endG.gx, gy: endG.gy + 1 }, { gx: endG.gx, gy: endG.gy - 1 }
+      ];
+      let best = null, minDistance = Infinity;
+      for (const neighbor of neighbors) {
+        if (isBlocked(neighbor.gx, neighbor.gy)) continue;
+        const distance = Math.hypot(neighbor.gx - startG.gx, neighbor.gy - startG.gy);
+        if (distance < minDistance) { minDistance = distance; best = neighbor; }
       }
-      neighbors.sort((a, b) => Math.hypot(a.gx - startG.gx, a.gy - startG.gy) - Math.hypot(b.gx - startG.gx, b.gy - startG.gy));
-      for (const n of neighbors) {
-        const x = n.gx * TILE_SIZE + 15, y = n.gy * TILE_SIZE + 15;
-        const candidatePath = findGridPath(startG, n, x, y, {
-          isBlocked,
-          allowCornerCutting: false,
-          isBlockedPath: false
-        });
-        if (candidatePath.path.length > 0) {
-          endG = n;
-          targetX = x;
-          targetY = y;
-          reachableBlockedTargetPath = candidatePath;
-          break;
+      if (best) endG = best;
+    } else {
+      for (let radius = 1; radius <= 3 && !reachableBlockedTargetPath; radius++) {
+        const neighbors = [];
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+            const gx = endG.gx + dx, gy = endG.gy + dy;
+            if (!isBlocked(gx, gy)) neighbors.push({ gx, gy });
+          }
+        }
+        neighbors.sort((a, b) => Math.hypot(a.gx - startG.gx, a.gy - startG.gy) - Math.hypot(b.gx - startG.gx, b.gy - startG.gy));
+        for (const n of neighbors) {
+          const x = n.gx * TILE_SIZE + 15, y = n.gy * TILE_SIZE + 15;
+          const candidatePath = findGridPath(startG, n, x, y, {
+            isBlocked,
+            allowCornerCutting: false,
+            isBlockedPath: false
+          });
+          if (candidatePath.path.length > 0) {
+            endG = n;
+            candidatePath.path.push({ x: targetX, y: targetY });
+            reachableBlockedTargetPath = candidatePath;
+            break;
+          }
         }
       }
     }

@@ -1,7 +1,7 @@
 // Builders build, bring materials, repair and run the smelters; a walled-in base breaks out
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { game, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats } from '../../colony/equipment/index.js';
 import { addResources, canAfford, fetchFromStorage, isAtTownHall, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
 import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
@@ -160,7 +160,7 @@ export function build(s, tick) {
   // (#279) torch posts by night with no worker up to build them: a soldier awake does
   const torchesOnly = s.role !== 'worker' && isNight() && !s.towerAssignment && !game.settlers.some(o => o.role === 'worker' && !o.asleep);
   if (game.blueprints.length > 0 && !s.carrying && (s.role === 'worker' || torchesOnly)) {
-    let hasNearbyEnemy = game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 220);
+    let hasNearbyEnemy = game.enemies.some(en => !en.campDefender && Math.hypot(en.x - s.x, en.y - s.y) < 220);
     if (!hasNearbyEnemy) {
       let bestBp = /** @type {import('../../../engine/world/types.js').Blueprint | null} */ (null);
       let minDist = Infinity;

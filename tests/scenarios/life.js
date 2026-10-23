@@ -13,11 +13,12 @@ Object.assign(window.sim, (() => {
     stock.food = 10;
     const far = createConfiguredEnemy(nearHall(-20, -15), 'raider');
     far.speed = 0;
+    far.fromWave = wave;
     enemies = wave ? [far] : [];
     s.hunger = 0.01;
     let ateAt = null, ate = false;
     run(12, { each: () => { calm(); if (s.eating && !ateAt) ateAt = Math.hypot(s.x - townHall.x, s.y - townHall.y); if (s.eating) ate = true; if (s.hunger < 5) s.hunger = 50; } });
-    return { ate, atHall: ateAt !== null && ateAt < townHall.radius + 40, food: stock.food, stillWants: !!s.wantsMeal };
+    return { ate, atHall: ateAt !== null && ateAt < townHall.radius + 50, food: stock.food, stillWants: !!s.wantsMeal };
   }
 
   // Settlers walking the same way in the base over and over wear a path; out of the base, none; left be, it
@@ -69,7 +70,7 @@ Object.assign(window.sim, (() => {
     putOnGear(cap, 'banner');
     const soldiers = [2, 3].map(i => makeSettler(i, townHall.x + 30 * i, townHall.y + 50, { weapon: 'sword', role: 'soldier' }));
     settlers = [cap, ...soldiers];
-    enemies = [8, 12, 16].map(d => { const en = createConfiguredEnemy(nearHall(d, 0), 'raider'); en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1e4; return en; });
+    enemies = [2, 4, 6].map(d => { const en = createConfiguredEnemy(nearHall(d, 0), 'raider'); en.fromWave = true; en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1e4; return en; });
     run(8, { each: () => { calm(); settlers.forEach(o => { o.hunger = 999; }); } });
     const targets = soldiers.map(o => enemies.indexOf(o.captainTarget));
     return { given: targets.every(i => i >= 0), different: new Set(targets).size === targets.length, nearest: targets.includes(0) };

@@ -323,14 +323,19 @@ export function isInsideBase(en) {
 // spread along that arc
 export function getDefensePlan() {
   // Asked for by every soldier every tick: once a tick is enough (the posts don't move within it).
-  if (game.defensePlan && game.defensePlanTick === game.pathTick) return game.defensePlan;
+  if (game.defensePlan && game.defensePlanTick === game.pathTick &&
+      game.defensePlanEnemies === game.enemies) return game.defensePlan;
   const allMelee = game.settlers.filter(s => s.role === 'soldier' && !s.isPossessed);
   const allArchers = game.settlers.filter(s => s.role === 'archer' && !s.isPossessed && !s.towerAssignment);
   const arc = getThreatArc();
   const facing = a => !arc || Math.abs(Math.atan2(Math.sin(a - arc.centre), Math.cos(a - arc.centre))) <= arc.half;
   const zones = game.postZones || [];
   const key = [...allMelee, ...allArchers].map(s => s.id).join(',') + '|' + game.buildings.length + '|' + (arc ? `${arc.centre},${arc.half}` : 'all') + '|' + zones.map(z => `${z.x},${z.y}`).join(';');
-  if (game.defensePlan && game.defensePlan.key === key) { game.defensePlanTick = game.pathTick; return game.defensePlan; }
+  if (game.defensePlan && game.defensePlan.key === key) {
+    game.defensePlanTick = game.pathTick;
+    game.defensePlanEnemies = game.enemies;
+    return game.defensePlan;
+  }
   // (#279) the tiles marked as posts first: one soldier each, the nearest free one (melee before archers);
   // those left over get posts as ever
   const zoned = new Map();
@@ -381,6 +386,7 @@ export function getDefensePlan() {
   for (const [s, place] of zoned) { squadOf.set(s, place); posts.push(place.post); }
   game.defensePlan = { key, posts, squadOf };
   game.defensePlanTick = game.pathTick;
+  game.defensePlanEnemies = game.enemies;
   return game.defensePlan;
 }
 

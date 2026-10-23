@@ -13,7 +13,7 @@ Object.assign(window.sim, (() => {
     const medic = makeSettler(3, hx, hy + 60, { tool: 'medbag' });
     settlers = [soldier, worker, medic];
     const enemy = createConfiguredEnemy({ x: 3 * TILE_SIZE + 15, y: 3 * TILE_SIZE + 15 }, 'raider');
-    enemy.speed = 0; enemy.damage = 0;
+    enemy.speed = 0; enemy.damage = 0; enemy.fromWave = true;
     enemies = [enemy];
     stock.herbs = herbs;
     run(seconds, { each: () => { keys.w = keys.a = keys.s = keys.d = false; } });

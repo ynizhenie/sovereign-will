@@ -94,7 +94,8 @@ export function fightEnemies(s, tick) {
   if (isBowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
   // an archer with nothing to shoot keeps out of the fight at the town hall while there's an enemy about
   // (#232: it went out to its post empty); with none, it gets on with its other work
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy) {
+  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) &&
+      (targetEnemy || (tick.isWaveActive && game.enemies.length > 0))) {
     s.patrolTarget = null;
     if (!isAtTownHall(s)) moveSettlerToTownHall(s, s.speed, dt);
     return true;
@@ -216,9 +217,15 @@ function isCampEnemy(enemy) {
 function canFightDuringDefense(s, tick, enemy, attacker) {
   if (enemy === attacker || enemy.markedTarget || s.raider) return true;
   if (isCampEnemy(enemy) && !s.raider) return false;
+  if (game.gameMode === 'battle') return true;
   if (!tick.isWaveActive && !isDefenseAlert()) return true;
   if (enemy.fromWave && (enemy.wavePrepared || enemy.musterUntil > game.pathTick)) return false;
-  return isInsideBase(enemy);
+  if (distanceTo(enemy, s.x, s.y) <= 3 * TILE_SIZE) return true;
+  if (isInsideBase(enemy)) return true;
+  const hallReach = getBaseRadius() + GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE + townHall.radius + TILE_SIZE;
+  if (distanceTo(enemy, townHall.x, townHall.y) <= hallReach) return true;
+  const nearBuilding = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE + TILE_SIZE;
+  return game.buildings.some(b => !b.campId && distanceTo(enemy, b.x, b.y) <= nearBuilding);
 }
 
 // Enough settlers in melee on that enemy this tick already (GAME_CONFIG.combatAI)
@@ -276,7 +283,9 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     : tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
   if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker')) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)
-    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && game.gameMode !== 'battle') {
+    const armedDefender = game.settlers.some(other => other !== s &&
+      (other.weapon !== 'fist' || hasAxeTool(other.tool) || hasPickaxeTool(other.tool) || getNecromancy(other)));
+    if (isUnarmedOrRod && armedDefender && !(isToolWorker && enemyNearTownHall) && !attacker && game.gameMode !== 'battle') {
       if (!isAtTownHall(s)) {
         moveSettlerToTownHall(s, s.speed, dt);
       }
