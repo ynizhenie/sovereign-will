@@ -110,7 +110,7 @@ export function tickMorale(dt) {
       if (heldByNecromancer(unit, side)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side)), side); continue; }
       // a panic passes by itself, foes about or not
       if (unit.panic) { setMorale(unit, unit.morale + c.panicRecoverPerSecond * dt, side); continue; }
-      const around = list => list.filter(o => o.hp > 0 && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange).length;
+      const around = list => { let n = 0; for (const o of list) if (o.hp > 0 && Math.abs(o.x - unit.x) <= c.nearRange && Math.abs(o.y - unit.y) <= c.nearRange && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange) n++; return n; };
       const foesNear = side === 'boar' ? 0 : around(foes);
       if (foesNear > 0 && foesNear > (around(units) + 1) * c.outnumbered) {
         shakeMorale(unit, c.outnumberedPerSecond * dt, side);
