@@ -87,7 +87,9 @@ export function getHeldItemPose(unit) {
     if (unit.workKind === 'pick') return { angle: 0.2 * beat, push: 6 + 4 * Math.abs(beat) };
     if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
     if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
-    if (item === 'hoe') return { angle: 0.4 * beat + 0.2, push: 2 + 2 * beat };
+    // (#326) a hoe: thrust forward into the ground and drawn back, the same whichever way it faces (it was
+    // turned off to one side: over its head facing left, behind its leg facing down-right)
+    if (item === 'hoe') return { angle: 0.1 * beat, push: 1 + 4 * beat };
     // a blade (butchering a carcass): it cuts into what's in front, not chops at it like an axe
     if (isSwordWeapon(item) || isSpearWeapon(item)) return { angle: 0.15 * beat, push: 3 + 3 * beat };
     return { angle: 0.8 * beat - 0.3, push: 0 };
@@ -347,7 +349,9 @@ export function drawFigure(unit, o) {
   // (#306) a zombie lunges as it strikes
   const z = !o.lying && !o.dead && !o.carryPoint ? zombieReach(unit) : null;
   if (z && z.lunge) ctx.translate(Math.cos(unit.facing || 0) * z.lunge, Math.sin(unit.facing || 0) * z.lunge * 0.7);
-  if (z) o = { ...o, handPoint: z.hand, otherPoint: z.other };
+  // (#326) each reaching hand on its own shoulder's side: the one more to the right on the right, or a diagonal
+  // facing crossed its arms over
+  if (z) o = { ...o, handPoint: z.hand.x >= z.other.x ? z.hand : z.other, otherPoint: z.hand.x >= z.other.x ? z.other : z.hand };
   // a human fighting bare-handed: a boxer's guard, stepping into its punch
   const box = !z && !o.lying && !o.dead && !o.carryPoint && !o.handPoint ? humanPunch(unit) : null;
   if (box && box.lean) ctx.translate(Math.cos(unit.facing || 0) * box.lean, Math.sin(unit.facing || 0) * box.lean * 0.7);
@@ -371,7 +375,7 @@ export function drawFigure(unit, o) {
   // that arm's taken by a shield or by the caller's own second hand (an archer's, at the string)
   const shaft = !o.otherPoint && !o.shield && !carry && !box && !o.handPoint && o.hand && !o.lying && !o.dead
     && isSpearWeapon(unit.weapon) && handHolds(unit) ? handAt(unit, r, spearGripBack) : null;
-  const right = hand.x >= 0 ? 1 : -1;
+  const right = z ? 1 : hand.x >= 0 ? 1 : -1;
   const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : box ? box.guard : o.otherPoint && !o.lying && !o.dead ? o.otherPoint : o.shield ? { x: -right * (r - 1), y: 3 } : shaft ? shaft : { x: -right * r * 0.72, y: r * 0.25 };
   // (both hands out: a load, a boxer, a zombie reaching, a spearman — its other arm's drawn even when behind)
   const both = !!(carry || box || z || shaft);
@@ -402,25 +406,7 @@ export function drawFigure(unit, o) {
   if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (!behind) arm(right * r * 0.5, hand);
   if (!(both && behind)) arm(-right * r * 0.5, other);
-  // its own stroke style, wrapped: what's drawn after (the head's outline) keeps the arms' width
-  if (z && z.sw > 0.3) {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(30, 30, 30, 0.8)'; ctx.lineWidth = 0.8;
-    const f = unit.facing || 0;
-    for (const p of [hand, other]) for (const d of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(f + d) * 3, p.y + Math.sin(f + d) * 3); ctx.stroke(); }
-    ctx.restore();
-  }
-  // the punch landing: a short burst off the fist
-  if (box && box.sw > 0.5) {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 1;
-    const bf = unit.facing || 0;
-    for (const d of [-0.6, 0, 0.6]) {
-      const a = bf + d, ax = hand.x + Math.cos(a) * r * 0.35, ay = hand.y + Math.sin(a) * r * 0.35;
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + Math.cos(a) * r * 0.3, ay + Math.sin(a) * r * 0.3); ctx.stroke();
-    }
-    ctx.restore();
-  }
+  // (#326: no strokes off the hands as they strike any more: the lunge and the arms' reach show the blow)
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
@@ -473,21 +459,11 @@ export function drawBackItems(s) {
 export function drawSideItems(s, front = true) {
   const r = s.visualRadius, f = s.facing || 0;
   const can = s.wateringCan && !((s.usingCan || 0) > 0), banner = !!s.banner;
-  const playing = s.flute && game.pathTick - (s.playingFlute ?? -1e9) < 10;
-  const far = a => Math.sin(a) < -0.15;
-  const fluteFar = playing ? facesAway(s) : far(f + 2.4);
-  if (s.flute && fluteFar !== front) {
-    // a flute: held to its mouth, across its face, while it plays; else at its belt (#279)
-    const fx = playing ? Math.cos(f) * (r * 0.55) : Math.cos(f + 2.4) * (r - 2), fy = playing ? Math.sin(f) * (r * 0.55) - r * 0.25 : Math.sin(f + 2.4) * (r - 2) + 2;
-    const a = playing ? f + Math.PI / 2 : f + 1.2;
-    ctx.save(); ctx.translate(fx, fy); ctx.rotate(a);
-    ctx.fillStyle = '#b07a45'; ctx.fillRect(-6, -1, 12, 2);
-    ctx.fillStyle = '#5c3a17'; for (const hx of [-2, 1, 4]) ctx.fillRect(hx, -0.5, 1, 1);
-    ctx.restore();
-    if (playing && Math.floor(game.pathTick / 20) % 2) { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.font = 'bold 7px sans-serif'; ctx.fillText('♪', fx + 6, fy - 8 - (game.pathTick % 20) / 4); }
-  }
-  const side = f + 1.9, x = Math.cos(side) * (r - 1), y = Math.sin(side) * (r - 1);
-  if ((!can && !banner) || far(side) === front) return;
+  // (#326) at its hip on the side away from its hand; side-on, that's its far side, a little behind it
+  const sideOn = Math.abs(Math.cos(f)) > 0.85, handX = handAt(s, r).x >= 0 ? 1 : -1;
+  const x = sideOn ? -Math.cos(f) * r * 0.3 : -handX * r * 0.72, y = r * 0.18;
+  const farSlot = sideOn || facesAway(s);
+  if ((!can && !banner) || farSlot === front) return;
   if (can) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
   if (banner) {
     const bx = x - Math.cos(f) * 3, by = y - 2;

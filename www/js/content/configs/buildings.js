@@ -29,8 +29,8 @@ export const buildingsConfig = {
     // the demons': a sacrificial circle adds population, and a settler sent into it heals everyone;
     // portals come in pairs (the 1st with the 2nd, the 3rd with the 4th...) and settlers step through
     // (#250) a den is the demons' home (population, no healing at it); the circle is only for sacrifices now
-    demon_den: { id: 'demon_den', group: 'homes', icon: 'demon_den', factions: ['demons'], cost: { stone: 8, wood: 4 }, demolishRefund: { stone: 4 }, population: 2, build: { maxProgress: 70, hp: 140 } },
-    sacrifice_circle: { id: 'sacrifice_circle', group: 'homes', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, sacrifice: true, build: { maxProgress: 80, hp: 150 } },
+    demon_den: { id: 'demon_den', group: 'homes', icon: 'demon_den', factions: ['demons'], cost: { stone: 8, wood: 4 }, demolishRefund: { stone: 4 }, population: 2, build: { maxProgress: 70, hp: 120 } },
+    sacrifice_circle: { id: 'sacrifice_circle', group: 'homes', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, sacrifice: true, build: { maxProgress: 80, hp: 60 } },
     // (#250) a corpse pit: soldiers carry corpses in, up to `holds`; in it they keep (age at keepShare of the
     // speed); a wounded demon eats from it. A cage holds one badly wounded enemy caught at a wave's end, to
     // be eaten; after captiveSeconds it dies in there and is a corpse
@@ -39,15 +39,15 @@ export const buildingsConfig = {
     portal: { id: 'portal', group: 'homes', icon: 'portal', factions: ['demons'], cost: { stone: 10, iron: 2 }, demolishRefund: { stone: 5 }, portal: true, build: { maxProgress: 100, hp: 120 } },
     grave: { id: 'grave', group: 'homes', icon: 'grave', factions: ['undead'], cost: { stone: 10 }, demolishRefund: { stone: 5 }, population: 1, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 100 } },
     campfire: { id: 'campfire', group: 'economy', icon: 'campfire', factions: ['humans', 'demons'], cost: { wood: 5 }, build: { maxProgress: 40, hp: 60, campfire: true }, arrowsPass: true },
-    smelter: { id: 'smelter', group: 'economy', icon: 'smelter', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 160,
+    smelter: { id: 'smelter', group: 'economy', icon: 'smelter', cost: { wood: 15, stone: 10 }, build: { maxProgress: 100, hp: 60,
       // holds at most maxOre ore and maxCoal coal; one ore + one coal make one iron every `seconds`, up to
       // maxIron waiting to be picked up. One settler at a time brings it ore/coal, one takes its iron.
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
-    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20, herbs: 4 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 220, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
+    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20, herbs: 4 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 100, tower: { capacity: 1, minEnemies: 2, range: 320, arrowCapacity: 12, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
     // crafts: where things are made (#211, #248): the workshop everything without iron in it, the smithy
     // everything with
-    workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 150 } },
-    smithy: { id: 'smithy', group: 'economy', icon: 'smithy', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 180 } },
+    workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 80 } },
+    smithy: { id: 'smithy', group: 'economy', icon: 'smithy', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 80 } },
     // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
     // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
     dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },
@@ -57,9 +57,9 @@ export const buildingsConfig = {
     // full) and bait it (anyone with free hands too)
     fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 6, herbs: 2 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a torch post (#257): lit at dusk by a worker (postFirewood), it lights the ground round it till morning
-    torch: { id: 'torch', group: 'defense', icon: 'torch', factions: ['humans', 'demons'], cost: { torches: 1 }, demolishRefund: { torches: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },
+    torch: { id: 'torch', group: 'defense', icon: 'torch', cost: { torches: 1 }, demolishRefund: { torches: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },
     // a place nearer than the town hall to bring resources to and fetch them from
-    warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 150 } },
+    warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 80 } },
     // a compost heap (#232): settlers with nothing to do bring it the dung lying in the base, up to
     // dungCapacity; farmers with a backpack take it from there to fertilise. Without one nobody gathers dung
     dung_heap: { id: 'dung_heap', icon: 'dung_heap', factions: ['humans', 'demons'], cost: { wood: 6 }, demolishRefund: { wood: 3 }, dungCapacity: 5, build: { maxProgress: 40, hp: 60 }, tab: 'farming', arrowsPass: true },
@@ -72,7 +72,9 @@ export const buildingsConfig = {
   // Buildings are repaired when the player orders it (tap it, or Repair all). Buildings without their own entry use `buildings`: costShare of what the building
   // cost (rounded up) for hpShare of its hp. Tents mend themselves for free (tent.repairPerSecond).
   repairs: {
-    townHall: { cost: { wood: 15, stone: 15 }, hp: 35 },
+    // (#326) the town hall: all of it mended for `cost`, in `steps` steps of `seconds` each (a part of a step for
+    // what's left, its part of the cost)
+    townHall: { cost: { wood: 30, stone: 30 }, steps: 3, seconds: 3 },
     buildings: { costShare: 0.2, hpShare: 0.25, interval: 1 }
   }
 };

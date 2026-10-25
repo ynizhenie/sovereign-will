@@ -219,11 +219,23 @@ function clearSleepingPlace(s, home, tick) {
 
 // At dusk and through the night, a worker lights the torch posts (postFirewood each)
 export function lightTorches(s, tick) {
-  if (!needsTorches() || s.role !== 'worker' || s.isPossessed || tick.isWaveActive || s.asleep) return false;
+  if (s.role !== 'worker' || s.isPossessed || tick.isWaveActive || s.asleep) return false;
   const phase = getDayPhase();
   if (phase !== 'evening' && phase !== 'night') return false;
   const load = s.carrying && s.carrying.forTorch ? s.carrying : null;
   const want = b => b.type === 'torch' && !b.lit && !game.settlers.some(o => o !== s && o.carrying && o.carrying.forTorch === b);
+  // (#326) the undead have torch posts too, lit with no firewood (they keep none): walked to and lit
+  if (!needsTorches()) {
+    const post = s.torchTarget && game.buildings.includes(s.torchTarget) && !s.torchTarget.lit ? s.torchTarget
+      : game.buildings.filter(b => want(b) && !game.settlers.some(o => o !== s && o.torchTarget === b)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (!post) { s.torchTarget = null; return false; }
+    s.torchTarget = post; s.patrolTarget = null;
+    if (Math.hypot(post.x - s.x, post.y - s.y) > 26) { moveEntityTowards(s, post.x, post.y, s.speed, false, tick.dt); return true; }
+    faceTowards(s, post.x, post.y);
+    post.lit = true; s.torchTarget = null;
+    playSound('ignite', post);
+    return true;
+  }
   if (!load) {
     if (s.carrying || (stock.firewood || 0) < config().postFirewood) return false;
     const post = game.buildings.filter(want).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];

@@ -63,16 +63,5 @@ Object.assign(window.sim, (() => {
     return { gone: !settlers.includes(z), club: loot.some(l => l.items.includes('weapons:club')) };
   }
 
-  // A flute in the armory, ordered for the selected settler: it fetches it and has it (21)
-  function fluteGiven({ seed = 'flute-given' } = {}) {
-    start(seed); clearResources();
-    const s = settlers[0];
-    settlers.length = 1;
-    armory['gear:flute'] = 1;
-    const ordered = orderGear('flute', true, s);
-    run(20, { each: () => { calm(); s.hunger = 999; } });
-    return { ordered, flute: !!s.flute, craftSeconds: GAME_CONFIG.gear.flute.craftSeconds < GAME_CONFIG.crafting.seconds.gear };
-  }
-
-  return { nightOneUp, eatThenSleep, foremanRange, zombieDrops, fluteGiven };
+  return { nightOneUp, eatThenSleep, foremanRange, zombieDrops };
 })());

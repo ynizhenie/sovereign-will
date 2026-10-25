@@ -14,7 +14,7 @@ export const raidConfig = {
   // marchSeconds: Attack! can be pressed this long after setting out even with some still on the way
   raid: {
     fromWave: 2, everyWaves: 2, seconds: 150, zoneTiles: 26, wallTiles: 5, gaps: 2, stoneFromWave: 8,
-    tents: { min: 1, max: 3 }, tentSummons: 2, outpostHp: 800,
+    tents: { min: 1, max: 3 }, tentSummons: 2, outpostHp: 200, // (#326)
     defenders: { perSoldier: 2, extraEveryWaves: 3, min: 4 },
     guardTiles: 7,
     reward: { wood: 30, stone: 20, iron: 6, leather: 6, food: 25 }, rewardPerDefender: 0.1,

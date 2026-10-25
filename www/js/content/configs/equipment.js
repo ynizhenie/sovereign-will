@@ -66,9 +66,7 @@ export const equipmentConfig = {
     // gathers first), and to swap its tool for one from the armory that does it. A soldier with a banner is a
     // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
     whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', craftSeconds: 2, cost: { wood: 2, rope: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45, rangeTiles: 5 } },
-    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } },
-    // (#279) a wooden flute in its side slot: sitting by a campfire it plays one of the flute tunes (music.js)
-    flute: { id: 'flute', icon: 'flute', madeBy: 'hand', craftSeconds: 2, cost: { wood: 3 } }
+    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } }
   },
   // what a foreman counts as needed most: the one furthest under its amount here (food only for those who
   // eat; ore with a smelter)
@@ -80,6 +78,6 @@ export const equipmentConfig = {
   recipes: {
     arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3, unlockedWith: 'weapons:bow' },
     rope: { id: 'rope', icon: 'rope', kind: 'supplies', madeBy: 'hand', cost: { herbs: 2 }, produces: { rope: 2 }, disassemble: true },
-    torch: { id: 'torch', icon: 'torch', kind: 'supplies', factions: ['humans', 'demons'], madeBy: 'hand', cost: { wood: 1, rope: 1 }, produces: { torches: 1 }, disassemble: true }
+    torch: { id: 'torch', icon: 'torch', kind: 'supplies', madeBy: 'hand', cost: { wood: 1, rope: 1 }, produces: { torches: 1 }, disassemble: true }
   }
 };

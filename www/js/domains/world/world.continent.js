@@ -181,7 +181,8 @@ export function generateContinent() {
       const i = at(gx, gy), b = biome[i];
       // (nothing within five tiles of the hall: room to walk up to it, as on a default map)
       if (!BIOME_TABLE[b] || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
-      const table = (b !== DESERT && nearMountain(gx, gy)) ? C.grow.foothills : C.grow[BIOME_TABLE[b]];
+      // (#326: a beach grows only pebbles and stones)
+      const table = b !== DESERT && sand[i] ? C.grow.beach : (b !== DESERT && nearMountain(gx, gy)) ? C.grow.foothills : C.grow[BIOME_TABLE[b]];
       const roll = rand();
       let sum = 0;
       for (const [kind, chance] of Object.entries(table)) {
@@ -189,9 +190,22 @@ export function generateContinent() {
         if (roll >= sum) continue;
         const { x, y } = tile(gx, gy);
         if (kind === 'boar') game.boars.push({ x, y, hp: boar.hp, maxHp: boar.hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
-        else if (!(sand[i] && kind === 'tree')) addMapResource(kind, x, y);
+        else addMapResource(kind, x, y);
         break;
       }
+    }
+  }
+
+  // ---- (#326) round the base, the small things to pick up by hand as many as a default map has: grass, berry
+  // bushes, sticks and pebbles near at hand from the start
+  const taken = new Set([...game.trees, ...game.boulders, ...game.grassList, ...game.berryBushes, ...game.sticks, ...game.pebbles, ...game.cacti].map(o => `${o.x},${o.y}`));
+  for (const [kind, count] of Object.entries(C.nearBase)) {
+    for (let k = 0, tries = 0; k < count && tries < count * 20; tries++) {
+      const gx = hall.gx + Math.round((rand() - 0.5) * 2 * C.nearBaseTiles), gy = hall.gy + Math.round((rand() - 0.5) * 2 * C.nearBaseTiles);
+      if (gx < 0 || gy < 0 || gx >= cols || gy >= rows || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
+      const b = biome[at(gx, gy)], { x, y } = tile(gx, gy);
+      if ((b !== GRASS && b !== FOREST && !(b === DESERT && kind === 'pebble')) || sand[at(gx, gy)] && kind !== 'pebble' || taken.has(`${x},${y}`)) continue;
+      taken.add(`${x},${y}`); addMapResource(kind, x, y); k++;
     }
   }
 

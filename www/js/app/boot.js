@@ -36,3 +36,6 @@ initEndlessGenerator();
 initEndlessSaves();
 initMenuWorld();
 initSounds();
+
+// (#326) everything made: the page shows (till now only its dark background: the menu half made flashed up)
+requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('booting')));

@@ -126,8 +126,7 @@ export const enLanguage = {
         armor: 'Armour',
         wateringCan: 'Watering can',
         whistle: 'Foreman\'s whistle',
-        banner: 'Banner',
-        flute: 'Wooden flute'
+        banner: 'Banner'
       },
       recipes: {
         arrows: 'Arrows',
@@ -181,8 +180,7 @@ export const enLanguage = {
         armor: 'More health, less damage taken.',
         wateringCan: 'The farmer waters the crops: they grow faster.',
         whistle: 'Makes a worker a foreman: it goes to its 3 nearest workers in turn and tells each what\'s needed most, and to swap tools from the store for it.',
-        banner: 'Makes a soldier a captain: in a wave it gives up to 5 soldiers each an enemy to go for.',
-        flute: 'By a campfire it plays a tune.'
+        banner: 'Makes a soldier a captain: in a wave it gives up to 5 soldiers each an enemy to go for.'
       },
       buildings: {
         workshop: 'Where anything without iron in it is made: tools, weapons, gear, arrows.',
@@ -440,6 +438,8 @@ export const enLanguage = {
       'menu.qualityLow': 'Low',
       'menu.qualityMedium': 'Medium',
       'menu.qualityHigh': 'High',
+      'voice.humans.noTorch': 'I won\'t go out there without a torch.|It\'s pitch dark out there!|Give me a torch first.',
+      'voice.demons.noTorch': 'No fire, no going out.|Darkness beyond the camp... I need a flame.|Bring me a torch!',
       'raid.appeared': '[[swords]] An enemy camp has turned up beyond the edge of the map! Raid it while it is there',
       'raid.gone': 'The enemy camp has packed up and gone',
       'raid.button': '[[swords]] Enemy camp · {time}',
@@ -794,7 +794,6 @@ export const enLanguage = {
       'card.fish': 'Fish {n}/{max}',
       'activity.restockQuiver': 'Fetching arrows',
       'activity.idleCampfire': 'Sitting by the fire',
-      'activity.fluteBreak': 'Playing the flute by the fire',
       'activity.idleTalk': 'Chatting',
       'activity.idleSpar': 'Sparring',
       'activity.idleSway': 'Swaying',
@@ -855,6 +854,7 @@ export const enLanguage = {
       'editor.tool.coal_ore': 'Coal',
       'editor.tool.iron_spawner': 'Iron source',
       'editor.tool.coal_spawner': 'Coal source',
+      'editor.tool.farm': 'Wheat',
       'editor.tool.boar': 'Boar',
       'defeat.title': 'DEFEAT!',
       'defeat.survived': 'You held out for {waves} waves',

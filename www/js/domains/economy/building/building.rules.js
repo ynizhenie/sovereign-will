@@ -90,6 +90,16 @@ export function getRepairStep(building) {
   return { cost, hp: building.maxHp * share.hpShare, interval: share.interval };
 }
 
+// (#326) The town hall's next repair step: a share of its hp (1/steps of it, less for what's left) and that share
+// of the full cost, rounded up; the cost of all that's left
+export function getHallRepairStep() {
+  const r = GAME_CONFIG.repairs.townHall, missing = Math.max(0, townHall.maxHp - townHall.hp), full = townHall.maxHp / r.steps;
+  const share = Math.min(1, missing / full) / r.steps;
+  const cost = {}, left = {};
+  for (const [id, n] of Object.entries(r.cost)) { cost[id] = Math.ceil(n * share); left[id] = Math.ceil(n * missing / townHall.maxHp); }
+  return { hp: Math.min(missing, full), cost, left, seconds: r.seconds };
+}
+
 // Order (or cancel) repairs of a damaged building; tents mend themselves
 export function toggleBuildingRepair(building) {
   if (!(building.hp < building.maxHp) || isShelter(building)) return false;

@@ -6,7 +6,7 @@ import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
 import { formatCost, storeCapacity, storeHome, storedTotal } from '../domains/colony/storage/index.js';
-import { getRepairStep, toggleBuildingRepair } from '../domains/economy/building/index.js';
+import { getHallRepairStep, getRepairStep, toggleBuildingRepair } from '../domains/economy/building/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
 import { getSelectedSettler } from '../domains/colony/settlers/index.js';
 import { craftPlace } from '../domains/colony/equipment/index.js';
@@ -118,7 +118,7 @@ export function renderBuildingCard() {
     actions.appendChild(button);
   };
   if (b.hp < b.maxHp && !(def && isShelter(b))) {
-    const cost = isHall ? GAME_CONFIG.repairs.townHall.cost : getRepairStep(b).cost;
+    const cost = isHall ? getHallRepairStep().left : getRepairStep(b).cost; // (#326: the hall's, all that's left)
     add(b.repairRequested ? t('card.repairCancel') : t('card.repair', { cost: formatCost(cost) }), () => {
       if (isHall) townHall.repairRequested = !townHall.repairRequested;
       else toggleBuildingRepair(b);

@@ -115,10 +115,13 @@ export const mapConfig = {
   // wettest `forest`, the rest grassland; lakes in the low wet hollows (`lakes` of the land). The start: on
   // grassland, as far from the sea as startCoast tiles at least, rock and ore within startNear. grow: the chance
   // of each thing on each biome's tile (the foot of the mountains its own)
+  // nearBase (#326): how many of each small thing on top of the rest within nearBaseTiles of the hall
   continent: { from: 96, margin: 0.07, mountains: 0.07, desert: 0.16, forest: 0.3, lakes: 0.025, startCoast: 14, startNear: 24,
+    nearBase: { grass: 16, berry_bush: 8, stick: 15, pebble: 14 }, nearBaseTiles: 16,
     grow: {
       grassland: { tree: 0.015, grass: 0.014, berry_bush: 0.005, stick: 0.009, pebble: 0.006, boulder: 0.01, boar: 0.0025 },
       forest: { tree: 0.17, grass: 0.02, berry_bush: 0.012, stick: 0.016, boulder: 0.004, boar: 0.003 },
       desert: { cactus: 0.025, pebble: 0.02, boulder: 0.004 },
-      foothills: { boulder: 0.05, pebble: 0.02 } } }
+      foothills: { boulder: 0.05, pebble: 0.02 },
+      beach: { pebble: 0.025, boulder: 0.01 } } }
 };

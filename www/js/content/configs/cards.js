@@ -16,7 +16,7 @@ export const cardsConfig = {
     chances: { common: 60, rare: 30, legendary: 10 },
     rarity: {
       common: ['buildings:wall_stone', 'buildings:door', 'buildings:spikes', 'buildings:dummy', 'buildings:fish_trap', 'buildings:dung_heap', 'buildings:apple_sapling',
-        'tools:medbag', 'gear:wateringCan', 'gear:whistle', 'gear:flute'],
+        'tools:medbag', 'gear:wateringCan', 'gear:whistle'],
       rare: ['buildings:smelter', 'buildings:smithy', 'buildings:iron_door', 'buildings:iron_trap', 'buildings:cage', 'buildings:portal', 'buildings:sacrifice_circle',
         'tools:iron_axe', 'tools:iron_pickaxe', 'weapons:spear', 'weapons:bow', 'gear:shield', 'gear:banner'],
       legendary: ['buildings:watchtower', 'weapons:iron_sword', 'weapons:iron_spear', 'gear:armor']

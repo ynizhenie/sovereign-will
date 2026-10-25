@@ -49,11 +49,13 @@ function drawHound(s, d, kind, id) {
   const [coat, dark] = coatOf(s, kind), beast = kind === 'beast';
   const lying = s.petSleep > 0, eating = (s.working || 0) > 0 && s.workKind === 'devour';
   const step = lying ? 0 : Math.sin((s.walk || 0) * 0.45) * 1.8;
-  const biting = game.pathTick - (s.struckAt ?? -1e9) < 12;
+  // (#326) a bite: a lunge of the whole body, its jaws open wide and snapping shut (bite: 0..1 through it)
+  const since = game.pathTick - (s.struckAt ?? -1e9), biting = since < 16, bite = biting ? since / 16 : 0;
+  const lunge = biting ? Math.sin(Math.PI * bite) * 4 : 0, gape = biting ? Math.max(0, Math.sin(Math.PI * Math.min(1, bite * 1.6))) : 0;
   castShadow(ctx, 0, lying ? 4 : 8, 11, 3, lying ? 5 : 10);
   ctx.save();
   ctx.scale(d, 1);
-  ctx.translate(0, lying ? 4 : 0);
+  ctx.translate(lunge, lying ? 4 : 0);
   // legs (tucked under it lying)
   ctx.fillStyle = dark;
   if (!lying) for (const [lx, dy] of [[-7, step], [-3.5, -step], [4, step], [7.5, -step]]) ctx.fillRect(lx - 1.2, 2 + dy * 0.4, 2.4, 6.5);
@@ -68,13 +70,21 @@ function drawHound(s, d, kind, id) {
   if (beast) { ctx.fillStyle = dark; for (let k = -7; k <= 3; k += 2.5) { ctx.beginPath(); ctx.moveTo(k - 1, -5); ctx.lineTo(k + 0.5, -8.5); ctx.lineTo(k + 1.6, -5); ctx.closePath(); ctx.fill(); } }
   // the head (down to its food eating, lunging biting)
   ctx.save();
-  ctx.translate(biting ? 2 : 0, eating ? 4 : lying ? 1 : 0);
+  ctx.translate(0, eating ? 4 : lying ? 1 : 0);
   ctx.fillStyle = coat; ctx.strokeStyle = dark;
   ctx.beginPath(); ctx.ellipse(9, -4, 5, 4.2, 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  // the snout, its nose, an open jaw biting
-  ctx.beginPath(); ctx.ellipse(13.5, -2.5, 3, 2, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#1b1b1f'; ctx.beginPath(); ctx.arc(16, -3, 1, 0, Math.PI * 2); ctx.fill();
-  if (biting) { ctx.fillStyle = '#7b1e1e'; ctx.beginPath(); ctx.moveTo(11, -1); ctx.lineTo(16, 0); ctx.lineTo(11, 1.5); ctx.closePath(); ctx.fill(); }
+  // the jaws: the lower one dropping open as it bites (its mouth dark, teeth white), shut again as it snaps
+  if (gape > 0.05) {
+    const open = gape * 3.2;
+    ctx.fillStyle = '#5a1414'; ctx.beginPath(); ctx.moveTo(11, -1.5); ctx.lineTo(16.5, -1.8); ctx.lineTo(15.5, -1.2 + open); ctx.lineTo(11, 0.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    for (const tx of [12.5, 14.5]) { ctx.beginPath(); ctx.moveTo(tx, -1.7); ctx.lineTo(tx + 0.6, -0.6); ctx.lineTo(tx + 1.2, -1.7); ctx.fill(); }
+    ctx.fillStyle = coat; ctx.beginPath(); ctx.ellipse(13.3, -0.8 + open, 2.6, 1.1, 0.25 + gape * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  // the snout and its nose
+  ctx.fillStyle = coat;
+  ctx.beginPath(); ctx.ellipse(13.5, -2.5 - gape * 0.6, 3, 2, 0.1 - gape * 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#1b1b1f'; ctx.beginPath(); ctx.arc(16, -3 - gape * 0.6, 1, 0, Math.PI * 2); ctx.fill();
   // ears: floppy (a dog's), pointed (a hellhound's), and small horns
   ctx.fillStyle = dark;
   if (beast) {

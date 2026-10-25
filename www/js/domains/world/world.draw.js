@@ -5,6 +5,7 @@ import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp 
 import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
+import { isContinentMap } from './world.continent.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -92,8 +93,10 @@ const chunkRes = () => Math.min(1, 2 ** Math.floor(Math.log2(Math.max(getViewSca
 // (the patches of the tiles round a piece too, for those spilling into it: the same either side of its edge)
 function paintGrass(g, x0, y0, x1, y1) {
   g.fillStyle = '#2d4a22'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
-  const gx0 = Math.max(0, x0 / TILE_SIZE - 1), gx1 = Math.min(game.COLS - 1, Math.ceil(x1 / TILE_SIZE));
-  const gy0 = Math.max(0, y0 / TILE_SIZE - 1), gy1 = Math.min(game.ROWS - 1, Math.ceil(y1 / TILE_SIZE));
+  // (#326: whole tiles: with the piece's bleed its edge isn't on one, and fractional tiles drew other patches
+  // than the piece beside it, a seam between them)
+  const gx0 = Math.max(0, Math.floor(x0 / TILE_SIZE) - 1), gx1 = Math.min(game.COLS - 1, Math.ceil(x1 / TILE_SIZE));
+  const gy0 = Math.max(0, Math.floor(y0 / TILE_SIZE) - 1), gy1 = Math.min(game.ROWS - 1, Math.ceil(y1 / TILE_SIZE));
   for (let gy = gy0; gy <= gy1; gy++) {
     for (let gx = gx0; gx <= gx1; gx++) {
       const hsh = tileVariantHash(gx, gy), x = gx * TILE_SIZE, y = gy * TILE_SIZE;
@@ -138,6 +141,9 @@ export const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
 // (#298) where the tile functions below draw: the screen, or the terrain's picture while it's painted
 /** @type {CanvasRenderingContext2D | null} */
 let target = null;
+// how far (world px) a tile's ground is painted past its sides, so no seam shows between two: half a pixel, or a
+// whole pixel of a small picture (#326)
+let over = 0.5;
 
 // Which sides (and corners) of tile (x, y) have no neighbour in `keys` (a Set of "x,y" tile centres)
 export function openSides(keys, x, y) {
@@ -199,8 +205,8 @@ export function drawJoinedTile(x, y, open, edgeColor, fillColor, outline = true,
   const k = cornerRadii(open, occupiedCorners), x0 = x - 15, y0 = y - 15;
   // Half a pixel over every side prevents light sand showing through soft edges when zoomed in (#251).
   G.fillStyle = fillColor;
-  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(x0 - 0.5, y0 - 0.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
-  else G.fillRect(x0 - 0.5, y0 - 0.5, TILE_SIZE + 1, TILE_SIZE + 1);
+  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(x0 - over, y0 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
+  else G.fillRect(x0 - over, y0 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2);
   if (outline) drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners);
 }
 
@@ -214,7 +220,7 @@ function edgeBand(G, x, y, open, which, rgb, a, width, inside, occupiedCorners =
     g.addColorStop(0, `rgba(${rgb}, ${a})`); g.addColorStop(1, `rgba(${rgb}, 0)`);
     G.fillStyle = g; G.fillRect(rx, ry, rw, rh);
   };
-  if (inside) { G.save(); G.beginPath(); G.roundRect(x0 - 0.5, y0 - 0.5, T + 1, T + 1, [k.nw, k.ne, k.se, k.sw]); G.clip(); } // (its half pixel over too)
+  if (inside) { G.save(); G.beginPath(); G.roundRect(x0 - over, y0 - over, T + over * 2, T + over * 2, [k.nw, k.ne, k.se, k.sw]); G.clip(); } // (its half pixel over too)
   const d = inside ? width : -width;
   // (outside, kept off the rounded corners: a quarter of a ring goes round each)
   const cut = c => (inside ? 0 : c);
@@ -275,7 +281,7 @@ export function drawRockTile(x, y, tiles) {
   const edgeColor = '#1a252f', occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
   drawJoinedTile(x, y, open, edgeColor, ROCK_SHADES[h % ROCK_SHADES.length], false, occupiedCorners);
   G.save(); G.beginPath();
-  G.roundRect(x - 15.5, y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]);
+  G.roundRect(x - 15 - over, y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]);
   G.clip();
   // facets of the rock face, a little lighter, and a lit top edge and shaded bottom edge where the mass
   // ends (#251: flat squares)
@@ -307,8 +313,8 @@ export function drawDesertTile(tile) {
   const tiles = getTileIndex(), occupiedCorners = terrainCornerOccupancy(tile.x, tile.y, tiles);
   const open = openSides(getSandKeys(), tile.x, tile.y), k = cornerRadii(open, occupiedCorners), shade = DESERT_SHADES[h % DESERT_SHADES.length];
   G.fillStyle = shade;
-  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
-  else G.fillRect(tile.x - 15.5, tile.y - 15.5, TILE_SIZE + 1, TILE_SIZE + 1);
+  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(tile.x - 15 - over, tile.y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
+  else G.fillRect(tile.x - 15 - over, tile.y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2);
   const n = parseInt(shade.slice(1), 16), rgb = `${n >> 16}, ${(n >> 8) & 255}, ${n & 255}`;
   edgeBand(G, tile.x, tile.y, open, open, rgb, 0.85, 7, false, occupiedCorners);
   G.fillStyle = 'rgba(255, 236, 179, 0.25)';
@@ -357,6 +363,7 @@ export const isGroundCached = () => cached;
 
 // The border zone round the map, and the line where it starts
 export function drawMapBorder() {
+  if (isContinentMap()) return; // (#326: a continent's edge is the sea, no strip or line round it)
   // (#299: only the part of it on the screen)
   const v = getViewRect(TILE_SIZE), M = BORDER_MARGIN * TILE_SIZE, W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;
   if (v.x0 > M && v.y0 > M && v.x1 < W - M && v.y1 < H - M) return;
@@ -415,6 +422,7 @@ function tilesAround(list, x0, y0, x1, y1) {
 function paintTerrain(g, x0, y0, x1, y1) {
   const terrain = getTileIndex();
   target = g;
+  over = Math.max(0.5, 1 / g.getTransform().a); // (#326: a whole pixel over at a small picture's size: no grid of seams)
   try {
     tilesAround(game.desertTiles, x0, y0, x1, y1).forEach(drawDesertTile);
     tilesAround(game.beachTiles, x0, y0, x1, y1).forEach(drawDesertTile);
@@ -422,7 +430,7 @@ function paintTerrain(g, x0, y0, x1, y1) {
     tilesAround(game.naturalRocks, x0, y0, x1, y1).forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); else drawOreSpawner(r.x, r.y, r.oreSpawner); });
     tilesAround(game.ironOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'iron', 14));
     tilesAround(game.coalOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'coal', 14));
-  } finally { target = null; }
+  } finally { target = null; over = 0.5; }
 }
 
 const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view.y1, fn);

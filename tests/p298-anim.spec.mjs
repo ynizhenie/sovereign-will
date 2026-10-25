@@ -15,7 +15,7 @@ test('facing away, what\'s in its hands is behind it and its back in front; faci
     clearResources();
     settlers = [];
     for (let i = 0; i < 8; i++) {
-      for (const extra of [{ weapon: 'sword', shield: true, backpack: true }, { weapon: 'bow', role: 'archer', quiver: true, arrows: 9 }, { tool: 'axe', working: 0.1 }, { carrying: { type: 'corpse', amount: 1 } }, { flute: true, wateringCan: true, tool: 'hoe' }]) {
+      for (const extra of [{ weapon: 'sword', shield: true, backpack: true }, { weapon: 'bow', role: 'archer', quiver: true, arrows: 9 }, { tool: 'axe', working: 0.1 }, { carrying: { type: 'corpse', amount: 1 } }, { wateringCan: true, tool: 'hoe' }]) {
         const s = makeSettler(settlers.length + 1, townHall.x + 80 + i * 30, townHall.y + 60 + settlers.length % 5 * 30, extra); s.facing = i * Math.PI / 4; settlers.push(s);
       }
       const en = createConfiguredEnemy({ x: townHall.x + 80 + i * 30, y: townHall.y - 60 }, 'raider_archer'); en.facing = i * Math.PI / 4; enemies.push(en);

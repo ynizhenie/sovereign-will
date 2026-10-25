@@ -8,6 +8,7 @@ test('wood and stone always show; worms are raw food and get eaten when food run
   expect(await page.locator('#resources-hud #resource-stone-txt').count()).toBe(1);
   const r = await page.evaluate(() => {
     stock.food = 1; stock.worms = 5;
+    GAME_CONFIG.meals.finishJobSeconds = 0; // (straight to the meal, not a job finished first, #326)
     settlers.forEach(s => { s.hunger = 0.001; });
     update(1 / 60); // one meal each: 2 settlers, 1 food -> 1 worm (eaten at the town hall, #248)
     for (let f = 0; f < 900 && settlers.some(s => s.wantsMeal || s.eating); f++) { settlers.forEach(s => { s.hunger = 999; }); update(1 / 60); }

@@ -81,14 +81,9 @@ export function enterMenuWorld(scene = '') {
   const behindPanel = (x, y) => !!panel && x > p0.x - TILE_SIZE && x < p1.x + TILE_SIZE && y > p0.y - TILE_SIZE && y < p1.y + TILE_SIZE;
   const v0 = toWorld(view.left, view.top), v1 = toWorld(view.right, view.bottom);
 
-  // the hall in the biggest free strip beside the panel (above, below, left or right of it)
-  const strips = panel ? [
-    { x: centre.x, y: (v0.y + p0.y) / 2, room: p0.y - v0.y },
-    { x: centre.x, y: (p1.y + v1.y) / 2, room: v1.y - p1.y },
-    { x: (v0.x + p0.x) / 2, y: centre.y, room: p0.x - v0.x },
-    { x: (p1.x + v1.x) / 2, y: centre.y, room: v1.x - p1.x }
-  ] : [{ x: centre.x, y: centre.y, room: 1 }];
-  const strip = strips.reduce((a, b) => (b.room > a.room ? b : a));
+  // (#326) the hall in the middle of the screen, always (it went beside the panel, but in the middle when the
+  // scene was changed by hand, with the panel put away)
+  const strip = { x: centre.x, y: centre.y };
   const hall = [Math.round(strip.x / TILE_SIZE) * TILE_SIZE, Math.round(strip.y / TILE_SIZE) * TILE_SIZE];
   const hg = [hall[0] / TILE_SIZE, hall[1] / TILE_SIZE]; // the hall stands on tiles hg-1..hg
 
