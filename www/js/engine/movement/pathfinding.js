@@ -124,8 +124,26 @@ export function getReachDistanceToResource(reach, resource) {
   return best;
 }
 
+// (#322) What a tile is for enemies, worked out the first time it's asked and kept till the world's blocking
+// tiles (or the hall) change: an enemy's search and its straight-line checks asked the same tiles over and
+// over, each time making an "x,y" string and looking it up in a dozen sets. -1: not known yet
+function enemyMemo() {
+  const signature = getTileIndex().signature, size = game.COLS * game.ROWS;
+  if (enemyTiles.signature !== signature || enemyTiles.strict.length !== size || enemyTiles.hallX !== townHall.x || enemyTiles.hallY !== townHall.y) {
+    enemyTiles = { signature, hallX: townHall.x, hallY: townHall.y, strict: new Int8Array(size).fill(-1), permissive: new Int8Array(size).fill(-1) };
+  }
+  return enemyTiles;
+}
+let enemyTiles = { signature: /** @type {number | null} */ (null), hallX: 0, hallY: 0, strict: new Int8Array(0), permissive: new Int8Array(0) };
+
 export function isTileBlockedForEnemyStrict(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
+  const memo = enemyMemo(), i = gy * game.COLS + gx;
+  if (memo.strict[i] === -1) memo.strict[i] = computeBlockedForEnemyStrict(gx, gy) ? 1 : 0;
+  return memo.strict[i] === 1;
+}
+
+function computeBlockedForEnemyStrict(gx, gy) {
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
@@ -168,6 +186,12 @@ export function getEnemyReach() {
 
 export function isTileBlockedForEnemyPermissive(gx, gy) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
+  const memo = enemyMemo(), i = gy * game.COLS + gx;
+  if (memo.permissive[i] === -1) memo.permissive[i] = computeBlockedForEnemyPermissive(gx, gy) ? 1 : 0;
+  return memo.permissive[i] === 1;
+}
+
+function computeBlockedForEnemyPermissive(gx, gy) {
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore
@@ -215,64 +239,102 @@ export function createOpenList() {
   };
 }
 
+// (#322) The search's own arrays, one entry per tile and kept between searches: a tile's g score, where it
+// was reached from, and whether it's closed or its blocking known, each counted by the search they're for (a
+// stamp), so nothing's cleared between searches. It used Maps keyed by "x,y" strings: most of an enemy's time
+const grid = { size: 0, g: new Float64Array(0), from: new Int32Array(0), seen: new Int32Array(0), closed: new Int32Array(0), known: new Int32Array(0), blocked: new Uint8Array(0) };
+let searchId = 0;
+function searchArrays() {
+  const size = game.COLS * game.ROWS;
+  if (grid.size !== size) {
+    Object.assign(grid, { size, g: new Float64Array(size), from: new Int32Array(size), seen: new Int32Array(size), closed: new Int32Array(size), known: new Int32Array(size), blocked: new Uint8Array(size) });
+    searchId = 0;
+  }
+  if (++searchId > 2e9) { grid.seen.fill(0); grid.closed.fill(0); grid.known.fill(0); searchId = 1; }
+  return grid;
+}
+
 export function findGridPath(startG, endG, targetX, targetY, options) {
   if (startG.gx === endG.gx && startG.gy === endG.gy) {
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: options.isBlockedPath };
   }
-
-  const key = (gx, gy) => `${gx},${gy}`;
-  const blockedCache = new Map();
+  const cols = game.COLS, rows = game.ROWS, a = searchArrays(), id = searchId;
   const isBlocked = (gx, gy) => {
-    const k = key(gx, gy);
-    if (!blockedCache.has(k)) blockedCache.set(k, options.isBlocked(gx, gy));
-    return blockedCache.get(k);
+    if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) return options.isBlocked(gx, gy);
+    const i = gy * cols + gx;
+    if (a.known[i] !== id) { a.known[i] = id; a.blocked[i] = options.isBlocked(gx, gy) ? 1 : 0; }
+    return a.blocked[i] === 1;
   };
-  const openList = createOpenList();
-  openList.push({ gx: startG.gx, gy: startG.gy, f: Math.hypot(startG.gx - endG.gx, startG.gy - endG.gy) });
-  const closedSet = new Set();
-  const parentMap = new Map();
-  const gScore = new Map([[key(startG.gx, startG.gy), 0]]);
+  // the open list: a min-heap on f of tile indexes (as createOpenList: the same order of pops)
+  const heapAt = [], heapF = [];
+  const push = (i, f) => {
+    heapAt.push(i); heapF.push(f);
+    let k = heapAt.length - 1;
+    while (k > 0) {
+      const parent = (k - 1) >> 1;
+      if (heapF[parent] <= heapF[k]) break;
+      [heapAt[parent], heapAt[k]] = [heapAt[k], heapAt[parent]]; [heapF[parent], heapF[k]] = [heapF[k], heapF[parent]];
+      k = parent;
+    }
+  };
+  const pop = () => {
+    const top = heapAt[0], lastAt = heapAt.pop(), lastF = heapF.pop();
+    if (heapAt.length > 0) {
+      heapAt[0] = /** @type {number} */ (lastAt); heapF[0] = /** @type {number} */ (lastF);
+      let k = 0;
+      for (;;) {
+        const l = 2 * k + 1, r = l + 1;
+        let smallest = k;
+        if (l < heapAt.length && heapF[l] < heapF[smallest]) smallest = l;
+        if (r < heapAt.length && heapF[r] < heapF[smallest]) smallest = r;
+        if (smallest === k) break;
+        [heapAt[smallest], heapAt[k]] = [heapAt[k], heapAt[smallest]]; [heapF[smallest], heapF[k]] = [heapF[k], heapF[smallest]];
+        k = smallest;
+      }
+    }
+    return top;
+  };
+  const inMap = (gx, gy) => gx >= 0 && gy >= 0 && gx < cols && gy < rows;
+  const startIndex = startG.gy * cols + startG.gx, endIndex = endG.gy * cols + endG.gx;
+  // (a start off the map: searched as before, from nothing)
+  if (!inMap(startG.gx, startG.gy)) return { path: [], isBlockedPath: options.isBlockedPath };
+  a.g[startIndex] = 0; a.seen[startIndex] = id; a.from[startIndex] = -1;
+  push(startIndex, Math.hypot(startG.gx - endG.gx, startG.gy - endG.gy));
   let found = false;
 
   // no step cap: with the heap a failed search over the whole 40x40 map is still cheap,
   // and long detours through rock mazes need it
-  while (openList.size > 0) {
-    const current = openList.pop();
-    const currentKey = key(current.gx, current.gy);
+  while (heapAt.length > 0) {
+    const current = pop(), cx = current % cols, cy = (current - cx) / cols;
     // a node can be queued several times before it's expanded; skip stale copies
-    if (closedSet.has(currentKey)) continue;
-    if (current.gx === endG.gx && current.gy === endG.gy) {
-      found = true;
-      break;
-    }
-    closedSet.add(currentKey);
+    if (a.closed[current] === id) continue;
+    if (current === endIndex) { found = true; break; }
+    a.closed[current] = id;
 
     for (const direction of PATH_DIRECTIONS) {
-      const gx = current.gx + direction.dx;
-      const gy = current.gy + direction.dy;
-      const nextKey = key(gx, gy);
-      if (closedSet.has(nextKey) || isBlocked(gx, gy)) continue;
+      const gx = cx + direction.dx;
+      const gy = cy + direction.dy;
+      if (!inMap(gx, gy)) { isBlocked(gx, gy); continue; }
+      const next = gy * cols + gx;
+      if (a.closed[next] === id || isBlocked(gx, gy)) continue;
       if (!options.allowCornerCutting && direction.dx !== 0 && direction.dy !== 0 &&
-          (isBlocked(current.gx + direction.dx, current.gy) || isBlocked(current.gx, current.gy + direction.dy))) continue;
+          (isBlocked(cx + direction.dx, cy) || isBlocked(cx, cy + direction.dy))) continue;
 
-      const worldX = gx * TILE_SIZE + 15;
-      const worldY = gy * TILE_SIZE + 15;
-      const extraCost = options.extraCost ? options.extraCost(worldX, worldY) : 0;
-      const tentativeG = (gScore.get(currentKey) || 0) + direction.cost + extraCost;
-      if (!gScore.has(nextKey) || tentativeG < /** @type {number} */ (gScore.get(nextKey))) {
-        gScore.set(nextKey, tentativeG);
-        parentMap.set(nextKey, current);
-        openList.push({ gx, gy, f: tentativeG + Math.hypot(gx - endG.gx, gy - endG.gy) });
+      const extraCost = options.extraCost ? options.extraCost(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15) : 0;
+      const tentativeG = a.g[current] + direction.cost + extraCost;
+      if (a.seen[next] !== id || tentativeG < a.g[next]) {
+        a.g[next] = tentativeG; a.seen[next] = id; a.from[next] = current;
+        push(next, tentativeG + Math.hypot(gx - endG.gx, gy - endG.gy));
       }
     }
   }
 
   const path = [];
-  let current = found ? endG : null;
-  while (current) {
-    path.unshift({ x: current.gx * TILE_SIZE + 15, y: current.gy * TILE_SIZE + 15 });
-    current = parentMap.get(key(current.gx, current.gy));
+  for (let i = found ? endIndex : -1; i !== -1; i = a.from[i]) {
+    const gx = i % cols;
+    path.push({ x: gx * TILE_SIZE + 15, y: (i - gx) / cols * TILE_SIZE + 15 });
   }
+  path.reverse();
   if (path.length > 0) path.push({ x: targetX, y: targetY });
   return { path, isBlockedPath: options.isBlockedPath };
 }

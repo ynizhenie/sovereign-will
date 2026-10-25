@@ -163,6 +163,25 @@
             </div>
         </div>
 
+        <!-- (#322) VSYNC (on the next start) and the picture's quality (its resolution) -->
+        <div class="wave-settings">
+            <div data-i18n="menu.vsync">VSYNC:</div>
+            <div class="wave-options">
+                <button class="fps-option" data-vsync="off" data-i18n="menu.off">Off</button>
+                <button class="fps-option" data-vsync="on" data-i18n="menu.on">On</button>
+            </div>
+            <div class="settings-note" id="vsync-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
+        </div>
+
+        <div class="wave-settings">
+            <div data-i18n="menu.quality">Quality:</div>
+            <div class="wave-options">
+                <button class="fps-option" data-quality="low" data-i18n="menu.qualityLow">Low</button>
+                <button class="fps-option" data-quality="medium" data-i18n="menu.qualityMedium">Medium</button>
+                <button class="fps-option" data-quality="high" data-i18n="menu.qualityHigh">High</button>
+            </div>
+        </div>
+
         <div class="wave-settings">
             <div data-i18n="menu.showFps">Show FPS:</div>
             <div class="wave-options" id="show-fps-options">

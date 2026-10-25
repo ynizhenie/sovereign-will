@@ -2,7 +2,8 @@
 // drawn as often as the frame rate setting allows
 
 import { renderConfigHud, syncHudMode } from '../ui/index.js';
-import { applyPageTexts, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
+import { applyPageTexts, camera, clampCamera, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
+import { game } from '../engine/world/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
 import { isDefeated, updateDefeat } from '../modes/endless/index.js';
@@ -35,6 +36,7 @@ export function gameLoop(now) {
   loop.lastTime = now;
   let steps = 0;
   while (loop.stepTime >= STEP && steps < MAX_STEPS_PER_FRAME) {
+    rememberPositions();
     stepGame(STEP);
     loop.stepTime -= STEP;
     steps++;
@@ -43,10 +45,42 @@ export function gameLoop(now) {
 
   if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
-    render();
+    drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
     countFrame(now);
   }
   requestAnimationFrame(gameLoop);
+}
+
+// (#322) Smooth on a fast screen: the game moves in steps of 1/60 s, but a 120 or 144 Hz screen shows a frame
+// two or more times a step. Each frame draws what moves (settlers, enemies, boars, arrows, the camera on the
+// one possessed) where it is between its last step and this one, by how far into the next step the frame
+// falls; then puts it back. A jump (a ghost back by its grave, a settler through a portal) isn't smoothed
+const movingLists = () => [game.settlers, game.enemies, game.boars, game.scouts, game.projectiles];
+export function rememberPositions() {
+  for (const list of movingLists()) for (const o of list) { o.prevX = o.x; o.prevY = o.y; }
+  camera.prevX = camera.x; camera.prevY = camera.y;
+}
+
+export function drawBetweenSteps(alpha, draw) {
+  /** @type {[any, number, number][]} */
+  const moved = [];
+  if (alpha < 1) {
+    for (const list of movingLists()) {
+      for (const o of list) {
+        if (o.prevX === undefined) continue;
+        const dx = o.x - o.prevX, dy = o.y - o.prevY;
+        if ((dx || dy) && Math.abs(dx) < 40 && Math.abs(dy) < 40) { moved.push([o, o.x, o.y]); o.x = o.prevX + dx * alpha; o.y = o.prevY + dy * alpha; }
+      }
+    }
+  }
+  // (the camera on the one possessed moves with it, between steps too)
+  const followed = game.settlers.find(s => s.isPossessed);
+  const cam = followed && camera.prevX !== undefined ? { x: camera.x, y: camera.y } : null;
+  if (cam && followed) { camera.x = followed.x; camera.y = followed.y; clampCamera(); }
+  try { draw(); } finally {
+    for (const [o, x, y] of moved) { o.x = x; o.y = y; }
+    if (cam) { camera.x = cam.x; camera.y = cam.y; }
+  }
 }
 
 // Is a frame to be drawn at `now`, under the frame-rate setting? Each one is due a whole interval after the

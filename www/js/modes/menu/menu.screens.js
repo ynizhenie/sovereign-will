@@ -1,7 +1,7 @@
 // The main menu's screens: home, settings (language, frame rate, FPS counter, sound, music), and the opening
 
 import { LANGUAGES } from '../../content/language/index.js';
-import { audio, currentLanguage, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn } from '../../engine/platform/index.js';
+import { audio, currentLanguage, fitCanvasToScreen, loadSetting, onTap, quality, saveSetting, setLanguage, setMusicOn, setSoundOn, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, loop } from '../../app/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
@@ -64,6 +64,22 @@ export function initMenuScreens() {
     loop.frameRate = button.dataset.fps;
     saveSetting('fps', loop.frameRate);
     markFps();
+  }));
+  // (#322) VSYNC: remembered, used from the next start (the canvas is made with it); the picture's quality at once
+  const markVsync = value => document.querySelectorAll('[data-vsync]').forEach(b => b.classList.toggle('active', b.dataset.vsync === value));
+  markVsync(VSYNC ? 'on' : 'off');
+  document.querySelectorAll('[data-vsync]').forEach(button => onTap(button, () => {
+    saveSetting('vsync', button.dataset.vsync);
+    markVsync(button.dataset.vsync);
+    document.getElementById('vsync-note').hidden = (button.dataset.vsync === 'on') === VSYNC;
+  }));
+  const markQuality = () => document.querySelectorAll('[data-quality]').forEach(b => b.classList.toggle('active', b.dataset.quality === quality.level));
+  markQuality();
+  document.querySelectorAll('[data-quality]').forEach(button => onTap(button, () => {
+    quality.level = /** @type {string} */ (button.dataset.quality);
+    saveSetting('quality', quality.level);
+    markQuality();
+    fitCanvasToScreen();
   }));
   applyShowFps(loadSetting('showFps', 'off'));
   showFpsOptions.forEach(button => onTap(button, () => {
