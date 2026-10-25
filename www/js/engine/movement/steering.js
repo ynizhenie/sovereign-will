@@ -96,12 +96,23 @@ function tickPathTimers(entity, isEnemy, dt) {
   if (entity.directBlockedTimer > 0) entity.directBlockedTimer -= dt;
 }
 
-// A new path when there's none, the target moved, an enemy's path is a second old, and no retry is pending
+// (#322) at most this many enemies' searches a tick: a wave chasing settlers searched again and again; the
+// rest keep the way they have a tick or two longer
+const ENEMY_SEARCHES_PER_TICK = 4;
+let searches = { tick: -1, count: 0 };
+
+// A new path when there's none, the target moved, an enemy's path is a second old, and no retry is pending.
+// (#322) An enemy far off minds its target moving only by a share of the way to it
 function replanIfNeeded(entity, targetX, targetY, isEnemy) {
-  let threshold = isEnemy ? 50 : 25;
+  let threshold = isEnemy ? Math.max(50, Math.hypot(targetX - entity.x, targetY - entity.y) * 0.25) : 25;
   let targetChanged = !entity.pathTarget || Math.hypot(entity.pathTarget.x - targetX, entity.pathTarget.y - targetY) > threshold;
   let needsPath = !entity.path || entity.path.length === 0 || targetChanged || (isEnemy && entity.pathTimer <= 0);
   let canRetryPath = !(entity.pathRetryTimer > 0);
+  if (needsPath && canRetryPath && isEnemy && entity.path && entity.path.length > 0) {
+    if (searches.tick !== game.pathTick) searches = { tick: game.pathTick, count: 0 };
+    if (searches.count >= ENEMY_SEARCHES_PER_TICK) return;
+    searches.count++;
+  }
 
   if (needsPath && canRetryPath) {
     // once the normal search found no way around (walled in), go straight to the breaking-through

@@ -22,7 +22,13 @@ export function takeFishingBait(s) {
 
 // Fish replenish the marked shoals over time. A single fisher's catch rate is slower than regrowth. (#299) The
 // water within the frontier only: fished nowhere else, and a continent's sea is tens of thousands of tiles
-export function tickFishPopulation(dt) {
+let fishClock = 0;
+export function tickFishPopulation(tickDt) {
+  // (#322: twice a second, half a second's worth: thousands of water tiles)
+  fishClock += tickDt;
+  if (fishClock < 0.5) return;
+  const dt = fishClock;
+  fishClock = 0;
   const { fishCapacity, fishRegrowSeconds } = GAME_CONFIG.fishing;
   const f = getFrontier(), near = [];
   forEachInRect(game.waterTiles, f.x0, f.y0, f.x1, f.y1, w => { near.push(w); });

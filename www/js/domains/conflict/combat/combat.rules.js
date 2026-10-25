@@ -2,7 +2,7 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
+import { game, getGridPos, getTileIndex, isDoor, onceThisTick, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
@@ -219,9 +219,11 @@ export const NORMAL_BODIES = 21;
 // ---- Pre-wave deployment
 
 // From deploySeconds before a wave until its enemies are beaten, not in battle mode
+// (#322: once a tick: it was asked for every resource every settler looked at)
+const alertOnce = onceThisTick();
 export function isDefenseAlert() {
   if (game.gameMode === 'battle' || !game.gameStarted) return false;
-  return game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave);
+  return alertOnce(() => game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave));
 }
 
 // How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
@@ -237,9 +239,13 @@ export function baseRadiusToward(angle) {
 }
 
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
+// (#322: worked out once a tick, not for every resource looked at)
+const baseRadiusOnce = onceThisTick();
 export function getBaseRadius() {
-  const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
-  return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  return baseRadiusOnce(() => {
+    const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
+    return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  });
 }
 
 // From the warning until the wave is beaten, settlers go no farther from the town hall than the base's

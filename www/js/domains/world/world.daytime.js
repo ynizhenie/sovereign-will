@@ -67,24 +67,27 @@ export function getLights() {
 }
 
 // The dark over the map (after the world, before the screen's own marks): a sheet of night with the lights
-// cut out of it, soft at their edges
+// cut out of it, soft at their edges. (#322) A third of the screen's size, laid over it stretched: its edges
+// are all soft anyway, and a phone filled the whole screen twice over for it every frame
+const SHEET_SCALE = 1 / 3;
 /** @type {HTMLCanvasElement | null} */
 let sheet = null;
 export function drawDarkness() {
   const dark = getDarkness();
   if (dark <= 0.01) return;
   if (!sheet) sheet = document.createElement('canvas');
-  if (sheet.width !== canvas.width || sheet.height !== canvas.height) { sheet.width = canvas.width; sheet.height = canvas.height; }
+  const sw = Math.max(1, Math.ceil(canvas.width * SHEET_SCALE)), sh = Math.max(1, Math.ceil(canvas.height * SHEET_SCALE));
+  if (sheet.width !== sw || sheet.height !== sh) { sheet.width = sw; sheet.height = sh; }
   const g = /** @type {CanvasRenderingContext2D} */ (sheet.getContext('2d'));
   g.globalCompositeOperation = 'source-over';
   g.clearRect(0, 0, sheet.width, sheet.height);
   g.fillStyle = `rgba(8, 12, 35, ${dark})`;
   g.fillRect(0, 0, sheet.width, sheet.height);
   g.globalCompositeOperation = 'destination-out';
-  const scale = getViewScale();
+  const scale = getViewScale() * SHEET_SCALE;
   const flicker = 1 + Math.sin(performance.now() / 120) * 0.02;
   for (const light of getLights()) {
-    const x = (light.x - camera.x) * scale + canvas.width / 2, y = (light.y - camera.y) * scale + canvas.height / 2;
+    const x = (light.x - camera.x) * scale + sheet.width / 2, y = (light.y - camera.y) * scale + sheet.height / 2;
     const r = light.r * scale * flicker;
     if (x < -r || y < -r || x > sheet.width + r || y > sheet.height + r) continue;
     const grad = g.createRadialGradient(x, y, r * 0.5, x, y, r); // (clear inside half its reach, soft beyond)
@@ -93,7 +96,9 @@ export function drawDarkness() {
     g.fillStyle = grad;
     g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
   }
-  ctx.drawImage(sheet, 0, 0);
+  ctx.save(); ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
 }
 
 // (#307) the sun: shadows fall away from it, long in the morning (to the west, the sun in the east) and the
