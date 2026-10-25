@@ -1,6 +1,6 @@
 // A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
-import { closeSheet, hidePlacing, iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
+import { closeSheet, closeWorldMap, hidePlacing, iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
@@ -75,6 +75,11 @@ export function exitToMainMenu() {
   setPaused(false);
   resetRaid(); // (#255)
   hidePlacing(); closeSheet(); // (#279: the editor's or a battle's pick stayed on the chip in the next game)
+  // (#326) nothing of the game left over in the menu and the next one: no build mode, nobody selected or
+  // possessed, the world map shut
+  game.buildMode = 'interact'; game.selectedSettler = null;
+  for (const s of game.settlers) s.isPossessed = false;
+  closeWorldMap();
   game.gameStarted = false;
   document.getElementById('main-menu').style.display = '';
   showMenuScreen('home');

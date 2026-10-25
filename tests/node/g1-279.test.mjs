@@ -18,7 +18,3 @@ test('a foreman gives orders only within 5 tiles of it, and doesn\'t walk across
 test('a temporary zombie crumbling drops what it held, like anyone (#279, c1.16)', () => {
   expect(sim.zombieDrops({})).toEqual({ gone: true, club: true });
 });
-
-test('a flute can be given to a settler, and it\'s quicker to make (#279, c1.21)', () => {
-  expect(sim.fluteGiven({})).toEqual({ ordered: true, flute: true, craftSeconds: true });
-});

@@ -37,6 +37,8 @@ Object.assign(window.sim, (() => {
     const s = settlers[0];
     const food0 = stock.food;
     const needsAfter = [];
+    const finish = GAME_CONFIG.meals.finishJobSeconds;
+    GAME_CONFIG.meals.finishJobSeconds = 0; // (straight to the meal, not a job finished first, #326)
     for (let meal = 1; meal <= GAME_CONFIG.relief.mealsBefore; meal++) {
       settlers.forEach(o => { o.hunger = o === s ? 0.001 : 999; });
       update(1 / 60);
@@ -44,6 +46,7 @@ Object.assign(window.sim, (() => {
       for (let f = 0; f < 600 && (s.wantsMeal || s.eating); f++) { settlers.forEach(o => { o.hunger = 999; }); update(1 / 60); }
       needsAfter.push(!!s.needsRelief);
     }
+    GAME_CONFIG.meals.finishJobSeconds = finish;
     return { distinct: new Set(clocks.map(c => c.toFixed(3))).size, eaten: food0 - stock.food, needsAfter };
   }
 

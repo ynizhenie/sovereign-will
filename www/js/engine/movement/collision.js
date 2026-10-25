@@ -122,6 +122,31 @@ export function separateSettlersFromEnemiesOnce() {
   return moved;
 }
 
+// (#326) Allies don't stand inside each other either (a fight's crowd went into one another): each overlapping
+// pair of one side pushed apart, a part of the way a tick (gently: one walking past another isn't shoved), not
+// one asleep (lying), up in a tower, or a ghost; not into a wall. fightingOnly: only those that struck in the last
+// few seconds (settlers: two working at one tuft of grass were pushed out of its reach, both, for good)
+const ALLY_PUSH = 0.35, FIGHTING_TICKS = 180;
+export function separateAllies(units, fightingOnly = false) {
+  const live = units.filter(u => !u.asleep && !u.towerAssignment && !u.ghostly && !(u.hp <= 0)
+    && (!fightingOnly || (u.struckAt !== undefined && game.pathTick - u.struckAt < FIGHTING_TICKS)));
+  for (let i = 0; i < live.length; i++) {
+    const a = live[i], ar = Math.min(a.visualRadius || a.radius, 13) * 0.85;
+    for (let j = i + 1; j < live.length; j++) {
+      const b = live[j], br = Math.min(b.visualRadius || b.radius, 13) * 0.85;
+      let dx = a.x - b.x, dy = a.y - b.y;
+      if (Math.abs(dx) > ar + br || Math.abs(dy) > ar + br) continue;
+      let dist = Math.hypot(dx, dy);
+      const overlap = ar + br - dist;
+      if (overlap <= 0) continue;
+      if (dist === 0) { dx = (i % 2 ? 1 : -1); dy = 0; dist = 1; }
+      const push = overlap * ALLY_PUSH, nx = dx / dist * push, ny = dy / dist * push;
+      if (!a.isPossessed && !collidesWithWall(a.x + nx, a.y + ny, Math.min(a.radius, 13))) { a.x += nx; a.y += ny; }
+      if (!b.isPossessed && !collidesWithWall(b.x - nx, b.y - ny, Math.min(b.radius, 13))) { b.x -= nx; b.y -= ny; }
+    }
+  }
+}
+
 export function clampEntityToBounds(ent) {
   ent.x = Math.max(ent.radius, Math.min(game.WORLD_WIDTH - ent.radius, ent.x));
   ent.y = Math.max(ent.radius, Math.min(game.WORLD_HEIGHT - ent.radius, ent.y));

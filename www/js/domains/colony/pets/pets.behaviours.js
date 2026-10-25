@@ -14,7 +14,7 @@ import { faceTowards, petKindOf, playerControlled } from '../settlers/index.js';
 import { fetchFromStorage, returnFood, stockLeft, takeFood } from '../storage/index.js';
 import { getWeaponStats } from '../equipment/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
-import { shakeMorale } from '../../conflict/morale/index.js';
+import { ghostScare } from '../../conflict/morale/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { playSound } from '../../../app/index.js';
@@ -62,7 +62,9 @@ export function tickPet(s, tick) {
 function tickBeast(s, tick, kind) {
   const c = config(), speed = s.speed * (s.petHungry ? c.hungryPace : 1);
   const keeper = nearest(game.settlers.filter(o => (o.role === 'soldier' || o.role === 'archer') && !o.leaving && o.hp > 0), s);
-  const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : townHall;
+  // (#326) in a battle the hall's out of the way in a corner: by the nearest of its side instead (it ran there)
+  const own = game.gameMode === 'battle' ? nearest(game.settlers.filter(o => o !== s && !petKindOf(o) && o.hp > 0), s) : null;
+  const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : own || (game.gameMode === 'battle' ? s : townHall);
   const guard = c.guardTiles * TILE_SIZE;
   const foe = nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s);
   // asleep: till an enemy comes near or a wave's on
@@ -99,7 +101,15 @@ function tickBeast(s, tick, kind) {
   // by its keeper (a place of its own round it)
   const a = (s.id * 2.399) % (Math.PI * 2), r = anchor === townHall ? townHall.radius + 26 : c.followTiles * TILE_SIZE;
   const spot = { x: anchor.x + Math.cos(a) * r, y: anchor.y + Math.sin(a) * r };
-  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 24) { moveEntityTowards(s, spot.x, spot.y, speed, false, tick.dt); return 'petFollow'; }
+  // (#326) off once it's fallen a way behind, and on till it's right there: it walked a step and stopped, a step
+  // and stopped, after one walking on
+  const off = Math.hypot(spot.x - s.x, spot.y - s.y);
+  if (off > 44 || (s.petFollowing && off > 10)) {
+    s.petFollowing = true;
+    moveEntityTowards(s, spot.x, spot.y, off > 90 ? speed : Math.min(speed, (anchor.speed || speed) * 1.05), false, tick.dt);
+    return 'petFollow';
+  }
+  s.petFollowing = false;
   // nothing about: now and then a sleep
   if (!tick.isWaveActive && rand() < c.sleepChance * tick.dt) s.petSleep = c.sleepSeconds[0] + rand() * (c.sleepSeconds[1] - c.sleepSeconds[0]);
   s.isIdle = true;
@@ -208,7 +218,7 @@ function tickGhost(s, tick) {
 
 // Into an enemy: it panics at once; the ghost is gone a while
 export function haunt(s, foe) {
-  shakeMorale(foe, 9999, 'enemy', true);
+  ghostScare(foe, 'enemy'); // (#326: a big one at the second ghost)
   s.ghostGone = config().ghost.backSeconds;
   s.escort = null;
   playSound('ghost', foe);

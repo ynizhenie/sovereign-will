@@ -2,7 +2,7 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, getGridPos, getTileIndex, isDoor, onceThisTick, TILE_SIZE, townHall } from '../../../engine/world/index.js';
+import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
@@ -26,6 +26,21 @@ export function isArrowBlockedAt(x, y, fromTower) {
 // Whether an arrow from (x1, y1) would fly to (x2, y2) unstopped. Walks every tile the line touches
 // (not just points along it), so an arrow never clips a corner the check missed. The shooter's own
 // tile doesn't count.
+// (#326) A blow from a to b doesn't go through a door or a wall between them (the tiles the line crosses, not
+// their own): no fighting through a shut door
+export function hasMeleeReach(a, b) {
+  const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8);
+  const own = new Set([`${Math.floor(a.x / TILE_SIZE)},${Math.floor(a.y / TILE_SIZE)}`, `${Math.floor(b.x / TILE_SIZE)},${Math.floor(b.y / TILE_SIZE)}`]);
+  for (let i = 1; i < steps; i++) {
+    const x = a.x + (b.x - a.x) * i / steps, y = a.y + (b.y - a.y) * i / steps;
+    const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
+    if (own.has(`${gx},${gy}`)) continue;
+    const building = thingAt(game.buildings, gx * TILE_SIZE + 15, gy * TILE_SIZE + 15);
+    if (building && (isDoor(building) || !(getDefinition('buildings', building.type) || {}).walkable)) return false;
+  }
+  return true;
+}
+
 export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   let gx = Math.floor(x1 / TILE_SIZE), gy = Math.floor(y1 / TILE_SIZE);
   const endGx = Math.floor(x2 / TILE_SIZE), endGy = Math.floor(y2 / TILE_SIZE);
@@ -83,7 +98,7 @@ export function performAttack(attacker, targetX, targetY) {
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => inReach(en, en.radius)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; bleed(en, attacker); playSound('hit', en); } })),
+      ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; bleed(en, attacker); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {

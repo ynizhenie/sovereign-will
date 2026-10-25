@@ -56,7 +56,8 @@ function drawBoarBody(b, dead) {
 }
 
 // (#306) the ground dug: darker under one lying in it, fading once it's gone
-function drawWallows() {
+// (#326) on the ground, under everything standing on it (drawn with the ground, before the trees and the rest)
+export function drawWallows() {
   const fade = GAME_CONFIG.mapResources.boar.wallowFade;
   for (const w of boarWallows) {
     const a = w.boar ? 0.42 : 0.42 * Math.max(0, 1 - w.age / fade);
@@ -68,7 +69,6 @@ function drawWallows() {
 
 // Boars (faded while hidden), and carcasses being butchered
 export function drawBoars() {
-  drawWallows();
   const v = getViewRect(40); // (#299: those on the screen)
   game.boars.forEach(b => {
     if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1 || !isVisible(b.x, b.y)) return; // (#299: and the colony sees it)

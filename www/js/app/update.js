@@ -10,7 +10,7 @@ import { tickDaytime, tickFog, tickPaths, tickWeather } from '../domains/world/i
 import { tickMenuScene } from '../modes/menu/index.js';
 import { growCrops } from '../domains/economy/farming/index.js';
 import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, updateTemporaryZombies } from '../domains/factions/undead/index.js';
-import { separateSettlersFromEnemies } from '../engine/movement/index.js';
+import { separateAllies, separateSettlersFromEnemies } from '../engine/movement/index.js';
 import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
 import { keepStoresInStep } from '../domains/colony/storage/index.js';
 import { tickDemonCamp } from '../domains/factions/demons/index.js';
@@ -61,6 +61,7 @@ export function update(dt) {
   tickEnemies(dt);
 
   separateSettlersFromEnemies();
+  separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
   for (const unit of game.settlers) tickAnimation(unit, dt);
   ageBloodAndDung(dt);
   trackAllFootprints();
@@ -99,6 +100,7 @@ function updateCamp(dt) {
   tickProjectiles();
   tickEnemies(dt);
   separateSettlersFromEnemies();
+  separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
   for (const unit of game.settlers) tickAnimation(unit, dt);
   for (const unit of game.enemies) tickAnimation(unit, dt);
   ageBloodAndDung(dt);

@@ -69,7 +69,14 @@ test('a tapped boar is marked and hunted, butchered and its meat carried to the 
   expect(hunt.meat).toBeGreaterThan(0);
 
   // the world stands still for the tap: otherwise the soldier walks on between reading where he is and the click
-  const soldier = await page.evaluate(() => { isPaused = true; return { x: settlers[0].x, y: settlers[0].y, type: settlers[0].type }; });
+  // (#326: the hall's in the middle, under the menu's panel: the soldier put where the menu shows the world)
+  const soldier = await page.evaluate(() => {
+    isPaused = true;
+    const s = settlers[0], rect = canvas.getBoundingClientRect(), k = getViewScale() / screenPixelRatio;
+    const open = () => { const el = document.elementFromPoint(rect.left + rect.width / 2 + (s.x - camera.x) * k, rect.top + rect.height / 2 + (s.y - camera.y) * k); return !!el && el.id === 'main-menu'; };
+    for (let dx = -300; dx <= 300 && !open(); dx += 30) for (let dy = -200; dy <= 200 && !open(); dy += 30) Object.assign(s, { x: camera.x + dx, y: camera.y + dy });
+    return { x: s.x, y: s.y, type: s.type };
+  });
   await page.mouse.click(...Object.values(await toPage(page, soldier)));
   const after = await page.evaluate(() => ({ type: settlers[0].type, weapon: settlers[0].weapon, faction: getPlayerFaction().id, sides: sides.player.faction }));
   expect(after.type).not.toBe(soldier.type);

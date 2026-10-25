@@ -1169,3 +1169,6 @@ body[data-hud="endless"] .day-clock { display: block; }
 #tab-farming .eats-only[hidden], #tab-farming .farm-only[hidden], #tab-farming .undead-only[hidden] { display: none !important; }
 #tab-farming .undead-only { margin-top: 6px; }
 .settings-note { font-size: 12px; color: #f1c40f; margin-top: 4px; }
+
+/* (#326) while the game starts: only the dark background, not the menu half made */
+body.booting > * { visibility: hidden; }

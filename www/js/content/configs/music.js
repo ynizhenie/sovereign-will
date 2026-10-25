@@ -293,16 +293,5 @@ export const musicConfig = {
       bass: { wave: 'sine', gain: 0.13, pattern: [0, null, null, null, 0, null, 1, null], octave: 0, length: 1 },
       drums: { kick: 'X.......', tom: '..x..x.x' },
       extra: { kind: 'chant', chance: 0.06 } },
-    // ---- (#279) flute tunes: a settler with a flute by a campfire plays one, over the music, softly
-    flute_meadow: { bpm: 84, chords: [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]], lead: { wave: 'triangle', gain: 0.075, chance: 0.42, length: 0.50, scale: [74, 76, 78, 81, 83, 86] } },
-    flute_river: { bpm: 72, chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]], lead: { wave: 'sine', gain: 0.075, chance: 0.50, length: 0.65, scale: [72, 74, 76, 79, 81, 84] } },
-    flute_ember: { bpm: 66, chords: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]], lead: { wave: 'triangle', gain: 0.075, chance: 0.58, length: 0.80, scale: [69, 72, 74, 76, 79, 81] } },
-    flute_dance: { bpm: 112, chords: [[62, 66, 69], [67, 71, 74], [69, 73, 76], [62, 66, 69]], lead: { wave: 'sine', gain: 0.075, chance: 0.42, length: 0.95, scale: [74, 76, 78, 79, 81, 83, 86] } },
-    flute_lament: { bpm: 58, chords: [[50, 53, 57], [46, 50, 53], [48, 52, 55], [45, 49, 52]], lead: { wave: 'triangle', gain: 0.075, chance: 0.50, length: 0.50, scale: [74, 76, 77, 79, 81, 82] } },
-    flute_shepherd: { bpm: 96, chords: [[55, 59, 62], [60, 64, 67], [62, 66, 69], [55, 59, 62]], lead: { wave: 'sine', gain: 0.075, chance: 0.58, length: 0.65, scale: [79, 81, 83, 86, 88] } },
-    flute_stars: { bpm: 60, chords: [[64, 67, 71], [60, 64, 67], [62, 65, 69], [59, 62, 66]], lead: { wave: 'triangle', gain: 0.075, chance: 0.42, length: 0.80, scale: [76, 79, 81, 83, 86, 88] } },
-    flute_wind: { bpm: 78, chords: [[52, 55, 59], [50, 53, 57], [48, 52, 55], [47, 50, 54]], lead: { wave: 'sine', gain: 0.075, chance: 0.50, length: 0.95, scale: [71, 74, 76, 78, 79, 83] } },
-    flute_harvest: { bpm: 104, chords: [[60, 64, 67], [65, 69, 72], [67, 71, 74], [60, 64, 67]], lead: { wave: 'triangle', gain: 0.075, chance: 0.58, length: 0.50, scale: [72, 74, 76, 77, 79, 81, 84] } },
-    flute_dusk: { bpm: 64, chords: [[57, 60, 64], [55, 58, 62], [53, 57, 60], [52, 56, 59]], lead: { wave: 'sine', gain: 0.075, chance: 0.42, length: 0.65, scale: [69, 71, 72, 74, 76, 77] } }
   }
 };

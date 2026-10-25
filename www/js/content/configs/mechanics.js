@@ -66,7 +66,8 @@ export const mechanicsConfig = {
   // hungry nightFactor as fast (#279: half)
   // zones the player marks (#279, world.zones.js): a relief zone holds reliefMax dung at most
   zones: { reliefMax: 5 },
-  meals: { seconds: 33, firstShare: 0.3, eatSeconds: 2.5, nightFactor: 0.5 },
+  // (#326) finishJobSeconds: hungry in the middle of a job, it finishes it first, for that long at most
+  meals: { seconds: 33, firstShare: 0.3, eatSeconds: 2.5, nightFactor: 0.5, finishJobSeconds: 25 },
   // day and night (#257): a day is morning + day + evening + night seconds, Endless starting in the morning;
   // at night it's `darkness` dark; light reaches (tiles) round the town hall, a lit torch, a lit campfire, a
   // torch in hand, a portal, a necromancer's staff. Night: settlers sleep at their shelters (hunger stopped),
@@ -109,12 +110,10 @@ export const mechanicsConfig = {
   // its most); soldiers and archers also patrol the edge of the base (patrolStep radians a waypoint) and
   // train at a dummy (their damage up trainPerSecond of itself a second, up to trainMax); a soldier guards a
   // gatherer more than guardBeyondTiles past the base's edge, keeping within guardRange px; an idle
-  // necromancer takes `bones` bones from a corpse in boneSeconds; one with a flute stops work now and then
-  // for a tune by a campfire (fluteEvery seconds, fluteSeconds at it; #306)
+  // necromancer takes `bones` bones from a corpse in boneSeconds
   idle: { seconds: [8, 16], campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
-    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3,
-    fluteEvery: [150, 300], fluteSeconds: [12, 26] },
+    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used

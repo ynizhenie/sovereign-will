@@ -5,7 +5,7 @@ import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/index.j
 import { ctx, mouse, t, getViewRect } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
-import { getSmelterLimits, needsRepair } from './building.rules.js';
+import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getEnemyColor, getPlayerFaction, sides } from '../../factions/index.js';
 import { drawDenArt, drawDoorArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawStoneWall, drawTentArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
@@ -106,7 +106,7 @@ export function drawTownHall() {
   if (townHall.hp < townHall.maxHp) {
     ctx.fillStyle = townHall.repairRequested ? '#f1c40f' : '#e74c3c';
     ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-    fillRichText(ctx, townHall.repairRequested ? t('repair.hall', { cost: formatCost(GAME_CONFIG.repairs.townHall.cost) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
+    fillRichText(ctx, townHall.repairRequested ? t('repair.hall', { cost: formatCost(getHallRepairStep().left) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
   }
 }
 

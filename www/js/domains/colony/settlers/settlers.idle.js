@@ -151,7 +151,6 @@ export function idlePastime(s, tick) {
       goStand(s, place, tick.dt, fire);
       if (Math.hypot(place.x - s.x, place.y - s.y) <= 6) {
         cheer(s, c.campfireMoralePerSecond, c.campfireAbove, tick.dt);
-        if (s.flute) s.playingFlute = game.pathTick; // (one with a flute plays it, #279)
       }
       return true;
     }
@@ -216,28 +215,6 @@ export function idlePastime(s, tick) {
     default:
       return false;
   }
-}
-
-// (#306) A tune now and then: one carrying a flute stops what it's doing for a while and plays by a campfire
-// (the campfire pastime: its morale up while it plays), then goes back to it. Not in a wave, not asleep, not
-// while it carries something, and now and then only (GAME_CONFIG.idle.fluteEvery, fluteSeconds)
-export function fluteBreak(s, tick) {
-  const c = config();
-  if (!s.flute || s.isPossessed) return false;
-  if (s.breaking) {
-    if (!tick.isWaveActive && !isDefenseAlert() && s.idle && s.idle.act === 'campfire' && s.idle.left > 0 && idlePastime(s, tick)) return true;
-    s.breaking = false;
-    s.idle = null;
-    return false;
-  }
-  if (s.carrying || s.drowsy || tick.isWaveActive || isDefenseAlert() || game.pathTick < (s.fluteAt || 0)) return false;
-  if (!isInSafeArea(s.x, s.y)) return false;
-  const seat = freeCampfireSeat(s);
-  if (!seat) return false;
-  s.fluteAt = game.pathTick + Math.round((c.fluteEvery[0] + rand() * (c.fluteEvery[1] - c.fluteEvery[0])) * 60);
-  s.breaking = true;
-  s.idle = { act: 'campfire', left: c.fluteSeconds[0] + rand() * (c.fluteSeconds[1] - c.fluteSeconds[0]), spot: { x: seat.fire.x, y: seat.fire.y }, partnerId: null, seat: seat.seat };
-  return idlePastime(s, tick);
 }
 
 // A patrol's waypoint at `angle` round the town hall: a tile past the base's edge, or nearer in where

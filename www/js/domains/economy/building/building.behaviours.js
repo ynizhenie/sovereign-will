@@ -4,7 +4,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats } from '../../colony/equipment/index.js';
 import { addResources, canAfford, fetchFromStorage, moveSettlerToTownHall, payCost, stock, takeStock } from '../../colony/storage/index.js';
-import { claimBuildingJob, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
+import { claimBuildingJob, getHallRepairStep, getMissingMaterial, getRepairStep, getSmelterLimits, isBuildingJobFree, needsRepair, removeBuilding } from './building.rules.js';
 import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
 import { makeAppleTree } from '../farming/index.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
@@ -80,21 +80,31 @@ export function deliverToSmelter(s, tick) {
   return false;
 }
 
+// (#326) At the hall, hammering at it for a step's seconds (the hammer's swing, s.working), then it's paid for
+// and mended by the step's hp
+export function hallRepairStep(s, tick, repair = getHallRepairStep()) {
+  faceTowards(s, townHall.x, townHall.y);
+  s.working = 0.1; s.workKind = 'build';
+  s.hallRepairTimer = (s.hallRepairTimer || 0) + tick.dt;
+  if (s.hallRepairTimer < repair.seconds) return true;
+  s.hallRepairTimer = 0;
+  payCost(repair.cost);
+  townHall.hp = Math.min(townHall.maxHp, townHall.hp + repair.hp);
+  if (townHall.hp >= townHall.maxHp) townHall.repairRequested = false;
+  return true;
+}
+
 // Repair the town hall when the player asked for it (cost and hp per step: GAME_CONFIG.repairs.townHall)
 export function repairTownHall(s, tick) {
   if (townHall.repairRequested && townHall.hp < townHall.maxHp && s.role === 'worker' && !s.carrying && !s.targetEquipment && !s.isPossessed) {
-    const repair = GAME_CONFIG.repairs.townHall;
+    const repair = getHallRepairStep();
     if (canAfford(repair.cost)) {
       let dist = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (dist > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
         return true;
-      } else {
-        payCost(repair.cost);
-        townHall.hp = Math.min(townHall.maxHp, townHall.hp + repair.hp);
-        if (townHall.hp >= townHall.maxHp) townHall.repairRequested = false;
-        return true;
       }
+      return hallRepairStep(s, tick, repair);
     }
   }
   return false;
