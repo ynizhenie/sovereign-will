@@ -1,7 +1,7 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { game, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { enemyDamagePerSecond, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
@@ -298,16 +298,13 @@ function breakBuilding(building, enemyDef, dt) {
 // The resource in the way on a blocked path: trees, boulders, bushes and grass; a big one breaks cacti
 // and ore too (not natural rock: paths never go through rock, so a brute only ever grazed rock beside its
 // corridor and then spent ~25s chewing through 100 hp instead of walking on)
+// (#322: looked for by the tiles round it, not through every tree and bush of a big map, every tick)
 function findBlockingResource(en, contactRadius) {
-  let destroyableResources = [
-    ...game.trees.filter(t => !t.isGrowing),
-    ...game.boulders,
-    ...game.berryBushes,
-    ...game.grassList
-  ];
-  if (en.type === 'big') destroyableResources.push(...game.cacti, ...game.ironOres, ...game.coalOres);
-  for (let r of destroyableResources) {
-    if (collidesWithBoxList(en.x, en.y, contactRadius, [r], 15)) return r;
+  const lists = en.type === 'big' ? [game.trees, game.boulders, game.berryBushes, game.grassList, game.cacti, game.ironOres, game.coalOres] : [game.trees, game.boulders, game.berryBushes, game.grassList];
+  for (const list of lists) {
+    let found = null;
+    someNear(list, en.x, en.y, contactRadius + 15, r => !(list === game.trees && r.isGrowing) && collidesWithBoxList(en.x, en.y, contactRadius, [r], 15) && (found = r));
+    if (found) return found;
   }
   return null;
 }

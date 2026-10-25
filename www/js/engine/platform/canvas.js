@@ -2,14 +2,30 @@
 
 import { game } from '../world/index.js';
 import { camera, clampCamera, getMaxZoom, getMinZoom } from './camera.js';
+import { loadSetting } from './storage.js';
 
 export const canvas = document.getElementById('gameCanvas');
 
+// (#322) VSYNC (Settings, on by default): frames shown in step with the screen's refreshes, whatever its rate
+// (60, 75, 120, 144 Hz...), no tearing. Off: drawn straight to the screen as soon as they're done (less delay,
+// may tear). Set when the canvas is made: a change takes effect the next time the game starts
+export const VSYNC = loadSetting('vsync', 'on') !== 'off';
+
 export const ctx = canvas.getContext('2d', {
   alpha: false,
-  desynchronized: true,
+  desynchronized: !VSYNC,
   willReadFrequently: false
 });
+
+// (#322) Quality (Settings): how many canvas pixels to a CSS pixel at most. High: up to 2 (sharp); medium:
+// 1.5; low: 1 (a weak phone's GPU fills a third of the pixels). By default high, but medium on a phone with a
+// very dense screen
+export const QUALITY_RATIOS = { high: 2, medium: 1.5, low: 1 };
+export function defaultQuality() {
+  const touch = typeof window !== 'undefined' && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+  return touch && (window.devicePixelRatio || 1) >= 2.5 ? 'medium' : 'high';
+}
+export const quality = { level: loadSetting('quality', '') || defaultQuality() };
 
 // ---- Screen and camera
 //
@@ -18,7 +34,7 @@ export const ctx = canvas.getContext('2d', {
 export let screenPixelRatio = 1;
 
 export function fitCanvasToScreen() {
-  screenPixelRatio = Math.min(2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
+  screenPixelRatio = Math.min(QUALITY_RATIOS[quality.level] || 2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
   const width = Math.max(1, Math.round(canvas.clientWidth * screenPixelRatio));
   const height = Math.max(1, Math.round(canvas.clientHeight * screenPixelRatio));
   if (canvas.width !== width || canvas.height !== height) {

@@ -233,11 +233,18 @@ export function haulPiles(s, tick, chosen = false) {
 /** @type {{ tick: number, set: Set<object> }} */
 let haulers = { tick: -1, set: new Set() };
 function pileHaulers() {
-  if (haulers.tick === game.pathTick) return haulers.set;
+  // (#322: chosen again a few times a second, not every tick; and a storage with room looked for only while
+  // there's room anywhere)
+  if (game.pathTick - haulers.tick < 15 && haulers.tick <= game.pathTick) return haulers.set;
   const set = new Set();
-  const movable = game.piles.filter(p => findStorageWithRoom(p));
+  const room = getStorages().some(st => roomIn(st) > 0);
+  const movable = room ? game.piles.filter(p => findStorageWithRoom(p)) : [];
   if (movable.length) {
-    const near = s => Math.min(...movable.map(p => Math.hypot(p.x - s.x, p.y - s.y)));
+    const nearest = new Map();
+    const near = s => {
+      if (!nearest.has(s)) { let best = Infinity; for (const p of movable) best = Math.min(best, Math.hypot(p.x - s.x, p.y - s.y)); nearest.set(s, best); }
+      return nearest.get(s);
+    };
     const workers = game.settlers.filter(s => s.role === 'worker' && !s.isPossessed && !s.asleep && !s.drowsy && (!s.carrying || s.pileTarget))
       .sort((a, b) => (b.pileTarget ? 1 : 0) - (a.pileTarget ? 1 : 0) || near(a) - near(b));
     // (never the only worker there is: it keeps gathering, and carries piles when it has nothing to do)
