@@ -7,7 +7,7 @@ import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/i
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { DUMMY_VARIANTS, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
+import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
@@ -174,16 +174,59 @@ export function drawUpgrades() {
   }
 }
 
+// (#326) Walls and doors join: a piece's neighbours (the four tiles round it that hold a wall or a door)
+const isWallPiece = b => b.type === 'wall_wood' || b.type === 'wall_stone' || b.type === 'door' || b.type === 'iron_door';
+function wallLinks() {
+  const at = new Map();
+  for (const b of game.buildings) if (isWallPiece(b)) at.set(`${Math.round(b.x / TILE_SIZE)},${Math.round(b.y / TILE_SIZE)}`, b);
+  const links = new Map();
+  for (const [key, b] of at) {
+    const [cx, cy] = key.split(',').map(Number);
+    let mask = 0;
+    if (at.has(`${cx},${cy - 1}`)) mask |= LINK.n;
+    if (at.has(`${cx + 1},${cy}`)) mask |= LINK.e;
+    if (at.has(`${cx},${cy + 1}`)) mask |= LINK.s;
+    if (at.has(`${cx - 1},${cy}`)) mask |= LINK.w;
+    links.set(b, mask);
+  }
+  return links;
+}
+
+// A door opens as someone comes to it and shuts after (the animation is only drawn, nothing waits for it)
+let lastDraw = performance.now();
+function doorOpening(b, dt) {
+  const near = u => u.hp > 0 && Math.abs(u.x - b.x) < 26 && Math.abs(u.y - b.y) < 26;
+  const wanted = game.settlers.some(near) || game.enemies.some(near) ? 1 : 0;
+  const now = b.openness || 0;
+  b.openness = wanted > now ? Math.min(1, now + dt * 5) : Math.max(0, now - dt * 2.5);
+  return b.openness;
+}
+
+// A door opens away from the hall (or the enemy's outpost; in a battle from its side's end of the field)
+function doorSwing(b, mask) {
+  let home;
+  if (b.side === 'red') {
+    const camp = game.enemyTents.find(et => et.outpost);
+    home = camp || { x: game.WORLD_WIDTH, y: game.WORLD_HEIGHT / 2 };
+  } else home = game.gameMode === 'battle' ? { x: 0, y: game.WORLD_HEIGHT / 2 } : townHall;
+  const dx = b.x - home.x, dy = b.y - home.y;
+  const horizontalRun = !((mask & (LINK.n | LINK.s)) && !(mask & (LINK.e | LINK.w)));
+  return horizontalRun ? { x: 0, y: dy >= 0 ? 1 : -1 } : { x: dx >= 0 ? 1 : -1, y: 0 };
+}
+
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
 export function drawBuildings() {
+  const now = performance.now(), dt = Math.min(0.1, (now - lastDraw) / 1000); lastDraw = now;
+  const links = wallLinks();
   game.buildings.forEach(b => {
     // (the look: building.art.js, #251)
     if (b.type === 'wall_wood') {
-      drawWoodWall(b.x, b.y);
+      drawWoodWall(b.x, b.y, links.get(b) || 0);
     } else if (b.type === 'wall_stone') {
-      drawStoneWall(b.x, b.y);
+      drawStoneWall(b.x, b.y, links.get(b) || 0);
     } else if (b.type === 'door' || b.type === 'iron_door') {
-      drawDoorArt(b.x, b.y, b.type === 'iron_door');
+      const open = doorOpening(b, dt);
+      drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, open, doorSwing(b, links.get(b) || 0));
     } else if (b.type === 'iron_trap') {
       // an iron trap (#248): open, with food in it when baited; shut on whoever it holds
       shadow(b.x, b.y, 22, 18, 6); // (#326: a shadow under everything)

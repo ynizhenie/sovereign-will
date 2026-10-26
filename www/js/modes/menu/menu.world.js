@@ -247,6 +247,7 @@ export function menuWorldTap(clientX, clientY) {
 // Each frame (app/main.js): the world runs while the main menu shows and no game is on; made again for a new
 // screen size
 export function syncMenuWorld() {
+  if (game.loading) return; // (#326) a world being made behind the loading screen: the scene waits as it is
   const showing = getComputedStyle(document.getElementById('main-menu')).display !== 'none';
   if (isMenuWorld()) {
     if (!showing || game.gameStarted) { leaveMenuWorld(); return; }

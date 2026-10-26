@@ -35,6 +35,12 @@ export const test = base.extend({
         return response;
       };
     }
+    // (#326) Play makes the world behind a loading screen: a click on it is done once the game has started
+    const click = page.click.bind(page);
+    page.click = async (selector, ...args) => {
+      await click(selector, ...args);
+      if (selector === '#play-button') await started(page);
+    };
     await use(page);
   }
 });
@@ -54,6 +60,9 @@ export async function openGame(page) {
   for (const file of files) await page.addScriptTag({ path: `${SCENARIOS}/${file}` });
   return errors;
 }
+
+// (#326) Play (the editor's too) makes its world behind a loading screen: done once the game has started
+export const started = page => page.waitForFunction(() => gameStarted === true && !game.loading, null, { timeout: 30000 });
 
 // Run window.sim[fn](arg) in the page and return its result
 export const sim = (page, fn, arg) => page.evaluate(([fn, arg]) => window.sim[fn](arg), [fn, arg]);

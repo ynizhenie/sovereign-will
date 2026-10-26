@@ -315,15 +315,24 @@ export function isWaterReachable(w) {
 }
 
 export function generateMap() {
+  for (const _ of generateMapSteps()); // (all at once)
+}
+
+// (#326) The map made in steps, each yielding how far along it is (a loading screen draws a frame between them)
+export function* generateMapSteps() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
   game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = []; game.beachTiles = []; // (#326: the last map's beaches gone before anything's placed)
+  yield 0.1;
   if (isContinentMap()) { generateContinent(); return; } // (#299: a big map, a continent)
 
   placeLakes();
+  yield 0.2;
   placeDeserts();
   placeRockClusters();
+  yield 0.3;
 
   placeForests();
+  yield 0.5;
   for (let i = 0; i < getMapCount('trees', 8); i++) spawnResource('tree');  // lone trees outside forests
   placeBoulderPiles();
   for (let i = 0; i < getMapCount('boulders', 15); i++) spawnResource('boulder');
@@ -331,6 +340,7 @@ export function generateMap() {
   for (let i = 0; i < getMapCount('berryBushes', 8); i++) spawnForestAware('berry_bush');
   for (let i = 0; i < getMapCount('sticks', 15); i++) spawnForestAware('stick');
   for (let i = 0; i < getMapCount('pebbles', 14); i++) spawnResource('pebble');
+  yield 0.7;
 
   // at least one spawner of each kind, even if the config says 0
   for (const kind of Object.keys(ORE_KINDS)) {
@@ -338,6 +348,7 @@ export function generateMap() {
   }
 
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
+  yield 0.85;
   placeBeaches();
   placeAppleTrees();
 }

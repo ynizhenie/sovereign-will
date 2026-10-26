@@ -1,5 +1,5 @@
 import { test, expect } from './helpers.mjs';
-import { openGame } from './helpers.mjs';
+import { openGame, started } from './helpers.mjs';
 
 // Battles and the editor (#255, a comment on it): a battle's difficulty and orders; the editor's brush, its
 // drag, undo and redo, clearing and playing a map
@@ -69,11 +69,14 @@ test('the editor: a 5×5 brush; a drag paints; undo and redo; clearing asks firs
 test('the editor\'s Play: saved, then Endless on that map (#255)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => localStorage.removeItem('sovereign-will-maps'));
-  const r = await page.evaluate(([p]) => {
+  await page.evaluate(([p]) => {
     startEditor({ cols: 30, rows: 30, generate: false });
     editor.tool = 'boulder'; editorTap(p.x, p.y);
     document.getElementById('editor-name').value = 'Play test';
     playEditorMap();
+  }, [at(8, 8)]);
+  await started(page);
+  const r = await page.evaluate(([p]) => {
     return { mode: gameMode, started: gameStarted, cols: COLS, boulder: boulders.some(b => b.x === p.x && b.y === p.y), settlers: settlers.length > 0 };
   }, [at(8, 8)]);
   expect(r).toEqual({ mode: 'endless', started: true, cols: 30, boulder: true, settlers: true });

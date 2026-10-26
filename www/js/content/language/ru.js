@@ -518,6 +518,8 @@ export const ruLanguage = {
       'activity.sleepAtNight': 'Спит',
       'activity.lightTorches': 'Зажигает факел',
       'menu.hideMenu': 'Скрыть меню и смотреть',
+      'loading.world': 'Создаём мир…',
+      'loading.save': 'Загружаем сохранение…',
       'menu.nextScene': '[[reroll]] Другая сценка',
       'menu.showMenu': '[[menu]] Меню',
       'voice.humans.hired': 'Готов к работе!|К вашим услугам.|С чего начать?|Здравствуйте, я новенький.|Рад быть здесь.',

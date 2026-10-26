@@ -86,7 +86,8 @@ export function performAttack(attacker, targetX, targetY) {
       damage: stats.damage * stats.multiplier,
       life: stats.projectileLife, 
       fromEnemy: false, 
-      owner: attacker
+      owner: attacker,
+      training: !!(attacker.idle && attacker.idle.act === 'train') // (#326) at a dummy: it sticks in it
     });
     playSound('bow', attacker);
     if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles
@@ -214,7 +215,7 @@ export function addCorpse(unit, side, kind) {
   const big = isBigBody(unit);
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
-  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false, look: unit.look, pet: def.pet }); // (its look, #306)
+  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false, look: unit.look, pet: def.pet, stuck: unit.stuck }); // (its look, #306; its arrows stay in it, #326)
 }
 
 export function updateCorpses(dt) {
@@ -363,13 +364,44 @@ export function getDefensePlan() {
   return game.defensePlan;
 }
 
+// (#326) An arrow that stopped stays: in the unit it hit (the same place on it as it moves), or on the ground
+// where it fell. It fades after a while, in a corpse it goes with it. Nobody can pick it up (a dummy's, its
+// trainers collect).
+function stickInto(host, proj) {
+  const keep = GAME_CONFIG.stuckArrows, arrow = { x: proj.x - host.x, y: proj.y - host.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy };
+  if (!host.stuck) host.stuck = [];
+  if (host.stuck.length >= keep.perUnit) host.stuck.shift();
+  host.stuck.push(arrow);
+}
+function dropOnGround(proj) {
+  if (proj.fire) return;
+  const keep = GAME_CONFIG.stuckArrows;
+  game.stuckArrows.push({ x: proj.x, y: proj.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy });
+  if (game.stuckArrows.length > keep.ground) game.stuckArrows.shift();
+}
+
+// Arrows age: those lying and those in the living go after GAME_CONFIG.stuckArrows.seconds
+export function ageStuckArrows(dt) {
+  const seconds = GAME_CONFIG.stuckArrows.seconds;
+  for (const a of game.stuckArrows) a.age += dt;
+  if (game.stuckArrows.length && game.stuckArrows[0].age > seconds) game.stuckArrows = game.stuckArrows.filter(a => a.age <= seconds);
+  for (const list of [game.settlers, game.enemies]) {
+    for (const u of list) {
+      if (!u.stuck) continue;
+      for (const a of u.stuck) a.age += dt;
+      u.stuck = u.stuck.filter(a => a.age <= seconds);
+      if (!u.stuck.length) u.stuck = undefined;
+    }
+  }
+}
+
 // Arrows fly, hit what they reach (settlers and the town hall, or enemies, tents and boars), stop at obstacles
 export function tickProjectiles() {
   for (let i = game.projectiles.length - 1; i >= 0; i--) {
     let proj = game.projectiles[i];
     if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
     proj.x += proj.vx; proj.y += proj.vy; proj.life--;
-    let hit = false;
+    let hit = false, host = null;
 
     if (proj.fromEnemy) {
       if (Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
@@ -382,7 +414,7 @@ export function tickProjectiles() {
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
           damageSettler(s, proj.damage, proj.owner);
           if (proj.fire) setBurning(s);
-          hit = true;
+          hit = true; host = s;
         }
       }
     } else {
@@ -393,8 +425,17 @@ export function tickProjectiles() {
           bleed(en, proj.owner);
           playSound('arrowHit', en);
           if (proj.fire) setBurning(en);
-          hit = true;
+          hit = true; host = en;
         }
+      }
+      // (#326) an archer's practice: the dummy takes the arrow and keeps it (a few), hurt by none
+      for (const d of proj.training && !hit ? game.buildings : []) {
+        if (d.type !== 'dummy' || Math.abs(d.x - proj.x) > TILE_SIZE / 2 || Math.abs(d.y - proj.y) > TILE_SIZE / 2) continue; // (its tile: a shut one stops an arrow the moment it's in it)
+        if (!d.arrowsStuck) d.arrowsStuck = [];
+        if (d.arrowsStuck.length < GAME_CONFIG.stuckArrows.dummy) d.arrowsStuck.push({ x: proj.x - d.x, y: proj.y - d.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: false });
+        else dropOnGround(proj);
+        hit = true; host = d;
+        break;
       }
       for (let j = game.enemyTents.length - 1; j >= 0 && !hit; j--) {
         let et = game.enemyTents[j];
@@ -414,7 +455,11 @@ export function tickProjectiles() {
     // gone: it hit something, flew its full range, or struck an obstacle past its shooter's own tile
     const tile = getGridPos(proj.x, proj.y);
     const leftStartTile = tile.gx !== proj.startTile.gx || tile.gy !== proj.startTile.gy;
-    if (hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower))) game.projectiles.splice(i, 1);
+    const stops = hit || proj.life <= 0 || (leftStartTile && isArrowBlockedAt(proj.x, proj.y, !!proj.fromTower));
+    if (stops) {
+      if (host && host.type === 'dummy') { /* kept by the dummy */ } else if (host) stickInto(host, proj); else dropOnGround(proj);
+      game.projectiles.splice(i, 1);
+    }
   }
 }
 

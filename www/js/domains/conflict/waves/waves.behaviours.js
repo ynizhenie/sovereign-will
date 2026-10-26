@@ -29,7 +29,7 @@ function enemyHeal(en, healer, dt) {
   if (game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 50)) return false;
   let patient = null;
   for (const other of game.enemies) {
-    if (other === en || other.hp >= other.maxHp || Math.hypot(other.x - en.x, other.y - en.y) > healer.range) continue;
+    if (other === en || other.hp <= 0 || other.hp >= other.maxHp || Math.hypot(other.x - en.x, other.y - en.y) > healer.range) continue;
     if (!patient || other.hp / other.maxHp < patient.hp / patient.maxHp) patient = other;
   }
   if (!patient) return false;
