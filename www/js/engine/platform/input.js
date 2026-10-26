@@ -1,27 +1,21 @@
-// Keyboard, mouse, touch and the on-screen joystick: what the player presses, turned into the game's
-// commands (pause, possession, camera drag and zoom, taps on the map)
+// Keyboard, mouse and touch: what the player presses, turned into the game's commands (pause, leaving
+// possession, camera drag and zoom, taps on the map)
 
 import { canvas, getViewScale } from './canvas.js';
 import { camera, clampCamera, getCanvasScreenCoords, setZoom, updateInputPos } from './camera.js';
-import { getPossessed, switchPossession, unpossess } from '../../domains/colony/settlers/index.js';
+import { getPossessed, unpossess } from '../../domains/colony/settlers/index.js';
 import { togglePause } from '../../app/index.js';
 import { isCameraLocked } from '../../modes/endless/index.js';
 
 export const keys = {};
-
-// the on-screen joystick for the possessed settler: x, y in -1..1 (bindJoystick, below)
-export const joystick = { x: 0, y: 0 };
 
 export let mouse = { x: 0, y: 0 };
 
 // Shift held: a building placed keeps the build mode on, to place another (see handleCanvasClick)
 export let shiftDown = false;
 
-// a touch screen: the possession joystick shows there only (a keyboard steers on a computer)
+// a touch screen
 export const isTouchScreen = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
-
-// The joystick for the possessed settler: drag the knob, how far from the centre sets the speed
-export const JOYSTICK_REACH = 45;
 
 export let touchStartDist = 0;
 
@@ -53,55 +47,22 @@ const paint = (phase, clientX, clientY) => {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initInput() {
   bindKeyboard();
-  bindJoystick();
   bindMouse();
   bindTouch();
   keepPageStill();
 }
 
-// Keys: Shift held (to keep a build mode), Space or P to pause, Escape out of possession, Tab to the
-// next settler, the rest held down for steering
+// Keys: Shift held (to keep a build mode), Space or P to pause, Escape out of possession (#326: a possessed
+// settler moves by taps, no keys or joystick; it's picked in its card, not by Tab)
 function bindKeyboard() {
   window.addEventListener('keydown', e => {
     if (e.key === 'Shift') shiftDown = true;
     if (e.code === 'Space' || (e.code === 'KeyP' && !e.repeat && document.activeElement?.tagName !== 'INPUT')) { e.preventDefault(); togglePause(); return; }
     if (e.code === 'Escape') { unpossess(); return; }
     keys[e.key.toLowerCase()] = true;
-    if (e.key === 'Tab') { e.preventDefault(); switchPossession(); }
   });
   window.addEventListener('keyup', e => { if (e.key === 'Shift') shiftDown = false; keys[e.key.toLowerCase()] = false; });
   window.addEventListener('blur', () => { shiftDown = false; });
-}
-
-// The joystick for the possessed settler: drag the knob, how far from the centre sets the speed
-function bindJoystick() {
-  const base = document.getElementById('mobile-joystick');
-  const knob = /** @type {HTMLElement} */ (base.querySelector('.joystick-knob'));
-  let pointerId = null;
-  const moveKnob = (clientX, clientY) => {
-    const rect = base.getBoundingClientRect();
-    let dx = clientX - (rect.left + rect.width / 2), dy = clientY - (rect.top + rect.height / 2);
-    const dist = Math.hypot(dx, dy);
-    if (dist > JOYSTICK_REACH) { dx *= JOYSTICK_REACH / dist; dy *= JOYSTICK_REACH / dist; }
-    joystick.x = dx / JOYSTICK_REACH;
-    joystick.y = dy / JOYSTICK_REACH;
-    knob.style.transform = `translate(${dx}px, ${dy}px)`;
-  };
-  const release = e => {
-    if (e.pointerId !== pointerId) return;
-    pointerId = null;
-    joystick.x = joystick.y = 0;
-    knob.style.transform = '';
-  };
-  base.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    pointerId = e.pointerId;
-    base.setPointerCapture(e.pointerId);
-    moveKnob(e.clientX, e.clientY);
-  });
-  base.addEventListener('pointermove', e => { if (e.pointerId === pointerId) moveKnob(e.clientX, e.clientY); });
-  base.addEventListener('pointerup', release);
-  base.addEventListener('pointercancel', release);
 }
 
 // The mouse on the map: the pointer, the camera dragged with the middle or right button, the wheel to zoom
@@ -239,7 +200,7 @@ function keepPageStill() {
   }, { passive: false });
   document.addEventListener("touchstart", function() {}, true);
   window.addEventListener('DOMContentLoaded', () => {
-    const uiElements = [...document.querySelectorAll('.hud-layer'), document.getElementById('mobile-joystick')];
+    const uiElements = [...document.querySelectorAll('.hud-layer')];
 
     uiElements.forEach(el => {
       if (el) {

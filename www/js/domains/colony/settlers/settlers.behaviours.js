@@ -19,7 +19,7 @@ import { getFrontier, getTerritoryBox, inReliefZone, inTerritory, isVisible, isW
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
@@ -247,6 +247,7 @@ export const SETTLER_BEHAVIOURS = [
   restWhileRaid, // (...and the base resting)
   battleOrders, // (a battle with the auto battle off, #255)
   panic,
+  followCommand, // (#326: the player's orders by tap, in Endless)
   strikeBack,
   sleepAtNight,
   fetchNightTorch,

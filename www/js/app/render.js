@@ -3,7 +3,7 @@
 import { game, getTileIndex } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawSettlers } from '../domains/colony/settlers/index.js';
+import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
@@ -40,6 +40,7 @@ export function render() {
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
   drawWallows(); // (the ground boars dug, on the ground, #326)
+  drawSelectedPaths(); // (where the picked ones are going, #326)
   drawSticksPebblesOre();
   drawLoot();
   drawPiles(); // (#248)

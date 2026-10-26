@@ -190,11 +190,11 @@ test('a fight can be cancelled back to the line-up; a unit can be possessed in i
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     battle.preset = 'humans:bow'; battleTap(at(12, 12).x, at(12, 12).y);
     battle.preset = 'humans:sword'; battleTap(at(25, 12).x, at(25, 12).y);
-    switchPossession();
+    selectedSettler = settlers[0]; switchPossession(); // (#326: the selected one, from its card)
     const possessedInSetup = !!getPossessed();
     startBattleFight();
     enemies[0].hp = enemies[0].maxHp = 1e5; // a long fight (the line-up's own raider comes back on cancel)
-    switchPossession();
+    selectedSettler = settlers[0]; switchPossession();
     const possessedInFight = !!getPossessed();
     const archer = settlers[0];
     archer.hp = archer.maxHp = 1e5; // (the raider reaches it in four seconds; it must live to cancel)
