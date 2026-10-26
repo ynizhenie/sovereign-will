@@ -1,35 +1,30 @@
 import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
-for (const by of ['keys', 'joystick']) {
-  test(`moving the possessed settler by hand (${by}) cancels its order (#16)`, async ({ page }) => {
-    await openGame(page);
-    expect(await sim(page, 'possessMoveCancels', { by })).toEqual({ hadOrder: true, cancelled: true, movedDown: true, treeStands: true });
+// (#326) the possessed settler moves by taps: a tap on the ground walks it there, its order gone
+test('a tap on the ground walks the possessed settler there, and takes its order off (#16, #326)', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'possessMoveCancels', {})).toEqual({ hadOrder: true, walking: true, there: true, done: true, treeStands: true });
+});
+
+test('no joystick, no keys to steer, no eye button: possessing is in the selected settler\'s card (#326)', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await expect(page.locator('#mobile-joystick')).toHaveCount(0);
+  await expect(page.locator('[data-action="switchPossession"]:not(#btn-possess)')).toHaveCount(0);
+  const r = await page.evaluate(() => {
+    const s = settlers[0];
+    selectedSettler = s; updateUI();
+    document.getElementById('btn-possess').click();
+    const possessed = s.isPossessed;
+    const y0 = s.y;
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }));
+    for (let f = 0; f < 30; f++) update(1 / 60);
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 's' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    const still = s.isPossessed && settlers.filter(o => o.isPossessed).length === 1;
+    document.getElementById('btn-possess').click();
+    return { possessed, keysDidNothing: Math.abs(s.y - y0) < 1, still, left: !s.isPossessed };
   });
-}
-
-test.describe('on a touch screen', () => {
-  test.use({ hasTouch: true });
-test('the joystick shows while possessing and steers with a drag (#16)', async ({ page }) => {
-  await openGame(page);
-  await page.evaluate(() => { window.sim.start('possess-joystick'); settlers[0].isPossessed = true; });
-  const stick = page.locator('#mobile-joystick');
-  await expect(stick).toBeVisible();
-  const box = await stick.boundingBox();
-  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-  await page.mouse.move(cx, cy);
-  await page.mouse.down();
-  await page.mouse.move(cx + 80, cy, { steps: 4 });
-  expect(await page.evaluate(() => ({ x: joystick.x, y: joystick.y }))).toEqual({ x: 1, y: 0 });
-  await page.mouse.up();
-  expect(await page.evaluate(() => ({ x: joystick.x, y: joystick.y }))).toEqual({ x: 0, y: 0 });
-  await page.evaluate(() => { settlers.forEach(s => s.isPossessed = false); });
-  await expect(stick).toBeHidden();
-});});
-
-test('on a computer (no touch screen) the joystick stays hidden while possessing; keys steer (playtest)', async ({ page }) => {
-  await openGame(page);
-  await page.evaluate(() => { window.sim.start('possess-no-stick'); settlers[0].isPossessed = true; });
-  await page.waitForTimeout(200);
-  await expect(page.locator('#mobile-joystick')).toBeHidden();
+  expect(r).toEqual({ possessed: true, keysDidNothing: true, still: true, left: true });
 });

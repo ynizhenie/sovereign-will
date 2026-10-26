@@ -284,6 +284,8 @@
  * @property {number} pathTick
  * @property {string} buildMode
  * @property {Settler | null} selectedSettler
+ * @property {Settler[]} selectedGroup
+ * @property {boolean} addingToGroup
  * @property {Object | null} defensePlan
  * @property {Settler[]} settlers
  * @property {Enemy[]} enemies

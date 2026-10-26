@@ -47,7 +47,7 @@ export function drawDamage(x, y, half, share) {
 
 // In a build mode: the tile grid, and the tile under the pointer (red where it can't go)
 export function drawBuildGrid() {
-  if (game.buildMode !== 'interact' && game.buildMode !== 'possess') {
+  if (game.buildMode !== 'interact') {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
     // (#299: the lines on the screen, in one path)

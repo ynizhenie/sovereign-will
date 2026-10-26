@@ -10,14 +10,14 @@ import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
-import { getPossessed, orderPossessed, roleTitle } from '../domains/colony/settlers/index.js';
+import { getPossessed, getSelectedSettler, getSelection, orderPossessed, roleTitle, toggleInGroup } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
 import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
-import { orderTap } from '../domains/conflict/combat/index.js';
+import { commandTap, orderTap } from '../domains/conflict/combat/index.js';
 import { scoutTapped } from '../domains/conflict/waves/index.js';
 
 export function handleCanvasClick() {
@@ -31,11 +31,11 @@ export function handleCanvasClick() {
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
   if (isDefeated()) return; // the defeat screen's own buttons
   if (!getPossessed() && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
-  if (game.buildMode === 'possess') { possessTapped(); return; }
 
   const p = getPossessed();
   if (p && orderPossessed(p, mouse.x, mouse.y)) return;
   if (game.buildMode === 'interact' && scoutTapped(mouse.x, mouse.y)) return; // (a scout pointed at: hunted, #279)
+  if (game.buildMode === 'interact' && commandAtEnemy()) return; // (#326: the picked ones sent at it)
   if (game.buildMode === 'interact' && enemyTapped()) return;
   if (game.buildMode === 'interact' && selectTapped()) return;
 
@@ -63,7 +63,7 @@ export function handleCanvasClick() {
     else { if (kind === 'clear') toggleZone(tile.gx, tile.gy, 'clear'); toggleFarmZone(tile.gx, tile.gy, kind); }
     return;
   }
-  if (game.buildMode !== 'interact' && game.buildMode !== 'possess' && game.buildMode !== 'demolish' && !canPlaceHere(tile)) return;
+  if (game.buildMode !== 'interact' && game.buildMode !== 'demolish' && !canPlaceHere(tile)) return;
 
   if (game.buildMode === 'interact') markTapped();
   else if (getDefinition('buildings', game.buildMode)) placeBlueprint(tile);
@@ -78,17 +78,6 @@ function tapTile() {
   return { gxIdx, gyIdx, gx: gxIdx * TILE_SIZE + TILE_SIZE / 2, gy: gyIdx * TILE_SIZE + TILE_SIZE / 2 };
 }
 
-// In possession mode: the tapped settler becomes the possessed one
-function possessTapped() {
-  for (let s of game.settlers) {
-    if (Math.hypot(mouse.x - s.x, mouse.y - s.y) < s.visualRadius + 10) {
-      game.settlers.forEach(s2 => s2.isPossessed = false);
-      s.isPossessed = true;
-      return;
-    }
-  }
-}
-
 // Point mode on a settler: select it, or unselect it with a second tap. True when a settler was tapped.
 function selectTapped() {
   let clickedSettler = game.settlers.find(s => Math.hypot(mouse.x - s.x, mouse.y - s.y) < s.visualRadius + 8);
@@ -98,11 +87,27 @@ function selectTapped() {
     showPickMenu(here, tapClient, clickedSettler);
     return true;
   }
+  // (#326) adding to the group (its card's button): in or out of it
+  if (clickedSettler && game.addingToGroup && getSelectedSettler()) {
+    toggleInGroup(clickedSettler);
+    return true;
+  }
   if (clickedSettler) {
     game.selectedSettler = (game.selectedSettler === clickedSettler) ? null : clickedSettler;
+    game.selectedGroup = []; game.addingToGroup = false;
     return true;
   }
   return false;
+}
+
+// (#326) Endless with settlers picked: a tap on an enemy (or a tent) sends them all at it. True when it did
+function commandAtEnemy() {
+  const picked = game.gameMode === 'endless' ? getSelection() : [];
+  if (!picked.length) return false;
+  const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
+  const onEnemy = game.enemies.some(en => en.hp > 0 && away(en) < en.radius + 12) || game.enemyTents.some(et => away(et) < 20);
+  if (!onEnemy || game.settlers.some(s => away(s) < s.visualRadius + 8)) return false;
+  return commandTap(picked, mouse.x, mouse.y);
 }
 
 // Point mode on a building: its card (#211; its repair, the circle taking the selected settler in...).
@@ -170,6 +175,12 @@ function enemyTapped() {
 // Point mode on the map: a fishing spot, or a resource marked "work here" (again: unmark). One kind of
 // mark, no levels (the 1-2-3 levels were confusing, #232)
 function markTapped() {
+  // (#326) settlers picked and the ground tapped (nothing on it to mark, no water): they go there and hold it
+  const picked = game.gameMode === 'endless' ? getSelection() : [];
+  if (picked.length && !thingsOnTile().length && !game.waterTiles.some(w => Math.hypot(mouse.x - w.x, mouse.y - w.y) < 18)) {
+    commandTap(picked, mouse.x, mouse.y);
+    return;
+  }
   // (#299) settlers don't go beyond the base's land
   if (!inTerritory(mouse.x, mouse.y)) {
     if (getHarvestableResources().some(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22) || thingAt(game.waterTiles, Math.floor(mouse.x / TILE_SIZE) * TILE_SIZE + 15, Math.floor(mouse.y / TILE_SIZE) * TILE_SIZE + 15)) showNotification(t('mark.outside'), true);

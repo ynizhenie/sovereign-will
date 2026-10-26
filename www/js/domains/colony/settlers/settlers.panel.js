@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { getResourceIconName, labelButton, makeTile, setRichText } from '../../../ui/index.js';
-import { camera, clampCamera, isTouchScreen, onTap, t } from '../../../engine/platform/index.js';
+import { camera, clampCamera, onTap, t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getPossessed, getUpgrade, spawnSettler, upgradeToBig } from './settlers.rules.js';
@@ -20,7 +20,7 @@ export function updateUnitCounts() {
   if (warriorsElem) warriorsElem.innerText = String(warriors);
 }
 
-// The selected settler's info line: what it's doing, when it's next hungry, what it carries
+// The selected settler's info: what it's doing, when it's next hungry, what it carries (#326: a line each, all of it)
 export function renderSettlerInfo(s) {
   const activity = `activity.${s.activity || 'patrol'}`;
   const parts = [t(activity) === activity ? t('activity.patrol') : t(activity)];
@@ -31,10 +31,15 @@ export function renderSettlerInfo(s) {
   const items = s.carrying ? (s.carrying.items || [s.carrying]) : [];
   const carried = items.filter(item => item.amount > 0).map(item => `${Math.round(item.amount)}[[${getResourceIconName(item.type)}]]`).join(' ');
   if (carried) parts.push(`${t('info.carries')} ${carried}`);
+  if (s.orderTarget || s.orderSpot) parts.push(t(s.orderTarget ? 'info.orderedAttack' : 'info.orderedHold')); // (#326)
   const info = document.getElementById('selected-info');
   info.hidden = false;
-  document.getElementById('selected-bar').classList.add('has-settler'); // a fixed size, whatever it carries
-  setRichText(info, parts.join(' · '));
+  document.getElementById('selected-bar').classList.add('has-settler');
+  const text = parts.join('\n');
+  if (info.dataset.text === text) return;
+  info.dataset.text = text;
+  info.innerHTML = '';
+  for (const part of parts) { const line = document.createElement('div'); setRichText(line, part); info.appendChild(line); }
 }
 
 // Seconds until this settler eats next
@@ -42,21 +47,13 @@ export function getHungerSeconds(s) {
   return s.hunger !== undefined ? s.hunger : GAME_CONFIG.meals.seconds;
 }
 
-// While possessing: the camera follows the possessed settler; the joystick shows on a touch screen
+// While possessing: the camera follows the possessed settler
 export function updatePossessionView() {
   const possessed = getPossessed();
-  const joystickEl = document.getElementById('mobile-joystick');
-
-  if (possessed) {
-    camera.x = possessed.x;
-    camera.y = possessed.y;
-    clampCamera();
-
-    const shown = isTouchScreen() ? 'block' : 'none';
-    if (joystickEl.style.display !== shown) joystickEl.style.display = shown;
-  } else {
-    if (joystickEl.style.display !== 'none') joystickEl.style.display = 'none';
-  }
+  if (!possessed) return;
+  camera.x = possessed.x;
+  camera.y = possessed.y;
+  clampCamera();
 }
 
 // Hiring at the town hall (#248, #261): a tile a unit, like every tab's (its icon, name and cost; a tap

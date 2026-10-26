@@ -72,19 +72,20 @@ Object.assign(window.sim, (() => {
     return { built: buildings.some(b => b.x === bp.x && b.y === bp.y && b.type === 'wall_wood'), orderDone: !s.order };
   }
 
-  // An order is given, then the player moves the settler by hand (keys or the joystick): the order is gone
-  function moveCancels({ seed = 'possess-cancel', by = 'keys' } = {}) {
+  // (#326) An order is given, then the player taps the ground (no keys or joystick any more): it walks there, the
+  // order gone, and stops there
+  function moveCancels({ seed = 'possess-cancel' } = {}) {
     const s = setUp(seed, { tool: 'axe' });
     const tree = { ...nearHall(8, 0), hp: 3, maxHp: 3, isGrowing: false, priority: 0 };
     trees.push(tree);
     tap(tree.x, tree.y);
     run(0.5);
     const hadOrder = !!s.order;
-    if (by === 'keys') keys.s = true; else joystick.y = 1;
-    const y0 = s.y;
-    try { run(1); } finally { keys.s = false; joystick.y = 0; }
-    run(3);
-    return { hadOrder, cancelled: !s.order, movedDown: s.y > y0 + 20, treeStands: trees.includes(tree) };
+    const spot = { x: s.x, y: s.y + 90 };
+    tap(spot.x, spot.y);
+    const walking = !!s.order && s.order.kind === 'walk';
+    run(5);
+    return { hadOrder, walking, there: Math.hypot(s.x - spot.x, s.y - spot.y) < 10, done: !s.order, treeStands: trees.includes(tree) };
   }
 
   return { possessAiOff: aiOff, possessChopAndDeliver: chopAndDeliver, possessAttack: attackOrder, possessBuild: buildOrder, possessMoveCancels: moveCancels };

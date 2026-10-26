@@ -84,7 +84,6 @@ html, body, button, input, select, textarea { font-family: var(--font); }
 button.cant-afford { opacity: 0.55; }
 
 /* buttons that say something about a settler keep their colour, laid over the wood */
-.btn-unpossess { background: linear-gradient(rgba(142, 68, 173, 0.75), rgba(142, 68, 173, 0.75)), var(--plank) center / cover; }
 .btn-demolish { background: var(--plank-red) center / cover; }
 .btn-disarm { background: linear-gradient(rgba(211, 84, 0, 0.6), rgba(211, 84, 0, 0.6)), var(--plank) center / cover; }
 .btn-armor { background: linear-gradient(rgba(39, 174, 96, 0.55), rgba(39, 174, 96, 0.55)), var(--plank) center / cover; }

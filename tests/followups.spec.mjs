@@ -16,7 +16,7 @@ test('a new game opens on the Building tab; the undead see bones and rot right a
   expect(chips[1]).toContain('[[rot]]');
 });
 
-test('on a phone the bottom panel is compact, and the selected settler box keeps its size (#188)', async ({ page }) => {
+test('on a phone the bottom panel is compact, and the selected settler\'s card shows all of it, as wide, within half the screen (#188, #326)', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openGame(page);
   await page.click('#play-button');
@@ -30,10 +30,15 @@ test('on a phone the bottom panel is compact, and the selected settler box keeps
     s.carrying = { items: [{ type: 'wood', amount: 3 }, { type: 'stone', amount: 2 }, { type: 'leather', amount: 1 }] };
     s.activity = 'deliverCarrying';
     updateUI();
-    return { panel: document.getElementById('bottom-panel').getBoundingClientRect().height, empty, carrying: box() };
+    return { panel: document.getElementById('bottom-panel').getBoundingClientRect().height, empty, carrying: box(), screen: innerHeight,
+      shown: document.getElementById('selected-info').textContent };
   });
   expect(r.panel).toBeLessThan(280);
-  expect(r.carrying).toEqual(r.empty);
+  // (#326) the card shows all of it, a line each: as wide, taller by the line, never more than about half the screen
+  expect(r.carrying[0]).toBe(r.empty[0]);
+  expect(r.carrying[1]).toBeGreaterThan(r.empty[1]);
+  expect(r.carrying[1]).toBeLessThanOrEqual(Math.min(r.screen * 0.46, 340) + 1);
+  expect(r.shown).toContain('3');
 });
 
 test('the camera goes half a screen past every edge at any zoom, and zoomed right out stays where it is (#189)', async ({ page }) => {
