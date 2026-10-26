@@ -30,7 +30,7 @@ test('a settler type can be limited to some kinds of orders (#133)', async () =>
     orderPossessed(s, tree.x, tree.y);
     return { limited, free: s.order && s.order.kind };
   })();
-  expect(r).toEqual({ limited: null, free: 'harvest' });
+  expect(r).toEqual({ limited: 'walk', free: 'harvest' }); // (#326: what it can't do, it walks to)
 });
 
 test('soldiers are a shade off the workers, in any colour (#167)', async () => {

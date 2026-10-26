@@ -55,8 +55,10 @@ test('a watchtower sees farther than a building; what\'s explored is saved and l
   await page.evaluate(() => { exitToMainMenu(); showMenuScreen('home'); });
   await page.click('#mode-battles');
   expect(await page.evaluate(() => [hasFog(), isVisible(0, 0)])).toEqual([false, true]);
-  await expect(page.locator('#btn-world-map')).toBeHidden();
+  // (a page error first, if any: it failed now and then on CI, the HUD left on Endless's)
   expect(errors).toEqual([]);
+  await expect(page.locator('body')).toHaveAttribute('data-hud', 'battle');
+  await expect(page.locator('#btn-world-map')).toBeHidden();
 });
 
 test('the world map: the top bar\'s button or M opens it, the whole map with the fog on it; a tap takes the camera there; To the base back (#299)', async ({ page }) => {

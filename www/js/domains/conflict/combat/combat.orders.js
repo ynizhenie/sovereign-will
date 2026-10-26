@@ -6,7 +6,7 @@
 
 import { game } from '../../../engine/world/index.js';
 import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
-import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker, getSelectedSettler, getSelection, toggleInGroup } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, performAttack } from './combat.rules.js';
 
@@ -18,11 +18,13 @@ const alive = o => (game.enemies.includes(o) && o.hp > 0) || game.enemyTents.inc
 export function orderTap(x, y) {
   const near = (o, r) => Math.hypot(o.x - x, o.y - y) < r;
   const unit = nearest({ x, y }, game.settlers.filter(s => near(s, (s.visualRadius || s.radius) + 8))); // (the nearest: they stand close)
-  if (unit) { game.selectedSettler = game.selectedSettler === unit ? null : unit; return true; }
+  // (#326) picked with a group: adding to it (the card's button), or another picked instead
+  if (unit && game.addingToGroup && getSelectedSettler()) { toggleInGroup(unit); return true; }
+  if (unit) { game.selectedSettler = game.selectedSettler === unit ? null : unit; game.selectedGroup = []; game.addingToGroup = false; return true; }
   const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && near(en, en.radius + 12)), ...game.enemyTents.filter(et => near(et, et.outpost ? 30 : 20))]);
-  const picked = game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
+  const picked = getSelection();
   if (target) {
-    const told = picked ? [picked] : game.settlers;
+    const told = picked.length ? picked : game.settlers;
     // (#279) tapped again, the one it was already given to (or all of them): the order's taken off
     if (target.markedTarget && told.every(s => s.orderTarget === target)) {
       for (const s of told) s.orderTarget = null;
@@ -33,7 +35,7 @@ export function orderTap(x, y) {
     target.markedTarget = true;
     return true;
   }
-  if (picked) { picked.orderTarget = null; picked.orderSpot = { x, y }; return true; }
+  if (picked.length) { for (const s of picked) { s.orderTarget = null; s.orderSpot = { x, y }; } return true; }
   return false;
 }
 
@@ -62,6 +64,36 @@ export function fightByOrders(s, dt, auto) {
   }
   if (target) { strike(s, target, dt); return; }
   if (dist(s, s.orderSpot) > 8) moveEntityTowards(s, s.orderSpot.x, s.orderSpot.y, s.speed, false, dt);
+}
+
+// (#326) In Endless, the player's own orders by tap (the selected settler and its group): an enemy (or a tent) to
+// fight till it's down, then back to work; a spot to go to and hold, fighting what comes close, till it's let
+// go (its card's Free). A behaviour of every settler's, after a panic
+export function followCommand(s, tick) {
+  if (game.gameMode !== 'endless' || s.raider || (!s.orderTarget && !s.orderSpot)) return false;
+  const spotGiven = !!s.orderSpot;
+  fightByOrders(s, tick.dt, false);
+  if (!spotGiven) {
+    delete s.orderSpot;
+    if (!s.orderTarget) return false; // (down: back to work)
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
+// (#326) Orders by tap for those picked in Endless: an enemy (or a tent) at (x, y) is theirs to fight, else they go
+// and hold the spot. True when it was an order
+export function commandTap(picked, x, y) {
+  if (!picked.length) return false;
+  const near = (o, r) => Math.hypot(o.x - x, o.y - y) < r;
+  const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && near(en, en.radius + 12)), ...game.enemyTents.filter(et => near(et, et.outpost ? 30 : 20))]);
+  for (const s of picked) {
+    if (target) s.orderTarget = target;
+    else { s.orderTarget = null; s.orderSpot = { x, y }; }
+    s.path = null;
+  }
+  if (target) target.markedTarget = true;
+  return true;
 }
 
 // Orders off a unit (the fight over)

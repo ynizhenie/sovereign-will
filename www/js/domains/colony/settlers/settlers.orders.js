@@ -10,7 +10,7 @@
 // without that list it takes them all. An archer's tap on nothing else shoots there.
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { joystick, keys, t } from '../../../engine/platform/index.js';
+import { t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/index.js';
 import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, stock, takeStock } from '../storage/index.js';
@@ -19,7 +19,7 @@ import { showNotification } from '../../../ui/index.js';
 import { getPossessed, petKindOf } from './settlers.rules.js';
 import { devour, haunt } from '../pets/index.js';
 import { getHarvestableResources, getMapResourceDef, getMapResourceKind, workResource } from '../../economy/gathering/index.js';
-import { collidesWithWall, getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/index.js';
+import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
 import { faceTowards } from './settlers.draw.js';
 import { fetchBait, fishAt, getFishingBait } from '../../economy/fishing/index.js';
@@ -273,6 +273,22 @@ export const ORDERS = [
       fishAt(s, target, tick.dt);
       return true;
     }
+  },
+  {
+    // (#326) a tap on nothing it can work: it walks there (a ghost straight, through anything). Never found by
+    // a tap on something (see orderPossessed)
+    kind: 'walk',
+    find: () => null,
+    step: (s, target, tick) => {
+      const d = Math.hypot(target.x - s.x, target.y - s.y);
+      if (d < 6) return false;
+      if (petKindOf(s) === 'ghost') {
+        const step = Math.min(d, s.speed * GAME_CONFIG.movementScale);
+        faceTowards(s, target.x, target.y);
+        s.x += (target.x - s.x) / d * step; s.y += (target.y - s.y) / d * step;
+      } else walkTo(s, target.x, target.y, tick);
+      return true;
+    }
   }
 ];
 
@@ -296,39 +312,14 @@ export function orderPossessed(p, x, y) {
     p.path = null;
     return true;
   }
-  if (isBowWeapon(p.weapon)) {
-    p.order = null;
-    performAttack(p, x, y);
-    return true;
-  }
-  return false;
+  // (#326) on nothing for it: it walks there (the possessed move by taps, no joystick or keys)
+  p.order = { kind: 'walk', target: { x, y } };
+  p.path = null;
+  return true;
 }
 
 // One tick of the possessed settler's order; false once it's done or can't be carried on
 export function followOrder(s, tick) {
   const order = ORDERS.find(o => o.kind === s.order.kind);
   return !!order && order.step(s, s.order.target, tick);
-}
-
-// The possessed settler moves by the joystick or WASD (a diagonal isn't faster than straight)
-export function movePossessed(dt) {
-  const p = getPossessed();
-  if (p) {
-    let dx = joystick.x, dy = joystick.y;
-    if (keys['w'] || keys['ц']) dy -= 1;
-    if (keys['s'] || keys['ы']) dy += 1;
-    if (keys['a'] || keys['ф']) dx -= 1;
-    if (keys['d'] || keys['в']) dx += 1;
-    const push = Math.hypot(dx, dy);
-    if (push > 1) { dx /= push; dy /= push; }
-    if (push > 0.1) {
-      p.order = null; // moving by hand cancels a tap order
-      faceTowards(p, p.x + dx, p.y + dy);
-      let vx = dx * p.speed * GAME_CONFIG.movementScale;
-      let vy = dy * p.speed * GAME_CONFIG.movementScale;
-      const ghost = petKindOf(p) === 'ghost'; // (#314: through anything)
-      if (ghost || !collidesWithWall(p.x + vx, p.y, p.radius)) p.x += vx;
-      if (ghost || !collidesWithWall(p.x, p.y + vy, p.radius)) p.y += vy;
-    }
-  }
 }

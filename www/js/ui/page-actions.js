@@ -6,7 +6,9 @@ import { game } from '../engine/world/index.js';
 import { openHallCard } from './building-card.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
-import { deselectSettler, dismissSettler, getSelectedSettler, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { deselectSettler, dismissSettler, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { clearOrders } from '../domains/conflict/combat/index.js';
+import { toggleGiveList } from './hud.js';
 import { t } from '../engine/platform/index.js';
 import { setRichText } from './icons.js';
 import { togglePause } from '../app/index.js';
@@ -37,7 +39,12 @@ export const PAGE_ACTIONS = {
   stopPlacing: () => stopPlacing(),
   toggleResources: () => toggleResources(),
   openWorldMap: () => openWorldMap(), // (#299)
-  dismissSelected: (arg, button) => dismissSelected(button) // (#314)
+  dismissSelected: (arg, button) => dismissSelected(button), // (#314)
+  // (#326) the selected settler's card
+  toggleGiveList: () => toggleGiveList(),
+  selectAllSoldiers: () => selectAllSoldiers(),
+  toggleAddingToGroup: () => { game.addingToGroup = !game.addingToGroup; },
+  freeSelection: () => { for (const s of getSelection()) clearOrders(s); }
 };
 
 // (#314) Letting the selected settler go: the first tap asks ("Let go?"), a second within 3 s does it

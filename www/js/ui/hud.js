@@ -5,8 +5,8 @@ import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
-import { getCurrentPop, getMaxPop, getSelectedSettler, getUpgrade, renderSettlerInfo, roleTitle } from '../domains/colony/settlers/index.js';
-import { armorOf, countHeld, disarmSettler, getHeldItems, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
+import { getCurrentPop, getMaxPop, getPossessed, getSelectedSettler, getSelection, getUpgrade, renderSettlerInfo, roleTitle } from '../domains/colony/settlers/index.js';
+import { countHeld, disarmSettler, getHeldItems, givableTo, giveStoredTo, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 import { getDayPhase, getWeather } from '../domains/world/index.js';
@@ -55,27 +55,23 @@ export function updateUI() {
   const selected = getSelectedSettler();
   if (selected) {
     const type = GAME_CONFIG.settlerTypes[selected.type] || GAME_CONFIG.settlerTypes.normal;
-    let name = `[[${type.icon}]] ${type.label}`;
-    name += ` · ${roleTitle(selected)}`; // (what it is by what it holds, #279; a commander, #248)
-    let wName = getDefinition('weapons', selected.weapon)?.label || selected.weapon;
-    let tName = selected.tool === 'none' ? '' : ' / ' + (getDefinition('tools', selected.tool)?.label || selected.tool);
-    let aName = armorOf(selected) ? ` / ${t(selected.armor === 'leather' ? 'hud.leatherArmor' : 'hud.ironArmor')}` : '';
-    let qName = selected.quiver ? ` / ${t('hud.quiver', { n: selected.arrows || 0 })}` : '';
-    // the rest of what it wears
-    const gear = ['shield', 'backpack', 'wateringCan', 'whistle', 'banner'].filter(id => hasGear(selected, id)).map(id => ` / [[${GAME_CONFIG.gear[id].icon}]]`).join('');
-    // (a pet: what it is and whether it's fed, nothing in its hands, #314)
-    setRichText(document.getElementById('selected-settler-txt'), selected.role === 'pet' ? name : `${name} (${wName}${tName}${aName}${qName}${gear})`);
+    // what it is by what it holds (#279; a commander, #248); a quiver's arrows (#326: what it holds is in its own row)
+    const name = `[[${type.icon}]] ${type.label} · ${roleTitle(selected)}${selected.quiver ? ` · ${t('hud.quiver', { n: selected.arrows || 0 })}` : ''}`;
+    setRichText(document.getElementById('selected-settler-txt'), name);
     renderSettlerInfo(selected);
     renderSelectedGear(selected);
+    renderSelectedActions(selected);
     document.getElementById('btn-deselect').style.display = 'inline-block';
     if (btnUpgrade) {
       const upgrade = getUpgrade();
-      btnUpgrade.style.display = upgrade && selected.type === upgrade.from ? 'block' : 'none';
+      btnUpgrade.style.display = upgrade && selected.type === upgrade.from && game.gameMode === 'endless' ? 'block' : 'none';
     }
     // (#314) letting one go: in Endless, a hired one
     document.getElementById('btn-dismiss').style.display = game.gameMode === 'endless' && !selected.temporary && !selected.leaving ? 'block' : 'none';
   } else {
     game.selectedSettler = null;
+    game.selectedGroup = []; game.addingToGroup = false;
+    giveOpen = false;
     document.getElementById('btn-dismiss').style.display = 'none';
     document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
     document.getElementById('selected-info').hidden = true;
@@ -87,6 +83,47 @@ export function updateUI() {
     }
   }
 
+}
+
+// (#326) The card's buttons as they apply now, the group's size, the Give list, and a hint for the taps
+let giveOpen = false, shownGive = '';
+export function toggleGiveList() { giveOpen = !giveOpen; shownGive = ''; }
+function renderSelectedActions(s) {
+  const endless = game.gameMode === 'endless', fight = game.gameMode === 'battle' ? document.body.dataset.battlePhase === 'fight' : endless;
+  const picked = getSelection(), pet = s.role === 'pet';
+  const show = (id, on) => { const b = document.getElementById(id); if (b) b.style.display = on ? '' : 'none'; };
+  show('btn-give', endless && !pet && !s.temporary);
+  show('btn-possess', fight);
+  show('btn-all-soldiers', endless || fight);
+  show('btn-add-more', endless || fight);
+  show('btn-free', endless && picked.some(o => o.orderTarget || o.orderSpot));
+  const possess = document.getElementById('btn-possess');
+  const possessKey = s.isPossessed ? 'sel.unpossess' : 'sel.possess';
+  if (possess.dataset.key !== possessKey) { possess.dataset.key = possessKey; setRichText(possess, t(possessKey)); }
+  document.getElementById('btn-give').classList.toggle('on', giveOpen);
+  document.getElementById('btn-add-more').classList.toggle('on', game.addingToGroup);
+  document.getElementById('selected-group-txt').textContent = picked.length > 1 ? t('sel.group', { n: picked.length }) : '';
+  const hint = document.getElementById('sel-hint');
+  const hintKey = getPossessed() === s ? 'sel.hintPossessed' : game.addingToGroup ? 'sel.hintAdding' : fight ? 'sel.hintOrders' : '';
+  if (hint.dataset.key !== hintKey) { hint.dataset.key = hintKey; hint.textContent = hintKey ? t(hintKey) : ''; }
+  // the Give list: what in the armory it can take
+  const list = document.getElementById('give-list');
+  const items = giveOpen && endless ? givableTo(s) : [];
+  const key = `${giveOpen}|${s.id}|${items.map(i => i.join(':')).join(',')}`;
+  if (key === shownGive) return;
+  shownGive = key;
+  list.hidden = !giveOpen || !endless;
+  list.innerHTML = '';
+  if (!items.length) { const none = document.createElement('div'); none.className = 'give-empty'; none.textContent = t('give.none'); list.appendChild(none); return; }
+  for (const [category, id, n] of items) {
+    const def = getDefinition(category, id) || {};
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.dataset.give = `${category}:${id}`;
+    setRichText(b, `[[${def.icon || 'tools'}]] ${def.label || id} ×${n}`);
+    b.addEventListener('click', () => { if (giveStoredTo(s, category, id)) { giveOpen = false; shownGive = ''; } });
+    list.appendChild(b);
+  }
 }
 
 // The wave in the middle of the top bar: its number, the time to the next as m:ss, a bar running down to

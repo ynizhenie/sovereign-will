@@ -44,15 +44,16 @@ export function hasGear(s, id) {
   return isArmorGear(id) ? s.armor === GAME_CONFIG.gear[id].armorKind : !!s[id];
 }
 
-// Pay for a piece of gear and send a settler to pick it up at the town hall: the selected one if it can
-// wear it, otherwise the first one the rules prefer, otherwise anyone who can
+// Pay for a piece of gear and send a settler to pick it up at the town hall: the one it's for if it can
+// wear it, otherwise the first one the rules prefer, otherwise anyone who can (#326: not the selected one any
+// more: that's its card's Give)
 // One in the armory goes at once; otherwise it's made first (#211), then handed out. auto: nothing said;
 // forSettler: who it's for, if it's still free to take it
 /** @param {string} id @param {boolean} [auto] @param {any} [forSettler] */
 export function orderGear(id, auto = false, forSettler = null) {
   const item = GAME_CONFIG.gear[id], rules = GEAR_RULES[id];
   const free = s => s.role !== 'pet' && rules.canWear(s) && !hasGear(s, id) && !s.targetEquipment && game.settlers.includes(s); // (a pet wears nothing, #314)
-  const selected = forSettler || (auto ? null : getSelectedSettler() || getPossessed());
+  const selected = forSettler;
   if (!((game.armory[`gear:${id}`] || 0) > 0)) return orderMade('gear', id, auto, selected);
   const target = (selected && free(selected) ? selected : null) ||
     game.settlers.find(s => free(s) && rules.first(s)) || game.settlers.find(free);
@@ -89,18 +90,43 @@ function orderMade(category, id, auto, forSettler) {
 
 // ---- The craft lists (#248): make one (into the armory), hand one out of it, or take a stored one apart
 
-// Make one: the selected settler makes it, or the one a button would give it to; into the armory
+// Make one: the one a button would give it to makes it; into the armory
 export function makeToStore(category, id) {
-  return orderMade(category, id, false, getSelectedSettler() || getPossessed() || null);
+  return orderMade(category, id, false, null);
 }
 
-// Hand a stored one out: to the selected settler if it can take it, otherwise as the button always did
+// Hand a stored one out, as the button always did (to whoever needs it most)
 export function giveStored(category, id) {
   if (!((game.armory[`${category}:${id}`] || 0) > 0)) return false;
   if (category === 'tools') return assignTool(id);
   if (category === 'weapons') return craftWeapon(id);
   if (category === 'gear') return orderGear(id);
   return false;
+}
+
+// (#326) What in the armory this settler could be given (its card's Give): [category, id, how many]
+export function givableTo(s) {
+  if (!s || s.role === 'pet') return [];
+  const out = [];
+  for (const [key, n] of Object.entries(game.armory)) {
+    if (!(n > 0)) continue;
+    const [category, id] = key.split(':');
+    if (category === 'tools' && (s.tool === id || (id === 'rod' && isBigBody(s)))) continue;
+    if (category === 'weapons' && (s.weapon === id || s.whistle)) continue;
+    if (category === 'gear' && (!GEAR_RULES[id] || !GEAR_RULES[id].canWear(s) || hasGear(s, id))) continue;
+    if (!['tools', 'weapons', 'gear'].includes(category)) continue;
+    out.push([category, id, n]);
+  }
+  return out;
+}
+
+// (#326) A stored one handed to this settler (its card's Give): it fetches it from the town hall
+export function giveStoredTo(s, category, id) {
+  if (!givableTo(s).some(([c, i]) => c === category && i === id)) return false;
+  if (s.targetEquipment) { showNotification(t('give.busy'), true); return false; }
+  if (category === 'tools') return assignTool(id, false, s);
+  if (category === 'weapons') return craftWeapon(id, false, s);
+  return orderGear(id, false, s);
 }
 
 // Take a stored one apart: what it cost back in the stock
@@ -258,9 +284,9 @@ export function assignTool(toolType, auto = false, forSettler = null) {
   }
 
   // none in the armory: made first (#211)
-  if (!((game.armory[`tools:${toolType}`] || 0) > 0)) return orderMade('tools', toolType, auto, forSettler || (auto ? null : getSelectedSettler() || getPossessed()));
+  if (!((game.armory[`tools:${toolType}`] || 0) > 0)) return orderMade('tools', toolType, auto, forSettler);
 
-  let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : auto ? null : getSelectedSettler() || getPossessed();
+  let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : null;
   if (target && target.role === 'pet') target = null; // (#314)
 
   if (target) {
@@ -301,9 +327,9 @@ export function craftWeapon(type, auto = false, forSettler = null) {
   }
 
   // none in the armory: made first (#211)
-  if (!((game.armory[`weapons:${type}`] || 0) > 0)) return orderMade('weapons', type, auto, forSettler || (auto ? null : getSelectedSettler() || getPossessed()));
+  if (!((game.armory[`weapons:${type}`] || 0) > 0)) return orderMade('weapons', type, auto, forSettler);
 
-  let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : auto ? null : getSelectedSettler() || getPossessed();
+  let target = forSettler && game.settlers.includes(forSettler) && !forSettler.targetEquipment ? forSettler : null;
   if (target && target.role === 'pet') target = null; // (#314)
 
   if (target) {

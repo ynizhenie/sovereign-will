@@ -30,7 +30,7 @@ export function resetGame(map) {
   resetRaid(); // (#255: a party out on a raid: the base back first, then all of it reset)
   game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.stumps = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
   townHall.store = {}; game.craftOrders = []; game.raidCamp = null; game.raidCampWave = 0; game.scouts = []; game.scoutClock = 0; game.weather = null; game.reliefZones = []; game.postZones = []; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
-  game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.pendingRespawns = [];
+  game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false; game.pendingRespawns = [];
   clearBoarWallows(); // (#306) the ground the last world's boars dug goes with that world
   
   if (map) loadCustomMap(map);
@@ -77,7 +77,7 @@ export function exitToMainMenu() {
   hidePlacing(); closeSheet(); // (#279: the editor's or a battle's pick stayed on the chip in the next game)
   // (#326) nothing of the game left over in the menu and the next one: no build mode, nobody selected or
   // possessed, the world map shut
-  game.buildMode = 'interact'; game.selectedSettler = null;
+  game.buildMode = 'interact'; game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false;
   for (const s of game.settlers) s.isPossessed = false;
   closeWorldMap();
   game.gameStarted = false;

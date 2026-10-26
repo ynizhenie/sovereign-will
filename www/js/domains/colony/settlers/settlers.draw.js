@@ -592,6 +592,30 @@ function eatingAt(s) {
   return { x: rest.x + (mouth.x - rest.x) * bite, y: rest.y + (mouth.y - rest.y) * bite, bite };
 }
 
+// (#326) Where the picked ones are going: their way as a dashed line, moving along it, to where it ends (an order's
+// spot without a way worked out yet: straight to it). On the ground, under everyone
+export function drawSelectedPaths() {
+  const picked = /** @type {import('../../../engine/world/types.js').Settler[]} */ ([game.selectedSettler, ...game.selectedGroup].filter(s => s && game.settlers.includes(s)));
+  if (!picked.length) return;
+  ctx.save();
+  ctx.setLineDash([6, 5]);
+  ctx.lineDashOffset = -(performance.now() / 40) % 11;
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (const s of picked) {
+    const way = s.path && s.path.length ? s.path : s.orderSpot && Math.hypot(s.orderSpot.x - s.x, s.orderSpot.y - s.y) > 8 ? [s.orderSpot] : null;
+    if (!way) continue;
+    ctx.strokeStyle = s === game.selectedSettler ? 'rgba(241, 196, 15, 0.85)' : 'rgba(241, 196, 15, 0.5)';
+    ctx.beginPath(); ctx.moveTo(s.x, s.y);
+    for (const p of way) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    const end = way[way.length - 1];
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(end.x, end.y, 3, 0, Math.PI * 2); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+    ctx.setLineDash([6, 5]);
+  }
+  ctx.restore();
+}
+
 export function drawSettlers() {
   // (#306) zoomed out: figures at their simplest, and what's off the screen not drawn at all
   const simple = simpleUnit(), view = getViewRect(60), scale = getViewScale(), tiny = tinyUnit();
@@ -697,8 +721,9 @@ export function drawSettlers() {
     if (crafting) drawWorkpiece(s);
     if (s.asleep) drawSleepZs(s.x + r, s.y - r);
 
-    if (s === game.selectedSettler) {
-      ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
+    // selected: a ring round its feet (#326: one picked with it, a fainter one)
+    if (s === game.selectedSettler || game.selectedGroup.includes(s)) {
+      ctx.strokeStyle = s === game.selectedSettler ? '#f1c40f' : 'rgba(241, 196, 15, 0.6)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(s.x, s.y + r * 0.95, r + 3, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); // (round its feet)
     }
 

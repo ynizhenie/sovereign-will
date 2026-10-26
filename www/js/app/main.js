@@ -29,6 +29,8 @@ export function stepGame(dt) {
 }
 
 export function gameLoop(now) {
+  // (the next frame asked for first: a frame that fails doesn't stop the game for good)
+  requestAnimationFrame(gameLoop);
   if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu
   syncHudMode();
   if (typeof updateMusic === 'function') updateMusic();
@@ -48,7 +50,6 @@ export function gameLoop(now) {
     drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
     countFrame(now);
   }
-  requestAnimationFrame(gameLoop);
 }
 
 // (#322) Smooth on a fast screen: the game moves in steps of 1/60 s, but a 120 or 144 Hz screen shows a frame
