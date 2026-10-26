@@ -126,8 +126,7 @@ export const ukLanguage = {
         armor: 'Броня',
         wateringCan: 'Лійка',
         whistle: 'Свисток бригадира',
-        banner: 'Прапор',
-        flute: 'Дерев\'яна сопілка'
+        banner: 'Прапор'
       },
       recipes: {
         arrows: 'Стріли',
@@ -181,8 +180,7 @@ export const ukLanguage = {
         armor: 'Більше здоров\'я і менше шкоди.',
         wateringCan: 'Фермер поливає посадки: ростуть швидше.',
         whistle: 'Робітник стає бригадиром: по черзі підходить до 3 найближчих робітників і каже, що зараз потрібніше, і змінити інструмент зі складу під це.',
-        banner: 'Солдат стає капітаном: у хвилю дає до 5 солдатам кожному ворога, на якого йти.',
-        flute: 'Біля вогнища грає мелодію.'
+        banner: 'Солдат стає капітаном: у хвилю дає до 5 солдатам кожному ворога, на якого йти.'
       },
       buildings: {
         workshop: 'Тут роблять усе без заліза: інструменти, зброю, спорядження, стріли.',
@@ -440,6 +438,8 @@ export const ukLanguage = {
       'menu.qualityLow': 'Низька',
       'menu.qualityMedium': 'Середня',
       'menu.qualityHigh': 'Висока',
+      'voice.humans.noTorch': 'Без смолоскипа туди не піду.|Там же темрява непроглядна!|Спершу дайте смолоскип.',
+      'voice.demons.noTorch': 'Без вогню за табір не вийду.|За табором темрява... потрібен вогонь.|Дайте смолоскип!',
       'raid.appeared': '[[swords]] За краєм мапи з’явився ворожий табір! Нападіть, поки він тут',
       'raid.gone': 'Ворожий табір знявся і пішов',
       'raid.button': '[[swords]] Ворожий табір · {time}',
@@ -794,7 +794,6 @@ export const ukLanguage = {
       'card.fish': 'Риби {n}/{max}',
       'activity.restockQuiver': 'Іде по стріли',
       'activity.idleCampfire': 'Сидить біля вогнища',
-      'activity.fluteBreak': 'Грає на сопілці біля вогнища',
       'activity.idleTalk': 'Балакає',
       'activity.idleSpar': 'Б\'ється навмисне',
       'activity.idleSway': 'Похитується',
@@ -855,6 +854,7 @@ export const ukLanguage = {
       'editor.tool.coal_ore': 'Вугілля',
       'editor.tool.iron_spawner': 'Джерело заліза',
       'editor.tool.coal_spawner': 'Джерело вугілля',
+      'editor.tool.farm': 'Пшениця',
       'editor.tool.boar': 'Кабан',
       'defeat.title': 'ПОРАЗКА!',
       'defeat.survived': 'Ви протрималися {waves} хвиль',

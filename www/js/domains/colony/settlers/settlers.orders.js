@@ -14,7 +14,7 @@ import { joystick, keys, t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/index.js';
 import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, stock, takeStock } from '../storage/index.js';
-import { deliverMaterials, getMissingMaterial, getRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
+import { deliverMaterials, getHallRepairStep, getMissingMaterial, getRepairStep, hallRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getPossessed, petKindOf } from './settlers.rules.js';
 import { devour, haunt } from '../pets/index.js';
@@ -92,15 +92,13 @@ export const ORDERS = [
     kind: 'repairHall',
     find: (p, near) => (near(townHall, townHall.radius + 10) && townHall.hp < townHall.maxHp ? townHall : null),
     step: (s, target, tick) => {
-      const repair = GAME_CONFIG.repairs.townHall;
+      const repair = getHallRepairStep();
       if (townHall.hp >= townHall.maxHp || !canAfford(repair.cost)) return false;
       if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + s.radius + 4) {
         moveSettlerToTownHall(s, s.speed, tick.dt);
-      } else {
-        payCost(repair.cost);
-        townHall.hp = Math.min(townHall.maxHp, townHall.hp + repair.hp);
+        return true;
       }
-      return true;
+      return hallRepairStep(s, tick, repair);
     }
   },
   {

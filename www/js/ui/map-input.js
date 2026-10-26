@@ -10,7 +10,7 @@ import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
-import { getPossessed, orderPossessed } from '../domains/colony/settlers/index.js';
+import { getPossessed, orderPossessed, roleTitle } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
@@ -92,6 +92,12 @@ function possessTapped() {
 // Point mode on a settler: select it, or unselect it with a second tap. True when a settler was tapped.
 function selectTapped() {
   let clickedSettler = game.settlers.find(s => Math.hypot(mouse.x - s.x, mouse.y - s.y) < s.visualRadius + 8);
+  // (#326) a settler standing on things: the menu has it as well as them
+  const here = clickedSettler && inTerritory(mouse.x, mouse.y) ? thingsOnTile() : [];
+  if (here.length) {
+    showPickMenu(here, tapClient, clickedSettler);
+    return true;
+  }
   if (clickedSettler) {
     game.selectedSettler = (game.selectedSettler === clickedSettler) ? null : clickedSettler;
     return true;
@@ -178,10 +184,19 @@ function markTapped() {
   }
 
   // several things there (a stick, a pebble and loot on one tile): a menu picks which (#261)
-  const here = getHarvestableResources().filter(r => Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22)
-    .sort((a, b) => Math.hypot(mouse.x - a.x, mouse.y - a.y) - Math.hypot(mouse.x - b.x, mouse.y - b.y));
+  const here = thingsOnTile();
   if (here.length > 1) showPickMenu(here, tapClient);
   else if (here.length) markResource(here[0]);
+}
+
+// What can be marked on the tapped tile, nearest first (#326: only that tile's, not its neighbours'); none
+// on it, the one nearest the tap within reach (one at a tile's edge)
+function thingsOnTile() {
+  const away = r => Math.hypot(mouse.x - r.x, mouse.y - r.y);
+  const gx = Math.floor(mouse.x / TILE_SIZE), gy = Math.floor(mouse.y / TILE_SIZE);
+  const near = getHarvestableResources().filter(r => away(r) < 22).sort((a, b) => away(a) - away(b));
+  const onTile = near.filter(r => Math.floor(r.x / TILE_SIZE) === gx && Math.floor(r.y / TILE_SIZE) === gy);
+  return onTile.length ? onTile : near.slice(0, 1);
 }
 
 function markResource(r) {
@@ -205,10 +220,19 @@ function resourceLook(r) {
 // else puts it away
 /** @type {{ x: number, y: number }} */
 let tapClient = { x: 0, y: 0 };
-export function showPickMenu(resources, at) {
+/** @param {any[]} resources @param {{ x: number, y: number }} at @param {any} [settler] */
+export function showPickMenu(resources, at, settler) {
   hidePickMenu();
   const menu = document.createElement('div');
   menu.id = 'pick-menu';
+  // (#326) the settler standing there: selected (unselected) by its row
+  if (settler) {
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.innerHTML = `${iconHtml(settler.role === 'pet' ? 'dog' : 'worker')} ${escapeHtml(roleTitle(settler))}${game.selectedSettler === settler ? ` ${iconHtml('ok')}` : ''}`;
+    b.addEventListener('click', () => { game.selectedSettler = game.selectedSettler === settler ? null : settler; hidePickMenu(); });
+    menu.appendChild(b);
+  }
   for (const r of resources) {
     const { icon, name } = resourceLook(r);
     const b = document.createElement('button');

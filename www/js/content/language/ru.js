@@ -126,8 +126,7 @@ export const ruLanguage = {
         armor: 'Броня',
         wateringCan: 'Лейка',
         whistle: 'Свисток бригадира',
-        banner: 'Знамя',
-        flute: 'Деревянная флейта'
+        banner: 'Знамя'
       },
       recipes: {
         arrows: 'Стрелы',
@@ -181,8 +180,7 @@ export const ruLanguage = {
         armor: 'Больше здоровья и меньше урона.',
         wateringCan: 'Фермер поливает посадки: растут быстрее.',
         whistle: 'Рабочий становится бригадиром: по очереди подходит к 3 ближайшим рабочим и говорит, что сейчас нужнее, и сменить инструмент со склада под это.',
-        banner: 'Солдат становится капитаном: в волну даёт до 5 солдатам каждому врага, на которого идти.',
-        flute: 'У костра играет мелодию.'
+        banner: 'Солдат становится капитаном: в волну даёт до 5 солдатам каждому врага, на которого идти.'
       },
       buildings: {
         workshop: 'Здесь делают всё без железа: инструменты, оружие, снаряжение, стрелы.',
@@ -440,6 +438,8 @@ export const ruLanguage = {
       'menu.qualityLow': 'Низкое',
       'menu.qualityMedium': 'Среднее',
       'menu.qualityHigh': 'Высокое',
+      'voice.humans.noTorch': 'Без факела туда не пойду.|Там же темень непроглядная!|Сначала дайте факел.',
+      'voice.demons.noTorch': 'Без огня за лагерь не выйду.|За лагерем тьма... нужен огонь.|Дайте факел!',
       'raid.appeared': '[[swords]] За краем карты появился вражеский лагерь! Нападите, пока он здесь',
       'raid.gone': 'Вражеский лагерь снялся и ушёл',
       'raid.button': '[[swords]] Вражеский лагерь · {time}',
@@ -794,7 +794,6 @@ export const ruLanguage = {
       'card.fish': 'Рыбы {n}/{max}',
       'activity.restockQuiver': 'Идёт за стрелами',
       'activity.idleCampfire': 'Сидит у костра',
-      'activity.fluteBreak': 'Играет на флейте у костра',
       'activity.idleTalk': 'Болтает',
       'activity.idleSpar': 'Дерётся понарошку',
       'activity.idleSway': 'Покачивается',
@@ -855,6 +854,7 @@ export const ruLanguage = {
       'editor.tool.coal_ore': 'Уголь',
       'editor.tool.iron_spawner': 'Источник железа',
       'editor.tool.coal_spawner': 'Источник угля',
+      'editor.tool.farm': 'Пшеница',
       'editor.tool.boar': 'Кабан',
       'defeat.title': 'ПОРАЖЕНИЕ!',
       'defeat.survived': 'Вы продержались {waves} волн',

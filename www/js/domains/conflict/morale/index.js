@@ -3,4 +3,4 @@
 
 export { boarsPanic, enemyPanic, necromancerKeepsBack, panic } from './morale.behaviours.js';
 export { drawMoraleMarks } from './morale.draw.js';
-export { baseMorale, getMorale, liftMorale, onUnitDeath, shakeMorale, shakeOnHit, tickMorale } from './morale.rules.js';
+export { baseMorale, getMorale, ghostScare, liftMorale, onUnitDeath, shakeMorale, shakeOnHit, tickMorale } from './morale.rules.js';

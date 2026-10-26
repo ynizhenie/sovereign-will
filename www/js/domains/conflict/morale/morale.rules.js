@@ -3,7 +3,7 @@
 // own tent lift it. Below panicBelow a unit panics until it's back above calmAbove (what it does then:
 // morale.behaviours.js). How steady each side is depends on its faction (GAME_CONFIG.morale).
 
-import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { getNecromancy } from '../../factions/undead/index.js';
@@ -122,3 +122,15 @@ export function tickMorale(dt) {
     }
   }
 }
+
+// (#326) A ghost flies into it: a big one panics at the second ghost within ghost.withinSeconds (the first
+// shakes it), anyone else at once (GAME_CONFIG.pets.ghost)
+export function ghostScare(unit, side = sideOf(unit)) {
+  const g = GAME_CONFIG.pets.ghost, now = game.pathTick;
+  const big = side === 'enemy' ? unit.type === 'big' : !!(getDefinition('settlerTypes', unit.type) || {}).big;
+  unit.ghostHits = (unit.ghostHitsUntil > now ? unit.ghostHits || 0 : 0) + 1;
+  unit.ghostHitsUntil = now + g.withinSeconds * 60;
+  if (unit.ghostHits >= (big ? g.bigNeeds : 1)) { unit.ghostHits = 0; shakeMorale(unit, 9999, side, true); }
+  else shakeMorale(unit, config().max * 0.3, side, true);
+}
+

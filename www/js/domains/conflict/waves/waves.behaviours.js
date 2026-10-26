@@ -11,9 +11,9 @@ import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
-import { hasLineOfFire } from '../combat/index.js';
+import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
 import { playSound } from '../../../app/index.js';
-import { enemyPanic, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
+import { enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
@@ -58,7 +58,7 @@ function enemyGhost(en) {
   const d = Math.hypot(target.x - en.x, target.y - en.y), step = GAME_CONFIG.pets.ghost.diveSpeed * GAME_CONFIG.movementScale;
   faceTowards(en, target.x, target.y);
   if (d > Math.max(14, step)) { en.x += (target.x - en.x) / d * step; en.y += (target.y - en.y) / d * step; return; }
-  if (target !== townHall) shakeMorale(target, 9999, 'settler', true);
+  if (target !== townHall) ghostScare(target, 'settler'); // (#326: a big one at the second ghost)
   Object.assign(en, { hp: 0, crumbled: true, rewardGranted: true, fled: true });
 }
 
@@ -91,9 +91,11 @@ export function tickEnemy(en, dt) {
   // a melee enemy close enough to strike stands and fights instead of walking into its target
   // the drawn size of a settler: a big one is pushed off further (see separateSettlersFromEnemies)
   const attackRange = (target === townHall ? townHall.radius : (/** @type {Settler} */ (target).visualRadius || target.radius)) + en.radius + meleeDef.reach;
-  const holdsGround = keepsAway || (inMelee && minDist < attackRange);
+  // (#326: not through a shut door or a wall: it walks on, breaking its way to it, instead)
+  const canStrike = inMelee && minDist < attackRange && (target === townHall || hasMeleeReach(en, target));
+  const holdsGround = keepsAway || canStrike;
   walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt);
-  if (inMelee && minDist < attackRange) enemyStrike(en, enemyDef, meleeDef, target, dt);
+  if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
 
 // A defender of an enemy camp (#255): at its post till a raider comes within guardTiles of it, or of itself.
@@ -352,7 +354,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   const shaken = en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1;
   const meleeDamage = (meleeDef === enemyDef ? en.damage : (en.meleeDamage ?? (en.meleeDamage = enemyDamagePerSecond(meleeDef)))) * shaken;
   faceTowards(en, target.x, target.y);
-  if (!(en.swingT > 0)) startSwing(en, 0.5); // keeps swinging while it hits
+  if (!(en.swingT > 0)) { startSwing(en, 0.5); en.struckAt = game.pathTick; } // keeps swinging while it hits (#326: a dog's bite drawn from its swing)
   if (en.type === 'big') {
     let splashRadius = enemyDef.splash.radius;
     let splashDamage = dt * en.damage * shaken * enemyDef.splash.share;

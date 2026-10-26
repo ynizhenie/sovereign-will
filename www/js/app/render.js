@@ -5,7 +5,7 @@ import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawAllSpeech, drawDung, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
-import { drawBoars } from '../domains/economy/hunting/index.js';
+import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
@@ -18,7 +18,8 @@ import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 import { drawRaidZone } from '../modes/endless/index.js';
 
 export function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // (#326) past the map's edge: the fog's own dark
+  ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   const viewScale = getViewScale();
   ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
@@ -38,6 +39,7 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
+  drawWallows(); // (the ground boars dug, on the ground, #326)
   drawSticksPebblesOre();
   drawLoot();
   drawPiles(); // (#248)

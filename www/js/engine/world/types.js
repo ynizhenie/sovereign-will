@@ -53,10 +53,6 @@
  * @property {boolean} [banner]      a captain's (#248)
  * @property {number} [working]      seconds it's still shown at work (getHeldItemPose)
  * @property {string | null} [workKind]  what work: 'build', 'butcher', 'pick' (drawn: a hammer, a knife, a hand, #279)
- * @property {boolean} [flute]       a wooden flute in its side slot (#279)
- * @property {number} [playingFlute] the tick it last played it, by a campfire
- * @property {boolean} [breaking]     it stepped away from work for a tune by a campfire (#306)
- * @property {number} [fluteAt]       the tick it may take its next one
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
