@@ -413,6 +413,7 @@
           <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
           <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
           <button class="btn sub-tab" data-battle-gear="banner" data-i18n="battle.banner">Banner</button>
+          <button class="btn sub-tab" data-battle-gear="torch" data-i18n="battle.torch">Torch</button>
         </div>
         <div class="battle-hint battle-gear" data-i18n="battle.bannerHint">Banner: the next soldier or archer placed becomes a commander</div>
         <div id="battle-presets"></div>
@@ -424,6 +425,26 @@
           <button class="btn sub-tab" data-battle-field="glade" data-i18n="battle.fieldGlade">Glade</button>
           <button class="btn sub-tab" data-battle-field="desert" data-i18n="battle.fieldDesert">Desert</button>
         </div>
+        <!-- (#326) how the battle looks: its time of day, its weather, blighted ground -->
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-look="blight" data-value="false" data-i18n="battle.blightOff">No blight</button>
+          <button class="btn sub-tab" data-battle-look="blight" data-value="true" data-i18n="battle.blightOn">Blighted</button>
+        </div>
+        <div class="panel-heading" data-i18n="battle.timeHeading">Time of day:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-look="time" data-value="morning" data-i18n="battle.time.morning">Morning</button>
+          <button class="btn sub-tab" data-battle-look="time" data-value="day" data-i18n="battle.time.day">Day</button>
+          <button class="btn sub-tab" data-battle-look="time" data-value="evening" data-i18n="battle.time.evening">Evening</button>
+          <button class="btn sub-tab" data-battle-look="time" data-value="night" data-i18n="battle.time.night">Night</button>
+        </div>
+        <div class="panel-heading" data-i18n="battle.weatherHeading">Weather:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-look="weather" data-value="clear" data-i18n="battle.weather.clear">Clear</button>
+          <button class="btn sub-tab" data-battle-look="weather" data-value="rain" data-i18n="battle.weather.rain">Rain</button>
+          <button class="btn sub-tab" data-battle-look="weather" data-value="fog" data-i18n="battle.weather.fog">Fog</button>
+          <button class="btn sub-tab" data-battle-look="weather" data-value="storm" data-i18n="battle.weather.storm">Storm</button>
+        </div>
+        <div class="battle-hint" data-i18n="battle.lookHint">Only how it looks: nobody sleeps by it. Torches given to units are lit when it's dark</div>
         <div class="panel-heading" data-i18n="menu.difficulty">Difficulty:</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-difficulty="normal" data-i18n="menu.normal">Normal</button>

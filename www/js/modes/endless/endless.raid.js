@@ -341,12 +341,12 @@ function layCamp(army, layout, wave) {
     /** @type {number[][]} */
     const gapAt = angles.map(a => [...ring].sort((p, q) => toward(a)(p) - toward(a)(q))[0]);
     const isGap = p => { const [gx, gy] = p; return gapAt.some(([x, y]) => Math.hypot(gx - x, gy - y) < 1.5); };
-    for (const p of ring) if (!isGap(p)) game.buildings.push(standing(type, tileCenter(p[0], p[1])));
+    for (const p of ring) if (!isGap(p)) game.buildings.push(standing(type, tileCenter(p[0], p[1]), { side: 'red' })); // (#326: the camp's own)
     // torches by each way in
     if (torches) for (const [gx, gy] of gapAt) {
       for (const p of ring.filter(q => Math.abs(Math.hypot(q[0] - gx, q[1] - gy) - 2) < 0.6).slice(0, 2)) {
         const at = tileCenter(p[0], p[1]), k = game.buildings.findIndex(b => b.x === at.x && b.y === at.y);
-        if (k >= 0) game.buildings[k] = standing('torch', at, { lit: true });
+        if (k >= 0) game.buildings[k] = standing('torch', at, { lit: true, side: 'red' });
       }
     }
   };
@@ -371,9 +371,9 @@ function layCamp(army, layout, wave) {
     return tileCenter(pick[0], pick[1]);
   };
   // fires (more in a camp with no walls), spikes round an open one, and its faction's own buildings
-  for (let i = 0; i < (open ? 3 : 2); i++) game.buildings.push(standing('campfire', takeFree(span - 2), { fuelLeft: 1e6 }));
-  if (open) for (let i = 0; i < 8; i++) game.buildings.push(standing('spikes', takeFree(span, span - 1)));
-  for (const type of (c.decor[getEnemyFaction().id] || [])) game.buildings.push(standing(type, takeFree(span - 1, 2)));
+  for (let i = 0; i < (open ? 3 : 2); i++) game.buildings.push(standing('campfire', takeFree(span - 2), { fuelLeft: 1e6, side: 'red' }));
+  if (open) for (let i = 0; i < 8; i++) game.buildings.push(standing('spikes', takeFree(span, span - 1), { side: 'red' }));
+  for (const type of (c.decor[getEnemyFaction().id] || [])) game.buildings.push(standing(type, takeFree(span - 1, 2), { side: 'red' }));
   // the outpost, and the tents
   game.enemyTents.push({ x: centre.x, y: centre.y, hp: c.outpostHp, maxHp: c.outpostHp, outpost: true, summonTimer: 0, summonsLeft: 0 });
   const tents = c.tents.min + Math.floor(rand() * (c.tents.max - c.tents.min + 1)) + (open ? 1 : 0);

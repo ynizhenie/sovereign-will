@@ -54,14 +54,14 @@ test('the night has its own music: the ambient changes as night falls and as day
   expect(r).toEqual({ day: true, night: true, nightFight: true, morning: true });
 });
 
-test('battles are always by day; a map from the editor starts at the time picked for it (#257)', async ({ page }) => {
+test('a battle is by day unless its settings say otherwise, and its clock stands still; a map from the editor starts at the time picked for it (#257, #326)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => localStorage.removeItem('sovereign-will-maps'));
   const r = await page.evaluate(() => {
     startBattleMode();
-    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 5;
+    const t0 = dayTime;
     for (let f = 0; f < 60; f++) stepGame(1 / 60);
-    const battleDay = [getDayPhase(), getDarkness()];
+    const battleDay = [getDayPhase(), getDarkness(), dayTime === t0];
     leaveBattleMode();
     startEditor({ cols: 30, rows: 30, generate: false });
     document.querySelector('[data-start-time="night"]').click();
@@ -69,6 +69,6 @@ test('battles are always by day; a map from the editor starts at the time picked
     playEditorMap();
     return { battleDay, phase: getDayPhase(), dark: getDarkness() > 0 };
   });
-  expect(r).toEqual({ battleDay: ['day', 0], phase: 'night', dark: true });
+  expect(r).toEqual({ battleDay: ['day', 0, true], phase: 'night', dark: true });
 });
 

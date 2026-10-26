@@ -8,9 +8,10 @@ import { getEnemyFaction } from '../index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
 import { getBaseRadius } from '../../conflict/combat/index.js';
 
-// The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th...
-export function getPortalPairs() {
-  const portals = game.buildings.filter(b => b.type === 'portal');
+// The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th... (#326) each side its own:
+// the red side's (b.side 'red') or the player's
+export function getPortalPairs(side = 'green') {
+  const portals = game.buildings.filter(b => b.type === 'portal' && (b.side === 'red') === (side === 'red'));
   const pairs = [];
   for (let i = 0; i + 1 < portals.length; i += 2) pairs.push([portals[i], portals[i + 1]], [portals[i + 1], portals[i]]);
   return pairs;
@@ -20,9 +21,9 @@ export function getPortalPairs() {
 // the far one (next to it). Returns where to walk to instead, or null to go straight; true once stepped through.
 export const PORTAL_SAVING = 90; // px the way through must save to be worth it
 
-export function takePortal(entity, targetX, targetY) {
+export function takePortal(entity, targetX, targetY, side = 'green') {
   const direct = Math.hypot(targetX - entity.x, targetY - entity.y);
-  for (const [near, far] of getPortalPairs()) {
+  for (const [near, far] of getPortalPairs(side)) {
     const toNear = Math.hypot(near.x - entity.x, near.y - entity.y);
     if (toNear + Math.hypot(targetX - far.x, targetY - far.y) + PORTAL_SAVING >= direct) continue;
     if (toNear > 30) return near;

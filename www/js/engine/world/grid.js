@@ -29,7 +29,8 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
  * @typedef {{ signature: number, rocks: Set<string>, water: Set<string>, trees: Set<string>, cacti: Set<string>,
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
  *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
- *   towerArrowBuildings: Set<string>, stamps?: Record<string, string> }} TileIndex
+ *   towerArrowBuildings: Set<string>, redBuildings: Set<string>, redDoors: Set<string>, ownSpikes: Set<string>, ownTraps: Set<string>,
+ *   redHazards: Set<string>, stamps?: Record<string, string> }} TileIndex
  */
 /** @type {TileIndex | null} */
 export let tileIndex = null;
@@ -86,6 +87,15 @@ export function getTileIndex() {
     spikes: [[game.buildings], () => keys(game.buildings.filter(b => b.type === 'spikes'))],
     // iron traps (#248): settlers keep off them, enemies don't see them
     traps: [[game.buildings], () => keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap))],
+    // (#326) the red side's own (b.side 'red': a battle's red half, a raid's camp): its walls and the like, which
+    // it never breaks and the player's break through; its doors, its own way through and a wall to the
+    // player's; its spikes and traps, which it keeps off and the player's walk straight onto. ownSpikes and
+    // ownTraps: the player's, which settlers keep off and enemies walk straight onto
+    redBuildings: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && !isDoor(b) && !isHazard(b) && !(getDefinition('buildings', b.type) || {}).walkable))],
+    redDoors: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && isDoor(b)))],
+    redHazards: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && isHazard(b)))],
+    ownSpikes: [[game.buildings], () => keys(game.buildings.filter(b => b.side !== 'red' && b.type === 'spikes'))],
+    ownTraps: [[game.buildings], () => keys(game.buildings.filter(b => b.side !== 'red' && (getDefinition('buildings', b.type) || {}).ironTrap))],
     // what stops arrows (see blocksArrows / arrowsPass / towerArrowsPass in GAME_CONFIG)
     arrowBlockers: [[...blocksArrows, tilesVersion], () => keys(blocksArrows.flatMap(list => list.filter(o => !o.isGrowing)))],
     arrowBuildings: [[game.buildings], () => keys(game.buildings.filter(b => !(getDefinition('buildings', b.type) || {}).arrowsPass))],
@@ -103,6 +113,11 @@ export function getTileIndex() {
   tileIndex = /** @type {TileIndex} */ (made);
   lastIndex = tileIndex;
   return tileIndex;
+}
+
+// Spikes or an iron trap: walked over, hurting who steps on it
+function isHazard(b) {
+  return b.type === 'spikes' || !!(getDefinition('buildings', b.type) || {}).ironTrap;
 }
 
 // A door (a wooden or an iron one, #248): settlers walk through it

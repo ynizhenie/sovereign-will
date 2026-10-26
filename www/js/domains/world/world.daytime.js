@@ -15,10 +15,24 @@ export function tickDaytime(dt) {
   game.dayTime = ((game.dayTime || 0) + dt) % dayLength();
 }
 
-// 'morning', 'day', 'evening' or 'night' (always 'day' out of Endless)
+// (#326) a battle has a time of day too, picked in its settings and standing still: only how it looks (the dark,
+// the lights, the shadows); nobody sleeps or eats by it there
+const looksByTime = () => game.gameMode === 'endless' || game.gameMode === 'battle';
+
+// When in a day each of a battle's times is (its middle; the evening's dusk well on)
+export function timeOfPhase(phase) {
+  const c = config();
+  return { morning: c.morning * 0.3, day: c.morning + c.day * 0.5, evening: c.morning + c.day + c.evening * 0.7, night: c.morning + c.day + c.evening + c.night * 0.5 }[phase] ?? c.morning + c.day * 0.5;
+}
+
+// 'morning', 'day', 'evening' or 'night' (always 'day' out of Endless: what the colony does by it)
 export function getDayPhase() {
   if (game.gameMode !== 'endless') return 'day';
-  const c = config(), t = game.dayTime || 0;
+  return phaseAt(game.dayTime || 0);
+}
+
+function phaseAt(t) {
+  const c = config();
   if (t < c.morning) return 'morning';
   if (t < c.morning + c.day) return 'day';
   if (t < c.morning + c.day + c.evening) return 'evening';
@@ -36,8 +50,8 @@ export function nightProgress() {
 
 // How dark it is now, 0 (day) .. darkness (night), smooth through the evening and the morning
 export function getDarkness() {
-  if (game.gameMode !== 'endless') return 0;
-  const c = config(), t = game.dayTime || 0, phase = getDayPhase();
+  if (!looksByTime()) return 0;
+  const c = config(), t = game.dayTime || 0, phase = phaseAt(t);
   if (phase === 'day') return 0;
   if (phase === 'night') return c.darkness;
   if (phase === 'morning') return c.darkness * (1 - t / c.morning);
@@ -103,10 +117,11 @@ export function drawDarkness() {
 
 // (#307) the sun: shadows fall away from it, long in the morning (to the west, the sun in the east) and the
 // evening (to the east), short at midday (straight down the screen), and faint at night (the moon). dx/dy:
-// how far a shadow falls for each unit of a thing's height; alpha: how dark it is. Out of Endless: an afternoon
+// how far a shadow falls for each unit of a thing's height; alpha: how dark it is. Out of Endless (and a battle):
+// an afternoon
 export function getSun() {
   const c = config(), light = c.morning + c.day + c.evening;
-  const t = game.gameMode === 'endless' ? (game.dayTime || 0) : c.morning + c.day * 0.7;
+  const t = looksByTime() ? (game.dayTime || 0) : c.morning + c.day * 0.7;
   if (t >= light) return { dx: 0.15, dy: 0.4, alpha: 0.08 };
   const x = (t / light - 0.5) * 2, len = 0.55 + Math.abs(x) * 1.7;
   return { dx: x * len, dy: 0.45, alpha: 0.24 - Math.abs(x) * 0.07 };

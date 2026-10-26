@@ -7,6 +7,7 @@ import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/ind
 import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
+import { removeBuilding } from '../../economy/building/index.js';
 import { tileVariantHash } from '../../world/index.js';
 import { playSound } from '../../../app/index.js';
 import { shakeOnHit } from '../morale/index.js';
@@ -100,6 +101,9 @@ export function performAttack(attacker, targetX, targetY) {
     const struck = [
       ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; bleed(en, attacker); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
+      ...game.buildings.filter(b => b.side === 'red' && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
+        .map(b => ({ at: b, hit: () => { b.hp -= dmg; if (b.hp <= 0) removeBuilding(b); } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
           woundBoar(b, dmg, attacker, attacker.x, attacker.y);

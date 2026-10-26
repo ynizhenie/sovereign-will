@@ -25,9 +25,10 @@ function buildSettlerBlockedGrid() {
     const gx = (o.x - 15) / TILE_SIZE, gy = (o.y - 15) / TILE_SIZE;
     if (Number.isInteger(gx) && Number.isInteger(gy) && gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS) grid[gy * game.COLS + gx] = 1;
   };
+  // (#326) the player's spikes and traps kept off, the enemy's walked straight onto; the enemy's doors a wall
   for (const b of game.buildings) {
-    const def = getDefinition('buildings', b.type) || {};
-    if ((!isDoor(b) && !def.walkable) || b.type === 'spikes' || def.ironTrap) mark(b);
+    const def = getDefinition('buildings', b.type) || {}, own = b.side !== 'red';
+    if ((!isDoor(b) && !def.walkable) || (own && (b.type === 'spikes' || def.ironTrap)) || (!own && isDoor(b))) mark(b);
   }
   for (const list of [game.naturalRocks, game.waterTiles, game.cacti, game.boulders, game.ironOres, game.coalOres]) list.forEach(mark);
   for (const t of game.trees) if (!t.isGrowing) mark(t);
@@ -55,7 +56,7 @@ export function computeTileBlockedForSettler(gx, gy) {
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
 
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.walls.has(k) || tiles.spikes.has(k) || tiles.traps.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  return tiles.walls.has(k) || tiles.redDoors.has(k) || tiles.ownSpikes.has(k) || tiles.ownTraps.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -150,8 +151,9 @@ function computeBlockedForEnemyStrict(gx, gy) {
   if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
   // route around buildings when possible; if walled in, the fallback search paths through them and enemies break them
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  // (an iron trap they don't see: they walk right onto it, #248)
-  return (tiles.buildings.has(k) && !tiles.traps.has(k)) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  // (an iron trap they don't see: they walk right onto it, #248; #326 the player's spikes too, straight over them;
+  // through their own doors, round their own spikes and traps)
+  return (tiles.buildings.has(k) && !tiles.ownTraps.has(k) && !tiles.ownSpikes.has(k) && !tiles.redDoors.has(k)) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -194,9 +196,10 @@ export function isTileBlockedForEnemyPermissive(gx, gy) {
 function computeBlockedForEnemyPermissive(gx, gy) {
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
-  // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore
+  // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore;
+  // (#326) not their own buildings, and they keep off their own spikes and traps
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k);
+  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) || tiles.redBuildings.has(k) || tiles.redHazards.has(k);
 }
 
 export const PATH_DIRECTIONS = [
@@ -342,7 +345,9 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
 // Enemies' way to their target: one search that weighs going round against breaking through, in
 // tiles of walking: breaking a building costs `building`, a tree or boulder `nature`, walking over spikes
 // `spikes`. Rock and water can't be crossed at all.
-export const ENEMY_PATH_COST = { building: 12, nature: 25, spikes: 2 };
+// (#326) a building costs 3 tiles: one is broken through when the way round is more than 3 tiles longer (both
+// sides, every mode); spikes are the other side's, walked straight over
+export const ENEMY_PATH_COST = { building: 3, nature: 25, spikes: 0 };
 
 // A path's length in tiles (diagonal steps count 1.41)
 export function pathCost(path) {
@@ -359,7 +364,7 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
   const tiles = getTileIndex();
-  const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k); // (traps unseen, #248)
+  const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k); // (traps unseen, #248; its own doors walked through)
   const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
   const PATH_COST = ENEMY_PATH_COST;
   const result = findGridPath(startG, endG, targetX, targetY, {
@@ -423,12 +428,37 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false)
     isBlockedPath: false
   });
   if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
-  // a long way round (to a far door, round a wall of spikes): breaking through, or walking the spikes,
-  // may be quicker; whichever costs less
-  if (isEnemy && pathCost(result.path) > 1.5 * Math.hypot(endG.gx - startG.gx, endG.gy - startG.gy) + 4) {
+  // a long way round (to a far door): breaking through may be quicker; whichever costs less. (#326) Tried once
+  // the way round is more than BREAK_DETOUR tiles longer than the straight way
+  const dx = Math.abs(endG.gx - startG.gx), dy = Math.abs(endG.gy - startG.gy);
+  const straight = Math.max(dx, dy) + 0.41 * Math.min(dx, dy);
+  const roundabout = result.path.length === 0 || pathCost(result.path) > straight + BREAK_DETOUR;
+  if (isEnemy && roundabout) {
     const through = findPathAStarPermissive(startX, startY, targetX, targetY, true);
     if (through.path.length > 0 && through.cost < pathCost(result.path)) return through;
   }
+  // (#326) the player's too, through the enemy's buildings (a battle's red half, a raid's camp)
+  if (!isEnemy && roundabout && (getTileIndex().redBuildings.size > 0 || getTileIndex().redDoors.size > 0)) {
+    const through = findSettlerPathThrough(startG, endG, targetX, targetY);
+    if (through.path.length > 0 && (result.path.length === 0 || through.cost < pathCost(result.path))) return through;
+  }
+  return result;
+}
+
+const BREAK_DETOUR = 3;
+
+// (#326) A settler's way through the enemy's buildings (its walls, doors and the like count ENEMY_PATH_COST.building
+// tiles each, to break): isBlockedPath, so it strikes what's in the way (see breakWhatsInTheWay)
+function findSettlerPathThrough(startG, endG, targetX, targetY) {
+  const tiles = getTileIndex();
+  const isRed = (gx, gy) => { const k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`; return tiles.redBuildings.has(k) || tiles.redDoors.has(k); };
+  const result = findGridPath(startG, endG, targetX, targetY, {
+    isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy) && !isRed(gx, gy),
+    allowCornerCutting: false,
+    isBlockedPath: true,
+    extraCost: (x, y) => (tiles.redBuildings.has(`${x},${y}`) || tiles.redDoors.has(`${x},${y}`) ? ENEMY_PATH_COST.building : 0)
+  });
+  result.cost = pathCost(result.path) + result.path.slice(0, -1).filter(p => tiles.redBuildings.has(`${p.x},${p.y}`) || tiles.redDoors.has(`${p.x},${p.y}`)).length * ENEMY_PATH_COST.building;
   return result;
 }
 
