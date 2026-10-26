@@ -150,8 +150,22 @@ function drawPetCorpse(c, grey) {
   ctx.restore();
 }
 
-// Arrows and fireballs in flight
+// (#326) An arrow that stopped: its shaft and fletching out of what it hit, a short stub; fading as it goes
+function drawStuckArrow(x, y, a, fromEnemy, alpha) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-9, -0.75, 9, 1.5);
+  ctx.fillStyle = fromEnemy ? '#e74c3c' : '#ecf0f1';
+  ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-12, 2.5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+const fadeOf = age => Math.min(1, Math.max(0, (GAME_CONFIG.stuckArrows.seconds - age) / 4));
+
+// Arrows and fireballs in flight, and those that stopped: on the ground, in the living, in corpses and dummies
 export function drawProjectiles() {
+  for (const a of game.stuckArrows) drawStuckArrow(a.x, a.y, a.a, a.fromEnemy, fadeOf(a.age));
+  for (const list of [game.settlers, game.enemies]) for (const u of list) if (u.stuck) for (const a of u.stuck) drawStuckArrow(u.x + a.x, u.y + a.y, a.a, a.fromEnemy, fadeOf(a.age));
+  for (const c of game.corpses) if (c.stuck) for (const a of c.stuck) drawStuckArrow(c.x + a.x, c.y + a.y, a.a, a.fromEnemy, Math.max(0, Math.min(1, (GAME_CONFIG.corpses.seconds - c.age) / 10)) * 0.9);
+  for (const d of game.buildings) if (d.arrowsStuck) for (const a of d.arrowsStuck) drawStuckArrow(d.x + a.x, d.y + a.y, a.a, false, 1);
   game.projectiles.forEach(proj => {
     // fireballs bigger and orange; everything else is an arrow, pointing where it flies
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }

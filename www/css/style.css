@@ -1156,3 +1156,12 @@ body[data-hud="endless"] .day-clock { display: block; }
 
 /* (#326) while the game starts: only the dark background, not the menu half made */
 body.booting > * { visibility: hidden; }
+
+/* (#326) the loading screen: the menu's scene stays, its panels away, a bar low on the screen */
+#loading-screen { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12vh; pointer-events: all; }
+#loading-screen[hidden] { display: none; }
+.loading-box { width: min(420px, 78vw); text-align: center; color: #f1f1f1; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+#loading-title { font-size: 1.05rem; margin-bottom: 10px; letter-spacing: 0.04em; }
+.loading-bar { height: 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); overflow: hidden; }
+#loading-fill { height: 100%; width: 0; background: linear-gradient(90deg, #c9a24a, #f0d27a); transition: width 0.15s ease-out; }
+body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-hide, body.loading #menu-scene-bar { display: none !important; }

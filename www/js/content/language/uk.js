@@ -518,6 +518,8 @@ export const ukLanguage = {
       'activity.sleepAtNight': 'Спить',
       'activity.lightTorches': 'Запалює смолоскип',
       'menu.hideMenu': 'Сховати меню й дивитися',
+      'loading.world': 'Створюємо світ…',
+      'loading.save': 'Завантажуємо збереження…',
       'menu.nextScene': '[[reroll]] Інша сценка',
       'menu.showMenu': '[[menu]] Меню',
       'voice.humans.hired': 'Готовий до роботи!|До ваших послуг.|З чого почати?|Привіт, я новенький.|Радий бути тут.',

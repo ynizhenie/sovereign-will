@@ -1,5 +1,5 @@
 import { test, expect } from './helpers.mjs';
-import { openGame } from './helpers.mjs';
+import { openGame, started } from './helpers.mjs';
 
 // The music varies as it plays (#252)
 test('a track goes A A B A, its key moves, some phrases drop parts; the ambient changes after a while (#252)', async ({ page }) => {
@@ -57,7 +57,7 @@ test('the night has its own music: the ambient changes as night falls and as day
 test('a battle is by day unless its settings say otherwise, and its clock stands still; a map from the editor starts at the time picked for it (#257, #326)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => localStorage.removeItem('sovereign-will-maps'));
-  const r = await page.evaluate(() => {
+  const battleDay = await page.evaluate(() => {
     startBattleMode();
     const t0 = dayTime;
     for (let f = 0; f < 60; f++) stepGame(1 / 60);
@@ -67,8 +67,10 @@ test('a battle is by day unless its settings say otherwise, and its clock stands
     document.querySelector('[data-start-time="night"]').click();
     document.getElementById('editor-name').value = 'Night map';
     playEditorMap();
-    return { battleDay, phase: getDayPhase(), dark: getDarkness() > 0 };
+    return battleDay;
   });
+  await started(page);
+  const r = { battleDay, ...(await page.evaluate(() => ({ phase: getDayPhase(), dark: getDarkness() > 0 }))) };
   expect(r).toEqual({ battleDay: ['day', 0, true], phase: 'night', dark: true });
 });
 

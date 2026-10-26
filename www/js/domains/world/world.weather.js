@@ -131,11 +131,11 @@ export function drawWeatherWorld() {
   // of a lattice bobbing where it is, not on the screen, so zooming and panning don't drag them along)
   const w = getWeather();
   if (w.kind === 'fog' && w.level > 0) {
-    ctx.fillStyle = `rgba(210, 215, 220, ${0.14 * w.level})`;
+    ctx.fillStyle = `rgba(210, 215, 220, ${0.07 * w.level})`;
     ctx.fillRect(camera.x - halfW, camera.y - halfH, halfW * 2, halfH * 2);
-    const cell = 300, drift = 90 * w.wind, bank = fogBank();
+    const cell = 400, drift = 90 * w.wind, bank = fogBank();
     ctx.save();
-    ctx.globalAlpha = 0.28 * w.level;
+    ctx.globalAlpha = 0.17 * w.level;
     for (let gy = Math.floor((camera.y - halfH - cell) / cell); gy <= Math.ceil((camera.y + halfH + cell) / cell); gy++) {
       for (let gx = Math.floor((camera.x - halfW - cell) / cell); gx <= Math.ceil((camera.x + halfW + cell) / cell); gx++) {
         const h = tileVariantHash(gx, gy);
@@ -156,7 +156,8 @@ function fogBank() {
     fogBankCanvas = document.createElement('canvas');
     fogBankCanvas.width = fogBankCanvas.height = 340;
     const c = /** @type {CanvasRenderingContext2D} */ (fogBankCanvas.getContext('2d')), g = c.createRadialGradient(170, 170, 0, 170, 170, 170);
-    g.addColorStop(0, 'rgba(225, 230, 235, 1)');
+    g.addColorStop(0, 'rgba(225, 230, 235, 0.9)');
+    g.addColorStop(0.5, 'rgba(225, 230, 235, 0.38)');
     g.addColorStop(1, 'rgba(225, 230, 235, 0)');
     c.fillStyle = g;
     c.fillRect(0, 0, 340, 340);
@@ -171,17 +172,27 @@ export function drawWeatherScreen() {
   if (rain <= 0 && !(w.flash > 0)) return;
   const W = canvas.width, H = canvas.height, t = performance.now() / 1000;
   if (rain > 0) {
-    ctx.fillStyle = `rgba(20, 30, 45, ${0.13 * rain * (w.kind === 'storm' ? 1.4 : 1)})`; ctx.fillRect(0, 0, W, H);
-    const slant = Math.cos(w.windAngle || 0) * w.wind * 0.6, n = Math.round((w.kind === 'storm' ? 170 : 110) * rain), len = H * 0.035;
-    ctx.strokeStyle = `rgba(200, 215, 230, ${0.28 + 0.12 * rain})`; ctx.lineWidth = Math.max(1, W / 1200);
-    ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const sx = ((i * 7919) % 1000) / 1000, sp = 0.8 + ((i * 104729) % 100) / 250;
-      const y = ((t * sp * 1.6 + ((i * 3571) % 1000) / 1000) % 1) * (H + len) - len;
-      const x = (sx * (W + H * 0.5) - H * 0.25 + slant * y) % (W + 40);
-      ctx.moveTo(x, y); ctx.lineTo(x + slant * len, y + len);
+    // (#326) a light dimming and not many streaks, in two depths: far ones short, thin and faint, near ones
+    // longer and brighter; each a little different in speed, so the rain doesn't march
+    ctx.fillStyle = `rgba(20, 30, 45, ${0.06 * rain * (w.kind === 'storm' ? 1.5 : 1)})`; ctx.fillRect(0, 0, W, H);
+    const slant = Math.cos(w.windAngle || 0) * w.wind * 0.6, storm = w.kind === 'storm';
+    const layers = [
+      { n: storm ? 44 : 28, len: H * 0.022, speed: 1.1, alpha: 0.16, width: Math.max(0.8, W / 1800), salt: 1 },
+      { n: storm ? 20 : 11, len: H * 0.05, speed: 1.7, alpha: 0.3, width: Math.max(1, W / 1100), salt: 7 }
+    ];
+    for (const { n, len, speed, alpha, width, salt } of layers) {
+      ctx.strokeStyle = `rgba(205, 220, 238, ${alpha * (0.6 + 0.4 * rain)})`; ctx.lineWidth = width; ctx.lineCap = 'round';
+      ctx.beginPath();
+      const count = Math.round(n * rain);
+      for (let i = 0; i < count; i++) {
+        const k = i * salt + salt * 31;
+        const sx = ((k * 7919) % 1000) / 1000, sp = speed * (0.85 + ((k * 104729) % 100) / 330);
+        const y = ((t * sp + ((k * 3571) % 1000) / 1000) % 1) * (H + len) - len;
+        const x = (sx * (W + H * 0.5) - H * 0.25 + slant * y) % (W + 40);
+        ctx.moveTo(x, y); ctx.lineTo(x + slant * len, y + len);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
   }
   if (w.flash > 0) {
     ctx.fillStyle = `rgba(235, 240, 255, ${0.5 * w.flash * w.flash})`; ctx.fillRect(0, 0, W, H);

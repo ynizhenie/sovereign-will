@@ -14,7 +14,7 @@ import { separateAllies, separateSettlersFromEnemies } from '../engine/movement/
 import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
 import { keepStoresInStep } from '../domains/colony/storage/index.js';
 import { tickDemonCamp } from '../domains/factions/demons/index.js';
-import { ageBloodAndDung, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
+import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
@@ -22,6 +22,7 @@ import { isInCamp, isRaidPicking, isRaiding, tickCards, tickRaid, tickRaidCamp }
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 
 export function update(dt) {
+  if (game.loading) return; // (#326)
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
   if (game.gameMode === 'endless' && (game.cardOffer || isRaidPicking())) return; // (the game waits for a card or a raid party to be picked, #255)
   if (game.gameMode === 'endless' && isInCamp()) { updateCamp(dt); return; } // (a raid's camp: the base waits, #255)
@@ -71,6 +72,7 @@ export function update(dt) {
   removeDeadSettlers();
   removeDeadEnemies();
   updateCorpses(dt);
+  ageStuckArrows(dt);
 
   keepStoresInStep(); // what lies where, in step with the stock (#248)
   tickPaths(); // ground walked a lot wears into paths (#248)
@@ -107,6 +109,7 @@ function updateCamp(dt) {
   removeDeadSettlers();
   removeDeadEnemies();
   updateCorpses(dt);
+  ageStuckArrows(dt);
   tickVoices(dt);
   tickRaid(dt);
   updateUI();

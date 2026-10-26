@@ -7,7 +7,7 @@ import { game, newWorldEpoch, resetTileIndex, setWorldSize, TOWN_HALL_HP, townHa
 import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { clearBoarWallows } from '../domains/economy/hunting/index.js';
-import { generateMap, resetFog } from '../domains/world/index.js';
+import { generateMapSteps, resetFog } from '../domains/world/index.js';
 import { getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
@@ -15,6 +15,11 @@ import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
 import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
 
 export function resetGame(map) {
+  for (const _ of resetGameSteps(map)); // (all at once)
+}
+
+// A new game made in steps, each yielding how far along it is (the loading screen's bar, #326)
+export function* resetGameSteps(map) {
   newWorldEpoch(); // (#326: nothing kept from the world before)
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu
   if (map === undefined) map = game.gameMode === 'endless' ? game.customMap : null;
@@ -31,11 +36,13 @@ export function resetGame(map) {
   resetRaid(); // (#255: a party out on a raid: the base back first, then all of it reset)
   game.settlers = []; game.blueprints = []; game.buildings = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.stumps = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
   townHall.store = {}; game.craftOrders = []; game.raidCamp = null; game.raidCampWave = 0; game.scouts = []; game.scoutClock = 0; game.weather = null; game.reliefZones = []; game.postZones = []; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
-  game.projectiles = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false; game.pendingRespawns = [];
+  game.projectiles = []; game.stuckArrows = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false; game.pendingRespawns = [];
   clearBoarWallows(); // (#306) the ground the last world's boars dug goes with that world
   
+  yield 0.05;
   if (map) loadCustomMap(map);
-  else generateMap();
+  else for (const share of generateMapSteps()) yield 0.05 + share * 0.8;
+  yield 0.9;
   mixStartFood(); // after the map, so the seeded map stays the same
   resetTileIndex();
   resetFog(); // (#299: nothing seen yet but the start land)
