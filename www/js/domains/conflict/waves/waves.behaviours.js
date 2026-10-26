@@ -4,7 +4,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
-import { enemyDamagePerSecond, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
+import { enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
@@ -354,12 +354,21 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   const shaken = en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1;
   const meleeDamage = (meleeDef === enemyDef ? en.damage : (en.meleeDamage ?? (en.meleeDamage = enemyDamagePerSecond(meleeDef)))) * shaken;
   faceTowards(en, target.x, target.y);
-  if (!(en.swingT > 0)) { startSwing(en, 0.5); en.struckAt = game.pathTick; } // keeps swinging while it hits (#326: a dog's bite drawn from its swing)
+  // (#326) a blow at a time, as the player's own strike, not hp drained a little every tick: one every
+  // cooldown of its kind's weapon, as much as that many seconds of its damage; the first at once
+  const cooldown = enemyHitCooldown(meleeDef);
+  if (en.strikeTick !== game.pathTick - 1) en.strikeTimer = 0;
+  en.strikeTick = game.pathTick;
+  en.strikeTimer = (en.strikeTimer || 0) - dt;
+  if (en.strikeTimer > 0) return;
+  en.strikeTimer = Math.max(en.strikeTimer + cooldown, dt);
+  startSwing(en, Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
+  const blow = cooldown * shaken;
   if (en.type === 'big') {
     let splashRadius = enemyDef.splash.radius;
-    let splashDamage = dt * en.damage * shaken * enemyDef.splash.share;
-    if (target === townHall) townHall.hp -= dt * en.damage * shaken;
-    else damageSettler(target, dt * en.damage * shaken, en);
+    let splashDamage = blow * en.damage * enemyDef.splash.share;
+    if (target === townHall) townHall.hp -= blow * en.damage;
+    else damageSettler(target, blow * en.damage, en);
 
     /** @type {any[]} */
     const around = game.settlers.filter(s => s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius);
@@ -370,7 +379,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
       else damageSettler(o, splashDamage, en);
     }
   } else {
-    if (target === townHall) townHall.hp -= dt * meleeDamage;
-    else damageSettler(target, dt * meleeDamage, en);
+    if (target === townHall) townHall.hp -= cooldown * meleeDamage;
+    else damageSettler(target, cooldown * meleeDamage, en);
   }
 }

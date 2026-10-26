@@ -91,7 +91,6 @@ export function renderBuildingCard() {
   const { name, icon } = isHall ? hallName() : { name: def ? def.label : b.type, icon: def ? def.icon : 'build' };
   document.getElementById('card-title').innerHTML = `${iconHtml(icon)} ${escapeHtml(name)}`;
   const info = [t('card.hp', { hp: Math.max(0, Math.ceil(b.hp)), max: b.maxHp })];
-  if (b.tower) info.push(t('card.arrows', { n: b.arrows || 0, max: b.tower.arrowCapacity }));
   if (b.type === 'fish_trap') info.push(t('card.fish', { n: b.fish || 0, max: GAME_CONFIG.buildings.fish_trap.fishTrap.holds })); // (#199)
   // its bait (#248): a fish trap's catches left on it, an iron trap's food
   if (b.type === 'fish_trap' || b.type === 'iron_trap') {

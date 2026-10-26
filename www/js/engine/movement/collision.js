@@ -1,6 +1,6 @@
 // Bodies and what stops them: walls, water, natural obstacles, the map's edge, and units pushed apart
 
-import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
 import { forEachSettlerNear } from './neighbours.js';
 
 export function collidesWithBoxList(x, y, radius, objects, halfSize) {
@@ -147,9 +147,11 @@ export function separateAllies(units, fightingOnly = false) {
   }
 }
 
+// In the world; (#326) in a battle, off the red strip round the field too, but for one fleeing in a panic
 export function clampEntityToBounds(ent) {
-  ent.x = Math.max(ent.radius, Math.min(game.WORLD_WIDTH - ent.radius, ent.x));
-  ent.y = Math.max(ent.radius, Math.min(game.WORLD_HEIGHT - ent.radius, ent.y));
+  const edge = game.gameMode === 'battle' && !ent.panic ? BORDER_MARGIN * TILE_SIZE : 0;
+  ent.x = Math.max(edge + ent.radius, Math.min(game.WORLD_WIDTH - edge - ent.radius, ent.x));
+  ent.y = Math.max(edge + ent.radius, Math.min(game.WORLD_HEIGHT - edge - ent.radius, ent.y));
 }
 
 export function ejectEntitiesFromTile(x, y) {

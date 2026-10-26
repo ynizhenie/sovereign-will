@@ -1,16 +1,17 @@
 // Battle mode: an empty grass field split down the middle. The player places units of any faction:
-// theirs on the green side (left), enemies on the red side (right), buildings anywhere; presses Fight, and
+// on the green side (left) they're theirs, on the red side (right) enemies (#326: any unit on either), buildings
+// anywhere; presses Fight, and
 // they battle it out; the winner is shown and, a few seconds later, the same line-up comes back to adjust.
 // A fight can be called off, and the player can possess one of theirs in it. Archers' arrows don't run
 // out. Green units are settlers and red ones enemies, driven by the usual AI.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
+import { camera, clampCamera, setZoom } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
 import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
-import { createConfiguredEnemy, getEnemyDef } from '../../domains/conflict/waves/index.js';
-import { closeOverlays, showNotification } from '../../ui/index.js';
+import { createConfiguredEnemy, getEnemyDef, presetEnemyKey } from '../../domains/conflict/waves/index.js';
+import { closeOverlays } from '../../ui/index.js';
 import { createSettler, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
@@ -19,17 +20,16 @@ import { renderBattlePanel } from './battle.panel.js';
 
 export const BATTLE_RESULT_SECONDS = 4;
 
-/** @type {{ phase: string, category: string, faction: string, preset: string, building: string, armor: boolean | string,
+/** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
  *   shield: boolean, banner: boolean, field: string,
  *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
- *   difficulty: string, auto: boolean, savedDifficulty: string | null }} */
+ *   difficulty: string, auto: boolean, savedDifficulty: string | null, music: string }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
-  category: 'own',    // the panel's category
-  faction: 'humans',  // the faction its units and buildings are shown for
-  preset: 'sword',    // the unit preset the next tap places
+  category: 'units',  // the panel's category
+  preset: 'humans:sword', // the unit preset the next tap places (BATTLE_PRESETS)
   building: 'wall_wood',
   armor: false,       // colony units placed next get armour / a shield (melee only)
   shield: false,
@@ -42,7 +42,8 @@ export const battle = {
   savedMapSettings: null,
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   auto: true,           // (#255) yours fight by themselves; off: they hold, and go where they're told
-  savedDifficulty: null // the Endless choice, back when the battle's left
+  savedDifficulty: null, // the Endless choice, back when the battle's left
+  music: ''             // (#326) the fight's music: a battle track (GAME_CONFIG.music), or '' for one at random
 };
 
 // (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
@@ -51,9 +52,10 @@ export function battleArmor(armor) {
 }
 
 // An enemy kind that can carry a shield: one of normal size fighting hand to hand
+/** @param {string} id */
 export function enemyCanShield(id) {
   const def = GAME_CONFIG.enemies[id];
-  return !!def && def.type !== 'big' && !def.ranged && !def.healer && !def.necromancer;
+  return !!def && def.type !== 'big' && !def.ranged && !def.healer && !def.necromancer && !def.pet;
 }
 
 // The midline: left of it is green, right of it red
@@ -63,21 +65,24 @@ export function battleSide(x) {
 
 export function makeBattleUnit(entry) {
   const preset = getBattlePreset(entry.presetId);
+  if (!preset) return;
   // (#306) the look it was placed with, kept on its line-up entry: a tap makes the whole line-up again,
   // and a new look every time would give every unit another face — and another man or a woman
   // (#314) a pet's its own look: a coat of its kind, not a man's
-  const pet = (GAME_CONFIG.settlerTypes[preset.type] || GAME_CONFIG.enemies[preset.enemy] || {}).pet;
+  const pet = GAME_CONFIG.settlerTypes[preset.type].pet;
   const look = entry.look || (entry.look = pet ? newPetLook(pet) : newLook());
-  if (preset.enemy) {
-    const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, preset.enemy);
+  // (#326) on the red half: an enemy, the very same unit
+  const enemyKey = battleSide(entry.x) === 'red' ? presetEnemyKey(preset.faction, preset.preset) : null;
+  if (enemyKey) {
+    const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, enemyKey);
     en.battleEntry = entry;
     en.look = look;
     // (#279) armour and a shield as yours can have (a shield: a melee one of normal size); a banner too,
     // given by the player, not picked by the game
-    const armour = battleArmor(entry.armor);
-    if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
-    if (entry.shield && enemyCanShield(preset.enemy)) en.shield = true;
     const def = getEnemyDef(en);
+    const armour = def.pet ? null : battleArmor(entry.armor); // (a pet wears nothing, #326)
+    if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
+    if (entry.shield && enemyCanShield(enemyKey)) en.shield = true;
     if (entry.banner && en.type === 'normal' && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
@@ -161,8 +166,8 @@ export function leaveBattleMode() {
   exitToMainMenu();
 }
 
-// A tap during setup: place what's chosen on an empty tile (colony units on the green side, enemies on
-// the red one, buildings anywhere), or take away what stands there
+// A tap during setup: place what's chosen on an empty tile (a unit is yours on the green side, an enemy on
+// the red one; buildings anywhere), or take away what stands there
 export function battleTap(x, y) {
   if (battle.phase !== 'setup') return;
   const g = getGridPos(x, y);
@@ -174,10 +179,7 @@ export function battleTap(x, y) {
   } else if (battle.category === 'buildings') {
     battle.lineup.push({ building: battle.building, x: cx, y: cy });
   } else {
-    const preset = getBattlePreset(battle.preset);
-    const side = preset.enemy ? 'red' : 'green';
-    if (battleSide(cx) !== side) { showNotification(t(`battle.only.${side}`), true); return; }
-    battle.lineup.push({ presetId: preset.id, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner }); // (an enemy too, #279)
+    battle.lineup.push({ presetId: battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner }); // (an enemy too, #279)
   }
   resetBattleUnits();
 }

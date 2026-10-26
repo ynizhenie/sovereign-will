@@ -57,14 +57,14 @@ test('Battles: the armour button goes off, leather, iron; the units placed wear 
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
-  await page.click('[data-battle-category="own"]');
+  await page.click('[data-battle-category="units"]');
   const b = page.locator('[data-battle-gear="armor"]');
   await b.click();
   await expect(b).toContainText('Кожаная');
   const r = await page.evaluate(() => {
     const at = gx => ({ x: gx * TILE_SIZE + 15, y: 8 * TILE_SIZE + 15 });
-    battle.preset = 'sword'; battleTap(at(8).x, at(8).y);
-    battle.category = 'enemy'; battle.preset = 'raider'; battleTap(at(30).x, at(30).y);
+    battle.preset = 'humans:sword'; battleTap(at(8).x, at(8).y);
+    battle.category = 'units'; battle.preset = 'humans:sword'; battleTap(at(30).x, at(30).y);
     return { mine: settlers[0].armor, theirs: enemies[0].armor };
   });
   await b.click();

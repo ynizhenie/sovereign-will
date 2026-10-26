@@ -38,7 +38,7 @@
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
  * @property {Look} [look]          a man or a woman, one of their looks: how it's drawn (#306)
  * @property {boolean} isPossessed   steered by the player (its AI is off)
- * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, forTower?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
+ * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
@@ -215,8 +215,7 @@
  * @property {number} hp
  * @property {number} maxHp
  * @property {Object<string, number>} [needs]  materials still to be brought to the blueprint
- * @property {{ arrowCapacity: number, capacity?: number }} [tower]
- * @property {number} [arrows]
+ * @property {{ capacity?: number }} [tower]
  * @property {Settler[]} [guards]    a watchtower's archers
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
@@ -246,8 +245,8 @@
  */
 
 /**
- * A watchtower: a building with its tower, its arrows and its guards
- * @typedef {Building & { tower: { arrowCapacity: number, capacity: number }, arrows: number, guards: Settler[] }} Watchtower
+ * A platform (a watchtower): a building with its tower and its guards
+ * @typedef {Building & { tower: { capacity: number, minEnemies: number, range: number, damage: number, cooldown: number, projectileSpeed: number }, guards: Settler[] }} Watchtower
  */
 
 /**
