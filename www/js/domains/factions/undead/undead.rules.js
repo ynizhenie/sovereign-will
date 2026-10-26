@@ -21,9 +21,13 @@ export function getNecromancy(s) {
 export let blightCache = { key: '', keys: new Set(), base: new Set() };
 
 export function updateBlightCache() {
-  const cacheKey = `${game.pathTick}|${sides.player.faction}|${game.gameMode}|${game.buildings.length}|${game.blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}`;
+  const cacheKey = `${game.pathTick}|${sides.player.faction}|${game.gameMode}|${game.buildings.length}|${game.blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}|${!!game.battleBlight}`;
   if (blightCache.key === cacheKey) return blightCache;
   const base = new Set();
+  // (#326) a battle on blighted ground (its settings): all of the field, working as in Endless (the red side slowed on it)
+  if (game.gameMode === 'battle' && game.battleBlight) {
+    for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) if (!isBorderZone(gx, gy)) base.add(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`);
+  }
   if (sides.player.faction === 'undead' && game.gameMode === 'endless') {
     const b = GAME_CONFIG.blight;
     // the tiles from (gx0, gy0) to (gx1, gy1) and r more on every side

@@ -7,12 +7,17 @@ import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { BATTLE_PRESETS, battlePresetLabel, getBattleBuildings } from './battle.roster.js';
-import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, startBattleMode } from './battle.setup.js';
+import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
-  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'banner'} */ (b.dataset.battleGear)]));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'banner' | 'torch'} */ (b.dataset.battleGear)]));
+  // (#326) the time of day, the weather, blighted ground
+  document.querySelectorAll('[data-battle-look]').forEach(b => {
+    b.classList.toggle('on', String(battle[/** @type {'time' | 'weather' | 'blight'} */ (b.dataset.battleLook)]) === b.dataset.value);
+    /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
+  });
   // (#298) the armour button says which: leather, iron, or just "armour" off
   const armourButton = document.querySelector('[data-battle-gear="armor"]');
   if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.armor'));
@@ -177,10 +182,14 @@ export function initBattlePanel() {
   }));
   // (the armour: off, leather, iron, off again; the shield and the banner: on or off, #298, #279)
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
-    const gear = /** @type {'armor' | 'shield' | 'banner'} */ (b.dataset.battleGear);
+    const gear = /** @type {'armor' | 'shield' | 'banner' | 'torch'} */ (b.dataset.battleGear);
     if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
-    else if (gear === 'shield') battle.shield = !battle.shield;
-    else battle.banner = !battle.banner;
+    else battle[gear] = !battle[gear];
+    renderBattlePanel();
+  }));
+  document.querySelectorAll('[data-battle-look]').forEach(b => onTap(b, () => {
+    const key = /** @type {'time' | 'weather' | 'blight'} */ (b.dataset.battleLook);
+    setBattleLook(key, key === 'blight' ? b.dataset.value === 'true' : b.dataset.value);
     renderBattlePanel();
   }));
   // the battle's settings (#255): the field, the difficulty, the auto battle (also by Fight! once it's on)

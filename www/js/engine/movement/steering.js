@@ -53,20 +53,21 @@ export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
 }
 
 // A settler's step that would take it onto a spike tile from off one (its own traps: it never walks
-// them, the player's possessed settler aside, which moves by hand)
+// them, the player's possessed settler aside, which moves by hand; #326: the enemy's it walks straight onto)
 export function stepsOntoSpikes(entity, vx, vy) {
   const tiles = getTileIndex();
-  if (tiles.spikes.size === 0 && tiles.traps.size === 0) return false;
+  if (tiles.ownSpikes.size === 0 && tiles.ownTraps.size === 0) return false;
   const key = (x, y) => { const g = getGridPos(x, y); return `${g.gx * TILE_SIZE + 15},${g.gy * TILE_SIZE + 15}`; };
-  const hazard = k => tiles.spikes.has(k) || tiles.traps.has(k); // (iron traps too, #248)
+  const hazard = k => tiles.ownSpikes.has(k) || tiles.ownTraps.has(k); // (iron traps too, #248)
   return hazard(key(entity.x + vx, entity.y + vy)) && !hazard(key(entity.x, entity.y));
 }
 
 export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
   // the undead's blighted ground holds enemies back
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
-  if (!isEnemy && game.buildings.length) {
-    const via = takePortal(entity, targetX, targetY);
+  // through a portal pair of its own side (#326: an enemy through the red side's, in a battle)
+  if (game.buildings.length) {
+    const via = takePortal(entity, targetX, targetY, isEnemy ? 'red' : 'green');
     if (via === true) return;
     if (via) { targetX = via.x; targetY = via.y; }
   }
@@ -77,7 +78,7 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
   tickPathTimers(entity, isEnemy, dt);
   replanIfNeeded(entity, targetX, targetY, isEnemy);
   if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, bodyRadius)) {
-    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius);
+    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy);
     return;
   }
   if (!isEnemy && pathBlockedAhead(entity)) {
@@ -137,7 +138,7 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
 
 // An enemy with a clear line to its target walks straight at it, eased; blocked, it drops the path for a
 // fresh search and leaves the straight line for a while
-function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius) {
+function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy) {
   let directDx = targetX - entity.x;
   let directDy = targetY - entity.y;
   let directDist = Math.hypot(directDx, directDy);
@@ -148,7 +149,7 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius) {
     entity.moveVy = (entity.moveVy || 0) * 0.8 + directVy * 0.2;
 
     if (!collidesWithEnemyNaturalResource(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius) &&
-        !collidesWithWall(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius) &&
+        !collidesWithWall(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius, isEnemy) &&
         !collidesWithWater(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius)) {
       entity.x += entity.moveVx;
       entity.y += entity.moveVy;
@@ -172,7 +173,9 @@ function pathBlockedAhead(entity) {
   const hereTile = getGridPos(entity.x, entity.y);
   const stepsOffTile = nextTile.gx !== hereTile.gx || nextTile.gy !== hereTile.gy;
   if (stepsOffTile && isTileBlockedForSettler(nextTile.gx, nextTile.gy)) {
-    return true;
+    // (#326) the enemy's building it's going to break through, on purpose
+    const tiles = getTileIndex(), k = `${nextTile.gx * TILE_SIZE + 15},${nextTile.gy * TILE_SIZE + 15}`;
+    return !tiles.redBuildings.has(k) && !tiles.redDoors.has(k);
   }
   return false;
 }
@@ -228,7 +231,7 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
     }
 
     if (isEnemy && (collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
-        collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius) ||
+        collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, true) ||
         collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius))) {
       entity.moveVx = 0;
       entity.moveVy = 0;

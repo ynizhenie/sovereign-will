@@ -131,6 +131,7 @@
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
@@ -217,6 +218,7 @@
  * @property {Object<string, number>} [needs]  materials still to be brought to the blueprint
  * @property {{ capacity?: number }} [tower]
  * @property {Settler[]} [guards]    a watchtower's archers
+ * @property {'red'} [side]        (#326) the enemy's (a battle's red half, a raid's camp); else the player's
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
  * @property {number} [fish]         a fish trap's catch waiting (#199)
@@ -296,6 +298,7 @@
  * @property {Object[]} farmPlots
  * @property {Object[]} farmZones
  * @property {Object[]} blightZones
+ * @property {boolean} [battleBlight]  (#326) a battle on blighted ground
  * @property {Object[]} naturalRocks
  * @property {Object[]} waterTiles
  * @property {number} [fishCount] fish remaining in this shoal

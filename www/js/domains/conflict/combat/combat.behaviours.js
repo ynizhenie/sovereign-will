@@ -214,6 +214,8 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       : dist <= approach + extraBody;
     if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
+    } else if (breakWhatsInTheWay(s)) {
+      // (#326) the enemy's wall or door in its way, broken through
     } else if (!isBowWeapon(s.weapon)) {
       // in melee each takes a side of its own round the enemy (#208)
       const slot = tick.meleeOn.get(targetEnemy) || 0;
@@ -228,6 +230,18 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     return true;
   }
   return false;
+}
+
+// (#326) On a way through the enemy's buildings (findPathAStar's, when the way round is long): the one next on
+// it struck once it's in reach. True while that keeps it busy
+function breakWhatsInTheWay(s) {
+  if (!s.path || !s.path.length || isBowWeapon(s.weapon)) return false;
+  const next = s.path[0];
+  const b = game.buildings.find(o => o.side === 'red' && o.type !== 'spikes' && Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1);
+  if (!b || Math.hypot(b.x - s.x, b.y - s.y) > getWeaponStats(s, 'combat').range + 15) return false;
+  performAttack(s, b.x, b.y);
+  s.patrolTarget = null;
+  return true;
 }
 
 // Who goes to destroy enemy tents: anyone armed, and unarmed workers only when nobody is armed
@@ -270,7 +284,7 @@ function attackTent(s, tent, tick) {
   const attackDist = getWeaponStats(s, 'combat').tentReach;
   const blockedShot = isBowWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
   if (dist > attackDist || blockedShot) {
-    moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
+    if (!breakWhatsInTheWay(s)) moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
   } else {
     performAttack(s, tent.x, tent.y);
   }
