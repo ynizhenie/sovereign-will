@@ -518,6 +518,8 @@ export const enLanguage = {
       'activity.sleepAtNight': 'Asleep',
       'activity.lightTorches': 'Lighting a torch',
       'menu.hideMenu': 'Hide the menu to watch',
+      'loading.world': 'Making the world…',
+      'loading.save': 'Loading the save…',
       'menu.nextScene': '[[reroll]] Next scene',
       'menu.showMenu': '[[menu]] Menu',
       'voice.humans.hired': 'Ready to work!|At your service.|Where do I start?|Hello, I\'m new here.|Glad to be here.',

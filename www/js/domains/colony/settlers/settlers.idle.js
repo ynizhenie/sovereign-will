@@ -9,7 +9,8 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { getBaseRadius, isDefenseAlert, isInSafeArea } from '../../conflict/combat/index.js';
+import { getBaseRadius, hasLineOfFire, isDefenseAlert, isInSafeArea, performAttack } from '../../conflict/combat/index.js';
+import { isBowWeapon, usesDagger } from '../equipment/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
@@ -101,6 +102,21 @@ function ringPlace(s, spot, radius, act) {
   const k = Math.max(0, here.indexOf(s)), n = Math.max(1, here.length);
   const angle = (k / n) * Math.PI * 2 + (spot.x + spot.y) * 0.01;
   return { x: spot.x + Math.cos(angle) * radius, y: spot.y + Math.sin(angle) * radius };
+}
+
+// (#326) Where an archer stands to shoot at a dummy: its place on the ring, or the nearest one round it that
+// it can stand on with a clear line to the dummy (a tree or a wall between would eat the arrows)
+function shootingPlace(s, dummy, radius) {
+  const first = ringPlace(s, dummy, radius, 'train');
+  const base = Math.atan2(first.y - dummy.y, first.x - dummy.x);
+  for (let k = 0; k < 8; k++) {
+    const angle = base + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * Math.PI / 4 * (k ? 1 : 0);
+    const p = { x: dummy.x + Math.cos(angle) * radius, y: dummy.y + Math.sin(angle) * radius };
+    const g = getGridPos(p.x, p.y);
+    const near = { x: dummy.x + Math.cos(angle) * 20, y: dummy.y + Math.sin(angle) * 20 }; // (the dummy's own tile is in the way of its middle)
+    if (!isTileBlockedForSettler(g.gx, g.gy) && hasLineOfFire(p.x, p.y, near.x, near.y)) return p;
+  }
+  return first;
 }
 
 // (#306) The others round the same spot at the same pastime, once a tick: gathering and sorting them again
@@ -203,7 +219,27 @@ export function idlePastime(s, tick) {
     }
     case 'train': {
       const dummy = game.buildings.find(b => b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
-      if (!dummy || !canTrain(s) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
+      const shoots = isBowWeapon(s.weapon) && !usesDagger(s);
+      const kept = dummy && dummy.arrowsStuck ? dummy.arrowsStuck.length : 0;
+      if (!dummy || (!canTrain(s) && !(shoots && kept)) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
+      if (shoots) {
+        // (#326) an archer practises from a few tiles off, the dummy keeping the arrows (up to 5); when it
+        // holds all it can, or the quiver's empty, it goes to the dummy and takes them back
+        const dry = !s.quiver || (s.arrows || 0) <= 0, full = kept >= GAME_CONFIG.stuckArrows.dummy;
+        if (full || dry) {
+          if (!kept) { idle.left = 0; return false; }
+          if (Math.hypot(dummy.x - s.x, dummy.y - s.y) > 34) { moveEntityTowards(s, dummy.x, dummy.y, s.speed * 0.7, false, tick.dt); return true; }
+          s.arrows = (s.arrows || 0) + kept; // (the ones it shot)
+          dummy.arrowsStuck = [];
+          return true;
+        }
+        const place = shootingPlace(s, dummy, c.trainShootTiles * TILE_SIZE);
+        if (Math.hypot(place.x - s.x, place.y - s.y) > 8) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }
+        faceTowards(s, dummy.x, dummy.y);
+        if ((s.attackCooldown || 0) <= 0) performAttack(s, dummy.x, dummy.y);
+        s.trained = Math.min(c.trainMax, (s.trained || 0) + c.trainPerSecond * tick.dt);
+        return true;
+      }
       const place = ringPlace(s, dummy, c.trainRing, 'train');
       // (close enough: the dummy itself may keep it off its exact place)
       if (Math.hypot(place.x - s.x, place.y - s.y) > 6 && Math.hypot(dummy.x - s.x, dummy.y - s.y) > c.trainRing + 10) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }

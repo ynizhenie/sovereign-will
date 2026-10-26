@@ -1,12 +1,12 @@
 // The Endless menu before a game: wave interval, map (random or saved, its size), difficulty, factions and
 // colours, the seed, and Play
 
-import { openTab } from '../../ui/index.js';
+import { openTab, runLoading } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { applySeedFromUI, createDefaultSeed, game } from '../../engine/world/index.js';
 import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
-import { resetGame } from '../../app/index.js';
+import { resetGameSteps } from '../../app/index.js';
 import { mainMenu } from '../menu/index.js';
 import { loadSavedMaps, renderSavedMapList } from '../editor/index.js';
 
@@ -36,16 +36,21 @@ export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapC
 // difficulty (Endless)
 export const difficultyOptions = document.querySelectorAll('.difficulty-option');
 
-export const startGame = (e) => {
+let starting = false;
+export const startGame = async (e) => {
     if (e) e.preventDefault();
-    applySeedFromUI();
-    // (#299) the size picked in the menu (its default one too, never tapped)
-    const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
-    if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
-    resetGame();
-    openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
-    game.gameStarted = true;
-    mainMenu.style.display = 'none';
+    if (starting) return; // (a second tap while the world is made)
+    starting = true;
+    try {
+      applySeedFromUI();
+      // (#299) the size picked in the menu (its default one too, never tapped)
+      const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
+      if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
+      await runLoading('loading.world', resetGameSteps()); // (#326) the menu's scene stays, a bar over it
+      openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
+      game.gameStarted = true;
+      mainMenu.style.display = 'none';
+    } finally { starting = false; }
 };
 
 // Endless: random (generated) map, or one of the saved maps

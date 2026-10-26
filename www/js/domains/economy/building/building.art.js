@@ -42,47 +42,91 @@ function house(x, y, w, h, { roof, roofDark, wall, wallDark, door = '#3e2723' })
 
 // ---- Walls and doors
 
+// (#326) A wall's neighbours as bits: 1 north, 2 east, 4 south, 8 west. A piece draws a post and an arm towards
+// each neighbour (a straight run, a corner, a T, a cross; a lone one is a post), a door sits in the run.
+export const LINK = { n: 1, e: 2, s: 4, w: 8 };
+const ARMS = [[LINK.n, 0, -1], [LINK.e, 1, 0], [LINK.s, 0, 1], [LINK.w, -1, 0]];
+
 // A palisade: logs side by side, their sharpened tops, bands of rope across
-export function drawWoodWall(x, y) {
+export function drawWoodWall(x, y, mask = 0) {
   shadow(x, y, 30, 30, 2); // (#326: everything casts one)
-  rect(x - 15, y - 15, 30, 30, '#5c3a17');
-  for (let k = 0; k < 5; k++) {
-    const lx = x - 15 + k * 6;
-    rect(lx + 0.5, y - 13, 5, 28, k % 2 ? '#8e5a2b' : '#9b6633');
-    poly([[lx + 0.5, y - 13], [lx + 3, y - 16], [lx + 5.5, y - 13]], '#b07a42');
-    line(lx + 1.5, y - 11, lx + 1.5, y + 13, 'rgba(255, 255, 255, 0.12)');
+  for (const [bit, dx, dy] of ARMS) {
+    if (!(mask & bit)) continue;
+    if (dy) { // north-south: log tops stacked
+      for (let k = 0; k < 3; k++) {
+        const cy = y + dy * (9 + k * 6);
+        ctx.fillStyle = '#5c3a17'; ctx.beginPath(); ctx.ellipse(x, cy, 7, 3.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = k % 2 ? '#8e5a2b' : '#9b6633'; ctx.beginPath(); ctx.ellipse(x, cy - 1, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    } else { // east-west: logs side by side
+      for (let k = 0; k < 3; k++) {
+        const lx = x + dx * (8 + k * 5.5) - 2.75;
+        rect(lx, y - 12, 5.5, 25, k % 2 ? '#8e5a2b' : '#9b6633', '#5c3a17');
+        poly([[lx, y - 12], [lx + 2.75, y - 15], [lx + 5.5, y - 12]], '#b07a42');
+      }
+      line(x, y - 4, x + dx * 15, y - 4, '#4e3016', 2);
+      line(x, y + 7, x + dx * 15, y + 7, '#4e3016', 2);
+    }
   }
-  line(x - 15, y - 4, x + 15, y - 4, '#4e3016', 2);
-  line(x - 15, y + 8, x + 15, y + 8, '#4e3016', 2);
+  // the post in the middle: two or three logs with their points
+  rect(x - 7, y - 11, 14, 24, '#7a4a20', '#4e3016');
+  rect(x - 6, y - 10, 5.5, 22, '#9b6633'); rect(x + 0.5, y - 10, 5.5, 22, '#8e5a2b');
+  poly([[x - 7, y - 11], [x - 3.5, y - 16], [x, y - 11]], '#b07a42');
+  poly([[x, y - 11], [x + 3.5, y - 16], [x + 7, y - 11]], '#b07a42');
 }
 
 // Masonry: blocks in courses, each set over the joint below, a light top edge
-export function drawStoneWall(x, y) {
+export function drawStoneWall(x, y, mask = 0) {
   shadow(x, y, 30, 30, 2);
-  rect(x - 15, y - 15, 30, 30, '#5d6d7e');
-  for (let row = 0; row < 4; row++) {
-    const by = y - 15 + row * 7.5, shift = row % 2 ? 5 : 0;
-    for (let col = -1; col < 3; col++) {
-      const bx = x - 15 + col * 10 + shift;
-      const x0 = Math.max(x - 15, bx + 0.5), x1 = Math.min(x + 15, bx + 9.5);
-      if (x1 <= x0) continue;
-      rect(x0, by + 0.5, x1 - x0, 6.5, (row + col) % 3 ? '#95a5a6' : '#8a9a9b');
-      line(x0, by + 1, x1, by + 1, 'rgba(255, 255, 255, 0.25)');
+  const block = (x0, y0, w, h, k) => {
+    rect(x0, y0, w, h, '#5d6d7e');
+    for (let row = 0; row * 7 < h - 1; row++) {
+      const by = y0 + row * 7, bh = Math.min(6.5, y0 + h - by - 0.5), shift = row % 2 ? 5 : 0;
+      for (let col = -1; col * 10 < w; col++) {
+        const bx = x0 + col * 10 + shift;
+        const l = Math.max(x0 + 0.5, bx + 0.5), r = Math.min(x0 + w - 0.5, bx + 9.5);
+        if (r <= l || bh <= 0) continue;
+        rect(l, by + 0.5, r - l, bh, (row + col + k) % 3 ? '#95a5a6' : '#8a9a9b');
+        line(l, by + 1, r, by + 1, 'rgba(255, 255, 255, 0.25)');
+      }
     }
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+  };
+  for (const [bit, dx, dy] of ARMS) {
+    if (!(mask & bit)) continue;
+    if (dy) block(x - 7, dy < 0 ? y - 15 : y + 7, 14, 8, bit);
+    else block(dx < 0 ? x - 15 : x + 7, y - 7, 8, 14, bit);
   }
-  ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(x - 14.5, y - 14.5, 29, 29);
+  block(x - 8, y - 8, 16, 16, 1);
 }
 
-// A door in its frame: planks (iron bands and rivets on an iron one)
-export function drawDoorArt(x, y, iron) {
+// A door in its frame, in a run of wall: two posts, the leaf hung on one and swung open (open 0..1) away from
+// the hall (swing: where it opens towards). Planks (iron bands and rivets on an iron one)
+export function drawDoorArt(x, y, iron, mask = 0, open = 0, swing = { x: 0, y: 1 }) {
   shadow(x, y, 30, 30, 2);
-  rect(x - 15, y - 15, 30, 30, iron ? '#4d5656' : '#6d4520');
-  rect(x - 11, y - 12, 22, 26, iron ? '#7b5a3c' : '#a0522d', '#3e2723');
-  for (const px of [-5, 0, 5]) line(x + px, y - 11, x + px, y + 13, 'rgba(0, 0, 0, 0.25)');
-  if (iron) {
-    for (const py of [-7, 1, 9]) { rect(x - 11, y + py - 1.5, 22, 3, '#7f8c8d'); for (const px of [-8, 8]) { ctx.fillStyle = '#d0d3d4'; ctx.fillRect(x + px - 0.5, y + py - 0.5, 1.5, 1.5); } }
-  }
-  ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(x + 6, y + 2, 1.6, 0, Math.PI * 2); ctx.fill();
+  const vertical = (mask & (LINK.n | LINK.s)) && !(mask & (LINK.e | LINK.w));
+  // the wall each side, in the local frame (along x); a door with no wall by it stands in a bare frame
+  const post = '#6d4520', ironPost = '#4d5656';
+  ctx.save(); ctx.translate(x, y); if (vertical) ctx.rotate(Math.PI / 2);
+  const along = vertical ? [mask & LINK.s, mask & LINK.n] : [mask & LINK.w, mask & LINK.e]; // local -x, +x
+  [-1, 1].forEach((d, i) => {
+    if (!along[i]) return;
+    if (iron) rect(d < 0 ? -15 : 11, -6, 4, 12, '#5d6d7e', '#2c3e50');
+    else for (let k = 0; k < 2; k++) rect(d * (11 + k * 2.2) - (d < 0 ? 2.2 : 0), -10, 2.2, 20, k ? '#8e5a2b' : '#9b6633', '#5c3a17');
+  });
+  rect(-15, -9, 5, 18, iron ? ironPost : post, '#2e1d0c'); rect(10, -9, 5, 18, iron ? ironPost : post, '#2e1d0c');
+  // the ground in the doorway
+  rect(-10, -7, 20, 14, 'rgba(60, 40, 20, 0.35)');
+  // the leaf, hinged at the left post; the local +y direction's sign on the swing decides which way it turns
+  const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
+  const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
+  ctx.translate(-10, 0); ctx.rotate(sign * open * Math.PI * 0.46);
+  const leaf = open < 0.98 ? 20 - open * 6 : 14; // seen end-on as it opens
+  rect(0, -3, leaf, 6, iron ? '#7b5a3c' : '#a0522d', '#3e2723');
+  for (const px of [5, 10, 15]) if (px < leaf) line(px, -2.5, px, 2.5, 'rgba(0, 0, 0, 0.25)');
+  if (iron) for (const px of [3, 10, 17]) if (px < leaf) { rect(px - 1.5, -3, 3, 6, '#7f8c8d'); }
+  ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(Math.min(18, leaf - 2), 0, 1.4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
 // ---- Homes and workplaces

@@ -113,8 +113,12 @@ export const mechanicsConfig = {
   // necromancer takes `bones` bones from a corpse in boneSeconds
   idle: { seconds: [8, 16], campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
-    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
+    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, trainShootTiles: 3, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
+
+  // (#326) arrows that stop stay where they hit: on the ground and in a unit `seconds` (at most `ground` of
+  // them lying, `perUnit` in one), in a corpse till it's gone; a dummy keeps `dummy` of its trainers' arrows
+  stuckArrows: { seconds: 25, ground: 120, perUnit: 4, dummy: 5 },
 
   // a fallen settler or enemy leaves a grey corpse where it fell, gone after `seconds` unless used
   corpses: { seconds: 60 },

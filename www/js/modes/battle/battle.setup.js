@@ -143,7 +143,7 @@ export function setUpBattleField() {
 
 // The line-up as placed: units standing still until Fight
 export function resetBattleUnits() {
-  game.settlers = []; game.enemies = []; game.projectiles = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
+  game.settlers = []; game.enemies = []; game.projectiles = []; game.stuckArrows = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
   for (const entry of battle.lineup) {
     if (entry.building) {
       // built at once: a building, not a blueprint
