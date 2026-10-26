@@ -83,7 +83,21 @@ test('a medic at work: herbs on the wound, its patient shows it; the necromancer
   expect(errors).toEqual([]);
 });
 
-test('a save loaded a few ticks after it was made: nothing kept from the world before, no frame fails (the CI flake of #299\'s fog test)', async ({ page }) => {
+test('what is kept for the tick is worked out again for a new world, even in the same tick', async ({ page }) => {
+  await openGame(page);
+  const r = await page.evaluate(() => {
+    const keep = onceThisTick();
+    let made = 0;
+    keep(() => ++made); keep(() => ++made);
+    const sameWorld = made;
+    newWorldEpoch();
+    keep(() => ++made);
+    return { sameWorld, afterNewWorld: made };
+  });
+  expect(r).toEqual({ sameWorld: 1, afterNewWorld: 2 });
+});
+
+test('smoke: saves loaded a few ticks after they were made, no frame fails (the CI flake of #299\'s fog test)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(async () => {
