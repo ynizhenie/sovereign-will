@@ -229,9 +229,13 @@ export const ICONS = {
     c.save(); c.translate(11, 11); c.rotate(-Math.PI / 4); icRound(c, '#7f8c8d', -8, -4, 16, 8, 2); c.restore();
   },
   build: c => {
-    icRect(c, '#f39c12', 8, 6, 4, 22); icRect(c, '#f39c12', 4, 6, 24, 3.5);
-    icLine(c, '#2c3e50', 1.2, [[24, 9], [24, 17]]); icRect(c, '#2c3e50', 22, 17, 4, 3);
-    icRect(c, '#7f8c8d', 5, 27, 10, 3); icRect(c, '#a04000', 18, 22, 9, 7);
+    // (#326) a timber frame going up (not a crane): a sill beam, two posts and the roof's rafters, and a mallet
+    icRect(c, '#6d4520', 3, 25, 22, 4);
+    icLine(c, '#a0522d', 3, [[6, 25], [6, 13]]); icLine(c, '#a0522d', 3, [[22, 25], [22, 13]]);
+    icLine(c, '#a0522d', 3, [[4, 14], [14, 5], [24, 14]]); icLine(c, '#8b4513', 2.2, [[6, 14], [22, 14]]);
+    icLine(c, '#8b4513', 2, [[7, 24], [21, 15]]);
+    icLine(c, '#d2b48c', 2.6, [[29, 30], [24, 21]]);
+    c.save(); c.translate(23.5, 19.5); c.rotate(-0.5); icRound(c, '#8e5a2b', -4.5, -2.6, 9, 5.2, 1.5); c.restore();
   },
   zone_wheat: c => icZone(c, 'rgba(241, 196, 15, 0.45)', '#f1c40f'),
   zone_sapling: c => icZone(c, 'rgba(46, 204, 113, 0.45)', '#2ecc71'),

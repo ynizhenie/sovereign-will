@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon } from '../../colony/equipment/index.js';
+import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
@@ -85,7 +85,9 @@ export function fightEnemies(s, tick) {
   if (isBowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
   // an archer with nothing to shoot keeps out of the fight at the town hall while there's an enemy about
   // (#232: it went out to its post empty); with none, it gets on with its other work
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy) {
+  // (#326) unless an enemy comes close: then it draws its dagger and stabs at it
+  const close = targetEnemy && usesDagger(s) && Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) < GAME_CONFIG.weapons.bow.dagger.closeTiles * TILE_SIZE;
+  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy && !close) {
     s.patrolTarget = null;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, dt);
     return true;
@@ -182,6 +184,7 @@ function restockArrows(s, dt) {
 // there are defenders; the rest walk up and strike (an archer shoots from where it has a clear line).
 // False when there's nothing to fight.
 function engageEnemy(s, tick, targetEnemy, attacker, dt) {
+  const shoots = isBowWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, a dagger: melee)
   let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
 
   // (a necromancer's staff fights: it doesn't shelter at the town hall, #232)
@@ -209,14 +212,14 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     // against a normal enemy (bodies 21 px apart): bigger bodies keep their centres further apart (see
     // separateSettlersFromEnemies), so a big settler or a brute counts as in reach that much sooner
     const extraBody = Math.max(0, (s.visualRadius || s.radius) + targetEnemy.radius - NORMAL_BODIES);
-    const inReach = isBowWeapon(s.weapon)
+    const inReach = shoots
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
       : dist <= approach + extraBody;
     if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
     } else if (breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through
-    } else if (!isBowWeapon(s.weapon)) {
+    } else if (!shoots) {
       // in melee each takes a side of its own round the enemy (#208)
       const slot = tick.meleeOn.get(targetEnemy) || 0;
       const around = Math.atan2(s.y - targetEnemy.y, s.x - targetEnemy.x) + (slot % 2 ? 1 : -1) * Math.ceil(slot / 2) * 0.9;
@@ -225,7 +228,7 @@ function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     } else {
       moveEntityTowards(s, targetEnemy.x, targetEnemy.y, s.speed, false, dt);
     }
-    if (!isBowWeapon(s.weapon)) tick.meleeOn.set(targetEnemy, (tick.meleeOn.get(targetEnemy) || 0) + 1);
+    if (!shoots) tick.meleeOn.set(targetEnemy, (tick.meleeOn.get(targetEnemy) || 0) + 1);
     s.patrolTarget = null;
     return true;
   }

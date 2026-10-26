@@ -233,10 +233,16 @@ export function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; 
 // A settler's weapon stats for `use` ('combat' or 'hunt': the same numbers, a boar takes twice the damage
 // in woundBoar, #232; a hunt's range is the weapon's reach, a bow's its shooting distance). Damage: the
 // weapon's, or, for fists, the carried tool's, else bare hands; times the settler type's multiplier.
+// (#326) An archer out of arrows, with its dagger out instead (arrows never run out in a battle)
+export function usesDagger(s) {
+  return isBowWeapon(s.weapon) && !!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle';
+}
+
 export function getWeaponStats(s, use) {
   const fist = GAME_CONFIG.weapons.fist;
   const weapon = getDefinition('weapons', s.weapon) || fist;
-  const stats = use === 'hunt' ? { ...weapon.combat, range: weapon.combat.range || weapon.combat.approach } : weapon.combat;
+  const dagger = use === 'combat' && usesDagger(s);
+  const stats = dagger ? weapon.dagger : use === 'hunt' ? { ...weapon.combat, range: weapon.combat.range || weapon.combat.approach } : weapon.combat;
   let damage = s.weapon !== 'fist' ? stats.damage : undefined;
   if (damage === undefined) {
     const tool = getDefinition('tools', s.tool);

@@ -6,9 +6,9 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
-import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
+import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon, usesDagger } from '../equipment/index.js';
 import { drawHeadTexture, lookOf } from './settlers.looks.js';
-import { castShadow } from '../../world/index.js';
+import { castShadow, getDarkness } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
@@ -17,7 +17,7 @@ import { drawStaff, getNecromancy } from '../../factions/undead/index.js';
 import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/index.js';
 import { drawHorns } from '../../factions/demons/index.js';
 import { drawPet } from '../pets/index.js';
-import { isPet } from './settlers.rules.js';
+import { isBigBody, isPet } from './settlers.rules.js';
 
 // (#306) Below this many screen px per world px a figure is a handful of pixels: its body, head and colours
 // are all that shows. Drawing its hands, gear, hair strands and idle signs on so little was most of what a
@@ -85,6 +85,7 @@ export function getHeldItemPose(unit) {
     if (unit.workKind === 'build' || isCrafting(unit)) return { angle: -0.9 + 0.9 * Math.abs(beat), push: 1 };
     if (unit.workKind === 'butcher') return { angle: 0.35, push: 4 + 3 * beat };
     if (unit.workKind === 'pick') return { angle: 0.2 * beat, push: 6 + 4 * Math.abs(beat) };
+    if (unit.workKind === 'heal') return { angle: 0.3, push: 6 + 3 * beat }; // (#326: herbs pressed onto the wound)
     if (item === 'rod') return { angle: 0.12 * beat, push: 0 };
     if (item === 'fist' || item === 'medbag') return { angle: 0, push: 2 * beat };
     // (#326) a hoe: thrust forward into the ground and drawn back, the same whichever way it faces (it was
@@ -363,6 +364,7 @@ export function drawFigure(unit, o) {
   if (!o.lying) castShadow(ctx, 0, r * 1.02, r * 0.7, r * 0.22, r * 1.6); // (cast away from the sun, #307)
   // legs, stepping while it walks (#306: a woman a little shorter)
   const look = lookOf(unit);
+  const big = isBigBody(unit); // (#326: drawn a strongman)
   const step = o.lying || o.dead ? 0 : Math.sin((unit.walk || 0) * 0.35) * r * (look.female ? 0.12 : 0.16);
   ctx.fillStyle = shade(o.body, -0.4);
   for (const [lx, dy] of [[-0.3, step], [0.3, -step]]) { ctx.beginPath(); ctx.roundRect(r * lx - r * 0.17, r * 0.25 + dy, r * 0.34, r * 0.72, r * 0.12); ctx.fill(); }
@@ -382,7 +384,7 @@ export function drawFigure(unit, o) {
   // (both hands out: a load, a boxer, a zombie reaching, a spearman — its other arm's drawn even when behind)
   const both = !!(carry || box || z || shaft);
   const arm = (from, to) => {
-    ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * 0.26); ctx.lineCap = 'round';
+    ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * (big ? 0.34 : 0.26)); ctx.lineCap = 'round'; // (#326: a strongman's thick)
     ctx.beginPath(); ctx.moveTo(from, -r * 0.3); ctx.lineTo(to.x, to.y); ctx.stroke();
     ctx.lineCap = 'butt';
     ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(to.x, to.y, r * 0.15, 0, Math.PI * 2); ctx.fill();
@@ -390,7 +392,8 @@ export function drawFigure(unit, o) {
   // (#298) its hand's arm behind its body when the hand is up behind it (heldBehind); the other in front
   // (a boxer's fists are in front of it, up behind its back when it faces away from us)
   const behind = box ? Math.sin(f0) < -0.1 : !o.lying && !o.dead && (carry ? carry.y < -r * 0.1 : o.handPoint ? facesAway(unit) : hand.y < -r * 0.1);
-  if (behind) { arm(right * r * 0.5, hand); if (both) arm(-right * r * 0.5, other); }
+  const shoulder = r * (big && !o.lying ? 0.66 : 0.5); // (#326: a strongman's wide)
+  if (behind) { arm(right * shoulder, hand); if (both) arm(-right * shoulder, other); }
   // the body (#306: a woman's narrower at the shoulders, a skirt's hem flaring over its legs)
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
   if (look.female) {
@@ -401,20 +404,32 @@ export function drawFigure(unit, o) {
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = shade(o.body, -0.3);
     ctx.beginPath(); ctx.moveTo(-r * 0.38, r * 0.1); ctx.lineTo(r * 0.38, r * 0.1); ctx.stroke();
+  } else if (big && !o.lying) {
+    // (#326) a strongman: broad shoulders, the body narrowing to its waist, the chest's line (facing us)
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.78, -r * 0.4); ctx.quadraticCurveTo(-r * 0.8, -r * 0.56, -r * 0.55, -r * 0.56); ctx.lineTo(r * 0.55, -r * 0.56);
+    ctx.quadraticCurveTo(r * 0.8, -r * 0.56, r * 0.78, -r * 0.4); ctx.lineTo(r * 0.5, r * 0.5); ctx.lineTo(-r * 0.5, r * 0.5);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (!facesAway(unit) && !o.armor) {
+      ctx.strokeStyle = shade(o.body, -0.28); ctx.lineWidth = Math.max(1, r * 0.05);
+      ctx.beginPath(); ctx.moveTo(-r * 0.42, -r * 0.12); ctx.quadraticCurveTo(-r * 0.2, -r * 0.02, 0, -r * 0.14); ctx.quadraticCurveTo(r * 0.2, -r * 0.02, r * 0.42, -r * 0.12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.14); ctx.lineTo(0, r * 0.32); ctx.stroke();
+    }
   } else {
     ctx.beginPath(); ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32); ctx.fill(); ctx.stroke();
   }
   // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
   if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
-  if (!behind) arm(right * r * 0.5, hand);
-  if (!(both && behind)) arm(-right * r * 0.5, other);
+  if (!behind) arm(right * shoulder, hand);
+  if (!(both && behind)) arm(-right * shoulder, other);
   // (#326: no strokes off the hands as they strike any more: the lunge and the arms' reach show the blow)
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
   drawHeadTexture(ctx, look, unitKin(unit), o.skin, 0, hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
   // a demon's horns through its hair
-  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35));
+  // (#326: a big demon's curled, a ram's)
+  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35), big);
   if (o.dead) {
     ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2;
     for (const sx of [-1, 1]) { const cx = sx * hr * 0.38, cy = hy; ctx.beginPath(); ctx.moveTo(cx - 1.6, cy - 1.6); ctx.lineTo(cx + 1.6, cy + 1.6); ctx.moveTo(cx + 1.6, cy - 1.6); ctx.lineTo(cx - 1.6, cy + 1.6); ctx.stroke(); }
@@ -458,6 +473,22 @@ export function drawBackItems(s) {
 // Its side slot (#279): what hangs at its belt on the side away from its hand, turned with it: a watering
 // can, a captain's banner (its pole held up beside it). (#298) Drawn before the body when that side is the far
 // one (up the screen), after it otherwise: `front` says which pass this is
+const isHealing = s => (s.working || 0) > 0 && s.workKind === 'heal';
+
+// (#326) Being treated: green crosses rising off it, a moment after each touch of the medic's herbs
+export function drawHealSparks(u) {
+  const since = game.pathTick - (u.treatedAt ?? -1e9);
+  if (since > 40) return;
+  const r = u.visualRadius || u.radius || 11;
+  ctx.save();
+  for (let i = 0; i < 3; i++) {
+    const t = ((game.pathTick + i * 17) % 50) / 50, px = u.x + (i - 1) * r * 0.6, py = u.y - r * 0.6 - t * r * 1.6;
+    ctx.globalAlpha = (1 - t) * Math.min(1, (40 - since) / 15);
+    ctx.fillStyle = '#2ecc71'; ctx.fillRect(px - 0.9, py - 3, 1.8, 6); ctx.fillRect(px - 3, py - 0.9, 6, 1.8);
+  }
+  ctx.restore();
+}
+
 export function drawSideItems(s, front = true) {
   const r = s.visualRadius, f = s.facing || 0;
   const can = s.wateringCan && !((s.usingCan || 0) > 0), banner = !!s.banner;
@@ -466,6 +497,12 @@ export function drawSideItems(s, front = true) {
   const x = sideOn ? -Math.cos(f) * r * 0.3 : -handX * r * 0.72, y = r * 0.18;
   const farSlot = sideOn || facesAway(s);
   if (can && farSlot !== front) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
+  // (#326) a medic at work: its bag at its hip (its hand's on the wound)
+  if (isHealing(s) && farSlot !== front) {
+    ctx.save(); ctx.translate(x - 3, y - 4);
+    drawHeldTool('medbag', 0.8, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
+    ctx.restore();
+  }
   // (#326) the banner on its back (still its side slot): behind it facing us or side-on, over its back facing
   // away; the pole up past its head, the flag at the top
   if (banner && facesAway(s) === front) {
@@ -647,7 +684,10 @@ export function drawSettlers() {
     // reaching into a bush: what it holds goes on its back, the hand's for the work
     const k = itemScale(s);
     const blade = isSwordWeapon(s.weapon) || isSpearWeapon(s.weapon);
-    const workTool = s.asleep ? null : crafting || ((s.working || 0) > 0 && s.workKind === 'build') ? 'hammer' : (s.working || 0) > 0 && s.workKind === 'butcher' && !blade ? 'knife' : null;
+    // (#326) a medic at work: herbs in its hand; an archer out of arrows in a fight: its dagger (the bow on its back)
+    const daggerOut = usesDagger(s) && game.pathTick - (s.struckAt ?? -1e9) < 180;
+    const workTool = s.asleep ? null : crafting || ((s.working || 0) > 0 && s.workKind === 'build') ? 'hammer' : (s.working || 0) > 0 && s.workKind === 'butcher' && !blade ? 'knife'
+      : isHealing(s) ? 'herbs' : daggerOut ? 'dagger' : null;
     const picking = (s.working || 0) > 0 && s.workKind === 'pick';
     const onBack = isResting(s) || inHands || s.eating || torchHeld || s.asleep || workTool || picking;
     const food = s.eating && !s.asleep ? eatingAt(s) : null;
@@ -660,10 +700,11 @@ export function drawSettlers() {
     const handBack = heldBehind(s) && !s.asleep, backBack = backBehind(s);
     // its weapon or tool, in its hand or across its back
     const heldItem = () => {
+      if (isHealing(s)) return; // (#326: its bag's at its hip)
       ctx.save();
       if (onBack) applyBackPose(s); else applyHeldItemPose(s);
       if (getNecromancy(s) && s.weapon === 'fist') {
-        drawStaff();
+        drawStaff(getSettlerColor(null), getDarkness()); // (#326: its side's colour, glowing in the dark)
       } else if (!drawHeldWeapon(s.weapon, k, onBack ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
         if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
         else drawHeldTool(s.tool || 'none', k, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
@@ -707,6 +748,7 @@ export function drawSettlers() {
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);
+    drawHealSparks(s); // (#326)
     if (!simple) at(() => {
       // a commander's whistle on a cord on its chest (#248), seen from the front
       if (s.whistle && !s.asleep && !away) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }

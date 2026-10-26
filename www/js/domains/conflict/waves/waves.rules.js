@@ -469,7 +469,9 @@ export function dropLoot(en) {
   if (game.gameMode !== 'endless') return;
   const loot = GAME_CONFIG.loot;
   const held = [];
-  if (en.weapon && en.weapon !== 'fist' && GAME_CONFIG.weapons[en.weapon]) held.push(['weapons', en.weapon]);
+  // (#326: an archer drops its bow, even with its dagger out)
+  const weapon = getEnemyDef(en).ranged ? 'bow' : en.weapon;
+  if (weapon && weapon !== 'fist' && GAME_CONFIG.weapons[weapon]) held.push(['weapons', weapon]);
   if (armorOf(en)) held.push(['gear', armorOf(en).id]);
   if (en.shield) held.push(['gear', 'shield']);
   // the thing itself, each with itemChance, lying apart (#232: no more bundles of a share of their cost)

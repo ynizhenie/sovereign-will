@@ -7,7 +7,7 @@ import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/i
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { drawDenArt, drawDoorArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawStoneWall, drawTentArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt } from './building.art.js';
+import { DUMMY_VARIANTS, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
@@ -186,6 +186,7 @@ export function drawBuildings() {
       drawDoorArt(b.x, b.y, b.type === 'iron_door');
     } else if (b.type === 'iron_trap') {
       // an iron trap (#248): open, with food in it when baited; shut on whoever it holds
+      shadow(b.x, b.y, 22, 18, 6); // (#326: a shadow under everything)
       if (b.holding) {
         ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(b.x - 11, b.y); ctx.lineTo(b.x + 11, b.y); ctx.stroke();
@@ -195,38 +196,26 @@ export function drawBuildings() {
       }
     } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
       if (b.type === 'portal') drawPortal(b.x, b.y, getBuildingColor(b)); // in its side's colour (#326: a battle's too)
-      else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons'
+      else { shadow(b.x, b.y + 3, b.type === 'grave' ? 18 : 26, b.type === 'grave' ? 14 : 20, 6); drawIcon(ctx, b.type, b.x, b.y, 28); } // the undead's and the demons'
     } else if (b.type === 'tent') {
       drawTentArt(b.x, b.y);
     } else if (b.type === 'spikes') {
-      // wooden base with iron points; a dot per use left; broken (none left): the points bent down, grey
-      const broken = !((b.usesLeft || 0) > 0);
-      ctx.fillStyle = '#6d4c2f'; ctx.fillRect(b.x - 13, b.y - 13, 26, 26);
-      ctx.fillStyle = broken ? '#5f6a6a' : '#b0bec5';
-      for (const [px, py] of [[-7, -7], [5, -7], [-7, 5], [5, 5], [-1, -1]]) {
-        ctx.beginPath(); ctx.moveTo(b.x + px - 3, b.y + py + 3); ctx.lineTo(b.x + px, b.y + py - 4); ctx.lineTo(b.x + px + 3, b.y + py + 3); ctx.closePath(); ctx.fill();
-      }
+      // stakes on a plank base (#326); a dot per use left; broken (none left): the stakes bent over, grey
+      drawSpikesArt(b.x, b.y, !((b.usesLeft || 0) > 0));
       ctx.fillStyle = '#e74c3c';
-      for (let i = 0; i < Math.min(b.usesLeft || 0, 5); i++) ctx.fillRect(b.x - 12 + i * 5, b.y + 10, 3, 2);
+      for (let i = 0; i < Math.min(b.usesLeft || 0, 5); i++) ctx.fillRect(b.x - 12 + i * 5, b.y + 13, 3, 2);
     } else if (b.type === 'watchtower') {
       // a wooden lookout, where its archer stands (drawn with the settlers)
       drawWatchtowerArt(b.x, b.y);
 
     } else if (b.type === 'campfire') {
-      // crossed logs, a flame while it burns (#298: while it has fuel)
-      ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(b.x - 10, b.y + 8); ctx.lineTo(b.x + 10, b.y - 2); ctx.moveTo(b.x + 10, b.y + 8); ctx.lineTo(b.x - 10, b.y - 2); ctx.stroke();
-      ctx.fillStyle = '#7f8c8d';
-      for (const [sx, sy] of [[-12, 10], [-5, 12], [3, 12], [11, 10]]) { ctx.beginPath(); ctx.arc(b.x + sx, b.y + sy, 2.5, 0, Math.PI * 2); ctx.fill(); }
+      // (#326) a ring of stones, logs across, its flames while it burns (#298: while it has fuel)
+      drawCampfireArt(b.x, b.y, (b.burning || 0) > 0);
       // fuel left (orange) and the piece cooking now (yellow)
       const perFuel = Math.max(...Object.values(GAME_CONFIG.cooking.fuel));
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3); ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
       ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, (b.fuelLeft || 0) / perFuel), 3);
       ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress || 0), 3);
-      if ((b.burning || 0) > 0) {
-        ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(b.x - 6, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 16, b.x + 6, b.y + 4); ctx.fill();
-        ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(b.x - 3, b.y + 4); ctx.quadraticCurveTo(b.x, b.y - 8, b.x + 3, b.y + 4); ctx.fill();
-      }
     } else if (b.type === 'workshop') {
       drawWorkshopArt(b.x, b.y); // (#248)
     } else if (b.type === 'smithy') {
@@ -239,6 +228,7 @@ export function drawBuildings() {
     } else if (b.type === 'dung_heap') {
       // a compost heap (#232): bigger the more dung it holds
       const share = Math.min(1, (b.dung || 0) / (GAME_CONFIG.buildings.dung_heap.dungCapacity || 5));
+      shadow(b.x, b.y + 6, 28, 12, 3);
       ctx.fillStyle = '#8e5a2b'; ctx.fillRect(b.x - 14, b.y + 4, 28, 8);
       ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.strokeRect(b.x - 14, b.y + 4, 28, 8);
       if (share > 0) {
@@ -246,18 +236,16 @@ export function drawBuildings() {
         ctx.fillStyle = '#6e4a1c'; ctx.beginPath(); ctx.ellipse(b.x - 1, b.y + 4 - 6 * share, 2 + 4 * share, 1.5 + 3 * share, 0, Math.PI, 0); ctx.fill();
       }
     } else if (b.type === 'dummy') {
-      drawIcon(ctx, 'dummy', b.x, b.y, 28); // a training dummy (#199)
+      // a training dummy (#199): one of its looks, picked once (#326: the commoner ones more often)
+      if (!b.variant) {
+        let n = Math.random() * DUMMY_VARIANTS.reduce((sum, v) => sum + Number(v[1]), 0);
+        b.variant = String((DUMMY_VARIANTS.find(v => (n -= Number(v[1])) < 0) || DUMMY_VARIANTS[0])[0]);
+      }
+      drawDummyArt(b.x, b.y, b.variant);
     } else if (b.type === 'warehouse') {
       drawWarehouseArt(b.x, b.y);
     } else if (b.type === 'torch') {
-      // a torch post (#257): a stake, its head burning when lit
-      ctx.fillStyle = '#6d4520'; ctx.fillRect(b.x - 2, b.y - 6, 4, 18);
-      ctx.fillStyle = '#3e2723'; ctx.fillRect(b.x - 4, b.y - 9, 8, 4);
-      if (b.lit) {
-        const k = 1 + Math.sin(performance.now() / 90 + b.x) * 0.15;
-        ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 13, 4 * k, 6 * k, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 12, 2 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
-      }
+      drawTorchPostArt(b.x, b.y, !!b.lit); // a torch post (#257): a stake, its head burning when lit
     } else if (b.type === 'demon_den') {
       drawDenArt(b.x, b.y); // the demons' den (#250)
     } else if (b.type === 'corpse_pit') {
@@ -267,6 +255,7 @@ export function drawBuildings() {
       (b.corpses || []).forEach((c, i) => { ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.ellipse(b.x - 5 + i * 5, b.y + (i % 2 ? 2 : -1), 5, 3, 0.4 * (i - 1), 0, Math.PI * 2); ctx.fill(); });
     } else if (b.type === 'cage') {
       // a cage (#250): who's in it behind the bars, in the enemy's colour
+      shadow(b.x, b.y + 2, 26, 22, 3);
       if (b.captive) { ctx.fillStyle = getEnemyColor(); ctx.beginPath(); ctx.arc(b.x, b.y + 2, 8, 0, Math.PI * 2); ctx.fill(); }
       drawIcon(ctx, 'cage', b.x, b.y, 28);
     } else if (b.type === 'smelter') {

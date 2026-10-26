@@ -6,6 +6,7 @@ import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { stock } from './storage.rules.js';
 import { ctx, getViewRect } from '../../../engine/platform/index.js';
+import { castShadow } from '../../world/index.js';
 import { storeCapacity } from './storage.stores.js';
 
 // the kinds it holds, the most first, with how many
@@ -17,7 +18,7 @@ export function drawPiles() {
     for (const p of seen) {
       if ((p.layer || 0) !== layer) continue;
       const y = p.y - layer * 4;
-      if (!layer) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 3.5, 4.5, 2, 0, 0, Math.PI * 2); ctx.fill(); }
+      if (!layer) castShadow(ctx, p.x, p.y + 3.5, 4.5, 2, 6); // (#326: by the sun)
       drawIcon(ctx, getResourceIconName(p.type), p.x, y, 9);
       // the cord round it
       ctx.strokeStyle = 'rgba(92, 58, 23, 0.85)'; ctx.lineWidth = 1;

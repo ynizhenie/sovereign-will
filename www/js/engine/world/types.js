@@ -23,6 +23,7 @@
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
  * @property {number} [grumbledAt]   the tick it last said it wants to sleep
  * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
+ * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
  * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
@@ -132,6 +133,7 @@
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
+ * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
@@ -219,6 +221,7 @@
  * @property {{ capacity?: number }} [tower]
  * @property {Settler[]} [guards]    a watchtower's archers
  * @property {'red'} [side]        (#326) the enemy's (a battle's red half, a raid's camp); else the player's
+ * @property {string} [variant]     (#326) a dummy's look, picked once
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
  * @property {number} [fish]         a fish trap's catch waiting (#199)

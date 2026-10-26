@@ -3,7 +3,7 @@
 import { closeSheet, closeWorldMap, hidePlacing, iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
-import { TOWN_HALL_HP, game, resetTileIndex, setWorldSize, townHall } from '../engine/world/index.js';
+import { game, newWorldEpoch, resetTileIndex, setWorldSize, TOWN_HALL_HP, townHall } from '../engine/world/index.js';
 import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { clearBoarWallows } from '../domains/economy/hunting/index.js';
@@ -15,6 +15,7 @@ import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
 import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
 
 export function resetGame(map) {
+  newWorldEpoch(); // (#326: nothing kept from the world before)
   if (game.gameMode === 'menu') leaveMenuWorld(); // a real game, out of the world behind the menu
   if (map === undefined) map = game.gameMode === 'endless' ? game.customMap : null;
   // every stock starts at 0 unless GAME_CONFIG.start.resources says otherwise

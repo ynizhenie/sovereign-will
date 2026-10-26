@@ -44,7 +44,9 @@ export const equipmentConfig = {
     iron_spear: { id: 'iron_spear', icon: 'iron_spear', cost: { wood: 10, iron: 5 }, family: 'spear',
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 } },
     bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, rope: 2 }, family: 'bow',
-      combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 } },
+      combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 },
+      // (#326) out of arrows an archer draws its dagger (the bow on its back) and stabs at what comes close: weak
+      dagger: { damage: 5, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
     // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },
 

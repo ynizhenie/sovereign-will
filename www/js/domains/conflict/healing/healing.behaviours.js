@@ -99,7 +99,8 @@ export function treatWounded(s, tick) {
     moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
   } else {
     s.healTimer = (s.healTimer || 0) + tick.dt;
-    s.working = 0.1;
+    s.working = 0.1; s.workKind = 'heal'; // (#326: herbs pressed onto the wound, the bag at its hip)
+    patient.treatedAt = game.pathTick; // (green crosses rising off it)
     if (patient !== s) faceTowards(s, patient.x, patient.y);
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;

@@ -2,6 +2,6 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { equip } from './equipment.behaviours.js';
-export { armorOf, assignTool, canUseShield, countHeld, craftArrows, craftRecipe, craftWeapon, disarmSettler, getHeldItems, getToolFamily, getWeaponStats, givableTo, giveStored, giveStoredTo, hasAxeTool, hasGear, hasPickaxeTool, hasToolFamily, hasWorkingShield, isArmorGear, isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon, makeToStore, orderGear, orderGearOff, putOnGear, refundEquipment, takeApartRecipe, takeApartStored, takeFromArmory } from './equipment.rules.js';
+export { armorOf, assignTool, canUseShield, countHeld, craftArrows, craftRecipe, craftWeapon, disarmSettler, getHeldItems, getToolFamily, getWeaponStats, givableTo, giveStored, giveStoredTo, hasAxeTool, hasGear, hasPickaxeTool, hasToolFamily, hasWorkingShield, isArmorGear, isBowWeapon, isClubWeapon, isSpearWeapon, isSwordWeapon, makeToStore, orderGear, orderGearOff, putOnGear, refundEquipment, takeApartRecipe, takeApartStored, takeFromArmory, usesDagger } from './equipment.rules.js';
 export { renderCraftLists, showCraftKind, updateCraftLists } from './equipment.panel.js';
 export { craftItem, craftPlace, findWorkplace, orderCraft } from './equipment.crafting.js';

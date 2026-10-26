@@ -666,13 +666,14 @@ window.sim = (() => {
     enemy.speed = 0; enemy.damage = 0; enemy.hp = enemy.maxHp = 1e6;
     enemies = [enemy];
     // every arrow shot should land: count shots, and hits from the enemy's hp
-    let shots = 0;
+    let shots = 0, hpAfterArrows = null;
     const seen = new WeakSet();
+    const perArrow = getWeaponStats(settlers[0], 'combat').damage; // (#326: its arrows'; out of them it stabs with a dagger)
     run(seconds, { each: () => {
       for (const p of projectiles) if (!seen.has(p) && !p.fromEnemy) { seen.add(p); shots++; }
+      if (hpAfterArrows === null && settlers[0].arrows <= 0 && !projectiles.some(p => !p.fromEnemy)) hpAfterArrows = enemy.hp;
     } });
-    const perArrow = getWeaponStats(settlers[0], 'combat').damage;
-    const hits = Math.round((enemy.maxHp - enemy.hp) / perArrow);
+    const hits = Math.round((enemy.maxHp - (hpAfterArrows ?? enemy.hp)) / perArrow);
     return { hurt: hits > 0, blockedShots: shots - hits, inFlight: projectiles.length };
   }
 
