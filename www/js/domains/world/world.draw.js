@@ -145,14 +145,14 @@ let target = null;
 // whole pixel of a small picture (#326)
 let over = 0.5;
 
-// Which sides (and corners) of tile (x, y) have no neighbour in `keys` (a Set of "x,y" tile centres)
+// Which sides (and corners) of tile (x, y) have no neighbour in `keys` (a Set of "x,y" tile centres). Past the
+// map's edge counts as a neighbour: (#326) the sea round a continent had a light rim along the map's edge
 export function openSides(keys, x, y) {
   const T = TILE_SIZE;
+  const open = (kx, ky) => kx >= 0 && ky >= 0 && kx < game.WORLD_WIDTH && ky < game.WORLD_HEIGHT && !keys.has(`${kx},${ky}`);
   return {
-    n: !keys.has(`${x},${y - T}`), s: !keys.has(`${x},${y + T}`),
-    w: !keys.has(`${x - T},${y}`), e: !keys.has(`${x + T},${y}`),
-    nw: !keys.has(`${x - T},${y - T}`), ne: !keys.has(`${x + T},${y - T}`),
-    sw: !keys.has(`${x - T},${y + T}`), se: !keys.has(`${x + T},${y + T}`)
+    n: open(x, y - T), s: open(x, y + T), w: open(x - T, y), e: open(x + T, y),
+    nw: open(x - T, y - T), ne: open(x + T, y - T), sw: open(x - T, y + T), se: open(x + T, y + T)
   };
 }
 

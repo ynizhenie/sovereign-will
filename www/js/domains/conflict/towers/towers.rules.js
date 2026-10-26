@@ -1,14 +1,14 @@
-// Watchtowers: archers climb them while there's tower duty, shoot from them, come down; arrows for them
+// Platforms (watchtowers): archers climb them while there's tower duty, shoot from them with their own arrows,
+// come down (out of arrows too, to fetch more: #326, a platform keeps none)
 
 import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
 import { isBowWeapon } from '../../colony/equipment/index.js';
-import { stock } from '../../colony/storage/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 
 // Archers climb the towers while there's tower duty (they stay up when enemies reach the base, that's
-// when a tower is worth most), as long as they or the tower have arrows
+// when a tower is worth most), as long as they have arrows
 export function assignTowerArchers() {
   const towers = /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(building => building.type === 'watchtower'));
   const towerSet = new Set(towers);
@@ -26,14 +26,14 @@ export function assignTowerArchers() {
     }
     const canGuard = !settler.isPossessed && settler.role === 'archer' &&
       isBowWeapon(settler.weapon) && settler.quiver && !settler.carrying && !settler.targetEquipment;
-    const hasArrows = tower => (settler.arrows || 0) > 0 || (tower.arrows || 0) > 0;
-    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment) && hasArrows(settler.towerAssignment);
+    const hasArrows = (settler.arrows || 0) > 0;
+    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment) && hasArrows;
     if ((!towerDutyActive || !canGuard) && settler.towerAssignment) {
       releaseTowerGuard(settler);
     }
     if (!canGuard || settler.towerAssignment) return;
 
-    const tower = towers.find(candidate => isTowerDutyOn(candidate) && hasArrows(candidate) && candidate.guards.length < candidate.tower.capacity);
+    const tower = hasArrows && towers.find(candidate => isTowerDutyOn(candidate) && candidate.guards.length < candidate.tower.capacity);
     if (tower) {
       tower.guards.push(settler);
       settler.towerAssignment = tower;
@@ -41,47 +41,11 @@ export function assignTowerArchers() {
   });
 }
 
-// A tower is manned when enough enemies are about, or from the warning until the wave is beaten
+// A tower is manned when enough enemies are about, or from the warning until the wave is beaten; (#326) in a
+// battle while there's any enemy at all
 export function isTowerDutyOn(tower) {
+  if (game.gameMode === 'battle') return game.enemies.length > 0;
   return game.enemies.length >= tower.tower.minEnemies || isDefenseAlert();
-}
-
-export function findTowerForArrows(settler) {
-  return /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(b => b.type === 'watchtower'))
-    .filter(tower =>
-      tower.arrows < tower.tower.arrowCapacity && stock.arrows > 0 &&
-      !game.settlers.some(s => s !== settler && s.carrying && s.carrying.forTower === tower))
-    .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
-}
-
-export function findNearestArrowTower(settler) {
-  const townHallDistance = Math.hypot(townHall.x - settler.x, townHall.y - settler.y);
-  const townHallThreatened = game.enemies.some(enemy => Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) <= 260);
-  if (townHallThreatened || game.enemies.length < 2) return null;
-  return /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(b => b.type === 'watchtower'))
-    .filter(tower => tower.arrows > 0 && Math.hypot(tower.x - settler.x, tower.y - settler.y) < townHallDistance)
-    .sort((a, b) => Math.hypot(a.x - settler.x, a.y - settler.y) - Math.hypot(b.x - settler.x, b.y - settler.y))[0] || null;
-}
-
-export function refillArcherFromTower(settler, tower) {
-  const amount = Math.min(tower.arrows, (settler.quiverCapacity || 12) - (settler.arrows || 0));
-  settler.arrows = (settler.arrows || 0) + amount;
-  tower.arrows -= amount;
-}
-
-export function updateTowerArrowLoader(settler, tower, dt) {
-  const distance = Math.hypot(tower.x - settler.x, tower.y - settler.y);
-  if (distance > 32) {
-    moveEntityTowards(settler, tower.x, tower.y, settler.speed, false, dt);
-    return true;
-  }
-  // the arrows it brought; what doesn't fit goes back to storage
-  const amount = Math.min(settler.carrying.amount, tower.tower.arrowCapacity - tower.arrows);
-  tower.arrows += amount;
-  settler.carrying.amount -= amount;
-  if (settler.carrying.amount > 0) delete settler.carrying.forTower;
-  else settler.carrying = null;
-  return true;
 }
 
 // Where a guard climbs down: the free tile next to the tower (then further out) that can be walked to from
@@ -145,11 +109,6 @@ export function updateTowerGuard(settler, tower, dt) {
   settler.x = tower.x;
   settler.y = tower.y;
 
-  if (settler.arrows <= 0 && tower.arrows > 0) {
-    const amount = Math.min(tower.arrows, tower.tower.arrowCapacity - settler.arrows);
-    settler.arrows += amount;
-    tower.arrows -= amount;
-  }
   if (settler.arrows <= 0) return;
 
   const target = game.enemies

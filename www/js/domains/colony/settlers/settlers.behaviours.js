@@ -22,7 +22,7 @@ import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSe
 import { clearEnemyTents, escortGatherers, fightEnemies, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
-import { assignTowerArchers, guardTower, loadTowerArrows } from '../../conflict/towers/index.js';
+import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
 import { collectBones, corpsesToGraves, necromancy } from '../../factions/undead/index.js';
@@ -254,7 +254,6 @@ export const SETTLER_BEHAVIOURS = [
   captainOrders,
   captainArms, // (#279: weapons lent before a wave, back after)
   goToSacrifice,
-  loadTowerArrows,
   collectSmelterIron,
   supplySmelter,
   deliverToSmelter,

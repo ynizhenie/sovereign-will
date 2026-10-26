@@ -11,16 +11,16 @@ test('Battles: every faction\'s buildings can be placed and stand through a figh
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     const placed = {};
     let gx = 6;
-    for (const faction of ['humans', 'undead', 'demons']) {
-      battle.faction = faction; battle.category = 'buildings';
-      for (const id of getBattleBuildings()) { battle.building = id; const p = at(gx % 32 + 4, 4 + Math.floor(gx / 32) * 2); battleTap(p.x, p.y); gx += 2; placed[id] = true; }
+    for (const faction of [null, 'humans', 'undead', 'demons']) { // (#326: everyone's, then each faction's own)
+      battle.category = 'buildings';
+      for (const id of getBattleBuildings(faction)) { battle.building = id; const p = at(gx % 32 + 4, 4 + Math.floor(gx / 32) * 2); battleTap(p.x, p.y); gx += 2; placed[id] = true; }
     }
     const standing = new Set(buildings.map(b => b.type));
-    battle.category = 'own'; battle.faction = 'humans'; battle.armor = false; battle.shield = false;
-    battle.preset = 'sword'; battleTap(at(8, 14).x, at(8, 14).y);
-    battle.category = 'enemy'; battle.armor = true; battle.shield = true;
-    battle.preset = 'raider'; battleTap(at(30, 14).x, at(30, 14).y);
-    battle.preset = 'raider_archer'; battleTap(at(30, 16).x, at(30, 16).y);
+    battle.category = 'units'; battle.armor = false; battle.shield = false;
+    battle.preset = 'humans:sword'; battleTap(at(8, 14).x, at(8, 14).y);
+    battle.category = 'units'; battle.armor = true; battle.shield = true;
+    battle.preset = 'humans:sword'; battleTap(at(30, 14).x, at(30, 14).y);
+    battle.preset = 'humans:bow'; battleTap(at(30, 16).x, at(30, 16).y);
     const raider = enemies.find(en => en.enemyKey === 'raider'), archer = enemies.find(en => en.enemyKey === 'raider_archer');
     startBattleFight();
     for (let f = 0; f < 600; f++) update(1 / 60);

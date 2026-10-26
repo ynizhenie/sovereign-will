@@ -7,10 +7,11 @@ test('outer corners rounded, inner corners joined; the sun\'s shadows by the tim
   const errors = await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
-    const keys = new Set(['30,0', '0,30']); // (neighbours north... a tile at 30,30: west and north of it filled, its north-west corner not)
-    const inner = openSides(keys, 30, 30);
-    const lone = cornerRadii(openSides(new Set(), 0, 0));
-    const mixed = cornerRadii(openSides(new Set(), 0, 0), { nw: true });
+    // (away from the map's edge: past it counts as a neighbour, #326)
+    const keys = new Set(['615,585', '585,615']); // (a tile at 615,615: west and north of it filled, its north-west corner not)
+    const inner = openSides(keys, 615, 615);
+    const lone = cornerRadii(openSides(new Set(), 615, 615));
+    const mixed = cornerRadii(openSides(new Set(), 615, 615), { nw: true });
     const c = GAME_CONFIG.daytime, at = t => { dayTime = t; return getSun(); };
     const morning = at(5), noon = at(c.morning + c.day / 2), evening = at(c.morning + c.day + c.evening - 5), night = at(c.morning + c.day + c.evening + 10);
     isPaused = true;

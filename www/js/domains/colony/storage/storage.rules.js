@@ -54,13 +54,10 @@ export function returnFood(id, amount) {
   else stock[id] = (stock[id] || 0) + amount;
 }
 
-// Shown in the HUD: the stock, plus for arrows the ones already loaded in towers and quivers
+// Shown in the HUD: the stock, plus for arrows the ones already in quivers
 export function getResourceAmount(resourceKey) {
   let amount = stock[resourceKey] || 0;
-  if (resourceKey === 'arrows') {
-    amount += game.buildings.filter(building => building.type === 'watchtower').reduce((sum, tower) => sum + (tower.arrows || 0), 0) +
-      game.settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0);
-  }
+  if (resourceKey === 'arrows') amount += game.settlers.reduce((sum, settler) => sum + (settler.arrows || 0), 0);
   return amount;
 }
 

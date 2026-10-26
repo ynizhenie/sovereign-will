@@ -34,6 +34,10 @@ export const factionsConfig = {
         nightAmbient: ['undead_midnight', 'undead_moonrise', 'undead_wraiths', 'undead_coffin', 'undead_cold'], nightBattle: ['undead_nighthorde', 'undead_gravedigger', 'undead_bonestorm', 'undead_blackmass', 'undead_deathknell'] } }
   },
 
-  // the colours either side can pick from; the two sides never share one
-  factionColors: ['#e9c46a', '#e8572a', '#9b59b6', '#3498db', '#2ecc71', '#ecf0f1']
+  // the colours either side can pick from; the two sides never share one. (#326) Ten, round the colour wheel:
+  // a colour taken by the other side gives way to the next free one along it. factionColorNames: what a side of
+  // that colour is called (language keys color.<name>: "the beige won")
+  factionColors: ['#e9c46a', '#e8572a', '#c0392b', '#e84393', '#9b59b6', '#3498db', '#1abc9c', '#2ecc71', '#ecf0f1', '#7f8c8d'],
+  factionColorNames: { '#e9c46a': 'beige', '#e8572a': 'orange', '#c0392b': 'red', '#e84393': 'pink', '#9b59b6': 'purple',
+    '#3498db': 'blue', '#1abc9c': 'teal', '#2ecc71': 'green', '#ecf0f1': 'white', '#7f8c8d': 'grey' }
 };

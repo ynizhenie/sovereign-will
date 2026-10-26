@@ -39,7 +39,8 @@ Object.assign(window.sim, (() => {
 
   // The camp fought out: by auto battle, or the party all down
   function raidOutcome({ win = true, seed = 'raid-test' } = {}) {
-    const inCamp = intoCamp({ seed, soldiers: win ? 8 : 2, gear: win ? { armor: 'iron', hp: 150, maxHp: 150 } : {} });
+    // (#326: a camp's soldiers are soldiers now, not dogs in armour: a party sure to win is a strong one)
+    const inCamp = intoCamp({ seed, soldiers: win ? 8 : 2, gear: win ? { armor: 'iron', hp: 600, maxHp: 600 } : {} });
     const homeSettlers = inCamp.homeBefore - inCamp.party;
     const waveBefore = waveTimer, stockBefore = stock.wood;
     // held without orders: nobody walks off to fight

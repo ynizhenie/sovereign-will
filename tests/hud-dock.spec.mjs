@@ -147,21 +147,21 @@ test('battle: a category opens its sheet, picking a unit shows it on the chip; t
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
   await expect(page.locator('#placing-chip')).toBeVisible(); // what a tap places, from the start
-  await page.click('[data-battle-category="enemy"]');
+  await page.click('[data-battle-category="units"]');
   await expect(page.locator('#battle-presets')).toBeVisible();
-  await page.click('#battle-presets [data-preset="brute"]');
+  await page.click('#battle-presets [data-preset="humans:big_spear"]');
   await expect(page.locator('#sheet-frame')).toBeHidden();
   await expect(page.locator('#placing-what')).toContainText('Богатырь, копьё');
   await expect(page.locator('#placing-close')).toBeHidden(); // a battle always has something picked
   await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     battleTap(at(30, 10).x, at(30, 10).y);
-    battle.preset = 'sword'; battleTap(at(10, 10).x, at(10, 10).y); battleTap(at(10, 12).x, at(10, 12).y);
+    battle.preset = 'humans:sword'; battleTap(at(10, 10).x, at(10, 10).y); battleTap(at(10, 12).x, at(10, 12).y);
     updateBattle(0);
   });
   await expect(page.locator('#battle-count-green')).toHaveText('2');
   await expect(page.locator('#battle-count-red')).toHaveText('1');
-  // clearing each side round Fight!, under the top bar (#255)
+  // clearing each side: its broom either side of the top bar's phase (#255, #326)
   await expect(page.locator('#battle-clear-red')).toBeVisible();
   await expect(page.locator('#battle-clear-green')).toBeVisible();
   await page.click('#battle-fight');

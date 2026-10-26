@@ -135,9 +135,51 @@ export function enemyDamagePerSecond(definition) {
   return hit / cooldown;
 }
 
-// The faction an enemy kind is of (its list of enemies has it), else the enemy's
+// (#326) Seconds between an enemy kind's blows, as the player's own unit of its kind strikes
+export function enemyHitCooldown(definition) {
+  return unitHit(definition).cooldown;
+}
+
+// The faction an enemy kind is of (its own `faction`, or its list of enemies has it), else the enemy's
 export function enemyFactionOf(id) {
-  return Object.values(GAME_CONFIG.factions).find(f => (f.enemies || []).includes(id)) || getEnemyFaction();
+  const own = (getDefinition('enemies', id) || {}).faction;
+  return (own && GAME_CONFIG.factions[own]) || Object.values(GAME_CONFIG.factions).find(f => (f.enemies || []).includes(id)) || getEnemyFaction();
+}
+
+// (#326) A preset (GAME_CONFIG.unitPresets) as a faction's unit: its settler kind by the preset's size, what it
+// holds; null if the faction hasn't that kind or may not have the tool (a medic's bag isn't the undead's)
+export function presetUnit(factionId, preset) {
+  const faction = GAME_CONFIG.factions[factionId];
+  const type = (faction.units || ['normal', 'big'])[{ normal: 0, big: 1, pet: 2 }[preset.size]];
+  const tool = preset.tool ? getDefinition('tools', preset.tool) : null;
+  if (!type || (tool && tool.factions && !tool.factions.includes(factionId))) return null;
+  return { faction: factionId, type, weapon: preset.weapon, tool: preset.tool || null };
+}
+
+// (#326) The enemy kind that is a faction's preset: one of its own enemies that's that very unit, else one made
+// for it (once, into GAME_CONFIG.enemies) like the nearest of them: an archer like its archer, a medic like the
+// humans' healer, a big one like its big one, any other like its swordsman, holding the preset's weapon. A made
+// one has no waveKey: no wave sends it (the new waves will choose)
+export function presetEnemyKey(factionId, presetId) {
+  const preset = GAME_CONFIG.unitPresets.find(p => p.id === presetId);
+  const unit = preset && presetUnit(factionId, preset);
+  if (!unit) return null;
+  const faction = GAME_CONFIG.factions[factionId];
+  const own = (faction.enemies || []).map(id => GAME_CONFIG.enemies[id]).filter(Boolean);
+  const same = own.find(def => { const u = enemyPlayerUnit(def); return u.type === unit.type && u.weapon === unit.weapon && (u.tool || null) === unit.tool; });
+  if (same) return same.id;
+  const key = `${factionId}_${presetId}`;
+  if (GAME_CONFIG.enemies[key]) return key;
+  const melee = def => !def.pet && !def.ranged && !def.healer && !def.necromancer;
+  const template = unit.tool === 'medbag' ? GAME_CONFIG.enemies.raider_medic
+    : unit.weapon === 'bow' ? own.find(def => def.ranged)
+    : preset.size === 'big' ? own.find(def => def.type === 'big')
+    : own.find(def => melee(def) && def.type === 'normal' && def.weapon === 'sword') || own.find(def => melee(def) && def.type === 'normal');
+  if (!template) return null;
+  const weapon = getDefinition('weapons', unit.weapon);
+  const reach = preset.size === 'normal' && weapon.combat.range ? Math.max(6, weapon.combat.range - 30) : template.reach;
+  GAME_CONFIG.enemies[key] = { ...template, id: key, faction: factionId, weapon: unit.weapon, tool: unit.tool || undefined, reach, waveKey: undefined, buildsTents: false };
+  return key;
 }
 
 // An enemy kind's hp and a hit's damage (an arrow's for an archer) as it would come now, with the
@@ -213,7 +255,7 @@ export function getWaveArmyFactor() {
 function dressForWave(enemy, def) {
   const gear = GAME_CONFIG.enemyGear;
   const chance = Math.min(gear.max, (game.waveNum - gear.fromWave + 1) * gear.perWave);
-  if (chance <= 0) return;
+  if (chance <= 0 || def.pet) return; // (a pet wears nothing, #326)
   // (the best the player has made: iron, else leather, #298)
   const armour = game.playerGear.armor ? GAME_CONFIG.gear.armor : game.playerGear.leather ? GAME_CONFIG.gear.leather_armor : null;
   if (armour && rand() < chance) {
