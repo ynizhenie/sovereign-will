@@ -31,6 +31,8 @@ export const game = {
   // the player's choices and the soldiers' plan
   buildMode: 'interact',
   selectedSettler: null,
+  selectedGroup: [],    // (#326) more picked with the selected one: orders by tap go to them all
+  addingToGroup: false, // (#326) a tap on a settler adds it to the group (or takes it out), not picks it
   defensePlan: null,        // squads and their posts (getDefensePlan)
   /** @type {Object<string, number>} */
   armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)

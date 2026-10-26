@@ -81,7 +81,7 @@ test('picking a building puts the sheet away and shows its chip: a tap brings th
 test('Esc with nothing open or picked leaves possession, as before', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
-  await page.evaluate(() => switchPossession());
+  await page.evaluate(() => { selectedSettler = settlers[0]; switchPossession(); }); // (#326: the selected one)
   expect(await page.evaluate(() => !!getPossessed())).toBe(true);
   await page.click('[data-arg="tab-build"]');
   await esc(page); // the sheet first

@@ -197,47 +197,43 @@ export function getSelectedSettler() {
   return game.selectedSettler && game.settlers.includes(game.selectedSettler) ? game.selectedSettler : null;
 }
 
-export let lastPossessedIndex = -1;
-
 export function unpossess() {
-  const currentIdx = game.settlers.findIndex(s => s.isPossessed);
-  if (currentIdx !== -1) {
-    lastPossessedIndex = currentIdx;
-  }
   game.settlers.forEach(s => s.isPossessed = false);
 }
 
+// (#326) The selected settler possessed (by its card's button), or let go again; a battle's only in a fight
 export function switchPossession() {
-  if (game.settlers.length === 0 || isDefeated()) return;
-  if (game.gameMode === 'battle' && battle.phase !== 'fight') return; // only once a fight is on
-
-  const currentPossessed = getPossessed();
-
-  if (game.selectedSettler) {
-    if (currentPossessed === game.selectedSettler) {
-      unpossess();
-    } else {
-      unpossess();
-      game.selectedSettler.isPossessed = true;
-
-      const idx = game.settlers.indexOf(game.selectedSettler);
-      if (idx !== -1) lastPossessedIndex = idx;
-    }
-    return;
-  }
-
-  if (currentPossessed) {
-    unpossess();
-  } else {
-    let nextIdx = (lastPossessedIndex + 1) % game.settlers.length;
-    if (nextIdx >= game.settlers.length || nextIdx < 0) nextIdx = 0;
-
-    game.settlers[nextIdx].isPossessed = true;
-    lastPossessedIndex = nextIdx;
-  }
+  const s = getSelectedSettler();
+  if (!s || isDefeated()) return;
+  if (game.gameMode === 'battle' && battle.phase !== 'fight') return;
+  const was = s.isPossessed;
+  unpossess();
+  if (!was) { s.isPossessed = true; s.order = null; s.path = null; }
 }
 
-export function deselectSettler() { game.selectedSettler = null; }
+export function deselectSettler() { game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false; }
+
+// (#326) Who's picked: the selected one and the group with it (those still about)
+export function getSelection() {
+  const lead = getSelectedSettler();
+  if (!lead) return [];
+  game.selectedGroup = game.selectedGroup.filter(s => s !== lead && game.settlers.includes(s));
+  return [lead, ...game.selectedGroup];
+}
+
+// (#326) All the soldiers and archers into the group with the selected one
+export function selectAllSoldiers() {
+  const lead = getSelectedSettler();
+  if (!lead) return;
+  game.selectedGroup = game.settlers.filter(s => s !== lead && (s.role === 'soldier' || s.role === 'archer') && !s.leaving);
+}
+
+// (#326) A settler into the group, or out of it again (the selected one: it stays)
+export function toggleInGroup(s) {
+  if (s === getSelectedSettler()) return;
+  const i = game.selectedGroup.indexOf(s);
+  if (i >= 0) game.selectedGroup.splice(i, 1); else game.selectedGroup.push(s);
+}
 
 // One settler's meal: food from the stock (2 for a big one), worms when it runs short; a few
 // meals in, it needs to go (see relieve)

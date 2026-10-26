@@ -231,8 +231,6 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="mobile-joystick"><div class="joystick-knob"></div></div>
-
     <!-- Endless lost (#191): over the game, which flies to the base; start again or leave -->
     <div id="defeat-overlay" hidden>
       <div class="defeat-box">
@@ -277,7 +275,6 @@
       <button class="btn editor-only" id="editor-undo" data-i18n-title="editor.undo" title="Undo" disabled><i class="ic ic-undo"></i></button>
       <button class="btn editor-only" id="editor-redo" data-i18n-title="editor.redo" title="Redo" disabled><i class="ic ic-redo"></i></button>
       <button class="btn btn-worldmap" id="btn-world-map" data-action="openWorldMap" data-i18n-title="top.worldMap" title="World map [M]"><i class="ic ic-worldmap"></i></button>
-      <button class="btn btn-unpossess" data-action="switchPossession" data-i18n-title="top.possess" title="Possess [Tab]"><i class="ic ic-eye"></i></button>
     </div>
   </div>
 
@@ -310,17 +307,29 @@
   <!-- over the bottom of the map, above the dock: the selected settler, what's being placed, the open sheet -->
   <div id="hud-bottom" class="hud-layer">
 
+    <!-- (#326) the selected settler's card: what it is and does, what it holds, and what can be done with it -->
     <div id="selected-bar" class="selected-unit-box">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 11px; color: #aaa;"><span data-i18n="hud.selected">Selected:</span> <b id="selected-settler-txt" style="color: #f1c40f;">Nobody</b></span>
-        <button class="btn" style="padding: 1px 5px; font-size: 10px; display: none;" id="btn-deselect" data-action="deselectSettler"><i class="ic ic-no"></i></button>
+      <div class="sel-head">
+        <b id="selected-settler-txt">Nobody</b>
+        <span class="sel-group" id="selected-group-txt"></span>
+        <button class="btn" style="display: none;" id="btn-deselect" data-action="deselectSettler"><i class="ic ic-no"></i></button>
       </div>
-      <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
-      <!-- (#314) let the selected one go: asked first -->
-      <button class="btn btn-disarm" id="btn-dismiss" style="display: none;" data-action="dismissSelected" data-i18n="btn.dismiss">Let go</button>
       <div id="selected-info" hidden></div>
       <!-- what the selected settler holds, each with its own "take off" (instead of buttons in the sheets) -->
       <div class="selected-gear" id="selected-gear" hidden></div>
+      <div class="sel-actions">
+        <button class="btn" id="btn-give" data-action="toggleGiveList" data-i18n="sel.give">[[backpack]] Give</button>
+        <button class="btn" id="btn-possess" data-action="switchPossession" data-i18n="sel.possess">[[eye]] Possess</button>
+        <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
+        <!-- (#314) let the selected one go: asked first -->
+        <button class="btn btn-disarm" id="btn-dismiss" style="display: none;" data-action="dismissSelected" data-i18n="btn.dismiss">Let go</button>
+        <button class="btn" id="btn-all-soldiers" data-action="selectAllSoldiers" data-i18n="sel.allSoldiers">[[swords]] All soldiers</button>
+        <button class="btn" id="btn-add-more" data-action="toggleAddingToGroup" data-i18n="sel.addMore">[[plus]] Add more</button>
+        <button class="btn" id="btn-free" data-action="freeSelection" data-i18n="sel.free">[[undo]] Free</button>
+      </div>
+      <!-- (#326) Give: what's in the armory that it can take, a tap hands it over -->
+      <div class="give-list" id="give-list" hidden></div>
+      <div class="sel-hint" id="sel-hint"></div>
     </div>
 
     <!-- a build (or zone, demolish, battle, editor) tool picked: its name; a tap opens its sheet again, × puts it down -->
