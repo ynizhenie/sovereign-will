@@ -55,7 +55,15 @@ export const mapConfig = {
       // the scared boar leaves dung
       butcherSeconds: 2, dungChance: 0.12,
       // (#299) one past the frontier (far from the base) moves in steps of farEvery ticks at once, by turns
-      farEvery: 8 }
+      farEvery: 8,
+      // (#326) how each boar looks, picked once: a coat by weight ([body, head, bristles, weight]; the commoner the
+      // heavier), now and then (marksChance) spots or a young one's stripes, a size, and a sow's (femaleChance)
+      // short tusks
+      looks: {
+        coats: [['#8e5a3b', '#7a4b30', '#5d3a24', 40], ['#5b4636', '#4a382b', '#2e231a', 22], ['#a0603a', '#8c522f', '#6b3a1f', 16],
+          ['#b08a62', '#9c7752', '#6d5236', 12], ['#4a4a4a', '#3d3d3d', '#232323', 10]],
+        marksChance: 0.15, size: [0.88, 1.12], femaleChance: 0.45
+      } }
   },
 
   // apple trees: a rare kind of tree (share of the map's trees, picked by tile, not rand). Woodcutters only

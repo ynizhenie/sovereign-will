@@ -11,6 +11,7 @@ import { castShadow } from '../../world/index.js';
 import { petKindOf } from '../settlers/index.js';
 import { drawBodyBlood } from '../../conflict/combat/index.js';
 import { isPetHungry } from './pets.behaviours.js';
+import { drawHorn } from '../../factions/demons/index.js';
 
 const coatOf = (s, kind) => {
   const coats = GAME_CONFIG.pets.coats[kind];
@@ -89,7 +90,7 @@ function drawHound(s, d, kind, id) {
   ctx.fillStyle = dark;
   if (beast) {
     ctx.beginPath(); ctx.moveTo(6.5, -7); ctx.lineTo(7.5, -12); ctx.lineTo(9.5, -7.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#d5c4a1'; ctx.beginPath(); ctx.moveTo(9, -7.8); ctx.quadraticCurveTo(11, -11, 12.5, -10.5); ctx.lineTo(10.5, -7.5); ctx.closePath(); ctx.fill();
+    drawHorn(10, -7.6, 1, 5.5); // (#326: the demons' own style of horn)
   } else {
     ctx.beginPath(); ctx.ellipse(7, -5, 2, 4, 0.5, 0, Math.PI * 2); ctx.fill();
   }

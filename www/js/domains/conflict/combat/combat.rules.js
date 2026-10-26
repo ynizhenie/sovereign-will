@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
-import { armorOf, getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
+import { armorOf, getWeaponStats, isBowWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
@@ -75,7 +75,7 @@ export function performAttack(attacker, targetX, targetY) {
 
   const stats = getWeaponStats(attacker, 'combat');
 
-  if (isBowWeapon(attacker.weapon)) {
+  if (isBowWeapon(attacker.weapon) && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
     game.projectiles.push({ 

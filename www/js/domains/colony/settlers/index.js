@@ -2,7 +2,7 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { playerControlled, tickSettlers } from './settlers.behaviours.js';
-export { applyHeldItemPose, backBehind, bowDraw, drawArmor, drawDung, drawFigure, drawHandTorch, drawOrderBubble, drawQuiver, drawSelectedPaths, drawSettlers, drawShield, facesAway, faceTowards, handSide, heldBehind, humanPunch, itemScale, simpleUnit, SKIN, startSwing, tickAnimation, tinyUnit, zombieReach } from './settlers.draw.js';
+export { applyHeldItemPose, backBehind, bowDraw, drawArmor, drawDung, drawFigure, drawHandTorch, drawHealSparks, drawOrderBubble, drawQuiver, drawSelectedPaths, drawSettlers, drawShield, facesAway, faceTowards, handSide, heldBehind, humanPunch, itemScale, simpleUnit, SKIN, startSwing, tickAnimation, tinyUnit, zombieReach } from './settlers.draw.js';
 export { orderPossessed } from './settlers.orders.js';
 export { renderRecruitRow, renderSettlerInfo, updatePossessionView, updateUnitCounts } from './settlers.panel.js';
 export { changeSettlerType, createSettler, damageSettler, deselectSettler, dismissSettler, dropSettlerLoot, getCurrentPop, getMaxPop, getPossessed, getRecentAttacker, getSelectedSettler, getSelection, getUpgrade, isBigBody, isPet, isUntouchable, newPetLook, petKindOf, removeDeadSettlers, selectAllSoldiers, spawnSettler, switchPossession, tickMeals, toggleInGroup, unpossess, upgradeRank, upgradeToBig } from './settlers.rules.js';

@@ -3,5 +3,5 @@
 
 export { eatCorpse, goToSacrifice } from './demons.behaviours.js';
 export { carryCaptive, catchForCage, tendCorpses, tickDemonCamp } from './demons.camp.js';
-export { drawHorns, drawPortal } from './demons.draw.js';
+export { drawHorn, drawHorns, drawPortal } from './demons.draw.js';
 export { openDemonPortal, takePortal } from './demons.rules.js';
