@@ -44,6 +44,7 @@ function house(x, y, w, h, { roof, roofDark, wall, wallDark, door = '#3e2723' })
 
 // A palisade: logs side by side, their sharpened tops, bands of rope across
 export function drawWoodWall(x, y) {
+  shadow(x, y, 30, 30, 2); // (#326: everything casts one)
   rect(x - 15, y - 15, 30, 30, '#5c3a17');
   for (let k = 0; k < 5; k++) {
     const lx = x - 15 + k * 6;
@@ -57,6 +58,7 @@ export function drawWoodWall(x, y) {
 
 // Masonry: blocks in courses, each set over the joint below, a light top edge
 export function drawStoneWall(x, y) {
+  shadow(x, y, 30, 30, 2);
   rect(x - 15, y - 15, 30, 30, '#5d6d7e');
   for (let row = 0; row < 4; row++) {
     const by = y - 15 + row * 7.5, shift = row % 2 ? 5 : 0;
@@ -73,6 +75,7 @@ export function drawStoneWall(x, y) {
 
 // A door in its frame: planks (iron bands and rivets on an iron one)
 export function drawDoorArt(x, y, iron) {
+  shadow(x, y, 30, 30, 2);
   rect(x - 15, y - 15, 30, 30, iron ? '#4d5656' : '#6d4520');
   rect(x - 11, y - 12, 22, 26, iron ? '#7b5a3c' : '#a0522d', '#3e2723');
   for (const px of [-5, 0, 5]) line(x + px, y - 11, x + px, y + 13, 'rgba(0, 0, 0, 0.25)');
@@ -114,19 +117,112 @@ export function drawSmithyArt(x, y) {
   line(x - 12, y + 9, x - 2, y + 9, '#95a5a6');
 }
 
-// The smelter: a round stone furnace, its mouth glowing, a chimney at the back
+// (#326) The smelter, as the others are seen (from above, a little from the front): a squat furnace of stone
+// courses, its domed top, a glowing mouth in its front, a chimney at the back with a wisp of smoke
 export function drawSmelterArt(x, y) {
-  shadow(x, y, 26, 26, 13);
-  ctx.fillStyle = '#6e2c00'; ctx.beginPath(); ctx.arc(x, y + 1, 13, 0, Math.PI * 2); ctx.fill();
-  for (let k = 0; k < 10; k++) {
-    const a = (k / 10) * Math.PI * 2;
-    ctx.fillStyle = k % 2 ? '#95a5a6' : '#7f8c8d';
-    ctx.beginPath(); ctx.arc(x + Math.cos(a) * 11, y + 1 + Math.sin(a) * 11, 3, 0, Math.PI * 2); ctx.fill();
+  shadow(x, y, 26, 24, 8);
+  // the body: its front face of stone courses
+  rect(x - 12, y - 2, 24, 14, '#7f8c8d', '#2c3e50');
+  for (let row = 0; row < 3; row++) {
+    const by = y - 2 + row * 4.6, shift = row % 2 ? 3 : 0;
+    line(x - 12, by, x + 12, by, 'rgba(0, 0, 0, 0.3)');
+    for (let bx = x - 12 + shift; bx < x + 12; bx += 6) line(bx, by, bx, by + 4.6, 'rgba(0, 0, 0, 0.25)');
   }
-  rect(x - 4, y - 14, 8, 7, '#5d6d7e', '#2c3e50');
+  // the dome over it, lit a little on its top
+  ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(x, y - 2, 12, 9, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)'; ctx.beginPath(); ctx.ellipse(x - 3, y - 7, 6, 3, -0.2, 0, Math.PI * 2); ctx.fill();
+  // the chimney at the back, smoke
+  rect(x + 3, y - 15, 5, 7, '#5d6d7e', '#2c3e50');
+  const t = performance.now() / 900 + x;
+  ctx.fillStyle = 'rgba(200, 200, 200, 0.35)';
+  for (let k = 0; k < 3; k++) { const p = (t + k / 3) % 1; ctx.beginPath(); ctx.arc(x + 5.5 + Math.sin((t + k) * 2) * 2, y - 16 - p * 10, 1.5 + p * 2.5, 0, Math.PI * 2); ctx.fill(); }
+  // its mouth, glowing
   const glow = 0.75 + Math.sin(performance.now() / 300 + x) * 0.15;
-  ctx.fillStyle = `rgba(230, 126, 34, ${glow})`; ctx.beginPath(); ctx.arc(x, y + 2, 6, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.arc(x, y + 3, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2c1a0e'; ctx.beginPath(); ctx.roundRect(x - 5, y + 3, 10, 8, [4, 4, 0, 0]); ctx.fill();
+  ctx.fillStyle = `rgba(230, 126, 34, ${glow})`; ctx.beginPath(); ctx.roundRect(x - 4, y + 5, 8, 6, [3, 3, 0, 0]); ctx.fill();
+  ctx.fillStyle = '#f9e79f'; ctx.fillRect(x - 2, y + 8, 4, 3);
+}
+
+// (#326) A campfire, as the others are seen: a ring of stones round the ashes (the near ones bigger), logs laid
+// across, its flames rising while it burns
+export function drawCampfireArt(x, y, burning) {
+  shadow(x, y + 3, 26, 16, 8);
+  ctx.fillStyle = '#3b3530'; ctx.beginPath(); ctx.ellipse(x, y + 3, 10, 6, 0, 0, Math.PI * 2); ctx.fill(); // the ashes
+  // the far stones, then the logs, then the near stones over them
+  const stone = (a, big) => {
+    const sx = x + Math.cos(a) * 12, sy = y + 3 + Math.sin(a) * 7.5, r = big ? 3.2 : 2.5;
+    ctx.fillStyle = big ? '#95a5a6' : '#7f8c8d'; ctx.strokeStyle = '#4d5656'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.ellipse(sx, sy, r * 1.15, r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  };
+  for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; if (Math.sin(a) < 0) stone(a, false); }
+  for (const [ax, ay, bx, by] of [[-8, 6, 8, 0], [-8, 0, 8, 6], [-1, -2, 1, 8]]) {
+    ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x + ax, y + ay); ctx.lineTo(x + bx, y + by); ctx.stroke();
+    ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + ax, y + ay - 0.8); ctx.lineTo(x + bx, y + by - 0.8); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  if (burning) {
+    const k = 1 + Math.sin(performance.now() / 110 + x) * 0.12;
+    ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(x - 7, y + 4); ctx.quadraticCurveTo(x - 4, y - 8 * k, x, y - 15 * k); ctx.quadraticCurveTo(x + 4, y - 8 * k, x + 7, y + 4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(x - 3.5, y + 4); ctx.quadraticCurveTo(x, y - 9 * k, x + 3.5, y + 4); ctx.closePath(); ctx.fill();
+  } else {
+    ctx.fillStyle = 'rgba(230, 126, 34, 0.35)'; ctx.beginPath(); ctx.ellipse(x, y + 3, 4, 2.4, 0, 0, Math.PI * 2); ctx.fill(); // (embers)
+  }
+  for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; if (Math.sin(a) >= 0) stone(a, true); }
+}
+
+// (#326) Spikes: sharpened stakes in rows on a plank base, each pointing up, lit on one side; a broken one's bent
+// over and grey
+export function drawSpikesArt(x, y, broken) {
+  shadow(x, y, 26, 22, 3);
+  rect(x - 13, y - 9, 26, 22, '#6d4c2f', '#3e2716');
+  for (let k = -8; k <= 8; k += 5.5) line(x - 13, y + k + 2, x + 13, y + k + 2, 'rgba(0, 0, 0, 0.2)');
+  for (const [px, py] of [[-8, -4], [0, -4], [8, -4], [-4, 4], [4, 4], [-8, 11], [0, 11], [8, 11]].sort((a, b) => a[1] - b[1])) {
+    const bx = x + px, by = y + py, tip = broken ? [bx + 5, by - 3] : [bx, by - 11];
+    poly([[bx - 2.6, by], tip, [bx + 2.6, by]], broken ? '#5f6a6a' : '#b0bec5', 'rgba(0, 0, 0, 0.5)', 0.7);
+    if (!broken) poly([[bx, by], tip, [bx + 2.6, by]], '#78909c');
+    ctx.fillStyle = '#4e3016'; ctx.fillRect(bx - 2.6, by - 1, 5.2, 2);
+  }
+}
+
+// (#326) A training dummy, one of its looks (variant): a straw man on a post with a sack head; with a pot for a
+// helmet; with a painted target on its chest; a wooden pell with arms; one with a battered shield
+/** @type {[string, number][]} */
+export const DUMMY_VARIANTS = [['sack', 40], ['pot', 20], ['target', 20], ['pell', 12], ['shield', 8]];
+export function drawDummyArt(x, y, variant) {
+  shadow(x, y + 6, 14, 10, 5);
+  rect(x - 1.5, y - 4, 3, 17, '#6d4520', '#3e2716'); // the post
+  rect(x - 5, y + 11, 10, 3, '#4e3016');
+  if (variant === 'pell') {
+    rect(x - 4, y - 12, 8, 16, '#a47148', '#5c3a17'); // a stout log
+    line(x - 4, y - 6, x - 10, y - 9, '#8e5a2b', 2.5); line(x + 4, y - 6, x + 10, y - 3, '#8e5a2b', 2.5);
+    ctx.fillStyle = '#5c3a17'; ctx.beginPath(); ctx.arc(x, y - 6, 1.2, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  line(x - 9, y - 4, x + 9, y - 4, '#6d4520', 2.5); // the cross bar, its arms
+  ctx.fillStyle = '#d4b06a'; ctx.strokeStyle = '#8a6d32'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.ellipse(x, y - 2, 5.5, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // the straw body
+  for (const sx of [-2, 0, 2]) line(x + sx, y - 7, x + sx * 1.3, y + 4, 'rgba(138, 109, 50, 0.6)', 0.6);
+  ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.arc(x, y - 12, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // the sack head
+  line(x - 3, y - 9.5, x + 3, y - 9.5, '#8a6d32', 0.8);
+  if (variant === 'pot') { ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.ellipse(x, y - 14, 5, 3, 0, Math.PI, 0); ctx.fill(); rect(x - 5.5, y - 14.5, 11, 1.5, '#5d6d7e'); }
+  if (variant === 'target') {
+    for (const [r, c] of /** @type {[number, string][]} */ ([[3.5, '#c0392b'], [2.3, '#ecf0f1'], [1.1, '#c0392b']])) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y - 2, r, 0, Math.PI * 2); ctx.fill(); }
+  } else { ctx.fillStyle = '#3e2723'; ctx.fillRect(x - 2, y - 13, 1.2, 1.2); ctx.fillRect(x + 1, y - 13, 1.2, 1.2); }
+  if (variant === 'shield') { ctx.fillStyle = '#8e5a2b'; ctx.strokeStyle = '#4e3016'; ctx.beginPath(); ctx.arc(x + 7, y - 2, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); line(x + 4, y - 4, x + 9.5, y + 0.5, '#4e3016', 0.8); }
+}
+
+// (#326) A torch post: a stake with its head, its shadow; burning when lit
+export function drawTorchPostArt(x, y, lit) {
+  shadow(x, y + 8, 8, 6, 3);
+  rect(x - 2, y - 6, 4, 18, '#6d4520', '#3e2716');
+  rect(x - 4, y - 9, 8, 4, '#3e2723');
+  if (lit) {
+    const k = 1 + Math.sin(performance.now() / 90 + x) * 0.15;
+    ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(x, y - 13, 4 * k, 6 * k, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(x, y - 12, 2 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
+  }
 }
 
 // The warehouse (#279): an open storehouse, all one bay: a plank floor, a back wall, four posts and a roof over

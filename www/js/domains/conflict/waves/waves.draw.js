@@ -6,12 +6,12 @@ import { game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
-import { castShadow, isExplored, isVisible } from '../../world/index.js';
+import { castShadow, getDarkness, isExplored, isVisible } from '../../world/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
@@ -66,7 +66,7 @@ export function drawLoot() {
     const key = (pile.items || [])[0];
     const [category, id] = key ? key.split(':') : [];
     const item = key && GAME_CONFIG[category] && GAME_CONFIG[category][id];
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(pile.x, pile.y + 5, 8, 3, 0, 0, Math.PI * 2); ctx.fill();
+    castShadow(ctx, pile.x, pile.y + 5, 8, 3, 6); // (#326: by the sun, as everything else)
     // (no thing in it: what it yields, as a crumbled zombie's rot and bones, #253)
     const res = !item && Object.keys(pile.yield || {}).find(id => GAME_CONFIG.resources[id]);
     drawIcon(ctx, item ? item.icon : res ? GAME_CONFIG.resources[res].icon : 'bundle', pile.x, pile.y, 18);
@@ -118,7 +118,7 @@ export function drawEnemy(en) {
     const inHand = () => {
       ctx.save();
       applyHeldItemPose(en);
-      if (getEnemyDef(en).necromancer) drawStaff();
+      if (getEnemyDef(en).necromancer) drawStaff(getEnemyColor(null), getDarkness()); // (#326)
       else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
       else drawHeldWeapon(en.weapon, itemScale(en), (bowDraw(en) || { pull: 0 }).pull); // (in its hand, as big as it, #279; drawn, #306)
       drawWeaponBlood(en);
@@ -135,6 +135,7 @@ export function drawEnemy(en) {
     drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
+    drawHealSparks(en); // (#326)
     if (!simple) {
       at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
       if (!backBack) at(onItsBack);
