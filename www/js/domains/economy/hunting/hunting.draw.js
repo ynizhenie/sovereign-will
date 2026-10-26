@@ -7,9 +7,22 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { boarWallows } from './hunting.rules.js';
 import { castShadow, isVisible } from '../../world/index.js';
 
+// (#326) A boar's look, picked the first time it's drawn and kept (saved with it): its coat, spots or stripes
+// now and then, its size, a sow's short tusks (GAME_CONFIG.mapResources.boar.looks)
+function boarLook(b) {
+  if (b.look) return b.look;
+  const c = GAME_CONFIG.mapResources.boar.looks, weight = i => Number(c.coats[i][3]);
+  let n = Math.random() * c.coats.reduce((sum, _, i) => sum + weight(i), 0), coat = 0;
+  while (coat < c.coats.length - 1 && (n -= weight(coat)) >= 0) coat++;
+  const marks = Math.random() < c.marksChance ? (Math.random() < 0.5 ? 'spots' : 'stripes') : null;
+  return (b.look = { coat, marks, size: c.size[0] + Math.random() * (c.size[1] - c.size[0]), female: Math.random() < c.femaleChance });
+}
+
 // A boar (#251), its side to us, facing the way it last went: a bristly body, legs stepping, its head with
-// snout, tusks and an ear, a curly tail. A carcass: on its back, legs up, a cross for its eye
+// snout, tusks and an ear, a curly tail. A carcass: on its back, legs up, a cross for its eye. (#326) In its look
 function drawBoarBody(b, dead) {
+  const look = boarLook(b), coats = GAME_CONFIG.mapResources.boar.looks.coats;
+  const [body, head, bristle] = /** @type {string[]} */ (coats[look.coat] || coats[0]);
   if (b.lastX !== undefined && Math.abs(b.x - b.lastX) > 0.05) b.faceX = b.x > b.lastX ? 1 : -1;
   if (!dead) { b.step = ((b.step || 0) + Math.hypot(b.x - (b.lastX ?? b.x), b.y - (b.lastY ?? b.y))) % 1000; b.lastX = b.x; b.lastY = b.y; }
   const d = b.faceX || 1;
@@ -17,7 +30,7 @@ function drawBoarBody(b, dead) {
   const digging = !dead && b.rest && b.rest.stage === 'dig', lying = !dead && b.rest && b.rest.stage === 'lie';
   ctx.save();
   ctx.translate(b.x, b.y + (lying ? 4 : 0));
-  ctx.scale(d, dead ? -1 : 1);
+  ctx.scale(d * look.size, (dead ? -1 : 1) * look.size);
   if (!dead) { ctx.save(); ctx.scale(d, 1); castShadow(ctx, 0, lying ? 5 : 9, 12, 3.5, lying ? 6 : 12); ctx.restore(); } // (#307)
   // legs (folded under it lying)
   const step = dead || lying ? 0 : Math.sin((b.step || 0) * 0.5) * 1.6;
@@ -28,21 +41,33 @@ function drawBoarBody(b, dead) {
     ctx.fillStyle = '#5d4037';
     for (const [px, py] of [[18, 2], [20, -2], [16, -4]]) ctx.fillRect(px + (game.pathTick % 3), py - (game.pathTick % 5), 1.6, 1.6);
   }
-  // the body, darker bristles along its back
-  ctx.fillStyle = '#8e5a3b'; ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.2;
+  // the body, darker bristles along its back (#326: spots, or a young one's light stripes, on some)
+  ctx.fillStyle = body; ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.ellipse(-1, 0, 12, 7.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = '#5d3a24'; ctx.lineWidth = 1;
+  if (look.marks) {
+    ctx.save(); ctx.beginPath(); ctx.ellipse(-1, 0, 11.4, 7, 0, 0, Math.PI * 2); ctx.clip();
+    if (look.marks === 'spots') {
+      ctx.fillStyle = 'rgba(30, 20, 14, 0.45)';
+      for (const [sx, sy, sr] of [[-6, -1, 2.6], [1, 2, 2], [-1, -4, 1.6], [5, -2, 1.8]]) { ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill(); }
+    } else {
+      ctx.strokeStyle = 'rgba(240, 220, 180, 0.45)'; ctx.lineWidth = 1.2;
+      for (const sy of [-3, 0, 3]) { ctx.beginPath(); ctx.moveTo(-12, sy); ctx.quadraticCurveTo(-1, sy - 1.5, 10, sy); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+  ctx.strokeStyle = bristle; ctx.lineWidth = 1;
   for (let k = -9; k <= 5; k += 2.5) { ctx.beginPath(); ctx.moveTo(k, -6.5); ctx.lineTo(k + 1, -9); ctx.stroke(); }
   // the tail
-  ctx.strokeStyle = '#5d3a24'; ctx.beginPath(); ctx.arc(-14, -2, 2, 0, Math.PI * 1.6); ctx.stroke();
+  ctx.strokeStyle = bristle; ctx.beginPath(); ctx.arc(-14, -2, 2, 0, Math.PI * 1.6); ctx.stroke();
   // the head, snout, tusk, ear, eye (down in the earth, nodding, digging)
   ctx.save(); ctx.translate(0, nod);
-  ctx.fillStyle = '#7a4b30'; ctx.strokeStyle = '#3e2723';
+  ctx.fillStyle = head; ctx.strokeStyle = '#3e2723';
   ctx.beginPath(); ctx.ellipse(11, -1, 6, 5, 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#c08a6e'; ctx.beginPath(); ctx.ellipse(16.5, 0.5, 2.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#3e2723'; ctx.fillRect(16.8, -0.2, 1, 1); ctx.fillRect(16.8, 1.2, 1, 1);
-  ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(14, 2.5); ctx.lineTo(15.5, -0.5); ctx.lineTo(15.5, 3); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#5d3a24'; ctx.beginPath(); ctx.moveTo(9, -4.5); ctx.lineTo(10.5, -9); ctx.lineTo(12.5, -4.5); ctx.closePath(); ctx.fill();
+  // (a sow's tusk short)
+  ctx.fillStyle = '#ecf0f1'; ctx.beginPath(); ctx.moveTo(14, 2.5); ctx.lineTo(15.5, look.female ? 1.2 : -0.5); ctx.lineTo(15.5, 3); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = bristle; ctx.beginPath(); ctx.moveTo(9, -4.5); ctx.lineTo(10.5, -9); ctx.lineTo(12.5, -4.5); ctx.closePath(); ctx.fill();
   if (dead) {
     ctx.strokeStyle = '#1b1b1f'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(11, -3); ctx.lineTo(14, 0); ctx.moveTo(14, -3); ctx.lineTo(11, 0); ctx.stroke();

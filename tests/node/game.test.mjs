@@ -159,20 +159,20 @@ test('disarming refunds exactly what the item cost', async () => {
   expect(await (() => window.sim.refundMismatches())()).toEqual([]);
 });
 
-test('an enemy archer runs out of arrows and switches to a club without a tent (#55)', async () => {
+test('an enemy archer runs out of arrows and draws its dagger without a tent (#55, #326)', async () => {
   const r = await sim.archerQuiver({ withTent: false });
   expect(r.shots).toBe(12);
   expect(r.tentVisits).toBe(0);
-  expect(r.weapon).toBe('club');
+  expect(r.weapon).toBe('dagger');
   expect(r.meleeDamage).toBeGreaterThan(0);
 });
 
-test('an enemy archer refills 6 arrows at a time from the tent stock, then clubs (#55)', async () => {
+test('an enemy archer refills 6 arrows at a time from the tent stock, then draws its dagger (#55, #326)', async () => {
   const r = await sim.archerQuiver({ withTent: true, seconds: 120 });
   expect(r.shots).toBe(24); // 12 in the quiver + its 12 in the tents
   expect(r.tentVisits).toBe(2);
   expect(r.stockLeft).toBe(0);
-  expect(r.weapon).toBe('club');
+  expect(r.weapon).toBe('dagger');
 });
 
 test('a resource added only in GAME_CONFIG is gathered, stocked and spent (#45)', async () => {

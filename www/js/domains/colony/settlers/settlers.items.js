@@ -29,9 +29,19 @@ export function drawHeldWeapon(weapon, k = 1, pull = 0) {
     poly([[4.8, -2], [len - 3, -1.6], [len, 0], [len - 3, 1.6], [4.8, 2]], steel, 'rgba(0, 0, 0, 0.4)');
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(6, -0.6); ctx.lineTo(len - 4, -0.4); ctx.stroke();
   } else if (isClubWeapon(weapon)) {
-    rect(-3, -1.4, 9, 2.8, '#7a4b21');
-    poly([[6, -1.8], [11, -3.5], [16, -4], [18, -2], [18, 2], [16, 4], [11, 3.5], [6, 1.8]], '#8b5a2b', 'rgba(0, 0, 0, 0.4)');
-    ctx.fillStyle = '#5c3a17'; for (const [kx, ky] of [[11, -1.5], [14, 1.8], [16, -1]]) { ctx.beginPath(); ctx.arc(kx, ky, 0.9, 0, Math.PI * 2); ctx.fill(); }
+    // (#326) smaller, in the others' style: a wrapped grip, the wood swelling to a knotted head, its grain and a shine
+    rect(-2.5, -1.3, 6.5, 2.6, '#6d4520');
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; ctx.lineWidth = 0.6;
+    for (const gx of [-1.6, 0.2, 2]) { ctx.beginPath(); ctx.moveTo(gx, -1.3); ctx.lineTo(gx + 0.8, 1.3); ctx.stroke(); }
+    poly([[4, -1.5], [8, -2.4], [12, -3], [14.5, -2.2], [15, 0], [14.5, 2.2], [12, 3], [8, 2.4], [4, 1.5]], '#8b5a2b', 'rgba(0, 0, 0, 0.45)');
+    ctx.strokeStyle = 'rgba(70, 40, 15, 0.6)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(5, 0.4); ctx.quadraticCurveTo(10, 1.4, 14, 0.6); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 230, 190, 0.35)'; ctx.beginPath(); ctx.moveTo(6, -1.2); ctx.quadraticCurveTo(10, -2.3, 13.5, -1.8); ctx.stroke();
+    ctx.fillStyle = '#5c3a17'; for (const [kx, ky] of [[10, -1.2], [12.6, 1.4]]) { ctx.beginPath(); ctx.arc(kx, ky, 0.7, 0, Math.PI * 2); ctx.fill(); }
+  } else if (weapon === 'dagger') {
+    // (#326) an archer's dagger (out of arrows): a short blade
+    rect(-2, -1.1, 4.5, 2.2, '#3e2716');
+    rect(2.4, -2.4, 1.2, 4.8, '#7f8c8d');
+    poly([[3.6, -1.3], [10, -0.3], [11, 0.2], [3.6, 1.3]], '#dfe6e9', 'rgba(0, 0, 0, 0.4)');
   } else if (isSpearWeapon(weapon)) {
     const iron = weapon === 'iron_spear';
     rect(-12, -1.2, 34, 2.4, iron ? '#5d4037' : '#8e5a2b'); // held at the middle of the shaft
@@ -82,12 +92,17 @@ export function drawHeldTool(tool, k = 1, full = 0) {
     ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(27, 2, 1.2, 0, Math.PI * 2); ctx.fill(); // the float
     ctx.lineCap = 'butt';
   } else if (tool === 'medbag') {
-    // hanging from the hand: leather with a green cross, its herbs rising inside (full, 0..1)
-    ctx.strokeStyle = '#5c3a17'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1, 2); ctx.moveTo(0, 0); ctx.lineTo(6, 2); ctx.stroke();
-    rect(-1, 2, 9, 8, '#8e5a2b');
-    rect(0, 10 - 7 * full, 7, 7 * full, '#27ae60');
-    ctx.strokeStyle = '#5c3a17'; ctx.strokeRect(-1, 2, 9, 8);
-    rect(2.6, 3, 1.8, 4.5, '#2ecc71'); rect(1.3, 4.3, 4.4, 1.8, '#2ecc71');
+    // (#326) a satchel hanging from the hand by its strap: rounded leather, a flap with a buckle and a green cross,
+    // herbs sticking out at its top, more the fuller it is (full, 0..1)
+    ctx.strokeStyle = '#4e3016'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-1, 2, 0, 3.5); ctx.moveTo(0, 0); ctx.quadraticCurveTo(6, 1.5, 7.5, 3.5); ctx.stroke();
+    ctx.fillStyle = '#27ae60';
+    for (let i = 0; i < Math.round(4 * full); i++) { ctx.beginPath(); ctx.ellipse(1 + i * 2, 3.2 - (i % 2), 0.9, 2, -0.3 + i * 0.2, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#8e5a2b'; ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect(-1.5, 3.5, 10, 8, [1, 1, 3, 3]); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#6d4520'; ctx.beginPath(); ctx.roundRect(-1.5, 3.5, 10, 3.6, [1, 1, 2.2, 2.2]); ctx.fill(); ctx.stroke(); // the flap
+    rect(3, 6.5, 1.6, 1.6, '#d4ac0d'); // its buckle
+    ctx.fillStyle = '#eaf7ee'; ctx.beginPath(); ctx.arc(3.8, 9.4, 1.9, 0, Math.PI * 2); ctx.fill();
+    rect(3.3, 8, 1, 2.8, '#27ae60'); rect(2.4, 8.9, 2.8, 1, '#27ae60');
   } else drawn = false;
   ctx.restore();
   return drawn;
@@ -100,6 +115,17 @@ export function drawWorkTool(kind, k = 1) {
   if (kind === 'knife') {
     rect(-2, -1.2, 5, 2.4, '#3e2716');
     poly([[3, -1.4], [10, -0.2], [10.5, 0.4], [3, 1.6]], '#dfe6e9', 'rgba(0, 0, 0, 0.4)');
+  } else if (kind === 'dagger') {
+    ctx.restore(); drawHeldWeapon('dagger', k); return; // (#326: an archer's, out of arrows)
+  } else if (kind === 'herbs') {
+    // (#326) a medic's handful of herbs pressed onto a wound: a little bundle of leaves, bound
+    for (const [a, len] of [[-0.5, 6], [0, 7.5], [0.5, 6]]) {
+      ctx.save(); ctx.rotate(a);
+      ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.ellipse(3 + len / 2, 0, len / 2, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1e8449'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(3, 0); ctx.lineTo(3 + len, 0); ctx.stroke();
+      ctx.restore();
+    }
+    rect(1.5, -1.2, 2, 2.4, '#d4b483');
   } else {
     rect(-2, -1, 12, 2, '#8e5a2b');
     rect(9, -4.5, 4, 9, '#7f8c8d');

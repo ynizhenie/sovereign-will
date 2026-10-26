@@ -37,6 +37,7 @@ function enemyHeal(en, healer, dt) {
     moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
   } else {
     patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * dt);
+    patient.treatedAt = game.pathTick; // (#326: green crosses rising off it)
     faceTowards(en, patient.x, patient.y);
   }
   return true;
@@ -82,7 +83,8 @@ export function tickEnemy(en, dt) {
   if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) return;
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
-  en.weapon = meleeDef.weapon || 'sword';
+  // (#326) an archer out of arrows (and tents to fill up at) draws its dagger, as the player's do
+  en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : meleeDef.weapon || 'sword';
   const inMelee = !shooting && moveTarget === target;
   // an archer with no clear shot walks closer instead of standing off
   const clearShot = shooting && hasLineOfFire(en.x, en.y, target.x, target.y);
@@ -383,11 +385,12 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   // the undead fight on in a panic, weaker (#232: morale.panicDamage); an archer out of arrows and tents
   // fights at its melee kind's strength, as the player's own would (#255)
   const shaken = en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1;
-  const meleeDamage = (meleeDef === enemyDef ? en.damage : (en.meleeDamage ?? (en.meleeDamage = enemyDamagePerSecond(meleeDef)))) * shaken;
+  const dagger = enemyDef.ranged && meleeDef !== enemyDef ? GAME_CONFIG.weapons.bow.dagger : null; // (#326: weak)
+  const meleeDamage = (dagger ? dagger.damage / dagger.cooldown : meleeDef === enemyDef ? en.damage : (en.meleeDamage ?? (en.meleeDamage = enemyDamagePerSecond(meleeDef)))) * shaken;
   faceTowards(en, target.x, target.y);
   // (#326) a blow at a time, as the player's own strike, not hp drained a little every tick: one every
   // cooldown of its kind's weapon, as much as that many seconds of its damage; the first at once
-  const cooldown = enemyHitCooldown(meleeDef);
+  const cooldown = dagger ? dagger.cooldown : enemyHitCooldown(meleeDef);
   if (en.strikeTick !== game.pathTick - 1) en.strikeTimer = 0;
   en.strikeTick = game.pathTick;
   en.strikeTimer = (en.strikeTimer || 0) - dt;

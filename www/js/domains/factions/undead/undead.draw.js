@@ -7,12 +7,26 @@ import { ctx } from '../../../engine/platform/index.js';
 import { updateBlightCache } from './undead.rules.js';
 
 // A necromancer's staff, a pale purple orb at its top
-export function drawStaff() {
+// (#326) in the other items' style: a gnarled shaft, bound in two places, a bone claw at its top holding a stone in
+// its side's colour; in the dark the stone glows that colour (`color`; dark: how dark it is, 0..1)
+export function drawStaff(color = '#bb8fce', dark = 0) {
   // held a third of the way up (#279: from the hand, not floating past it)
-  ctx.fillStyle = '#6d4520'; ctx.fillRect(-7, -1.2, 26, 2.4);
-  ctx.fillStyle = '#4a2f17'; ctx.fillRect(17, -2, 2, 4);
-  ctx.fillStyle = '#bb8fce'; ctx.beginPath(); ctx.arc(21, 0, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#e8daef'; ctx.beginPath(); ctx.arc(20, -1, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#5d3a1d'; ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'; ctx.lineWidth = 0.7;
+  ctx.beginPath(); ctx.moveTo(-7, -1); ctx.lineTo(6, -1.3); ctx.lineTo(9, -0.8); ctx.lineTo(17, -1.2); ctx.lineTo(17, 1.2); ctx.lineTo(9, 1); ctx.lineTo(6, 1.3); ctx.lineTo(-7, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c8b28a'; ctx.fillRect(2, -1.6, 1.4, 3.2); ctx.fillRect(14, -1.6, 1.4, 3.2); // (its bindings)
+  // the claw: three bone prongs round the stone
+  ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+  for (const side of [-1, 0, 1]) { ctx.beginPath(); ctx.moveTo(17, side * 0.8); ctx.quadraticCurveTo(19, side * 4.2, 22.5, side * 3.4); ctx.stroke(); }
+  ctx.lineCap = 'butt';
+  if (dark > 0) {
+    const glow = ctx.createRadialGradient(21, 0, 1, 21, 0, 14);
+    glow.addColorStop(0, color); glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.save(); ctx.globalAlpha = Math.min(1, dark * 1.2) * (0.55 + 0.15 * Math.sin(game.pathTick * 0.08)); ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(21, 0, 14, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(21, 0, 3.2, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'; ctx.lineWidth = 0.7; ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.beginPath(); ctx.arc(20, -1, 1.1, 0, Math.PI * 2); ctx.fill();
 }
 
 // A necromancer raising a corpse from afar: a wavering dark purple thread from it to the corpse (#203)

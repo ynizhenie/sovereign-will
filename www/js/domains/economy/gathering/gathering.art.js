@@ -37,6 +37,7 @@ function drawFallenTree(t) {
 
 // The stump where a tree was felled: it stays till a tree grows again somewhere else (see finishHarvest)
 export function drawStumpArt(st) {
+  groundShadow(st.x, st.y - 2, 4, 2); // (#326: everything casts one)
   ctx.fillStyle = '#6d4c2f'; ctx.beginPath(); ctx.ellipse(st.x, st.y, 3.5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(st.x, st.y - 0.6, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
 }
@@ -136,6 +137,7 @@ export function drawBoulderArt(b) {
 // A tuft of tall grass: curved blades in a few greens, now and then a small flower
 export function drawGrassArt(g) {
   const h = variant(g), x = g.x, y = g.y;
+  groundShadow(x, y - 2, 5, 1.6); // (#326)
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
   ctx.lineWidth = 1.6; ctx.lineCap = 'round';
   for (let k = 0; k < 7; k++) {
@@ -160,6 +162,7 @@ export function drawBushArt(b) {
 // A stick: a forked twig
 export function drawStickArt(st) {
   const flip = variant(st) % 2 ? 1 : -1, x = st.x, y = st.y;
+  groundShadow(x, y - 3, 7, 2); // (#326)
   ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(x - 7 * flip, y - 4); ctx.lineTo(x + 7 * flip, y + 4); ctx.stroke();
   ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2 * flip, y - 5); ctx.stroke();
@@ -180,6 +183,7 @@ export function drawLogArt(lg) {
 // Pebbles: two or three small stones, lit on top
 export function drawPebblesArt(pe) {
   const h = variant(pe), x = pe.x, y = pe.y;
+  groundShadow(x, y - 3, 5, 2); // (#326: by the sun, as the rest)
   for (const [px, py, r] of [[-3, 0, 3], [3, 2, 2.2], [1, -3, 1.8]].slice(0, 2 + (h % 2))) {
     blob(x + px + 1, y + py + 1, r, 'rgba(0, 0, 0, 0.25)');
     blob(x + px, y + py, r, '#95a5a6');
