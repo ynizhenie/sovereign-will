@@ -29,6 +29,13 @@ export function getSettlerColor(s) {
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
 }
 
+// (#326) A building's side's colour: in a battle, the side of the field it stands on (a portal on the red half is
+// red's); else the player's
+export function getBuildingColor(b) {
+  if (game.gameMode === 'battle') return b.x >= game.WORLD_WIDTH / 2 ? sides.battle.red : sides.battle.green;
+  return getSettlerColor(null);
+}
+
 export function getEnemyColor(en) {
   const color = game.gameMode === 'battle' ? sides.battle.red : sides.enemy.color;
   return en && en.type === 'big' ? shadeColor(color, -0.25) : color;
@@ -41,10 +48,12 @@ export function shadeColor(hex, amount) {
   return `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
 }
 
-// The first colour of the palette the other side doesn't have, starting from `wanted`
+// `wanted`, or if the other side has it the next colour along the palette (round the colour wheel: the
+// nearest, #326)
 export function freeColor(wanted, other) {
   if (wanted !== other) return wanted;
-  return GAME_CONFIG.factionColors.find(c => c !== other);
+  const all = GAME_CONFIG.factionColors, i = all.indexOf(wanted);
+  return all[(i + 1) % all.length];
 }
 
 // The faction a custom map in Endless fixes for the player, or null

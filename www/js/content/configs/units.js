@@ -16,6 +16,20 @@ export const unitsConfig = {
   // the game was tuned at on a 120 Hz screen, before updates became a fixed 60 per second
   movementScale: 2,
 
+  // (#326) what a fighting unit can be, the same for every faction and either side (Battles now, waves with
+  // the new waves): its size (the faction's units: first normal, second big, third its pet) and what it
+  // holds. A tool that's only some factions' (GAME_CONFIG.tools[].factions) only for them: a medic with a bag
+  // isn't the undead's, a necromancer only theirs. In this order everywhere
+  unitPresets: [
+    { id: 'fist', size: 'normal', weapon: 'fist' }, { id: 'club', size: 'normal', weapon: 'club' },
+    { id: 'sword', size: 'normal', weapon: 'sword' }, { id: 'spear', size: 'normal', weapon: 'spear' },
+    { id: 'iron_sword', size: 'normal', weapon: 'iron_sword' }, { id: 'iron_spear', size: 'normal', weapon: 'iron_spear' },
+    { id: 'bow', size: 'normal', weapon: 'bow' }, { id: 'medic', size: 'normal', weapon: 'fist', tool: 'medbag' },
+    { id: 'necromancer', size: 'normal', weapon: 'fist', tool: 'necro_staff' },
+    { id: 'big_club', size: 'big', weapon: 'club' }, { id: 'big_spear', size: 'big', weapon: 'spear' },
+    { id: 'pet', size: 'pet', weapon: 'fist' }
+  ],
+
   // kinds of settlers: stats, how many population slots they take, damage multiplier, and what hiring / upgrading costs.
   // carryLoads: how many gathered loads (one tree, one boulder, one boar...) it carries before going home
   settlerTypes: {

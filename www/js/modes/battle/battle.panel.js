@@ -1,13 +1,12 @@
-// The battle's panel: categories, factions, what to place, armour and shield; its buttons
+// The battle's panel: units and buildings by faction, what to place, armour and shield; its buttons
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
-import { enemyPlayerUnit, enemyStats } from '../../domains/conflict/waves/index.js';
 import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
-import { battlePresetLabel, getBattleBuildings, getBattlePresetsShown } from './battle.roster.js';
+import { BATTLE_PRESETS, battlePresetLabel, getBattleBuildings } from './battle.roster.js';
 import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
@@ -30,23 +29,24 @@ export function renderBattlePanel() {
   }
   document.querySelectorAll('[data-battle-auto]').forEach(b => b.classList.toggle('on', (b.dataset.battleAuto === 'on') === battle.auto));
   renderBattleColors();
+  renderBattleMusic();
   document.getElementById('battle-auto').classList.toggle('on', battle.auto);
-  // the faction sub-tabs
-  const factions = document.getElementById('battle-factions');
-  factions.innerHTML = '';
-  for (const f of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
-    const b = document.createElement('button');
-    b.className = 'btn sub-tab' + (battle.faction === f.id ? ' on' : '');
-    b.dataset.battleFaction = f.id;
-    b.textContent = f.label;
-    onTap(b, () => setBattleFaction(f.id));
-    factions.appendChild(b);
-  }
   panel.dataset.category = battle.category;
   const presets = document.getElementById('battle-presets');
   presets.innerHTML = '';
   // picked: the sheet steps aside for the field, the chip says what a tap places
   let chosen = '';
+  // (#326) in sections under headings, as Endless's Build and Craft: no sub-tabs. Units: a faction each;
+  // buildings: everyone's, then each faction's own
+  let grid = presets;
+  const section = title => {
+    const heading = document.createElement('div');
+    heading.className = 'panel-heading';
+    heading.textContent = title;
+    grid = document.createElement('div');
+    grid.className = 'tile-grid';
+    presets.append(heading, grid);
+  };
   // a tile (as Endless's, #255): its icons and name, and under them what it is in a fight
   const add = (id, active, icons, name, stats, pick) => {
     const button = document.createElement('button');
@@ -54,18 +54,27 @@ export function renderBattlePanel() {
     button.dataset.preset = id;
     button.innerHTML = `<span class="tile-name">${icons.map(i => iconHtml(i)).join('')} <b>${escapeHtml(name)}</b></span> <span class="tile-cost">${richText(stats)}</span>`;
     onTap(button, () => { pick(); closeSheet(); renderBattlePanel(); });
-    presets.appendChild(button);
+    grid.appendChild(button);
     if (active) chosen = /** @type {HTMLElement} */ (button.querySelector('.tile-name')).innerHTML;
   };
+  const factions = Object.values(GAME_CONFIG.factions).filter(f => f.ready);
   if (battle.category === 'buildings') {
-    for (const id of getBattleBuildings()) {
-      const def = getDefinition('buildings', id);
-      add(id, battle.building === id, [def.icon], def.label, `[[heart]]${(def.build && def.build.hp) || ''}`, () => { battle.building = id; });
+    for (const faction of [null, ...factions]) {
+      const ids = getBattleBuildings(faction && faction.id);
+      if (!ids.length) continue;
+      section(faction ? faction.label : t('battle.buildingsCommon'));
+      for (const id of ids) {
+        const def = getDefinition('buildings', id);
+        add(id, battle.building === id, [def.icon], def.label, `[[heart]]${(def.build && def.build.hp) || ''}`, () => { battle.building = id; });
+      }
     }
   } else {
-    for (const preset of getBattlePresetsShown()) {
-      const { icons, hp, damage } = presetStats(preset);
-      add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(preset), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
+    for (const faction of factions) {
+      section(faction.label);
+      for (const preset of BATTLE_PRESETS.filter(p => p.faction === faction.id)) {
+        const { icons, hp, damage } = presetStats(preset);
+        add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(preset), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
+      }
     }
   }
   panel.dataset.phase = battle.phase;
@@ -76,24 +85,12 @@ export function renderBattlePanel() {
 }
 
 // What a unit is: its icons (kind and weapon or tool), hp, and damage (a hit's, an arrow's), with the
-// armour picked and the difficulty
+// armour picked (as one of yours: on the red half the difficulty may take some hp off)
 function presetStats(preset) {
-  if (preset.enemy) {
-    const def = GAME_CONFIG.enemies[preset.enemy];
-    const unit = enemyPlayerUnit(def);
-    const kind = GAME_CONFIG.settlerTypes[unit.type];
-    const weapon = getDefinition('weapons', unit.weapon), tool = unit.tool && getDefinition('tools', unit.tool);
-    // (#255) the very icons the player's own preset of that kind and weapon shows: the kind's, then the
-    // tool's or the weapon's (a necromancer's staff with its trade)
-    const stats = enemyStats(preset.enemy);
-    const armour = battleArmor(battle.armor);
-    if (armour) stats.hp += armour.hpBonus; // (#279; #298 its kind's)
-    return { icons: [kind && kind.icon, tool ? tool.icon : weapon && weapon.icon].filter(Boolean), ...stats };
-  }
   const kind = GAME_CONFIG.settlerTypes[preset.type], weapon = getDefinition('weapons', preset.weapon);
   const tool = preset.tool && getDefinition('tools', preset.tool);
   const hit = kind.bite ? kind.bite.damage : kind.pet ? 0 : preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
-  const armour = battleArmor(battle.armor);
+  const armour = kind.pet ? null : battleArmor(battle.armor);
   const hp = kind.hp + (armour && !isBowWeapon(preset.weapon) ? armour.hpBonus : 0);
   return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp, damage: Math.round(hit * kind.damageMultiplier) };
 }
@@ -101,32 +98,22 @@ function presetStats(preset) {
 // The top bar's middle: placing, fighting or who won, and how many stand on each side
 export function updateBattleTop() {
   const label = battle.phase === 'fight' ? t('battle.phase.fight')
-    : battle.phase === 'result' ? t(battle.winner === 'green' ? 'battle.greenWins' : battle.winner === 'red' ? 'battle.redWins' : 'battle.drawWins')
+    : battle.phase === 'result' ? (battle.winner === 'green' || battle.winner === 'red' ? t('battle.wins', { color: t(`color.${GAME_CONFIG.factionColorNames[sides.battle[battle.winner]]}`) }) : t('battle.drawWins'))
     : t('battle.phase.setup');
   document.getElementById('battle-phase-label').textContent = label;
+  // (#326) each side's broom on its colour
+  for (const side of /** @type {('green' | 'red')[]} */ (['green', 'red'])) {
+    document.getElementById(`battle-clear-${side}`).style.background = sides.battle[side];
+    document.getElementById(`battle-count-${side}`).style.color = sides.battle[side];
+  }
   document.getElementById('battle-count-green').textContent = String(game.settlers.length);
   document.getElementById('battle-count-red').textContent = String(game.enemies.length);
 }
 
-// Switching category or faction picks the first unit shown (so a tap never places from another one)
+// The dock's category: its sheet's units or buildings (what was picked in each is kept)
 export function setBattleCategory(category) {
   battle.category = category;
-  pickShownPreset();
   renderBattlePanel();
-}
-
-export function setBattleFaction(faction) {
-  battle.faction = faction;
-  pickShownPreset();
-  renderBattlePanel();
-}
-
-export function pickShownPreset() {
-  if (battle.category === 'buildings') {
-    if (!getBattleBuildings().includes(battle.building)) battle.building = getBattleBuildings()[0];
-  } else if (!getBattlePresetsShown().some(p => p.id === battle.preset)) {
-    battle.preset = getBattlePresetsShown()[0].id;
-  }
 }
 
 // (#306) the sides' colours: a swatch each, the other side's taken
@@ -146,6 +133,32 @@ function renderBattleColors() {
       onTap(swatch, () => { setBattleColor(side, color); renderBattlePanel(); });
       row.appendChild(swatch);
     }
+  }
+}
+
+// (#326) the fight's music: random, or a faction's battle track, by day (1-5) or by night (moon 1-5)
+function renderBattleMusic() {
+  const box = document.getElementById('battle-music');
+  if (!box) return;
+  box.innerHTML = '';
+  const row = () => { const r = document.createElement('div'); r.className = 'sub-tabs battle-music-row'; box.appendChild(r); return r; };
+  const button = (into, track, html) => {
+    const b = document.createElement('button');
+    b.className = 'btn sub-tab' + (battle.music === track ? ' on' : '');
+    b.dataset.music = track;
+    b.innerHTML = html;
+    onTap(b, () => { battle.music = track; renderBattlePanel(); });
+    into.appendChild(b);
+  };
+  button(row(), '', escapeHtml(t('battle.musicRandom')));
+  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) {
+    const r = row();
+    const name = document.createElement('span');
+    name.className = 'battle-music-faction';
+    name.textContent = faction.label;
+    r.appendChild(name);
+    (faction.music.battle || []).forEach((track, i) => button(r, track, String(i + 1)));
+    (faction.music.nightBattle || []).forEach((track, i) => button(r, track, `${iconHtml('moon')}${i + 1}`));
   }
 }
 

@@ -669,7 +669,9 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .faction-option.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
 .faction-option:disabled { opacity: 0.45; cursor: default; }
-.color-options { display: flex; gap: 6px; justify-content: flex-end; }
+.color-options { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+[data-sheet="battle-settings"] .color-options { justify-content: center; } /* (#326) */
+[data-sheet="battle-settings"] .color-options + .panel-heading, [data-sheet="battle-settings"] .panel-heading:has(+ .color-options) { text-align: center; }
 .color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #353a46; cursor: pointer; padding: 0; }
 .color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px #46b8da; }
 .color-swatch:disabled { opacity: 0.25; cursor: default; }
@@ -858,6 +860,14 @@ body[data-hud="endless"] .top-wave, body[data-hud="battle"] .top-battle, body[da
 .battle-score { font-variant-numeric: tabular-nums; }
 .battle-score .green { color: #2ecc71; }
 .battle-score .red { color: #e74c3c; }
+/* (#326) the battle's music: a row per faction, its name then its tracks */
+#battle-music .battle-music-row { flex-wrap: wrap; justify-content: center; align-items: center; }
+#battle-music .battle-music-row .sub-tab { flex: 0 0 auto; min-width: 34px; padding: 4px 6px; }
+.battle-music-faction { font-size: 12px; opacity: 0.8; min-width: 64px; text-align: right; margin-right: 4px; }
+/* (#326) a side's broom: on its colour */
+.top-battle .battle-clear { min-height: 0; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.45); }
+.top-battle .battle-clear .ic { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
 .top-editor { border: none; cursor: pointer; font: inherit; font-size: 13px; overflow: hidden; }
 #editor-map-label { overflow: hidden; text-overflow: ellipsis; }
 .top-actions { display: flex; align-items: center; gap: 6px; }

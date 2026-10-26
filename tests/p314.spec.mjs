@@ -157,8 +157,10 @@ test('turned big with none picked: the best armed and armoured soldier first (#3
 test('pets in Battles on both sides, and possessed: a dog bites what\'s tapped, a ghost flies into it (#314)', async ({ page }) => {
   const errors = await start(page, 'humans');
   const r = await page.evaluate(() => {
-    const own = BATTLE_PRESETS.filter(p => !p.enemy && ['dog', 'beast', 'ghost'].includes(p.type)).map(p => p.id).sort();
-    const foes = BATTLE_PRESETS.filter(p => p.enemy && /dog|beast|ghost/.test(p.enemy)).map(p => p.enemy).sort();
+    // (#326: one pet preset each faction, either side)
+    const pets = BATTLE_PRESETS.filter(p => p.preset === 'pet');
+    const own = pets.map(p => p.type).sort();
+    const foes = pets.map(p => presetEnemyKey(p.faction, p.preset)).sort();
     // possessed dog: tap an enemy, bitten
     spawnSettler('dog');
     const dog = settlers.find(s => s.type === 'dog');
