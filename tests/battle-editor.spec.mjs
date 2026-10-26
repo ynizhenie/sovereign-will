@@ -10,23 +10,23 @@ const openBattle = async page => {
 };
 const at = (gx, gy) => ({ x: gx * 30 + 15, y: gy * 30 + 15 });
 
-test('a battle\'s difficulty: on Hard the red side is as strong as yours, shown on its tiles; Endless\'s choice comes back (#255)', async ({ page }) => {
+test('a battle\'s difficulty: on Hard the red side is as strong as yours; Endless\'s choice comes back (#255)', async ({ page }) => {
   await openBattle(page);
-  const place = () => page.evaluate(([p]) => { battle.category = 'enemy'; battle.faction = 'humans'; battle.preset = 'raider'; battle.lineup = []; battleTap(p.x, p.y); return [enemies[0].maxHp, enemies[0].damage]; }, [at(30, 10)]);
+  const place = () => page.evaluate(([p]) => { battle.category = 'units'; battle.preset = 'humans:sword'; battle.lineup = []; battleTap(p.x, p.y); return [enemies[0].maxHp, enemies[0].damage]; }, [at(30, 10)]);
   expect(await place()).toEqual([75, 50]);
   await page.click('[data-dock="battle-settings"]');
   await page.click('[data-battle-difficulty="hard"]');
   expect(await page.evaluate(() => [enemies[0].maxHp, enemies[0].damage])).toEqual([100, 50]); // (made again at once)
-  await page.evaluate(() => { closeSheet(); setBattleCategory('enemy'); });
-  expect(await page.locator('#battle-presets [data-preset="raider"] .tile-cost').innerText()).toContain('100');
+  await page.evaluate(() => { closeSheet(); setBattleCategory('units'); });
+  expect(await page.locator('#battle-presets [data-preset="humans:sword"] .tile-cost').innerText()).toContain('100'); // (a tile shows the unit as one of yours, #326)
   expect(await page.evaluate(() => { leaveBattleMode(); return gameDifficulty; })).toBe('normal');
 });
 
 test('with the auto battle off yours hold and go at what they\'re told to (#255)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(([a, b, c]) => {
-    battle.preset = 'sword'; battleTap(a.x, a.y); battleTap(b.x, b.y);
-    battle.category = 'enemy'; battle.faction = 'humans'; battle.preset = 'raider'; battleTap(c.x, c.y);
+    battle.preset = 'humans:sword'; battleTap(a.x, a.y); battleTap(b.x, b.y);
+    battle.category = 'units'; battle.preset = 'humans:sword'; battleTap(c.x, c.y);
     battle.auto = false;
     startBattleFight();
     for (let f = 0; f < 120; f++) stepGame(1 / 60);

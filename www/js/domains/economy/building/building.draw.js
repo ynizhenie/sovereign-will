@@ -6,7 +6,7 @@ import { ctx, mouse, t, getViewRect } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
-import { getEnemyColor, getPlayerFaction, sides } from '../../factions/index.js';
+import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
 import { drawDenArt, drawDoorArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawStoneWall, drawTentArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
@@ -194,7 +194,7 @@ export function drawBuildings() {
         if (b.bait) drawIcon(ctx, 'food', b.x, b.y, 9);
       }
     } else if (b.type === 'grave' || b.type === 'sacrifice_circle' || b.type === 'portal') {
-      if (b.type === 'portal') drawPortal(b.x, b.y, sides.player.color); // in the side's colour
+      if (b.type === 'portal') drawPortal(b.x, b.y, getBuildingColor(b)); // in its side's colour (#326: a battle's too)
       else drawIcon(ctx, b.type, b.x, b.y, 28); // the undead's and the demons'
     } else if (b.type === 'tent') {
       drawTentArt(b.x, b.y);
@@ -211,13 +211,6 @@ export function drawBuildings() {
     } else if (b.type === 'watchtower') {
       // a wooden lookout, where its archer stands (drawn with the settlers)
       drawWatchtowerArt(b.x, b.y);
-      ctx.textAlign = 'center';
-      // no count in battles: arrows don't run out there
-      if (game.gameMode !== 'battle') { ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 9px sans-serif'; fillRichText(ctx, `[[arrows]] ${b.arrows || 0}/${/** @type {import('../../../engine/world/types.js').Watchtower} */ (b).tower.arrowCapacity}`, b.x, b.y - 22); }
-      if (game.gameMode !== 'battle') {
-        ctx.fillStyle = '#95a5a6'; ctx.fillRect(b.x - 12, b.y + 16, 24, 3);
-        ctx.fillStyle = '#ecf0f1'; ctx.fillRect(b.x - 11, b.y + 17, 22 * Math.min(1, (b.arrows || 0) / /** @type {import('../../../engine/world/types.js').Watchtower} */ (b).tower.arrowCapacity), 1);
-      }
 
     } else if (b.type === 'campfire') {
       // crossed logs, a flame while it burns (#298: while it has fuel)

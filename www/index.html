@@ -261,8 +261,11 @@
       </div>
       <!-- battle: placing or fighting, and how many on each side -->
       <div class="top-battle">
+        <!-- (#326) clearing each side: a broom on its colour, either side of the phase -->
+        <button class="btn battle-clear battle-setup-only" id="battle-clear-green" data-i18n-title="battle.clearGreen" title="Clear the left side"><i class="ic ic-broom"></i></button>
         <span id="battle-phase-label" data-i18n="battle.phase.setup">Placing</span>
         <span class="battle-score"><b class="green" id="battle-count-green">0</b> : <b class="red" id="battle-count-red">0</b></span>
+        <button class="btn battle-clear battle-setup-only" id="battle-clear-red" data-i18n-title="battle.clearRed" title="Clear the right side"><i class="ic ic-broom"></i></button>
       </div>
       <!-- the editor: the map's name and size (a tap opens the map's sheet) -->
       <button class="top-editor" data-action="toggleSheet" data-arg="editor-map">
@@ -293,9 +296,7 @@
   <!-- battle: under the top bar, clearing each side round Fight! in the middle; in a fight the auto battle
        and calling it off (#255) -->
   <div id="battle-actions" class="hud-layer">
-    <button class="btn battle-setup-only" id="battle-clear-green" data-i18n="battle.clearGreen">Clear green</button>
     <button class="btn btn-armor battle-setup-only" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-    <button class="btn battle-setup-only" id="battle-clear-red" data-i18n="battle.clearRed">Clear red</button>
     <button class="btn battle-fight-only" id="battle-auto" data-i18n="battle.auto">Auto battle</button>
     <button class="btn btn-disarm battle-fight-only" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
   </div>
@@ -407,15 +408,14 @@
 
       <!-- battle mode (battle.js): who to place (the dock picks yours, the enemies or buildings) -->
       <div id="battle-panel" class="hud-sheet" data-sheet="battle">
-        <div class="sub-tabs" id="battle-factions"></div>
-        <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: yours on the left, enemies on the right</div>
+        <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: on the left a unit is yours, on the right an enemy</div>
         <div class="sub-tabs battle-gear">
           <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
           <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
           <button class="btn sub-tab" data-battle-gear="banner" data-i18n="battle.banner">Banner</button>
         </div>
         <div class="battle-hint battle-gear" data-i18n="battle.bannerHint">Banner: the next soldier or archer placed becomes a commander</div>
-        <div id="battle-presets" class="tile-grid"></div>
+        <div id="battle-presets"></div>
       </div>
       <!-- the battle's own settings (#255): the field, the difficulty, the auto battle -->
       <div class="hud-sheet" data-sheet="battle-settings">
@@ -441,6 +441,9 @@
         <div class="color-options" id="battle-colors-green"></div>
         <div class="panel-heading" data-i18n="battle.colorsEnemy">Enemy colour:</div>
         <div class="color-options" id="battle-colors-red"></div>
+        <!-- (#326) the fight's music: random, or one of the factions' battle tracks (by day and by night) -->
+        <div class="panel-heading" data-i18n="battle.musicHeading">Battle music:</div>
+        <div id="battle-music"></div>
       </div>
 
       <!-- the map editor: what to put down (the dock picks the category), and the map's own settings -->
@@ -493,8 +496,7 @@
       <button class="dock-btn dock-point active" id="btn-interact" data-action="pointMode"><i class="ic ic-point"></i><span data-i18n="top.point">Point</span></button>
     </div>
     <div class="dock-row" data-hud-mode="battle">
-      <button class="dock-btn" data-battle-category="own" data-dock="battle:own"><i class="ic ic-worker"></i><span data-i18n="battle.cat.own">Player</span></button>
-      <button class="dock-btn" data-battle-category="enemy" data-dock="battle:enemy"><i class="ic ic-swords"></i><span data-i18n="battle.cat.enemy">Enemies</span></button>
+      <button class="dock-btn" data-battle-category="units" data-dock="battle:units"><i class="ic ic-worker"></i><span data-i18n="battle.cat.units">Units</span></button>
       <button class="dock-btn" data-battle-category="buildings" data-dock="battle:buildings"><i class="ic ic-build"></i><span data-i18n="battle.cat.buildings">Buildings</span></button>
       <button class="dock-btn" data-action="toggleSheet" data-arg="battle-settings" data-dock="battle-settings"><i class="ic ic-gear"></i><span data-i18n="dock.battle">Battle</span></button>
     </div>

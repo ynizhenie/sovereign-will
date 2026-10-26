@@ -127,9 +127,11 @@ export function zombieReach(unit) {
   // both arms out straight in front of it, a hand's width apart across its reach (a load's width when we see
   // it front or back, where that's two arms reaching at us), near its shoulders' height: spread a load's
   // width side-on, the lower hand ended up at its hip and that arm hung down its front
-  const apart = r * (0.42 - 0.24 * Math.abs(Math.cos(f)));
-  const out = { x: Math.cos(f) * reach, y: Math.sin(f) * reach * 0.7 - r * 0.25 };
-  return { hand: { x: out.x - Math.sin(f) * apart, y: out.y + Math.cos(f) * apart }, other: { x: out.x + Math.sin(f) * apart, y: out.y - Math.cos(f) * apart }, lunge: sw * 3, sw };
+  // (#326) each hand off its own shoulder: facing us (or away) a shoulder's width apart; on a diagonal the far
+  // hand shorter, so that arm no longer crosses the body; side-on both out alike, one over the other
+  const c = Math.cos(f), sn = Math.abs(Math.sin(f)), y = Math.sin(f) * reach * 0.7 - r * 0.25, apart = r * 0.18 * Math.abs(c);
+  const at = side => ({ x: c * reach * (side * c >= 0 ? 1 : 1 - 0.6 * sn) + side * r * 0.4 * sn, y: y + side * apart });
+  return { hand: at(1), other: at(-1), lunge: sw * 3, sw };
 }
 
 // A human with bare hands in a fight: a boxer's guard, its other fist up by its chin, and a straight punch as
@@ -463,13 +465,14 @@ export function drawSideItems(s, front = true) {
   const sideOn = Math.abs(Math.cos(f)) > 0.85, handX = handAt(s, r).x >= 0 ? 1 : -1;
   const x = sideOn ? -Math.cos(f) * r * 0.3 : -handX * r * 0.72, y = r * 0.18;
   const farSlot = sideOn || facesAway(s);
-  if ((!can && !banner) || farSlot === front) return;
-  if (can) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
-  if (banner) {
-    const bx = x - Math.cos(f) * 3, by = y - 2;
-    ctx.fillStyle = '#6d4520'; ctx.fillRect(bx - 1, by - 20, 2, 22);
-    ctx.fillStyle = getSettlerColor(s); ctx.fillRect(bx + 1, by - 20, 9, 6);
-    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(bx + 1, by - 20, 9, 6);
+  if (can && farSlot !== front) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
+  // (#326) the banner on its back (still its side slot): behind it facing us or side-on, over its back facing
+  // away; the pole up past its head, the flag at the top
+  if (banner && facesAway(s) === front) {
+    const bx = -Math.cos(f) * r * 0.35, by = -r * 0.1;
+    ctx.fillStyle = '#6d4520'; ctx.fillRect(bx - 1, by - r * 2.1, 2, r * 2.1 + 4);
+    ctx.fillStyle = getSettlerColor(s); ctx.fillRect(bx + 1, by - r * 2.1, 10, 7);
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(bx + 1, by - r * 2.1, 10, 7);
   }
 }
 

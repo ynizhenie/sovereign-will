@@ -284,7 +284,8 @@ export function musicMix() {
   const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
   if (game.gameMode === 'editor') return { [ambientFor(getPlayerFaction())]: 0.6 };
-  if (game.gameMode === 'battle') return battle.phase === 'fight' ? { [trackFor(true)]: 1 } : { [trackFor(false)]: 0.8 };
+  // (#326) a battle's own music if one's picked: in the fight, and while placing (to hear it first)
+  if (game.gameMode === 'battle') return battle.phase === 'fight' ? { [battle.music || trackFor(true)]: 1 } : { [battle.music || trackFor(false)]: 0.8 };
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
   // a wave is on until the last enemy and enemy tent are gone

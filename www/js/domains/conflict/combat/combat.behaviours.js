@@ -7,7 +7,6 @@ import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStoc
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
-import { findNearestArrowTower, refillArcherFromTower } from '../towers/index.js';
 import { getNecromancy } from '../../factions/undead/index.js';
 import { getEnemyDef } from '../waves/index.js';
 
@@ -158,26 +157,14 @@ function meleeFull(en, tick) {
   return (tick.meleeOn.get(en) || 0) >= (en.type === 'big' ? ai.meleePerBig : ai.meleePerEnemy);
 }
 
-// An archer's arrows: from a tower close by, from the storage it's at, or it walks to a storage when
-// empty. True while that keeps it busy.
+// An archer's arrows: from the storage it's at, or it walks to a storage when empty (#326: a platform keeps
+// none). True while that keeps it busy.
 function restockArrows(s, dt) {
   let currentArrows = s.arrows || 0;
   let capacity = s.quiverCapacity || 12;
-  let nearbyTower = findNearestArrowTower(s);
   // arrows from the nearest storage, if the stock has any
   const arrowStore = stock.arrows > 0 ? findNearestStorage(s) : null;
   const atArrowStore = !!arrowStore && isAtStorage(s, arrowStore);
-  let towerDistance = nearbyTower ? Math.hypot(nearbyTower.x - s.x, nearbyTower.y - s.y) : Infinity;
-
-  if (nearbyTower && currentArrows < capacity) {
-    if (towerDistance > 32) {
-      moveEntityTowards(s, nearbyTower.x, nearbyTower.y, s.speed, false, dt);
-      s.patrolTarget = null;
-      return true;
-    }
-    refillArcherFromTower(s, nearbyTower);
-    currentArrows = s.arrows;
-  }
 
   if (atArrowStore && currentArrows < capacity) {
     s.arrows = currentArrows + takeStock('arrows', capacity - currentArrows);
