@@ -18,7 +18,14 @@ const CLEAR = { kind: 'clear', level: 0, left: 0, wind: 0.3, windTo: 0.3, windAn
 
 /** @returns {typeof CLEAR} */
 export function getWeather() {
-  return game.gameMode === 'endless' && game.weather ? game.weather : CLEAR;
+  return (game.gameMode === 'endless' || game.gameMode === 'battle') && game.weather ? game.weather : CLEAR;
+}
+
+// (#326) A battle's weather, picked in its settings: that kind all through the fight (null: clear)
+export function setStandingWeather(kind) {
+  if (kind === 'clear' || !config().wind[kind]) { game.weather = null; return; }
+  const [lo, hi] = config().wind[kind];
+  game.weather = { ...CLEAR, kind, level: 1, left: Infinity, wind: (lo + hi) / 2, windTo: (lo + hi) / 2 };
 }
 // rain falling now, 0..1 (a storm is rain too)
 export const rainLevel = () => { const w = getWeather(); return w.kind === 'rain' || w.kind === 'storm' ? w.level : 0; };
@@ -34,7 +41,8 @@ function pickKind(after) {
 }
 
 export function tickWeather(dt) {
-  if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  if (game.gameMode === 'battle' && game.weather) game.weather.left = Infinity; // (a battle's stands: its wind and lightning go on)
+  else if (game.gameMode !== 'endless' || !game.gameStarted) return;
   const c = config();
   if (!game.weather) game.weather = { ...CLEAR, left: c.firstClearSeconds };
   const w = game.weather;

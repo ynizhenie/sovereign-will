@@ -1,7 +1,7 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, someNear, townHall } from '../../../engine/world/index.js';
+import { game, isDoor, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
@@ -79,6 +79,7 @@ export function tickEnemy(en, dt) {
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
+  if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) return;
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
   en.weapon = meleeDef.weapon || 'sword';
@@ -96,6 +97,31 @@ export function tickEnemy(en, dt) {
   const holdsGround = keepsAway || canStrike;
   walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt);
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
+}
+
+// (#326) An enemy archer and its own side's platform (a watchtower of the red side's, in a battle): up a free one
+// near it, it shoots from there, farther and over the walls, as the player's archers do from theirs. True
+// while it's on its way up or on it
+const PLATFORM_TILES = 12;
+function enemyOnPlatform(en, enemyDef, dt) {
+  if (game.gameMode !== 'battle' || !game.settlers.length) { en.platform = null; return false; }
+  if (en.platform && !game.buildings.includes(en.platform)) en.platform = null;
+  if (!en.platform) {
+    const taken = new Set(game.enemies.map(o => o.platform).filter(Boolean));
+    en.platform = game.buildings.filter(b => b.type === 'watchtower' && b.side === 'red' && !taken.has(b) && Math.hypot(b.x - en.x, b.y - en.y) < PLATFORM_TILES * 30)
+      .sort((a, b) => Math.hypot(a.x - en.x, a.y - en.y) - Math.hypot(b.x - en.x, b.y - en.y))[0] || null;
+    if (!en.platform) return false;
+  }
+  const tower = /** @type {any} */ (en.platform);
+  if (Math.hypot(tower.x - en.x, tower.y - en.y) > 32) {
+    moveEntityTowards(en, tower.x, tower.y, en.speed, true, dt);
+    return true;
+  }
+  en.x = tower.x; en.y = tower.y;
+  const target = game.settlers.filter(s => s.hp > 0 && !isUntouchable(s) && hasLineOfFire(tower.x, tower.y, s.x, s.y, true))
+    .sort((a, b) => Math.hypot(a.x - tower.x, a.y - tower.y) - Math.hypot(b.x - tower.x, b.y - tower.y))[0];
+  if (target) enemyShoot(en, enemyDef, target, Math.hypot(target.x - tower.x, target.y - tower.y), true, dt, tower);
+  return true;
 }
 
 // A defender of an enemy camp (#255): at its post till a raider comes within guardTiles of it, or of itself.
@@ -245,13 +271,16 @@ function chooseEnemyAttack(en, enemyDef, target) {
 }
 
 // An archer's shot, when its cooldown is over and it has a clear line within range
-function enemyShoot(en, enemyDef, target, minDist, clearShot, dt) {
+// (fromTower: up a platform, #326: its reach, over the walls)
+/** @param {any} [fromTower] */
+function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = null) {
   const ranged = enemyDef.ranged;
   en.attackCooldown = (en.attackCooldown || 0) - dt;
-  if (clearShot && minDist < ranged.range && en.attackCooldown <= 0) {
+  if (clearShot && minDist < (fromTower ? fromTower.tower.range : ranged.range) && en.attackCooldown <= 0) {
     let angle = Math.atan2(target.y - en.y, target.x - en.x);
     playSound('bow', en);
-    game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1), life: ranged.arrowLife, fromEnemy: true, owner: en });
+    game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
+      life: fromTower ? ranged.arrowLife * fromTower.tower.range / ranged.range : ranged.arrowLife, fromEnemy: true, owner: en, fromTower: !!fromTower });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     en.attackCooldown = en.shotCooldown || ranged.cooldown; // (a bow's rate in a settler's hands, #255)
@@ -265,12 +294,14 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt) {
   // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
-  // spikes are walked over, not besieged
-  let touchingBuilding = game.buildings.find(b => !(getDefinition('buildings', b.type) || {}).walkable && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
+  // spikes are walked over, not besieged; (#326) its own doors (the red side's) walked through
+  let touchingBuilding = game.buildings.find(b => !(getDefinition('buildings', b.type) || {}).walkable && !(b.side === 'red' && isDoor(b)) && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
   if (touchingBuilding) {
-    if (isShelter(touchingBuilding)) {
+    // (#326) its own it never breaks: round it
+    const own = touchingBuilding.side === 'red';
+    if (!own && isShelter(touchingBuilding)) {
       breakBuilding(touchingBuilding, enemyDef, dt);
-    } else if (en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes)) {
+    } else if (!own && (en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
       // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
       // way in over spikes squeezes past the walls beside them
       breakBuilding(touchingBuilding, enemyDef, dt);

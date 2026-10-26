@@ -54,10 +54,12 @@ export function collidesWithTiles(x, y, radius, kinds) {
   return false;
 }
 
-export const WALL_COLLISION_KINDS = [['walls', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
+export const WALL_COLLISION_KINDS = [['walls', 14], ['redDoors', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
+// (#326) an enemy goes through its own doors (the red side's): a wall to the player's
+const ENEMY_WALL_KINDS = WALL_COLLISION_KINDS.filter(([set]) => set !== 'redDoors');
 
-export function collidesWithWall(x, y, radius) {
-  return collidesWithTiles(x, y, radius, WALL_COLLISION_KINDS);
+export function collidesWithWall(x, y, radius, isEnemy = false) {
+  return collidesWithTiles(x, y, radius, isEnemy ? ENEMY_WALL_KINDS : WALL_COLLISION_KINDS);
 }
 
 export function collidesWithWater(x, y, radius) {
