@@ -1,8 +1,8 @@
 // Boars: hurt, they run (and hide in the bushes)
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand } from '../../../engine/world/index.js';
-import { getFrontier, hasTerritory, spawnResource } from '../../world/index.js';
+import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
+import { getFrontier, hasTerritory, inTerritory, spawnResource } from '../../world/index.js';
 import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../../engine/movement/index.js';
 import { bleed } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
@@ -77,9 +77,19 @@ export function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = fal
     boar.targetY = boar.hideTarget.y;
   } else {
     const edge = (BORDER_MARGIN + 1) * TILE_SIZE;
-    boar.targetX = Math.max(edge, Math.min(game.WORLD_WIDTH - edge, boar.x + dx / distance * fleeDistance));
-    boar.targetY = Math.max(edge, Math.min(game.WORLD_HEIGHT - edge, boar.y + dy / distance * fleeDistance));
+    keepInZone(boar, Math.max(edge, Math.min(game.WORLD_WIDTH - edge, boar.x + dx / distance * fleeDistance)), Math.max(edge, Math.min(game.WORLD_HEIGHT - edge, boar.y + dy / distance * fleeDistance)));
   }
+}
+
+// (#326) A boar that came up on the base's land stays on it: a target off it is turned back towards the hall
+// (one out in the wild goes where it likes)
+function keepInZone(boar, x, y) {
+  if (hasTerritory() && boar.inBase === undefined) boar.inBase = inTerritory(boar.x, boar.y);
+  if (hasTerritory() && boar.inBase && !inTerritory(x, y)) {
+    const d = Math.max(1, Math.hypot(townHall.x - boar.x, townHall.y - boar.y));
+    x = boar.x + (townHall.x - boar.x) / d * 40; y = boar.y + (townHall.y - boar.y) / d * 40;
+  }
+  boar.targetX = x; boar.targetY = y;
 }
 
 // A new boar every 25 s while there are fewer than BOAR_LIMIT
@@ -186,8 +196,7 @@ export function tickBoars(tickDt) {
       b.wanderInterval = 3 + rand() * 3;
       let ang = rand() * Math.PI * 2;
       let dist = 15 + rand() * 35;
-      b.targetX = Math.max(60, Math.min(game.WORLD_WIDTH - 60, b.x + Math.cos(ang) * dist));
-      b.targetY = Math.max(60, Math.min(game.WORLD_HEIGHT - 60, b.y + Math.sin(ang) * dist));
+      keepInZone(b, Math.max(60, Math.min(game.WORLD_WIDTH - 60, b.x + Math.cos(ang) * dist)), Math.max(60, Math.min(game.WORLD_HEIGHT - 60, b.y + Math.sin(ang) * dist)));
     }
     let dx = (b.targetX !== undefined ? b.targetX : b.x) - b.x;
     let dy = (b.targetY !== undefined ? b.targetY : b.y) - b.y;

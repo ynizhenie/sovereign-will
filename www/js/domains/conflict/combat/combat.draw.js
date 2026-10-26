@@ -7,6 +7,7 @@ import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
 import { corpseHasWorms } from '../../economy/fishing/index.js';
 import { tileVariantHash } from '../../world/index.js';
 import { drawFigure } from '../../colony/settlers/index.js';
+import { getEnemyColor, getSettlerColor } from '../../factions/index.js';
 
 // Blood on the blade of the held item, fading (see bleed). A bare hand has no blade to bleed on: bleed gives
 // whoever struck in melee weapon blood, and with nothing drawn at the grip it hung in the air in front of it
@@ -100,13 +101,23 @@ export function drawCorpses() {
   game.corpses.forEach(c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
     ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
-    // a grey figure lying on its side, crosses for its eyes (#251); a pet's own body
+    // a figure lying on its side, crosses for its eyes (#251), its skin grey and its clothes its side's colour
+    // gone dull (#326: all of it was grey); a pet's own body
     const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
+    const cloth = dull(c.side === 'enemy' ? getEnemyColor(null) : getSettlerColor(null));
     if (c.pet) drawPetCorpse(c, grey);
-    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: grey, skin: '#9a9a9a', lying: true, dead: true });
+    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', lying: true, dead: true });
     if (corpseHasWorms(c)) drawWorms(c);
     ctx.globalAlpha = 1;
   });
+}
+
+// A colour (#rrggbb) gone dull: half way to grey, a little darker
+function dull(hex) {
+  const n = parseInt(String(hex).slice(1, 7), 16);
+  if (Number.isNaN(n)) return '#7a7a7a';
+  const mix = c => Math.round((c * 0.5 + 0x7a * 0.5) * 0.85).toString(16).padStart(2, '0');
+  return `#${mix(n >> 16)}${mix((n >> 8) & 255)}${mix(n & 255)}`;
 }
 
 // A dead dog or hellhound: on its side, its legs out stiff, its head down on the ground, its tail limp

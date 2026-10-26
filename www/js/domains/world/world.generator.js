@@ -190,8 +190,10 @@ export function spawnResource(type, nearX = null, nearY = null, spread = 180, pi
     let inDesert = isDesertTile(tx, ty);
     let desertResource = type === 'cactus' || type === 'pebble';
     let cactusOutsideDesert = type === 'cactus' && !inDesert;
+    // (#326) a beach: only pebbles and stones on it
+    const offBeach = type === 'pebble' || type === 'boulder' || !thingAt(game.beachTiles, tx, ty);
     if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && isSpawnSpotFree(tx, ty) &&
-        (!inDesert || desertResource) && !cactusOutsideDesert) {
+        (!inDesert || desertResource) && !cactusOutsideDesert && offBeach) {
       isValid = true;
     }
   }
@@ -314,7 +316,7 @@ export function isWaterReachable(w) {
 
 export function generateMap() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
-  game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = [];
+  game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = []; game.beachTiles = []; // (#326: the last map's beaches gone before anything's placed)
   if (isContinentMap()) { generateContinent(); return; } // (#299: a big map, a continent)
 
   placeLakes();

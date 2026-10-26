@@ -123,7 +123,8 @@ export function craftItem(s, tick) {
   if (s.isPossessed || s.towerAssignment || (s.role !== 'worker' && (tick.isWaveActive || isDefenseAlert()))) return false;
   let order = game.craftOrders.find(o => o.crafter === s);
   if (!order) {
-    if (s.carrying) return false;
+    // (#326) making a thing comes before cooking: one on its way to a fire with food puts it back for it
+    if (s.carrying && !s.carrying.forFire) return false;
     // its own first; one for someone else only once that one's gone (#232: who it's for makes it)
     const open = o => !o.crafter || !game.settlers.includes(o.crafter);
     // arrows are the archers' to make while there are any (#249; #306: looked for once a tick)
@@ -135,6 +136,7 @@ export function craftItem(s, tick) {
     order = game.craftOrders.find(o => open(o) && ready(o) && o.for === s) ||
       game.craftOrders.find(o => open(o) && ready(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
     if (!order) return false;
+    if (s.carrying) { stock[s.carrying.type] = (stock[s.carrying.type] || 0) + (s.carrying.amount || 0); s.carrying = null; }
   }
   if (order.stage === 'waitResources') {
     if (!Object.entries(order.waitFor || {}).every(([resource, amount]) => (stock[resource] || 0) >= amount)) { order.crafter = null; return false; }
@@ -170,7 +172,7 @@ export function craftItem(s, tick) {
   s.working = 0.1;
   playWorkSound(s, 'hammer', 0.5);
   // quicker at a workshop: nothing with iron is made there (#232)
-  // (#279) a small thing made by hand has its own time (craftSeconds: a whistle, a flute)
+  // (#279) a small thing made by hand has its own time (craftSeconds: a whistle)
   const own = (GAME_CONFIG[order.category][order.id] || {}).craftSeconds;
   const seconds = own ?? (GAME_CONFIG.crafting.seconds[order.category] || 5) * (craftPlace(order.category, order.id) === 'workshop' ? GAME_CONFIG.crafting.workshopShare : 1);
   order.progress += tick.dt / seconds;

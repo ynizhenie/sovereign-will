@@ -17,6 +17,9 @@ function foodLook() {
   return kind ? kind.icon : 'food';
 }
 
+// what a settler finishes before it goes to eat (its last tick's behaviour)
+const BUSY = new Set(['harvest', 'harvestMarked', 'build', 'repairBuilding', 'fish', 'pickApples', 'tendFarmZones', 'waterCrops', 'deliverMaterials', 'craftItem', 'cook']);
+
 export function goEat(s, tick) {
   if (s.eating) { s.patrolTarget = null; return true; } // (counted down in tickMeals)
   if (!s.wantsMeal || s.isPossessed) return false;
@@ -26,11 +29,15 @@ export function goEat(s, tick) {
     s.wantsMeal = false; eatMeal(s); return false;
   }
   if (tick.isWaveActive || isDefenseAlert() || s.carrying) return false; // (later: after the wave, its load home first)
+  // (#326) in the middle of a job (hunting, felling, building...): that finished first, for a while at most
+  if (s.mealWaitFrom === undefined) s.mealWaitFrom = game.pathTick;
+  if (BUSY.has(s.activity) && game.pathTick - s.mealWaitFrom < GAME_CONFIG.meals.finishJobSeconds * 60) return false;
   s.patrolTarget = null;
   const storage = findNearestStorage(s);
   if (!isAtStorage(s, storage)) { walkToStorage(s, storage, tick.dt); return true; }
   const look = foodLook();
   s.wantsMeal = false;
+  s.mealWaitFrom = undefined;
   eatMeal(s);
   s.eating = { left: GAME_CONFIG.meals.eatSeconds, icon: look };
   return true;

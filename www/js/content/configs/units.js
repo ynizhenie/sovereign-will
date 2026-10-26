@@ -51,7 +51,8 @@ export const unitsConfig = {
   pets: {
     hungerSeconds: 120, hungryPace: 0.7, hungryBite: 0.6, foods: ['rawMeat', 'rawFish', 'cookedMeat', 'cookedFish', 'bread', 'berries', 'apples'],
     followTiles: 1.5, guardTiles: 6, sleepChance: 0.015, sleepSeconds: [20, 40], flushTiles: 8, flushSeconds: 15, devourSeconds: 3,
-    ghost: { diveTiles: 5, diveSpeed: 2.6, backSeconds: 30, carry: 3 },
+    // (#326) a big one panics at the bigNeeds'th ghost within withinSeconds
+    ghost: { diveTiles: 5, diveSpeed: 2.6, backSeconds: 30, carry: 3, bigNeeds: 2, withinSeconds: 15 },
     relief: { mealsBefore: 2, seconds: 1.5, awayFromBuildings: 4, spotTiles: [3, 8] },
     coats: {
       dog: [['#8d6e63', '#5d4037'], ['#d7ccc8', '#8d6e63'], ['#424242', '#212121'], ['#c8a165', '#8a6a3a'], ['#eeeeee', '#9e9e9e']],

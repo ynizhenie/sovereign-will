@@ -44,7 +44,7 @@ export const resourcesConfig = {
     { id: 'materials', icon: 'stone', members: ['firewood', 'coal', 'ironOre', 'iron', 'leather'] },
     { id: 'supplies', icon: 'arrows', members: ['arrows', 'torches'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
-    { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan', 'whistle', 'flute'] } },
+    { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan', 'whistle'] } },
     { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'leather_armor', 'shield', 'banner'] } }
   ],
 

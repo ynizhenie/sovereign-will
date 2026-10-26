@@ -290,13 +290,6 @@ export function musicMix() {
   // a wave is on until the last enemy and enemy tent are gone
   const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
   const mix = { [trackFor(fighting)]: pause };
-  // (#279) one playing a flute by a campfire, in view: its tune over the music, softer the farther it is
-  const flutes = Object.keys(GAME_CONFIG.music).filter(id => id.startsWith('flute_'));
-  const player = !fighting && game.settlers.find(s => s.flute && game.pathTick - (s.playingFlute ?? -1e9) < 10);
-  if (player && flutes.length) {
-    const d = Math.hypot(player.x - camera.x, player.y - camera.y);
-    if (d < 600) mix[flutes[player.id % flutes.length]] = pause * Math.max(0.25, 1 - d / 600);
-  }
   return mix;
 }
 

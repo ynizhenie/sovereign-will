@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
-import { faceTowards, isBigBody, nightReach } from '../../colony/settlers/index.js';
+import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
 import { addCarryLoad, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { ORE_KINDS } from '../../world/index.js';
@@ -118,6 +118,8 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
     tick.workerAssignments.set(pick.r, workers(pick.r) + 1);
   }
   s.markTarget = assignedRes;
+  // (#326) up at night for a mark past the base, with no torch: it says it won't go out there in the dark
+  if (!assignedRes && s.drowsy && night !== Infinity && tick.markedResources.some(r => !withinNight(r) && canSettlerHarvest(s, r, tick))) says(s, 'noTorch');
   if (!assignedRes && (s.drowsy || markedOnly)) return null; // (up at night for what was marked, or the marks first: only that, #298)
 
   if (!assignedRes) {
@@ -133,6 +135,12 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
     if (s.focus && s.focus.until > game.pathTick) {
       const focused = availableRes.filter(r => ((r.yield || getMapResourceDef(tick.resourceKind.get(r)).yield || {})[s.focus.resource] || 0) > 0);
       if (focused.length) availableRes = focused;
+    }
+    // (#326) a woodcutter takes up the logs of what's felled (and a fallen tree's log cut up) before felling
+    // another: the wood's all brought in first
+    if (hasToolFamily(s.tool, 'axe')) {
+      const felled = availableRes.filter(r => tick.resourceKind.get(r) === 'log' || r.fallen);
+      if (felled.length) availableRes = felled;
     }
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off.
     // (#306) Walking is never shorter than the straight way there in tiles, so what's farther off than the
