@@ -1,5 +1,5 @@
 import { test, expect } from './helpers.mjs';
-import { openGame, sim, iconText } from './helpers.mjs';
+import { openGame, sim, iconText, started } from './helpers.mjs';
 
 test('editor screens: new map, tools, save by name, open and delete saved maps (#37, #39)', async ({ page }) => {
   await openGame(page);
@@ -55,6 +55,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#custom-map-list [data-map="Озерцо"]')).toHaveClass(/active/);
   await expect(page.locator('#open-generator')).toBeHidden();
   await page.locator('#play-button').click();
+  await started(page);
   expect(await page.evaluate(() => [COLS, waterTiles.length, gameMode])).toEqual([30, 1, 'endless']);
 
   // delete it in the editor

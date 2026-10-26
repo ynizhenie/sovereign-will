@@ -98,6 +98,7 @@
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {number | null} [guardingId]  the gatherer it guards (escortGatherers)
  * @property {Object | null} [dungTarget]  the pile of dung it's going for (cleanDung)
  * @property {boolean} [hasArmor]
@@ -129,6 +130,7 @@
 /**
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
@@ -222,6 +224,7 @@
  * @property {Settler[]} [guards]    a watchtower's archers
  * @property {'red'} [side]        (#326) the enemy's (a battle's red half, a raid's camp); else the player's
  * @property {string} [variant]     (#326) a dummy's look, picked once
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [arrowsStuck]  (#326) a dummy's: the arrows in it, taken back by whoever trains
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
  * @property {number} [fish]         a fish trap's catch waiting (#199)
@@ -270,6 +273,7 @@
  * @typedef {Object} Game
  * @property {'endless'|'battle'|'editor'|'menu'} gameMode
  * @property {boolean} gameStarted
+ * @property {boolean} loading
  * @property {boolean} isPaused
  * @property {string} gameDifficulty
  * @property {boolean} cardMode  Endless with cards (#255)
@@ -332,6 +336,7 @@
  * @property {Object[]} enemyTents
  * @property {Object[]} enemyTentBlueprints
  * @property {Object[]} projectiles
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} stuckArrows (#326) arrows lying where they stopped
  * @property {Object<string, number>} foodMix
  * @property {Object[]} bloodSplats
  * @property {Object[]} dung

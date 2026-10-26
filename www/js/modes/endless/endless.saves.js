@@ -7,7 +7,7 @@
 // load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
 // loading puts the real object back in its place.
 
-import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, setRichText, updateSeedHud } from '../../ui/index.js';
+import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, runLoading, setRichText, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { createWorldSeed, game, newWorldEpoch, resetTileIndex, setWorldSize, townHall, WORLD_LISTS } from '../../engine/world/index.js';
 import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
@@ -260,7 +260,16 @@ export function renderSaveList(listId = 'save-list') {
     tile.title = s.name;
     tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(t('save.world', { world }))}</b></span>` +
       `<span class="tile-cost">${escapeHtml(t('save.wave', { wave }))} · ${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}</span>`;
-    onTap(tile, async () => { document.getElementById('pause-load').hidden = true; loadGame(await saveDataOf(loadSaves()[key])); });
+    onTap(tile, async () => {
+      document.getElementById('pause-load').hidden = true;
+      let data;
+      await runLoading('loading.save', (function* () { // (#326) a bar while it's read and set up
+        yield 0.1;
+        yield saveDataOf(loadSaves()[key]).then(read => { data = read; });
+        yield 0.7;
+        loadGame(data);
+      })());
+    });
     const del = document.createElement('button');
     del.className = 'btn tile-act save-delete';
     del.dataset.deleteSave = key;

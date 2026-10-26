@@ -18,6 +18,7 @@ import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 import { drawRaidZone } from '../modes/endless/index.js';
 
 export function render() {
+  if (game.loading) return; // (#326) the loading screen's: the last frame stays under it
   // (#326) past the map's edge: the fog's own dark
   ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.save();
