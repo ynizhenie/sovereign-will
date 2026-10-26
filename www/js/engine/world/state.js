@@ -44,6 +44,7 @@ export const game = {
   farmPlots: [],
   farmZones: [],        // { x, y, crop } tiles the player marked for farmers to plant, see tendFarmZones()
   blightZones: [],      // { x, y, done, clearing } tiles the player marked for blight, see necromancy()
+  battleBlight: false,  // (#326) a battle fought on blighted ground (its settings)
   naturalRocks: [],
   waterTiles: [],
   desertTiles: [],

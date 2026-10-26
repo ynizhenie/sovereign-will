@@ -11,6 +11,7 @@ import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engin
 import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy, getEnemyDef, presetEnemyKey } from '../../domains/conflict/waves/index.js';
+import { setStandingWeather, timeOfPhase } from '../../domains/world/index.js';
 import { closeOverlays } from '../../ui/index.js';
 import { createSettler, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
@@ -21,8 +22,8 @@ import { renderBattlePanel } from './battle.panel.js';
 export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, banner: boolean, field: string,
- *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean,
+ *   shield: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string, blight: boolean,
+ *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null, music: string }} */
@@ -34,7 +35,11 @@ export const battle = {
   armor: false,       // colony units placed next get armour / a shield (melee only)
   shield: false,
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
+  torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   field: 'glade',     // glade / desert: what the battle is fought on
+  time: 'day',        // (#326) morning / day / evening / night: how it looks (it stands still; nobody sleeps by it)
+  weather: 'clear',   // (#326) clear / rain / fog / storm, all through the fight
+  blight: false,      // (#326) the field blighted, as the undead's ground in Endless
   lineup: [],         // { presetId, x, y, armor, shield, banner } or { building, x, y }: what's placed, kept between fights
   winner: null,       // green / red / draw
   resultTimer: 0,
@@ -56,6 +61,16 @@ export function battleArmor(armor) {
 export function enemyCanShield(id) {
   const def = GAME_CONFIG.enemies[id];
   return !!def && def.type !== 'big' && !def.ranged && !def.healer && !def.necromancer && !def.pet;
+}
+
+// (#326) It's dark: torches lit (in hands, on posts)
+const isDark = () => battle.time === 'evening' || battle.time === 'night';
+
+// (#326) The battle's time of day, weather and ground as its settings say
+export function applyBattleLook() {
+  game.dayTime = timeOfPhase(battle.time);
+  setStandingWeather(battle.weather);
+  game.battleBlight = battle.blight;
 }
 
 // The midline: left of it is green, right of it red
@@ -84,6 +99,7 @@ export function makeBattleUnit(entry) {
     if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (entry.shield && enemyCanShield(enemyKey)) en.shield = true;
     if (entry.banner && en.type === 'normal' && !def.pet && !def.healer && !def.necromancer) en.captain = true;
+    if (entry.torch && !def.pet && isDark()) en.torch = true; // (#326)
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
     return;
@@ -100,6 +116,7 @@ export function makeBattleUnit(entry) {
   if (armour) putOnGear(s, armour.id);
   if (entry.shield && canUseShield(s) && s.role !== 'pet') s.shield = true;
   if (entry.banner && (s.role === 'soldier' || s.role === 'archer')) s.banner = true; // (#279) the player gave it
+  if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
   game.settlers.push(s);
 }
 
@@ -119,6 +136,7 @@ export function setUpBattleField() {
   game.settlers = [];
   townHall.x = -10000; townHall.y = -10000; townHall.hp = townHall.maxHp = 1e9;
   game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
+  applyBattleLook();
   invalidateAllPaths();
   camera.x = game.WORLD_WIDTH / 2; camera.y = game.WORLD_HEIGHT / 2; setZoom(0); clampCamera();
 }
@@ -132,6 +150,8 @@ export function resetBattleUnits() {
       const b = /** @type {any} */ (createBuildingBlueprint(entry.building, entry.x, entry.y));
       delete b.progress;
       delete b.maxProgress;
+      if (battleSide(entry.x) === 'red') b.side = 'red'; // (#326) the red side's: it keeps off its spikes, the green breaks it
+      if (b.type === 'torch' && isDark()) b.lit = true;
       game.buildings.push(b);
     } else {
       makeBattleUnit(entry);
@@ -179,7 +199,7 @@ export function battleTap(x, y) {
   } else if (battle.category === 'buildings') {
     battle.lineup.push({ building: battle.building, x: cx, y: cy });
   } else {
-    battle.lineup.push({ presetId: battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner }); // (an enemy too, #279)
+    battle.lineup.push({ presetId: battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
   }
   resetBattleUnits();
 }
@@ -196,6 +216,15 @@ export function setBattleField(field) {
   if (battle.phase !== 'setup' || field === battle.field || (field !== 'glade' && field !== 'desert')) return;
   battle.field = field;
   setUpBattleField();
+  resetBattleUnits();
+}
+
+// (#326) The battle's time of day, weather or ground picked: its look at once, the line-up made again (a torch
+// lit or not)
+export function setBattleLook(key, value) {
+  if (battle.phase !== 'setup') return;
+  battle[key] = value;
+  applyBattleLook();
   resetBattleUnits();
 }
 
