@@ -170,6 +170,12 @@ export const ICONS = {
     icRing(c, '#5dade2', 3, 16, 16, 10, Math.PI * 0.1, Math.PI * 0.9);
     icFill(c, '#5dade2', [[10, 28], [5, 21], [13, 21]]);
   },
+  // (#326) a path: worn earth with a few pebbles
+  path: c => {
+    icFill(c, '#8a6f45', [[2, 22], [10, 8], [20, 6], [30, 10], [22, 26], [8, 28]]);
+    icFill(c, '#c4aa7a', [[5, 21], [12, 11], [20, 9], [27, 12], [21, 23], [9, 25]]);
+    for (const [x, y] of [[11, 18], [18, 14], [22, 19], [15, 22]]) icCircle(c, '#9a8660', x, y, 1.6);
+  },
   // (#326) the music player's stop, with the play that is (a triangle)
   stop: c => { icRound(c, '#ecf0f1', 8, 8, 16, 16, 2); },
   gear: c => {
