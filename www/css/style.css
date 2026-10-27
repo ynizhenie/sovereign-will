@@ -838,8 +838,7 @@ body[data-hud="endless"] .top-wave, body[data-hud="battle"] .top-battle, body[da
 .battle-score .red { color: #e74c3c; }
 /* (#326) the battle's music: a row per faction, its name then its tracks */
 #battle-music .battle-music-row { flex-wrap: wrap; justify-content: center; align-items: center; }
-#battle-music .battle-music-row .sub-tab { flex: 0 0 auto; min-width: 34px; padding: 4px 6px; }
-.battle-music-faction { font-size: 12px; opacity: 0.8; min-width: 64px; text-align: right; margin-right: 4px; }
+#battle-music .battle-music-row .sub-tab { flex: 0 0 auto; padding: 4px 10px; }
 /* (#326) a side's broom: on its colour */
 .top-battle .battle-clear { min-height: 0; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.45); }

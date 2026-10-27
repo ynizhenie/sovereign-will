@@ -27,7 +27,7 @@ test('sound starts with the first tap; menu music in the menu, the ambient in En
     return { calm: one(calm, own.ambient), during: one(during, theirs.battle), tentsLeft: JSON.stringify(tentsLeft) === JSON.stringify(during),
       after: one(after, own.ambient), another: Object.keys(after)[0] !== Object.keys(calm)[0], layers: Object.keys(audio.layers).length };
   });
-  expect(r).toEqual({ calm: true, during: true, tentsLeft: true, after: true, another: true, layers: 61 }); // (the menu's and every faction's five and five, by day and by night, #252)
+  expect(r).toEqual({ calm: true, during: true, tentsLeft: true, after: true, another: true, layers: 70 }); // (the menu's, every faction's five and five by day and by night, #252, and the Battles' own nine, #326)
   await page.waitForTimeout(300);
   expect(errors).toEqual([]);
 });
