@@ -20,6 +20,30 @@ export function storeSavedMaps(maps) {
   return saveData('maps', maps);
 }
 
+// (#326) Tiles of one kind as runs along a row, [row, first column, how many]: a continent's sea is a hundred thousand tiles, a
+// run each many (a map saved with the tiles one by one, `water` and `sand`, loads as ever)
+function toRuns(list) {
+  const rows = new Map();
+  for (const o of list) {
+    const gx = Math.floor(o.x / TILE_SIZE), gy = Math.floor(o.y / TILE_SIZE);
+    if (!rows.has(gy)) rows.set(gy, []);
+    rows.get(gy).push(gx);
+  }
+  const runs = [];
+  for (const [gy, xs] of [...rows].sort((a, b) => a[0] - b[0])) {
+    xs.sort((a, b) => a - b);
+    let start = xs[0], prev = xs[0];
+    for (const gx of xs.slice(1)) {
+      if (gx === prev + 1) { prev = gx; continue; }
+      if (gx === prev) continue;
+      runs.push([gy, start, prev - start + 1]); start = prev = gx;
+    }
+    runs.push([gy, start, prev - start + 1]);
+  }
+  return runs;
+}
+const fromRuns = runs => runs.flatMap(([gy, gx, n]) => Array.from({ length: n }, (_, k) => [gx + k, gy]));
+
 // The world as plain data: tiles by grid position
 export function serializeMap(name) {
   const tile = o => [Math.floor(o.x / TILE_SIZE), Math.floor(o.y / TILE_SIZE)];
@@ -31,8 +55,8 @@ export function serializeMap(name) {
   return {
     name, cols: game.COLS, rows: game.ROWS, faction: editor.faction, startTime: editor.startTime,
     hall: [townHall.x, townHall.y],
-    water: game.waterTiles.map(tile),
-    sand: game.desertTiles.map(tile),
+    waterRuns: toRuns(game.waterTiles),
+    sandRuns: toRuns(game.desertTiles),
     resources,
     apples: game.trees.filter(tr => tr.apple).map(tile),
     spawners: game.naturalRocks.filter(r => r.oreSpawner).map(r => [...tile(r), r.oreSpawner]),
@@ -48,8 +72,8 @@ export function loadCustomMap(map) {
   game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = [];
   const at = ([gx, gy]) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   if (map.hall) { townHall.x = map.hall[0]; townHall.y = map.hall[1]; }
-  for (const t of map.water || []) game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
-  for (const t of map.sand || []) game.desertTiles.push(at(t));
+  for (const t of map.waterRuns ? fromRuns(map.waterRuns) : map.water || []) game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
+  for (const t of map.sandRuns ? fromRuns(map.sandRuns) : map.sand || []) game.desertTiles.push(at(t));
   for (const [kind, tiles] of Object.entries(map.resources || {})) {
     if (!GAME_CONFIG.mapResources[kind]) continue;
     for (const t of tiles) { const p = at(t); addMapResource(kind, p.x, p.y); }

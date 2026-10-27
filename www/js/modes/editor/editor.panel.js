@@ -8,7 +8,7 @@ import { onTap, setDragPainter, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
-import { EDITOR_TOOLS, clearEditorMap, editor, editorPaint, playEditorMap, redoEditor, resizeEditorMap, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
+import { EDITOR_TOOLS, clearEditorMap, editor, editorPaint, redoEditor, resizeEditorMap, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
 
 export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
@@ -81,7 +81,7 @@ export function renderEditorMapList() {
   });
 }
 
-export let editorNewSize = 40;
+export let editorNewSize = 256; // (#326: Endless's sizes)
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEditorPanel() {
@@ -109,7 +109,6 @@ export function initEditorPanel() {
   onTap(document.getElementById('editor-drag'), () => { editor.dragPaint = !editor.dragPaint; renderEditorPanel(); });
   onTap(document.getElementById('editor-undo'), undoEditor);
   onTap(document.getElementById('editor-redo'), redoEditor);
-  onTap(document.getElementById('editor-play'), playEditorMap);
   onTap(document.getElementById('editor-clear'), clearEditorMap);
   document.querySelectorAll('[data-start-time]').forEach(b => onTap(b, () => { editor.startTime = /** @type {string} */ (b.dataset.startTime); renderEditorPanel(); })); // (#257)
   document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
