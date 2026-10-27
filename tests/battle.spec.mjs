@@ -126,17 +126,18 @@ test('the desert field keeps the midline and the green and red halves of the gla
   await openBattle(page);
   const r = await page.evaluate(() => {
     setBattleField('desert');
-    render();
+    const frames = () => { for (let i = 0; i < 24; i++) render(); }; // (#322: the terrain's pictures are painted a piece or two a frame)
+    frames();
     const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
     const outsideX = Math.round(x + (20 - camera.x) * getViewScale()); // (the border beyond the red line)
     const sample = (px, py) => [...ctx.getImageData(px, py, 1, 1).data];
     const on = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
     const phase = battle.phase;
     battle.phase = 'fight'; // the same frame without the placing overlay
-    render();
+    frames();
     const off = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
     battle.phase = phase;
-    render();
+    frames();
     return { on, off };
   });
   // the white midline is drawn over the sand
