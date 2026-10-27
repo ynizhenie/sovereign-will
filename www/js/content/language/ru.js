@@ -804,6 +804,7 @@ export const ruLanguage = {
       'activity.healAtTent': 'Лечится',
       'activity.treatWounded': 'Лечит раненых',
       'activity.necromancy': 'Колдует',
+      'activity.followMaster': 'Следует за хозяином',
       'activity.holdPost': 'На посту',
       'activity.fightEnemies': 'Сражается',
       'activity.breakOutOfSealedBase': 'Пробивает выход',

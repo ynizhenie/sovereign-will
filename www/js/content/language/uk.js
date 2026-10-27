@@ -804,6 +804,7 @@ export const ukLanguage = {
       'activity.healAtTent': 'Лікується',
       'activity.treatWounded': 'Лікує поранених',
       'activity.necromancy': 'Чаклує',
+      'activity.followMaster': 'Слідує за господарем',
       'activity.holdPost': 'На посту',
       'activity.fightEnemies': 'Б\'ється',
       'activity.breakOutOfSealedBase': 'Пробиває вихід',

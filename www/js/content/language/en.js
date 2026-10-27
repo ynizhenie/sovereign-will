@@ -804,6 +804,7 @@ export const enLanguage = {
       'activity.healAtTent': 'Healing',
       'activity.treatWounded': 'Treating the wounded',
       'activity.necromancy': 'Necromancy',
+      'activity.followMaster': 'Follows its master',
       'activity.holdPost': 'On guard',
       'activity.fightEnemies': 'Fighting',
       'activity.breakOutOfSealedBase': 'Breaking a way out',
