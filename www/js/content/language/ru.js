@@ -666,6 +666,7 @@ export const ruLanguage = {
       'battle.cat.buildings': 'Постройки',
       'battle.armor': '[[armor]] Броня',
       'battle.shield': '[[shield]] Щит',
+      'battle.big': 'Большой',
       'battle.clearGreen': 'Убрать всех слева',
       'battle.clearRed': 'Убрать всех справа',
       'battle.fight': '[[swords]] В бой!',

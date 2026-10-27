@@ -666,6 +666,7 @@ export const ukLanguage = {
       'battle.cat.buildings': 'Будівлі',
       'battle.armor': '[[armor]] Броня',
       'battle.shield': '[[shield]] Щит',
+      'battle.big': 'Великий',
       'battle.clearGreen': 'Прибрати всіх зліва',
       'battle.clearRed': 'Прибрати всіх справа',
       'battle.fight': '[[swords]] У бій!',

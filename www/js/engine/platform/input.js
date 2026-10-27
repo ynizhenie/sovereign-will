@@ -3,7 +3,7 @@
 
 import { canvas, getViewScale } from './canvas.js';
 import { camera, clampCamera, getCanvasScreenCoords, setZoom, updateInputPos } from './camera.js';
-import { getPossessed, unpossess } from '../../domains/colony/settlers/index.js';
+import { unpossess } from '../../domains/colony/settlers/index.js';
 import { togglePause } from '../../app/index.js';
 import { isCameraLocked } from '../../modes/endless/index.js';
 
@@ -112,11 +112,7 @@ function bindMouse() {
 function bindTouch() {
   canvas.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
-      if (typeof getPossessed === 'function' && getPossessed()) {
-        isTouchDragging = false;
-        return;
-      }
-
+      // (#326: a possessed unit is ordered by taps like any other: no early return here, which left isTap false after a pinch)
       const touch = e.touches[0];
       isTouchDragging = true;
       isTap = true;

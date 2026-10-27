@@ -24,9 +24,9 @@ export function updateBlightCache() {
   const cacheKey = `${game.pathTick}|${sides.player.faction}|${game.gameMode}|${game.buildings.length}|${game.blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}|${!!game.battleBlight}`;
   if (blightCache.key === cacheKey) return blightCache;
   const base = new Set();
-  // (#326) a battle on blighted ground (its settings): all of the field, working as in Endless (the red side slowed on it)
+  // (#326) a battle on blighted ground (its settings): all of the field, the strip outside the red line too, working as in Endless (the red side slowed on it)
   if (game.gameMode === 'battle' && game.battleBlight) {
-    for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) if (!isBorderZone(gx, gy)) base.add(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`);
+    for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) base.add(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`);
   }
   if (sides.player.faction === 'undead' && game.gameMode === 'endless') {
     const b = GAME_CONFIG.blight;

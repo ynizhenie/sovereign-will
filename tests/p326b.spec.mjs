@@ -56,17 +56,18 @@ test('Battles: off the red strip but for one fleeing; ten colours, the winner na
     s.panic = true; s.x = 5; s.y = 5; clampEntityToBounds(s);
     const fled = [s.x, s.y];
     battle.winner = 'red'; battle.phase = 'result'; battle.resultTimer = 99; renderBattlePanel();
-    const won = document.getElementById('battle-phase-label').textContent;
+    const won = battleWinnerText(); const top = document.getElementById('battle-phase-label').textContent;
     battle.phase = 'setup'; renderBattlePanel();
-    return { kept, fled, won, colors: GAME_CONFIG.factionColors.length, next: freeColor('#e8572a', '#e8572a'), broom: getComputedStyle(document.getElementById('battle-clear-red')).backgroundColor };
+    return { kept, fled, won, top, colors: GAME_CONFIG.factionColors.length, next: freeColor('#e8572a', '#e8572a'), broom: getComputedStyle(document.getElementById('battle-clear-red')).backgroundColor };
     function at(gx, gy) { return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 }; }
   });
   expect(r.kept[0]).toBeGreaterThanOrEqual(60 + 11);
   expect(r.fled[0]).toBeLessThan(60);
-  expect(r.won).toBe('Победили оранжевые!');
+  expect(r.won).toBe('Победили красные!'); // (the red side's colour by default; said in the field's middle, not in the top bar)
+  expect(r.top).toBe('Расстановка');
   expect(r.colors).toBe(10);
   expect(r.next).toBe('#c0392b'); // (the next one along the wheel, not the first free)
-  expect(r.broom).toBe('rgb(232, 87, 42)');
+  expect(r.broom).toBe('rgb(192, 57, 43)');
   await page.click('[data-dock="battle-settings"]');
   await page.click('#battle-music [data-music="demons_drums"]');
   expect(await page.evaluate(() => battle.music)).toBe('demons_drums');

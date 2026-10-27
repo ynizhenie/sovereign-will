@@ -11,7 +11,7 @@
 //  - the farm: a farmer with a backpack, a hoe and a watering can plants a wheat field, waters it, brings
 //    it dung from the compost heap.
 // No waves come and nobody gets hungry. The world is made to fit the screen: its centre is the screen's,
-// with the hall and what's around it beside the menu's panel, not behind it. The menu can be put away to
+// with the hall and what's around it laid out over all of the screen (the panel is over it). The menu can be put away to
 // watch, and the scene changed there (#256).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
@@ -44,17 +44,6 @@ export function isMenuWorld() {
   return game.gameMode === 'menu';
 }
 
-// The menu's panel on the screen (CSS px), with the game's title over it when it shows, or null
-export function menuPanelRect() {
-  const panel = [...document.querySelectorAll('#main-menu .main-menu-content')].find(p => !p.hidden);
-  if (!panel) return null;
-  const r = panel.getBoundingClientRect();
-  const title = document.querySelector('#menu-title span'); // the letters, not the whole strip they're in
-  const tr = title && title.offsetParent ? title.getBoundingClientRect() : null;
-  if (!tr) return r;
-  return { left: Math.min(r.left, tr.left), top: Math.min(r.top, tr.top), right: Math.max(r.right, tr.right), bottom: Math.max(r.bottom, tr.bottom) };
-}
-
 // Make the world and show it behind the menu: the scene it had (the screen's size changed), `scene`, or a new
 // one at random
 export function enterMenuWorld(scene = '') {
@@ -75,10 +64,7 @@ export function enterMenuWorld(scene = '') {
     x: centre.x + (cx - view.left - view.width / 2) / MENU_WORLD.cssScale,
     y: centre.y + (cy - view.top - view.height / 2) / MENU_WORLD.cssScale
   });
-  const panel = menuPanelRect();
-  // (with no panel showing, p0 and p1 are never read)
-  const p0 = panel ? toWorld(panel.left, panel.top) : centre, p1 = panel ? toWorld(panel.right, panel.bottom) : centre;
-  const behindPanel = (x, y) => !!panel && x > p0.x - TILE_SIZE && x < p1.x + TILE_SIZE && y > p0.y - TILE_SIZE && y < p1.y + TILE_SIZE;
+  // (#326) laid out over the whole screen, the menu's panel or not: the same at launch as by a hand-changed scene
   const v0 = toWorld(view.left, view.top), v1 = toWorld(view.right, view.bottom);
 
   // (#326) the hall in the middle of the screen, always (it went beside the panel, but in the middle when the
@@ -88,7 +74,7 @@ export function enterMenuWorld(scene = '') {
   const hg = [hall[0] / TILE_SIZE, hall[1] / TILE_SIZE]; // the hall stands on tiles hg-1..hg
 
   const taken = new Set();
-  const tileFree = (gx, gy) => !taken.has(`${gx},${gy}`) && !behindPanel(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15) &&
+  const tileFree = (gx, gy) => !taken.has(`${gx},${gy}`) &&
     gx * TILE_SIZE >= v0.x && (gx + 1) * TILE_SIZE <= v1.x && gy * TILE_SIZE >= v0.y && (gy + 1) * TILE_SIZE <= v1.y;
   // round the hall: nothing within 2 tiles of it
   for (let gy = hg[1] - 3; gy <= hg[1] + 2; gy++) for (let gx = hg[0] - 3; gx <= hg[0] + 2; gx++) taken.add(`${gx},${gy}`);

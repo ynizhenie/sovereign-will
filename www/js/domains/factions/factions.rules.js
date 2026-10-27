@@ -11,7 +11,7 @@ import { loadData, saveData } from '../../engine/platform/index.js';
 
 // the two sides: GAME_CONFIG.factions ids and the colours their units are drawn in
 // (#306) battle: the colours of Battles' two sides, chosen in its settings
-export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#e8572a' }, battle: { green: '#2ecc71', red: '#e8572a' } };
+export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#c0392b' }, battle: { green: '#2ecc71', red: '#c0392b' } };
 
 // in the map editor, the faction the map is made for
 export function getPlayerFaction() {

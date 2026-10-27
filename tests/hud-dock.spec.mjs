@@ -149,7 +149,8 @@ test('battle: a category opens its sheet, picking a unit shows it on the chip; t
   await expect(page.locator('#placing-chip')).toBeVisible(); // what a tap places, from the start
   await page.click('[data-battle-category="units"]');
   await expect(page.locator('#battle-presets')).toBeVisible();
-  await page.click('#battle-presets [data-preset="humans:big_spear"]');
+  await page.click('[data-battle-gear="big"]'); // (#326: a big one by the switch)
+  await page.click('#battle-presets [data-preset="humans:spear"]');
   await expect(page.locator('#sheet-frame')).toBeHidden();
   await expect(page.locator('#placing-what')).toContainText('Богатырь, копьё');
   await expect(page.locator('#placing-close')).toBeHidden(); // a battle always has something picked
