@@ -162,7 +162,7 @@ export const ukLanguage = {
         rod: 'Ловить рибу у позначених місцях; наживка — насіння, черв\'яки з трупів.',
         medbag: 'Медик: у хвилю лікує поранених травами, між хвилями збирає траву.',
         hoe: 'Фермер: садить зони, з лійкою поливає, з рюкзаком удобрює.',
-        necro_staff: 'Некромант: лікує своїх, підіймає трупи, псує позначену землю.'
+        necro_staff: 'Некромант: лікує своїх, підіймає з трупів до трьох зомбі (озброює тим, що лежало поруч), вони тримаються поруч і йдуть, куди він пошле, псує позначену землю.'
       },
       weapons: {
         fist: 'Без зброї.',
@@ -361,7 +361,7 @@ export const ukLanguage = {
       'role.handyman': 'різноробочий',
       'weapon.foreman': '[[warn]] Бригадир не бере зброю: його справа — віддавати накази',
       'possess.noHerbs': '[[warn]] Нема чим лікувати: немає трав',
-      'possess.noRaises': '[[warn]] Сили на підйом скінчилися: спершу до могили',
+      'possess.noRaises': '[[warn]] Сили на підйом скінчилися або вже три зомбі: спершу до могили',
       'activity.captainArms': 'Озброює беззбройних',
       'daytime.clock': '{now}: до {next} {time}',
       'voice.humans.gathered': 'Є!|Ще одна ноша.|Важка трапилась.',
@@ -805,6 +805,7 @@ export const ukLanguage = {
       'activity.healAtTent': 'Лікується',
       'activity.treatWounded': 'Лікує поранених',
       'activity.necromancy': 'Чаклує',
+      'activity.followMaster': 'Слідує за господарем',
       'activity.holdPost': 'На посту',
       'activity.fightEnemies': 'Б\'ється',
       'activity.breakOutOfSealedBase': 'Пробиває вихід',

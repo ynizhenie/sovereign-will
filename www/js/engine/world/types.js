@@ -98,6 +98,8 @@
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
+ * @property {number} [masterId]    (#326) a temporary zombie's necromancer (its id): it keeps by it and goes where it sends it
+ * @property {Object | null} [zombieTarget]  (#326) a necromancer's: the enemy its zombies are sent at
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {number | null} [guardingId]  the gatherer it guards (escortGatherers)
  * @property {Object | null} [dungTarget]  the pile of dung it's going for (cleanDung)

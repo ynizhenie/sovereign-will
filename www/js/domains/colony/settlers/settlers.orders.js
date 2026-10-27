@@ -27,7 +27,7 @@ import { huntBoar } from '../../economy/hunting/index.js';
 import { pickApplesFrom, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { cook } from '../../economy/cooking/index.js';
 import { craftItem } from '../equipment/index.js';
-import { getNecromancy, raiseTemporaryZombie } from '../../factions/undead/index.js';
+import { getNecromancy, raiseTemporaryZombie, zombiesOf } from '../../factions/undead/index.js';
 import { getCorpseHeap } from './settlers.corpses.js';
 import { lightTorches } from './settlers.night.js';
 import { cleanDung } from './settlers.idle.js';
@@ -183,7 +183,7 @@ export const ORDERS = [
     // a necromancer: a corpse tapped, raised (one of its raises)
     kind: 'raise',
     find: (p, near) => (getNecromancy(p) ? game.corpses.find(c => near(c, 18)) : null),
-    check: p => ((p.raisesLeft ?? 1) > 0 ? null : 'possess.noRaises'),
+    check: p => ((p.raisesLeft ?? 1) > 0 && zombiesOf(p).length < (getNecromancy(p)?.maxZombies ?? Infinity) ? null : 'possess.noRaises'),
     step: (s, target, tick) => {
       const necro = getNecromancy(s);
       if (!necro || !game.corpses.includes(target) || (s.raisesLeft ?? necro.raises) <= 0) return false;
@@ -193,7 +193,7 @@ export const ORDERS = [
       s.raiseTimer = (s.raiseTimer || 0) + tick.dt;
       if (s.raiseTimer < necro.raiseSeconds) return true;
       s.raiseTimer = 0; s.raisesLeft = (s.raisesLeft ?? necro.raises) - 1;
-      raiseTemporaryZombie(target);
+      raiseTemporaryZombie(target, s);
       return false;
     }
   },
