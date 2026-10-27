@@ -101,6 +101,8 @@ function tickPathTimers(entity, isEnemy, dt) {
 // rest keep the way they have a tick or two longer
 const ENEMY_SEARCHES_PER_TICK = 4;
 let searches = { tick: -1, count: 0 };
+const SETTLER_SEARCHES_PER_TICK = 10;
+let settlerSearches = { tick: -1, count: 0 };
 
 // A new path when there's none, the target moved, an enemy's path is a second old, and no retry is pending.
 // (#322) An enemy far off minds its target moving only by a share of the way to it
@@ -113,6 +115,13 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
     if (searches.tick !== game.pathTick) searches = { tick: game.pathTick, count: 0 };
     if (searches.count >= ENEMY_SEARCHES_PER_TICK) return;
     searches.count++;
+  }
+  // (#322) and the settlers': a hundred of them all setting off in one tick (the alarm of a wave, a night's end) searched a hundred
+  // ways in it; some a tick or two later (those with a way already keep it a little longer)
+  if (needsPath && canRetryPath && !isEnemy) {
+    if (settlerSearches.tick !== game.pathTick) settlerSearches = { tick: game.pathTick, count: 0 };
+    if (settlerSearches.count >= SETTLER_SEARCHES_PER_TICK) return;
+    settlerSearches.count++;
   }
 
   if (needsPath && canRetryPath) {

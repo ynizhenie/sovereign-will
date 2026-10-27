@@ -26,6 +26,8 @@ export function tileVariantHash(gx, gy) {
 // MAX_CHUNKS of each, the least recently shown dropped first.
 export const CHUNK = 16;
 const MAX_CHUNKS = 96;
+// (#322) and the pictures of a layer kept no more than this many pixels in all (a sharp piece of the terrain is four times a plain one's)
+const MAX_PIXELS = 16e6;
 
 /** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string }} Chunk */
 // layer -> its pictures by "res|cx,cy"
@@ -60,7 +62,9 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
       if (chunk) chunks.delete(key); // (to the end: the most recently shown)
       const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
       const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
-      if ((!chunk || chunk.stamp !== now) && res < 1 && performance.now() - started > PAINT_MS) {
+      // (#322) a new piece is painted for at most PAINT_MS a frame at any size (the first always, so something shows): panning
+      // into a new row of pieces, or zoomed in, is a piece or two a frame, not all of them at once
+      if ((!chunk || chunk.stamp !== now) && performance.now() - started > (res < 1 ? PAINT_MS : PAINT_MS * 2)) {
         if (chunk) { chunks.set(key, chunk); } else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
         if (chunk) ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
         continue;
@@ -79,7 +83,13 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
       ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
     }
   }
-  while (chunks.size > MAX_CHUNKS) chunks.delete(/** @type {string} */ (chunks.keys().next().value));
+  let pixels = 0;
+  for (const c of chunks.values()) pixels += c.canvas.width * c.canvas.height;
+  while (chunks.size > 1 && (chunks.size > MAX_CHUNKS || pixels > MAX_PIXELS)) {
+    const oldest = /** @type {string} */ (chunks.keys().next().value), c = /** @type {Chunk} */ (chunks.get(oldest));
+    pixels -= c.canvas.width * c.canvas.height;
+    chunks.delete(oldest);
+  }
 }
 
 // full-size pictures zoomed in, half zoomed out
@@ -87,6 +97,9 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
 // isn't painted again for every little change of zoom). Zoomed out to the whole map it used to paint and lay
 // down sixteen times the pixels that showed, which was most of what that view cost
 const chunkRes = () => Math.min(1, 2 ** Math.floor(Math.log2(Math.max(getViewScale(), 0.0625))));
+// (#322) The terrain's pieces are laid down at every zoom (what's drawn tile by tile each frame, with its gradients and rounded
+// corners, was most of what a view of lake or desert cost): as fine as the screen shows, up to twice a world unit
+const terrainRes = () => { const s = getViewScale(); return s < 0.7 ? chunkRes() : s >= 1.35 ? 2 : 1; };
 
 // The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
 // shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes
@@ -385,9 +398,8 @@ export function drawMapBorder() {
 // Desert and beach sand
 // (#298) the ground that rarely changes (sand, water, natural rock): zoomed out, where thousands of tiles
 // show, drawn into pictures (#299: in pieces, drawChunks) laid down each frame, a piece painted again only
-// when a tile in it or next to it changes; zoomed in, only the tiles on screen are drawn. Zoomed out it drew
-// every tile every frame: 180 fps down to 70
-const ZOOMED_OUT = 0.75;
+// when a tile in it or next to it changes. (#322: at every zoom now; zoomed in it drew the tiles on screen one by one every
+// frame, gradients and rounded corners each.) Zoomed out it drew every tile every frame: 180 fps down to 70
 let view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity }, cached = false;
 const isRock = r => !r.oreSpawner;
 const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, game.naturalRocks, game.ironOres, game.coalOres];
@@ -438,8 +450,8 @@ const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view
 export function drawSand() {
   // this frame: zoomed out (the pictures), or the tiles on screen (with a tile's margin)
   view = getViewRect(TILE_SIZE);
-  cached = getViewScale() < ZOOMED_OUT && typeof document !== 'undefined';
-  if (cached) { drawChunks('terrain', chunkRes(), terrainStamp, paintTerrain); return; }
+  cached = typeof document !== 'undefined';
+  if (cached) { drawChunks('terrain', terrainRes(), terrainStamp, paintTerrain); return; }
   inView(game.desertTiles, drawDesertTile);
   inView(game.beachTiles, drawDesertTile);
 }
