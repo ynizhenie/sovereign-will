@@ -26,7 +26,7 @@ export const BATTLE_RESULT_SECONDS = 4;
  *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
- *   difficulty: string, auto: boolean, savedDifficulty: string | null, music: string }} */
+ *   difficulty: string, auto: boolean, savedDifficulty: string | null, theme: string }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'units',  // the panel's category
@@ -48,7 +48,7 @@ export const battle = {
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   auto: true,           // (#255) yours fight by themselves; off: they hold, and go where they're told
   savedDifficulty: null, // the Endless choice, back when the battle's left
-  music: ''             // (#326) the fight's music: a battle track (GAME_CONFIG.music), or '' for one at random
+  theme: 'arena'        // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
 };
 
 // (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null

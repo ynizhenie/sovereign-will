@@ -293,5 +293,53 @@ export const musicConfig = {
       bass: { wave: 'sine', gain: 0.13, pattern: [0, null, null, null, 0, null, 1, null], octave: 0, length: 1 },
       drums: { kick: 'X.......', tom: '..x..x.x' },
       extra: { kind: 'chant', chance: 0.06 } },
+
+    // ---- (#326) the Battles' own: a muster while the sides are placed, a clash in the fight, each by day and by night
+    // (battleMusic below; a battle's settings pick whose theme plays: this one, or a faction's)
+    arena_muster: { bpm: 84, chords: [[50, 53, 57], [46, 50, 53], [48, 52, 55], [45, 49, 52]], chordsB: [[43, 46, 50], [45, 49, 52], [46, 50, 53], [45, 49, 52]],
+      pad: { wave: 'sawtooth', gain: 0.03, attack: 0.5, length: 4, filter: 900 },
+      bass: { wave: 'triangle', gain: 0.08, pattern: [0, null, null, null, 7, null, null, null], octave: -12, length: 1.2 },
+      drums: { tom: 'x.......' },
+      lead: { wave: 'triangle', gain: 0.05, chance: 0.08, length: 1.4, scale: [62, 65, 67, 69, 72] } },
+    arena_parade: { bpm: 96, chords: [[53, 57, 60], [48, 52, 55], [50, 53, 57], [46, 50, 53]],
+      pad: { wave: 'sawtooth', gain: 0.03, attack: 0.3, length: 3.6, filter: 1000 },
+      arp: { wave: 'triangle', gain: 0.045, pattern: [0, 2, 1, 2, 0, 2, 1, 2], octave: 12, length: 0.6 },
+      bass: { wave: 'triangle', gain: 0.08, pattern: [0, null, 7, null, 0, null, 7, null], octave: -12, length: 0.7 },
+      drums: { kick: 'x...x...', hat: '..x...x.' } },
+    arena_vigil: { bpm: 60, chords: [[45, 48, 52], [41, 45, 48], [43, 47, 50], [40, 44, 47]], chordsB: [[38, 41, 45], [40, 44, 47], [41, 45, 48], [40, 44, 47]],
+      pad: { wave: 'sine', gain: 0.08, attack: 1.4, length: 4.6 },
+      bass: { wave: 'sine', gain: 0.1, pattern: [0, null, null, null, null, null, null, null], octave: -12, length: 3.6 },
+      drums: { tom: 'x.......' },
+      extra: { kind: 'crickets', chance: 0.02 } },
+    arena_torches: { bpm: 72, chords: [[50, 53, 57], [48, 51, 55], [46, 50, 53], [45, 49, 52]],
+      pad: { wave: 'triangle', gain: 0.05, attack: 0.8, length: 4.2, filter: 800 },
+      lead: { wave: 'sine', gain: 0.045, chance: 0.08, length: 2.2, scale: [69, 72, 74, 76] },
+      extra: { kind: 'crackle', chance: 0.05 } },
+    arena_clash: { bpm: 132, chords: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 56, 59]],
+      pad: { wave: 'sawtooth', gain: 0.03, attack: 0.02, length: 1.6, filter: 1300 },
+      bass: { wave: 'sawtooth', gain: 0.08, notes: [45, 45, 48, 45, 43, 45, 40, 43], length: 0.4, filter: 520 },
+      drums: { kick: 'x...x...', snare: '..x...x.', tom: '.......x', fill: true } },
+    arena_onslaught: { bpm: 144, chords: [[52, 55, 59], [48, 52, 55], [50, 54, 57], [47, 51, 54]],
+      bass: { wave: 'sawtooth', gain: 0.07, pattern: [0, null, 0, 0, 0, null, 0, 0], octave: -12, length: 0.25, filter: 700 },
+      lead: { wave: 'sawtooth', gain: 0.04, chance: 0.25, length: 0.5, filter: 1800, scale: [76, 79, 81, 83, 86] },
+      drums: { kick: 'X.x.X.x.', snare: '..x...xx', hat: 'xxxxxxxx', fill: true } },
+    arena_duel: { bpm: 112, chords: [[50, 53, 57], [49, 52, 56], [50, 53, 57], [53, 56, 60]],
+      pad: { wave: 'sawtooth', gain: 0.035, attack: 0.1, length: 3, filter: 900 },
+      bass: { wave: 'triangle', gain: 0.09, pattern: [0, null, 0, null, 7, null, 5, null], octave: -12, length: 0.5 },
+      drums: { kick: 'x.......', snare: '....x...', tom: '..x..x..' } },
+    arena_moonclash: { bpm: 124, chords: [[45, 48, 52], [41, 45, 48], [43, 47, 50], [40, 44, 47]], chordsB: [[38, 41, 45], [40, 44, 47], [41, 45, 48], [40, 44, 47]],
+      pad: { wave: 'sawtooth', gain: 0.03, attack: 0.1, length: 2, filter: 900 },
+      bass: { wave: 'sawtooth', gain: 0.08, pattern: [0, null, 0, null, 0, 0, 7, null], octave: -12, length: 0.35, filter: 500 },
+      drums: { kick: 'x...x...', snare: '..x...x.', tom: '.......x', fill: true } },
+    arena_nightfall: { bpm: 100, chords: [[38, 45, 50], [37, 44, 49], [38, 44, 50], [39, 46, 51]],
+      pad: { wave: 'sawtooth', gain: 0.035, attack: 0.3, length: 3.6, filter: 650 },
+      bass: { wave: 'sawtooth', gain: 0.08, pattern: [0, null, 0, 1, 0, null, 0, null], octave: -12, length: 0.3, filter: 550 },
+      drums: { kick: 'X..x..x.', snare: '....x...', tom: '......xx' } },
+  },
+
+  // (#326) the Battles' own music, as a faction's: while the sides are placed (ambient), in the fight (battle), by night too
+  battleMusic: {
+    ambient: ['arena_muster', 'arena_parade'], nightAmbient: ['arena_vigil', 'arena_torches'],
+    battle: ['arena_clash', 'arena_onslaught', 'arena_duel'], nightBattle: ['arena_moonclash', 'arena_nightfall']
   }
 };
