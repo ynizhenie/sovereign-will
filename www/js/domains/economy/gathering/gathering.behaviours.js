@@ -127,6 +127,12 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
     const usable = r => !skipped(r) && (!r.priority || r.priority === 0) && isInSafeArea(r.x, r.y) && withinNight(r) &&
       isSafeFromTentAssault(s, r, tick);
     // (#306) from the list of what this gear can work, not from every resource on the base's land
+    // (#322) the one it picked is kept for a third of a second while it's still there and it can still work it: every settler
+    // went through every resource of the base's land every tick to pick, and came to the same one
+    const gear = `${s.role}|${s.tool}|${s.weapon}`;
+    const held = s.pickedRes;
+    if (held && s.pickedGear === gear && game.pathTick >= s.pickedAt && game.pathTick - s.pickedAt < 20 && tick.resourceSet.has(held) && !held.isCarcass && !(held.hp <= 0) &&
+      !(s.focus && s.focus.until > game.pathTick) && usable(held) && canSettlerHarvest(s, held, tick)) return held;
     let availableRes = [];
     for (const r of workableWithGear(s, tick)) if (!getMapResourceDef(tick.resourceKind.get(r)).markOnly && usable(r)) availableRes.push(r);
     // (the carcasses it was the one to bring in, one each, #199)
@@ -152,6 +158,7 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
       const d = getReachDistanceToResource(reachOf(), r);
       if (d < minDist) { minDist = d; assignedRes = r; }
     }
+    s.pickedRes = assignedRes; s.pickedAt = game.pathTick; s.pickedGear = gear;
   }
   return assignedRes;
 }
