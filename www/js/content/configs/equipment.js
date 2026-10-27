@@ -20,7 +20,12 @@ export const equipmentConfig = {
     // the ground the player marks (blightSeconds and blightRot of the stock a tile); it raises a corpse
     // from raiseReach away, a dark thread to it while it does (#203)
     necro_staff: { id: 'necro_staff', icon: 'staff', factions: ['undead'], madeBy: 'hand', cost: { bones: 20, rot: 10 }, family: 'necro', combatDamage: 6,
-      necromancer: { raises: 5, range: 400, raiseReach: 110, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
+      // (#326) up to `maxZombies` of its raised zombies at once, one raise (of `raises`) each, the charges back at a grave;
+      // they keep within leashTiles of it, a necromancer sends them at an enemy within commandTiles of it (else they
+      // guard themselves within guardTiles), and arms one with what lies by the corpse (within armReach px); it goes
+      // for a corpse up to seekRange px off
+      necromancer: { raises: 3, maxZombies: 3, range: 400, seekRange: 900, commandTiles: 10, leashTiles: 4, guardTiles: 3, armReach: 45,
+        raiseReach: 110, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
   },
 
   // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).

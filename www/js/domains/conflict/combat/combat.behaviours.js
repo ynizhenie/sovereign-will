@@ -183,7 +183,7 @@ function restockArrows(s, dt) {
 // Fight the enemy if it's close enough (or it's not a worker): the unarmed shelter at the town hall while
 // there are defenders; the rest walk up and strike (an archer shoots from where it has a clear line).
 // False when there's nothing to fight.
-function engageEnemy(s, tick, targetEnemy, attacker, dt) {
+export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   const shoots = isBowWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, a dagger: melee)
   let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
 
