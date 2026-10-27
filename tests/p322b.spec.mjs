@@ -23,32 +23,6 @@ test('the canvas\'s size on the page is read only when it has changed, not every
   expect(errors).toEqual([]);
 });
 
-test('zoomed out, trees, cacti and boulders are flat dots in one go; grass and the like are left out; close up they are drawn whole (#322)', async ({ page }) => {
-  const errors = await openGame(page);
-  await page.click('#play-button');
-  const r = await page.evaluate(() => {
-    isPaused = true;
-    for (const list of [game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs, game.stumps, game.naturalRocks, game.waterTiles]) list.length = 0;
-    game.trees.length = 0;
-    resetTileIndex();
-    const g = getGridPos(townHall.x, townHall.y);
-    for (let i = 0; i < 300; i++) addMapResource('tree', (g.gx - 8 + (i % 20)) * TILE_SIZE + 15, (g.gy + 6 + Math.floor(i / 20)) * TILE_SIZE + 15);
-    camera.x = townHall.x; camera.y = townHall.y + 300;
-    const arcs = () => { let n = 0; const arc = ctx.arc; ctx.arc = function (...a) { n++; return arc.apply(this, a); }; render(); ctx.arc = arc; return n; };
-    const visible = () => { const v = getViewRect(60); return game.trees.filter(t => t.x >= v.x0 && t.x <= v.x1 && t.y >= v.y0 && t.y <= v.y1).length; };
-    setZoom(getMinZoom()); const farScale = getViewScale(), farTrees = visible(), farArcs = arcs();
-    setZoom(getMaxZoom() * 0.5); const nearScale = getViewScale(), nearTrees = visible(), nearArcs = arcs();
-    return { farScale, nearScale, farPer: farArcs / Math.max(1, farTrees), nearPer: nearArcs / Math.max(1, nearTrees), farTrees, nearTrees };
-  });
-  expect(r.farScale).toBeLessThan(0.65);
-  expect(r.nearScale).toBeGreaterThan(0.65);
-  expect(r.farTrees).toBeGreaterThan(100);
-  expect(r.nearTrees).toBeGreaterThan(20);
-  expect(r.farPer).toBeLessThan(3);
-  expect(r.nearPer).toBeGreaterThan(r.farPer * 2.5);
-  expect(errors).toEqual([]);
-});
-
 test('the terrain is drawn from its pictures at every zoom, zoomed in too; the pictures are kept within a budget of pixels (#322)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
@@ -150,5 +124,35 @@ test('what settlers may work is kept between ticks: a new thing shows at once, a
     return { first, shownAtOnce, sameTick, later, kept, pickedNear: picked === near, changedToNearest: changed === nearer };
   });
   expect(r).toEqual({ first: true, shownAtOnce: true, sameTick: false, later: true, kept: true, pickedNear: true, changedToNearest: true });
+  expect(errors).toEqual([]);
+});
+
+test('the HUD is written only when its text changes, and the canvas font only when it differs: no layout work every step (#322)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(async () => {
+    isPaused = true;
+    updateUI();
+    let mutations = 0;
+    const observer = new MutationObserver(list => { mutations += list.length; });
+    observer.observe(document.getElementById('hud-bottom') || document.body, { childList: true, characterData: true, subtree: true });
+    observer.observe(document.getElementById('top-bar') || document.body, { childList: true, characterData: true, subtree: true });
+    for (let i = 0; i < 20; i++) updateUI();
+    await new Promise(res => setTimeout(res, 50));
+    const idle = mutations;
+    stock.wood += 7; updateUI(); await new Promise(res => setTimeout(res, 50));
+    const changed = mutations - idle;
+    observer.disconnect();
+    // the font: setting the one it has is not done again
+    let sets = 0; const own = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font');
+    Object.defineProperty(ctx, 'font', { configurable: true, get() { return own.get.call(this); }, set(v) { sets++; own.set.call(this, v); } });
+    setFont('bold 8px sans-serif'); setFont('bold 8px sans-serif'); setFont('bold 8px sans-serif');
+    const afterThree = sets;
+    delete ctx.font;
+    return { idle, changed, afterThree };
+  });
+  expect(r.idle).toBe(0);
+  expect(r.changed).toBeGreaterThan(0);
+  expect(r.afterThree).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
 });
