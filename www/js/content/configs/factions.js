@@ -18,7 +18,7 @@ export const factionsConfig = {
     // portalSpawns: its spawners are portals that open anywhere (but not within minPortalTiles of the
     // town hall) and its waves come out of them instead of the map's edge
     // bowUnits: what a kind becomes when it's given a bow (and back when the bow is taken)
-    demons: { id: 'demons', color: '#e8572a', ready: true, units: ['imp', 'demon', 'beast'], upgrades: { imp: 'demon' }, startUnits: 'imp', eats: true,
+    demons: { id: 'demons', color: '#c0392b', ready: true, units: ['imp', 'demon', 'beast'], upgrades: { imp: 'demon' }, startUnits: 'imp', eats: true,
       hall: 'hellgate', spawner: 'portal', portalSpawns: true, minPortalTiles: 8,
       enemies: ['demon_imp', 'demon_imp_sword', 'demon_brute', 'demon_imp_archer', 'demon_beast'], summonEnemy: 'demon_imp',
       music: { ambient: ['demons_embers', 'demons_brimstone', 'demons_abyss', 'demons_ashfall', 'demons_magma'], battle: ['demons_inferno', 'demons_drums', 'demons_hellfire', 'demons_ritual', 'demons_rampage'],

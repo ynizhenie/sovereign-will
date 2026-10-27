@@ -81,9 +81,10 @@ test('allies in a fight stand apart, workers at one thing aren\'t pushed off it;
   await page.click('#play-button');
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
-    // (an open spot: the map's random, a rock there kept them where they were)
-    let at = { x: townHall.x + 200, y: townHall.y };
-    for (let k = 0; k < 40 && [-25, 0, 25].some(dx => collidesWithWall(at.x + dx, at.y, 13)); k++) at = { x: townHall.x + 200 + (k % 8) * 60, y: townHall.y + Math.floor(k / 8) * 60 };
+    // (open ground: the map's random, a tree or a rock there kept them where they were)
+    for (const list of [game.trees, game.cacti, game.boulders, game.naturalRocks, game.waterTiles, game.ironOres, game.coalOres, game.berryBushes]) list.length = 0;
+    resetTileIndex();
+    const at = { x: townHall.x + 200, y: townHall.y };
     const a = makeSettler(1, at.x, at.y), b = makeSettler(2, at.x + 2, at.y);
     separateAllies([a, b], true);
     const workersApart = Math.hypot(a.x - b.x, a.y - b.y);

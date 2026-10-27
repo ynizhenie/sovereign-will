@@ -666,6 +666,7 @@ export const enLanguage = {
       'battle.cat.buildings': 'Buildings',
       'battle.armor': '[[armor]] Armour',
       'battle.shield': '[[shield]] Shield',
+      'battle.big': 'Big',
       'battle.clearGreen': 'Clear the left side',
       'battle.clearRed': 'Clear the right side',
       'battle.fight': '[[swords]] Fight!',

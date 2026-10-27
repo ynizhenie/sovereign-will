@@ -16,13 +16,13 @@ import { closeOverlays } from '../../ui/index.js';
 import { createSettler, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
-import { getBattlePreset } from './battle.roster.js';
+import { bigPresetOf, getBattlePreset } from './battle.roster.js';
 import { renderBattlePanel } from './battle.panel.js';
 
 export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string, blight: boolean,
+ *   shield: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string, blight: boolean,
  *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
@@ -34,6 +34,7 @@ export const battle = {
   building: 'wall_wood',
   armor: false,       // colony units placed next get armour / a shield (melee only)
   shield: false,
+  big: false,         // (#326) the next unit placed is a big one (not a pet, medic, necromancer or archer)
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   field: 'glade',     // glade / desert: what the battle is fought on
@@ -199,7 +200,8 @@ export function battleTap(x, y) {
   } else if (battle.category === 'buildings') {
     battle.lineup.push({ building: battle.building, x: cx, y: cy });
   } else {
-    battle.lineup.push({ presetId: battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
+    const picked = getBattlePreset(battle.preset), big = battle.big && picked ? bigPresetOf(picked) : undefined; // (#326)
+    battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
   }
   resetBattleUnits();
 }

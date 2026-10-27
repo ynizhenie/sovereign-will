@@ -6,7 +6,7 @@ import { game } from '../engine/world/index.js';
 import { openHallCard } from './building-card.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
-import { deselectSettler, dismissSettler, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { deselectSettler, dismissSettler, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, unpossess, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { clearOrders } from '../domains/conflict/combat/index.js';
 import { toggleGiveList } from './hud.js';
 import { t } from '../engine/platform/index.js';
@@ -19,6 +19,7 @@ import { openWorldMap } from './world-map.js';
 export const PAGE_ACTIONS = {
   togglePause: () => togglePause(),
   switchPossession: () => switchPossession(),
+  unpossess: () => unpossess(), // (#326: from the button over the closed card)
   deselectSettler: () => deselectSettler(),
   upgradeToBig: () => upgradeToBig(),
   repairAllBuildings: () => repairAllBuildings(),
