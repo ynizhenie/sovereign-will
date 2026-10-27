@@ -141,30 +141,25 @@ function renderBattleColors() {
   }
 }
 
-// (#326) the fight's music: random, or a faction's battle track, by day (1-5) or by night (moon 1-5)
+// (#326) Whose music: the Battles' own, or a faction's; the game picks the track for the placing and the fight and
+// for the time of day
 function renderBattleMusic() {
   const box = document.getElementById('battle-music');
   if (!box) return;
   box.innerHTML = '';
-  const row = () => { const r = document.createElement('div'); r.className = 'sub-tabs battle-music-row'; box.appendChild(r); return r; };
-  const button = (into, track, html) => {
+  const row = document.createElement('div');
+  row.className = 'sub-tabs battle-music-row';
+  box.appendChild(row);
+  const button = (theme, label) => {
     const b = document.createElement('button');
-    b.className = 'btn sub-tab' + (battle.music === track ? ' on' : '');
-    b.dataset.music = track;
-    b.innerHTML = html;
-    onTap(b, () => { battle.music = track; renderBattlePanel(); });
-    into.appendChild(b);
+    b.className = 'btn sub-tab' + (battle.theme === theme ? ' on' : '');
+    b.dataset.theme = theme;
+    b.textContent = label;
+    onTap(b, () => { battle.theme = theme; renderBattlePanel(); });
+    row.appendChild(b);
   };
-  button(row(), '', escapeHtml(t('battle.musicRandom')));
-  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) {
-    const r = row();
-    const name = document.createElement('span');
-    name.className = 'battle-music-faction';
-    name.textContent = faction.label;
-    r.appendChild(name);
-    (faction.music.battle || []).forEach((track, i) => button(r, track, String(i + 1)));
-    (faction.music.nightBattle || []).forEach((track, i) => button(r, track, `${iconHtml('moon')}${i + 1}`));
-  }
+  button('arena', t('battle.themeArena'));
+  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) button(faction.id, faction.label);
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
