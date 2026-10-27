@@ -38,8 +38,8 @@ export const resourcesConfig = {
   resourceGroups: [
     // factions: only these factions see it (the undead have no food); pinned: on the strip under the top bar
     { id: 'bones', members: ['bones'], factions: ['undead'], pinned: true }, // the undead's own, first
-    { id: 'souls', members: ['souls'], factions: ['undead'], pinned: true },
     { id: 'rot', members: ['rot'], factions: ['undead'] },
+    { id: 'souls', members: ['souls'], factions: ['undead'], pinned: true }, // (#326)
     { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'], pinned: true }, // Food, opening onto what it's made of
     { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food
     { id: 'wood', members: ['wood'], pinned: true },
