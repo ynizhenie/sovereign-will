@@ -9,7 +9,9 @@
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, townHall } from '../../engine/world/index.js';
 import { ctx } from '../../engine/platform/index.js';
+import { getDefinition } from '../../content/configs/index.js';
 import { hasTerritory } from './world.territory.js';
+import { isNight } from './world.daytime.js';
 
 const config = () => GAME_CONFIG.fog;
 
@@ -104,9 +106,18 @@ export function tickFog(dt) {
     box.gx0 = Math.min(box.gx0, g.gx - r); box.gy0 = Math.min(box.gy0, g.gy - r); box.gx1 = Math.max(box.gx1, g.gx + r); box.gy1 = Math.max(box.gy1, g.gy + r);
   };
   const c = config();
-  look(townHall.x, townHall.y, c.hallTiles);
-  for (const b of game.buildings) look(b.x, b.y, b.type === 'watchtower' ? c.towerTiles : c.buildingTiles);
-  for (const s of game.settlers) if (s.hp > 0 && !s.leaving) look(s.x, s.y, c.settlerTiles); // (not one let go, #314)
+  // (#326) less at night, but not by what's lit; a pet sees farther, night or day
+  const k = isNight() ? c.nightShare : 1;
+  look(townHall.x, townHall.y, c.hallTiles * k);
+  for (const b of game.buildings) {
+    const lit = b.type === 'torch' || (b.type === 'campfire' && ((b.fuelLeft || 0) > 0 || (b.burning || 0) > 0));
+    look(b.x, b.y, (b.type === 'watchtower' ? c.towerTiles : c.buildingTiles) * (lit ? 1 : k));
+  }
+  for (const s of game.settlers) {
+    if (s.hp <= 0 || s.leaving) continue; // (not one let go, #314)
+    const pet = (getDefinition('settlerTypes', s.type) || {}).pet;
+    look(s.x, s.y, pet ? c.settlerTiles * c.petShare : c.settlerTiles * (s.torchInHand ? 1 : k));
+  }
   seenBox = box;
   // painted again where it changed: the old box and the new
   paint(Math.min(before.gx0, box.gx0), Math.min(before.gy0, box.gy0), Math.max(before.gx1, box.gx1), Math.max(before.gy1, box.gy1));
