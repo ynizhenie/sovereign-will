@@ -37,6 +37,8 @@ export let screenPixelRatio = 1;
 // frame made the browser lay the page out every frame
 let cssWidth = 0, cssHeight = 0, sizeStale = true, sizedFor = 0;
 export const markCanvasSizeStale = () => { sizeStale = true; };
+// the canvas's size on the page as last read (for the sounds' pan: a sound read it, and so laid the page out, each time)
+export const canvasCssSize = () => ({ w: cssWidth || canvas.clientWidth, h: cssHeight || canvas.clientHeight });
 
 export function fitCanvasToScreen() {
   screenPixelRatio = Math.min(QUALITY_RATIOS[quality.level] || 2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
