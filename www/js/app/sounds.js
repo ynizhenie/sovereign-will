@@ -6,7 +6,7 @@
 // off in the Settings. The audio starts with the first tap or key (browsers allow it only then).
 
 import { game } from '../engine/world/index.js';
-import { audio, camera, canvas, getViewScale, loadSetting, midi, noise, saveSetting, screenPixelRatio, startAudio, t, tone } from '../engine/platform/index.js';
+import { audio, camera, canvas, canvasCssSize, getViewScale, loadSetting, midi, noise, saveSetting, screenPixelRatio, startAudio, t, tone } from '../engine/platform/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle } from '../modes/battle/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
@@ -103,7 +103,7 @@ export const SOUNDS = {
 export function soundPlace(at) {
   if (!at || typeof camera === 'undefined') return { volume: 1, pan: 0 };
   const k = getViewScale() / screenPixelRatio;
-  const halfW = Math.max(1, canvas.clientWidth / 2), halfH = Math.max(1, canvas.clientHeight / 2);
+  const css = canvasCssSize(), halfW = Math.max(1, css.w / 2), halfH = Math.max(1, css.h / 2);
   const dx = (at.x - camera.x) * k / halfW, dy = (at.y - camera.y) * k / halfH;
   const far = Math.max(Math.abs(dx), Math.abs(dy));
   if (far > 1.3) return null;

@@ -16,6 +16,7 @@ import { updateMusic } from './sounds.js';
 export const STEP = 1 / 60;
 
 export const MAX_STEPS_PER_FRAME = 6; // after a long hitch, catch up at most this much instead of freezing
+export const STEP_BUDGET_MS = 9; // (#322) and the steps of a frame take at most about this long (the first is always made)
 
 // the loop's clock: when the last frame was, game time not stepped yet, when the last frame was drawn,
 // and the frame-rate setting (30, 60, or 'display': every screen refresh)
@@ -37,13 +38,17 @@ export function gameLoop(now) {
   loop.stepTime += Math.min(0.25, (now - loop.lastTime) / 1000);
   loop.lastTime = now;
   let steps = 0;
-  while (loop.stepTime >= STEP && steps < MAX_STEPS_PER_FRAME) {
+  const started = performance.now();
+  // (#322) On a slow device the steps owed are not all made in one frame whatever they cost (that left a frame of many long
+  // steps and one drawing, five or six a second): past STEP_BUDGET_MS the frame is drawn, and the game goes a little slow
+  // (the rest of what's owed is let go) instead of the screen going slow
+  while (loop.stepTime >= STEP && steps < MAX_STEPS_PER_FRAME && (steps === 0 || performance.now() - started < STEP_BUDGET_MS)) {
     rememberPositions();
     stepGame(STEP);
     loop.stepTime -= STEP;
     steps++;
   }
-  if (steps === MAX_STEPS_PER_FRAME) loop.stepTime = 0;
+  if (loop.stepTime >= STEP && (steps === MAX_STEPS_PER_FRAME || performance.now() - started >= STEP_BUDGET_MS)) loop.stepTime = 0;
 
   if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
