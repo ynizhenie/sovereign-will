@@ -25,7 +25,7 @@ test('at night a soldier out of the light fetches a crafted torch; without one, 
 });
 
 test('a night wave: some of its enemies carry torches; the town hall, a torch, a portal, a necromancer\'s staff give light (#257)', () => {
-  expect(sim.nightWave({})).toEqual({ someTorches: true, notAll: true, lights: { hall: true, enemyTorch: true, portal: true, staff: true } });
+  expect(sim.nightWave({})).toEqual({ someTorches: true, notAll: true, farTorchesDark: true, lights: { hall: true, enemyTorch: true, portal: true, staff: true } });
 });
 
 test('no firewood at night: a woodcutter stays up to get some, guarded by the soldier on watch; the rest sleep (#257)', () => {

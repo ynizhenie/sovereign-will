@@ -132,6 +132,8 @@
 /**
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
+ * @property {Object} [struckBy]   (#326) the last settler that hit it, and when (struckTick): in the fog it turns on that one
+ * @property {number} [struckTick]
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
