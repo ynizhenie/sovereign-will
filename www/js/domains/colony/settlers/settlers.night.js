@@ -20,8 +20,8 @@ import { playSound, playWorkSound } from '../../../app/index.js';
 
 const config = () => GAME_CONFIG.daytime;
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
-// a faction with firewood needs torches at night (the undead see in the dark)
-export const needsTorches = () => !!GAME_CONFIG.resources.firewood.factions && GAME_CONFIG.resources.firewood.factions.includes(getPlayerFaction().id);
+// a faction with hand torches needs them at night (the undead see in the dark; their torch posts still burn firewood, #326)
+export const needsTorches = () => !!GAME_CONFIG.resources.torches.factions && GAME_CONFIG.resources.torches.factions.includes(getPlayerFaction().id);
 
 // Its watch: the fighters by id, half on in the first half of the night, the other half in the second
 export function onWatch(s) {
@@ -33,7 +33,7 @@ export function onWatch(s) {
 
 // The one up getting firewood for the night (a woodcutter, while a soldier's on watch to guard it)
 export function onFuelDuty(s) {
-  if (!isNight() || !needsTorches() || (stock.firewood || 0) >= 1) return false;
+  if (!isNight() || (stock.firewood || 0) >= 1) return false;
   if (!game.buildings.some(b => b.type === 'torch' || b.type === 'campfire')) return false;
   if (!game.settlers.some(o => onWatch(o))) return false;
   const cutter = game.settlers.filter(o => o.role === 'worker' && getDefinition('tools', o.tool) && getDefinition('tools', o.tool).family === 'axe' && !o.isPossessed).sort((a, b) => a.id - b.id)[0];
@@ -224,18 +224,6 @@ export function lightTorches(s, tick) {
   if (phase !== 'evening' && phase !== 'night') return false;
   const load = s.carrying && s.carrying.forTorch ? s.carrying : null;
   const want = b => b.type === 'torch' && !b.lit && !game.settlers.some(o => o !== s && o.carrying && o.carrying.forTorch === b);
-  // (#326) the undead have torch posts too, lit with no firewood (they keep none): walked to and lit
-  if (!needsTorches()) {
-    const post = s.torchTarget && game.buildings.includes(s.torchTarget) && !s.torchTarget.lit ? s.torchTarget
-      : game.buildings.filter(b => want(b) && !game.settlers.some(o => o !== s && o.torchTarget === b)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
-    if (!post) { s.torchTarget = null; return false; }
-    s.torchTarget = post; s.patrolTarget = null;
-    if (Math.hypot(post.x - s.x, post.y - s.y) > 26) { moveEntityTowards(s, post.x, post.y, s.speed, false, tick.dt); return true; }
-    faceTowards(s, post.x, post.y);
-    post.lit = true; s.torchTarget = null;
-    playSound('ignite', post);
-    return true;
-  }
   if (!load) {
     if (s.carrying || (stock.firewood || 0) < config().postFirewood) return false;
     const post = game.buildings.filter(want).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
