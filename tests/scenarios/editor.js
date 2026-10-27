@@ -53,7 +53,7 @@ Object.assign(window.sim, (() => {
     resetGame(before);
     const after = serializeMap('x');
     leaveEditor();
-    const count = m => Object.values(m.resources).reduce((n, list) => n + list.length, 0) + m.water.length;
+    const count = m => Object.values(m.resources).reduce((n, list) => n + list.length, 0) + m.waterRuns.reduce((n, run) => n + run[2], 0);
     return { same: JSON.stringify(before) === JSON.stringify(after), things: count(before) };
   }
 

@@ -51,7 +51,7 @@ export const EDITOR_TOOLS = [
 ];
 
 // how small and big a map can be made (the same as the Endless custom size)
-export const EDITOR_MIN_TILES = 20, EDITOR_MAX_TILES = 100;
+export const EDITOR_MIN_TILES = 20, EDITOR_MAX_TILES = 512;
 
 export const editor = {
   tool: 'tree',

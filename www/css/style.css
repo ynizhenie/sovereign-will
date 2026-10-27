@@ -586,7 +586,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 .editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
 .editor-toolbar #editor-name { flex: 1; min-width: 0; }
 .editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
-.editor-resize { display: grid; grid-template-columns: auto 36px 36px auto 36px 36px; gap: 4px 8px; align-items: center; font-size: 11px; color: #aeb4c0; }
+.editor-resize { display: grid; grid-template-columns: auto repeat(4, 38px); gap: 4px 6px; /* (#326: a side's +10, +1, -1, -10) */ align-items: center; font-size: 11px; color: #aeb4c0; }
 .editor-resize .btn { min-height: 30px; padding: 0; font-size: 15px; }
 .editor-only { display: none; }
 body[data-hud="editor"] .editor-only { display: inline-flex; }
@@ -668,12 +668,16 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   font-size: 11px;
 }
 .generator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
-.generator-fields h2 {
+.generator-fields h2, .generator-fields h3 {
   font-size: 12px;
   color: #8a91a0;
   text-transform: uppercase;
   margin: 8px 0 2px;
 }
+/* (#326) a kind of map's section: the one this game's size uses lit */
+.generator-fields h2.generator-section { margin-top: 14px; padding: 5px 8px; border-radius: 5px; background: #1c1f26; color: #b5bac5; font-size: 13px; }
+.generator-fields h2.generator-section small { display: block; text-transform: none; font-weight: normal; opacity: 0.75; }
+.generator-fields h2.generator-section.used { background: #2a4a2c; color: #e6f2e6; }
 .generator-field {
   display: flex;
   flex-direction: column;

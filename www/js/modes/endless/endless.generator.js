@@ -1,6 +1,8 @@
-// Map generator settings: every GAME_CONFIG.map value on its own labelled field, a Standard preset
-// and the player's own presets, saved on the device. The values go straight into GAME_CONFIG.map, which
-// the next new game (resetGame -> generateMap) reads.
+// Map generator settings: every GAME_CONFIG.map value on its own labelled field (the small maps'), and (#326) the
+// continent's (maps from GAME_CONFIG.continent.from tiles: the sea round it, how much of the land is mountain, desert,
+// forest and lake, what grows on each biome), a Standard preset and the player's own presets, saved on the device. The
+// values go straight into GAME_CONFIG.map and GAME_CONFIG.continent, which the next new game (resetGame ->
+// generateMap) reads. Which of the two a game uses is by its map's size, said on the screen.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
@@ -9,6 +11,17 @@ import { showMenuScreen } from '../menu/index.js';
 
 // The settings as the game ships them: the Standard preset
 export const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));
+// (#326) the continent's settings that can be changed (what else is in GAME_CONFIG.continent is the generator's own)
+export const CONTINENT_SHARES = { margin: 0.2, mountains: 0.6, desert: 0.6, forest: 0.8, lakes: 0.2 }; // key: its most (a share of the map or of the land)
+export const CONTINENT_BIOMES = ['grassland', 'forest', 'desert', 'foothills', 'beach'];
+const continentSettings = () => ({ ...Object.fromEntries(Object.keys(CONTINENT_SHARES).map(k => [k, GAME_CONFIG.continent[k]])), startCoast: GAME_CONFIG.continent.startCoast, grow: GAME_CONFIG.continent.grow });
+export const STANDARD_CONTINENT_SETTINGS = JSON.parse(JSON.stringify(continentSettings()));
+// Whether a game on the map size picked in the menu is made as a continent
+export function usesContinent() {
+  const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
+  const size = picked && picked.dataset.mapSize !== 'custom' ? Number(picked.dataset.mapSize) : Math.min(Number((/** @type {HTMLInputElement | null} */ (document.getElementById('map-cols')) || { value: 0 }).value) || 0, Number((/** @type {HTMLInputElement | null} */ (document.getElementById('map-rows')) || { value: 0 }).value) || 0);
+  return size >= GAME_CONFIG.continent.from;
+}
 // Fields in groups; a GAME_CONFIG.map value missing here still gets a field, under "other"
 /** @type {[string, string[]][]} */
 export const GENERATOR_GROUPS = [
@@ -36,18 +49,85 @@ export function cleanValue(key, raw) {
 export function renderGeneratorFields() {
   const container = document.getElementById('generator-fields');
   container.innerHTML = '';
+  const continent = usesContinent();
+  const from = GAME_CONFIG.continent.from;
+  // each kind of map in a section of its own; the one this game's map size uses first, and said so
+  const sections = [
+    { id: 'classic', title: t('gen.section.classic', { n: from }), used: !continent, render: () => renderClassicFields(container) },
+    { id: 'continent', title: t('gen.section.continent', { n: from }), used: continent, render: () => renderContinentFields(container) }
+  ].sort((x, y) => Number(y.used) - Number(x.used));
+  for (const section of sections) {
+    const heading = document.createElement('h2');
+    heading.className = 'generator-section' + (section.used ? ' used' : '');
+    heading.innerHTML = `${escapeText(section.title)} <small>${escapeText(t(section.used ? 'gen.used' : 'gen.notUsed'))}</small>`;
+    container.appendChild(heading);
+    section.render();
+  }
+}
+const escapeText = text => String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderClassicFields(container) {
   const listed = new Set(GENERATOR_GROUPS.flatMap(([, keys]) => keys));
   const other = Object.keys(GAME_CONFIG.map).filter(key => !listed.has(key));
   const groups = [...GENERATOR_GROUPS, ...(other.length ? [/** @type {[string, string[]]} */ (['other', other])] : [])];
   for (const [group, keys] of groups) {
     // each group: a heading, then its fields two to a row
-    const heading = document.createElement('h2');
+    const heading = document.createElement('h3');
     heading.textContent = t(`gen.group.${group}`);
     const grid = document.createElement('div');
     grid.className = 'generator-grid';
     for (const key of keys.filter(k => k in GAME_CONFIG.map)) grid.appendChild(generatorField(key));
     container.append(heading, grid);
   }
+}
+
+// (#326) The continent's: the sea round the land and the base's distance from it, the biomes' shares of the land, and what
+// grows on each biome (as a share of its tiles), each a percent
+function renderContinentFields(container) {
+  const C = GAME_CONFIG.continent;
+  const grid = (title, fields) => {
+    const heading = document.createElement('h3'); heading.textContent = title;
+    const box = document.createElement('div'); box.className = 'generator-grid';
+    fields.forEach(f => box.appendChild(f));
+    container.append(heading, box);
+  };
+  grid(t('gen.group.cland'), [
+    percentField(t('gen.c.margin'), () => C.margin, v => { C.margin = v; }, CONTINENT_SHARES.margin),
+    numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; }, 40)
+  ]);
+  grid(t('gen.group.cbiomes'), ['mountains', 'desert', 'forest', 'lakes'].map(k => percentField(t(`gen.c.${k}`), () => C[k], v => { C[k] = v; }, CONTINENT_SHARES[k])));
+  for (const biome of CONTINENT_BIOMES) {
+    const table = C.grow[biome];
+    grid(t(`gen.group.grow.${biome}`), Object.keys(table).map(kind => percentField(t(`gen.res.${kind}`), () => table[kind], v => {
+      // (a tile grows one thing: the chances of a biome can't add up to more than all its tiles)
+      const others = Object.entries(table).filter(([k]) => k !== kind).reduce((a, [, c]) => a + c, 0);
+      table[kind] = Math.min(v, Math.max(0, 1 - others));
+    }, 0.5, 0.1)));
+  }
+}
+
+// A field of a share, shown and typed as a percent (the value kept as a share, 0..max)
+function percentField(label, get, set, max, step = 1) {
+  return labelledNumber(label, Math.round(get() * 1000) / 10, raw => { const n = Number(raw); if (!Number.isFinite(n)) return; set(Math.max(0, Math.min(max, n / 100))); renderGeneratorFields(); }, 0, Math.round(max * 100), step, '%');
+}
+
+// A field of a whole number
+function numberField(label, get, set, max) {
+  return labelledNumber(label, get(), raw => { const n = Number(raw); if (!Number.isFinite(n)) return; set(Math.max(0, Math.min(max, Math.round(n)))); renderGeneratorFields(); }, 0, max, 1, '');
+}
+
+function labelledNumber(label, value, onChange, min, max, step, unit) {
+  const row = document.createElement('label');
+  row.className = 'generator-field';
+  const name = document.createElement('span'); name.textContent = label;
+  const boxes = document.createElement('span');
+  const input = document.createElement('input');
+  input.type = 'number'; input.min = String(min); input.max = String(max); input.step = String(step); input.value = String(value);
+  input.addEventListener('change', () => onChange(input.value));
+  boxes.appendChild(input);
+  if (unit) boxes.appendChild(document.createTextNode(` ${unit}`));
+  row.append(name, boxes);
+  return row;
 }
 
 // One labelled field: "from - to" for a range, a single box for a number
@@ -95,9 +175,24 @@ export function savePresets(presets) {
   saveData('map-presets', presets);
 }
 
+// A preset is { map, continent } (#326); one saved before is the small maps' settings alone
+export function currentSettings() {
+  return JSON.parse(JSON.stringify({ map: GAME_CONFIG.map, continent: continentSettings() }));
+}
+
 export function applyMapSettings(settings) {
+  const isBoth = !!(settings && settings.map && settings.continent);
+  const map = isBoth ? settings.map : settings, continent = isBoth ? settings.continent : null;
   for (const key of Object.keys(GAME_CONFIG.map)) delete GAME_CONFIG.map[key];
-  Object.assign(GAME_CONFIG.map, JSON.parse(JSON.stringify(STANDARD_MAP_SETTINGS)), JSON.parse(JSON.stringify(settings)));
+  Object.assign(GAME_CONFIG.map, JSON.parse(JSON.stringify(STANDARD_MAP_SETTINGS)), JSON.parse(JSON.stringify(map)));
+  // the continent's: the Standard first, then the preset's (a preset from before keeps the continent as it is: Standard)
+  const wanted = JSON.parse(JSON.stringify(continent || STANDARD_CONTINENT_SETTINGS));
+  for (const key of Object.keys(CONTINENT_SHARES)) GAME_CONFIG.continent[key] = wanted[key] ?? STANDARD_CONTINENT_SETTINGS[key];
+  GAME_CONFIG.continent.startCoast = wanted.startCoast ?? STANDARD_CONTINENT_SETTINGS.startCoast;
+  for (const biome of CONTINENT_BIOMES) {
+    for (const kind of Object.keys(GAME_CONFIG.continent.grow[biome])) delete GAME_CONFIG.continent.grow[biome][kind];
+    Object.assign(GAME_CONFIG.continent.grow[biome], JSON.parse(JSON.stringify(STANDARD_CONTINENT_SETTINGS.grow[biome])), (wanted.grow || {})[biome] || {});
+  }
   renderGeneratorFields();
 }
 
@@ -113,13 +208,13 @@ export function renderPresetList() {
 export function initEndlessGenerator() {
   onTap(document.getElementById('open-generator'), () => { renderGeneratorFields(); renderPresetList(); showMenuScreen('generator'); });
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
-  onTap(document.getElementById('preset-standard'), () => applyMapSettings(STANDARD_MAP_SETTINGS));
+  onTap(document.getElementById('preset-standard'), () => applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS }));
   onTap(document.getElementById('preset-save'), () => {
     const input = document.getElementById('preset-name');
     const name = input.value.trim();
     if (!name) return;
     const presets = loadPresets();
-    presets[name] = JSON.parse(JSON.stringify(GAME_CONFIG.map));
+    presets[name] = currentSettings();
     savePresets(presets);
     input.value = '';
     renderPresetList();
