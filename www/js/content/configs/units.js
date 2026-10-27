@@ -50,8 +50,8 @@ export const unitsConfig = {
       bite: { damage: 7, range: 24, cooldown: 0.45, approach: 18, tentReach: 22 }, orders: ['attack'] },
     beast: { id: 'beast', icon: 'beast', pet: 'beast', hp: 90, speed: 1.3, radius: 10, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { food: 20, stone: 5 },
       bite: { damage: 9, range: 24, cooldown: 0.5, approach: 18, tentReach: 22 }, orders: ['attack', 'devour'] },
-    ghost: { id: 'ghost', icon: 'ghost', pet: 'ghost', hp: 50, speed: 1.6, radius: 8, visualRadius: 10, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { bones: 10, rot: 5 },
-      orders: ['dive'] }
+    ghost: { id: 'ghost', icon: 'ghost', pet: 'ghost', hp: 50, speed: 1.6, radius: 8, visualRadius: 10, population: 0, damageMultiplier: 1, carryLoads: 0, hireCost: { souls: 1 },
+      orders: ['dive'] } // (#326: takes no room in the colony; costs a soul, needs a grave, and at most ghost.limit.base + one a grave)
   },
 
   // (#314) pets: hungry every hungerSeconds (slower asleep), then fed by a settler with one of `foods` from the
@@ -67,7 +67,7 @@ export const unitsConfig = {
     hungerSeconds: 120, hungryPace: 0.7, hungryBite: 0.6, foods: ['rawMeat', 'rawFish', 'cookedMeat', 'cookedFish', 'bread', 'berries', 'apples'],
     followTiles: 1.5, guardTiles: 6, sleepChance: 0.015, sleepSeconds: [20, 40], flushTiles: 8, flushSeconds: 15, devourSeconds: 3,
     // (#326) a big one panics at the bigNeeds'th ghost within withinSeconds
-    ghost: { diveTiles: 5, diveSpeed: 2.6, backSeconds: 30, carry: 3, bigNeeds: 2, withinSeconds: 15 },
+    ghost: { diveTiles: 5, diveSpeed: 2.6, backSeconds: 30, carry: 3, bigNeeds: 2, withinSeconds: 15, limit: { base: 3, perGrave: 1 } },
     relief: { mealsBefore: 2, seconds: 1.5, awayFromBuildings: 4, spotTiles: [3, 8] },
     coats: {
       dog: [['#8d6e63', '#5d4037'], ['#d7ccc8', '#8d6e63'], ['#424242', '#212121'], ['#c8a165', '#8a6a3a'], ['#eeeeee', '#9e9e9e']],

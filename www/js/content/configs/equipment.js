@@ -73,7 +73,10 @@ export const equipmentConfig = {
     // gathers first), and to swap its tool for one from the armory that does it. A soldier with a banner is a
     // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
     whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', craftSeconds: 2, cost: { wood: 2, rope: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45, rangeTiles: 5 } },
-    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } }
+    banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } },
+    // (#326) the undead's soul lantern, in a necromancer's side slot: a soul flies into it for each zombie it raises (no limit to
+    // what it holds); near a grave or the hall (nearTiles) one flies out every releaseSeconds into the stock
+    soul_lantern: { id: 'soul_lantern', icon: 'soul_lantern', factions: ['undead'], madeBy: 'hand', craftSeconds: 3, cost: { bones: 6, rot: 3 }, lantern: { nearTiles: 3, releaseSeconds: 0.6, flySeconds: 0.9 } }
   },
   // what a foreman counts as needed most: the one furthest under its amount here (food only for those who
   // eat; ore with a smelter)

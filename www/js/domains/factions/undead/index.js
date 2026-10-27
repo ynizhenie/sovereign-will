@@ -2,5 +2,5 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { collectBones, corpsesToGraves, followMaster, necromancy, nextAutoBlightTile } from './undead.behaviours.js';
-export { drawBlight, drawRaising, drawStaff } from './undead.draw.js';
-export { enemyNecromancy, fadeClearedBlight, getNecromancy, raiseTemporaryZombie, isBlighted, makeBonesAndRot, raiseOnBlight, toggleBlightZone, updateTemporaryZombies, zombiesOf } from './undead.rules.js';
+export { drawBlight, drawRaising, drawSouls, drawStaff } from './undead.draw.js';
+export { enemyNecromancy, fadeClearedBlight, getNecromancy, raiseTemporaryZombie, isBlighted, makeBonesAndRot, raiseOnBlight, tickLanterns, toggleBlightZone, updateTemporaryZombies, zombiesOf } from './undead.rules.js';

@@ -91,6 +91,7 @@ test('a hellhound eats a corpse by itself when hungry (#314)', async ({ page }) 
 test('a ghost hovers by a grave, can\'t be hurt, flies into an enemy that comes near: it panics, the ghost is gone a while and back by a grave (#314)', async ({ page }) => {
   const errors = await start(page, 'undead');
   const r = await page.evaluate(() => {
+    stock.souls = 1; // (a ghost costs a soul, #326)
     spawnSettler('ghost');
     const ghost = settlers.find(s => s.type === 'ghost');
     const grave = buildings.find(b => b.type === 'grave');

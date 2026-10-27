@@ -9,7 +9,7 @@ import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
 import { tickDaytime, tickFog, tickPaths, tickWeather } from '../domains/world/index.js';
 import { tickMenuScene } from '../modes/menu/index.js';
 import { growCrops } from '../domains/economy/farming/index.js';
-import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, updateTemporaryZombies } from '../domains/factions/undead/index.js';
+import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, tickLanterns, updateTemporaryZombies } from '../domains/factions/undead/index.js';
 import { separateAllies, separateSettlersFromEnemies } from '../engine/movement/index.js';
 import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
 import { keepStoresInStep } from '../domains/colony/storage/index.js';
@@ -73,6 +73,7 @@ export function update(dt) {
   removeDeadEnemies();
   updateCorpses(dt);
   ageStuckArrows(dt);
+  tickLanterns(dt); // (souls out of a necromancer's lantern by a grave or the hall, #326)
 
   keepStoresInStep(); // what lies where, in step with the stock (#248)
   tickPaths(); // ground walked a lot wears into paths (#248)

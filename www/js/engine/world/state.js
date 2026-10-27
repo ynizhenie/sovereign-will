@@ -78,6 +78,7 @@ export const game = {
   enemyTentBlueprints: [],
   projectiles: [],
   stuckArrows: [],
+  soulFx: [],   // (#326) souls flying into a lantern or out of it, only drawn
   foodMix: {},          // how much of stock.food is each GAME_CONFIG.foodKinds kind, see addFood()
   bloodSplats: [],      // { x, y, r, age, kind } blood on the ground (bleed) and footprints (trackFootprints)
   dung: [],             // { x, y, age, by, byLeft } see relieve()

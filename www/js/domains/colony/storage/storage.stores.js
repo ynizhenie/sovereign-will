@@ -168,6 +168,7 @@ export function keepStoresInStep() {
   for (const p of game.piles) count(p.type, p.amount);
   for (const s of game.settlers) if (s.carrying && s.carrying.counted) count(s.carrying.type, s.carrying.amount);
   for (const id of Object.keys(GAME_CONFIG.resources)) {
+    if (GAME_CONFIG.resources[id].intangible) continue; // (#326: souls lie nowhere)
     const have = Math.max(0, Number(stock[id] || 0)), there = lying[id] || 0;
     if (have > there + EPS) storeInto(townHall, id, have - there);
     else if (have < there - EPS) takeOff(id, there - have, storages);

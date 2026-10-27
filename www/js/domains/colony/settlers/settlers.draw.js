@@ -497,6 +497,21 @@ export function drawSideItems(s, front = true) {
   const x = sideOn ? -Math.cos(f) * r * 0.3 : -handX * r * 0.72, y = r * 0.18;
   const farSlot = sideOn || facesAway(s);
   if (can && farSlot !== front) drawWateringCan(x + Math.cos(f) * 2, y + 3, 0.55);
+  // (#326) a necromancer's soul lantern at its hip: a cord, an iron cap and foot, glass that glows pale blue with the souls in it
+  if (s.soul_lantern && farSlot !== front) {
+    const souls = s.lanternSouls || 0, lx = x + Math.cos(f) * 2, ly = y + 2;
+    ctx.save(); ctx.translate(lx, ly);
+    ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, -3.2); ctx.stroke();
+    ctx.fillStyle = '#34495e'; ctx.fillRect(-2.6, -3.6, 5.2, 1.3); ctx.fillRect(-2.6, 3.4, 5.2, 1.2);
+    ctx.fillStyle = souls > 0 ? 'rgba(150, 210, 255, 0.95)' : 'rgba(190, 205, 215, 0.55)'; ctx.fillRect(-2.2, -2.3, 4.4, 5.7);
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 0.7; ctx.strokeRect(-2.2, -2.3, 4.4, 5.7);
+    if (souls > 0) {
+      const glow = ctx.createRadialGradient(0, 0.5, 0.5, 0, 0.5, 9);
+      glow.addColorStop(0, `rgba(190, 230, 255, ${Math.min(0.7, 0.3 + souls * 0.04)})`); glow.addColorStop(1, 'rgba(120, 190, 255, 0)');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0.5, 9, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
   // (#326) a medic at work: its bag at its hip (its hand's on the wound)
   if (isHealing(s) && farSlot !== front) {
     ctx.save(); ctx.translate(x - 3, y - 4);

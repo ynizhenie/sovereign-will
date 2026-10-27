@@ -57,7 +57,7 @@ function setMorale(unit, value, side = sideOf(unit)) {
 
 // (everyone: the armed take it whole too — a wave falling apart)
 export function shakeMorale(unit, amount, side = sideOf(unit), everyone = false) {
-  if (game.gameMode === 'menu' || heldByNecromancer(unit, side)) return;
+  if (game.gameMode === 'menu' || unit.ghostly || heldByNecromancer(unit, side)) return; // (#326: a ghost never panics)
   const armed = !everyone && side !== 'boar' && unit.weapon && unit.weapon !== 'fist';
   setMorale(unit, getMorale(unit) - amount * (armed ? config().armedShare : 1), side);
 }
