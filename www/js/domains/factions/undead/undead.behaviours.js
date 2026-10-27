@@ -5,10 +5,10 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
-import { getBlightKeys, getNecromancy, raiseTemporaryZombie } from './undead.rules.js';
+import { getBlightKeys, getNecromancy, raiseTemporaryZombie, zombiesOf } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
-import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
+import { engageEnemy, getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../index.js';
 
 // The undead's necromancer: heals the wounded around it; in a fight raises corpses (any, a big one into a
@@ -21,16 +21,24 @@ export function necromancy(s, tick) {
   const dt = tick.dt;
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
 
+  // (#326) the zombies it holds (up to maxZombies), sent at the nearest enemy within commandTiles of it
+  const zombies = zombiesOf(s);
+  s.zombieTarget = null;
+  if (zombies.length) {
+    const reach = necro.commandTiles * TILE_SIZE;
+    for (const en of game.enemies) if (en.hp > 0 && dist(en) < reach && (!s.zombieTarget || dist(en) < dist(s.zombieTarget))) s.zombieTarget = en;
+  }
+
   // (#279: no more stepping back from an enemy close by: it stepped back, went to heal one of its own
   // among the enemies, stepped back again... It keeps calmly to its work; hit, it strikes back, strikeBack)
   let corpse = null;
   const zombieType = c => (c.big ? 'big_zombie' : 'zombie');
   // raised in a fight; between waves the corpses give bones instead (collectBones, #199)
-  if (s.raisesLeft > 0 && (tick.isWaveActive || isDefenseAlert())) {
+  if (s.raisesLeft > 0 && zombies.length < necro.maxZombies && (tick.isWaveActive || isDefenseAlert())) {
     // not one with an enemy close to it: it would go for it and step back again (#232)
     const guarded = c => game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - c.x, en.y - c.y) < GAME_CONFIG.morale.necroCorpseClear);
     for (const c of game.corpses) {
-      if (tick.raiseAssignments.has(c) || dist(c) > necro.range || guarded(c)) continue;
+      if (tick.raiseAssignments.has(c) || dist(c) > necro.seekRange || guarded(c)) continue; // (#326: it goes for one far off, not stands)
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
     }
   }
@@ -50,7 +58,7 @@ export function necromancy(s, tick) {
     if (s.raiseTimer >= necro.raiseSeconds) {
       s.raiseTimer = 0;
       s.raisesLeft--;
-      raiseTemporaryZombie(corpse);
+      raiseTemporaryZombie(corpse, s);
     }
     return true;
   };
@@ -120,6 +128,24 @@ export function necromancy(s, tick) {
   // between waves (not with one coming), a grave worked for its bones and rot (#253)
   if (!tick.isWaveActive && !isDefenseAlert() && workGrave(s, tick)) return true;
   return false;
+}
+
+// (#326) A temporary zombie raised by a necromancer: it keeps within leashTiles of it, goes at the enemy it's
+// sent at, and guards itself against one within guardTiles; the necromancer gone, it's free again
+export function followMaster(s, tick) {
+  if (s.masterId === undefined) return false;
+  const master = game.settlers.find(o => o.id === s.masterId && o.hp > 0);
+  const necro = master && getNecromancy(master);
+  if (!master || !necro) { s.masterId = undefined; return false; }
+  const target = master.zombieTarget && master.zombieTarget.hp > 0 && game.enemies.includes(master.zombieTarget) ? master.zombieTarget : null;
+  const guard = game.enemies.find(en => en.hp > 0 && Math.hypot(en.x - s.x, en.y - s.y) < necro.guardTiles * TILE_SIZE);
+  const foe = target || guard;
+  if (foe && engageEnemy(s, tick, foe, foe, tick.dt)) return true;
+  s.patrolTarget = null;
+  const away = Math.hypot(master.x - s.x, master.y - s.y);
+  if (away > necro.leashTiles * TILE_SIZE) moveEntityTowards(s, master.x, master.y, s.speed, false, tick.dt);
+  else if (away > TILE_SIZE) moveEntityTowards(s, master.x, master.y, s.speed * 0.4, false, tick.dt); // (drifting in to it)
+  return true;
 }
 
 // Between waves (no one to fight, a raised zombie would only crumble), a necromancer with nothing else to

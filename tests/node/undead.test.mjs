@@ -7,10 +7,16 @@ test('a zombie given a bow stays a zombie, an archer (#164, #249: no skeletons)'
   expect(await sim.bowMakesSkeleton()).toEqual({ withBow: { type: 'zombie', weapon: 'bow' }, without: { type: 'zombie', weapon: 'fist' } });
 });
 
-test('a necromancer (the staff) raises 5 corpses as temporary zombies, recharges at a grave; they crumble into a little rot and bones on the ground (#164, #253)', async () => {
+test('a necromancer (the staff) holds three raised corpses at most, recharges at a grave, raises three more when those crumble; they take no room, crumble into a little rot and bones on the ground (#164, #253, #326)', async () => {
   expect(await sim.necromancerRaises()).toEqual({
-    afterFirstRound: 5, recharged: true, raised: 7, corpsesLeft: 0, bigZombies: 1, popTaken: 0,
-    crumbled: true, leftOnGround: { piles: 7, rot: 8, bones: 8 }, corpsesFromThem: 0
+    afterFirstRound: 3, recharged: true, held: 3, corpsesKept: 4, ownedBy: true, raised: 3, corpsesLeft: 0, bigZombies: 0, popTaken: 0,
+    crumbled: true, leftOnGround: { piles: 3, rot: 3, bones: 3 }, corpsesFromThem: 0
+  });
+});
+
+test('a necromancer\'s zombies: armed with what lay by the corpse, kept by it, sent at an enemy, three at most (#326)', async () => {
+  expect(await sim.necromancerControl()).toEqual({
+    armed: ['iron_sword', 'iron', 'soldier', true], lootLeft: ['weapons:sword'], keepsBy: true, sent: true, held: 3, corpseKept: 1
   });
 });
 

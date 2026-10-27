@@ -162,7 +162,7 @@ export const ruLanguage = {
         rod: 'Ловит рыбу в отмеченных местах; наживка — семена, черви с трупов.',
         medbag: 'Медик: в волну лечит раненых травами, между волнами собирает траву.',
         hoe: 'Фермер: сажает зоны, с лейкой поливает, с рюкзаком удобряет.',
-        necro_staff: 'Некромант: лечит своих, поднимает трупы, портит отмеченную землю.'
+        necro_staff: 'Некромант: лечит своих, поднимает из трупов до трёх зомби (вооружает тем, что лежало рядом), они держатся рядом и идут, куда он пошлёт, портит отмеченную землю.'
       },
       weapons: {
         fist: 'Без оружия.',
@@ -361,7 +361,7 @@ export const ruLanguage = {
       'role.handyman': 'разнорабочий',
       'weapon.foreman': '[[warn]] Бригадир не берёт оружие: его дело — отдавать приказы',
       'possess.noHerbs': '[[warn]] Нечем лечить: нет трав',
-      'possess.noRaises': '[[warn]] Силы на подъём кончились: сначала к могиле',
+      'possess.noRaises': '[[warn]] Силы на подъём кончились или уже три зомби: сначала к могиле',
       'activity.captainArms': 'Вооружает безоружных',
       'daytime.clock': '{now}: до {next} {time}',
       'voice.humans.gathered': 'Есть!|Ещё одна ноша.|Тяжёлая попалась.',
@@ -805,6 +805,7 @@ export const ruLanguage = {
       'activity.healAtTent': 'Лечится',
       'activity.treatWounded': 'Лечит раненых',
       'activity.necromancy': 'Колдует',
+      'activity.followMaster': 'Следует за хозяином',
       'activity.holdPost': 'На посту',
       'activity.fightEnemies': 'Сражается',
       'activity.breakOutOfSealedBase': 'Пробивает выход',
