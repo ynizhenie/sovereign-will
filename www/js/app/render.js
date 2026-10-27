@@ -16,6 +16,7 @@ import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 import { drawRaidZone } from '../modes/endless/index.js';
+import { mark, startMarks } from './perf.js';
 
 export function render() {
   if (game.loading) return; // (#326) the loading screen's: the last frame stays under it
@@ -26,53 +27,97 @@ export function render() {
   ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
   ctx.scale(viewScale, viewScale);
 
+  startMarks();
   drawGrassGround();
+  mark('drawGrassGround');
   drawPaths(); // (#248)
+  mark('drawPaths');
 
   const terrain = getTileIndex();
   drawSand(); // (the desert's tiles, over the ground they cover)
+  mark('drawSand');
   drawMapBorder(); // (over the sand: the field's edge is the same on a desert as on a glade)
+  mark('drawMapBorder');
   drawRaidZone(); // (an enemy camp's zone beyond the edge, #255)
+  mark('drawRaidZone');
   if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing, over the sand too
+  mark('drawBattleOverlay');
   drawBlight();
+  mark('drawBlight');
   drawFarmZones();
+  mark('drawFarmZones');
   drawBuildGrid();
+  mark('drawBuildGrid');
   drawWater(terrain);
+  mark('drawWater');
   drawRocks(terrain);
+  mark('drawRocks');
   drawTerritory(); // (the base's land, #299)
+  mark('drawTerritory');
   drawWallows(); // (the ground boars dug, on the ground, #326)
+  mark('drawWallows');
   drawSelectedPaths(); // (where the picked ones are going, #326)
+  mark('drawSelectedPaths');
   drawSticksPebblesOre();
+  mark('drawSticksPebblesOre');
   drawLoot();
+  mark('drawLoot');
   drawPiles(); // (#248)
+  mark('drawPiles');
   drawTownHall();
+  mark('drawTownHall');
   drawTrees();
+  mark('drawTrees');
   drawCactiBouldersGrassBushes();
+  mark('drawCactiBouldersGrassBushes');
   drawBoars();
+  mark('drawBoars');
   drawFarmPlots();
+  mark('drawFarmPlots');
   drawPriorityMarks();
+  mark('drawPriorityMarks');
   drawBlueprints();
+  mark('drawBlueprints');
   drawBuildings();
+  mark('drawBuildings');
   drawUpgrades(); // (over what they replace, #261)
+  mark('drawUpgrades');
   drawStoreContents(); // (#248)
+  mark('drawStoreContents');
   drawEnemyTents();
+  mark('drawEnemyTents');
   drawBloodOnGround();
+  mark('drawBloodOnGround');
   drawDung();
+  mark('drawDung');
   drawCorpses();
+  mark('drawCorpses');
   drawEnemyTentSites();
+  mark('drawEnemyTentSites');
   drawSettlers();
+  mark('drawSettlers');
   drawEnemies();
+  mark('drawEnemies');
   drawMoraleMarks();
+  mark('drawMoraleMarks');
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
+  mark('drawAllSpeech');
   drawRaising();
+  mark('drawRaising');
   drawSouls(); // (flying into a necromancer's lantern, out of it into a grave, #326)
+  mark('drawSouls');
   drawProjectiles();
+  mark('drawProjectiles');
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)
+  mark('drawWeatherWorld');
   drawFog(); // (what the colony hasn't seen dark, what it doesn't see now dimmed, #299)
+  mark('drawFog');
 
   ctx.restore();
   drawDarkness(); // (night, with its lights, #257)
+  mark('drawDarkness');
   drawWeatherScreen(); // (rain, lightning, #308)
+  mark('drawWeatherScreen');
 
   if (game.gameMode === 'battle') drawBattleResult();
   // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)

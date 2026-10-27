@@ -271,6 +271,7 @@ export const ruLanguage = {
       'menu.fps': 'Частота кадров:',
       'menu.fpsDisplay': 'Как экран',
       'menu.showFps': 'Показывать FPS:',
+      'menu.showFpsDetail': 'Подробно',
       'menu.sound': 'Звук:',
       'menu.music': 'Музыка:',
       'music.player': 'Плеер музыки:',
