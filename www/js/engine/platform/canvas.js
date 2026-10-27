@@ -33,10 +33,16 @@ export const quality = { level: loadSetting('quality', '') || defaultQuality() }
 // world covers the screen; zooming out to getMinZoom() shows all of it.
 export let screenPixelRatio = 1;
 
+// (#322) The canvas's size on the page is read again only when it has changed (a resize, a rotation, a panel): reading it every
+// frame made the browser lay the page out every frame
+let cssWidth = 0, cssHeight = 0, sizeStale = true, sizedFor = 0;
+export const markCanvasSizeStale = () => { sizeStale = true; };
+
 export function fitCanvasToScreen() {
   screenPixelRatio = Math.min(QUALITY_RATIOS[quality.level] || 2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
-  const width = Math.max(1, Math.round(canvas.clientWidth * screenPixelRatio));
-  const height = Math.max(1, Math.round(canvas.clientHeight * screenPixelRatio));
+  if (sizeStale || sizedFor !== screenPixelRatio) { cssWidth = canvas.clientWidth; cssHeight = canvas.clientHeight; sizeStale = false; sizedFor = screenPixelRatio; }
+  const width = Math.max(1, Math.round(cssWidth * screenPixelRatio));
+  const height = Math.max(1, Math.round(cssHeight * screenPixelRatio));
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
@@ -73,5 +79,6 @@ export function drawProgressBar(cx, cy, share, width = 24) {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initCanvas() {
-  window.addEventListener('resize', fitCanvasToScreen);
+  window.addEventListener('resize', () => { markCanvasSizeStale(); fitCanvasToScreen(); });
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(markCanvasSizeStale).observe(canvas);
 }
