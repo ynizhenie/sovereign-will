@@ -51,16 +51,54 @@ export function tickPaths() {
 // where it runs on or crosses itself it doesn't come out in darker blotches and squares). A darker worn edge, a
 // dry earth body, and a bare middle where it's walked most; each tile's centre nudged a little so the path
 // wanders, a few pebbles on the worn bits
+// (#326) What shows as path: each worn tile (strength by its wear), each the player marked by hand (full), and the tiles
+// the others close in on, filled with the same path: one with three of its four sides on path, with a path on all four
+// diagonals, or the missing corner of a block of four. Worked out again a few times a second
+/** @type {{ key: string, tiles: Map<string, number> }} */
+let shown = { key: '', tiles: new Map() };
+const SIDES = [[1, 0], [-1, 0], [0, 1], [0, -1]], CORNERS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+function pathStrengths() {
+  const key = `${Math.floor(game.pathTick / 10)}|${(game.pathZones || []).length}|${Object.keys(game.paths || {}).length}`;
+  if (shown.key === key) return shown.tiles;
+  const shows = config().shows, fields = fieldTiles(), worn = game.paths || {};
+  /** @type {Map<string, number>} */
+  const base = new Map();
+  for (const [k, w] of Object.entries(worn)) if (w >= shows && !fields.has(k)) base.set(k, Math.min(1, (w - shows) / (1 - shows)));
+  for (const z of game.pathZones || []) {
+    const k = `${Math.floor(z.x / TILE_SIZE)},${Math.floor(z.y / TILE_SIZE)}`;
+    if (!fields.has(k)) base.set(k, 1);
+  }
+  const tiles = new Map(base), candidates = new Set();
+  for (const k of base.keys()) {
+    const [gx, gy] = k.split(',').map(Number);
+    for (const [dx, dy] of [...SIDES, ...CORNERS]) candidates.add(`${gx + dx},${gy + dy}`);
+  }
+  for (const k of candidates) {
+    if (base.has(k) || fields.has(k)) continue;
+    const [gx, gy] = k.split(',').map(Number);
+    const at = (dx, dy) => base.get(`${gx + dx},${gy + dy}`) || 0;
+    const sides = SIDES.map(([dx, dy]) => at(dx, dy)), corners = CORNERS.map(([dx, dy]) => at(dx, dy));
+    const block = CORNERS.some(([dx, dy]) => at(dx, 0) && at(0, dy) && at(dx, dy));
+    if (sides.filter(Boolean).length >= 3 || corners.every(Boolean) || block) {
+      const around = [...sides, ...corners].filter(Boolean);
+      tiles.set(k, Math.max(0.55, around.reduce((a, b) => a + b, 0) / around.length));
+    }
+  }
+  shown = { key, tiles };
+  return tiles;
+}
+
+// Whether (x, y) shows as path (worn, marked, or filled in)
+export const isPathTile = (x, y) => pathStrengths().has(`${Math.floor(x / TILE_SIZE)},${Math.floor(y / TILE_SIZE)}`);
+
 export function drawPaths() {
-  const shows = config().shows, fields = fieldTiles();
-  const worn = game.paths || {};
-  const strength = (gx, gy) => { if (fields.has(`${gx},${gy}`)) return 0; const w = worn[`${gx},${gy}`] || 0; return w < shows ? 0 : Math.min(1, (w - shows) / (1 - shows)); };
+  const strengths = pathStrengths();
+  const strength = (gx, gy) => strengths.get(`${gx},${gy}`) || 0;
   const at = (gx, gy) => { const h = tileVariantHash(gx, gy); return { x: gx * TILE_SIZE + 15 + (h % 7) - 3, y: gy * TILE_SIZE + 15 + ((h >> 3) % 7) - 3 }; };
   const tiles = [];
-  for (const key of Object.keys(worn)) {
+  for (const [key, a] of strengths) {
     const [gx, gy] = key.split(',').map(Number);
-    const a = strength(gx, gy);
-    if (a) tiles.push({ gx, gy, a });
+    tiles.push({ gx, gy, a });
   }
   if (!tiles.length) return;
   // one path of segments to each worn neighbour (right, below; a diagonal only where no corner joins them)

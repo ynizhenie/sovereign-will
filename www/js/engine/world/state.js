@@ -103,6 +103,7 @@ export const game = {
   raidCampWave: 0,      // the waves beaten when the last one opened
   reliefZones: [],      // { x, y } tiles marked to relieve in (#279, world.zones.js)
   postZones: [],        // { x, y } tiles marked for soldiers' posts before a wave
+  pathZones: [],        // (#326) { x, y } tiles the player marked as a path: trodden for good
   scouts: [],           // enemy scouts between waves (#279, waves.scouts.js): not enemies till the player points at one
   scoutClock: 0,
   /** @type {any} */
