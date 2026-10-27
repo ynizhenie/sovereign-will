@@ -28,6 +28,7 @@ export function tickPaths() {
   if (game.pathTick % c.everyTicks === 0) {
     const base = getBaseRadius(), tiles = getTileIndex(), fields = fieldTiles();
     for (const s of game.settlers) {
+      if (s.ghostly) continue; // (#326: a ghost treads no path)
       const was = lastSeen.get(s);
       lastSeen.set(s, { x: s.x, y: s.y });
       if (!was || Math.hypot(s.x - was.x, s.y - was.y) < c.minStep) continue; // (standing: no wear)

@@ -10,7 +10,7 @@ import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.j
 import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
-import { drawBlight, drawRaising } from '../domains/factions/undead/index.js';
+import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
 import { drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
@@ -65,6 +65,7 @@ export function render() {
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
+  drawSouls(); // (flying into a necromancer's lantern, out of it into a grave, #326)
   drawProjectiles();
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)
   drawFog(); // (what the colony hasn't seen dark, what it doesn't see now dimmed, #299)

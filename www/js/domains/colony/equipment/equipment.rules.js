@@ -31,7 +31,9 @@ export const GEAR_RULES = {
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
-  banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' }
+  banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' },
+  // (#326) the soul lantern: a necromancer's (its staff in hand)
+  soul_lantern: { canWear: s => !!(getDefinition('tools', s.tool) || {}).necromancer, first: () => true }
 };
 
 // (#298) armour, of a kind: the gear a unit's `armor` ('iron', 'leather') is, or null

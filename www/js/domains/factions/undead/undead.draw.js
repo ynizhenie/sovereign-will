@@ -44,6 +44,26 @@ export function drawRaising() {
   }
 }
 
+// (#326) Souls in flight: a pale glowing dot with a short tail, from a raised corpse into the lantern at its necromancer's
+// side, or from the lantern into a grave or the hall (only drawn; the count is kept at once, see tickLanterns)
+export function drawSouls() {
+  for (const fx of game.soulFx) {
+    const k = Math.min(1, fx.t / fx.dur), e = k * k * (3 - 2 * k);
+    const to = fx.kind === 'in' ? { x: fx.who.x, y: fx.who.y - 2 } : fx.to;
+    const back = Math.max(0, e - 0.12);
+    const x = fx.x + (to.x - fx.x) * e, y = fx.y + (to.y - fx.y) * e - Math.sin(e * Math.PI) * 14;
+    const px = fx.x + (to.x - fx.x) * back, py = fx.y + (to.y - fx.y) * back - Math.sin(back * Math.PI) * 14;
+    ctx.save();
+    ctx.globalAlpha = 0.85 * (1 - Math.max(0, k - 0.8) * 5);
+    ctx.strokeStyle = 'rgba(170, 220, 255, 0.6)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 7);
+    glow.addColorStop(0, 'rgba(235, 248, 255, 0.95)'); glow.addColorStop(1, 'rgba(120, 190, 255, 0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
 // The undead's blighted ground, and ground marked for it (while the Blight tab is open)
 export function drawBlight() {
   const fading = new Map(game.blightZones.filter(z => z.clearing !== undefined).map(z => [`${z.x},${z.y}`, z.clearing / GAME_CONFIG.blight.clearSeconds]));

@@ -98,6 +98,9 @@
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
+ * @property {boolean} [soul_lantern]  (#326) a necromancer's soul lantern at its side
+ * @property {number} [lanternSouls]  (#326) the souls in it
+ * @property {number} [lanternTimer]  (#326) the time to the next one let out by a grave
  * @property {number} [masterId]    (#326) a temporary zombie's necromancer (its id): it keeps by it and goes where it sends it
  * @property {Object | null} [zombieTarget]  (#326) a necromancer's: the enemy its zombies are sent at
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
@@ -340,6 +343,7 @@
  * @property {Object[]} enemyTents
  * @property {Object[]} enemyTentBlueprints
  * @property {Object[]} projectiles
+ * @property {Object[]} soulFx (#326) { x, y, who | to, t, dur, kind: 'in' | 'out' }: a soul in flight
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} stuckArrows (#326) arrows lying where they stopped
  * @property {Object<string, number>} foodMix
  * @property {Object[]} bloodSplats

@@ -637,6 +637,22 @@ export const ICONS = {
     icLine(c, '#6d4520', 1.2, [[13, 5], [13, 28]]); icLine(c, '#6d4520', 1.2, [[19, 5], [19, 28]]);
     icCircle(c, '#f39c12', 21.5, 17, 1.8);
   },
+  // (#326) a soul: a pale drop with a tail and two dark eyes
+  soul: c => {
+    icFill(c, 'rgba(160, 215, 255, 0.55)', [[16, 3], [24, 14], [22, 25], [16, 29], [10, 25], [8, 14]]);
+    icEllipse(c, '#e8f6ff', 16, 15, 7, 8.5);
+    icCircle(c, '#34495e', 13.5, 14, 1.6); icCircle(c, '#34495e', 18.5, 14, 1.6);
+    icEllipse(c, '#34495e', 16, 19, 1.6, 2.2);
+  },
+  // (#326) the soul lantern: a cord, an iron cap and foot, glass with a soul glowing in it
+  soul_lantern: c => {
+    icLine(c, '#6d4520', 1.5, [[16, 2], [16, 7]]);
+    icRound(c, '#34495e', 9, 6, 14, 4, 1.5);
+    icRound(c, '#aed6f1', 10, 10, 12, 15, 2);
+    icEllipse(c, '#e8f6ff', 16, 17, 3.6, 5); icCircle(c, '#34495e', 14.8, 16, 0.9); icCircle(c, '#34495e', 17.2, 16, 0.9);
+    icRound(c, '#34495e', 9, 24, 14, 4, 1.5);
+    icLine(c, '#34495e', 1.2, [[10, 10], [10, 25]]); icLine(c, '#34495e', 1.2, [[22, 10], [22, 25]]);
+  },
   whistle: c => {
     // a whistle on a cord (#248)
     icRing(c, '#c0392b', 1.5, 12, 11, 7, Math.PI * 0.9, Math.PI * 2.1);

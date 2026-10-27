@@ -20,6 +20,13 @@ test('a necromancer\'s zombies: armed with what lay by the corpse, kept by it, s
   });
 });
 
+test('souls: a soul lantern takes one for each zombie raised and lets them out by a grave, none stored; a ghost costs a soul, needs a grave, takes no room, is limited, never panics (#326)', async () => {
+  expect(await sim.soulsAndGhosts()).toEqual({
+    noGrave: 0, noSoul: 0, hired: { ghosts: 1, souls: 9, popTaken: 0 }, limited: 4, moreWithAGrave: 5, noPanic: true,
+    inLantern: [2, 0], farFromGrave: { stock: 0, kept: 2 }, byTheGrave: { stock: 2, kept: 0 }, notStored: true
+  });
+});
+
 test('a necromancer heals the wounded undead around it (#164)', async () => {
   expect(await sim.necromancerHeals()).toEqual({ healed: true });
 });
