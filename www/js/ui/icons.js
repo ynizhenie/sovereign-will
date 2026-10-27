@@ -170,6 +170,8 @@ export const ICONS = {
     icRing(c, '#5dade2', 3, 16, 16, 10, Math.PI * 0.1, Math.PI * 0.9);
     icFill(c, '#5dade2', [[10, 28], [5, 21], [13, 21]]);
   },
+  // (#326) the music player's stop, with the play that is (a triangle)
+  stop: c => { icRound(c, '#ecf0f1', 8, 8, 16, 16, 2); },
   gear: c => {
     c.fillStyle = '#95a5a6';
     for (let i = 0; i < 8; i++) {
