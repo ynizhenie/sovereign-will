@@ -2,7 +2,7 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { drawGrassGround, drawMapBorder, drawOreVeins, drawRocks, drawSand, drawWater, isGroundCached, tileVariantHash } from './world.draw.js';
-export { drawPaths, tickPaths } from './world.paths.js';
+export { drawPaths, isPathTile, tickPaths } from './world.paths.js';
 export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones.js';
 export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStandingWeather, tickWeather, windSway } from './world.weather.js';
 export { castShadow, drawDarkness, getDarkness, getDayPhase, getLights, getSun, isNight, nightProgress, tickDaytime, timeOfPhase } from './world.daytime.js';
