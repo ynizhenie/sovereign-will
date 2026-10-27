@@ -8,7 +8,7 @@ test('Endless: pick your faction and the enemy\'s, each with a colour the other 
   await expect(page.locator('#faction-player [data-faction="demons"]')).toBeEnabled();
   await expect(page.locator('#faction-player [data-faction="demons"]')).toHaveText('Демоны');
   // the enemy's colour can't be yours, and the other way round
-  await expect(page.locator('#colors-player [data-color="#e8572a"]')).toBeDisabled();
+  await expect(page.locator('#colors-player [data-color="#c0392b"]')).toBeDisabled();
   await expect(page.locator('#colors-enemy [data-color="#e9c46a"]')).toBeDisabled();
   await page.click('#colors-player [data-color="#3498db"]');
   await expect(page.locator('#colors-player [data-color="#3498db"]')).toHaveClass(/active/);

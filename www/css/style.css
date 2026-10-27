@@ -636,10 +636,10 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .faction-option.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
 .faction-option:disabled { opacity: 0.45; cursor: default; }
-.color-options { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.color-options { display: flex; flex-wrap: nowrap; gap: 4px; justify-content: flex-end; }
 [data-sheet="battle-settings"] .color-options { justify-content: center; } /* (#326) */
 [data-sheet="battle-settings"] .color-options + .panel-heading, [data-sheet="battle-settings"] .panel-heading:has(+ .color-options) { text-align: center; }
-.color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #353a46; cursor: pointer; padding: 0; }
+.color-swatch { flex: 1 1 0; min-width: 14px; max-width: 26px; aspect-ratio: 1; border-radius: 50%; border: 2px solid #353a46; cursor: pointer; padding: 0; } /* (#326) all in one line */
 .color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px #46b8da; }
 .color-swatch:disabled { opacity: 0.25; cursor: default; }
 
@@ -1165,3 +1165,6 @@ body.booting > * { visibility: hidden; }
 .loading-bar { height: 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); overflow: hidden; }
 #loading-fill { height: 100%; width: 0; background: linear-gradient(90deg, #c9a24a, #f0d27a); transition: width 0.15s ease-out; }
 body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-hide, body.loading #menu-scene-bar { display: none !important; }
+
+/* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
+#btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }

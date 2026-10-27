@@ -14,12 +14,18 @@ export const BATTLE_CATEGORIES = ['units', 'buildings'];
 export const BATTLE_PRESETS = Object.values(GAME_CONFIG.factions).filter(f => f.ready).flatMap(f => GAME_CONFIG.unitPresets
   .map(p => ({ preset: p, unit: presetUnit(f.id, p) }))
   .filter(({ unit }) => unit)
-  .map(({ preset, unit }) => ({ id: `${f.id}:${preset.id}`, preset: preset.id, ...unit })));
+  .map(({ preset, unit }) => ({ id: `${f.id}:${preset.id}`, preset: preset.id, size: preset.size, ...unit })));
 
 // buildings any faction has, then each faction's own (those with `factions` in GAME_CONFIG.buildings); (#279)
 // all of them now, but a fish trap (on water) and crops
 export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'watchtower', 'dummy', 'warehouse', 'workshop', 'smithy', 'smelter',
   'tent', 'campfire', 'torch', 'dung_heap', 'grave', 'demon_den', 'sacrifice_circle', 'portal', 'corpse_pit', 'cage'];
+
+// (#326) The big one of a unit, when the panel's Big switch is on: the same weapon in the faction's big body
+// (none for a pet, a medic, a necromancer or an archer)
+export function bigPresetOf(preset) {
+  return preset.size === 'normal' ? BATTLE_PRESETS.find(p => p.id === `${preset.faction}:big_${preset.preset}`) : undefined;
+}
 
 export function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);

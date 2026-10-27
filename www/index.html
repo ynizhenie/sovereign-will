@@ -265,8 +265,8 @@
         <!-- (#326) clearing each side: a broom on its colour, either side of the phase -->
         <button class="btn battle-clear battle-setup-only" id="battle-clear-green" data-i18n-title="battle.clearGreen" title="Clear the left side"><i class="ic ic-broom"></i></button>
         <span id="battle-phase-label" data-i18n="battle.phase.setup">Placing</span>
-        <span class="battle-score"><b class="green" id="battle-count-green">0</b> : <b class="red" id="battle-count-red">0</b></span>
         <button class="btn battle-clear battle-setup-only" id="battle-clear-red" data-i18n-title="battle.clearRed" title="Clear the right side"><i class="ic ic-broom"></i></button>
+        <span class="battle-score"><b class="green" id="battle-count-green">0</b> : <b class="red" id="battle-count-red">0</b></span>
       </div>
       <!-- the editor: the map's name and size (a tap opens the map's sheet) -->
       <button class="top-editor" data-action="toggleSheet" data-arg="editor-map">
@@ -309,6 +309,9 @@
 
   <!-- over the bottom of the map, above the dock: the selected settler, what's being placed, the open sheet -->
   <div id="hud-bottom" class="hud-layer">
+
+    <!-- (#326) a possessed unit with its card closed: a way to leave it -->
+    <button class="btn" id="btn-leave-unit" data-action="unpossess" style="display: none;"></button>
 
     <!-- (#326) the selected settler's card: what it is and does, what it holds, and what can be done with it -->
     <div id="selected-bar" class="selected-unit-box">
@@ -424,6 +427,7 @@
         <div class="sub-tabs battle-gear">
           <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
           <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
+          <button class="btn sub-tab" data-battle-gear="big" data-i18n="battle.big">Big</button>
           <button class="btn sub-tab" data-battle-gear="banner" data-i18n="battle.banner">Banner</button>
           <button class="btn sub-tab" data-battle-gear="torch" data-i18n="battle.torch">Torch</button>
         </div>

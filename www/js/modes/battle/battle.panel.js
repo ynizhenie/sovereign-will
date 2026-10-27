@@ -6,13 +6,13 @@ import { isBowWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
-import { BATTLE_PRESETS, battlePresetLabel, getBattleBuildings } from './battle.roster.js';
+import { BATTLE_PRESETS, battlePresetLabel, bigPresetOf, getBattleBuildings } from './battle.roster.js';
 import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
-  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'banner' | 'torch'} */ (b.dataset.battleGear)]));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear)]));
   // (#326) the time of day, the weather, blighted ground
   document.querySelectorAll('[data-battle-look]').forEach(b => {
     b.classList.toggle('on', String(battle[/** @type {'time' | 'weather' | 'blight'} */ (b.dataset.battleLook)]) === b.dataset.value);
@@ -76,9 +76,10 @@ export function renderBattlePanel() {
   } else {
     for (const faction of factions) {
       section(faction.label);
-      for (const preset of BATTLE_PRESETS.filter(p => p.faction === faction.id)) {
-        const { icons, hp, damage } = presetStats(preset);
-        add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(preset), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
+      for (const preset of BATTLE_PRESETS.filter(p => p.faction === faction.id && p.size !== 'big')) {
+        const shown = (battle.big && bigPresetOf(preset)) || preset; // (#326: as a big one, when the switch is on)
+        const { icons, hp, damage } = presetStats(shown);
+        add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(shown), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
       }
     }
   }
@@ -102,9 +103,8 @@ function presetStats(preset) {
 
 // The top bar's middle: placing, fighting or who won, and how many stand on each side
 export function updateBattleTop() {
-  const label = battle.phase === 'fight' ? t('battle.phase.fight')
-    : battle.phase === 'result' ? (battle.winner === 'green' || battle.winner === 'red' ? t('battle.wins', { color: t(`color.${GAME_CONFIG.factionColorNames[sides.battle[battle.winner]]}`) }) : t('battle.drawWins'))
-    : t('battle.phase.setup');
+  // (#326: who won is said in the middle of the field, not up here)
+  const label = battle.phase === 'fight' ? t('battle.phase.fight') : t('battle.phase.setup');
   document.getElementById('battle-phase-label').textContent = label;
   // (#326) each side's broom on its colour
   for (const side of /** @type {('green' | 'red')[]} */ (['green', 'red'])) {
@@ -182,7 +182,7 @@ export function initBattlePanel() {
   }));
   // (the armour: off, leather, iron, off again; the shield and the banner: on or off, #298, #279)
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
-    const gear = /** @type {'armor' | 'shield' | 'banner' | 'torch'} */ (b.dataset.battleGear);
+    const gear = /** @type {'armor' | 'shield' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear);
     if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
     else battle[gear] = !battle[gear];
     renderBattlePanel();

@@ -82,7 +82,13 @@ export function updateUI() {
       btnUpgrade.style.display = 'none';
     }
   }
-
+  // (#326) possessing with the card closed: the way out stays
+  const leave = document.getElementById('btn-leave-unit');
+  if (leave) {
+    const show = !!getPossessed() && !selected;
+    if (leave.style.display !== (show ? '' : 'none')) leave.style.display = show ? '' : 'none';
+    if (show && leave.dataset.key !== 'sel.unpossess') { leave.dataset.key = 'sel.unpossess'; setRichText(leave, t('sel.unpossess')); }
+  }
 }
 
 // (#326) The card's buttons as they apply now, the group's size, the Give list, and a hint for the taps
