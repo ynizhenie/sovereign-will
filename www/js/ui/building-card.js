@@ -54,7 +54,7 @@ function renderStoreContents(b, isStorage) {
   const chip = (id, n) => `<span class="res-chip">${iconHtml(getResourceIconName(id))} ${Math.floor(n)}</span>`;
   const inside = Object.entries(b.store || {}).filter(([, n]) => n >= 1).sort((a, c) => c[1] - a[1]);
   const by = packsBy(b);
-  const keeps = Object.keys(GAME_CONFIG.resources).filter(id => storeHome(id) === b && GAME_CONFIG.resources[id] && (!GAME_CONFIG.resources[id].factions || GAME_CONFIG.resources[id].factions.includes(getPlayerFaction().id)));
+  const keeps = Object.keys(GAME_CONFIG.resources).filter(id => storeHome(id) === b && GAME_CONFIG.resources[id] && !GAME_CONFIG.resources[id].intangible && (!GAME_CONFIG.resources[id].factions || GAME_CONFIG.resources[id].factions.includes(getPlayerFaction().id)));
   el.innerHTML = `<div class="card-store-line"><b>${escapeHtml(t('card.storeInside'))}</b> ${inside.length ? inside.map(([id, n]) => chip(id, n)).join(' ') : escapeHtml(t('card.storeEmpty'))}</div>` +
     (by.length ? `<div class="card-store-line"><b>${escapeHtml(t('card.storeBy'))}</b> ${by.map(([id, n, packs]) => `${chip(id, n)}<small>×${packs}</small>`).join(' ')}</div>` : '') +
     (keeps.length ? `<div class="card-store-line"><b>${escapeHtml(t('card.storeKeeps'))}</b> ${keeps.map(id => iconHtml(getResourceIconName(id))).join(' ')}</div>` : '');

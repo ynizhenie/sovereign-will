@@ -83,9 +83,15 @@ export function spawnSettler(type = 'normal') {
   const settlerType = GAME_CONFIG.settlerTypes[type];
   if (!settlerType) return;
 
-  if (getCurrentPop() + settlerType.population > getMaxPop()) {
+  if (settlerType.population > 0 && getCurrentPop() + settlerType.population > getMaxPop()) {
     showPopLimit();
     return;
+  }
+  // (#326) a ghost: needs a built grave, and at most the base's few plus one a grave (it takes no room otherwise)
+  if (settlerType.pet === 'ghost') {
+    const graves = game.buildings.filter(b => b.type === 'grave').length, limit = GAME_CONFIG.pets.ghost.limit;
+    if (!graves) { showNotification(t('ghost.needGrave'), true); return; }
+    if (game.settlers.filter(s => s.type === type).length >= limit.base + graves * limit.perGrave) { showNotification(t('ghost.limit', { n: limit.base + graves * limit.perGrave }), true); return; }
   }
   if (!canAfford(settlerType.hireCost)) {
     showCostError(settlerType.hireCost, t('cost.needs', { name: settlerType.label }));

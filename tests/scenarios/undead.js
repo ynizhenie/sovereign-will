@@ -149,6 +149,51 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
+  // (#326) Souls and ghosts: a zombie raised by a necromancer with a soul lantern puts a soul in it (none without one); by a grave
+  // they come out into the stock, which lies in no storage; a ghost needs a built grave and a soul, takes no room, is held to
+  // 3 and one a grave, and never panics
+  function soulsAndGhosts({ seed = 'undead-souls' } = {}) {
+    asUndead(seed);
+    clearResources();
+    invalidateAllPaths();
+    stock.souls = 0;
+    const r = {};
+    // the hiring, with no grave, then one with no soul
+    const ghosts = () => settlers.filter(s => s.type === 'ghost').length;
+    settlers = [];
+    spawnSettler('ghost'); r.noGrave = ghosts();
+    placeBuilding('grave', nearHall(-4, 0).x, nearHall(-4, 0).y);
+    spawnSettler('ghost'); r.noSoul = ghosts();
+    stock.souls = 10;
+    const pop = getCurrentPop();
+    spawnSettler('ghost');
+    r.hired = { ghosts: ghosts(), souls: stock.souls, popTaken: getCurrentPop() - pop };
+    for (let i = 0; i < 8; i++) spawnSettler('ghost');
+    r.limited = ghosts(); // (3 and one for the grave)
+    placeBuilding('grave', nearHall(-4, 2).x, nearHall(-4, 2).y);
+    spawnSettler('ghost');
+    r.moreWithAGrave = ghosts();
+    r.noPanic = (() => { const g = settlers.find(s => s.type === 'ghost'); shakeMorale(g, 9999, 'settler', true); return !g.panic; })();
+    // the souls: a lantern takes one for each zombie raised, a necromancer with none loses them
+    stock.souls = 0;
+    const lit = Object.assign(necromancerAt(50, nearHall(-3, 0)), { soul_lantern: true });
+    const bare = necromancerAt(51, nearHall(8, 8));
+    settlers = [lit, bare];
+    const corpse = dx => corpseAt(nearHall(dx, 6));
+    raiseTemporaryZombie(corpse(2), lit); raiseTemporaryZombie(corpse(3), lit); raiseTemporaryZombie(corpse(4), bare);
+    r.inLantern = [lit.lanternSouls, bare.lanternSouls || 0];
+    // far from the grave: they stay in it; by it they come out one by one
+    lit.x = nearHall(10, 10).x; lit.y = nearHall(10, 10).y;
+    for (let i = 0; i < 40; i++) tickLanterns(1 / 20);
+    r.farFromGrave = { stock: stock.souls, kept: lit.lanternSouls };
+    lit.x = nearHall(-4, 0).x + 20; lit.y = nearHall(-4, 0).y;
+    for (let i = 0; i < 60; i++) tickLanterns(1 / 20);
+    r.byTheGrave = { stock: stock.souls, kept: lit.lanternSouls };
+    keepStoresInStep();
+    r.notStored = !(townHall.store && townHall.store.souls) && stock.souls === 2;
+    return r;
+  }
+
   function necromancerHeals({ seed = 'undead-heal' } = {}) {
     asUndead(seed);
     clearResources();
@@ -247,5 +292,5 @@ Object.assign(window.sim, (() => {
     return { kinds, zombies: enemies.filter(en => en.enemyKey === 'undead_zombie').length, corpses: corpses.length, temporary: !!zombie && zombie.temporary > 0 };
   }
 
-  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerControl, necromancerHeals, undeadBlight: blight, undeadEnemies };
+  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerControl, soulsAndGhosts, necromancerHeals, undeadBlight: blight, undeadEnemies };
 })());

@@ -154,11 +154,42 @@ export function raiseTemporaryZombie(corpse, master = null) {
   if (master) {
     zombie.masterId = master.id;
     armFromCorpse(zombie, corpse, getNecromancy(master).armReach);
+    giveSoul(master, corpse);
   }
   game.settlers.push(zombie);
   game.corpses.splice(game.corpses.indexOf(corpse), 1);
   playSound('raise', corpse);
   return zombie;
+}
+
+// ---- Souls (#326): each zombie a necromancer raises gives one, which flies into the soul lantern at its side (no
+// limit to what it holds); near a grave or the hall they fly out one after another into the stock (souls are no
+// thing: they lie in no storage). The flights are only drawn (game.soulFx), the count is kept at once
+
+// A soul from `from` into the lantern of `necro` (none without one: it's lost)
+export function giveSoul(necro, from) {
+  if (!necro.soul_lantern) return;
+  necro.lanternSouls = (necro.lanternSouls || 0) + 1;
+  game.soulFx.push({ x: from.x, y: from.y, who: necro, t: 0, dur: GAME_CONFIG.gear.soul_lantern.lantern.flySeconds, kind: 'in' });
+}
+
+// Each tick: a lantern near a grave or the hall lets its souls out, one every releaseSeconds
+export function tickLanterns(dt) {
+  const c = GAME_CONFIG.gear.soul_lantern.lantern, reach = c.nearTiles * TILE_SIZE;
+  for (const s of game.settlers) {
+    if (!s.soul_lantern || !((s.lanternSouls || 0) > 0)) { s.lanternTimer = 0; continue; }
+    const home = game.buildings.find(b => b.type === 'grave' && Math.hypot(b.x - s.x, b.y - s.y) <= reach) ||
+      (Math.hypot(townHall.x - s.x, townHall.y - s.y) <= townHall.radius + reach ? townHall : null);
+    if (!home) { s.lanternTimer = 0; continue; }
+    const timer = (s.lanternTimer || 0) + dt;
+    if (timer < c.releaseSeconds) { s.lanternTimer = timer; continue; }
+    s.lanternTimer = 0;
+    s.lanternSouls = (s.lanternSouls || 0) - 1;
+    stock.souls = (stock.souls || 0) + 1;
+    game.soulFx.push({ x: s.x, y: s.y, to: { x: home.x, y: home.y }, t: 0, dur: c.flySeconds, kind: 'out' });
+  }
+  for (const fx of game.soulFx) fx.t += dt;
+  if (game.soulFx.length) game.soulFx = game.soulFx.filter(fx => fx.t < fx.dur);
 }
 
 // An enemy necromancer: heals the wounded enemies around it as it goes; with no settler close by
