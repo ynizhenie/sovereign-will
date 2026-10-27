@@ -3,7 +3,7 @@
 import { LANGUAGES } from '../../content/language/index.js';
 import { audio, currentLanguage, fitCanvasToScreen, loadSetting, onTap, quality, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, previewTrack, setTrackOn } from '../../app/index.js';
-import { flagHtml } from '../../ui/index.js';
+import { flagHtml, iconHtml } from '../../ui/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
 
@@ -32,7 +32,7 @@ export function renderMusicPlayer() {
       row.dataset.track = track.id;
       const listen = document.createElement('button');
       listen.className = 'btn music-listen' + (musicPreview.id === track.id ? ' on' : '');
-      listen.textContent = musicPreview.id === track.id ? '■' : '▶';
+      listen.innerHTML = iconHtml(musicPreview.id === track.id ? 'stop' : 'play');
       listen.setAttribute('aria-label', t(musicPreview.id === track.id ? 'music.stop' : 'music.listen'));
       onTap(listen, () => { previewTrack(musicPreview.id === track.id ? '' : track.id); renderMusicPlayer(); });
       const name = document.createElement('span');
