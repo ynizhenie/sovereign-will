@@ -59,7 +59,7 @@ export function someoneSays(units, faction, event, urgent = false) {
 // A bubble with what it says, over its head (top: the top of its head)
 export function drawSpeech(ctx, unit, top) {
   if (!unit.say || unit.say.until < game.pathTick) return;
-  ctx.font = 'bold 8px sans-serif';
+  if (ctx.font !== 'bold 8px sans-serif') ctx.font = 'bold 8px sans-serif'; // (#322)
   // a long one (a story by the fire, #279) on two lines, broken at a space near its middle
   const full = unit.say.text.length > 70 ? `${unit.say.text.slice(0, 69)}…` : unit.say.text;
   let lines = [full];

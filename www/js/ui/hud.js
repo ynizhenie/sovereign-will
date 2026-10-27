@@ -2,6 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
 import { escapeHtml, iconHtml, setRichText } from './icons.js';
+import { setText } from './text.js';
 import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
@@ -23,12 +24,12 @@ export function updateUI() {
   updateSheetStock();
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
     const resourceElement = document.getElementById(resourceHudId(resourceKey));
-    if (resourceElement) resourceElement.innerText = String(Math.floor(getResourceAmount(resourceKey)));
+    setText(resourceElement, String(Math.floor(getResourceAmount(resourceKey))));
   });
   syncFoodMix();
   for (const kind of Object.keys(GAME_CONFIG.foodKinds)) {
     const el = document.getElementById(`food-kind-${kind}-txt`);
-    if (el) el.innerText = String(Math.floor(game.foodMix[kind] || 0));
+    setText(el, String(Math.floor(game.foodMix[kind] || 0)));
   }
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.held)) {
     let total = 0;
@@ -36,19 +37,19 @@ export function updateUI() {
       const count = countHeld(category, id);
       total += count;
       const el = document.getElementById(`held-${category}-${id}-txt`);
-      if (el) el.innerText = String(count);
+      setText(el, String(count));
     }
     const totalEl = document.getElementById(`group-${group.id}-txt`);
-    if (totalEl) totalEl.innerText = String(total);
+    setText(totalEl, String(total));
   }
   for (const group of GAME_CONFIG.resourceGroups.filter(g => !g.held)) {
     const total = document.getElementById(`group-${group.id}-txt`);
     let sum = 0;
     for (const id of group.members) sum += getResourceAmount(id);
-    if (total) total.innerText = String(Math.floor(sum));
+    setText(total, String(Math.floor(sum)));
   }
-  document.getElementById('pop-txt').innerText = `${getCurrentPop()}/${getMaxPop()}`;
-  document.getElementById('base-hp-txt').innerText = `${Math.max(0, Math.ceil(townHall.hp))}/${townHall.maxHp}`;
+  setText(document.getElementById('pop-txt'), `${getCurrentPop()}/${getMaxPop()}`);
+  setText(document.getElementById('base-hp-txt'), `${Math.max(0, Math.ceil(townHall.hp))}/${townHall.maxHp}`);
 
   let btnUpgrade = document.getElementById('btn-upgrade-big');
 
@@ -73,7 +74,7 @@ export function updateUI() {
     game.selectedGroup = []; game.addingToGroup = false;
     giveOpen = false;
     document.getElementById('btn-dismiss').style.display = 'none';
-    document.getElementById('selected-settler-txt').innerText = t('hud.nobody');
+    setText(document.getElementById('selected-settler-txt'), t('hud.nobody'));
     document.getElementById('selected-info').hidden = true;
     renderSelectedGear(null);
     document.getElementById('selected-bar').classList.remove('has-settler');
@@ -169,8 +170,8 @@ function updateDayClock() {
 function updateWave() {
   updateDayClock();
   const left = Math.max(0, Math.ceil(game.waveTimer));
-  document.getElementById('wave-num').innerText = String(game.waveNum);
-  document.getElementById('wave-timer').innerText = Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+  setText(document.getElementById('wave-num'), String(game.waveNum));
+  setText(document.getElementById('wave-timer'), Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '');
   const share = game.waveInterval > 0 && Number.isFinite(game.waveTimer) ? game.waveTimer / game.waveInterval : 0;
   document.getElementById('wave-progress').style.width = `${Math.max(0, Math.min(1, share)) * 100}%`;
   const box = document.getElementById('top-wave');
@@ -196,7 +197,7 @@ export function renderResourceStrip() {
 }
 
 function updateResourceStrip() {
-  const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+  const set = (id, text) => setText(document.getElementById(id), text);
   set('strip-base', String(Math.max(0, Math.ceil(townHall.hp))));
   set('strip-pop', `${getCurrentPop()}/${getMaxPop()}`);
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned)) {
@@ -221,7 +222,7 @@ export function renderSheetStock(tabId) {
 export function updateSheetStock() {
   for (const chip of document.querySelectorAll('#sheet-stock [data-res]')) {
     const b = chip.querySelector('b');
-    if (b) b.textContent = String(Math.floor(Number(stock[/** @type {HTMLElement} */ (chip).dataset.res || ''] || 0)));
+    setText(b, String(Math.floor(Number(stock[/** @type {HTMLElement} */ (chip).dataset.res || ''] || 0))));
   }
 }
 
@@ -251,7 +252,7 @@ function updateResourcePanel() {
   for (const em of document.querySelectorAll('#resources-hud .res-rate')) {
     const id = /** @type {HTMLElement} */ (em).dataset.rate || '';
     const span = now - old.t, change = span >= 20 ? Math.round(((stock[id] || 0) - (old.stock[id] || 0)) * 60 / span) : 0;
-    em.textContent = change ? `${change > 0 ? '+' : '−'}${Math.abs(change)}/${t('hud.perMinute')}` : '';
+    setText(em, change ? `${change > 0 ? '+' : '−'}${Math.abs(change)}/${t('hud.perMinute')}` : '');
     em.classList.toggle('down', change < 0);
   }
   for (const line of document.querySelectorAll('#resources-hud .res-line')) {

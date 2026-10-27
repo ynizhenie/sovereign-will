@@ -1,7 +1,7 @@
 // The settlers in the panel: how many of each, and the selected one's info line
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { getResourceIconName, labelButton, makeTile, setRichText } from '../../../ui/index.js';
+import { getResourceIconName, labelButton, makeTile, setRichText, setText } from '../../../ui/index.js';
 import { camera, clampCamera, onTap, t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -16,8 +16,8 @@ export function updateUnitCounts() {
   const workersElem = document.getElementById('workers-cnt');
   const warriorsElem = document.getElementById('warriors-cnt');
 
-  if (workersElem) workersElem.innerText = String(workers);
-  if (warriorsElem) warriorsElem.innerText = String(warriors);
+  setText(workersElem, String(workers));
+  setText(warriorsElem, String(warriors));
 }
 
 // The selected settler's info: what it's doing, when it's next hungry, what it carries (#326: a line each, all of it)

@@ -2,7 +2,7 @@
 
 import { TILE_SIZE, forEachInRect, game } from '../../../engine/world/index.js';
 import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawPebblesArt, drawSaplingArt, drawStickArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
-import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
+import { ctx, drawProgressBar, getViewRect } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawOreVeins, isGroundCached } from '../../world/index.js';
 
@@ -20,26 +20,12 @@ export function drawHarvestProgress(resource, width = 24) {
 // (#299) only what's on the screen (with room for a tree's crown over the edge): a big map has thousands
 const onScreen = (list, fn) => { const v = getViewRect(2 * TILE_SIZE); forEachInRect(list, v.x0, v.y0, v.x1, v.y1, fn); };
 
-// (#322) Zoomed out (a tile under 20 screen pixels) nature is drawn at its simplest: a tree, a cactus or a boulder one
-// flat dot of its colour, all of a colour in one go; grass, bushes, sticks, pebbles and logs, a few pixels each, not at all
-const FAR_NATURE = 0.65;
-const far = () => getViewScale() < FAR_NATURE;
-// The things of lists, those on the screen and passing `keep`, as dots of one colour (one path, one fill)
-/** @param {(o: any) => boolean} [keep] */
-function dots(list, color, r, dy, keep = () => true) {
-  ctx.fillStyle = color; ctx.beginPath();
-  onScreen(list, o => { if (keep(o)) { ctx.moveTo(o.x + r, o.y + dy); ctx.arc(o.x, o.y + dy, r, 0, Math.PI * 2); } });
-  ctx.fill();
-}
-
 // Sticks and pebbles, and minable ore
 export function drawSticksPebblesOre() {
   // (the look: gathering.art.js, #251)
-  if (!far()) {
-    onScreen(game.sticks, drawStickArt);
-    onScreen(game.pebbles, drawPebblesArt);
-    onScreen(game.logs, drawLogArt); // (#298)
-  }
+  onScreen(game.sticks, drawStickArt);
+  onScreen(game.pebbles, drawPebblesArt);
+  onScreen(game.logs, drawLogArt); // (#298)
 
   // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)
   // (zoomed out: in the ground's pictures, #299)
@@ -57,15 +43,6 @@ export function drawSticksPebblesOre() {
 
 // Trees: saplings growing, grown trees, apple trees with their apples (and the stumps of those felled)
 export function drawTrees() {
-  if (far()) {
-    // (#322) standing trees as dots of their crown's colour; a sapling, a felled or a worked-on one as it is
-    const plain = t => !t.isGrowing && !t.fallen && !t.apple && t.hp >= getHarvestMaxHp(t);
-    const apple = t => !t.isGrowing && !t.fallen && t.apple && t.hp >= getHarvestMaxHp(t);
-    dots(game.trees, '#2e5d20', 13, -3, plain);
-    dots(game.trees, '#3f7a2a', 13, -3, apple);
-    onScreen(game.trees, t => { if (t.isGrowing || t.fallen || t.hp < getHarvestMaxHp(t)) drawTreeNear(t); });
-    return;
-  }
   // (before the trees: a tree grown there covers its own stump, a felled one's log covers it)
   onScreen(game.stumps, drawStumpArt);
   onScreen(game.trees, drawTreeNear);
@@ -88,11 +65,6 @@ function drawTreeNear(t) {
 
 // Cacti, boulders, grass and berry bushes
 export function drawCactiBouldersGrassBushes() {
-  if (far()) {
-    dots(game.cacti, '#5d9a4a', 8, 0);
-    dots(game.boulders, '#8a949e', 10, 0);
-    return;
-  }
   onScreen(game.cacti, c => {
     drawCactusArt(c);
     drawHarvestProgress(c);
