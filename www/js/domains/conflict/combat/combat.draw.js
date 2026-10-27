@@ -31,14 +31,17 @@ export function drawBodyBlood(unit, radius) {
   }
 }
 
-// An arrow in flight: a shaft along its way, a grey head, pale fletching (enemies' red)
+// (#326) The fletching in its side's colour: the colony's, or the enemy's
+const fletching = fromEnemy => (fromEnemy ? getEnemyColor(null) : getSettlerColor(null));
+
+// An arrow in flight: a shaft along its way, a grey head, the fletching in its side's colour
 export function drawArrow(proj) {
   ctx.save();
   ctx.translate(proj.x, proj.y);
   ctx.rotate(Math.atan2(proj.vy, proj.vx));
   ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-9, -0.75, 13, 1.5);
   ctx.fillStyle = '#bdc3c7'; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(3, -2.5); ctx.lineTo(3, 2.5); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = proj.fromEnemy ? '#e74c3c' : '#ecf0f1';
+  ctx.fillStyle = fletching(proj.fromEnemy);
   ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-12, 2.5); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
@@ -154,7 +157,7 @@ function drawPetCorpse(c, grey) {
 function drawStuckArrow(x, y, a, fromEnemy, alpha) {
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(a);
   ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-9, -0.75, 9, 1.5);
-  ctx.fillStyle = fromEnemy ? '#e74c3c' : '#ecf0f1';
+  ctx.fillStyle = fletching(fromEnemy);
   ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-12, 2.5); ctx.closePath(); ctx.fill();
   ctx.restore();
 }

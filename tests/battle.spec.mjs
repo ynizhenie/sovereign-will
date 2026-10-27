@@ -48,9 +48,9 @@ test('one Units sheet for both sides, every faction under its heading in the sam
   });
   expect(sheet.map(s => s.name)).toEqual(['Люди', 'Демоны', 'Нежить']);
   const order = ids => ids.map(id => id.split(':')[1]);
-  expect(order(sheet[0].tiles)).toEqual(['fist', 'club', 'sword', 'spear', 'iron_sword', 'iron_spear', 'bow', 'medic', 'big_club', 'big_spear', 'pet']);
+  expect(order(sheet[0].tiles)).toEqual(['fist', 'club', 'sword', 'spear', 'iron_sword', 'iron_spear', 'bow', 'medic', 'pet']); // (the big ones are the Big switch's, #326)
   expect(order(sheet[1].tiles)).toEqual(order(sheet[0].tiles)); // (a medic with a bag: the demons' too)
-  expect(order(sheet[2].tiles)).toEqual(['fist', 'club', 'sword', 'spear', 'iron_sword', 'iron_spear', 'bow', 'necromancer', 'big_club', 'big_spear', 'pet']);
+  expect(order(sheet[2].tiles)).toEqual(['fist', 'club', 'sword', 'spear', 'iron_sword', 'iron_spear', 'bow', 'necromancer', 'pet']);
   expect(await page.locator('[data-battle-category="units"]').innerText()).toBe('Юниты');
   await expect(page.locator('#battle-factions')).toHaveCount(0); // (no sub-tabs)
   await expect(page.locator('[data-battle-gear="armor"]')).toBeVisible();
@@ -79,7 +79,7 @@ test('any unit on either side: on the left one of yours, on the right an enemy, 
     return { wrong, count: BATTLE_PRESETS.length };
   });
   expect(r.wrong).toEqual([]);
-  expect(r.count).toBe(33);
+  expect(r.count).toBe(45); // (the big ones too, #326: 15 each)
 });
 
 test('a battle has no commander unless the player gives a banner (#279)', async ({ page }) => {

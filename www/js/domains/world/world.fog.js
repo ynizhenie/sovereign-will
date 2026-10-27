@@ -145,5 +145,10 @@ export function drawFog() {
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(picture, 0, 0, cols * TILE_SIZE, rows * TILE_SIZE);
+  // (#326) a tile of the dark past the map's edge too, so no strip of what lies there (water) shows round it
+  const w = cols * TILE_SIZE, h = rows * TILE_SIZE, T = TILE_SIZE;
+  ctx.fillStyle = `rgb(${SHADE[0]}, ${SHADE[1]}, ${SHADE[2]})`;
+  ctx.fillRect(-T, -T, w + 2 * T, T); ctx.fillRect(-T, h, w + 2 * T, T);
+  ctx.fillRect(-T, 0, T, h); ctx.fillRect(w, 0, T, h);
   ctx.restore();
 }
