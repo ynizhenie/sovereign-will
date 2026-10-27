@@ -6,7 +6,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-maps'); showMenuScreen('home'); });
   await page.locator('#mode-editor').click();
   await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
-  await page.locator('[data-editor-size="30"]').click();
+  await page.locator('[data-editor-size="128"]').click();
   await page.locator('#editor-new-empty').click();
   await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock
   await expect(page.locator('[data-arg="tab-build"]')).toBeHidden();
@@ -39,11 +39,11 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
   await page.locator('#exit-to-menu-button').click();
   await expect(page.locator('#main-menu')).toBeVisible();
-  await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveText('Озерцо · 30×30');
+  await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveText('Озерцо · 128×128');
 
   // open it again: the water is still there
   await page.locator('#editor-map-list [data-map="Озерцо"]').click();
-  expect(await page.evaluate(() => [waterTiles.length, COLS])).toEqual([1, 30]);
+  expect(await page.evaluate(() => [waterTiles.length, COLS])).toEqual([1, 128]);
   await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
   await page.locator('#exit-to-menu-button').click();
 
@@ -56,14 +56,14 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#open-generator')).toBeHidden();
   await page.locator('#play-button').click();
   await started(page);
-  expect(await page.evaluate(() => [COLS, waterTiles.length, gameMode])).toEqual([30, 1, 'endless']);
+  expect(await page.evaluate(() => [COLS, waterTiles.length, gameMode])).toEqual([128, 1, 'endless']);
 
   // delete it in the editor
   await page.evaluate(() => exitToMainMenu());
   await page.locator('[data-screen="home"] #mode-editor').click();
   // delete asks first: No keeps it, Yes deletes it (#143)
   await page.locator('#editor-map-list [data-delete-map="Озерцо"]').click();
-  await expect(page.locator('#editor-map-list')).toContainText('Удалить «Озерцо · 30×30»?');
+  await expect(page.locator('#editor-map-list')).toContainText('Удалить «Озерцо · 128×128»?');
   await page.locator('#editor-map-list [data-cancel-delete="Озерцо"]').click();
   await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveCount(1);
   await page.locator('#editor-map-list [data-delete-map="Озерцо"]').click();
