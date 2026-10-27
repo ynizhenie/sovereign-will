@@ -38,7 +38,7 @@ export const equipmentConfig = {
   weapons: {
     fist: { id: 'fist', icon: 'fist', cost: {},
       combat: { damage: 6, range: 28, cooldown: 0.7, approach: 22, tentReach: 25 } },
-    club: { id: 'club', icon: 'club', madeBy: 'hand', cost: { wood: 4 }, family: 'club',
+    club: { id: 'club', icon: 'club', madeBy: 'hand', craftSeconds: 2.5, cost: { wood: 4 }, family: 'club', // (#326: quick to make)
       combat: { damage: 10, range: 35, cooldown: 0.6, approach: 22, tentReach: 25 } },
     sword: { id: 'sword', icon: 'sword', cost: { wood: 6, stone: 3 }, family: 'sword',
       combat: { damage: 20, range: 42, cooldown: 0.4, approach: 22, tentReach: 25 } },
@@ -88,6 +88,8 @@ export const equipmentConfig = {
   recipes: {
     arrows: { id: 'arrows', icon: 'arrows', kind: 'weapons', cost: { wood: 3, stone: 1 }, produces: { arrows: 6 }, batches: 3, unlockedWith: 'weapons:bow' },
     rope: { id: 'rope', icon: 'rope', kind: 'supplies', madeBy: 'hand', cost: { herbs: 2 }, produces: { rope: 2 }, disassemble: true },
-    torch: { id: 'torch', icon: 'torch', kind: 'supplies', madeBy: 'hand', cost: { wood: 1, rope: 1 }, produces: { torches: 1 }, disassemble: true }
+    torch: { id: 'torch', icon: 'torch', kind: 'supplies', madeBy: 'hand', cost: { wood: 1, rope: 1 }, produces: { torches: 1 }, disassemble: true },
+    // (#326) firewood to order: as much as a woodcutter chops of it (GAME_CONFIG.firewood: `makes` of one wood)
+    firewood: { id: 'firewood', icon: 'firewood', kind: 'supplies', madeBy: 'hand', cost: { wood: 1 }, produces: { firewood: 2 } }
   }
 };

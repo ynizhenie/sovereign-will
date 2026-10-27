@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
@@ -11,7 +11,7 @@ import { armorOf } from '../../colony/equipment/index.js';
 import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
-import { getFrontier, getFrontierTiles, isNight, isOutskirts } from '../../world/index.js';
+import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
 import { newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
@@ -209,7 +209,35 @@ export function grantEnemyReward(enemy) {
   addResources(enemy.reward);
 }
 
+// (#326) At home (Endless) a wave's tent or grave is put up at the border of the player's land: outside it, one to
+// three tiles from it, the spot nearest its builder of a good few tried. Null with none free (then as ever, by the builder)
+function tentSiteAtBorder(origin) {
+  const box = getTerritoryBox(), c = GAME_CONFIG.enemyTents.borderTiles;
+  const gx0 = Math.floor(box.x0 / TILE_SIZE) - c[1], gx1 = Math.floor(box.x1 / TILE_SIZE) - 1 + c[1];
+  const gy0 = Math.floor(box.y0 / TILE_SIZE) - c[1], gy1 = Math.floor(box.y1 / TILE_SIZE) - 1 + c[1];
+  const centre = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+  let best = null, bestD = Infinity;
+  for (let attempt = 0; attempt < 160; attempt++) {
+    const gx = gx0 + Math.floor(rand() * (gx1 - gx0 + 1)), gy = gy0 + Math.floor(rand() * (gy1 - gy0 + 1));
+    if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
+    const { x, y } = centre(gx, gy);
+    if (inTerritory(x, y)) continue;
+    let gap = Infinity; // (the tiles from the land: 1 beside it)
+    for (let dy = -c[1]; dy <= c[1] && gap > c[0]; dy++) for (let dx = -c[1]; dx <= c[1]; dx++) {
+      if (inTerritory(x + dx * TILE_SIZE, y + dy * TILE_SIZE)) gap = Math.min(gap, Math.max(Math.abs(dx), Math.abs(dy)));
+    }
+    if (gap < c[0] || gap > c[1]) continue;
+    const occupied = isTileOccupied(x, y) || game.naturalRocks.some(r => r.x === x && r.y === y) || game.waterTiles.some(w => w.x === x && w.y === y) ||
+      game.enemyTents.some(t => t.x === x && t.y === y) || game.enemyTentBlueprints.some(t => t.x === x && t.y === y);
+    if (occupied) continue;
+    const d = Math.hypot(x - origin.x, y - origin.y);
+    if (d < bestD) { bestD = d; best = { x, y }; }
+  }
+  return best ? { x: best.x, y: best.y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null } : null;
+}
+
 export function getNearbyEnemyTentSite(origin) {
+  if (hasTerritory()) { const border = tentSiteAtBorder(origin); if (border) return border; }
   let originG = getGridPos(origin.x, origin.y);
   for (let attempt = 0; attempt < 40; attempt++) {
     let gx = Math.max(0, Math.min(game.COLS - 1, originG.gx + Math.floor(rand() * 9) - 4));
