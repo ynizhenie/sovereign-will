@@ -65,8 +65,12 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
       // (#322) a new piece is painted for at most PAINT_MS a frame at any size (the first always, so something shows): panning
       // into a new row of pieces, or zoomed in, is a piece or two a frame, not all of them at once
       if ((!chunk || chunk.stamp !== now) && performance.now() - started > (res < 1 ? PAINT_MS : PAINT_MS * 2)) {
-        if (chunk) { chunks.set(key, chunk); } else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
-        if (chunk) ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
+        if (chunk) chunks.set(key, chunk);
+        // (#322) not painted yet at this size: what it had, or the piece as painted at another size, laid down as it is (a little
+        // soft or sharp) till the new one's done; the ground never shows a hole, or a flash, as the zoom changes
+        const shown = chunk || otherSize(chunks, cx, cy, res, now);
+        if (shown) ctx.drawImage(shown.canvas, shown.pad, shown.pad, shown.pw, shown.ph, dx0, dy0, dw, dh);
+        else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
         continue;
       }
       if (!chunk || chunk.stamp !== now) {
@@ -92,14 +96,42 @@ function drawChunks(layer, res, stamp, paint, fill = null) {
   }
 }
 
+// (#322) The piece (cx, cy) as painted at any other size and still as it is now, if there is one: the nearest size first
+const SIZES = [2, 1, 0.5, 0.25, 0.125, 0.0625];
+function otherSize(chunks, cx, cy, res, now) {
+  const order = SIZES.filter(r => r !== res).sort((a, b) => Math.abs(Math.log2(a / res)) - Math.abs(Math.log2(b / res)));
+  for (const r of order) {
+    const c = chunks.get(`${r}|${cx},${cy}`);
+    if (c && c.stamp === now) return c;
+  }
+  return null;
+}
+
 // full-size pictures zoomed in, half zoomed out
 // (#306) How fine a piece is painted: about what the screen shows, and no finer (a power of two, so a piece
 // isn't painted again for every little change of zoom). Zoomed out to the whole map it used to paint and lay
 // down sixteen times the pixels that showed, which was most of what that view cost
-const chunkRes = () => Math.min(1, 2 ** Math.floor(Math.log2(Math.max(getViewScale(), 0.0625))));
+// (#322) and a size is kept while the zoom is within a little of it (a hair either side of a threshold painted two sizes in turn, and
+// the whole screen of pieces again each time)
+let heldRes = 1;
+const chunkRes = () => {
+  const s = Math.max(getViewScale(), 0.0625), want = Math.min(1, 2 ** Math.floor(Math.log2(s)));
+  if (want !== heldRes && s / heldRes > 0.88 && s / heldRes < 2.3) return Math.min(1, heldRes);
+  heldRes = want;
+  return want;
+};
 // (#322) The terrain's pieces are laid down at every zoom (what's drawn tile by tile each frame, with its gradients and rounded
 // corners, was most of what a view of lake or desert cost): as fine as the screen shows, up to twice a world unit
-const terrainRes = () => { const s = getViewScale(); return s < 0.7 ? chunkRes() : s >= 1.35 ? 2 : 1; };
+let heldTerrain = 1;
+const terrainRes = () => {
+  const s = getViewScale();
+  let want = s < 0.7 ? chunkRes() : s >= 1.35 ? 2 : 1;
+  // (a size is kept within a band of a tenth or so round each threshold)
+  if (heldTerrain === 2 && s > 1.2) want = 2;
+  else if (heldTerrain === 1 && s >= 0.62 && s < 1.5) want = 1;
+  heldTerrain = want;
+  return want;
+};
 
 // The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
 // shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes

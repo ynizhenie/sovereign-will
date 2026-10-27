@@ -271,6 +271,7 @@ export const ukLanguage = {
       'menu.fps': 'Частота кадрів:',
       'menu.fpsDisplay': 'Як екран',
       'menu.showFps': 'Показувати FPS:',
+      'menu.showFpsDetail': 'Докладно',
       'menu.sound': 'Звук:',
       'menu.music': 'Музика:',
       'music.player': 'Плеєр музики:',

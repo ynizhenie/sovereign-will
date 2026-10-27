@@ -271,6 +271,7 @@ export const enLanguage = {
       'menu.fps': 'Frame rate:',
       'menu.fpsDisplay': 'Screen',
       'menu.showFps': 'Show FPS:',
+      'menu.showFpsDetail': 'Details',
       'menu.sound': 'Sound:',
       'menu.music': 'Music:',
       'music.player': 'Music player:',

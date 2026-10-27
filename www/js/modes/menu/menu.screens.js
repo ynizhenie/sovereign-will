@@ -2,7 +2,7 @@
 
 import { LANGUAGES } from '../../content/language/index.js';
 import { audio, currentLanguage, fitCanvasToScreen, loadSetting, onTap, quality, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
-import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, previewTrack, setTrackOn } from '../../app/index.js';
+import { fpsCounter, isTrackOn, perf, loop, musicCatalog, musicPreview, previewTrack, setTrackOn } from '../../app/index.js';
 import { flagHtml, iconHtml } from '../../ui/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
@@ -63,7 +63,8 @@ export const markFps = () => fpsOptions.forEach(b => b.classList.toggle('active'
 export const showFpsOptions = document.querySelectorAll('[data-show-fps]');
 
 export const applyShowFps = value => {
-  fpsCounter.hidden = value !== 'on';
+  fpsCounter.hidden = value === 'off';
+  perf.detail = value === 'detail'; // (#322: the times of a frame's parts too)
   showFpsOptions.forEach(b => b.classList.toggle('active', b.dataset.showFps === value));
 };
 

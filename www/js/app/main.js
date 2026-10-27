@@ -2,6 +2,7 @@
 // drawn as often as the frame rate setting allows
 
 import { renderConfigHud, syncHudMode } from '../ui/index.js';
+import { perf, perfText } from './perf.js';
 import { applyPageTexts, camera, clampCamera, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { update } from './update.js';
@@ -44,7 +45,9 @@ export function gameLoop(now) {
   // (the rest of what's owed is let go) instead of the screen going slow
   while (loop.stepTime >= STEP && steps < MAX_STEPS_PER_FRAME && (steps === 0 || performance.now() - started < STEP_BUDGET_MS)) {
     rememberPositions();
+    const stepStart = performance.now();
     stepGame(STEP);
+    perf.stepMs += performance.now() - stepStart; perf.steps++;
     loop.stepTime -= STEP;
     steps++;
   }
@@ -52,7 +55,10 @@ export function gameLoop(now) {
 
   if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
+    const drawStart = performance.now();
     drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
+    const drawn = performance.now() - drawStart;
+    perf.drawMs += drawn; perf.frames++; if (drawn + (drawStart - started) > 20) perf.slow++;
     countFrame(now);
   }
 }
@@ -109,7 +115,7 @@ export let framesThisSecond = 0, secondStart = 0;
 export function countFrame(now) {
   framesThisSecond++;
   if (now - secondStart >= 1000) {
-    if (!fpsCounter.hidden) fpsCounter.textContent = `${Math.round(framesThisSecond * 1000 / (now - secondStart))} FPS`;
+    if (!fpsCounter.hidden) fpsCounter.textContent = perfText(Math.round(framesThisSecond * 1000 / (now - secondStart)));
     framesThisSecond = 0;
     secondStart = now;
   }

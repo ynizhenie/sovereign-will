@@ -487,6 +487,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   color: #2ecc71;
   text-shadow: 1px 1px 2px #000;
   pointer-events: none;
+  white-space: pre; font-family: monospace; text-align: left;
 }
 #fps-counter[hidden] {
   display: none;

@@ -17,6 +17,7 @@ import { tickDemonCamp } from '../domains/factions/demons/index.js';
 import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/index.js';
+import { mark, startMarks } from './perf.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
 import { isInCamp, isRaidPicking, isRaiding, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
@@ -31,64 +32,116 @@ export function update(dt) {
     updateBattle(dt);
     if (battle.phase !== 'fight') return;
   }
+  startMarks();
   resetTileIndex();
+  mark('resetTileIndex');
   game.pathTick++;
 
   updatePossessionView();
+  mark('updatePossessionView');
   tickMorale(dt);
+  mark('tickMorale');
   boarsPanic();
+  mark('boarsPanic');
   if (!isRaiding()) tickWaveTimer(dt); // (a party out on a raid: the wave clock stops, #255)
+  mark('isRaiding');
   updatePendingRespawns(dt);
+  mark('updatePendingRespawns');
   makeBonesAndRot(dt);
+  mark('makeBonesAndRot');
   updateTemporaryZombies(dt);
+  mark('updateTemporaryZombies');
   fadeClearedBlight(dt);
+  mark('fadeClearedBlight');
   updateBurning(dt);
+  mark('updateBurning');
   raiseOnBlight(dt);
+  mark('raiseOnBlight');
   tickMeals(dt);
+  mark('tickMeals');
   tickBoarRespawn(dt);
+  mark('tickBoarRespawn');
   growCrops(dt);
+  mark('growCrops');
   tickBoars(dt);
+  mark('tickBoars');
   tickCampfires(dt);
+  mark('tickCampfires');
   tickFishPopulation(dt);
+  mark('tickFishPopulation');
   tickFishTraps(dt);
+  mark('tickFishTraps');
   tickSmelters(dt);
+  mark('tickSmelters');
   tickSettlers(dt);
+  mark('tickSettlers');
   tickEnemyTents(dt);
+  mark('tickEnemyTents');
   tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
+  mark('tickPortalWave');
   tickScouts(dt); // (scouts between waves, #279)
+  mark('tickScouts');
   tickDemonCamp(dt); // (their corpse pits and cages)
+  mark('tickDemonCamp');
   tickProjectiles();
+  mark('tickProjectiles');
   tickEnemies(dt);
+  mark('tickEnemies');
 
   separateSettlersFromEnemies();
+  mark('separateSettlersFromEnemies');
   separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
+  mark('separateAllies');
   for (const unit of game.settlers) tickAnimation(unit, dt);
   ageBloodAndDung(dt);
+  mark('ageBloodAndDung');
   trackAllFootprints();
+  mark('trackAllFootprints');
   for (const unit of game.enemies) tickAnimation(unit, dt);
   applySpikeTraps(dt);
+  mark('applySpikeTraps');
   tickIronTraps(dt); // (#248)
+  mark('tickIronTraps');
 
   removeDeadSettlers();
+  mark('removeDeadSettlers');
   removeDeadEnemies();
+  mark('removeDeadEnemies');
   updateCorpses(dt);
+  mark('updateCorpses');
   ageStuckArrows(dt);
+  mark('ageStuckArrows');
   tickLanterns(dt); // (souls out of a necromancer's lantern by a grave or the hall, #326)
+  mark('tickLanterns');
 
   keepStoresInStep(); // what lies where, in step with the stock (#248)
+  mark('keepStoresInStep');
   tickPaths(); // ground walked a lot wears into paths (#248)
+  mark('tickPaths');
   tickDaytime(dt); // day and night (#257)
+  mark('tickDaytime');
   tickWeather(dt); // (#308)
+  mark('tickWeather');
   tickFog(dt); // (what the colony sees, #299)
+  mark('tickFog');
   tickMenuScene(dt); // (the main menu's scene, #256)
+  mark('tickMenuScene');
   tickNight();
+  mark('tickNight');
   tickVoices(dt); // (#252)
+  mark('tickVoices');
   if (!isRaiding()) tickCards(); // (#255)
+  mark('isRaiding');
   tickRaidCamp(dt); // (#255)
+  mark('tickRaidCamp');
   tickRaid(dt);
+  mark('tickRaid');
   updateUnitCounts();
+  mark('updateUnitCounts');
   updateUI();
+  mark('updateUI');
   refreshAffordability();
+  mark('refreshAffordability');
 }
 
 // A raid's camp (#255): only the fight goes on, the party against the camp; the base is put away
