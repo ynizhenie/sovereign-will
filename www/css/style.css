@@ -1167,3 +1167,26 @@ body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loadi
 
 /* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
 #btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }
+
+/* (#326) the languages: Settings with a square of flags at its right, and a flag before each language in Settings */
+.menu-row { display: flex; gap: 8px; align-items: stretch; width: 100%; }
+.menu-row .menu-button { flex: 1; width: auto; }
+.flag-box { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 3px; width: 44px; box-sizing: border-box;
+  background: #2a2d34; border: 1px solid #3d414b; border-radius: 6px; }
+.flag-button { display: flex; padding: 1px; background: none; border: 1px solid transparent; border-radius: 3px; cursor: pointer; line-height: 0; }
+.flag-button .flag { width: 100%; height: auto; }
+.flag-button.active { border-color: #46b8da; }
+.language-option { display: inline-flex; align-items: center; gap: 6px; }
+.language-option .flag { flex: none; }
+
+/* (#326) the music player in Settings: a long list that scrolls inside the panel */
+#music-player { max-height: 38vh; overflow-y: auto; text-align: left; padding-right: 2px; }
+.music-group { margin: 10px 0 4px; font-size: 12px; opacity: 0.75; letter-spacing: 0.06em; text-transform: uppercase; }
+.music-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.music-row.off .music-name { opacity: 0.45; }
+.music-listen { flex: none; width: 34px; min-height: 30px; padding: 0; }
+.music-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.music-name b { font-size: 13px; }
+.music-name small { font-size: 11px; opacity: 0.7; }
+.music-toggle { flex: none; min-width: 52px; min-height: 30px; padding: 0 8px; font-size: 12px; }
+.music-toggle.on, .music-listen.on { background: #2e6da4; border-color: #46b8da; color: #fff; }
