@@ -25,6 +25,7 @@ export const enLanguage = {
         worms: 'Worms',
         bones: 'Bones',
         rot: 'Rot',
+        souls: 'Souls',
         appleSaplings: 'Apple saplings'
       },
       resourceGroups: {
@@ -126,7 +127,8 @@ export const enLanguage = {
         armor: 'Armour',
         wateringCan: 'Watering can',
         whistle: 'Foreman\'s whistle',
-        banner: 'Banner'
+        banner: 'Banner',
+        soul_lantern: 'Soul lantern'
       },
       recipes: {
         arrows: 'Arrows',
@@ -180,7 +182,8 @@ export const enLanguage = {
         armor: 'More health, less damage taken.',
         wateringCan: 'The farmer waters the crops: they grow faster.',
         whistle: 'Makes a worker a foreman: it goes to its 3 nearest workers in turn and tells each what\'s needed most, and to swap tools from the store for it.',
-        banner: 'Makes a soldier a captain: in a wave it gives up to 5 soldiers each an enemy to go for.'
+        banner: 'Makes a soldier a captain: in a wave it gives up to 5 soldiers each an enemy to go for.',
+        soul_lantern: 'A necromancer\'s: a soul flies into it for each zombie raised (no limit); near a grave or the hall they fly out into the stock. A ghost costs one.'
       },
       buildings: {
         workshop: 'Where anything without iron in it is made: tools, weapons, gear, arrows.',
@@ -655,6 +658,8 @@ export const enLanguage = {
       'disarm.noItem': '[[warn]] No settler with anything to take away!',
       'pop.limit': '[[warn]] Too many settlers! More homes needed: {name} ([[{icon}]])',
       'pop.limitNoHome': '[[warn]] Too many settlers!',
+      'ghost.needGrave': '[[warn]] A ghost needs a built grave',
+      'ghost.limit': '[[warn]] No more ghosts: {n} at most (3, and one more for each grave)',
       'hire.done': '[[ok]] Hired: {name}!',
       'upgrade.noone': '[[no]] No ordinary settler to upgrade!',
       'upgrade.needs': '[[no]] Upgrade to {name}: needs',
