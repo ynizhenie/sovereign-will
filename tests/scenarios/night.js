@@ -96,7 +96,11 @@ Object.assign(window.sim, (() => {
     // the lights: the town hall, a torch in an enemy's hand, a portal, a necromancer's staff
     placeBuilding('portal', nearHall(5, 5).x, nearHall(5, 5).y);
     settlers = [Object.assign(createSettler('zombie', 1, townHall.x + 40, townHall.y), { tool: 'necro_staff' })];
+    // (#326) an enemy's torch gives light where the colony sees it, not in the fog: one by the hall does, the far ones don't
+    const carriers = enemies.filter(en => en.torch);
+    carriers[0].x = townHall.x + 60; carriers[0].y = townHall.y; tickFog(1);
     const lights = getLights();
+    r.farTorchesDark = carriers.slice(1).every(en => !lights.some(l => l.x === en.x && l.y === en.y));
     r.lights = { hall: lights.some(l => l.x === townHall.x && l.y === townHall.y && Math.abs(l.r - (townHall.radius + day().hallLightTiles * TILE_SIZE)) < 0.01),
       enemyTorch: lights.some(l => enemies.some(en => en.torch && en.x === l.x && en.y === l.y)),
       portal: lights.some(l => buildings.some(b => b.type === 'portal' && b.x === l.x && b.y === l.y)),

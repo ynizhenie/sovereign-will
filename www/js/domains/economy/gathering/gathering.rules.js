@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { forEachInRect, game, rand } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
-import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
+import { ORE_KINDS, getFrontier, getMapCount, hasFog, isVisible, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -35,7 +35,8 @@ export function getWorkableResources(found = () => {}) {
   }
   const plot = take(game.farmPlots), boar = take(game.boars);
   for (const p of game.farmPlots) if (p.growth >= 100) plot(p);
-  game.boars.forEach(boar);
+  // (#326) a boar in the dark isn't seen: nobody goes for it (they find it by walking about, and a dog's wider sight)
+  game.boars.forEach(b => { if (!hasFog() || isVisible(b.x, b.y)) boar(b); });
   return all;
 }
 

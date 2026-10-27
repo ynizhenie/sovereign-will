@@ -100,7 +100,7 @@ export function performAttack(attacker, targetX, targetY) {
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; bleed(en, attacker); playSound('hit', en); } })),
+      ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
       ...game.buildings.filter(b => b.side === 'red' && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
@@ -422,6 +422,7 @@ export function tickProjectiles() {
         let en = game.enemies[j];
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           damageEnemy(en, proj.damage);
+          if (proj.owner) { en.struckBy = proj.owner; en.struckTick = game.pathTick; } // (who it turns on in the fog, #326)
           bleed(en, proj.owner);
           playSound('arrowHit', en);
           if (proj.fire) setBurning(en);

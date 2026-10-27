@@ -5,6 +5,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../engine/world/index.js';
+import { isVisible } from './world.fog.js';
 import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -74,6 +75,7 @@ export function getLights() {
     else if (staff(s)) lights.push({ x: s.x, y: s.y, r: c.staffLightTiles * TILE_SIZE });
   }
   for (const en of game.enemies) {
+    if (!isVisible(en.x, en.y)) continue; // (#326: its torch isn't seen in the fog)
     if (en.torch) lights.push({ x: en.x, y: en.y, r: c.handTorchTiles * TILE_SIZE });
     else if (en.enemyKey === 'undead_necromancer') lights.push({ x: en.x, y: en.y, r: c.staffLightTiles * TILE_SIZE });
   }
