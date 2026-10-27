@@ -6,7 +6,7 @@
 // off in the Settings. The audio starts with the first tap or key (browsers allow it only then).
 
 import { game } from '../engine/world/index.js';
-import { audio, camera, canvas, getViewScale, midi, noise, screenPixelRatio, startAudio, tone } from '../engine/platform/index.js';
+import { audio, camera, canvas, getViewScale, loadSetting, midi, noise, saveSetting, screenPixelRatio, startAudio, t, tone } from '../engine/platform/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle } from '../modes/battle/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
@@ -247,8 +247,32 @@ export const WORLD_SOUNDS = {
 // Which tracks play: the colony's ambient (another after each wave) and the attacking faction's battle
 // track (one picked as each wave comes)
 export const musicPick = { ambient: '', ambientFaction: '', battle: '', fighting: false, ambientSince: 0, night: false };
+// ---- (#326) The player in Settings: tracks switched off (remembered on the device; none of theirs is picked), and one
+// listened to (it plays alone while it's on)
+/** @type {Set<string>} */
+const switchedOff = new Set((() => { try { return JSON.parse(loadSetting('musicOff', '[]')); } catch (e) { return []; } })());
+export const isTrackOn = id => !switchedOff.has(id);
+export function setTrackOn(id, on) {
+  if (on) switchedOff.delete(id); else switchedOff.add(id);
+  saveSetting('musicOff', JSON.stringify([...switchedOff]));
+}
+export const musicPreview = { id: '' };
+/** @param {string} id the track to listen to, '' to stop */
+export function previewTrack(id) { musicPreview.id = id; if (id) startAudio(); }
+
+// Every track by where it plays: [{ id, label, tracks: [{ id, when }] }] (label: a faction's name or a text key; when: a text key)
+export function musicCatalog() {
+  const groups = [{ id: 'menu', label: t('music.group.menu'), tracks: [{ id: 'menu', when: 'music.when.menu' }] }];
+  const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind] }))) });
+  set('arena', t('music.group.arena'), GAME_CONFIG.battleMusic, { ambient: 'music.when.arenaAmbient', nightAmbient: 'music.when.arenaAmbientNight', battle: 'music.when.arenaBattle', nightBattle: 'music.when.arenaBattleNight' });
+  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) {
+    set(faction.id, faction.label, faction.music, { ambient: 'music.when.ambient', nightAmbient: 'music.when.ambientNight', battle: 'music.when.battle', nightBattle: 'music.when.battleNight' });
+  }
+  return groups;
+}
+
 const AMBIENT_SECONDS = 180; // a new ambient after this long (#252), not one for the whole colony
-const pickOne = (list, not = '') => { const choice = list.filter(id => id !== not); return choice[Math.floor(Math.random() * choice.length)] || list[0]; };
+const pickOne = (list, not = '') => { const on = list.filter(isTrackOn), choice = on.filter(id => id !== not); return choice[Math.floor(Math.random() * choice.length)] || on[0] || ''; }; // ('' with all switched off)
 
 // The day's tracks or the night's (#252: the night has its own; only Endless has nights)
 const nightMusic = () => game.gameMode === 'endless' && isNight();
@@ -257,7 +281,7 @@ const battlesOf = faction => (nightMusic() && faction.music.nightBattle) || fact
 
 function ambientFor(faction) {
   if (musicPick.night !== nightMusic()) { musicPick.night = nightMusic(); musicPick.ambient = ''; musicPick.battle = ''; } // (night fell, or day broke)
-  if (musicPick.ambientFaction !== faction.id || !musicPick.ambient) {
+  if (musicPick.ambientFaction !== faction.id || !musicPick.ambient || !isTrackOn(musicPick.ambient)) {
     musicPick.ambientFaction = faction.id;
     musicPick.ambient = pickOne(ambientsOf(faction));
     musicPick.ambientSince = performance.now() / 1000;
@@ -268,7 +292,7 @@ function ambientFor(faction) {
 // fighting now or not: a new battle track as a fight starts, a new ambient as one ends
 function trackFor(fighting) {
   ambientFor(getPlayerFaction()); // (the day's or the night's)
-  if (fighting && (!musicPick.fighting || !musicPick.battle)) musicPick.battle = pickOne(battlesOf(getEnemyFaction()));
+  if (fighting && (!musicPick.fighting || !musicPick.battle || !isTrackOn(musicPick.battle))) musicPick.battle = pickOne(battlesOf(getEnemyFaction()));
   const now = performance.now() / 1000;
   if ((!fighting && musicPick.fighting) || (!fighting && musicPick.ambient && now - musicPick.ambientSince > AMBIENT_SECONDS)) {
     musicPick.ambient = pickOne(ambientsOf(getPlayerFaction()), musicPick.ambient);
@@ -287,12 +311,21 @@ function battleTrack(fight) {
   const night = battle.time === 'night';
   const list = fight ? (night && set.nightBattle) || set.battle : (night && set.nightAmbient) || set.ambient;
   const key = `${battle.theme}|${night}|${fight}`;
-  if (battleKey.key !== key || !list.includes(battleKey.track)) { battleKey.key = key; battleKey.track = pickOne(list, battleKey.track); }
+  if (battleKey.key !== key || !list.includes(battleKey.track) || !isTrackOn(battleKey.track)) { battleKey.key = key; battleKey.track = pickOne(list, battleKey.track); }
   return battleKey.track;
 }
 
-// Which music now, and how loud: { style: level }
+// Which music now, and how loud: { style: level }. (#326) A track listened to in Settings plays alone; one switched off
+// there is never picked
 export function musicMix() {
+  if (musicPreview.id) return { [musicPreview.id]: 1 };
+  const mix = pickedMix();
+  delete mix[''];
+  if (!isTrackOn('menu')) delete mix.menu;
+  return mix;
+}
+
+function pickedMix() {
   if (!audio.musicOn) return {};
   const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
