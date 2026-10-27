@@ -8,6 +8,7 @@ import { game } from './state.js';
 // world before held things no longer in the world (a frame failed on them and the game stopped)
 let epoch = 0;
 export function newWorldEpoch() { epoch++; }
+export const worldEpoch = () => epoch; // (#322: what's kept longer than a tick is kept for one world)
 
 // A place to keep one such thing; call it with how to work it out, get it (worked out the first time in a tick)
 /** @returns {<T>(make: () => T) => T} */

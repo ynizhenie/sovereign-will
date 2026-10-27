@@ -116,3 +116,39 @@ test('the marks on resources show within a moment of being put on, and go with t
   expect(r.gone).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('what settlers may work is kept between ticks: a new thing shows at once, a mark within a few ticks; the one a settler picked is kept a third of a second (#322)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    isPaused = true;
+    for (const list of [game.trees, game.boulders, game.naturalRocks, game.waterTiles, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.cacti]) list.length = 0;
+    resetTileIndex();
+    const { makeSettler } = window.sim.helpers;
+    const g = getGridPos(townHall.x, townHall.y);
+    const at = (dx, dy) => ({ x: (g.gx + dx) * TILE_SIZE + 15, y: (g.gy + dy) * TILE_SIZE + 15 });
+    const s = makeSettler(1, at(0, 6).x, at(0, 6).y); s.tool = 'axe'; settlers = [s];
+    game.pathTick = 1000;
+    const far = addMapResource('tree', at(0, 12).x, at(0, 12).y);
+    const first = createSettlerTick(1 / 60).allResources.includes(far);
+    const near = addMapResource('tree', at(0, 8).x, at(0, 8).y);
+    const shownAtOnce = createSettlerTick(1 / 60).allResources.includes(near); // (the list changed: made again)
+    // a mark: within RESOURCES_EVERY ticks
+    far.priority = 1;
+    const sameTick = createSettlerTick(1 / 60).markedResources.includes(far);
+    game.pathTick += 10;
+    const later = createSettlerTick(1 / 60).markedResources.includes(far);
+    far.priority = 0; game.pathTick += 10;
+    // the picked one is kept
+    const t1 = createSettlerTick(1 / 60);
+    const picked = pickResourceToHarvest(s, t1);
+    const nearer = addMapResource('tree', at(0, 7).x, at(0, 7).y);
+    game.pathTick += 5;
+    const kept = pickResourceToHarvest(s, createSettlerTick(1 / 60)) === picked;
+    game.pathTick += 30;
+    const changed = pickResourceToHarvest(s, createSettlerTick(1 / 60));
+    return { first, shownAtOnce, sameTick, later, kept, pickedNear: picked === near, changedToNearest: changed === nearer };
+  });
+  expect(r).toEqual({ first: true, shownAtOnce: true, sameTick: false, later: true, kept: true, pickedNear: true, changedToNearest: true });
+  expect(errors).toEqual([]);
+});

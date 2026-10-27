@@ -101,6 +101,9 @@
  * @property {boolean} [soul_lantern]  (#326) a necromancer's soul lantern at its side
  * @property {number} [lanternSouls]  (#326) the souls in it
  * @property {number} [lanternTimer]  (#326) the time to the next one let out by a grave
+ * @property {Object | null} [pickedRes]  (#322) the resource it picked to work, kept a third of a second (pickedAt: the tick; pickedGear: what it carried then)
+ * @property {number} [pickedAt]
+ * @property {string} [pickedGear]
  * @property {number} [masterId]    (#326) a temporary zombie's necromancer (its id): it keeps by it and goes where it sends it
  * @property {Object | null} [zombieTarget]  (#326) a necromancer's: the enemy its zombies are sent at
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)

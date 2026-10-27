@@ -12,7 +12,7 @@
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, rand, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { getFrontier, getTerritoryBox, inReliefZone, inTerritory, isVisible, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
@@ -40,7 +40,19 @@ import { baitTrap } from '../../economy/hunting/index.js';
 import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
 import { battleOrders } from '../../../modes/battle/index.js';
 
-export function createSettlerTick(dt) {
+// (#322) What the settlers may work, and which of it is marked or in the way, was worked out afresh every tick: every list of
+// things looked through over the whole base's land (tens of thousands of tiles' buckets), sixty times a second. It's kept now,
+// and made again when a list of things (or the buildings, or a zone) has changed, and anyway every RESOURCES_EVERY ticks (the
+// marks, a boar's step in or out of sight, a plot ripe...)
+const RESOURCES_EVERY = 10;
+/** @type {{ tick: number, epoch: number, stamps: any[], state: any } | null} */
+let resourceCache = null;
+const resourceLists = () => [...Object.values(GAME_CONFIG.mapResources).map(def => game[def.list]), game.buildings, game.farmZones, game.waterTiles];
+function resourceState() {
+  const stamps = resourceLists().flatMap(listStamp);
+  const kept = resourceCache;
+  if (kept && kept.epoch === worldEpoch() && game.pathTick >= kept.tick && game.pathTick - kept.tick < RESOURCES_EVERY &&
+    stamps.length === kept.stamps.length && stamps.every((v, i) => v === kept.stamps[i])) return kept.state;
   // which GAME_CONFIG.mapResources kind each resource is, so canSettlerHarvest() doesn't scan every list
   // (#299: those to be worked, by the list each came from; another one asked about found out then)
   const kindOfList = new Map(Object.entries(GAME_CONFIG.mapResources).map(([kind, def]) => [game[def.list], kind]));
@@ -53,6 +65,13 @@ export function createSettlerTick(dt) {
   const zoneBlockers = findZoneBlockers(allResources, resourceKind);
   const markedResources = allResources.filter(r => (r.priority || 0) > 0 || doorBlockers.has(r) || zoneBlockers.has(r));
   markedResources.sort((a, b) => getWorkPriority(b) - getWorkPriority(a));
+  const state = { allResources, resourceSet: new Set(allResources), resourceKind, doorBlockers, markedResources, activeWaterSpots: fishingSpots() };
+  resourceCache = { tick: game.pathTick, epoch: worldEpoch(), stamps, state };
+  return state;
+}
+
+export function createSettlerTick(dt) {
+  const { allResources, resourceSet, resourceKind, doorBlockers, markedResources, activeWaterSpots } = resourceState();
 
   const defendersCount = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
 
@@ -61,6 +80,7 @@ export function createSettlerTick(dt) {
     isWaveActive: game.enemies.length > 0 || (game.portalQueue || []).length > 0, // (demons still to come out, #250)
     tents: game.buildings.filter(isShelter), // tents or graves
     allResources,
+    resourceSet,
     resourceKind,
     markedResources,
     doorBlockers,
@@ -85,7 +105,7 @@ export function createSettlerTick(dt) {
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     // (not one with a fish trap on it, #248)
     // (#299: looked for on the base's land only, not through a continent's sea)
-    activeWaterSpots: fishingSpots(),
+    activeWaterSpots,
     assignedFishersCount: 0,
     defendersCount,
     // unarmed workers only help destroy enemy tents when there's nobody armed to do it
