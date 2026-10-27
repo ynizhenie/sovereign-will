@@ -11,7 +11,7 @@ import { drawHeadTexture, lookOf } from './settlers.looks.js';
 import { castShadow, getDarkness } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
-import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
+import { ctx, getViewRect, getViewScale, setFont } from '../../../engine/platform/index.js';
 import { getEnemyColor, getPlayerFaction, getSettlerColor } from '../../factions/index.js';
 import { drawStaff, getNecromancy } from '../../factions/undead/index.js';
 import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/combat/index.js';
@@ -255,7 +255,7 @@ function drawSideTorch(facing, r) {
 // Asleep (#257): a few z's drifting up off it
 function drawSleepZs(x, y) {
   const t = performance.now() / 1000;
-  ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; setFont('bold 8px sans-serif'); ctx.textAlign = 'center';
   for (let k = 0; k < 3; k++) {
     const p = (t * 0.5 + k / 3) % 1;
     ctx.globalAlpha = 1 - p;
@@ -618,7 +618,7 @@ export function drawIdleIcon(x, y) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
   ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 6, y + 7, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#34495e'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#34495e'; setFont('bold 8px sans-serif'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('zZ', x, y + 1);
   ctx.textBaseline = 'alphabetic';
 }

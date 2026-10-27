@@ -6,7 +6,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
-import { ctx } from '../../../engine/platform/index.js';
+import { ctx, setFont } from '../../../engine/platform/index.js';
 import { castShadow } from '../../world/index.js';
 import { petKindOf } from '../settlers/index.js';
 import { drawBodyBlood } from '../../conflict/combat/index.js';
@@ -139,7 +139,7 @@ function drawBone(x, y) {
 
 function drawZs(x, y) {
   ctx.save();
-  ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; setFont('bold 8px sans-serif');
   const t = (game.pathTick % 90) / 90;
   ctx.globalAlpha = 1 - t; ctx.fillText('z', x, y - t * 8);
   ctx.globalAlpha = Math.max(0, 1 - ((t + 0.5) % 1)); ctx.fillText('Z', x + 4, y - 4 - ((t + 0.5) % 1) * 8);
