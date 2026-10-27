@@ -20,7 +20,8 @@ export const resourcesConfig = {
     rope: { id: 'rope', icon: 'rope', type: 'resource' },
     torches: { id: 'torches', icon: 'torch', type: 'resource', factions: ['humans', 'demons'] },
     // campfire fuel (#199): a woodcutter chops it from wood; campfires burn it (or coal), not the wood
-    firewood: { id: 'firewood', icon: 'firewood', type: 'resource', factions: ['humans', 'demons'] },
+    // (#326) every faction's now: the undead's torch posts burn it too; crafted by hand (Craft: supplies) as well as chopped
+    firewood: { id: 'firewood', icon: 'firewood', type: 'resource' },
     worms: { id: 'worms', icon: 'worms', type: 'resource' },
     appleSaplings: { id: 'appleSaplings', icon: 'appleSaplings', type: 'resource' },
     // factions: only shown to these factions

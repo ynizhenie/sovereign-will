@@ -93,9 +93,10 @@ export const enemiesConfig = {
   // wave fromWave wears it with a chance growing by perWave a wave, up to max. Shields: melee, not big
   enemyGear: { fromWave: 4, perWave: 0.04, max: 0.5 },
 
-  // enemy tents: builders put them up near the map edge; each summons extra enemies during a wave
+  // enemy tents: builders put them up near the map edge (#326: in Endless at the border of the player's land, outside it
+  // borderTiles [from, to] tiles from it); each summons extra enemies during a wave
   enemyTents: {
-    hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
+    borderTiles: [1, 3], hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
     summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
   },
 

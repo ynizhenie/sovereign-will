@@ -133,7 +133,8 @@ export const enLanguage = {
       recipes: {
         arrows: 'Arrows',
         rope: 'Rope',
-        torch: 'Torch'
+        torch: 'Torch',
+        firewood: 'Firewood'
       },
       foodKinds: {
         berries: 'Berries',
@@ -216,7 +217,8 @@ export const enLanguage = {
       recipes: {
         arrows: 'Arrows for archers and towers.',
         rope: 'Twisted plant fibre used to make fishing rods, bows and torches.',
-        torch: 'Carried by settlers at night and used to build torch posts.'
+        torch: 'Carried by settlers at night and used to build torch posts.',
+        firewood: 'Burnt in campfires and torch posts. A woodcutter chops it by itself when it runs low; made here: 1 wood into 2.'
       }
     },
     statLabels: {
