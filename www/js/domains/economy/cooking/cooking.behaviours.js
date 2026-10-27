@@ -131,7 +131,7 @@ export function chopFirewood(s, tick) {
   if (load && (tick.isWaveActive || s.isPossessed)) { stock.wood += load.amount; s.carrying = null; return false; }
   if (!load) {
     const can = s.role === 'worker' && hasAxeTool(s.tool) && !s.isPossessed && !s.carrying && !tick.isWaveActive &&
-      game.buildings.some(b => b.type === 'campfire') && stock.wood >= 1 && (stock.firewood || 0) < c.keep;
+      game.buildings.some(b => b.type === 'campfire' || b.type === 'torch') && stock.wood >= 1 && (stock.firewood || 0) < c.keep;
     if (!can || (!s.wasIdle && !s.chopTrip && (stock.firewood || 0) >= c.low)) { s.chopTrip = false; return false; }
     s.patrolTarget = null;
     s.chopTrip = fetchFromStorage(s, 'wood', tick.dt, () => { s.carrying = { type: 'wood', amount: takeStock('wood', c.perTrip), forChop: true }; s.chopTimer = 0; });
