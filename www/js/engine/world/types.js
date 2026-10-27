@@ -365,6 +365,7 @@
  * @property {Enemy[]} scouts  enemy scouts between waves (#279)
  * @property {Point[]} reliefZones  tiles marked to relieve in (#279)
  * @property {Point[]} postZones    tiles marked for soldiers' posts
+ * @property {Point[]} pathZones    (#326) tiles marked as a path, trodden for good
  * @property {number} scoutClock
  * @property {any} weather  the weather now (#308, world.weather.js); null: none yet
  */

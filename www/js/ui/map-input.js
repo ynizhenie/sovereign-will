@@ -59,7 +59,7 @@ export function handleCanvasClick() {
     // (#299) only on the base's land (taking one off: anywhere)
     if (kind !== 'clear' && !inTerritory(tile.gx, tile.gy)) { showNotification(t('build.outside'), true); return; }
     // (#279) relief and post zones; Remove zone takes any off
-    if (kind === 'relief' || kind === 'post') toggleZone(tile.gx, tile.gy, kind);
+    if (kind === 'relief' || kind === 'post' || kind === 'path') toggleZone(tile.gx, tile.gy, kind);
     else { if (kind === 'clear') toggleZone(tile.gx, tile.gy, 'clear'); toggleFarmZone(tile.gx, tile.gy, kind); }
     return;
   }

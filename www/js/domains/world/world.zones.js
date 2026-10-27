@@ -11,7 +11,7 @@ import { isTileBlockedForSettler } from '../../engine/movement/index.js';
 import { showNotification } from '../../ui/index.js';
 import { t } from '../../engine/platform/index.js';
 
-const LISTS = { relief: 'reliefZones', post: 'postZones' };
+const LISTS = { relief: 'reliefZones', post: 'postZones', path: 'pathZones' }; // (#326: a path, marked by hand)
 
 // The tile's zone of a kind marked or taken away (again: taken away); 'clear' takes any off
 export function toggleZone(x, y, kind) {
@@ -22,7 +22,7 @@ export function toggleZone(x, y, kind) {
   }
   if (kind === 'clear') return;
   const g = getGridPos(x, y);
-  if (isTileBlockedForSettler(g.gx, g.gy) || Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 10) { showNotification(t('zone.badTile'), true); return; }
+  if (isTileBlockedForSettler(g.gx, g.gy) || (kind !== 'path' && Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 10)) { showNotification(t('zone.badTile'), true); return; }
   // (one kind to a tile)
   for (const k of Object.keys(LISTS)) if (k !== kind) game[LISTS[k]] = game[LISTS[k]].filter(z => z.x !== x || z.y !== y);
   game[LISTS[kind]].push({ x, y });
