@@ -1,8 +1,8 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, isDoor, someNear, townHall } from '../../../engine/world/index.js';
-import { getFrontier } from '../../world/index.js';
+import { TILE_SIZE, game, isDoor, someNear, townHall } from '../../../engine/world/index.js';
+import { getFrontier, hasFog } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
@@ -218,14 +218,20 @@ function chooseEnemyTarget(en) {
   let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
   let closestSettler = /** @type {Settler | null} */ (null);
 
+  // (#326) in the fog an enemy sees a settler only close to it (an archer: as far as it shoots), or one that has
+  // hit it a moment ago; else it knows just its goal, the town hall
+  const fog = GAME_CONFIG.fog, foggy = hasFog();
+  const def = getEnemyDef(en);
+  const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? def.ranged.range + 30 : 0);
+  const sees = (s, d) => !foggy || d <= sight || (en.struckBy === s && game.pathTick - (en.struckTick || -Infinity) < fog.enemyRememberSeconds * 60);
   game.settlers.forEach(s => {
     if (isUntouchable(s)) return; // (a ghost: nothing to hit, #314)
     let d = Math.hypot(en.x - s.x, en.y - s.y);
-    if (d < minDist) { minDist = d; closestSettler = s; }
+    if (d < minDist && sees(s, d)) { minDist = d; closestSettler = s; }
   });
 
   let lockedTarget = en.attackTarget;
-  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget))) lockedTarget = null;
+  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) || !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1)))) lockedTarget = null;
   if (lockedTarget) {
     let lockedDist = Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y);
     if (!closestSettler || lockedDist <= minDist + 40) {

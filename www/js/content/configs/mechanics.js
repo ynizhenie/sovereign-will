@@ -86,7 +86,12 @@ export const mechanicsConfig = {
   territory: { startTiles: 40, buildingTiles: 6, waveTiles: 14, skip: ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'torch', 'wheat', 'sapling', 'apple_sapling'] },
   // (#299) fog of war (Endless): how far round them the town hall, a building, a watchtower and a settler see
   // (tiles); worked out every everySeconds; dim: how dark what's been seen but isn't now (0..1)
-  fog: { hallTiles: 12, buildingTiles: 5, towerTiles: 12, settlerTiles: 7, everySeconds: 0.25, dim: 0.55 },
+  // (#326) at night they see `nightShare` of that, but what's lit (a torch in hand, a torch post, a campfire) sees as by day;
+  // a pet sees `petShare` as far, night or day (so a dog's company widens how far a boar is noticed); a boar is worked or
+  // hunted only where the colony sees now; an enemy sees a settler only within enemySightTiles of it (an archer: as far as it shoots), and a settler
+  // that hit it for a while after
+  fog: { hallTiles: 12, buildingTiles: 5, towerTiles: 12, settlerTiles: 7, everySeconds: 0.25, dim: 0.55,
+    nightShare: 0.6, petShare: 1.6, enemySightTiles: 8, enemyRememberSeconds: 4 },
   weather: { firstClearSeconds: 240, seconds: [60, 130], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
     wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
