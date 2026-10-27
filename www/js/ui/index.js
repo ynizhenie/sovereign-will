@@ -9,6 +9,7 @@ export { initPageActions } from './page-actions.js';
 export { closeOverlays, closeSheet, getOpenSheet, hidePlacing, initSheets, openSheet, showPlacing, syncHudMode, toggleSheet } from './sheets.js';
 export { hideInfo, initItemInfo, showCostOnButton } from './item-info.js';
 export { openBuildingCard, openHallCard, renderBuildingCard, sacrificeSelected } from './building-card.js';
+export { flagHtml } from './flags.js';
 export { runLoading } from './loading.js';
 export { showNotification } from './toasts.js';
 export { initWidgets, labelButton, refreshAffordability, renderItemList } from './widgets.js';

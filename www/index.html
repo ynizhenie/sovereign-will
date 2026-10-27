@@ -29,7 +29,11 @@
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
         <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
         <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>
-        <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
+        <!-- (#326) Settings, and at its right a square of the languages' flags: a tap on one changes the language -->
+        <div class="menu-row">
+            <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
+            <div class="flag-box" id="menu-flags"></div>
+        </div>
         <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
     </div>
 
@@ -207,6 +211,12 @@
                 <button class="fps-option" data-music="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-music="on" data-i18n="menu.on">On</button>
             </div>
+        </div>
+
+        <!-- (#326) every track of the game: its name, when it plays, a button to listen to it, and a switch to turn it off -->
+        <div class="wave-settings">
+            <div data-i18n="music.player">Music player:</div>
+            <div id="music-player"></div>
         </div>
     </div>
 </div>

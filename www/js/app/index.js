@@ -3,4 +3,4 @@
 
 export { fpsCounter, loop } from './main.js';
 export { exitToMainMenu, resetGame, resetGameSteps, setPaused, togglePause } from './session.js';
-export { MUSIC_STYLES, SOUND, playSound, playWorkSound } from './sounds.js';
+export { MUSIC_STYLES, SOUND, isTrackOn, musicCatalog, musicPreview, playSound, playWorkSound, previewTrack, setTrackOn } from './sounds.js';
