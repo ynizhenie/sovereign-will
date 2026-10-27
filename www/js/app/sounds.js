@@ -278,14 +278,27 @@ function trackFor(fighting) {
   return fighting ? musicPick.battle || pickOne(battlesOf(getEnemyFaction())) : ambientFor(getPlayerFaction());
 }
 
+// (#326) A battle's track: of the theme picked in its settings (the Battles' own, or a faction's), the ambient while
+// placing and the battle tracks in the fight, the night's if the battle is at night; one picked each time the phase,
+// the theme or the time of day changes
+const battleKey = { key: '', track: '' };
+function battleTrack(fight) {
+  const set = battle.theme === 'arena' || !GAME_CONFIG.factions[battle.theme] ? GAME_CONFIG.battleMusic : GAME_CONFIG.factions[battle.theme].music;
+  const night = battle.time === 'night';
+  const list = fight ? (night && set.nightBattle) || set.battle : (night && set.nightAmbient) || set.ambient;
+  const key = `${battle.theme}|${night}|${fight}`;
+  if (battleKey.key !== key || !list.includes(battleKey.track)) { battleKey.key = key; battleKey.track = pickOne(list, battleKey.track); }
+  return battleKey.track;
+}
+
 // Which music now, and how loud: { style: level }
 export function musicMix() {
   if (!audio.musicOn) return {};
   const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
   if (game.gameMode === 'editor') return { [ambientFor(getPlayerFaction())]: 0.6 };
-  // (#326) a battle's own music if one's picked: in the fight, and while placing (to hear it first)
-  if (game.gameMode === 'battle') return battle.phase === 'fight' ? { [battle.music || trackFor(true)]: 1 } : { [battle.music || trackFor(false)]: 0.8 };
+  // (#326) a battle's: its theme's tracks for the time of day, a muster while placing (to hear it) and a clash in the fight
+  if (game.gameMode === 'battle') { const fight = battle.phase === 'fight'; return { [battleTrack(fight)]: fight ? 1 : 0.8 }; }
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
   // a wave is on until the last enemy and enemy tent are gone

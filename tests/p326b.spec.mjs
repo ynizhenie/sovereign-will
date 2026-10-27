@@ -45,7 +45,7 @@ test('pets wear nothing: not in Battles, not in a wave, not among a camp\'s defe
   expect(r.soldiers.every(p => p === null)).toBe(true);
 });
 
-test('Battles: off the red strip but for one fleeing; ten colours, the winner named by its colour, the brooms on the sides\' colours; the music picked (#326)', async ({ page }) => {
+test('Battles: off the red strip but for one fleeing; ten colours, the winner named by its colour, the brooms on the sides\' colours; the music theme picked (#326)', async ({ page }) => {
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
     battle.lineup = []; battle.category = 'units'; battle.preset = 'humans:sword';
@@ -68,9 +68,9 @@ test('Battles: off the red strip but for one fleeing; ten colours, the winner na
   expect(r.next).toBe('#c0392b'); // (the next one along the wheel, not the first free)
   expect(r.broom).toBe('rgb(232, 87, 42)');
   await page.click('[data-dock="battle-settings"]');
-  await page.click('#battle-music [data-music="demons_drums"]');
-  expect(await page.evaluate(() => battle.music)).toBe('demons_drums');
-  expect(await page.evaluate(() => { audio.musicOn = true; return Object.keys(musicMix()); })).toEqual(['demons_drums']);
+  await page.click('#battle-music [data-theme="demons"]');
+  expect(await page.evaluate(() => battle.theme)).toBe('demons');
+  expect(await page.evaluate(() => { audio.musicOn = true; return Object.keys(musicMix()).every(id => GAME_CONFIG.factions.demons.music.ambient.includes(id)); })).toBe(true); // (placing: its ambient)
   expect(errors).toEqual([]);
 });
 
