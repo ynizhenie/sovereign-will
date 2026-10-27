@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/index.js';
-import { ctx, mouse, t, getViewRect } from '../../../engine/platform/index.js';
+import { ctx, getViewRect, mouse, setFont, t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
@@ -105,7 +105,7 @@ export function drawTownHall() {
 
   if (townHall.hp < townHall.maxHp) {
     ctx.fillStyle = townHall.repairRequested ? '#f1c40f' : '#e74c3c';
-    ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    setFont('bold 12px sans-serif'); ctx.textAlign = 'center';
     fillRichText(ctx, townHall.repairRequested ? t('repair.hall', { cost: formatCost(getHallRepairStep().left) }) : t('repair.hallNeeded'), townHall.x, townHall.y - 52);
   }
 }
@@ -305,17 +305,17 @@ export function drawBuildings() {
 	  drawSmelterArt(b.x, b.y);
 	  if ((b.oreLoaded || 0) > 0) {
 		ctx.fillStyle = '#34495e'; ctx.fillRect(b.x - 13, b.y - 13, 12, 10);
-		ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+		ctx.fillStyle = '#ffffff'; setFont('bold 9px sans-serif'); ctx.textAlign = 'center';
 		ctx.fillText(`${b.oreLoaded}`, b.x - 7, b.y - 5);
 	  }
 	  if ((b.ironProduced || 0) > 0) {
 		ctx.fillStyle = '#bdc3c7'; ctx.fillRect(b.x + 1, b.y - 13, 12, 10);
-		ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+		ctx.fillStyle = '#2c3e50'; setFont('bold 9px sans-serif'); ctx.textAlign = 'center';
 		ctx.fillText(`${b.ironProduced}`, b.x + 7, b.y - 5);
 	  }
 	  if ((b.coalLoaded || 0) > 0) {
 		ctx.fillStyle = '#1e272e'; ctx.fillRect(b.x - 11, b.y + 5, 22, 8);
-		ctx.fillStyle = '#ffffff'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+		ctx.fillStyle = '#ffffff'; setFont('8px sans-serif'); ctx.textAlign = 'center';
 		fillRichText(ctx, `[[coal]]${b.coalLoaded}`, b.x, b.y + 11);
 	  }
 	  if ((b.smeltProgress || 0) > 0) {

@@ -63,6 +63,10 @@ export function getViewScale() {
   return getBaseScale() * camera.zoom;
 }
 
+// (#322) The canvas's font set only when it differs: assigning ctx.font makes the browser work out the page's styles first, which
+// when the page has just been changed means a whole style pass, each time (a quarter of a slow frame)
+export function setFont(font) { if (ctx.font !== font) ctx.font = font; }
+
 // A small yellow bar above a thing being worked on, share 0..1 done
 export function drawProgressBar(cx, cy, share, width = 24) {
   const progress = Math.max(0, Math.min(1, share));

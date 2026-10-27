@@ -10,6 +10,7 @@ export { closeOverlays, closeSheet, getOpenSheet, hidePlacing, initSheets, openS
 export { hideInfo, initItemInfo, showCostOnButton } from './item-info.js';
 export { openBuildingCard, openHallCard, renderBuildingCard, sacrificeSelected } from './building-card.js';
 export { flagHtml } from './flags.js';
+export { setText } from './text.js';
 export { runLoading } from './loading.js';
 export { showNotification } from './toasts.js';
 export { initWidgets, labelButton, refreshAffordability, renderItemList } from './widgets.js';
