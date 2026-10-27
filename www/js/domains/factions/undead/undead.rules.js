@@ -8,6 +8,7 @@ import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
 import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
+import { canUseShield, isBowWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -114,11 +115,46 @@ export function raiseOnBlight(dt) {
   }
 }
 
+// (#326) The temporary zombies a necromancer holds now
+/** @param {{ id: number }} necro */
+export function zombiesOf(necro) {
+  return game.settlers.filter(z => z.masterId === necro.id && z.temporary !== undefined && z.hp > 0);
+}
+
+// (#326) What lies by a corpse (what it dropped: a weapon, armour, a shield) the new zombie takes up: a weapon
+// if it has none (a bow with a quiver of arrows), armour, a shield (a melee one's)
+function armFromCorpse(zombie, corpse, reach) {
+  const piles = game.loot.filter(p => p.items.length && Math.hypot(p.x - corpse.x, p.y - corpse.y) <= reach);
+  for (const pile of piles) {
+    for (const key of [...pile.items]) {
+      const [category, id] = key.split(':');
+      let taken = false;
+      if (category === 'weapons' && zombie.weapon === 'fist') {
+        zombie.weapon = id; taken = true;
+        if (isBowWeapon(id)) { zombie.quiver = true; zombie.arrows = 15; }
+      } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
+        if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
+        else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
+      }
+      if (taken) pile.items.splice(pile.items.indexOf(key), 1);
+    }
+  }
+  zombie.role = zombie.weapon === 'fist' ? 'worker' : isBowWeapon(zombie.weapon) ? 'archer' : 'soldier';
+  if (zombie.shield && !canUseShield(zombie)) zombie.shield = false;
+  game.loot = game.loot.filter(p => p.items.length || Object.keys(p.yield || {}).length);
+}
+
 // A corpse rises as a temporary zombie: no room taken in the colony; it crumbles into rot after
-// GAME_CONFIG.temporaryZombie.lifeSeconds (see updateTemporaryZombies)
-export function raiseTemporaryZombie(corpse) {
+// GAME_CONFIG.temporaryZombie.lifeSeconds (see updateTemporaryZombies). (#326) One raised by a necromancer is
+// its own: it keeps by it, is sent where it sends it, and takes up what lies by the corpse
+/** @param {any} corpse @param {import('../../../engine/world/types.js').Settler | null} [master] */
+export function raiseTemporaryZombie(corpse, master = null) {
   const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
   zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
+  if (master) {
+    zombie.masterId = master.id;
+    armFromCorpse(zombie, corpse, getNecromancy(master).armReach);
+  }
   game.settlers.push(zombie);
   game.corpses.splice(game.corpses.indexOf(corpse), 1);
   playSound('raise', corpse);

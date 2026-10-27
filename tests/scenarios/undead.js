@@ -64,9 +64,9 @@ Object.assign(window.sim, (() => {
     return { withBow, without: { type: z.type, weapon: z.weapon } };
   }
 
-  // A zombie with the necromancer's staff, a grave and seven corpses (one big), a wave coming: it raises five as
-  // temporary zombies (they take no room), gets its raises back at the grave, raises the last two;
-  // a raised zombie crumbles into rot when its time is up
+  // A zombie with the necromancer's staff, a grave and seven corpses (one big), a wave coming: it raises three as
+  // temporary zombies (they take no room; three at most at once, #326), gets its raises back at the grave; when
+  // those crumble it raises three more; a raised zombie crumbles into rot when its time is up
   function necromancerRaises({ seed = 'undead-raise' } = {}) {
     asUndead(seed);
     clearResources();
@@ -80,11 +80,20 @@ Object.assign(window.sim, (() => {
       waveTimer = 5; // a wave coming: raised, not taken for bones (#199)
       settlers.forEach(s => { if (s.temporary !== undefined) s.temporary = 999; });
       if (necro.raisesLeft === 0 && afterFirstRound === null) afterFirstRound = settlers.length - 1;
-      if (afterFirstRound !== null && necro.raisesLeft === 5) recharged = true;
+      if (afterFirstRound !== null && necro.raisesLeft === 3) recharged = true;
     } });
-    const raised = settlers.filter(s => s.temporary !== undefined);
-    const r = { afterFirstRound, recharged, raised: raised.length, corpsesLeft: corpses.length,
-      bigZombies: raised.filter(s => s.type === 'big_zombie').length, popTaken: getCurrentPop() - 1 };
+    let raised = settlers.filter(s => s.temporary !== undefined);
+    const r = { afterFirstRound, recharged, held: raised.length, corpsesKept: corpses.length, ownedBy: raised.every(z => z.masterId === necro.id) };
+    // the first three crumble: it raises three more
+    raised.forEach(s => { s.temporary = 0.01; });
+    run(2, { holdWaves: false, each: () => { waveTimer = 5; } });
+    run(45, { holdWaves: false, each: () => {
+      waveTimer = 5;
+      settlers.forEach(s => { if (s.temporary !== undefined) s.temporary = 999; });
+    } });
+    raised = settlers.filter(s => s.temporary !== undefined);
+    Object.assign(r, { raised: raised.length, corpsesLeft: corpses.length,
+      bigZombies: raised.filter(s => s.type === 'big_zombie').length, popTaken: getCurrentPop() - 1 });
     loot = [];
     raised.forEach(s => { s.temporary = 0.01; });
     settlers = [...settlers.filter(s => s.temporary !== undefined)]; // (nobody to pick it up)
@@ -93,6 +102,50 @@ Object.assign(window.sim, (() => {
     // on the ground where they were (#253): a little rot and bones each, more off a big one
     r.leftOnGround = { piles: loot.length, rot: loot.reduce((a, l) => a + (l.yield.rot || 0), 0), bones: loot.reduce((a, l) => a + (l.yield.bones || 0), 0) };
     r.corpsesFromThem = corpses.length;
+    return r;
+  }
+
+  // (#326) A necromancer's zombies: raised from a corpse with what lay by it (a sword, armour) in their hands, kept by
+  // it (a stray one walks back), sent at an enemy that comes within its reach; none raised past three
+  function necromancerControl({ seed = 'undead-control' } = {}) {
+    asUndead(seed);
+    clearResources();
+    invalidateAllPaths();
+    const necro = necromancerAt(1, nearHall(3, 0));
+    settlers = [necro];
+    enemies = [];
+    // the arming: an iron sword and armour by the corpse (and a sword far from it)
+    const spot = nearHall(6, 3);
+    corpses = [corpseAt(spot)];
+    loot = [{ ...spot, hp: 1, maxHp: 1, priority: 0, yield: {}, items: ['weapons:iron_sword'] }, { x: spot.x + 10, y: spot.y, hp: 1, maxHp: 1, priority: 0, yield: {}, items: ['gear:armor'] },
+      { x: spot.x + 300, y: spot.y, hp: 1, maxHp: 1, priority: 0, yield: {}, items: ['weapons:sword'] }];
+    const first = raiseTemporaryZombie(corpses[0], necro);
+    const r = { armed: [first.weapon, first.armor, first.role, first.masterId === necro.id], lootLeft: loot.map(l => l.items.join()) };
+    // the leash: a zombie far off walks back to it
+    first.temporary = 999;
+    first.x = necro.x + 300; first.y = necro.y;
+    const farBefore = Math.hypot(first.x - necro.x, first.y - necro.y);
+    run(4);
+    const farAfter = Math.hypot(first.x - necro.x, first.y - necro.y);
+    r.keepsBy = farAfter < farBefore - 50;
+    // sent: an enemy within its reach becomes its zombies' target, and they go for it
+    const en = createNormalEnemy({ x: necro.x + 200, y: necro.y + 40 }, 'raider'); en.speed = 0; en.damage = 0; en.hp = en.maxHp = 5000;
+    enemies = [en];
+    first.x = necro.x + 20; first.y = necro.y;
+    waveTimer = 999;
+    const gap = () => Math.hypot(first.x - en.x, first.y - en.y);
+    const g0 = gap();
+    run(3, { holdWaves: true });
+    r.sent = necro.zombieTarget === en && gap() < g0 - 60;
+    // the cap: with three held, another corpse isn't raised
+    enemies = [];
+    const more = [1, 2].map(i => Object.assign(createSettler('zombie', 20 + i, necro.x + 10 * i, necro.y), { temporary: 999, masterId: necro.id }));
+    settlers.push(...more);
+    corpses = [corpseAt(nearHall(5, 4))];
+    necro.raisesLeft = 3;
+    run(6, { holdWaves: false, each: () => { waveTimer = 5; settlers.forEach(z => { if (z.temporary !== undefined) z.temporary = 999; }); } });
+    r.held = settlers.filter(z => z.masterId === necro.id && z.temporary !== undefined).length;
+    r.corpseKept = corpses.length;
     return r;
   }
 
@@ -194,5 +247,5 @@ Object.assign(window.sim, (() => {
     return { kinds, zombies: enemies.filter(en => en.enemyKey === 'undead_zombie').length, corpses: corpses.length, temporary: !!zombie && zombie.temporary > 0 };
   }
 
-  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerHeals, undeadBlight: blight, undeadEnemies };
+  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerControl, necromancerHeals, undeadBlight: blight, undeadEnemies };
 })());

@@ -162,7 +162,7 @@ export const enLanguage = {
         rod: 'Fishes at marked spots; bait is seeds, or worms off corpses.',
         medbag: 'A medic: heals the wounded with herbs in a wave, gathers grass between waves.',
         hoe: 'A farmer: plants the zones, waters with a can, fertilises with a backpack.',
-        necro_staff: 'A necromancer: heals its own, raises corpses, blights marked ground.'
+        necro_staff: 'A necromancer: heals its own, raises up to three zombies from corpses (armed with what lay by them) that keep by it and go where it sends them, blights marked ground.'
       },
       weapons: {
         fist: 'No weapon.',
@@ -361,7 +361,7 @@ export const enLanguage = {
       'role.handyman': 'handyman',
       'weapon.foreman': '[[warn]] A foreman takes no weapon: its work is giving orders',
       'possess.noHerbs': '[[warn]] No herbs to heal with',
-      'possess.noRaises': '[[warn]] No raises left: back to a grave first',
+      'possess.noRaises': '[[warn]] No raises left, or three zombies already: back to a grave first',
       'activity.captainArms': 'Arming the unarmed',
       'daytime.clock': '{now}: {time} till {next}',
       'voice.humans.gathered': 'Got it!|Another load.|Heavy, this one.',
