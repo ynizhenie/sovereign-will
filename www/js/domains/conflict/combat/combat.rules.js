@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
-import { armorOf, getWeaponStats, isBowWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { armorOf, getWeaponStats, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
@@ -75,8 +75,9 @@ export function performAttack(attacker, targetX, targetY) {
 
   const stats = getWeaponStats(attacker, 'combat');
 
-  if (isBowWeapon(attacker.weapon) && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
+  if (isRangedWeapon(attacker.weapon) && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
+    const bolt = isCrossbowWeapon(attacker.weapon);
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
     game.projectiles.push({ 
       x: attacker.x, 
@@ -87,9 +88,10 @@ export function performAttack(attacker, targetX, targetY) {
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
+      bolt,
       training: !!(attacker.idle && attacker.idle.act === 'train') // (#326) at a dummy: it sticks in it
     });
-    playSound('bow', attacker);
+    playSound(bolt ? 'crossbow' : 'bow', attacker);
     if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles
     attacker.attackCooldown = stats.cooldown;
     attacker.shotAt = game.pathTick; attacker.shotLen = stats.cooldown; // (its next arrow drawn, #306)
@@ -126,7 +128,7 @@ export function performAttack(attacker, targetX, targetY) {
 // weapon that did it (GAME_CONFIG.blood)
 export function bleed(unit, attacker) {
   unit.bloodAge = 0;
-  if (attacker && !isBowWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
+  if (attacker && !isRangedWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
   if (game.pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
   unit.lastBleedTick = game.pathTick;
   const h = tileVariantHash(game.pathTick, game.bloodSplats.length);
@@ -368,7 +370,7 @@ export function getDefensePlan() {
 // where it fell. It fades after a while, in a corpse it goes with it. Nobody can pick it up (a dummy's, its
 // trainers collect).
 function stickInto(host, proj) {
-  const keep = GAME_CONFIG.stuckArrows, arrow = { x: proj.x - host.x, y: proj.y - host.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy };
+  const keep = GAME_CONFIG.stuckArrows, arrow = { x: proj.x - host.x, y: proj.y - host.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy, bolt: !!proj.bolt };
   if (!host.stuck) host.stuck = [];
   if (host.stuck.length >= keep.perUnit) host.stuck.shift();
   host.stuck.push(arrow);
@@ -376,7 +378,7 @@ function stickInto(host, proj) {
 function dropOnGround(proj) {
   if (proj.fire) return;
   const keep = GAME_CONFIG.stuckArrows;
-  game.stuckArrows.push({ x: proj.x, y: proj.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy });
+  game.stuckArrows.push({ x: proj.x, y: proj.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy, bolt: !!proj.bolt });
   if (game.stuckArrows.length > keep.ground) game.stuckArrows.shift();
 }
 
@@ -435,7 +437,7 @@ export function tickProjectiles(dt = 1 / 60) {
       for (const d of proj.training && !hit ? game.buildings : []) {
         if (d.type !== 'dummy' || Math.abs(d.x - proj.x) > TILE_SIZE / 2 || Math.abs(d.y - proj.y) > TILE_SIZE / 2) continue; // (its tile: a shut one stops an arrow the moment it's in it)
         if (!d.arrowsStuck) d.arrowsStuck = [];
-        if (d.arrowsStuck.length < GAME_CONFIG.stuckArrows.dummy) d.arrowsStuck.push({ x: proj.x - d.x, y: proj.y - d.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: false });
+        if (d.arrowsStuck.length < GAME_CONFIG.stuckArrows.dummy) d.arrowsStuck.push({ x: proj.x - d.x, y: proj.y - d.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: false, bolt: !!proj.bolt });
         else dropOnGround(proj);
         hit = true; host = d;
         break;

@@ -19,7 +19,7 @@ export const cardsConfig = {
         'tools:medbag', 'gear:wateringCan', 'gear:whistle'],
       rare: ['buildings:smelter', 'buildings:smithy', 'buildings:iron_door', 'buildings:iron_trap', 'buildings:cage', 'buildings:portal', 'buildings:sacrifice_circle',
         'tools:iron_axe', 'tools:iron_pickaxe', 'weapons:spear', 'weapons:bow', 'gear:shield', 'gear:banner'],
-      legendary: ['buildings:watchtower', 'weapons:iron_sword', 'weapons:iron_spear', 'gear:armor']
+      legendary: ['buildings:watchtower', 'weapons:iron_sword', 'weapons:iron_spear', 'weapons:crossbow', 'gear:armor']
     }
   }
 };

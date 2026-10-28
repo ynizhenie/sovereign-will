@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
-import { hasAxeTool, hasPickaxeTool, hasToolFamily, isBowWeapon } from '../../colony/equipment/index.js';
+import { hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
 import { addCarryLoad, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
@@ -23,12 +23,12 @@ export function canSettlerHarvest(s, r, tick) {
   if (s.role !== 'worker') {
     if (r.isCarcass) return r.collector === s;
     // (an archer out of arrows doesn't go hunting, #232)
-    if (kind === 'boar') return !tick.isWaveActive && !r.hidden && !r.hideTarget && !(isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0));
+    if (kind === 'boar') return !tick.isWaveActive && !r.hidden && !r.hideTarget && !(isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0));
     return false;
   }
   if (r.isCarcass) return r.collector === s;
   if (kind === 'boar') {
-    if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
+    if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
     if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool) || hasToolFamily(s.tool, 'hoe') || hasToolFamily(s.tool, 'medic')) return false;
     if (hasToolFamily(s.tool, 'necro') && !((r.priority || 0) > 0)) return false; // a necromancer only one pointed at (#253)
     if (r.hidden || r.hideTarget) return false;
@@ -73,7 +73,7 @@ function workableWithGear(s, tick) {
   const one = r => !r.isCarcass && canSettlerHarvest(s, r, tick);
   // (the farmer gathering grass for herbs is the one a tick: its own list)
   if (tick.idleFarmer === s) return tick.allResources.filter(one);
-  const bow = isBowWeapon(s.weapon) ? (s.quiver && (s.arrows || 0) > 0 ? 'bow' : 'noArrows') : '';
+  const bow = isRangedWeapon(s.weapon) ? (s.quiver && (s.arrows || 0) > 0 ? 'bow' : 'noArrows') : '';
   const key = `${s.role}|${s.tool}|${s.weapon}|${bow}`;
   const lists = gearListsOnce(() => new Map());
   let list = lists.get(key);

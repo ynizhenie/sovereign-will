@@ -7,7 +7,7 @@ import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { armorOf } from '../../colony/equipment/index.js';
+import { armorOf, isRangedWeapon } from '../../colony/equipment/index.js';
 import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
@@ -172,13 +172,17 @@ export function presetEnemyKey(factionId, presetId) {
   if (GAME_CONFIG.enemies[key]) return key;
   const melee = def => !def.pet && !def.ranged && !def.healer && !def.necromancer;
   const template = unit.tool === 'medbag' ? GAME_CONFIG.enemies.raider_medic
-    : unit.weapon === 'bow' ? own.find(def => def.ranged)
+    : isRangedWeapon(unit.weapon) ? own.find(def => def.ranged)
     : preset.size === 'big' ? own.find(def => def.type === 'big')
     : own.find(def => melee(def) && def.type === 'normal' && def.weapon === 'sword') || own.find(def => melee(def) && def.type === 'normal');
   if (!template) return null;
   const weapon = getDefinition('weapons', unit.weapon);
   const reach = preset.size === 'normal' && weapon.combat.range ? Math.max(6, weapon.combat.range - 30) : template.reach;
-  GAME_CONFIG.enemies[key] = { ...template, id: key, faction: factionId, weapon: unit.weapon, tool: unit.tool || undefined, reach, waveKey: undefined, buildsTents: false };
+  // (#326) a crossbow's own shot, not the archer template's bow: farther, harder, slower to load
+  const ranged = unit.weapon === 'crossbow'
+    ? { range: weapon.combat.approach, keepAway: Math.round(weapon.combat.approach * 0.85), cooldown: weapon.combat.cooldown, arrowSpeed: weapon.combat.projectileSpeed, arrowLife: weapon.combat.projectileLife }
+    : undefined;
+  GAME_CONFIG.enemies[key] = { ...template, id: key, faction: factionId, weapon: unit.weapon, tool: unit.tool || undefined, reach, waveKey: undefined, buildsTents: false, ...(ranged ? { ranged } : {}) };
   return key;
 }
 
@@ -497,8 +501,8 @@ export function dropLoot(en) {
   if (game.gameMode !== 'endless') return;
   const loot = GAME_CONFIG.loot;
   const held = [];
-  // (#326: an archer drops its bow, even with its dagger out)
-  const weapon = getEnemyDef(en).ranged ? 'bow' : en.weapon;
+  // (#326: an archer drops its bow, even with its dagger out; a crossbowman its crossbow)
+  const weapon = getEnemyDef(en).ranged ? getEnemyDef(en).weapon : en.weapon;
   if (weapon && weapon !== 'fist' && GAME_CONFIG.weapons[weapon]) held.push(['weapons', weapon]);
   if (armorOf(en)) held.push(['gear', armorOf(en).id]);
   if (en.shield) held.push(['gear', 'shield']);

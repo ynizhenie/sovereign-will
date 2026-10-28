@@ -18,7 +18,7 @@ import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, createWorldSeed, game, getGridPo
 import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../engine/movement/index.js';
 import { addResources, canAfford, formatCost, moveSettlerToTownHall, payCost, showCostError, stock, takeStock } from '../../domains/colony/storage/index.js';
 import { faceTowards, someoneSays } from '../../domains/colony/settlers/index.js';
-import { armorOf, isBowWeapon } from '../../domains/colony/equipment/index.js';
+import { armorOf, isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../domains/factions/index.js';
@@ -161,7 +161,7 @@ export function openRaidPicker(scout = false) {
   // the arrows to take: as many as the archers picked can use, as far as the stock goes; more or fewer by hand
   let arrows = 0, touched = false;
   const showArrows = () => { const n = el.querySelector('.raid-arrow-count'); if (n) n.innerHTML = richText(t('raid.arrows', { n: arrows })); };
-  const offerArrows = () => { if (!touched) arrows = Math.min(stock.arrows || 0, picked().filter(s => isBowWeapon(s.weapon)).length * config().arrowsPerArcher); showArrows(); };
+  const offerArrows = () => { if (!touched) arrows = Math.min(stock.arrows || 0, picked().filter(s => isRangedWeapon(s.weapon)).length * config().arrowsPerArcher); showArrows(); };
   const step = d => { touched = true; arrows = Math.max(0, Math.min(stock.arrows || 0, arrows + d)); showArrows(); };
   if (!scout) {
     onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="all"]')), () => { roster.querySelectorAll('.raid-unit').forEach(b => b.classList.add('on')); offerArrows(); });
@@ -403,7 +403,7 @@ export function campDefenders(army, wave = game.waveNum) {
   const kinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id));
   const ofKey = key => kinds.find(def => /** @type {string[]} */ ([]).concat(def.waveKey).includes(key) && !def.healer && !def.necromancer && !def.pet) || kinds[0]; // (not a pet for a soldier: a dog in armour, #326)
   const list = army.map(s => {
-    const key = isBowWeapon(s.weapon) ? 'archer' : (GAME_CONFIG.settlerTypes[s.type] || {}).big ? 'brute' : s.weapon === 'fist' || s.weapon === 'club' ? 'club' : 'raider';
+    const key = isRangedWeapon(s.weapon) ? 'archer' : (GAME_CONFIG.settlerTypes[s.type] || {}).big ? 'brute' : s.weapon === 'fist' || s.weapon === 'club' ? 'club' : 'raider';
     const def = ofKey(key);
     return { id: def.id, armor: s.armor || null, shield: !!s.shield && def.type === 'normal' && !def.ranged };
   });
@@ -475,7 +475,7 @@ function tickShelters(dt) {
       if (dist(s, b) > c.reach) continue;
       if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + c.healPerSecond * dt);
       const room = (/** @type {any} */ (s).quiverCapacity || 12) - (s.arrows || 0);
-      if (isBowWeapon(s.weapon) && s.quiver && room > 0 && raid.arrows > 0) { const n = Math.min(room, raid.arrows); s.arrows = (s.arrows || 0) + n; raid.arrows -= n; }
+      if (isRangedWeapon(s.weapon) && s.quiver && room > 0 && raid.arrows > 0) { const n = Math.min(room, raid.arrows); s.arrows = (s.arrows || 0) + n; raid.arrows -= n; }
     }
   }
 }
@@ -518,7 +518,7 @@ export function raidOrders(s, tick) {
   const site = game.blueprints.find(bp => bp.raidShelter && bp.builderId === s.id);
   if (site && !s.orderTarget) { buildShelter(s, site, dt); return true; }
   const shelter = shelters().sort((a, b) => dist(a, s) - dist(b, s))[0];
-  const empty = isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && raid.arrows > 0;
+  const empty = isRangedWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && raid.arrows > 0;
   if (shelter && !s.orderTarget && ((raid.auto && (s.hp < s.maxHp * config().shelter.woundedShare || (s.healing && s.hp < s.maxHp * 0.9))) || empty)) {
     s.healing = s.hp < s.maxHp * 0.9;
     if (dist(s, shelter) > config().shelter.reach - 10) moveEntityTowards(s, shelter.x, shelter.y, s.speed, false, dt);

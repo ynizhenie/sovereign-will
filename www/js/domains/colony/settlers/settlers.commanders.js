@@ -12,7 +12,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { getToolFamily, hasGear, takeFromArmory } from '../equipment/index.js';
+import { getToolFamily, hasGear, isRangedWeapon, takeFromArmory } from '../equipment/index.js';
 import { stock } from '../storage/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
@@ -155,7 +155,7 @@ export function captainArms(s, tick) {
 
 // The best melee weapon in the store: the most damage a hit
 function bestStoredWeapon() {
-  return Object.values(GAME_CONFIG.weapons).filter(w => w.id !== 'fist' && w.family !== 'bow' && (game.armory[`weapons:${w.id}`] || 0) > 0)
+  return Object.values(GAME_CONFIG.weapons).filter(w => w.id !== 'fist' && !isRangedWeapon(w.id) && (game.armory[`weapons:${w.id}`] || 0) > 0)
     .sort((a, b) => b.combat.damage - a.combat.damage)[0]?.id || null;
 }
 
@@ -167,7 +167,7 @@ export function roleTitle(s) {
   if (s.banner) return t('role.captain');
   const family = getToolFamily(s.tool);
   if (family === 'necro') return t('role.necromancer');
-  if (s.weapon !== 'fist') return t(s.role === 'archer' || s.weapon === 'bow' ? 'role.archer' : 'role.soldier');
+  if (s.weapon !== 'fist') return t(s.role === 'archer' || isRangedWeapon(s.weapon) ? 'role.archer' : 'role.soldier');
   const byTool = { axe: 'woodcutter', pickaxe: 'miner', rod: 'fisher', hoe: 'farmer', medic: 'medic' }[family];
   return t(`role.${byTool || 'handyman'}`);
 }

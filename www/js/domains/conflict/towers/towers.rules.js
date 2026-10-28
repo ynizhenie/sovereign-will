@@ -2,10 +2,11 @@
 // come down (out of arrows too, to fetch more: #326, a platform keeps none)
 
 import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
-import { isBowWeapon } from '../../colony/equipment/index.js';
+import { isCrossbowWeapon, isRangedWeapon } from '../../colony/equipment/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
-import { faceTowards } from '../../colony/settlers/index.js';
+import { faceTowards, startSwing } from '../../colony/settlers/index.js';
+import { playSound } from '../../../app/index.js';
 
 // Archers climb the towers while there's tower duty (they stay up when enemies reach the base, that's
 // when a tower is worth most), as long as they have arrows
@@ -25,7 +26,7 @@ export function assignTowerArchers() {
       settler.towerAssignment = null;
     }
     const canGuard = !settler.isPossessed && settler.role === 'archer' &&
-      isBowWeapon(settler.weapon) && settler.quiver && !settler.carrying && !settler.targetEquipment;
+      isRangedWeapon(settler.weapon) && settler.quiver && !settler.carrying && !settler.targetEquipment;
     const hasArrows = (settler.arrows || 0) > 0;
     const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment) && hasArrows;
     if ((!towerDutyActive || !canGuard) && settler.towerAssignment) {
@@ -119,6 +120,10 @@ export function updateTowerGuard(settler, tower, dt) {
 
   const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
   faceTowards(settler, target.x, target.y);
+  // (#326) the guard's own weapon shows: a crossbowman looses a bolt with its heavy thunk, an archer an arrow;
+  // and the shot is drawn, as from the ground (its next one cocked while it waits, #306)
+  const bolt = isCrossbowWeapon(settler.weapon);
+  playSound(bolt ? 'crossbow' : 'bow', settler);
   game.projectiles.push({
     x: tower.x,
     y: tower.y,
@@ -128,8 +133,11 @@ export function updateTowerGuard(settler, tower, dt) {
     life: 80,
     fromEnemy: false,
     owner: settler,
-    fromTower: true
+    fromTower: true,
+    bolt
   });
+  startSwing(settler, 0.3);
+  settler.shotAt = game.pathTick; settler.shotLen = tower.tower.cooldown;
   if (game.gameMode !== 'battle') settler.arrows--;
   settler.towerAttackCooldown = tower.tower.cooldown;
 }
