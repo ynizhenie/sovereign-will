@@ -280,6 +280,7 @@ function searchArrays() {
 }
 
 export function findGridPath(startG, endG, targetX, targetY, options) {
+  const maxNodes = options.maxNodes || Infinity;
   if (startG.gx === endG.gx && startG.gy === endG.gy) {
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: options.isBlockedPath };
   }
@@ -298,7 +299,8 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
     while (k > 0) {
       const parent = (k - 1) >> 1;
       if (heapF[parent] <= heapF[k]) break;
-      [heapAt[parent], heapAt[k]] = [heapAt[k], heapAt[parent]]; [heapF[parent], heapF[k]] = [heapF[k], heapF[parent]];
+      const at = heapAt[parent], f0 = heapF[parent];
+      heapAt[parent] = heapAt[k]; heapF[parent] = heapF[k]; heapAt[k] = at; heapF[k] = f0;
       k = parent;
     }
   };
@@ -313,19 +315,26 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
         if (l < heapAt.length && heapF[l] < heapF[smallest]) smallest = l;
         if (r < heapAt.length && heapF[r] < heapF[smallest]) smallest = r;
         if (smallest === k) break;
-        [heapAt[smallest], heapAt[k]] = [heapAt[k], heapAt[smallest]]; [heapF[smallest], heapF[k]] = [heapF[k], heapF[smallest]];
+        const at = heapAt[smallest], f0 = heapF[smallest];
+        heapAt[smallest] = heapAt[k]; heapF[smallest] = heapF[k]; heapAt[k] = at; heapF[k] = f0;
         k = smallest;
       }
     }
     return top;
   };
   const inMap = (gx, gy) => gx >= 0 && gy >= 0 && gx < cols && gy < rows;
+  // (#322) What's left, as the walk costs it: a diagonal step 1.41, a straight one 1 (the way across open ground), not the straight line:
+  // that fell short, and the search spread over tiles it needn't have looked at. Put a hair over (0.1%) so that of tiles of the same
+  // total the one nearer the end is looked at first: on open ground the search goes straight there instead of over a plateau
+  const estimate = (gx, gy) => { const dx = Math.abs(gx - endG.gx), dy = Math.abs(gy - endG.gy); return (Math.max(dx, dy) + 0.41 * Math.min(dx, dy)) ; };
   const startIndex = startG.gy * cols + startG.gx, endIndex = endG.gy * cols + endG.gx;
   // (a start off the map: searched as before, from nothing)
   if (!inMap(startG.gx, startG.gy)) return { path: [], isBlockedPath: options.isBlockedPath };
   a.g[startIndex] = 0; a.seen[startIndex] = id; a.from[startIndex] = -1;
-  push(startIndex, Math.hypot(startG.gx - endG.gx, startG.gy - endG.gy));
+  push(startIndex, estimate(startG.gx, startG.gy));
   let found = false;
+  // (#322) the tile of those looked at that came nearest the end, for a search that gives up (see maxNodes)
+  let best = startIndex, bestEstimate = estimate(startG.gx, startG.gy), looked = 0;
 
   // no step cap: with the heap a failed search over the whole 40x40 map is still cheap,
   // and long detours through rock mazes need it
@@ -335,6 +344,11 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
     if (a.closed[current] === id) continue;
     if (current === endIndex) { found = true; break; }
     a.closed[current] = id;
+    // (#322) a search for a way that isn't there (the end walled in, on an island, past water) looked at every tile it could reach before it said
+    // so: a fifth of a second on a big map, on every try. Past maxNodes it takes the way to the nearest it came instead, and goes there
+    if (++looked > maxNodes) break;
+    const toEnd = estimate(cx, cy);
+    if (toEnd < bestEstimate) { bestEstimate = toEnd; best = current; }
 
     for (const direction of PATH_DIRECTIONS) {
       const gx = cx + direction.dx;
@@ -349,18 +363,19 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
       const tentativeG = a.g[current] + direction.cost + extraCost;
       if (a.seen[next] !== id || tentativeG < a.g[next]) {
         a.g[next] = tentativeG; a.seen[next] = id; a.from[next] = current;
-        push(next, tentativeG + Math.hypot(gx - endG.gx, gy - endG.gy));
+        push(next, tentativeG + estimate(gx, gy));
       }
     }
   }
 
   const path = [];
-  for (let i = found ? endIndex : -1; i !== -1; i = a.from[i]) {
+  const partial = !found && looked > maxNodes && best !== startIndex;
+  for (let i = found ? endIndex : partial ? best : -1; i !== -1; i = a.from[i]) {
     const gx = i % cols;
     path.push({ x: gx * TILE_SIZE + 15, y: (i - gx) / cols * TILE_SIZE + 15 });
   }
   path.reverse();
-  if (path.length > 0) path.push({ x: targetX, y: targetY });
+  if (path.length > 0 && !partial) path.push({ x: targetX, y: targetY });
   return { path, isBlockedPath: options.isBlockedPath };
 }
 
@@ -447,7 +462,8 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false)
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked,
     allowCornerCutting: false,
-    isBlockedPath: false
+    isBlockedPath: false,
+    maxNodes: isEnemy ? Infinity : SETTLER_MAX_NODES
   });
   if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
   // a long way round (to a far door): breaking through may be quicker; whichever costs less. (#326) Tried once
@@ -468,6 +484,8 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false)
 }
 
 const BREAK_DETOUR = 3;
+// (#322) how many tiles a settler's search looks at at most (a big map has sixty thousand): a way round a lake or a rock maze comes well within it
+const SETTLER_MAX_NODES = 12000;
 
 // (#326) A settler's way through the enemy's buildings (its walls, doors and the like count ENEMY_PATH_COST.building
 // tiles each, to break): isBlockedPath, so it strikes what's in the way (see breakWhatsInTheWay)
