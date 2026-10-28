@@ -7,10 +7,16 @@ import { castShadow, tileVariantHash, windSway } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 
+// Where it's drawn: the screen, or (#322) a picture of a piece of the ground (paintOn)
+/** @type {CanvasRenderingContext2D | null} */
+let target = null;
+const pen = () => target || ctx;
+export function paintOn(g) { target = g; }
+
 const variant = o => tileVariantHash(Math.round(o.x), Math.round(o.y));
-const blob = (x, y, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+const blob = (x, y, r, fill) => { pen().fillStyle = fill; pen().beginPath(); pen().arc(x, y, r, 0, Math.PI * 2); pen().fill(); };
 // (#307) cast away from the sun by the thing's height (about its size)
-const groundShadow = (x, y, rx, ry) => castShadow(ctx, x, y + 4, rx, ry, rx * 0.9);
+const groundShadow = (x, y, rx, ry) => castShadow(pen(), x, y + 4, rx, ry, rx * 0.9);
 
 // A tree: its shadow, a bit of trunk under a crown of overlapping leafy clumps, lit from the top left.
 // (#279) Felled, it falls over away from its cutter (turned about its foot), and lies there, a log with its
@@ -27,10 +33,10 @@ function drawFallenTree(t) {
   const footX = t.x, footY = t.y + 12;
   if (p < 1) {
     // tipping over about its foot, faster as it goes
-    ctx.save();
-    ctx.translate(footX, footY); ctx.rotate(side * p * p * Math.PI / 2); ctx.translate(-footX, -footY);
+    pen().save();
+    pen().translate(footX, footY); pen().rotate(side * p * p * Math.PI / 2); pen().translate(-footX, -footY);
     drawStandingTree(t, true);
-    ctx.restore();
+    pen().restore();
   } else drawLyingTree(t, side, footX, footY, 1 - Math.max(0, t.hp) / (GAME_CONFIG.mapResources.tree.hp * fall.logHp));
   // (the stump left at its foot is its own: game.stumps, see drawStumpArt — it outlives the log)
 }
@@ -38,8 +44,8 @@ function drawFallenTree(t) {
 // The stump where a tree was felled: it stays till a tree grows again somewhere else (see finishHarvest)
 export function drawStumpArt(st) {
   groundShadow(st.x, st.y - 2, 4, 2); // (#326: everything casts one)
-  ctx.fillStyle = '#6d4c2f'; ctx.beginPath(); ctx.ellipse(st.x, st.y, 3.5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(st.x, st.y - 0.6, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+  pen().fillStyle = '#6d4c2f'; pen().beginPath(); pen().ellipse(st.x, st.y, 3.5, 2.2, 0, 0, Math.PI * 2); pen().fill();
+  pen().fillStyle = '#c8a46a'; pen().beginPath(); pen().ellipse(st.x, st.y - 0.6, 2.6, 1.4, 0, 0, Math.PI * 2); pen().fill();
 }
 
 // On the ground: a log along the ground from its stump, its crown at the far end squashed flat; cut up (cut,
@@ -50,7 +56,7 @@ function drawLyingTree(t, side, footX, footY, cut) {
   groundShadow((x0 + x1) / 2, y + 3, len / 2 + 2, 3);
   if (cut < 0.5) {
     const cx = x0 + side * 30, a = 1 - cut * 2;
-    ctx.save(); ctx.globalAlpha = a;
+    pen().save(); pen().globalAlpha = a;
     groundShadow(cx, y + 4, 12, 5);
     const dark = t.apple ? '#27501a' : ['#1e3d14', '#1b3912', '#21421a'][h % 3];
     const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
@@ -58,19 +64,19 @@ function drawLyingTree(t, side, footX, footY, cut) {
     for (let k = 0; k < 5; k++) blob(cx + side * (k - 2) * 4, y + ((h >>> k) % 3) - 1, 6, dark);
     blob(cx, y - 1, 7, mid);
     for (let k = 0; k < 3; k++) blob(cx + side * (k * 4 - 4), y - 3 + ((h >>> (k * 4)) % 3), 3, light);
-    ctx.restore();
+    pen().restore();
   }
-  ctx.fillStyle = '#5d4037'; ctx.fillRect(Math.min(x0, x1), y - 2.5, len, 5);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(Math.min(x0, x1), y + 1, len, 1.5);
-  ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 0.7;
-  for (let k = 5; k < len - 2; k += 5) { const bx = x0 + side * k; ctx.beginPath(); ctx.moveTo(bx, y - 2); ctx.lineTo(bx + side * 2, y + 1); ctx.stroke(); }
+  pen().fillStyle = '#5d4037'; pen().fillRect(Math.min(x0, x1), y - 2.5, len, 5);
+  pen().fillStyle = 'rgba(0, 0, 0, 0.25)'; pen().fillRect(Math.min(x0, x1), y + 1, len, 1.5);
+  pen().strokeStyle = '#3e2723'; pen().lineWidth = 0.7;
+  for (let k = 5; k < len - 2; k += 5) { const bx = x0 + side * k; pen().beginPath(); pen().moveTo(bx, y - 2); pen().lineTo(bx + side * 2, y + 1); pen().stroke(); }
   // its cut end (or the broken top before it's cut)
-  ctx.fillStyle = cut > 0 ? '#c8a46a' : '#6d4c2f'; ctx.beginPath(); ctx.ellipse(x1, y, 1.6, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+  pen().fillStyle = cut > 0 ? '#c8a46a' : '#6d4c2f'; pen().beginPath(); pen().ellipse(x1, y, 1.6, 2.6, 0, 0, Math.PI * 2); pen().fill();
   // logs cut off it, stacked by it
   for (let k = 0; k < Math.floor(cut * 3); k++) {
     const lx = footX - side * 8, ly = y + 6 - k * 3;
-    ctx.fillStyle = '#5d4037'; ctx.fillRect(lx - 4, ly - 1.5, 8, 3);
-    ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(lx + 4, ly, 1, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+    pen().fillStyle = '#5d4037'; pen().fillRect(lx - 4, ly - 1.5, 8, 3);
+    pen().fillStyle = '#c8a46a'; pen().beginPath(); pen().ellipse(lx + 4, ly, 1, 1.5, 0, 0, Math.PI * 2); pen().fill();
   }
 }
 
@@ -80,7 +86,7 @@ function drawStandingTree(t, lying = false) {
   const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
   const light = t.apple ? '#5a9a3c' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
   if (!lying) groundShadow(x, y, 14, 10);
-  ctx.fillStyle = '#5d4037'; ctx.fillRect(x - 2, y + 4, 4, 9);
+  pen().fillStyle = '#5d4037'; pen().fillRect(x - 2, y + 4, 4, 9);
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2 + (h % 7) * 0.3;
     blob(x + Math.cos(a) * 7, y - 2 + Math.sin(a) * 6, 8, dark);
@@ -96,9 +102,9 @@ function drawStandingTree(t, lying = false) {
 export function drawSaplingArt(t) {
   const x = t.x, y = t.y;
   groundShadow(x, y + 3, 5, 3);
-  ctx.strokeStyle = '#6d4c2f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + 8); ctx.lineTo(x, y - 4); ctx.stroke();
+  pen().strokeStyle = '#6d4c2f'; pen().lineWidth = 2; pen().beginPath(); pen().moveTo(x, y + 8); pen().lineTo(x, y - 4); pen().stroke();
   for (const [lx, ly, a] of [[-4, -4, -0.6], [4, -5, 0.6], [0, -8, 0]]) {
-    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(x + lx, y + ly, 4, 2.2, a, 0, Math.PI * 2); ctx.fill();
+    pen().fillStyle = '#2ecc71'; pen().beginPath(); pen().ellipse(x + lx, y + ly, 4, 2.2, a, 0, Math.PI * 2); pen().fill();
   }
 }
 
@@ -106,15 +112,15 @@ export function drawSaplingArt(t) {
 export function drawCactusArt(c) {
   const h = variant(c), x = c.x, y = c.y, flip = h % 2 ? 1 : -1;
   groundShadow(x, y + 6, 8, 4);
-  const limb = (x0, y0, w, len) => { ctx.fillStyle = '#2f8f46'; ctx.beginPath(); ctx.roundRect(x0 - w / 2, y0 - len, w, len, w / 2); ctx.fill(); ctx.strokeStyle = '#1e6b33'; ctx.lineWidth = 1; ctx.stroke(); };
+  const limb = (x0, y0, w, len) => { pen().fillStyle = '#2f8f46'; pen().beginPath(); pen().roundRect(x0 - w / 2, y0 - len, w, len, w / 2); pen().fill(); pen().strokeStyle = '#1e6b33'; pen().lineWidth = 1; pen().stroke(); };
   limb(x, y + 13, 8, 26);
   // the arms: out, then up
-  ctx.fillStyle = '#2f8f46'; ctx.fillRect(x + flip * 3, y - 1, flip * 7, 4); ctx.fillRect(x - flip * 3, y + 4, -flip * 6, 4);
+  pen().fillStyle = '#2f8f46'; pen().fillRect(x + flip * 3, y - 1, flip * 7, 4); pen().fillRect(x - flip * 3, y + 4, -flip * 6, 4);
   limb(x + flip * 10, y + 3, 5, 11);
   limb(x - flip * 9, y + 8, 5, 9);
-  ctx.strokeStyle = '#b7e08a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 1.5, y - 10); ctx.lineTo(x - 1.5, y + 11); ctx.stroke();
-  ctx.fillStyle = '#e8f6d4';
-  for (let k = 0; k < 6; k++) ctx.fillRect(x + (k % 2 ? 3 : -4), y - 9 + k * 3.5, 1, 1);
+  pen().strokeStyle = '#b7e08a'; pen().lineWidth = 1; pen().beginPath(); pen().moveTo(x - 1.5, y - 10); pen().lineTo(x - 1.5, y + 11); pen().stroke();
+  pen().fillStyle = '#e8f6d4';
+  for (let k = 0; k < 6; k++) pen().fillRect(x + (k % 2 ? 3 : -4), y - 9 + k * 3.5, 1, 1);
 }
 
 // A boulder: a rounded, uneven stone, lighter on top, a crack, sometimes moss
@@ -126,12 +132,12 @@ export function drawBoulderArt(b) {
     const a = (k / 8) * Math.PI * 2, rr = 10 + ((h >>> (k * 2)) % 4) - 1;
     pts.push([x + Math.cos(a) * rr * 1.1, y + Math.sin(a) * rr * 0.9]);
   }
-  ctx.fillStyle = '#7f8c8d'; ctx.strokeStyle = '#4d5656'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#a4b0b5'; ctx.beginPath(); ctx.ellipse(x - 2, y - 4, 7, 4, -0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(x + 2, y - 1); ctx.lineTo(x + 5, y + 3); ctx.lineTo(x + 4, y + 7); ctx.stroke();
-  if (h % 3 === 0) { ctx.fillStyle = 'rgba(80, 140, 60, 0.7)'; ctx.beginPath(); ctx.ellipse(x - 6, y + 4, 4, 2.5, 0.4, 0, Math.PI * 2); ctx.fill(); }
+  pen().fillStyle = '#7f8c8d'; pen().strokeStyle = '#4d5656'; pen().lineWidth = 1.5;
+  pen().beginPath(); pts.forEach(([px, py], i) => (i ? pen().lineTo(px, py) : pen().moveTo(px, py))); pen().closePath(); pen().fill(); pen().stroke();
+  pen().fillStyle = '#a4b0b5'; pen().beginPath(); pen().ellipse(x - 2, y - 4, 7, 4, -0.3, 0, Math.PI * 2); pen().fill();
+  pen().strokeStyle = 'rgba(0, 0, 0, 0.3)'; pen().lineWidth = 1;
+  pen().beginPath(); pen().moveTo(x + 2, y - 1); pen().lineTo(x + 5, y + 3); pen().lineTo(x + 4, y + 7); pen().stroke();
+  if (h % 3 === 0) { pen().fillStyle = 'rgba(80, 140, 60, 0.7)'; pen().beginPath(); pen().ellipse(x - 6, y + 4, 4, 2.5, 0.4, 0, Math.PI * 2); pen().fill(); }
 }
 
 // A tuft of tall grass: curved blades in a few greens, now and then a small flower
@@ -139,13 +145,13 @@ export function drawGrassArt(g) {
   const h = variant(g), x = g.x, y = g.y;
   groundShadow(x, y - 2, 5, 1.6); // (#326)
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
-  ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  pen().lineWidth = 1.6; pen().lineCap = 'round';
   for (let k = 0; k < 7; k++) {
     const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + windSway(bx, y, y + 7 - top); // (in the wind, #308)
-    ctx.strokeStyle = greens[(h >>> (k * 2)) % 3];
-    ctx.beginPath(); ctx.moveTo(bx, y + 7); ctx.quadraticCurveTo(bx + lean * 0.3, y, bx + lean, top); ctx.stroke();
+    pen().strokeStyle = greens[(h >>> (k * 2)) % 3];
+    pen().beginPath(); pen().moveTo(bx, y + 7); pen().quadraticCurveTo(bx + lean * 0.3, y, bx + lean, top); pen().stroke();
   }
-  ctx.lineCap = 'butt';
+  pen().lineCap = 'butt';
   if (h % 4 === 0) { blob(x + 4, y - 9, 1.8, '#f9e79f'); blob(x + 4, y - 9, 0.8, '#e67e22'); }
 }
 
@@ -163,21 +169,21 @@ export function drawBushArt(b) {
 export function drawStickArt(st) {
   const flip = variant(st) % 2 ? 1 : -1, x = st.x, y = st.y;
   groundShadow(x, y - 3, 7, 2); // (#326)
-  ctx.strokeStyle = '#8e5a2b'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(x - 7 * flip, y - 4); ctx.lineTo(x + 7 * flip, y + 4); ctx.stroke();
-  ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2 * flip, y - 5); ctx.stroke();
-  ctx.lineCap = 'butt';
+  pen().strokeStyle = '#8e5a2b'; pen().lineWidth = 2.5; pen().lineCap = 'round';
+  pen().beginPath(); pen().moveTo(x - 7 * flip, y - 4); pen().lineTo(x + 7 * flip, y + 4); pen().stroke();
+  pen().lineWidth = 1.5; pen().beginPath(); pen().moveTo(x, y); pen().lineTo(x + 2 * flip, y - 5); pen().stroke();
+  pen().lineCap = 'butt';
 }
 
 // A piece of a felled tree's log (#298): a short length of trunk, bark lines, its cut ends pale
 export function drawLogArt(lg) {
   const x = lg.x, y = lg.y, w = 11;
   groundShadow(x, y + 3, 7, 2.5);
-  ctx.fillStyle = '#5d4037'; ctx.fillRect(x - w / 2, y - 2.5, w, 5);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(x - w / 2, y + 1, w, 1.5);
-  ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 0.7;
-  for (const k of [-2, 2]) { ctx.beginPath(); ctx.moveTo(x + k, y - 2); ctx.lineTo(x + k + 1.5, y + 1); ctx.stroke(); }
-  for (const ex of [x - w / 2, x + w / 2]) { ctx.fillStyle = '#c8a46a'; ctx.beginPath(); ctx.ellipse(ex, y, 1.4, 2.5, 0, 0, Math.PI * 2); ctx.fill(); }
+  pen().fillStyle = '#5d4037'; pen().fillRect(x - w / 2, y - 2.5, w, 5);
+  pen().fillStyle = 'rgba(0, 0, 0, 0.25)'; pen().fillRect(x - w / 2, y + 1, w, 1.5);
+  pen().strokeStyle = '#3e2723'; pen().lineWidth = 0.7;
+  for (const k of [-2, 2]) { pen().beginPath(); pen().moveTo(x + k, y - 2); pen().lineTo(x + k + 1.5, y + 1); pen().stroke(); }
+  for (const ex of [x - w / 2, x + w / 2]) { pen().fillStyle = '#c8a46a'; pen().beginPath(); pen().ellipse(ex, y, 1.4, 2.5, 0, 0, Math.PI * 2); pen().fill(); }
 }
 
 // Pebbles: two or three small stones, lit on top
@@ -195,17 +201,17 @@ export function drawPebblesArt(pe) {
 // to golden ears
 export function drawFarmPlotArt(f) {
   const x = f.x, y = f.y, g = Math.max(0, Math.min(100, f.growth || 0)) / 100;
-  ctx.fillStyle = f.fertilized ? '#4a3020' : '#5c4033'; ctx.fillRect(x - 13, y - 13, 26, 26);
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)'; ctx.lineWidth = 1;
-  for (let k = -9; k <= 9; k += 6) { ctx.beginPath(); ctx.moveTo(x - 12, y + k); ctx.lineTo(x + 12, y + k); ctx.stroke(); }
-  if (f.fertilized) { ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 2; ctx.strokeRect(x - 12, y - 12, 24, 24); }
+  pen().fillStyle = f.fertilized ? '#4a3020' : '#5c4033'; pen().fillRect(x - 13, y - 13, 26, 26);
+  pen().strokeStyle = 'rgba(0, 0, 0, 0.3)'; pen().lineWidth = 1;
+  for (let k = -9; k <= 9; k += 6) { pen().beginPath(); pen().moveTo(x - 12, y + k); pen().lineTo(x + 12, y + k); pen().stroke(); }
+  if (f.fertilized) { pen().strokeStyle = '#3b2412'; pen().lineWidth = 2; pen().strokeRect(x - 12, y - 12, 24, 24); }
   const ripe = g >= 1;
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
       const sx = x - 9 + col * 6, sy = y - 8 + row * 6, tall = 2 + 7 * g, sway = windSway(sx, sy, tall); // (in the wind, #308)
-      ctx.strokeStyle = ripe ? '#d4ac0d' : g > 0.6 ? '#9acd32' : '#2ecc71'; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.quadraticCurveTo(sx + sway * 0.3, sy + 2 - tall * 0.6, sx + sway, sy + 2 - tall); ctx.stroke();
-      if (ripe || g > 0.6) { ctx.fillStyle = ripe ? '#f4d03f' : '#c5e384'; ctx.beginPath(); ctx.ellipse(sx + sway, sy + 1 - tall, 1.4, 2.6, sway * 0.08, 0, Math.PI * 2); ctx.fill(); }
+      pen().strokeStyle = ripe ? '#d4ac0d' : g > 0.6 ? '#9acd32' : '#2ecc71'; pen().lineWidth = 1.2;
+      pen().beginPath(); pen().moveTo(sx, sy + 2); pen().quadraticCurveTo(sx + sway * 0.3, sy + 2 - tall * 0.6, sx + sway, sy + 2 - tall); pen().stroke();
+      if (ripe || g > 0.6) { pen().fillStyle = ripe ? '#f4d03f' : '#c5e384'; pen().beginPath(); pen().ellipse(sx + sway, sy + 1 - tall, 1.4, 2.6, sway * 0.08, 0, Math.PI * 2); pen().fill(); }
     }
   }
 }
