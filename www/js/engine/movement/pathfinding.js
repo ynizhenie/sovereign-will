@@ -67,23 +67,42 @@ let reachBounds = () => null;
 export function setReachBounds(fn) { reachBounds = fn; }
 
 // Walking distance (in tiles) from the settler's tile to every tile, as an Int16Array indexed gy * COLS + gx,
-// -1 where it can't get (and past the reach bounds, unless it stands out there itself). Cached until the
-// settler changes tile or the world's blocking tiles change.
+// -1 where it can't get (and past the reach bounds, unless it stands out there itself). (#322) Worked out from
+// a tile near the settler's, not always its own: a map of distances is used as it is while the settler is
+// within REACH_SLACK steps' walk of where it starts (a tile or two out in what's a "nearest" or "can get there"),
+// and one worked out for a settler beside it is used by this one too. A search of the whole walkable map for every
+// tile every settler stepped onto was most of a big colony's tick.
+const REACH_SLACK = 2;
+/** @typedef {{ startIndex: number, signature: number | null, steps: Int16Array, visited: number[] }} Reach */
+/** @type {{ signature: number | null, size: number, byStart: Map<number, Reach> }} */
+let sharedReach = { signature: null, size: 0, byStart: new Map() };
+
+/** @param {Reach | undefined} r @param {number} index @param {number | null} signature @param {number} size */
+const nearTo = (r, index, signature, size) => !!r && r.signature === signature && r.steps.length === size && r.steps[index] !== -1 && r.steps[index] <= REACH_SLACK;
+
 export function getSettlerReach(settler) {
   const start = getGridPos(settler.x, settler.y);
   const startIndex = start.gy * game.COLS + start.gx;
   const signature = getTileIndex().signature;
-  const cache = settler.reachCache;
   const size = game.COLS * game.ROWS;
-  if (cache && cache.startIndex === startIndex && cache.signature === signature && cache.steps.length === size) return cache.steps;
+  /** @type {Reach | undefined} */
+  const using = settler.reachUse, own = settler.reachCache;
+  if (nearTo(using, startIndex, signature, size)) return /** @type {Reach} */ (using).steps;
+  if (nearTo(own, startIndex, signature, size)) { settler.reachUse = own; return /** @type {Reach} */ (own).steps; }
+  // one a settler beside it worked out (this tile or the next to it)
+  if (sharedReach.signature !== signature || sharedReach.size !== size || sharedReach.byStart.size > 256) sharedReach = { signature, size, byStart: new Map() };
+  for (const index of [startIndex, startIndex - 1, startIndex + 1, startIndex - game.COLS, startIndex + game.COLS]) {
+    const found = sharedReach.byStart.get(index);
+    if (found && found.startIndex === index && nearTo(found, startIndex, signature, size)) { settler.reachUse = found; return found.steps; }
+  }
 
   const blocked = getSettlerBlockedGrid();
   // (#306) the settler's own array again, with only what its last walk set cleared: making a new map's worth
   // of -1 for every settler that stepped onto a new tile was a tick's costliest work
   let steps;
-  if (cache && cache.steps.length === size) {
-    steps = cache.steps;
-    for (const index of cache.visited) steps[index] = -1;
+  if (own && own.steps.length === size) {
+    steps = own.steps;
+    for (const index of own.visited) steps[index] = -1;
   } else {
     steps = new Int16Array(size).fill(-1);
   }
@@ -102,7 +121,10 @@ export function getSettlerReach(settler) {
     if (cy < b.gy1) { const index = current + cols; if (steps[index] === -1 && !blocked[index]) { steps[index] = next; queue.push(index); } }
     if (cy > b.gy0) { const index = current - cols; if (steps[index] === -1 && !blocked[index]) { steps[index] = next; queue.push(index); } }
   }
-  settler.reachCache = { startIndex, signature, steps, visited: queue };
+  /** @type {Reach} */
+  const reach = { startIndex, signature, steps, visited: queue };
+  settler.reachCache = reach; settler.reachUse = reach;
+  sharedReach.byStart.set(startIndex, reach);
   return steps;
 }
 
