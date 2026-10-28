@@ -1,8 +1,9 @@
 // What's held (#279): every weapon and tool drawn with its grip where the hand is (the origin, after
 // applyHeldItemPose), along +x, as big as the hand holding it (scale k). A sword with a guard, a wrapped grip
 // and a tapering blade; a club thickening to a knotted head; a spear held at the middle of its shaft, a leaf
-// of a head; a bow bent forward with its string; an axe, a pickaxe and a hoe with heads that look the part; a
-// rod with its line; a medic's bag hanging from the hand; and for work, a hammer and a knife.
+// of a head; a bow bent forward with its string; a crossbow with steel limbs and a bolt in its groove; an axe, a
+// pickaxe and a hoe with heads that look the part; a rod with its line; a medic's bag hanging from the hand; and
+// for work, a hammer and a knife.
 
 import { ctx } from '../../../engine/platform/index.js';
 import { isClubWeapon, isSpearWeapon, isSwordWeapon } from '../equipment/index.js';
@@ -60,6 +61,31 @@ export function drawHeldWeapon(weapon, k = 1, pull = 0) {
       ctx.fillStyle = '#ecf0f1'; ctx.fillRect(sx, -1.4, 2.5, 1); ctx.fillRect(sx, 0.4, 2.5, 1); // (its fletching)
     }
     rect(2.2, -2, 2.4, 4, '#5c3a17'); // the grip
+    ctx.lineCap = 'butt';
+  } else if (weapon === 'crossbow') {
+    // (#326) a crossbow: a short, thick stock with a raised butt, steel limbs across its nose bent forward, and
+    // its string hauled back along the stock to cock it. pull (0..1): how far the string is drawn back; loaded,
+    // a bolt lies in the groove, its head past the nose
+    const tipY = 10.5, sx = 15 - pull * 17, limb = 15 - pull * 1.5;
+    rect(-7, -1.7, 27, 3.4, '#6d4520'); // the stock
+    poly([[-9.5, -3.4], [-4, -2.1], [-4, 2.1], [-9.5, 3.4]], '#5c3a17', 'rgba(0, 0, 0, 0.4)'); // its butt
+    ctx.strokeStyle = 'rgba(255, 230, 190, 0.28)'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(-5, -0.6); ctx.lineTo(18, -0.6); ctx.stroke(); // (the grain)
+    // the limbs, across the nose
+    ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(15, -tipY); ctx.quadraticCurveTo(limb + 5, 0, 15, tipY); ctx.stroke();
+    ctx.strokeStyle = 'rgba(236, 240, 241, 0.5)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(15, -tipY); ctx.quadraticCurveTo(limb + 5, 0, 15, tipY); ctx.stroke();
+    // the string, from tip to tip, drawn back to the nut
+    ctx.strokeStyle = 'rgba(236, 240, 241, 0.85)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(15, -tipY); ctx.lineTo(sx, 0); ctx.lineTo(15, tipY); ctx.stroke();
+    if (pull > 0.35) {
+      // the bolt in the groove
+      ctx.strokeStyle = '#d2b48c'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(22, 0); ctx.stroke();
+      poly([[22, -1.8], [26, 0], [22, 1.8]], '#bdc3c7', 'rgba(0, 0, 0, 0.35)');
+      ctx.fillStyle = '#ecf0f1'; ctx.fillRect(sx + 0.5, -1.5, 3, 1); ctx.fillRect(sx + 0.5, 0.5, 3, 1); // (its fletching)
+    }
+    rect(0, -2.3, 3, 4.6, '#5c3a17'); // the grip
     ctx.lineCap = 'butt';
   } else drawn = false;
   ctx.restore();

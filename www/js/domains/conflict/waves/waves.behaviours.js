@@ -286,9 +286,10 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
   en.attackCooldown = (en.attackCooldown || 0) - dt;
   if (clearShot && minDist < (fromTower ? fromTower.tower.range : ranged.range) && en.attackCooldown <= 0) {
     let angle = Math.atan2(target.y - en.y, target.x - en.x);
-    playSound('bow', en);
+    const bolt = enemyDef.weapon === 'crossbow';
+    playSound(bolt ? 'crossbow' : 'bow', en);
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
-      life: fromTower ? ranged.arrowLife * fromTower.tower.range / ranged.range : ranged.arrowLife, fromEnemy: true, owner: en, fromTower: !!fromTower });
+      life: fromTower ? ranged.arrowLife * fromTower.tower.range / ranged.range : ranged.arrowLife, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     en.attackCooldown = en.shotCooldown || ranged.cooldown; // (a bow's rate in a settler's hands, #255)
@@ -391,7 +392,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   // the undead fight on in a panic, weaker (#232: morale.panicDamage); an archer out of arrows and tents
   // fights at its melee kind's strength, as the player's own would (#255)
   const shaken = en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1;
-  const dagger = enemyDef.ranged && meleeDef !== enemyDef ? GAME_CONFIG.weapons.bow.dagger : null; // (#326: weak)
+  const dagger = enemyDef.ranged && meleeDef !== enemyDef ? (GAME_CONFIG.weapons[enemyDef.weapon] || {}).dagger : null; // (#326: weak)
   const meleeDamage = (dagger ? dagger.damage / dagger.cooldown : meleeDef === enemyDef ? en.damage : (en.meleeDamage ?? (en.meleeDamage = enemyDamagePerSecond(meleeDef)))) * shaken;
   faceTowards(en, target.x, target.y);
   // (#326) a blow at a time, as the player's own strike, not hp drained a little every tick: one every

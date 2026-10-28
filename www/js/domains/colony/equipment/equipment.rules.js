@@ -10,9 +10,9 @@ import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
 import { craftPlace, getCraftOrderCost, orderCraft } from './equipment.crafting.js';
 
-// A shield only helps a melee soldier: a worker or an archer doesn't fight with it
+// A shield only helps a melee soldier: a worker or an archer (a bow or a crossbow) doesn't fight with it
 export function canUseShield(s) {
-  return s.role === 'soldier' && !isBowWeapon(s.weapon);
+  return s.role === 'soldier' && !isRangedWeapon(s.weapon);
 }
 
 export function hasWorkingShield(s) {
@@ -24,9 +24,9 @@ export function hasWorkingShield(s) {
 // Who can wear each piece, and who gets it first when nobody who can is selected
 export const GEAR_RULES = {
   backpack: { canWear: s => s.role !== 'archer', first: s => s.role === 'worker' && s.tool !== 'rod' },
-  armor: { canWear: () => true, first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
+  armor: { canWear: () => true, first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   // (#298) not over iron
-  leather_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isBowWeapon(s.weapon) },
+  leather_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
@@ -232,12 +232,17 @@ export function isSpearWeapon(weapon) { return getWeaponFamily(weapon) === 'spea
 
 export function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; }
 
+export function isCrossbowWeapon(weapon) { return getWeaponFamily(weapon) === 'crossbow'; }
+
+// Bows and crossbows: what shoots arrows from a quiver
+export function isRangedWeapon(weapon) { return isBowWeapon(weapon) || isCrossbowWeapon(weapon); }
+
 // A settler's weapon stats for `use` ('combat' or 'hunt': the same numbers, a boar takes twice the damage
-// in woundBoar, #232; a hunt's range is the weapon's reach, a bow's its shooting distance). Damage: the
-// weapon's, or, for fists, the carried tool's, else bare hands; times the settler type's multiplier.
+// in woundBoar, #232; a hunt's range is the weapon's reach, a ranged weapon's its shooting distance). Damage:
+// the weapon's, or, for fists, the carried tool's, else bare hands; times the settler type's multiplier.
 // (#326) An archer out of arrows, with its dagger out instead (arrows never run out in a battle)
 export function usesDagger(s) {
-  return isBowWeapon(s.weapon) && !!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle';
+  return isRangedWeapon(s.weapon) && !!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle';
 }
 
 export function getWeaponStats(s, use) {
@@ -358,8 +363,9 @@ export function craftWeapon(type, auto = false, forSettler = null) {
   }
 
   takeFromArmory(`weapons:${type}`);
-  target.targetEquipment = { weapon: type, tool: 'none', role: type === 'bow' ? 'archer' : 'soldier' };
-  if (type === 'bow') {
+  const ranged = isRangedWeapon(type);
+  target.targetEquipment = { weapon: type, tool: 'none', role: ranged ? 'archer' : 'soldier' };
+  if (ranged) {
     target.targetEquipment.quiver = true;
     target.targetEquipment.quiverOnly = true;
   }
@@ -434,13 +440,13 @@ export function disarmSettler(type = 'all', keep = false) {
   }
 }
 
-// Given a bow (or having it taken), a kind that has a bow form turns into it (and back): the
+// Given a ranged weapon (or having it taken), a kind that has a bow form turns into it (and back): the
 // faction's bowUnits (none now: a zombie or an imp with a bow stays one, #249)
 export function applyBowUnit(s) {
   const forms = getPlayerFaction().bowUnits || {};
-  if (isBowWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);
+  if (isRangedWeapon(s.weapon) && forms[s.type]) changeSettlerType(s, forms[s.type]);
   const base = Object.keys(forms).find(k => forms[k] === s.type);
-  if (!isBowWeapon(s.weapon) && base) changeSettlerType(s, base);
+  if (!isRangedWeapon(s.weapon) && base) changeSettlerType(s, base);
 }
 
 // Whether the tool belongs to that family (GAME_CONFIG.tools.*.family: axe, pickaxe, rod, hoe)

@@ -18,7 +18,7 @@ export const SOUND = {
   menuWorldShare: 0.35,  // the world behind the main menu is quieter
   fadeSeconds: 1.2,      // the music's crossfades: a time constant, so about 4x this to the end
   // a sound plays at most once in this many seconds (the same name), so crowds don't drown everything
-  minGap: { built: 0.3, hire: 0.2, horn: 1.5, defeat: 2, tentUp: 0.4, click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
+  minGap: { built: 0.3, hire: 0.2, horn: 1.5, defeat: 2, tentUp: 0.4, click: 0.03, swing: 0.07, hit: 0.06, bow: 0.08, crossbow: 0.12, arrowHit: 0.06, chop: 0.09, mine: 0.09, rustle: 0.15,
     hammer: 0.12, boar: 0.25, hurt: 0.12, death: 0.12, deliver: 0.15, error: 0.3,
     eat: 0.2, sizzle: 0.3, dig: 0.2, splash: 0.2, drip: 0.1, catch: 0.3, heal: 0.3, raise: 0.3, collapse: 0.2, smelt: 0.3, ignite: 0.2,
     trapSnap: 0.2, craftDone: 0.3, cageLock: 0.3, butcher: 0.25, pickup: 0.12, portal: 0.5, dawn: 5, owl: 5, snore: 0.8, alarm: 2, voice: 0.12, thunder: 2, bark: 1.2, ghost: 0.4 }
@@ -31,6 +31,8 @@ export const SOUNDS = {
   swing: (o, t) => noise(o, t, { dur: 0.13, gain: 1.2, freq: 700, to: 2600, q: 1.5, attack: 0.03 }),
   hit: (o, t) => { noise(o, t, { dur: 0.07, gain: 0.45, type: 'lowpass', freq: 1400 }); tone(o, t, { freq: 150, to: 55, dur: 0.12, gain: 0.5 }); },
   bow: (o, t) => { tone(o, t, { type: 'triangle', freq: 240, to: 170, dur: 0.2, gain: 0.35, attack: 0.002 }); noise(o, t + 0.01, { dur: 0.08, gain: 0.12, type: 'highpass', freq: 3000 }); },
+  // (#326) a crossbow: a heavier thunk of the nut and limbs, and a sharp snap of the string
+  crossbow: (o, t) => { tone(o, t, { type: 'square', freq: 150, to: 70, dur: 0.16, gain: 0.3, attack: 0.002 }); noise(o, t, { dur: 0.09, gain: 0.28, freq: 900, to: 300, q: 1.5 }); noise(o, t + 0.01, { dur: 0.05, gain: 0.18, type: 'highpass', freq: 3500 }); },
   arrowHit: (o, t) => noise(o, t, { dur: 0.05, gain: 0.3, freq: 2400, q: 4 }),
   chop: (o, t) => { tone(o, t, { freq: 320, to: 120, dur: 0.09, gain: 0.4 }); noise(o, t, { dur: 0.07, gain: 0.3, freq: 750, q: 2 }); },
   mine: (o, t) => { tone(o, t, { type: 'triangle', freq: 1850, dur: 0.14, gain: 0.16 }); tone(o, t, { type: 'triangle', freq: 2770, dur: 0.09, gain: 0.08 }); noise(o, t, { dur: 0.03, gain: 0.2, type: 'highpass', freq: 2200 }); },

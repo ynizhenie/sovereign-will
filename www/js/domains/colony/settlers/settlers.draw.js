@@ -6,7 +6,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
-import { armorOf, isBowWeapon, isSpearWeapon, isSwordWeapon, usesDagger } from '../equipment/index.js';
+import { armorOf, isCrossbowWeapon, isRangedWeapon, isSpearWeapon, isSwordWeapon, usesDagger } from '../equipment/index.js';
 import { drawHeadTexture, lookOf } from './settlers.looks.js';
 import { castShadow, getDarkness } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
@@ -68,7 +68,9 @@ export function getHeldItemPose(unit) {
   if (unit.swingT > 0) {
     const p = 1 - unit.swingT / (unit.swingLen || 0.3);
     const arc = Math.sin(Math.PI * p);
-    if (isBowWeapon(item)) return { angle: 0.05 * arc, push: -4 * arc };
+    // a crossbow kicks back hard; a bow only a little
+    if (isCrossbowWeapon(item)) return { angle: -0.22 * arc * big, push: -8 * arc * big };
+    if (isRangedWeapon(item)) return { angle: 0.05 * arc, push: -4 * arc };
     if (isSpearWeapon(item)) return { angle: 0.08 * arc * big, push: 10 * arc * big };
     if (isSwordWeapon(item)) return { angle: (-1.1 + 2.2 * p) * big, push: 2 * arc };
     if (item === 'fist') {
@@ -99,17 +101,29 @@ export function getHeldItemPose(unit) {
 }
 
 // (#306) an archer's shot, drawn: after one's loosed, its other hand goes back to its quiver for an arrow,
-// brings it to the bow (nock) and draws the string; ready, in a fight it holds it drawn. { pull, other } (other:
-// where its other hand is, round its middle), or null (no bow, or not shooting)
+// brings it to the bow (nock) and draws the string; ready, in a fight it holds it drawn. A crossbowman cocks
+// its crossbow: the off hand hauls the string back along the stock and leaves a bolt in the groove, loaded
+// until the next shot. { pull, other } (other: where its other hand is, round its middle), or null (no ranged
+// weapon, or not shooting)
 export function bowDraw(unit) {
+  const crossbow = unit.weapon === 'crossbow';
   const bow = unit.weapon === 'bow' || (unit.enemyKey && (getDefinition('enemies', unit.enemyKey) || {}).ranged);
-  if (!bow || unit.asleep) return null;
+  if ((!bow && !crossbow) || unit.asleep) return null;
   const len = unit.shotLen || 0.8, since = (game.pathTick - (unit.shotAt ?? -1e9)) / 60;
-  if (since > len + 3) return null; // (not shooting: the bow at rest)
-  const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0, p = Math.min(1, since / len);
+  const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0;
   const quiver = { x: -Math.cos(f) * r * 0.55, y: -Math.sin(f) * r * 0.55 - r * 0.15 };
   const pose = getHeldItemPose(unit), a = f + pose.angle, grip = gripAt(r);
   const at = local => { const fx = pose.push + grip.x + local * itemScale(unit), fy = grip.y; return { x: Math.cos(a) * fx - Math.sin(a) * fy, y: Math.sin(a) * fx + Math.cos(a) * fy }; };
+  if (crossbow) {
+    // loaded at rest: the string back and a bolt in the groove; after a shot, the hand cocks it again
+    if (since > len + 3) return { pull: 1, other: at(-2) };
+    const p = Math.min(1, since / len);
+    if (p < 0.08) return { pull: 0, other: quiver }; // (the bolt just gone, the hand off the stock)
+    const pull = Math.min(1, (p - 0.08) / 0.5);
+    return { pull, other: at(16 - pull * 18) };
+  }
+  if (since > len + 3) return null; // (not shooting: the bow at rest)
+  const p = Math.min(1, since / len);
   if (p < 0.4) return { pull: 0, other: quiver };
   if (p < 0.6) { const q = (p - 0.4) / 0.2, g = at(-1); return { pull: 0, other: { x: quiver.x + (g.x - quiver.x) * q, y: quiver.y + (g.y - quiver.y) * q } }; }
   const pull = Math.min(1, (p - 0.6) / 0.4);
@@ -786,7 +800,7 @@ export function drawSettlers() {
 
     if (!simple && s.isIdle && !s.carrying && (!s.idle || s.idle.act === 'wander')) drawIdleIcon(s.x + r, top - 12);
     // an archer out of arrows (#232): a crossed-out arrow over it
-    if (isBowWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - r - 2, top - 12);
+    if (isRangedWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') drawNoArrows(s.x - r - 2, top - 12);
     // an order given or taken (#248): its bubble, and the commander's line to the one it told
     const line = s.orderLine;
     if (line && line.until > game.pathTick) {
