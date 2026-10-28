@@ -334,10 +334,32 @@ export const SETTLER_BEHAVIOURS = [
 const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, battleOrders, panic, strikeBack, sleepAtNight,
   fetchNightTorch, deliverMaterials, deliverCarrying, fightEnemies, build, harvestMarked, harvest, patrol]);
 
+// (#322) A settler at its everyday work (gathering, hauling, building, strolling) in a calm colony goes on with it
+// for a few ticks without being offered everything above it again: it looks at the whole list only every
+// RECHECK_TICKS (its turn is spread by its id, so a colony isn't all asked in one tick). What came before it in the
+// list said no a moment ago; with the tick's cost grown with each of the settlers x each of the sixty behaviours,
+// that was most of a big colony's step. Not while there are enemies about, or in anything but Endless, nor for one
+// the player moves.
+const RECHECK_TICKS = 4;
+const CALM_WORK = new Set([harvestMarked, harvest, pickApples, build, haulPilesFirst, haulPiles, haulCorpses, deliverCarrying, deliverMaterials,
+  deliverWhenNothingToDo, emptyFishTrap, collectWorms, fish, tendFarmZones, waterCrops, farmerGathersGrass, collectBones, escortGatherers, patrol]);
+
+// A settler's turn to be offered the whole list
+const isRecheckTurn = s => (game.pathTick + (typeof s.id === 'number' ? s.id : 0)) % RECHECK_TICKS === 0;
+
+function took(s, behaviour) {
+  s.lastBehaviour = behaviour;
+  s.isIdle = behaviour === patrol;
+  if (!s.isIdle) { s.idle = null; s.swaying = false; }
+  // what it's doing, for the selected settler's info (a pastime: its own text)
+  s.activity = s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
+}
+
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
   assignTowerArchers();
+  const calmColony = game.gameMode === 'endless' && !settlerTick.isWaveActive;
 
   // one ordered to work at night goes at half its pace (#279), the rest of its tick as anyone's
   let drowsyTick = null;
@@ -346,17 +368,19 @@ export function tickSettlers(dt) {
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
     if (isPet(s)) { if (s.targetEquipment) s.targetEquipment = null; tickPet(s, tick); return; } // (its own ways, #314)
+    const last = s.lastBehaviour;
+    // (a captain or a foreman counts its own seconds to its next order inside the behaviours above: always offered the list)
+    if (last && calmColony && !s.drowsy && !s.isPossessed && !s.targetEquipment && !s.order && s.orderIn === undefined && s.armIn === undefined &&
+      CALM_WORK.has(last) && !isRecheckTurn(s)) {
+      s.isIdle = false;
+      if (last(s, tick)) { took(s, last); return; }
+    }
     s.isIdle = false;
     for (const behaviour of SETTLER_BEHAVIOURS) {
       if (s.drowsy && !NIGHT_ORDER_ONLY.has(behaviour)) continue;
-      if (behaviour(s, tick)) {
-        s.isIdle = behaviour === patrol;
-        if (!s.isIdle) { s.idle = null; s.swaying = false; }
-        // what it's doing, for the selected settler's info (a pastime: its own text)
-        s.activity = s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
-        return;
-      }
+      if (behaviour(s, tick)) { took(s, behaviour); return; }
     }
+    s.lastBehaviour = null;
   });
   if (game.settlers.some(s => s.leftColony)) game.settlers = game.settlers.filter(s => !s.leftColony); // (#314: let go, gone)
 }

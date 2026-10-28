@@ -20,7 +20,7 @@ import { isInCamp, resetRaid } from './endless.raid.js';
 
 // caches, worked out again after loading rather than saved
 // (#298) and a raid's marks on its party: saved on the way, loaded they're home, the raid over
-export const UNSAVED_FIELDS = new Set(['reachCache', 'reachUse', 'approachCache', 'raider', 'raidSpot', 'exitSpot', 'lastStep']);
+export const UNSAVED_FIELDS = new Set(['reachCache', 'reachUse', 'lastBehaviour', 'approachCache', 'raider', 'raidSpot', 'exitSpot', 'lastStep']);
 
 export function loadSaves() {
   return loadData('saves', {});
