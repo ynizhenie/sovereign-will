@@ -5,7 +5,7 @@ import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInput
 import { TILE_SIZE, game, isBorderZone, thingAt, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
-import { inTerritory, isWaterReachable, toggleZone } from '../domains/world/index.js';
+import { inTerritory, isWaterReachable, markFishingChanged, toggleZone } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
@@ -190,6 +190,7 @@ function markTapped() {
   if (clickedWater) {
     if (isWaterReachable(clickedWater)) {
       clickedWater.isFishing = !clickedWater.isFishing;
+      markFishingChanged();
     }
     return;
   }
