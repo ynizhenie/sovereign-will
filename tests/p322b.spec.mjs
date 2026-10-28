@@ -156,3 +156,33 @@ test('the HUD is written only when its text changes, and the canvas font only wh
   expect(r.afterThree).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
 });
+
+test('zooming across a size of the terrain\'s pictures leaves no hole or flash: the picture it had is laid down till the new one is painted (#322)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    isPaused = true;
+    for (const list of [game.trees, game.boulders, game.naturalRocks, game.waterTiles, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.cacti, game.desertTiles]) list.length = 0;
+    const g = getGridPos(townHall.x, townHall.y);
+    for (let dy = 0; dy < 12; dy++) for (let dx = 0; dx < 12; dx++) waterTiles.push({ x: (g.gx + 6 + dx) * TILE_SIZE + 15, y: (g.gy + 6 + dy) * TILE_SIZE + 15, isFishing: false, fishTimer: 0, fishCount: 0, fishRegrowTimer: 0 });
+    resetTileIndex();
+    const centre = { x: (g.gx + 12) * TILE_SIZE, y: (g.gy + 12) * TILE_SIZE };
+    camera.x = centre.x; camera.y = centre.y;
+    const blue = () => { const px = Math.round(canvas.width / 2), py = Math.round(canvas.height / 2); const d = ctx.getImageData(px, py, 1, 1).data; return d[2] > d[0] + 20; };
+    const sizes = [];
+    // painted at the size for a scale near 1, then zoomed to where the next size is, one frame at a time
+    setZoom(1.0 / getBaseScale()); for (let i = 0; i < 30; i++) render(); const settled = blue();
+    const scaleBefore = getViewScale();
+    const flashes = [];
+    for (const scale of [1.5, 0.6, 0.2, 1.0, 2.4]) {
+      setZoom(scale / getBaseScale());
+      render(); // (one frame at the new size)
+      flashes.push(blue());
+      for (let i = 0; i < 30; i++) render();
+    }
+    return { settled, scaleBefore, flashes };
+  });
+  expect(r.settled).toBe(true);
+  expect(r.flashes).toEqual([true, true, true, true, true]);
+  expect(errors).toEqual([]);
+});
