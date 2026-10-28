@@ -15,7 +15,7 @@ test('menu loads and a game runs without errors', async ({ page }) => {
   // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
   // at a smithy
   await expect(page.locator('#craft-tools .tile')).toHaveCount(7); // (#279: no rope)
-  await expect(page.locator('#craft-weapons .tile')).toHaveCount(7);
+  await expect(page.locator('#craft-weapons .tile')).toHaveCount(8);
   await expect(page.locator('#craft-gear .tile')).toHaveCount(7); // (the whistle and the banner, #248; leather armour, #298; the flute gone, #326)
   await expect(page.locator('#craft-weapons .panel-heading')).toHaveCount(3);
 
