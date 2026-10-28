@@ -57,7 +57,7 @@ export function update(dt) {
   tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
   tickScouts(dt); // (scouts between waves, #279)
   tickDemonCamp(dt); // (their corpse pits and cages)
-  tickProjectiles();
+  tickProjectiles(dt);
   tickEnemies(dt);
 
   separateSettlersFromEnemies();
@@ -98,7 +98,7 @@ function updateCamp(dt) {
   updatePossessionView();
   tickSettlers(dt);
   tickEnemyTents(dt);
-  tickProjectiles();
+  tickProjectiles(dt);
   tickEnemies(dt);
   separateSettlersFromEnemies();
   separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
