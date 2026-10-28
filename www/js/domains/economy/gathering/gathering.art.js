@@ -12,6 +12,9 @@ import { game } from '../../../engine/world/index.js';
 let target = null;
 const pen = () => target || ctx;
 export function paintOn(g) { target = g; }
+// (a picture of tufts is painted with the wind still: they're too small to be seen swaying that far out)
+let still = false;
+export function paintStill(on) { still = on; }
 
 const variant = o => tileVariantHash(Math.round(o.x), Math.round(o.y));
 const blob = (x, y, r, fill) => { pen().fillStyle = fill; pen().beginPath(); pen().arc(x, y, r, 0, Math.PI * 2); pen().fill(); };
@@ -147,7 +150,7 @@ export function drawGrassArt(g) {
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
   pen().lineWidth = 1.6; pen().lineCap = 'round';
   for (let k = 0; k < 7; k++) {
-    const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + windSway(bx, y, y + 7 - top); // (in the wind, #308)
+    const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + (still ? 0 : windSway(bx, y, y + 7 - top)); // (in the wind, #308)
     pen().strokeStyle = greens[(h >>> (k * 2)) % 3];
     pen().beginPath(); pen().moveTo(bx, y + 7); pen().quadraticCurveTo(bx + lean * 0.3, y, bx + lean, top); pen().stroke();
   }

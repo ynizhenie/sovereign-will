@@ -6,6 +6,7 @@ import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
+import { isDarkBox, isUnexplored } from './world.fog.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -57,6 +58,8 @@ export function drawChunks(layer, res, stamp, paint, fill = null) {
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(Math.ceil(game.ROWS / CHUNK) - 1, Math.floor(v.y1 / size));
   for (let cy = cy0; cy <= cy1; cy++) {
     for (let cx = cx0; cx <= cx1; cx++) {
+      // (#322) a piece wholly under the fog's dark is not laid down
+      if (isDarkBox(cx * CHUNK, cy * CHUNK, cx * CHUNK + CHUNK - 1, cy * CHUNK + CHUNK - 1)) continue;
       const key = `${res}|${cx},${cy}`, now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
       let chunk = chunks.get(key);
       if (chunk) chunks.delete(key); // (to the end: the most recently shown)
@@ -488,26 +491,60 @@ export function drawSand() {
   inView(game.beachTiles, drawDesertTile);
 }
 
+// (#322) Zoomed out, where the tiles are in the pictures, a frame went through every water tile on the screen to find the few with a fish
+// or a fishing spot. The tiles that may have a fish are found from the list of the water once, till the list changes (they never
+// move); the fishing spots (the player puts and takes them) are looked for among the water every few ticks, a flag read each, not worked out
+/** @type {{ lists: any[], list: any[] }} */
+let fishy = { lists: [], list: [] };
+/** @type {{ version: number, list: any[], acc: any[], at: number }} */
+let spots = { version: -1, list: [], acc: [], at: 0 };
+// a fishing spot marked or taken off (the player's tap): looked for at once; others set from elsewhere are found within a second
+let fishingVersion = 0;
+export function markFishingChanged() { fishingVersion++; }
+// a sine from a table (a fish's swimming: a thousand of them a frame, a hundred-odd times a second)
+const SINE = Array.from({ length: 256 }, (_, i) => Math.sin(i / 256 * Math.PI * 2));
+const sinOf = x => SINE[((x * (256 / (Math.PI * 2))) & 255)];
+const mayHaveFish = w => tileVariantHash(w.x, w.y) % 7 === 0;
+function fishyWater() {
+  const lists = listStamp(game.waterTiles);
+  if (lists.length !== fishy.lists.length || lists.some((v, i) => v !== fishy.lists[i])) fishy = { lists, list: game.waterTiles.filter(mayHaveFish) };
+  return fishy.list;
+}
+const SPOTS_PER_FRAME = 1500;
+function fishingSpots() {
+  const water = game.waterTiles;
+  if (spots.version !== fishingVersion) spots = { version: fishingVersion, list: water.filter(w => w.isFishing), acc: [], at: 0 }; // (a tap: at once)
+  // (a bit of the water a frame, round and round: a spot set from elsewhere shows within a second or two, and no frame goes through all of it)
+  const end = Math.min(water.length, spots.at + SPOTS_PER_FRAME);
+  for (let i = spots.at; i < end; i++) if (water[i].isFishing) spots.acc.push(water[i]);
+  spots.at = end;
+  if (spots.at >= water.length) { spots.list = spots.acc; spots.acc = []; spots.at = 0; }
+  return spots.list;
+}
+
 // Water, and the fishing spots marked on it
 export function drawWater(terrain) {
   // (#306) zoomed out a fish is under a pixel: the shoals are drawn only when there's room to see them
-  const fishShown = getViewScale() >= 0.45;
-  inView(game.waterTiles, w => {
+  const scale = getViewScale(), fishShown = scale >= 0.45;
+  // (#322) fewer of them the farther out: every 14th water tile's, every 28th's... no more than the eye can tell apart; one clock read a frame, not one a fish
+  const fishEvery = scale >= 0.9 ? 7 : scale >= 0.6 ? 14 : 28, clock = performance.now() / 850;
+  ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
+  const each = cached
+    ? (/** @type {(w: any) => void} */ fn) => { if (fishShown) forEachInRect(fishyWater(), view.x0, view.y0, view.x1, view.y1, fn); for (const w of fishingSpots()) if (!mayHaveFish(w) && w.x >= view.x0 && w.x <= view.x1 && w.y >= view.y0 && w.y <= view.y1) fn(w); }
+    : (/** @type {(w: any) => void} */ fn) => inView(game.waterTiles, fn);
+  each(w => {
     if (!cached) drawWaterTile(w, terrain);
     const hash = tileVariantHash(w.x, w.y);
-    if (fishShown && (w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && hash % 7 === 0) {
-      const phase = performance.now() / 850 + (hash % 100) / 13;
-      const swim = Math.sin(phase) * 6;
-      const fx = w.x + swim, fy = w.y + Math.cos(phase * 0.7) * 3;
-      ctx.save();
-      ctx.translate(fx, fy);
-      ctx.scale(Math.cos(phase) < 0 ? -1 : 1, 1);
-      ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
-      ctx.beginPath(); ctx.ellipse(0, 0, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(-6, -2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(190, 229, 240, 0.75)';
-      ctx.beginPath(); ctx.arc(2, -0.5, 0.55, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
+    // (#322) a shoal is one path and one fill, no save and restore (ten canvas calls each, a thousand of them on a big lake), and not
+    // on a tile never seen, nor all of them when the view's wide: the fish that show are enough
+    if (fishShown && (hash % 7 === 0) && (hash % fishEvery === 0) && (w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && !isUnexplored(w.x, w.y)) {
+      const phase = clock + (hash % 100) / 13;
+      const swim = sinOf(phase) * 6, f = sinOf(phase + 1.5708) < 0 ? -1 : 1;
+      const fx = w.x + swim, fy = w.y + sinOf(phase * 0.7 + 1.5708) * 3;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 4, 2, 0, 0, Math.PI * 2);
+      ctx.moveTo(fx - 3 * f, fy); ctx.lineTo(fx - 6 * f, fy - 2); ctx.lineTo(fx - 6 * f, fy + 2); ctx.closePath();
+      ctx.fill();
     }
     if (w.isFishing) {
       ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
