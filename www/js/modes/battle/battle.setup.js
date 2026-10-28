@@ -8,7 +8,7 @@
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, setZoom } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
-import { canUseShield, isBowWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
+import { canUseShield, isRangedWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy, getEnemyDef, presetEnemyKey } from '../../domains/conflict/waves/index.js';
 import { setStandingWeather, timeOfPhase } from '../../domains/world/index.js';
@@ -105,7 +105,7 @@ export function makeBattleUnit(entry) {
     game.enemies.push(en);
     return;
   }
-  const archer = isBowWeapon(preset.weapon);
+  const archer = isRangedWeapon(preset.weapon);
   const id = entry.id ?? (entry.id = battle.nextId++); // (kept: a tap re-makes the line-up, a pet's tail shouldn't jump)
   const s = createSettler(preset.type, id, entry.x, entry.y, { look });
   Object.assign(s, {

@@ -622,6 +622,17 @@ export const ICONS = {
     c.beginPath(); c.moveTo(7, 4); c.quadraticCurveTo(30, 16, 7, 28); c.stroke();
     icLine(c, '#ecf0f1', 1, [[7, 4], [7, 28]]);
   },
+  // (#326) a crossbow, cocked: its stock, steel limbs and string, a bolt in the groove
+  crossbow: c => {
+    c.save(); c.translate(16, 16); c.rotate(-Math.PI / 4);
+    icRect(c, '#6d4520', -11, -1.8, 22, 3.6);
+    c.strokeStyle = '#7f8c8d'; c.lineWidth = 2.2; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(8, -9); c.quadraticCurveTo(14, 0, 8, 9); c.stroke();
+    icLine(c, '#ecf0f1', 0.9, [[8, -9], [-2, 0], [8, 9]]);
+    icLine(c, '#d2b48c', 1.1, [[-2, 0], [12, 0]]);
+    icFill(c, '#bdc3c7', [[12, -2], [16, 0], [12, 2]]);
+    c.restore();
+  },
 
   // ---- Buildings
   wall_wood: c => {

@@ -12,7 +12,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, hasAxeTool, hasToolFamily, isBowWeapon } from '../equipment/index.js';
+import { getWeaponStats, hasAxeTool, hasToolFamily, isRangedWeapon } from '../equipment/index.js';
 import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, stock, takeStock } from '../storage/index.js';
 import { deliverMaterials, getHallRepairStep, getMissingMaterial, getRepairStep, hallRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
 import { showNotification } from '../../../ui/index.js';
@@ -41,7 +41,7 @@ export const ORDERS = [
     find: (p, near) => game.enemies.find(en => near(en, en.radius + 15)) || game.enemyTents.find(et => near(et, 25)),
     step: (s, target, tick) => {
       if (!game.enemies.includes(target) && !game.enemyTents.includes(target)) return false;
-      if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
+      if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
       const combat = getWeaponStats(s, 'combat');
       const reach = game.enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
       if (Math.hypot(target.x - s.x, target.y - s.y) > reach) walkTo(s, target.x, target.y, tick);

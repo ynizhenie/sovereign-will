@@ -8,7 +8,7 @@ import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
 import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
-import { canUseShield, isBowWeapon, putOnGear } from '../../colony/equipment/index.js';
+import { canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -131,7 +131,7 @@ function armFromCorpse(zombie, corpse, reach) {
       let taken = false;
       if (category === 'weapons' && zombie.weapon === 'fist') {
         zombie.weapon = id; taken = true;
-        if (isBowWeapon(id)) { zombie.quiver = true; zombie.arrows = 15; }
+        if (isRangedWeapon(id)) { zombie.quiver = true; zombie.arrows = 15; }
       } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
         if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
         else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
@@ -139,7 +139,7 @@ function armFromCorpse(zombie, corpse, reach) {
       if (taken) pile.items.splice(pile.items.indexOf(key), 1);
     }
   }
-  zombie.role = zombie.weapon === 'fist' ? 'worker' : isBowWeapon(zombie.weapon) ? 'archer' : 'soldier';
+  zombie.role = zombie.weapon === 'fist' ? 'worker' : isRangedWeapon(zombie.weapon) ? 'archer' : 'soldier';
   if (zombie.shield && !canUseShield(zombie)) zombie.shield = false;
   game.loot = game.loot.filter(p => p.items.length || Object.keys(p.yield || {}).length);
 }

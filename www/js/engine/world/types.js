@@ -107,7 +107,7 @@
  * @property {string} [pickedGear]
  * @property {number} [masterId]    (#326) a temporary zombie's necromancer (its id): it keeps by it and goes where it sends it
  * @property {Object | null} [zombieTarget]  (#326) a necromancer's: the enemy its zombies are sent at
- * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {number | null} [guardingId]  the gatherer it guards (escortGatherers)
  * @property {Object | null} [dungTarget]  the pile of dung it's going for (cleanDung)
  * @property {boolean} [hasArmor]
@@ -141,7 +141,7 @@
  * @typedef {Object} Enemy
  * @property {Object} [struckBy]   (#326) the last settler that hit it, and when (struckTick): in the fog it turns on that one
  * @property {number} [struckTick]
- * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {string} enemyKey       GAME_CONFIG.enemies key
@@ -235,7 +235,7 @@
  * @property {Settler[]} [guards]    a watchtower's archers
  * @property {'red'} [side]        (#326) the enemy's (a battle's red half, a raid's camp); else the player's
  * @property {string} [variant]     (#326) a dummy's look, picked once
- * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} [arrowsStuck]  (#326) a dummy's: the arrows in it, taken back by whoever trains
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [arrowsStuck]  (#326) a dummy's: the arrows in it, taken back by whoever trains
  * @property {number} [usesLeft]     a trap's uses
  * @property {number} [dung]         a compost heap's dung (#232)
  * @property {number} [fish]         a fish trap's catch waiting (#199)
@@ -348,7 +348,7 @@
  * @property {Object[]} enemyTentBlueprints
  * @property {Object[]} projectiles
  * @property {Object[]} soulFx (#326) { x, y, who | to, t, dur, kind: 'in' | 'out' }: a soul in flight
- * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean }[]} stuckArrows (#326) arrows lying where they stopped
+ * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} stuckArrows (#326) arrows lying where they stopped
  * @property {Object<string, number>} foodMix
  * @property {Object[]} bloodSplats
  * @property {Object[]} dung

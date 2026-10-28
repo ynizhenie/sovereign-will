@@ -53,7 +53,8 @@ export const ruLanguage = {
         spear: 'Копье',
         iron_sword: 'Железный меч',
         iron_spear: 'Железное копье',
-        bow: 'Лук'
+        bow: 'Лук',
+        crossbow: 'Арбалет'
       },
       buildings: {
         smithy: 'Кузница',
@@ -174,7 +175,8 @@ export const ruLanguage = {
         spear: 'Бьёт дальше и сильнее, но реже.',
         iron_sword: 'Железный меч: сильнее обычного.',
         iron_spear: 'Железное копьё: сильнее обычного.',
-        bow: 'Стреляет издалека; нужны стрелы.'
+        bow: 'Стреляет издалека; нужны стрелы.',
+        crossbow: 'Бьёт дальше и намного сильнее, но перезаряжается долго. Нужны стрелы.'
       },
       gear: {
         leather_armor: 'Немного больше здоровья и меньше урона. Слабее железной.',
@@ -796,6 +798,7 @@ export const ruLanguage = {
       'preset.iron_sword': 'Железный меч',
       'preset.iron_spear': 'Железное копьё',
       'preset.bow': 'Лучник',
+      'preset.crossbow': 'Арбалетчик',
       'preset.big_club': 'Богатырь, дубина',
       'preset.big_spear': 'Богатырь, копьё',
       'preset.medic': 'Лекарь',

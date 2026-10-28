@@ -4,7 +4,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
-import { applyBowUnit, isBowWeapon, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
+import { applyBowUnit, isRangedWeapon, putOnGear, refundEquipment, takeOffGear } from './equipment.rules.js';
 import { addResources, moveSettlerToTownHall } from '../storage/index.js';
 import { says } from '../settlers/index.js';
 
@@ -46,10 +46,10 @@ export function equip(s, tick) {
         s.arrows = 0;
       }
       if (equipment.quiver !== undefined) s.quiver = equipment.quiver;
-      // given a bow, the shield goes back to the stock; disarmed, it keeps it (#232: taking the spear off took
-      // the shield too), of use again once it's given a melee weapon
+      // given a bow or a crossbow, the shield goes back to the stock; disarmed, it keeps it (#232: taking the
+      // spear off took the shield too), of use again once it's given a melee weapon
       if (handed) says(s, 'tool'); // (something new in its hands, #252)
-      if (s.shield && isBowWeapon(s.weapon)) {
+      if (s.shield && isRangedWeapon(s.weapon)) {
         game.armory['gear:shield'] = (game.armory['gear:shield'] || 0) + 1; // (into the store whole, #279)
         s.shield = false;
       }

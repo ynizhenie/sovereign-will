@@ -10,7 +10,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getBaseRadius, hasLineOfFire, isDefenseAlert, isInSafeArea, performAttack } from '../../conflict/combat/index.js';
-import { isBowWeapon, usesDagger } from '../equipment/index.js';
+import { isRangedWeapon, usesDagger } from '../equipment/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
@@ -48,7 +48,7 @@ export function freeCampfireSeat(s) {
   return null;
 }
 // an archer out of arrows doesn't train (#232)
-const canTrain = s => !(s.weapon === 'bow' && (!s.quiver || (s.arrows || 0) <= 0));
+const canTrain = s => !(isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0));
 // a training dummy with room for one more
 const freeDummy = s => game.buildings.filter(b => b.type === 'dummy' &&
   game.settlers.filter(o => o !== s && o.idle && o.idle.act === 'train' && o.idle.spot && Math.hypot(o.idle.spot.x - b.x, o.idle.spot.y - b.y) < 1).length < (GAME_CONFIG.buildings.dummy.trainers || 2))
@@ -219,7 +219,7 @@ export function idlePastime(s, tick) {
     }
     case 'train': {
       const dummy = game.buildings.find(b => b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
-      const shoots = isBowWeapon(s.weapon) && !usesDagger(s);
+      const shoots = isRangedWeapon(s.weapon) && !usesDagger(s);
       const kept = dummy && dummy.arrowsStuck ? dummy.arrowsStuck.length : 0;
       if (!dummy || (!canTrain(s) && !(shoots && kept)) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
       if (shoots) {
