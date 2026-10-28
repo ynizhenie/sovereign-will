@@ -51,13 +51,15 @@ function quantile(values, share) {
   return sample[Math.min(sample.length - 1, Math.max(0, Math.floor(share * sample.length)))];
 }
 
-export function generateContinent() {
+// (#326) in steps, a yield between its parts, each with how far along it is: the loading screen draws a frame between them (#322: it was one block, seconds on a slow phone)
+export function* generateContinent() {
   const C = config(), cols = game.COLS, rows = game.ROWS, n = cols * rows, side = Math.min(cols, rows);
   const shapeNoise = makeNoise(), warpNoise = makeNoise(), heightNoise = makeNoise(), wetNoise = makeNoise(), hollowNoise = makeNoise();
   const at = (gx, gy) => gy * cols + gx;
   const scale = 6 / side; // (the noise's features a sixth of the map across)
 
   // ---- The land: an oval, stretched and turned, its coast warped by noise; the sea at the edges
+  yield 0.12;
   const cx = cols * (0.5 + (rand() - 0.5) * 0.08), cy = rows * (0.5 + (rand() - 0.5) * 0.08);
   const turn = rand() * Math.PI, rx = cols * (0.37 + rand() * 0.07), ry = rows * (0.31 + rand() * 0.09);
   const margin = Math.max(5, Math.round(side * C.margin));
@@ -96,6 +98,7 @@ export function generateContinent() {
   for (let i = 0; i < n; i++) if (land[i] && mass[i] !== main && sizes[mass[i]] < 30) land[i] = 0;
 
   // ---- How far each land tile is from the sea
+  yield 0.21;
   const coast = new Int16Array(n).fill(-1), queue = [];
   for (let i = 0; i < n; i++) if (!land[i]) { coast[i] = 0; queue.push(i); }
   for (let k = 0; k < queue.length; k++) {
@@ -108,6 +111,7 @@ export function generateContinent() {
   }
 
   // ---- Biomes: by height (with its own noise) and wetness, each the share the config asks of the land
+  yield 0.29;
   const height = new Float32Array(n), wet = new Float32Array(n), hollow = new Float32Array(n);
   const landTiles = [];
   for (let gy = 0; gy < rows; gy++) {
@@ -130,6 +134,7 @@ export function generateContinent() {
   }
 
   // ---- The start: grassland far from the sea, with land, rock and trees round it, lakes and deserts few
+  yield 0.38;
   const start = chooseStart(biome, coast, cols, rows, C);
   // (on the corner of four tiles, as on a default map: the tiles round it laid out for walking up to it)
   townHall.x = start.gx * TILE_SIZE; townHall.y = start.gy * TILE_SIZE;
@@ -154,6 +159,7 @@ export function generateContinent() {
   }
 
   // ---- The tiles into the world's lists
+  yield 0.47;
   game.beachTiles = [];
   const tile = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   const sand = new Uint8Array(n);
@@ -170,6 +176,7 @@ export function generateContinent() {
   game.desertRegion = null;
 
   // ---- What grows on it: each biome's things by their chances (the foot of the mountains its own)
+  yield 0.56;
   const hall = { gx: start.gx, gy: start.gy };
   const nearMountain = (gx, gy) => {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (biome[at(Math.min(cols - 1, Math.max(0, gx + dx)), Math.min(rows - 1, Math.max(0, gy + dy)))] === MOUNTAIN) return true;
@@ -197,6 +204,7 @@ export function generateContinent() {
   }
 
   // ---- (#326) round the base, the small things to pick up by hand as many as a default map has: grass, berry
+  yield 0.64;
   // bushes, sticks and pebbles near at hand from the start
   const taken = new Set([...game.trees, ...game.boulders, ...game.grassList, ...game.berryBushes, ...game.sticks, ...game.pebbles, ...game.cacti].map(o => `${o.x},${o.y}`));
   for (const [kind, count] of Object.entries(C.nearBase)) {
@@ -210,6 +218,7 @@ export function generateContinent() {
   }
 
   // ---- Forests (where trees grow back, see spawnForestAware): the middle of the forest in each patch of it
+  yield 0.73;
   game.forests = [];
   const cell = 12;
   for (let y0 = 0; y0 < rows; y0 += cell) {
@@ -223,10 +232,12 @@ export function generateContinent() {
   }
 
   // ---- Ore in the mountains: the first of each kind near the start
+  yield 0.82;
   // (as many to the land as a default map has to its whole: the sea's not counted)
   const perLand = landTiles.length / (DEFAULT_MAP_TILES * DEFAULT_MAP_TILES);
   for (const kind of Object.keys(ORE_KINDS)) {
     placeOreSpawners(kind, Math.max(1, Math.round(getUnscaledMapCount(ORE_KINDS[kind].spawnerKey, 1) * perLand)), { x: townHall.x, y: townHall.y, r: C.startNear * TILE_SIZE });
+    yield 0.85;
   }
   placeAppleTrees();
 }

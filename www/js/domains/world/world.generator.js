@@ -323,7 +323,7 @@ export function* generateMapSteps() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
   game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = []; game.beachTiles = []; // (#326: the last map's beaches gone before anything's placed)
   yield 0.1;
-  if (isContinentMap()) { generateContinent(); return; } // (#299: a big map, a continent)
+  if (isContinentMap()) { yield* generateContinent(); return; } // (#299: a big map, a continent)
 
   placeLakes();
   yield 0.2;

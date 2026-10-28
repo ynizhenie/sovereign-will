@@ -28,11 +28,11 @@ export function isBuildingSingle(building) {
 export function isTileOccupied(x, y) {
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return true;
   // (#299: by the tiles round it, anyWithin, not through every list: a big map has thousands)
-  return anyWithin(game.trees, x, y, 20) || anyWithin(game.cacti, x, y, 20) || anyWithin(game.boulders, x, y, 20) ||
-         anyWithin(game.grassList, x, y, 20) || anyWithin(game.sticks, x, y, 20) || anyWithin(game.pebbles, x, y, 20) ||
-         anyWithin(game.ironOres, x, y, 22) || anyWithin(game.coalOres, x, y, 22) || anyWithin(game.buildings, x, y, 20) ||
-         anyWithin(game.blueprints, x, y, 20) || anyWithin(game.naturalRocks, x, y, 24) || anyWithin(game.waterTiles, x, y, 20) ||
-         anyWithin(game.farmPlots, x, y, 20) || anyWithin(game.berryBushes, x, y, 20) ||
+  // (#322) the likeliest first: a world's being made, a spot beside rock or water is turned down by the first it asks, not after twelve lists
+  return anyWithin(game.naturalRocks, x, y, 24) || anyWithin(game.waterTiles, x, y, 20) || anyWithin(game.trees, x, y, 20) || anyWithin(game.cacti, x, y, 20) ||
+         anyWithin(game.boulders, x, y, 20) || anyWithin(game.ironOres, x, y, 22) || anyWithin(game.coalOres, x, y, 22) ||
+         anyWithin(game.grassList, x, y, 20) || anyWithin(game.sticks, x, y, 20) || anyWithin(game.pebbles, x, y, 20) || anyWithin(game.buildings, x, y, 20) ||
+         anyWithin(game.blueprints, x, y, 20) || anyWithin(game.farmPlots, x, y, 20) || anyWithin(game.berryBushes, x, y, 20) ||
          game.boars.some(b => Math.hypot(b.x - x, b.y - y) < 20);
 }
 
