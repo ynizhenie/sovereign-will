@@ -3,7 +3,7 @@ import { openGame } from './helpers.mjs';
 
 // #322: a settler at its everyday work is offered the whole list of behaviours only every few ticks, in a calm colony
 
-test('a settler strolling about takes up a more urgent thing within a few ticks; with enemies about, at once (#322)', async ({ page }) => {
+test('a settler strolling about takes up a more urgent thing within a few ticks (#322)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
