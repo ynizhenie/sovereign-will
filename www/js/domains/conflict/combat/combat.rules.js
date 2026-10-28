@@ -396,11 +396,13 @@ export function ageStuckArrows(dt) {
 }
 
 // Arrows fly, hit what they reach (settlers and the town hall, or enemies, tents and boars), stop at obstacles
-export function tickProjectiles() {
+// (#322) dt: a step's length in seconds (the speeds are for 1/60 s)
+export function tickProjectiles(dt = 1 / 60) {
+  const k = dt * 60;
   for (let i = game.projectiles.length - 1; i >= 0; i--) {
     let proj = game.projectiles[i];
     if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
-    proj.x += proj.vx; proj.y += proj.vy; proj.life--;
+    proj.x += proj.vx * k; proj.y += proj.vy * k; proj.life -= k;
     let hit = false, host = null;
 
     if (proj.fromEnemy) {
