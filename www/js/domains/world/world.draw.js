@@ -44,7 +44,7 @@ const PAD = 6;
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
 // paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
 /** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {string | null} [fill] */
-function drawChunks(layer, res, stamp, paint, fill = null) {
+export function drawChunks(layer, res, stamp, paint, fill = null) {
   if (typeof document === 'undefined') return;
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
