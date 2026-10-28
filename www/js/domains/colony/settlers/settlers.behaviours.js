@@ -27,7 +27,7 @@ import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZo
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
 import { collectBones, corpsesToGraves, followMaster, necromancy } from '../../factions/undead/index.js';
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
-import { craftItem, equip, isBowWeapon } from '../equipment/index.js';
+import { craftItem, equip, isRangedWeapon } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
@@ -131,7 +131,7 @@ export function prepareSettler(s, dt) {
   // goes back to the store
   if (s.weapon !== 'fist' && s.temporary === undefined) {
     if (s.whistle) { if (!s.targetEquipment && game.gameMode === 'endless') s.targetEquipment = { weapon: 'fist', role: 'worker', keep: true }; }
-    else if (s.role === 'worker') s.role = isBowWeapon(s.weapon) ? 'archer' : 'soldier';
+    else if (s.role === 'worker') s.role = isRangedWeapon(s.weapon) ? 'archer' : 'soldier';
   }
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) s.attackCooldown -= dt;

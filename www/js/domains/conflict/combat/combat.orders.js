@@ -5,7 +5,7 @@
 // the tents.
 
 import { game } from '../../../engine/world/index.js';
-import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
+import { getWeaponStats, isRangedWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, getRecentAttacker, getSelectedSettler, getSelection, toggleInGroup } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, performAttack } from './combat.rules.js';
@@ -44,7 +44,7 @@ function strike(s, target, dt) {
   const combat = getWeaponStats(s, 'combat');
   const tent = game.enemyTents.includes(target);
   const reach = tent ? combat.tentReach + (target.outpost ? 10 : 0) : combat.approach + (target.radius || 10);
-  const bow = isBowWeapon(s.weapon);
+  const bow = isRangedWeapon(s.weapon);
   if (dist(s, target) > reach || (bow && !hasLineOfFire(s.x, s.y, target.x, target.y))) moveEntityTowards(s, target.x, target.y, s.speed, false, dt);
   else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y); }
 }
@@ -54,7 +54,7 @@ function strike(s, target, dt) {
 export function fightByOrders(s, dt, auto) {
   if (!s.orderSpot) s.orderSpot = { x: s.x, y: s.y };
   if (s.orderTarget && !alive(s.orderTarget)) s.orderTarget = null;
-  const outOfArrows = isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0);
+  const outOfArrows = isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0);
   const attacker = getRecentAttacker(s);
   const hitter = attacker && game.enemies.includes(attacker) ? attacker : null;
   let target = null;

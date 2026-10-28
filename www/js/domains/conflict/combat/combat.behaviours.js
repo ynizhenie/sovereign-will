@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { getWeaponStats, hasAxeTool, hasPickaxeTool, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
@@ -25,7 +25,7 @@ export function takeMarkedTarget(s, tick) {
 // to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards
 export function holdPost(s, tick) {
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false; // no arrows: no post (#232, fightEnemies)
+  if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false; // no arrows: no post (#232, fightEnemies)
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
   if (getRecentAttacker(s)) return false;
@@ -70,7 +70,7 @@ export function strikeBack(s, tick) {
   const attacker = getRecentAttacker(s);
   if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
+  if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
   return engageEnemy(s, tick, attacker, attacker, tick.dt);
 }
 
@@ -82,12 +82,13 @@ export function fightEnemies(s, tick) {
   const choice = chooseSettlerTarget(s, tick);
   if (!choice) return false; // on the way to the enemy tents, with nothing in the way
   const { targetEnemy, attacker } = choice;
-  if (isBowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
+  if (isRangedWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
   // an archer with nothing to shoot keeps out of the fight at the town hall while there's an enemy about
   // (#232: it went out to its post empty); with none, it gets on with its other work
   // (#326) unless an enemy comes close: then it draws its dagger and stabs at it
-  const close = targetEnemy && usesDagger(s) && Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) < GAME_CONFIG.weapons.bow.dagger.closeTiles * TILE_SIZE;
-  if (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy && !close) {
+  const dagger = (GAME_CONFIG.weapons[s.weapon] || {}).dagger;
+  const close = targetEnemy && usesDagger(s) && dagger && Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) < dagger.closeTiles * TILE_SIZE;
+  if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy && !close) {
     s.patrolTarget = null;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, dt);
     return true;
@@ -131,7 +132,7 @@ function chooseSettlerTarget(s, tick) {
   if (!attacker && s.captainTarget && !(targetEnemy && targetEnemy.markedTarget)) targetEnemy = s.captainTarget;
   if (attacker) targetEnemy = attacker;
   // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
-  if (targetEnemy && !attacker && !isBowWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
+  if (targetEnemy && !attacker && !isRangedWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
     const others = game.enemies.filter(en => en !== targetEnemy && !meleeFull(en, tick));
     const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (next && Math.hypot(next.x - s.x, next.y - s.y) < 300) targetEnemy = next;
@@ -184,7 +185,7 @@ function restockArrows(s, dt) {
 // there are defenders; the rest walk up and strike (an archer shoots from where it has a clear line).
 // False when there's nothing to fight.
 export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
-  const shoots = isBowWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, a dagger: melee)
+  const shoots = isRangedWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, a dagger: melee)
   let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
 
   // (a necromancer's staff fights: it doesn't shelter at the town hall, #232)
@@ -238,7 +239,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 // (#326) On a way through the enemy's buildings (findPathAStar's, when the way round is long): the one next on
 // it struck once it's in reach. True while that keeps it busy
 function breakWhatsInTheWay(s) {
-  if (!s.path || !s.path.length || isBowWeapon(s.weapon)) return false;
+  if (!s.path || !s.path.length || isRangedWeapon(s.weapon)) return false;
   const next = s.path[0];
   const b = game.buildings.find(o => o.side === 'red' && o.type !== 'spikes' && Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1);
   if (!b || Math.hypot(b.x - s.x, b.y - s.y) > getWeaponStats(s, 'combat').range + 15) return false;
@@ -285,7 +286,7 @@ export function goForMarkedTent(s, tick) {
 function attackTent(s, tent, tick) {
   const dist = Math.hypot(tent.x - s.x, tent.y - s.y);
   const attackDist = getWeaponStats(s, 'combat').tentReach;
-  const blockedShot = isBowWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
+  const blockedShot = isRangedWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
   if (dist > attackDist || blockedShot) {
     if (!breakWhatsInTheWay(s)) moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
   } else {
@@ -334,7 +335,7 @@ export function escortGatherers(s, tick) {
   const state = escortState();
   // (an archer with no arrows guards nobody, #232)
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert() ||
-    (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
+    (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
     guard(state, s, null);
     return false;
   }
@@ -364,7 +365,7 @@ export function escortGatherers(s, tick) {
 // stock): with a wave coming, up to full; otherwise once it's empty. Not with an enemy close (then it fights,
 // restocking from a tower or the storage it's at in fightEnemies), nor on a tower (the tower's arrows)
 export function restockQuiver(s, tick) {
-  if (!isBowWeapon(s.weapon) || !s.quiver || s.isPossessed || s.towerAssignment || s.carrying || !(stock.arrows > 0)) return false;
+  if (!isRangedWeapon(s.weapon) || !s.quiver || s.isPossessed || s.towerAssignment || s.carrying || !(stock.arrows > 0)) return false;
   const capacity = s.quiverCapacity || 12, have = s.arrows || 0;
   if (!(isDefenseAlert() ? have < capacity : have <= 0)) return false;
   if (getRecentAttacker(s) || game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 160)) return false;

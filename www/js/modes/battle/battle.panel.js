@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
-import { isBowWeapon } from '../../domains/colony/equipment/index.js';
+import { isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
@@ -97,7 +97,7 @@ function presetStats(preset) {
   const tool = preset.tool && getDefinition('tools', preset.tool);
   const hit = kind.bite ? kind.bite.damage : kind.pet ? 0 : preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
   const armour = kind.pet ? null : battleArmor(battle.armor);
-  const hp = kind.hp + (armour && !isBowWeapon(preset.weapon) ? armour.hpBonus : 0);
+  const hp = kind.hp + (armour && !isRangedWeapon(preset.weapon) ? armour.hpBonus : 0);
   return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp, damage: Math.round(hit * kind.damageMultiplier) };
 }
 

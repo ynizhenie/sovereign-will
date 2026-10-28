@@ -28,10 +28,10 @@ export const equipmentConfig = {
         raiseReach: 110, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
   },
 
-  // family: club / sword / spear / bow — how it's drawn and used (bows shoot arrows).
-  // combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the settler
-  //   walks to an enemy before striking (bow: shooting distance), tentReach: same for enemy tents;
-  //   bows also: projectileSpeed, projectileLife (ticks).
+  // family: club / sword / spear / bow / crossbow — how it's drawn and used (bows and crossbows shoot
+  //   arrows). combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the
+  //   settler walks to an enemy before striking (a ranged weapon: shooting distance), tentReach: same for
+  //   enemy tents; ranged weapons also: projectileSpeed, projectileLife (ticks).
   // Hunting a boar uses the same (#298: not doubled).
   // Fists hit with the tool the settler carries (tools' combatDamage), bare hands otherwise.
   // settlerTypes' damageMultiplier applies on top.
@@ -49,9 +49,14 @@ export const equipmentConfig = {
     iron_spear: { id: 'iron_spear', icon: 'iron_spear', cost: { wood: 10, iron: 5 }, family: 'spear',
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 } },
     bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, rope: 2 }, family: 'bow',
-      combat: { damage: 30, cooldown: 0.8, approach: 140, tentReach: 140, projectileSpeed: 4.5, projectileLife: 80 },
+      combat: { damage: 30, cooldown: 1, approach: 210, tentReach: 210, projectileSpeed: 4.5, projectileLife: 80 },
       // (#326) out of arrows an archer draws its dagger (the bow on its back) and stabs at what comes close: weak
-      dagger: { damage: 5, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
+      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
+    // (#326) a crossbow: slower to load than a bow, but it hits harder and shoots farther; it uses the same
+    // arrows (a quiver), and out of them its bearer draws a dagger as an archer does
+    crossbow: { id: 'crossbow', icon: 'crossbow', cost: { wood: 20, iron: 4, rope: 4 }, family: 'crossbow',
+      combat: { damage: 65, cooldown: 2.2, approach: 310, tentReach: 310, projectileSpeed: 7.2, projectileLife: 115 },
+      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
     // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },
 

@@ -49,7 +49,7 @@ test('an archer out of arrows draws its dagger and stabs at one close by (weakly
     return { stabbed, dagger: usesDagger(s), stats: getWeaponStats(s, 'combat').damage, enemyWeapon: archer.weapon };
   });
   expect(r.dagger).toBe(true);
-  expect(r.stats).toBe(5);
+  expect(r.stats).toBe(15);
   expect(r.stabbed).toBeGreaterThan(0);
   expect(r.enemyWeapon).toBe('dagger');
 });

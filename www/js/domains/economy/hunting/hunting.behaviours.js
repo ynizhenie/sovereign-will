@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { rand, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, isBowWeapon } from '../../colony/equipment/index.js';
+import { getWeaponStats, isRangedWeapon } from '../../colony/equipment/index.js';
 import { finishHarvest } from '../gathering/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { woundBoar } from './hunting.rules.js';
@@ -46,7 +46,7 @@ export function huntBoar(s, boar, tick) {
   if (dist > hunt.range) {
     moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
   } else {
-    if (isBowWeapon(s.weapon)) {
+    if (isRangedWeapon(s.weapon)) {
       // only with a clear shot: no arrows wasted on trees and stones in the way
       if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y);
       else moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);

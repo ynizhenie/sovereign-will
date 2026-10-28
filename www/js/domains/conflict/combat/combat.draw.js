@@ -46,6 +46,20 @@ export function drawArrow(proj) {
   ctx.restore();
 }
 
+// (#326) A crossbow bolt in flight: a short, thick shaft, a steel head on a ferrule, the fletching in its
+// side's colour
+export function drawBolt(proj) {
+  ctx.save();
+  ctx.translate(proj.x, proj.y);
+  ctx.rotate(Math.atan2(proj.vy, proj.vx));
+  ctx.fillStyle = '#6d4520'; ctx.fillRect(-7, -1, 10, 2);
+  ctx.fillStyle = '#cfd8dc'; ctx.fillRect(3, -1.1, 2.2, 2.2);
+  ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(5, -3); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = fletching(proj.fromEnemy);
+  ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-10, -2.8); ctx.lineTo(-5, 0); ctx.lineTo(-10, 2.8); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
 // Flames licking up a burning unit
 export function drawBurning(x, y, r) {
   const flicker = Math.sin(game.pathTick * 0.5) * 2;
@@ -163,15 +177,26 @@ function drawStuckArrow(x, y, a, fromEnemy, alpha) {
 }
 const fadeOf = age => Math.min(1, Math.max(0, (GAME_CONFIG.stuckArrows.seconds - age) / 4));
 
+// (#326) A bolt that stopped: its thicker shaft and fletching out of what it hit
+function drawStuckBolt(x, y, a, fromEnemy, alpha) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = '#6d4520'; ctx.fillRect(-7, -1, 7, 2);
+  ctx.fillStyle = fletching(fromEnemy);
+  ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-10, -2.8); ctx.lineTo(-5, 0); ctx.lineTo(-10, 2.8); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+const drawStuck = (a, x, y, alpha) => (a.bolt ? drawStuckBolt : drawStuckArrow)(x, y, a.a, a.fromEnemy, alpha);
+
 // Arrows and fireballs in flight, and those that stopped: on the ground, in the living, in corpses and dummies
 export function drawProjectiles() {
-  for (const a of game.stuckArrows) drawStuckArrow(a.x, a.y, a.a, a.fromEnemy, fadeOf(a.age));
-  for (const list of [game.settlers, game.enemies]) for (const u of list) if (u.stuck) for (const a of u.stuck) drawStuckArrow(u.x + a.x, u.y + a.y, a.a, a.fromEnemy, fadeOf(a.age));
-  for (const c of game.corpses) if (c.stuck) for (const a of c.stuck) drawStuckArrow(c.x + a.x, c.y + a.y, a.a, a.fromEnemy, Math.max(0, Math.min(1, (GAME_CONFIG.corpses.seconds - c.age) / 10)) * 0.9);
-  for (const d of game.buildings) if (d.arrowsStuck) for (const a of d.arrowsStuck) drawStuckArrow(d.x + a.x, d.y + a.y, a.a, false, 1);
+  for (const a of game.stuckArrows) drawStuck(a, a.x, a.y, fadeOf(a.age));
+  for (const list of [game.settlers, game.enemies]) for (const u of list) if (u.stuck) for (const a of u.stuck) drawStuck(a, u.x + a.x, u.y + a.y, fadeOf(a.age));
+  for (const c of game.corpses) if (c.stuck) for (const a of c.stuck) drawStuck(a, c.x + a.x, c.y + a.y, Math.max(0, Math.min(1, (GAME_CONFIG.corpses.seconds - c.age) / 10)) * 0.9);
+  for (const d of game.buildings) if (d.arrowsStuck) for (const a of d.arrowsStuck) drawStuck(a, d.x + a.x, d.y + a.y, 1);
   game.projectiles.forEach(proj => {
-    // fireballs bigger and orange; everything else is an arrow, pointing where it flies
+    // fireballs bigger and orange; a bolt is short and thick; everything else is an arrow, pointing where it flies
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
+    else if (proj.bolt) { drawBolt(proj); return; }
     else { drawArrow(proj); return; }
     ctx.beginPath(); ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2); ctx.fill();
   });

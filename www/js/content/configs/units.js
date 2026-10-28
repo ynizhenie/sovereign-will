@@ -24,7 +24,7 @@ export const unitsConfig = {
     { id: 'fist', size: 'normal', weapon: 'fist' }, { id: 'club', size: 'normal', weapon: 'club' },
     { id: 'sword', size: 'normal', weapon: 'sword' }, { id: 'spear', size: 'normal', weapon: 'spear' },
     { id: 'iron_sword', size: 'normal', weapon: 'iron_sword' }, { id: 'iron_spear', size: 'normal', weapon: 'iron_spear' },
-    { id: 'bow', size: 'normal', weapon: 'bow' }, { id: 'medic', size: 'normal', weapon: 'fist', tool: 'medbag' },
+    { id: 'bow', size: 'normal', weapon: 'bow' }, { id: 'crossbow', size: 'normal', weapon: 'crossbow' }, { id: 'medic', size: 'normal', weapon: 'fist', tool: 'medbag' },
     { id: 'necromancer', size: 'normal', weapon: 'fist', tool: 'necro_staff' },
     { id: 'big_fist', size: 'big', weapon: 'fist' }, { id: 'big_club', size: 'big', weapon: 'club' }, { id: 'big_sword', size: 'big', weapon: 'sword' }, { id: 'big_spear', size: 'big', weapon: 'spear' },
     { id: 'big_iron_sword', size: 'big', weapon: 'iron_sword' }, { id: 'big_iron_spear', size: 'big', weapon: 'iron_spear' }, // (#326: the big ones are picked by the panel's Big switch)
