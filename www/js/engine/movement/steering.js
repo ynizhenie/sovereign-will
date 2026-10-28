@@ -62,7 +62,9 @@ export function stepsOntoSpikes(entity, vx, vy) {
   return hazard(key(entity.x + vx, entity.y + vy)) && !hazard(key(entity.x, entity.y));
 }
 
-export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 0.016) {
+// (#322) A step's distance is the speed for 1/60 s: a longer or shorter step (dt) goes further or less far, and a settler
+// at half pace (dt halved) walks at half speed
+export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60) {
   // the undead's blighted ground holds enemies back
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
   // through a portal pair of its own side (#326: an enemy through the red side's, in a battle)
@@ -71,7 +73,7 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
     if (via === true) return;
     if (via) { targetX = via.x; targetY = via.y; }
   }
-  speed *= GAME_CONFIG.movementScale;
+  speed *= GAME_CONFIG.movementScale * dt * 60;
   // terrain collision body; big units are drawn larger but must still fit one-tile gaps (30px)
   const bodyRadius = Math.min(entity.radius, 13);
 
