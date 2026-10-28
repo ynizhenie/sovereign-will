@@ -369,7 +369,9 @@ export function tickSettlers(dt) {
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
     if (isPet(s)) { if (s.targetEquipment) s.targetEquipment = null; tickPet(s, tick); return; } // (its own ways, #314)
     const last = s.lastBehaviour;
-    if (last && calmColony && !s.drowsy && !s.isPossessed && !s.targetEquipment && !s.order && CALM_WORK.has(last) && !isRecheckTurn(s)) {
+    // (a captain or a foreman counts its own seconds to its next order inside the behaviours above: always offered the list)
+    if (last && calmColony && !s.drowsy && !s.isPossessed && !s.targetEquipment && !s.order && s.orderIn === undefined && s.armIn === undefined &&
+      CALM_WORK.has(last) && !isRecheckTurn(s)) {
       s.isIdle = false;
       if (last(s, tick)) { took(s, last); return; }
     }
