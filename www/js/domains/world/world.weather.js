@@ -11,6 +11,7 @@ import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.j
 import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
 import { tileVariantHash } from './world.draw.js';
+import { isUnexplored } from './world.fog.js';
 
 const config = () => GAME_CONFIG.weather;
 /** @type {{ kind: string, level: number, left: number, wind: number, windTo: number, windAngle: number, flash: number, thunderIn: number, nextBolt: number, bolt: { x: number, seed: number } | null }} */
@@ -95,14 +96,20 @@ export function drawWeatherWorld() {
   const t = performance.now() / 1000, rain = rainLevel();
   const lowDetail = canvas.width * canvas.height > 1_000_000;
   if (scale >= 0.75) {
+    // (#322) the wavelets of a lake: each was its own path, its own stroke and its own colour string (a thousand a frame on a big lake).
+    // Now their strokes are grouped by how bright they are now (six steps, the way they fade in and out), a path and a stroke for each step;
+    // not on tiles never seen, and half of them (the other half's alike) when the view's not close
+    const WAVES = 6, waves = Array.from({ length: WAVES }, () => new Path2D());
+    const sparse = scale < 1.2;
     for (const tile of seen(game.waterTiles)) {
       const h = (tile.x * 73856093) ^ (tile.y * 19349663);
-      if (lowDetail && (h & 1)) continue;
+      if ((lowDetail || sparse) && (h & 1)) continue;
+      if (isUnexplored(tile.x, tile.y)) continue;
       // a light wavelet drifting across it
       const p = ((t * 0.25 + (h & 255) / 255) % 1);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.16 * Math.sin(p * Math.PI)})`; ctx.lineWidth = 1.2;
       const wx = tile.x - 12 + p * 20, wy = tile.y - 6 + ((h >>> 8) % 12);
-      ctx.beginPath(); ctx.moveTo(wx - 5, wy); ctx.quadraticCurveTo(wx, wy - 2, wx + 5, wy); ctx.stroke();
+      const path = waves[Math.min(WAVES - 1, Math.floor(Math.sin(p * Math.PI) * WAVES))];
+      path.moveTo(wx - 5, wy); path.quadraticCurveTo(wx, wy - 2, wx + 5, wy);
       // rain's rings, each spreading and fading
       if (rain > 0.05) {
         for (let k = 0; k < (lowDetail ? 1 : 2); k++) {
@@ -112,19 +119,22 @@ export function drawWeatherWorld() {
         }
       }
     }
+    ctx.lineWidth = 1.2;
+    waves.forEach((path, i) => { ctx.strokeStyle = `rgba(255, 255, 255, ${0.16 * (i + 0.5) / WAVES})`; ctx.stroke(path); });
     // the desert's air shimmering in the day's heat (not in rain)
     const heat = Math.max(0, getSun().alpha - 0.16) / 0.08 * (1 - rain);
     if (heat > 0.05) {
       ctx.lineWidth = 1;
+      const SHIMMER = 4, shimmer = Array.from({ length: SHIMMER }, () => new Path2D());
       for (const tile of seen(game.desertTiles)) {
         const h = (tile.x * 2654435761) ^ tile.y;
         if (h & (lowDetail ? 3 : 1)) continue;
+        if (isUnexplored(tile.x, tile.y)) continue;
         const p = (t * 0.35 + ((h >>> 3) & 255) / 255) % 1, y = tile.y + 12 - p * 26;
-        ctx.strokeStyle = `rgba(255, 245, 220, ${0.22 * heat * Math.sin(p * Math.PI)})`;
-        ctx.beginPath();
-        for (let k = 0; k <= 6; k++) { const x = tile.x - 12 + k * 4, yy = y + Math.sin(t * 6 + k + tile.x) * 1.5; if (k) ctx.lineTo(x, yy); else ctx.moveTo(x, yy); }
-        ctx.stroke();
+        const path = shimmer[Math.min(SHIMMER - 1, Math.floor(Math.sin(p * Math.PI) * SHIMMER))];
+        for (let k = 0; k <= 6; k++) { const x = tile.x - 12 + k * 4, yy = y + Math.sin(t * 6 + k + tile.x) * 1.5; if (k) path.lineTo(x, yy); else path.moveTo(x, yy); }
       }
+      shimmer.forEach((path, i) => { ctx.strokeStyle = `rgba(255, 245, 220, ${0.22 * heat * (i + 0.5) / SHIMMER})`; ctx.stroke(path); });
     }
   }
   // fog: soft banks drifting with the wind over a light haze (#306: they lie on the map, each on its own cell
