@@ -1,7 +1,7 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, isBowWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
@@ -315,20 +315,41 @@ function isFarOut(w) {
 // Between waves, a soldier or archer with nothing else to do guards a worker gathering far out of the base:
 // one each, keeping within guardRange of it on the base's side, facing out (an enemy coming at them it
 // fights, as ever: fightEnemies comes first)
+// (#322) What every guard of this tick looks at, made once for the tick: the settlers by id, the workers out far, and how
+// many guard each (kept up as they pick), not a pass through all the settlers for each soldier
+const escortOnce = onceThisTick();
+const escortState = () => escortOnce(() => {
+  const guarded = new Map(), byId = new Map();
+  for (const o of game.settlers) { byId.set(o.id, o); if (o.guardingId) guarded.set(o.guardingId, (guarded.get(o.guardingId) || 0) + 1); }
+  return { guarded, byId, far: game.settlers.filter(o => o.role === 'worker' && !o.isPossessed && isFarOut(o)) };
+});
+const guard = (state, s, id) => {
+  if (s.guardingId === id) return;
+  if (s.guardingId) state.guarded.set(s.guardingId, (state.guarded.get(s.guardingId) || 1) - 1);
+  if (id) state.guarded.set(id, (state.guarded.get(id) || 0) + 1);
+  s.guardingId = id;
+};
+
 export function escortGatherers(s, tick) {
+  const state = escortState();
   // (an archer with no arrows guards nobody, #232)
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert() ||
     (isBowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
-    s.guardingId = null;
+    guard(state, s, null);
     return false;
   }
-  const guarded = new Set(game.settlers.filter(o => o !== s && o.guardingId).map(o => o.guardingId));
-  let w = s.guardingId ? game.settlers.find(o => o.id === s.guardingId) : null;
+  const guardedByOthers = o => (state.guarded.get(o.id) || 0) - (s.guardingId === o.id ? 1 : 0) > 0;
+  let w = s.guardingId ? state.byId.get(s.guardingId) || null : null;
   if (!w || w.role !== 'worker' || w.isIdle || !isFarOut(w)) {
-    w = game.settlers.filter(o => o.role === 'worker' && !o.isIdle && !o.isPossessed && !guarded.has(o.id) && isFarOut(o))
-      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+    w = null;
+    let best = Infinity;
+    for (const o of state.far) {
+      if (o.isIdle || guardedByOthers(o)) continue;
+      const d = Math.hypot(o.x - s.x, o.y - s.y);
+      if (d < best) { best = d; w = o; }
+    }
   }
-  s.guardingId = w ? w.id : null;
+  guard(state, s, w ? w.id : null);
   if (!w) return false;
   const range = GAME_CONFIG.idle.guardRange;
   const d = Math.max(1, Math.hypot(w.x - townHall.x, w.y - townHall.y));
