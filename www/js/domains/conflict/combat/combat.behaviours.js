@@ -1,6 +1,6 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
-import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
@@ -114,7 +114,8 @@ function chooseSettlerTarget(s, tick) {
     if (en.toCatch && en.toCatch !== s.id) return; // (one being caught for a cage, #250)
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
-    let score = dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
+    // (#326) in a battle the hall's out of the way in a corner: the nearest, not the one nearest the hall
+    let score = game.gameMode === 'battle' ? dToSettler : dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
   });
   // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
@@ -241,7 +242,8 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 function breakWhatsInTheWay(s) {
   if (!s.path || !s.path.length || isRangedWeapon(s.weapon)) return false;
   const next = s.path[0];
-  const b = game.buildings.find(o => o.side === 'red' && o.type !== 'spikes' && Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1);
+  // (#326: what's walked onto, spikes and iron traps, isn't broken: it's walked over, as the enemies walk onto the player's)
+  const b = game.buildings.find(o => o.side === 'red' && !(getDefinition('buildings', o.type) || {}).walkable && Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1);
   if (!b || Math.hypot(b.x - s.x, b.y - s.y) > getWeaponStats(s, 'combat').range + 15) return false;
   performAttack(s, b.x, b.y);
   s.patrolTarget = null;

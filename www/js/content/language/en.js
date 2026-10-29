@@ -753,6 +753,7 @@ export const enLanguage = {
       'battle.cancel': '[[close]] Cancel fight',
       'battle.cat.buildings': 'Buildings',
       'battle.armor': '[[armor]] Armour',
+      'battle.noArmor': '[[no]] No armour',
       'battle.shield': '[[shield]] Shield',
       'battle.big': 'Big',
       'battle.clearGreen': 'Clear the left side',

@@ -753,6 +753,7 @@ export const ukLanguage = {
       'battle.cancel': '[[close]] Скасувати бій',
       'battle.cat.buildings': 'Будівлі',
       'battle.armor': '[[armor]] Броня',
+      'battle.noArmor': '[[no]] Без броні',
       'battle.shield': '[[shield]] Щит',
       'battle.big': 'Великий',
       'battle.clearGreen': 'Прибрати всіх зліва',

@@ -6,7 +6,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, rand } from '../../../engine/world/index.js';
 import { canAfford, fetchFromStorage, takeStock } from '../../colony/storage/index.js';
 import { collidesWithWall, collidesWithWater, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isUntouchable } from '../../colony/settlers/index.js';
 import { damageEnemy } from '../../conflict/combat/index.js';
 import { getFishingBait } from '../fishing/index.js';
 import { playSound } from '../../../app/index.js';
@@ -63,7 +63,7 @@ export function tickIronTraps(dt) {
     if (trap.type !== 'iron_trap') continue;
     if (trap.holding) {
       const held = trap.holding;
-      const gone = !(game.enemies.includes(held) || game.boars.includes(held)) || held.hp <= 0 || held.isCarcass;
+      const gone = !(game.enemies.includes(held) || game.boars.includes(held) || game.settlers.includes(held)) || held.hp <= 0 || held.isCarcass;
       if (gone || (held.trappedFor !== undefined && (held.trappedFor -= dt) <= 0)) {
         if (!gone) delete held.trappedFor;
         held.trapped = false;
@@ -77,9 +77,12 @@ export function tickIronTraps(dt) {
     if ((trap.rearm || 0) > 0) { trap.rearm = (trap.rearm || 0) - dt; continue; }
     const g = getGridPos(trap.x, trap.y);
     const onIt = u => { const p = getGridPos(u.x, u.y); return p.gx === g.gx && p.gy === g.gy; };
-    const en = game.enemies.find(e => e.hp > 0 && onIt(e));
+    // (#326) a side's trap catches the other side: the player's the enemies, the red side's (a battle) the player's own,
+    // who walk straight onto it as the enemies do onto theirs
+    const red = trap.side === 'red';
+    const en = red ? game.settlers.find(s => s.hp > 0 && !s.towerAssignment && !isUntouchable(s) && onIt(s)) : game.enemies.find(e => e.hp > 0 && onIt(e));
     if (en) {
-      damageEnemy(en, def.enemyDamage);
+      if (red) damageSettler(en, def.enemyDamage); else damageEnemy(en, def.enemyDamage);
       if (en.hp > 0) { trap.holding = en; en.trapped = true; en.trappedFor = def.holdSeconds; }
       else trap.rearm = def.rearmSeconds;
       playSound('trapSnap', trap);
