@@ -1,9 +1,10 @@
 // How far a resource is worked through
 
 import { TILE_SIZE, forEachInRect, game, listStamp } from '../../../engine/world/index.js';
-import { paintOn, paintStill, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawPebblesArt, drawSaplingArt, drawStickArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
+import { paintOn, paintStill, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
+import { drawSprites } from './gathering.sprites.js';
 import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, isUnexplored } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
@@ -20,12 +21,18 @@ export function drawHarvestProgress(resource, width = 24) {
 // (#299) only what's on the screen (with room for a tree's crown over the edge): a big map has thousands
 // (#322) not what's on a tile never seen: the fog's dark covers it
 const onScreen = (list, fn) => { const v = getViewRect(2 * TILE_SIZE); forEachInRect(list, v.x0, v.y0, v.x1, v.y1, o => { if (!isUnexplored(o.x, o.y)) fn(o); }); };
+// the things of a list on the screen
+/** @param {any[]} list */
+const seenOf = list => { /** @type {any[]} */ const found = []; onScreen(list, o => { found.push(o); }); return found; };
+// (#322) a kind laid down from its pictures (gathering.sprites.js), then the bars of those being worked
+/** @param {string} kind @param {any[]} list @param {number} [width] */
+const drawKind = (kind, list, width = 24) => { const things = seenOf(list); drawSprites(kind, things); for (const o of things) drawHarvestProgress(o, width); };
 
 // Sticks and pebbles, and minable ore
 export function drawSticksPebblesOre() {
   // (the look: gathering.art.js, #251)
-  onScreen(game.sticks, drawStickArt);
-  onScreen(game.pebbles, drawPebblesArt);
+  drawSprites('stick', seenOf(game.sticks));
+  drawSprites('pebbles', seenOf(game.pebbles));
   onScreen(game.logs, drawLogArt); // (#298)
 
   // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)
@@ -169,8 +176,10 @@ function drawPicturedNature() {
 export function drawTrees() {
   if (pictured()) return; // (with the others, in drawCactiBouldersGrassBushes)
   // (before the trees: a tree grown there covers its own stump, a felled one's log covers it)
-  onScreen(game.stumps, drawStumpArt);
-  onScreen(game.trees, t => drawTreeNear(t));
+  drawSprites('stump', seenOf(game.stumps));
+  const trees = seenOf(game.trees);
+  drawSprites('tree', trees.filter(t => !t.isGrowing && !t.fallen));
+  for (const t of trees) drawTreeNear(t, !t.isGrowing && !t.fallen); // (a sapling, a felled tree as they are; a standing one's bars)
 }
 
 // A tree as it is close up (over its picture, standing: only what's changing, its bar)
@@ -197,31 +206,13 @@ export function drawCactiBouldersGrassBushes() {
       for (const g of over.grass) if (!isUnexplored(g.x, g.y)) drawHarvestProgress(g, 20);
       return;
     }
-    onScreen(game.grassList, g => {
-      drawGrassArt(g);
-      drawHarvestProgress(g, 20);
-    });
+    drawKind('grass', game.grassList, 20);
     return;
   }
-  onScreen(game.cacti, c => {
-    drawCactusArt(c);
-    drawHarvestProgress(c);
-  });
-
-  onScreen(game.boulders, b => {
-    drawBoulderArt(b); // (a loose, rounded stone, not the square rock that joins up)
-    drawHarvestProgress(b);
-  });
-
-  onScreen(game.grassList, g => {
-    drawGrassArt(g);
-    drawHarvestProgress(g, 20);
-  });
-
-  onScreen(game.berryBushes, b => {
-    drawBushArt(b); // (blue berries, as the Berries icon)
-    drawHarvestProgress(b, 22);
-  });
+  drawKind('cactus', game.cacti);
+  drawKind('boulder', game.boulders); // (a loose, rounded stone, not the square rock that joins up)
+  drawKind('grass', game.grassList, 20);
+  drawKind('bush', game.berryBushes, 22); // (blue berries, as the Berries icon)
 }
 
 // The player's marks on resources: a square around it and a pointer over it, "here" (#232)
