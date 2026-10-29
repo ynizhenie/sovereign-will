@@ -34,14 +34,8 @@ export const markCanvasSizeStale = () => { sizeStale = true; };
 // the canvas's size on the page as last read (for the sounds' pan: a sound read it, and so laid the page out, each time)
 export const canvasCssSize = () => ({ w: cssWidth || canvas.clientWidth, h: cssHeight || canvas.clientHeight });
 
-// (#322) How much of that the game draws at now (1, or less when the frames come slow, see app/resolution.js): the canvas is shown
-// at the same size on the page, with fewer pixels, never below what a weak screen needs (0.75 of a pixel to a CSS pixel)
-let renderFactor = 1;
-export function setRenderFactor(factor) { renderFactor = factor; }
-
 export function fitCanvasToScreen() {
-  const top = Math.min(QUALITY_RATIO, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
-  screenPixelRatio = Math.max(top * renderFactor, Math.min(top, 0.75));
+  screenPixelRatio = Math.min(QUALITY_RATIO, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
   if (sizeStale || sizedFor !== screenPixelRatio) { cssWidth = canvas.clientWidth; cssHeight = canvas.clientHeight; sizeStale = false; sizedFor = screenPixelRatio; }
   const width = Math.max(1, Math.round(cssWidth * screenPixelRatio));
   const height = Math.max(1, Math.round(cssHeight * screenPixelRatio));
