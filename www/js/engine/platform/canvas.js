@@ -17,15 +17,9 @@ export const ctx = canvas.getContext('2d', {
   willReadFrequently: false
 });
 
-// (#322) Quality (Settings): how many canvas pixels to a CSS pixel at most. High: up to 2 (sharp); medium:
-// 1.5; low: 1 (a weak phone's GPU fills a third of the pixels). By default high, but medium on a phone with a
-// very dense screen
-export const QUALITY_RATIOS = { high: 2, medium: 1.5, low: 1 };
-export function defaultQuality() {
-  const touch = typeof window !== 'undefined' && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
-  return touch && (window.devicePixelRatio || 1) >= 2.5 ? 'medium' : 'high';
-}
-export const quality = { level: loadSetting('quality', '') || defaultQuality() };
+// How many canvas pixels to a CSS pixel at most: the sharpest picture (up to 2; a screen denser than that
+// is capped, more pixels cost frame time)
+const QUALITY_RATIO = 2;
 
 // ---- Screen and camera
 //
@@ -46,7 +40,7 @@ let renderFactor = 1;
 export function setRenderFactor(factor) { renderFactor = factor; }
 
 export function fitCanvasToScreen() {
-  const top = Math.min(QUALITY_RATIOS[quality.level] || 2, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
+  const top = Math.min(QUALITY_RATIO, window.devicePixelRatio || 1); // capped: more pixels cost frame time on phones
   screenPixelRatio = Math.max(top * renderFactor, Math.min(top, 0.75));
   if (sizeStale || sizedFor !== screenPixelRatio) { cssWidth = canvas.clientWidth; cssHeight = canvas.clientHeight; sizeStale = false; sizedFor = screenPixelRatio; }
   const width = Math.max(1, Math.round(cssWidth * screenPixelRatio));

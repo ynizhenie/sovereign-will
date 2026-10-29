@@ -55,9 +55,6 @@ export function gameLoop(now) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
     countFrame(now);
-    // (#322) the canvas's resolution follows how the frames come (not under a test driving the page: its frames come as they come)
-    resolution.on = !navigator.webdriver;
-    adaptResolution(now, now - loop.lastFrameAt, performance.now() - started, 1000 / (Number(loop.frameRate) || 60));
     loop.lastFrameAt = now;
   }
 }
