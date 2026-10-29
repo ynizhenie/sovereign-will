@@ -155,7 +155,7 @@ export function upgradeToBig(target) {
 }
 
 // (#314) Let one go (reverse hiring): what it wears and holds into the store (and its load into the stock),
-// and it walks away out of the base's land and is gone (see leaveColony); its place in the population free
+// and it walks to the town hall and is gone there (see leaveColony, #326); its place in the population free
 // at once. A raised zombie can't be let go: it's not hired
 export function dismissSettler(s) {
   if (!s || s.leaving || s.temporary || !game.settlers.includes(s)) return false;

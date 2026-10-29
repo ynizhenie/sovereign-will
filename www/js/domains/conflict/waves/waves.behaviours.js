@@ -81,6 +81,10 @@ export function tickEnemy(en, dt) {
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
   if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) return;
+  // (#326) one that hit it a moment ago, still on its feet: it turns on that one, not on with the wall or tent it was breaking
+  const struck = en.struckBy && game.settlers.includes(en.struckBy) && en.struckBy.hp > 0 && !isUntouchable(en.struckBy) &&
+    game.pathTick - (en.struckTick || -Infinity) < STRUCK_TICKS ? en.struckBy : null;
+  if (struck) en.attackTarget = struck;
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
   // (#326) an archer out of arrows (and tents to fill up at) draws its dagger, as the player's do
@@ -97,9 +101,10 @@ export function tickEnemy(en, dt) {
   // (#326: not through a shut door or a wall: it walks on, breaking its way to it, instead)
   const canStrike = inMelee && minDist < attackRange && (target === townHall || hasMeleeReach(en, target));
   const holdsGround = keepsAway || canStrike;
-  walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt);
+  walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck);
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
+const STRUCK_TICKS = 120; // (2 s: how long a hit turns it)
 
 // (#326) An enemy archer and its own side's platform (a watchtower of the red side's, in a battle): up a free one
 // near it, it shoots from there, farther and over the walls, as the player's archers do from theirs. True
@@ -298,8 +303,9 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
   }
 }
 
-// Walking on, or breaking what's in the way: a building it touches, or (on a blocked path) a resource
-function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt) {
+// Walking on, or breaking what's in the way: a building it touches, or (on a blocked path) a resource.
+// turned: going for one that just hit it: a building it touches is broken only if it's what blocks the only way there
+function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = false) {
   // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
@@ -308,9 +314,9 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt) {
   if (touchingBuilding) {
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
-    if (!own && isShelter(touchingBuilding)) {
+    if (!own && isShelter(touchingBuilding) && !turned) {
       breakBuilding(touchingBuilding, enemyDef, dt);
-    } else if (!own && (en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
+    } else if (!own && (turned ? en.isBlockedPath : en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
       // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
       // way in over spikes squeezes past the walls beside them
       breakBuilding(touchingBuilding, enemyDef, dt);
