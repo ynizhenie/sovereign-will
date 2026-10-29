@@ -58,19 +58,23 @@ export function fightByOrders(s, dt, auto) {
   const attacker = getRecentAttacker(s);
   const hitter = attacker && game.enemies.includes(attacker) ? attacker : null;
   let target = null;
+  // (#326) told to break a tent or an outpost and hit meanwhile: the one hitting it first, then back to the tent
+  const told = s.orderTarget && hitter && game.enemyTents.includes(s.orderTarget) ? hitter : s.orderTarget;
   if (!outOfArrows) {
-    if (auto) target = s.orderTarget || hitter || nearest(s, game.enemies.filter(en => en.hp > 0)) || nearest(s, game.enemyTents);
-    else target = s.orderTarget || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && dist(en, s) < 90));
+    if (auto) target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0)) || nearest(s, game.enemyTents);
+    else target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && dist(en, s) < 90));
   }
   if (target) { strike(s, target, dt); return; }
   if (dist(s, s.orderSpot) > 8) moveEntityTowards(s, s.orderSpot.x, s.orderSpot.y, s.speed, false, dt);
 }
 
 // (#326) In Endless, the player's own orders by tap (the selected settler and its group): an enemy (or a tent) to
-// fight till it's down, then back to work; a spot to go to and hold, fighting what comes close, till it's let
-// go (its card's Free). A behaviour of every settler's, after a panic
+// fight till it's down, then back to work; a spot to go to and stand at while it's picked, fighting what comes
+// close; picked no more, back to work, unless it was told to hold (its card's Hold: till Free). A behaviour of
+// every settler's (and a pet's), after a panic
 export function followCommand(s, tick) {
   if (game.gameMode !== 'endless' || s.raider || (!s.orderTarget && !s.orderSpot)) return false;
+  if (s.orderSpot && !s.holdOrder && !getSelection().includes(s)) { delete s.orderSpot; if (!s.orderTarget) return false; }
   const spotGiven = !!s.orderSpot;
   fightByOrders(s, tick.dt, false);
   if (!spotGiven) {
@@ -98,5 +102,11 @@ export function commandTap(picked, x, y) {
 
 // Orders off a unit (the fight over)
 export function clearOrders(s) {
-  delete s.orderTarget; delete s.orderSpot;
+  delete s.orderTarget; delete s.orderSpot; delete s.holdOrder;
+}
+
+// (#326) The card's Hold: those picked stand where they are (or where they were sent) till Free, picked or not
+export function holdPosition(s) {
+  if (!s.orderSpot) s.orderSpot = { x: s.x, y: s.y };
+  s.holdOrder = true; s.path = null;
 }

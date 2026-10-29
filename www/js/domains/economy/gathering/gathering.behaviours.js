@@ -93,6 +93,17 @@ const ripeAppleTrees = () => appleTreesOnce(() => game.trees.filter(t => t.apple
 // it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
 // worker on one (up to getWorkPriority) — two on one while others waited made one of them stand about
 // (#232). Returns null if there's nothing to do.
+// (#326) Who's going for which thing: one each. Made once a tick from what each was going for (picked in the last two seconds,
+// still gathering), and kept up as they pick in this tick: two workers didn't go for one stick, one of them for nothing
+const claimsOnce = onceThisTick();
+const claims = () => claimsOnce(() => {
+  /** @type {Map<any, any>} */
+  const by = new Map();
+  for (const o of game.settlers) if (o.pickedRes && o.lastBehaviour && o.activity === 'harvest' && game.pathTick - (o.pickedAt || -Infinity) < 120) by.set(o.pickedRes, o);
+  return by;
+});
+const claimedByOther = (r, s) => { const o = claims().get(r); return !!o && o !== s && game.settlers.includes(o) && o.hp > 0; };
+
 export function pickResourceToHarvest(s, tick, markedOnly = false) {
   // (#306) the settler's walking distances worked out only if there's something to walk to: that walk is the
   // costliest thing in here, and it was made for every settler every tick, whether there was work or not
@@ -130,7 +141,7 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
   if (!assignedRes) {
     // from the warning until the wave is beaten, nothing beyond the base's farthest building
     const usable = r => !skipped(r) && (!r.priority || r.priority === 0) && isInSafeArea(r.x, r.y) && withinNight(r) &&
-      isSafeFromTentAssault(s, r, tick);
+      isSafeFromTentAssault(s, r, tick) && !claimedByOther(r, s);
     // (#306) from the list of what this gear can work, not from every resource on the base's land
     // (#322) the one it picked is kept for a third of a second while it's still there and it can still work it: every settler
     // went through every resource of the base's land every tick to pick, and came to the same one
@@ -177,6 +188,7 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
       if (assignedRes && assignedRes.apple && assignedRes.applesReady) tick.appleAssignments.add(assignedRes);
     }
     s.pickedRes = assignedRes; s.pickedAt = game.pathTick; s.pickedGear = gear;
+    if (assignedRes) claims().set(assignedRes, s);
   }
   return assignedRes;
 }
