@@ -38,7 +38,7 @@ export function adaptResolution(now, frameMs, workMs, intervalMs) {
       r.lastDown = now;
       apply(r.index + 1, now);
     }
-  } else if (r.index > 0 && r.frameEma <= intervalMs * 1.15 && r.workEma < intervalMs * 0.5) {
+  } else if (r.index > 0 && r.frameEma <= intervalMs * 1.15 && r.workEma < intervalMs * 0.75) {
     r.slowFor = 0; r.fastFor += frameMs;
     if (r.fastFor >= r.hold) apply(r.index - 1, now);
   } else { r.slowFor = 0; r.fastFor = 0; }
