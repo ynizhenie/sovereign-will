@@ -266,7 +266,7 @@ export const enLanguage = {
       'menu.editor': 'Map editor',
       'menu.settings': 'Settings',
       'menu.exit': 'Exit',
-      'menu.back': '← Back',
+      'menu.back': '[[back]] Back',
       'menu.difficulty': 'Difficulty:',
       'menu.normal': 'Normal',
       'menu.hard': 'Hard',

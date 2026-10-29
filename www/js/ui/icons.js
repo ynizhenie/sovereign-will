@@ -126,6 +126,10 @@ export const ICONS = {
     c.bezierCurveTo(17, 8, 19, 6, 22, 6); c.bezierCurveTo(29, 6, 30, 18, 16, 28); c.fill();
     icCircle(c, '#f5b7b1', 10.5, 11, 2.2);
   },
+  // (#326: drawn, not the text arrows ← ▾ →, which some devices showed as emoji or not at all)
+  back: c => icLine(c, '#ecf0f1', 4.5, [[20, 6], [10, 16], [20, 26]]),
+  more: c => icFill(c, '#ecf0f1', [[7, 11], [25, 11], [16, 22]]),
+  to: c => { icLine(c, '#ecf0f1', 3.5, [[5, 16], [24, 16]]); icFill(c, '#ecf0f1', [[18, 8], [28, 16], [18, 24]]); },
   undo: c => { icRing(c, '#ecf0f1', 3.5, 17, 17, 9, Math.PI * 1.05, Math.PI * 2.6); icFill(c, '#ecf0f1', [[2, 14], [10, 8], [11, 19]]); },
   redo: c => { icRing(c, '#ecf0f1', 3.5, 15, 17, 9, Math.PI * 0.4, Math.PI * 1.95); icFill(c, '#ecf0f1', [[30, 14], [22, 8], [21, 19]]); },
   sun: c => {

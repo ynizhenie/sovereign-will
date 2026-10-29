@@ -1,25 +1,28 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
-// The friend's #326, the settings: the languages' flags (31) and the music player (34)
+// The friend's #326, the settings: the language's flag (31; one flag since 27.10, point 3) and the music player (34)
 
-test('a square of flags by the Settings button changes the language; Settings names each language with its flag (#326, 31)', async ({ page }) => {
+test('one flag by the Settings button, the language\'s now: a tap is the next language; Settings names each language with its flag (#326, 31; 27.10, 3)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  expect(await page.locator('#menu-flags .flag-button').count()).toBe(3);
-  expect(await page.locator('#menu-flags .flag-button svg').count()).toBe(3);
-  await page.locator('#menu-flags [data-language="uk"]').click();
-  expect(await page.evaluate(() => currentLanguage)).toBe('uk');
-  expect(await page.locator('#open-settings').innerText()).toBe('Налаштування');
-  await page.locator('#menu-flags [data-language="en"]').click();
-  expect(await page.locator('#open-settings').innerText()).toBe('Settings');
-  await expect(page.locator('#menu-flags [data-language="en"]')).toHaveClass(/active/);
-  // in Settings: each language with its flag, the same choice
+  expect(await page.locator('#menu-flags .flag-button').count()).toBe(1);
+  expect(await page.locator('#menu-flags .flag-button svg').count()).toBe(1);
+  const codes = await page.evaluate(() => Object.keys(LANGUAGES));
+  const from = await page.evaluate(() => currentLanguage);
+  await page.locator('#menu-flags .flag-button').click();
+  const next = codes[(codes.indexOf(from) + 1) % codes.length];
+  expect(await page.evaluate(() => currentLanguage)).toBe(next);
+  // round all of them, back to where it began
+  for (let i = 1; i < codes.length; i++) await page.locator('#menu-flags .flag-button').click();
+  expect(await page.evaluate(() => currentLanguage)).toBe(from);
+  // in Settings: each language with its flag, the same choice; the flag by Settings follows
   await page.evaluate(() => showMenuScreen('settings'));
   expect(await page.locator('#language-options .language-option svg').count()).toBe(3);
-  await page.locator('#language-options [data-language="ru"]').click();
-  expect(await page.evaluate(() => currentLanguage)).toBe('ru');
-  await expect(page.locator('#menu-flags [data-language="ru"]')).toHaveClass(/active/);
+  await page.locator('#language-options [data-language="uk"]').click();
+  expect(await page.evaluate(() => currentLanguage)).toBe('uk');
+  expect(await page.locator('#open-settings').innerText()).toBe('Налаштування');
+  expect(await page.locator('#menu-flags .flag-button').getAttribute('title')).toBe(await page.evaluate(() => LANGUAGES.uk.label));
   expect(errors).toEqual([]);
 });
 
