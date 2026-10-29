@@ -1,12 +1,12 @@
 // Workers gather: pick a resource (the player's marks first), walk to it, work it with the right tool
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
-import { addCarryLoad, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
-import { ORE_KINDS } from '../../world/index.js';
+import { addCarryLoad, addResources, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
+import { inTerritory, ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards, someEnemyNear } from '../../../engine/movement/index.js';
 import { isInSafeArea, TENT_ASSAULT_FIGHT_DISTANCE } from '../../conflict/combat/index.js';
 import { huntBoar } from '../hunting/index.js';
@@ -84,6 +84,11 @@ function workableWithGear(s, tick) {
   return list;
 }
 
+// Ripe apple trees on the base's land, worked out once a tick for all the free hands: a ripe tree is no
+// priority of its own, it is simply one more thing to pick, the nearest one first (see pickResourceToHarvest)
+const appleTreesOnce = onceThisTick();
+const ripeAppleTrees = () => appleTreesOnce(() => game.trees.filter(t => t.apple && t.applesReady && inTerritory(t.x, t.y)));
+
 // Player-marked resources first, otherwise the nearest one the settler can walk to. Of the marked: the one
 // it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
 // worker on one (up to getWorkPriority) — two on one while others waited made one of them stand about
@@ -158,6 +163,19 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
       const d = getReachDistanceToResource(reachOf(), r);
       if (d < minDist) { minDist = d; assignedRes = r; }
     }
+    // a free hand picks ripe apples too, like anything else it can reach: only the nearest, on the base's
+    // land, and (with a wave coming) inside the base; not a priority over the rest, nor a walk past the
+    // player's zone for them
+    if (s.role === 'worker' && s.tool === 'none' && s.weapon === 'fist') {
+      for (const t of ripeAppleTrees()) {
+        if (tick.appleAssignments.has(t) || skipped(t) || !isInSafeArea(t.x, t.y) || !withinNight(t)) continue;
+        const offTiles = Math.max(Math.abs(t.x - s.x), Math.abs(t.y - s.y)) / TILE_SIZE;
+        if (offTiles >= minDist + 1) continue;
+        const d = getReachDistanceToResource(reachOf(), t);
+        if (d < minDist) { minDist = d; assignedRes = t; }
+      }
+      if (assignedRes && assignedRes.apple && assignedRes.applesReady) tick.appleAssignments.add(assignedRes);
+    }
     s.pickedRes = assignedRes; s.pickedAt = game.pathTick; s.pickedGear = gear;
   }
   return assignedRes;
@@ -221,6 +239,35 @@ export function workResource(s, assignedRes, tick) {
   s.patrolTarget = null;
 }
 
+// Walk up to an apple tree and pick its apples; false if there's nowhere to stand next to it
+export function pickApplesFrom(s, target, dt) {
+  const spot = getResourceApproachPoint(s, target);
+  if (!spot) return false;
+  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) {
+    moveEntityTowards(s, spot.x, spot.y, s.speed, false, dt);
+    s.pickProgress = 0;
+  } else {
+    s.pickProgress = (s.pickProgress || 0) + dt;
+    s.working = 0.1;
+    faceTowards(s, target.x, target.y);
+    const apples = GAME_CONFIG.appleTrees;
+    target.pickShare = s.pickProgress / apples.pickSeconds; // shown on the tree
+    target.pickTick = game.pathTick;
+    if (s.pickProgress >= apples.pickSeconds) {
+      s.pickProgress = 0;
+      for (const [item, amount] of Object.entries(apples.yield)) giveResourceToSettler(s, item, amount);
+      addCarryLoad(s);
+      for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) addResources({ [item]: 1 });
+      target.applesReady = false;
+      target.appleGrowth = 0;
+      target.pickShare = 0;
+      if (target.markIntent === 'apples') { target.priority = 0; target.markIntent = null; }
+    }
+  }
+  s.patrolTarget = null;
+  return true;
+}
+
 // (#298) the player's marks first: something marked, and one fit for it goes for it before its chores
 // (cooking, dung, corpses, firewood, piles...), which kept it from them for long ("marks ignored"). With its
 // load full it takes that home first
@@ -234,8 +281,20 @@ export function harvestMarked(s, tick) {
 // Gather: pick a resource, walk to a free spot next to it, work it
 export function harvest(s, tick, markedOnly = false) {
   if (!canGather(s, tick)) return false;
+  // hands full (as many loads as it can carry): home with them first (see deliverCarrying)
+  if (s.carrying && s.carrying.loads !== undefined && !hasRoomToCarry(s)) return false;
   const assignedRes = pickResourceToHarvest(s, tick, markedOnly);
   if (!assignedRes) return false;
+
+  // a ripe apple tree: its apples are picked, not the tree felled
+  if (assignedRes.apple && assignedRes.applesReady) {
+    if (!pickApplesFrom(s, assignedRes, tick.dt)) {
+      s.skippedResource = assignedRes;
+      s.skippedUntilTick = game.pathTick + 5 * 60;
+      s.patrolTarget = null;
+    }
+    return true;
+  }
 
   let approachPos = getResourceApproachPoint(s, assignedRes);
   if (!approachPos) {

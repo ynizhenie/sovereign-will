@@ -106,6 +106,18 @@ let searches = { tick: -1, count: 0 };
 const SETTLER_SEARCHES_PER_TICK = 10;
 let settlerSearches = { tick: -1, count: 0 };
 
+// (#322) and at most this many tiles looked at by searches a tick, and by one: on a big map a way that isn't
+// there (walled in, across water) had the search go over every tile it could reach — 90 ms, a step and the
+// frames of a fifth of a second lost, every time it was tried. Past the budget the rest keep the way they
+// have (or none) and are searched for again next tick. (Tiles, not time: a save loads back and goes on the
+// same way, whatever the machine)
+const SEARCH_NODES_PER_TICK = 3000;
+let searchNodes = { tick: -1, left: 0 };
+function searchNodesLeft() {
+  if (searchNodes.tick !== game.pathTick) searchNodes = { tick: game.pathTick, left: SEARCH_NODES_PER_TICK };
+  return searchNodes.left;
+}
+
 // A new path when there's none, the target moved, an enemy's path is a second old, and no retry is pending.
 // (#322) An enemy far off minds its target moving only by a share of the way to it
 function replanIfNeeded(entity, targetX, targetY, isEnemy) {
@@ -127,11 +139,14 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
   }
 
   if (needsPath && canRetryPath) {
+    const nodesLeft = searchNodesLeft();
+    if (nodesLeft <= 0) return; // (the tick's searches are spent: this one next tick)
     // once the normal search found no way around (walled in), go straight to the breaking-through
     // search for a while instead of exploring the whole map again on every re-path
     let res = isEnemy && entity.strictPathFailTimer > 0
-      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY)
-      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy);
+      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY, false, nodesLeft)
+      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy, nodesLeft);
+    searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
     entity.isBlockedPath = res.isBlockedPath || false;

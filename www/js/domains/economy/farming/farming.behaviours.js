@@ -3,21 +3,21 @@
 // ---- Apple trees
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, getGridPos, onceThisTick, rand, resetTileIndex } from '../../../engine/world/index.js';
+import { game, getGridPos, onceThisTick, resetTileIndex } from '../../../engine/world/index.js';
 import { hasToolFamily } from '../../colony/equipment/index.js';
-import { addCarryLoad, addResources, canAfford, giveResourceToSettler, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
+import { canAfford, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../building/index.js';
 import { isWaterReachable } from '../../world/index.js';
-import { getMapResourceDef, harvest, isFreeHands } from '../gathering/index.js';
+import { getMapResourceDef, harvest, isFreeHands, pickApplesFrom } from '../gathering/index.js';
 import { makeAppleTree } from './farming.rules.js';
-import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getResourceApproachPoint, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
-import { isInSafeArea } from '../../conflict/combat/index.js';
+import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 
-// Workers with no tool pick ripe apples off the nearest apple tree they can reach (marked ones first),
-// one worker per tree; a pick is a load to carry home (GAME_CONFIG.appleTrees)
-const appleTreesOnce = onceThisTick();
+// The player's marks for apples: a worker picks the nearest apple tree marked for its apples (one worker per
+// tree); a pick is a load to carry home (GAME_CONFIG.appleTrees). Ripe apples nobody marked are no priority:
+// they are worked like any other resource, the nearest one first (see pickResourceToHarvest).
+const appleCandidatesOnce = onceThisTick();
 export function pickApples(s, tick) {
   if (s.role !== 'worker' || s.isPossessed || tick.isWaveActive) return false;
   // one with a tool or weapon picks only a tree the player marked for its apples, and only while no
@@ -27,50 +27,19 @@ export function pickApples(s, tick) {
   const freeHandsOnce = onceThisTick();
   if (handsOnly && freeHandsOnce(() => game.settlers.some(isFreeHands))) return false;
   if (s.carrying && !hasRoomToCarry(s)) return false;
-  // (#306) the apple trees of the map, not every tree on it (asked for by every worker, every tick)
-  const trees = appleTreesOnce(() => game.trees.filter(t => t.apple));
-  if (!trees.length) return false; // (no walking distances to work out then either)
+  // (#322) the marked trees, worked out once for all the workers
+  const candidates = appleCandidatesOnce(() => game.trees.filter(t => t.apple && t.applesReady && t.markIntent === 'apples' && t.priority > 0));
+  if (!candidates.length) return false; // (no walking distances to work out then either)
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;
-  for (const t of trees) {
-    if (!t.applesReady || tick.appleAssignments.has(t)) continue;
-    if (handsOnly && !(t.markIntent === 'apples' && t.priority > 0)) continue;
-    if (!(t.markIntent === 'apples' && t.priority > 0) && !isInSafeArea(t.x, t.y)) continue;
-    const d = getReachDistanceToResource(reach, t) - (t.markIntent === 'apples' && t.priority > 0 ? 1000 : 0);
+  for (const t of candidates) {
+    if (tick.appleAssignments.has(t)) continue;
+    const d = getReachDistanceToResource(reach, t) - 1000;
     if (d < best) { best = d; target = t; }
   }
   if (!target || best === Infinity) return false;
   tick.appleAssignments.add(target);
   return pickApplesFrom(s, target, tick.dt);
-}
-
-// Walk up to an apple tree and pick its apples; false if there's nowhere to stand next to it
-export function pickApplesFrom(s, target, dt) {
-  const spot = getResourceApproachPoint(s, target);
-  if (!spot) return false;
-  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) {
-    moveEntityTowards(s, spot.x, spot.y, s.speed, false, dt);
-    s.pickProgress = 0;
-  } else {
-    s.pickProgress = (s.pickProgress || 0) + dt;
-    s.working = 0.1;
-    faceTowards(s, target.x, target.y);
-    const apples = GAME_CONFIG.appleTrees;
-    target.pickShare = s.pickProgress / apples.pickSeconds; // shown on the tree
-    target.pickTick = game.pathTick;
-    if (s.pickProgress >= apples.pickSeconds) {
-      s.pickProgress = 0;
-      for (const [item, amount] of Object.entries(apples.yield)) giveResourceToSettler(s, item, amount);
-      addCarryLoad(s);
-      for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) addResources({ [item]: 1 });
-      target.applesReady = false;
-      target.appleGrowth = 0;
-      target.pickShare = 0;
-      if (target.markIntent === 'apples') { target.priority = 0; target.markIntent = null; }
-    }
-  }
-  s.patrolTarget = null;
-  return true;
 }
 
 // ---- Watering

@@ -13,7 +13,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
-import { deliverCarrying, deliverWhenNothingToDo, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
+import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
 import { getFrontier, getTerritoryBox, inReliefZone, inTerritory, isVisible, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
@@ -344,8 +344,13 @@ const RECHECK_TICKS = 4;
 const CALM_WORK = new Set([harvestMarked, harvest, pickApples, build, haulPilesFirst, haulPiles, haulCorpses, deliverCarrying, deliverMaterials,
   deliverWhenNothingToDo, emptyFishTrap, collectWorms, fish, tendFarmZones, waterCrops, farmerGathersGrass, collectBones, escortGatherers, patrol]);
 
-// A settler's turn to be offered the whole list
-const isRecheckTurn = s => (game.pathTick + (typeof s.id === 'number' ? s.id : 0)) % RECHECK_TICKS === 0;
+// A settler's turn to be offered the whole list. (Ids are not always whole numbers — a hired settler's or a
+// raised zombie's is Date.now() + rand(), and `% 4` of a fraction is never 0: it never looked at the list
+// again, and so never took its load home, gathering on forever.)
+const isRecheckTurn = s => (game.pathTick + (typeof s.id === 'number' ? Math.floor(s.id) : 0)) % RECHECK_TICKS === 0;
+
+// As many gathered loads as it can carry: the list is offered again at once, so it goes home with them
+const handsFull = s => !!s.carrying && s.carrying.loads !== undefined && !hasRoomToCarry(s);
 
 function took(s, behaviour) {
   s.lastBehaviour = behaviour;
@@ -371,7 +376,7 @@ export function tickSettlers(dt) {
     const last = s.lastBehaviour;
     // (a captain or a foreman counts its own seconds to its next order inside the behaviours above: always offered the list)
     if (last && calmColony && !s.drowsy && !s.isPossessed && !s.targetEquipment && !s.order && s.orderIn === undefined && s.armIn === undefined &&
-      CALM_WORK.has(last) && !isRecheckTurn(s)) {
+      CALM_WORK.has(last) && !handsFull(s) && !isRecheckTurn(s)) {
       s.isIdle = false;
       if (last(s, tick)) { took(s, last); return; }
     }
