@@ -34,7 +34,7 @@ export function getItemStats(category, item) {
   } else if (category === 'buildings') {
     const build = item.build || {};
     stats = [['durability', build.hp], ['housing', item.population && `+${item.population}`], ['heal', item.healPerSecond]];
-    if (build.tower) stats.push(['archers', build.tower.capacity], ['reach', tiles(build.tower.range)], ['damage', build.tower.damage]);
+    if (build.tower) stats.push(['archers', build.tower.capacity], ['reach', `+${Math.round((build.tower.reach - 1) * 100)}%`]);
     if (build.trap) stats.push(['damage', build.trap.damage], ['uses', build.trap.uses]);
   } else if (category === 'recipes') {
     stats = Object.entries(item.produces || {}).map(([id, n]) => ['makes', `${n}${GAME_CONFIG.resources[id] ? ` ${GAME_CONFIG.resources[id].label}` : ''}`]);

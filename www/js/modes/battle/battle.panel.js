@@ -20,7 +20,7 @@ export function renderBattlePanel() {
   });
   // (#298) the armour button says which: leather, iron, or just "armour" off
   const armourButton = document.querySelector('[data-battle-gear="armor"]');
-  if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.armor'));
+  if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.noArmor'));
   document.querySelectorAll('[data-battle-field]').forEach(b => {
     b.classList.toggle('on', b.dataset.battleField === battle.field);
     /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
