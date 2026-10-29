@@ -12,7 +12,7 @@ const trunks = `(() => {
   return n;
 })()`;
 
-test('zoomed out the standing trees come from pictures; what is felled or growing is still drawn one by one (#322)', async ({ page }) => {
+test('standing trees come from pictures: zoomed out the ground\'s, close up each its own; what is felled or growing is still drawn one by one (#322)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(trunksSource => {
@@ -26,6 +26,9 @@ test('zoomed out the standing trees come from pictures; what is felled or growin
     const out = {};
     setZoom(getMaxZoom());
     out.near = count();
+    // (close up each from its own small picture, #322)
+    let pictures = 0; const d = ctx.drawImage; ctx.drawImage = function (...a) { if (a[0].width < 200) pictures++; return d.apply(this, a); }; render(); ctx.drawImage = d;
+    out.nearPictures = pictures;
     setZoom(Math.min(0.6, getMaxZoom()));
     out.farStanding = count();
     trees.push(at(0, 2, { fallen: true, fallAt: -999, fallAngle: 0, hp: 1, maxHp: 3 }));
@@ -33,7 +36,8 @@ test('zoomed out the standing trees come from pictures; what is felled or growin
     out.farWithFelled = count();
     return out;
   }, trunks);
-  expect(r.near).toBeGreaterThan(0);
+  expect(r.near).toBe(0);
+  expect(r.nearPictures).toBeGreaterThanOrEqual(12);
   expect(r.farStanding).toBe(0);
   expect(r.farWithFelled).toBeGreaterThan(0); // (the log lying there)
   expect(errors).toEqual([]);
