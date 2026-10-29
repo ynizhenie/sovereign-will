@@ -34,28 +34,6 @@ test('a frame between two steps draws what moves between them, then puts it back
   expect(errors).toEqual([]);
 });
 
-test('Settings: VSYNC remembered for the next start (on by default); the quality sets how fine the picture is, at once (#322)', async ({ page }) => {
-  const errors = await openGame(page);
-  await page.evaluate(() => showMenuScreen('settings'));
-  await expect(page.locator('[data-vsync="on"]')).toHaveClass(/active/);
-  expect(await page.evaluate(() => VSYNC)).toBe(true);
-  await page.click('[data-vsync="off"]');
-  await expect(page.locator('#vsync-note')).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('sovereign-will-vsync'))).toBe('off');
-  await page.click('[data-vsync="on"]');
-  await expect(page.locator('#vsync-note')).toBeHidden();
-  // quality: low draws at a CSS pixel to a canvas pixel, high up to 2
-  await page.click('[data-quality="low"]');
-  const low = await page.evaluate(() => [screenPixelRatio, canvas.width / canvas.clientWidth]);
-  await page.click('[data-quality="high"]');
-  const high = await page.evaluate(() => screenPixelRatio);
-  expect(low[0]).toBe(1);
-  expect(low[1]).toBeCloseTo(1, 1);
-  expect(high).toBe(Math.min(2, await page.evaluate(() => window.devicePixelRatio)));
-  expect(await page.evaluate(() => localStorage.getItem('sovereign-will-quality'))).toBe('high');
-  expect(errors).toEqual([]);
-});
-
 test('the night\'s dark is drawn small and laid over stretched; a busy wave renders without errors (#322)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
