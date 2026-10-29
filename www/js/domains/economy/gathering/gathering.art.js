@@ -16,10 +16,22 @@ export function paintOn(g) { target = g; }
 let still = false;
 export function paintStill(on) { still = on; }
 
-const variant = o => tileVariantHash(Math.round(o.x), Math.round(o.y));
+// (#322) A picture of one of a kind (gathering.sprites.js) is painted as a variant given here, without its shadow (the shadows of
+// all on the screen are laid down together), and a tuft of grass leaning a given way
+/** @type {number | null} */
+let forced = null;
+let shadows = true;
+/** @type {number | null} */
+let fixedSway = null;
+/** @param {number | null} h @param {boolean} [withShadow] @param {number | null} [sway] */
+export function paintVariant(h, withShadow = true, sway = null) { forced = h; shadows = withShadow; fixedSway = sway; }
+
+const variant = o => (forced !== null ? forced : tileVariantHash(Math.round(o.x), Math.round(o.y)));
 const blob = (x, y, r, fill) => { pen().fillStyle = fill; pen().beginPath(); pen().arc(x, y, r, 0, Math.PI * 2); pen().fill(); };
 // (#307) cast away from the sun by the thing's height (about its size)
-const groundShadow = (x, y, rx, ry) => castShadow(pen(), x, y + 4, rx, ry, rx * 0.9);
+const groundShadow = (x, y, rx, ry) => { if (shadows) castShadow(pen(), x, y + 4, rx, ry, rx * 0.9); };
+// each kind's shadow as its art casts it: [dx, dy, rx, ry] from where the thing stands (for the shadows laid down together)
+export const SHADOWS = { stump: [0, -2, 4, 2], tree: [0, 0, 14, 10], cactus: [0, 6, 8, 4], boulder: [0, 2, 12, 8], grass: [0, -2, 5, 1.6], bush: [0, 2, 11, 7], stick: [0, -3, 7, 2], pebbles: [0, -3, 5, 2] };
 
 // A tree: its shadow, a bit of trunk under a crown of overlapping leafy clumps, lit from the top left.
 // (#279) Felled, it falls over away from its cutter (turned about its foot), and lies there, a log with its
@@ -150,7 +162,7 @@ export function drawGrassArt(g) {
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
   pen().lineWidth = 1.6; pen().lineCap = 'round';
   for (let k = 0; k < 7; k++) {
-    const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + (still ? 0 : windSway(bx, y, y + 7 - top)); // (in the wind, #308)
+    const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + (still ? 0 : fixedSway !== null ? fixedSway * (y + 7 - top) / 10 : windSway(bx, y, y + 7 - top)); // (in the wind, #308)
     pen().strokeStyle = greens[(h >>> (k * 2)) % 3];
     pen().beginPath(); pen().moveTo(bx, y + 7); pen().quadraticCurveTo(bx + lean * 0.3, y, bx + lean, top); pen().stroke();
   }
