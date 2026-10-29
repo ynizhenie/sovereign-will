@@ -76,22 +76,6 @@ export function isExplored(x, y) {
   const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
   return gx >= 0 && gy >= 0 && gx < cols && gy < rows && explored[gy * cols + gx] === 1;
 }
-// (#322) Whether (x, y) is on a tile never seen: under the fog's full dark, nothing there shows, so nothing there is drawn
-export function isUnexplored(x, y) {
-  if (!ready()) return false;
-  const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
-  // (the tile and the ones round it: a tree's crown reaches into the next tile)
-  return gx >= 0 && gy >= 0 && gx < cols && gy < rows && isDarkBox(gx, gy, gx, gy);
-}
-// whether no tile of the rectangle (tiles, both ends in), nor one round it (the fog's edge is soft, a tile either side), has been seen
-export function isDarkBox(gx0, gy0, gx1, gy1) {
-  if (!ready()) return false;
-  for (let gy = Math.max(0, gy0 - 1); gy <= Math.min(rows - 1, gy1 + 1); gy++) {
-    const row = gy * cols;
-    for (let gx = Math.max(0, gx0 - 1); gx <= Math.min(cols - 1, gx1 + 1); gx++) if (explored[row + gx]) return false;
-  }
-  return true;
-}
 // the tile's state by index: 0 unexplored, 1 explored, 2 seen now (the world map's)
 export function fogAt(index) {
   if (!ready()) return 2;

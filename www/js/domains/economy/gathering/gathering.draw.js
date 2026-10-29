@@ -5,7 +5,7 @@ import { paintOn, paintStill, drawBoulderArt, drawBushArt, drawCactusArt, drawGr
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawSprites } from './gathering.sprites.js';
-import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, isUnexplored } from '../../world/index.js';
+import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
@@ -19,8 +19,7 @@ export function drawHarvestProgress(resource, width = 24) {
 }
 
 // (#299) only what's on the screen (with room for a tree's crown over the edge): a big map has thousands
-// (#322) not what's on a tile never seen: the fog's dark covers it
-const onScreen = (list, fn) => { const v = getViewRect(2 * TILE_SIZE); forEachInRect(list, v.x0, v.y0, v.x1, v.y1, o => { if (!isUnexplored(o.x, o.y)) fn(o); }); };
+const onScreen = (list, fn) => { const v = getViewRect(2 * TILE_SIZE); forEachInRect(list, v.x0, v.y0, v.x1, v.y1, fn); };
 // the things of a list on the screen
 /** @param {any[]} list */
 const seenOf = list => { /** @type {any[]} */ const found = []; onScreen(list, o => { found.push(o); }); return found; };
@@ -203,7 +202,7 @@ export function drawCactiBouldersGrassBushes() {
     drawPicturedNature();
     if (tuftsPictured()) {
       drawChunks('tufts', natureRes(), tuftStamps.stamp, paintTufts);
-      for (const g of over.grass) if (!isUnexplored(g.x, g.y)) drawHarvestProgress(g, 20);
+      for (const g of over.grass) drawHarvestProgress(g, 20);
       return;
     }
     drawKind('grass', game.grassList, 20);

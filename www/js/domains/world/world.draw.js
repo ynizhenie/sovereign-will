@@ -6,7 +6,6 @@ import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
-import { isDarkBox, isUnexplored } from './world.fog.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -30,72 +29,105 @@ const MAX_CHUNKS = 96;
 // (#322) and the pictures of a layer kept no more than this many pixels in all (a sharp piece of the terrain is four times a plain one's)
 const MAX_PIXELS = 16e6;
 
-/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string }} Chunk */
+/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame: number }} Chunk */
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
 
-// Zoomed out, panning shows many new pieces at once: painted for at most this long a frame (ms), the rest
-// the next frames (an old picture meanwhile, or the plain ground: fill)
+// (#322) The pieces on the screen are always laid down whole: one not painted yet is painted there and then, never left a hole or
+// the plain ground to fill in later (a pop-in the player sees). A ring of pieces round the screen is painted ahead, a few
+// milliseconds of it a frame, so that moving the camera brings in pieces already painted; a piece whose look has changed keeps
+// its old picture till its turn comes. As the zoom changes size, a piece is laid down as painted at the nearest other size till
+// its own is painted (a moment soft or sharp, never missing)
 const PAINT_MS = 4;
+const AHEAD = 1; // (pieces round the screen painted ahead)
 // (#306) world px painted past a piece's edge: a patch of grass crossing the edge is whole on either side of it,
 // instead of being cut off at it
 const PAD = 6;
+let frameOf = 0;
+/** @type {Map<string, { res: number, since: number }>} */
+const layerSize = new Map();
+// the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
+// painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
+const stats = { holes: 0, late: 0 };
+export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
 // paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
-/** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {string | null} [fill] */
-export function drawChunks(layer, res, stamp, paint, fill = null) {
+/** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint */
+export function drawChunks(layer, res, stamp, paint) {
   if (typeof document === 'undefined') return;
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
-  const size = CHUNK * TILE_SIZE, v = getViewRect(), started = performance.now();
+  if (layer === 'grass') { frameOf++; stats.holes = 0; stats.late = 0; } // (the first layer of a frame)
+  // (the size this layer's pictures were last laid down at, and since when: another size's picture stands in only for half a
+  // second after the zoom crossed into a new size, not when the camera moves)
+  const was = layerSize.get(layer);
+  if (!was || was.res !== res) layerSize.set(layer, { res, since: frameOf });
+  const zoomedNow = frameOf - /** @type {{ since: number }} */ (layerSize.get(layer)).since < 30;
+  const size = CHUNK * TILE_SIZE, v = getViewRect();
+  let spent = 0; // (ms of painting this frame: laying pictures down doesn't count)
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
   const m = ctx.getTransform();
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
-  const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(Math.ceil(game.COLS / CHUNK) - 1, Math.floor(v.x1 / size));
-  const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(Math.ceil(game.ROWS / CHUNK) - 1, Math.floor(v.y1 / size));
-  for (let cy = cy0; cy <= cy1; cy++) {
-    for (let cx = cx0; cx <= cx1; cx++) {
-      // (#322) a piece wholly under the fog's dark is not laid down
-      if (isDarkBox(cx * CHUNK, cy * CHUNK, cx * CHUNK + CHUNK - 1, cy * CHUNK + CHUNK - 1)) continue;
-      const key = `${res}|${cx},${cy}`, now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
-      let chunk = chunks.get(key);
-      if (chunk) chunks.delete(key); // (to the end: the most recently shown)
-      const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
-      const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
-      // (#322) a new piece is painted for at most PAINT_MS a frame at any size (the first always, so something shows): panning
-      // into a new row of pieces, or zoomed in, is a piece or two a frame, not all of them at once
-      if ((!chunk || chunk.stamp !== now) && performance.now() - started > (res < 1 ? PAINT_MS : PAINT_MS * 2)) {
-        if (chunk) chunks.set(key, chunk);
-        // (#322) not painted yet at this size: what it had, or the piece as painted at another size, laid down as it is (a little
-        // soft or sharp) till the new one's done; the ground never shows a hole, or a flash, as the zoom changes
-        const shown = chunk || otherSize(chunks, cx, cy, res, now);
-        if (shown) ctx.drawImage(shown.canvas, shown.pad, shown.pad, shown.pw, shown.ph, dx0, dy0, dw, dh);
-        else if (fill) { ctx.fillStyle = fill; ctx.fillRect(dx0, dy0, dw, dh); }
-        continue;
+  const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
+  const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
+  const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
+  /** @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @param {string} now */
+  const painted = (cx, cy, x0, y0, x1, y1, chunk, now) => {
+    const startedAt = performance.now();
+    const canvas = chunk ? chunk.canvas : document.createElement('canvas');
+    const pad = Math.ceil(PAD * res), bleed = pad / res;
+    const pw = Math.ceil((x1 - x0) * res), ph = Math.ceil((y1 - y0) * res);
+    canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
+    const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+    g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
+    paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
+    spent += performance.now() - startedAt;
+    return { canvas, pad, pw, ph, stamp: now, frame: frameOf };
+  };
+  // the screen's pieces first (a changed one repainted before any painting ahead), then the ring round it
+  for (const ahead of [false, true]) {
+    for (let cy = Math.max(0, cy0 - AHEAD); cy <= Math.min(lastY, cy1 + AHEAD); cy++) {
+      for (let cx = Math.max(0, cx0 - AHEAD); cx <= Math.min(lastX, cx1 + AHEAD); cx++) {
+        const shown = cx >= cx0 && cx <= cx1 && cy >= cy0 && cy <= cy1;
+        if (shown === ahead) continue;
+        const key = `${res}|${cx},${cy}`;
+        let chunk = chunks.get(key);
+        const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
+        const free = spent < PAINT_MS;
+        // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
+        if (!shown) {
+          const now = free ? `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}` : null;
+          if (now !== null && (!chunk || chunk.stamp !== now)) { chunks.delete(key); chunks.set(key, painted(cx, cy, x0, y0, x1, y1, chunk, now)); }
+          else if (chunk) chunk.frame = frameOf;
+          continue;
+        }
+        const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
+        if (chunk) chunks.delete(key); // (to the end: the most recently shown)
+        let picture = chunk;
+        if (!chunk || chunk.stamp !== now) {
+          const other = chunk || !zoomedNow ? null : otherSize(chunks, cx, cy, res, now);
+          if ((chunk || other) && !free) picture = chunk || other; // (its old picture, or another size's, till its turn)
+          else { picture = chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now); stats.late++; }
+          if (picture !== chunk) stats.holes++;
+        }
+        if (chunk) { chunk.frame = frameOf; chunks.set(key, chunk); }
+        const p = /** @type {Chunk} */ (picture);
+        const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
+        ctx.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
       }
-      if (!chunk || chunk.stamp !== now) {
-        const canvas = chunk ? chunk.canvas : document.createElement('canvas');
-        const pad = Math.ceil(PAD * res), bleed = pad / res;
-        const pw = Math.ceil((x1 - x0) * res), ph = Math.ceil((y1 - y0) * res);
-        canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
-        const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
-        g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
-        paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
-        chunk = { canvas, pad, pw, ph, stamp: now };
-      }
-      chunks.set(key, chunk);
-      ctx.drawImage(chunk.canvas, chunk.pad, chunk.pad, chunk.pw, chunk.ph, dx0, dy0, dw, dh);
     }
   }
+  // the least recently shown dropped past the budget, never one this frame has (on the screen or just round it)
   let pixels = 0;
   for (const c of chunks.values()) pixels += c.canvas.width * c.canvas.height;
-  while (chunks.size > 1 && (chunks.size > MAX_CHUNKS || pixels > MAX_PIXELS)) {
-    const oldest = /** @type {string} */ (chunks.keys().next().value), c = /** @type {Chunk} */ (chunks.get(oldest));
+  for (const [key, c] of chunks) {
+    if (chunks.size <= MAX_CHUNKS && pixels <= MAX_PIXELS) break;
+    if (c.frame === frameOf) continue;
     pixels -= c.canvas.width * c.canvas.height;
-    chunks.delete(oldest);
+    chunks.delete(key);
   }
 }
 
@@ -174,7 +206,7 @@ function paintGrass(g, x0, y0, x1, y1) {
 }
 
 export function drawGrassGround() {
-  drawChunks('grass', chunkRes(), () => '', paintGrass, '#2d4a22');
+  drawChunks('grass', chunkRes(), () => '', paintGrass);
 }
 
 // ---- Terrain that joins up
@@ -536,8 +568,8 @@ export function drawWater(terrain) {
     if (!cached) drawWaterTile(w, terrain);
     const hash = tileVariantHash(w.x, w.y);
     // (#322) a shoal is one path and one fill, no save and restore (ten canvas calls each, a thousand of them on a big lake), and not
-    // on a tile never seen, nor all of them when the view's wide: the fish that show are enough
-    if (fishShown && (hash % 7 === 0) && (hash % fishEvery === 0) && (w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0 && !isUnexplored(w.x, w.y)) {
+    // nor all of them when the view's wide: the fish that show are enough
+    if (fishShown && (hash % 7 === 0) && (hash % fishEvery === 0) && (w.fishCount ?? GAME_CONFIG.fishing.fishCapacity) > 0) {
       const phase = clock + (hash % 100) / 13;
       const swim = sinOf(phase) * 6, f = sinOf(phase + 1.5708) < 0 ? -1 : 1;
       const fx = w.x + swim, fy = w.y + sinOf(phase * 0.7 + 1.5708) * 3;
