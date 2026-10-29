@@ -9,7 +9,6 @@ import { render } from './render.js';
 import { isDefeated, updateDefeat } from '../modes/endless/index.js';
 import { syncMenuWorld } from '../modes/menu/index.js';
 import { updateMusic } from './sounds.js';
-import { adaptResolution, resolution } from './resolution.js';
 
 // The game runs in fixed steps of 1/60 s whatever the frame rate, so it plays at the same speed on a
 // 30 Hz phone and a 144 Hz monitor (much of the movement is per step). Frames are drawn as often as the
@@ -21,7 +20,7 @@ export const STEP_BUDGET_MS = 9; // (#322) and the steps of a frame take at most
 
 // the loop's clock: when the last frame was, game time not stepped yet, when the last frame was drawn,
 // and the frame-rate setting (30, 60, or 'display': every screen refresh)
-export const loop = { lastTime: performance.now(), stepTime: 0, lastDrawn: 0, lastFrameAt: performance.now(), frameRate: loadSetting('fps', 'display') };
+export const loop = { lastTime: performance.now(), stepTime: 0, lastDrawn: 0, frameRate: loadSetting('fps', 'display') };
 
 // One step of the game, unless it's lost: then the world stops and no more waves come
 export function stepGame(dt) {
@@ -55,7 +54,6 @@ export function gameLoop(now) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
     countFrame(now);
-    loop.lastFrameAt = now;
   }
 }
 
