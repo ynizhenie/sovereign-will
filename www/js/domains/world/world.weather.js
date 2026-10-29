@@ -11,7 +11,6 @@ import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.j
 import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
 import { tileVariantHash } from './world.draw.js';
-import { isUnexplored } from './world.fog.js';
 
 const config = () => GAME_CONFIG.weather;
 /** @type {{ kind: string, level: number, left: number, wind: number, windTo: number, windAngle: number, flash: number, thunderIn: number, nextBolt: number, bolt: { x: number, seed: number } | null }} */
@@ -98,13 +97,12 @@ export function drawWeatherWorld() {
   if (scale >= 0.75) {
     // (#322) the wavelets of a lake: each was its own path, its own stroke and its own colour string (a thousand a frame on a big lake).
     // Now their strokes are grouped by how bright they are now (six steps, the way they fade in and out), a path and a stroke for each step;
-    // not on tiles never seen, and half of them (the other half's alike) when the view's not close
+    // and half of them (the other half's alike) when the view's not close
     const WAVES = 6, waves = Array.from({ length: WAVES }, () => new Path2D());
     const sparse = scale < 1.2;
     for (const tile of seen(game.waterTiles)) {
       const h = (tile.x * 73856093) ^ (tile.y * 19349663);
       if ((lowDetail || sparse) && (h & 1)) continue;
-      if (isUnexplored(tile.x, tile.y)) continue;
       // a light wavelet drifting across it
       const p = ((t * 0.25 + (h & 255) / 255) % 1);
       const wx = tile.x - 12 + p * 20, wy = tile.y - 6 + ((h >>> 8) % 12);
@@ -129,7 +127,6 @@ export function drawWeatherWorld() {
       for (const tile of seen(game.desertTiles)) {
         const h = (tile.x * 2654435761) ^ tile.y;
         if (h & (lowDetail ? 3 : 1)) continue;
-        if (isUnexplored(tile.x, tile.y)) continue;
         const p = (t * 0.35 + ((h >>> 3) & 255) / 255) % 1, y = tile.y + 12 - p * 26;
         const path = shimmer[Math.min(SHIMMER - 1, Math.floor(Math.sin(p * Math.PI) * SHIMMER))];
         for (let k = 0; k <= 6; k++) { const x = tile.x - 12 + k * 4, yy = y + Math.sin(t * 6 + k + tile.x) * 1.5; if (k) path.lineTo(x, yy); else path.moveTo(x, yy); }
