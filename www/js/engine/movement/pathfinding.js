@@ -282,7 +282,7 @@ function searchArrays() {
 export function findGridPath(startG, endG, targetX, targetY, options) {
   const maxNodes = options.maxNodes || Infinity;
   if (startG.gx === endG.gx && startG.gy === endG.gy) {
-    return { path: [{ x: targetX, y: targetY }], isBlockedPath: options.isBlockedPath };
+    return { path: [{ x: targetX, y: targetY }], isBlockedPath: options.isBlockedPath, looked: 0 };
   }
   const cols = game.COLS, rows = game.ROWS, a = searchArrays(), id = searchId;
   const isBlocked = (gx, gy) => {
@@ -329,7 +329,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
   const estimate = (gx, gy) => { const dx = Math.abs(gx - endG.gx), dy = Math.abs(gy - endG.gy); return (Math.max(dx, dy) + 0.41 * Math.min(dx, dy)) ; };
   const startIndex = startG.gy * cols + startG.gx, endIndex = endG.gy * cols + endG.gx;
   // (a start off the map: searched as before, from nothing)
-  if (!inMap(startG.gx, startG.gy)) return { path: [], isBlockedPath: options.isBlockedPath };
+  if (!inMap(startG.gx, startG.gy)) return { path: [], isBlockedPath: options.isBlockedPath, looked: 0 };
   a.g[startIndex] = 0; a.seen[startIndex] = id; a.from[startIndex] = -1;
   push(startIndex, estimate(startG.gx, startG.gy));
   let found = false;
@@ -376,7 +376,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
   }
   path.reverse();
   if (path.length > 0 && !partial) path.push({ x: targetX, y: targetY });
-  return { path, isBlockedPath: options.isBlockedPath };
+  return { path, isBlockedPath: options.isBlockedPath, looked };
 }
 
 // Enemies' way to their target: one search that weighs going round against breaking through, in
@@ -395,7 +395,11 @@ export function pathCost(path) {
 
 // natureBlocks: trees and boulders are walked round, not chopped through (only buildings and spikes
 // are taken straight, when the way round is long)
-export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false) {
+/**
+ * @param {number} startX @param {number} startY @param {number} targetX @param {number} targetY
+ * @param {boolean} [natureBlocks] @param {number | null} [maxNodes] (the tick's searches' own cap, if less)
+ */
+export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false, maxNodes = null) {
   const startG = getGridPos(startX, startY);
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
@@ -418,7 +422,8 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
       if (isBuilding(k)) return PATH_COST.building;
       if (tiles.trees.has(k) || tiles.boulders.has(k)) return PATH_COST.nature;
       return tiles.spikes.has(k) ? PATH_COST.spikes : 0;
-    }
+    },
+    maxNodes: Math.min(maxNodes || ENEMY_MAX_NODES, ENEMY_MAX_NODES)
   });
   // a way in over spikes only needs nothing broken: the enemy just walks it (see update())
   if (result.path.length > 0 && !result.path.some(p => isBreakable(`${p.x},${p.y}`))) result.isBlockedPath = false;
@@ -430,7 +435,11 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   return result;
 }
 
-export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false) {
+/**
+ * @param {number} startX @param {number} startY @param {number} targetX @param {number} targetY
+ * @param {boolean} [isEnemy] @param {number | null} [maxNodes] (the tick's searches' own cap, if less)
+ */
+export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false, maxNodes = null) {
   let startG = getGridPos(startX, startY);
   let endG = getGridPos(targetX, targetY);
 
@@ -463,7 +472,7 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false)
     isBlocked,
     allowCornerCutting: false,
     isBlockedPath: false,
-    maxNodes: isEnemy ? Infinity : SETTLER_MAX_NODES
+    maxNodes: Math.min(maxNodes || (isEnemy ? ENEMY_MAX_NODES : SETTLER_MAX_NODES), isEnemy ? ENEMY_MAX_NODES : SETTLER_MAX_NODES)
   });
   if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
   // a long way round (to a far door): breaking through may be quicker; whichever costs less. (#326) Tried once
@@ -484,8 +493,12 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false)
 }
 
 const BREAK_DETOUR = 3;
-// (#322) how many tiles a settler's search looks at at most (a big map has sixty thousand): a way round a lake or a rock maze comes well within it
-const SETTLER_MAX_NODES = 12000;
+// (#322) how many tiles a search looks at at most. A way that isn't there (walled in, across water, in a rock
+// maze) had the search go over every tile it could reach before it said so: 90 ms on a big map — a step, and
+// every frame of a fifth of a second dropped. Past the cap it takes the way to the nearest it came instead
+// (findGridPath's), and goes on from there next tick. On a default map (40x40, 1600 tiles) a whole search fits
+const SETTLER_MAX_NODES = 2000;
+const ENEMY_MAX_NODES = 3000;
 
 // (#326) A settler's way through the enemy's buildings (its walls, doors and the like count ENEMY_PATH_COST.building
 // tiles each, to break): isBlockedPath, so it strikes what's in the way (see breakWhatsInTheWay)
@@ -496,7 +509,8 @@ function findSettlerPathThrough(startG, endG, targetX, targetY) {
     isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy) && !isRed(gx, gy),
     allowCornerCutting: false,
     isBlockedPath: true,
-    extraCost: (x, y) => (tiles.redBuildings.has(`${x},${y}`) || tiles.redDoors.has(`${x},${y}`) ? ENEMY_PATH_COST.building : 0)
+    extraCost: (x, y) => (tiles.redBuildings.has(`${x},${y}`) || tiles.redDoors.has(`${x},${y}`) ? ENEMY_PATH_COST.building : 0),
+    maxNodes: SETTLER_MAX_NODES
   });
   result.cost = pathCost(result.path) + result.path.slice(0, -1).filter(p => tiles.redBuildings.has(`${p.x},${p.y}`) || tiles.redDoors.has(`${p.x},${p.y}`)).length * ENEMY_PATH_COST.building;
   return result;
