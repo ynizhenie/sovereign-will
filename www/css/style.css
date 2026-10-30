@@ -713,6 +713,17 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 .give-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 4px; margin-top: 6px; }
 .give-list[hidden] { display: none; }
 .give-list .btn { font-size: 11px; padding: 5px 6px; min-height: 0; }
+/* (#326, 27.10, 7) the Units tab: a row each, the picked one open */
+.units-list { display: flex; flex-direction: column; gap: 4px; }
+.unit-row { border: 1px solid #3a404c; border-radius: 6px; padding: 2px; }
+.unit-row.picked { border-color: #f1c40f; }
+.unit-head { width: 100%; display: grid; grid-template-columns: 1fr 64px; gap: 2px 8px; align-items: center; text-align: left; padding: 5px 8px; min-height: 0; font-size: 12px; }
+.unit-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unit-hp { height: 6px; border-radius: 3px; background: #3b2626; overflow: hidden; }
+.unit-hp span { display: block; height: 100%; background: #2ecc71; }
+.unit-state { grid-column: 1 / -1; font-size: 11px; opacity: 0.8; }
+.unit-gear { justify-content: flex-start; padding: 2px 6px; font-size: 11px; }
+.unit-give { padding: 0 6px 4px; }
 .give-empty { grid-column: 1 / -1; font-size: 11px; color: #aaa; text-align: center; }
 .sel-hint { font-size: 10.5px; color: #aaa; text-align: center; margin-top: 5px; }
 .sel-hint:empty { display: none; }
