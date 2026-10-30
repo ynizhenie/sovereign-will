@@ -46,9 +46,10 @@ export function newPetLook(kind) {
   return { female: Math.random() < c.femaleChance, coat: Math.floor(Math.random() * c.coats[kind].length), style: 0, shade: 0 };
 }
 
-// A big body: a giant or a big zombie (settlerTypes with big), or a big enemy
+// A big body: a giant or a big zombie (settlerTypes with big), or a big enemy (a big archer, medic or
+// necromancer too: bigBody, 27.10, 32)
 export function isBigBody(unit) {
-  return unit.type === 'big' || !!(getDefinition('settlerTypes', unit.type) || {}).big;
+  return unit.type === 'big' || !!unit.bigBody || !!(getDefinition('settlerTypes', unit.type) || {}).big;
 }
 
 // A settler turns into another kind of its faction (a faction's bowUnits, if it has any), keeping

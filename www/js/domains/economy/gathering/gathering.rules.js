@@ -16,6 +16,11 @@ export function getPlacedResources(includeGrowingTrees = true) {
   ];
 }
 
+// (#326, 27.10, 26) An ore source with a mine built on it: worked unmarked, as ore is; one without, not at all
+export function hasMine(r) {
+  return !!r.oreSpawner && game.buildings.some(b => b.type === 'mine' && b.x === r.x && b.y === r.y);
+}
+
 export function getHarvestableResources() {
   // ore spawners are natural rock that's never used up: only worked when marked, for its ore (#248)
   return [...getPlacedResources(false), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];

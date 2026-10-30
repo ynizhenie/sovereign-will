@@ -3,7 +3,7 @@ import { openGame } from './helpers.mjs';
 
 // The friend's #326, "corrections of corrections": in the page
 
-test('the Big switch: a unit placed is the faction\'s big one with the same weapon, on either side; not a pet, medic or necromancer; the big ones are not in the list (#326)', async ({ page }) => {
+test('the Big switch: a unit placed is the faction\'s big one with the same weapon, on either side; not a pet (an archer and a medic too, 27.10, 32); the big ones are not in the list (#326)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => startBattleMode());
   const r = await page.evaluate(() => {
@@ -22,7 +22,7 @@ test('the Big switch: a unit placed is the faction\'s big one with the same weap
   expect(r.placed).toEqual([
     ['humans:fist', 'big', 'fist', 'big'], ['humans:iron_sword', 'big', 'iron_sword', 'big'], ['humans:iron_spear', 'big', 'iron_spear', 'big'],
     ['undead:sword', 'big_zombie', 'sword', 'big_zombie'], ['demons:spear', 'demon', 'spear', 'demon'],
-    ['humans:medic', 'normal', 'fist', 'normal'], ['humans:pet', 'dog', 'fist', 'dog'], ['humans:bow', 'normal', 'bow', 'normal']
+    ['humans:medic', 'big', 'fist', 'big'], ['humans:pet', 'dog', 'fist', 'dog'], ['humans:bow', 'big', 'bow', 'big']
   ]);
   expect(r.all).toBeGreaterThan(r.listed);
   expect(errors).toEqual([]);

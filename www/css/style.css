@@ -520,7 +520,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   text-transform: uppercase;
 }
 
-#seed-input {
+#seed-input, #editor-seed-input {
   width: 100%;
   padding: 8px 10px;
   background: #111318;
@@ -532,7 +532,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   outline: none;
 }
 
-#seed-input:focus {
+#seed-input:focus, #editor-seed-input:focus {
   border-color: #46b8da;
 }
 
@@ -542,7 +542,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 /* small unlabeled button next to the seed: a new random seed */
-#seed-reroll {
+#seed-reroll, #editor-seed-reroll {
   flex: 0 0 auto;
   width: 34px;
   background: #111318;
@@ -553,7 +553,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   cursor: pointer;
 }
 
-#seed-reroll:active {
+#seed-reroll:active, #editor-seed-reroll:active {
   border-color: #46b8da;
 }
 
@@ -675,9 +675,6 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   margin: 8px 0 2px;
 }
 /* (#326) a kind of map's section: the one this game's size uses lit */
-.generator-fields h2.generator-section { margin-top: 14px; padding: 5px 8px; border-radius: 5px; background: #1c1f26; color: #b5bac5; font-size: 13px; }
-.generator-fields h2.generator-section small { display: block; text-transform: none; font-weight: normal; opacity: 0.75; }
-.generator-fields h2.generator-section.used { background: #2a4a2c; color: #e6f2e6; }
 .generator-field {
   display: flex;
   flex-direction: column;
@@ -838,8 +835,8 @@ body[data-hud="endless"] .top-wave, body[data-hud="battle"] .top-battle, body[da
   color: #fff;
 }
 .battle-score { font-variant-numeric: tabular-nums; }
-.battle-score .green { color: #2ecc71; }
-.battle-score .red { color: #e74c3c; }
+.battle-score.green { color: #2ecc71; }
+.battle-score.red { color: #e74c3c; }
 /* (#326) the battle's music: a row per faction, its name then its tracks */
 #battle-music .battle-music-row { flex-wrap: wrap; justify-content: center; align-items: center; }
 #battle-music .battle-music-row .sub-tab { flex: 0 0 auto; padding: 4px 10px; }

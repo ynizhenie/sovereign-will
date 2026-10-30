@@ -1,76 +1,105 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
-test('the gear opens a labelled field for every generator setting (#20)', async ({ page }) => {
+test('the gear opens a labelled field for each of the ore and regrowth settings a continent uses; none of the small maps\' (#20; #326, 27.10, 18)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
   const r = await page.evaluate(() => {
-    const keys = Object.keys(GAME_CONFIG.map);
-    const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]')); // (the small maps' ones; the continent's have their own test)
+    const keys = GENERATOR_GROUPS.flatMap(([, k]) => k);
+    const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
     const labelled = fields.every(f => f.querySelector('span').textContent && !f.querySelector('span').textContent.startsWith('gen.'));
     const covered = keys.every(k => document.querySelector(`#generator-fields input[data-key="${k}"]`));
-    return { fields: fields.length, keys: keys.length, labelled, covered };
+    return { fields: fields.length, keys, labelled, covered, lakes: !!document.querySelector('#generator-fields input[data-key="lakes"]'),
+      sections: document.querySelectorAll('#generator-fields h2').length };
   });
-  expect(r.fields).toBe(r.keys);
+  expect(r.keys).toEqual(['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
+  expect(r.fields).toBe(r.keys.length);
   expect(r.covered).toBe(true);
   expect(r.labelled).toBe(true);
+  expect(r.lakes).toBe(false);
+  expect(r.sections).toBe(0);
 });
 
 test('a setting changed in the generator shapes the next map; Standard puts it back (#20)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
-  // no lakes at all
-  const lakes = page.locator('#generator-fields input[data-key="lakes"]');
-  await lakes.nth(1).fill('0'); await lakes.nth(1).dispatchEvent('change');
-  await lakes.nth(0).fill('0'); await lakes.nth(0).dispatchEvent('change');
-  // a minimum above the maximum lifts the maximum
-  const boars = page.locator('#generator-fields input[data-key="boars"]');
-  await boars.nth(0).fill('20'); await boars.nth(0).dispatchEvent('change');
-  const r = await page.evaluate(() => {
+  const spawners = () => page.evaluate(() => {
+    mapSettings = { cols: 128, rows: 128 };
     window.sim.start('generator-test');
-    return { water: waterTiles.length, boarsRange: { ...GAME_CONFIG.map.boars } };
+    return naturalRocks.filter(r => r.oreSpawner === 'iron').length;
   });
-  expect(r.water).toBe(0);
-  expect(r.boarsRange).toEqual({ min: 20, max: 20 });
-  await page.evaluate(() => document.getElementById('preset-standard').click()); // the menu is hidden while a game runs
-  expect(await page.evaluate(() => GAME_CONFIG.map.lakes)).toEqual({ min: 1, max: 4 });
+  const before = await spawners();
+  await page.evaluate(() => { document.getElementById('main-menu').style.display = ''; showMenuScreen('endless'); document.getElementById('open-generator').click(); }); // (the menu is hidden while a game runs)
+  // a minimum above the maximum lifts the maximum
+  const iron = page.locator('#generator-fields input[data-key="ironSpawners"]');
+  await iron.nth(0).fill('20'); await iron.nth(0).dispatchEvent('change');
+  expect(await page.evaluate(() => ({ ...GAME_CONFIG.map.ironSpawners }))).toEqual({ min: 20, max: 20 });
+  expect(await spawners()).toBeGreaterThan(before);
+  await page.evaluate(() => document.getElementById('preset-standard').click());
+  expect(await page.evaluate(() => GAME_CONFIG.map.ironSpawners)).toEqual({ min: 1, max: 2 });
 });
 
 test('own presets are saved on the device, loaded and deleted (#20)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
-  const forests = page.locator('#generator-fields input[data-key="forests"]');
-  await forests.nth(1).fill('9'); await forests.nth(1).dispatchEvent('change');
-  await page.fill('#preset-name', 'Big forests');
+  const ore = page.locator('#generator-fields input[data-key="orePerSpawner"]');
+  await ore.nth(1).fill('9'); await ore.nth(1).dispatchEvent('change');
+  await page.fill('#preset-name', 'Rich ore');
   await page.click('#preset-save');
-  await expect(page.locator('#preset-list [data-preset="Big forests"]')).toHaveCount(1);
+  await expect(page.locator('#preset-list [data-preset="Rich ore"]')).toHaveCount(1);
   await page.reload();
   await page.evaluate(() => showMenuScreen('endless'));
   await page.click('#open-generator');
-  expect(await page.evaluate(() => GAME_CONFIG.map.forests.max)).toBe(5); // a fresh page starts from Standard
-  await page.click('#preset-list [data-preset="Big forests"]');
-  expect(await page.evaluate(() => GAME_CONFIG.map.forests.max)).toBe(9);
-  await page.click('#preset-list [data-delete-preset="Big forests"]');
-  await page.click('#preset-list [data-confirm-delete="Big forests"]'); // asks first (#143)
+  expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(6); // a fresh page starts from Standard
+  await page.click('#preset-list [data-preset="Rich ore"]');
+  expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(9);
+  await page.click('#preset-list [data-delete-preset="Rich ore"]');
+  await page.click('#preset-list [data-confirm-delete="Rich ore"]'); // asks first (#143)
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
 });
 
-test('the continent\'s own settings: its sections and fields, labelled; they shape a continent map; presets keep them; the section a map size uses is said (#326, 56)', async ({ page }) => {
+test('the editor has a seed of its own and the generator\'s gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 96 (#326, 27.10, 18, 19)', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-editor');
+  await page.click('#editor-open-generator');
+  await expect(page.locator('[data-screen="generator"]')).toBeVisible();
+  await page.click('[data-screen="generator"] [data-back-to]');
+  await expect(page.locator('[data-screen="editor"]')).toBeVisible();
+  const make = seed => page.evaluate(seed => {
+    document.getElementById('editor-seed-input').value = seed;
+    document.querySelector('[data-editor-size="128"]').click();
+    document.getElementById('editor-new-generated').click();
+    const shape = naturalRocks.length + ':' + trees.length + ':' + waterTiles.length;
+    leaveEditor();
+    showMenuScreen('editor');
+    return shape;
+  }, seed);
+  const a = await make('editor-a'), again = await make('editor-a'), b = await make('editor-b');
+  expect(again).toBe(a);
+  expect(b).not.toBe(a);
+  // the reroll gives a new one
+  const seeds = await page.evaluate(() => { const before = document.getElementById('editor-seed-input').value; document.getElementById('editor-seed-reroll').click(); return [before, document.getElementById('editor-seed-input').value]; });
+  expect(seeds[1]).not.toBe(seeds[0]);
+  // Endless's own size: from 96
+  const custom = await page.evaluate(() => { const c = document.getElementById('map-cols'); c.value = '40'; applyCustomMap(); return [c.min, mapSettings.cols]; });
+  expect(custom).toEqual(['96', 96]);
+});
+
+test('the continent\'s own settings: its fields, labelled; they shape a continent map; presets keep them (#326, 56)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
   const r = await page.evaluate(() => {
     const out = {};
-    out.sections = [...document.querySelectorAll('#generator-fields h2.generator-section')].map(h => h.className.includes('used'));
     const all = [...document.querySelectorAll('#generator-fields .generator-field')];
     out.fields = all.length;
     out.labelled = all.every(f => f.querySelector('span').textContent && !/^gen\./.test(f.querySelector('span').textContent));
     out.biomes = document.querySelectorAll('#generator-fields h3').length;
     return out;
   });
-  expect(r.sections).toEqual([true, false]); // (the default size, 256, is a continent: its section first, lit)
   expect(r.labelled).toBe(true);
-  expect(r.fields).toBeGreaterThan(50);
+  expect(r.fields).toBeGreaterThan(30);
   // fewer mountains and no forest at all, changed by the fields: a continent made then has none of either
   const make = () => page.evaluate(() => {
     mapSettings = { cols: 128, rows: 128 };

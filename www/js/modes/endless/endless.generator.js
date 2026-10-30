@@ -1,8 +1,8 @@
-// Map generator settings: every GAME_CONFIG.map value on its own labelled field (the small maps'), and (#326) the
-// continent's (maps from GAME_CONFIG.continent.from tiles: the sea round it, how much of the land is mountain, desert,
-// forest and lake, what grows on each biome), a Standard preset and the player's own presets, saved on the device. The
-// values go straight into GAME_CONFIG.map and GAME_CONFIG.continent, which the next new game (resetGame ->
-// generateMap) reads. Which of the two a game uses is by its map's size, said on the screen.
+// Map generator settings (#326, 27.10, 18: the continent's alone, every map is one): the sea round the land, how much
+// of it is mountain, desert, forest and lake, what grows on each biome, and the ore and regrowth (GAME_CONFIG.map's
+// that a continent uses), a Standard preset and the player's own presets, saved on the device. The values go
+// straight into GAME_CONFIG.continent and GAME_CONFIG.map, which the next new game (resetGame -> generateMap) reads.
+// The screen opens from Endless and from the editor (19), and goes back there.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
@@ -16,61 +16,24 @@ export const CONTINENT_SHARES = { margin: 0.2, mountains: 0.6, desert: 0.6, fore
 export const CONTINENT_BIOMES = ['grassland', 'forest', 'desert', 'foothills', 'beach'];
 const continentSettings = () => ({ ...Object.fromEntries(Object.keys(CONTINENT_SHARES).map(k => [k, GAME_CONFIG.continent[k]])), startCoast: GAME_CONFIG.continent.startCoast, grow: GAME_CONFIG.continent.grow });
 export const STANDARD_CONTINENT_SETTINGS = JSON.parse(JSON.stringify(continentSettings()));
-// Whether a game on the map size picked in the menu is made as a continent
-export function usesContinent() {
-  const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
-  const size = picked && picked.dataset.mapSize !== 'custom' ? Number(picked.dataset.mapSize) : Math.min(Number((/** @type {HTMLInputElement | null} */ (document.getElementById('map-cols')) || { value: 0 }).value) || 0, Number((/** @type {HTMLInputElement | null} */ (document.getElementById('map-rows')) || { value: 0 }).value) || 0);
-  return size >= GAME_CONFIG.continent.from;
-}
-// Fields in groups; a GAME_CONFIG.map value missing here still gets a field, under "other"
+// GAME_CONFIG.map's a continent uses, in groups (the rest were the small maps' own, 27.10, 18)
 /** @type {[string, string[]][]} */
 export const GENERATOR_GROUPS = [
-  ['water', ['lakes', 'lakeWidth', 'lakeHeight', 'lakeMinDistance']],
-  ['desert', ['deserts', 'desertRadiusX', 'desertRadiusY', 'desertCactus', 'desertPebbles']],
-  ['forests', ['forests', 'forestTrees', 'forestRadius', 'forestUndergrowthShare', 'trees']],
-  ['resources', ['boulders', 'boulderPiles', 'boulderPileSize', 'grass', 'berryBushes', 'sticks', 'pebbles']],
   ['ore', ['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius']],
-  ['rocks', ['rockClusters', 'rockClusterWidth', 'rockClusterHeight']],
-  ['animals', ['boars']],
   ['regrowth', ['respawnDelay', 'oreRespawnDelay']]
 ];
 
-export function isShare(key) {
-  return key === 'forestUndergrowthShare';
-}
-
-// A typed-in number, kept sensible: never negative, shares 0..1, whole numbers otherwise
-export function cleanValue(key, raw) {
+// A typed-in number, kept sensible: never negative, a whole number
+export function cleanValue(raw) {
   const n = Number(raw);
-  if (!Number.isFinite(n)) return null;
-  return isShare(key) ? Math.max(0, Math.min(1, n)) : Math.max(0, Math.round(n));
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
 }
 
 export function renderGeneratorFields() {
   const container = document.getElementById('generator-fields');
   container.innerHTML = '';
-  const continent = usesContinent();
-  const from = GAME_CONFIG.continent.from;
-  // each kind of map in a section of its own; the one this game's map size uses first, and said so
-  const sections = [
-    { id: 'classic', title: t('gen.section.classic', { n: from }), used: !continent, render: () => renderClassicFields(container) },
-    { id: 'continent', title: t('gen.section.continent', { n: from }), used: continent, render: () => renderContinentFields(container) }
-  ].sort((x, y) => Number(y.used) - Number(x.used));
-  for (const section of sections) {
-    const heading = document.createElement('h2');
-    heading.className = 'generator-section' + (section.used ? ' used' : '');
-    heading.innerHTML = `${escapeText(section.title)} <small>${escapeText(t(section.used ? 'gen.used' : 'gen.notUsed'))}</small>`;
-    container.appendChild(heading);
-    section.render();
-  }
-}
-const escapeText = text => String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-function renderClassicFields(container) {
-  const listed = new Set(GENERATOR_GROUPS.flatMap(([, keys]) => keys));
-  const other = Object.keys(GAME_CONFIG.map).filter(key => !listed.has(key));
-  const groups = [...GENERATOR_GROUPS, ...(other.length ? [/** @type {[string, string[]]} */ (['other', other])] : [])];
-  for (const [group, keys] of groups) {
+  renderContinentFields(container);
+  for (const [group, keys] of GENERATOR_GROUPS) {
     // each group: a heading, then its fields two to a row
     const heading = document.createElement('h3');
     heading.textContent = t(`gen.group.${group}`);
@@ -143,11 +106,11 @@ export function generatorField(key) {
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '0';
-    input.step = isShare(key) ? '0.05' : '1';
+    input.step = '1';
     input.value = current;
     input.dataset.key = key;
     input.addEventListener('change', () => {
-      const clean = cleanValue(key, input.value);
+      const clean = cleanValue(input.value);
       if (clean === null) { input.value = current; return; }
       onChange(clean);
       renderGeneratorFields(); // shows the value as kept (e.g. min raised to max)
@@ -175,7 +138,7 @@ export function savePresets(presets) {
   saveData('map-presets', presets);
 }
 
-// A preset is { map, continent } (#326); one saved before is the small maps' settings alone
+// A preset is { map, continent } (#326); one saved before is GAME_CONFIG.map's alone
 export function currentSettings() {
   return JSON.parse(JSON.stringify({ map: GAME_CONFIG.map, continent: continentSettings() }));
 }
@@ -204,9 +167,15 @@ export function renderPresetList() {
   });
 }
 
+// The screen, from Endless or the editor (27.10, 19): Back goes back there
+export function openGenerator(from) {
+  /** @type {HTMLElement} */ (document.querySelector('[data-screen="generator"] [data-back-to]')).dataset.backTo = from;
+  renderGeneratorFields(); renderPresetList(); showMenuScreen('generator');
+}
+
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessGenerator() {
-  onTap(document.getElementById('open-generator'), () => { renderGeneratorFields(); renderPresetList(); showMenuScreen('generator'); });
+  onTap(document.getElementById('open-generator'), () => openGenerator('endless'));
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
   onTap(document.getElementById('preset-standard'), () => applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS }));
   onTap(document.getElementById('preset-save'), () => {

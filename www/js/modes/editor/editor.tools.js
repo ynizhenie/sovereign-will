@@ -1,6 +1,6 @@
 // Map editor: make a map by hand, tile by tile, save it on the device, and play it in Endless
 // ("Custom map" there, see renderCustomMapList). A new map starts empty or from the generator (the
-// seed and generator settings of the Endless screen); a saved one can be opened again and changed.
+// editor screen's own seed, and the generator's settings, its gear); a saved one can be opened again and changed.
 //
 // In the editor the world is the ordinary game world with the clock stopped: a tool puts its thing on
 // the tapped tile (the brush can cover 3×3), replacing what was there; on a tile that already has that
@@ -122,6 +122,11 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   }
   // the town hall's own tiles stay free
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return;
+  // (#326, 27.10, 26) a mine goes on a source, which stays under it
+  if (tool.building && GAME_CONFIG.buildings[tool.building].onSpawner) {
+    if (game.naturalRocks.some(r => r.oreSpawner && r.x === x && r.y === y) && !game.buildings.some(b => b.x === x && b.y === y)) game.buildings.push(makeBuilt(tool.building, x, y));
+    return;
+  }
   clearEditorTile(x, y);
   if (tool.id === 'water') {
     game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
@@ -310,12 +315,12 @@ export function startEditor(source) {
     editor.startTime = source.map.startTime || 'morning';
     resetGame(source.map);
   } else {
-    // a generated map uses the Endless seed and generator settings, at the size picked here
+    // a generated map: the editor's own seed, the generator's settings (its gear), the size picked here
     editor.name = '';
     editor.startTime = 'morning';
     const endlessSize = game.mapSettings;
     game.mapSettings = { cols: source.cols, rows: source.rows };
-    applySeedFromUI();
+    applySeedFromUI(/** @type {HTMLInputElement} */ (document.getElementById('editor-seed-input')));
     resetGame(source.generate ? null : { cols: source.cols, rows: source.rows });
     game.mapSettings = endlessSize;
   }

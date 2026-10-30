@@ -79,7 +79,7 @@ test('any unit on either side: on the left one of yours, on the right an enemy, 
     return { wrong, count: BATTLE_PRESETS.length };
   });
   expect(r.wrong).toEqual([]);
-  expect(r.count).toBe(48); // (the big ones too, #326: 16 each)
+  expect(r.count).toBe(57); // (the big ones too, #326: 19 each; 27.10, 32: a big archer, crossbowman, medic or necromancer too)
 });
 
 test('a battle has no commander unless the player gives a banner (#279)', async ({ page }) => {

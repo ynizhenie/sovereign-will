@@ -34,7 +34,7 @@ export const battle = {
   building: 'wall_wood',
   armor: false,       // colony units placed next get armour / a shield (melee only)
   shield: false,
-  big: false,         // (#326) the next unit placed is a big one (not a pet, medic, necromancer or archer)
+  big: false,         // (#326) the next unit placed is a big one (not a pet)
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   helmet: false,      // (#326, 27.10, 27) the next unit placed gets a helmet (not a pet)
@@ -58,11 +58,11 @@ export function battleArmor(armor) {
   return armor === 'leather' ? GAME_CONFIG.gear.leather_armor : armor ? GAME_CONFIG.gear.armor : null;
 }
 
-// An enemy kind that can carry a shield: one of normal size fighting hand to hand
+// An enemy kind that can carry a shield: one fighting hand to hand, a big one too (27.10, 32)
 /** @param {string} id */
 export function enemyCanShield(id) {
   const def = GAME_CONFIG.enemies[id];
-  return !!def && def.type !== 'big' && !def.ranged && !def.healer && !def.necromancer && !def.pet;
+  return !!def && !def.ranged && !def.healer && !def.necromancer && !def.pet;
 }
 
 // (#326) It's dark: torches lit (in hands, on posts)
@@ -94,7 +94,7 @@ export function makeBattleUnit(entry) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, enemyKey);
     en.battleEntry = entry;
     en.look = look;
-    // (#279) armour and a shield as yours can have (a shield: a melee one of normal size); a banner too,
+    // (#279) armour and a shield as yours can have (a shield: a melee one); a banner too,
     // given by the player, not picked by the game
     const def = getEnemyDef(en);
     const armour = def.pet ? null : battleArmor(entry.armor); // (a pet wears nothing, #326)

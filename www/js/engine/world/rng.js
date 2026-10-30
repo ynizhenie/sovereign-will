@@ -37,8 +37,10 @@ export function createDefaultSeed() {
 
 export const worldSeedInput = document.getElementById('seed-input');
 
-export function applySeedFromUI() {
-  const rawSeed = worldSeedInput ? worldSeedInput.value.trim() : '';
+// (input: another seed field, the editor's, #326 27.10, 19)
+/** @param {HTMLInputElement | null} [input] */
+export function applySeedFromUI(input = /** @type {HTMLInputElement | null} */ (worldSeedInput)) {
+  const rawSeed = input ? input.value.trim() : '';
   game.worldSeed = createWorldSeed(rawSeed || createDefaultSeed());
   updateSeedHud();
   return game.worldSeed;

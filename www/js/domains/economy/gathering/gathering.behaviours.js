@@ -4,7 +4,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
-import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
+import { finishHarvest, getMapResourceDef, hasMine } from './gathering.rules.js';
 import { addCarryLoad, addResources, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { hasFog, inTerritory, isVisible, ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards, someEnemyNear } from '../../../engine/movement/index.js';
@@ -38,6 +38,7 @@ export function canSettlerHarvest(s, r, tick) {
     return !hasNothing && !hasRod;
   }
 
+  if (r.oreSpawner && !hasMine(r)) return false; // (#326, 27.10, 26: a mine on it first)
   if (kind === 'grass' && game.boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
   // loot (#210): not while an enemy is close to it
   if (kind === 'loot' && someEnemyNear(r.x, r.y, 150, () => true)) return false; // (#306: an enemy close to it)
@@ -151,7 +152,7 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
     if (held && s.pickedGear === gear && game.pathTick >= s.pickedAt && game.pathTick - s.pickedAt < 20 && tick.resourceSet.has(held) && !held.isCarcass && !(held.hp <= 0) &&
       !(s.focus && s.focus.until > game.pathTick) && usable(held) && canSettlerHarvest(s, held, tick)) return held;
     let availableRes = [];
-    for (const r of workableWithGear(s, tick)) if (!getMapResourceDef(tick.resourceKind.get(r)).markOnly && usable(r)) availableRes.push(r);
+    for (const r of workableWithGear(s, tick)) if ((!getMapResourceDef(tick.resourceKind.get(r)).markOnly || hasMine(r)) && usable(r)) availableRes.push(r);
     // (the carcasses it was the one to bring in, one each, #199)
     for (const b of game.boars) if (b.isCarcass && b.collector === s && usable(b)) availableRes.push(b);
     // what its foreman said is needed most, first, while there's some of it (#248)
