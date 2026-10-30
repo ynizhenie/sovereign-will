@@ -59,6 +59,10 @@
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
  * @property {Watchtower | null} [towerAssignment] the watchtower it guards
+ * @property {number} [towerIdle]   seconds up its platform with nothing in reach (#326: down after a while)
+ * @property {number} [towerRestUntil] the tick it may climb a platform again
+ * @property {boolean} [trapped]    held in the other side's iron trap (#326)
+ * @property {number} [trappedFor]  seconds it's held yet
  * @property {((s: any, tick: any, markedOnly?: boolean) => boolean) | null} [lastBehaviour] the behaviour that took it last tick (everyday work goes on without the whole list, #322)
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)

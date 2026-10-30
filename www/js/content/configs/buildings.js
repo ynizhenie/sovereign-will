@@ -45,7 +45,7 @@ export const buildingsConfig = {
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
     // (#326) the Platform (its id from when it was a watchtower): an archer climbs it and shoots farther from it, with
     // the arrows in its own quiver; it keeps none
-    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20, herbs: 4 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 100, tower: { capacity: 1, minEnemies: 2, range: 320, damage: 18, cooldown: 1.2, projectileSpeed: 4.5 } } },
+    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20, herbs: 4 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 100, tower: { capacity: 1, minEnemies: 2, reach: 1.35, idleSeconds: 4, restSeconds: 10 } } },
     // crafts: where things are made (#211, #248): the workshop everything without iron in it, the smithy
     // everything with
     workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 80 } },
