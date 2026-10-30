@@ -65,7 +65,7 @@ test('paths the player marked are saved with the game, and drawn without error (
     isPaused = true;
     const g = getGridPos(townHall.x, townHall.y);
     const spot = { x: (g.gx + 8) * TILE_SIZE + 15, y: (g.gy + 8) * TILE_SIZE + 15 };
-    for (const list of [game.trees, game.boulders, game.naturalRocks, game.waterTiles]) list.length = 0;
+    window.sim.helpers.clearResources(); // (all of it: a cactus or ore on the spot, on a random map, and the tile was refused)
     resetTileIndex();
     toggleZone(spot.x, spot.y, 'path');
     render();
