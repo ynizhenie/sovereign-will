@@ -22,7 +22,7 @@ export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'iron_door',
   'tent', 'campfire', 'torch', 'dung_heap', 'grave', 'demon_den', 'sacrifice_circle', 'portal', 'corpse_pit', 'cage'];
 
 // (#326) The big one of a unit, when the panel's Big switch is on: the same weapon in the faction's big body
-// (none for a pet, a medic, a necromancer or an archer)
+// (none for a pet)
 export function bigPresetOf(preset) {
   return preset.size === 'normal' ? BATTLE_PRESETS.find(p => p.id === `${preset.faction}:big_${preset.preset}`) : undefined;
 }
@@ -31,16 +31,13 @@ export function getBattlePreset(id) {
   return BATTLE_PRESETS.find(p => p.id === id);
 }
 
-// What a preset is called: a human one by its own name (Unarmed, Club, Archer...), another faction's by its
-// kind and what it carries (a pet by its kind)
+// What a preset is called: every faction's as the humans' (Unarmed, Club, Archer...; 27.10, 32: an archer, not
+// "Imp, bow"), a big one with its big kind first (Giant, club); a pet by its kind
 export function battlePresetLabel(preset) {
   const kind = GAME_CONFIG.settlerTypes[preset.type];
   if (kind.pet) return kind.label; // (#314: a pet has no weapon to name it by)
-  if (preset.faction === 'humans') return t(`preset.${preset.preset}`);
-  const parts = [kind.label];
-  if (preset.tool) parts.push(getDefinition('tools', preset.tool).label);
-  else if (preset.weapon !== 'fist') parts.push(getDefinition('weapons', preset.weapon).label.toLowerCase()); // (a bow too, #249: no archer kinds of their own)
-  return parts.join(', ');
+  const name = t(`preset.${preset.preset.replace(/^big_/, '')}`);
+  return preset.size === 'big' ? `${kind.label}, ${name.toLowerCase()}` : name;
 }
 
 // The buildings a faction has: the common ones (no `factions`) for null, else that faction's own

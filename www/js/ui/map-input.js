@@ -11,7 +11,7 @@ import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
 import { getPossessed, getSelectedSettler, getSelection, orderPossessed, roleTitle, toggleInGroup } from '../domains/colony/settlers/index.js';
-import { getHarvestableResources, getMapResourceKind } from '../domains/economy/gathering/index.js';
+import { getHarvestableResources, getMapResourceKind, hasMine } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
 import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
@@ -145,6 +145,15 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
     }
     return true;
   }
+  // (#326, 27.10, 26) a mine on an iron or coal source, one each
+  if (item && item.onSpawner) {
+    const source = game.naturalRocks.find(r => r.oreSpawner && r.x === gx && r.y === gy);
+    if (!source || [...game.buildings, ...game.blueprints].some(b => b.x === gx && b.y === gy)) {
+      showNotification(t('build.onSpawner'), true);
+      return false;
+    }
+    return true;
+  }
   if (!isBuildLocationAllowed(gx, gy)) {
     if (Math.hypot(gx - townHall.x, gy - townHall.y) < townHall.radius + 15) {
       showNotification(t('build.onHall'), true);
@@ -197,6 +206,8 @@ function markTapped() {
 
   // several things there (a stick, a pebble and loot on one tile): a menu picks which (#261)
   const here = thingsOnTile();
+  const source = !here.length && game.naturalRocks.find(r => r.oreSpawner && Math.hypot(mouse.x - r.x, mouse.y - r.y) < 22);
+  if (source && !hasMine(source)) { showNotification(t('mark.needsMine'), true); return; } // (#326, 27.10, 26)
   if (here.length > 1) showPickMenu(here, tapClient);
   else if (here.length) markResource(here[0]);
 }
@@ -206,7 +217,7 @@ function markTapped() {
 function thingsOnTile() {
   const away = r => Math.hypot(mouse.x - r.x, mouse.y - r.y);
   const gx = Math.floor(mouse.x / TILE_SIZE), gy = Math.floor(mouse.y / TILE_SIZE);
-  const near = getHarvestableResources().filter(r => away(r) < 22).sort((a, b) => away(a) - away(b));
+  const near = getHarvestableResources().filter(r => away(r) < 22 && !r.oreSpawner).sort((a, b) => away(a) - away(b)); // (a source: by a mine, #326 27.10, 26)
   const onTile = near.filter(r => Math.floor(r.x / TILE_SIZE) === gx && Math.floor(r.y / TILE_SIZE) === gy);
   return onTile.length ? onTile : near.slice(0, 1);
 }
@@ -289,7 +300,7 @@ function placeBlueprint({ gx, gy }) {
     showNotification(t('cards.locked', { name: building.label }), true);
   } else if (!canBuild(game.buildMode)) {
     showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
-  } else if (replaces || building.onWater || isBuildLocationAllowed(gx, gy)) {
+  } else if (replaces || building.onWater || building.onSpawner || isBuildLocationAllowed(gx, gy)) {
     // its cost stays in storage until builders bring it
     const bp = createBuildingBlueprint(game.buildMode, gx, gy);
     bp.needs = { ...(building.cost || {}) };
