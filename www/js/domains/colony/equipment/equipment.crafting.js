@@ -12,6 +12,7 @@ import { playSound, playWorkSound } from '../../../app/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { isLocked } from '../../../modes/endless/index.js';
 import { isForPlayerFaction } from '../../factions/index.js';
+import { hasToolFamily } from './equipment.rules.js';
 
 // Where it's made: by hand (madeBy: 'hand', at the town hall, #261), the smithy if there's iron in it,
 // otherwise the workshop
@@ -129,7 +130,9 @@ export function craftItem(s, tick) {
     const open = o => !o.crafter || !game.settlers.includes(o.crafter);
     // arrows are the archers' to make while there are any (#249; #306: looked for once a tick)
     const archers = archersOnce(() => game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed));
-    const mine = o => !(o.id === 'arrows' && archers && s.role !== 'archer');
+    // (#326) a recipe with a tool (firewood: an axe) only for one holding it
+    const needs = o => (GAME_CONFIG[o.category] && GAME_CONFIG[o.category][o.id] || {}).tool;
+    const mine = o => !(o.id === 'arrows' && archers && s.role !== 'archer') && (!needs(o) || hasToolFamily(s.tool, needs(o)));
     const ready = o => o.stage === 'waitRope'
       ? (stock.rope || 0) >= o.ropeNeeded
       : o.stage !== 'waitResources' || Object.entries(o.waitFor || {}).every(([resource, amount]) => (stock[resource] || 0) >= amount);

@@ -12,8 +12,8 @@ test('a wave that has lost seven of ten still fights: it runs only with a fifth 
   expect(await sim.moraleHoldOn({})).toEqual({ routed: false, panicked: false });
 });
 
-test('the undead panic at a single blow, unless their necromancer is close by', async () => {
-  expect(await sim.moraleUndead({})).toEqual({ panic: true });
+test('the undead never panic, their necromancer near or not (#326, 27.10)', async () => {
+  expect(await sim.moraleUndead({})).toEqual({ panic: false });
   expect(await sim.moraleUndead({ necromancer: true })).toEqual({ panic: false });
 });
 

@@ -20,7 +20,7 @@ export function getPlayerFaction() {
   return GAME_CONFIG.factions[sides.player.faction];
 }
 
-export function getEnemyFaction() { return GAME_CONFIG.factions[sides.enemy.faction]; }
+export function getEnemyFaction() { return GAME_CONFIG.factions[game.gameMode === 'menu' ? 'undead' : sides.enemy.faction]; } // (#326: the menu's fight is against the undead, whatever's picked)
 
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour
@@ -37,7 +37,8 @@ export function getBuildingColor(b) {
 }
 
 export function getEnemyColor(en) {
-  const color = game.gameMode === 'battle' ? sides.battle.red : sides.enemy.color;
+  // (#326) behind the main menu: its own fixed colours, not the Endless screen's
+  const color = game.gameMode === 'battle' ? sides.battle.red : game.gameMode === 'menu' ? getEnemyFaction().color : sides.enemy.color;
   return en && en.type === 'big' ? shadeColor(color, -0.25) : color;
 }
 
@@ -108,7 +109,7 @@ export function setBattleColor(side, color) {
 // Whether the player's faction has this (a resource, building, tool, gear...): yes unless the item names
 // the factions it's for (`factions`) and the player's isn't one of them
 export function isForPlayerFaction(item) {
-  return !item.factions || item.factions.includes(sides.player.faction);
+  return !item.factions || item.factions.includes(getPlayerFaction().id); // (#326: the menu's and the editor's own faction there)
 }
 
 // (#279) what a building costs the player's faction: as in GAME_CONFIG, and for one with buildBones (the undead)
