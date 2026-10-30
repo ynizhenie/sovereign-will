@@ -15,7 +15,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
-import { getFrontier, getTerritoryBox, inReliefZone, inTerritory, isVisible, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
+import { getTerritoryBox, inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
@@ -245,18 +245,12 @@ export function patrol(s, tick) {
 }
 
 // Order = priority: the first behaviour that takes a settler's tick wins.
-// (#314) One let go walks away, out of the base's land and a few tiles past it, and is gone (taken off the list
-// after the tick: leftColony)
+// (#314) One let go (#326: a pet too) walks to the town hall and is gone there (taken off the list after the tick: leftColony)
 function leaveColony(s, tick) {
   if (!s.leaving) return false;
-  if (!s.leaveTo) {
-    const f = getFrontier(), edges = [{ x: f.x0 + 20, y: s.y }, { x: f.x1 - 20, y: s.y }, { x: s.x, y: f.y0 + 20 }, { x: s.x, y: f.y1 - 20 }];
-    s.leaveTo = edges.reduce((a, b) => (Math.hypot(a.x - s.x, a.y - s.y) < Math.hypot(b.x - s.x, b.y - s.y) ? a : b));
-  }
-  moveEntityTowards(s, s.leaveTo.x, s.leaveTo.y, s.speed, false, tick.dt);
-  const away = !isVisible(s.x, s.y) || Math.hypot(s.leaveTo.x - s.x, s.leaveTo.y - s.y) < 20 ||
-    (!inTerritory(s.x, s.y) && !inTerritory(s.x + 4 * TILE_SIZE, s.y) && !inTerritory(s.x - 4 * TILE_SIZE, s.y) && !inTerritory(s.x, s.y + 4 * TILE_SIZE) && !inTerritory(s.x, s.y - 4 * TILE_SIZE));
-  if (away) s.leftColony = true;
+  s.leaveTo = { x: townHall.x, y: townHall.y };
+  moveEntityTowards(s, townHall.x, townHall.y, s.speed, false, tick.dt);
+  if (Math.hypot(townHall.x - s.x, townHall.y - s.y) < townHall.radius + 30) s.leftColony = true;
   return true;
 }
 
@@ -372,7 +366,12 @@ export function tickSettlers(dt) {
     prepareSettler(s, dt);
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
-    if (isPet(s)) { if (s.targetEquipment) s.targetEquipment = null; tickPet(s, tick); return; } // (its own ways, #314)
+    if (isPet(s)) {
+      if (s.targetEquipment) s.targetEquipment = null;
+      // (#326) let go, or sent somewhere by the player (with no soldier about too): that first, as a settler does
+      if (!s.isPossessed && (leaveColony(s, tick) || followCommand(s, tick))) { s.activity = s.leaving ? 'leaveColony' : 'followCommand'; return; }
+      tickPet(s, tick); return; // (its own ways, #314)
+    }
     const last = s.lastBehaviour;
     // (a captain or a foreman counts its own seconds to its next order inside the behaviours above: always offered the list)
     if (last && calmColony && !s.drowsy && !s.isPossessed && !s.targetEquipment && !s.order && s.orderIn === undefined && s.armIn === undefined &&

@@ -28,6 +28,7 @@
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
  * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
  * @property {boolean} [healing]     at the camp's shelter till it's mended (#279)
+ * @property {boolean} [holdOrder]  told to hold its spot (the card's Hold, #326): it stays there picked or not, till Free
  * @property {Point} [orderSpot]     where it stands in a fight under orders (a raid's camp, a battle), told nothing to fight
  * @property {Object | null} [orderTarget]  what the player told it to fight there
  * @property {string} weapon         GAME_CONFIG.weapons key, 'fist' for none

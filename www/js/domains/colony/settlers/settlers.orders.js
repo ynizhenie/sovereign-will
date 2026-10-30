@@ -148,6 +148,8 @@ export const ORDERS = [
     check: (p, target) => {
       const kind = getMapResourceKind(target);
       const def = getMapResourceDef(kind);
+      // (#326) as it does by itself: a soldier or an archer gathers nothing (it hunts, and brings in its own kill)
+      if (p.role !== 'worker' && kind !== 'boar' && !target.isCarcass) return 'possess.notWorker';
       if (def.tool && (!hasToolFamily(p.tool, def.tool) || target.isGrowing)) return `possess.needs.${def.tool}`;
       if (kind === 'farm' && !(target.growth >= 100)) return 'possess.notRipe';
       return handsFull(p) ? 'possess.handsFull' : null;
