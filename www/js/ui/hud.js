@@ -11,12 +11,14 @@ import { countHeld, disarmSettler, getHeldItems, givableTo, giveStoredTo, hasGea
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
 import { isForPlayerFaction } from '../domains/factions/index.js';
 import { getDayPhase, getWeather } from '../domains/world/index.js';
+import { updateUnitsTab } from './units-tab.js';
 
 export function updateUI() {
   updateWave();
   updateResourcePanel(); // (#279)
   renderBuildingCard();
   updateCraftLists();
+  updateUnitsTab(); // (#326, 27.10, 7)
   // the blight-by-itself switch (#253): lit while on, greyed for good with none left
   const autoBlight = document.getElementById('btn-auto-blight');
   if (autoBlight) { autoBlight.classList.toggle('on', !!game.autoBlight); autoBlight.disabled = !!game.autoBlightDone; }
@@ -121,6 +123,13 @@ function renderSelectedActions(s) {
   if (key === shownGive) return;
   shownGive = key;
   list.hidden = !giveOpen || !endless;
+  fillGiveList(list, s, items, () => { giveOpen = false; shownGive = ''; });
+}
+
+// (#326) What in the armory a settler can take, a button each (a tap hands it over; done: then); none, says so.
+// Its card's Give list, and its row in the Units tab
+/** @param {HTMLElement} list @param {any} s @param {any[][]} items @param {() => void} [done] */
+export function fillGiveList(list, s, items, done = () => {}) {
   list.innerHTML = '';
   if (!items.length) { const none = document.createElement('div'); none.className = 'give-empty'; none.textContent = t('give.none'); list.appendChild(none); return; }
   for (const [category, id, n] of items) {
@@ -129,7 +138,7 @@ function renderSelectedActions(s) {
     b.className = 'btn';
     b.dataset.give = `${category}:${id}`;
     setRichText(b, `[[${def.icon || 'tools'}]] ${def.label || id} ×${n}`);
-    b.addEventListener('click', () => { if (giveStoredTo(s, category, id)) { giveOpen = false; shownGive = ''; } });
+    b.addEventListener('click', () => { if (giveStoredTo(s, category, id)) done(); });
     list.appendChild(b);
   }
 }
@@ -332,9 +341,9 @@ export function renderResourceTiles() {
 // for that used to sit in the sheets and took it off whoever, #232)
 
 let shownGear = '';
-export function renderSelectedGear(s) {
-  const box = document.getElementById('selected-gear');
-  if (!box) return;
+// What a settler holds, as [action, its arg, the item's id]: its tool, its weapon, its gear
+/** @returns {[string, string, string][]} */
+export function heldGear(s) {
   /** @type {[string, string, string][]} */
   const items = [];
   if (s) {
@@ -342,10 +351,24 @@ export function renderSelectedGear(s) {
     if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
     for (const id of ['armor', 'leather_armor', 'shield', 'helmet', 'backpack', 'wateringCan', 'whistle', 'banner', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
   }
+  return items;
+}
+
+export function renderSelectedGear(s) {
+  const box = document.getElementById('selected-gear');
+  if (!box) return;
+  const items = heldGear(s);
   const key = `${s ? s.id : ''}|${items.map(i => i[2]).join(',')}|${s && s.targetEquipment ? 1 : 0}`;
   if (key === shownGear) return;
   shownGear = key;
   box.hidden = !items.length;
+  fillGearChips(box, s, items, () => { shownGear = ''; });
+}
+
+// (#326) Each thing it holds: its name, then into the store whole, or taken apart (#248). Its card's, and its row's
+// in the Units tab (done: after a tap)
+/** @param {HTMLElement} box @param {any} s @param {[string, string, string][]} items @param {() => void} [done] */
+export function fillGearChips(box, s, items, done = () => {}) {
   box.innerHTML = '';
   // each: its name, then into the store whole, or taken apart (#248)
   for (const [action, arg, id] of items) {
@@ -360,8 +383,8 @@ export function renderSelectedGear(s) {
       button.dataset.arg = arg;
       button.title = t(keep ? 'gearOff.store' : 'gearOff.take', { name: def.label || id });
       setRichText(button, keep ? '[[warehouse]]' : '[[no]]');
-      // (made after the page's buttons were wired: its own listener)
-      button.addEventListener('click', () => { if (action === 'disarmSettler') disarmSettler(arg, keep); else orderGearOff(arg, keep); shownGear = ''; });
+      // (made after the page's buttons were wired: its own listener; on this settler, selected for it)
+      button.addEventListener('click', () => { game.selectedSettler = s; if (action === 'disarmSettler') disarmSettler(arg, keep); else orderGearOff(arg, keep); done(); });
       chip.appendChild(button);
     }
     box.appendChild(chip);
