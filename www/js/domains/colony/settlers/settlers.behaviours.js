@@ -134,7 +134,7 @@ export function prepareSettler(s, dt) {
     else if (s.role === 'worker') s.role = isRangedWeapon(s.weapon) ? 'archer' : 'soldier';
   }
   rescueSettlerFromResource(s);
-  if (s.attackCooldown > 0) s.attackCooldown -= dt;
+  if (s.attackCooldown > 0) { s.attackCooldown -= dt; if (s.attackCooldown < 1e-6) s.attackCooldown = 0; } // (#326, 27.10, 16: 0.4 s less 24 steps left a hair over 0, a step lost a blow)
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
 }
 
