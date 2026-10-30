@@ -32,10 +32,21 @@ export function speak(unit, faction, event, urgent = false) {
   const now = clock;
   if (now - lastSpoke < (urgent ? VOICE.globalGap / 2 : VOICE.globalGap)) return false;
   if (now - (unit.spokeAt || -Infinity) < VOICE.ownGap) return false;
-  const key = `voice.${faction}.${event}`, phrases = t(key);
-  if (!phrases || phrases === key) return false;
-  const list = phrases.split('|');
+  const list = phrasesFor(unit, faction, event);
+  if (!list.length) return false;
   return voice(unit, list[Math.floor(Math.random() * list.length)]);
+}
+
+// (#326, 27.10, 24) What it may say: its faction's for the event, or the ones for the side it's against when there
+// are such (voice.<faction>.<event>.vs.<other>: no brains wanted off the undead); about the walls (….walls) only
+// when the colony has a wall or a door
+const WALLS = ['wall_wood', 'wall_stone', 'door', 'iron_door'];
+export function phrasesFor(unit, faction, event) {
+  const text = key => { const s = t(key); return s && s !== key ? s.split('|') : []; };
+  const against = (unit.enemyKey ? getPlayerFaction() : getEnemyFaction()).id;
+  const key = `voice.${faction}.${event}`, vs = text(`${key}.vs.${against}`);
+  const list = vs.length ? vs : text(key);
+  return game.buildings.some(b => WALLS.includes(b.type) && b.side !== 'red') ? [...list, ...text(`${key}.walls`)] : list;
 }
 
 // What it says, shown and heard
