@@ -77,8 +77,9 @@ test('hire, upgrade and craft buttons show their cost from the config (#45)', as
   await expect.poll(() => tile('btn-hire-normal')).toEqual(['[[worker]] Рабочий 15[[food]]']);
   await expect.poll(() => tile('btn-hire-big')).toEqual(['[[giant]] Богатырь 30[[food]] 15[[wood]]']);
   await expect.poll(() => tile('btn-upgrade')).toEqual(['[[giant]] Улучшить: Богатырь 15[[food]] 15[[wood]]']);
-  await expect.poll(() => tile('btn-arrows')).toEqual(['[[arrows]] Стрелы 3[[wood]] 1[[stone]] [[to]] 6']);
-  await expect.poll(() => tile('btn-armor')).toEqual(['[[armor]] Броня 8[[iron]]']);
+  // (a lock on what's made at a workshop or a smithy not built yet, #326 27.10, 20)
+  await expect.poll(() => tile('btn-arrows')).toEqual(['[[arrows]] Стрелы 3[[wood]] 1[[stone]] [[to]] 6[[lock]]']);
+  await expect.poll(() => tile('btn-armor')).toEqual(['[[armor]] Броня 8[[iron]][[lock]]']);
   // change a price in the config and the button follows
   await page.evaluate(() => {
     GAME_CONFIG.settlerTypes.normal.hireCost = { food: 20, wood: 2 };

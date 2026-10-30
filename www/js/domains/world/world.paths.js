@@ -51,12 +51,10 @@ export function tickPaths() {
 // where it runs on or crosses itself it doesn't come out in darker blotches and squares). A darker worn edge, a
 // dry earth body, and a bare middle where it's walked most; each tile's centre nudged a little so the path
 // wanders, a few pebbles on the worn bits
-// (#326) What shows as path: each worn tile (strength by its wear), each the player marked by hand (full), and the tiles
-// the others close in on, filled with the same path: one with three of its four sides on path, with a path on all four
-// diagonals, or the missing corner of a block of four. Worked out again a few times a second
+// (#326) What shows as path: each worn tile (strength by its wear) and each the player marked by hand (full). Worked out
+// again a few times a second
 /** @type {{ key: string, tiles: Map<string, number> }} */
 let shown = { key: '', tiles: new Map() };
-const SIDES = [[1, 0], [-1, 0], [0, 1], [0, -1]], CORNERS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 function pathStrengths() {
   const key = `${Math.floor(game.pathTick / 10)}|${(game.pathZones || []).length}|${Object.keys(game.paths || {}).length}`;
   if (shown.key === key) return shown.tiles;
@@ -68,24 +66,8 @@ function pathStrengths() {
     const k = `${Math.floor(z.x / TILE_SIZE)},${Math.floor(z.y / TILE_SIZE)}`;
     if (!fields.has(k)) base.set(k, 1);
   }
-  const tiles = new Map(base), candidates = new Set();
-  for (const k of base.keys()) {
-    const [gx, gy] = k.split(',').map(Number);
-    for (const [dx, dy] of [...SIDES, ...CORNERS]) candidates.add(`${gx + dx},${gy + dy}`);
-  }
-  for (const k of candidates) {
-    if (base.has(k) || fields.has(k)) continue;
-    const [gx, gy] = k.split(',').map(Number);
-    const at = (dx, dy) => base.get(`${gx + dx},${gy + dy}`) || 0;
-    const sides = SIDES.map(([dx, dy]) => at(dx, dy)), corners = CORNERS.map(([dx, dy]) => at(dx, dy));
-    const block = CORNERS.some(([dx, dy]) => at(dx, 0) && at(0, dy) && at(dx, dy));
-    if (sides.filter(Boolean).length >= 3 || corners.every(Boolean) || block) {
-      const around = [...sides, ...corners].filter(Boolean);
-      tiles.set(k, Math.max(0.55, around.reduce((a, b) => a + b, 0) / around.length));
-    }
-  }
-  shown = { key, tiles };
-  return tiles;
+  shown = { key, tiles: base }; // (#326, 27.10: no tiles filled in round the worn ones any more, corners or blocks)
+  return base;
 }
 
 // Whether (x, y) shows as path (worn, marked, or filled in)
@@ -123,10 +105,12 @@ export function drawPaths() {
   };
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  stroke(all, 'rgba(105, 85, 50, 0.32)', 22);
-  stroke(all, 'rgba(176, 150, 98, 0.55)', 16);
-  if (core.length) stroke(core, 'rgba(196, 172, 122, 0.45)', 7);
-  ctx.fillStyle = 'rgba(120, 104, 80, 0.55)';
+  // (#326, 27.10) trodden grass rather than a sand road: a darker, duller earth that sits in the meadow, a soft edge of
+  // flattened grass, and only the most walked bare in the middle
+  stroke(all, 'rgba(34, 46, 22, 0.30)', 22);
+  stroke(all, 'rgba(86, 82, 54, 0.42)', 15);
+  if (core.length) stroke(core, 'rgba(112, 100, 70, 0.35)', 6);
+  ctx.fillStyle = 'rgba(70, 64, 48, 0.5)';
   for (const { gx, gy, a } of tiles) {
     const h = tileVariantHash(gx, gy);
     if (a < 0.4 || h % 3) continue;
