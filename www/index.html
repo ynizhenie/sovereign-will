@@ -104,8 +104,9 @@
                 <button class="map-option" data-map-size="custom" data-i18n="menu.mapCustom">Custom</button>
             </div>
             <div class="map-custom" hidden>
-                <input id="map-cols" class="menu-number" type="number" min="40" max="512" value="160" /> ×
-                <input id="map-rows" class="menu-number" type="number" min="40" max="512" value="160" />
+                <!-- (#326, 27.10, 18: from 96, every map a continent) -->
+                <input id="map-cols" class="menu-number" type="number" min="96" max="512" value="160" /> ×
+                <input id="map-rows" class="menu-number" type="number" min="96" max="512" value="160" />
             </div>
         </div>
 
@@ -121,6 +122,8 @@
     <div class="main-menu-content" data-screen="editor" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="menu.editor">Map editor</h1>
+        <!-- (#326, 27.10, 19) the generator's settings for a generated map, as Endless's gear -->
+        <button id="editor-open-generator" class="menu-gear" data-i18n-title="menu.generator" title="Map generator"><i class="ic ic-gear"></i></button>
         <div class="wave-settings">
             <div data-i18n="editor.newMap">New map:</div>
             <div class="wave-options">
@@ -133,6 +136,13 @@
             <div class="wave-options">
                 <button id="editor-new-empty" class="fps-option" data-i18n="editor.empty">Empty</button>
                 <button id="editor-new-generated" class="fps-option" data-i18n="editor.generated">From the generator</button>
+            </div>
+        </div>
+        <div class="seed-settings">
+            <label for="editor-seed-input" data-i18n="menu.seed">World seed</label>
+            <div class="seed-row">
+                <input id="editor-seed-input" type="text" value="default-world-seed" />
+                <button id="editor-seed-reroll" type="button" data-i18n-title="menu.newSeed" title="New random seed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
             </div>
         </div>
         <div class="wave-settings">

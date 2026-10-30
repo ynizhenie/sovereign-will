@@ -28,8 +28,8 @@ test('small, large and custom maps generate and play a wave without errors, scal
 test('the menu sets map size and a custom wave interval for the next game (#21)', async ({ page }) => {
   await openGame(page);
   await page.click('.map-option[data-map-size="custom"]');
-  await page.fill('#map-cols', '56');
-  await page.fill('#map-rows', '48');
+  await page.fill('#map-cols', '120');
+  await page.fill('#map-rows', '100');
   await page.locator('#map-rows').dispatchEvent('change');
   await page.locator('#map-cols').dispatchEvent('change');
   await page.click('.wave-option[data-wave-interval="custom"]');
@@ -37,7 +37,7 @@ test('the menu sets map size and a custom wave interval for the next game (#21)'
   await page.locator('#wave-custom').dispatchEvent('change');
   await page.click('#play-button');
   const r = await page.evaluate(() => ({ cols: COLS, rows: ROWS, width: WORLD_WIDTH, waveInterval, waveTimer }));
-  expect(r).toMatchObject({ cols: 56, rows: 48, width: 56 * 30, waveInterval: 240 });
+  expect(r).toMatchObject({ cols: 120, rows: 100, width: 120 * 30, waveInterval: 240 }); // (from 96, #326 27.10, 18)
   expect(r.waveTimer).toBeGreaterThan(230); // counting down from 240 in real time
   // out-of-range input is clamped
   await page.evaluate(() => exitToMainMenu());
