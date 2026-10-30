@@ -118,6 +118,7 @@ export function makeBattleUnit(entry) {
   if (entry.shield && canUseShield(s) && s.role !== 'pet') s.shield = true;
   if (entry.banner && (s.role === 'soldier' || s.role === 'archer')) s.banner = true; // (#279) the player gave it
   if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
+  if (s.tool === 'medbag') s.bagHerbs = GAME_CONFIG.medic.bagSize; // (#326: a medic starts with its bag full)
   game.settlers.push(s);
 }
 

@@ -6,7 +6,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
-import { getNecromancy } from '../../factions/undead/index.js';
+import { hasGear } from '../../colony/equipment/index.js';
 import { getEnemyDef } from '../waves/index.js';
 
 const config = () => GAME_CONFIG.morale;
@@ -38,13 +38,15 @@ export function getMorale(unit) {
   return unit.morale;
 }
 
-// An undead unit near a living necromancer of its side keeps its morale (the necromancer's own too)
-function heldByNecromancer(unit, side) {
-  if (factionOf(unit, side) !== 'undead') return false;
-  const range = config().necroRange;
+// (#326) Who keeps its morale whatever comes: the undead (they don't panic at all), and anyone near a captain of its side
+// (a banner: within the reach it gives its orders in), the captain too, and one it gave an order to
+function steadied(unit, side) {
+  if (side === 'boar') return false;
+  if (factionOf(unit, side) === 'undead') return true;
   const allies = side === 'settler' ? game.settlers : game.enemies;
-  const isNecro = side === 'settler' ? s => !!getNecromancy(s) : en => !!getEnemyDef(en).necromancer;
-  return allies.some(a => a.hp > 0 && isNecro(a) && Math.hypot(a.x - unit.x, a.y - unit.y) <= range);
+  const isCaptain = side === 'settler' ? s => hasGear(s, 'banner') && (s.role === 'soldier' || s.role === 'archer') : en => !!en.captain;
+  const reach = GAME_CONFIG.gear.banner.commands.reach;
+  return allies.some(a => a.hp > 0 && isCaptain(a) && (a === unit || unit.captainTarget && unit.orderedBy === a.id || Math.hypot(a.x - unit.x, a.y - unit.y) <= reach));
 }
 
 // below panicBelow: panic, until back at calmAbove (or its own base, if that's lower: the undead's)
@@ -57,7 +59,7 @@ function setMorale(unit, value, side = sideOf(unit)) {
 
 // (everyone: the armed take it whole too — a wave falling apart)
 export function shakeMorale(unit, amount, side = sideOf(unit), everyone = false) {
-  if (game.gameMode === 'menu' || unit.ghostly || heldByNecromancer(unit, side)) return; // (#326: a ghost never panics)
+  if (game.gameMode === 'menu' || unit.ghostly || steadied(unit, side)) return; // (#326: a ghost never panics)
   const armed = !everyone && side !== 'boar' && unit.weapon && unit.weapon !== 'fist';
   setMorale(unit, getMorale(unit) - amount * (armed ? config().armedShare : 1), side);
 }
@@ -96,8 +98,8 @@ function checkRout() {
   }
 }
 
-// Every step: outnumbered units are shaken, quiet ones settle back towards their base; the necromancer's
-// undead hold
+// Every step: outnumbered units are shaken, quiet ones settle back towards their base; the undead and those by a
+// captain hold
 export function tickMorale(dt) {
   if (game.gameMode === 'menu') return;
   const c = config();
@@ -107,7 +109,7 @@ export function tickMorale(dt) {
   for (const [side, units, foes] of groups) {
     for (const unit of units) {
       if (unit.morale === undefined) unit.morale = baseMorale(unit, side);
-      if (heldByNecromancer(unit, side)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side)), side); continue; }
+      if (steadied(unit, side)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side), config().calmAbove), side); continue; }
       // a panic passes by itself, foes about or not
       if (unit.panic) { setMorale(unit, unit.morale + c.panicRecoverPerSecond * dt, side); continue; }
       const around = list => { let n = 0; for (const o of list) if (o.hp > 0 && Math.abs(o.x - unit.x) <= c.nearRange && Math.abs(o.y - unit.y) <= c.nearRange && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange) n++; return n; };

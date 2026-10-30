@@ -27,7 +27,9 @@ import { resetGame } from '../../app/index.js';
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
   boars: 3, trees: 7, boulders: 4, grass: 7,
-  warehouseHp: 300 // (the fight's: the zombies can break it, #279)
+  warehouseHp: 300, // (the fight's: the zombies can break it, #279)
+  // (#326) what its warehouse holds, whatever faction the Endless screen has picked: always the same
+  stock: { wood: 30, stone: 20, herbs: 10, rope: 6, leather: 4 }
 };
 
 export const MENU_SCENES = ['hunt', 'fishing', 'fight', 'farm'];
@@ -113,6 +115,9 @@ export function enterMenuWorld(scene = '') {
   }
   game.gameMode = 'endless';
   resetGame(map);
+  // (#326) the warehouse's own, not the start of whatever faction the Endless screen has picked
+  for (const id of Object.keys(stock)) stock[id] = 0;
+  Object.assign(stock, MENU_WORLD.stock);
   game.gameMode = 'menu';
   game.settlers = [];
   if (sceneName === 'hunt') {
