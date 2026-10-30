@@ -6,7 +6,7 @@ import { hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon } from '../..
 import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef } from './gathering.rules.js';
 import { addCarryLoad, addResources, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
-import { inTerritory, ORE_KINDS } from '../../world/index.js';
+import { hasFog, inTerritory, isVisible, ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards, someEnemyNear } from '../../../engine/movement/index.js';
 import { isInSafeArea, TENT_ASSAULT_FIGHT_DISTANCE } from '../../conflict/combat/index.js';
 import { huntBoar } from '../hunting/index.js';
@@ -32,6 +32,7 @@ export function canSettlerHarvest(s, r, tick) {
     if (hasAxeTool(s.tool) || hasPickaxeTool(s.tool) || hasToolFamily(s.tool, 'hoe') || hasToolFamily(s.tool, 'medic')) return false;
     if (hasToolFamily(s.tool, 'necro') && !((r.priority || 0) > 0)) return false; // a necromancer only one pointed at (#253)
     if (r.hidden || r.hideTarget) return false;
+    if ((hasFog() && !isVisible(r.x, r.y)) || !inTerritory(r.x, r.y)) return false; // (a soldier goes looking for one in the dark, 27.10, 6)
     let hasNothing = (s.tool === 'none' && s.weapon === 'fist');
     let hasRod = (s.tool === 'rod');
     return !hasNothing && !hasRod;

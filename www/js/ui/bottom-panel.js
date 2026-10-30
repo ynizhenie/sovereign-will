@@ -55,6 +55,18 @@ export function makeTile(item, extra = '') {
   return button;
 }
 
+// A small mark in a tile's top right corner (a lock: where it's made isn't built; a card: a card opens it,
+// #255; 27.10, 20), on or off
+export function tileMark(tile, className, icon, on) {
+  let marks = tile.querySelector('.tile-marks'), mark = tile.querySelector(`.${className}`);
+  if (on && !mark) {
+    if (!marks) { marks = document.createElement('span'); marks.className = 'tile-marks'; tile.appendChild(marks); }
+    mark = document.createElement('span'); mark.className = className; mark.innerHTML = iconHtml(icon);
+    if (className === 'tile-lock') marks.prepend(mark); else marks.appendChild(mark);
+  }
+  if (!on && mark) mark.remove();
+}
+
 // A tile for a config item (category: its GAME_CONFIG section, for its card, #213)
 export function createConfigButton(item, action, category) {
   const button = makeTile(item);

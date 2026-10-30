@@ -1,7 +1,8 @@
 // Hunting a boar and carrying its carcass home
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, rand, townHall } from '../../../engine/world/index.js';
+import { hasFog, isVisible } from '../../world/index.js';
 import { getWeaponStats, isRangedWeapon } from '../../colony/equipment/index.js';
 import { finishHarvest } from '../gathering/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
@@ -9,6 +10,8 @@ import { woundBoar } from './hunting.rules.js';
 import { hasLineOfFire, performAttack } from '../../conflict/combat/index.js';
 import { faceTowards, startSwing } from '../../colony/settlers/index.js';
 import { playWorkSound } from '../../../app/index.js';
+
+const SEARCH_ROUND = 4 * TILE_SIZE; // (how far off where it really is a soldier looks for a boar in the dark)
 
 // Hunt a boar or collect its carcass
 export function huntBoar(s, boar, tick) {
@@ -42,6 +45,19 @@ export function huntBoar(s, boar, tick) {
     moveEntityTowards(s, s.patrolTarget.x, s.patrolTarget.y, s.speed * 0.5, false, dt);
     return;
   }
+  // (27.10, 6) one in the dark: where it is isn't known, only about where; looked for there, from spot to
+  // spot round it, till it's seen
+  if (hasFog() && !isVisible(boar.x, boar.y)) {
+    const guess = s.boarSearch;
+    if (!guess || guess.boar !== boar || Math.hypot(s.x - guess.x, s.y - guess.y) < 15 || Math.hypot(boar.x - guess.x, boar.y - guess.y) > SEARCH_ROUND * 1.5) {
+      const angle = rand() * Math.PI * 2, d = rand() * SEARCH_ROUND;
+      s.boarSearch = { boar, x: boar.x + Math.cos(angle) * d, y: boar.y + Math.sin(angle) * d };
+    }
+    moveEntityTowards(s, s.boarSearch.x, s.boarSearch.y, s.speed * 0.8, false, dt);
+    s.patrolTarget = null;
+    return;
+  }
+  s.boarSearch = null;
   const hunt = getWeaponStats(s, 'hunt');
   if (dist > hunt.range) {
     moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);

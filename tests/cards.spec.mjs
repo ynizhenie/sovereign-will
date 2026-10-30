@@ -30,7 +30,7 @@ test('on: only what it takes to live is open; a locked thing can\'t be built or 
       open: [isLocked('buildings', 'wall_wood'), isLocked('buildings', 'workshop'), isLocked('tools', 'axe'), isLocked('weapons', 'club')],
       locked: [isLocked('buildings', 'watchtower'), isLocked('weapons', 'spear'), isLocked('gear', 'armor')],
       mode, made, orders: craftOrders.length,
-      greyed: !!document.querySelector('#bottom-panel [data-info="buildings:watchtower"].locked .tile-lock'),
+      greyed: !!document.querySelector('#bottom-panel [data-info="buildings:watchtower"].locked .tile-card'),
       wallGreyed: !!document.querySelector('#bottom-panel [data-info="buildings:wall_wood"].locked')
     };
   });

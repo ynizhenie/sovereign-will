@@ -46,10 +46,13 @@ test('a boar in the dark isn\'t workable, in sight it is; an enemy in the fog se
     tickFog(10);
     const inLand = inTerritory(spot.x, spot.y);
     const dark = !isVisible(spot.x, spot.y);
-    const hiddenBoar = !getWorkableResources().includes(boars[0]);
+    // (27.10, 6: a soldier goes looking for it, a worker doesn't go for it)
+    const hunter = makeSettler(9, townHall.x, townHall.y, { weapon: 'spear', temporary: true });
+    const asked = { resourceKind: { get: () => 'boar' }, isWaveActive: false };
+    const hiddenBoar = !canSettlerHarvest(hunter, boars[0], asked);
     // someone goes close: it's seen, and workable
     settlers[0].x = spot.x - 100; settlers[0].y = spot.y; tickFog(10);
-    const seenBoar = getWorkableResources().includes(boars[0]);
+    const seenBoar = getWorkableResources().includes(boars[0]) && canSettlerHarvest(hunter, boars[0], asked);
     // the enemy
     const en = createNormalEnemy({ x: townHall.x + 900, y: townHall.y + 900 }, 'raider'); en.speed = 0; enemies = [en];
     const near = makeSettler(2, en.x - 90, en.y), afar = makeSettler(3, en.x - 400, en.y);
