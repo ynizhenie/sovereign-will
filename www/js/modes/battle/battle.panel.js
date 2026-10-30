@@ -12,7 +12,7 @@ import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
-  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear)]));
+  document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear)]));
   // (#326) the time of day, the weather, blighted ground
   document.querySelectorAll('[data-battle-look]').forEach(b => {
     b.classList.toggle('on', String(battle[/** @type {'time' | 'weather' | 'blight'} */ (b.dataset.battleLook)]) === b.dataset.value);
@@ -177,7 +177,7 @@ export function initBattlePanel() {
   }));
   // (the armour: off, leather, iron, off again; the shield and the banner: on or off, #298, #279)
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
-    const gear = /** @type {'armor' | 'shield' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear);
+    const gear = /** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear);
     if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
     else battle[gear] = !battle[gear];
     renderBattlePanel();

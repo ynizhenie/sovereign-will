@@ -22,8 +22,8 @@ import { renderBattlePanel } from './battle.panel.js';
 export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string, blight: boolean,
- *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, banner?: boolean, torch?: boolean,
+ *   shield: boolean, helmet: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string, blight: boolean,
+ *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, auto: boolean, savedDifficulty: string | null, theme: string }} */
@@ -37,6 +37,7 @@ export const battle = {
   big: false,         // (#326) the next unit placed is a big one (not a pet)
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
+  helmet: false,      // (#326, 27.10, 27) the next unit placed gets a helmet (not a pet)
   field: 'glade',     // glade / desert: what the battle is fought on
   time: 'day',        // (#326) morning / day / evening / night: how it looks (it stands still; nobody sleeps by it)
   weather: 'clear',   // (#326) clear / rain / fog / storm, all through the fight
@@ -99,6 +100,7 @@ export function makeBattleUnit(entry) {
     const armour = def.pet ? null : battleArmor(entry.armor); // (a pet wears nothing, #326)
     if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (entry.shield && enemyCanShield(enemyKey)) en.shield = true;
+    if (entry.helmet && !def.pet) en.helmet = true; // (#326, 27.10, 27)
     if (entry.banner && en.type === 'normal' && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     if (entry.torch && !def.pet && isDark()) en.torch = true; // (#326)
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
@@ -116,6 +118,7 @@ export function makeBattleUnit(entry) {
   const armour = s.role === 'pet' ? null : battleArmor(entry.armor); // (a pet wears nothing, #314)
   if (armour) putOnGear(s, armour.id);
   if (entry.shield && canUseShield(s) && s.role !== 'pet') s.shield = true;
+  if (entry.helmet && s.role !== 'pet') s.helmet = true; // (#326, 27.10, 27)
   if (entry.banner && (s.role === 'soldier' || s.role === 'archer')) s.banner = true; // (#279) the player gave it
   if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
   if (s.tool === 'medbag') s.bagHerbs = GAME_CONFIG.medic.bagSize; // (#326: a medic starts with its bag full)
@@ -202,7 +205,7 @@ export function battleTap(x, y) {
     battle.lineup.push({ building: battle.building, x: cx, y: cy });
   } else {
     const picked = getBattlePreset(battle.preset), big = battle.big && picked ? bigPresetOf(picked) : undefined; // (#326)
-    battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
+    battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, helmet: battle.helmet, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
   }
   resetBattleUnits();
 }

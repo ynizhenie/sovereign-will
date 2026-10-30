@@ -86,8 +86,8 @@ export const game = {
   waveSize: 0,          // how many the last wave brought (morale: a wave that's lost most of them runs, #207)
   waveRouted: false,
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
-  /** @type {{ armor: boolean, shield: boolean, leather?: boolean }} */
-  playerGear: { armor: false, shield: false, leather: false }, // armour / a shield the player has made: waves wear them too (#203)
+  /** @type {{ armor: boolean, shield: boolean, leather?: boolean, helmet?: boolean }} */
+  playerGear: { armor: false, shield: false, leather: false, helmet: false }, // armour / a shield the player has made: waves wear them too (#203)
   forests: [],          // forest centres, see placeForests()
   pendingRespawns: [],  // harvested resources waiting to grow back, see scheduleRespawn()
   /** @type {Object<string, number>} */

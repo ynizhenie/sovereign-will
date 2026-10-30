@@ -50,7 +50,7 @@ export const resourcesConfig = {
     { id: 'supplies', icon: 'arrows', members: ['arrows', 'torches'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
     { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan', 'whistle'] } },
-    { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'leather_armor', 'shield', 'banner'] } }
+    { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'leather_armor', 'shield', 'helmet', 'banner'] } }
   ],
 
   // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows

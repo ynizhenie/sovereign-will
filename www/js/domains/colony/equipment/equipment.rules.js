@@ -28,6 +28,7 @@ export const GEAR_RULES = {
   // (#298) not over iron
   leather_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
+  helmet: { canWear: () => true, first: s => s.role === 'soldier' }, // (#326, 27.10, 27)
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
