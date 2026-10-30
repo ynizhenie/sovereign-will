@@ -1,9 +1,9 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
-// The friend's #326, point 27: paths by hand, and the gaps between path tiles filled in
+// The friend's #326, point 27: paths by hand (27.10, point 22: the gaps between them no longer filled in)
 
-test('a Path tool in Zones marks tiles by hand (again: takes it off, Remove zone too); tiles the others close in on fill with the same path (#326, 27)', async ({ page }) => {
+test('a Path tool in Zones marks tiles by hand (again: takes it off, Remove zone too); no tile round them is filled in (#326, 27; 27.10, 22)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
@@ -18,19 +18,19 @@ test('a Path tool in Zones marks tiles by hand (again: takes it off, Remove zone
     // by hand: it stays, again takes it off
     mark(0, 0); out.marked = pathZones.length === 1 && at(0, 0);
     mark(0, 0); out.unmarked = pathZones.length === 0 && !at(0, 0);
-    // four tiles round one: it fills (the centre isn't grass), with the diagonals not made path by it
+    // four tiles round one: the centre stays grass
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) mark(dx, dy);
     out.plusCentre = at(0, 0); out.plusCorner = at(1, 1);
     pathZones.length = 0;
-    // three of four sides: a notch fills
+    // three of four sides: the notch stays
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1]]) mark(dx + 10, dy);
     out.notch = at(10, 0);
     pathZones.length = 0;
-    // the four diagonals: the middle fills
+    // the four diagonals: the middle stays
     for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) mark(dx + 20, dy);
     out.diagonals = at(20, 0);
     pathZones.length = 0;
-    // the missing corner of a block of four
+    // the missing corner of a block of four: stays
     for (const [dx, dy] of [[1, 0], [0, 1], [1, 1]]) mark(dx + 30, dy);
     out.corner = at(30, 0);
     pathZones.length = 0;
@@ -42,7 +42,7 @@ test('a Path tool in Zones marks tiles by hand (again: takes it off, Remove zone
     pathZones.length = 0;
     return out;
   });
-  expect(r).toEqual({ marked: true, unmarked: true, plusCentre: true, plusCorner: false, notch: true, diagonals: true, corner: true, apart: false, cleared: true });
+  expect(r).toEqual({ marked: true, unmarked: true, plusCentre: false, plusCorner: false, notch: false, diagonals: false, corner: false, apart: false, cleared: true });
   // the tool: its button sets the mode and a tap marks the tile
   const tool = await page.evaluate(() => {
     openTab('tab-farming');

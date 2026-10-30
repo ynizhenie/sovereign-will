@@ -5,13 +5,13 @@
 // weapons (#248) and supplies.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { iconHtml, makeTile, renderSheetStock } from '../../../ui/index.js';
+import { iconHtml, makeTile, renderSheetStock, tileMark } from '../../../ui/index.js';
 import { onTap, t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
 import { stock } from '../storage/index.js';
 import { isForPlayerFaction } from '../../factions/index.js';
 import { craftRecipe, giveStored, makeToStore, takeApartRecipe, takeApartStored } from './equipment.rules.js';
-import { craftPlace, getCraftOrderCost } from './equipment.crafting.js';
+import { craftPlace, findWorkplace, getCraftOrderCost } from './equipment.crafting.js';
 
 export const CRAFT_KINDS = ['tools', 'weapons', 'gear', 'supplies'];
 const PLACES = ['hand', 'workshop', 'smithy'];
@@ -106,13 +106,18 @@ export function showCraftKind(kind) {
   if (pane && pane.scrollIntoView) pane.scrollIntoView({ block: 'start' });
 }
 
-// Each frame (updateUI): how many wait in the armory, and whether there's one to hand out or take apart
+// Each frame (updateUI): how many wait in the armory, and whether there's one to hand out or take apart; a
+// lock on what's made at a workshop or a smithy not built yet (27.10, 20)
 let shown = '';
 export function updateCraftLists(force = false) {
-  const key = JSON.stringify(game.armory) + '|' + JSON.stringify(stock);
+  const built = Object.fromEntries(PLACES.map(place => [place, !!findWorkplace(place)]));
+  const key = JSON.stringify(game.armory) + '|' + JSON.stringify(stock) + '|' + JSON.stringify(built);
   if (!force && key === shown) return;
   shown = key;
   for (const r of tiles) {
+    const noPlace = !built[craftPlace(r.category, r.id)];
+    r.button.classList.toggle('no-place', noPlace);
+    tileMark(r.button, 'tile-lock', 'lock', noPlace);
     const cost = getCraftOrderCost(r.category, r.id);
     r.button.dataset.craftCost = JSON.stringify(cost);
     const stored = r.recipe ? Math.floor(stock[r.recipe] || 0) : game.armory[r.key] || 0; // (a recipe: what it makes, in the stock)

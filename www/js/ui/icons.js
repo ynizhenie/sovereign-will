@@ -143,6 +143,11 @@ export const ICONS = {
     icRound(c, '#f1c40f', 6, 14, 20, 15, 3); icRound(c, '#d4ac0d', 6, 24, 20, 5, 2);
     icCircle(c, '#7d6608', 16, 20, 2.3); icRect(c, '#7d6608', 15, 20, 2, 5);
   },
+  card: c => {
+    icRound(c, '#7d6608', 7, 3, 18, 26, 3); icRound(c, '#f5e6c4', 9, 5, 14, 22, 2);
+    const star = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.8 : 6.5; star.push([16 + Math.cos(a) * r, 16 + Math.sin(a) * r]); }
+    icFill(c, '#e67e22', star);
+  },
   menu: c => { for (const y of [8, 15, 22]) icRound(c, '#ecf0f1', 5, y, 22, 3.5, 1.7); },
   pause: c => { icRound(c, '#ecf0f1', 8, 6, 6, 20, 1.5); icRound(c, '#ecf0f1', 18, 6, 6, 20, 1.5); },
   play: c => icFill(c, '#ecf0f1', [[9, 5], [26, 16], [9, 27]]),

@@ -7,7 +7,7 @@ import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { isForPlayerFaction } from '../../domains/factions/index.js';
-import { escapeHtml, iconHtml, richText, showNotification } from '../../ui/index.js';
+import { escapeHtml, iconHtml, richText, showNotification, tileMark } from '../../ui/index.js';
 import { formatCost } from '../../domains/colony/storage/index.js';
 import { playSound } from '../../app/index.js';
 
@@ -96,15 +96,13 @@ export function pickCard(key) {
 
 // ---- On screen
 
-// The tiles of locked things greyed, a lock on each (the Building and Craft tabs)
+// The tiles of locked things greyed, a card on each (27.10, 20: a lock means where it's made isn't built) (the Building and Craft tabs)
 export function refreshLocks() {
   for (const tile of document.querySelectorAll('#bottom-panel [data-info]')) {
     const [category, id] = String(tile.dataset.info).split(':');
     const locked = isLocked(category, id);
     tile.classList.toggle('locked', locked);
-    let mark = tile.querySelector('.tile-lock');
-    if (locked && !mark) { mark = document.createElement('span'); mark.className = 'tile-lock'; mark.innerHTML = iconHtml('lock'); tile.appendChild(mark); }
-    if (!locked && mark) mark.remove();
+    tileMark(tile, 'tile-card', 'card', locked);
   }
 }
 

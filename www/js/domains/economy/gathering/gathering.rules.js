@@ -1,9 +1,9 @@
 // Resources on the map: which can be gathered, adding one, what a finished one gives, and growing back
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { forEachInRect, game, rand } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, rand } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
-import { ORE_KINDS, getFrontier, getMapCount, hasFog, isVisible, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
+import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -21,6 +21,8 @@ export function getHarvestableResources() {
   return [...getPlacedResources(false), ...game.farmPlots.filter(plot => plot.growth >= 100), ...game.boars];
 }
 
+const BOAR_STRAY = 12;
+
 // (#299) The same, only those on the base's land (inTerritory), found within the box round it: settlers
 // work only there, and a big map's thousands far off aren't gone through every tick. found(o, list): told
 // the list each one's from
@@ -33,10 +35,17 @@ export function getWorkableResources(found = () => {}) {
     const add = take(list);
     forEachInRect(list, box.x0, box.y0, box.x1, box.y1, o => { if (list !== game.trees || !o.isGrowing) add(o); });
   }
-  const plot = take(game.farmPlots), boar = take(game.boars);
+  const plot = take(game.farmPlots);
   for (const p of game.farmPlots) if (p.growth >= 100) plot(p);
-  // (#326) a boar in the dark isn't seen: nobody goes for it (they find it by walking about, and a dog's wider sight)
-  game.boars.forEach(b => { if (!hasFog() || isVisible(b.x, b.y)) boar(b); });
+  // (#326) a boar in the dark isn't seen: a worker doesn't go for it (canSettlerHarvest), a soldier goes looking
+  // for it (huntBoar; 27.10, 6). One that's been on the base's land is hunted after it ran off it too, while
+  // it's within BOAR_STRAY tiles of it
+  const stray = BOAR_STRAY * TILE_SIZE;
+  for (const b of game.boars) {
+    if (inTerritory(b.x, b.y)) b.homeZone = true;
+    else if (!b.homeZone || b.x < box.x0 - stray || b.x > box.x1 + stray || b.y < box.y0 - stray || b.y > box.y1 + stray) continue;
+    all.push(b); found(b, game.boars);
+  }
   return all;
 }
 
