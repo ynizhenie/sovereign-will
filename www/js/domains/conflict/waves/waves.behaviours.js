@@ -426,12 +426,11 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   faceTowards(en, target.x, target.y);
   // (#326) a blow at a time, as the player's own strike, not hp drained a little every tick: one every
   // cooldown of its kind's weapon, as much as that many seconds of its damage; the first at once
+  // (27.10, 16: the wait runs on whether it's in reach or not, as a settler's attackCooldown: stepping out of
+  // reach and back for a moment, as bodies jostle, gave it its next blow at once, and it won every even fight)
   const cooldown = dagger ? dagger.cooldown : enemyHitCooldown(meleeDef);
-  if (en.strikeTick !== game.pathTick - 1) en.strikeTimer = 0;
-  en.strikeTick = game.pathTick;
-  en.strikeTimer = (en.strikeTimer || 0) - dt;
-  if (en.strikeTimer > 0) return;
-  en.strikeTimer = Math.max(en.strikeTimer + cooldown, dt);
+  if (game.pathTick < (en.nextStrikeTick || 0)) return;
+  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
   startSwing(en, Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
   const blow = cooldown * shaken;
   if (en.type === 'big') {

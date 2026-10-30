@@ -7,7 +7,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { hasGear } from '../../colony/equipment/index.js';
-import { getEnemyDef } from '../waves/index.js';
+import { enemyFactionOf, getEnemyDef } from '../waves/index.js';
 
 const config = () => GAME_CONFIG.morale;
 
@@ -18,9 +18,11 @@ function sideOf(unit) {
   return 'boar';
 }
 
+// (#326, 27.10, 16: its own, not its side's: in a battle either side has any faction's units, and the green side's
+// undead panicked where the red side's didn't)
 function factionOf(unit, side = sideOf(unit)) {
-  if (side === 'settler') return getPlayerFaction().id;
-  if (side === 'enemy') return getEnemyFaction().id;
+  if (side === 'settler') { const own = Object.values(GAME_CONFIG.factions).find(f => (f.units || []).includes(unit.type)); return own ? own.id : getPlayerFaction().id; }
+  if (side === 'enemy') return unit.enemyKey ? enemyFactionOf(unit.enemyKey).id : getEnemyFaction().id;
   return 'boar';
 }
 

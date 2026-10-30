@@ -69,7 +69,8 @@ Object.assign(window.sim, (() => {
     putOnGear(cap, 'banner');
     const soldiers = [2, 3].map(i => makeSettler(i, townHall.x + 30 * i, townHall.y + 50, { weapon: 'sword', role: 'soldier' }));
     settlers = [cap, ...soldiers];
-    enemies = [8, 12, 16].map(d => { const en = createConfiguredEnemy(nearHall(d, 0), 'raider'); en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1e4; return en; });
+    // (targets only: held as in an iron trap, they neither walk nor strike, so the captain isn't busy striking back)
+    enemies = [8, 12, 16].map(d => { const en = createConfiguredEnemy(nearHall(d, 0), 'raider'); en.speed = 0; en.damage = 0; en.trapped = true; en.hp = en.maxHp = 1e4; return en; });
     run(8, { each: () => { calm(); settlers.forEach(o => { o.hunger = 999; }); } });
     const targets = soldiers.map(o => enemies.indexOf(o.captainTarget));
     return { given: targets.every(i => i >= 0), different: new Set(targets).size === targets.length, nearest: targets.includes(0) };
