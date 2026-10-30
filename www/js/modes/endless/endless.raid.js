@@ -103,7 +103,7 @@ function lineUp(at, side, i) {
 // The armed, as the camp's defenders mirror them (#279: taken when the camp appears, so it's the same camp
 // however the army changes after)
 const armyOf = settlers => settlers.filter(s => s.weapon !== 'fist' || s.role === 'soldier' || s.role === 'archer')
-  .map(s => ({ weapon: s.weapon, type: s.type, armor: s.armor || null, shield: !!s.shield }));
+  .map(s => ({ weapon: s.weapon, type: s.type, armor: s.armor || null, shield: !!s.shield, helmet: !!s.helmet }));
 
 // Each tick (Endless): a camp opens after a wave beaten, and goes when its time is up
 export function tickRaidCamp(dt) {
@@ -148,7 +148,7 @@ export function openRaidPicker(scout = false) {
     const type = GAME_CONFIG.settlerTypes[s.type] || GAME_CONFIG.settlerTypes.normal;
     const weapon = getDefinition('weapons', s.weapon) || GAME_CONFIG.weapons.fist;
     const tool = s.weapon === 'fist' && s.tool && s.tool !== 'none' ? getDefinition('tools', s.tool) : null;
-    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${armorOf(s) ? iconHtml(armorOf(s).icon) : ''}${s.shield ? iconHtml('shield') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
+    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${armorOf(s) ? iconHtml(armorOf(s).icon) : ''}${s.shield ? iconHtml('shield') : ''}${s.helmet ? iconHtml('helmet') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
     onTap(b, () => {
       if (scout) roster.querySelectorAll('.raid-unit.on').forEach(o => { if (o !== b) o.classList.remove('on'); });
       b.classList.toggle('on');
@@ -391,6 +391,7 @@ function layCamp(army, layout, wave) {
     const armour = armorOf({ armor: kind.armor === true ? 'iron' : kind.armor }); // (#298: its kind; an old save's true: iron)
     if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (kind.shield) en.shield = true;
+    if (kind.helmet) en.helmet = true; // (#326, 27.10, 27)
     en.guard = { x: at.x, y: at.y };
     game.enemies.push(en);
   }
@@ -405,7 +406,7 @@ export function campDefenders(army, wave = game.waveNum) {
   const list = army.map(s => {
     const key = isRangedWeapon(s.weapon) ? 'archer' : (GAME_CONFIG.settlerTypes[s.type] || {}).big ? 'brute' : s.weapon === 'fist' || s.weapon === 'club' ? 'club' : 'raider';
     const def = ofKey(key);
-    return { id: def.id, armor: s.armor || null, shield: !!s.shield && def.type === 'normal' && !def.ranged };
+    return { id: def.id, armor: s.armor || null, shield: !!s.shield && def.type === 'normal' && !def.ranged, helmet: !!s.helmet };
   });
   const count = Math.max(c.min, Math.round(army.length * c.perSoldier) + Math.floor((wave - 1) / c.extraEveryWaves));
   const out = [];

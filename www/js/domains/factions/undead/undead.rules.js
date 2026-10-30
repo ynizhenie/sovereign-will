@@ -135,6 +135,7 @@ function armFromCorpse(zombie, corpse, reach) {
       } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
         if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
         else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
+        else if (id === 'helmet' && !zombie.helmet) { zombie.helmet = true; taken = true; } // (#326, 27.10, 27)
       }
       if (taken) pile.items.splice(pile.items.indexOf(key), 1);
     }
