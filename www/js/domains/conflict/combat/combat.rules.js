@@ -226,11 +226,12 @@ export function updateCorpses(dt) {
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
 }
 
-// Damage to an enemy, less what its armour and shield take, as a settler's (#203)
+// Damage to an enemy, less what its armour, shield and helmet take, as a settler's (#203)
 export function damageEnemy(en, amount) {
   if (getDefinition('enemies', en.enemyKey)?.pet === 'ghost') return; // (a ghost, #314)
   let damage = armorOf(en) ? amount * (1 - armorOf(en).damageReduction) : amount;
   if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
+  if (en.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
   en.hp -= damage;
   if (damage > 0) shakeOnHit(en); // (#207)
 }

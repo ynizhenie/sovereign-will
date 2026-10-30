@@ -441,7 +441,13 @@ export function drawFigure(unit, o) {
   const hy = -r * 0.9, hr = r * 0.5;
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
   drawHeadTexture(ctx, look, unitKin(unit), o.skin, 0, hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
-  // a demon's horns through its hair
+  // (#326, 27.10, 27) a helmet: an iron cap over the top of the head, a rim round it
+  if (unit.helmet) {
+    ctx.fillStyle = '#8e9aa6'; ctx.strokeStyle = '#4d5660'; ctx.lineWidth = Math.max(0.8, hr * 0.14);
+    ctx.beginPath(); ctx.arc(0, hy - hr * 0.08, hr * 1.06, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.beginPath(); ctx.ellipse(-hr * 0.35, hy - hr * 0.62, hr * 0.28, hr * 0.14, -0.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // a demon's horns through its hair (and its helmet)
   // (#326: a big demon's curled, a ram's)
   if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35), big);
   if (o.dead) {
