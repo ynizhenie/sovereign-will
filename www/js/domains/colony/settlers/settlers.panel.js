@@ -31,7 +31,7 @@ export function renderSettlerInfo(s) {
   const items = s.carrying ? (s.carrying.items || [s.carrying]) : [];
   const carried = items.filter(item => item.amount > 0).map(item => `${Math.round(item.amount)}[[${getResourceIconName(item.type)}]]`).join(' ');
   if (carried) parts.push(`${t('info.carries')} ${carried}`);
-  if (s.orderTarget || s.orderSpot) parts.push(t(s.orderTarget ? 'info.orderedAttack' : 'info.orderedHold')); // (#326)
+  if (s.orderTarget || s.orderSpot) parts.push(t(s.orderTarget ? 'info.orderedAttack' : s.holdOrder ? 'info.orderedStill' : 'info.orderedHold')); // (#326)
   const info = document.getElementById('selected-info');
   info.hidden = false;
   document.getElementById('selected-bar').classList.add('has-settler');

@@ -104,6 +104,7 @@ function renderSelectedActions(s) {
   show('btn-all-soldiers', endless || fight);
   show('btn-add-more', endless || fight);
   show('btn-free', endless && picked.some(o => o.orderTarget || o.orderSpot));
+  show('btn-hold', endless && picked.some(o => !o.holdOrder)); // (#326)
   const possess = document.getElementById('btn-possess');
   const possessKey = s.isPossessed ? 'sel.unpossess' : 'sel.possess';
   if (possess.dataset.key !== possessKey) { possess.dataset.key = possessKey; setRichText(possess, t(possessKey)); }
