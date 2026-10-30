@@ -77,7 +77,7 @@ test('hire, upgrade and craft buttons show their cost from the config (#45)', as
   await expect.poll(() => tile('btn-hire-normal')).toEqual(['[[worker]] Рабочий 15[[food]]']);
   await expect.poll(() => tile('btn-hire-big')).toEqual(['[[giant]] Богатырь 30[[food]] 15[[wood]]']);
   await expect.poll(() => tile('btn-upgrade')).toEqual(['[[giant]] Улучшить: Богатырь 15[[food]] 15[[wood]]']);
-  await expect.poll(() => tile('btn-arrows')).toEqual(['[[arrows]] Стрелы 3[[wood]] 1[[stone]] → 6']);
+  await expect.poll(() => tile('btn-arrows')).toEqual(['[[arrows]] Стрелы 3[[wood]] 1[[stone]] [[to]] 6']);
   await expect.poll(() => tile('btn-armor')).toEqual(['[[armor]] Броня 8[[iron]]']);
   // change a price in the config and the button follows
   await page.evaluate(() => {
