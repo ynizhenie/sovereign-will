@@ -39,7 +39,7 @@ export function getBuildingColor(b) {
 export function getEnemyColor(en) {
   // (#326) behind the main menu: its own fixed colours, not the Endless screen's
   const color = game.gameMode === 'battle' ? sides.battle.red : game.gameMode === 'menu' ? getEnemyFaction().color : sides.enemy.color;
-  return en && en.type === 'big' ? shadeColor(color, -0.25) : color;
+  return en && (en.type === 'big' || en.bigBody) ? shadeColor(color, -0.25) : color;
 }
 
 // A colour made lighter (amount > 0) or darker (< 0), amount -1..1
