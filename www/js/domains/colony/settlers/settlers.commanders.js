@@ -118,6 +118,7 @@ export function captainOrders(s, tick) {
     .sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
   if (!enemy) return false;
   to.captainTarget = enemy;
+  to.orderedBy = s.id; // (#326: its morale held by its captain while it carries out the order)
   showOrder(s, to, 'swords');
   return false;
 }

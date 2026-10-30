@@ -707,7 +707,8 @@ export function drawSettlers() {
     const inHands = isCarryingInHands(s);
     const crafting = isCrafting(s);
     // (#279) fighting with a torch in hand and a weapon or tool: the torch goes to its side, it fights with that
-    const torchAside = s.torchInHand && game.pathTick - (s.struckAt ?? -1e9) < 150 && (s.weapon !== 'fist' || s.tool !== 'none');
+    // (#326) at work too (gathering, building, cooking...): the hands are on the job, the torch at its side
+    const torchAside = s.torchInHand && ((game.pathTick - (s.struckAt ?? -1e9) < 150 && (s.weapon !== 'fist' || s.tool !== 'none')) || (s.working || 0) > 0);
     const torchHeld = s.torchInHand && !torchAside;
     // (#279) at work with a hammer (building, making) or a knife (butchering, with no blade of its own), or
     // reaching into a bush: what it holds goes on its back, the hand's for the work
