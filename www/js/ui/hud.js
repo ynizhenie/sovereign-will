@@ -194,7 +194,7 @@ export function renderResourceStrip() {
     const resource = GAME_CONFIG.resources[group.members[0]];
     if (resource) html += chip(resource.icon || group.icon, `strip-${resource.id}`, resource.label);
   }
-  strip.innerHTML = `${html}<span class="strip-more">▾</span>`;
+  strip.innerHTML = `${html}<span class="strip-more">${iconHtml('more')}</span>`;
 }
 
 function updateResourceStrip() {

@@ -115,7 +115,7 @@ export function initMenuScreens() {
     saveSetting('showFps', button.dataset.showFps);
     applyShowFps(button.dataset.showFps);
   }));
-  // (#326) the languages: in Settings each with its flag and its name, and by the Settings button a square of the flags
+  // (#326) the languages: in Settings each with its flag and its name, and by the Settings button the flag of the one now
   const markLanguage = () => { document.querySelectorAll('[data-language]').forEach(b => b.classList.toggle('active', b.dataset.language === currentLanguage)); renderMusicPlayer(); };
   const flagBox = document.getElementById('menu-flags');
   for (const [code, language] of Object.entries(LANGUAGES)) {
@@ -124,17 +124,16 @@ export function initMenuScreens() {
     button.dataset.language = code;
     button.innerHTML = `${flagHtml(code)}<span>${language.label}</span>`;
     languageOptions.appendChild(button);
-    onTap(button, () => { setLanguage(code); markLanguage(); });
-    const small = document.createElement('button');
-    small.className = 'flag-button';
-    small.dataset.language = code;
-    small.title = language.label;
-    small.setAttribute('aria-label', language.label);
-    small.innerHTML = flagHtml(code);
-    flagBox.appendChild(small);
-    onTap(small, () => { setLanguage(code); markLanguage(); });
-    markLanguage();
+    onTap(button, () => { setLanguage(code); markLanguage(); showFlag(); });
   }
+  // (#326) by the Settings button one flag, the language's now: a tap on it is the next language
+  const flagButton = document.createElement('button');
+  flagButton.className = 'flag-button';
+  flagBox.appendChild(flagButton);
+  const showFlag = () => { flagButton.innerHTML = flagHtml(currentLanguage); flagButton.title = LANGUAGES[currentLanguage].label; flagButton.setAttribute('aria-label', LANGUAGES[currentLanguage].label); };
+  onTap(flagButton, () => { const codes = Object.keys(LANGUAGES); setLanguage(codes[(codes.indexOf(currentLanguage) + 1) % codes.length]); markLanguage(); showFlag(); });
+  showFlag();
+  markLanguage();
   markAudioOptions();
   document.querySelectorAll('[data-sound]').forEach(b => onTap(b, () => { setSoundOn(b.dataset.sound === 'on'); markAudioOptions(); }));
   document.querySelectorAll('[data-music]').forEach(b => onTap(b, () => { setMusicOn(b.dataset.music === 'on'); markAudioOptions(); }));

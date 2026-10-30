@@ -266,7 +266,7 @@ export const ukLanguage = {
       'menu.editor': 'Редактор мап',
       'menu.settings': 'Налаштування',
       'menu.exit': 'Вийти',
-      'menu.back': '← Назад',
+      'menu.back': '[[back]] Назад',
       'menu.difficulty': 'Складність:',
       'menu.normal': 'Звичайна',
       'menu.hard': 'Важка',

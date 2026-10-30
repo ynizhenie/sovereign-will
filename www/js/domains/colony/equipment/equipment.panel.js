@@ -63,7 +63,7 @@ function renderKind(kind) {
       const wrap = document.createElement('div');
       wrap.className = 'tile-wrap';
       wrap.dataset.item = key;
-      const tile = makeTile(item, recipe ? ` → ${Object.values(item.produces)[0]}` : '');
+      const tile = makeTile(item, recipe ? ` [[to]] ${Object.values(item.produces)[0]}` : '');
       tile.dataset.info = key;
       tile.id = category === 'recipes' && item.id !== 'arrows' ? `btn-recipe-${item.id}` : `btn-${item.id}`; // (as the old buttons were)
       onTap(tile, () => (recipe ? craftRecipe(item.id) : makeToStore(category, item.id)));
