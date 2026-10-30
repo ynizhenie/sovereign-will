@@ -95,6 +95,7 @@ export const equipmentConfig = {
     rope: { id: 'rope', icon: 'rope', kind: 'supplies', madeBy: 'hand', cost: { herbs: 2 }, produces: { rope: 2 }, disassemble: true },
     torch: { id: 'torch', icon: 'torch', kind: 'supplies', madeBy: 'hand', cost: { wood: 1, rope: 1 }, produces: { torches: 1 }, disassemble: true },
     // (#326) firewood to order: as much as a woodcutter chops of it (GAME_CONFIG.firewood: `makes` of one wood)
-    firewood: { id: 'firewood', icon: 'firewood', kind: 'supplies', madeBy: 'hand', cost: { wood: 1 }, produces: { firewood: 2 } }
+    // (#326) chopped by one with an axe only; taken apart, back into wood
+    firewood: { id: 'firewood', icon: 'firewood', kind: 'supplies', madeBy: 'hand', cost: { wood: 1 }, produces: { firewood: 2 }, tool: 'axe', disassemble: true }
   }
 };

@@ -10,9 +10,9 @@ Object.assign(window.sim, (() => {
     sides.player.faction = 'undead'; sides.player.color = '#9b59b6'; sides.enemy.color = '#e8572a';
     start(seed); clearResources();
     const r = { forUndead: isForPlayerFaction(GAME_CONFIG.resources.firewood), recipeListed: isForPlayerFaction(GAME_CONFIG.recipes.firewood) };
-    // ordered in Craft: made by hand at the hall
+    // ordered in Craft: made by hand at the hall (#326, 27.10: by one with an axe)
     stock.wood = 5; stock.firewood = 0;
-    settlers = [makeSettler(1, townHall.x + 40, townHall.y)];
+    settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'axe' })];
     boars = []; boarRespawnTimer = 999; pendingRespawns = []; waveTimer = 999;
     craftRecipe('firewood');
     run(15, { each: () => { waveTimer = 999; } });
