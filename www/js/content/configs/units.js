@@ -28,6 +28,8 @@ export const unitsConfig = {
     { id: 'necromancer', size: 'normal', weapon: 'fist', tool: 'necro_staff' },
     { id: 'big_fist', size: 'big', weapon: 'fist' }, { id: 'big_club', size: 'big', weapon: 'club' }, { id: 'big_sword', size: 'big', weapon: 'sword' }, { id: 'big_spear', size: 'big', weapon: 'spear' },
     { id: 'big_iron_sword', size: 'big', weapon: 'iron_sword' }, { id: 'big_iron_spear', size: 'big', weapon: 'iron_spear' }, // (#326: the big ones are picked by the panel's Big switch)
+    { id: 'big_bow', size: 'big', weapon: 'bow' }, { id: 'big_crossbow', size: 'big', weapon: 'crossbow' }, { id: 'big_medic', size: 'big', weapon: 'fist', tool: 'medbag' },
+    { id: 'big_necromancer', size: 'big', weapon: 'fist', tool: 'necro_staff' }, // (27.10, 32: any of them big, but a pet)
     { id: 'pet', size: 'pet', weapon: 'fist' }
   ],
 

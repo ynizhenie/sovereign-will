@@ -76,7 +76,7 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const enemy = {
     look: definition.pet ? newPetLook(definition.pet) : newLook(), // (#306: a man or a woman, one of their looks; a pet's its own, #314)
     ghostly: definition.pet === 'ghost', // (#314: through everyone)
-    type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius,
+    type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius, bigBody: !!definition.big,
     hp: definition.hp, maxHp: definition.hp,
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
@@ -95,7 +95,7 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
 export function enemyPlayerUnit(definition) {
   const faction = enemyFactionOf(definition.id);
   const units = faction.units || ['normal', 'big'];
-  const type = definition.pet || (definition.type === 'big' ? units[1] || units[0] : units[0]);
+  const type = definition.pet || (definition.type === 'big' || definition.big ? units[1] || units[0] : units[0]);
   const kind = GAME_CONFIG.settlerTypes[type] || GAME_CONFIG.settlerTypes.normal;
   return { faction: faction.id, type: kind.id, weapon: definition.weapon || 'fist', tool: definition.tool || (definition.necromancer ? 'necro_staff' : null) };
 }
@@ -171,18 +171,22 @@ export function presetEnemyKey(factionId, presetId) {
   const key = `${factionId}_${presetId}`;
   if (GAME_CONFIG.enemies[key]) return key;
   const melee = def => !def.pet && !def.ranged && !def.healer && !def.necromancer;
-  const template = unit.tool === 'medbag' ? GAME_CONFIG.enemies.raider_medic
-    : isRangedWeapon(unit.weapon) ? own.find(def => def.ranged)
-    : preset.size === 'big' ? own.find(def => def.type === 'big')
-    : own.find(def => melee(def) && def.type === 'normal' && def.weapon === 'sword') || own.find(def => melee(def) && def.type === 'normal');
+  // (27.10, 32) an archer, a medic or a necromancer behaves as its trade's, a big one of them in a big body
+  const trade = unit.tool === 'medbag' ? GAME_CONFIG.enemies.raider_medic
+    : unit.tool === 'necro_staff' ? own.find(def => def.necromancer) || GAME_CONFIG.enemies.undead_necromancer
+    : isRangedWeapon(unit.weapon) ? own.find(def => def.ranged) : null;
+  const bigOne = own.find(def => def.type === 'big');
+  const template = trade || (preset.size === 'big' ? bigOne
+    : own.find(def => melee(def) && def.type === 'normal' && def.weapon === 'sword') || own.find(def => melee(def) && def.type === 'normal'));
   if (!template) return null;
+  const body = trade && preset.size === 'big' && bigOne ? { big: true, radius: bigOne.radius } : {};
   const weapon = getDefinition('weapons', unit.weapon);
   const reach = preset.size === 'normal' && weapon.combat.range ? Math.max(6, weapon.combat.range - 30) : template.reach;
   // (#326) a crossbow's own shot, not the archer template's bow: farther, harder, slower to load
   const ranged = unit.weapon === 'crossbow'
     ? { range: weapon.combat.approach, keepAway: Math.round(weapon.combat.approach * 0.85), cooldown: weapon.combat.cooldown, arrowSpeed: weapon.combat.projectileSpeed, arrowLife: weapon.combat.projectileLife }
     : undefined;
-  GAME_CONFIG.enemies[key] = { ...template, id: key, faction: factionId, weapon: unit.weapon, tool: unit.tool || undefined, reach, waveKey: undefined, buildsTents: false, ...(ranged ? { ranged } : {}) };
+  GAME_CONFIG.enemies[key] = { ...template, ...body, id: key, faction: factionId, weapon: unit.weapon, tool: unit.tool || undefined, reach, waveKey: undefined, buildsTents: false, ...(ranged ? { ranged } : {}) };
   return key;
 }
 

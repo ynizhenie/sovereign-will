@@ -129,7 +129,7 @@ export function tickMorale(dt) {
 // shakes it), anyone else at once (GAME_CONFIG.pets.ghost)
 export function ghostScare(unit, side = sideOf(unit)) {
   const g = GAME_CONFIG.pets.ghost, now = game.pathTick;
-  const big = side === 'enemy' ? unit.type === 'big' : !!(getDefinition('settlerTypes', unit.type) || {}).big;
+  const big = side === 'enemy' ? unit.type === 'big' || !!unit.bigBody : !!(getDefinition('settlerTypes', unit.type) || {}).big;
   unit.ghostHits = (unit.ghostHitsUntil > now ? unit.ghostHits || 0 : 0) + 1;
   unit.ghostHitsUntil = now + g.withinSeconds * 60;
   if (unit.ghostHits >= (big ? g.bigNeeds : 1)) { unit.ghostHits = 0; shakeMorale(unit, 9999, side, true); }

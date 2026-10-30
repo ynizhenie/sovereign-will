@@ -838,8 +838,8 @@ body[data-hud="endless"] .top-wave, body[data-hud="battle"] .top-battle, body[da
   color: #fff;
 }
 .battle-score { font-variant-numeric: tabular-nums; }
-.battle-score .green { color: #2ecc71; }
-.battle-score .red { color: #e74c3c; }
+.battle-score.green { color: #2ecc71; }
+.battle-score.red { color: #e74c3c; }
 /* (#326) the battle's music: a row per faction, its name then its tracks */
 #battle-music .battle-music-row { flex-wrap: wrap; justify-content: center; align-items: center; }
 #battle-music .battle-music-row .sub-tab { flex: 0 0 auto; padding: 4px 10px; }
