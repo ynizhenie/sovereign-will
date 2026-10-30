@@ -12,6 +12,7 @@ import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
 import { setMode } from './map-input.js';
 import { refreshAffordability } from './widgets.js';
+import { updateUnitsTab } from './units-tab.js';
 import { closeSheet, getOpenSheet, toggleSheet } from './sheets.js';
 
 // the colony sheet's tab (the last one opened, even with the sheet closed)
@@ -32,6 +33,7 @@ function showTab(tabId) {
   activeTab = tabId;
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === tabId));
   renderSheetStock(tabId);
+  if (tabId === 'tab-units') updateUnitsTab(true); // (at once, paused too)
 }
 
 // A dock button: back to Point (#80), and its tab's sheet opens, or closes if it's the one open (a picked
