@@ -2,7 +2,7 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { initEndlessCards, isLocked, pickCard, syncCards, tickCards } from './endless.cards.js';
-export { initEndlessGenerator } from './endless.generator.js';
+export { initEndlessGenerator, openGenerator } from './endless.generator.js';
 export { drawRaidZone, enterCamp, isInCamp, isRaidPicking, isRaiding, leaveCamp, openRaidPicker, raid, raidAction, raidOrders, raidTap, resetRaid, restWhileRaid, startRaid, tickRaid, tickRaidCamp } from './endless.raid.js';
 export { initEndlessRules, isCameraLocked, isDefeated, updateDefeat } from './endless.rules.js';
 export { initEndlessSaves } from './endless.saves.js';

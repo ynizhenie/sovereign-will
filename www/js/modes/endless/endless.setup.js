@@ -31,7 +31,7 @@ export const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom
 // map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
 export const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
 
-export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 40), rows: clampInput(mapRowsInput, 40) }; };
+export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 160), rows: clampInput(mapRowsInput, 160) }; };
 
 // difficulty (Endless)
 export const difficultyOptions = document.querySelectorAll('.difficulty-option');
