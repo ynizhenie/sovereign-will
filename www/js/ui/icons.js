@@ -740,6 +740,13 @@ export const ICONS = {
     icRect(c, '#5d6d7e', 12, 2, 8, 7); c.strokeStyle = '#2c3e50'; c.lineWidth = 1; c.strokeRect(12.5, 2.5, 7, 6);
     icCircle(c, 'rgba(230, 126, 34, 0.85)', 16, 19, 6); icCircle(c, '#f9e79f', 16, 20, 2.5);
   },
+  // (#326, 27.10, 26) a mine: a dark way into the rock under a timber frame
+  mine: c => {
+    icRound(c, '#5d6d7e', 2, 6, 28, 24, 4); icRound(c, '#7f8c8d', 4, 8, 24, 20, 3);
+    icFill(c, '#1b1b1b', [[9, 29], [9, 15], [16, 10], [23, 15], [23, 29]]);
+    icRect(c, '#8e5a2b', 7, 13, 3, 16); icRect(c, '#8e5a2b', 22, 13, 3, 16); icRect(c, '#a0522d', 6, 11, 20, 3);
+    icCircle(c, '#c0392b', 13, 25, 1.6); icCircle(c, '#34495e', 18, 26, 1.6);
+  },
   // (#306) as in the world: an open storehouse, a plank floor, a back wall and a roof over its back half
   warehouse: c => {
     icRect(c, '#8a6a45', 3, 4, 26, 25); c.strokeStyle = '#5c3a17'; c.lineWidth = 1; c.strokeRect(3.5, 4.5, 25, 24);

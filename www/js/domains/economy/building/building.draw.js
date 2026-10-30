@@ -263,6 +263,8 @@ export function drawBuildings() {
       drawWorkshopArt(b.x, b.y); // (#248)
     } else if (b.type === 'smithy') {
       drawSmithyArt(b.x, b.y); // (#211)
+    } else if (b.type === 'mine') {
+      drawIcon(ctx, 'mine', b.x, b.y, 28); // (#326, 27.10, 26: over the source)
     } else if (b.type === 'fish_trap') {
       // a fish trap (#199): a basket, a fish mark for each fish waiting in it
       drawIcon(ctx, 'fish_trap', b.x, b.y, 26);
