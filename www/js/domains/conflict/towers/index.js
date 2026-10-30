@@ -2,4 +2,4 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { guardTower } from './towers.behaviours.js';
-export { assignTowerArchers } from './towers.rules.js';
+export { assignTowerArchers, findTowerExit } from './towers.rules.js';

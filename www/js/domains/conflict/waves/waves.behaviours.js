@@ -12,6 +12,7 @@ import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
+import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
 import { enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
 
@@ -113,6 +114,7 @@ const PLATFORM_TILES = 12;
 function enemyOnPlatform(en, enemyDef, dt) {
   if (game.gameMode !== 'battle' || !game.settlers.length) { en.platform = null; return false; }
   if (en.platform && !game.buildings.includes(en.platform)) en.platform = null;
+  if (!en.platform && game.pathTick < (en.platformRestUntil || 0)) return false; // (down a while ago with nothing in reach)
   if (!en.platform) {
     const taken = new Set(game.enemies.map(o => o.platform).filter(Boolean));
     en.platform = game.buildings.filter(b => b.type === 'watchtower' && b.side === 'red' && !taken.has(b) && Math.hypot(b.x - en.x, b.y - en.y) < PLATFORM_TILES * 30)
@@ -125,9 +127,22 @@ function enemyOnPlatform(en, enemyDef, dt) {
     return true;
   }
   en.x = tower.x; en.y = tower.y;
-  const target = game.settlers.filter(s => s.hp > 0 && !isUntouchable(s) && hasLineOfFire(tower.x, tower.y, s.x, s.y, true))
+  const range = shotOf(enemyDef).range * (tower.tower.reach || 1);
+  const target = game.settlers.filter(s => s.hp > 0 && !isUntouchable(s) && Math.hypot(s.x - tower.x, s.y - tower.y) < range && hasLineOfFire(tower.x, tower.y, s.x, s.y, true))
     .sort((a, b) => Math.hypot(a.x - tower.x, a.y - tower.y) - Math.hypot(b.x - tower.x, b.y - tower.y))[0];
-  if (target) enemyShoot(en, enemyDef, target, Math.hypot(target.x - tower.x, target.y - tower.y), true, dt, tower);
+  // (#326) nothing in reach for a while (the player's archer up its own platform out of reach, say): down, and not up again
+  // for a while: neither side waits for the other for ever
+  if (!target) {
+    en.platformIdle = (en.platformIdle || 0) + dt;
+    if (en.platformIdle > (tower.tower.idleSeconds || 4)) {
+      const down = findTowerExit(tower, en);
+      Object.assign(en, { x: down.x, y: down.y, path: null, platformIdle: 0, platform: null, platformRestUntil: game.pathTick + (tower.tower.restSeconds || 10) * 60 });
+      return false;
+    }
+    return true;
+  }
+  en.platformIdle = 0;
+  enemyShoot(en, enemyDef, target, Math.hypot(target.x - tower.x, target.y - tower.y), true, dt, tower);
   return true;
 }
 
@@ -227,7 +242,7 @@ function chooseEnemyTarget(en) {
   // hit it a moment ago; else it knows just its goal, the town hall
   const fog = GAME_CONFIG.fog, foggy = hasFog();
   const def = getEnemyDef(en);
-  const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? def.ranged.range + 30 : 0);
+  const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? shotOf(def).range + 30 : 0);
   const sees = (s, d) => !foggy || d <= sight || (en.struckBy === s && game.pathTick - (en.struckTick || -Infinity) < fog.enemyRememberSeconds * 60);
   game.settlers.forEach(s => {
     if (isUntouchable(s)) return; // (a ghost: nothing to hit, #314)
@@ -283,21 +298,29 @@ function chooseEnemyAttack(en, enemyDef, target) {
   return { shooting, meleeDef, moveTarget };
 }
 
+// (#326) An archer's shot as the player's own with that bow or crossbow: its reach, its arrows' speed and flight (its
+// damage and rate are already the player's unit's, see asPlayerUnit); a kind's own numbers only for a weapon with none
+function shotOf(enemyDef) {
+  const ranged = enemyDef.ranged, w = (getDefinition('weapons', enemyDef.weapon) || {}).combat;
+  if (!w || !w.projectileSpeed) return { range: ranged.range, arrowSpeed: ranged.arrowSpeed, arrowLife: ranged.arrowLife, cooldown: ranged.cooldown };
+  return { range: w.approach, arrowSpeed: w.projectileSpeed, arrowLife: w.projectileLife, cooldown: w.cooldown };
+}
+
 // An archer's shot, when its cooldown is over and it has a clear line within range
 // (fromTower: up a platform, #326: its reach, over the walls)
 /** @param {any} [fromTower] */
 function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = null) {
-  const ranged = enemyDef.ranged;
+  const shot = shotOf(enemyDef), reach = fromTower ? fromTower.tower.reach || 1 : 1;
   en.attackCooldown = (en.attackCooldown || 0) - dt;
-  if (clearShot && minDist < (fromTower ? fromTower.tower.range : ranged.range) && en.attackCooldown <= 0) {
+  if (clearShot && minDist < shot.range * reach && en.attackCooldown <= 0) {
     let angle = Math.atan2(target.y - en.y, target.x - en.x);
     const bolt = enemyDef.weapon === 'crossbow';
     playSound(bolt ? 'crossbow' : 'bow', en);
-    game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * ranged.arrowSpeed, vy: Math.sin(angle) * ranged.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
-      life: fromTower ? ranged.arrowLife * fromTower.tower.range / ranged.range : ranged.arrowLife, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt });
+    game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * shot.arrowSpeed, vy: Math.sin(angle) * shot.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
+      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
-    en.attackCooldown = en.shotCooldown || ranged.cooldown; // (a bow's rate in a settler's hands, #255)
+    en.attackCooldown = en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
     en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle') en.arrows--;
   }

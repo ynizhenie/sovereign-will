@@ -754,6 +754,7 @@ export const ruLanguage = {
       'battle.cancel': '[[close]] Отменить бой',
       'battle.cat.buildings': 'Постройки',
       'battle.armor': '[[armor]] Броня',
+      'battle.noArmor': '[[no]] Без брони',
       'battle.shield': '[[shield]] Щит',
       'battle.big': 'Большой',
       'battle.clearGreen': 'Убрать всех слева',
