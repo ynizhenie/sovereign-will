@@ -20,7 +20,7 @@ let clock = 1000; // seconds of game played (tickVoices): the gaps are in game t
 
 // The voice of a unit: by its kind, an enemy's by its look
 function voiceOf(unit) {
-  const kind = unit.enemyKey ? (unit.type === 'big' ? (unit.enemyKey.startsWith('undead_') ? 'big_zombie' : unit.enemyKey.startsWith('demon_') ? 'demon' : 'big')
+  const kind = unit.enemyKey ? (unit.type === 'big' || unit.bigBody ? (unit.enemyKey.startsWith('undead_') ? 'big_zombie' : unit.enemyKey.startsWith('demon_') ? 'demon' : 'big')
     : unit.enemyKey.startsWith('undead_') ? 'zombie' : unit.enemyKey.startsWith('demon_') ? 'imp' : 'normal') : unit.type;
   return PITCH[kind] || PITCH.normal;
 }

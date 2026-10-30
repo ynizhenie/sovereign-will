@@ -264,11 +264,12 @@
       </div>
       <!-- battle: placing or fighting, and how many on each side -->
       <div class="top-battle">
-        <!-- (#326) clearing each side: a broom on its colour, either side of the phase -->
+        <!-- (#326) each side's count and its broom on its colour, either side of the phase (27.10, 33) -->
+        <b class="battle-score green" id="battle-count-green">0</b>
         <button class="btn battle-clear battle-setup-only" id="battle-clear-green" data-i18n-title="battle.clearGreen" title="Clear the left side"><i class="ic ic-broom"></i></button>
         <span id="battle-phase-label" data-i18n="battle.phase.setup">Placing</span>
         <button class="btn battle-clear battle-setup-only" id="battle-clear-red" data-i18n-title="battle.clearRed" title="Clear the right side"><i class="ic ic-broom"></i></button>
-        <span class="battle-score"><b class="green" id="battle-count-green">0</b> : <b class="red" id="battle-count-red">0</b></span>
+        <b class="battle-score red" id="battle-count-red">0</b>
       </div>
       <!-- the editor: the map's name and size (a tap opens the map's sheet) -->
       <button class="top-editor" data-action="toggleSheet" data-arg="editor-map">
