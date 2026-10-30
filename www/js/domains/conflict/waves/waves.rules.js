@@ -283,7 +283,7 @@ export function getWaveArmyFactor() {
   return Math.max(army.min, Math.min(army.max, 1 + (units - army.base) * army.perUnit));
 }
 
-// Armour and a shield on a wave enemy, by chance, once the player has made them (GAME_CONFIG.enemyGear)
+// Armour, a shield and a helmet on a wave enemy, by chance, once the player has made them (GAME_CONFIG.enemyGear)
 function dressForWave(enemy, def) {
   const gear = GAME_CONFIG.enemyGear;
   const chance = Math.min(gear.max, (game.waveNum - gear.fromWave + 1) * gear.perWave);
@@ -296,6 +296,7 @@ function dressForWave(enemy, def) {
     enemy.hp = enemy.maxHp;
   }
   if (game.playerGear.shield && def.type === 'normal' && !def.ranged && !def.healer && !def.necromancer && rand() < chance) enemy.shield = true;
+  if (game.playerGear.helmet && rand() < chance) enemy.helmet = true; // (#326, 27.10, 27)
 }
 
 export function startNextWave() {
@@ -506,6 +507,7 @@ export function dropLoot(en) {
   if (weapon && weapon !== 'fist' && GAME_CONFIG.weapons[weapon]) held.push(['weapons', weapon]);
   if (armorOf(en)) held.push(['gear', armorOf(en).id]);
   if (en.shield) held.push(['gear', 'shield']);
+  if (en.helmet) held.push(['gear', 'helmet']);
   // the thing itself, each with itemChance, lying apart (#232: no more bundles of a share of their cost)
   held.forEach(([category, id], i) => {
     if (rand() >= loot.itemChance) return;

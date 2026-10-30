@@ -49,6 +49,7 @@
  * @property {boolean} [quiver]
  * @property {number} [arrows]
  * @property {boolean} [shield]
+ * @property {boolean} [helmet]  (#326, 27.10, 27)
  * @property {string|boolean} [armor]
  * @property {boolean} [backpack]
  * @property {boolean} [wateringCan]
@@ -204,6 +205,7 @@
  * @property {boolean} [deadNoted]     its fall has shaken (and heartened) those around
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
  * @property {boolean} [shield]
+ * @property {boolean} [helmet]  (#326, 27.10, 27)
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
@@ -362,7 +364,7 @@
  * @property {number} enemyArrowStock
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
- * @property {{ armor: boolean, shield: boolean, leather?: boolean }} playerGear  armour / a shield the player has made
+ * @property {{ armor: boolean, shield: boolean, leather?: boolean, helmet?: boolean }} playerGear  armour / a shield / a helmet the player has made
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  * @property {Object<string, number>} paths  'gx,gy' -> how worn its ground is (#248)

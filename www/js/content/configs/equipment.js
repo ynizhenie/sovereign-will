@@ -67,6 +67,8 @@ export const equipmentConfig = {
   gear: {
     backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, rope: 2 }, extraLoads: 1 },
     shield: { id: 'shield', icon: 'shield', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
+    // (#326, 27.10, 27) a helmet: anyone but a pet, damageReduction off every hit, on top of armour and a shield
+    helmet: { id: 'helmet', icon: 'helmet', cost: { iron: 3 }, damageReduction: 0.15 },
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35, armorKind: 'iron' },
     // (#298) leather armour: weaker than iron (armorKind: what `armor` a unit wearing it has), made at a workshop
     leather_armor: { id: 'leather_armor', icon: 'leather_armor', cost: { leather: 6 }, hpBonus: 25, damageReduction: 0.18, armorKind: 'leather' },

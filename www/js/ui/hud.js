@@ -340,7 +340,7 @@ export function renderSelectedGear(s) {
   if (s) {
     if (s.tool && s.tool !== 'none') items.push(['disarmSettler', 'tool', s.tool]);
     if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
-    for (const id of ['armor', 'leather_armor', 'shield', 'backpack', 'wateringCan', 'whistle', 'banner', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
+    for (const id of ['armor', 'leather_armor', 'shield', 'helmet', 'backpack', 'wateringCan', 'whistle', 'banner', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
   }
   const key = `${s ? s.id : ''}|${items.map(i => i[2]).join(',')}|${s && s.targetEquipment ? 1 : 0}`;
   if (key === shownGear) return;

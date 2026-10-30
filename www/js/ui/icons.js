@@ -457,6 +457,13 @@ export const ICONS = {
     icLine(c, '#5d4037', 1.2, [[16, 5], [16, 27]]); icLine(c, '#5d4037', 1.2, [[5, 16], [27, 16]]);
     icCircle(c, '#b0bec5', 16, 16, 4);
   },
+  // (#326, 27.10, 27) an iron cap with a rim and a nose guard
+  helmet: c => {
+    c.fillStyle = '#95a5a6'; c.strokeStyle = '#4d5660'; c.lineWidth = 1.6;
+    c.beginPath(); c.arc(16, 19, 12, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+    icRect(c, '#707b7c', 3, 18, 26, 3.5); icRect(c, '#707b7c', 14.5, 19, 3, 9);
+    icEllipse(c, 'rgba(255, 255, 255, 0.4)', 11, 12, 4, 2, -0.5);
+  },
   armor: c => {
     icFill(c, '#95a5a6', [[9, 4], [13, 6], [19, 6], [23, 4], [29, 9], [25, 14], [25, 28], [7, 28], [7, 14], [3, 9]]);
     icFill(c, '#bdc3c7', [[13, 6], [19, 6], [16, 13]]);

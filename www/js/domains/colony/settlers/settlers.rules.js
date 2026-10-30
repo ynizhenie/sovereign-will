@@ -180,6 +180,7 @@ export function damageSettler(settler, amount, attacker = null) {
   if (isUntouchable(settler)) return; // (a ghost, #314)
   let damage = armorOf(settler) ? amount * (1 - armorOf(settler).damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
+  if (settler.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
   const wasWell = settler.hp >= settler.maxHp * 0.3;
   settler.hp -= damage;
   if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); shakeOnHit(settler); }
