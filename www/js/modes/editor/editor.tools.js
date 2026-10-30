@@ -122,6 +122,11 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   }
   // the town hall's own tiles stay free
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return;
+  // (#326, 27.10, 26) a mine goes on a source, which stays under it
+  if (tool.building && GAME_CONFIG.buildings[tool.building].onSpawner) {
+    if (game.naturalRocks.some(r => r.oreSpawner && r.x === x && r.y === y) && !game.buildings.some(b => b.x === x && b.y === y)) game.buildings.push(makeBuilt(tool.building, x, y));
+    return;
+  }
   clearEditorTile(x, y);
   if (tool.id === 'water') {
     game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);

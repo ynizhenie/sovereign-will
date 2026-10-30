@@ -19,7 +19,7 @@ test('what lies where is saved and loaded (#248)', () => {
   expect(sim.storesSaved({})).toEqual({ same: true });
 });
 
-test('an ore spawner marked with Point is mined for its ore and never used up; unmarked, nobody mines it (#248)', () => {
+test('an ore spawner with a mine on it is mined for its ore and never used up; without one, nobody mines it (#248; #326, 27.10, 26)', () => {
   expect(sim.mineSpawner({})).toEqual({ ore: true, standing: true });
   expect(sim.mineSpawner({ marked: false })).toEqual({ ore: false, standing: true });
 });
