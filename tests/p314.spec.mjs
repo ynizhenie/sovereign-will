@@ -99,7 +99,7 @@ test('a ghost hovers by a grave, can\'t be hurt, flies into an enemy that comes 
     const byGrave = Math.hypot(ghost.x - grave.x, ghost.y - grave.y);
     damageSettler(ghost, 999);
     const unhurt = ghost.hp === ghost.maxHp;
-    const en = createNormalEnemy({ x: ghost.x + 100, y: ghost.y }, 'undead_zombie'); en.speed = 0; enemies = [en];
+    const en = createNormalEnemy({ x: ghost.x + 100, y: ghost.y }, 'raider'); en.speed = 0; enemies = [en]; // (a living one: the undead never panic, #326)
     let panicked = false;
     for (let f = 0; f < 300 && !panicked; f++) { update(1 / 60); panicked = !!en.panic; }
     const gone = ghost.ghostGone > 0;
