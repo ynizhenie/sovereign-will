@@ -28,8 +28,8 @@ export const mapConfig = {
       work: { seconds: { pickaxe: 3.0, iron_pickaxe: 2.0 } } },
     coal_ore: { list: 'coalOres', blocksArrows: true, tool: 'pickaxe', hp: 5, yield: { coal: 3 }, regrow: 'spawner',
       work: { seconds: { pickaxe: 2.5, iron_pickaxe: 1.7 } } },
-    // spawnerWork (#248): an ore spawner (rock too) marked is mined for one of its ore every `seconds`, never
-    // used up
+    // spawnerWork (#248): an ore spawner (rock too) with a mine on it (#326, 27.10, 26) is mined for one of its ore
+    // every `seconds`, never used up
     natural_rock: { list: 'naturalRocks', blocksArrows: true, tool: 'pickaxe', markOnly: true, hp: 100, yield: { stone: 15 }, clearsPath: true,
       work: { drain: { pickaxe: 25, iron_pickaxe: 38 } }, spawnerWork: { seconds: { pickaxe: 9, iron_pickaxe: 6 } } },
     stick: { list: 'sticks', hp: 1, yield: { wood: 1 }, regrow: 'forest', work: { pickup: true } },
