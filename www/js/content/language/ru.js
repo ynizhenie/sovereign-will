@@ -266,7 +266,7 @@ export const ruLanguage = {
       'menu.editor': 'Редактор карт',
       'menu.settings': 'Настройки',
       'menu.exit': 'Выйти',
-      'menu.back': '← Назад',
+      'menu.back': '[[back]] Назад',
       'menu.difficulty': 'Сложность:',
       'menu.normal': 'Обычная',
       'menu.hard': 'Сложная',

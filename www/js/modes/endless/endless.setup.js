@@ -3,7 +3,7 @@
 
 import { openTab, runLoading } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { onTap, t } from '../../engine/platform/index.js';
+import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { applySeedFromUI, createDefaultSeed, game } from '../../engine/world/index.js';
 import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
 import { resetGameSteps } from '../../app/index.js';
@@ -154,4 +154,33 @@ export function initEndlessSetup() {
   loadSides();
   renderFactionPicker();
   onTap(document.getElementById('mode-endless'), renderFactionPicker); // in the current language
+}
+
+// (#326) What's picked on the Endless screen kept from one visit to the next: the difficulty, the cards, the waves' interval,
+// the map's size and where it comes from, the custom numbers (the sides, factions and colours, are kept by factions/). Put
+// back as if tapped, once every screen's buttons are set up (app/boot.js)
+const CHOICES = ['difficulty', 'cards', 'waveInterval', 'mapSize', 'mapSource'];
+const attrOf = name => `data-${name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`;
+export function restoreEndlessChoices() {
+  const screen = document.querySelector('[data-screen="endless"]');
+  if (!screen) return;
+  const saved = loadData('endlessChoices', null);
+  if (saved) {
+    if (saved.waveCustom) waveCustom.value = saved.waveCustom;
+    if (saved.mapCols) mapColsInput.value = saved.mapCols;
+    if (saved.mapRows) mapRowsInput.value = saved.mapRows;
+    for (const name of CHOICES) {
+      const button = saved[name] && /** @type {HTMLElement | null} */ (screen.querySelector(`[${attrOf(name)}="${saved[name]}"]`));
+      if (button && !button.classList.contains('active')) button.click();
+    }
+  }
+  const remember = () => {
+    /** @type {Record<string, string>} */
+    const out = { waveCustom: waveCustom.value, mapCols: mapColsInput.value, mapRows: mapRowsInput.value };
+    for (const name of CHOICES) { const active = screen.querySelector(`.active[${attrOf(name)}]`); if (active) out[name] = /** @type {string} */ (active.getAttribute(attrOf(name))); }
+    saveData('endlessChoices', out);
+  };
+  // (after the button's own handler: the screen hears the tap once it's done)
+  screen.addEventListener('click', () => setTimeout(remember, 0));
+  screen.addEventListener('change', () => setTimeout(remember, 0));
 }
