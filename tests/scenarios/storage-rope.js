@@ -86,19 +86,19 @@ Object.assign(window.sim, (() => {
   // Rope: twisted from two herbs by hand at the town hall, no workshop needed
 
 
-  // An ore spawner marked with Point: a miner works it for its ore, one at a time, and it's still there;
-  // unmarked, nobody touches it
+  // An ore spawner with a mine on it (#326, 27.10, 26): a miner works it for its ore, one at a time, and it's
+  // still there; without one, nobody touches it
   function mineSpawner({ seed = 'maze-283', marked = true } = {}) { // (its spawner has an open side)
     start(seed);
     ironOres = []; coalOres = []; pendingRespawns = [];
     const spawner = getOreSpawners('iron')[0];
-    if (marked) spawner.priority = 1;
+    if (marked) buildings.push({ type: 'mine', x: spawner.x, y: spawner.y, hp: 150, maxHp: 150 });
     const spot = getResourceApproachPoint({ x: spawner.x, y: spawner.y + 40, radius: 11 }, spawner) || { x: spawner.x, y: spawner.y + 30 };
     settlers = [makeSettler(1, spot.x, spot.y, { tool: 'pickaxe' })];
     stock.ironOre = 0;
     run(40, { each: () => { quiet(); ironOres = []; coalOres = []; pendingRespawns = []; } });
     const carried = settlers[0].carrying && settlers[0].carrying.type === 'ironOre' ? settlers[0].carrying.amount : 0;
-    return { ore: stock.ironOre + carried >= 2, standing: naturalRocks.includes(spawner) };
+    return { ore: stock.ironOre + carried >= 1, standing: naturalRocks.includes(spawner) }; // (unmarked: one, then the nearest thing)
   }
 
   return { storeHallFull: hallFull, storeHaulAndFall: haulAndFall, storeDeliverInto: deliverInto, storesSaved, mineSpawner };

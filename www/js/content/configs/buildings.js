@@ -57,6 +57,9 @@ export const buildingsConfig = {
     // every fishTrap.seconds, holding up to fishTrap.holds, and a bait (what a fisher uses,
     // GAME_CONFIG.fishing.bait) lasts baitCatches fish. Fishers empty it (anyone with free hands once it's
     // full) and bait it (anyone with free hands too)
+    // a mine (#326, 27.10, 26): on an iron or coal source (onSpawner); built, the source is worked for its ore by
+    // anyone with a pickaxe, unmarked, as ore is (slowly, never used up). A source without one can't be marked
+    mine: { id: 'mine', group: 'economy', icon: 'mine', cost: { wood: 15, stone: 10 }, demolishRefund: { wood: 8, stone: 5 }, onSpawner: true, build: { maxProgress: 80, hp: 150 } },
     fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 6, herbs: 2 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a torch post (#257): lit at dusk by a worker (postFirewood), it lights the ground round it till morning
     torch: { id: 'torch', group: 'defense', icon: 'torch', cost: { torches: 1 }, demolishRefund: { torches: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },
