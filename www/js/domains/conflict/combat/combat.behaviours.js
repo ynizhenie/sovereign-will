@@ -104,20 +104,31 @@ export function fightEnemies(s, tick) {
 
 const MENU_GUARD = 4 * 30; // (how far from the menu's warehouse its squad goes for a zombie)
 
+const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
+
 // The enemy a settler fights: the one most dangerous to the base, an enemy the player marked, the one near
 // its post, or whoever is hitting it right now. On the way to the enemy tents, only what's in the way
 // (null: nothing is). attacker: the one hitting it, if any.
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  game.enemies.forEach(en => {
-    if (en.toCatch && en.toCatch !== s.id) return; // (one being caught for a cage, #250)
+  const scoreOf = en => {
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
     // (#326) in a battle the hall's out of the way in a corner: the nearest, not the one nearest the hall
-    let score = game.gameMode === 'battle' ? dToSettler : dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
+    return game.gameMode === 'battle' ? dToSettler : dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
+  };
+  game.enemies.forEach(en => {
+    if (en.toCatch && en.toCatch !== s.id) return; // (one being caught for a cage, #250)
+    const score = scoreOf(en);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
   });
+  // (#326, 27.10, 16) the one it went for is kept unless another is KEEP_TARGET better, as an enemy keeps its own
+  // (chooseEnemyTarget): going for whichever was a hair nearer each moment, it walked a zigzag as they all closed in
+  // and came into the fight late
+  const kept = s.fightTarget;
+  if (kept && kept !== targetEnemy && game.enemies.includes(kept) && kept.hp > 0 && !(kept.toCatch && kept.toCatch !== s.id) && scoreOf(kept) <= minBaseDist + KEEP_TARGET) targetEnemy = kept;
+  s.fightTarget = targetEnemy;
   // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
   // squad soldier already got its own from holdPost)...
   if (s.weapon !== 'fist' && !(s.postTarget && s.postTarget.markedTarget && game.enemies.includes(s.postTarget))) {
@@ -209,14 +220,18 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 
     let dist = distToClosestEn;
     // approach: how close to walk before striking (bows: shoot from under this distance)
-    const approach = getWeaponStats(s, 'combat').approach;
+    const stats = getWeaponStats(s, 'combat'), approach = stats.approach;
     // bows need a clear line of fire too, or they walk closer. Melee approach is set for a normal settler
     // against a normal enemy (bodies 21 px apart): bigger bodies keep their centres further apart (see
     // separateSettlersFromEnemies), so a big settler or a brute counts as in reach that much sooner
     const extraBody = Math.max(0, (s.visualRadius || s.radius) + targetEnemy.radius - NORMAL_BODIES);
+    // (#326, 27.10, 16) and as far past the bodies as an enemy with that weapon strikes (its reach, a sword's 12 px:
+    // the weapon's range less 30, as presetEnemyKey makes it): it struck from 33 px, this one from 22, and won every
+    // even fight
+    const pastBodies = (s.visualRadius || s.radius) + targetEnemy.radius + Math.max(6, (stats.range || 0) - 30);
     const inReach = shoots
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
-      : dist <= approach + extraBody;
+      : dist <= Math.max(approach + extraBody, pastBodies);
     if (inReach) {
       performAttack(s, targetEnemy.x, targetEnemy.y);
     } else if (breakWhatsInTheWay(s)) {
