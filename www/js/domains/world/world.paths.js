@@ -4,7 +4,7 @@
 // darker the more worn
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, townHall, worldEpoch } from '../../engine/world/index.js';
 import { ctx, getViewRect } from '../../engine/platform/index.js';
 import { getBaseRadius } from '../conflict/combat/index.js';
 import { tileVariantHash } from './world.draw.js';
@@ -56,7 +56,7 @@ export function tickPaths() {
 /** @type {{ key: string, tiles: Map<string, number>, bins: Map<string, { gx: number, gy: number, a: number }[]> }} */
 let shown = { key: '', tiles: new Map(), bins: new Map() };
 function pathStrengths() {
-  const key = `${Math.floor(game.pathTick / 10)}|${(game.pathZones || []).length}|${Object.keys(game.paths || {}).length}`;
+  const key = `${worldEpoch()}|${Math.floor(game.pathTick / 10)}|${(game.pathZones || []).length}|${Object.keys(game.paths || {}).length}`;
   if (shown.key === key) return shown.tiles;
   const shows = config().shows, fields = fieldTiles(), worn = game.paths || {};
   /** @type {Map<string, number>} */

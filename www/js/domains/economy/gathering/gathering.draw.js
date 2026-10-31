@@ -1,6 +1,6 @@
 // How far a resource is worked through
 
-import { TILE_SIZE, forEachInRect, game, listStamp } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, listStamp, worldEpoch } from '../../../engine/world/index.js';
 import { paintOn, paintStill, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
@@ -95,12 +95,15 @@ function around(list, x0, y0, x1, y1, keep = null) {
 const STAMPS_PER_FRAME = 4;
 /** @param {() => any[][]} listsOf */
 function stamper(listsOf) {
-  /** @type {{ lists: any[], epoch: number, made: number, stamps: Map<string, { tick: number, epoch: number, stamp: string }> }} */
-  const state = { lists: [], epoch: 0, made: 0, stamps: new Map() };
+  /** @type {{ lists: any[], epoch: number, made: number, world: number, stamps: Map<string, { tick: number, epoch: number, stamp: string }> }} */
+  const state = { lists: [], epoch: 0, made: 0, world: worldEpoch(), stamps: new Map() };
   return {
     newFrame() { state.made = 0; },
     /** @param {number} cx @param {number} cy */
     stamp(cx, cy) {
+      if (state.world !== worldEpoch()) {
+        state.world = worldEpoch(); state.lists = []; state.epoch++; state.stamps.clear();
+      }
       const lists = /** @type {any[]} */ (listsOf().flatMap(listStamp));
       if (lists.length !== state.lists.length || lists.some((v, i) => v !== state.lists[i])) { state.lists = lists; state.epoch++; }
       const key = `${cx},${cy}`, kept = state.stamps.get(key);
@@ -147,9 +150,10 @@ const tuftsPictured = () => {
 };
 
 // What's drawn over the pictures: the things on the screen that aren't just standing there (looked for every few ticks)
-/** @type {{ tick: number, trees: any[], others: any[], grass: any[] }} */
-const over = { tick: -Infinity, trees: [], others: [], grass: [] };
+/** @type {{ tick: number, world: number, trees: any[], others: any[], grass: any[] }} */
+const over = { tick: -Infinity, world: worldEpoch(), trees: [], others: [], grass: [] };
 function updateOver() {
+  if (over.world !== worldEpoch()) { over.world = worldEpoch(); over.tick = -Infinity; }
   if (game.pathTick - over.tick < REFRESH_TICKS && game.pathTick >= over.tick) return;
   over.tick = game.pathTick;
   const v = getViewRect(10 * TILE_SIZE);
@@ -218,8 +222,9 @@ export function drawCactiBouldersGrassBushes() {
 // (#322) Which things are marked is looked for in all the lists only every few ticks (the player's marks change
 // rarely: a thousand things on the screen were each looked at, list by list, every frame); the marked ones are
 // then drawn where they are
-const marks = { tick: -Infinity, list: /** @type {any[]} */ ([]) };
+const marks = { tick: -Infinity, world: worldEpoch(), list: /** @type {any[]} */ ([]) };
 export function drawPriorityMarks() {
+  if (marks.world !== worldEpoch()) { marks.world = worldEpoch(); marks.tick = -Infinity; marks.list = []; }
   if (game.pathTick - marks.tick >= 6 || game.pathTick < marks.tick) {
     marks.tick = game.pathTick;
     const lists = [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs, game.loot,
