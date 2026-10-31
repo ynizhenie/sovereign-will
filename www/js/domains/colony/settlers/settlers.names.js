@@ -1,5 +1,5 @@
 import { LANGUAGES } from '../../../content/language/index.js';
-import { loadSetting } from '../../../engine/platform/storage.js';
+import { loadSetting } from '../../../engine/platform/index.js';
 
 export function generateUnitName(faction, female, units = [], petKind = null) {
   const fallback = LANGUAGES.en.names.unitNames;
