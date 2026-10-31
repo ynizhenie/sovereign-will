@@ -49,7 +49,8 @@ let previousView = null, previousScale = 0;
 let cacheWorldEpoch = -1;
 // the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
 // painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
-const stats = { holes: 0, late: 0 };
+// `holes` are uncovered base-ground pieces. `pending` also counts chunks still shown from a light preview.
+const stats = { holes: 0, late: 0, pending: 0 };
 export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
@@ -63,7 +64,7 @@ export function drawChunks(layer, res, stamp, paint, preview) {
     chunkLayers.clear();
     cacheWorldEpoch = epoch;
     previousView = null; previousScale = 0;
-    stats.holes = 0; stats.late = 0;
+    stats.holes = 0; stats.late = 0; stats.pending = 0;
     // These derived indexes are tied to world lists and may have identical lengths on a new map.
     sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
     terrainStamps = { lists: [], stamps: new Map() };
@@ -76,7 +77,7 @@ export function drawChunks(layer, res, stamp, paint, preview) {
   if (layer === 'grass') {
     const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
     previousView = v; previousScale = scale;
-    frameOf++; stats.holes = 0; stats.late = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
+    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
     framePaintLayer = layers[(frameOf - 1) % layers.length];
   } // (the first layer of a frame)
@@ -132,7 +133,10 @@ export function drawChunks(layer, res, stamp, paint, preview) {
             // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
             // or rasterize each one this frame: preview it until its turn in the queue.
             if (preview) preview(x0, y0, x1, y1);
-            stats.holes++;
+            stats.pending++;
+            // Nature and tufts are overlays on the already painted ground. Only a missing base layer
+            // without its own fallback leaves a visible hole.
+            if (!preview && (layer === 'grass' || layer === 'terrain')) stats.holes++;
           }
           continue;
         }

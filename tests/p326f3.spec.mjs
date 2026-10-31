@@ -31,7 +31,8 @@ test('what was picked on the Endless screen and in Settings is still picked afte
   await page.goto('/');
   await page.evaluate(() => {
     showMenuScreen('endless');
-    for (const sel of ['[data-difficulty="hard"]', '[data-cards="on"]', '[data-wave-interval="240"]', '[data-map-size="512"]']) document.querySelector(sel).click();
+    for (const sel of ['[data-difficulty="hard"]', '[data-cards="on"]', '[data-wave-interval="240"]', '[data-map-size="custom"]']) document.querySelector(sel).click();
+    const mapCols = document.getElementById('map-cols'); mapCols.value = '512'; mapCols.dispatchEvent(new Event('change', { bubbles: true }));
     showMenuScreen('settings');
     for (const sel of ['[data-fps="60"]', '[data-show-fps="on"]', '[data-sound="off"]', '[data-vsync="off"]']) { const b = document.querySelector(sel); if (b) b.click(); }
   });
@@ -40,7 +41,7 @@ test('what was picked on the Endless screen and in Settings is still picked afte
   const r = await page.evaluate(() => {
     const on = sel => !!document.querySelector(`${sel}.active`);
     return {
-      difficulty: on('[data-difficulty="hard"]'), cards: on('[data-cards="on"]'), wave: on('[data-wave-interval="240"]'), map: on('[data-map-size="512"]'),
+      difficulty: on('[data-difficulty="hard"]'), cards: on('[data-cards="on"]'), wave: on('[data-wave-interval="240"]'), map: on('[data-map-size="custom"]'),
       gameDifficulty: game.gameDifficulty, waveInterval: game.waveInterval, mapCols: game.mapSettings.cols,
       fps: on('[data-fps="60"]'), showFps: on('[data-show-fps="on"]'), sound: on('[data-sound="off"]'), vsync: on('[data-vsync="off"]')
     };
