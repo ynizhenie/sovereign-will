@@ -694,6 +694,7 @@ export const enLanguage = {
       'activity.craftItem': 'Making a thing',
       'pause.seed': 'World seed',
       'panel.hire': 'Hire',
+      'panel.actions': 'Actions',
       'editor.untitled': 'New map',
       'dock.build': 'Build',
       'dock.farming': 'Zones',

@@ -694,6 +694,7 @@ export const ukLanguage = {
       'activity.craftItem': 'Робить річ',
       'pause.seed': 'Сід світу',
       'panel.hire': 'Найм',
+      'panel.actions': 'Дії',
       'editor.untitled': 'Нова мапа',
       'dock.build': 'Будова',
       'dock.farming': 'Зони',

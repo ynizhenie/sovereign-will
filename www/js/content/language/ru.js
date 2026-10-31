@@ -694,6 +694,7 @@ export const ruLanguage = {
       'activity.craftItem': 'Делает вещь',
       'pause.seed': 'Сид мира',
       'panel.hire': 'Найм',
+      'panel.actions': 'Действия',
       'editor.untitled': 'Новая карта',
       'dock.build': 'Стройка',
       'dock.farming': 'Зоны',
