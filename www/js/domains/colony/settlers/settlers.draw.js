@@ -33,7 +33,12 @@ export function tickAnimation(unit, dt) {
   // walking (not striking or working): the held item turns the way it goes, not stay where it last struck
   if (unit.lastX !== undefined) {
     const dx = unit.x - unit.lastX, dy = unit.y - unit.lastY;
-    if (Math.hypot(dx, dy) > 0.3 && !(unit.swingT > 0) && !(unit.working > 0)) unit.facing = Math.atan2(dy, dx);
+    if (Math.hypot(dx, dy) > 0.3 && !(unit.swingT > 0) && !(unit.working > 0)) {
+      const target = game.gameMode === 'battle' && !unit.isPossessed && game.enemies.includes(unit.fightTarget) && unit.fightTarget.hp > 0
+        ? unit.fightTarget
+        : null;
+      unit.facing = target ? Math.atan2(target.y - unit.y, target.x - unit.x) : Math.atan2(dy, dx);
+    }
     unit.walk = ((unit.walk || 0) + Math.hypot(dx, dy)) % 1000; // (its steps, drawFigure)
   }
   unit.lastX = unit.x; unit.lastY = unit.y;

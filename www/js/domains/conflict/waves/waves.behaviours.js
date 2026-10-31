@@ -67,6 +67,7 @@ function enemyGhost(en) {
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
+  if (en.hp <= 0) return;
   clampEntityToBounds(en);
   if (getEnemyDef(en).pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
@@ -101,7 +102,8 @@ export function tickEnemy(en, dt) {
   const attackRange = (target === townHall ? townHall.radius : (/** @type {Settler} */ (target).visualRadius || target.radius)) + en.radius + meleeDef.reach;
   // (#326: not through a shut door or a wall: it walks on, breaking its way to it, instead)
   const canStrike = inMelee && minDist < attackRange && (target === townHall || hasMeleeReach(en, target));
-  const holdsGround = keepsAway || canStrike;
+  const canShoot = shooting && clearShot && minDist < shotOf(enemyDef).range;
+  const holdsGround = keepsAway || canStrike || canShoot;
   walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck);
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
@@ -320,7 +322,7 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
       life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
-    en.attackCooldown = en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
+    en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
     en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle') en.arrows--;
   }
@@ -429,8 +431,13 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   // (27.10, 16: the wait runs on whether it's in reach or not, as a settler's attackCooldown: stepping out of
   // reach and back for a moment, as bodies jostle, gave it its next blow at once, and it won every even fight)
   const cooldown = dagger ? dagger.cooldown : enemyHitCooldown(meleeDef);
+  if (game.gameMode === 'battle' && en.nextStrikeTick == null) {
+    en.nextStrikeTick = game.pathTick + 1;
+    return;
+  }
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
-  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
+  const attackCooldown = game.gameMode === 'battle' ? cooldown / (en.battleAttackSpeed || 1) : cooldown;
+  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(attackCooldown / dt));
   startSwing(en, Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
   const blow = cooldown * shaken;
   if (en.type === 'big') {
