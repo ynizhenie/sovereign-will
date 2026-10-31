@@ -53,6 +53,27 @@ test('a dock button opens its sheet and closes it again; another tab swaps it; P
   expect((await body(page)).sheet).toBe(false);
 });
 
+test('the dock sheet stays the same size when the units roster grows', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  await page.click('[data-arg="tab-units"]');
+  await page.evaluate(() => {
+    const unit = game.settlers[0];
+    game.settlers = Array.from({ length: 60 }, (_, i) => ({ ...unit, id: 1000 + i, name: `Settler ${i}` }));
+    updateUnitsTab(true);
+  });
+  const unitsSize = await page.locator('#sheet-frame').evaluate(element => ({
+    height: element.getBoundingClientRect().height,
+    content: element.scrollHeight,
+    viewport: innerHeight
+  }));
+  await page.click('[data-arg="tab-build"]');
+  const buildHeight = await page.locator('#sheet-frame').evaluate(element => element.getBoundingClientRect().height);
+  expect(unitsSize.content).toBeGreaterThan(unitsSize.height);
+  expect(unitsSize.height).toBeCloseTo(unitsSize.viewport * 0.3, 0);
+  expect(buildHeight).toBeCloseTo(unitsSize.height, 0);
+});
+
 test('picking a building puts the sheet away and shows its chip: a tap brings the sheet back, × or Esc puts it down', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
@@ -168,7 +189,7 @@ test('battle: a category opens its sheet, picking a unit shows it on the chip; t
   await expect(page.locator('#battle-clear-green')).toBeVisible();
   await page.click('#battle-fight');
   await expect(page.locator('#battle-clear-red')).toBeHidden();
-  await expect(page.locator('#battle-auto')).toBeVisible();
+  await expect(page.locator('#battle-auto')).toHaveCount(0);
   await expect(page.locator('#placing-chip')).toBeHidden();
   await expect(page.locator('#sheet-frame')).toBeHidden();
   await expect(page.locator('#battle-cancel')).toBeVisible();

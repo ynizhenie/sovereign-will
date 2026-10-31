@@ -92,7 +92,7 @@ test('in a battle the picked group goes where it is told, an enemy tapped is the
     battle.lineup = []; battle.category = 'units'; battle.preset = 'humans:sword';
     for (const gy of [10, 12, 14]) battleTap(at(8, gy).x, at(8, gy).y);
     battleTap(at(32, 12).x, at(32, 12).y);
-    battle.auto = false; startBattleFight();
+    startBattleFight();
     selectedSettler = settlers[0]; game.addingToGroup = true;
     orderTap(settlers[1].x, settlers[1].y);
     game.addingToGroup = false;

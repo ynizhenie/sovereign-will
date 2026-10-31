@@ -320,7 +320,7 @@ export function startEditor(source) {
     editor.startTime = 'morning';
     const endlessSize = game.mapSettings;
     game.mapSettings = { cols: source.cols, rows: source.rows };
-    applySeedFromUI(/** @type {HTMLInputElement} */ (document.getElementById('editor-seed-input')));
+    applySeedFromUI();
     resetGame(source.generate ? null : { cols: source.cols, rows: source.rows });
     game.mapSettings = endlessSize;
   }

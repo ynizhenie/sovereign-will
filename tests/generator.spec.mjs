@@ -5,6 +5,13 @@ test('the gear opens a labelled field for each of the ore and regrowth settings 
   await openGame(page);
   await page.click('#open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
+  const size = await page.locator('[data-screen="generator"]').evaluate(element => ({
+    height: element.getBoundingClientRect().height,
+    content: element.scrollHeight,
+    viewport: innerHeight
+  }));
+  expect(size.height).toBeLessThanOrEqual(size.viewport * 0.75);
+  expect(size.content).toBeGreaterThan(size.height);
   const r = await page.evaluate(() => {
     const keys = GENERATOR_GROUPS.flatMap(([, k]) => k);
     const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
@@ -59,7 +66,7 @@ test('own presets are saved on the device, loaded and deleted (#20)', async ({ p
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
 });
 
-test('the editor has a seed of its own and the generator\'s gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 128 (#326, 27.10, 18, 19)', async ({ page }) => {
+test('the editor shares Endless\' seed and the generator gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 128 (#326, 27.10, 18, 19)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-editor');
@@ -67,8 +74,19 @@ test('the editor has a seed of its own and the generator\'s gear: a generated ma
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
   await page.click('[data-screen="generator"] [data-back-to]');
   await expect(page.locator('[data-screen="editor"]')).toBeVisible();
+  const modeSeeds = await page.evaluate(() => {
+    document.getElementById('seed-input').value = 'editor-only-seed';
+    showMenuScreen('home');
+    showMenuScreen('endless');
+    const endless = document.getElementById('seed-input').value;
+    showMenuScreen('editor');
+    return { endless, editor: document.getElementById('seed-input').value };
+  });
+  expect(modeSeeds).toEqual({ endless: 'editor-only-seed', editor: 'editor-only-seed' });
+  await expect(page.locator('[data-screen="editor"] #seed-settings')).toBeVisible();
+  await expect(page.locator('#editor-seed-input')).toHaveCount(0);
   const make = seed => page.evaluate(seed => {
-    document.getElementById('editor-seed-input').value = seed;
+    document.getElementById('seed-input').value = seed;
     document.querySelector('[data-editor-size="128"]').click();
     document.getElementById('editor-new-generated').click();
     const shape = naturalRocks.length + ':' + trees.length + ':' + waterTiles.length;
@@ -80,7 +98,7 @@ test('the editor has a seed of its own and the generator\'s gear: a generated ma
   expect(again).toBe(a);
   expect(b).not.toBe(a);
   // the reroll gives a new one
-  const seeds = await page.evaluate(() => { const before = document.getElementById('editor-seed-input').value; document.getElementById('editor-seed-reroll').click(); return [before, document.getElementById('editor-seed-input').value]; });
+  const seeds = await page.evaluate(() => { const before = document.getElementById('seed-input').value; document.getElementById('seed-reroll').click(); return [before, document.getElementById('seed-input').value]; });
   expect(seeds[1]).not.toBe(seeds[0]);
   // Endless's own size: from 128
   const custom = await page.evaluate(() => { const c = document.getElementById('map-cols'); c.value = '40'; applyCustomMap(); return [c.min, mapSettings.cols]; });

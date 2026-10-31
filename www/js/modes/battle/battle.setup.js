@@ -22,11 +22,11 @@ import { renderBattlePanel } from './battle.panel.js';
 export const BATTLE_RESULT_SECONDS = 4;
 
 /** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, helmet: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string, blight: boolean,
+ *   shield: boolean, helmet: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string,
  *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
- *   difficulty: string, auto: boolean, savedDifficulty: string | null, theme: string }} */
+ *   difficulty: string, savedDifficulty: string | null, theme: string }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'units',  // the panel's category
@@ -41,14 +41,12 @@ export const battle = {
   field: 'glade',     // glade / desert: what the battle is fought on
   time: 'day',        // (#326) morning / day / evening / night: how it looks (it stands still; nobody sleeps by it)
   weather: 'clear',   // (#326) clear / rain / fog / storm, all through the fight
-  blight: false,      // (#326) the field blighted, as the undead's ground in Endless
   lineup: [],         // { presetId, x, y, armor, shield, banner } or { building, x, y }: what's placed, kept between fights
   winner: null,       // green / red / draw
   resultTimer: 0,
   nextId: 1,
   savedMapSettings: null,
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
-  auto: true,           // (#255) yours fight by themselves; off: they hold, and go where they're told
   savedDifficulty: null, // the Endless choice, back when the battle's left
   theme: 'arena'        // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
 };
@@ -68,11 +66,11 @@ export function enemyCanShield(id) {
 // (#326) It's dark: torches lit (in hands, on posts)
 const isDark = () => battle.time === 'evening' || battle.time === 'night';
 
-// (#326) The battle's time of day, weather and ground as its settings say
+// (#326) The battle's time of day and weather as its settings say
 export function applyBattleLook() {
   game.dayTime = timeOfPhase(battle.time);
   setStandingWeather(battle.weather);
-  game.battleBlight = battle.blight;
+  game.battleBlight = false;
 }
 
 // The midline: left of it is green, right of it red
@@ -225,10 +223,9 @@ export function setBattleField(field) {
   resetBattleUnits();
 }
 
-// (#326) The battle's time of day, weather or ground picked: its look at once, the line-up made again (a torch
-// lit or not)
+// (#326) The battle's time of day or weather picked: its look at once, the line-up made again (a torch lit or not)
 export function setBattleLook(key, value) {
-  if (battle.phase !== 'setup') return;
+  if (battle.phase !== 'setup' || (key !== 'time' && key !== 'weather')) return;
   battle[key] = value;
   applyBattleLook();
   resetBattleUnits();
