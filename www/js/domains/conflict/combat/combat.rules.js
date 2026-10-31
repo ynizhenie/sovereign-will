@@ -74,6 +74,7 @@ export function performAttack(attacker, targetX, targetY) {
   faceTowards(attacker, targetX, targetY);
 
   const stats = getWeaponStats(attacker, 'combat');
+  const attackCooldown = game.gameMode === 'battle' ? stats.cooldown / (attacker.battleAttackSpeed || 1) : stats.cooldown;
 
   if (isRangedWeapon(attacker.weapon) && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
@@ -93,8 +94,8 @@ export function performAttack(attacker, targetX, targetY) {
     });
     playSound(bolt ? 'crossbow' : 'bow', attacker);
     if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles
-    attacker.attackCooldown = stats.cooldown;
-    attacker.shotAt = game.pathTick; attacker.shotLen = stats.cooldown; // (its next arrow drawn, #306)
+    attacker.attackCooldown = attackCooldown;
+    attacker.shotAt = game.pathTick; attacker.shotLen = attackCooldown; // (its next arrow drawn, #306)
     startSwing(attacker, 0.3);
   } else {
     const range = stats.range;
@@ -118,8 +119,8 @@ export function performAttack(attacker, targetX, targetY) {
     if (isBigBody(attacker)) struck.sort((a, b) => toAim(a) - toAim(b)).slice(0, GAME_CONFIG.combatAI.splashMax).forEach(target => target.hit());
     else if (struck.length > 0) struck.reduce((best, target) => (toAim(target) < toAim(best) ? target : best)).hit();
 
-    attacker.attackCooldown = stats.cooldown;
-    startSwing(attacker, Math.min(0.35, stats.cooldown * 0.8));
+    attacker.attackCooldown = attackCooldown;
+    startSwing(attacker, Math.min(0.35, attackCooldown * 0.8));
     playSound('swing', attacker);
   }
 }

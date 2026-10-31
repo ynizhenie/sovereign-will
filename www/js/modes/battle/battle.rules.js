@@ -1,7 +1,7 @@
 // The fight: started, called off, and over when a side has nobody left
 
 import { t } from '../../engine/platform/index.js';
-import { game } from '../../engine/world/index.js';
+import { game, rand } from '../../engine/world/index.js';
 import { showNotification } from '../../ui/index.js';
 import { BATTLE_RESULT_SECONDS, battle, resetBattleUnits } from './battle.setup.js';
 import { renderBattlePanel, updateBattleTop } from './battle.panel.js';
@@ -20,6 +20,7 @@ export function startBattleFight() {
     showNotification(t('battle.needBoth'), true);
     return;
   }
+  for (const unit of [...game.settlers, ...game.enemies]) unit.battleAttackSpeed = 0.9 + rand() * 0.2;
   battle.phase = 'fight';
   renderBattlePanel();
 }

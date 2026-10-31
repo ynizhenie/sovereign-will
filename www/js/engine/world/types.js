@@ -25,6 +25,8 @@
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
  * @property {number} [grumbledAt]   the tick it last said it wants to sleep
  * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
+ * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
+ * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
@@ -203,6 +205,7 @@
  * @property {boolean} [markedTarget] the player pointed at it
  * @property {boolean} [rewardGranted]
  * @property {Object} [battleEntry]   its place in a battle's line-up
+ * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
  * @property {number} [morale]         0..100 (#207)
  * @property {boolean} [panic]
  * @property {boolean} [fled]          ran off the map's edge
