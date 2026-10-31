@@ -284,6 +284,71 @@ test('Fight runs until one side is left, shows the winner, then brings the line-
   expect(r).toMatchObject({ winner: 'green', phase: 'result', back: 'setup', lineup: { settlers: 3, enemies: 1 } });
 });
 
+test('identical Hard duels can resolve differently between fights', async ({ page }) => {
+  await openBattle(page);
+  const winners = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    setBattleDifficulty('hard');
+    battle.preset = 'humans:club'; battleTap(at(14, 13).x, at(14, 13).y);
+    battle.preset = 'humans:club'; battleTap(at(26, 13).x, at(26, 13).y);
+    game.worldSeed.setState(0x12345678);
+    const results = [];
+    for (let fight = 0; fight < 12; fight++) {
+      startBattleFight();
+      let seconds = 0;
+      while (battle.phase === 'fight' && seconds < 30) {
+        update(1 / 60); seconds += 1 / 60;
+      }
+      results.push(battle.winner);
+      battle.phase = 'setup';
+      resetBattleUnits();
+    }
+    return results;
+  });
+  expect(new Set(winners).size).toBeGreaterThan(1);
+});
+
+test('an enemy killed before its turn cannot strike back', async ({ page }) => {
+  await openBattle(page);
+  const hp = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:iron_sword'; battleTap(at(19, 13).x, at(19, 13).y);
+    battle.preset = 'humans:club'; battleTap(at(20, 13).x, at(20, 13).y);
+    startBattleFight();
+    const settler = settlers[0], enemy = enemies[0];
+    enemy.hp = 0;
+    update(1 / 60);
+    return settler.hp;
+  });
+  expect(hp).toBe(100);
+});
+
+test('a fighting settler keeps facing its target while it moves', async ({ page }) => {
+  await openBattle(page);
+  const maxAimError = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    setBattleDifficulty('hard');
+    battle.preset = 'humans:club'; battleTap(at(14, 13).x, at(14, 13).y);
+    battle.preset = 'humans:club'; battleTap(at(26, 13).x, at(26, 13).y);
+    startBattleFight();
+    let seconds = 0, maxError = 0, samples = 0;
+    while (battle.phase === 'fight' && seconds < 30) {
+      update(1 / 60); seconds += 1 / 60;
+      const settler = settlers[0];
+      if (!settler) continue;
+      const target = settler.fightTarget;
+      if (!target || settler.swingT > 0) continue;
+      const aimedAt = Math.atan2(target.y - settler.y, target.x - settler.x);
+      const difference = Math.atan2(Math.sin(settler.facing - aimedAt), Math.cos(settler.facing - aimedAt));
+      maxError = Math.max(maxError, Math.abs(difference));
+      samples++;
+    }
+    return { maxError, samples };
+  });
+  expect(maxAimError.samples).toBeGreaterThan(0);
+  expect(maxAimError.maxError).toBeLessThan(0.1);
+});
+
 test('the pause menu leaves battle mode and the Endless map size comes back (#38, #145)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => { mapSettings = { cols: 60, rows: 60 }; showMenuScreen('home'); });
