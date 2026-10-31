@@ -10,10 +10,12 @@ import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
-import { getPossessed, getSelectedSettler, getSelection, orderPossessed, roleTitle, toggleInGroup } from '../domains/colony/settlers/index.js';
+import { isSelectedCardVisible, openSelectedCard } from './selected-card-state.js';
+import { ensureUnitName, getPossessed, getSelectedSettler, getSelection, orderPossessed, roleTitle, toggleInGroup } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources, getMapResourceKind, hasMine } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
+import { getPlayerFaction } from '../domains/factions/index.js';
 import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
@@ -93,6 +95,10 @@ function selectTapped() {
     return true;
   }
   if (clickedSettler) {
+    if (game.selectedSettler === clickedSettler && !isSelectedCardVisible(clickedSettler)) {
+      openSelectedCard(clickedSettler);
+      return true;
+    }
     game.selectedSettler = (game.selectedSettler === clickedSettler) ? null : clickedSettler;
     game.selectedGroup = []; game.addingToGroup = false;
     return true;
@@ -252,7 +258,7 @@ export function showPickMenu(resources, at, settler) {
   if (settler) {
     const b = document.createElement('button');
     b.className = 'btn';
-    b.innerHTML = `${iconHtml(settler.role === 'pet' ? 'dog' : 'worker')} ${escapeHtml(roleTitle(settler))}${game.selectedSettler === settler ? ` ${iconHtml('ok')}` : ''}`;
+    b.innerHTML = `${iconHtml(settler.role === 'pet' ? 'dog' : 'worker')} ${escapeHtml(ensureUnitName(settler, getPlayerFaction().id, game.settlers))}${game.selectedSettler === settler ? ` ${iconHtml('ok')}` : ''}`;
     b.addEventListener('click', () => { game.selectedSettler = game.selectedSettler === settler ? null : settler; hidePickMenu(); });
     menu.appendChild(b);
   }
@@ -346,7 +352,7 @@ export function processInteraction(clientX, clientY) {
 
 export function setMode(mode) {
   game.buildMode = mode;
-  document.querySelectorAll('.btn, #btn-interact').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
   const button = document.getElementById('btn-' + mode);
   if (button) button.classList.add('active');
   // a tool picked: its sheet steps aside for the map, its chip shows what's being placed

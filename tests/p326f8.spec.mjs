@@ -7,10 +7,22 @@ test('a mine goes only on a source, one each; a source can\'t be marked; built (
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
-    window.sim.start('maze-283'); // (its iron source has an open side)
-    ironOres = []; coalOres = []; pendingRespawns = [];
-    const source = getOreSpawners('iron')[0];
-    const spot = getResourceApproachPoint({ x: source.x, y: source.y + 40, radius: 11 }, source) || { x: source.x, y: source.y + 30 };
+    let source, spot, worker;
+    for (const seed of ['maze-283', 'maze-137', 'ore-a']) {
+      window.sim.start(seed);
+      ironOres = []; coalOres = []; pendingRespawns = [];
+      worker = makeSettler(1, townHall.x, townHall.y, { tool: 'pickaxe' });
+      settlers = [worker];
+      const reachable = getOreSpawners('iron')
+        .map(resource => ({ resource, spot: getResourceApproachPoint(worker, resource) }))
+        .filter(candidate => candidate.spot)
+        .sort((a, b) => Math.hypot(a.spot.x - worker.x, a.spot.y - worker.y) - Math.hypot(b.spot.x - worker.x, b.spot.y - worker.y));
+      if (reachable.length) {
+        ({ resource: source, spot } = reachable[0]);
+        break;
+      }
+    }
+    if (!source) throw new Error('No reachable iron spawner on the test maps');
     const quiet = () => { waveTimer = 999; ironOres = []; coalOres = []; pendingRespawns = []; };
     const run = (seconds, each) => { for (let f = 0; f < seconds * 60; f++) { quiet(); update(1 / 60); if (each) each(); } };
     // tapped with Point: not marked, a notice instead
@@ -18,10 +30,10 @@ test('a mine goes only on a source, one each; a source can\'t be marked; built (
     mouse.x = source.x; mouse.y = source.y; handleCanvasClick();
     const marked = (source.priority || 0) > 0;
     // a worker with a pickaxe by it, no mine: nothing
-    settlers = [makeSettler(1, spot.x, spot.y, { tool: 'pickaxe' })];
+    worker.x = spot.x; worker.y = spot.y;
     stock.ironOre = 0;
     run(15);
-    const carried = () => (settlers[0].carrying && settlers[0].carrying.type === 'ironOre' ? settlers[0].carrying.amount : 0);
+    const carried = () => (worker.carrying && worker.carrying.type === 'ironOre' ? worker.carrying.amount : 0);
     const without = stock.ironOre + carried();
     // a mine: not on plain ground, on the source yes, not twice
     stock.wood = 200; stock.stone = 200;

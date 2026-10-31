@@ -239,6 +239,10 @@ export function drawGrassGround() {
 // of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
 export const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
 export const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
+const ROCK_PALETTES = [
+  { shades: ROCK_SHADES, edge: '#1a252f' },
+  { shades: ['#95a5a6', '#8f9fa0', '#9ba9aa', '#89999a', '#93a3a4'], edge: '#566164' }
+];
 // Sand: one base with close patches over it, as the grass has (not a shade per tile: that read as a grid)
 export const SAND_BASE = '#c9a66b';
 export const DESERT_SHADES = ['#cba96f', '#c7a468', '#cdab72', '#c5a166', '#cfad74'];
@@ -246,6 +250,32 @@ export const DESERT_SHADES = ['#cba96f', '#c7a468', '#cdab72', '#c5a166', '#cfad
 // making it stone (a much redder rock stood out of the desert; a muddy brown read as a patch of dirt)
 export const DESERT_ROCK_SHADES = ['#b38d5a', '#b7905d', '#af8956', '#bb945f', '#b18b58'];
 export const DESERT_ROCK_EDGE = '#63431f';
+let rockMassPaletteCache = { signature: -1, palettes: new Map() };
+
+function rockMassPalettes(tiles) {
+  if (rockMassPaletteCache.signature === tiles.signature) return rockMassPaletteCache.palettes;
+  const palettes = new Map(), remaining = new Set(tiles.rockAndOre);
+  const oreTiles = new Set([...game.ironOres, ...game.coalOres, ...game.naturalRocks.filter(r => r.oreSpawner)]
+    .map(r => `${r.x},${r.y}`));
+  while (remaining.size) {
+    const first = remaining.values().next().value;
+    const queue = [first], component = [];
+    remaining.delete(first);
+    let minX = Infinity, minY = Infinity;
+    for (let i = 0; i < queue.length; i++) {
+      const key = queue[i], [x, y] = key.split(',').map(Number);
+      component.push(key);
+      if (y < minY || (y === minY && x < minX)) { minX = x; minY = y; }
+      for (const neighbor of [`${x - TILE_SIZE},${y}`, `${x + TILE_SIZE},${y}`, `${x},${y - TILE_SIZE}`, `${x},${y + TILE_SIZE}`]) {
+        if (remaining.delete(neighbor)) queue.push(neighbor);
+      }
+    }
+    const palette = component.some(key => oreTiles.has(key)) ? 0 : tileVariantHash(minX, minY) % ROCK_PALETTES.length;
+    for (const key of component) palettes.set(key, palette);
+  }
+  rockMassPaletteCache = { signature: tiles.signature, palettes };
+  return palettes;
+}
 
 // (#298) where the tile functions below draw: the screen, or the terrain's picture while it's painted
 /** @type {CanvasRenderingContext2D | null} */
@@ -390,8 +420,9 @@ export function drawRockTile(x, y, tiles) {
   // a rock standing in the desert (the sand is under it, see markDesertUnderRocks): warm sandstone, its own edge
   const desert = getSandKeys().has(`${x},${y}`);
   // (one shade under a whole desert mass: the layers and facets give it its texture, not a shade a tile)
-  const fill = desert ? DESERT_ROCK_SHADES[0] : ROCK_SHADES[h % ROCK_SHADES.length];
-  const edgeColor = desert ? DESERT_ROCK_EDGE : '#1a252f', occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
+  const palette = ROCK_PALETTES[rockMassPalettes(tiles).get(`${x},${y}`) || 0];
+  const fill = desert ? DESERT_ROCK_SHADES[0] : palette.shades[h % palette.shades.length];
+  const edgeColor = desert ? DESERT_ROCK_EDGE : palette.edge, occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
   drawJoinedTile(x, y, open, edgeColor, fill, false, occupiedCorners);
   G.save(); G.beginPath();
   G.roundRect(x - 15 - over, y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]);
@@ -601,7 +632,10 @@ function previewTerrain(x0, y0, x1, y1) {
   const sand = getSandKeys();
   // the preview must use the same palette as the picture it stands in for: a desert rock shown dark
   // for a frame while the chunk is painted read as ordinary rock flashing over it on every zoom
-  const rockColor = o => (sand.has(`${o.x},${o.y}`) ? DESERT_ROCK_SHADES[0] : ROCK_SHADES[0]);
+  const palettes = rockMassPalettes(getTileIndex());
+  const rockColor = o => (sand.has(`${o.x},${o.y}`)
+    ? DESERT_ROCK_SHADES[0]
+    : ROCK_PALETTES[palettes.get(`${o.x},${o.y}`) || 0].shades[0]);
   const paintTiles = (list, color) => {
     forEachInRect(list, x0 - TILE_SIZE, y0 - TILE_SIZE, x1 + TILE_SIZE, y1 + TILE_SIZE, o => {
       ctx.fillStyle = typeof color === 'function' ? color(o) : color;

@@ -27,11 +27,11 @@ function itemsOfKind(kind) {
   return [...Object.values(GAME_CONFIG.weapons).filter(w => w.id !== 'fist' && !w.hidden).map(i => /** @type {[string, any]} */ (['weapons', i])), ...recipes];
 }
 
-// A small square button with an icon, its name in its tooltip
+// A small square button with an icon and an accessible name
 function iconButton(icon, title, className, action) {
   const b = document.createElement('button');
   b.className = `btn tile-act ${className}`;
-  b.title = title;
+  b.setAttribute('aria-label', title);
   b.innerHTML = iconHtml(icon);
   onTap(b, action);
   return b;
@@ -122,7 +122,6 @@ export function updateCraftLists(force = false) {
     r.button.dataset.craftCost = JSON.stringify(cost);
     const stored = r.recipe ? Math.floor(stock[r.recipe] || 0) : game.armory[r.key] || 0; // (a recipe: what it makes, in the stock)
     r.count.textContent = stored > 0 ? `×${stored}` : '';
-    r.count.title = t('craft.stored', { n: stored });
     if (r.acts) {
       const recipe = r.recipe ? GAME_CONFIG.recipes[r.key.slice('recipes:'.length)] : null;
       const minToApart = recipe && recipe.disassemble ? Object.values(recipe.produces)[0] / (recipe.batches || 1) : 1;

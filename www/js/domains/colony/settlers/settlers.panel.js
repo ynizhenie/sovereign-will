@@ -34,7 +34,6 @@ export function renderSettlerInfo(s) {
   if (s.orderTarget || s.orderSpot) parts.push(t(s.orderTarget ? 'info.orderedAttack' : s.holdOrder ? 'info.orderedStill' : 'info.orderedHold')); // (#326)
   const info = document.getElementById('selected-info');
   info.hidden = false;
-  document.getElementById('selected-bar').classList.add('has-settler');
   const text = parts.join('\n');
   if (info.dataset.text === text) return;
   info.dataset.text = text;
