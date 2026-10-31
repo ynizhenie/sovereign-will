@@ -54,13 +54,14 @@ test('a tree taken from the map is gone from its picture within a few ticks (#32
     setZoom(Math.min(0.6, getMaxZoom()));
     const tree = { x: townHall.x, y: townHall.y + 150, hp: 3, maxHp: 3, isGrowing: false, growProgress: 0, priority: 0 };
     trees.push(tree);
-    const frames = () => { for (let i = 0; i < 12; i++) render(); };
+    const frames = (count = 12) => { for (let i = 0; i < count; i++) render(); };
     // (where the crown shows on the screen)
     const px = () => { const s = getViewScale(); const x = Math.round(canvas.width / 2), y = Math.round(canvas.height / 2 - 2 * s); return Array.from(ctx.getImageData(x, y, 1, 1).data).join(','); };
-    frames(); const withTree = px();
+    // (let the zoomed-out picture queue finish before comparing its pixels)
+    frames(60); const withTree = px();
     trees.splice(0, trees.length);
     for (let i = 0; i < 5; i++) game.pathTick++;
-    frames(); const without = px();
+    frames(60); const without = px();
     return { withTree, without };
   });
   expect(r.without).not.toBe(r.withTree);

@@ -49,11 +49,20 @@ test('the game runs at the same speed whatever the frame rate (#39)', async ({ p
   // most of the test timeout on a slow runner)
   // the steps counted by the game's own tick counter (the world behind the menu runs every step)
   const ticks = await page.evaluate(() => [30, 144].map(fps => {
-    const before = pathTick;
-    const start = performance.now() + 1000;
-    loop.lastTime = start; loop.stepTime = 0;
-    for (let i = 1; i <= 20 * fps; i++) gameLoop(start + i * 1000 / fps);
-    return pathTick - before;
+    const nowDescriptor = Object.getOwnPropertyDescriptor(performance, 'now');
+    const oldRaf = window.requestAnimationFrame, oldRate = loop.frameRate;
+    Object.defineProperty(performance, 'now', { configurable: true, value: () => 0 });
+    window.requestAnimationFrame = () => 0;
+    try {
+      const before = pathTick, start = 1000;
+      loop.frameRate = 0.001; // (simulation-speed check: don't draw thousands of frames on the synthetic clock)
+      loop.lastTime = start; loop.stepTime = 0;
+      for (let i = 1; i <= 20 * fps; i++) gameLoop(start + i * 1000 / fps);
+      return pathTick - before;
+    } finally {
+      loop.frameRate = oldRate; window.requestAnimationFrame = oldRaf;
+      if (nowDescriptor) Object.defineProperty(performance, 'now', nowDescriptor); else delete performance.now;
+    }
   }));
   expect(ticks[0]).toBeGreaterThanOrEqual(1195);
   expect(ticks[0]).toBeLessThanOrEqual(1205);

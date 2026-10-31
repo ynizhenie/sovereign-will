@@ -45,11 +45,14 @@ export function getMaxZoom() {
 // on the screen is thousands of things drawn every frame (the world map shows it all instead)
 export const MIN_CSS_SCALE = 0.3;
 const MAX_ZOOM_OUT_REDUCTION = 0.25;
+// Battle fields can be seen with a little room around them; the everyday map keeps its tighter zoom-out limit.
+const BATTLE_ZOOM_OUT_SCALE = 0.9;
 
 // zoomed out this far, the whole world fits on the screen (a big map's: as far as MIN_CSS_SCALE)
 export function getMinZoom() {
   const previousLimit = Math.max(Math.min(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT), MIN_CSS_SCALE * screenPixelRatio);
-  return previousLimit * (1 + MAX_ZOOM_OUT_REDUCTION) / getBaseScale();
+  const scale = game.gameMode === 'battle' ? BATTLE_ZOOM_OUT_SCALE : 1 + MAX_ZOOM_OUT_REDUCTION;
+  return previousLimit * scale / getBaseScale();
 }
 
 export function setZoom(zoom) {

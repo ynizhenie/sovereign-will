@@ -30,6 +30,7 @@ const MAX_CHUNKS = 96;
 const MAX_PIXELS = 16e6;
 
 /** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame: number }} Chunk */
+/** @typedef {((cx: number, cy: number) => string) & { dirty?: (cx: number, cy: number) => boolean }} ChunkStamp */
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
@@ -55,7 +56,7 @@ export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
 // paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
-/** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] */
+/** @param {string} layer @param {number} res @param {ChunkStamp} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] */
 export function drawChunks(layer, res, stamp, paint, preview) {
   if (typeof document === 'undefined') return;
   const epoch = worldEpoch();
@@ -79,7 +80,9 @@ export function drawChunks(layer, res, stamp, paint, preview) {
     previousView = v; previousScale = scale;
     frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
-    framePaintLayer = layers[(frameOf - 1) % layers.length];
+    // While still, let every layer use the remaining paint budget. Rotating priorities
+    // is useful only during movement, when a coarse first pass keeps the pan responsive.
+    framePaintLayer = moving ? layers[(frameOf - 1) % layers.length] : layers[0];
   } // (the first layer of a frame)
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
@@ -115,6 +118,7 @@ export function drawChunks(layer, res, stamp, paint, preview) {
         let chunk = chunks.get(key);
         const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
         const free = framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed);
+        const invalidated = typeof stamp.dirty === 'function' && stamp.dirty(cx, cy);
         // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
         if (!shown) {
           if (free) {
@@ -127,11 +131,12 @@ export function drawChunks(layer, res, stamp, paint, preview) {
         }
         if (chunk) chunks.delete(key); // (to the end: the most recently shown)
         if (!free) {
-          if (chunk) {
+          if (chunk && !invalidated) {
             chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1);
           } else {
             // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
             // or rasterize each one this frame: preview it until its turn in the queue.
+            // An invalidated overlay is left off the screen rather than showing a removed thing.
             if (preview) preview(x0, y0, x1, y1);
             stats.pending++;
             // Nature and tufts are overlays on the already painted ground. Only a missing base layer
