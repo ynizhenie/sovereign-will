@@ -260,23 +260,60 @@ function countNear(biome, kind, spot, r, cols, rows) {
 function chooseStart(biome, coast, cols, rows, C) {
   const half = GAME_CONFIG.territory.startTiles / 2;
   let best = null, bestScore = -Infinity;
+
   for (let attempt = 0; attempt < 400; attempt++) {
-    const gx = Math.floor(half + rand() * (cols - 2 * half)), gy = Math.floor(half + rand() * (rows - 2 * half));
+    const gx = Math.floor(half + rand() * (cols - 2 * half));
+    const gy = Math.floor(half + rand() * (rows - 2 * half));
     const i = gy * cols + gx;
+
     if (biome[i] !== GRASS || coast[i] < Math.min(C.startCoast, 6)) continue;
+
     let landTiles = 0, forest = 0, rock = 0, lake = 0, desert = 0, total = 0;
+
     for (let y = gy - half; y < gy + half; y += 2) {
       for (let x = gx - half; x < gx + half; x += 2) {
         total++;
         const b = biome[y * cols + x];
         if (b !== SEA) landTiles++;
-        if (b === FOREST) forest++; else if (b === MOUNTAIN) rock++; else if (b === LAKE) lake++; else if (b === DESERT) desert++;
+        if (b === FOREST) forest++;
+        else if (b === MOUNTAIN) rock++;
+        else if (b === LAKE) lake++;
+        else if (b === DESERT) desert++;
       }
     }
-    // (some rock, not hemmed in by it)
-    const score = landTiles / total * 3 + Math.min(forest / total, 0.25) * 4 + Math.min(rock / total, 0.06) * 10 - Math.max(0, rock / total - 0.1) * 8 +
-      Math.min(lake, 3) * 0.1 - desert / total * 2 + Math.min(coast[i], C.startCoast) / C.startCoast;
-    if (score > bestScore) { bestScore = score; best = { gx, gy }; }
+
+    const score = landTiles / total * 3 +
+      Math.min(forest / total, 0.25) * 4 +
+      Math.min(rock / total, 0.06) * 10 -
+      Math.max(0, rock / total - 0.1) * 8 +
+      Math.min(lake, 3) * 0.1 -
+      desert / total * 2 +
+      Math.min(coast[i], C.startCoast) / C.startCoast;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = { gx, gy };
+    }
   }
-  return best || { gx: Math.floor(cols / 2), gy: Math.floor(rows / 2) };
+
+  if (best) return best;
+
+  // Fallback: find the nearest grassland tile.
+  let fallback = null, nearest = Infinity;
+  const centerX = Math.floor(cols / 2);
+  const centerY = Math.floor(rows / 2);
+
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      if (biome[gy * cols + gx] !== GRASS) continue;
+
+      const distance = (gx - centerX) ** 2 + (gy - centerY) ** 2;
+      if (distance < nearest) {
+        nearest = distance;
+        fallback = { gx, gy };
+      }
+    }
+  }
+
+  return fallback || { gx: centerX, gy: centerY };
 }
