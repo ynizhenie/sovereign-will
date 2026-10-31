@@ -19,16 +19,9 @@ import { drawHorns } from '../../factions/demons/index.js';
 import { drawPet } from '../pets/index.js';
 import { isBigBody, isPet } from './settlers.rules.js';
 
-// (#306) Below this many screen px per world px a figure is a handful of pixels: its body, head and colours
-// are all that shows. Drawing its hands, gear, hair strands and idle signs on so little was most of what a
-// big colony cost to draw (and read as clutter)
-const SIMPLE_UNIT = 0.72;
-// (#306) Below this, a figure is one or two pixels: a dab of its colour is all there is to see
-const TINY_UNIT = 0.26;
-
-// Whether figures are drawn at that size now
-export const simpleUnit = () => getViewScale() < SIMPLE_UNIT;
-export const tinyUnit = () => getViewScale() < TINY_UNIT;
+// Keep character detail intact at every camera zoom level.
+export const simpleUnit = () => false;
+export const tinyUnit = () => false;
 
 // A strike: the held weapon or tool swings through once over `seconds`
 export function startSwing(unit, seconds) {

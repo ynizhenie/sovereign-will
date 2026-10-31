@@ -9,7 +9,7 @@
 
 import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, runLoading, setRichText, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
-import { createWorldSeed, game, newWorldEpoch, resetTileIndex, setWorldSize, townHall, WORLD_LISTS } from '../../engine/world/index.js';
+import { createWorldSeed, game, resetTileIndex, setWorldSize, townHall, WORLD_LISTS } from '../../engine/world/index.js';
 import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
@@ -171,7 +171,6 @@ export function loadGame(data) {
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
   ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
-  newWorldEpoch(); // (#326: what was kept a tick is the world before's, whatever tick this is)
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
   game.armory = { ...data.armory };
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();

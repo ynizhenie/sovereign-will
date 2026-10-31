@@ -35,6 +35,25 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.afterRemove).toBe(0);
 });
 
+test('Battles can zoom out enough to see the whole field', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const battleMin = getMinZoom();
+    game.gameMode = 'endless';
+    const endlessMin = getMinZoom();
+    game.gameMode = 'battle';
+    setZoom(0);
+    const view = getViewRect();
+    return { battleMin, endlessMin, zoom: camera.zoom, view, width: WORLD_WIDTH, height: WORLD_HEIGHT };
+  });
+  expect(r.battleMin).toBeLessThan(r.endlessMin);
+  expect(r.zoom).toBe(r.battleMin);
+  expect(r.view.x0).toBeLessThan(0);
+  expect(r.view.y0).toBeLessThan(0);
+  expect(r.view.x1).toBeGreaterThan(r.width);
+  expect(r.view.y1).toBeGreaterThan(r.height);
+});
+
 test('one Units sheet for both sides, every faction under its heading in the same order; armour, shield and banner for units; buildings everyone\'s, then each faction\'s (#142, #279, #326)', async ({ page }) => {
   await openBattle(page);
   await showCategory(page, 'units');
@@ -126,10 +145,14 @@ test('the desert field keeps the midline and the green and red halves of the gla
   await openBattle(page);
   const r = await page.evaluate(() => {
     setBattleField('desert');
+    // (The zoom-out limit no longer shows the whole map; pan left so its outer border is on-screen.)
+    camera.x = game.WORLD_WIDTH / 4;
     const frames = () => { for (let i = 0; i < 24; i++) render(); }; // (#322: the terrain's pictures are painted a piece or two a frame)
     frames();
-    const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
-    const outsideX = Math.round(x + (20 - camera.x) * getViewScale()); // (the border beyond the red line)
+    const x = Math.round(canvas.width / 2 + (game.WORLD_WIDTH / 2 - camera.x) * getViewScale()), y = Math.floor(canvas.height / 2);
+    // (With the zoom-out limit the map edge can be off-screen; sample the sand just past its red border instead.)
+    const outsideWorldX = BORDER_MARGIN * TILE_SIZE - 30;
+    const outsideX = Math.round(x + (outsideWorldX - camera.x) * getViewScale());
     const sample = (px, py) => [...ctx.getImageData(px, py, 1, 1).data];
     const on = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
     const phase = battle.phase;

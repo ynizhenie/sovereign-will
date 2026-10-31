@@ -3,7 +3,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/index.js';
 import { ctx, getViewRect, mouse, setFont, t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, isBorderZone, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
@@ -112,7 +112,9 @@ export function drawTownHall() {
 
 // Blueprints: their shape, the materials still to come, the work done
 export function drawBlueprints() {
-  game.blueprints.forEach(bp => {
+  const v = getViewRect(60), visible = [];
+  forEachInRect(game.blueprints, v.x0, v.y0, v.x1, v.y1, bp => visible.push(bp));
+  visible.forEach(bp => {
     if (bp.replaces) return; // (an upgrade: over the building, drawUpgrades)
     ctx.save(); ctx.globalAlpha = 0.5;
     if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
@@ -153,7 +155,9 @@ export function drawBlueprints() {
 // replace, the new one faint, an up arrow in its corner, how far along in a bar under it, and what's still
 // to be brought
 export function drawUpgrades() {
-  for (const bp of game.blueprints) {
+  const v = getViewRect(60), visible = [];
+  forEachInRect(game.blueprints, v.x0, v.y0, v.x1, v.y1, bp => visible.push(bp));
+  for (const bp of visible) {
     if (!bp.replaces) continue;
     const def = getDefinition('buildings', bp.type) || {};
     ctx.save();
@@ -176,9 +180,9 @@ export function drawUpgrades() {
 
 // (#326) Walls and doors join: a piece's neighbours (the four tiles round it that hold a wall or a door)
 const isWallPiece = b => b.type === 'wall_wood' || b.type === 'wall_stone' || b.type === 'door' || b.type === 'iron_door';
-function wallLinks() {
+function wallLinks(buildings = game.buildings) {
   const at = new Map();
-  for (const b of game.buildings) if (isWallPiece(b)) at.set(`${Math.round(b.x / TILE_SIZE)},${Math.round(b.y / TILE_SIZE)}`, b);
+  for (const b of buildings) if (isWallPiece(b)) at.set(`${Math.round(b.x / TILE_SIZE)},${Math.round(b.y / TILE_SIZE)}`, b);
   const links = new Map();
   for (const [key, b] of at) {
     const [cx, cy] = key.split(',').map(Number);
@@ -217,8 +221,12 @@ function doorSwing(b, mask) {
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
 export function drawBuildings() {
   const now = performance.now(), dt = Math.min(0.1, (now - lastDraw) / 1000); lastDraw = now;
-  const links = wallLinks();
-  game.buildings.forEach(b => {
+  // Wall links and building art only need this view and its neighbours. Scanning all
+  // buildings on every frame made camera movement scale with the whole map.
+  const v = getViewRect(90), nearby = [];
+  forEachInRect(game.buildings, v.x0, v.y0, v.x1, v.y1, b => nearby.push(b));
+  const links = wallLinks(nearby);
+  nearby.forEach(b => {
     // (the look: building.art.js, #251)
     if (b.type === 'wall_wood') {
       drawWoodWall(b.x, b.y, links.get(b) || 0);
