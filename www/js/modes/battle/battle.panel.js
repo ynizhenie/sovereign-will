@@ -13,9 +13,9 @@ import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear)]));
-  // (#326) the time of day, the weather, blighted ground
+  // (#326) the time of day and weather
   document.querySelectorAll('[data-battle-look]').forEach(b => {
-    b.classList.toggle('on', String(battle[/** @type {'time' | 'weather' | 'blight'} */ (b.dataset.battleLook)]) === b.dataset.value);
+    b.classList.toggle('on', String(battle[/** @type {'time' | 'weather'} */ (b.dataset.battleLook)]) === b.dataset.value);
     /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
   });
   // (#298) the armour button says which: leather, iron, or just "armour" off
@@ -32,10 +32,8 @@ export function renderBattlePanel() {
     hint.dataset.i18n = battle.difficulty === 'hard' ? 'battle.hardHint' : 'battle.normalHint';
     setRichText(hint, t(hint.dataset.i18n));
   }
-  document.querySelectorAll('[data-battle-auto]').forEach(b => b.classList.toggle('on', (b.dataset.battleAuto === 'on') === battle.auto));
   renderBattleColors();
   renderBattleMusic();
-  document.getElementById('battle-auto').classList.toggle('on', battle.auto);
   panel.dataset.category = battle.category;
   const presets = document.getElementById('battle-presets');
   presets.innerHTML = '';
@@ -183,13 +181,11 @@ export function initBattlePanel() {
     renderBattlePanel();
   }));
   document.querySelectorAll('[data-battle-look]').forEach(b => onTap(b, () => {
-    const key = /** @type {'time' | 'weather' | 'blight'} */ (b.dataset.battleLook);
-    setBattleLook(key, key === 'blight' ? b.dataset.value === 'true' : b.dataset.value);
+    const key = /** @type {'time' | 'weather'} */ (b.dataset.battleLook);
+    setBattleLook(key, b.dataset.value);
     renderBattlePanel();
   }));
-  // the battle's settings (#255): the field, the difficulty, the auto battle (also by Fight! once it's on)
+  // the battle's settings (#255): the field and difficulty
   document.querySelectorAll('[data-battle-field]').forEach(b => onTap(b, () => { setBattleField(b.dataset.battleField); renderBattlePanel(); }));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => onTap(b, () => { setBattleDifficulty(b.dataset.battleDifficulty); renderBattlePanel(); }));
-  document.querySelectorAll('[data-battle-auto]').forEach(b => onTap(b, () => { battle.auto = b.dataset.battleAuto === 'on'; renderBattlePanel(); }));
-  onTap(document.getElementById('battle-auto'), () => { battle.auto = !battle.auto; renderBattlePanel(); });
 }

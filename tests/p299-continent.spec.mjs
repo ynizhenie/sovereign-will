@@ -79,3 +79,24 @@ test('the start: on grassland far from the sea, room round the hall, rock, ore, 
   }
   expect(errors).toEqual([]);
 });
+
+test('a continent starts with 3–5 boars in the player territory', async ({ page }) => {
+  test.setTimeout(60000);
+  const errors = await openGame(page);
+  const counts = await page.evaluate(() => {
+    const results = [];
+    for (const seed of ['start-boars-a', 'start-boars-b', 'start-boars-c']) {
+      mapSettings = { cols: 192, rows: 192 }; window.sim.start(seed);
+      const half = GAME_CONFIG.territory.startTiles / 2;
+      results.push(boars.filter(b => {
+        const gx = Math.floor(b.x / TILE_SIZE), gy = Math.floor(b.y / TILE_SIZE);
+        return gx >= Math.floor(townHall.x / TILE_SIZE) - half && gx < Math.floor(townHall.x / TILE_SIZE) + half &&
+          gy >= Math.floor(townHall.y / TILE_SIZE) - half && gy < Math.floor(townHall.y / TILE_SIZE) + half;
+      }).length);
+    }
+    mapSettings = { cols: 40, rows: 40 };
+    return results;
+  });
+  expect(counts.every(n => n >= 3 && n <= 5)).toBe(true);
+  expect(errors).toEqual([]);
+});

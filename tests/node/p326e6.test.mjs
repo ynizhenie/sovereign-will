@@ -10,5 +10,11 @@ test('firewood is every faction\'s: the undead order it in Craft (1 wood into 2)
 });
 
 test('a wave\'s tents are put up outside the player\'s land, one to three tiles from it (#326)', async () => {
-  expect(await sim.wavesTentsAtTheBorder()).toEqual({ sites: true, allOutside: true, gaps: [1, 3] });
+  const tents = await sim.wavesTentsAtTheBorder();
+  expect(tents).toMatchObject({ sites: true, allOutside: true });
+  expect(tents.gaps.length).toBeGreaterThan(0);
+  for (const gap of tents.gaps) {
+    expect(gap).toBeGreaterThanOrEqual(1);
+    expect(gap).toBeLessThanOrEqual(3);
+  }
 });

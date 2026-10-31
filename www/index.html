@@ -29,13 +29,11 @@
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
         <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
         <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>
-        <!-- (#326) Settings, and at its right a square of the languages' flags: a tap on one changes the language -->
-        <div class="menu-row">
-            <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
-            <div class="flag-box" id="menu-flags"></div>
-        </div>
+        <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
     </div>
+    <!-- The current language; tapping its flag cycles languages. -->
+    <div class="flag-box" id="menu-flags"></div>
 
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
@@ -109,11 +107,13 @@
             </div>
         </div>
 
-        <div class="seed-settings">
-            <label for="seed-input" data-i18n="menu.seed">World seed</label>
-            <div class="seed-row">
-                <input id="seed-input" type="text" value="default-world-seed" />
-                <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
+        <div data-seed-slot="endless">
+            <div id="seed-settings" class="seed-settings">
+                <label for="seed-input" data-i18n="menu.seed">World seed</label>
+                <div class="seed-row">
+                    <input id="seed-input" type="text" value="default-world-seed" />
+                    <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
+                </div>
             </div>
         </div>
     </div>
@@ -137,18 +137,15 @@
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
             <div class="faction-side"><span data-i18n="menu.you">You</span><div id="editor-faction" class="faction-options"></div></div>
-            <div class="wave-options">
-                <button id="editor-new-empty" class="fps-option" data-i18n="editor.empty">Empty</button>
-                <button id="editor-new-generated" class="fps-option" data-i18n="editor.generated">From the generator</button>
+            <div class="editor-start">
+                <div class="editor-start-title" data-i18n="editor.start">Choose a map and open it in the editor:</div>
+                <div class="editor-start-options">
+                    <button id="editor-new-empty" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.empty">Empty map</button>
+                    <button id="editor-new-generated" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.generated">Generate map</button>
+                </div>
             </div>
         </div>
-        <div class="seed-settings">
-            <label for="editor-seed-input" data-i18n="menu.seed">World seed</label>
-            <div class="seed-row">
-                <input id="editor-seed-input" type="text" value="default-world-seed" />
-                <button id="editor-seed-reroll" type="button" data-i18n-title="menu.newSeed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
-            </div>
-        </div>
+        <div data-seed-slot="editor"></div>
         <div class="wave-settings">
             <div data-i18n="editor.savedMaps">Saved maps:</div>
             <div id="editor-map-list" class="preset-list"></div>
@@ -218,12 +215,14 @@
                 <button class="fps-option" data-music="on" data-i18n="menu.on">On</button>
             </div>
         </div>
+        <button id="open-music-player" class="menu-button" data-i18n="menu.openMusicPlayer">Open music player</button>
+    </div>
 
-        <!-- (#326) every track of the game: its name, when it plays, a button to listen to it, and a switch to turn it off -->
-        <div class="wave-settings">
-            <div data-i18n="music.player">Music player:</div>
-            <div id="music-player"></div>
-        </div>
+    <div class="main-menu-content" data-screen="music" hidden>
+        <button class="menu-back" data-back-to="settings" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="music.player">Music player</h1>
+        <!-- (#326) each track: its name, when it plays, a button to listen to it, and a switch to turn it off -->
+        <div id="music-player"></div>
     </div>
 </div>
 
@@ -310,11 +309,9 @@
     </div>
   </div>
 
-  <!-- battle: under the top bar, clearing each side round Fight! in the middle; in a fight the auto battle
-       and calling it off (#255) -->
+  <!-- battle: under the top bar, clearing each side round Fight! in the middle; in a fight, calling it off -->
   <div id="battle-actions" class="hud-layer">
     <button class="btn btn-armor battle-setup-only" id="battle-fight" data-i18n="battle.fight">[[swords]] Fight!</button>
-    <button class="btn battle-fight-only" id="battle-auto" data-i18n="battle.auto">Auto battle</button>
     <button class="btn btn-disarm battle-fight-only" id="battle-cancel" data-i18n="battle.cancel">[[close]] Cancel fight</button>
   </div>
 
@@ -394,10 +391,12 @@
 
           <div id="tab-build" class="tab-pane active">
             <div id="build-actions"></div>
-
-            <div class="tile-grid">
-              <button class="btn tile btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
-              <button class="btn tile" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
+            <div class="panel-section" id="build-action-controls">
+              <div class="panel-heading" data-i18n="panel.actions">Actions</div>
+              <div class="tile-grid">
+                <button class="btn tile btn-demolish" id="btn-demolish" data-action="setMode" data-arg="demolish" data-i18n="btn.demolish">[[hammer]] Demolish</button>
+                <button class="btn tile" id="btn-repair-all" data-action="repairAllBuildings" data-i18n="btn.repairAll">[[tools]] Repair all</button>
+              </div>
             </div>
           </div>
 
@@ -463,18 +462,14 @@
         <div class="battle-hint battle-gear" data-i18n="battle.bannerHint">Banner: the next soldier or archer placed becomes a commander</div>
         <div id="battle-presets"></div>
       </div>
-      <!-- the battle's own settings (#255): the field, the difficulty, the auto battle -->
+      <!-- the battle's own settings (#255): the field and the difficulty -->
       <div class="hud-sheet" data-sheet="battle-settings">
         <div class="panel-heading" data-i18n="battle.fieldHeading">Battlefield:</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-field="glade" data-i18n="battle.fieldGlade">Glade</button>
           <button class="btn sub-tab" data-battle-field="desert" data-i18n="battle.fieldDesert">Desert</button>
         </div>
-        <!-- (#326) how the battle looks: its time of day, its weather, blighted ground -->
-        <div class="sub-tabs">
-          <button class="btn sub-tab" data-battle-look="blight" data-value="false" data-i18n="battle.blightOff">No blight</button>
-          <button class="btn sub-tab" data-battle-look="blight" data-value="true" data-i18n="battle.blightOn">Blighted</button>
-        </div>
+        <!-- (#326) how the battle looks: its time of day and weather -->
         <div class="panel-heading" data-i18n="battle.timeHeading">Time of day:</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-look="time" data-value="morning" data-i18n="battle.time.morning">Morning</button>
@@ -496,12 +491,6 @@
           <button class="btn sub-tab" data-battle-difficulty="hard" data-i18n="menu.hard">Hard</button>
         </div>
         <div class="battle-hint" id="battle-difficulty-hint" data-i18n="battle.normalHint">Normal: the red units have a quarter less hp</div>
-        <div class="panel-heading" data-i18n="battle.autoHeading">Auto battle:</div>
-        <div class="sub-tabs">
-          <button class="btn sub-tab" data-battle-auto="on" data-i18n="menu.on">On</button>
-          <button class="btn sub-tab" data-battle-auto="off" data-i18n="menu.off">Off</button>
-        </div>
-        <div class="battle-hint" data-i18n="battle.ordersHint">Off: yours hold their ground; tap an enemy to send them all at it, or tap one of yours, then an enemy or a spot</div>
         <!-- (#306) the sides' colours, as in Endless -->
         <div class="panel-heading" data-i18n="battle.colorsYours">Your colour:</div>
         <div class="color-options" id="battle-colors-green"></div>

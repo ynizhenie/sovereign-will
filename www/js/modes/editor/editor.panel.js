@@ -5,7 +5,7 @@
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { closeSheet, escapeHtml, iconHtml, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
 import { onTap, setDragPainter, t } from '../../engine/platform/index.js';
-import { createDefaultSeed, game } from '../../engine/world/index.js';
+import { game } from '../../engine/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { openGenerator } from '../endless/index.js';
 import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
@@ -108,8 +108,7 @@ export function initEditorPanel() {
   onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
   onTap(document.getElementById('editor-new-empty'), () => startEditor({ ...editorDimensions(), generate: false }));
   onTap(document.getElementById('editor-new-generated'), () => startEditor({ ...editorDimensions(), generate: true }));
-  // (#326, 27.10, 19) a generated map's seed (a new random one by its button) and the generator's settings
-  onTap(document.getElementById('editor-seed-reroll'), () => { /** @type {HTMLInputElement} */ (document.getElementById('editor-seed-input')).value = createDefaultSeed(); });
+  // (#326, 27.10, 19) the shared seed panel's generator settings
   onTap(document.getElementById('editor-open-generator'), () => openGenerator('editor'));
   onTap(document.getElementById('editor-save'), saveEditorMap);
   document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));

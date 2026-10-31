@@ -41,9 +41,39 @@ function showOrder(from, to, icon, text) {
   from.say = { text, until };
 }
 
+// The tools needed for the player's marked work, in the marks' priority order
+function playerMarkedNeeds(tick) {
+  const needs = [];
+  const add = need => {
+    if (need && !needs.some(existing => existing.family === need.family)) needs.push(need);
+  };
+  for (const resource of tick.markedResources) {
+    if (!(resource.priority > 0)) continue;
+    const kind = tick.resourceKind.get(resource);
+    const def = GAME_CONFIG.mapResources[kind];
+    const family = def?.tool || (kind === 'farm' ? 'hoe' : null);
+    const output = Object.keys(resource.yield || def?.yield || {})[0];
+    if (family && output && GAME_CONFIG.resources[output]) add({ resource: output, family });
+  }
+  if (tick.activeWaterSpots.length) add({ resource: 'rawFish', family: 'rod' });
+  if (game.farmZones.some(zone => zone.crop === 'wheat')) add({ resource: 'wheat', family: 'hoe' });
+  return needs;
+}
+
+// What the player has asked to work first, else what the colony needs most now
+function playerMarkedNeed(tick, settler) {
+  const needs = playerMarkedNeeds(tick);
+  const currentFamily = getToolFamily(settler.tool);
+  return needs.find(need => need.family === currentFamily) ||
+    needs.find(need => storedTool(need.family)) ||
+    needs[0] || null;
+}
+
 // What the colony needs most now, and the tool family that gathers it (null: by hand)
 const NEED_TOOLS = { wood: 'axe', stone: 'pickaxe', ironOre: 'pickaxe', food: null };
-function mostNeeded() {
+function mostNeeded(tick, settler) {
+  const marked = playerMarkedNeed(tick, settler);
+  if (marked) return marked;
   const needs = GAME_CONFIG.needs;
   let best = null, bestShare = Infinity;
   for (const [id, amount] of Object.entries(needs)) {
@@ -89,15 +119,20 @@ export function foremanOrders(s, tick) {
   if (Math.hypot(to.x - s.x, to.y - s.y) > c.reach) { moveEntityTowards(s, to.x, to.y, s.speed, false, tick.dt); return true; }
   // there: the order
   faceTowards(s, to.x, to.y);
-  const need = mostNeeded();
+  const need = mostNeeded(tick, to);
   s.orderTo = null;
   s.orderIn = c.everySeconds;
   if (!need) return true;
+  const sameFocus = to.focus?.resource === need.resource && to.focus.until > game.pathTick;
+  const alreadyWorking = to.activity === 'harvest' && to.pickedRes &&
+    ((to.pickedRes.yield || GAME_CONFIG.mapResources[tick.resourceKind.get(to.pickedRes)]?.yield || {})[need.resource] || 0) > 0;
+  const pendingToolMatches = need.family && getToolFamily(to.targetEquipment?.tool) === need.family;
   to.focus = { resource: need.resource, until: game.pathTick + c.focusSeconds * 60 };
   if (need.family && getToolFamily(to.tool) !== need.family && !to.targetEquipment) {
     const tool = storedTool(need.family);
     if (tool && takeFromArmory(`tools:${tool}`)) to.targetEquipment = { weapon: 'fist', tool, role: 'worker', keep: true }; // (its own into the armory)
   }
+  if ((sameFocus && (getToolFamily(to.tool) === need.family || pendingToolMatches)) || alreadyWorking) return true;
   const name = ensureUnitName(to, getPlayerFaction().id, game.settlers);
   showOrder(s, to, GAME_CONFIG.resources[need.resource].icon, t('order.foreman', { name, resource: GAME_CONFIG.resources[need.resource].label }));
   return true;

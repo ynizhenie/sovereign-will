@@ -24,7 +24,6 @@ async function openBattle(page) {
 test('the red side\'s iron traps catch the player\'s own, who walk onto them as the enemies do onto the player\'s (#326, 14)', async ({ page }) => {
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
-    battle.auto = true;
     // red traps right in the way, the red one standing behind them
     for (let gx = 22; gx <= 25; gx++) for (let gy = 11; gy <= 13; gy++) put('b', 'iron_trap', gx, gy);
     put('u', 'humans:sword', 8, 12); put('u', 'humans:sword', 27, 12);
@@ -39,7 +38,6 @@ test('the red side\'s iron traps catch the player\'s own, who walk onto them as 
 test('in a battle a unit goes for the nearest enemy (#326, 29)', async ({ page }) => {
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
-    battle.auto = true;
     put('u', 'humans:sword', 10, 12);
     put('u', 'humans:sword', 23, 12); put('u', 'humans:sword', 30, 3); put('u', 'humans:sword', 30, 21);
     let start = null, d = null;
@@ -60,7 +58,6 @@ test('in a battle a unit goes for the nearest enemy (#326, 29)', async ({ page }
 test('up its platform an archer shoots with its own bow, a third farther; never up the red side\'s; down when nothing\'s in reach (#326, 30-31)', async ({ page }) => {
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
-    battle.auto = true;
     // its own platform, an enemy in reach
     put('b', 'watchtower', 14, 12); put('u', 'humans:bow', 11, 12); put('u', 'humans:sword', 22, 12);
     let shot = null;
