@@ -3,7 +3,7 @@
 // the more the higher (the town hall's storeroom no longer shown, #279)
 
 import { drawIcon, getResourceIconName } from '../../../ui/index.js';
-import { game, townHall } from '../../../engine/world/index.js';
+import { forEachInRect, game, townHall } from '../../../engine/world/index.js';
 import { stock } from './storage.rules.js';
 import { ctx, getViewRect } from '../../../engine/platform/index.js';
 import { castShadow } from '../../world/index.js';
@@ -13,7 +13,8 @@ import { storeCapacity } from './storage.stores.js';
 const kinds = store => Object.entries(store || {}).filter(([, n]) => n >= 1).sort((a, b) => b[1] - a[1]);
 
 export function drawPiles() {
-  const v = getViewRect(20), seen = game.piles.filter(p => p.x > v.x0 && p.x < v.x1 && p.y > v.y0 && p.y < v.y1); // (#322: those on the screen)
+  const v = getViewRect(20), seen = [];
+  forEachInRect(game.piles, v.x0, v.y0, v.x1, v.y1, p => seen.push(p)); // (#322: those on the screen)
   for (const layer of [0, 1, 2]) {
     for (const p of seen) {
       if ((p.layer || 0) !== layer) continue;
@@ -35,7 +36,9 @@ function stack(id, n, x, y, size, room) {
 
 // After the buildings: a warehouse's kinds on its floor (six at most)
 export function drawStoreContents() {
-  for (const b of game.buildings) {
+  const v = getViewRect(60), nearby = [];
+  forEachInRect(game.buildings, v.x0, v.y0, v.x1, v.y1, b => nearby.push(b));
+  for (const b of nearby) {
     if (b.type !== 'warehouse') continue;
     const room = storeCapacity(b) / 4;
     kinds(b.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, b.x - 8 + (i % 3) * 8, b.y + 3 + Math.floor(i / 3) * 7, 7, room));

@@ -75,8 +75,8 @@ export function tickWeather(dt) {
 }
 
 // How far a stalk (of height h) at (x, y) leans with the wind now, in px: sideways along the wind's way
-export function windSway(x, y, h) {
-  const w = getWeather(), t = performance.now() / 1000;
+export function windSway(x, y, h, time = performance.now() / 1000) {
+  const w = getWeather(), t = time;
   const gust = 0.6 + 0.4 * Math.sin(t * 0.7 + x * 0.004);
   const s = w.wind * gust * (Math.sin(t * 2.4 + x * 0.05 + y * 0.03) * 0.5 + 0.7);
   // (a wind up or down the screen still bends them a little sideways)

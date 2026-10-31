@@ -20,7 +20,6 @@ const KINDS = {
   stick: { variants: 2, box: [-10, -8, 10, 8], paint: drawStickArt },
   pebbles: { variants: 4, box: [-7, -7, 7, 7], paint: drawPebblesArt }
 };
-const LEANS = 4; // (a tuft's lean either way, in steps: 9 in all)
 const MAX_SPRITES = 1500;
 
 /** @type {Map<string, HTMLCanvasElement>} */
@@ -31,11 +30,11 @@ const hashOf = (kind, v) => tileVariantHash(v * 7919 + kind.length, v * 104729 +
 // the picture's resolution: the screen's, to the next power of two (a little sharper than needed rather than blurred)
 const resOf = () => Math.min(4, Math.max(0.25, 2 ** Math.ceil(Math.log2(Math.max(getViewScale(), 0.01)))));
 
-/** @param {string} kind @param {any} o @param {number} res @param {number} lean */
-function spriteOf(kind, o, res, lean) {
+/** @param {string} kind @param {any} o @param {number} res */
+function spriteOf(kind, o, res) {
   const k = KINDS[kind], v = tileVariantHash(Math.round(o.x), Math.round(o.y)) % k.variants;
   const apple = kind === 'tree' ? (o.apple ? (o.applesReady ? 2 : 1) : 0) : 0;
-  const key = `${kind}|${v}|${apple}|${lean}|${res}`;
+  const key = `${kind}|${v}|${apple}|${res}`;
   let c = sprites.get(key);
   if (c) { sprites.delete(key); sprites.set(key, c); return c; }
   const [x0, y0, x1, y1] = k.box;
@@ -43,7 +42,7 @@ function spriteOf(kind, o, res, lean) {
   c.width = Math.ceil((x1 - x0) * res) + 2; c.height = Math.ceil((y1 - y0) * res) + 2;
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
   g.setTransform(res, 0, 0, res, 1 - x0 * res, 1 - y0 * res);
-  paintOn(g); paintVariant(hashOf(kind, v), false, kind === 'grass' ? lean * 1.5 : null);
+  paintOn(g); paintVariant(hashOf(kind, v), false, kind === 'grass' ? 0 : null);
   try { k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady }); } finally { paintVariant(null); paintOn(null); }
   sprites.set(key, c);
   if (sprites.size > MAX_SPRITES) sprites.delete(/** @type {string} */ (sprites.keys().next().value));
@@ -55,6 +54,7 @@ function spriteOf(kind, o, res, lean) {
 export function drawSprites(kind, things) {
   if (!things.length) return;
   const res = resOf(), [x0, y0] = KINDS[kind].box, [dx, dy, rx, ry] = SHADOWS[kind];
+  const windTime = performance.now() / 1000;
   const sun = getSun(), height = rx * 0.9, ox = sun.dx * height, oy = sun.dy * height;
   const ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
   const shadow = new Path2D();
@@ -65,8 +65,18 @@ export function drawSprites(kind, things) {
   ctx.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
   ctx.fill(shadow);
   for (const o of things) {
-    const lean = kind === 'grass' ? Math.max(-LEANS, Math.min(LEANS, Math.round(windSway(o.x, o.y, 10) / 1.5))) : 0;
-    const c = spriteOf(kind, o, res, lean);
-    ctx.drawImage(c, o.x + x0 - 1 / res, o.y + y0 - 1 / res, c.width / res, c.height / res);
+    const c = spriteOf(kind, o, res);
+    if (kind === 'grass') {
+      // Reuse the still sprite and shear it around the base of the blades. The wind angle
+      // stays continuous instead of jumping between a few cached lean images.
+      const sway = windSway(o.x, o.y, 18, windTime);
+      ctx.save();
+      ctx.translate(o.x, o.y + 7);
+      ctx.transform(1, 0, -sway / 18, 1, 0, 0);
+      ctx.drawImage(c, x0 - 1 / res, y0 - 7 - 1 / res, c.width / res, c.height / res);
+      ctx.restore();
+    } else {
+      ctx.drawImage(c, o.x + x0 - 1 / res, o.y + y0 - 1 / res, c.width / res, c.height / res);
+    }
   }
 }

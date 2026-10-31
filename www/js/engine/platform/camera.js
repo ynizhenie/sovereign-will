@@ -44,10 +44,12 @@ export function getMaxZoom() {
 // (#299) zoomed out no farther than a world unit to MIN_CSS_SCALE CSS pixels: on a big map the whole of it
 // on the screen is thousands of things drawn every frame (the world map shows it all instead)
 export const MIN_CSS_SCALE = 0.3;
+const MAX_ZOOM_OUT_REDUCTION = 0.25;
 
 // zoomed out this far, the whole world fits on the screen (a big map's: as far as MIN_CSS_SCALE)
 export function getMinZoom() {
-  return Math.max(Math.min(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT), MIN_CSS_SCALE * screenPixelRatio) / getBaseScale();
+  const previousLimit = Math.max(Math.min(canvas.width / game.WORLD_WIDTH, canvas.height / game.WORLD_HEIGHT), MIN_CSS_SCALE * screenPixelRatio);
+  return previousLimit * (1 + MAX_ZOOM_OUT_REDUCTION) / getBaseScale();
 }
 
 export function setZoom(zoom) {

@@ -1,8 +1,8 @@
 // Blood, arrows, flames and the target mark
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/index.js';
-import { ctx } from '../../../engine/platform/index.js';
+import { forEachInRect, game } from '../../../engine/world/index.js';
+import { ctx, getViewRect } from '../../../engine/platform/index.js';
 import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
 import { corpseHasWorms } from '../../economy/fishing/index.js';
 import { tileVariantHash } from '../../world/index.js';
@@ -84,7 +84,8 @@ export function drawTargetMark(en) {
 
 // Blood on the ground, and footprints out of blood or dung
 export function drawBloodOnGround() {
-  game.bloodSplats.forEach(b => {
+  const v = getViewRect(30);
+  forEachInRect(game.bloodSplats, v.x0, v.y0, v.x1, v.y1, b => {
     const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
     ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
     ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r * 1.3, b.r, 0, 0, Math.PI * 2); ctx.fill();
@@ -115,7 +116,8 @@ function drawWorms(c) {
 
 // Corpses: grey, fading out over their last 10 seconds; worms on them
 export function drawCorpses() {
-  game.corpses.forEach(c => {
+  const v = getViewRect(40);
+  forEachInRect(game.corpses, v.x0, v.y0, v.x1, v.y1, c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
     ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
     // a figure lying on its side, crosses for its eyes (#251), its skin grey and its clothes its side's colour
