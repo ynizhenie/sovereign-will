@@ -10,7 +10,7 @@ import { DEFAULT_MAP_TILES, TILE_SIZE, game, rand, townHall } from '../../engine
 import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
-import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, placeOreSpawners } from './world.generator.js';
+import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners } from './world.generator.js';
 
 const config = () => GAME_CONFIG.continent;
 
@@ -167,8 +167,11 @@ export function* generateContinent() {
     for (let gx = 0; gx < cols; gx++) {
       const i = at(gx, gy), b = biome[i], { x, y } = tile(gx, gy);
       if (b === SEA || b === LAKE) game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
-      else if (b === MOUNTAIN) addMapResource('natural_rock', x, y);
-      else if (b === DESERT) { game.desertTiles.push({ x, y }); sand[i] = 1; }
+      else if (b === MOUNTAIN) {
+        addMapResource('natural_rock', x, y);
+        // a mountain where the desert's climate is: the sand goes under it, so it counts as desert too
+        if (wet[i] <= desertAt) { game.desertTiles.push({ x, y }); sand[i] = 1; }
+      } else if (b === DESERT) { game.desertTiles.push({ x, y }); sand[i] = 1; }
       // a beach along the sea: the land touching it, a tile or two deep
       else if (coast[i] === 1 || (coast[i] === 2 && shapeNoise(gx * 0.3, gy * 0.3) > 0.55)) { game.beachTiles.push({ x, y }); sand[i] = 1; }
     }
@@ -240,6 +243,7 @@ export function* generateContinent() {
     yield 0.85;
   }
   placeAppleTrees();
+  markDesertUnderRocks(); // (rock and ore standing in the desert: sand under them, and the tile counts as desert)
 }
 
 // How many tiles of a biome within r tiles of the spot

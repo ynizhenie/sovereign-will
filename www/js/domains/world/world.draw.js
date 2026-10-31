@@ -239,7 +239,13 @@ export function drawGrassGround() {
 // of a grid of separate squares. Shades and details vary per tile (tileVariantHash).
 export const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
 export const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
-export const DESERT_SHADES = ['#c9a66b', '#cba96f', '#c7a468', '#cdab72'];
+// Sand: one base with close patches over it, as the grass has (not a shade per tile: that read as a grid)
+export const SAND_BASE = '#c9a66b';
+export const DESERT_SHADES = ['#cba96f', '#c7a468', '#cdab72', '#c5a166', '#cfad74'];
+// Rock standing in the desert: sandstone a little darker than the sand, its layers and a dark edge
+// making it stone (a much redder rock stood out of the desert; a muddy brown read as a patch of dirt)
+export const DESERT_ROCK_SHADES = ['#b38d5a', '#b7905d', '#af8956', '#bb945f', '#b18b58'];
+export const DESERT_ROCK_EDGE = '#63431f';
 
 // (#298) where the tile functions below draw: the screen, or the terrain's picture while it's painted
 /** @type {CanvasRenderingContext2D | null} */
@@ -381,27 +387,40 @@ export function drawWaterTile(w, tiles) {
 export function drawRockTile(x, y, tiles) {
   const G = target || ctx;
   const h = tileVariantHash(x, y), open = openSides(tiles.rockAndOre, x, y);
-  const edgeColor = '#1a252f', occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
-  drawJoinedTile(x, y, open, edgeColor, ROCK_SHADES[h % ROCK_SHADES.length], false, occupiedCorners);
+  // a rock standing in the desert (the sand is under it, see markDesertUnderRocks): warm sandstone, its own edge
+  const desert = getSandKeys().has(`${x},${y}`);
+  // (one shade under a whole desert mass: the layers and facets give it its texture, not a shade a tile)
+  const fill = desert ? DESERT_ROCK_SHADES[0] : ROCK_SHADES[h % ROCK_SHADES.length];
+  const edgeColor = desert ? DESERT_ROCK_EDGE : '#1a252f', occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
+  drawJoinedTile(x, y, open, edgeColor, fill, false, occupiedCorners);
   G.save(); G.beginPath();
   G.roundRect(x - 15 - over, y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]);
   G.clip();
   // facets of the rock face, a little lighter, and a lit top edge and shaded bottom edge where the mass
   // ends (#251: flat squares)
-  G.fillStyle = 'rgba(255, 255, 255, 0.07)';
+  if (desert) {
+    // layers of sediment across the face: what makes it read as sandstone rather than a patch of dirt.
+    // They sit at the same heights in every tile, so a mass of rock has one set of layers across it,
+    // not a band a tile (which read as rows of bricks)
+    for (let sy = Math.floor((y - 15) / 12) * 12; sy < y + 15; sy += 12) {
+      G.fillStyle = Math.round(sy / 12) % 3 === 0 ? 'rgba(96, 62, 24, 0.18)' : 'rgba(255, 232, 188, 0.16)';
+      G.fillRect(x - 15, sy, TILE_SIZE, 2);
+    }
+  }
+  G.fillStyle = desert ? 'rgba(255, 224, 176, 0.2)' : 'rgba(255, 255, 255, 0.07)';
   for (let k = 0; k < 2; k++) {
     const v = h >>> (k * 9), fx = x - 12 + (v % 14), fy = y - 12 + ((v >>> 4) % 14);
     G.beginPath(); G.moveTo(fx, fy); G.lineTo(fx + 8 + (v % 4), fy + 2); G.lineTo(fx + 5, fy + 8 + ((v >>> 2) % 3)); G.lineTo(fx - 1, fy + 5); G.closePath(); G.fill();
   }
-  if (open.n) { G.fillStyle = 'rgba(255, 255, 255, 0.12)'; G.fillRect(x - 13 + Math.max(0, k.nw - 2), y - 13, TILE_SIZE - 4 - Math.max(0, k.nw - 2) - Math.max(0, k.ne - 2), 3); }
-  if (open.s) { G.fillStyle = 'rgba(0, 0, 0, 0.25)'; G.fillRect(x - 13 + Math.max(0, k.sw - 2), y + 9, TILE_SIZE - 4 - Math.max(0, k.sw - 2) - Math.max(0, k.se - 2), 4); }
+  if (open.n) { G.fillStyle = desert ? 'rgba(255, 236, 198, 0.28)' : 'rgba(255, 255, 255, 0.12)'; G.fillRect(x - 13 + Math.max(0, k.nw - 2), y - 13, TILE_SIZE - 4 - Math.max(0, k.nw - 2) - Math.max(0, k.ne - 2), 3); }
+  if (open.s) { G.fillStyle = desert ? 'rgba(62, 38, 12, 0.34)' : 'rgba(0, 0, 0, 0.25)'; G.fillRect(x - 13 + Math.max(0, k.sw - 2), y + 9, TILE_SIZE - 4 - Math.max(0, k.sw - 2) - Math.max(0, k.se - 2), 4); }
   // a crack or a couple of speckles
   if (h % 4 === 0) {
-    G.strokeStyle = 'rgba(0, 0, 0, 0.25)'; G.lineWidth = 1;
+    G.strokeStyle = desert ? 'rgba(74, 48, 18, 0.4)' : 'rgba(0, 0, 0, 0.25)'; G.lineWidth = 1;
     const cx = x - 7 + ((h >>> 6) % 12), cy = y - 7 + ((h >>> 11) % 12);
     G.beginPath(); G.moveTo(cx, cy); G.lineTo(cx + 4, cy + 3); G.lineTo(cx + 3, cy + 8); G.stroke();
   } else if (h % 4 === 1) {
-    G.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    G.fillStyle = desert ? 'rgba(255, 226, 188, 0.16)' : 'rgba(255, 255, 255, 0.06)';
     G.fillRect(x - 8 + ((h >>> 6) % 14), y - 8 + ((h >>> 11) % 14), 3, 3);
     G.fillRect(x - 4 + ((h >>> 16) % 10), y - 2 + ((h >>> 20) % 10), 2, 2);
   }
@@ -409,26 +428,61 @@ export function drawRockTile(x, y, tiles) {
   drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners);
 }
 
-export function drawDesertTile(tile) {
-  const G = target || ctx;
-  const h = tileVariantHash(tile.x, tile.y);
-  // (#307) its outer corners rounded, and where grass meets it, the sand thinning out into it
-  const tiles = getTileIndex(), occupiedCorners = terrainCornerOccupancy(tile.x, tile.y, tiles);
-  const open = openSides(getSandKeys(), tile.x, tile.y), k = cornerRadii(open, occupiedCorners), shade = DESERT_SHADES[h % DESERT_SHADES.length];
-  G.fillStyle = shade;
-  if (k.nw || k.ne || k.se || k.sw) { G.beginPath(); G.roundRect(tile.x - 15 - over, tile.y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]); G.fill(); }
-  else G.fillRect(tile.x - 15 - over, tile.y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2);
-  const n = parseInt(shade.slice(1), 16), rgb = `${n >> 16}, ${(n >> 8) & 255}, ${n & 255}`;
-  edgeBand(G, tile.x, tile.y, open, open, rgb, 0.85, 7, false, occupiedCorners);
-  G.fillStyle = 'rgba(255, 236, 179, 0.25)';
-  if (h % 3 === 0) {
-    // a dune ripple
-    G.strokeStyle = 'rgba(120, 90, 40, 0.25)'; G.lineWidth = 1;
-    const ry = tile.y - 6 + ((h >>> 7) % 12);
-    G.beginPath(); G.moveTo(tile.x - 10, ry); G.quadraticCurveTo(tile.x, ry - 4, tile.x + 10, ry); G.stroke();
-  } else {
-    G.fillRect(tile.x - 10 + ((h >>> 5) % 16), tile.y - 8 + ((h >>> 9) % 14), 3, 2);
-    G.fillRect(tile.x - 6 + ((h >>> 13) % 14), tile.y - 4 + ((h >>> 17) % 14), 2, 2);
+// ---- Sand (desert and beach)
+//
+// As the grass: one base under the whole desert, soft patches of close shades crossing the tiles' edges,
+// dunes and speckles here and there, and a soft band where it meets the grass. A tile's own shade no
+// longer makes a grid of squares: only the shape's edge follows the tiles.
+function sandTilesAround(x0, y0, x1, y1) {
+  const found = [];
+  forEachInRect(game.desertTiles, x0 - TILE_SIZE, y0 - TILE_SIZE, x1 + TILE_SIZE, y1 + TILE_SIZE, o => { found.push(o); });
+  forEachInRect(game.beachTiles, x0 - TILE_SIZE, y0 - TILE_SIZE, x1 + TILE_SIZE, y1 + TILE_SIZE, o => { found.push(o); });
+  return found.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+export function paintSandGround(g, x0, y0, x1, y1) {
+  const tiles = sandTilesAround(x0, y0, x1, y1);
+  if (!tiles.length) return;
+  const keys = getSandKeys(), terrain = getTileIndex();
+  // the sand's shape: the tiles' squares joined, their outer corners rounded (as water and rock)
+  g.save();
+  g.beginPath();
+  for (const t of tiles) {
+    const open = openSides(keys, t.x, t.y), k = cornerRadii(open, terrainCornerOccupancy(t.x, t.y, terrain));
+    g.roundRect(t.x - 15 - over, t.y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]);
+  }
+  g.clip();
+  g.fillStyle = SAND_BASE;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  for (const t of tiles) {
+    const hsh = tileVariantHash(t.x, t.y), x = t.x - 15, y = t.y - 15;
+    // two soft patches a tile, anywhere in it and spilling out of it (as the grass: no grid)
+    for (let k = 0; k < 2; k++) {
+      const v = k ? hsh >>> 11 : hsh;
+      g.globalAlpha = 0.3 + (v % 4) * 0.05;
+      g.fillStyle = DESERT_SHADES[(v >>> 3) % DESERT_SHADES.length];
+      g.beginPath();
+      g.ellipse(x + (v >>> 6) % TILE_SIZE, y + (v >>> 9) % TILE_SIZE, 9 + (v >>> 12) % 12, 7 + (v >>> 15) % 10, ((v >>> 18) % 6) / 2, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+    if (hsh % 3 === 0) {
+      // a dune ripple
+      g.strokeStyle = 'rgba(120, 90, 40, 0.22)'; g.lineWidth = 1;
+      const ry = y + 8 + ((hsh >>> 7) % 14);
+      g.beginPath(); g.moveTo(x + 5, ry); g.quadraticCurveTo(x + 15, ry - 4, x + 25, ry); g.stroke();
+    } else if (hsh % 7 === 0) {
+      g.fillStyle = 'rgba(255, 240, 200, 0.22)';
+      g.fillRect(x + 4 + ((hsh >>> 5) % (TILE_SIZE - 8)), y + 4 + ((hsh >>> 9) % (TILE_SIZE - 8)), 3, 2);
+      g.fillRect(x + 4 + ((hsh >>> 13) % (TILE_SIZE - 8)), y + 4 + ((hsh >>> 17) % (TILE_SIZE - 8)), 2, 2);
+    }
+  }
+  g.restore();
+  // where it meets the grass: the sand thinning out into it (a soft band outside the open sides)
+  const n = parseInt(SAND_BASE.slice(1), 16), rgb = `${n >> 16}, ${(n >> 8) & 255}, ${n & 255}`;
+  for (const t of tiles) {
+    const open = openSides(keys, t.x, t.y);
+    edgeBand(g, t.x, t.y, open, open, rgb, 0.8, 7, false, terrainCornerOccupancy(t.x, t.y, terrain));
   }
 }
 
@@ -438,10 +492,17 @@ export const ORE_COLORS = {
   iron: { body: '#aab7c3', shine: '#dfe6ed' }, // (#298: the old silver-grey again)
   coal: { body: '#050608', shine: '#6b7785' }
 };
+// the same ore in a desert rock: the metal cool and bright against the red sandstone (a warm beige
+// vein on warm rock disappeared into it, as a stain)
+export const DESERT_ORE_COLORS = {
+  iron: { body: '#b7c4d1', shine: '#eef4fa' },
+  coal: { body: '#0d0a08', shine: '#8b7c6c' }
+};
+const oreColorsAt = (x, y) => (getSandKeys().has(`${x},${y}`) ? DESERT_ORE_COLORS : ORE_COLORS);
 
 export function drawOreVeins(x, y, kind, half) {
   const G = target || ctx;
-  const c = ORE_COLORS[kind];
+  const c = oreColorsAt(x, y)[kind];
   const k = half / 14;
   drawRockTile(x, y, getTileIndex());
   G.fillStyle = c.body;
@@ -453,7 +514,7 @@ export function drawOreVeins(x, y, kind, half) {
 // Spawner: the same veined rock on a full tile, framed in the ore colour with a large crystal in the middle
 export function drawOreSpawner(x, y, kind) {
   const G = target || ctx;
-  const c = ORE_COLORS[kind];
+  const c = oreColorsAt(x, y)[kind];
   drawOreVeins(x, y, kind, 14);
   G.strokeStyle = c.body; G.lineWidth = 2; G.strokeRect(x - 11, y - 11, 22, 22);
   G.fillStyle = c.body;
@@ -526,8 +587,7 @@ function paintTerrain(g, x0, y0, x1, y1) {
   target = g;
   over = Math.max(0.5, 1 / g.getTransform().a); // (#326: a whole pixel over at a small picture's size: no grid of seams)
   try {
-    tilesAround(game.desertTiles, x0, y0, x1, y1).forEach(drawDesertTile);
-    tilesAround(game.beachTiles, x0, y0, x1, y1).forEach(drawDesertTile);
+    paintSandGround(g, x0, y0, x1, y1);
     tilesAround(game.waterTiles, x0, y0, x1, y1).forEach(t => drawWaterTile(t, terrain));
     tilesAround(game.naturalRocks, x0, y0, x1, y1).forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); else drawOreSpawner(r.x, r.y, r.oreSpawner); });
     tilesAround(game.ironOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'iron', 14));
@@ -538,18 +598,22 @@ function paintTerrain(g, x0, y0, x1, y1) {
 // A fast panning placeholder keeps the map's main land/water/sand shapes visible while
 // the detailed chunk waits its turn in drawChunks' per-frame paint queue.
 function previewTerrain(x0, y0, x1, y1) {
+  const sand = getSandKeys();
+  // the preview must use the same palette as the picture it stands in for: a desert rock shown dark
+  // for a frame while the chunk is painted read as ordinary rock flashing over it on every zoom
+  const rockColor = o => (sand.has(`${o.x},${o.y}`) ? DESERT_ROCK_SHADES[0] : ROCK_SHADES[0]);
   const paintTiles = (list, color) => {
-    ctx.fillStyle = color;
     forEachInRect(list, x0 - TILE_SIZE, y0 - TILE_SIZE, x1 + TILE_SIZE, y1 + TILE_SIZE, o => {
+      ctx.fillStyle = typeof color === 'function' ? color(o) : color;
       ctx.fillRect(o.x - TILE_SIZE / 2, o.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
     });
   };
-  paintTiles(game.desertTiles, '#c9a66b');
-  paintTiles(game.beachTiles, '#c9a66b');
-  paintTiles(game.waterTiles, '#2c83bd');
-  paintTiles(game.naturalRocks, '#34495e');
-  paintTiles(game.ironOres, '#34495e');
-  paintTiles(game.coalOres, '#34495e');
+  paintTiles(game.desertTiles, SAND_BASE);
+  paintTiles(game.beachTiles, SAND_BASE);
+  paintTiles(game.waterTiles, WATER_SHADES[0]);
+  paintTiles(game.naturalRocks, rockColor);
+  paintTiles(game.ironOres, rockColor);
+  paintTiles(game.coalOres, rockColor);
 }
 
 const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view.y1, fn);
@@ -559,8 +623,7 @@ export function drawSand() {
   view = getViewRect(TILE_SIZE);
   cached = typeof document !== 'undefined';
   if (cached) { drawChunks('terrain', terrainRes(), terrainStamp, paintTerrain, previewTerrain); return; }
-  inView(game.desertTiles, drawDesertTile);
-  inView(game.beachTiles, drawDesertTile);
+  paintSandGround(ctx, view.x0, view.y0, view.x1, view.y1);
 }
 
 // (#322) Zoomed out, where the tiles are in the pictures, a frame went through every water tile on the screen to find the few with a fish
