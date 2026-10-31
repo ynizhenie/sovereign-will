@@ -1,6 +1,6 @@
 // A game's session: a new game made (resetGame), paused and resumed, left for the main menu
 
-import { closeSheet, closeWorldMap, hidePlacing, iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
+import { closeSelectedCard, closeSheet, closeWorldMap, hidePlacing, iconHtml, rebuildConfigHud, renderedFaction, updateSeedHud } from '../ui/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { game, resetTileIndex, setWorldSize, TOWN_HALL_HP, townHall } from '../engine/world/index.js';
@@ -66,9 +66,10 @@ export function togglePause() {
 // Pausing opens the pause menu (Continue / Main menu)
 export function setPaused(paused) {
   game.isPaused = paused;
+  if (paused) closeSelectedCard();
   const btn = document.getElementById('btn-pause-toggle');
   btn.innerHTML = iconHtml(game.isPaused ? 'play' : 'pause');
-  btn.title = game.isPaused ? t('pause.resumeHint') : t('pause.pauseHint');
+  btn.setAttribute('aria-label', t(game.isPaused ? 'pause.resumeHint' : 'pause.pauseHint'));
   btn.classList.toggle('paused', game.isPaused);
   document.getElementById('pause-menu').hidden = !game.isPaused;
   // saving and loading are Endless's: not in a battle (#254)

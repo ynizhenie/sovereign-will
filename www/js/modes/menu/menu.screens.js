@@ -130,7 +130,7 @@ export function initMenuScreens() {
   const flagButton = document.createElement('button');
   flagButton.className = 'flag-button';
   flagBox.appendChild(flagButton);
-  const showFlag = () => { flagButton.innerHTML = flagHtml(currentLanguage); flagButton.title = LANGUAGES[currentLanguage].label; flagButton.setAttribute('aria-label', LANGUAGES[currentLanguage].label); };
+  const showFlag = () => { flagButton.innerHTML = flagHtml(currentLanguage); flagButton.setAttribute('aria-label', LANGUAGES[currentLanguage].label); };
   onTap(flagButton, () => { const codes = Object.keys(LANGUAGES); setLanguage(codes[(codes.indexOf(currentLanguage) + 1) % codes.length]); markLanguage(); showFlag(); });
   showFlag();
   markLanguage();

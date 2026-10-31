@@ -89,12 +89,25 @@ Object.assign(window.sim, (() => {
   // An ore spawner with a mine on it (#326, 27.10, 26): a miner works it for its ore, one at a time, and it's
   // still there; without one, nobody touches it
   function mineSpawner({ seed = 'maze-283', marked = true } = {}) { // (its spawner has an open side)
-    start(seed);
-    ironOres = []; coalOres = []; pendingRespawns = [];
-    const spawner = getOreSpawners('iron')[0];
+    let miner, spawner, spot;
+    for (const mapSeed of [seed, 'maze-137', 'ore-a']) {
+      start(mapSeed);
+      ironOres = []; coalOres = []; boulders = []; pendingRespawns = [];
+      invalidateAllPaths();
+      miner = makeSettler(1, townHall.x, townHall.y, { tool: 'pickaxe' });
+      settlers = [miner];
+      const reachable = getOreSpawners('iron')
+        .map(resource => ({ resource, spot: getResourceApproachPoint(miner, resource) }))
+        .filter(candidate => candidate.spot)
+        .sort((a, b) => Math.hypot(a.spot.x - miner.x, a.spot.y - miner.y) - Math.hypot(b.spot.x - miner.x, b.spot.y - miner.y));
+      if (reachable.length) {
+        ({ resource: spawner, spot } = reachable[0]);
+        break;
+      }
+    }
+    if (!spawner) throw new Error('No reachable iron spawner on the test maps');
     if (marked) buildings.push({ type: 'mine', x: spawner.x, y: spawner.y, hp: 150, maxHp: 150 });
-    const spot = getResourceApproachPoint({ x: spawner.x, y: spawner.y + 40, radius: 11 }, spawner) || { x: spawner.x, y: spawner.y + 30 };
-    settlers = [makeSettler(1, spot.x, spot.y, { tool: 'pickaxe' })];
+    miner.x = spot.x; miner.y = spot.y;
     stock.ironOre = 0;
     run(40, { each: () => { quiet(); ironOres = []; coalOres = []; pendingRespawns = []; } });
     const carried = settlers[0].carrying && settlers[0].carrying.type === 'ironOre' ? settlers[0].carrying.amount : 0;

@@ -22,7 +22,7 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
   await page.locator('#language-options [data-language="uk"]').click();
   expect(await page.evaluate(() => currentLanguage)).toBe('uk');
   expect(await page.locator('#open-settings').innerText()).toBe('Налаштування');
-  expect(await page.locator('#menu-flags .flag-button').getAttribute('title')).toBe(await page.evaluate(() => LANGUAGES.uk.label));
+  expect(await page.locator('#menu-flags .flag-button').getAttribute('aria-label')).toBe(await page.evaluate(() => LANGUAGES.uk.label));
   expect(errors).toEqual([]);
 });
 

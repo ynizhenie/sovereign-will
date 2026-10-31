@@ -108,7 +108,7 @@ test('walls and doors join (a run, corners, a T, a cross, a lone post) and a doo
     const { makeSettler } = window.sim.helpers;
     const walker = makeSettler(1, door.x, door.y + 8, {}); settlers = [walker];
     const frames = async n => { for (let f = 0; f < n; f++) { await new Promise(res => setTimeout(res, 100)); render(); } }; // (the animation runs by the clock)
-    await frames(5);
+    await frames(8);
     const opened = door.openness;
     settlers = [];
     await frames(8);

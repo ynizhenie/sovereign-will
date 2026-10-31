@@ -49,8 +49,7 @@ export function applyPageTexts() {
   document.querySelectorAll('[data-i18n]').forEach(el => setRichText(el, t(el.dataset.i18n)));
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = plainText(t(el.dataset.i18nPlaceholder)); });
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
-    el.title = plainText(t(el.dataset.i18nTitle));
-    if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', el.title);
+    if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', plainText(t(el.dataset.i18nTitle)));
   });
 }
 

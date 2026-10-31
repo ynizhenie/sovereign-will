@@ -6,6 +6,7 @@
 import { TILE_SIZE, game, townHall } from '../engine/world/index.js';
 import { camera, clampCamera, getViewRect, onTap } from '../engine/platform/index.js';
 import { fogAt, getTerritoryBox, hasFog, inTerritory, isVisible } from '../domains/world/index.js';
+import { closeSelectedCard } from './selected-card-state.js';
 
 const COLORS = {
   grass: [62, 96, 44], water: [44, 131, 189], sand: [201, 166, 107], rock: [52, 73, 94], iron: [170, 183, 195], coal: [20, 22, 26],
@@ -19,6 +20,7 @@ export const isWorldMapOpen = () => !document.getElementById('world-map').hidden
 
 export function openWorldMap() {
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  closeSelectedCard();
   document.getElementById('world-map').hidden = false;
   drawWorldMap();
   clearInterval(refresh);

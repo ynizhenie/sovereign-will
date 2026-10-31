@@ -2,11 +2,13 @@
 // calls the action with its argument (switchTab also gets the button)
 
 import { switchTab } from './bottom-panel.js';
+import { GAME_CONFIG } from '../content/configs/index.js';
 import { game } from '../engine/world/index.js';
+import { getPlayerFaction } from '../domains/factions/index.js';
 import { openHallCard } from './building-card.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
-import { deselectSettler, dismissSettler, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, unpossess, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { deselectSettler, dismissSettler, ensureUnitName, generateUnitName, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, unpossess, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { clearOrders, holdPosition } from '../domains/conflict/combat/index.js';
 import { toggleGiveList } from './hud.js';
 import { t } from '../engine/platform/index.js';
@@ -15,6 +17,7 @@ import { togglePause } from '../app/index.js';
 import { setMode } from './map-input.js';
 import { closeOverlays, reopenSheet, stopPlacing, toggleResources, toggleSheet } from './sheets.js';
 import { openWorldMap } from './world-map.js';
+import { openSelectedNameEditor } from './selected-card-state.js';
 
 export const PAGE_ACTIONS = {
   togglePause: () => togglePause(),
@@ -43,6 +46,15 @@ export const PAGE_ACTIONS = {
   dismissSelected: (arg, button) => dismissSelected(button), // (#314)
   // (#326) the selected settler's card
   toggleGiveList: () => toggleGiveList(),
+  openSelectedNameEditor: () => openSelectedNameEditor(getSelectedSettler()),
+  generateSelectedName: () => {
+    const selected = getSelectedSettler();
+    if (selected) {
+      const { pet } = GAME_CONFIG.settlerTypes[selected.type] || {};
+      selected.name = generateUnitName(getPlayerFaction().id, !!selected.look?.female, game.settlers, pet || null);
+      selected.nameGenerated = true;
+    }
+  },
   selectAllSoldiers: () => selectAllSoldiers(),
   toggleAddingToGroup: () => { game.addingToGroup = !game.addingToGroup; },
   freeSelection: () => { for (const s of getSelection()) clearOrders(s); },
@@ -67,5 +79,13 @@ function dismissSelected(button) {
 export function initPageActions() {
   document.querySelectorAll('[data-action]').forEach(button => {
     button.addEventListener('click', () => PAGE_ACTIONS[button.dataset.action](button.dataset.arg, button));
+  });
+  const nameInput = /** @type {HTMLInputElement} */ (document.getElementById('selected-name'));
+  nameInput.addEventListener('change', () => {
+    const selected = getSelectedSettler();
+    if (!selected) return;
+    const name = nameInput.value.trim().slice(0, nameInput.maxLength);
+    if (name) { selected.name = name; selected.nameGenerated = false; }
+    nameInput.value = ensureUnitName(selected, getPlayerFaction().id, game.settlers);
   });
 }
