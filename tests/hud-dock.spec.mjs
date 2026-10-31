@@ -93,6 +93,8 @@ test('picking a building puts the sheet away and shows its chip: a tap brings th
   expect(await body(page)).toEqual({ sheet: false, placing: false, stock: false });
 
   await page.click('[data-arg="tab-build"]');
+  await expect(page.locator('#build-action-controls .panel-heading')).toHaveText('Действия');
+  await expect(page.locator('#build-action-controls #btn-demolish, #build-action-controls #btn-repair-all')).toHaveCount(2);
   await page.click('#btn-demolish');
   await expect(page.locator('#placing-chip')).toBeVisible();
   await page.click('#placing-close');
