@@ -126,10 +126,14 @@ test('the desert field keeps the midline and the green and red halves of the gla
   await openBattle(page);
   const r = await page.evaluate(() => {
     setBattleField('desert');
+    // (The zoom-out limit no longer shows the whole map; pan left so its outer border is on-screen.)
+    camera.x = game.WORLD_WIDTH / 4;
     const frames = () => { for (let i = 0; i < 24; i++) render(); }; // (#322: the terrain's pictures are painted a piece or two a frame)
     frames();
-    const x = Math.floor(canvas.width / 2), y = Math.floor(canvas.height / 2);
-    const outsideX = Math.round(x + (20 - camera.x) * getViewScale()); // (the border beyond the red line)
+    const x = Math.round(canvas.width / 2 + (game.WORLD_WIDTH / 2 - camera.x) * getViewScale()), y = Math.floor(canvas.height / 2);
+    // (With the zoom-out limit the map edge can be off-screen; sample the sand just past its red border instead.)
+    const outsideWorldX = BORDER_MARGIN * TILE_SIZE - 30;
+    const outsideX = Math.round(x + (outsideWorldX - camera.x) * getViewScale());
     const sample = (px, py) => [...ctx.getImageData(px, py, 1, 1).data];
     const on = { line: sample(x, y), left: sample(x - 200, y), right: sample(x + 200, y), outside: sample(outsideX, y) };
     const phase = battle.phase;
