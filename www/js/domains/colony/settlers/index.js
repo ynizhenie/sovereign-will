@@ -12,3 +12,4 @@ export { hasPlayerOrderFor } from './settlers.corpses.js';
 export { roleTitle } from './settlers.commanders.js';
 export { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 export { drawHair, lookOf, newLook } from './settlers.looks.js';
+export { ensureUnitName, generateUnitName } from './settlers.names.js';

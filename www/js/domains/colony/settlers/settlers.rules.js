@@ -15,6 +15,7 @@ import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 import { says } from './settlers.voices.js';
 import { newLook } from './settlers.looks.js';
+import { generateUnitName } from './settlers.names.js';
 import { isNight } from '../../world/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
@@ -68,11 +69,14 @@ export function changeSettlerType(s, type) {
 /** @returns {import('../../../engine/world/types.js').Settler} */
 export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
+  const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook());
   const s = {
     id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false,
-    look: extra.look || (t.pet ? newPetLook(t.pet) : newLook()) // (#306; a pet's its own, #314)
+    name: extra.name || generateUnitName(getPlayerFaction().id, look.female, game.settlers, t.pet || null),
+    nameGenerated: extra.nameGenerated ?? !extra.name,
+    look // (#306; a pet's its own, #314)
   };
   if (t.pet) s.role = 'pet';
   if (t.pet === 'ghost') Object.assign(s, { ghostly: true }); // (nobody pushes it or is pushed by it)
@@ -102,7 +106,7 @@ export function spawnSettler(type = 'normal') {
   const hired = createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: null, hasArmor: false }); // (#298: 'none' was taken for armour since leather)
   game.settlers.push(hired);
   says(hired, 'hired'); // (#252)
-  showNotification(t('hire.done', { name: settlerType.label }), false);
+  showNotification(t('hire.done', { name: hired.name }), false);
   playSound('hire');
 }
 

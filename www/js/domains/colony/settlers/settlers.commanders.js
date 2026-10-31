@@ -17,6 +17,7 @@ import { stock } from '../storage/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { faceTowards } from './settlers.draw.js';
+import { ensureUnitName } from './settlers.names.js';
 
 const SHOW_TICKS = 120; // how long an order shows (2 s)
 
@@ -32,11 +33,12 @@ function squadOf(s, size, fits) {
 }
 
 // An order shows over both, and a line between them
-function showOrder(from, to, icon) {
+function showOrder(from, to, icon, text) {
   const until = game.pathTick + SHOW_TICKS;
   from.orderBubble = { icon, until };
   to.orderBubble = { icon, until };
   from.orderLine = { toId: to.id, until };
+  from.say = { text, until };
 }
 
 // What the colony needs most now, and the tool family that gathers it (null: by hand)
@@ -96,7 +98,8 @@ export function foremanOrders(s, tick) {
     const tool = storedTool(need.family);
     if (tool && takeFromArmory(`tools:${tool}`)) to.targetEquipment = { weapon: 'fist', tool, role: 'worker', keep: true }; // (its own into the armory)
   }
-  showOrder(s, to, GAME_CONFIG.resources[need.resource].icon);
+  const name = ensureUnitName(to, getPlayerFaction().id, game.settlers);
+  showOrder(s, to, GAME_CONFIG.resources[need.resource].icon, t('order.foreman', { name, resource: GAME_CONFIG.resources[need.resource].label }));
   return true;
 }
 
@@ -119,7 +122,8 @@ export function captainOrders(s, tick) {
   if (!enemy) return false;
   to.captainTarget = enemy;
   to.orderedBy = s.id; // (#326: its morale held by its captain while it carries out the order)
-  showOrder(s, to, 'swords');
+  const name = ensureUnitName(to, getPlayerFaction().id, game.settlers);
+  showOrder(s, to, 'swords', t('order.captain', { name }));
   return false;
 }
 

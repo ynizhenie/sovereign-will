@@ -39,7 +39,8 @@ test('a dock button opens its sheet and closes it again; another tab swaps it; P
   await page.click('[data-arg="tab-craft"]');
   await expect(page.locator('#craft-tools')).toBeVisible(); // Craft, its Tools first (#261)
   await expect(page.locator('#build-actions')).toBeHidden();
-  await page.click('#btn-interact');
+  await expect(page.locator('#btn-interact')).toHaveCount(0);
+  await page.evaluate(() => PAGE_ACTIONS.pointMode());
   expect(await body(page)).toEqual({ sheet: false, placing: false, stock: false });
 
   await build.click();
@@ -207,12 +208,13 @@ test('the open sheet shows the stock of what its prices ask for, by the prices (
   await expect(page.locator('#sheet-stock [data-res="leather"]')).toBeVisible(); // (gear too, all in one, #279)
 });
 
-test('Point takes the selection off the settler (#232)', async ({ page }) => {
+test('Point action takes the selection off the settler without a dock button (#232)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
   await page.evaluate(() => { selectedSettler = settlers[0]; updateUI(); });
   await expect(page.locator('#btn-deselect')).toBeVisible();
-  await page.click('#btn-interact');
+  await expect(page.locator('#btn-interact')).toHaveCount(0);
+  await page.evaluate(() => PAGE_ACTIONS.pointMode());
   expect(await page.evaluate(() => selectedSettler)).toBeNull();
 });
 

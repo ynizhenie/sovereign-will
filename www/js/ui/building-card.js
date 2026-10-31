@@ -14,12 +14,17 @@ import { isShelter } from '../domains/conflict/healing/index.js';
 import { escapeHtml, getResourceIconName, iconHtml, setRichText } from './icons.js';
 import { getOpenSheet, openSheet } from './sheets.js';
 import { showNotification } from './toasts.js';
+import { closeSelectedCard } from './selected-card-state.js';
 
 /** @type {any} the town hall or a building */
 let shown = null;
 let shownKey = '';
+let sacrificeVictim = null;
 
 export function openBuildingCard(target) {
+  const definition = target === townHall ? null : getDefinition('buildings', target.type);
+  sacrificeVictim = definition && definition.sacrifice ? getSelectedSettler() : null;
+  closeSelectedCard();
   shown = target;
   shownKey = '';
   openSheet('building', target === townHall ? 'hall' : `${target.type}@${target.x},${target.y}`);
@@ -37,11 +42,12 @@ function hallName() {
 
 // The circle's card: the selected settler goes into it (and dies there, healing everyone)
 export function sacrificeSelected(circle) {
-  const victim = getSelectedSettler();
+  const victim = getSelectedSettler() || sacrificeVictim;
   if (!victim) return;
   victim.sacrificeAt = circle;
   game.selectedSettler = null;
-  showNotification(t('sacrifice.going', { name: GAME_CONFIG.settlerTypes[victim.type].label }), false);
+  sacrificeVictim = null;
+  showNotification(t('sacrifice.going', { name: victim.name || GAME_CONFIG.settlerTypes[victim.type].label }), false);
 }
 
 // (#279) what lies in a storage, kind by kind, the most first; what lies by it in packs; and with more than
@@ -79,7 +85,7 @@ export function renderBuildingCard() {
   const b = shown, isHall = b === townHall;
   if (!isHall && !game.buildings.includes(b)) return; // gone: what was there stays till it's closed
   const def = isHall ? null : getDefinition('buildings', b.type);
-  const selected = getSelectedSettler();
+  const selected = getSelectedSettler() || sacrificeVictim;
   // what's being made here (#211): the town hall's, or a smithy's
   const place = isHall ? 'hand' : def && def.crafts;
   const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
@@ -125,7 +131,7 @@ export function renderBuildingCard() {
   }
   if (def && def.sacrifice) {
     if (selected) {
-      add(t('card.sacrifice', { name: GAME_CONFIG.settlerTypes[selected.type].label }), () => sacrificeSelected(b), 'btn btn-demolish');
+      add(t('card.sacrifice', { name: selected.name || GAME_CONFIG.settlerTypes[selected.type].label }), () => sacrificeSelected(b), 'btn btn-demolish');
     } else {
       actions.insertAdjacentHTML('beforeend', `<span class="card-hint">${escapeHtml(t('sacrifice.pick'))}</span>`);
     }

@@ -99,6 +99,14 @@ export const icPerson = (c, body, scale) => {
   icCircle(c, '#1e272e', 16, 17, 12 * scale + 1.5);
   icCircle(c, body, 16, 17, 12 * scale);
 };
+function drawHumanUnit(c, body, scale) {
+  const radius = 12 * scale;
+  icCircle(c, '#1e272e', 16, 16, radius + 1.5);
+  icCircle(c, '#f1c27d', 16, 16, radius);
+  const eyeSize = Math.max(2.5, 3.2 * scale);
+  icRect(c, '#1e272e', 16 - 4 * scale - eyeSize / 2, 16 - eyeSize / 2, eyeSize, eyeSize);
+  icRect(c, '#1e272e', 16 + 4 * scale - eyeSize / 2, 16 - eyeSize / 2, eyeSize, eyeSize);
+}
 export const icZone = (c, fill, edge) => { icRound(c, fill, 4, 4, 24, 24, 3); c.strokeStyle = edge; c.lineWidth = 2.5; c.beginPath(); c.roundRect(4, 4, 24, 24, 3); c.stroke(); };
 export const icArrow = (c, x) => {
   icLine(c, '#8e5a2b', 2, [[x, 27], [x, 9]]);
@@ -443,11 +451,8 @@ export const ICONS = {
   },
 
   // ---- Settlers and gear
-  worker: c => {
-    icPerson(c, '#2ecc71', 0.75);
-    icEllipse(c, '#f4d03f', 16, 10, 12, 3.5); icRound(c, '#d4ac0d', 10, 4, 12, 7, 3);
-  },
-  giant: c => { icPerson(c, '#27ae60', 1.05); icRect(c, '#1e272e', 10, 13, 4, 2.5); icRect(c, '#1e272e', 18, 13, 4, 2.5); },
+  worker: c => drawHumanUnit(c, '#2ecc71', 0.75),
+  giant: c => drawHumanUnit(c, '#27ae60', 1.05),
   backpack: c => {
     icRound(c, '#a0522d', 6, 6, 20, 23, 5); icRound(c, '#8e5a2b', 9, 15, 14, 10, 3);
     icRing(c, '#6d4520', 2.5, 16, 7, 5, Math.PI, 0); icRect(c, '#f39c12', 15, 18, 2.5, 3);

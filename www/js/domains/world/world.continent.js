@@ -10,7 +10,7 @@ import { DEFAULT_MAP_TILES, TILE_SIZE, game, rand, townHall } from '../../engine
 import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
-import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, placeOreSpawners } from './world.generator.js';
+import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners } from './world.generator.js';
 
 const config = () => GAME_CONFIG.continent;
 
@@ -167,8 +167,11 @@ export function* generateContinent() {
     for (let gx = 0; gx < cols; gx++) {
       const i = at(gx, gy), b = biome[i], { x, y } = tile(gx, gy);
       if (b === SEA || b === LAKE) game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
-      else if (b === MOUNTAIN) addMapResource('natural_rock', x, y);
-      else if (b === DESERT) { game.desertTiles.push({ x, y }); sand[i] = 1; }
+      else if (b === MOUNTAIN) {
+        addMapResource('natural_rock', x, y);
+        // a mountain where the desert's climate is: the sand goes under it, so it counts as desert too
+        if (wet[i] <= desertAt) { game.desertTiles.push({ x, y }); sand[i] = 1; }
+      } else if (b === DESERT) { game.desertTiles.push({ x, y }); sand[i] = 1; }
       // a beach along the sea: the land touching it, a tile or two deep
       else if (coast[i] === 1 || (coast[i] === 2 && shapeNoise(gx * 0.3, gy * 0.3) > 0.55)) { game.beachTiles.push({ x, y }); sand[i] = 1; }
     }
@@ -240,6 +243,7 @@ export function* generateContinent() {
     yield 0.85;
   }
   placeAppleTrees();
+  markDesertUnderRocks(); // (rock and ore standing in the desert: sand under them, and the tile counts as desert)
 }
 
 // How many tiles of a biome within r tiles of the spot
@@ -256,23 +260,60 @@ function countNear(biome, kind, spot, r, cols, rows) {
 function chooseStart(biome, coast, cols, rows, C) {
   const half = GAME_CONFIG.territory.startTiles / 2;
   let best = null, bestScore = -Infinity;
+
   for (let attempt = 0; attempt < 400; attempt++) {
-    const gx = Math.floor(half + rand() * (cols - 2 * half)), gy = Math.floor(half + rand() * (rows - 2 * half));
+    const gx = Math.floor(half + rand() * (cols - 2 * half));
+    const gy = Math.floor(half + rand() * (rows - 2 * half));
     const i = gy * cols + gx;
+
     if (biome[i] !== GRASS || coast[i] < Math.min(C.startCoast, 6)) continue;
+
     let landTiles = 0, forest = 0, rock = 0, lake = 0, desert = 0, total = 0;
+
     for (let y = gy - half; y < gy + half; y += 2) {
       for (let x = gx - half; x < gx + half; x += 2) {
         total++;
         const b = biome[y * cols + x];
         if (b !== SEA) landTiles++;
-        if (b === FOREST) forest++; else if (b === MOUNTAIN) rock++; else if (b === LAKE) lake++; else if (b === DESERT) desert++;
+        if (b === FOREST) forest++;
+        else if (b === MOUNTAIN) rock++;
+        else if (b === LAKE) lake++;
+        else if (b === DESERT) desert++;
       }
     }
-    // (some rock, not hemmed in by it)
-    const score = landTiles / total * 3 + Math.min(forest / total, 0.25) * 4 + Math.min(rock / total, 0.06) * 10 - Math.max(0, rock / total - 0.1) * 8 +
-      Math.min(lake, 3) * 0.1 - desert / total * 2 + Math.min(coast[i], C.startCoast) / C.startCoast;
-    if (score > bestScore) { bestScore = score; best = { gx, gy }; }
+
+    const score = landTiles / total * 3 +
+      Math.min(forest / total, 0.25) * 4 +
+      Math.min(rock / total, 0.06) * 10 -
+      Math.max(0, rock / total - 0.1) * 8 +
+      Math.min(lake, 3) * 0.1 -
+      desert / total * 2 +
+      Math.min(coast[i], C.startCoast) / C.startCoast;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = { gx, gy };
+    }
   }
-  return best || { gx: Math.floor(cols / 2), gy: Math.floor(rows / 2) };
+
+  if (best) return best;
+
+  // Fallback: find the nearest grassland tile.
+  let fallback = null, nearest = Infinity;
+  const centerX = Math.floor(cols / 2);
+  const centerY = Math.floor(rows / 2);
+
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      if (biome[gy * cols + gx] !== GRASS) continue;
+
+      const distance = (gx - centerX) ** 2 + (gy - centerY) ** 2;
+      if (distance < nearest) {
+        nearest = distance;
+        fallback = { gx, gy };
+      }
+    }
+  }
+
+  return fallback || { gx: centerX, gy: centerY };
 }

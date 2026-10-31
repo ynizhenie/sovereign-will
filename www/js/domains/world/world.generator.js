@@ -43,6 +43,15 @@ export function isDesertTile(x, y) {
   return Math.hypot((x - game.desertRegion.x) / (TILE_SIZE * game.desertRegion.rx), (y - game.desertRegion.y) / (TILE_SIZE * game.desertRegion.ry)) <= 1;
 }
 
+// Rock, ore and ore sources standing in the desert: sand under them too, and the tile counts as desert
+// (the ground it leaves when mined, what may grow there, its look). Only the tiles in the desert are
+// marked: a mass that reaches out of it keeps its ordinary rock outside, tile by tile.
+export function markDesertUnderRocks() {
+  for (const o of [...game.naturalRocks, ...game.ironOres, ...game.coalOres]) {
+    if (!thingAt(game.desertTiles, o.x, o.y) && isDesertTile(o.x, o.y)) game.desertTiles.push({ x: o.x, y: o.y });
+  }
+}
+
 // ---- Ore spawners
 // A spawner is a natural rock tile marked oreSpawner: 'iron' | 'coal'. It blocks and draws like rock but
 // can't be mined, and ores of its kind appear within a few tiles of it: on free ground, or inside the
@@ -73,9 +82,9 @@ export function getOreSpotsAround(spawner, radius, keep = null, enough = Infinit
       if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
       if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
-      // free ground only: ore never replaces natural rock
+      // free ground only: ore never replaces natural rock (the desert's sand is free ground too)
       if (keep && !keep({ x, y })) continue;
-      if (!isDesertTile(x, y) && isSpawnSpotFree(x, y) && spots.push({ x, y }) >= enough) return spots;
+      if (isSpawnSpotFree(x, y) && spots.push({ x, y }) >= enough) return spots;
     }
   }
   return spots;
@@ -91,13 +100,14 @@ export function isOreSpotExposed(spot, reach) {
   return [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => getReachSteps(reach, g.gx + dx, g.gy + dy) >= 0);
 }
 
-// Put a small rock outcrop on free ground far from the hall, for maps with no usable rock
+// Put a small rock outcrop on free ground far from the hall, for maps with no usable rock (in the desert
+// too: the sand goes under it, see markDesertUnderRocks)
 export function placeRockOutcrop() {
   for (let attempt = 0; attempt < 200; attempt++) {
     const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 3));
     const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 3));
     const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
-    if (tiles.some(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) < 220 || isTileOccupied(t.x, t.y) || isDesertTile(t.x, t.y))) continue;
+    if (tiles.some(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) < 220 || isTileOccupied(t.x, t.y))) continue;
     for (const t of tiles) addMapResource('natural_rock', t.x, t.y);
     return true;
   }
@@ -348,6 +358,7 @@ export function* generateMapSteps() {
   }
 
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
+  markDesertUnderRocks();
   yield 0.85;
   placeBeaches();
   placeAppleTrees();
@@ -500,7 +511,8 @@ function placeDeserts() {
   }
 }
 
-// Rock: clusters of natural rock with wavy edges, not on sand, away from the hall
+// Rock: clusters of natural rock with wavy edges, away from the hall; in the desert too, the sand
+// going under the rock (see markDesertUnderRocks)
 function placeRockClusters() {
   const cfg = GAME_CONFIG.map;
   let numRockClusters = Math.round((cfg.rockClusters.min + Math.floor(rand() * (cfg.rockClusters.max - cfg.rockClusters.min + 1))) * getMapAreaScale());
@@ -530,7 +542,7 @@ function placeRockClusters() {
 
         let dynamicThreshold = 0.85 + Math.sin(angle * waves + phase) * amp;
 
-        if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 150 && !isDesertTile(tx, ty) && !isTileOccupied(tx, ty)) {
+        if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 150 && !isTileOccupied(tx, ty)) {
           addMapResource('natural_rock', tx, ty);
         }
       }

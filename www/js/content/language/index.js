@@ -2,9 +2,9 @@
 // the language in the main menu and it's remembered on the device.
 //
 // - names: what things are called, by GAME_CONFIG category and id. applyLanguage() puts them into the
-//   config as `label`, so code reads item.label as before.
+//   config as `label`, so code reads item.label as before. unitNames are generated from faction/gender pools.
 // - text: messages, buttons and screens, by key. t(key, { name: ... }) fills in {name}.
-// - index.html marks its texts with data-i18n="key" (text), data-i18n-title="key" (tooltip).
+// - index.html marks its texts with data-i18n="key" (text), data-i18n-title="key" (accessible label).
 //
 // A key missing in a language falls back to English, then to the key itself.
 

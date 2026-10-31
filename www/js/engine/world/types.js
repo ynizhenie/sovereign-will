@@ -16,6 +16,8 @@
  * A colony unit (GAME_CONFIG.settlerTypes): created by createSettler, driven by SETTLER_BEHAVIOURS.
  * @typedef {Object} Settler
  * @property {number} id
+ * @property {string} [name]       generated from faction and look; optional for older saves
+ * @property {boolean} [nameGenerated]
  * @property {number} x
  * @property {number} y
  * @property {string} type           GAME_CONFIG.settlerTypes key ('normal', 'big', 'zombie'...)
@@ -146,6 +148,8 @@
 /**
  * A wave's unit (GAME_CONFIG.enemies): created by createConfiguredEnemy, driven by tickEnemy.
  * @typedef {Object} Enemy
+ * @property {string} [name]       generated from faction and look; optional for older saves
+ * @property {boolean} [nameGenerated]
  * @property {Object} [struckBy]   (#326) the last settler that hit it, and when (struckTick): in the fog it turns on that one
  * @property {number} [struckTick]
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)

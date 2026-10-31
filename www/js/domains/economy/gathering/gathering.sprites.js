@@ -17,8 +17,8 @@ const KINDS = {
   boulder: { variants: 24, box: [-15, -14, 15, 14], paint: drawBoulderArt },
   bush: { variants: 10, box: [-15, -14, 15, 14], paint: drawBushArt },
   grass: { variants: 24, box: [-13, -19, 13, 10], paint: drawGrassArt },
-  stick: { variants: 2, box: [-10, -8, 10, 8], paint: drawStickArt },
-  pebbles: { variants: 4, box: [-7, -7, 7, 7], paint: drawPebblesArt }
+  stick: { variants: 12, box: [-11, -11, 11, 11], paint: drawStickArt },
+  pebbles: { variants: 12, box: [-8, -8, 8, 8], paint: drawPebblesArt }
 };
 const MAX_SPRITES = 1500;
 
