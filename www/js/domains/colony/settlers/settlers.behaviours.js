@@ -38,7 +38,6 @@ import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settl
 import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
 import { baitTrap } from '../../economy/hunting/index.js';
 import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
-import { battleOrders } from '../../../modes/battle/index.js';
 
 // (#322) What the settlers may work, and which of it is marked or in the way, was worked out afresh every tick: every list of
 // things looked through over the whole base's land (tens of thousands of tiles' buckets), sixty times a second. It's kept now,
@@ -259,7 +258,6 @@ export const SETTLER_BEHAVIOURS = [
   playerControlled,
   raidOrders, // (a raid on an enemy camp, #255: the party...)
   restWhileRaid, // (...and the base resting)
-  battleOrders, // (a battle with the auto battle off, #255)
   panic,
   followCommand, // (#326: the player's orders by tap, in Endless)
   strikeBack,
@@ -325,7 +323,7 @@ export const SETTLER_BEHAVIOURS = [
 
 // (#298) one got up at night for the player's order does that and nothing else: what was marked, the build,
 // bringing it what it needs; the rest (cooking, firewood, gathering what wasn't marked...) waits for the day
-const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, battleOrders, panic, strikeBack, sleepAtNight,
+const NIGHT_ORDER_ONLY = new Set([playerControlled, raidOrders, restWhileRaid, panic, strikeBack, sleepAtNight,
   fetchNightTorch, deliverMaterials, deliverCarrying, fightEnemies, build, harvestMarked, harvest, patrol]);
 
 // (#322) A settler at its everyday work (gathering, hauling, building, strolling) in a calm colony goes on with it

@@ -6,10 +6,25 @@ import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, previewTrack, 
 import { flagHtml, iconHtml } from '../../ui/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
+const seedPanel = document.getElementById('seed-settings');
+if (!seedPanel) throw new Error('The shared seed panel is missing');
+const seedInputElement = document.getElementById('seed-input');
+if (!seedInputElement) throw new Error('The shared seed input is missing');
+const seedInput = /** @type {HTMLInputElement} */ (seedInputElement);
+/** @type {'endless' | 'editor' | null} */
+let seedScreen = 'endless';
 
 export function showMenuScreen(name) {
-  if (name !== 'settings' && musicPreview.id) previewTrack(''); // (a track listened to stops as Settings is left, #326)
-  if (name === 'settings') renderMusicPlayer();
+  if (name !== 'settings' && name !== 'music' && musicPreview.id) previewTrack(''); // (a track listened to stops as the menu is left, #326)
+  if (name === 'settings' || name === 'music') renderMusicPlayer();
+  if (name === 'endless' || name === 'editor') {
+    const seedSlot = document.querySelector(`[data-seed-slot="${name}"]`);
+    if (!seedSlot) throw new Error(`The ${name} seed slot is missing`);
+    seedSlot.appendChild(seedPanel);
+    seedScreen = name;
+  } else {
+    seedScreen = null;
+  }
   document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
   document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
 }
@@ -85,6 +100,7 @@ export function initMenuScreens() {
   setTimeout(() => document.getElementById('main-menu').classList.remove('intro'), 3500);
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
+  onTap(document.getElementById('open-music-player'), () => showMenuScreen('music'));
   document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => {
     // opened from the pause menu (#254): back to it, over the game
     if (mainMenu.dataset.fromPause === 'yes') {

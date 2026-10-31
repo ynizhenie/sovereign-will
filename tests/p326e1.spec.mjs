@@ -51,14 +51,14 @@ test('the arrow\'s fletching is its side\'s colour; a fight\'s winner is named i
   expect(errors).toEqual([]);
 });
 
-test('Battles: blight over the strip outside the red line too; the fog\'s dark a tile past the map\'s edge; enemy demons start red, the colours in one row (#326)', async ({ page }) => {
+test('Battles have no blight; the fog\'s dark a tile past the map\'s edge; enemy demons start red, the colours in one row (#326)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
-    startBattleMode(); battle.blight = true; setBattleLook('blight', true);
+    startBattleMode();
     const outside = [isBlighted(15, 15), isBlighted((COLS - 1) * TILE_SIZE + 15, (ROWS - 1) * TILE_SIZE + 15), isBlighted(20 * TILE_SIZE + 15, 12 * TILE_SIZE + 15)];
     return { outside, enemyDemons: GAME_CONFIG.factions.demons.color, enemyStart: sides.enemy.color, redSide: sides.battle.red };
   });
-  expect(r.outside).toEqual([true, true, true]);
+  expect(r.outside).toEqual([false, false, false]);
   expect([r.enemyDemons, r.enemyStart, r.redSide]).toEqual(['#c0392b', '#c0392b', '#c0392b']);
   const rows = await page.evaluate(() => { showMenuScreen('endless'); const tops = [...document.querySelectorAll('#colors-enemy .color-swatch')].map(s => Math.round(s.getBoundingClientRect().top)); return new Set(tops).size; });
   expect(rows).toBe(1);

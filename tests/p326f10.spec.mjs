@@ -44,7 +44,7 @@ test('six swordsmen against six on Normal (the red side weaker): the player\'s w
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
     const fight = id => {
-      battle.lineup = []; battle.auto = true; battle.phase = 'setup';
+      battle.lineup = []; battle.phase = 'setup';
       for (let i = 0; i < 6; i++) { put(id, 14 - (i % 2) * 2, 8 + i * 2); put(id, 25 + (i % 2) * 2, 8 + i * 2); }
       startBattleFight();
       let panicked = false;

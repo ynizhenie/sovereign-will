@@ -81,12 +81,12 @@ test('a red archer goes up its side\'s platform and shoots from it; the red go t
   expect(r).toEqual({ up: true, shot: true, through: true });
 });
 
-test('a battle\'s settings: night, rain and blighted ground, only to look at; torches given lit in the dark (#326)', async ({ page }) => {
+test('a battle\'s settings: night and rain are only to look at; blight is unavailable; torches given lit in the dark (#326)', async ({ page }) => {
   const errors = await openBattle(page);
   await page.click('[data-dock="battle-settings"]');
   await page.click('[data-battle-look="time"][data-value="night"]');
   await page.click('[data-battle-look="weather"][data-value="rain"]');
-  await page.click('[data-battle-look="blight"][data-value="true"]');
+  await expect(page.locator('[data-battle-look="blight"]')).toHaveCount(0);
   const r = await page.evaluate(() => {
     closeSheet();
     battle.lineup = []; battle.torch = true;
@@ -100,7 +100,7 @@ test('a battle\'s settings: night, rain and blighted ground, only to look at; to
       post: buildings.find(b => b.type === 'torch').lit, asleep: settlers.some(s => s.asleep)
     };
   });
-  expect(r).toEqual({ dark: true, rain: 'rain', still: true, night: false, blighted: true, torches: [true, true, false], post: true, asleep: false });
+  expect(r).toEqual({ dark: true, rain: 'rain', still: true, night: false, blighted: false, torches: [true, true, false], post: true, asleep: false });
   // Endless after it: its own day and weather, nothing of the battle's
   expect(await page.evaluate(() => { leaveBattleMode(); showMenuScreen('home'); return 1; })).toBe(1);
   await page.click('#mode-endless');

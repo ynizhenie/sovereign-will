@@ -6,6 +6,10 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-maps'); showMenuScreen('home'); });
   await page.locator('#mode-editor').click();
   await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
+  await expect(page.locator('.editor-start')).toContainText('Выберите карту для открытия в редакторе');
+  await expect(page.locator('#editor-new-empty')).toHaveText('Пустая карта');
+  await expect(page.locator('#editor-new-generated')).toHaveText('Сгенерировать карту');
+  await expect(page.locator('.editor-start-options .menu-button-primary')).toHaveCount(2);
   await page.locator('[data-editor-size="128"]').click();
   await page.locator('#editor-new-empty').click();
   await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock
@@ -70,4 +74,3 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#editor-map-list [data-confirm-delete="Озерцо"]').click();
   await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
 });
-

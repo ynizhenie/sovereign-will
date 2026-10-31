@@ -22,23 +22,17 @@ test('a battle\'s difficulty: on Hard the red side is as strong as yours; Endles
   expect(await page.evaluate(() => { leaveBattleMode(); return gameDifficulty; })).toBe('normal');
 });
 
-test('with the auto battle off yours hold and go at what they\'re told to (#255)', async ({ page }) => {
+test('battles always use automatic combat; the auto-battle option is absent (#255)', async ({ page }) => {
   await openBattle(page);
+  await page.click('[data-dock="battle-settings"]');
+  await expect(page.locator('[data-battle-auto], #battle-auto')).toHaveCount(0);
   const r = await page.evaluate(([a, b, c]) => {
     battle.preset = 'humans:sword'; battleTap(a.x, a.y); battleTap(b.x, b.y);
     battle.category = 'units'; battle.preset = 'humans:sword'; battleTap(c.x, c.y);
-    battle.auto = false;
     startBattleFight();
-    for (let f = 0; f < 120; f++) stepGame(1 / 60);
-    const held = settlers.every(s => Math.hypot(s.x - s.orderSpot.x, s.y - s.orderSpot.y) < 12);
-    const en = enemies[0];
-    en.speed = 0; // (it waits for them)
-    orderTap(en.x, en.y);
-    const before = Math.hypot(settlers[0].x - en.x, settlers[0].y - en.y);
-    for (let f = 0; f < 120; f++) stepGame(1 / 60);
-    return { held, told: settlers.every(s => s.orderTarget === en || !enemies.includes(en)), closer: !enemies.includes(en) || Math.hypot(settlers[0].x - en.x, settlers[0].y - en.y) < before - 40 };
+    return { phase: battle.phase, hasAutoFlag: Object.hasOwn(battle, 'auto') };
   }, [at(8, 6), at(8, 18), at(32, 12)]);
-  expect(r).toEqual({ held: true, told: true, closer: true });
+  expect(r).toEqual({ phase: 'fight', hasAutoFlag: false });
 });
 
 test('the editor: a 5×5 brush; a drag paints; undo and redo; clearing asks first (#255)', async ({ page }) => {

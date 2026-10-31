@@ -62,6 +62,34 @@ Object.assign(window.sim, (() => {
     return { focus: w1.focus && w1.focus.resource, tool: w1.tool, axeStored: armory['tools:axe'] || 0, bubble };
   }
 
+  // Player marks, fishing spots and wheat plots take priority over the foreman's stock-based choice;
+  // the worker is sent to take the matching tool from the armory.
+  function foremanFollowsPlayerMark({ kind = 'tree', tool = 'axe', output = 'wood', fishing = false, farming = false } = {}) {
+    start(`foreman-mark-${kind}`); clearResources();
+    const boss = makeSettler(1, townHall.x - 10, townHall.y + 40);
+    putOnGear(boss, 'whistle');
+    const worker = makeSettler(2, townHall.x + 10, townHall.y + 40);
+    settlers = [boss, worker];
+    boss.squadIds = [worker.id];
+    boss.orderIn = 0;
+    armory = { [`tools:${tool}`]: 1 };
+    if (farming) farmZones = [{ crop: 'wheat' }];
+    const marked = { x: worker.x, y: worker.y, priority: 1, yield: { [output]: 1 } };
+    const tick = {
+      dt: 0.1,
+      isWaveActive: false,
+      markedResources: fishing || farming ? [] : [marked],
+      resourceKind: new Map([[marked, kind]]),
+      activeWaterSpots: fishing ? [{ x: worker.x, y: worker.y }] : []
+    };
+    foremanOrders(boss, tick);
+    return {
+      tool: worker.targetEquipment?.tool || null,
+      focus: worker.focus?.resource || null,
+      armory: armory[`tools:${tool}`] || 0
+    };
+  }
+
   // A captain in a wave gives its soldiers enemies to go for, the nearest the town hall first, each its own
   function captain({ seed = 'captain' } = {}) {
     start(seed); clearResources();
@@ -76,5 +104,5 @@ Object.assign(window.sim, (() => {
     return { given: targets.every(i => i >= 0), different: new Set(targets).size === targets.length, nearest: targets.includes(0) };
   }
 
-  return { eatAtStorage, pathsWear, foreman, captain };
+  return { eatAtStorage, pathsWear, foreman, foremanFollowsPlayerMark, captain };
 })());

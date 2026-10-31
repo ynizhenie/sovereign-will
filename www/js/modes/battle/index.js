@@ -3,5 +3,5 @@
 
 export { drawBattleOverlay, drawBattleResult } from './battle.draw.js';
 export { initBattlePanel } from './battle.panel.js';
-export { battleOrders, updateBattle } from './battle.rules.js';
+export { updateBattle } from './battle.rules.js';
 export { battle, battleTap, leaveBattleMode } from './battle.setup.js';
