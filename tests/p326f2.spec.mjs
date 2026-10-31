@@ -55,6 +55,33 @@ test('in a battle a unit goes for the nearest enemy (#326, 29)', async ({ page }
   expect(errors).toEqual([]);
 });
 
+test('enemy archers stop moving when they shoot, like the player archers', async ({ page }) => {
+  const errors = await openBattle(page);
+  const r = await page.evaluate(() => {
+    const shotStep = preset => {
+      battle.phase = 'setup';
+      battle.lineup = [];
+      resetBattleUnits();
+      put('u', 'humans:sword', 10, 12);
+      put('u', preset, 30, 12);
+      const settler = settlers[0], enemy = enemies[0];
+      settler.hp = 10000;
+      startBattleFight();
+      for (let frame = 0; frame < 60 * 30 && battle.phase === 'fight'; frame++) {
+        settler.speed = 0;
+        const before = { x: enemy.x, y: enemy.y };
+        update(1 / 60);
+        if (enemy.shotAt === game.pathTick) return Math.hypot(enemy.x - before.x, enemy.y - before.y);
+      }
+      return null;
+    };
+    return { bow: shotStep('humans:bow'), crossbow: shotStep('humans:crossbow') };
+  });
+  expect(r.bow).toBe(0);
+  expect(r.crossbow).toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test('up its platform an archer shoots with its own bow, a third farther; never up the red side\'s; down when nothing\'s in reach (#326, 30-31)', async ({ page }) => {
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
