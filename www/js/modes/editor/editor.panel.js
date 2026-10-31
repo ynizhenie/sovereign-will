@@ -82,18 +82,32 @@ export function renderEditorMapList() {
   });
 }
 
-export let editorNewSize = 256; // (#326: Endless's sizes)
+export let editorNewSize = 192;
+let editorUsesCustomSize = false;
+const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
+const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
+const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
+const editorDimensions = () => {
+  if (!editorUsesCustomSize) return { cols: editorNewSize, rows: editorNewSize };
+  const dimension = input => {
+    const value = Math.round(Number(input.value));
+    return Number.isFinite(value) ? Math.max(128, Math.min(512, value)) : 192;
+  };
+  return { cols: dimension(editorMapCols), rows: dimension(editorMapRows) };
+};
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEditorPanel() {
   document.querySelectorAll('[data-editor-size]').forEach(button => onTap(button, () => {
-    editorNewSize = Number(button.dataset.editorSize);
+    editorUsesCustomSize = button.dataset.editorSize === 'custom';
+    if (!editorUsesCustomSize) editorNewSize = Number(button.dataset.editorSize);
+    editorCustomSize.hidden = !editorUsesCustomSize;
     document.querySelectorAll('[data-editor-size]').forEach(b => b.classList.toggle('active', b === button));
   }));
   document.getElementById('mode-editor').disabled = false;
   onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
-  onTap(document.getElementById('editor-new-empty'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: false }));
-  onTap(document.getElementById('editor-new-generated'), () => startEditor({ cols: editorNewSize, rows: editorNewSize, generate: true }));
+  onTap(document.getElementById('editor-new-empty'), () => startEditor({ ...editorDimensions(), generate: false }));
+  onTap(document.getElementById('editor-new-generated'), () => startEditor({ ...editorDimensions(), generate: true }));
   // (#326, 27.10, 19) a generated map's seed (a new random one by its button) and the generator's settings
   onTap(document.getElementById('editor-seed-reroll'), () => { /** @type {HTMLInputElement} */ (document.getElementById('editor-seed-input')).value = createDefaultSeed(); });
   onTap(document.getElementById('editor-open-generator'), () => openGenerator('editor'));

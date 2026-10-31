@@ -24,7 +24,7 @@ export const game = {
   WORLD_WIDTH: DEFAULT_MAP_TILES * TILE_SIZE,
   WORLD_HEIGHT: DEFAULT_MAP_TILES * TILE_SIZE,
   // the clocks
-  waveInterval: 180,     // (#257: 120 / 180 / 240)
+  waveInterval: 300,
   waveTimer: 90,
   waveNum: 1,
   boarRespawnTimer: 25,

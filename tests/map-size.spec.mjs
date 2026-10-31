@@ -37,7 +37,7 @@ test('the menu sets map size and a custom wave interval for the next game (#21)'
   await page.locator('#wave-custom').dispatchEvent('change');
   await page.click('#play-button');
   const r = await page.evaluate(() => ({ cols: COLS, rows: ROWS, width: WORLD_WIDTH, waveInterval, waveTimer }));
-  expect(r).toMatchObject({ cols: 120, rows: 100, width: 120 * 30, waveInterval: 240 }); // (from 96, #326 27.10, 18)
+  expect(r).toMatchObject({ cols: 128, rows: 128, width: 128 * 30, waveInterval: 240 }); // (minimum custom size, #326 27.10, 18)
   expect(r.waveTimer).toBeGreaterThan(230); // counting down from 240 in real time
   // out-of-range input is clamped
   await page.evaluate(() => exitToMainMenu());
@@ -45,8 +45,8 @@ test('the menu sets map size and a custom wave interval for the next game (#21)'
   await page.fill('#map-cols', '900');
   await page.locator('#map-cols').dispatchEvent('change');
   expect(await page.evaluate(() => mapSettings.cols)).toBe(512);
-  // (#299) the sizes: 128, 256 (the one picked to start with), 512
-  expect(await page.locator('.map-option').evaluateAll(b => b.map(o => o.dataset.mapSize))).toEqual(['128', '256', '512', 'custom']);
+  // The map-size choices: 128, 192 (the one picked to start with), 256
+  expect(await page.locator('.map-option').evaluateAll(b => b.map(o => o.dataset.mapSize))).toEqual(['128', '192', '256', 'custom']);
   await page.click('.map-option[data-map-size="128"]');
   await page.click('#play-button');
   expect(await page.evaluate(() => [COLS, ROWS])).toEqual([128, 128]);

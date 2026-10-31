@@ -59,7 +59,7 @@ test('own presets are saved on the device, loaded and deleted (#20)', async ({ p
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
 });
 
-test('the editor has a seed of its own and the generator\'s gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 96 (#326, 27.10, 18, 19)', async ({ page }) => {
+test('the editor has a seed of its own and the generator\'s gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 128 (#326, 27.10, 18, 19)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-editor');
@@ -82,9 +82,9 @@ test('the editor has a seed of its own and the generator\'s gear: a generated ma
   // the reroll gives a new one
   const seeds = await page.evaluate(() => { const before = document.getElementById('editor-seed-input').value; document.getElementById('editor-seed-reroll').click(); return [before, document.getElementById('editor-seed-input').value]; });
   expect(seeds[1]).not.toBe(seeds[0]);
-  // Endless's own size: from 96
+  // Endless's own size: from 128
   const custom = await page.evaluate(() => { const c = document.getElementById('map-cols'); c.value = '40'; applyCustomMap(); return [c.min, mapSettings.cols]; });
-  expect(custom).toEqual(['96', 96]);
+  expect(custom).toEqual(['128', 128]);
 });
 
 test('the continent\'s own settings: its fields, labelled; they shape a continent map; presets keep them (#326, 56)', async ({ page }) => {
