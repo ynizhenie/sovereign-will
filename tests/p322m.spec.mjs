@@ -12,18 +12,19 @@ test('panning fast, jumping across the map and under the fog, every piece on the
     setZoom(0.6 / getBaseScale() * screenPixelRatio);
     camera.x = townHall.x; camera.y = townHall.y;
     for (let i = 0; i < 5; i++) render();
-    let holes = 0, frames = 0;
-    const frame = () => { render(); holes += chunkStats().holes; frames++; };
+    let holes = 0, pending = 0, frames = 0;
+    const frame = () => { render(); holes += chunkStats().holes; pending += chunkStats().pending; frames++; };
     // fast: a third of a screen a frame, right then down
     for (let i = 0; i < 20; i++) { camera.x += 400; clampCamera(); frame(); }
     for (let i = 0; i < 20; i++) { camera.y += 300; clampCamera(); frame(); }
     // a jump across the map (a tap on the world map), dark or not
     camera.x = WORLD_WIDTH * 0.2; camera.y = WORLD_HEIGHT * 0.8; clampCamera(); frame();
     camera.x = WORLD_WIDTH * 0.8; camera.y = WORLD_HEIGHT * 0.2; clampCamera(); frame();
-    return { holes, frames };
+    return { holes, pending, frames };
   });
   expect(r.frames).toBe(42);
   expect(r.holes).toBe(0);
+  expect(r.pending).toBeGreaterThan(0); // (the light previews cover the screen while detailed pieces catch up)
   expect(errors).toEqual([]);
 });
 
