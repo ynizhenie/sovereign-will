@@ -1,7 +1,7 @@
 // The ground: grass, water, rock, desert and ore, each joining its own kind
 
 import { drawIcon } from '../../ui/index.js';
-import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, worldEpoch } from '../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
@@ -46,6 +46,7 @@ const PAD = 6;
 let frameOf = 0;
 let framePaints = 0, framePaintMs = 0, framePaintLimit = STILL_PAINTS_PER_FRAME, framePaintLayer = 'grass', priorityPassed = false;
 let previousView = null, previousScale = 0;
+let cacheWorldEpoch = -1;
 // the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
 // painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
 const stats = { holes: 0, late: 0 };
@@ -56,6 +57,19 @@ export const chunkStats = () => ({ ...stats });
 /** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] */
 export function drawChunks(layer, res, stamp, paint, preview) {
   if (typeof document === 'undefined') return;
+  const epoch = worldEpoch();
+  if (cacheWorldEpoch !== epoch) {
+    // Chunk canvases contain map-specific pixels; don't let equal-sized worlds reuse them.
+    chunkLayers.clear();
+    cacheWorldEpoch = epoch;
+    previousView = null; previousScale = 0;
+    stats.holes = 0; stats.late = 0;
+    // These derived indexes are tied to world lists and may have identical lengths on a new map.
+    sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
+    terrainStamps = { lists: [], stamps: new Map() };
+    fishy = { lists: [], list: [] };
+    spots = { version: -1, list: [], acc: [], at: 0 };
+  }
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
   const size = CHUNK * TILE_SIZE, v = getViewRect(), scale = getViewScale();

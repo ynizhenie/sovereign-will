@@ -4,8 +4,12 @@
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { BORDER_MARGIN, DEFAULT_MAP_TILES, TILE_SIZE, game, townHall } from './state.js';
 import { camera } from '../platform/index.js';
+import { newWorldEpoch } from './once.js';
 
 export function setWorldSize(cols, rows) {
+  // A size change marks a world transition (new map, save load, or raid field).
+  // Invalidate anything cached from the previous map even when dimensions match.
+  newWorldEpoch();
   game.COLS = cols; game.ROWS = rows;
   game.WORLD_WIDTH = cols * TILE_SIZE; game.WORLD_HEIGHT = rows * TILE_SIZE;
   townHall.x = game.WORLD_WIDTH / 2; townHall.y = game.WORLD_HEIGHT / 2;
