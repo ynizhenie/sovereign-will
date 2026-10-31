@@ -737,7 +737,7 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 .units-kind { margin-top: 6px; }
 .unit-hp { width: 100%; height: 5px; border-radius: 3px; background: #3b2626; overflow: hidden; }
 .unit-hp span { display: block; height: 100%; background: #2ecc71; }
-.unit-state { font-size: 9px; opacity: 0.8; }
+.unit-state { display: block; width: 100%; min-width: 0; min-height: 1.15em; overflow: hidden; font-size: 9px; line-height: 1.15; opacity: 0.8; text-overflow: ellipsis; white-space: nowrap; }
 .unit-give { padding: 0 6px 4px; }
 .give-empty { grid-column: 1 / -1; font-size: 11px; color: #aaa; text-align: center; }
 .sel-hint { font-size: 10.5px; color: #aaa; text-align: center; margin-top: 5px; }
@@ -975,7 +975,7 @@ body.placing:not(.sheet-open) #placing-chip { display: flex; animation: chip-pop
 #sheet-frame {
   display: none;
   width: min(760px, 100%);
-  height: 30vh;
+  height: auto;
   max-height: 30vh;
   overflow-y: auto;
   overscroll-behavior: contain;
