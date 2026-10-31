@@ -35,6 +35,25 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.afterRemove).toBe(0);
 });
 
+test('Battles can zoom out enough to see the whole field', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const battleMin = getMinZoom();
+    game.gameMode = 'endless';
+    const endlessMin = getMinZoom();
+    game.gameMode = 'battle';
+    setZoom(0);
+    const view = getViewRect();
+    return { battleMin, endlessMin, zoom: camera.zoom, view, width: WORLD_WIDTH, height: WORLD_HEIGHT };
+  });
+  expect(r.battleMin).toBeLessThan(r.endlessMin);
+  expect(r.zoom).toBe(r.battleMin);
+  expect(r.view.x0).toBeLessThan(0);
+  expect(r.view.y0).toBeLessThan(0);
+  expect(r.view.x1).toBeGreaterThan(r.width);
+  expect(r.view.y1).toBeGreaterThan(r.height);
+});
+
 test('one Units sheet for both sides, every faction under its heading in the same order; armour, shield and banner for units; buildings everyone\'s, then each faction\'s (#142, #279, #326)', async ({ page }) => {
   await openBattle(page);
   await showCategory(page, 'units');

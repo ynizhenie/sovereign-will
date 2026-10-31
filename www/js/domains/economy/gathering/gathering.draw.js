@@ -95,30 +95,49 @@ function around(list, x0, y0, x1, y1, keep = null) {
 const STAMPS_PER_FRAME = 4;
 /** @param {() => any[][]} listsOf */
 function stamper(listsOf) {
-  /** @type {{ lists: any[], epoch: number, made: number, world: number, stamps: Map<string, { tick: number, epoch: number, stamp: string }> }} */
-  const state = { lists: [], epoch: 0, made: 0, world: worldEpoch(), stamps: new Map() };
-  return {
-    newFrame() { state.made = 0; },
-    /** @param {number} cx @param {number} cy */
-    stamp(cx, cy) {
+  /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, stamps: Map<string, { tick: number, epoch: number, stamp: string }>, dirty: Set<string> }} */
+  const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), stamps: new Map(), dirty: new Set() };
+  const sameSignature = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  const dirtyObject = o => {
+    const size = CHUNK * TILE_SIZE;
+    const x0 = Math.floor((o.x - MARGIN) / size), x1 = Math.floor((o.x + MARGIN) / size);
+    const y0 = Math.floor((o.y - MARGIN) / size), y1 = Math.floor((o.y + MARGIN) / size);
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) state.dirty.add(`${cx},${cy}`);
+  };
+  const stamp = (cx, cy) => {
       if (state.world !== worldEpoch()) {
-        state.world = worldEpoch(); state.lists = []; state.epoch++; state.stamps.clear();
+        state.world = worldEpoch(); state.signatures = []; state.members = []; state.epoch++; state.stamps.clear(); state.dirty.clear();
       }
-      const lists = /** @type {any[]} */ (listsOf().flatMap(listStamp));
-      if (lists.length !== state.lists.length || lists.some((v, i) => v !== state.lists[i])) { state.lists = lists; state.epoch++; }
+      const current = listsOf(), signatures = current.map(listStamp);
+      if (!state.signatures.length) state.members = current.map(list => [...list]);
+      else if (signatures.length !== state.signatures.length || signatures.some((v, i) => !sameSignature(v, state.signatures[i]))) {
+        for (let n = 0; n < current.length; n++) {
+          if (state.signatures[n] && sameSignature(signatures[n], state.signatures[n])) continue;
+          const before = new Set(state.members[n] || []), after = new Set(current[n] || []);
+          for (const o of before) if (!after.has(o)) dirtyObject(o);
+          for (const o of after) if (!before.has(o)) dirtyObject(o);
+          state.members[n] = [...(current[n] || [])];
+        }
+      }
+      state.signatures = signatures;
       const key = `${cx},${cy}`, kept = state.stamps.get(key);
-      const due = !kept || kept.epoch !== state.epoch || game.pathTick - kept.tick >= STAMP_TICKS || game.pathTick < kept.tick;
+      const due = !kept || state.dirty.has(key) || kept.epoch !== state.epoch || game.pathTick - kept.tick >= STAMP_TICKS || game.pathTick < kept.tick;
       if (kept && (!due || state.made >= STAMPS_PER_FRAME)) return kept.stamp;
       state.made++;
       const size = CHUNK * TILE_SIZE, x0 = cx * size, y0 = cy * size;
       let h = 0;
-      listsOf().forEach((list, n) => forEachInRect(list, x0 - MARGIN, y0 - MARGIN, x0 + size + MARGIN, y0 + size + MARGIN, o => {
+      current.forEach((list, n) => forEachInRect(list, x0 - MARGIN, y0 - MARGIN, x0 + size + MARGIN, y0 + size + MARGIN, o => {
         h = (h * 31 + o.x * 7919 + o.y * 31 + n + (standing(o) ? 1 : 0) + (o.applesReady ? 2 : 0) + (o.apple ? 4 : 0)) | 0;
       }));
-      const stamp = `${h}|${sunKey()}`;
-      state.stamps.set(key, { tick: game.pathTick, epoch: state.epoch, stamp });
-      return stamp;
-    }
+      const value = `${h}|${sunKey()}`;
+      state.dirty.delete(key);
+      state.stamps.set(key, { tick: game.pathTick, epoch: state.epoch, stamp: value });
+      return value;
+  };
+  stamp.dirty = (cx, cy) => state.dirty.has(`${cx},${cy}`);
+  return {
+    newFrame() { state.made = 0; },
+    stamp
   };
 }
 const natureStamps = stamper(natureLists), tuftStamps = stamper(() => [game.grassList]);
