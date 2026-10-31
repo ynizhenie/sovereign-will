@@ -9,8 +9,8 @@ export const mainMenu = document.getElementById('main-menu');
 const seedPanel = document.getElementById('seed-settings');
 if (!seedPanel) throw new Error('The shared seed panel is missing');
 const seedInputElement = document.getElementById('seed-input');
-if (!(seedInputElement instanceof HTMLInputElement)) throw new Error('The shared seed input is missing');
-const seedInput = seedInputElement;
+if (!seedInputElement) throw new Error('The shared seed input is missing');
+const seedInput = /** @type {HTMLInputElement} */ (seedInputElement);
 /** @type {'endless' | 'editor' | null} */
 let seedScreen = 'endless';
 
