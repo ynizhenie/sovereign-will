@@ -3,7 +3,7 @@ import { openGame } from './helpers.mjs';
 
 // The friend's #306, part A: Battles (1, 2, 3), the HUD's icons (6), the cards (10), the wheat (11), more phrases (5)
 
-test('Battles: the undead and demons look their own, a necromancer raises with the auto battle off, the sides\' colours chosen (#306, 1-3)', async ({ page }) => {
+test('Battles: the undead and demons look their own, combat is always automatic, the sides\' colours chosen (#306, 1-3)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
@@ -11,18 +11,11 @@ test('Battles: the undead and demons look their own, a necromancer raises with t
     const { makeSettler } = window.sim.helpers;
     const kin = type => unitKin(makeSettler(1, 0, 0, { type }));
     const kinds = { zombie: kin('zombie'), imp: kin('imp'), normal: kin('normal') };
-    battle.auto = false; battle.phase = 'fight';
-    const necro = makeSettler(2, 0, 0, { type: 'zombie', tool: 'necro_staff' });
-    const left = battleOrders(necro, { dt: 1 / 60 });
-    necro.orderTarget = { x: 0, y: 0 };
-    const told = battleOrders(necro, { dt: 1 / 60 });
-    battle.phase = 'setup'; battle.auto = true;
     setBattleColor('green', '#3498db'); setBattleColor('red', '#3498db'); // (the other's: refused)
-    return { kinds, left, told, green: getSettlerColor(), red: sides.battle.red, swatches: document.querySelectorAll('#battle-colors-green .color-swatch').length };
+    return { kinds, hasAutoControl: !!document.querySelector('[data-battle-auto], #battle-auto'), green: getSettlerColor(), red: sides.battle.red, swatches: document.querySelectorAll('#battle-colors-green .color-swatch').length };
   });
   expect(r.kinds).toEqual({ zombie: 'undead', imp: 'demons', normal: 'humans' });
-  expect(r.left).toBe(false); // (its own work: necromancy)
-  expect(r.told).toBe(true);
+  expect(r.hasAutoControl).toBe(false);
   expect(r.green).toBe('#3498db');
   expect(r.red).not.toBe('#3498db');
   expect(r.swatches).toBeGreaterThan(5);

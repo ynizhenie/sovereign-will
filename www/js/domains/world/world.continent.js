@@ -10,6 +10,7 @@ import { DEFAULT_MAP_TILES, TILE_SIZE, game, rand, townHall } from '../../engine
 import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
+import { isSpawnSpotFree } from '../economy/building/index.js';
 import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners } from './world.generator.js';
 
 const config = () => GAME_CONFIG.continent;
@@ -61,7 +62,7 @@ export function* generateContinent() {
   // ---- The land: an oval, stretched and turned, its coast warped by noise; the sea at the edges
   yield 0.12;
   const cx = cols * (0.5 + (rand() - 0.5) * 0.08), cy = rows * (0.5 + (rand() - 0.5) * 0.08);
-  const turn = rand() * Math.PI, rx = cols * (0.37 + rand() * 0.07), ry = rows * (0.31 + rand() * 0.09);
+  const turn = rand() * Math.PI, rx = cols * (0.41 + rand() * 0.05), ry = rows * (0.35 + rand() * 0.07);
   const margin = Math.max(5, Math.round(side * C.margin));
   const elevation = new Float32Array(n), land = new Uint8Array(n);
   for (let gy = 0; gy < rows; gy++) {
@@ -181,6 +182,9 @@ export function* generateContinent() {
   // ---- What grows on it: each biome's things by their chances (the foot of the mountains its own)
   yield 0.56;
   const hall = { gx: start.gx, gy: start.gy };
+  const startHalf = GAME_CONFIG.territory.startTiles / 2;
+  const inStartTerritory = (gx, gy) => gx >= hall.gx - startHalf && gx < hall.gx + startHalf &&
+    gy >= hall.gy - startHalf && gy < hall.gy + startHalf;
   const nearMountain = (gx, gy) => {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (biome[at(Math.min(cols - 1, Math.max(0, gx + dx)), Math.min(rows - 1, Math.max(0, gy + dy)))] === MOUNTAIN) return true;
     return false;
@@ -199,11 +203,32 @@ export function* generateContinent() {
         sum += chance;
         if (roll >= sum) continue;
         const { x, y } = tile(gx, gy);
-        if (kind === 'boar') game.boars.push({ x, y, hp: boar.hp, maxHp: boar.hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
+        if (kind === 'boar') {
+          if (!inStartTerritory(gx, gy)) game.boars.push({ x, y, hp: boar.hp, maxHp: boar.hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
+        }
         else addMapResource(kind, x, y);
         break;
       }
     }
+  }
+
+  // Keep the starting territory at a predictable 3–5 boars, independent of the biome rolls above.
+  const startBoarCount = 3 + Math.floor(rand() * 3);
+  const startBoarSpots = [];
+  for (let gy = Math.ceil(hall.gy - startHalf); gy < hall.gy + startHalf; gy++) {
+    for (let gx = Math.ceil(hall.gx - startHalf); gx < hall.gx + startHalf; gx++) {
+      const b = biome[at(gx, gy)];
+      if ((b !== GRASS && b !== FOREST) || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
+      const { x, y } = tile(gx, gy);
+      if (isSpawnSpotFree(x, y)) startBoarSpots.push({ x, y });
+    }
+  }
+  for (let i = startBoarSpots.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [startBoarSpots[i], startBoarSpots[j]] = [startBoarSpots[j], startBoarSpots[i]];
+  }
+  for (const { x, y } of startBoarSpots.slice(0, startBoarCount)) {
+    game.boars.push({ x, y, hp: boar.hp, maxHp: boar.hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
   }
 
   // ---- (#326) round the base, the small things to pick up by hand as many as a default map has: grass, berry

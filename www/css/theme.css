@@ -43,7 +43,7 @@ html, body, button, input, select, textarea { font-family: var(--font); }
 
 /* ---- Planks: every button-like thing is a piece of wood; chosen ones are green with a glow */
 .btn, .menu-button, #play-button, .tab-btn, .wave-option, .map-option, .map-source-option, .editor-size-option,
-.difficulty-option, .cards-option, .fps-option, .faction-option, .menu-gear, #seed-reroll, #editor-seed-reroll, #btn-generate-name,
+.difficulty-option, .cards-option, .fps-option, .faction-option, .menu-gear, #seed-reroll, #btn-generate-name,
 .item-row .item-name, .item-row .item-delete, .item-row .item-confirm, .item-row .item-cancel,
 .resources-grid div, .resource-group-members div {
   background: var(--plank) center / cover;
@@ -118,7 +118,7 @@ button.cant-afford { opacity: 0.55; }
 .resources-grid .resource-group { border: none; }
 .resource-group-members { background: var(--bg); border: 1px solid var(--edge); }
 .selected-unit-box { background: var(--plank-dark) center / cover; border: none; }
-#seed-input, #editor-seed-input, .menu-number, .generator-field input { background: var(--bg-deep); border: 1px solid var(--edge); }
+#seed-input, .menu-number, .generator-field input { background: var(--bg-deep); border: 1px solid var(--edge); }
 
 /* ---- Toasts: a red plank for a warning, a green one for done (showNotification sets .ok) */
 #toast-notification { background: var(--plank-red) center / cover; border: none; font-weight: 700; }

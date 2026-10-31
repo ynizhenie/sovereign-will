@@ -446,6 +446,16 @@ body.menu-world #defeat-overlay { display: none !important; }
   display: none;
 }
 
+.editor-start {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.editor-start-title { color: #b6c1b8; font-size: 11px; }
+.editor-start-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.editor-start-options .editor-launch-option { min-width: 0; min-height: 48px; padding: 6px; font-size: 12px; line-height: 1.2; }
+
 .menu-number {
   width: 70px;
   padding: 6px;
@@ -520,7 +530,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   text-transform: uppercase;
 }
 
-#seed-input, #editor-seed-input {
+#seed-input {
   width: 100%;
   padding: 8px 10px;
   background: #111318;
@@ -532,7 +542,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   outline: none;
 }
 
-#seed-input:focus, #editor-seed-input:focus {
+#seed-input:focus {
   border-color: #46b8da;
 }
 
@@ -542,7 +552,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 /* small unlabeled button next to the seed: a new random seed */
-#seed-reroll, #editor-seed-reroll, #btn-generate-name {
+#seed-reroll, #btn-generate-name {
   flex: 0 0 auto;
   width: 34px;
   background: #111318;
@@ -553,7 +563,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   cursor: pointer;
 }
 
-#seed-reroll:active, #editor-seed-reroll:active, #btn-generate-name:active {
+#seed-reroll:active, #btn-generate-name:active {
   border-color: #46b8da;
 }
 
@@ -660,6 +670,7 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   max-height: 92vh;
   overflow-y: auto;
 }
+.main-menu-content.generator-screen { max-height: 75vh; }
 .generator-fields {
   display: flex;
   flex-direction: column;
@@ -964,7 +975,8 @@ body.placing:not(.sheet-open) #placing-chip { display: flex; animation: chip-pop
 #sheet-frame {
   display: none;
   width: min(760px, 100%);
-  max-height: 44vh;
+  height: 30vh;
+  max-height: 30vh;
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -1184,11 +1196,12 @@ body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loadi
 /* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
 #btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }
 
-/* (#326) the languages: Settings with a square of flags at its right, and a flag before each language in Settings */
-.menu-row { display: flex; gap: 8px; align-items: stretch; width: 100%; }
-.menu-row .menu-button { flex: 1; width: auto; }
-.flag-box { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 3px; width: 44px; box-sizing: border-box;
-  background: #2a2d34; border: 1px solid #3d414b; border-radius: 6px; }
+/* (#326) the language flag stays in the lower-left corner, away from the aligned menu buttons */
+.flag-box { position: fixed; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 5;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px; width: 44px; box-sizing: border-box;
+  background: rgba(13, 20, 13, 0.94); border: 1px solid rgba(180, 195, 180, 0.28); border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); }
+body.menu-ui-hidden #menu-flags { display: none; }
 .flag-button { display: flex; padding: 1px; background: none; border: 1px solid transparent; border-radius: 3px; cursor: pointer; line-height: 0; }
 .flag-button .flag { width: 100%; height: auto; }
 .flag-button.active { border-color: #46b8da; }

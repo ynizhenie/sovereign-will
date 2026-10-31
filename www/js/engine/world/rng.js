@@ -1,5 +1,5 @@
 // The world's seed and the random numbers drawn from it: the same seed always makes the same map. The seed
-// is still read from the Endless menu's field here, until a game is made from a seed it's given (createGame).
+// is read from the shared Endless/editor menu field until a game is made from a seed it's given (createGame).
 
 import { game } from './state.js';
 import { updateSeedHud } from '../../ui/index.js';
@@ -37,7 +37,6 @@ export function createDefaultSeed() {
 
 export const worldSeedInput = document.getElementById('seed-input');
 
-// (input: another seed field, the editor's, #326 27.10, 19)
 /** @param {HTMLInputElement | null} [input] */
 export function applySeedFromUI(input = /** @type {HTMLInputElement | null} */ (worldSeedInput)) {
   const rawSeed = input ? input.value.trim() : '';
