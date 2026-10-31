@@ -180,14 +180,38 @@ export function drawBushArt(b) {
   for (const [bx, by] of [[-5, -3], [4, -2], [1, 4], [-2, 2], [6, 3]]) { blob(x + bx, y + by, 2.4, '#5b6ee1'); blob(x + bx - 0.7, y + by - 0.7, 0.8, '#aab6fb'); }
 }
 
-// A stick: a forked twig
+// A fallen twig: its length, angle, bark and forks vary by the tile it lies on
 export function drawStickArt(st) {
-  const flip = variant(st) % 2 ? 1 : -1, x = st.x, y = st.y;
+  const h = variant(st), x = st.x, y = st.y, g = pen();
+  const length = 9 + (h >>> 3) % 6, angle = ((h >>> 7) % 9 - 4) * 0.13;
+  const bark = ['#8e5a2b', '#79502e', '#a16a38', '#704522'][(h >>> 12) % 4];
   groundShadow(x, y - 3, 7, 2); // (#326)
-  pen().strokeStyle = '#8e5a2b'; pen().lineWidth = 2.5; pen().lineCap = 'round';
-  pen().beginPath(); pen().moveTo(x - 7 * flip, y - 4); pen().lineTo(x + 7 * flip, y + 4); pen().stroke();
-  pen().lineWidth = 1.5; pen().beginPath(); pen().moveTo(x, y); pen().lineTo(x + 2 * flip, y - 5); pen().stroke();
-  pen().lineCap = 'butt';
+  g.save();
+  g.translate(x, y);
+  g.rotate(angle);
+  g.lineCap = 'round';
+  g.strokeStyle = bark;
+  g.lineWidth = 1.5 + (h >>> 15) % 3 * 0.35;
+  g.beginPath();
+  g.moveTo(-length / 2, 1 + (h >>> 18) % 3);
+  g.lineTo(length / 2, -1 - (h >>> 20) % 3);
+  g.stroke();
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(-length * 0.12, 0);
+  g.lineTo(-length * 0.26, -3 - (h >>> 22) % 3);
+  if (h & 1) {
+    g.moveTo(length * 0.2, -1);
+    g.lineTo(length * 0.34, -4 - (h >>> 24) % 3);
+  }
+  g.stroke();
+  g.strokeStyle = 'rgba(220, 170, 105, 0.55)';
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(-length / 2 + 2, 1 + (h >>> 18) % 3 - 0.6);
+  g.lineTo(length / 2 - 2, -1 - (h >>> 20) % 3 - 0.6);
+  g.stroke();
+  g.restore();
 }
 
 // A piece of a felled tree's log (#298): a short length of trunk, bark lines, its cut ends pale
@@ -201,14 +225,31 @@ export function drawLogArt(lg) {
   for (const ex of [x - w / 2, x + w / 2]) { pen().fillStyle = '#c8a46a'; pen().beginPath(); pen().ellipse(ex, y, 1.4, 2.5, 0, 0, Math.PI * 2); pen().fill(); }
 }
 
-// Pebbles: two or three small stones, lit on top
+// Pebbles: a small cluster of varied stones, lit from above
 export function drawPebblesArt(pe) {
-  const h = variant(pe), x = pe.x, y = pe.y;
+  const h = variant(pe), x = pe.x, y = pe.y, g = pen();
+  const layouts = [
+    [[-3, 0, 2.8, 2], [3, 2, 2, 1.5], [1, -3, 1.8, 1.4]],
+    [[-4, 2, 2.3, 1.8], [0, -2, 3, 2], [4, 1, 1.6, 1.4]],
+    [[-3, -2, 2, 1.6], [1, 2, 3, 2], [4, -3, 1.7, 1.3], [-4, 4, 1.4, 1.2]],
+    [[-4, 0, 2.5, 1.7], [1, -3, 2, 1.4], [3, 3, 2.7, 1.8]],
+    [[-2, 3, 2.8, 1.8], [2, -2, 2.4, 2], [-5, -2, 1.6, 1.3], [5, 2, 1.3, 1]],
+    [[-4, -3, 1.8, 1.4], [0, 0, 3, 2], [4, 3, 2, 1.5]],
+    [[-3, 3, 2.3, 1.7], [3, -2, 2.8, 1.9], [0, -4, 1.5, 1.2], [4, 4, 1.3, 1]],
+    [[-4, 1, 2, 1.5], [0, -3, 2.5, 1.8], [4, 1, 2.5, 1.8]]
+  ];
+  const stones = layouts[h % layouts.length];
+  const colors = [['#95a5a6', '#d0d3d4'], ['#858f91', '#c4ccce'], ['#a1a7a5', '#e0dfd7'], ['#777f82', '#b9c1c2']];
+  const [stoneColor, lightColor] = colors[(h >>> 4) % colors.length];
   groundShadow(x, y - 3, 5, 2); // (#326: by the sun, as the rest)
-  for (const [px, py, r] of [[-3, 0, 3], [3, 2, 2.2], [1, -3, 1.8]].slice(0, 2 + (h % 2))) {
-    blob(x + px + 1, y + py + 1, r, 'rgba(0, 0, 0, 0.25)');
-    blob(x + px, y + py, r, '#95a5a6');
-    blob(x + px - r * 0.3, y + py - r * 0.3, r * 0.45, '#d0d3d4');
+  for (let i = 0; i < stones.length; i++) {
+    const [px, py, rx, ry] = stones[i], rotation = ((h >>> (i * 3 + 8)) % 5 - 2) * 0.12;
+    g.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    g.beginPath(); g.ellipse(x + px + 1, y + py + 1, rx, ry, rotation, 0, Math.PI * 2); g.fill();
+    g.fillStyle = stoneColor;
+    g.beginPath(); g.ellipse(x + px, y + py, rx, ry, rotation, 0, Math.PI * 2); g.fill();
+    g.fillStyle = lightColor;
+    g.beginPath(); g.ellipse(x + px - rx * 0.2, y + py - ry * 0.3, rx * 0.45, ry * 0.35, rotation, 0, Math.PI * 2); g.fill();
   }
 }
 

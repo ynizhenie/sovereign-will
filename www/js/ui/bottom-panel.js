@@ -14,6 +14,7 @@ import { setMode } from './map-input.js';
 import { refreshAffordability } from './widgets.js';
 import { updateUnitsTab } from './units-tab.js';
 import { closeSheet, getOpenSheet, toggleSheet } from './sheets.js';
+import { closeSelectedCard } from './selected-card-state.js';
 
 // the colony sheet's tab (the last one opened, even with the sheet closed)
 export let activeTab = 'tab-build';
@@ -30,13 +31,14 @@ export function openTab(tabId) {
 }
 
 function showTab(tabId) {
+  closeSelectedCard();
   activeTab = tabId;
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === tabId));
   renderSheetStock(tabId);
   if (tabId === 'tab-units') updateUnitsTab(true); // (at once, paused too)
 }
 
-// A dock button: back to Point (#80), and its tab's sheet opens, or closes if it's the one open (a picked
+// A dock button: its tab's sheet opens, or closes if it's the one open (a picked
 // tool's sheet comes back from its chip instead, the tool kept)
 export function switchTab(_button, tabId) {
   setMode('interact');

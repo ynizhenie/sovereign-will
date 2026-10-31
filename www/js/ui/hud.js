@@ -6,12 +6,13 @@ import { setText } from './text.js';
 import { renderBuildingCard } from './building-card.js';
 import { t } from '../engine/platform/index.js';
 import { game, townHall } from '../engine/world/index.js';
-import { getCurrentPop, getMaxPop, getPossessed, getSelectedSettler, getSelection, getUpgrade, renderSettlerInfo, roleTitle } from '../domains/colony/settlers/index.js';
+import { ensureUnitName, getCurrentPop, getMaxPop, getPossessed, getSelectedSettler, getSelection, getUpgrade, renderSettlerInfo, roleTitle } from '../domains/colony/settlers/index.js';
 import { countHeld, disarmSettler, getHeldItems, givableTo, giveStoredTo, hasGear, orderGearOff, updateCraftLists } from '../domains/colony/equipment/index.js';
 import { getResourceAmount, stock, syncFoodMix } from '../domains/colony/storage/index.js';
-import { isForPlayerFaction } from '../domains/factions/index.js';
+import { getPlayerFaction, isForPlayerFaction } from '../domains/factions/index.js';
 import { getDayPhase, getWeather } from '../domains/world/index.js';
 import { updateUnitsTab } from './units-tab.js';
+import { isSelectedCardVisible, isSelectedNameEditing } from './selected-card-state.js';
 
 export function updateUI() {
   updateWave();
@@ -58,9 +59,15 @@ export function updateUI() {
   const selected = getSelectedSettler();
   if (selected) {
     const type = GAME_CONFIG.settlerTypes[selected.type] || GAME_CONFIG.settlerTypes.normal;
-    // what it is by what it holds (#279; a commander, #248); a quiver's arrows (#326: what it holds is in its own row)
-    const name = `[[${type.icon}]] ${type.label} · ${roleTitle(selected)}${selected.quiver ? ` · ${t('hud.quiver', { n: selected.arrows || 0 })}` : ''}`;
-    setRichText(document.getElementById('selected-settler-txt'), name);
+    const unitName = ensureUnitName(selected, getPlayerFaction().id, game.settlers);
+    setRichText(document.getElementById('selected-type-icon'), `[[${type.icon}]]`);
+    setText(document.getElementById('selected-settler-txt'), unitName);
+    setText(document.getElementById('selected-role-txt'), `· ${roleTitle(selected)}${selected.quiver ? ` · ${t('hud.quiver', { n: selected.arrows || 0 })}` : ''}`);
+    const nameInput = document.getElementById('selected-name');
+    if (nameInput && document.activeElement !== nameInput && nameInput.value !== unitName) nameInput.value = unitName;
+    const selectedBar = document.getElementById('selected-bar');
+    selectedBar.classList.toggle('has-settler', isSelectedCardVisible(selected));
+    selectedBar.classList.toggle('editing-name', isSelectedNameEditing(selected));
     renderSettlerInfo(selected);
     renderSelectedGear(selected);
     renderSelectedActions(selected);
@@ -72,14 +79,18 @@ export function updateUI() {
     // (#314) letting one go: in Endless, a hired one
     document.getElementById('btn-dismiss').style.display = game.gameMode === 'endless' && !selected.temporary && !selected.leaving ? 'block' : 'none';
   } else {
+    isSelectedCardVisible(null);
     game.selectedSettler = null;
     game.selectedGroup = []; game.addingToGroup = false;
     giveOpen = false;
     document.getElementById('btn-dismiss').style.display = 'none';
+    setRichText(document.getElementById('selected-type-icon'), '');
     setText(document.getElementById('selected-settler-txt'), t('hud.nobody'));
+    setText(document.getElementById('selected-role-txt'), '');
     document.getElementById('selected-info').hidden = true;
     renderSelectedGear(null);
     document.getElementById('selected-bar').classList.remove('has-settler');
+    document.getElementById('selected-bar').classList.remove('editing-name');
     document.getElementById('btn-deselect').style.display = 'none';
     if (btnUpgrade) {
       btnUpgrade.style.display = 'none';
@@ -96,7 +107,7 @@ export function updateUI() {
 
 // (#326) The card's buttons as they apply now, the group's size, the Give list, and a hint for the taps
 let giveOpen = false, shownGive = '';
-export function toggleGiveList() { giveOpen = !giveOpen; shownGive = ''; }
+export function toggleGiveList() { giveOpen = !giveOpen; shownGive = ''; updateUI(); }
 function renderSelectedActions(s) {
   const endless = game.gameMode === 'endless', fight = game.gameMode === 'battle' ? document.body.dataset.battlePhase === 'fight' : endless;
   const picked = getSelection(), pet = s.role === 'pet';
@@ -123,7 +134,7 @@ function renderSelectedActions(s) {
   if (key === shownGive) return;
   shownGive = key;
   list.hidden = !giveOpen || !endless;
-  fillGiveList(list, s, items, () => { giveOpen = false; shownGive = ''; });
+  fillGiveList(list, s, items, () => { giveOpen = false; shownGive = ''; updateUI(); });
 }
 
 // (#326) What in the armory a settler can take, a button each (a tap hands it over; done: then); none, says so.
@@ -147,7 +158,7 @@ export function fillGiveList(list, s, items, done = () => {}) {
 // it; the last seconds pulse, and a new wave shakes it
 let shownWave = 0;
 // (#279) the dial of the day: its parts as wedges in their colours (once), the hand on now, the sun by day
-// and the moon at night in the middle; hovered, what part of the day it is and how long till the next
+// and the moon at night in the middle
 let dialFor = '';
 function updateDayClock() {
   const clock = document.getElementById('day-clock');
@@ -169,12 +180,6 @@ function updateDayClock() {
   const weather = getWeather(), wet = weather.kind !== 'clear' && weather.level > 0.3; // (#308: rain, fog, a storm on its face)
   const icon = wet ? weather.kind : phase === 'night' ? 'moon' : 'sun';
   if (face.dataset.icon !== icon) { face.dataset.icon = icon; face.innerHTML = iconHtml(icon); }
-  let end = 0;
-  for (const [id, len] of parts) { end += len; if (id === phase) break; }
-  const next = parts[(parts.findIndex(p => p[0] === phase) + 1) % parts.length][0];
-  const left = Math.max(0, Math.ceil(end - now));
-  clock.title = t('daytime.clock', { now: t(`daytime.${phase}`), next: t(`daytime.${next}`).toLowerCase(), time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` }) +
-    (wet ? ` · ${t(`weather.${weather.kind}`)}` : '');
 }
 
 function updateWave() {
@@ -197,11 +202,11 @@ function updateWave() {
 export function renderResourceStrip() {
   const strip = document.getElementById('resource-strip');
   if (!strip) return;
-  const chip = (icon, id, title) => `<span class="strip-chip" title="${escapeHtml(title)}">${iconHtml(icon)} <b id="${id}">0</b></span>`;
-  let html = chip('hall', 'strip-base', t('hud.base')) + chip('worker', 'strip-pop', t('hud.people'));
+  const chip = (icon, id) => `<span class="strip-chip">${iconHtml(icon)} <b id="${id}">0</b></span>`;
+  let html = chip('hall', 'strip-base') + chip('worker', 'strip-pop');
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned && isForPlayerFaction(g))) {
     const resource = GAME_CONFIG.resources[group.members[0]];
-    if (resource) html += chip(resource.icon || group.icon, `strip-${resource.id}`, resource.label);
+    if (resource) html += chip(resource.icon || group.icon, `strip-${resource.id}`);
   }
   strip.innerHTML = `${html}<span class="strip-more">${iconHtml('more')}</span>`;
 }
@@ -224,7 +229,7 @@ export function renderSheetStock(tabId) {
   // (the sub-tab showing only, #261)
   const parts = [...pane.querySelectorAll('.cost-part')].filter(part => !part.closest('[hidden]'));
   const ids = [...new Set(parts.map(part => /** @type {HTMLElement} */ (part).dataset.res || ''))].filter(id => GAME_CONFIG.resources[id]);
-  row.innerHTML = ids.map(id => `<span class="strip-chip" data-res="${id}" title="${escapeHtml(GAME_CONFIG.resources[id].label)}">${iconHtml(GAME_CONFIG.resources[id].icon)} <b>0</b></span>`).join('');
+  row.innerHTML = ids.map(id => `<span class="strip-chip" data-res="${id}">${iconHtml(GAME_CONFIG.resources[id].icon)} <b>0</b></span>`).join('');
   row.hidden = ids.length === 0;
   updateSheetStock();
 }
@@ -296,7 +301,6 @@ export function renderResourceTiles() {
   const chip = (parent, icon, label, id, res = '') => {
     const c = document.createElement('span');
     c.className = 'res-chip';
-    c.title = label;
     c.innerHTML = `${icon ? iconHtml(icon) : ''} <b id="${id}">0</b> <small class="res-name">${escapeHtml(label)}</small>` + (res ? ` <em class="res-rate" data-rate="${res}"></em>` : '');
     parent.appendChild(c);
   };
@@ -381,7 +385,7 @@ export function fillGearChips(box, s, items, done = () => {}) {
       button.className = `btn btn-disarm ${keep ? 'btn-store' : 'btn-apart'}`;
       button.dataset.action = action;
       button.dataset.arg = arg;
-      button.title = t(keep ? 'gearOff.store' : 'gearOff.take', { name: def.label || id });
+      button.setAttribute('aria-label', t(keep ? 'gearOff.store' : 'gearOff.take', { name: def.label || id }));
       setRichText(button, keep ? '[[warehouse]]' : '[[no]]');
       // (made after the page's buttons were wired: its own listener; on this settler, selected for it)
       button.addEventListener('click', () => { game.selectedSettler = s; if (action === 'disarmSettler') disarmSettler(arg, keep); else orderGearOff(arg, keep); done(); });

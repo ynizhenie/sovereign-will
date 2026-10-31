@@ -110,6 +110,16 @@ export const enLanguage = {
         demons: 'Demons',
         undead: 'Undead'
       },
+      unitNames: {
+        humans: { male: ['Alden', 'Bram', 'Cedric', 'Dorian', 'Edwin', 'Felix', 'Gareth', 'Hugo', 'Ivan', 'Jonas', 'Lukas', 'Milo'], female: ['Ada', 'Beatrice', 'Clara', 'Daphne', 'Elise', 'Freya', 'Greta', 'Hilda', 'Iris', 'Julia', 'Lena', 'Mira'] },
+        demons: { male: ['Azrak', 'Baal', 'Draz', 'Gorath', 'Khar', 'Malek', 'Nazar', 'Orun', 'Rhaz', 'Skorn', 'Vark', 'Zagan'], female: ['Aza', 'Briya', 'Dretha', 'Eshka', 'Ghara', 'Izzra', 'Kavra', 'Morga', 'Nytha', 'Rava', 'Syra', 'Zura'] },
+        undead: { male: ['Ashen', 'Barrow', 'Cairn', 'Dusk', 'Graves', 'Harrow', 'Morrow', 'Rook', 'Sable', 'Thorne', 'Vale', 'Wraith'], female: ['Ash', 'Briar', 'Cinder', 'Dahlia', 'Eira', 'Fable', 'Mara', 'Morrow', 'Nyx', 'Raven', 'Vesper', 'Winter'] },
+        pets: {
+          dog: { male: ['Buddy', 'Copper', 'Patch', 'Rex', 'Scout', 'Toby', 'Winston', 'Bandit'], female: ['Bella', 'Daisy', 'Luna', 'Molly', 'Penny', 'Sadie', 'Ruby', 'Poppy'] },
+          beast: { male: ['Ashfang', 'Blaze', 'Brimstone', 'Cinder', 'Fang', 'Flint', 'Scorch', 'Smoulder'], female: ['Ashenmaw', 'Ember', 'Hellfire', 'Sableflame', 'Scoria', 'Vex', 'Wildfire', 'Cinderheart'] },
+          ghost: { male: ['Boo', 'Ecton', 'Flicker', 'Morrow', 'Shade', 'Wisp', 'Whisper', 'Rattle'], female: ['Banshee', 'Echo', 'Glimmer', 'Hollow', 'Mist', 'Misty', 'Spirit', 'Willowisp'] }
+        }
+      },
       settlerTypes: {
         normal: 'Worker',
         big: 'Giant',
@@ -598,6 +608,11 @@ export const enLanguage = {
       'activity.goEat': 'Eating',
       'role.foreman': 'foreman',
       'role.captain': 'captain',
+      'sel.namePlaceholder': 'Character name',
+      'sel.editName': 'Edit character name',
+      'sel.generateName': 'Generate a new name',
+      'order.foreman': 'Gather {resource}, {name}!',
+      'order.captain': 'Take that one, {name}!',
       'activity.foremanOrders': 'Giving orders',
       'activity.captainOrders': 'Giving orders',
       'activity.tendCorpses': 'Seeing to the corpses',
@@ -657,6 +672,9 @@ export const enLanguage = {
       'dock.units': 'Units',
       'units.count': 'Settlers and pets: {n}',
       'units.holdsNothing': 'Holds nothing',
+      'units.focus': 'Move the camera to this character',
+      'units.give': 'Give an item',
+      'units.openCard': 'Open character menu',
       'craft.kind.tools': 'Tools',
       'craft.kind.weapons': 'Weapons',
       'craft.kind.gear': 'Gear',

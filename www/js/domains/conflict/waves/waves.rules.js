@@ -12,7 +12,7 @@ import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict } from '
 import { addCorpse } from '../combat/index.js';
 import { openDemonPortal } from '../../factions/demons/index.js';
 import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
-import { newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
+import { generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 
@@ -73,8 +73,10 @@ export function getEnemyDef(enemy) {
 export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
+  const look = definition.pet ? newPetLook(definition.pet) : newLook();
   const enemy = {
-    look: definition.pet ? newPetLook(definition.pet) : newLook(), // (#306: a man or a woman, one of their looks; a pet's its own, #314)
+    look, // (#306: a man or a woman, one of their looks; a pet's its own, #314)
+    name: generateUnitName(enemyFactionOf(definition.id).id, look.female, game.enemies, definition.pet || null),
     ghostly: definition.pet === 'ghost', // (#314: through everyone)
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius, bigBody: !!definition.big,
     hp: definition.hp, maxHp: definition.hp,

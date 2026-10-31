@@ -256,7 +256,6 @@ export function renderSaveList(listId = 'save-list') {
     const at = new Date(s.savedAt);
     const world = seedOf(s) ?? '';
     const wave = waveOf(s);
-    tile.title = s.name;
     tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(t('save.world', { world }))}</b></span>` +
       `<span class="tile-cost">${escapeHtml(t('save.wave', { wave }))} · ${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}</span>`;
     onTap(tile, async () => {
@@ -272,7 +271,7 @@ export function renderSaveList(listId = 'save-list') {
     const del = document.createElement('button');
     del.className = 'btn tile-act save-delete';
     del.dataset.deleteSave = key;
-    del.title = t('list.deleteQuestion', { name: s.name });
+    del.setAttribute('aria-label', t('list.deleteQuestion', { name: s.name }));
     del.innerHTML = iconHtml('close');
     // asked first: the × turns into "Delete?", tapped again it's gone
     onTap(del, () => {
