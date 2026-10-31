@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { drawIcon } from '../../../ui/index.js';
-import { game } from '../../../engine/world/index.js';
+import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
@@ -15,7 +15,9 @@ import { castShadow, getDarkness, isExplored, isVisible } from '../../world/inde
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
-  game.enemyTents.forEach(et => {
+  const v = getViewRect(60), visible = [];
+  forEachInRect(game.enemyTents, v.x0, v.y0, v.x1, v.y1, et => visible.push(et));
+  visible.forEach(et => {
     if (!isExplored(et.x, et.y)) return; // (#299: in the dark; once seen, a tent stays shown)
     if (et.outpost) drawOutpost(et);
     else if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
@@ -62,7 +64,9 @@ function drawOutpost(et) {
 // Things fallen enemies dropped (#210, #232): the thing itself on the ground, a faint shadow under it (an old
 // save's pile of resources: a little sack)
 export function drawLoot() {
-  for (const pile of game.loot) {
+  const v = getViewRect(30), visible = [];
+  forEachInRect(game.loot, v.x0, v.y0, v.x1, v.y1, pile => visible.push(pile));
+  for (const pile of visible) {
     const key = (pile.items || [])[0];
     const [category, id] = key ? key.split(':') : [];
     const item = key && GAME_CONFIG[category] && GAME_CONFIG[category][id];
@@ -75,7 +79,9 @@ export function drawLoot() {
 
 // Tent sites enemies are building
 export function drawEnemyTentSites() {
-  game.enemyTentBlueprints.forEach(site => {
+  const v = getViewRect(60), visible = [];
+  forEachInRect(game.enemyTentBlueprints, v.x0, v.y0, v.x1, v.y1, site => visible.push(site));
+  visible.forEach(site => {
     if (!isVisible(site.x, site.y)) return; // (#299)
     ctx.fillStyle = 'rgba(192, 57, 43, 0.35)';
     ctx.beginPath();
@@ -91,15 +97,18 @@ export function drawEnemies() {
   // (#299) only those the colony sees now, and only those on the screen (#306)
   const view = getViewRect(60);
   const shown = en => isVisible(en.x, en.y) && en.x > view.x0 && en.x < view.x1 && en.y > view.y0 && en.y < view.y1;
+  const enemies = [], scouts = [];
+  forEachInRect(game.enemies, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) enemies.push(en); });
+  forEachInRect(game.scouts, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) scouts.push(en); });
   // (#306) zoomed out to one or two pixels apiece: a dab of their colour each
   if (tinyUnit()) {
     const dab = 1.6 / getViewScale();
-    for (const en of game.enemies) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
-    for (const en of game.scouts) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
+    for (const en of enemies) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
+    for (const en of scouts) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
     return;
   }
-  for (const en of game.enemies) if (shown(en)) drawEnemy(en);
-  for (const en of game.scouts) if (shown(en)) drawEnemy(en); // (scouts between waves, #279)
+  for (const en of enemies) if (shown(en)) drawEnemy(en);
+  for (const en of scouts) if (shown(en)) drawEnemy(en); // (scouts between waves, #279)
 }
 
 // One enemy

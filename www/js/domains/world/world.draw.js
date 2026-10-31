@@ -34,19 +34,18 @@ const MAX_PIXELS = 16e6;
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
 
-// (#322) The pieces on the screen are always laid down whole: one not painted yet is painted there and then, never left a hole or
-// the plain ground to fill in later (a pop-in the player sees). A ring of pieces round the screen is painted ahead, a few
-// milliseconds of it a frame, so that moving the camera brings in pieces already painted; a piece whose look has changed keeps
-// its old picture till its turn comes. As the zoom changes size, a piece is laid down as painted at the nearest other size till
-// its own is painted (a moment soft or sharp, never missing)
+// (#322) Pieces are cached by map chunk. A camera pan can expose many uncached pieces at once,
+// so only one detailed chunk is painted per frame; old-size pictures or lightweight previews
+// cover the rest until their turn. A ring round the screen is painted ahead when budget allows.
 const PAINT_MS = 4;
 const AHEAD = 1; // (pieces round the screen painted ahead)
+const STILL_PAINTS_PER_FRAME = 4;
 // (#306) world px painted past a piece's edge: a patch of grass crossing the edge is whole on either side of it,
 // instead of being cut off at it
 const PAD = 6;
 let frameOf = 0;
-/** @type {Map<string, { res: number, since: number }>} */
-const layerSize = new Map();
+let framePaints = 0, framePaintMs = 0, framePaintLimit = STILL_PAINTS_PER_FRAME, framePaintLayer = 'grass', priorityPassed = false;
+let previousView = null, previousScale = 0;
 // the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
 // painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
 const stats = { holes: 0, late: 0 };
@@ -54,23 +53,27 @@ export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
 // paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
-/** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint */
-export function drawChunks(layer, res, stamp, paint) {
+/** @param {string} layer @param {number} res @param {(cx: number, cy: number) => string} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] */
+export function drawChunks(layer, res, stamp, paint, preview) {
   if (typeof document === 'undefined') return;
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
-  if (layer === 'grass') { frameOf++; stats.holes = 0; stats.late = 0; } // (the first layer of a frame)
-  // (the size this layer's pictures were last laid down at, and since when: another size's picture stands in only for half a
-  // second after the zoom crossed into a new size, not when the camera moves)
-  const was = layerSize.get(layer);
-  if (!was || was.res !== res) layerSize.set(layer, { res, since: frameOf });
-  const zoomedNow = frameOf - /** @type {{ since: number }} */ (layerSize.get(layer)).since < 30;
-  const size = CHUNK * TILE_SIZE, v = getViewRect();
-  let spent = 0; // (ms of painting this frame: laying pictures down doesn't count)
+  const size = CHUNK * TILE_SIZE, v = getViewRect(), scale = getViewScale();
+  if (layer === 'grass') {
+    const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
+    previousView = v; previousScale = scale;
+    frameOf++; stats.holes = 0; stats.late = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
+    const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
+    framePaintLayer = layers[(frameOf - 1) % layers.length];
+  } // (the first layer of a frame)
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
   const m = ctx.getTransform();
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
+  const blit = (p, x0, y0, x1, y1) => {
+    const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
+    ctx.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+  };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
@@ -84,7 +87,7 @@ export function drawChunks(layer, res, stamp, paint) {
     const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
     g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
     paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
-    spent += performance.now() - startedAt;
+    framePaintMs += performance.now() - startedAt;
     return { canvas, pad, pw, ph, stamp: now, frame: frameOf };
   };
   // the screen's pieces first (a changed one repainted before any painting ahead), then the ring round it
@@ -96,30 +99,36 @@ export function drawChunks(layer, res, stamp, paint) {
         const key = `${res}|${cx},${cy}`;
         let chunk = chunks.get(key);
         const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
-        const free = spent < PAINT_MS;
+        const free = framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed);
         // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
         if (!shown) {
-          const now = free ? `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}` : null;
-          if (now !== null && (!chunk || chunk.stamp !== now)) { chunks.delete(key); chunks.set(key, painted(cx, cy, x0, y0, x1, y1, chunk, now)); }
+          if (free) {
+            const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
+            if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, painted(cx, cy, x0, y0, x1, y1, chunk, now)); framePaints++; }
+            else if (chunk) chunk.frame = frameOf;
+          }
           else if (chunk) chunk.frame = frameOf;
           continue;
         }
-        const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
         if (chunk) chunks.delete(key); // (to the end: the most recently shown)
-        let picture = chunk;
-        if (!chunk || chunk.stamp !== now) {
-          const other = chunk || !zoomedNow ? null : otherSize(chunks, cx, cy, res, now);
-          if ((chunk || other) && !free) picture = chunk || other; // (its old picture, or another size's, till its turn)
-          else { picture = chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now); stats.late++; }
-          if (picture !== chunk) stats.holes++;
+        if (!free) {
+          if (chunk) {
+            chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1);
+          } else {
+            // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
+            // or rasterize each one this frame: preview it until its turn in the queue.
+            if (preview) preview(x0, y0, x1, y1);
+            stats.holes++;
+          }
+          continue;
         }
-        if (chunk) { chunk.frame = frameOf; chunks.set(key, chunk); }
-        const p = /** @type {Chunk} */ (picture);
-        const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
-        ctx.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+        const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
+        if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now))); framePaints++; stats.late++; }
+        if (chunk) { chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); }
       }
     }
   }
+  if (layer === framePaintLayer) priorityPassed = true;
   // the least recently shown dropped past the budget, never one this frame has (on the screen or just round it)
   let pixels = 0;
   for (const c of chunks.values()) pixels += c.canvas.width * c.canvas.height;
@@ -129,17 +138,6 @@ export function drawChunks(layer, res, stamp, paint) {
     pixels -= c.canvas.width * c.canvas.height;
     chunks.delete(key);
   }
-}
-
-// (#322) The piece (cx, cy) as painted at any other size and still as it is now, if there is one: the nearest size first
-const SIZES = [2, 1, 0.5, 0.25, 0.125, 0.0625];
-function otherSize(chunks, cx, cy, res, now) {
-  const order = SIZES.filter(r => r !== res).sort((a, b) => Math.abs(Math.log2(a / res)) - Math.abs(Math.log2(b / res)));
-  for (const r of order) {
-    const c = chunks.get(`${r}|${cx},${cy}`);
-    if (c && c.stamp === now) return c;
-  }
-  return null;
 }
 
 // full-size pictures zoomed in, half zoomed out
@@ -206,7 +204,9 @@ function paintGrass(g, x0, y0, x1, y1) {
 }
 
 export function drawGrassGround() {
-  drawChunks('grass', chunkRes(), () => '', paintGrass);
+  drawChunks('grass', chunkRes(), () => '', paintGrass, (x0, y0, x1, y1) => {
+    ctx.fillStyle = '#2d4a22'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  });
 }
 
 // ---- Terrain that joins up
@@ -512,13 +512,30 @@ function paintTerrain(g, x0, y0, x1, y1) {
   } finally { target = null; over = 0.5; }
 }
 
+// A fast panning placeholder keeps the map's main land/water/sand shapes visible while
+// the detailed chunk waits its turn in drawChunks' per-frame paint queue.
+function previewTerrain(x0, y0, x1, y1) {
+  const paintTiles = (list, color) => {
+    ctx.fillStyle = color;
+    forEachInRect(list, x0 - TILE_SIZE, y0 - TILE_SIZE, x1 + TILE_SIZE, y1 + TILE_SIZE, o => {
+      ctx.fillRect(o.x - TILE_SIZE / 2, o.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+    });
+  };
+  paintTiles(game.desertTiles, '#c9a66b');
+  paintTiles(game.beachTiles, '#c9a66b');
+  paintTiles(game.waterTiles, '#2c83bd');
+  paintTiles(game.naturalRocks, '#34495e');
+  paintTiles(game.ironOres, '#34495e');
+  paintTiles(game.coalOres, '#34495e');
+}
+
 const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view.y1, fn);
 
 export function drawSand() {
   // this frame: zoomed out (the pictures), or the tiles on screen (with a tile's margin)
   view = getViewRect(TILE_SIZE);
   cached = typeof document !== 'undefined';
-  if (cached) { drawChunks('terrain', terrainRes(), terrainStamp, paintTerrain); return; }
+  if (cached) { drawChunks('terrain', terrainRes(), terrainStamp, paintTerrain, previewTerrain); return; }
   inView(game.desertTiles, drawDesertTile);
   inView(game.beachTiles, drawDesertTile);
 }

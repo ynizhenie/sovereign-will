@@ -26,12 +26,12 @@ export const clampInput = (input, fallback) => {
 };
 
 // wave interval: a preset, or "custom" with its own number of seconds
-export const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom, 90); game.waveTimer = game.waveInterval; };
+export const applyCustomWave = () => { game.waveInterval = clampInput(waveCustom, 300); game.waveTimer = game.waveInterval; };
 
 // map size in tiles: a preset square, or "custom" width x height (used by the next resetGame)
 export const mapColsInput = document.getElementById('map-cols'), mapRowsInput = document.getElementById('map-rows');
 
-export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 160), rows: clampInput(mapRowsInput, 160) }; };
+export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 192), rows: clampInput(mapRowsInput, 192) }; };
 
 // difficulty (Endless)
 export const difficultyOptions = document.querySelectorAll('.difficulty-option');

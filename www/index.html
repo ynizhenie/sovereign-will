@@ -77,12 +77,12 @@
             <div data-i18n="menu.waveInterval">Wave interval (s):</div>
 
             <div class="wave-options">
-                <button class="wave-option" data-wave-interval="120">120</button>
-                <button class="wave-option active" data-wave-interval="180">180</button>
                 <button class="wave-option" data-wave-interval="240">240</button>
+                <button class="wave-option active" data-wave-interval="300">300</button>
+                <button class="wave-option" data-wave-interval="360">360</button>
                 <button class="wave-option" data-wave-interval="custom" data-i18n="menu.custom">Custom</button>
             </div>
-            <input id="wave-custom" class="menu-number" type="number" min="20" max="600" step="10" value="150" hidden />
+            <input id="wave-custom" class="menu-number" type="number" min="30" max="3600" step="1" value="300" hidden />
         </div>
 
         <div class="wave-settings">
@@ -99,14 +99,13 @@
 
             <div class="wave-options">
                 <button class="map-option" data-map-size="128" data-i18n="menu.mapSmall">Small</button>
-                <button class="map-option active" data-map-size="256" data-i18n="menu.mapMedium">Medium</button>
-                <button class="map-option" data-map-size="512" data-i18n="menu.mapLarge">Large</button>
+                <button class="map-option active" data-map-size="192" data-i18n="menu.mapMedium">Medium</button>
+                <button class="map-option" data-map-size="256" data-i18n="menu.mapLarge">Large</button>
                 <button class="map-option" data-map-size="custom" data-i18n="menu.mapCustom">Custom</button>
             </div>
             <div class="map-custom" hidden>
-                <!-- (#326, 27.10, 18: from 96, every map a continent) -->
-                <input id="map-cols" class="menu-number" type="number" min="96" max="512" value="160" /> ×
-                <input id="map-rows" class="menu-number" type="number" min="96" max="512" value="160" />
+                <input id="map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
+                <input id="map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
         </div>
 
@@ -129,8 +128,13 @@
             <div class="wave-options">
                 <!-- (#326) the sizes of Endless's maps (continents): the editor's are the same -->
                 <button class="editor-size-option" data-editor-size="128" data-i18n="menu.mapSmall">Small 128</button>
-                <button class="editor-size-option active" data-editor-size="256" data-i18n="menu.mapMedium">Medium 256</button>
-                <button class="editor-size-option" data-editor-size="512" data-i18n="menu.mapLarge">Large 512</button>
+                <button class="editor-size-option active" data-editor-size="192" data-i18n="menu.mapMedium">Medium 192</button>
+                <button class="editor-size-option" data-editor-size="256" data-i18n="menu.mapLarge">Large 256</button>
+                <button class="editor-size-option" data-editor-size="custom" data-i18n="menu.mapCustom">Custom</button>
+            </div>
+            <div id="editor-map-custom" class="map-custom" hidden>
+                <input id="editor-map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
+                <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
             <div class="faction-side"><span data-i18n="menu.you">You</span><div id="editor-faction" class="faction-options"></div></div>
             <div class="wave-options">

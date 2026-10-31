@@ -5,7 +5,7 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../engine/world/index.js';
-import { ctx } from '../../engine/platform/index.js';
+import { ctx, getViewRect } from '../../engine/platform/index.js';
 import { getBaseRadius } from '../conflict/combat/index.js';
 import { tileVariantHash } from './world.draw.js';
 
@@ -53,8 +53,8 @@ export function tickPaths() {
 // wanders, a few pebbles on the worn bits
 // (#326) What shows as path: each worn tile (strength by its wear) and each the player marked by hand (full). Worked out
 // again a few times a second
-/** @type {{ key: string, tiles: Map<string, number> }} */
-let shown = { key: '', tiles: new Map() };
+/** @type {{ key: string, tiles: Map<string, number>, bins: Map<string, { gx: number, gy: number, a: number }[]> }} */
+let shown = { key: '', tiles: new Map(), bins: new Map() };
 function pathStrengths() {
   const key = `${Math.floor(game.pathTick / 10)}|${(game.pathZones || []).length}|${Object.keys(game.paths || {}).length}`;
   if (shown.key === key) return shown.tiles;
@@ -66,7 +66,17 @@ function pathStrengths() {
     const k = `${Math.floor(z.x / TILE_SIZE)},${Math.floor(z.y / TILE_SIZE)}`;
     if (!fields.has(k)) base.set(k, 1);
   }
-  shown = { key, tiles: base }; // (#326, 27.10: no tiles filled in round the worn ones any more, corners or blocks)
+  // Index path tiles once per update. At maximum zoom-out the map may contain thousands
+  // of worn tiles, while only a few screen-sized bins are needed for this frame.
+  const bins = new Map();
+  for (const [tile, a] of base) {
+    const comma = tile.indexOf(','), gx = Number(tile.slice(0, comma)), gy = Number(tile.slice(comma + 1));
+    const bin = `${Math.floor(gx / 16)},${Math.floor(gy / 16)}`;
+    let list = bins.get(bin);
+    if (!list) bins.set(bin, list = []);
+    list.push({ gx, gy, a });
+  }
+  shown = { key, tiles: base, bins }; // (#326, 27.10: no tiles filled in round the worn ones any more, corners or blocks)
   return base;
 }
 
@@ -74,13 +84,16 @@ function pathStrengths() {
 export const isPathTile = (x, y) => pathStrengths().has(`${Math.floor(x / TILE_SIZE)},${Math.floor(y / TILE_SIZE)}`);
 
 export function drawPaths() {
-  const strengths = pathStrengths();
+  const strengths = pathStrengths(), bins = shown.bins;
   const strength = (gx, gy) => strengths.get(`${gx},${gy}`) || 0;
   const at = (gx, gy) => { const h = tileVariantHash(gx, gy); return { x: gx * TILE_SIZE + 15 + (h % 7) - 3, y: gy * TILE_SIZE + 15 + ((h >> 3) % 7) - 3 }; };
-  const tiles = [];
-  for (const [key, a] of strengths) {
-    const [gx, gy] = key.split(',').map(Number);
-    tiles.push({ gx, gy, a });
+  const view = getViewRect(30), gx0 = Math.max(0, Math.floor(view.x0 / TILE_SIZE)), gy0 = Math.max(0, Math.floor(view.y0 / TILE_SIZE));
+  const gx1 = Math.floor(view.x1 / TILE_SIZE), gy1 = Math.floor(view.y1 / TILE_SIZE), tiles = [];
+  for (let by = Math.floor(gy0 / 16); by <= Math.floor(gy1 / 16); by++) {
+    for (let bx = Math.floor(gx0 / 16); bx <= Math.floor(gx1 / 16); bx++) {
+      const bin = bins.get(`${bx},${by}`);
+      if (bin) for (const tile of bin) if (tile.gx >= gx0 && tile.gx <= gx1 && tile.gy >= gy0 && tile.gy <= gy1) tiles.push(tile);
+    }
   }
   if (!tiles.length) return;
   // one path of segments to each worn neighbour (right, below; a diagonal only where no corner joins them)
