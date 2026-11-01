@@ -36,7 +36,28 @@ Object.assign(window.sim, (() => {
     });
   }
 
-  return { appleOrchard, appleShare };
+  function appleSaplingCargo({ seed = 'apple-sapling-cargo', count = 400 } = {}) {
+    start(seed);
+    clearResources();
+    const apple = makeAppleTree({ ...nearHall(4, 2), hp: 3, isGrowing: false, growProgress: 0, priority: 0 });
+    trees.push(apple);
+    const settler = makeSettler(1, apple.x + 30, apple.y);
+    const spot = getResourceApproachPoint(settler, apple);
+    settler.x = spot.x; settler.y = spot.y;
+    settlers = [settler];
+    let carried = 0;
+    const saplingsAtStart = stock.appleSaplings;
+    for (let i = 0; i < count; i++) {
+      apple.applesReady = true;
+      settler.pickProgress = 0;
+      settler.carrying = null;
+      pickApplesFrom(settler, apple, GAME_CONFIG.appleTrees.pickSeconds);
+      if ((settler.carrying.items || [settler.carrying]).some(item => item && item.type === 'appleSaplings')) carried++;
+    }
+    return { carried, inStock: stock.appleSaplings - saplingsAtStart };
+  }
+
+  return { appleOrchard, appleShare, appleSaplingCargo };
 })());
 
 // Picking apples shows on the tree like any other gathering (#176): a progress bar while it's picked
