@@ -20,6 +20,7 @@ const config = () => GAME_CONFIG.storage;
 
 /** @param {any} storage */
 export function storeCapacity(storage) {
+  if (game.gameMode === 'menu') return Infinity;
   return storage === townHall ? config().capacity.hall : config().capacity.warehouse;
 }
 
