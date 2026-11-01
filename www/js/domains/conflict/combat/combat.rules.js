@@ -4,11 +4,12 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
-import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
 import { tileVariantHash } from '../../world/index.js';
+import { getEnemyFaction } from '../../factions/index.js';
 import { playSound } from '../../../app/index.js';
 import { shakeOnHit } from '../morale/index.js';
 
@@ -242,6 +243,8 @@ export function damageEnemy(en, amount) {
   if (en.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
   en.hp -= damage;
   if (damage > 0) shakeOnHit(en); // (#207)
+  if (en.hp > 0 && en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken &&
+      speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
 }
 
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for

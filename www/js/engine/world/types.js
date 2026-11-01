@@ -220,6 +220,7 @@
  * @property {boolean} [panic]
  * @property {boolean} [fled]          ran off the map's edge
  * @property {boolean} [deadNoted]     its fall has shaken (and heartened) those around
+ * @property {boolean} [hurtVoiceSpoken] spoke after dropping below 30% health
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
  * @property {boolean} [shield]
  * @property {boolean} [helmet]  (#326, 27.10, 27)

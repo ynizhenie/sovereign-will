@@ -20,7 +20,11 @@ let clock = 1000; // seconds of game played (tickVoices): the gaps are in game t
 
 function factionOf(unit, fallback) {
   const factions = Object.values(GAME_CONFIG.factions);
-  if (unit.enemyKey) return factions.find(f => (f.enemies || []).includes(unit.enemyKey))?.id || fallback;
+  if (unit.enemyKey) {
+    const ownFaction = GAME_CONFIG.enemies[unit.enemyKey]?.faction;
+    return (ownFaction && GAME_CONFIG.factions[ownFaction] ? ownFaction : null) ||
+      factions.find(f => (f.enemies || []).includes(unit.enemyKey))?.id || fallback;
+  }
   return factions.find(f => (f.units || []).includes(unit.type))?.id || fallback;
 }
 
@@ -31,13 +35,13 @@ function voiceOf(unit) {
   return PITCH[kind] || PITCH.normal;
 }
 
-// A unit says something for `event` of `faction` ('humans', 'demons', 'undead'): true if it spoke. urgent
-// (a wave, badly hurt) waits less for others
+// A unit says something for `event` of `faction` ('humans', 'demons', 'undead'): true if it spoke. Urgent
+// events (a wave, badly hurt) may interrupt both shared and per-unit gaps.
 export function speak(unit, faction, event, urgent = false) {
-  if (!unit || game.gameMode === 'editor' || isPet(unit)) return false; // (a pet barks, it doesn't talk, #314)
+  if (!unit || game.gameMode === 'editor' || isPet(unit) || (unit.enemyKey && GAME_CONFIG.enemies[unit.enemyKey]?.pet)) return false; // (pets bark, they don't talk, #314)
   const now = clock;
-  if (now - lastSpoke < (urgent ? VOICE.globalGap / 2 : VOICE.globalGap)) return false;
-  if (now - (unit.spokeAt || -Infinity) < VOICE.ownGap) return false;
+  if (!urgent && now - lastSpoke < VOICE.globalGap) return false;
+  if (!urgent && now - (unit.spokeAt || -Infinity) < VOICE.ownGap) return false;
   const list = phrasesFor(unit, factionOf(unit, faction), event);
   if (!list.length) return false;
   return voice(unit, list[Math.floor(Math.random() * list.length)]);

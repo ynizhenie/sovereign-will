@@ -36,6 +36,24 @@ test('generated enemy battle presets keep their faction visual when armed', asyn
   expect(errors).toEqual([]);
 });
 
+test('generated enemy battle presets speak phrases from their own faction', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  const result = await page.evaluate(() => {
+    setSideFaction('enemy', 'humans');
+    const key = presetEnemyKey('demons', 'spear');
+    const enemy = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, key);
+    speak(enemy, 'humans', 'taunt', true);
+    return {
+      phrase: enemy.say?.text,
+      demons: t('voice.demons.taunt').split('|')
+    };
+  });
+  expect(result.demons).toContain(result.phrase);
+  expect(errors).toEqual([]);
+});
+
 test('enemy fighters get the same dark uniform shading as armed player soldiers', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
