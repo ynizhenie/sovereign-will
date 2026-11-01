@@ -40,12 +40,12 @@ Object.assign(window.sim, (() => {
     game.enemyTents = [{ x: medic.x, y: medic.y, hp: 60, maxHp: 60 }];
     game.enemyHerbStock = 0;
     medic.herbs = 1;
-    run(1.3);
+    tickEnemy(medic, 1.3);
     const afterUse = { herbs: medic.herbs, hp: hurt.hp };
     game.enemyHerbStock = 5;
-    run(0.1);
+    tickEnemy(medic, 0.1);
     const afterRefill = { herbs: medic.herbs, stock: game.enemyHerbStock };
-    run(1.3);
+    tickEnemy(medic, 1.3);
     return { afterUse, afterRefill, healingResumed: hurt.hp > afterUse.hp };
   }
 
