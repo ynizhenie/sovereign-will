@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, forEachInRect, game, rand } from '../../../engine/world/index.js';
-import { addCarryLoad, giveResourceToSettler } from '../../colony/storage/index.js';
+import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
 import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
@@ -105,7 +105,10 @@ export function finishHarvest(settler, resource, kind) {
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {
-    if (rand() < chance) giveResourceToSettler(settler, item, 1);
+    if (rand() < chance) {
+      if (kind === 'grass') giveResourceToSettler(settler, item, 1);
+      else addResources({ [item]: 1 });
+    }
   }
   const list = game[def.list];
   const index = list.indexOf(resource);
