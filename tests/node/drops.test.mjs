@@ -31,12 +31,14 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
   expect(r.grass.carried.herbs).toBe(400);
   expect(r.grass.carried.wheatSeeds).toBeGreaterThan(0.4 * 400);
   expect(r.grass.carried.wheatSeeds).toBeLessThan(0.6 * 400);
-  expect(r.tree.bonus.saplings).toBeGreaterThan(0.4);
-  expect(r.tree.bonus.saplings).toBeLessThan(0.6);
-  expect(r.apple.bonus.appleSaplings).toBeGreaterThan(0.4);
-  expect(r.apple.bonus.appleSaplings).toBeLessThan(0.6);
+  expect(r.tree.carried.saplings).toBeGreaterThan(0.4 * 400);
+  expect(r.tree.carried.saplings).toBeLessThan(0.6 * 400);
+  expect(r.apple.carried.appleSaplings).toBeGreaterThan(0.4 * 400);
+  expect(r.apple.carried.appleSaplings).toBeLessThan(0.6 * 400);
   expect(r.apple.carried.saplings).toBeUndefined();
   expect(r.grass.bonus.wheatSeeds).toBeUndefined();
+  expect(r.tree.bonus.saplings).toBeUndefined();
+  expect(r.apple.bonus.appleSaplings).toBeUndefined();
 });
 
 test('a felled tree falls first, leaving its stump till it grows again elsewhere, then its log is cut into two pieces lying there, its wood shared between them (#279, #298)', async () => {
@@ -57,6 +59,6 @@ test('a felled tree falls first, leaving its stump till it grows again elsewhere
     return { fell, cut, stumpAfter: stumps.length };
   })();
   expect(r.fell).toEqual({ fallen: true, standing: true, carrying: null, hp: 3 * 0.6, bar: 3 * 0.6, stump: [[40, 10]] });
-  expect(r.cut).toEqual({ gone: true, carrying: null, pieces: [1, 2], stump: 1, waiting: 1 });
+  expect(r.cut).toEqual({ gone: true, carrying: { type: 'saplings', amount: 1, loads: 0 }, pieces: [1, 2], stump: 1, waiting: 1 });
   expect(r.stumpAfter).toBe(0);
 });

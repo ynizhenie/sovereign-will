@@ -44,11 +44,14 @@ Object.assign(window.sim, (() => {
     // (#298) felled and cut into pieces: the bigger one tapped, picked up
     const piece = logs.slice().sort((a, b) => b.yield.wood - a.yield.wood)[0];
     if (piece) { tap(piece.x, piece.y); run(6); }
-    const carried = s.carrying ? { type: s.carrying.type, amount: s.carrying.amount } : null;
+    const carried = s.carrying
+      ? Object.fromEntries((s.carrying.items || [s.carrying]).map(item => [item.type, item.amount]))
+      : null;
     const wood0 = stock.wood;
+    const saplings0 = stock.saplings;
     tap(townHall.x, townHall.y);
     run(10);
-    return { ordered, treeGone: !trees.includes(tree), carried, handedIn: stock.wood - wood0, notes };
+    return { ordered, treeGone: !trees.includes(tree), carried, handedIn: stock.wood - wood0, saplingsHandedIn: stock.saplings - saplings0, notes };
   }
 
   // A swordsman taps an enemy standing a few tiles away: walks over and fights it until it's dead
