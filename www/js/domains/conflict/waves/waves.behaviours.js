@@ -113,22 +113,53 @@ function enemyGhost(en) {
   }
 }
 
+// Enemy dogs and beasts keep with their fighters, but attack when an opponent is near either of them.
+// With no fighters to follow, they use the ordinary enemy combat behaviour and advance into the fight.
+function enemyPetKeepsNear(en, dt) {
+  const c = GAME_CONFIG.pets;
+  const fighters = game.enemies.filter(other => {
+    if (other === en || other.hp <= 0) return false;
+    const def = getEnemyDef(other);
+    return !def.pet && !def.healer && !def.necromancer;
+  });
+  const keeper = fighters.reduce((best, other) =>
+    !best || Math.hypot(other.x - en.x, other.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? other : best, null);
+  if (!keeper || Math.hypot(keeper.x - en.x, keeper.y - en.y) >= 20 * TILE_SIZE) return false;
+
+  const guard = c.guardTiles * TILE_SIZE;
+  if (game.settlers.some(s => s.hp > 0 && !isUntouchable(s) &&
+    (Math.hypot(s.x - en.x, s.y - en.y) <= guard || Math.hypot(s.x - keeper.x, s.y - keeper.y) <= guard))) return false;
+
+  const angle = (Number(en.id) || 0) * 2.399;
+  const radius = c.followTiles * TILE_SIZE;
+  const x = keeper.x + Math.cos(angle) * radius, y = keeper.y + Math.sin(angle) * radius;
+  const off = Math.hypot(x - en.x, y - en.y);
+  if (off > 44 || (en.petFollowing && off > 10)) {
+    en.petFollowing = true;
+    moveEntityTowards(en, x, y, en.speed, true, dt);
+  } else {
+    en.petFollowing = false;
+  }
+  return true;
+}
+
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
   clampEntityToBounds(en);
-  if (getEnemyDef(en).pet === 'ghost') { enemyGhost(en); return; } // (#314)
+  const enemyDef = getEnemyDef(en);
+  if (enemyDef.pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
-  if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
+  if ((enemyDef.pet === 'dog' || enemyDef.pet === 'beast') && enemyPetKeepsNear(en, dt)) return;
+  if (!enemyDef.pet && enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.guard && holdGuardPost(en, dt)) return; // (a defender of an enemy camp, #255)
   if (en.scout) { scoutFlees(en, dt); return; } // (a scout the player pointed at: it only runs, #279)
   if (en.captain) captainOrdersEnemies(en, dt); // (gathering too: the one it tells goes at once)
   if (en.musterUntil && musterHold(en, dt)) return; // (a wave gathering first, #279)
 
-  const enemyDef = getEnemyDef(en);
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;

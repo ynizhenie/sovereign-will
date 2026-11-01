@@ -52,6 +52,42 @@ test('a dog is hired at the hall, keeps by a soldier, bites an enemy near, flush
   expect(errors).toEqual([]);
 });
 
+test('a dog without allied soldiers advances toward an enemy instead of wandering off', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    Object.assign(dog, { x: townHall.x + 180, y: townHall.y, petSleep: 0 });
+    game.settlers = [dog];
+    const foe = createNormalEnemy({ x: dog.x + 300, y: dog.y }, 'raider');
+    foe.speed = 0;
+    game.enemies = [foe];
+    const before = Math.hypot(foe.x - dog.x, foe.y - dog.y);
+    window.sim.run(1);
+    return { closer: Math.hypot(foe.x - dog.x, foe.y - dog.y) < before, activity: dog.activity };
+  });
+  expect(result).toEqual({ closer: true, activity: 'petFight' });
+  expect(errors).toEqual([]);
+});
+
+test('a player dog bite timestamp is not refreshed during its attack cooldown', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    const foe = createNormalEnemy({ x: dog.x + 20, y: dog.y }, 'raider');
+    foe.speed = 0;
+    game.enemies = [foe];
+    window.sim.run(1 / 60);
+    const struckAt = dog.struckAt;
+    const swinging = dog.swingT > 0;
+    window.sim.run(1 / 60);
+    return { struck: struckAt !== undefined, swinging, heldDuringCooldown: dog.struckAt === struckAt };
+  });
+  expect(result).toEqual({ struck: true, swinging: true, heldDuringCooldown: true });
+  expect(errors).toEqual([]);
+});
+
 test('a dog sleeps with no enemy about and wakes for a wave; nothing is handed to a pet; it doesn\'t talk (#314)', async ({ page }) => {
   const errors = await start(page, 'humans');
   const r = await page.evaluate(() => {

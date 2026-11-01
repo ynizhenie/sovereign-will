@@ -48,16 +48,9 @@ function healOnAlly(unit, allies, dt) {
 export function panic(s, tick) {
   if (!s.panic || s.isPossessed) return false;
   // the undead don't run: they fight on in a panic, weaker (getWeaponStats, morale.panicDamage, #232)
-  if (getPlayerFaction().id === 'undead') return false;
-  // cornered: hit just now with its attacker at hand, it fights back (strikeBack)
-  const attacker = getRecentAttacker(s);
-  if (attacker && game.pathTick - (s.lastAttackedTick || 0) < 60 && Math.hypot(attacker.x - s.x, attacker.y - s.y) < 45) return false;
-  if (getPlayerFaction().id === 'demons' && healOnAlly(s, game.settlers, tick.dt)) return true;
-  // wounded, it runs to heal at a tent (a grave...), not just to the town hall (#232)
-  if (s.hp < s.maxHp && tick.tents.length > 0) {
-    s.healing = true;
-    if (healAtTent(s, tick)) return true;
-  }
+  const faction = Object.values(GAME_CONFIG.factions).find(f => f.units.includes(s.type))?.id || getPlayerFaction().id;
+  if (faction === 'undead') return false;
+  if (faction === 'demons' && healOnAlly(s, game.settlers, tick.dt)) return true;
   s.patrolTarget = null;
   if (game.gameMode === 'battle') {
     const foe = nearest(game.enemies.filter(en => en.hp > 0), s) || s.ghostPanicFrom;
@@ -65,6 +58,14 @@ export function panic(s, tick) {
     const g = getGridPos(s.x, s.y);
     if (isOutskirts(g.gx, g.gy)) Object.assign(s, { hp: 0, crumbled: true, rewardGranted: true, fled: true });
     return true;
+  }
+  // cornered: hit just now with its attacker at hand, it fights back (strikeBack)
+  const attacker = getRecentAttacker(s);
+  if (attacker && game.pathTick - (s.lastAttackedTick || 0) < 60 && Math.hypot(attacker.x - s.x, attacker.y - s.y) < 45) return false;
+  // wounded, it runs to heal at a tent (a grave...), not just to the town hall (#232)
+  if (s.hp < s.maxHp && tick.tents.length > 0) {
+    s.healing = true;
+    if (healAtTent(s, tick)) return true;
   }
   if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, tick.dt);
   return true;
@@ -135,7 +136,7 @@ export function necromancerKeepsBack(en, dt) {
   return true;
 }
 
-function playerSupportKeepsBack(s, dt, isAlly) {
+function playerSupportKeepsBack(s, dt, isAlly, smooth = false) {
   if (game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - s.x, en.y - s.y) < config().necroKeepBack)) return false;
   const allies = game.settlers.filter(o => o !== s && o.hp > 0 && isAlly(o));
   if (!allies.length) return false;
@@ -146,13 +147,14 @@ function playerSupportKeepsBack(s, dt, isAlly) {
     : townHall;
   const d = Math.max(1, Math.hypot(mid.x - origin.x, mid.y - origin.y));
   const spot = { x: mid.x + (mid.x - origin.x) / d * 50, y: mid.y + (mid.y - origin.y) / d * 50 };
-  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 12) moveEntityTowards(s, spot.x, spot.y, s.speed, false, dt);
+  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 12) moveEntityTowards(s, spot.x, spot.y, s.speed, false, dt, smooth);
+  else if (smooth) { s.moveVx = 0; s.moveVy = 0; }
   return true;
 }
 
 // The player's necromancer keeps behind its own fighters too, but advances to fight when left alone.
 export function playerNecromancerKeepsBack(s, dt) {
-  return playerSupportKeepsBack(s, dt, o => o.tool !== 'necro_staff' && o.role !== 'pet');
+  return playerSupportKeepsBack(s, dt, o => o.tool !== 'necro_staff' && o.role !== 'pet', true);
 }
 
 // A medic keeps behind armed allies and necromancers, but advances to fight when left alone.

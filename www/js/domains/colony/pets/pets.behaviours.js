@@ -66,7 +66,9 @@ function tickBeast(s, tick, kind) {
   const own = game.gameMode === 'battle' ? nearest(game.settlers.filter(o => o !== s && !petKindOf(o) && o.hp > 0), s) : null;
   const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : own || (game.gameMode === 'battle' ? s : townHall);
   const guard = c.guardTiles * TILE_SIZE;
-  const foe = nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s);
+  const foe = keeper
+    ? nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s)
+    : nearest(foesNear(s.x, s.y, Infinity), s);
   // asleep: till an enemy comes near or a wave's on
   if (s.petSleep > 0) {
     if (foe || tick.isWaveActive) s.petSleep = 0;

@@ -365,6 +365,35 @@ test('a settler panicking from a ghost leaves the battle without a corpse or loo
   expect(r).toEqual({ removed: true, ghostScared: true, fled: true, corpse: false, lootDropped: false });
 });
 
+test('a human in Battles speaks human phrases when the player faction is undead', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'undead');
+    const human = createSettler('normal', 1, 300, 300);
+    game.settlers = [human];
+    says(human, 'hired', true);
+    return { phrase: human.say && human.say.text, humans: t('voice.humans.hired').split('|') };
+  });
+  expect(result.humans).toContain(result.phrase);
+});
+
+test('a panicking player soldier flees in Battle even when recently struck at close range', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:iron_sword'; battleTap(at(12, 13).x, at(12, 13).y);
+    battle.preset = 'humans:club'; battleTap(at(14, 13).x, at(14, 13).y);
+    startBattleFight();
+    const settler = settlers[0], enemy = enemies[0];
+    Object.assign(settler, { panic: true, morale: 0, lastAttacker: enemy, lastAttackedTick: game.pathTick });
+    enemy.speed = 0;
+    const before = Math.hypot(settler.x - enemy.x, settler.y - enemy.y);
+    for (let frame = 0; frame < 30; frame++) update(1 / 60);
+    return { fledFromAttacker: Math.hypot(settler.x - enemy.x, settler.y - enemy.y) > before };
+  });
+  expect(result.fledFromAttacker).toBe(true);
+});
+
 test('an enemy necromancer keeps behind its allies away from the opposing side in Battles', async ({ page }) => {
   await openBattle(page);
   const movement = await page.evaluate(() => {
@@ -382,6 +411,29 @@ test('an enemy necromancer keeps behind its allies away from the opposing side i
   expect(movement.y).toBe(movement.before.y);
 });
 
+test('an enemy dog follows its soldiers, and advances to fight when none are left', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    townHall.x = 1200; townHall.y = 1200;
+    const dog = createConfiguredEnemy({ x: 800, y: 300 }, 'raider_dog');
+    const soldier = createConfiguredEnemy({ x: 1040, y: 300 }, 'raider');
+    const player = { x: 300, y: 300, hp: 100, maxHp: 100, radius: 10, visualRadius: 10 };
+    game.settlers = [player];
+    game.enemies = [dog, soldier];
+    const followingBefore = Math.hypot(dog.x - soldier.x, dog.y - soldier.y);
+    tickEnemy(dog, 1 / 60);
+    const followingAfter = Math.hypot(dog.x - soldier.x, dog.y - soldier.y);
+
+    game.enemies = [dog];
+    dog.x = 700; dog.y = 300; dog.petFollowing = false; dog.attackTarget = null; dog.nextStrikeTick = 0;
+    const fightingBefore = Math.hypot(dog.x - player.x, dog.y - player.y);
+    for (let frame = 0; frame < 30; frame++) tickEnemy(dog, 1 / 60);
+    const fightingAfter = Math.hypot(dog.x - player.x, dog.y - player.y);
+    return { followingCloser: followingAfter < followingBefore, fightingCloser: fightingAfter < fightingBefore };
+  });
+  expect(movement).toEqual({ followingCloser: true, fightingCloser: true });
+});
+
 test('a player necromancer keeps behind allies in Battles', async ({ page }) => {
   await openBattle(page);
   const movement = await page.evaluate(() => {
@@ -397,6 +449,26 @@ test('a player necromancer keeps behind allies in Battles', async ({ page }) => 
   expect(movement.moved).toBe(true);
   expect(movement.x).toBeGreaterThan(movement.before.x);
   expect(movement.y).toBe(movement.before.y);
+});
+
+test('a player necromancer eases its movement while following allies', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const necromancer = Object.assign(createSettler('zombie', 1, 300, 300), { tool: 'necro_staff', speed: 1.2 });
+    const ally = createSettler('zombie', 2, 500, 300);
+    const enemy = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
+    game.settlers = [necromancer, ally];
+    game.enemies = [enemy];
+    const steps = [];
+    for (let frame = 0; frame < 8; frame++) {
+      ally.x += 0.25;
+      const before = { x: necromancer.x, y: necromancer.y };
+      playerNecromancerKeepsBack(necromancer, 1 / 60);
+      steps.push(Math.hypot(necromancer.x - before.x, necromancer.y - before.y));
+    }
+    return { eased: !!necromancer.moveVx || !!necromancer.moveVy, increasing: steps[1] > steps[0] };
+  });
+  expect(movement).toEqual({ eased: true, increasing: true });
 });
 
 test('a medic keeps behind armed allies in Battles', async ({ page }) => {
