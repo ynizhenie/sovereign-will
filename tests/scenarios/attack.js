@@ -30,6 +30,7 @@ Object.assign(window.sim, (() => {
 
   function enemyHealerHerbs({ seed = 'enemy-healer-herbs' } = {}) {
     start(seed);
+    game.gameMode = 'endless';
     clearResources();
     settlers = [];
     const medic = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, 'raider_medic');
