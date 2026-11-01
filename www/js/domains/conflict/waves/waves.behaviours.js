@@ -122,8 +122,11 @@ function enemyPetKeepsNear(en, dt) {
     const def = getEnemyDef(other);
     return !def.pet && !def.healer && !def.necromancer;
   });
-  const keeper = fighters.reduce((best, other) =>
-    !best || Math.hypot(other.x - en.x, other.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? other : best, null);
+  /** @type {import('../../../engine/world/types.js').Enemy | null} */
+  let keeper = null;
+  for (const other of fighters) {
+    if (!keeper || Math.hypot(other.x - en.x, other.y - en.y) < Math.hypot(keeper.x - en.x, keeper.y - en.y)) keeper = other;
+  }
   if (!keeper || Math.hypot(keeper.x - en.x, keeper.y - en.y) >= 20 * TILE_SIZE) return false;
 
   const guard = c.guardTiles * TILE_SIZE;
@@ -147,6 +150,8 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  if (en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken && !getEnemyDef(en).pet &&
+      speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
   const enemyDef = getEnemyDef(en);
   if (enemyDef.pet === 'ghost') { enemyGhost(en); return; } // (#314)

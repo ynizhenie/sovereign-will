@@ -108,6 +108,17 @@ test('a dog sleeps with no enemy about and wakes for a wave; nothing is handed t
   expect(errors).toEqual([]);
 });
 
+test('enemy pets do not speak', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    const pets = ['raider_dog', 'demon_beast', 'undead_ghost'].map(key =>
+      createConfiguredEnemy({ x: townHall.x + 200, y: townHall.y }, key));
+    return pets.map(pet => speak(pet, 'humans', 'taunt', true) || !!pet.say);
+  });
+  expect(result).toEqual([false, false, false]);
+  expect(errors).toEqual([]);
+});
+
 test('a hellhound eats a corpse by itself when hungry (#314)', async ({ page }) => {
   const errors = await start(page, 'demons');
   const r = await page.evaluate(() => {
