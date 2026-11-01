@@ -18,14 +18,25 @@ test('bottom sheets fit their contents and unit status does not resize its tile'
     unit.activity = 'patrol';
     settlers = [unit];
     updateUnitsTab(true);
+    game.isPaused = true;
+    closeSheet();
+    switchTab(null, 'tab-units');
   });
-  await page.click('#tab-btn-units');
-  const before = await page.locator('#tab-units .unit-main').boundingBox();
+  const unitTile = page.locator('#tab-units .unit-main');
+  await expect(unitTile).toBeVisible();
+  const before = await unitTile.evaluate(element => {
+    const { width, height } = element.getBoundingClientRect();
+    return { width, height };
+  });
   await page.evaluate(() => {
     settlers[0].activity = 'harvestMarked';
     updateUnitsTab(true);
   });
-  const after = await page.locator('#tab-units .unit-main').boundingBox();
+  await expect(unitTile).toBeVisible();
+  const after = await unitTile.evaluate(element => {
+    const { width, height } = element.getBoundingClientRect();
+    return { width, height };
+  });
   expect(after.width).toBe(before.width);
   expect(after.height).toBe(before.height);
   expect(errors).toEqual([]);
