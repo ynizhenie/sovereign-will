@@ -157,7 +157,6 @@ export function applyMapSettings(settings) {
     Object.assign(GAME_CONFIG.continent.grow[biome], JSON.parse(JSON.stringify(STANDARD_CONTINENT_SETTINGS.grow[biome])), (wanted.grow || {})[biome] || {});
   }
   renderGeneratorFields();
-  saveData('generator-settings', currentSettings());
 }
 
 export function renderPresetList() {
@@ -176,9 +175,6 @@ export function openGenerator(from) {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessGenerator() {
-  const saved = loadData('generator-settings', null);
-  if (saved) applyMapSettings(saved);
-  document.getElementById('generator-fields').addEventListener('change', () => saveData('generator-settings', currentSettings()));
   onTap(document.getElementById('open-generator'), () => openGenerator('endless'));
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
   onTap(document.getElementById('preset-standard'), () => applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS }));
