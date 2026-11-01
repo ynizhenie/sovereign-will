@@ -182,7 +182,6 @@ export function restoreEndlessChoices() {
     for (const name of CHOICES) { const active = screen.querySelector(`.active[${attrOf(name)}]`); if (active) out[name] = /** @type {string} */ (active.getAttribute(attrOf(name))); }
     saveData('endlessChoices', out);
   };
-  // (after the button's own handler: the screen hears the tap once it's done)
-  screen.addEventListener('click', () => setTimeout(remember, 0));
-  screen.addEventListener('change', () => setTimeout(remember, 0));
+  screen.addEventListener('click', remember);
+  screen.addEventListener('change', remember);
 }

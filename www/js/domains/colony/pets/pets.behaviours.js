@@ -203,7 +203,7 @@ function tickGhost(s, tick) {
   }
   // an enemy near it (or its necromancer): into it
   const reach = g.diveTiles * TILE_SIZE;
-  const foe = nearest([...foesNear(s.x, s.y, reach), ...(s.escort ? foesNear(s.escort.x, s.escort.y, reach) : [])].filter(en => !en.panic), s);
+  const foe = nearest([...foesNear(s.x, s.y, reach), ...(s.escort ? foesNear(s.escort.x, s.escort.y, reach) : [])].filter(en => !en.panic && !en.ghostly), s);
   if (foe) {
     if (fly(s, foe.x, foe.y, g.diveSpeed) || Math.hypot(foe.x - s.x, foe.y - s.y) < foe.radius + s.radius + 4) haunt(s, foe);
     return 'ghostDive';
@@ -218,6 +218,7 @@ function tickGhost(s, tick) {
 
 // Into an enemy: it panics at once; the ghost is gone a while
 export function haunt(s, foe) {
+  foe.ghostPanicFrom = { x: s.x, y: s.y };
   ghostScare(foe, 'enemy'); // (#326: a big one at the second ghost)
   s.ghostGone = config().ghost.backSeconds;
   s.escort = null;

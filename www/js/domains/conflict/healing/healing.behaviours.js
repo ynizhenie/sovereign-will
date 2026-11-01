@@ -82,7 +82,8 @@ export function treatWounded(s, tick) {
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive) return false;
   if (tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
   const medic = GAME_CONFIG.medic;
-  if (!(s.bagHerbs > 0) && stock.herbs <= 0) return false;
+  const unlimitedHerbs = game.gameMode === 'battle';
+  if (!unlimitedHerbs && !(s.bagHerbs > 0) && stock.herbs <= 0) return false;
   let patient = null, best = Infinity;
   for (const other of game.settlers) {
     if (other === s || other.hp >= other.maxHp || other.towerAssignment || tick.patients.has(other)) continue;
@@ -93,7 +94,7 @@ export function treatWounded(s, tick) {
   if (!patient) { s.healTimer = 0; return false; }
   s.patrolTarget = null;
   // an empty bag gets filled with herbs at the nearest storage first
-  if (!(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
+  if (!unlimitedHerbs && !(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
   tick.patients.add(patient);
   if (patient !== s && Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
     moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
@@ -104,7 +105,7 @@ export function treatWounded(s, tick) {
     if (patient !== s) faceTowards(s, patient.x, patient.y);
     if (s.healTimer >= medic.healSeconds) {
       s.healTimer = 0;
-      s.bagHerbs--;
+      if (!unlimitedHerbs) s.bagHerbs--;
       patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
       if (patient !== s) noteDay(s, 'healed'); // (#279)
       playSound('heal', patient);
@@ -113,5 +114,4 @@ export function treatWounded(s, tick) {
   s.patrolTarget = null;
   return true;
 }
-
 

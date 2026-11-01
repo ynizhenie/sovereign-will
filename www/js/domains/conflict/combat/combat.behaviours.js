@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, hasAxeTool, hasPickaxeTool, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
@@ -207,9 +207,12 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   // tent-summoned enemies alone don't call workers off their work, unless they come close
   // workers keep working through a wave and only react to an enemy close by
   const alarm = tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
-  if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker')) {
+  const aloneNecromancer = !!getNecromancy(s) && !game.settlers.some(o => o !== s && o.hp > 0 && o.tool !== 'necro_staff' && o.role !== 'pet');
+  const aloneMedic = hasToolFamily(s.tool, 'medic') && !game.settlers.some(o => o !== s && o.hp > 0 && o.role !== 'pet' &&
+    (o.weapon !== 'fist' || getNecromancy(o)));
+  if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker' || aloneNecromancer || aloneMedic)) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)
-    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && game.gameMode !== 'battle') {
+    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && !aloneMedic && game.gameMode !== 'battle') {
       let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTown > townHall.radius + 15) {
         moveSettlerToTownHall(s, s.speed, dt);

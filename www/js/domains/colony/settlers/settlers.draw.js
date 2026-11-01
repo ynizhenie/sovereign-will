@@ -61,7 +61,12 @@ export function faceTowards(unit, x, y) {
 // game's ticks, by the work: a hammer's (building, making), a knife's sawing (butchering), a hand reaching into
 // a bush (berries), an axe's or a pickaxe's chop, a hoe's dig, a rod's bob.
 export function getHeldItemPose(unit) {
-  const item = unit.weapon && unit.weapon !== 'fist' ? unit.weapon : (unit.tool && unit.tool !== 'none' ? unit.tool : 'fist');
+  const enemyDef = unit.enemyKey && getDefinition('enemies', unit.enemyKey);
+  const enemyNecromancer = enemyDef && enemyDef.necromancer;
+  const enemyMedic = enemyDef && enemyDef.healer;
+  const item = unit.tool === 'necro_staff' || enemyNecromancer ? 'necro_staff'
+    : unit.tool === 'medbag' || enemyMedic ? 'medbag'
+    : unit.weapon && unit.weapon !== 'fist' ? unit.weapon : (unit.tool && unit.tool !== 'none' ? unit.tool : 'fist');
   const big = (unit.visualRadius || unit.radius || 11) > 14 ? 1.3 : 1;
   if (unit.swingT > 0) {
     const p = 1 - unit.swingT / (unit.swingLen || 0.3);
@@ -131,8 +136,9 @@ export function bowDraw(unit) {
 // (#306) a zombie with no weapon: its arms out in front of it, reaching; striking, a lunge, its hands further
 // out, clawing. Where its two hands reach to (round its middle), and how far it lunges, or null
 export function zombieReach(unit) {
-  if (unitKin(unit) !== 'undead' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', unit.tool || 'none') || unit.asleep) return null;
   const def = unit.enemyKey ? getDefinition('enemies', unit.enemyKey) || {} : null;
+  const tool = unit.tool || def && def.tool;
+  if (unitKin(unit) !== 'undead' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', tool || 'none') || unit.asleep) return null;
   if (def && (def.ranged || def.necromancer)) return null; // (an archer's bow, a necromancer's staff)
   const r = unit.visualRadius || unit.radius || 11, f = unit.facing || 0;
   const sw = unit.swingT > 0 ? Math.sin(Math.PI * (1 - unit.swingT / (unit.swingLen || 0.3))) : 0;
@@ -152,7 +158,9 @@ export function zombieReach(unit) {
 // with the punch, or null (not a human, not bare-handed, asleep, not in a fight, or with a shield: its other
 // arm is the shield's)
 export function humanPunch(unit) {
-  if (unitKin(unit) !== 'humans' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', unit.tool || 'none') || unit.asleep || unit.shield) return null;
+  const def = unit.enemyKey ? getDefinition('enemies', unit.enemyKey) || {} : null;
+  const tool = unit.tool || def && def.tool;
+  if (unitKin(unit) !== 'humans' || (unit.weapon && unit.weapon !== 'fist') || getDefinition('tools', tool || 'none') || unit.asleep || unit.shield) return null;
   const since = t => game.pathTick - (t ?? -1e9);
   // in a fight: striking now, or having struck or been struck not long ago
   if (!(unit.swingT > 0) && since(unit.struckAt) > 150 && since(unit.lastAttackedTick) > 150) return null;
@@ -533,7 +541,7 @@ export function drawSideItems(s, front = true) {
   // (#326) a medic at work: its bag at its hip (its hand's on the wound)
   if (isHealing(s) && farSlot !== front) {
     ctx.save(); ctx.translate(x - 3, y - 4);
-    drawHeldTool('medbag', 0.8, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
+    drawHeldTool('medbag', 0.8, game.gameMode === 'battle' ? 1 : Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
     ctx.restore();
   }
   // (#326) the banner on its back (still its side slot): behind it facing us or side-on, over its back facing
@@ -741,7 +749,7 @@ export function drawSettlers() {
         drawStaff(getSettlerColor(null), getDarkness()); // (#326: its side's colour, glowing in the dark)
       } else if (!drawHeldWeapon(s.weapon, k, onBack ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
         if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
-        else drawHeldTool(s.tool || 'none', k, Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
+        else drawHeldTool(s.tool || 'none', k, game.gameMode === 'battle' && s.tool === 'medbag' ? 1 : Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
       }
       drawWeaponBlood(s);
       ctx.restore(); // pose only moves the held item

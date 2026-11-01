@@ -199,6 +199,7 @@
  * @property {Look} [look]         how it's drawn, given when it's made (#306)
  * @property {number} [burning]
  * @property {number} [temporary]
+ * @property {Enemy} [raisedBy] the necromancer that raised this temporary enemy zombie
  * @property {boolean} [crumbled]
  * @property {boolean} [summoned]     from a tent, not the wave
  * @property {boolean} [fromWave]
@@ -369,6 +370,7 @@
  * @property {Object[]} dung
  * @property {Object[]} corpses
  * @property {number} enemyArrowStock
+ * @property {number} enemyHerbStock
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
  * @property {{ armor: boolean, shield: boolean, leather?: boolean, helmet?: boolean }} playerGear  armour / a shield / a helmet the player has made

@@ -35,6 +35,26 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.afterRemove).toBe(0);
 });
 
+test('battle taps cannot select a friendly unit or mark an enemy during a fight', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:sword'; battleTap(at(10, 10).x, at(10, 10).y);
+    battle.preset = 'humans:sword'; battleTap(at(30, 10).x, at(30, 10).y);
+    startBattleFight();
+    mouse.x = settlers[0].x; mouse.y = settlers[0].y; handleCanvasClick();
+    mouse.x = enemies[0].x; mouse.y = enemies[0].y; handleCanvasClick();
+    return {
+      phase: battle.phase,
+      selected: game.selectedSettler,
+      selectedGroup: game.selectedGroup.length,
+      target: settlers[0].orderTarget,
+      marked: enemies[0].markedTarget
+    };
+  });
+  expect(result).toEqual({ phase: 'fight', selected: null, selectedGroup: 0, target: undefined, marked: undefined });
+});
+
 test('Battles can zoom out enough to see the whole field', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
@@ -321,6 +341,259 @@ test('an enemy killed before its turn cannot strike back', async ({ page }) => {
     return settler.hp;
   });
   expect(hp).toBe(100);
+});
+
+test('a settler panicking from a ghost leaves the battle without a corpse or loot at the border (#314)', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:iron_sword'; battleTap(at(2, 13).x, at(2, 13).y);
+    battle.preset = 'undead:pet'; battleTap(at(30, 13).x, at(30, 13).y);
+    const settler = settlers[0];
+    settler.x = 2 * TILE_SIZE + 1;
+    const lootBefore = loot.length;
+    startBattleFight();
+    for (let f = 0; f < 60 * 15 && settlers.includes(settler); f++) update(1 / 60);
+    return {
+      removed: !settlers.includes(settler),
+      ghostScared: settler.ghostHits > 0,
+      fled: settler.fled,
+      corpse: corpses.some(c => c.by === settler),
+      lootDropped: loot.length > lootBefore
+    };
+  });
+  expect(r).toEqual({ removed: true, ghostScared: true, fled: true, corpse: false, lootDropped: false });
+});
+
+test('an enemy necromancer keeps behind its allies away from the opposing side in Battles', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const necromancer = createConfiguredEnemy({ x: 820, y: 300 }, 'undead_necromancer');
+    const ally = createConfiguredEnemy({ x: 780, y: 300 }, 'undead_zombie');
+    const ghost = createConfiguredEnemy({ x: 600, y: 300 }, 'undead_ghost');
+    game.settlers = [{ x: 450, y: 300, hp: 100 }];
+    game.enemies = [necromancer, ally, ghost];
+    const before = { x: necromancer.x, y: necromancer.y };
+    const moved = necromancerKeepsBack(necromancer, 1 / 60);
+    return { moved, x: necromancer.x, y: necromancer.y, before };
+  });
+  expect(movement.moved).toBe(true);
+  expect(movement.x).toBe(movement.before.x);
+  expect(movement.y).toBe(movement.before.y);
+});
+
+test('a player necromancer keeps behind allies in Battles', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const necromancer = Object.assign(createSettler('zombie', 1, 300, 300), { tool: 'necro_staff' });
+    const ally = createSettler('zombie', 2, 500, 300);
+    const enemy = createConfiguredEnemy({ x: 800, y: 300 }, 'raider');
+    game.settlers = [necromancer, ally];
+    game.enemies = [enemy];
+    const before = { x: necromancer.x, y: necromancer.y };
+    const moved = playerNecromancerKeepsBack(necromancer, 1 / 60);
+    return { moved, x: necromancer.x, y: necromancer.y, before };
+  });
+  expect(movement.moved).toBe(true);
+  expect(movement.x).toBeGreaterThan(movement.before.x);
+  expect(movement.y).toBe(movement.before.y);
+});
+
+test('a medic keeps behind armed allies in Battles', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const medic = Object.assign(createSettler('zombie', 1, 300, 300), { role: 'worker', weapon: 'fist', tool: 'medbag' });
+    const ally = createSettler('zombie', 2, 500, 300);
+    ally.weapon = 'sword';
+    const enemy = createConfiguredEnemy({ x: 800, y: 300 }, 'raider');
+    game.settlers = [medic, ally];
+    game.enemies = [enemy];
+    const before = { x: medic.x, y: medic.y };
+    const moved = playerMedicKeepsBack(medic, 1 / 60);
+    return { moved, x: medic.x, y: medic.y, before };
+  });
+  expect(movement.moved).toBe(true);
+  expect(movement.x).toBeGreaterThan(movement.before.x);
+  expect(movement.y).toBe(movement.before.y);
+});
+
+test('an enemy necromancer heals an injured ally instead of fighting a nearby settler', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const necromancer = createConfiguredEnemy({ x: 800, y: 300 }, 'undead_necromancer');
+    const ally = createConfiguredEnemy({ x: 900, y: 300 }, 'undead_zombie');
+    const settler = createSettler('zombie', 1, 810, 300);
+    ally.hp -= 20;
+    game.settlers = [settler];
+    game.enemies = [necromancer, ally];
+    const before = { hp: ally.hp, x: necromancer.x, y: necromancer.y };
+    for (let frame = 0; frame < 240 && ally.hp < ally.maxHp; frame++) tickEnemy(necromancer, 1 / 60);
+    return {
+      healed: ally.hp > before.hp,
+      moved: necromancer.x !== before.x || necromancer.y !== before.y,
+      target: necromancer.attackTarget,
+      workKind: necromancer.workKind,
+      treatedAt: ally.treatedAt
+    };
+  });
+  expect(result).toMatchObject({ healed: true, moved: true, target: undefined });
+  expect(result.workKind).not.toBe('heal');
+  expect(result.treatedAt).toBeUndefined();
+});
+
+test('an enemy medic uses the player medic healing animation state', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const medic = createConfiguredEnemy({ x: 800, y: 300 }, 'raider_medic');
+    const ally = createConfiguredEnemy({ x: 850, y: 300 }, 'raider');
+    const settler = createSettler('zombie', 1, 600, 300);
+    ally.hp -= 20;
+    game.settlers = [settler];
+    game.enemies = [medic, ally];
+    tickEnemy(medic, 1 / 60);
+    return { workKind: medic.workKind, working: medic.working, treatedAt: ally.treatedAt, healed: ally.hp > ally.maxHp - 20 };
+  });
+  expect(result.workKind).toBe('heal');
+  expect(result.working).toBeGreaterThan(0);
+  expect(result.treatedAt).toBeGreaterThanOrEqual(0);
+  expect(result.healed).toBe(true);
+});
+
+test('medics have unlimited herbs during Battles', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const playerMedic = Object.assign(createSettler('zombie', 1, 300, 300), { role: 'worker', weapon: 'fist', tool: 'medbag', bagHerbs: 0 });
+    const ally = createSettler('zombie', 2, 320, 300);
+    ally.weapon = 'sword';
+    ally.role = 'soldier';
+    ally.hp = 10000 - 40;
+    ally.maxHp = 10000;
+    const enemy = createConfiguredEnemy({ x: 900, y: 300 }, 'raider');
+    enemy.speed = 0;
+    enemy.damage = 0;
+    enemy.hp = enemy.maxHp = 100000;
+    const enemyMedic = createConfiguredEnemy({ x: 700, y: 300 }, 'raider_medic');
+    enemyMedic.speed = 0;
+    const enemyAlly = createConfiguredEnemy({ x: 720, y: 300 }, 'raider');
+    enemyAlly.hp -= 20;
+    game.settlers = [playerMedic, ally];
+    game.enemies = [enemy, enemyMedic, enemyAlly];
+    stock.herbs = 0;
+    startBattleFight();
+    for (let frame = 0; frame < 180 && battle.phase === 'fight'; frame++) update(1 / 60);
+    return {
+      playerBag: playerMedic.bagHerbs,
+      playerHealed: ally.hp > ally.maxHp - 40,
+      enemyBag: enemyMedic.herbs,
+      enemyHealed: enemyAlly.hp > enemyAlly.maxHp - 20
+    };
+  });
+  expect(result.playerBag).toBe(0);
+  expect(result.playerHealed).toBe(true);
+  expect(result.enemyBag).toBe(GAME_CONFIG.enemies.raider_medic.healer.bagSize);
+  expect(result.enemyHealed).toBe(true);
+});
+
+test('an enemy medic uses the player medic swing animation duration', async ({ page }) => {
+  await openBattle(page);
+  const swingLen = await page.evaluate(() => {
+    const medic = createConfiguredEnemy({ x: 800, y: 300 }, 'raider_medic');
+    const settler = createSettler('zombie', 1, 810, 300);
+    game.settlers = [settler];
+    game.enemies = [medic];
+    medic.nextStrikeTick = 0;
+    tickEnemy(medic, 1 / 60);
+    return medic.swingLen;
+  });
+  expect(swingLen).toBe(0.3);
+});
+
+test('an enemy necromancer raises a nearby corpse despite an enemy unit being close', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const necromancer = createConfiguredEnemy({ x: 800, y: 300 }, 'undead_necromancer');
+    const settler = createSettler('zombie', 1, 810, 300);
+    game.settlers = [settler];
+    game.enemies = [necromancer];
+    game.corpses = [{ x: 905, y: 300, radius: 11, side: 'player', kind: 'zombie', age: 0, big: false, wormsTaken: false }];
+    let animatedRaise = false;
+    for (let frame = 0; frame < 120 && game.corpses.length; frame++) {
+      tickEnemy(necromancer, 1 / 60);
+      if (necromancer.raising && necromancer.working > 0) animatedRaise = true;
+    }
+    const raised = game.enemies.find(enemy => enemy.raisedBy === necromancer);
+    return { corpseLeft: game.corpses.length, raised: !!raised, temporary: raised && raised.temporary > 0, animatedRaise };
+  });
+  expect(result).toEqual({ corpseLeft: 0, raised: true, temporary: true, animatedRaise: true });
+});
+
+test('a lone player necromancer advances to fight in Battles', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const necromancer = Object.assign(createSettler('zombie', 1, 200, 300), { tool: 'necro_staff' });
+    const enemy = createConfiguredEnemy({ x: 900, y: 300 }, 'raider');
+    game.settlers = [necromancer];
+    game.enemies = [enemy];
+    startBattleFight();
+    const before = necromancer.x;
+    for (let frame = 0; frame < 60 && battle.phase === 'fight'; frame++) update(1 / 60);
+    return { moved: necromancer.x > before, x: necromancer.x, before };
+  });
+  expect(movement.moved).toBe(true);
+  expect(movement.x).toBeGreaterThan(movement.before);
+});
+
+test('a lone medic advances to fight in Battles', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const medic = Object.assign(createSettler('zombie', 1, 200, 300), { role: 'worker', weapon: 'fist', tool: 'medbag' });
+    const enemy = createConfiguredEnemy({ x: 900, y: 300 }, 'raider');
+    game.settlers = [medic];
+    game.enemies = [enemy];
+    startBattleFight();
+    const before = medic.x;
+    for (let frame = 0; frame < 60 && battle.phase === 'fight'; frame++) update(1 / 60);
+    return { moved: medic.x > before, x: medic.x, before };
+  });
+  expect(movement.moved).toBe(true);
+  expect(movement.x).toBeGreaterThan(movement.before);
+});
+
+test('an enemy necromancer with only ghost escorts does not walk toward the hidden town hall in Battles', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const necromancer = createConfiguredEnemy({ x: game.WORLD_WIDTH - 100, y: 300 }, 'undead_necromancer');
+    const ghost = createConfiguredEnemy({ x: necromancer.x - 20, y: necromancer.y }, 'undead_ghost');
+    game.settlers = [];
+    game.enemies = [necromancer, ghost];
+    const before = { x: necromancer.x, y: necromancer.y };
+    tickEnemy(necromancer, 1 / 60);
+    return { x: necromancer.x, y: necromancer.y, before, hall: { x: townHall.x, y: townHall.y } };
+  });
+  expect(movement.x).toBe(movement.before.x);
+  expect(movement.y).toBe(movement.before.y);
+  expect(movement.hall.x).toBeLessThan(0);
+});
+
+test('a battle ends when the last player ghost is temporarily gone, and enemies stop chasing the hidden hall', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const enemy = createConfiguredEnemy({ x: game.WORLD_WIDTH - 100, y: 300 }, 'raider');
+    const ghost = createSettler('ghost', 1, 200, 300);
+    ghost.ghostGone = 10;
+    game.settlers = [ghost];
+    game.enemies = [enemy];
+    battle.phase = 'fight';
+    const before = { x: enemy.x, y: enemy.y };
+    tickEnemy(enemy, 1 / 60);
+    updateBattle(0);
+    return {
+      moved: enemy.x !== before.x || enemy.y !== before.y,
+      phase: battle.phase,
+      winner: battle.winner
+    };
+  });
+  expect(result).toEqual({ moved: false, phase: 'result', winner: 'red' });
 });
 
 test('a fighting settler keeps facing its target while it moves', async ({ page }) => {

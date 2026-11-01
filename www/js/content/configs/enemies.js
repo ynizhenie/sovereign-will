@@ -11,8 +11,9 @@ export const enemiesConfig = {
   // quiver: arrows it spawns with; tentStock: arrows it adds to the shared stock in enemy tents;
   //   refill: arrows taken from a tent at once; melee: the enemy it fights like when out of arrows
   //   and no tent has any left.
-  // healer: walks up to the most hurt of its own side within range px and heals it by healPerSecond from
-  //   healRange; tool: what it's drawn holding instead of a weapon.
+  // healer: walks up to the most hurt of its own side within range px and heals it from healRange;
+  //   bagSize: herbs carried, tentStock: shared stock in enemy tents, refill: herbs taken at once,
+  //   healSeconds: seconds between herbs; tool: what it's drawn holding instead of a weapon.
   // reward: added to the stock when it dies. Waves spawn kinds in this order.
   enemies: {
     raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
@@ -40,10 +41,10 @@ export const enemiesConfig = {
     // a medic with a bag of herbs: heals the other raiders (#203)
     raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.5, reach: 6, siege: { buildings: 5, resources: 1 },
-      healer: { range: 220, healRange: 30, healPerSecond: 10 } },
+      healer: { range: 220, healRange: 30, healPerSecond: 10, bagSize: 5, tentStock: 10, refill: 5, healSeconds: 1.2 } },
     // the undead: slow zombies, big zombies, zombie archers, and necromancers that raise the dead
-    // (necromancer: raises before they're spent, within range px, raiseSeconds each; heals the wounded
-    // within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
+    // (necromancer: raises up to raises corpses before recharging at a grave, maxZombies at once;
+    // heals within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
     undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
     // a zombie that picked up a sword (#203)
@@ -58,7 +59,7 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
     undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
-      necromancer: { raises: 5, range: 200, raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 6 } },
+      necromancer: { raises: 3, maxZombies: 3, range: 400, seekRange: 900, raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 8 } },
     // the demons: quick imps, big demons that hit all around, imp archers. They
     // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
     demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',

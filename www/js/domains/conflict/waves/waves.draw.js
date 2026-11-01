@@ -6,7 +6,7 @@ import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, drawWorkTool, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
@@ -124,10 +124,22 @@ export function drawEnemy(en) {
     // body and its quiver in front; facing us, the other way round
     const handBack = heldBehind(en), backBack = backBehind(en);
     const at = fn => { ctx.save(); ctx.translate(en.x, en.y); fn(); ctx.restore(); };
+    const healing = en.working > 0 && en.workKind === 'heal';
+    const drawMedicBag = front => {
+      if (!healing || !getEnemyDef(en).healer) return;
+      const r = en.visualRadius || en.radius, f = en.facing || 0;
+      const sideOn = Math.abs(Math.cos(f)) > 0.85, x = sideOn ? -Math.cos(f) * r * 0.3 : -handSide(en) * r * 0.72, y = r * 0.18;
+      const farSlot = sideOn || Math.sin(f) < -0.25;
+      if (farSlot === front) return;
+      ctx.save(); ctx.translate(x - 3, y - 4);
+      drawHeldTool('medbag', 0.8, game.gameMode === 'battle' ? 1 : Math.min(1, (en.herbs || 0) / getEnemyDef(en).healer.bagSize));
+      ctx.restore();
+    };
     const inHand = () => {
       ctx.save();
       applyHeldItemPose(en);
       if (getEnemyDef(en).necromancer) drawStaff(getEnemyColor(null), getDarkness()); // (#326)
+      else if (healing && getEnemyDef(en).healer) drawWorkTool('herbs', itemScale(en));
       else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
       else drawHeldWeapon(en.weapon, itemScale(en), (bowDraw(en) || { pull: 0 }).pull); // (in its hand, as big as it, #279; drawn, #306)
       drawWeaponBlood(en);
@@ -140,6 +152,7 @@ export function drawEnemy(en) {
     if (!simple) {
       if (backBack) at(onItsBack);
       if (handBack) at(inHand);
+      at(() => drawMedicBag(false));
     }
     drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
@@ -149,6 +162,7 @@ export function drawEnemy(en) {
       at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
       if (!backBack) at(onItsBack);
       if (!handBack) at(inHand);
+      at(() => drawMedicBag(true));
     }
     at(() => { if (en.captain) drawEnemyBanner(en); }); // (the flag shows even zoomed out)
     if (en.orderBubble && en.orderBubble.until > game.pathTick) drawOrderBubble(en.x + en.radius, en.y - en.radius * 1.45 - 14, en.orderBubble.icon);
