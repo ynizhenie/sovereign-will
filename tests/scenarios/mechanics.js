@@ -35,7 +35,6 @@ Object.assign(window.sim, (() => {
     update(1 / 60);
     const clocks = settlers.map(s => s.hunger);
     const s = settlers[0];
-    const food0 = stock.food;
     const needsAfter = [];
     const finish = GAME_CONFIG.meals.finishJobSeconds;
     GAME_CONFIG.meals.finishJobSeconds = 0; // (straight to the meal, not a job finished first, #326)
@@ -47,7 +46,7 @@ Object.assign(window.sim, (() => {
       needsAfter.push(!!s.needsRelief);
     }
     GAME_CONFIG.meals.finishJobSeconds = finish;
-    return { distinct: new Set(clocks.map(c => c.toFixed(3))).size, eaten: food0 - stock.food, needsAfter };
+    return { distinct: new Set(clocks.map(c => c.toFixed(3))).size, eaten: s.meals, needsAfter };
   }
 
   // Enemies in a wave: the first lighter, then more for a bigger army

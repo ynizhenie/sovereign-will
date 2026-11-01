@@ -72,7 +72,7 @@ function resourceState() {
 export function createSettlerTick(dt) {
   const { allResources, resourceSet, resourceKind, doorBlockers, markedResources, activeWaterSpots } = resourceState();
 
-  const defendersCount = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
+  const defendersCount = game.settlers.filter(s => s.weapon !== 'fist').length;
 
   return {
     dt,
