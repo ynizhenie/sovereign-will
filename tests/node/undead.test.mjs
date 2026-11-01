@@ -40,7 +40,10 @@ test('blight: round the graveyard and graves, marked ground blighted by a necrom
 test('undead enemies: waves of theirs; their necromancer raises temporary zombies too (#175)', async () => {
   const r = await sim.undeadEnemies();
   expect(r.kinds.every(k => k.startsWith('undead_'))).toBe(true);
-  expect(r).toMatchObject({ zombies: 1, corpses: 0, temporary: true });
+  expect(r).toMatchObject({
+    zombies: 3, corpses: 3, temporary: true, raises: 3, maxZombies: 3, range: 400, seekRange: 900, maxHeld: 3, recharged: true,
+    healing: { player: { range: 80, rate: 8 }, enemy: { range: 80, rate: 8 } }
+  });
 });
 
 test('the undead spend rot: a tile of blight, hiring a zombie; what\'s missing shows in whole pieces (#204)', async () => {

@@ -46,6 +46,7 @@ test('six swordsmen against six on Normal (the red side weaker): the player\'s w
     const fight = id => {
       battle.lineup = []; battle.phase = 'setup';
       for (let i = 0; i < 6; i++) { put(id, 14 - (i % 2) * 2, 8 + i * 2); put(id, 25 + (i % 2) * 2, 8 + i * 2); }
+      game.worldSeed = createWorldSeed('p326f10-battle-balance');
       startBattleFight();
       let panicked = false;
       for (let f = 0; f < 60 * 90 && battle.phase === 'fight'; f++) { update(1 / 60); if (settlers.some(s => s.panic)) panicked = true; }

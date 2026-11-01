@@ -24,12 +24,12 @@ import { stock } from '../../domains/colony/storage/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { resetGame } from '../../app/index.js';
 
+const MENU_STOCK_START_DELAY = 2;
+
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
   boars: 3, trees: 7, boulders: 4, grass: 7,
-  warehouseHp: 300, // (the fight's: the zombies can break it, #279)
-  // (#326) what its warehouse holds, whatever faction the Endless screen has picked: always the same
-  stock: { wood: 30, stone: 20, herbs: 10, rope: 6, leather: 4 }
+  warehouseHp: 300 // (the fight's: the zombies can break it, #279)
 };
 
 export const MENU_SCENES = ['hunt', 'fishing', 'fight', 'farm'];
@@ -39,6 +39,7 @@ export const menuWorld = {
   size: '',             // the screen it was made for: made again when that changes
   opened: false,        // the game's opening done: the curtain lifted (style.css)
   scene: '',            // which scene (MENU_SCENES): picked at random each time the menu opens
+  stockAge: 0,
   fight: { next: 0, gap: 0, down: 0 } // the fight's clock (tickMenuScene)
 };
 
@@ -115,10 +116,11 @@ export function enterMenuWorld(scene = '') {
   }
   game.gameMode = 'endless';
   resetGame(map);
-  // (#326) the warehouse's own, not the start of whatever faction the Endless screen has picked
+  clearShoreResources();
   for (const id of Object.keys(stock)) stock[id] = 0;
-  Object.assign(stock, MENU_WORLD.stock);
+  game.foodMix = {};
   game.gameMode = 'menu';
+  menuWorld.stockAge = 0;
   game.settlers = [];
   if (sceneName === 'hunt') {
     // one soldier with a spear, of the menu's faction
@@ -128,7 +130,6 @@ export function enterMenuWorld(scene = '') {
   } else if (sceneName === 'fishing') {
     for (const w of game.waterTiles) w.isFishing = w === game.waterTiles[0];
     game.settlers = [Object.assign(createSettler('normal', 1, hall[0] + 45, hall[1]), { tool: 'rod' }), createSettler('normal', 2, hall[0] - 45, hall[1] + 20)];
-    Object.assign(stock, { worms: 0, wheatSeeds: 0, wheat: 0, firewood: 99, food: 999 });
   } else if (sceneName === 'fight') {
     menuWorld.fight = { next: 2, gap: 5, down: 0 };
     fightSquad();
@@ -136,7 +137,6 @@ export function enterMenuWorld(scene = '') {
     const zone = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [3, 2]].map(([dx, dy]) => near(dx, dy));
     for (const [gx, gy] of zone) game.farmZones.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15, crop: 'wheat' });
     game.settlers = [Object.assign(createSettler('normal', 1, hall[0] + 45, hall[1]), { tool: 'hoe', backpack: true, wateringCan: true })];
-    stock.wheatSeeds = 20;
   }
   game.waveTimer = Infinity;
   camera.x = centre.x; camera.y = centre.y;
@@ -149,12 +149,25 @@ export function enterMenuWorld(scene = '') {
   }
 }
 
+function clearShoreResources() {
+  const water = new Set(game.waterTiles.map(tile => `${tile.x},${tile.y}`));
+  const sand = new Set([...game.desertTiles, ...game.beachTiles].map(tile => `${tile.x},${tile.y}`));
+  const allowedOnSand = new Set(['natural_rock', 'boulder', 'pebble']);
+  for (const [kind, definition] of Object.entries(GAME_CONFIG.mapResources)) {
+    const resources = game[definition.list];
+    if (!Array.isArray(resources)) continue;
+    game[definition.list] = resources.filter(resource => {
+      const key = `${resource.x},${resource.y}`;
+      return !water.has(key) && (!sand.has(key) || allowedOnSand.has(kind));
+    });
+  }
+}
+
 // The fight's squad (#256): two swords with shields, a medic in armour, by the hall. (#279) They guard the
 // warehouse: the zombies can break it, and then the medic has no herbs to fill its bag with
 function fightSquad() {
   const h = { x: townHall.x, y: townHall.y };
   townHall.hp = townHall.maxHp = MENU_WORLD.warehouseHp;
-  stock.herbs = 20;
   const sword = (id, dy) => Object.assign(createSettler('normal', id, h.x - 50, h.y + dy), { weapon: 'sword', role: 'soldier', shield: true });
   const medic = Object.assign(createSettler('normal', 3, h.x - 70, h.y), { tool: 'medbag', bagHerbs: 3 });
   putOnGear(medic, 'armor');
@@ -166,6 +179,8 @@ function fightSquad() {
 // and the fishing: seeds, dung and fuel never run out
 export function tickMenuScene(dt) {
   if (!isMenuWorld()) return;
+  menuWorld.stockAge += dt;
+  const canRestock = menuWorld.stockAge >= MENU_STOCK_START_DELAY;
   game.settlers.forEach(s => { s.hunger = 999; });
   if (menuWorld.scene === 'fight') {
     const f = menuWorld.fight;
@@ -187,12 +202,12 @@ export function tickMenuScene(dt) {
     }
     if (game.corpses.length > 12) game.corpses.splice(0, game.corpses.length - 12);
     // herbs in the warehouse while it stands; broken, none (#279)
-    stock.herbs = townHall.hp > 0 ? Math.max(stock.herbs || 0, 10) : 0;
+    stock.herbs = townHall.hp > 0 && canRestock ? Math.max(stock.herbs || 0, 10) : 0;
   } else if (menuWorld.scene === 'farm') {
-    stock.wheatSeeds = Math.max(stock.wheatSeeds || 0, 10);
+    if (canRestock) stock.wheatSeeds = Math.max(stock.wheatSeeds || 0, 10);
     for (const b of game.buildings) if (b.type === 'dung_heap') b.dung = Math.max(b.dung || 0, 3);
   } else if (menuWorld.scene === 'fishing') {
-    stock.firewood = Math.max(stock.firewood || 0, 50);
+    if (canRestock) stock.firewood = Math.max(stock.firewood || 0, 50);
   }
 }
 

@@ -300,8 +300,10 @@ export function removeDeadSettlers() {
   game.settlers.forEach(s => {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
-      onUnitDeath(s, 'settler');
-      dropSettlerLoot(s);
+      if (!s.fled) {
+        onUnitDeath(s, 'settler');
+        dropSettlerLoot(s);
+      }
       if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot
       if (game.selectedSettler === s) game.selectedSettler = null;
     }

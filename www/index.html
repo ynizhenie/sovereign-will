@@ -419,11 +419,9 @@
               <button class="btn tile" id="btn-zone_path" data-action="setMode" data-arg="zone_path" data-i18n="btn.zonePath">[[path]] Path</button>
               <button class="btn tile" id="btn-zone_clear" data-action="setMode" data-arg="zone_clear" data-i18n="btn.zoneClear">[[close]] Remove zone</button>
             </div>
-            <div class="battle-hint" data-i18n="zone.hint">A relief zone holds 5 heaps; a post is one soldier's before a wave</div>
             <!-- (#279) the undead's blight, here (no tab of its own) -->
             <div class="undead-only">
               <div class="panel-heading" data-i18n="dock.blight">Blight</div>
-              <div class="battle-hint" data-i18n="blight.hint">Mark ground for a necromancer to blight: enemies are slowed on it, corpses rise</div>
               <div class="tile-grid">
                 <button class="btn tile" id="btn-blight" data-action="setMode" data-arg="blight" data-i18n="btn.blightZone">[[rot]] Blight zone</button>
                 <button class="btn tile" id="btn-blight_clear" data-action="setMode" data-arg="blight_clear" data-i18n="btn.blightClear">[[close]] Remove zone</button>
@@ -450,7 +448,6 @@
 
       <!-- battle mode (battle.js): who to place (the dock picks yours, the enemies or buildings) -->
       <div id="battle-panel" class="hud-sheet" data-sheet="battle">
-        <div class="battle-hint" data-i18n="battle.hint">Tap to place, tap again to remove: on the left a unit is yours, on the right an enemy</div>
         <div class="sub-tabs battle-gear">
           <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
           <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>
@@ -459,7 +456,6 @@
           <button class="btn sub-tab" data-battle-gear="banner" data-i18n="battle.banner">Banner</button>
           <button class="btn sub-tab" data-battle-gear="torch" data-i18n="battle.torch">Torch</button>
         </div>
-        <div class="battle-hint battle-gear" data-i18n="battle.bannerHint">Banner: the next soldier or archer placed becomes a commander</div>
         <div id="battle-presets"></div>
       </div>
       <!-- the battle's own settings (#255): the field and the difficulty -->
@@ -484,13 +480,12 @@
           <button class="btn sub-tab" data-battle-look="weather" data-value="fog" data-i18n="battle.weather.fog">Fog</button>
           <button class="btn sub-tab" data-battle-look="weather" data-value="storm" data-i18n="battle.weather.storm">Storm</button>
         </div>
-        <div class="battle-hint" data-i18n="battle.lookHint">Only how it looks: nobody sleeps by it. Torches given to units are lit when it's dark</div>
         <div class="panel-heading" data-i18n="menu.difficulty">Difficulty:</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-difficulty="normal" data-i18n="menu.normal">Normal</button>
           <button class="btn sub-tab" data-battle-difficulty="hard" data-i18n="menu.hard">Hard</button>
         </div>
-        <div class="battle-hint" id="battle-difficulty-hint" data-i18n="battle.normalHint">Normal: the red units have a quarter less hp</div>
+        <div class="battle-hint" id="battle-difficulty-hint" data-i18n="battle.normalHint">Red units have 25% less health than yours</div>
         <!-- (#306) the sides' colours, as in Endless -->
         <div class="panel-heading" data-i18n="battle.colorsYours">Your colour:</div>
         <div class="color-options" id="battle-colors-green"></div>

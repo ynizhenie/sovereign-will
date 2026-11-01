@@ -3,7 +3,7 @@
 
 import { openTab, runLoading } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
+import { loadData, onTap, saveData, saveSetting, t } from '../../engine/platform/index.js';
 import { applySeedFromUI, createDefaultSeed, game } from '../../engine/world/index.js';
 import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
 import { resetGameSteps } from '../../app/index.js';
@@ -58,9 +58,10 @@ export let mapSource = 'random';
 
 export function renderCustomMapList() {
   const maps = loadSavedMaps();
+  const savedName = loadData('endlessChoices', {}).customMap;
   // the chosen map may have been deleted or changed in the editor since
   if (game.customMap) game.customMap = maps[game.customMap.name] || null;
-  if (mapSource === 'custom' && !game.customMap) game.customMap = Object.values(maps)[0] || null;
+  if (mapSource === 'custom' && !game.customMap) game.customMap = maps[savedName] || Object.values(maps)[0] || null;
   // a custom map is played as the faction it was made for
   if (mapSource === 'custom' && game.customMap && game.customMap.faction && sides.player.faction !== game.customMap.faction) setSideFaction('player', game.customMap.faction);
   renderFactionPicker();
@@ -148,6 +149,7 @@ export function initEndlessSetup() {
   // the small button next to the seed: a new random seed
   onTap(document.getElementById('seed-reroll'), () => {
     document.getElementById('seed-input').value = createDefaultSeed();
+    saveSetting('worldSeed', document.getElementById('seed-input').value);
   });
   document.querySelectorAll('[data-map-source]').forEach(button => onTap(button, () => setMapSource(button.dataset.mapSource)));
   onTap(document.getElementById('mode-endless'), renderCustomMapList); // maps may have changed in the editor
@@ -176,11 +178,10 @@ export function restoreEndlessChoices() {
   }
   const remember = () => {
     /** @type {Record<string, string>} */
-    const out = { waveCustom: waveCustom.value, mapCols: mapColsInput.value, mapRows: mapRowsInput.value };
+    const out = { waveCustom: waveCustom.value, mapCols: mapColsInput.value, mapRows: mapRowsInput.value, customMap: game.customMap && game.customMap.name };
     for (const name of CHOICES) { const active = screen.querySelector(`.active[${attrOf(name)}]`); if (active) out[name] = /** @type {string} */ (active.getAttribute(attrOf(name))); }
     saveData('endlessChoices', out);
   };
-  // (after the button's own handler: the screen hears the tap once it's done)
-  screen.addEventListener('click', () => setTimeout(remember, 0));
-  screen.addEventListener('change', () => setTimeout(remember, 0));
+  screen.addEventListener('click', remember);
+  screen.addEventListener('change', remember);
 }

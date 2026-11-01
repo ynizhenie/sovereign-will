@@ -94,6 +94,8 @@ export const markAudioOptions = () => {
 // What this file sets up as the game starts (called by app/boot.js)
 export function initMenuScreens() {
   // ---- Main menu screens: home (modes), endless (setup), settings
+  seedInput.value = loadSetting('worldSeed', seedInput.value);
+  seedInput.addEventListener('input', () => saveSetting('worldSeed', seedInput.value));
 
   // the opening animation, once, as the page loads (style.css: #main-menu.intro)
   document.getElementById('main-menu').classList.add('intro');

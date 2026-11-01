@@ -10,18 +10,25 @@ import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } fr
 import { repairAllBuildings } from '../domains/economy/building/index.js';
 import { deselectSettler, dismissSettler, ensureUnitName, generateUnitName, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, unpossess, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { clearOrders, holdPosition } from '../domains/conflict/combat/index.js';
-import { toggleGiveList } from './hud.js';
+import { toggleGiveList, updateUI } from './hud.js';
 import { t } from '../engine/platform/index.js';
 import { setRichText } from './icons.js';
 import { togglePause } from '../app/index.js';
 import { setMode } from './map-input.js';
 import { closeOverlays, reopenSheet, stopPlacing, toggleResources, toggleSheet } from './sheets.js';
 import { openWorldMap } from './world-map.js';
-import { openSelectedNameEditor } from './selected-card-state.js';
+import { closeSelectedCard, openSelectedNameEditor } from './selected-card-state.js';
 
 export const PAGE_ACTIONS = {
   togglePause: () => togglePause(),
-  switchPossession: () => switchPossession(),
+  switchPossession: () => {
+    const selected = getSelectedSettler();
+    switchPossession();
+    if (selected?.isPossessed) {
+      closeSelectedCard();
+      updateUI();
+    }
+  },
   unpossess: () => unpossess(), // (#326: from the button over the closed card)
   deselectSettler: () => deselectSettler(),
   upgradeToBig: () => upgradeToBig(),

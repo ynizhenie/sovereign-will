@@ -105,7 +105,10 @@ export function finishHarvest(settler, resource, kind) {
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   for (const [item, chance] of Object.entries(bonus || {})) {
-    if (rand() < chance) addResources({ [item]: 1 });
+    if (rand() < chance) {
+      giveResourceToSettler(settler, item, 1);
+      if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+    }
   }
   const list = game[def.list];
   const index = list.indexOf(resource);

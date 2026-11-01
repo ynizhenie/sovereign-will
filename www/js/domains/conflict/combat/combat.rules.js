@@ -4,11 +4,12 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
-import { damageSettler, faceTowards, isBigBody, isUntouchable, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
 import { tileVariantHash } from '../../world/index.js';
+import { getEnemyFaction } from '../../factions/index.js';
 import { playSound } from '../../../app/index.js';
 import { shakeOnHit } from '../morale/index.js';
 
@@ -69,8 +70,10 @@ export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
 }
 
 export function performAttack(attacker, targetX, targetY) {
-  attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
+  const pet = attacker.role === 'pet';
+  if (!pet) attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
   if (attacker.attackCooldown > 0) return;
+  if (pet) attacker.struckAt = game.pathTick; // (a bite animation starts on the actual strike, not each cooldown tick)
   faceTowards(attacker, targetX, targetY);
 
   const stats = getWeaponStats(attacker, 'combat');
@@ -218,7 +221,12 @@ export function addCorpse(unit, side, kind) {
   const big = isBigBody(unit);
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
-  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false, look: unit.look, pet: def.pet, stuck: unit.stuck }); // (its look, #306; its arrows stay in it, #326)
+  game.corpses.push({
+    x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
+    look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
+    weapon: unit.weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet,
+    pet: def.pet, stuck: unit.stuck
+  }); // (its look and body type, #306; its arrows stay in it, #326)
 }
 
 export function updateCorpses(dt) {
@@ -235,6 +243,8 @@ export function damageEnemy(en, amount) {
   if (en.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
   en.hp -= damage;
   if (damage > 0) shakeOnHit(en); // (#207)
+  if (en.hp > 0 && en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken &&
+      speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
 }
 
 // a normal settler's drawn radius plus a normal enemy's: what melee `approach` distances are set for

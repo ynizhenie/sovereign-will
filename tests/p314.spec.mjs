@@ -52,6 +52,42 @@ test('a dog is hired at the hall, keeps by a soldier, bites an enemy near, flush
   expect(errors).toEqual([]);
 });
 
+test('a dog without allied soldiers advances toward an enemy instead of wandering off', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    Object.assign(dog, { x: townHall.x + 180, y: townHall.y, petSleep: 0 });
+    game.settlers = [dog];
+    const foe = createNormalEnemy({ x: dog.x + 300, y: dog.y }, 'raider');
+    foe.speed = 0;
+    game.enemies = [foe];
+    const before = Math.hypot(foe.x - dog.x, foe.y - dog.y);
+    window.sim.run(1);
+    return { closer: Math.hypot(foe.x - dog.x, foe.y - dog.y) < before, activity: dog.activity };
+  });
+  expect(result).toEqual({ closer: true, activity: 'petFight' });
+  expect(errors).toEqual([]);
+});
+
+test('a player dog bite timestamp is not refreshed during its attack cooldown', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    const foe = createNormalEnemy({ x: dog.x + 20, y: dog.y }, 'raider');
+    foe.speed = 0;
+    game.enemies = [foe];
+    window.sim.run(1 / 60);
+    const struckAt = dog.struckAt;
+    const swinging = dog.swingT > 0;
+    window.sim.run(1 / 60);
+    return { struck: struckAt !== undefined, swinging, heldDuringCooldown: dog.struckAt === struckAt };
+  });
+  expect(result).toEqual({ struck: true, swinging: true, heldDuringCooldown: true });
+  expect(errors).toEqual([]);
+});
+
 test('a dog sleeps with no enemy about and wakes for a wave; nothing is handed to a pet; it doesn\'t talk (#314)', async ({ page }) => {
   const errors = await start(page, 'humans');
   const r = await page.evaluate(() => {
@@ -69,6 +105,17 @@ test('a dog sleeps with no enemy about and wakes for a wave; nothing is handed t
     return { slept, woke, notToDog, says: says(dog, 'hired', true) };
   });
   expect(r).toEqual({ slept: true, woke: true, notToDog: true, says: false });
+  expect(errors).toEqual([]);
+});
+
+test('enemy pets do not speak', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    const pets = ['raider_dog', 'demon_beast', 'undead_ghost'].map(key =>
+      createConfiguredEnemy({ x: townHall.x + 200, y: townHall.y }, key));
+    return pets.map(pet => speak(pet, 'humans', 'taunt', true) || !!pet.say);
+  });
+  expect(result).toEqual([false, false, false]);
   expect(errors).toEqual([]);
 });
 
@@ -99,18 +146,49 @@ test('a ghost hovers by a grave, can\'t be hurt, flies into an enemy that comes 
     const byGrave = Math.hypot(ghost.x - grave.x, ghost.y - grave.y);
     damageSettler(ghost, 999);
     const unhurt = ghost.hp === ghost.maxHp;
-    const en = createNormalEnemy({ x: ghost.x + 100, y: ghost.y }, 'raider'); en.speed = 0; enemies = [en]; // (a living one: the undead never panic, #326)
+    const enemyGhost = createNormalEnemy({ x: ghost.x + 20, y: ghost.y }, 'raider');
+    Object.assign(enemyGhost, { enemyKey: 'undead_ghost', ghostly: true, hp: 30, maxHp: 30 });
+    const en = createNormalEnemy({ x: ghost.x + 100, y: ghost.y }, 'raider'); en.speed = 0; // (a living one: the undead never panic, #326)
+    enemies = [enemyGhost, en];
     let panicked = false;
     for (let f = 0; f < 300 && !panicked; f++) { update(1 / 60); panicked = !!en.panic; }
     const gone = ghost.ghostGone > 0;
+    const ignoredGhost = !(enemyGhost.ghostHits > 0);
+    const ignoredPlayerGhost = !(ghost.ghostHits > 0);
     enemies = [];
     ghost.ghostGone = 0.05; window.sim.run(1);
-    return { byGrave, unhurt, panicked, gone, back: !(ghost.ghostGone > 0), backByGrave: Math.hypot(ghost.x - grave.x, ghost.y - grave.y) };
+    return { byGrave, unhurt, panicked, gone, ignoredGhost, ignoredPlayerGhost, back: !(ghost.ghostGone > 0), backByGrave: Math.hypot(ghost.x - grave.x, ghost.y - grave.y) };
   });
   expect(r.byGrave).toBeLessThan(60);
-  expect(r).toMatchObject({ unhurt: true, panicked: true, gone: true, back: true });
+  expect(r).toMatchObject({ unhurt: true, panicked: true, gone: true, ignoredGhost: true, ignoredPlayerGhost: true, back: true });
   expect(r.backByGrave).toBeLessThan(60);
   expect(errors).toEqual([]);
+});
+
+test('ghosts are tinted with their side colour', async ({ page }) => {
+  await openGame(page);
+  const colors = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    sides.player.color = '#3498db';
+    sides.enemy.color = '#e74c3c';
+    const fill = ctx.fill, stroke = ctx.stroke;
+    const painted = [];
+    ctx.fill = function (...args) { painted.push(this.fillStyle); return fill.apply(this, args); };
+    ctx.stroke = function (...args) { painted.push(this.strokeStyle); return stroke.apply(this, args); };
+    const ghost = { x: 100, y: 100, radius: 10, visualRadius: 10, facing: 0, ghostGone: 0, look: { coat: 0 } };
+    try {
+      drawPet(ghost, 'ghost', false);
+      const player = [...painted];
+      painted.length = 0;
+      drawPet(ghost, 'ghost', true);
+      return { player, enemy: painted };
+    } finally {
+      ctx.fill = fill;
+      ctx.stroke = stroke;
+    }
+  });
+  expect(colors.player).toContain('#3498db');
+  expect(colors.enemy).toContain('#e74c3c');
 });
 
 test('a settler let go puts its gear in the store and walks away; its place free at once (#314)', async ({ page }) => {
@@ -152,6 +230,27 @@ test('turned big with none picked: the best armed and armoured soldier first (#3
     return { first, second };
   });
   expect(r).toEqual({ first: 4, second: 3 });
+  expect(errors).toEqual([]);
+});
+
+test('enemy ghosts split between enemy necromancers and stay with them until settlers come near (#314)', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    const y = townHall.y;
+    const first = createConfiguredEnemy({ x: townHall.x - 400, y }, 'undead_necromancer');
+    const second = createConfiguredEnemy({ x: townHall.x + 400, y }, 'undead_necromancer');
+    const ghosts = Array.from({ length: 4 }, (_, i) =>
+      createConfiguredEnemy({ x: i < 3 ? first.x + 20 + i : second.x + 20, y: y + 20 }, 'undead_ghost'));
+    enemies = [first, second, ...ghosts];
+    window.sim.run(1);
+    return {
+      firstCount: ghosts.filter(ghost => ghost.escort === first).length,
+      secondCount: ghosts.filter(ghost => ghost.escort === second).length,
+      stayNearNecromancer: ghosts.every(ghost => Math.hypot(ghost.x - ghost.escort.x, ghost.y - ghost.escort.y) < 100),
+      noDive: ghosts.every(ghost => !ghost.fled)
+    };
+  });
+  expect(result).toEqual({ firstCount: 3, secondCount: 1, stayNearNecromancer: true, noDive: true });
   expect(errors).toEqual([]);
 });
 

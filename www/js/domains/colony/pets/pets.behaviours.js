@@ -66,7 +66,9 @@ function tickBeast(s, tick, kind) {
   const own = game.gameMode === 'battle' ? nearest(game.settlers.filter(o => o !== s && !petKindOf(o) && o.hp > 0), s) : null;
   const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : own || (game.gameMode === 'battle' ? s : townHall);
   const guard = c.guardTiles * TILE_SIZE;
-  const foe = nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s);
+  const foe = keeper
+    ? nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s)
+    : nearest(foesNear(s.x, s.y, Infinity), s);
   // asleep: till an enemy comes near or a wave's on
   if (s.petSleep > 0) {
     if (foe || tick.isWaveActive) s.petSleep = 0;
@@ -203,7 +205,7 @@ function tickGhost(s, tick) {
   }
   // an enemy near it (or its necromancer): into it
   const reach = g.diveTiles * TILE_SIZE;
-  const foe = nearest([...foesNear(s.x, s.y, reach), ...(s.escort ? foesNear(s.escort.x, s.escort.y, reach) : [])].filter(en => !en.panic), s);
+  const foe = nearest([...foesNear(s.x, s.y, reach), ...(s.escort ? foesNear(s.escort.x, s.escort.y, reach) : [])].filter(en => !en.panic && !en.ghostly), s);
   if (foe) {
     if (fly(s, foe.x, foe.y, g.diveSpeed) || Math.hypot(foe.x - s.x, foe.y - s.y) < foe.radius + s.radius + 4) haunt(s, foe);
     return 'ghostDive';
@@ -218,6 +220,7 @@ function tickGhost(s, tick) {
 
 // Into an enemy: it panics at once; the ghost is gone a while
 export function haunt(s, foe) {
+  foe.ghostPanicFrom = { x: s.x, y: s.y };
   ghostScare(foe, 'enemy'); // (#326: a big one at the second ghost)
   s.ghostGone = config().ghost.backSeconds;
   s.escort = null;

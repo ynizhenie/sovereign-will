@@ -240,8 +240,7 @@ export function drawGrassGround() {
 export const WATER_SHADES = ['#2c83bd', '#2a80b9', '#2d85be', '#2a7db5'];
 export const ROCK_SHADES = ['#34495e', '#33475b', '#364b60', '#32465a', '#354a5f'];
 const ROCK_PALETTES = [
-  { shades: ROCK_SHADES, edge: '#1a252f' },
-  { shades: ['#95a5a6', '#8f9fa0', '#9ba9aa', '#89999a', '#93a3a4'], edge: '#566164' }
+  { shades: ROCK_SHADES, edge: '#1a252f' }
 ];
 // Sand: one base with close patches over it, as the grass has (not a shade per tile: that read as a grid)
 export const SAND_BASE = '#c9a66b';

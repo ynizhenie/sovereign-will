@@ -27,6 +27,41 @@ test('each weapon strikes its own way, a big one wider; work has its own (#279, 
   expect(r.pick.push).toBeGreaterThanOrEqual(6);
 });
 
+test('enemy and player necromancers animate their staffs the same way', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const poses = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    const player = makeSettler(1, 0, 0, { weapon: 'fist', tool: 'necro_staff' });
+    const enemy = createConfiguredEnemy({ x: 0, y: 0 }, 'undead_necromancer');
+    const posePair = () => ({ player: getHeldItemPose(player), enemy: getHeldItemPose(enemy) });
+    player.working = enemy.working = 0.1;
+    const working = posePair();
+    player.swingLen = enemy.swingLen = 0.3;
+    player.swingT = enemy.swingT = 0.2;
+    return { working, swinging: posePair() };
+  });
+  expect(poses.working.enemy).toEqual(poses.working.player);
+  expect(poses.swinging.enemy).toEqual(poses.swinging.player);
+});
+
+test('enemy and player medics animate their bags the same way', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const poses = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    const player = makeSettler(1, 0, 0, { weapon: 'fist', tool: 'medbag' });
+    const enemy = createConfiguredEnemy({ x: 0, y: 0 }, 'raider_medic');
+    player.swingLen = enemy.swingLen = 0.3;
+    player.swingT = enemy.swingT = 0.2;
+    return { player: getHeldItemPose(player), enemy: getHeldItemPose(enemy), playerPunch: humanPunch(player), enemyPunch: humanPunch(enemy) };
+  });
+  expect(poses.enemy).toEqual(poses.player);
+  expect(poses.enemy.push).toBeGreaterThan(0);
+  expect(poses.playerPunch).toBeNull();
+  expect(poses.enemyPunch).toBeNull();
+});
+
 test('every weapon and tool drawn in hand, at work and eating, with no error (#279, 1, 2, 4)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');

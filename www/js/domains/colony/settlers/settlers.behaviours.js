@@ -20,7 +20,7 @@ import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, har
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
-import { panic } from '../../conflict/morale/index.js';
+import { panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -72,7 +72,7 @@ function resourceState() {
 export function createSettlerTick(dt) {
   const { allResources, resourceSet, resourceKind, doorBlockers, markedResources, activeWaterSpots } = resourceState();
 
-  const defendersCount = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer' || s.weapon !== 'fist').length;
+  const defendersCount = game.settlers.filter(s => s.weapon !== 'fist').length;
 
   return {
     dt,
@@ -295,6 +295,7 @@ export const SETTLER_BEHAVIOURS = [
   eatCorpse,
   healAtTent,
   treatWounded,
+  medicKeepsBack,
   necromancy,
   restockQuiver,
   catchForCage, // (before holdPost: a soldier on its post goes for one to cage too, #250)
@@ -343,6 +344,10 @@ const isRecheckTurn = s => (game.pathTick + (typeof s.id === 'number' ? Math.flo
 
 // As many gathered loads as it can carry: the list is offered again at once, so it goes home with them
 const handsFull = s => !!s.carrying && s.carrying.loads !== undefined && !hasRoomToCarry(s);
+
+function medicKeepsBack(s, tick) {
+  return s.role === 'worker' && s.tool === 'medbag' && playerMedicKeepsBack(s, tick.dt);
+}
 
 function took(s, behaviour) {
   s.lastBehaviour = behaviour;

@@ -12,6 +12,7 @@ import { petKindOf } from '../settlers/index.js';
 import { drawBodyBlood } from '../../conflict/combat/index.js';
 import { isPetHungry } from './pets.behaviours.js';
 import { drawHorn } from '../../factions/demons/index.js';
+import { getEnemyColor, getSettlerColor, shadeColor } from '../../factions/index.js';
 
 const coatOf = (s, kind) => {
   const coats = GAME_CONFIG.pets.coats[kind];
@@ -30,7 +31,7 @@ export function drawPet(s, kind = petKindOf(s), enemy = false) {
   if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, r * 0.7, r * 1.2, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); }
   if (s === game.selectedSettler) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, r * 0.7, r * 1.3, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); }
   ctx.scale(scale, scale);
-  if (kind === 'ghost') drawGhost(s, d, id);
+  if (kind === 'ghost') drawGhost(s, d, id, enemy ? getEnemyColor(null) : getSettlerColor(null));
   else drawHound(s, d, kind, id);
   ctx.restore();
   if (kind !== 'ghost') drawBodyBlood(s, r);
@@ -102,15 +103,14 @@ function drawHound(s, d, kind, id) {
 }
 
 // A ghost: a pale sheet, see-through, floating and bobbing, its hem waving
-function drawGhost(s, d, id) {
-  const [pale, edge] = coatOf(s, 'ghost');
+function drawGhost(s, d, id, color) {
   const bob = Math.sin(game.pathTick * 0.08 + id) * 2.5;
   ctx.save();
   ctx.globalAlpha = 0.25; castShadow(ctx, 0, 10, 7, 2, 4); ctx.globalAlpha = 1;
   ctx.translate(0, -6 + bob);
   ctx.scale(d, 1);
   ctx.globalAlpha = 0.72;
-  ctx.fillStyle = pale; ctx.strokeStyle = edge; ctx.lineWidth = 1.2;
+  ctx.fillStyle = color; ctx.strokeStyle = shadeColor(color, -0.25); ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-7, 2);
   ctx.arc(0, -3, 7, Math.PI, 0);

@@ -64,7 +64,8 @@ export function stepsOntoSpikes(entity, vx, vy) {
 
 // (#322) A step's distance is the speed for 1/60 s: a longer or shorter step (dt) goes further or less far, and a settler
 // at half pace (dt halved) walks at half speed
-export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60) {
+export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60, smooth = false) {
+  if (!isEnemy && !smooth) { entity.moveVx = 0; entity.moveVy = 0; }
   // the undead's blighted ground holds enemies back
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
   // through a portal pair of its own side (#326: an enemy through the red side's, in a battle)
@@ -83,13 +84,31 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
     stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy);
     return;
   }
+  if (smooth && !isEnemy && hasClearSettlerLine(entity.x, entity.y, targetX, targetY, bodyRadius) &&
+    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, false, true)) return;
   if (!isEnemy && pathBlockedAhead(entity)) {
     entity.path = null;
     entity.pathRetryTimer = 0;
     return;
   }
-  if (entity.path && entity.path.length > 0) stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius);
-  else if (!isEnemy) stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius);
+  if (entity.path && entity.path.length > 0) stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth);
+  else if (!isEnemy) stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth);
+}
+
+function hasClearSettlerLine(startX, startY, targetX, targetY, radius) {
+  const distance = Math.hypot(targetX - startX, targetY - startY);
+  if (distance < 1) return true;
+  const steps = Math.ceil(distance / 10);
+  const perpX = -(targetY - startY) / distance, perpY = (targetX - startX) / distance;
+  for (let i = 1; i <= steps; i++) {
+    const ratio = i / steps, cx = startX + (targetX - startX) * ratio, cy = startY + (targetY - startY) * ratio;
+    for (const offset of [0, -radius * 0.75, radius * 0.75]) {
+      const gx = Math.floor((cx + perpX * offset) / TILE_SIZE);
+      const gy = Math.floor((cy + perpY * offset) / TILE_SIZE);
+      if (isTileBlockedForSettler(gx, gy)) return false;
+    }
+  }
+  return true;
 }
 
 function tickPathTimers(entity, isEnemy, dt) {
@@ -149,6 +168,11 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
     searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
+    if (!isEnemy && entity.path.length > 1) {
+      // A* includes the current tile center, which can pull a settler backwards after a replan.
+      const start = getGridPos(entity.x, entity.y), first = getGridPos(entity.path[0].x, entity.path[0].y);
+      if (start.gx === first.gx && start.gy === first.gy) entity.path.shift();
+    }
     entity.isBlockedPath = res.isBlockedPath || false;
     if (isEnemy) entity.pathViaSpikes = pathCrossesSpikes(entity); // kept while the path is dropped and retried
     entity.pathTarget = { x: targetX, y: targetY };
@@ -164,31 +188,44 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
 
 // An enemy with a clear line to its target walks straight at it, eased; blocked, it drops the path for a
 // fresh search and leaves the straight line for a while
-function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy) {
+function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy, smooth = false) {
   let directDx = targetX - entity.x;
   let directDy = targetY - entity.y;
   let directDist = Math.hypot(directDx, directDy);
   if (directDist > 0) {
     let directVx = (directDx / directDist) * speed;
     let directVy = (directDy / directDist) * speed;
-    entity.moveVx = (entity.moveVx || 0) * 0.8 + directVx * 0.2;
-    entity.moveVy = (entity.moveVy || 0) * 0.8 + directVy * 0.2;
-
-    if (!collidesWithEnemyNaturalResource(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius) &&
-        !collidesWithWall(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius, isEnemy) &&
-        !collidesWithWater(entity.x + entity.moveVx, entity.y + entity.moveVy, bodyRadius)) {
-      entity.x += entity.moveVx;
-      entity.y += entity.moveVy;
-    } else {
+    if (isEnemy || smooth) {
+      entity.moveVx = (entity.moveVx || 0) * 0.8 + directVx * 0.2;
+      entity.moveVy = (entity.moveVy || 0) * 0.8 + directVy * 0.2;
+      directVx = entity.moveVx;
+      directVy = entity.moveVy;
+    }
+    const step = Math.hypot(directVx, directVy);
+    if (step > directDist) { directVx *= directDist / step; directVy *= directDist / step; }
+    const nextX = entity.x + directVx, nextY = entity.y + directVy;
+    const blocked = isEnemy
+      ? collidesWithEnemyNaturalResource(nextX, nextY, bodyRadius) || collidesWithWall(nextX, nextY, bodyRadius, true) || collidesWithWater(nextX, nextY, bodyRadius)
+      : collidesWithWall(nextX, nextY, bodyRadius) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy);
+    if (!blocked) {
+      entity.x += directVx;
+      entity.y += directVy;
+      if (isEnemy) entity.path = [];
+      return true;
+    }
+    if (smooth && !isEnemy) {
       entity.moveVx = 0;
       entity.moveVy = 0;
+      return false;
+    }
+    if (isEnemy) {
       entity.path = null;
       entity.pathRetryTimer = 0.25;
       entity.directBlockedTimer = 1.5;
-      return;
     }
   }
-  entity.path = [];
+  if (isEnemy) entity.path = [];
+  return true;
 }
 
 // The world changed under the path (a resource respawned on it, a wall was built): the next tile is
@@ -208,7 +245,7 @@ function pathBlockedAhead(entity) {
 
 // One step to the path's next node: eased for an enemy, steered round other settlers for a settler, and
 // round what it would walk into
-function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
+function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth = false) {
   const path = /** @type {{ x: number, y: number }[]} */ (entity.path);
   let nextNode = path[0];
   let dx = nextNode.x - entity.x;
@@ -240,7 +277,7 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
     let vx = (dx / dist) * speed;
     let vy = (dy / dist) * speed;
 
-    if (isEnemy) {
+    if (isEnemy || smooth) {
       entity.moveVx = (entity.moveVx || 0) * 0.8 + vx * 0.2;
       entity.moveVy = (entity.moveVy || 0) * 0.8 + vy * 0.2;
       vx = entity.moveVx;
@@ -274,6 +311,7 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
         : findSafeStepAroundObstacle(entity, nextNode.x, nextNode.y, speed);
       if (fallback && stepsOntoSpikes(entity, fallback.x, fallback.y)) fallback = null;
       if (fallback) {
+        if (smooth) { entity.moveVx = 0; entity.moveVy = 0; }
         entity.x += fallback.x;
         entity.y += fallback.y;
       } else {
@@ -287,7 +325,7 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
 }
 
 // No path but close to the target: a settler steps straight to it (out of something it's caught in, too)
-function stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius) {
+function stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth = false) {
   let directDx = targetX - entity.x;
   let directDy = targetY - entity.y;
   let directDist = Math.hypot(directDx, directDy);
@@ -295,11 +333,22 @@ function stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius) {
   if (directDist > 2 && directDist < 45) {
     let directVx = (directDx / directDist) * speed;
     let directVy = (directDy / directDist) * speed;
+    if (smooth) {
+      entity.moveVx = (entity.moveVx || 0) * 0.8 + directVx * 0.2;
+      entity.moveVy = (entity.moveVy || 0) * 0.8 + directVy * 0.2;
+      directVx = entity.moveVx;
+      directVy = entity.moveVy;
+      const step = Math.hypot(directVx, directVy);
+      if (step > directDist) { directVx *= directDist / step; directVy *= directDist / step; }
+    }
 
     // (caught inside something already: it may walk out)
     if ((!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius) || collidesWithWall(entity.x, entity.y, bodyRadius)) && !stepsOntoSpikes(entity, directVx, directVy)) {
       entity.x += directVx;
       entity.y += directVy;
+    } else if (smooth) {
+      entity.moveVx = 0;
+      entity.moveVy = 0;
     }
   }
 }

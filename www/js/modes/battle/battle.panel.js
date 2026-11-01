@@ -7,7 +7,7 @@ import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { BATTLE_PRESETS, battlePresetLabel, bigPresetOf, getBattleBuildings } from './battle.roster.js';
-import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, setBattleLook, startBattleMode } from './battle.setup.js';
+import { battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
@@ -56,7 +56,7 @@ export function renderBattlePanel() {
     button.className = 'btn tile' + (active ? ' active' : '');
     button.dataset.preset = id;
     button.innerHTML = `<span class="tile-name">${icons.map(i => iconHtml(i)).join('')} <b>${escapeHtml(name)}</b></span> <span class="tile-cost">${richText(stats)}</span>`;
-    onTap(button, () => { pick(); closeSheet(); renderBattlePanel(); });
+    onTap(button, () => { pick(); saveBattleChoices(); closeSheet(); renderBattlePanel(); });
     grid.appendChild(button);
     if (active) chosen = /** @type {HTMLElement} */ (button.querySelector('.tile-name')).innerHTML;
   };
@@ -116,6 +116,7 @@ export function updateBattleTop() {
 // The dock's category: its sheet's units or buildings (what was picked in each is kept)
 export function setBattleCategory(category) {
   battle.category = category;
+  saveBattleChoices();
   renderBattlePanel();
 }
 
@@ -153,7 +154,7 @@ function renderBattleMusic() {
     b.className = 'btn sub-tab' + (battle.theme === theme ? ' on' : '');
     b.dataset.theme = theme;
     b.textContent = label;
-    onTap(b, () => { battle.theme = theme; renderBattlePanel(); });
+    onTap(b, () => { battle.theme = theme; saveBattleChoices(); renderBattlePanel(); });
     row.appendChild(b);
   };
   button('arena', t('battle.themeArena'));
@@ -162,6 +163,7 @@ function renderBattleMusic() {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initBattlePanel() {
+  restoreBattleChoices();
   document.getElementById('mode-battles').disabled = false;
   onTap(document.getElementById('mode-battles'), startBattleMode);
   onTap(document.getElementById('battle-fight'), startBattleFight);
@@ -178,6 +180,7 @@ export function initBattlePanel() {
     const gear = /** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear);
     if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
     else battle[gear] = !battle[gear];
+    saveBattleChoices();
     renderBattlePanel();
   }));
   document.querySelectorAll('[data-battle-look]').forEach(b => onTap(b, () => {

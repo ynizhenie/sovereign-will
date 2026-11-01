@@ -12,6 +12,14 @@ test('an enemy healer walks up to a hurt raider and heals it (#203)', async () =
   expect(await sim.enemyHealer()).toEqual({ healed: true, holdsBag: true });
 });
 
+test('an enemy medic spends herbs and refills its bag at an enemy tent', async () => {
+  const result = await sim.enemyHealerHerbs();
+  expect(result.afterUse.herbs).toBe(0);
+  expect(result.afterUse.hp).toBeGreaterThan(1);
+  expect(result.afterRefill).toEqual({ herbs: 5, stock: 0 });
+  expect(result.healingResumed).toBe(true);
+});
+
 test('every faction\'s waves bring their new kinds: a healer, a zombie and an imp with swords; the demon carries a spear (#203)', async () => {
   const r = (() => {
     // the kinds in waves 4 to 12
