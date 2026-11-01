@@ -11,7 +11,7 @@ import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
 import { isSpawnSpotFree } from '../economy/building/index.js';
-import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners } from './world.generator.js';
+import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners, startingBoarCount } from './world.generator.js';
 
 const config = () => GAME_CONFIG.continent;
 
@@ -213,7 +213,7 @@ export function* generateContinent() {
   }
 
   // Keep the starting territory at a predictable 3–5 boars, independent of the biome rolls above.
-  const startBoarCount = 3 + Math.floor(rand() * 3);
+  const startBoarCount = startingBoarCount();
   const startBoarSpots = [];
   for (let gy = Math.ceil(hall.gy - startHalf); gy < hall.gy + startHalf; gy++) {
     for (let gx = Math.ceil(hall.gx - startHalf); gx < hall.gx + startHalf; gx++) {
@@ -228,7 +228,7 @@ export function* generateContinent() {
     [startBoarSpots[i], startBoarSpots[j]] = [startBoarSpots[j], startBoarSpots[i]];
   }
   for (const { x, y } of startBoarSpots.slice(0, startBoarCount)) {
-    game.boars.push({ x, y, hp: boar.hp, maxHp: boar.hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y });
+    game.boars.push({ x, y, hp: boar.hp, maxHp: boar.hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y, inBase: true });
   }
 
   // ---- (#326) round the base, the small things to pick up by hand as many as a default map has: grass, berry

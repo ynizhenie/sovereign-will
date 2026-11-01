@@ -349,6 +349,67 @@ test('a fighting settler keeps facing its target while it moves', async ({ page 
   expect(maxAimError.maxError).toBeLessThan(0.1);
 });
 
+test('melee units do not recoil while closing on a large enemy', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    for (const gy of [7, 9, 11, 15, 17]) {
+      battle.preset = 'humans:sword'; battleTap(at(14, gy).x, at(14, gy).y);
+    }
+    battle.preset = 'humans:big_sword'; battleTap(at(26, 13).x, at(26, 13).y);
+    const target = enemies[0];
+    target.hp = target.maxHp = 1_000_000;
+    target.trapped = true;
+    startBattleFight();
+    const previous = settlers.map(s => ({ x: s.x, y: s.y }));
+    let reversals = 0;
+    for (let frame = 0; frame < 60 * 18 && battle.phase === 'fight'; frame++) {
+      update(1 / 60);
+      settlers.forEach((unit, i) => {
+        const vx = unit.x - previous[i].x, vy = unit.y - previous[i].y;
+        const progress = vx * (target.x - unit.x) + vy * (target.y - unit.y);
+        if (progress < -0.5) reversals++;
+        previous[i] = { x: unit.x, y: unit.y };
+      });
+    }
+    return { reversals, assigned: settlers.filter(unit => unit.fightTarget === target).length };
+  });
+  expect(movement.assigned).toBe(5);
+  expect(movement.reversals).toBe(0);
+});
+
+test('melee fighters do not recoil when paths are replanned toward moving enemies', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    for (const gy of [11, 12, 13, 14, 15]) {
+      battle.preset = 'humans:sword'; battleTap(at(14, gy).x, at(14, gy).y);
+      battle.preset = 'humans:sword'; battleTap(at(20, gy).x, at(20, gy).y);
+    }
+    for (const unit of [...settlers, ...enemies]) unit.hp = unit.maxHp = 1_000_000;
+    startBattleFight();
+    const previous = settlers.map(s => ({ x: s.x, y: s.y, dx: 0, dy: 0 }));
+    let reversals = 0, sharpTurns = 0;
+    for (let frame = 0; frame < 60 * 15 && battle.phase === 'fight'; frame++) {
+      update(1 / 60);
+      settlers.forEach((unit, i) => {
+        const old = previous[i], dx = unit.x - old.x, dy = unit.y - old.y;
+        const step = Math.hypot(dx, dy);
+        const target = unit.fightTarget;
+        if (target && dx * (target.x - unit.x) + dy * (target.y - unit.y) < -0.5) reversals++;
+        if (step > 0.1 && Math.hypot(old.dx, old.dy) > 0.1 && dx * old.dx + dy * old.dy < -step * Math.hypot(old.dx, old.dy) * 0.5) {
+          sharpTurns++;
+        }
+        previous[i] = { x: unit.x, y: unit.y, dx, dy };
+      });
+    }
+    return { reversals, sharpTurns, assigned: settlers.filter(unit => unit.fightTarget && enemies.includes(unit.fightTarget)).length };
+  });
+  expect(movement.assigned).toBe(5);
+  expect(movement.reversals).toBe(0);
+  expect(movement.sharpTurns).toBe(0);
+});
+
 test('the pause menu leaves battle mode and the Endless map size comes back (#38, #145)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => { mapSettings = { cols: 60, rows: 60 }; showMenuScreen('home'); });

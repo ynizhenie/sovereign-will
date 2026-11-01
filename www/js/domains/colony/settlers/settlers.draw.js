@@ -170,7 +170,7 @@ export function humanPunch(unit) {
 // Whose kind of body: an enemy's by its kind, a settler's by its type's faction (#306: in Battles the undead's
 // and demons' were drawn as humans; a zombie raised is a zombie), else the colony's
 export function unitKin(unit) {
-  if (unit.enemyKey) return unit.enemyKey.startsWith('demon_') ? 'demons' : unit.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
+  if (unit.enemyKey) return unit.enemyKey.startsWith('demon_') || unit.enemyKey.startsWith('demons_') ? 'demons' : unit.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
   const own = Object.values(GAME_CONFIG.factions).find(f => (f.units || []).includes(unit.type));
   return own ? own.id : game.gameMode === 'battle' ? 'humans' : getPlayerFaction().id;
 }

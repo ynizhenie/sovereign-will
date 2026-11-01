@@ -239,7 +239,11 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     } else if (!shoots) {
       // in melee each takes a side of its own round the enemy (#208)
       const slot = tick.meleeOn.get(targetEnemy) || 0;
-      const around = Math.atan2(s.y - targetEnemy.y, s.x - targetEnemy.x) + (slot % 2 ? 1 : -1) * Math.ceil(slot / 2) * 0.9;
+      if (s.meleeApproachTarget !== targetEnemy) {
+        s.meleeApproachTarget = targetEnemy;
+        s.meleeApproachAngle = Math.atan2(s.y - targetEnemy.y, s.x - targetEnemy.x);
+      }
+      const around = s.meleeApproachAngle + (slot % 2 ? 1 : -1) * Math.ceil(slot / 2) * 0.9;
       const near = dist < approach * 3;
       moveEntityTowards(s, near ? targetEnemy.x + Math.cos(around) * approach * 0.8 : targetEnemy.x, near ? targetEnemy.y + Math.sin(around) * approach * 0.8 : targetEnemy.y, s.speed, false, dt);
     } else {

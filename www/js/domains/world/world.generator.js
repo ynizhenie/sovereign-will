@@ -136,7 +136,8 @@ export function placeOreSpawners(kind, count, nearStart = null) {
   game.naturalRocks.forEach(r => { if (r.oreSpawner) keepAway(r); });
   let reach = null;
   for (let n = 0; n < count; n++) {
-    if (!big || !reach) { resetTileIndex(); reach = getSettlerReach({ x: townHall.x, y: townHall.y }); }
+    // Generated placement is the same in Editor and Endless, irrespective of Endless territory bounds.
+    if (!big || !reach) { resetTileIndex(); reach = getSettlerReach({ x: townHall.x, y: townHall.y }, true); }
     const walk = reach;
     // (a big map's after the first: room round it is enough, it needn't be walked to from the hall yet)
     const exposed = !big || n === 0 ? s => isOreSpotExposed(s, walk) : null;
@@ -358,10 +359,38 @@ export function* generateMapSteps() {
   }
 
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
+  placeStartingBoars();
   markDesertUnderRocks();
   yield 0.85;
   placeBeaches();
   placeAppleTrees();
+}
+
+export function startingBoarCount() {
+  const seed = String(game.worldSeed && game.worldSeed.value || 'default-world-seed');
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619) >>> 0;
+  return 3 + hash % 3;
+}
+
+function placeStartingBoars() {
+  const target = startingBoarCount(), half = GAME_CONFIG.territory.startTiles / 2;
+  const inStart = boar => {
+    const gx = Math.floor(boar.x / TILE_SIZE), gy = Math.floor(boar.y / TILE_SIZE);
+    const hall = getGridPos(townHall.x, townHall.y);
+    return gx >= hall.gx - half && gx < hall.gx + half && gy >= hall.gy - half && gy < hall.gy + half;
+  };
+  const local = game.boars.filter(boar => !boar.isCarcass && inStart(boar));
+  local.forEach(boar => { boar.inBase = true; });
+  local.sort((a, b) => Math.hypot(a.x - townHall.x, a.y - townHall.y) - Math.hypot(b.x - townHall.x, b.y - townHall.y));
+  for (const extra of local.slice(target)) game.boars.splice(game.boars.indexOf(extra), 1);
+  while (local.length < target) {
+    const before = game.boars.length;
+    spawnResource('boar', townHall.x, townHall.y, GAME_CONFIG.territory.startTiles * TILE_SIZE);
+    if (game.boars.length === before) break;
+    game.boars[game.boars.length - 1].inBase = true;
+    local.push(game.boars[game.boars.length - 1]);
+  }
 }
 
 // Lakes: a few blobs of water with wavy shores, apart from each other and away from the town hall

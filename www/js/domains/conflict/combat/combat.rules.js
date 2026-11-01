@@ -218,7 +218,12 @@ export function addCorpse(unit, side, kind) {
   const big = isBigBody(unit);
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
-  game.corpses.push({ x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false, look: unit.look, pet: def.pet, stuck: unit.stuck }); // (its look, #306; its arrows stay in it, #326)
+  game.corpses.push({
+    x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
+    look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
+    weapon: unit.weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet,
+    pet: def.pet, stuck: unit.stuck
+  }); // (its look and body type, #306; its arrows stay in it, #326)
 }
 
 export function updateCorpses(dt) {

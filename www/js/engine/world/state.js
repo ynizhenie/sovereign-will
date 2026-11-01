@@ -82,7 +82,7 @@ export const game = {
   foodMix: {},          // how much of stock.food is each GAME_CONFIG.foodKinds kind, see addFood()
   bloodSplats: [],      // { x, y, r, age, kind } blood on the ground (bleed) and footprints (trackFootprints)
   dung: [],             // { x, y, age, by, byLeft } see relieve()
-  corpses: [],          // { x, y, radius, side: 'settler' | 'enemy', kind, age, pet }, see addCorpse()
+  corpses: [],          // { x, y, radius, side, kind, age, look, type, enemyKey, bigBody, pet }, see addCorpse()
   waveSize: 0,          // how many the last wave brought (morale: a wave that's lost most of them runs, #207)
   waveRouted: false,
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers

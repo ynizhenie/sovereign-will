@@ -13,7 +13,7 @@ import { SHADOWS, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, draw
 const KINDS = {
   stump: { variants: 1, box: [-6, -5, 6, 5], paint: drawStumpArt },
   tree: { variants: 48, box: [-22, -22, 22, 16], paint: drawTreeArt },
-  cactus: { variants: 4, box: [-17, -16, 17, 16], paint: drawCactusArt },
+  cactus: { variants: 2, box: [-17, -16, 17, 16], paint: drawCactusArt },
   boulder: { variants: 24, box: [-15, -14, 15, 14], paint: drawBoulderArt },
   bush: { variants: 10, box: [-15, -14, 15, 14], paint: drawBushArt },
   grass: { variants: 24, box: [-13, -19, 13, 10], paint: drawGrassArt },
@@ -26,13 +26,14 @@ const MAX_SPRITES = 1500;
 const sprites = new Map();
 // a variant's own hash: all its bits, as a real tile's (the art reads several of them)
 const hashOf = (kind, v) => tileVariantHash(v * 7919 + kind.length, v * 104729 + 13);
+export const spriteVariantOf = (kind, o) => tileVariantHash(Math.round(o.x), Math.round(o.y)) % (kind === 'cactus' ? 2 : KINDS[kind].variants);
 
 // the picture's resolution: the screen's, to the next power of two (a little sharper than needed rather than blurred)
 const resOf = () => Math.min(4, Math.max(0.25, 2 ** Math.ceil(Math.log2(Math.max(getViewScale(), 0.01)))));
 
 /** @param {string} kind @param {any} o @param {number} res */
 function spriteOf(kind, o, res) {
-  const k = KINDS[kind], v = tileVariantHash(Math.round(o.x), Math.round(o.y)) % k.variants;
+  const k = KINDS[kind], v = spriteVariantOf(kind, o);
   const apple = kind === 'tree' ? (o.apple ? (o.applesReady ? 2 : 1) : 0) : 0;
   const key = `${kind}|${v}|${apple}|${res}`;
   let c = sprites.get(key);
@@ -42,8 +43,8 @@ function spriteOf(kind, o, res) {
   c.width = Math.ceil((x1 - x0) * res) + 2; c.height = Math.ceil((y1 - y0) * res) + 2;
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
   g.setTransform(res, 0, 0, res, 1 - x0 * res, 1 - y0 * res);
-  paintOn(g); paintVariant(hashOf(kind, v), false, kind === 'grass' ? 0 : null);
-  try { k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady }); } finally { paintVariant(null); paintOn(null); }
+  paintOn(g);
+  try { paintVariant(kind === 'cactus' ? v : hashOf(kind, v), false, kind === 'grass' ? 0 : null); k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady }); } finally { paintVariant(null); paintOn(null); }
   sprites.set(key, c);
   if (sprites.size > MAX_SPRITES) sprites.delete(/** @type {string} */ (sprites.keys().next().value));
   return c;

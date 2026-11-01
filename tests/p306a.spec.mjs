@@ -22,6 +22,39 @@ test('Battles: the undead and demons look their own, combat is always automatic,
   expect(errors).toEqual([]);
 });
 
+test('generated enemy battle presets keep their faction visual when armed', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  const result = await page.evaluate(() => {
+    const key = presetEnemyKey('demons', 'spear');
+    const enemy = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, key);
+    return { key, factionVisual: unitKin(enemy), weapon: enemy.weapon };
+  });
+  expect(result.key).toMatch(/^demons_/);
+  expect(result).toMatchObject({ factionVisual: 'demons', weapon: 'spear' });
+  expect(errors).toEqual([]);
+});
+
+test('enemy fighters get the same dark uniform shading as armed player soldiers', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  const result = await page.evaluate(() => {
+    const fighter = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, 'raider');
+    const medic = createConfiguredEnemy({ x: townHall.x + 160, y: townHall.y }, 'raider_medic');
+    return {
+      fighter: getEnemyColor(fighter),
+      fighterExpected: shadeColor(getEnemyColor(null), -0.28),
+      medic: getEnemyColor(medic),
+      medicBase: getEnemyColor(null)
+    };
+  });
+  expect(result.fighter).toBe(result.fighterExpected);
+  expect(result.medic).toBe(result.medicBase);
+  expect(errors).toEqual([]);
+});
+
 test('cards: a sword from the start, arrows only with the bow; wheat ripe in 45 s; the smithy its own icon; new stories in every language (#306, 10, 11, 6, 5)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
