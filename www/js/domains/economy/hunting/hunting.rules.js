@@ -2,8 +2,9 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
-import { getFrontier, hasTerritory, inTerritory, spawnResource } from '../../world/index.js';
+import { getFrontier, getTerritoryBox, hasTerritory, inTerritory, spawnResource, startingBoarCount } from '../../world/index.js';
 import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../../engine/movement/index.js';
+import { isSpawnSpotFree } from '../building/index.js';
 import { bleed } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
@@ -94,6 +95,17 @@ function keepInZone(boar, x, y) {
 
 // A new boar every 25 s while there are fewer than BOAR_LIMIT
 export function tickBoarRespawn(dt) {
+  if (hasTerritory()) {
+    const living = game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y));
+    living.forEach(boar => { boar.inBase = true; });
+    if (living.length >= startingBoarCount()) {
+      game.boarRespawnTimer = 25;
+      return;
+    }
+    game.boarRespawnTimer -= dt;
+    if (game.boarRespawnTimer <= 0) game.boarRespawnTimer = spawnTerritoryBoar() ? 25 : 5;
+    return;
+  }
   if (game.boars.length < BOAR_LIMIT) {
     game.boarRespawnTimer -= dt;
     if (game.boarRespawnTimer <= 0) {
@@ -103,6 +115,24 @@ export function tickBoarRespawn(dt) {
   } else {
     game.boarRespawnTimer = 25;
   }
+}
+
+function spawnTerritoryBoar() {
+  const box = getTerritoryBox();
+  const gx0 = Math.max(BORDER_MARGIN, Math.ceil(box.x0 / TILE_SIZE));
+  const gy0 = Math.max(BORDER_MARGIN, Math.ceil(box.y0 / TILE_SIZE));
+  const gx1 = Math.min(game.COLS - BORDER_MARGIN, Math.floor(box.x1 / TILE_SIZE));
+  const gy1 = Math.min(game.ROWS - BORDER_MARGIN, Math.floor(box.y1 / TILE_SIZE));
+  const hp = GAME_CONFIG.mapResources.boar.hp;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const gx = gx0 + Math.floor(rand() * Math.max(1, gx1 - gx0));
+    const gy = gy0 + Math.floor(rand() * Math.max(1, gy1 - gy0));
+    const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+    if (!inTerritory(x, y) || Math.hypot(x - townHall.x, y - townHall.y) <= 140 || !isSpawnSpotFree(x, y)) continue;
+    game.boars.push({ x, y, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y, inBase: true });
+    return true;
+  }
+  return false;
 }
 
 // Boars: hide in the grass, run from settlers that come near, wander. (#299) One past the frontier, far from

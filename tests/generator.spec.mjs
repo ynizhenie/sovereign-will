@@ -105,6 +105,64 @@ test('the editor shares Endless\' seed and the generator gear: a generated map i
   expect(custom).toEqual(['128', 128]);
 });
 
+test('editor and Endless generate the same seeded terrain and starting boars', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    const make = (mode, size) => {
+      game.gameMode = mode;
+      game.mapSettings = { cols: size, rows: size };
+      window.sim.start('editor-endless-map-parity');
+      const lists = [naturalRocks, waterTiles, desertTiles, trees, cacti, boulders, ironOres, coalOres, berryBushes, grassList, sticks, pebbles, boars];
+      return { lists: lists.map(list => list.map(o => ({ ...o }))), rng: game.worldSeed.getState() };
+    };
+    return [40, 128].map(size => {
+      const editorMap = make('editor', size);
+      const endlessMap = make('endless', size);
+      return {
+        size, sameMap: JSON.stringify(editorMap) === JSON.stringify(endlessMap),
+        startingBoars: endlessMap.lists.at(-1).filter(boar => boar.inBase).length
+      };
+    });
+  });
+  expect(result.map(r => r.size)).toEqual([40, 128]);
+  expect(result.every(r => r.sameMap)).toBe(true);
+  expect(result[0].startingBoars).toBe(await page.evaluate(() => startingBoarCount()));
+  expect(result[1].startingBoars).toBe(await page.evaluate(() => startingBoarCount()));
+});
+
+test('an Endless respawn restores the seeded boar count inside the player territory', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('territory-boar-respawn');
+    const target = startingBoarCount();
+    game.boars = game.boars.filter(boar => !inTerritory(boar.x, boar.y));
+    for (let i = 0; i < target; i++) {
+      game.boarRespawnTimer = 0;
+      tickBoarRespawn(1 / 60);
+    }
+    const local = game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y));
+    return { target, count: local.length, marked: local.every(boar => boar.inBase) };
+  });
+  expect(result.count).toBe(result.target);
+  expect(result.marked).toBe(true);
+  expect(result.target).toBeGreaterThanOrEqual(3);
+  expect(result.target).toBeLessThanOrEqual(5);
+});
+
+test('a cactus keeps its coordinate-based orientation in sprite and direct drawing', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    const cactus = { x: 12345, y: 67890 };
+    return {
+      sprite: spriteVariantOf('cactus', cactus),
+      direct: tileVariantHash(cactus.x, cactus.y) % 2
+    };
+  });
+  expect(result.sprite).toBe(result.direct);
+});
+
 test('the continent\'s own settings: its fields, labelled; they shape a continent map; presets keep them (#326, 56)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');

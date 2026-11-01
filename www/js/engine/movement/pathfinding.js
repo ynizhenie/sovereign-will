@@ -80,10 +80,10 @@ let sharedReach = { signature: null, size: 0, byStart: new Map() };
 /** @param {Reach | undefined} r @param {number} index @param {number | null} signature @param {number} size */
 const nearTo = (r, index, signature, size) => !!r && r.signature === signature && r.steps.length === size && r.steps[index] !== -1 && r.steps[index] <= REACH_SLACK;
 
-export function getSettlerReach(settler) {
+export function getSettlerReach(settler, fullMap = false) {
   const start = getGridPos(settler.x, settler.y);
   const startIndex = start.gy * game.COLS + start.gx;
-  const signature = getTileIndex().signature;
+  const signature = (getTileIndex().signature * 31 + (fullMap ? 1 : 0)) | 0;
   const size = game.COLS * game.ROWS;
   /** @type {Reach | undefined} */
   const using = settler.reachUse, own = settler.reachCache;
@@ -106,7 +106,8 @@ export function getSettlerReach(settler) {
   } else {
     steps = new Int16Array(size).fill(-1);
   }
-  let b = reachBounds() || { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
+  let b = fullMap ? { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 }
+    : reachBounds() || { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
   if (start.gx < b.gx0 || start.gx > b.gx1 || start.gy < b.gy0 || start.gy > b.gy1) b = { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
   const queue = [startIndex];
   if (startIndex >= 0 && startIndex < steps.length) steps[startIndex] = 0;

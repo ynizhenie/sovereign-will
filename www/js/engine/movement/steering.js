@@ -149,6 +149,11 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
     searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
+    if (!isEnemy && entity.path.length > 1) {
+      // A* includes the current tile center, which can pull a settler backwards after a replan.
+      const start = getGridPos(entity.x, entity.y), first = getGridPos(entity.path[0].x, entity.path[0].y);
+      if (start.gx === first.gx && start.gy === first.gy) entity.path.shift();
+    }
     entity.isBlockedPath = res.isBlockedPath || false;
     if (isEnemy) entity.pathViaSpikes = pathCrossesSpikes(entity); // kept while the path is dropped and retried
     entity.pathTarget = { x: targetX, y: targetY };

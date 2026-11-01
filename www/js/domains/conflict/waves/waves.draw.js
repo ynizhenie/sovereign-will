@@ -6,7 +6,7 @@ import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
@@ -119,7 +119,7 @@ export function drawEnemy(en) {
     const simple = simpleUnit(); // (#306) zoomed out: its shape and colours, no gear
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
     // (#251); their skin their faction's
-    const kin = en.enemyKey.startsWith('demon_') ? 'demons' : en.enemyKey.startsWith('undead_') ? 'undead' : 'humans';
+    const kin = unitKin(en);
     // (#298) in layers by the way it faces, as a settler: facing away, its weapon, shield and torch behind its
     // body and its quiver in front; facing us, the other way round
     const handBack = heldBehind(en), backBack = backBehind(en);
