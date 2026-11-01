@@ -25,6 +25,8 @@
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
  * @property {number} [grumbledAt]   the tick it last said it wants to sleep
  * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
+ * @property {number} [moveVx]       eased horizontal movement step
+ * @property {number} [moveVy]       eased vertical movement step
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
@@ -135,8 +137,11 @@
  * @property {number} [petHunger]   a pet's hunger (#314): 1 and more, hungry
  * @property {boolean} [petHungry]
  * @property {number} [petSleep]    a pet's sleep, seconds left
+ * @property {boolean} [petFollowing] a pet closing the last distance to its keeper
  * @property {number} [ghostGone]   a ghost gone after flying into an enemy, seconds till it's back
  * @property {any} [escort]          the necromancer a ghost goes to a fight with
+ * @property {Point} [ghostPanicFrom] where an enemy ghost touched it
+ * @property {boolean} [fled]        gone without a corpse or loot
  * @property {any} [feeding]         the pet a settler is feeding
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {boolean} [crumbled]
@@ -154,6 +159,10 @@
  * @property {boolean} [nameGenerated]
  * @property {Object} [struckBy]   (#326) the last settler that hit it, and when (struckTick): in the fog it turns on that one
  * @property {number} [struckTick]
+ * @property {number} [moveVx]       eased horizontal movement step
+ * @property {number} [moveVy]       eased vertical movement step
+ * @property {Enemy | null} [escort] a ghost's necromancer
+ * @property {boolean} [petFollowing] a pet closing the last distance to its fighter
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)

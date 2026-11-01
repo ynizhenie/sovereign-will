@@ -232,8 +232,12 @@ export function enemyNecromancy(en, necro, dt) {
   };
   if (corpse && best <= necro.raiseReach) return raise();
 
-  const patient = game.enemies.filter(other => other !== en && other.hp > 0 && other.hp < other.maxHp && dist(other) < necro.range / 2)
-    .reduce((nearest, other) => !nearest || dist(other) < dist(nearest) ? other : nearest, null);
+  /** @type {import('../../../engine/world/types.js').Enemy | null} */
+  let patient = null;
+  for (const other of game.enemies) {
+    if (other !== en && other.hp > 0 && other.hp < other.maxHp && dist(other) < necro.range / 2 &&
+      (!patient || dist(other) < dist(patient))) patient = other;
+  }
   if (patient) {
     if (dist(patient) > necro.healRange) moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
     else {

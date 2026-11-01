@@ -18,6 +18,12 @@ const PITCH = { normal: [210, false], big: [120, false], imp: [380, false], demo
 let lastSpoke = -Infinity;
 let clock = 1000; // seconds of game played (tickVoices): the gaps are in game time, not stopped by a pause
 
+function factionOf(unit, fallback) {
+  const factions = Object.values(GAME_CONFIG.factions);
+  if (unit.enemyKey) return factions.find(f => (f.enemies || []).includes(unit.enemyKey))?.id || fallback;
+  return factions.find(f => (f.units || []).includes(unit.type))?.id || fallback;
+}
+
 // The voice of a unit: by its kind, an enemy's by its look
 function voiceOf(unit) {
   const kind = unit.enemyKey ? (unit.type === 'big' || unit.bigBody ? (unit.enemyKey.startsWith('undead_') ? 'big_zombie' : unit.enemyKey.startsWith('demon_') ? 'demon' : 'big')
@@ -32,7 +38,7 @@ export function speak(unit, faction, event, urgent = false) {
   const now = clock;
   if (now - lastSpoke < (urgent ? VOICE.globalGap / 2 : VOICE.globalGap)) return false;
   if (now - (unit.spokeAt || -Infinity) < VOICE.ownGap) return false;
-  const list = phrasesFor(unit, faction, event);
+  const list = phrasesFor(unit, factionOf(unit, faction), event);
   if (!list.length) return false;
   return voice(unit, list[Math.floor(Math.random() * list.length)]);
 }
