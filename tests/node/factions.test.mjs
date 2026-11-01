@@ -20,6 +20,14 @@ test('units are drawn in their side\'s colour; waves are the enemy faction\'s ki
   expect(r.enemies).toBeGreaterThan(0);
 });
 
+test('demon units have the same base health as comparable units from other factions', () => {
+  expect({
+    imp: GAME_CONFIG.settlerTypes.imp.hp,
+    demon: GAME_CONFIG.settlerTypes.demon.hp,
+    beast: GAME_CONFIG.settlerTypes.beast.hp
+  }).toEqual({ imp: 100, demon: 250, beast: 70 });
+});
+
 test('a settler type can be limited to some kinds of orders (#133)', async () => {
   const r = await (() => {
     window.sim.start('orders-limited');

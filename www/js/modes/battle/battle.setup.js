@@ -6,7 +6,7 @@
 // out. Green units are settlers and red ones enemies, driven by the usual AI.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { camera, clampCamera, setZoom } from '../../engine/platform/index.js';
+import { camera, clampCamera, loadData, saveData, setZoom } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
 import { canUseShield, isRangedWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
@@ -50,6 +50,32 @@ export const battle = {
   savedDifficulty: null, // the Endless choice, back when the battle's left
   theme: 'arena'        // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
 };
+
+const BATTLE_DEFAULTS = {
+  category: 'units', preset: 'humans:sword', building: 'wall_wood',
+  armor: false, shield: false, helmet: false, big: false, banner: false, torch: false,
+  field: 'glade', time: 'day', weather: 'clear', difficulty: 'normal', theme: 'arena'
+};
+
+export function saveBattleChoices() {
+  const { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme } = battle;
+  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme });
+}
+
+export function restoreBattleChoices() {
+  const saved = loadData('battle-choices', null);
+  if (!saved || typeof saved !== 'object') return;
+  if (saved.category === 'units' || saved.category === 'buildings') battle.category = saved.category;
+  if (typeof saved.preset === 'string' && getBattlePreset(saved.preset)) battle.preset = saved.preset;
+  if (typeof saved.building === 'string' && GAME_CONFIG.buildings[saved.building]) battle.building = saved.building;
+  if ([false, 'leather', 'iron'].includes(saved.armor)) battle.armor = saved.armor;
+  for (const key of ['shield', 'helmet', 'big', 'banner', 'torch']) if (typeof saved[key] === 'boolean') battle[key] = saved[key];
+  if (saved.field === 'glade' || saved.field === 'desert') battle.field = saved.field;
+  if (['morning', 'day', 'evening', 'night'].includes(saved.time)) battle.time = saved.time;
+  if (['clear', 'rain', 'fog', 'storm'].includes(saved.weather)) battle.weather = saved.weather;
+  if (saved.difficulty === 'normal' || saved.difficulty === 'hard') battle.difficulty = saved.difficulty;
+  if (saved.theme === 'arena' || GAME_CONFIG.factions[saved.theme]?.ready) battle.theme = saved.theme;
+}
 
 // (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
 export function battleArmor(armor) {
@@ -213,6 +239,7 @@ export function setBattleDifficulty(level) {
   battle.difficulty = level;
   game.gameDifficulty = level;
   if (battle.phase === 'setup') resetBattleUnits();
+  saveBattleChoices();
 }
 
 // The ground the battle is fought on: the line-up stays, the field is made again
@@ -221,6 +248,7 @@ export function setBattleField(field) {
   battle.field = field;
   setUpBattleField();
   resetBattleUnits();
+  saveBattleChoices();
 }
 
 // (#326) The battle's time of day or weather picked: its look at once, the line-up made again (a torch lit or not)
@@ -229,6 +257,7 @@ export function setBattleLook(key, value) {
   battle[key] = value;
   applyBattleLook();
   resetBattleUnits();
+  saveBattleChoices();
 }
 
 // Take away everything placed on one side

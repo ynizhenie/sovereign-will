@@ -44,13 +44,13 @@ export const unitsConfig = {
     big_zombie: { id: 'big_zombie', icon: 'big_zombie', big: true, hp: 250, speed: 0.6, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.8, carryLoads: 2, hireCost: { bones: 20, rot: 8 }, upgradeCost: { bones: 12, rot: 5 } },
     // the demons'. eatsCorpses: heals by eating a corpse (eatSeconds) when not fighting.
     // fireArrows: its arrows set what they hit burning (see GAME_CONFIG.burning)
-    imp: { id: 'imp', icon: 'imp', eatsCorpses: true, hp: 90, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
-    demon: { id: 'demon', icon: 'demon', big: true, eatsCorpses: true, hp: 260, speed: 0.75, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.9, carryLoads: 2, hireCost: { food: 30, stone: 10 }, upgradeCost: { food: 15, stone: 10 } },
+    imp: { id: 'imp', icon: 'imp', eatsCorpses: true, hp: 100, speed: 1.1, radius: 11, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 1, hireCost: { food: 15 } },
+    demon: { id: 'demon', icon: 'demon', big: true, eatsCorpses: true, hp: 250, speed: 0.75, radius: 13, visualRadius: 18, population: 2, damageMultiplier: 1.9, carryLoads: 2, hireCost: { food: 30, stone: 10 }, upgradeCost: { food: 15, stone: 10 } },
     // (#314) each faction's pet (GAME_CONFIG.pets): pet: which; bite: how it fights (a weapon's combat
     // stats); orders: what it takes when possessed
     dog: { id: 'dog', icon: 'dog', pet: 'dog', hp: 70, speed: 1.35, radius: 9, visualRadius: 10, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { food: 20 },
       bite: { damage: 7, range: 24, cooldown: 0.45, approach: 18, tentReach: 22 }, orders: ['attack'] },
-    beast: { id: 'beast', icon: 'beast', pet: 'beast', hp: 90, speed: 1.3, radius: 10, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { food: 20, stone: 5 },
+    beast: { id: 'beast', icon: 'beast', pet: 'beast', hp: 70, speed: 1.3, radius: 10, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { food: 20, stone: 5 },
       bite: { damage: 9, range: 24, cooldown: 0.5, approach: 18, tentReach: 22 }, orders: ['attack', 'devour'] },
     ghost: { id: 'ghost', icon: 'ghost', pet: 'ghost', hp: 50, speed: 1.6, radius: 8, visualRadius: 10, population: 0, damageMultiplier: 1, carryLoads: 0, hireCost: { souls: 1 },
       orders: ['dive'] } // (#326: takes no room in the colony; costs a soul, needs a grave, and at most ghost.limit.base + one a grave)

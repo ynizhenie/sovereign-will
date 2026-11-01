@@ -16,15 +16,19 @@ test('no joystick, no keys to steer, no eye button: possessing is in the selecte
     const s = settlers[0];
     selectedSettler = s; updateUI();
     document.getElementById('btn-possess').click();
-    const possessed = s.isPossessed;
+    const possessed = {
+      active: s.isPossessed,
+      cardClosed: !document.getElementById('selected-bar').classList.contains('has-settler'),
+      leaveButtonVisible: document.getElementById('btn-leave-unit').style.display !== 'none'
+    };
     const y0 = s.y;
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }));
     for (let f = 0; f < 30; f++) update(1 / 60);
     window.dispatchEvent(new KeyboardEvent('keyup', { key: 's' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
     const still = s.isPossessed && settlers.filter(o => o.isPossessed).length === 1;
-    document.getElementById('btn-possess').click();
+    document.getElementById('btn-leave-unit').click();
     return { possessed, keysDidNothing: Math.abs(s.y - y0) < 1, still, left: !s.isPossessed };
   });
-  expect(r).toEqual({ possessed: true, keysDidNothing: true, still: true, left: true });
+  expect(r).toEqual({ possessed: { active: true, cardClosed: true, leaveButtonVisible: true }, keysDidNothing: true, still: true, left: true });
 });
