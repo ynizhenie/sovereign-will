@@ -71,12 +71,12 @@ function renderContinentFields(container) {
 
 // A field of a share, shown and typed as a percent (the value kept as a share, 0..max)
 function percentField(label, get, set, max, step = 1) {
-  return labelledNumber(label, Math.round(get() * 1000) / 10, raw => { const n = Number(raw); if (!Number.isFinite(n)) return; set(Math.max(0, Math.min(max, n / 100))); renderGeneratorFields(); }, 0, Math.round(max * 100), step, '%');
+  return labelledNumber(label, Math.round(get() * 1000) / 10, raw => { const n = Number(raw); if (!Number.isFinite(n)) return; set(Math.max(0, Math.min(max, n / 100))); rememberSettings(); renderGeneratorFields(); }, 0, Math.round(max * 100), step, '%');
 }
 
 // A field of a whole number
 function numberField(label, get, set, max) {
-  return labelledNumber(label, get(), raw => { const n = Number(raw); if (!Number.isFinite(n)) return; set(Math.max(0, Math.min(max, Math.round(n)))); renderGeneratorFields(); }, 0, max, 1, '');
+  return labelledNumber(label, get(), raw => { const n = Number(raw); if (!Number.isFinite(n)) return; set(Math.max(0, Math.min(max, Math.round(n)))); rememberSettings(); renderGeneratorFields(); }, 0, max, 1, '');
 }
 
 function labelledNumber(label, value, onChange, min, max, step, unit) {
@@ -113,6 +113,7 @@ export function generatorField(key) {
       const clean = cleanValue(input.value);
       if (clean === null) { input.value = current; return; }
       onChange(clean);
+      rememberSettings();
       renderGeneratorFields(); // shows the value as kept (e.g. min raised to max)
     });
     return input;
@@ -143,6 +144,10 @@ export function currentSettings() {
   return JSON.parse(JSON.stringify({ map: GAME_CONFIG.map, continent: continentSettings() }));
 }
 
+function rememberSettings() {
+  saveData('generator-settings', currentSettings());
+}
+
 export function applyMapSettings(settings) {
   const isBoth = !!(settings && settings.map && settings.continent);
   const map = isBoth ? settings.map : settings, continent = isBoth ? settings.continent : null;
@@ -162,7 +167,7 @@ export function applyMapSettings(settings) {
 export function renderPresetList() {
   renderItemList(document.getElementById('preset-list'), Object.keys(loadPresets()).map(name => ({ id: name, label: name })), {
     attr: 'preset',
-    onPick: name => applyMapSettings(loadPresets()[name]),
+    onPick: name => { applyMapSettings(loadPresets()[name]); rememberSettings(); },
     onDelete: name => { const presets = loadPresets(); delete presets[name]; savePresets(presets); renderPresetList(); }
   });
 }
@@ -175,9 +180,14 @@ export function openGenerator(from) {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessGenerator() {
+  const saved = loadData('generator-settings', null);
+  if (saved && typeof saved === 'object' && saved.map && saved.continent) applyMapSettings(saved);
   onTap(document.getElementById('open-generator'), () => openGenerator('endless'));
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
-  onTap(document.getElementById('preset-standard'), () => applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS }));
+  onTap(document.getElementById('preset-standard'), () => {
+    applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS });
+    rememberSettings();
+  });
   onTap(document.getElementById('preset-save'), () => {
     const input = document.getElementById('preset-name');
     const name = input.value.trim();

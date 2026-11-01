@@ -193,48 +193,70 @@ export function tickLanterns(dt) {
   if (game.soulFx.length) game.soulFx = game.soulFx.filter(fx => fx.t < fx.dur);
 }
 
-// An enemy necromancer: heals the wounded enemies around it as it goes; with no settler close by
-// it walks to a corpse within range and raises it into a zombie (a big corpse: a big zombie), as many
-// times as it has raises. True while it's busy raising (it does nothing else then).
+// An enemy necromancer heals its allies and raises corpses, then returns to an enemy grave to recharge.
 export function enemyNecromancy(en, necro, dt) {
   if (en.raisesLeft === undefined) en.raisesLeft = necro.raises;
-  for (const other of game.enemies) {
-    if (other !== en && other.hp < other.maxHp && Math.hypot(other.x - en.x, other.y - en.y) < necro.healRange) {
-      other.hp = Math.min(other.maxHp, other.hp + necro.healPerSecond * dt);
+  const dist = other => Math.hypot(other.x - en.x, other.y - en.y);
+  const held = game.enemies.filter(zombie => zombie.raisedBy === en && zombie.temporary !== undefined && zombie.hp > 0).length;
+  let corpse = null, best = necro.seekRange;
+  if (en.raisesLeft > 0 && held < necro.maxZombies) {
+    const guarded = c => game.settlers.some(s => s.hp > 0 && Math.hypot(s.x - c.x, s.y - c.y) < GAME_CONFIG.morale.necroCorpseClear);
+    for (const c of game.corpses) {
+      const d = dist(c);
+      if (d < best && (!c.raisedBy || c.raisedBy === en) && (c.raisedBy === en || !guarded(c))) { best = d; corpse = c; }
     }
   }
-  // (while raising it holds on unless a settler is right on it: no stepping back and forth, #232)
-  const near = en.raiseTimer > 0 ? 40 : 60;
-  if (en.raisesLeft <= 0 || game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < near)) return false;
-  // only corpses no settler (nor the town hall) is close to: going for one by the colony's fighters it was
-  // pushed back (necromancerKeepsBack) and came again, twitching to and fro (#232)
-  const guarded = c => game.settlers.some(s => Math.hypot(s.x - c.x, s.y - c.y) < GAME_CONFIG.morale.necroCorpseClear) ||
-    Math.hypot(townHall.x - c.x, townHall.y - c.y) < townHall.radius + GAME_CONFIG.morale.necroCorpseClear;
-  let corpse = null, best = necro.range;
-  for (const c of game.corpses) {
-    const d = Math.hypot(c.x - en.x, c.y - en.y);
-    if (d < best && (!c.raisedBy || c.raisedBy === en) && (c.raisedBy === en || !guarded(c))) { best = d; corpse = c; }
-  }
-  if (!corpse) return false;
-  corpse.raisedBy = en;
-  if (best > necro.raiseReach) { // raised from a distance, as the player's (#203)
-    moveEntityTowards(en, corpse.x, corpse.y, en.speed, true, dt);
+  const raise = () => {
+    corpse.raisedBy = en;
+    if (best > necro.raiseReach) {
+      moveEntityTowards(en, corpse.x, corpse.y, en.speed, true, dt);
+      en.raiseTimer = 0;
+      return true;
+    }
+    en.working = 0.1;
+    faceTowards(en, corpse.x, corpse.y);
+    en.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 };
+    en.raiseTimer = (en.raiseTimer || 0) + dt;
+    if (en.raiseTimer >= necro.raiseSeconds) {
+      en.raiseTimer = 0;
+      en.raisesLeft--;
+      game.corpses.splice(game.corpses.indexOf(corpse), 1);
+      const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
+      zombie.fromWave = en.fromWave;
+      zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
+      zombie.raisedBy = en;
+      game.enemies.push(zombie);
+      playSound('raise', corpse);
+    }
+    return true;
+  };
+  if (corpse && best <= necro.raiseReach) return raise();
+
+  const patient = game.enemies.filter(other => other !== en && other.hp > 0 && other.hp < other.maxHp && dist(other) < necro.range / 2)
+    .reduce((nearest, other) => !nearest || dist(other) < dist(nearest) ? other : nearest, null);
+  if (patient) {
+    if (dist(patient) > necro.healRange) moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
+    else {
+      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      en.working = 0.1;
+      faceTowards(en, patient.x, patient.y);
+    }
     return true;
   }
-  faceTowards(en, corpse.x, corpse.y);
-  en.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 }; // its thread (drawRaising)
-  en.raiseTimer = (en.raiseTimer || 0) + dt;
-  if (en.raiseTimer >= necro.raiseSeconds) {
-    en.raiseTimer = 0;
-    en.raisesLeft--;
-    game.corpses.splice(game.corpses.indexOf(corpse), 1);
-    const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
-    zombie.fromWave = en.fromWave;
-    zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds; // as the player's
-    game.enemies.push(zombie);
-    playSound('raise', corpse);
+  if (corpse) return raise();
+  if (en.raisesLeft <= 0) {
+    const graves = [
+      ...game.enemyTents.filter(grave => grave.hp > 0),
+      ...game.buildings.filter(grave => grave.type === 'grave' && grave.side === 'red' && grave.hp > 0)
+    ];
+    if (!graves.length) return false;
+    const grave = graves.reduce((nearest, current) =>
+      Math.hypot(current.x - en.x, current.y - en.y) < Math.hypot(nearest.x - en.x, nearest.y - en.y) ? current : nearest);
+    if (Math.hypot(grave.x - en.x, grave.y - en.y) > 32) moveEntityTowards(en, grave.x, grave.y, en.speed, true, dt);
+    else en.raisesLeft = necro.raises;
+    return true;
   }
-  return true;
+  return false;
 }
 
 // The undead's graveyard makes a little bones and rot by itself (graves don't any more: a necromancer works

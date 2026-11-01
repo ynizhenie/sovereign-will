@@ -28,40 +28,89 @@ export function tickEnemies(dt) {
 // at it, or nobody hurt, it fights like the rest (weakly). True while it heals
 function enemyHeal(en, healer, dt) {
   if (game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 50)) return false;
+  if (en.herbs === undefined) en.herbs = healer.bagSize;
+  const battle = game.gameMode === 'battle';
   let patient = null;
   for (const other of game.enemies) {
     if (other === en || other.hp <= 0 || other.hp >= other.maxHp || Math.hypot(other.x - en.x, other.y - en.y) > healer.range) continue;
     if (!patient || other.hp / other.maxHp < patient.hp / patient.maxHp) patient = other;
   }
   if (!patient) return false;
+  if (!battle && en.herbs <= 0) {
+    const tent = game.enemyHerbStock > 0 ? findNearestEnemyTent(en) : null;
+    if (!tent) return false;
+    if (Math.hypot(tent.x - en.x, tent.y - en.y) > GAME_CONFIG.enemyTents.buildDistance) {
+      moveEntityTowards(en, tent.x, tent.y, en.speed, true, dt);
+      return true;
+    }
+    const refill = Math.min(healer.refill, game.enemyHerbStock);
+    en.herbs += refill;
+    game.enemyHerbStock -= refill;
+  }
   if (Math.hypot(patient.x - en.x, patient.y - en.y) > healer.healRange + patient.radius) {
     moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
   } else {
-    patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * dt);
+    if (battle) {
+      patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * dt);
+    } else {
+      en.healTimer = (en.healTimer || 0) + dt;
+      if (en.healTimer >= healer.healSeconds) {
+        en.healTimer = 0;
+        en.herbs--;
+        patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * healer.healSeconds);
+      }
+    }
     patient.treatedAt = game.pathTick; // (#326: green crosses rising off it)
+    en.working = 0.1;
+    en.workKind = 'heal';
     faceTowards(en, patient.x, patient.y);
   }
   return true;
 }
 
-// (#314) An enemy ghost: straight at the nearest settler not in a panic, through anything; into it, it panics
-// and the ghost is gone (no corpse, no spoils)
+// (#314) Enemy ghosts keep to their necromancers, split between them, and dive at nearby settlers.
 function enemyGhost(en) {
-  /** @type {{ x: number, y: number } | null} */
+  const g = GAME_CONFIG.pets.ghost;
+  const necros = game.enemies.filter(other => other.hp > 0 && getEnemyDef(other).necromancer);
+  if (en.escort && !necros.includes(en.escort)) en.escort = null;
+  if (!en.escort) {
+    const taken = n => game.enemies.filter(other => other !== en && getEnemyDef(other).pet === 'ghost' && other.escort === n).length;
+    let best = Infinity;
+    for (const necro of necros) {
+      if (taken(necro) >= g.carry) continue;
+      const d = Math.hypot(necro.x - en.x, necro.y - en.y);
+      if (d < best) { best = d; en.escort = necro; }
+    }
+  }
+
+  const reach = g.diveTiles * TILE_SIZE;
+  const nearby = x => game.settlers.filter(s => s.hp > 0 && !s.panic && !isUntouchable(s) && Math.hypot(s.x - x.x, s.y - x.y) <= reach);
+  const targets = [...nearby(en), ...(en.escort ? nearby(en.escort) : [])];
   let target = null, best = Infinity;
-  for (const s of game.settlers) {
-    const d = Math.hypot(s.x - en.x, s.y - en.y);
-    if (!s.panic && !isUntouchable(s) && s.hp > 0 && d < best) { best = d; target = s; }
+  for (const settler of targets) {
+    const d = Math.hypot(settler.x - en.x, settler.y - en.y);
+    if (d < best) { best = d; target = settler; }
   }
-  if (!target) {
-    if (game.gameMode === 'battle') return; // (no town hall in a battle: stay, don't fly off the field)
-    target = townHall;
+  if (target) {
+    const d = Math.hypot(target.x - en.x, target.y - en.y), step = g.diveSpeed * GAME_CONFIG.movementScale;
+    faceTowards(en, target.x, target.y);
+    if (d > Math.max(14, step)) { en.x += (target.x - en.x) / d * step; en.y += (target.y - en.y) / d * step; return; }
+    target.ghostPanicFrom = { x: en.x, y: en.y };
+    ghostScare(target, 'settler');
+    Object.assign(en, { hp: 0, crumbled: true, rewardGranted: true, fled: true });
+    return;
   }
-  const d = Math.hypot(target.x - en.x, target.y - en.y), step = GAME_CONFIG.pets.ghost.diveSpeed * GAME_CONFIG.movementScale;
-  faceTowards(en, target.x, target.y);
-  if (d > Math.max(14, step)) { en.x += (target.x - en.x) / d * step; en.y += (target.y - en.y) / d * step; return; }
-  if (target !== townHall) ghostScare(target, 'settler'); // (#326: a big one at the second ghost)
-  Object.assign(en, { hp: 0, crumbled: true, rewardGranted: true, fled: true });
+
+  const homes = en.escort ? [en.escort] : game.enemyTents.length ? game.enemyTents : en.battleEntry ? [en.battleEntry] : [townHall];
+  const home = homes[Math.abs(en.id || 0) % homes.length];
+  const t = game.pathTick / 60 + (en.id || 0);
+  const x = home.x + Math.cos(t * 0.8) * 26, y = home.y - 12 + Math.sin(t * 1.1) * 14;
+  const d = Math.hypot(x - en.x, y - en.y), step = en.speed * 0.6 * GAME_CONFIG.movementScale;
+  if (d > 0.5) {
+    faceTowards(en, x, y);
+    en.x += (x - en.x) / d * Math.min(step, d);
+    en.y += (y - en.y) / d * Math.min(step, d);
+  }
 }
 
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
@@ -70,6 +119,7 @@ export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
   clampEntityToBounds(en);
   if (getEnemyDef(en).pet === 'ghost') { enemyGhost(en); return; } // (#314)
+  if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
   if (enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
@@ -438,7 +488,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
   const attackCooldown = game.gameMode === 'battle' ? cooldown / (en.battleAttackSpeed || 1) : cooldown;
   en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(attackCooldown / dt));
-  startSwing(en, Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
+  startSwing(en, enemyDef.healer ? 0.3 : Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
   const blow = cooldown * shaken;
   if (en.type === 'big') {
     let splashRadius = enemyDef.splash.radius;

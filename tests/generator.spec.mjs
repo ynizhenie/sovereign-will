@@ -58,7 +58,9 @@ test('own presets are saved on the device, loaded and deleted (#20)', async ({ p
   await page.reload();
   await page.evaluate(() => showMenuScreen('endless'));
   await page.click('#open-generator');
-  expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(6); // a fresh page starts from Standard
+  expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(9); // the generator settings are remembered too
+  await page.click('#preset-standard');
+  expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(6);
   await page.click('#preset-list [data-preset="Rich ore"]');
   expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(9);
   await page.click('#preset-list [data-delete-preset="Rich ore"]');

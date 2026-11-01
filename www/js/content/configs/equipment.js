@@ -25,7 +25,7 @@ export const equipmentConfig = {
       // guard themselves within guardTiles), and arms one with what lies by the corpse (within armReach px); it goes
       // for a corpse up to seekRange px off
       necromancer: { raises: 3, maxZombies: 3, range: 400, seekRange: 900, commandTiles: 10, leashTiles: 4, guardTiles: 3, armReach: 45,
-        raiseReach: 110, raiseSeconds: 1.5, healRange: 60, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
+        raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
   },
 
   // family: club / sword / spear / bow / crossbow — how it's drawn and used (bows and crossbows shoot

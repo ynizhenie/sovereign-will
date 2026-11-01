@@ -910,6 +910,7 @@ export const enLanguage = {
       'activity.eatCorpse': 'Eating a corpse',
       'activity.healAtTent': 'Healing',
       'activity.treatWounded': 'Treating the wounded',
+      'activity.medicKeepsBack': 'Following the fighters',
       'activity.necromancy': 'Necromancy',
       'activity.followMaster': 'Follows its master',
       'activity.holdPost': 'On guard',

@@ -25,12 +25,17 @@ export function startBattleFight() {
   renderBattlePanel();
 }
 
+function activeBattleUnits(units) {
+  return units.filter(unit => unit.hp > 0 && !(unit.ghostly && unit.ghostGone > 0));
+}
+
 // Called every update in battle mode: the fight ends when a side has nobody left
 export function updateBattle(dt) {
   updateBattleTop();
   if (battle.phase === 'fight') {
-    if (game.settlers.length === 0 || game.enemies.length === 0) {
-      battle.winner = game.settlers.length > 0 ? 'green' : game.enemies.length > 0 ? 'red' : 'draw';
+    const settlers = activeBattleUnits(game.settlers), enemies = activeBattleUnits(game.enemies);
+    if (settlers.length === 0 || enemies.length === 0) {
+      battle.winner = settlers.length > 0 ? 'green' : enemies.length > 0 ? 'red' : 'draw';
       battle.phase = 'result';
       battle.resultTimer = BATTLE_RESULT_SECONDS;
     }
