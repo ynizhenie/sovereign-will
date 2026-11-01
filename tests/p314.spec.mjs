@@ -240,7 +240,7 @@ test('enemy ghosts split between enemy necromancers and stay with them until set
     const first = createConfiguredEnemy({ x: townHall.x - 400, y }, 'undead_necromancer');
     const second = createConfiguredEnemy({ x: townHall.x + 400, y }, 'undead_necromancer');
     const ghosts = Array.from({ length: 4 }, (_, i) =>
-      createConfiguredEnemy({ x: first.x + 20 + i, y: y + 20 }, 'undead_ghost'));
+      createConfiguredEnemy({ x: i < 3 ? first.x + 20 + i : second.x + 20, y: y + 20 }, 'undead_ghost'));
     enemies = [first, second, ...ghosts];
     window.sim.run(1);
     return {
