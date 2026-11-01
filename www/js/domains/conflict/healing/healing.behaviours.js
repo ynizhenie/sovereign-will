@@ -79,10 +79,11 @@ export function healAtTent(s, tick) {
 // from its bag, filled at a storage. With the wave beaten and a tent (grave) to heal at for free, it keeps
 // its herbs (#199)
 export function treatWounded(s, tick) {
-  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || !tick.isWaveActive) return false;
-  if (tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
+  const battle = game.gameMode === 'battle';
+  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || (!tick.isWaveActive && !battle)) return false;
+  if (!battle && tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
   const medic = GAME_CONFIG.medic;
-  const unlimitedHerbs = game.gameMode === 'battle';
+  const unlimitedHerbs = battle;
   if (!unlimitedHerbs && !(s.bagHerbs > 0) && stock.herbs <= 0) return false;
   let patient = null, best = Infinity;
   for (const other of game.settlers) {
@@ -114,4 +115,3 @@ export function treatWounded(s, tick) {
   s.patrolTarget = null;
   return true;
 }
-
