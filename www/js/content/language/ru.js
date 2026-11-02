@@ -907,6 +907,7 @@ export const ruLanguage = {
       'activity.strikeBack': 'Отбивается',
       'info.morale': 'мораль {n}',
       'info.panic': '[[warn]] в панике',
+      'info.sleepDebt': '[[moon]] не выспался: досыпать {seconds} с',
       'activity.panic': 'В панике',
       'activity.cook': 'Готовит',
       'activity.deliverMaterials': 'Несёт материалы на стройку',
