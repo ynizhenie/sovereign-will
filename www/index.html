@@ -502,12 +502,11 @@
           <button class="btn sub-tab on" data-brush="1" data-i18n="editor.brush1">Brush 1</button>
           <button class="btn sub-tab" data-brush="3">3×3</button>
           <button class="btn sub-tab" data-brush="5">5×5</button>
-          <button class="btn sub-tab" id="editor-drag" data-i18n="editor.dragPaint">Drag to paint</button>
         </div>
         <div class="battle-hint" id="editor-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
         <div id="editor-tools"></div>
       </div>
-      <!-- the map's own (#255): its name, saving and playing it; its size; clearing it -->
+      <!-- the map's own (#255): its name, saving and playing it; its starting time; clearing it -->
       <div class="hud-sheet" data-sheet="editor-map">
         <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
         <div class="editor-toolbar">
@@ -520,13 +519,6 @@
           <button class="btn sub-tab" data-start-time="day" data-i18n="daytime.day">Day</button>
           <button class="btn sub-tab" data-start-time="evening" data-i18n="daytime.evening">Evening</button>
           <button class="btn sub-tab" data-start-time="night" data-i18n="daytime.night">Night</button>
-        </div>
-        <div class="panel-heading"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></div>
-        <div id="editor-resize-panel" class="editor-resize">
-          <span data-i18n="editor.side.top">Top</span><button class="btn" data-resize="top:10">+10</button><button class="btn" data-resize="top:1">+</button><button class="btn" data-resize="top:-1">−</button><button class="btn" data-resize="top:-10">−10</button>
-          <span data-i18n="editor.side.bottom">Bottom</span><button class="btn" data-resize="bottom:10">+10</button><button class="btn" data-resize="bottom:1">+</button><button class="btn" data-resize="bottom:-1">−</button><button class="btn" data-resize="bottom:-10">−10</button>
-          <span data-i18n="editor.side.left">Left</span><button class="btn" data-resize="left:10">+10</button><button class="btn" data-resize="left:1">+</button><button class="btn" data-resize="left:-1">−</button><button class="btn" data-resize="left:-10">−10</button>
-          <span data-i18n="editor.side.right">Right</span><button class="btn" data-resize="right:10">+10</button><button class="btn" data-resize="right:1">+</button><button class="btn" data-resize="right:-1">−</button><button class="btn" data-resize="right:-10">−10</button>
         </div>
         <div class="editor-toolbar">
           <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">[[broom]] Clear the map</button>

@@ -19,7 +19,7 @@ export function tickDaytime(dt) {
 
 // (#326) a battle has a time of day too, picked in its settings and standing still: only how it looks (the dark,
 // the lights, the shadows); nobody sleeps or eats by it there
-const looksByTime = () => game.gameMode === 'endless' || game.gameMode === 'battle';
+const looksByTime = () => game.gameMode === 'endless' || game.gameMode === 'battle' || game.gameMode === 'editor';
 
 // When in a day each of a battle's times is (its middle; the evening's dusk well on)
 export function timeOfPhase(phase) {
@@ -29,7 +29,7 @@ export function timeOfPhase(phase) {
 
 // 'morning', 'day', 'evening' or 'night' (always 'day' out of Endless: what the colony does by it)
 export function getDayPhase() {
-  if (game.gameMode !== 'endless') return 'day';
+  if (game.gameMode !== 'endless' && game.gameMode !== 'editor') return 'day';
   return phaseAt(game.dayTime || 0);
 }
 

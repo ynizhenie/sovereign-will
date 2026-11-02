@@ -1,8 +1,8 @@
 import { test, expect } from './helpers.mjs';
 import { openGame, started } from './helpers.mjs';
 
-// Battles and the editor (#255, a comment on it): a battle's difficulty and orders; the editor's brush, its
-// drag, undo and redo, clearing and playing a map
+// Battles and the editor (#255, a comment on it): a battle's difficulty and orders; the editor's brush, undo
+// and redo, clearing and playing a map
 const openBattle = async page => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
@@ -35,9 +35,9 @@ test('battles always use automatic combat; the auto-battle option is absent (#25
   expect(r).toEqual({ phase: 'fight', hasAutoFlag: false });
 });
 
-test('the editor: a 5×5 brush; a drag paints; undo and redo; clearing asks first (#255)', async ({ page }) => {
+test('the editor: a 5×5 brush; undo and redo; clearing asks first (#255)', async ({ page }) => {
   await openGame(page);
-  const r = await page.evaluate(([p, q]) => {
+  const r = await page.evaluate(([p]) => {
     startEditor({ cols: 40, rows: 40, generate: false });
     const trees = () => game.trees.length;
     editor.tool = 'tree'; editor.brush = 5;
@@ -47,17 +47,10 @@ test('the editor: a 5×5 brush; a drag paints; undo and redo; clearing asks firs
     const undone = trees();
     redoEditor();
     const redone = trees();
-    // a drag with the brush (1) along a row
-    editor.brush = 1; editor.dragPaint = true; editor.tool = 'rock';
-    const rocks = naturalRocks.length;
-    editorPaint('start', q.x, q.y);
-    for (let i = 0; i <= 6; i++) editorPaint('move', q.x + i * 30, q.y);
-    editorPaint('end', q.x + 180, q.y);
-    const dragged = naturalRocks.length - rocks;
     const asked = clearEditorMap(), cleared = clearEditorMap();
-    return { brushed, undone, redone, dragged, asked, cleared, left: trees() + naturalRocks.length };
-  }, [at(10, 10), at(10, 25)]);
-  expect(r).toEqual({ brushed: 25, undone: 0, redone: 25, dragged: 7, asked: false, cleared: true, left: 0 });
+    return { brushed, undone, redone, asked, cleared, left: trees() + naturalRocks.length };
+  }, [at(10, 10)]);
+  expect(r).toEqual({ brushed: 25, undone: 0, redone: 25, asked: false, cleared: true, left: 0 });
 });
 
 test('the editor\'s Play: saved, then Endless on that map (#255)', async ({ page }) => {

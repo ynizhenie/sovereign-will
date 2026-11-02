@@ -4,13 +4,14 @@
 //
 // In the editor the world is the ordinary game world with the clock stopped: a tool puts its thing on
 // the tapped tile (the brush can cover 3×3), replacing what was there; on a tile that already has that
-// thing it clears it instead. Rows and columns can be added or taken away at any edge. Saved maps are
-// plain data (serializeMap), keyed by name in localStorage; loadCustomMap() builds the world from one.
+// thing it clears it instead. Saved maps are plain data (serializeMap), keyed by name in localStorage;
+// loadCustomMap() builds the world from one.
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, applySeedFromUI, game, getGridPos, isBorderZone, resetTileIndex, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, applySeedFromUI, game, getGridPos, isBorderZone, resetTileIndex, townHall } from '../../engine/world/index.js';
 import { isTileOccupied } from '../../domains/economy/building/index.js';
+import { isWaterReachable, timeOfPhase } from '../../domains/world/index.js';
 import { closeOverlays, showNotification } from '../../ui/index.js';
 import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/index.js';
 import { makeAppleTree } from '../../domains/economy/farming/index.js';
@@ -50,15 +51,11 @@ export const EDITOR_TOOLS = [
     .map(b => ({ id: b.id, icon: b.icon, building: b.id, category: 'buildings', section: b.tab || b.group || 'economy' }))
 ];
 
-// how small and big a map can be made (the same as the Endless custom size)
-export const EDITOR_MIN_TILES = 20, EDITOR_MAX_TILES = 512;
-
 export const editor = {
   tool: 'tree',
   category: 'nature',
   brush: 1,     // 1, 3 or 5: a 3×3 (5×5) brush covers the tapped tile and the ones round it
-  dragPaint: false, // a drag paints with the brush instead of moving the view (#255)
-  startTime: 'morning', // the time of day an Endless game on it starts at (#257): morning, day, evening, night
+  startTime: 'day', // the time of day an Endless game on it starts at (#257): morning, day, evening, night
   name: '',     // the name it was opened or last saved as
   faction: 'humans' // whose map it is (the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
 };
@@ -104,6 +101,9 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   if (clearing) {
     if (!tileHasTool(tool, gx, gy)) return;
     if (tool.id === 'sand') game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    else if (tool.building && GAME_CONFIG.buildings[tool.building].onWater) {
+      game.buildings = game.buildings.filter(b => b.x !== x || b.y !== y || b.type !== tool.building);
+    }
     else clearEditorTile(x, y);
     return;
   }
@@ -122,6 +122,13 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   }
   // the town hall's own tiles stay free
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return;
+  // (#248) a fish trap sits on water; keep the water tile beneath it
+  if (tool.building && GAME_CONFIG.buildings[tool.building].onWater) {
+    const water = game.waterTiles.find(w => w.x === x && w.y === y);
+    if (!water || !isWaterReachable(water) || game.buildings.some(b => b.x === x && b.y === y)) return;
+    game.buildings.push(makeBuilt(tool.building, x, y));
+    return;
+  }
   // (#326, 27.10, 26) a mine goes on a source, which stays under it
   if (tool.building && GAME_CONFIG.buildings[tool.building].onSpawner) {
     if (game.naturalRocks.some(r => r.oreSpawner && r.x === x && r.y === y) && !game.buildings.some(b => b.x === x && b.y === y)) game.buildings.push(makeBuilt(tool.building, x, y));
@@ -178,35 +185,6 @@ export function editorTap(x, y) {
   resetTileIndex();
 }
 
-// A drag with the brush (#255, with dragPaint on): from the tile it began on along every tile it goes over;
-// begun on a tile that has the tool's thing, it clears it instead, all the way
-/** @type {{ tool: any, clearing: boolean, last: { gx: number, gy: number } } | null} */
-let stroke = null;
-let pressedAt = { x: 0, y: 0 };
-export function editorPaint(phase, x, y) {
-  if (game.gameMode !== 'editor') return false;
-  if (phase === 'start') { pressedAt = { x, y }; stroke = null; return false; }
-  if (phase === 'end') { if (stroke) resetTileIndex(); stroke = null; return false; }
-  if (!editor.dragPaint) return false;
-  const tool = EDITOR_TOOLS.find(tl => tl.id === editor.tool);
-  if (!tool || tool.id === 'town_hall') return false;
-  const g = getGridPos(x, y);
-  if (!stroke) {
-    remember();
-    const from = getGridPos(pressedAt.x, pressedAt.y);
-    stroke = { tool, clearing: tileHasTool(tool, from.gx, from.gy), last: from };
-    brushAt(tool, from.gx, from.gy, stroke.clearing);
-  }
-  // every tile between the last one and this (a quick drag skips none)
-  const steps = Math.max(Math.abs(g.gx - stroke.last.gx), Math.abs(g.gy - stroke.last.gy));
-  for (let i = 1; i <= steps; i++) {
-    brushAt(tool, Math.round(stroke.last.gx + (g.gx - stroke.last.gx) * i / steps), Math.round(stroke.last.gy + (g.gy - stroke.last.gy) * i / steps), stroke.clearing);
-  }
-  stroke.last = g;
-  resetTileIndex();
-  return true;
-}
-
 // ---- Undo and redo (#255): the map as it was before each change, the last HISTORY_SIZE of them
 
 const HISTORY_SIZE = 40;
@@ -216,13 +194,11 @@ const undoStack = [];
 const redoStack = [];
 const snapshot = () => ({
   lists: Object.fromEntries(EDITOR_LISTS.map(list => [list, structuredClone(game[list])])),
-  hall: { x: townHall.x, y: townHall.y }, cols: game.COLS, rows: game.ROWS
+  hall: { x: townHall.x, y: townHall.y }
 });
 function restore(shot) {
   for (const list of EDITOR_LISTS) game[list] = shot.lists[list];
   townHall.x = shot.hall.x; townHall.y = shot.hall.y;
-  game.COLS = shot.cols; game.ROWS = shot.rows;
-  game.WORLD_WIDTH = shot.cols * TILE_SIZE; game.WORLD_HEIGHT = shot.rows * TILE_SIZE;
   clampCamera();
   resetTileIndex();
   invalidateAllPaths();
@@ -271,38 +247,8 @@ export function clearEditorMap() {
   return true;
 }
 
-// ---- Map size
-
 export const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
   'naturalRocks', 'waterTiles', 'desertTiles', 'beachTiles', 'boars', 'buildings'];
-
-// Add (delta 1) or take away (delta -1) a whole row or column of tiles at one edge: top, bottom, left,
-// right. What would end up off the map or on the new border goes; the town hall must stay clear of it.
-export function resizeEditorMap(side, delta) {
-  const horizontal = side === 'left' || side === 'right';
-  const cols = game.COLS + (horizontal ? delta : 0), rows = game.ROWS + (horizontal ? 0 : delta);
-  if (Math.min(cols, rows) < EDITOR_MIN_TILES || Math.max(cols, rows) > EDITOR_MAX_TILES) return;
-  remember();
-  const shiftX = side === 'left' ? delta * TILE_SIZE : 0, shiftY = side === 'top' ? delta * TILE_SIZE : 0;
-  const inBorder = (gx, gy) => gx < BORDER_MARGIN || gy < BORDER_MARGIN || gx >= cols - BORDER_MARGIN || gy >= rows - BORDER_MARGIN;
-  const hall = getGridPos(townHall.x + shiftX - 1, townHall.y + shiftY - 1);
-  if (inBorder(hall.gx, hall.gy) || inBorder(hall.gx + 1, hall.gy + 1)) { showNotification(t('editor.hallInTheWay'), true); return; }
-  for (const list of EDITOR_LISTS) {
-    game[list] = game[list].filter(o => {
-      o.x += shiftX; o.y += shiftY;
-      const g = getGridPos(o.x, o.y);
-      return !inBorder(g.gx, g.gy);
-    });
-  }
-  townHall.x += shiftX; townHall.y += shiftY;
-  game.COLS = cols; game.ROWS = rows;
-  game.WORLD_WIDTH = cols * TILE_SIZE; game.WORLD_HEIGHT = rows * TILE_SIZE;
-  camera.x += shiftX; camera.y += shiftY;
-  clampCamera();
-  resetTileIndex();
-  invalidateAllPaths();
-  renderEditorPanel();
-}
 
 // ---- Opening and leaving the editor
 
@@ -312,18 +258,19 @@ export function startEditor(source) {
   if (source.map) {
     editor.name = source.map.name;
     editor.faction = source.map.faction || 'humans';
-    editor.startTime = source.map.startTime || 'morning';
+    editor.startTime = source.map.startTime || 'day';
     resetGame(source.map);
   } else {
     // a generated map: the editor's own seed, the generator's settings (its gear), the size picked here
     editor.name = '';
-    editor.startTime = 'morning';
+    editor.startTime = 'day';
     const endlessSize = game.mapSettings;
     game.mapSettings = { cols: source.cols, rows: source.rows };
     applySeedFromUI();
     resetGame(source.generate ? null : { cols: source.cols, rows: source.rows });
     game.mapSettings = endlessSize;
   }
+  game.dayTime = timeOfPhase(editor.startTime);
   game.settlers = []; game.enemies = []; game.corpses = [];
   game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
   resetTileIndex();

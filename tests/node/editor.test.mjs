@@ -20,11 +20,3 @@ test('a generated map saved from the editor loads back exactly (#37)', async () 
 test('the same tool again clears the tile; another thing replaces it (#143)', async () => {
   expect(await sim.toggleClear()).toEqual({ treeCleared: true, replaced: true, sandCleared: true, pondCleared: true });
 });
-
-test('rows and columns can be added and taken away at any edge (#143)', async () => {
-  const r = await sim.resize();
-  expect(r.after).toEqual({ size: [31, 30], tree: [6, 4], hallMoved: [30, -30] });
-  expect(r.treeGone).toBe(true);
-  expect(r.minCols).toBe(20);
-  expect(r.refused).toBe(true);
-});

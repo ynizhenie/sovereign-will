@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, anyWithin, game, getTileIndex, isDoor, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, anyWithin, game, getTileIndex, isDoor, isWithinTownHallBuffer, townHall } from '../../../engine/world/index.js';
 import { dropStoreContents, formatCost, getFreeStock } from '../../colony/storage/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { getMapResourceDef } from '../gathering/index.js';
@@ -45,7 +45,7 @@ export function isSpawnSpotFree(x, y) {
 }
 
 export function isBuildLocationAllowed(x, y) {
-  return !isTileOccupied(x, y);
+  return !isWithinTownHallBuffer(x, y) && !isTileOccupied(x, y);
 }
 
 // map: a saved map (modes/editor) to play instead of generating one; Endless plays the one chosen in its menu

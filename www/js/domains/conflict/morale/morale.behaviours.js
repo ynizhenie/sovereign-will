@@ -4,18 +4,19 @@
 // necromancer keeps behind its own
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
 import { getFrontier, isOutskirts, isVisible } from '../../world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { collidesWithWall, findPathAStar, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
 import { getEnemyDef } from '../waves/index.js';
 import { healAtTent } from '../healing/index.js';
 
 const config = () => GAME_CONFIG.morale;
+const supportSpotCache = new WeakMap();
 
 // the one of `list` nearest to `unit`, or null
 /** @template T @param {T[]} list @param {{ x: number, y: number }} unit @returns {T | null} */
@@ -139,6 +140,42 @@ function supportBacklineSpot(anchor, opponents, enemySide) {
   };
 }
 
+function reachableSupportSpot(unit, anchor, desired, enemySide) {
+  const tile = getGridPos(desired.x, desired.y);
+  const key = `${tile.gx},${tile.gy}`;
+  const signature = getTileIndex().signature;
+  const blocked = enemySide ? isTileBlockedForEnemyStrict : isTileBlockedForSettler;
+  const collides = point => collidesWithWall(point.x, point.y, unit.radius, enemySide);
+  if (!blocked(tile.gx, tile.gy) && !collides(desired)) {
+    supportSpotCache.delete(unit);
+    return desired;
+  }
+
+  const cached = supportSpotCache.get(unit);
+  if (cached?.anchor === anchor && cached.key === key && cached.signature === signature) return cached.position;
+
+  const candidates = [];
+  for (let radius = 1; radius <= 3; radius++) {
+    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+      const gx = tile.gx + dx, gy = tile.gy + dy;
+      const point = { x: gx * TILE_SIZE + TILE_SIZE / 2, y: gy * TILE_SIZE + TILE_SIZE / 2 };
+      candidates.push({ gx, gy, point, distance: Math.hypot(point.x - desired.x, point.y - desired.y) });
+    }
+  }
+  candidates.sort((a, b) => a.distance - b.distance);
+
+  let position = null;
+  for (const candidate of candidates) {
+    if (blocked(candidate.gx, candidate.gy) || collides(candidate.point)) continue;
+    if (!findPathAStar(unit.x, unit.y, candidate.point.x, candidate.point.y, enemySide).path.length) continue;
+    position = candidate.point;
+    break;
+  }
+  supportSpotCache.set(unit, { anchor, key, signature, position });
+  return position;
+}
+
 function enemySupports() {
   return game.enemies.filter(unit => {
     const def = getEnemyDef(unit);
@@ -167,11 +204,16 @@ function playerSoldiers(unit) {
 function keepSupportBehind(unit, dt, allies, supports, opponents, enemySide, smooth = false) {
   if (!allies.length) {
     unit.supportAnchor = null;
+    supportSpotCache.delete(unit);
     return false;
   }
   const anchor = chooseSupportAnchor(unit, allies, supports);
   unit.supportAnchor = anchor;
-  const spot = supportBacklineSpot(anchor, opponents, enemySide);
+  const spot = reachableSupportSpot(unit, anchor, supportBacklineSpot(anchor, opponents, enemySide), enemySide);
+  if (!spot) {
+    if (smooth) { unit.moveVx = 0; unit.moveVy = 0; }
+    return true;
+  }
   if (Math.hypot(spot.x - unit.x, spot.y - unit.y) > 12) {
     moveEntityTowards(unit, spot.x, spot.y, unit.speed, enemySide, dt, smooth);
   } else if (smooth) {
