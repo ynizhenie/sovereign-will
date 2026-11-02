@@ -106,7 +106,7 @@ export function treatWounded(s, tick) {
       s.healTimer = 0;
       s.bagHerbs--;
       patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
-      if (patient !== s) noteDay(s, 'healed', 'healed', 0.25); // (#279; a word on it, #326 26.10, 24)
+      if (patient !== s) noteDay(s, 'healed'); // (#279)
       playSound('heal', patient);
     }
   }

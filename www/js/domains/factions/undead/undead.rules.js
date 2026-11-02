@@ -7,7 +7,7 @@ import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
-import { createSettler, dropSettlerLoot, faceTowards, speak } from '../../colony/settlers/index.js';
+import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
 import { canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
@@ -152,7 +152,6 @@ function armFromCorpse(zombie, corpse, reach) {
 export function raiseTemporaryZombie(corpse, master = null) {
   const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
   zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
-  if (master && Math.random() < 0.5) speak(master, getPlayerFaction().id, 'raised'); // (#326, 26.10, 24)
   if (master) {
     zombie.masterId = master.id;
     armFromCorpse(zombie, corpse, getNecromancy(master).armReach);
