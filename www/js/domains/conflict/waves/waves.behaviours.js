@@ -49,27 +49,9 @@ function enemyHeal(en, healer, dt) {
 function enemyGhost(en) {
   /** @type {{ x: number, y: number } | null} */
   let target = null, best = Infinity;
-  const g = GAME_CONFIG.pets.ghost, fair = s => !s.panic && !isUntouchable(s) && s.hp > 0;
-  // (#326, 26.10, 11) with a necromancer of its side: by it (at most `carry` to one), into a settler near it or
-  // near the necromancer, as the player's ghosts do; with none, at the nearest settler
-  const necros = game.enemies.filter(o => o.hp > 0 && getEnemyDef(o).necromancer);
-  if (en.escort && !necros.includes(en.escort)) en.escort = null;
-  if (!en.escort && necros.length) {
-    const taken = n => game.enemies.filter(o => o !== en && o.escort === n).length;
-    const free = necros.filter(n => taken(n) < g.carry);
-    en.escort = (free.length ? free : necros).reduce((b, n) => (Math.hypot(n.x - en.x, n.y - en.y) < Math.hypot(b.x - en.x, b.y - en.y) ? n : b));
-  }
-  const escort = en.escort, reach = g.diveTiles * TILE_SIZE;
   for (const s of game.settlers) {
     const d = Math.hypot(s.x - en.x, s.y - en.y);
-    const near = !escort || d < reach || Math.hypot(s.x - escort.x, s.y - escort.y) < reach;
-    if (fair(s) && near && d < best) { best = d; target = s; }
-  }
-  if (!target && escort) {
-    const t = game.pathTick / 60 + (en.x % 7), hx = escort.x + Math.cos(t * 0.8) * 26, hy = escort.y - 12 + Math.sin(t * 1.1) * 14;
-    const hd = Math.hypot(hx - en.x, hy - en.y), hstep = en.speed * (hd > 40 ? 1 : 0.6) * GAME_CONFIG.movementScale; // (left behind: it catches up)
-    if (hd > 1) { en.x += (hx - en.x) / hd * Math.min(hd, hstep); en.y += (hy - en.y) / hd * Math.min(hd, hstep); }
-    return;
+    if (!s.panic && !isUntouchable(s) && s.hp > 0 && d < best) { best = d; target = s; }
   }
   if (!target) {
     if (game.gameMode === 'battle') return; // (no town hall in a battle: stay, don't fly off the field)

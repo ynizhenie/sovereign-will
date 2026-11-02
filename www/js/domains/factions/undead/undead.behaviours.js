@@ -5,7 +5,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
-import { getBlightKeys, getNecromancy, keepBehindOwn, raiseTemporaryZombie, zombiesOf } from './undead.rules.js';
+import { getBlightKeys, getNecromancy, raiseTemporaryZombie, zombiesOf } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
 import { engageEnemy, getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
@@ -86,16 +86,6 @@ export function necromancy(s, tick) {
     s.hp = Math.min(s.maxHp, s.hp + necro.healPerSecond * dt);
     s.working = 0.1;
     return true;
-  }
-
-  // (#326, 26.10, 11) in a fight (a battle's, a wave, the alarm): behind one of its side's fighters, as the enemy's
-  // necromancers keep (it stood where it was put, in a battle)
-  const foes = game.enemies.filter(en => en.hp > 0);
-  const fight = foes.length && (game.gameMode === 'battle' || tick.isWaveActive || isDefenseAlert());
-  if (fight) {
-    const fighters = game.settlers.filter(o => o.hp > 0 && (o.role === 'soldier' || o.role === 'archer') && !getNecromancy(o) && !o.towerAssignment);
-    const necros = game.settlers.filter(o => o.hp > 0 && getNecromancy(o));
-    if (keepBehindOwn(s, necros, fighters, foes, dt)) { s.patrolTarget = null; return true; }
   }
 
   // blighting by itself (#253): with none marked left, the tile nearest the base not blighted yet, queued
