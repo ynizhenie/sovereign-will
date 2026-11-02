@@ -747,6 +747,12 @@ export const ICONS = {
     icRect(c, '#5d6d7e', 12, 2, 8, 7); c.strokeStyle = '#2c3e50'; c.lineWidth = 1; c.strokeRect(12.5, 2.5, 7, 6);
     icCircle(c, 'rgba(230, 126, 34, 0.85)', 16, 19, 6); icCircle(c, '#f9e79f', 16, 20, 2.5);
   },
+  // (#326, 27.10, 28) a boar pen: a fence of posts and rails round trodden ground
+  pen: c => {
+    icRound(c, '#8d6e4a', 3, 6, 26, 22, 3);
+    for (const x of [4, 11, 18, 25]) { icRect(c, '#5d4037', x, 4, 3, 26); }
+    for (const y of [9, 17, 25]) icRect(c, '#a1887f', 3, y, 26, 2.5);
+  },
   // (#326, 27.10, 26) a mine: a dark way into the rock under a timber frame
   mine: c => {
     icRound(c, '#5d6d7e', 2, 6, 28, 24, 4); icRound(c, '#7f8c8d', 4, 8, 24, 20, 3);
