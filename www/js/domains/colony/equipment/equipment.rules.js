@@ -33,7 +33,6 @@ export const GEAR_RULES = {
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
   banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' },
-  lasso: { canWear: s => s.role === 'soldier', first: () => true }, // (#326, 27.10, 28)
   // (#326) the soul lantern: a necromancer's (its staff in hand)
   soul_lantern: { canWear: s => !!(getDefinition('tools', s.tool) || {}).necromancer, first: () => true }
 };

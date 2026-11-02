@@ -530,13 +530,6 @@ export function drawSideItems(s, front = true) {
     }
     ctx.restore();
   }
-  // (#326, 27.10, 28) a lasso coiled at its hip (not while it leads a boar on it)
-  if (s.lasso && !s.leading && farSlot !== front) {
-    ctx.save(); ctx.translate(x + Math.cos(f) * 2, y + 2);
-    ctx.strokeStyle = '#a9824f'; ctx.lineWidth = 1.3;
-    for (const rr of [3.6, 2.4]) { ctx.beginPath(); ctx.ellipse(0, 0, rr, rr * 1.2, 0, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.restore();
-  }
   // (#326) a medic at work: its bag at its hip (its hand's on the wound)
   if (isHealing(s) && farSlot !== front) {
     ctx.save(); ctx.translate(x - 3, y - 4);

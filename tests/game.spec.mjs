@@ -10,13 +10,13 @@ const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
-  await expect(page.locator('#build-actions button')).toHaveCount(18); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248), the torch (#257), the mine and the pen (#326)
+  await expect(page.locator('#build-actions button')).toHaveCount(17); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248), the torch (#257), the mine (#326)
   await expect(page.locator('#farming-actions button')).toHaveCount(1); // the compost heap (#232; #279: crops only in zones)
   // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
   // at a smithy
   await expect(page.locator('#craft-tools .tile')).toHaveCount(7); // (#279: no rope)
   await expect(page.locator('#craft-weapons .tile')).toHaveCount(8);
-  await expect(page.locator('#craft-gear .tile')).toHaveCount(9); // (the whistle and the banner, #248; leather armour, #298; the flute gone, #326; a helmet and a lasso, #326 27.10)
+  await expect(page.locator('#craft-gear .tile')).toHaveCount(8); // (the whistle and the banner, #248; leather armour, #298; the flute gone, #326; a helmet, #326 27.10)
   await expect(page.locator('#craft-weapons .panel-heading')).toHaveCount(3);
 
   await page.fill('#seed-input', 'smoke-test');

@@ -9,7 +9,6 @@ import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 import { boarToBait } from './hunting.traps.js';
 import { noteDay } from '../../colony/settlers/index.js';
-import { heldBoar } from './hunting.pen.js';
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
@@ -26,9 +25,7 @@ export function woundBoar(boar, damage, attacker, fromX, fromY) {
   if (boar.hp > 0) { shakeOnHit(boar); makeBoarFlee(boar, fromX, fromY); return; }
   onUnitDeath(boar, 'boar');
   if (attacker && game.settlers.includes(attacker)) noteDay(attacker, 'hunted'); // (its day, #306)
-  // (#326, 27.10, 28) one killed in a pen falls at its fence on the killer's side, where it can be butchered
-  if (boar.pen && attacker) { const pen = boar.pen; boar.x = pen.x + (attacker.x - pen.x) * 0.55; boar.y = pen.y + (attacker.y - pen.y) * 0.55; }
-  Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0, pen: null, cull: false, ledBy: null });
+  Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
 
 // (#306) the ground boars have dug, darker where one lies and for a while after it's gone (not saved: only a look)
@@ -47,7 +44,6 @@ function endRest(boar) {
 }
 
 export function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
-  if (boar.pen || boar.ledBy) return; // (penned or on a lasso: nowhere to run, #326 27.10, 28)
   endRest(boar); // (up and off, #306)
   // already running: only a hit turns a wary back-off into a sprint
   if ((boar.fleeTimer || 0) > 0 && (wary || boar.sprinting)) return;
@@ -125,7 +121,6 @@ export function tickBoars(tickDt) {
     const k = far ? every : 1, dt = tickDt * k; // (its steps and its time, farEvery ticks' worth)
     if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) { endRest(b); return; }
-    if (heldBoar(b)) return; // (in a pen, or on a lasso, #326 27.10, 28)
     // a baited iron trap near by: it goes for the food, and may be caught (#248)
     if (!b.hidden && !(b.fleeTimer > 0) && boarToBait(b)) return;
 
@@ -147,8 +142,7 @@ export function tickBoars(tickDt) {
         let d = Math.hypot(s.x - b.x, s.y - b.y);
         if (d < nearestDist) { nearestDist = d; nearest = s; }
       });
-      // (#326, 27.10, 28: from one with a lasso it backs off into the grass and hides there)
-      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, !!(/** @type {any} */ (nearest)).lasso, true);
+      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
     }
 
     if (b.hideTarget) {
