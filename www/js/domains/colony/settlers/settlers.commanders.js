@@ -18,6 +18,7 @@ import { getPlayerFaction } from '../../factions/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { faceTowards } from './settlers.draw.js';
 import { ensureUnitName } from './settlers.names.js';
+import { says } from './settlers.voices.js';
 
 const SHOW_TICKS = 120; // how long an order shows (2 s)
 
@@ -135,6 +136,7 @@ export function foremanOrders(s, tick) {
   if ((sameFocus && (getToolFamily(to.tool) === need.family || pendingToolMatches)) || alreadyWorking) return true;
   const name = ensureUnitName(to, getPlayerFaction().id, game.settlers);
   showOrder(s, to, GAME_CONFIG.resources[need.resource].icon, t('order.foreman', { name, resource: GAME_CONFIG.resources[need.resource].label }));
+  if (Math.random() < 0.35) says(s, 'order'); // (#326, 26.10, 24)
   return true;
 }
 
@@ -159,6 +161,7 @@ export function captainOrders(s, tick) {
   to.orderedBy = s.id; // (#326: its morale held by its captain while it carries out the order)
   const name = ensureUnitName(to, getPlayerFaction().id, game.settlers);
   showOrder(s, to, 'swords', t('order.captain', { name }));
+  if (Math.random() < 0.35) says(s, 'order'); // (#326, 26.10, 24)
   return false;
 }
 

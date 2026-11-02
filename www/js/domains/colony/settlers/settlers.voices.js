@@ -10,7 +10,8 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { playSound } from '../../../app/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
-import { isNight, isVisible } from '../../world/index.js';
+import { getWeather, isNight, isVisible } from '../../world/index.js';
+import { getToolFamily, hasGear, isRangedWeapon } from '../equipment/index.js';
 
 const VOICE = { globalGap: 2.5, ownGap: 12, showTicks: 150, storyEvery: 20, talkEvery: 7, replyAfter: 2.4 };
 // how each kind sounds: pitch (Hz), and a growl under it
@@ -41,12 +42,35 @@ export function speak(unit, faction, event, urgent = false) {
 // are such (voice.<faction>.<event>.vs.<other>: no brains wanted off the undead); about the walls (….walls) only
 // when the colony has a wall or a door
 const WALLS = ['wall_wood', 'wall_stone', 'door', 'iron_door'];
+// (26.10, 24) a settler's own lines by its trade, when it has some (….role.<role>: a necromancer, a foreman, a captain,
+// a fisher, a woodcutter, a miner, a farmer, a medic, an archer); and those that fit the weather and the time only then
+// (….wet in rain or a storm, ….dry out of it, ….night, ….day): it said it wished for rain in the rain
 export function phrasesFor(unit, faction, event) {
   const text = key => { const s = t(key); return s && s !== key ? s.split('|') : []; };
   const against = (unit.enemyKey ? getPlayerFaction() : getEnemyFaction()).id;
-  const key = `voice.${faction}.${event}`, vs = text(`${key}.vs.${against}`);
-  const list = vs.length ? vs : text(key);
-  return game.buildings.some(b => WALLS.includes(b.type) && b.side !== 'red') ? [...list, ...text(`${key}.walls`)] : list;
+  const key = `voice.${faction}.${event}`, vs = text(`${key}.vs.${against}`), role = roleOf(unit);
+  const own = role ? text(`${key}.role.${role}`) : [];
+  const list = own.length ? own : vs.length ? vs : text(key);
+  const kind = getWeather().kind, wet = kind === 'rain' || kind === 'storm';
+  const extra = [...text(`${key}.${wet ? 'wet' : 'dry'}`), ...text(`${key}.${isNight() ? 'night' : 'day'}`)];
+  if (game.buildings.some(b => WALLS.includes(b.type) && b.side !== 'red')) extra.push(...text(`${key}.walls`));
+  return [...list, ...extra];
+}
+
+// What a settler is by its trade, for its own lines (null: none of its own; an enemy has none)
+export function roleOf(unit) {
+  if (unit.enemyKey || isPet(unit)) return null;
+  const family = getToolFamily(unit.tool);
+  if (family === 'necro') return 'necromancer';
+  if (unit.whistle) return 'foreman';
+  if (hasGear(unit, 'banner')) return 'captain';
+  if (unit.tool === 'rod') return 'fisher';
+  if (family === 'axe') return 'woodcutter';
+  if (family === 'pickaxe') return 'miner';
+  if (family === 'hoe') return 'farmer';
+  if (family === 'medic') return 'medic';
+  if (isRangedWeapon(unit.weapon)) return 'archer';
+  return null;
 }
 
 // What it says, shown and heard
