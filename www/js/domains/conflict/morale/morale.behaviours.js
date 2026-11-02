@@ -119,8 +119,8 @@ export function boarsPanic() {
 // The enemy's necromancer keeps behind its own (#207), a little behind the ally nearest the hall. It doesn't
 // run from a settler that comes for it (#261: it led the soldiers far off and they went back to their
 // posts): one within keepBack px it fights, as any enemy. True: it took the step
-export function necromancerKeepsBack(en, dt) {
-  if (game.settlers.some(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroKeepBack)) return false;
+export function necromancerKeepsBack(en, dt, staysBackUnderThreat = false) {
+  if (!staysBackUnderThreat && game.settlers.some(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroKeepBack)) return false;
   // amid its own, a little behind their middle (#232: behind the front one it was off on its own, its own
   // out of its reach and panicking): the allies within reach of it, else all of them
   const allies = game.enemies.filter(o => o !== en && o.hp > 0 && !getEnemyDef(o).necromancer && getEnemyDef(o).pet !== 'ghost');
@@ -136,8 +136,27 @@ export function necromancerKeepsBack(en, dt) {
   return true;
 }
 
-function playerSupportKeepsBack(s, dt, isAlly, smooth = false) {
-  if (game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - s.x, en.y - s.y) < config().necroKeepBack)) return false;
+// Enemy medics use the same backline position as player medics, while ignoring nearby threats.
+export function enemyMedicKeepsBack(en, dt) {
+  const allies = game.enemies.filter(o => {
+    if (o === en || o.hp <= 0) return false;
+    const def = getEnemyDef(o);
+    return !def.pet && (def.weapon !== 'fist' || def.necromancer);
+  });
+  if (!allies.length) return false;
+  const group = allies.filter(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroRange * 2.5);
+  const mid = (group.length ? group : allies).reduce((m, o, i, list) => ({ x: m.x + o.x / list.length, y: m.y + o.y / list.length }), { x: 0, y: 0 });
+  const origin = game.gameMode === 'battle'
+    ? nearest(game.settlers.filter(s => s.hp > 0), mid) || { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2 }
+    : townHall;
+  const d = Math.max(1, Math.hypot(mid.x - origin.x, mid.y - origin.y));
+  const spot = { x: mid.x + (mid.x - origin.x) / d * 50, y: mid.y + (mid.y - origin.y) / d * 50 };
+  if (Math.hypot(spot.x - en.x, spot.y - en.y) > 12) moveEntityTowards(en, spot.x, spot.y, en.speed, true, dt);
+  return true;
+}
+
+function playerSupportKeepsBack(s, dt, isAlly, smooth = false, staysBackUnderThreat = false) {
+  if (!staysBackUnderThreat && game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - s.x, en.y - s.y) < config().necroKeepBack)) return false;
   const allies = game.settlers.filter(o => o !== s && o.hp > 0 && isAlly(o));
   if (!allies.length) return false;
   const group = allies.filter(o => Math.hypot(o.x - s.x, o.y - s.y) < config().necroRange * 2.5);
@@ -159,5 +178,5 @@ export function playerNecromancerKeepsBack(s, dt) {
 
 // A medic keeps behind armed allies and necromancers, but advances to fight when left alone.
 export function playerMedicKeepsBack(s, dt) {
-  return playerSupportKeepsBack(s, dt, o => o.role !== 'pet' && (o.weapon !== 'fist' || o.tool === 'necro_staff'));
+  return playerSupportKeepsBack(s, dt, o => o.role !== 'pet' && (o.weapon !== 'fist' || o.tool === 'necro_staff'), true, true);
 }

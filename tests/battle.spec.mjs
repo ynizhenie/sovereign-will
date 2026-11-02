@@ -480,6 +480,65 @@ test('a player necromancer eases its movement while following allies', async ({ 
   expect(movement).toEqual({ eased: true, increasing: true });
 });
 
+test('a player necromancer walks to a wounded ally and heals instead of repositioning behind the group', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const necromancer = Object.assign(createSettler('zombie', 1, 650, 300), { tool: 'necro_staff' });
+    const patient = createSettler('zombie', 2, 500, 300);
+    const ally = createSettler('zombie', 3, 800, 300);
+    const enemy = createConfiguredEnemy({ x: 300, y: 300 }, 'raider');
+    patient.hp -= 20;
+    game.settlers = [necromancer, patient, ally];
+    game.enemies = [enemy];
+    const before = { x: necromancer.x, hp: patient.hp };
+    for (let frame = 0; frame < 600 && patient.hp < patient.maxHp; frame++) {
+      necromancy(necromancer, createSettlerTick(1 / 60));
+    }
+    return {
+      approachedPatient: necromancer.x < before.x,
+      healed: patient.hp > before.hp,
+      fullyHealed: patient.hp === patient.maxHp
+    };
+  });
+  expect(result).toEqual({ approachedPatient: true, healed: true, fullyHealed: true });
+});
+
+test('a second player necromancer heals an already assigned wounded ally instead of fighting', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const first = Object.assign(createSettler('zombie', 1, 650, 300), { tool: 'necro_staff' });
+    const second = Object.assign(createSettler('zombie', 2, 650, 340), { tool: 'necro_staff' });
+    const patient = createSettler('zombie', 3, 500, 300);
+    const enemy = createConfiguredEnemy({ x: 620, y: 300 }, 'raider');
+    patient.hp -= 20;
+    game.settlers = [first, second, patient];
+    game.enemies = [enemy];
+    tickSettlers(1 / 60);
+    return {
+      firstHeals: first.workKind === 'heal' || first.healTarget === patient,
+      secondHeals: second.workKind === 'heal' || second.healTarget === patient,
+      secondAttacks: second.attackTarget === enemy || second.fightTarget === enemy
+    };
+  });
+  expect(result).toEqual({ firstHeals: true, secondHeals: true, secondAttacks: false });
+});
+
+test('a player necromancer heals another wounded necromancer in Battles', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const healer = Object.assign(createSettler('zombie', 1, 650, 300), { tool: 'necro_staff' });
+    const patient = Object.assign(createSettler('zombie', 2, 680, 300), { tool: 'necro_staff' });
+    const enemy = createConfiguredEnemy({ x: 700, y: 300 }, 'raider');
+    patient.hp -= 20;
+    game.settlers = [healer, patient];
+    game.enemies = [enemy];
+    const before = patient.hp;
+    tickSettlers(1 / 60);
+    return { healed: patient.hp > before, assignedPatient: healer.healTarget === patient, working: healer.working > 0 };
+  });
+  expect(result).toEqual({ healed: true, assignedPatient: true, working: true });
+});
+
 test('a medic keeps behind armed allies in Battles', async ({ page }) => {
   await openBattle(page);
   const movement = await page.evaluate(() => {
@@ -495,6 +554,66 @@ test('a medic keeps behind armed allies in Battles', async ({ page }) => {
   });
   expect(movement.moved).toBe(true);
   expect(movement.x).toBeGreaterThan(movement.before.x);
+});
+
+test('a medic follows allies smoothly while an enemy is close', async ({ page }) => {
+  await openBattle(page);
+  const movement = await page.evaluate(() => {
+    const medic = Object.assign(createSettler('zombie', 1, 300, 300), { role: 'worker', weapon: 'fist', tool: 'medbag', speed: 1.2 });
+    const ally = Object.assign(createSettler('zombie', 2, 500, 300), { weapon: 'sword', role: 'soldier' });
+    const enemy = createConfiguredEnemy({ x: 340, y: 300 }, 'raider');
+    game.settlers = [medic, ally];
+    game.enemies = [enemy];
+    const steps = [];
+    for (let frame = 0; frame < 8; frame++) {
+      ally.x += 0.25;
+      const before = { x: medic.x, y: medic.y };
+      playerMedicKeepsBack(medic, 1 / 60);
+      steps.push(Math.hypot(medic.x - before.x, medic.y - before.y));
+    }
+    return { eased: !!medic.moveVx || !!medic.moveVy, increasing: steps[1] > steps[0] };
+  });
+  expect(movement).toEqual({ eased: true, increasing: true });
+});
+
+test('a medic stays behind its allies instead of attacking the enemy that hit its healed patient', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const medic = Object.assign(createSettler('zombie', 1, 300, 300), { role: 'worker', weapon: 'fist', tool: 'medbag' });
+    const patient = Object.assign(createSettler('zombie', 2, 500, 300), { weapon: 'sword', role: 'soldier', hp: 100 });
+    const enemy = createConfiguredEnemy({ x: 340, y: 300 }, 'raider');
+    patient.lastAttacker = enemy;
+    patient.lastAttackedTick = game.pathTick;
+    game.settlers = [medic, patient];
+    game.enemies = [enemy];
+    const before = medic.x;
+    tickSettlers(1 / 60);
+    return {
+      movedBehindAlly: medic.x > before,
+      targetsAttacker: medic.attackTarget === enemy || medic.fightTarget === enemy,
+      targetsHealedPatient: patient.hp === patient.maxHp
+    };
+  });
+  expect(result).toEqual({ movedBehindAlly: true, targetsAttacker: false, targetsHealedPatient: true });
+});
+
+test('a player medic heals from the configured 30-unit range', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'humans');
+    const medic = Object.assign(createSettler('normal', 1, 300, 300), { role: 'worker', weapon: 'fist', tool: 'medbag' });
+    const patient = Object.assign(createSettler('normal', 2, 339, 300), { weapon: 'sword', role: 'soldier', hp: 80 });
+    const enemy = createConfiguredEnemy({ x: 900, y: 300 }, 'raider');
+    game.settlers = [medic, patient];
+    game.enemies = [enemy];
+    startBattleFight();
+    const before = patient.hp;
+    for (let frame = 0; frame < 100 && patient.hp === before; frame++) {
+      treatWounded(medic, createSettlerTick(1 / 60));
+    }
+    return { healed: patient.hp > before, range: GAME_CONFIG.medic.range };
+  });
+  expect(result).toEqual({ healed: true, range: 30 });
 });
 
 test('an enemy necromancer heals an injured ally instead of fighting a nearby settler', async ({ page }) => {
@@ -537,6 +656,68 @@ test('an enemy medic uses the player medic healing animation state', async ({ pa
   expect(result.working).toBeGreaterThan(0);
   expect(result.treatedAt).toBeGreaterThanOrEqual(0);
   expect(result.healed).toBe(true);
+});
+
+test('an enemy medic follows a wounded ally beyond its healing range', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const medic = createConfiguredEnemy({ x: 800, y: 300 }, 'raider_medic');
+    const patient = createConfiguredEnemy({ x: 550, y: 300 }, 'raider');
+    const fighter = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
+    const settler = createSettler('zombie', 1, 300, 300);
+    patient.hp -= 20;
+    game.settlers = [settler];
+    game.enemies = [medic, patient, fighter];
+    const before = medic.x;
+    tickEnemy(medic, 1 / 60);
+    return { movedTowardPatient: medic.x < before, assignedPatient: medic.healTarget === patient };
+  });
+  expect(result).toEqual({ movedTowardPatient: true, assignedPatient: true });
+});
+
+test('an enemy medic stops healing when another enemy medic has claimed the only wounded ally', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const first = createConfiguredEnemy({ x: 800, y: 300 }, 'raider_medic');
+    const second = createConfiguredEnemy({ x: 800, y: 340 }, 'raider_medic');
+    const patient = createConfiguredEnemy({ x: 830, y: 300 }, 'raider');
+    const fighter = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
+    const settler = createSettler('zombie', 1, 500, 300);
+    patient.hp -= 20;
+    game.settlers = [settler];
+    game.enemies = [first, second, patient, fighter];
+    const before = patient.hp;
+    tickEnemy(first, 1 / 60);
+    const afterFirst = patient.hp;
+    tickEnemy(second, 1 / 60);
+    return {
+      firstHeals: afterFirst > before,
+      secondDoesNotHeal: patient.hp === afterFirst,
+      secondHasNoPatient: second.healTarget == null,
+      firstHasPatient: first.healTarget === patient
+    };
+  });
+  expect(result).toEqual({ firstHeals: true, secondDoesNotHeal: true, secondHasNoPatient: true, firstHasPatient: true });
+});
+
+test('an enemy medic keeps behind its allies after healing instead of attacking their attacker', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const medic = createConfiguredEnemy({ x: 800, y: 300 }, 'raider_medic');
+    const ally = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
+    const attacker = createSettler('zombie', 1, 850, 300);
+    ally.struckBy = attacker;
+    ally.struckTick = game.pathTick;
+    game.settlers = [attacker];
+    game.enemies = [medic, ally];
+    const before = medic.x;
+    tickEnemy(medic, 1 / 60);
+    return {
+      movedBehindAlly: medic.x > before,
+      targetsAttacker: medic.attackTarget === attacker || medic.struckBy === attacker
+    };
+  });
+  expect(result).toEqual({ movedBehindAlly: true, targetsAttacker: false });
 });
 
 test('medics have unlimited herbs during Battles', async ({ page }) => {

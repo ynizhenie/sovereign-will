@@ -14,7 +14,7 @@ import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntit
 import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
-import { enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
+import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
@@ -23,19 +23,32 @@ export function tickEnemies(dt) {
 
 /** @typedef {import('../../../engine/world/types.js').Settler} Settler */
 /** @typedef {import('../../../engine/world/types.js').TownHall} TownHall */
+/** @typedef {import('../../../engine/world/types.js').Enemy & { healTarget?: import('../../../engine/world/types.js').Enemy | null }} EnemyWithHealTarget */
 
-// An enemy medic (#203): walks up to the most hurt of its side within range and heals it; with a settler
-// at it, or nobody hurt, it fights like the rest (weakly). True while it heals
+// An enemy medic (#203) follows one wounded ally at a time and heals at close range. True while it heals.
 function enemyHeal(en, healer, dt) {
-  if (game.settlers.some(s => Math.hypot(s.x - en.x, s.y - en.y) < 50)) return false;
   if (en.herbs === undefined) en.herbs = healer.bagSize;
   const battle = game.gameMode === 'battle';
-  let patient = null;
-  for (const other of game.enemies) {
-    if (other === en || other.hp <= 0 || other.hp >= other.maxHp || Math.hypot(other.x - en.x, other.y - en.y) > healer.range) continue;
-    if (!patient || other.hp / other.maxHp < patient.hp / patient.maxHp) patient = other;
+  const isSupport = unit => {
+    const def = getEnemyDef(unit);
+    return !!(def.healer || def.necromancer);
+  };
+  const available = other => other.hp > 0 && other.hp < other.maxHp &&
+    !game.enemies.some(unit => unit !== en && unit.hp > 0 && isSupport(unit) &&
+      /** @type {EnemyWithHealTarget} */ (unit).healTarget === other);
+  const support = /** @type {EnemyWithHealTarget} */ (en);
+  let patient = support.healTarget && game.enemies.includes(support.healTarget) && available(support.healTarget) &&
+    Math.hypot(support.healTarget.x - en.x, support.healTarget.y - en.y) <= healer.range ? support.healTarget : null;
+  let best = patient ? -1 : Infinity;
+  if (!patient) {
+    for (const other of game.enemies) {
+      if (other === en || !available(other)) continue;
+      const score = Math.hypot(other.x - en.x, other.y - en.y);
+      if (score < best) { best = score; patient = other; }
+    }
   }
-  if (!patient) return false;
+  if (!patient) { support.healTarget = null; return false; }
+  support.healTarget = patient;
   if (!battle && en.herbs <= 0) {
     const tent = game.enemyHerbStock > 0 ? findNearestEnemyTent(en) : null;
     if (!tent) return false;
@@ -168,6 +181,7 @@ export function tickEnemy(en, dt) {
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
+  if (enemyDef.healer && enemyMedicKeepsBack(en, dt)) return;
   if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) return;
   // (#326) one that hit it a moment ago, still on its feet: it turns on that one, not on with the wall or tent it was breaking
   const struck = en.struckBy && game.settlers.includes(en.struckBy) && en.struckBy.hp > 0 && !isUntouchable(en.struckBy) &&
