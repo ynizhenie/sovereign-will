@@ -96,7 +96,7 @@ Object.assign(window.sim, (() => {
     asFaction('humans', 'undead', seed);
     settlers = [];
     const at = nearHall(-14, -8);
-    enemies = [0, 1, 2, 3, 4].map(i => { const z = createConfiguredEnemy(i === 0 ? at : { x: at.x - 260 + (i % 2) * 40, y: at.y - 200 + i * 15 }, 'undead_zombie'); z.speed = 0; z.fromWave = true; return z; });
+    enemies = [0, 1, 2, 3, 4].map(i => { const z = createConfiguredEnemy(i === 0 ? at : { x: at.x - 60 + (i % 2) * 30, y: at.y - 40 + i * 20 }, 'undead_zombie'); z.speed = 0; z.fromWave = true; return z; });
     const necro = createConfiguredEnemy({ x: at.x + 260, y: at.y - 120 }, 'undead_necromancer');
     enemies.push(necro);
     run(6, { holdWaves: false, each: () => { waveTimer = 999; } });
