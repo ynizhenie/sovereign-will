@@ -56,6 +56,7 @@ test('the fight: zombies keep coming; a tapped one falls; the squad gone, a new 
   expect(await page.evaluate(() => enemies.filter(en => en.hp <= 0).length)).toBeGreaterThan(0);
   // all fall: a new squad a moment later, the dead cleared
   const back = await page.evaluate(() => {
+    enterMenuWorld('fight'); // reset random combat casualties before checking the respawn
     isPaused = false;
     settlers.forEach(s => { s.hp = 0; });
     let gone = false;
