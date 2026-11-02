@@ -361,7 +361,7 @@ test('a settler panicking from a ghost leaves the battle without a corpse or loo
     let ghostScared = false;
     for (let f = 0; f < 60 * 15 && settlers.includes(settler); f++) {
       update(1 / 60);
-      if (settler.ghostHits > 0) ghostScared = true;
+      if (settler.ghostPanicFrom && settler.panic) ghostScared = true;
     }
     return {
       removed: !settlers.includes(settler),
@@ -561,7 +561,7 @@ test('medics have unlimited herbs during Battles', async ({ page }) => {
     stock.herbs = 0;
     startBattleFight();
     for (let frame = 0; frame < 180; frame++) {
-      tickSettlers(1 / 60);
+      treatWounded(playerMedic, createSettlerTick(1 / 60));
       tickEnemy(enemyMedic, 1 / 60);
     }
     return {
