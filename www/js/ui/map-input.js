@@ -121,6 +121,9 @@ function commandAtEnemy() {
 function buildingTapped({ gx, gy }) {
   const building = game.buildings.find(b => b.x === gx && b.y === gy);
   if (!building) return false;
+  // (#326, 30.10, 7) a mine: a tap marks its source to be mined first (again: unmarked), as any resource
+  const source = building.type === 'mine' && game.naturalRocks.find(r => r.oreSpawner && r.x === building.x && r.y === building.y);
+  if (source) { markResource(source); return true; }
   openBuildingCard(building);
   return true;
 }
@@ -223,7 +226,8 @@ function markTapped() {
 function thingsOnTile() {
   const away = r => Math.hypot(mouse.x - r.x, mouse.y - r.y);
   const gx = Math.floor(mouse.x / TILE_SIZE), gy = Math.floor(mouse.y / TILE_SIZE);
-  const near = getHarvestableResources().filter(r => away(r) < 22 && !r.oreSpawner).sort((a, b) => away(a) - away(b)); // (a source: by a mine, #326 27.10, 26)
+  // (a source: only with a mine on it, #326 27.10, 26; marked, it stays marked till taken off: it's never used up, 30.10, 7)
+  const near = getHarvestableResources().filter(r => away(r) < 22 && (!r.oreSpawner || hasMine(r))).sort((a, b) => away(a) - away(b));
   const onTile = near.filter(r => Math.floor(r.x / TILE_SIZE) === gx && Math.floor(r.y / TILE_SIZE) === gy);
   return onTile.length ? onTile : near.slice(0, 1);
 }
