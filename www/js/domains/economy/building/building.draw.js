@@ -262,16 +262,11 @@ export function drawBuildings() {
     } else if (b.type === 'campfire') {
       // (#326) a ring of stones, logs across, its flames while it burns (#298: while it has fuel)
       drawCampfireArt(b.x, b.y, (b.burning || 0) > 0);
-      // fuel left (orange) and the piece cooking now (yellow), each only while there is some (26.10, 16)
+      // fuel left (orange) and the piece cooking now (yellow)
       const perFuel = Math.max(...Object.values(GAME_CONFIG.cooking.fuel));
-      if ((b.fuelLeft || 0) > 0) {
-        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3);
-        ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, b.fuelLeft / perFuel), 3);
-      }
-      if ((b.cookProgress || 0) > 0) {
-        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
-        ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress), 3);
-      }
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3); ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
+      ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, (b.fuelLeft || 0) / perFuel), 3);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress || 0), 3);
     } else if (b.type === 'workshop') {
       drawWorkshopArt(b.x, b.y); // (#248)
     } else if (b.type === 'smithy') {
@@ -303,8 +298,7 @@ export function drawBuildings() {
     } else if (b.type === 'dummy') {
       // a training dummy (#199): one of its looks, picked once (#326: the commoner ones more often)
       if (!b.variant) {
-        // (26.10, 13: by its tile, not at random: a battle's line-up makes its buildings again with every one placed)
-        let n = (tileVariantHash(Math.floor(b.x / TILE_SIZE), Math.floor(b.y / TILE_SIZE)) % 10007) / 10007 * DUMMY_VARIANTS.reduce((sum, v) => sum + Number(v[1]), 0);
+        let n = Math.random() * DUMMY_VARIANTS.reduce((sum, v) => sum + Number(v[1]), 0);
         b.variant = String((DUMMY_VARIANTS.find(v => (n -= Number(v[1])) < 0) || DUMMY_VARIANTS[0])[0]);
       }
       drawDummyArt(b.x, b.y, b.variant);

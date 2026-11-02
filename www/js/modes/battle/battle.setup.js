@@ -48,7 +48,7 @@ export const battle = {
   savedMapSettings: null,
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   savedDifficulty: null, // the Endless choice, back when the battle's left
-  theme: ''             // (#326) whose music: a faction's (its id; none picked: the player's, 26.10, 32); the track by the phase and the time of day
+  theme: 'arena'        // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
 };
 
 // (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
