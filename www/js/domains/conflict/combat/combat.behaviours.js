@@ -197,7 +197,8 @@ function restockArrows(s, dt) {
 // there are defenders; the rest walk up and strike (an archer shoots from where it has a clear line).
 // False when there's nothing to fight.
 export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
-  const shoots = isRangedWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, a dagger: melee)
+  drawDaggerAt(s, targetEnemy);
+  const shoots = isRangedWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, or one up close, a dagger: melee)
   let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
 
   // (a necromancer's staff fights: it doesn't shelter at the town hall, #232)
@@ -233,7 +234,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
       : dist <= Math.max(approach + extraBody, pastBodies);
     if (inReach) {
-      performAttack(s, targetEnemy.x, targetEnemy.y);
+      performAttack(s, targetEnemy.x, targetEnemy.y, targetEnemy);
     } else if (breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through
     } else if (!shoots) {
@@ -252,14 +253,21 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   return false;
 }
 
+// (#326, 26.10, 21) An archer with an enemy up close (within its dagger's drawTiles) draws its dagger, in Battles too
+export function drawDaggerAt(s, target) {
+  const dagger = isRangedWeapon(s.weapon) && (getDefinition('weapons', s.weapon) || {}).dagger;
+  if (dagger && target && game.enemies.includes(target) && Math.hypot(target.x - s.x, target.y - s.y) < dagger.drawTiles * TILE_SIZE) s.daggerDrawn = true;
+}
+
 // (#326) On a way through the enemy's buildings (findPathAStar's, when the way round is long): the one next on
 // it struck once it's in reach. True while that keeps it busy
 function breakWhatsInTheWay(s) {
-  if (!s.path || !s.path.length || isRangedWeapon(s.weapon)) return false;
+  if (!s.path || !s.path.length) return false;
+  if (isRangedWeapon(s.weapon)) s.daggerDrawn = true; // (26.10, 23: an archer breaks it with its dagger, no arrows on walls)
   const next = s.path[0];
   // (#326: what's walked onto, spikes and iron traps, isn't broken: it's walked over, as the enemies walk onto the player's)
   const b = game.buildings.find(o => o.side === 'red' && !(getDefinition('buildings', o.type) || {}).walkable && Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1);
-  if (!b || Math.hypot(b.x - s.x, b.y - s.y) > getWeaponStats(s, 'combat').range + 15) return false;
+  if (!b || Math.hypot(b.x - s.x, b.y - s.y) > getWeaponStats(s, 'combat').range + 15) { s.daggerDrawn = false; return false; }
   performAttack(s, b.x, b.y);
   s.patrolTarget = null;
   return true;
@@ -301,9 +309,10 @@ export function goForMarkedTent(s, tick) {
 
 // Walk up to a tent and strike it (an archer: from where it has a clear shot)
 function attackTent(s, tent, tick) {
+  if (isRangedWeapon(s.weapon)) s.daggerDrawn = true; // (26.10, 23: with its dagger, as it breaks any building)
   const dist = Math.hypot(tent.x - s.x, tent.y - s.y);
   const attackDist = getWeaponStats(s, 'combat').tentReach;
-  const blockedShot = isRangedWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
+  const blockedShot = isRangedWeapon(s.weapon) && !usesDagger(s) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
   if (dist > attackDist || blockedShot) {
     if (!breakWhatsInTheWay(s)) moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
   } else {

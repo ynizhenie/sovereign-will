@@ -14,7 +14,7 @@ import { separateAllies, separateSettlersFromEnemies } from '../engine/movement/
 import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
 import { keepStoresInStep } from '../domains/colony/storage/index.js';
 import { tickDemonCamp } from '../domains/factions/demons/index.js';
-import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
+import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trackAllFootprints, trackMotion, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
@@ -62,6 +62,7 @@ export function update(dt) {
 
   separateSettlersFromEnemies();
   separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
+  trackMotion(); // (#326, 30.10, 5: for shots that lead)
   for (const unit of game.settlers) tickAnimation(unit, dt);
   ageBloodAndDung(dt);
   trackAllFootprints();
@@ -102,6 +103,7 @@ function updateCamp(dt) {
   tickEnemies(dt);
   separateSettlersFromEnemies();
   separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
+  trackMotion(); // (#326, 30.10, 5: for shots that lead)
   for (const unit of game.settlers) tickAnimation(unit, dt);
   for (const unit of game.enemies) tickAnimation(unit, dt);
   ageBloodAndDung(dt);
