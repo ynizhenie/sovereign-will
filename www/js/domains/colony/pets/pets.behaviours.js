@@ -10,7 +10,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, petKindOf, playerControlled } from '../settlers/index.js';
+import { faceTowards, petKindOf, playerControlled, unpossess } from '../settlers/index.js';
 import { fetchFromStorage, returnFood, stockLeft, takeFood } from '../storage/index.js';
 import { getWeaponStats } from '../equipment/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
@@ -219,6 +219,7 @@ function tickGhost(s, tick) {
 
 // Into an enemy: it panics at once; the ghost is gone a while
 export function haunt(s, foe) {
+  if (s.isPossessed) unpossess(); // (#326, 26.10, 12: gone a while, the player isn't left in it)
   ghostScare(foe, 'enemy'); // (#326: a big one at the second ghost)
   s.ghostGone = config().ghost.backSeconds;
   s.escort = null;

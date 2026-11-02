@@ -262,15 +262,27 @@ export function drawBuildings() {
     } else if (b.type === 'campfire') {
       // (#326) a ring of stones, logs across, its flames while it burns (#298: while it has fuel)
       drawCampfireArt(b.x, b.y, (b.burning || 0) > 0);
-      // fuel left (orange) and the piece cooking now (yellow)
+      // fuel left (orange) and the piece cooking now (yellow), each only while there is some (26.10, 16)
       const perFuel = Math.max(...Object.values(GAME_CONFIG.cooking.fuel));
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3); ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
-      ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, (b.fuelLeft || 0) / perFuel), 3);
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress || 0), 3);
+      if ((b.fuelLeft || 0) > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 20, 24, 3);
+        ctx.fillStyle = '#e67e22'; ctx.fillRect(b.x - 12, b.y - 20, 24 * Math.min(1, b.fuelLeft / perFuel), 3);
+      }
+      if ((b.cookProgress || 0) > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(b.x - 12, b.y - 16, 24, 3);
+        ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 12, b.y - 16, 24 * Math.min(1, b.cookProgress), 3);
+      }
     } else if (b.type === 'workshop') {
       drawWorkshopArt(b.x, b.y); // (#248)
     } else if (b.type === 'smithy') {
       drawSmithyArt(b.x, b.y); // (#211)
+    } else if (b.type === 'pen') {
+      // (#326, 27.10, 28) a boar pen: trodden ground, a fence of posts and rails round the tile (its boars drawn with the rest)
+      ctx.fillStyle = '#7a6044'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
+      ctx.strokeStyle = '#a1887f'; ctx.lineWidth = 1.6;
+      ctx.strokeRect(b.x - 14, b.y - 14, 28, 28); ctx.strokeRect(b.x - 11, b.y - 11, 22, 22); // (two rails all round)
+      ctx.fillStyle = '#5d4037';
+      for (const [px, py] of [[-14, -14], [0, -14], [14, -14], [-14, 0], [14, 0], [-14, 14], [0, 14], [14, 14]]) ctx.fillRect(b.x + px - 1.5, b.y + py - 1.5, 3, 3);
     } else if (b.type === 'mine') {
       drawIcon(ctx, 'mine', b.x, b.y, 28); // (#326, 27.10, 26: over the source)
     } else if (b.type === 'fish_trap') {
@@ -291,7 +303,8 @@ export function drawBuildings() {
     } else if (b.type === 'dummy') {
       // a training dummy (#199): one of its looks, picked once (#326: the commoner ones more often)
       if (!b.variant) {
-        let n = Math.random() * DUMMY_VARIANTS.reduce((sum, v) => sum + Number(v[1]), 0);
+        // (26.10, 13: by its tile, not at random: a battle's line-up makes its buildings again with every one placed)
+        let n = (tileVariantHash(Math.floor(b.x / TILE_SIZE), Math.floor(b.y / TILE_SIZE)) % 10007) / 10007 * DUMMY_VARIANTS.reduce((sum, v) => sum + Number(v[1]), 0);
         b.variant = String((DUMMY_VARIANTS.find(v => (n -= Number(v[1])) < 0) || DUMMY_VARIANTS[0])[0]);
       }
       drawDummyArt(b.x, b.y, b.variant);

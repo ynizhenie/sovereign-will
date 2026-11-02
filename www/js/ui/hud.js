@@ -353,7 +353,7 @@ export function heldGear(s) {
   if (s) {
     if (s.tool && s.tool !== 'none') items.push(['disarmSettler', 'tool', s.tool]);
     if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
-    for (const id of ['armor', 'leather_armor', 'shield', 'helmet', 'backpack', 'wateringCan', 'whistle', 'banner', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
+    for (const id of ['armor', 'leather_armor', 'shield', 'helmet', 'backpack', 'wateringCan', 'whistle', 'banner', 'lasso', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
   }
   return items;
 }

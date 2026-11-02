@@ -36,7 +36,7 @@ import { isPet } from './settlers.rules.js';
 import { feedPet, tickPet } from '../pets/index.js';
 import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
-import { baitTrap } from '../../economy/hunting/index.js';
+import { baitTrap, catchBoar, feedPen, leadBoar } from '../../economy/hunting/index.js';
 import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
 
 // (#322) What the settlers may work, and which of it is marked or in the way, was worked out afresh every tick: every list of
@@ -133,6 +133,7 @@ export function prepareSettler(s, dt) {
     else if (s.role === 'worker') s.role = isRangedWeapon(s.weapon) ? 'archer' : 'soldier';
   }
   rescueSettlerFromResource(s);
+  s.daggerDrawn = false; // (drawn again this tick if an enemy's up close or it breaks a building, #326 26.10, 21)
   if (s.attackCooldown > 0) { s.attackCooldown -= dt; if (s.attackCooldown < 1e-6) s.attackCooldown = 0; } // (#326, 27.10, 16: 0.4 s less 24 steps left a hair over 0, a step lost a blow)
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
 }
@@ -265,6 +266,7 @@ export const SETTLER_BEHAVIOURS = [
   sleepAtNight,
   fetchNightTorch,
   carryCaptive,
+  leadBoar, // (#326, 27.10, 28: one caught, into the pen)
   captainOrders,
   captainArms, // (#279: weapons lent before a wave, back after)
   goToSacrifice,
@@ -278,6 +280,8 @@ export const SETTLER_BEHAVIOURS = [
   equip,
   goEat,
   feedPet, // (#314: a hungry pet fed)
+  feedPen, // (#326, 27.10, 28: the penned boars)
+  catchBoar, // (#326, 27.10, 28: with a lasso, one for the pen)
   foremanOrders,
   harvestMarked, // (the player's marks before the chores, #298)
   cook,
@@ -367,6 +371,7 @@ export function tickSettlers(dt) {
     if (isPet(s)) {
       if (s.targetEquipment) s.targetEquipment = null;
       // (#326) let go, or sent somewhere by the player (with no soldier about too): that first, as a settler does
+      if (s.order || s.orderSpot || s.orderTarget || s.leaving) s.petSleep = 0; // (#326, 30.10, 2: sent somewhere, it wakes up and walks)
       if (!s.isPossessed && (leaveColony(s, tick) || followCommand(s, tick))) { s.activity = s.leaving ? 'leaveColony' : 'followCommand'; return; }
       tickPet(s, tick); return; // (its own ways, #314)
     }

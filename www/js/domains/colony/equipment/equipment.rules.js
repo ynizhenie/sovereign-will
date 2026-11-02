@@ -33,6 +33,7 @@ export const GEAR_RULES = {
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
   banner: { canWear: s => s.role === 'soldier' || s.role === 'archer', first: s => s.role === 'soldier' },
+  lasso: { canWear: s => s.role === 'soldier', first: () => true }, // (#326, 27.10, 28)
   // (#326) the soul lantern: a necromancer's (its staff in hand)
   soul_lantern: { canWear: s => !!(getDefinition('tools', s.tool) || {}).necromancer, first: () => true }
 };
@@ -242,8 +243,9 @@ export function isRangedWeapon(weapon) { return isBowWeapon(weapon) || isCrossbo
 // in woundBoar, #232; a hunt's range is the weapon's reach, a ranged weapon's its shooting distance). Damage:
 // the weapon's, or, for fists, the carried tool's, else bare hands; times the settler type's multiplier.
 // (#326) An archer out of arrows, with its dagger out instead (arrows never run out in a battle)
+// (#326, 26.10, 21) or drawn this tick: an enemy up close, a building broken (daggerDrawn, see engageEnemy)
 export function usesDagger(s) {
-  return isRangedWeapon(s.weapon) && !!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle';
+  return isRangedWeapon(s.weapon) && ((!!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') || !!s.daggerDrawn);
 }
 
 export function getWeaponStats(s, use) {
