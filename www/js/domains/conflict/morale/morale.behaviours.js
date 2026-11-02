@@ -14,6 +14,7 @@ import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
 import { getEnemyDef } from '../waves/index.js';
 import { healAtTent } from '../healing/index.js';
+import { keepBehindOwn } from '../../factions/undead/index.js';
 
 const config = () => GAME_CONFIG.morale;
 
@@ -118,14 +119,9 @@ export function boarsPanic() {
 // posts): one within keepBack px it fights, as any enemy. True: it took the step
 export function necromancerKeepsBack(en, dt) {
   if (game.settlers.some(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroKeepBack)) return false;
-  // amid its own, a little behind their middle (#232: behind the front one it was off on its own, its own
-  // out of its reach and panicking): the allies within reach of it, else all of them
-  const allies = game.enemies.filter(o => o !== en && o.hp > 0 && !getEnemyDef(o).necromancer);
-  if (!allies.length) return false;
-  const group = allies.filter(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroRange * 2.5);
-  const mid = (group.length ? group : allies).reduce((m, o, i, list) => ({ x: m.x + o.x / list.length, y: m.y + o.y / list.length }), { x: 0, y: 0 });
-  const d = Math.max(1, Math.hypot(mid.x - townHall.x, mid.y - townHall.y));
-  const spot = { x: mid.x + (mid.x - townHall.x) / d * 50, y: mid.y + (mid.y - townHall.y) / d * 50 };
-  if (Math.hypot(spot.x - en.x, spot.y - en.y) > 12) moveEntityTowards(en, spot.x, spot.y, en.speed, true, dt);
-  return true;
+  // (#326, 26.10, 11) behind its share of its own (each necromancer its own share), away from the player's nearest (none seen: from the hall)
+  const isNecro = o => !!getEnemyDef(o).necromancer;
+  const allies = game.enemies.filter(o => o.hp > 0 && !isNecro(o) && !getEnemyDef(o).pet);
+  const necros = game.enemies.filter(o => o.hp > 0 && isNecro(o));
+  return keepBehindOwn(en, necros, allies, game.settlers.filter(o => o.hp > 0 && !o.ghostly), dt, true, game.gameMode === 'battle' ? null : townHall);
 }
