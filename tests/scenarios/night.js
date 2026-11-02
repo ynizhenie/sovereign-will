@@ -118,7 +118,7 @@ Object.assign(window.sim, (() => {
     r.lights = { hall: lights.some(l => l.x === townHall.x && l.y === townHall.y && Math.abs(l.r - (townHall.radius + day().hallLightTiles * TILE_SIZE)) < 0.01),
       enemyTorch: lights.some(l => enemies.some(en => en.torch && en.x === l.x && en.y === l.y)),
       portal: lights.some(l => buildings.some(b => b.type === 'portal' && b.x === l.x && b.y === l.y)),
-      staff: lights.some(l => l.x === settlers[0].x && l.y === settlers[0].y) };
+      staff: lights.some(l => l.color && Math.hypot(l.x - settlers[0].x, l.y - settlers[0].y) < 40) };
     enemies = [];
     return r;
   }
