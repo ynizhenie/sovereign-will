@@ -252,33 +252,3 @@ export function fadeClearedBlight(dt) {
   for (const z of game.blightZones) if (z.clearing !== undefined) z.clearing -= dt;
   if (game.blightZones.some(z => z.clearing <= 0)) game.blightZones = game.blightZones.filter(z => !(z.clearing <= 0));
 }
-
-// (#326, 26.10, 11) A necromancer in a fight keeps behind its share of its side's fighters, on the side away from the
-// nearest foe (none seen: away from `goal`, where its side is going). The shares: each necromancer in turn takes the
-// nearest fighter not taken yet, and every other fighter goes with the necromancer whose pick is nearest it. One
-// necromancer: behind the middle of them all, as before; several: each behind its own (they all went to one spot).
-// necros: its side's necromancers (it among them); allies: its side's fighters; foes: the other side. True while
-// that keeps it busy (walking there)
-/** @param {any} unit @param {any[]} necros @param {any[]} allies @param {any[]} foes @param {number} dt @param {boolean} [isEnemy] @param {{ x: number, y: number } | null} [goal] */
-export function keepBehindOwn(unit, necros, allies, foes, dt, isEnemy = false, goal = null) {
-  if (!allies.length) return false;
-  const away = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const nearestOf = (list, p) => list.reduce((best, o) => (away(o, p) < away(best, p) ? o : best));
-  const picks = new Map();
-  for (const n of necros) {
-    const free = allies.filter(a => ![...picks.values()].includes(a));
-    picks.set(n, nearestOf(free.length ? free : allies, n));
-  }
-  const mine = picks.get(unit);
-  if (!mine) return false;
-  const anchors = [...picks.values()];
-  const share = allies.filter(a => nearestOf(anchors, a) === mine);
-  const mid = share.reduce((m, o) => ({ x: m.x + o.x / share.length, y: m.y + o.y / share.length }), { x: 0, y: 0 });
-  const from = foes.length ? nearestOf(foes, mid) : goal;
-  if (!from) return false;
-  const d = Math.max(1, away(mid, from));
-  const spot = { x: mid.x + (mid.x - from.x) / d * BEHIND, y: mid.y + (mid.y - from.y) / d * BEHIND };
-  if (away(spot, unit) > 12) moveEntityTowards(unit, spot.x, spot.y, unit.speed, isEnemy, dt);
-  return true;
-}
-const BEHIND = 50; // (px behind its share's middle)
