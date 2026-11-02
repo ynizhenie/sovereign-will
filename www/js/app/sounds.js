@@ -266,7 +266,6 @@ export function previewTrack(id) { musicPreview.id = id; if (id) startAudio(); }
 export function musicCatalog() {
   const groups = [{ id: 'menu', label: t('music.group.menu'), tracks: [{ id: 'menu', when: 'music.when.menu' }] }];
   const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind] }))) });
-  set('arena', t('music.group.arena'), GAME_CONFIG.battleMusic, { ambient: 'music.when.arenaAmbient', nightAmbient: 'music.when.arenaAmbientNight', battle: 'music.when.arenaBattle', nightBattle: 'music.when.arenaBattleNight' });
   for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) {
     set(faction.id, faction.label, faction.music, { ambient: 'music.when.ambient', nightAmbient: 'music.when.ambientNight', battle: 'music.when.battle', nightBattle: 'music.when.battleNight' });
   }
@@ -304,12 +303,19 @@ function trackFor(fighting) {
   return fighting ? musicPick.battle || pickOne(battlesOf(getEnemyFaction())) : ambientFor(getPlayerFaction());
 }
 
-// (#326) A battle's track: of the theme picked in its settings (the Battles' own, or a faction's), the ambient while
+// (#326) The faction whose music a battle plays: the one picked in its settings, else the player's (26.10, 32: no Battles'
+// music of their own any more, only the factions')
+export function battleThemeFaction() {
+  const f = GAME_CONFIG.factions[battle.theme];
+  return f && f.music ? f : getPlayerFaction();
+}
+
+// (#326) A battle's track: of the faction's theme picked in its settings, the ambient while
 // placing and the battle tracks in the fight, the night's if the battle is at night; one picked each time the phase,
 // the theme or the time of day changes
 const battleKey = { key: '', track: '' };
 function battleTrack(fight) {
-  const set = battle.theme === 'arena' || !GAME_CONFIG.factions[battle.theme] ? GAME_CONFIG.battleMusic : GAME_CONFIG.factions[battle.theme].music;
+  const set = battleThemeFaction().music;
   const night = battle.time === 'night';
   const list = fight ? (night && set.nightBattle) || set.battle : (night && set.nightAmbient) || set.ambient;
   const key = `${battle.theme}|${night}|${fight}`;
