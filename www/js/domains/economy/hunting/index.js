@@ -3,6 +3,6 @@
 
 export { huntBoar } from './hunting.behaviours.js';
 export { baitTrap, tickIronTraps } from './hunting.traps.js';
-export { drawBoars, drawWallows } from './hunting.draw.js';
+export { drawBoarBody, drawBoars, drawWallows } from './hunting.draw.js';
 export { clearBoarWallows, makeBoarFlee, tickBoarRespawn, tickBoars, woundBoar } from './hunting.rules.js';
 export { catchBoar, feedPen, isPenHungry, leadBoar, pennedIn, tickPens } from './hunting.pen.js';

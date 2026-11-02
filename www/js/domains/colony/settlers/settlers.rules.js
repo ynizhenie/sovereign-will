@@ -44,7 +44,11 @@ export const isUntouchable = unit => petKindOf(unit) === 'ghost';
 // A pet's look: a female or a male (drawn a little smaller), one of its kind's coats
 export function newPetLook(kind) {
   const c = GAME_CONFIG.pets;
-  return { female: Math.random() < c.femaleChance, coat: Math.floor(Math.random() * c.coats[kind].length), style: 0, shade: 0 };
+  // (#326, 26.10, 28) a coat by its weight (its third, 1 with none: as likely as any), as set in the looks editor
+  const coats = c.coats[kind], weight = coat => Math.max(0, Number(coat[2] ?? 1));
+  let n = Math.random() * coats.reduce((sum, coat) => sum + weight(coat), 0), coat = 0;
+  while (coat < coats.length - 1 && (n -= weight(coats[coat])) >= 0) coat++;
+  return { female: Math.random() < c.femaleChance, coat, style: 0, shade: 0 };
 }
 
 // A big body: a giant or a big zombie (settlerTypes with big), or a big enemy (a big archer, medic or
