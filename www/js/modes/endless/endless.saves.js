@@ -1,5 +1,6 @@
-// Saving and loading Endless games: from the pause menu, a save of the whole game on the device;
-// from the Endless menu, the saves to carry on from (or delete). A save holds the world (every list in
+// Saving and loading Endless games: from the pause menu, a save of the whole game on the device (as many as
+// there's room for); from the pause menu or the Endless menu, the saves to carry on from (or delete, or write
+// to a file and read back, #326 30.10, 3). A save holds the world (every list in
 // WORLD_LISTS), the stock, the clocks, the factions and the random sequence, so a loaded game goes on exactly
 // as it would have.
 //
@@ -7,8 +8,10 @@
 // load at its blueprint...). Saved, such a pointer becomes { $ref: 'list:index' } (or '$hall'), and
 // loading puts the real object back in its place.
 
-import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, runLoading, setRichText, updateSeedHud } from '../../ui/index.js';
-import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
+import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, richText, runLoading, setRichText, updateSeedHud } from '../../ui/index.js';
+import { camera, clampCamera, deleteBig, getBig, loadData, onTap, putBig, saveData, t } from '../../engine/platform/index.js';
+import { GAME_CONFIG } from '../../content/configs/index.js';
+import { showMenuScreen } from '../menu/index.js';
 import { createWorldSeed, game, resetTileIndex, setWorldSize, townHall, WORLD_LISTS } from '../../engine/world/index.js';
 import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
@@ -36,14 +39,6 @@ async function squeeze(data) {
   let text = '';
   for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return { z: btoa(text) };
-}
-
-// A save's game, squeezed or not
-export async function saveDataOf(save) {
-  if (save.data) return save.data;
-  const bytes = Uint8Array.from(atob(save.z), c => c.charCodeAt(0));
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return JSON.parse(await new Response(stream).text());
 }
 
 // Its world (the seed) and wave, kept beside it (inside it, in one from before #299)
@@ -188,38 +183,116 @@ export function loadGame(data) {
   document.getElementById('main-menu').style.display = 'none';
 }
 
-// The most saves kept: one slot a world (#254)
-export const SAVE_SLOTS = 10;
+// ---- (#326, 30.10, 3) As many saves as the device has room for, each its own (no slot a world any more): what's
+// shown of it kept in the list (localStorage, small), its game in the device's database (putBig). Saved and loaded
+// from screens of their own with the whole list; each can be written to a file and read back from one
 
-// From the pause menu: one slot a world (its seed), saved over each time; at most SAVE_SLOTS worlds. Says
-// how it went on the save button itself, not in a notice the pause menu hides (#254)
-export function saveCurrentGame() {
+// What's shown of a save: its world, wave, day, people, sides, difficulty, map size, when (and its name)
+function saveInfo() {
+  const now = new Date(), pad = n => String(n).padStart(2, '0');
+  const seed = game.worldSeed.value;
+  return {
+    name: t('save.name', { world: seed, wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` }),
+    savedAt: now.getTime(), seed, wave: game.waveNum, day: (game.nightId || 0) + 1,
+    settlers: game.settlers.filter(s => !s.temporary && s.role !== 'pet').length, pets: game.settlers.filter(s => s.role === 'pet').length,
+    faction: sides.player.faction, enemy: sides.enemy.faction, difficulty: game.gameDifficulty, cols: game.COLS, rows: game.ROWS
+  };
+}
+
+// A new save (over: the key of one to write over), its game where there's room. Says how it went on its button
+/** @param {string | null} [over] */
+export function saveCurrentGame(over = null) {
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
   // (#298) with a party on its way to a camp or home it saves (the base is there; loaded, they're home);
   // in the camp itself, not: it says so, it used to do nothing at all
   if (isInCamp()) { flashSaveButton(t('save.inCamp'), false); return; }
-  return saveNow().catch(e => { console.error(e); flashSaveButton(t('save.failed'), false); });
+  return saveNow(over).catch(e => { console.error(e); flashSaveButton(t('save.failed'), false); });
 }
 
-async function saveNow() {
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const seed = game.worldSeed.value;
-  const name = t('save.name', { world: seed, wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
-  const save = { name, savedAt: now.getTime(), seed, wave: game.waveNum, ...(await squeeze(serializeGame())) };
+/** @param {string | null} over */
+async function saveNow(over) {
+  const body = await squeeze(serializeGame());
+  const key = over || `save:${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+  const save = { ...saveInfo(), id: key, size: (body.z || JSON.stringify(body.data)).length };
+  let inBig = true;
+  try { await putBig(key, body); } catch (e) { inBig = false; } // (no database: in the list itself, as before)
   const saves = loadSaves();
-  // this world's slot (older saves of it, one per save, go into it)
-  for (const [key, s] of Object.entries(saves)) if (seedOf(s) === seed) delete saves[key];
-  if (Object.keys(saves).length >= SAVE_SLOTS) { flashSaveButton(t('save.full', { n: SAVE_SLOTS }), false); return; }
-  saves[`world:${seed}`] = save;
-  if (!storeSaves(saves)) { flashSaveButton(t('save.failed'), false); return; }
+  if (over && saves[over] && !saves[over].id) delete saves[over]; // (an old one written over: kept the new way)
+  saves[key] = inBig ? save : { ...save, ...body };
+  if (!storeSaves(saves)) { if (inBig) deleteBig(key).catch(() => {}); flashSaveButton(t('save.failed'), false); return; }
   flashSaveButton(t('save.done'), true);
+  if (!document.getElementById('saves-screen').hidden) renderSavesScreen();
+  return key;
 }
 
-// The save button says how the save went for a moment, then is itself again
+// A save's game: in the list (one from before) or in the database
+export async function saveDataOf(save) {
+  if (save.data) return save.data;
+  const body = save.z ? save : await getBig(save.id);
+  if (!body) throw new Error('save missing');
+  if (body.data) return body.data;
+  const bytes = Uint8Array.from(atob(body.z), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+// The newest save (of this world, if asked)
+export function latestSave(seed = null) {
+  return Object.values(loadSaves()).filter(s => seed === null || seedOf(s) === seed).sort((a, b) => b.savedAt - a.savedAt)[0] || null;
+}
+
+export function deleteSave(key) {
+  const saves = loadSaves();
+  delete saves[key];
+  storeSaves(saves);
+  deleteBig(key).catch(() => {});
+}
+
+// ---- Files
+
+const FILE_KIND = 'sovereign-will-save';
+// A save written to a file (a .swsave: its info and its game), downloaded, or shared where the device can
+export async function exportSave(key) {
+  const save = loadSaves()[key];
+  if (!save) return false;
+  const body = save.z || save.data ? { z: save.z, data: save.data } : await getBig(save.id);
+  const { z, data, ...info } = save;
+  const text = JSON.stringify({ kind: FILE_KIND, version: 1, info, body });
+  const name = `${String(seedOf(save) || 'world').replace(/[^\w-]+/g, '_').slice(0, 40)}-wave${waveOf(save)}.swsave`;
+  const file = new File([text], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: save.name }); return true; } catch (e) { /* shared not: downloaded */ }
+  }
+  const url = URL.createObjectURL(file), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return true;
+}
+
+// A save read from a file into the list (a new one, whatever it was called before). True if it was one
+export async function importSave(file) {
+  let parsed;
+  try { parsed = JSON.parse(await file.text()); } catch (e) { parsed = null; }
+  if (!parsed || parsed.kind !== FILE_KIND || !parsed.body || !(parsed.body.z || parsed.body.data)) { showSavesNote(t('save.importBad'), false); return false; }
+  const key = `save:${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+  const info = { ...(parsed.info || {}), id: key };
+  let inBig = true;
+  try { await putBig(key, parsed.body); } catch (e) { inBig = false; }
+  const saves = loadSaves();
+  saves[key] = inBig ? info : { ...info, ...parsed.body };
+  if (!storeSaves(saves)) { showSavesNote(t('save.failed'), false); return false; }
+  showSavesNote(t('save.imported'), true);
+  renderSavesScreen();
+  return true;
+}
+
+// ---- On screen
+
+// The save button (and the saves screen's own note) says how it went for a moment, then is itself again
 /** @type {any} */
 let flashTimer = null;
 function flashSaveButton(text, ok) {
+  showSavesNote(text, ok);
   const button = document.getElementById('save-game-button');
   setRichText(button, text);
   button.classList.toggle('save-ok', ok);
@@ -227,76 +300,136 @@ function flashSaveButton(text, ok) {
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => { setRichText(button, t('save.button')); button.classList.remove('save-ok', 'save-no'); }, 2200);
 }
+/** @type {any} */
+let noteTimer = null;
+function showSavesNote(text, ok) {
+  const note = document.getElementById('saves-note');
+  if (!note) return;
+  setRichText(note, text);
+  note.className = `saves-note ${ok ? 'save-ok' : 'save-no'}`;
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(() => { note.textContent = ''; note.className = 'saves-note'; }, 2600);
+}
 
-// The saves as tiles, newest first (#254): its world in bold, its wave and when it was saved; tapped, it's
-// loaded; its × deletes it, asked first. In the Endless menu all of them; in the pause menu's Load only this
-// world's (its one slot)
-export function renderSaveList(listId = 'save-list') {
-  const all = Object.entries(loadSaves()).sort((a, b) => b[1].savedAt - a[1].savedAt);
-  const thisWorld = listId !== 'save-list';
-  const saves = thisWorld ? all.filter(([, s]) => game.worldSeed && seedOf(s) === game.worldSeed.value) : all;
-  if (!thisWorld) document.getElementById('save-settings').hidden = saves.length === 0;
-  const list = document.getElementById(listId);
+// The saves screen: 'save' (from the pause menu: a new save, or written over one) or 'load' (from the pause menu or
+// the Endless screen); 'from': where Back goes ('pause' or 'endless')
+const screen = { mode: 'load', from: 'endless' };
+export function openSavesScreen(mode, from) {
+  screen.mode = mode; screen.from = from;
+  const menu = document.getElementById('main-menu');
+  if (from === 'pause') { document.getElementById('pause-menu').hidden = true; menu.style.display = ''; menu.dataset.fromPause = 'yes'; }
+  showMenuScreen('saves');
+  renderSavesScreen();
+}
+
+function closeSavesScreen() {
+  const menu = document.getElementById('main-menu');
+  if (menu.dataset.fromPause === 'yes') {
+    delete menu.dataset.fromPause;
+    menu.style.display = 'none';
+    document.getElementById('pause-menu').hidden = false;
+    showMenuScreen('home');
+  } else { renderSaveList(); showMenuScreen('endless'); }
+}
+
+const pad = n => String(n).padStart(2, '0');
+const when = at => { const d = new Date(at); return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const factionIcon = id => (GAME_CONFIG.factions[id] ? { humans: 'worker', demons: 'imp', undead: 'zombie' }[id] || 'worker' : '');
+
+// The list, newest first (this world's first when saving): each with its world, wave, day, people, sides, difficulty,
+// map size and when; tapped, loaded (or, saving, written over: asked first); its buttons write it to a file or delete it
+export function renderSavesScreen() {
+  const saving = screen.mode === 'save' && game.gameStarted && game.gameMode === 'endless';
+  document.getElementById('saves-title').textContent = t(saving ? 'save.screenSave' : 'save.screenLoad');
+  document.getElementById('saves-new').hidden = !saving;
+  const list = document.getElementById('saves-list');
+  const here = game.worldSeed && game.worldSeed.value;
+  const all = Object.entries(loadSaves()).sort((a, b) => (saving ? Number(seedOf(b[1]) === here) - Number(seedOf(a[1]) === here) : 0) || b[1].savedAt - a[1].savedAt);
   list.innerHTML = '';
-  list.className = 'tile-grid save-tiles';
-  if (!saves.length) {
+  if (!all.length) {
     const empty = document.createElement('div');
     empty.className = 'item-list-empty';
-    empty.textContent = t(thisWorld ? 'save.noneHere' : 'save.none');
+    empty.textContent = t('save.none');
     list.appendChild(empty);
     return;
   }
-  const pad = n => String(n).padStart(2, '0');
-  for (const [key, s] of saves) {
-    const wrap = document.createElement('div');
-    wrap.className = 'save-tile-wrap';
+  for (const [key, s] of all) {
+    const row = document.createElement('div');
+    row.className = 'save-row';
     const tile = document.createElement('button');
-    tile.className = 'btn tile save-tile';
+    tile.className = 'btn save-tile';
     tile.dataset.save = key;
-    const at = new Date(s.savedAt);
-    const world = seedOf(s) ?? '';
-    const wave = waveOf(s);
-    tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(t('save.world', { world }))}</b></span>` +
-      `<span class="tile-cost">${escapeHtml(t('save.wave', { wave }))} · ${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}</span>`;
-    onTap(tile, async () => {
-      document.getElementById('pause-load').hidden = true;
-      let data;
-      await runLoading('loading.save', (function* () { // (#326) a bar while it's read and set up
-        yield 0.1;
-        yield saveDataOf(loadSaves()[key]).then(read => { data = read; });
-        yield 0.7;
-        loadGame(data);
-      })());
-    });
+    const info = [t('save.wave', { wave: waveOf(s) })];
+    if (s.day) info.push(t('save.day', { n: s.day }));
+    if (s.settlers !== undefined) info.push(t('save.people', { n: s.settlers }) + (s.pets ? ` + ${s.pets}[[dog]]` : ''));
+    if (s.cols) info.push(`${s.cols}×${s.rows}`);
+    if (s.difficulty) info.push(t(`menu.${s.difficulty}`));
+    const sidesLine = s.faction ? `[[${factionIcon(s.faction)}]] ${GAME_CONFIG.factions[s.faction] ? GAME_CONFIG.factions[s.faction].label : ''} · [[swords]] ${GAME_CONFIG.factions[s.enemy] ? GAME_CONFIG.factions[s.enemy].label : ''}` : '';
+    tile.innerHTML = `<span class="save-world"><b>${escapeHtml(t('save.world', { world: seedOf(s) ?? '' }))}</b> <small>${escapeHtml(when(s.savedAt))}</small></span>` +
+      `<span class="save-info">${richText(info.join(' · '))}</span>` + (sidesLine ? `<span class="save-info">${richText(sidesLine)}</span>` : '');
+    onTap(tile, () => (saving ? askThen(tile, () => saveCurrentGame(key)) : loadSave(key)));
+    const actions = document.createElement('div');
+    actions.className = 'save-actions';
+    const fileBtn = document.createElement('button');
+    fileBtn.className = 'btn tile-act save-export';
+    fileBtn.dataset.exportSave = key;
+    fileBtn.title = t('save.export');
+    fileBtn.innerHTML = iconHtml('save');
+    onTap(fileBtn, () => exportSave(key));
     const del = document.createElement('button');
     del.className = 'btn tile-act save-delete';
     del.dataset.deleteSave = key;
     del.setAttribute('aria-label', t('list.deleteQuestion', { name: s.name }));
     del.innerHTML = iconHtml('close');
-    // asked first: the × turns into "Delete?", tapped again it's gone
-    onTap(del, () => {
-      if (!del.classList.contains('asking')) {
-        del.classList.add('asking');
-        del.dataset.confirmDelete = key;
-        del.textContent = t('save.deleteAsk');
-        setTimeout(() => { if (del.isConnected) { del.classList.remove('asking'); delete del.dataset.confirmDelete; del.innerHTML = iconHtml('close'); } }, 3000);
-        return;
-      }
-      const left = loadSaves(); delete left[key]; storeSaves(left); renderSaveList(listId);
-    });
-    wrap.append(tile, del);
-    list.appendChild(wrap);
+    onTap(del, () => askThen(del, () => { deleteSave(key); renderSavesScreen(); }, true));
+    actions.append(fileBtn, del);
+    row.append(tile, actions);
+    list.appendChild(row);
   }
+}
+
+// Asked first: the button turns into its question, tapped again it's done
+function askThen(button, act, isDelete = false) {
+  if (!button.classList.contains('asking')) {
+    const was = button.innerHTML;
+    button.classList.add('asking');
+    if (isDelete) button.dataset.confirmDelete = button.dataset.deleteSave; else button.dataset.confirmOver = button.dataset.save;
+    const label = t(isDelete ? 'save.deleteAsk' : 'save.overAsk');
+    if (isDelete) button.textContent = label; else button.insertAdjacentHTML('beforeend', `<span class="save-ask">${escapeHtml(label)}</span>`);
+    setTimeout(() => { if (button.isConnected && button.classList.contains('asking')) { button.classList.remove('asking'); delete button.dataset.confirmDelete; delete button.dataset.confirmOver; button.innerHTML = was; } }, 3000);
+    return;
+  }
+  act();
+}
+
+async function loadSave(key) {
+  const menu = document.getElementById('main-menu');
+  delete menu.dataset.fromPause;
+  let data;
+  await runLoading('loading.save', (function* () { // (#326) a bar while it's read and set up
+    yield 0.1;
+    yield saveDataOf(loadSaves()[key]).then(read => { data = read; });
+    yield 0.7;
+    loadGame(data);
+  })());
+}
+
+// The Endless screen's line: how many saves there are, its button opening the list
+export function renderSaveList() {
+  const n = Object.keys(loadSaves()).length;
+  document.getElementById('save-settings').hidden = n === 0;
+  setRichText(document.getElementById('open-saves'), t('save.openList', { n }));
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessSaves() {
-  onTap(document.getElementById('save-game-button'), saveCurrentGame);
+  onTap(document.getElementById('save-game-button'), () => openSavesScreen('save', 'pause'));
+  onTap(document.getElementById('load-game-button'), () => openSavesScreen('load', 'pause'));
   onTap(document.getElementById('mode-endless'), () => renderSaveList());
-  // the pause menu's Load: the saves, under the button (#254)
-  onTap(document.getElementById('load-game-button'), () => {
-    const box = document.getElementById('pause-load');
-    box.hidden = !box.hidden;
-    if (!box.hidden) renderSaveList('pause-load-list');
-  });
+  onTap(document.getElementById('open-saves'), () => openSavesScreen('load', 'endless'));
+  onTap(document.getElementById('saves-back'), closeSavesScreen);
+  onTap(document.getElementById('saves-new'), () => saveCurrentGame());
+  const input = /** @type {HTMLInputElement} */ (document.getElementById('saves-import-file'));
+  onTap(document.getElementById('saves-import'), () => input.click());
+  input.addEventListener('change', async () => { const file = input.files && input.files[0]; input.value = ''; if (file) await importSave(file); });
 }
