@@ -5,3 +5,4 @@ export { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deli
 export { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from './building.draw.js';
 export { canBuild, claimBuildingJob, createBuildingBlueprint, findDoorBlockers, getHallRepairStep, getMissingMaterial, getRepairStep, getReservedForBlueprints, isBaseSealed, isBuildingJobFree, isBuildingSingle, isBuildLocationAllowed, isSpawnSpotFree, isTileOccupied, removeBuilding, repairAllBuildings, tickSmelters, toggleBuildingRepair } from './building.rules.js';
 export { renderBuildTab } from './building.panel.js';
+export { DUMMY_VARIANTS, drawDummyArt } from './building.art.js';

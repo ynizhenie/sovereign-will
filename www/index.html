@@ -216,6 +216,24 @@
             </div>
         </div>
         <button id="open-music-player" class="menu-button" data-i18n="menu.openMusicPlayer">Open music player</button>
+        <!-- (#326, 26.10, 28) the looks editor -->
+        <button id="open-looks" class="menu-button" data-i18n="looks.open">Looks</button>
+    </div>
+
+    <div class="main-menu-content looks-screen" data-screen="looks" id="looks-screen" hidden>
+        <button class="menu-back" data-back-to="settings" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="looks.title">Looks</h1>
+        <div class="wave-options looks-tabs">
+            <button class="btn sub-tab on" data-looks-tab="people" data-i18n="looks.tab.people">People</button>
+            <button class="btn sub-tab" data-looks-tab="pets" data-i18n="looks.tab.pets">Pets</button>
+            <button class="btn sub-tab" data-looks-tab="boars" data-i18n="looks.tab.boars">Boars</button>
+            <button class="btn sub-tab" data-looks-tab="dummies" data-i18n="looks.tab.dummies">Dummies</button>
+        </div>
+        <div id="looks-pane" class="looks-pane"></div>
+        <div class="saves-top">
+            <button id="looks-reset" class="fps-option" data-i18n="looks.reset">Reset this</button>
+            <button id="looks-reset-all" class="fps-option" data-i18n="looks.resetAll">Reset all</button>
+        </div>
     </div>
 
     <!-- (#326, 30.10, 3) the saves, all of them: saving (a new one, or over one) or loading; to a file and back -->

@@ -20,7 +20,7 @@ function boarLook(b) {
 
 // A boar (#251), its side to us, facing the way it last went: a bristly body, legs stepping, its head with
 // snout, tusks and an ear, a curly tail. A carcass: on its back, legs up, a cross for its eye. (#326) In its look
-function drawBoarBody(b, dead) {
+export function drawBoarBody(b, dead) {
   const look = boarLook(b), coats = GAME_CONFIG.mapResources.boar.looks.coats;
   const [body, head, bristle] = /** @type {string[]} */ (coats[look.coat] || coats[0]);
   if (b.lastX !== undefined && Math.abs(b.x - b.lastX) > 0.05) b.faceX = b.x > b.lastX ? 1 : -1;
