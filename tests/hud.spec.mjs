@@ -22,6 +22,29 @@ test('the stock drops down at one level: a line a group, its name and each resou
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
 });
 
+test('the population icon follows the faction and role counters are hidden', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  for (const [faction, icon] of [['humans', 'worker'], ['demons', 'imp'], ['undead', 'zombie']]) {
+    const result = await page.evaluate(faction => {
+      setSideFaction('player', faction);
+      updateUI();
+      return {
+        icons: [
+          document.querySelector('#population-icon i')?.className,
+          document.querySelector('#strip-pop-icon i')?.className
+        ],
+        hasWorkers: !!document.getElementById('workers-cnt'),
+        hasWarriors: !!document.getElementById('warriors-cnt')
+      };
+    }, faction);
+    expect(result.icons).toHaveLength(2);
+    result.icons.forEach(iconClass => expect(iconClass).toContain(`ic-${icon}`));
+    expect(result.hasWorkers).toBe(false);
+    expect(result.hasWarriors).toBe(false);
+  }
+});
+
 test('farm zones are drawn only with the Farming tab open (#106)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');

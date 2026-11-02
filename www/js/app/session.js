@@ -4,7 +4,7 @@ import { closeSelectedCard, closeSheet, closeWorldMap, hidePlacing, iconHtml, re
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { game, resetTileIndex, setWorldSize, TOWN_HALL_HP, townHall } from '../engine/world/index.js';
-import { createSettler, updateUnitCounts } from '../domains/colony/settlers/index.js';
+import { createSettler } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { clearBoarWallows } from '../domains/economy/hunting/index.js';
 import { generateMapSteps, resetFog } from '../domains/world/index.js';
@@ -54,7 +54,6 @@ export function* resetGameSteps(map) {
   // the undead start with a necromancer too: one more with the staff (#253)
   if (getPlayerFaction().startNecromancer) game.settlers.push(Object.assign(createSettler(getPlayerFaction().startUnits, 103, townHall.x, townHall.y + 45), { tool: 'necro_staff' }));
 
-  updateUnitCounts();
   syncCards(); // (#255: all locked again, or none out of Endless's cards)
 }
 
