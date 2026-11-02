@@ -36,8 +36,8 @@ test('a dog is hired at the hall, keeps by a soldier, bites an enemy near, flush
     for (let f = 0; f < 600 && boar.hidden; f++) update(1 / 60);
     const flushed = !boar.hidden;
     soldier.isPossessed = false;
-    // hungry: a settler brings it food from the stock
-    dog.petHunger = 1; const meat = (stock.rawMeat = 5);
+    // hungry: its soldier, after its own meal, brings it food from the stock (#326, 26.10, 30)
+    dog.petHunger = 1; const meat = (stock.rawMeat = 5); stock.food = Math.max(stock.food || 0, 20); soldier.hunger = 0.01;
     for (let f = 0; f < 60 * 30 && dog.petHunger >= 1; f++) update(1 / 60);
     return { units, byKeeper, bitten, flushed, fed: dog.petHunger < 1, meatUsed: meat - stock.rawMeat, role: dog.role, look: dog.look };
   });
