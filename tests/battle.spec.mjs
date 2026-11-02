@@ -350,10 +350,11 @@ test('a settler panicking from a ghost leaves the battle without a corpse or loo
     battle.preset = 'humans:iron_sword'; battleTap(at(2, 13).x, at(2, 13).y);
     battle.preset = 'undead:pet'; battleTap(at(30, 13).x, at(30, 13).y);
     const settler = settlers[0];
-    settler.x = 700;
+    settler.x = 150;
+    enemies[0].x = 180;
+    enemies[0].y = settler.y;
     const remainingEnemy = createConfiguredEnemy({ x: 1100, y: 700 }, 'raider');
-    remainingEnemy.speed = 0;
-    remainingEnemy.damage = 0;
+    remainingEnemy.trapped = true;
     enemies.push(remainingEnemy);
     const lootBefore = loot.length;
     startBattleFight();
@@ -537,12 +538,12 @@ test('an enemy medic uses the player medic healing animation state', async ({ pa
 test('medics have unlimited herbs during Battles', async ({ page }) => {
   await openBattle(page);
   const result = await page.evaluate(() => {
+    setSideFaction('player', 'humans');
     const playerMedic = Object.assign(createSettler('normal', 1, 300, 300), { role: 'worker', weapon: 'fist', tool: 'medbag', bagHerbs: 0 });
     const ally = createSettler('normal', 2, 320, 300);
     ally.weapon = 'sword';
     ally.role = 'soldier';
-    ally.hp = 10000 - 40;
-    ally.maxHp = 10000;
+    ally.hp = 60;
     const enemy = createConfiguredEnemy({ x: 900, y: 300 }, 'raider');
     enemy.speed = 0;
     enemy.damage = 0;
@@ -558,7 +559,7 @@ test('medics have unlimited herbs during Battles', async ({ page }) => {
     for (let frame = 0; frame < 180 && battle.phase === 'fight'; frame++) update(1 / 60);
     return {
       playerBag: playerMedic.bagHerbs,
-      playerHealed: ally.hp > ally.maxHp - 40,
+      playerHealed: ally.hp > 60,
       enemyBag: enemyMedic.herbs,
       enemyHealed: enemyAlly.hp > enemyAlly.maxHp - 20
     };
