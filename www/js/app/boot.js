@@ -1,7 +1,7 @@
 // The game starts: each file sets up what it needs (wires its buttons, fills its menus...), in the order
 // the files depend on each other
 
-import { initIcons, initItemInfo, initLooksEditor, initMapInput, initPageActions, initSheets, initWidgets, initWorldMap } from '../ui/index.js';
+import { initIcons, initItemInfo, initMapInput, initPageActions, initSheets, initWidgets, initWorldMap } from '../ui/index.js';
 import { initAudio, initCanvas, initI18n, initInput } from '../engine/platform/index.js';
 import { initRng } from '../engine/world/index.js';
 import { initSession } from './session.js';
@@ -23,7 +23,6 @@ initWidgets();
 initPageActions();
 initSheets();
 initItemInfo();
-initLooksEditor(); // (#326, 26.10, 28: the looks changed on this device, laid over the config)
 initWorldMap();
 initEndlessSetup();
 initEndlessCards();

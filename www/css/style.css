@@ -1232,18 +1232,3 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .save-info { font-size: 12px; opacity: 0.85; }
 .save-ask { margin-left: auto; color: #f1c40f; font-weight: bold; }
 .save-actions { display: flex; flex-direction: column; gap: 4px; }
-
-/* (#326, 26.10, 28) the looks editor: a card a variation, its picture, chance and colours */
-.looks-pane { max-height: 58vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.look-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
-.look-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border: 1px solid #3a404c; border-radius: 6px; background: rgba(0, 0, 0, 0.18); font-size: 11px; }
-.look-preview { position: static !important; width: 72px !important; height: 72px !important; cursor: default; touch-action: auto; border-radius: 4px; }
-.look-name { font-weight: bold; text-align: center; }
-.look-weight { display: flex; align-items: center; gap: 3px; }
-.look-weight input { width: 46px; }
-.look-colours { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
-.look-colours input { width: 26px; height: 22px; padding: 0; border: none; background: none; }
-.look-remove { position: absolute; top: 2px; right: 2px; min-height: 0; padding: 0 4px; }
-.look-add { align-self: center; min-height: 0; padding: 6px 8px; font-size: 12px; }
-.looks-pane .generator-field { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
-.looks-pane .generator-field input { width: 56px; }
