@@ -1219,3 +1219,16 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .music-name small { font-size: 11px; opacity: 0.7; }
 .music-toggle { flex: none; min-width: 52px; min-height: 30px; padding: 0 8px; font-size: 12px; }
 .music-toggle.on, .music-listen.on { background: #2e6da4; border-color: #46b8da; color: #fff; }
+
+/* (#326, 30.10, 3) the saves screen: a row a save, its info under its world, its buttons by it */
+.saves-top { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.saves-note { min-height: 1.2em; text-align: center; font-size: 13px; }
+.saves-note.save-ok { color: #2ecc71; } .saves-note.save-no { color: #e74c3c; }
+.saves-list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; }
+.save-row { display: flex; gap: 4px; align-items: stretch; }
+.save-row .save-tile { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 6px 10px; min-height: 0; white-space: normal; }
+.save-row .save-tile span { max-width: 100%; overflow-wrap: anywhere; }
+.save-world small { opacity: 0.7; font-weight: normal; }
+.save-info { font-size: 12px; opacity: 0.85; }
+.save-ask { margin-left: auto; color: #f1c40f; font-weight: bold; }
+.save-actions { display: flex; flex-direction: column; gap: 4px; }

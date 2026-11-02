@@ -182,7 +182,7 @@ test('a big map saves squeezed (several fit on the device) and loads back as it 
     await saveCurrentGame();
     const size = localStorage.getItem('sovereign-will-saves').length;
     resetGame();
-    await loadGame(await saveDataOf(loadSaves()[`world:${worldSeed.value}`]));
+    await loadGame(await saveDataOf(latestSave(worldSeed.value)));
     mapSettings = { cols: 40, rows: 40 };
     return { was, size, now: { rocks: naturalRocks.length, water: waterTiles.length, trees: trees.length, first: { ...naturalRocks[0] }, spawner: naturalRocks.findIndex(r => r.oreSpawner) }, cols: COLS };
   });

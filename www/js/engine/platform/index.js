@@ -7,4 +7,4 @@ export { VSYNC, canvas, canvasCssSize, ctx, drawProgressBar, fitCanvasToScreen, 
 export { onTap } from './dom.js';
 export { applyPageTexts, currentLanguage, initI18n, setLanguage, statLabel, t } from './i18n.js';
 export { initInput, isTap, isTouchScreen, keys, mouse, painted, setDragPainter, shiftDown } from './input.js';
-export { loadData, loadSetting, saveData, saveSetting } from './storage.js';
+export { deleteBig, getBig, loadData, loadSetting, putBig, saveData, saveSetting } from './storage.js';

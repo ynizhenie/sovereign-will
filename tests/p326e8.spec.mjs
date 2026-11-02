@@ -70,7 +70,7 @@ test('paths the player marked are saved with the game, and drawn without error (
     toggleZone(spot.x, spot.y, 'path');
     render();
     await saveCurrentGame();
-    const data = await saveDataOf(loadSaves()[`world:${worldSeed.value}`]);
+    const data = await saveDataOf(latestSave(worldSeed.value));
     pathZones.length = 0;
     await loadGame(data);
     return { restored: pathZones.length, shown: isPathTile(spot.x, spot.y) };
