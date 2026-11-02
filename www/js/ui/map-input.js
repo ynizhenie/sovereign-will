@@ -1,8 +1,8 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
-import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
-import { TILE_SIZE, game, isBorderZone, thingAt, townHall } from '../engine/world/index.js';
+import { canvas, isTap, isTouchScreen, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
+import { TILE_SIZE, game, isBorderZone, isWithinTownHallBuffer, thingAt, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
 import { craftRecipe } from '../domains/colony/equipment/index.js';
@@ -139,6 +139,10 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
     return false;
   }
   const item = getDefinition('buildings', game.buildMode);
+  if (item && isWithinTownHallBuffer(gx, gy)) {
+    showNotification(t('build.onHall'), true);
+    return false;
+  }
   // a door on a wall, an iron door on a door: built over it (#248)
   if (item && upgradeTarget(item, gx, gy)) return true;
   // a fish trap on water a fisher could fish from (#248)
@@ -388,8 +392,6 @@ export function initMapInput() {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     if (e.pointerType === 'touch' && !isTap) return;
-    if (painted) return; // (a stroke of the editor's brush, not a tap, #255)
-
     closeOverlays(); // a tap on the map closes the open sheet (a drag to look around doesn't)
     processInteraction(e.clientX, e.clientY);
   });

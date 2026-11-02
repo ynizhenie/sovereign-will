@@ -596,14 +596,10 @@ body.menu-world #defeat-overlay { display: none !important; }
 .editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
 .editor-toolbar #editor-name { flex: 1; min-width: 0; }
 .editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
-.editor-resize { display: grid; grid-template-columns: auto repeat(4, 38px); gap: 4px 6px; /* (#326: a side's +10, +1, -1, -10) */ align-items: center; font-size: 11px; color: #aeb4c0; }
-.editor-resize .btn { min-height: 30px; padding: 0; font-size: 15px; }
 .editor-only { display: none; }
 body[data-hud="editor"] .editor-only { display: inline-flex; }
 .btn.editor-only:disabled { opacity: 0.35; }
 #editor-tools .panel-heading:first-child { margin-top: 0; }
-.editor-resize[hidden] { display: none; }
-.editor-resize .fps-option { padding: 2px 0; font-size: 12px; line-height: 1.1; }
 
 /* lists of saved maps and presets (#143): a row each, with its own delete that asks first */
 .item-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; flex-shrink: 0; }

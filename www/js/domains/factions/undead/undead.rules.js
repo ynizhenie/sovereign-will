@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isBorderZone, isWithinTownHallBuffer, rand, townHall } from '../../../engine/world/index.js';
 import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
@@ -78,7 +78,7 @@ export function toggleBlightZone(x, y, gx, gy, clearOnly) {
     else if (!clearOnly) delete existing.clearing;
     return;
   }
-  if (clearOnly || isBorderZone(gx, gy) || isTileBlockedForSettler(gx, gy)) return;
+  if (clearOnly || isBorderZone(gx, gy) || isTileBlockedForSettler(gx, gy) || isWithinTownHallBuffer(x, y)) return;
   if (isBaseBlighted(x, y)) { showNotification(t('blight.already'), true); return; }
   game.blightZones.push({ x, y, done: false });
 }

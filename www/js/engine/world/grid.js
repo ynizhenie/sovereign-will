@@ -25,6 +25,12 @@ export function getMapAreaScale() {
 
 export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: Math.floor(y / TILE_SIZE) }; }
 
+export function isWithinTownHallBuffer(x, y) {
+  const { gx, gy } = getGridPos(x, y);
+  const hall = getGridPos(townHall.x, townHall.y);
+  return gx >= hall.gx - 2 && gx <= hall.gx + 1 && gy >= hall.gy - 2 && gy <= hall.gy + 1;
+}
+
 // What occupies each tile, keyed "x,y" by tile center. Path searches check thousands of tiles,
 // so they look tiles up here instead of scanning every object list. Rebuilt lazily after
 // resetTileIndex(), which runs every tick and whenever paths are invalidated.
@@ -34,7 +40,7 @@ export function getGridPos(x, y) { return { gx: Math.floor(x / TILE_SIZE), gy: M
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
  *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
  *   towerArrowBuildings: Set<string>, redBuildings: Set<string>, redDoors: Set<string>, ownSpikes: Set<string>, ownTraps: Set<string>,
- *   redHazards: Set<string>, stamps?: Record<string, string> }} TileIndex
+ *   redHazards: Set<string>, outposts: Set<string>, stamps?: Record<string, string> }} TileIndex
  */
 /** @type {TileIndex | null} */
 export let tileIndex = null;
@@ -65,7 +71,7 @@ export function getTileIndex() {
   // into a tree) says so with markTilesChanged()
   let signature = game.COLS * 1000 + game.ROWS; // a new map size invalidates everything cached by signature
   signature = (signature * 31 + tilesVersion) | 0;
-  for (const list of [game.naturalRocks, game.waterTiles, game.trees, game.cacti, game.boulders, game.ironOres, game.coalOres, game.buildings]) {
+  for (const list of [game.naturalRocks, game.waterTiles, game.trees, game.cacti, game.boulders, game.ironOres, game.coalOres, game.buildings, game.enemyTents]) {
     signature = (signature * 31 + idOf(list)) | 0;
     signature = (signature * 31 + list.length) | 0;
     if (list.length) signature = ((signature * 31 + idOf(list[0])) * 31 + idOf(list[list.length - 1])) | 0;
@@ -87,7 +93,11 @@ export function getTileIndex() {
     solids: [[game.boulders, game.cacti, game.ironOres, game.coalOres], () => keys([...game.boulders, ...game.cacti, ...game.ironOres, ...game.coalOres])],
     buildings: [[game.buildings], () => keys(game.buildings)],
     // (doors are walked through, spikes and traps walked over: none of them a wall)
-    walls: [[game.buildings], () => keys(game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable))],
+    walls: [[game.buildings, game.enemyTents], () => keys([
+      ...game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable),
+      ...game.enemyTents.filter(t => t.outpost)
+    ])],
+    outposts: [[game.enemyTents], () => keys(game.enemyTents.filter(t => t.outpost))],
     spikes: [[game.buildings], () => keys(game.buildings.filter(b => b.type === 'spikes'))],
     // iron traps (#248): settlers keep off them, enemies don't see them
     traps: [[game.buildings], () => keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap))],

@@ -12,14 +12,14 @@ test('the editor\'s new maps are of Endless\'s sizes, one from the generator is 
   await page.locator('#editor-new-generated').click();
   const r = await page.evaluate(() => ({
     size: [COLS, ROWS], gameMode, water: waterTiles.length, rocks: naturalRocks.length, trees: trees.length,
-    play: !!document.getElementById('editor-play'), limit: EDITOR_MAX_TILES
+    play: !!document.getElementById('editor-play'), customMax: Number(document.getElementById('editor-map-cols').max)
   }));
   expect(r.size).toEqual([128, 128]);
   expect(r.gameMode).toBe('editor');
   expect(r.water).toBeGreaterThan(128 * 128 * 0.3); // (a continent in the sea, not a clearing)
   expect(r.rocks).toBeGreaterThan(50);
   expect(r.play).toBe(false);
-  expect(r.limit).toBe(512);
+  expect(r.customMax).toBe(512);
   expect(errors).toEqual([]);
 });
 
@@ -49,17 +49,15 @@ test('a big map is saved as runs, not tile by tile, and opens as it was; a map s
   expect(errors).toEqual([]);
 });
 
-test('a side of the map can be moved ten tiles at once (#326, 35)', async ({ page }) => {
+test('map dimensions cannot be changed after opening it in the editor', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.locator('#mode-editor').click();
   await page.locator('[data-editor-size="128"]').click();
   await page.locator('#editor-new-empty').click();
-  const r = await page.evaluate(() => {
-    resizeEditorMap('right', 10); resizeEditorMap('bottom', -10);
-    return [COLS, ROWS];
-  });
-  expect(r).toEqual([138, 118]);
-  expect(await page.locator('[data-resize]').count()).toBe(16);
+  expect(await page.locator('[data-resize]').count()).toBe(0);
+  expect(await page.locator('#editor-resize-panel').count()).toBe(0);
+  expect(await page.locator('#editor-drag').count()).toBe(0);
+  expect(await page.evaluate(() => [COLS, ROWS])).toEqual([128, 128]);
   expect(errors).toEqual([]);
 });
