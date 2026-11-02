@@ -76,6 +76,7 @@ export function setPaused(paused) {
   const endless = game.gameMode === 'endless';
   document.getElementById('save-game-button').hidden = !endless || isInCamp(); // (not in a raid's camp, #255; on the way there or back it saves, #298)
   document.getElementById('load-game-button').hidden = !endless;
+  document.getElementById('pause-load').hidden = true;
 }
 
 export function exitToMainMenu() {

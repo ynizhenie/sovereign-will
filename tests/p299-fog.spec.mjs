@@ -46,7 +46,7 @@ test('a watchtower sees farther than a building; what\'s explored is saved and l
     await saveCurrentGame();
     settlers = []; resetFog(); // (a new game's fog, on this same map, nobody out there)
     const afterReset = isExplored(far.x, far.y);
-    await loadGame(await saveDataOf(latestSave(worldSeed.value)));
+    await loadGame(await saveDataOf(loadSaves()[`world:${worldSeed.value}`]));
     const loaded = isExplored(far.x, far.y);
     mapSettings = { cols: 40, rows: 40 };
     return { store, tower, afterReset, loaded };
