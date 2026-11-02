@@ -358,10 +358,14 @@ test('a settler panicking from a ghost leaves the battle without a corpse or loo
     enemies.push(remainingEnemy);
     const lootBefore = loot.length;
     startBattleFight();
-    for (let f = 0; f < 60 * 15 && settlers.includes(settler); f++) update(1 / 60);
+    let ghostScared = false;
+    for (let f = 0; f < 60 * 15 && settlers.includes(settler); f++) {
+      update(1 / 60);
+      if (settler.ghostHits > 0) ghostScared = true;
+    }
     return {
       removed: !settlers.includes(settler),
-      ghostScared: settler.ghostHits > 0,
+      ghostScared,
       fled: settler.fled,
       corpse: corpses.some(c => c.by === settler),
       lootDropped: loot.length > lootBefore
@@ -556,7 +560,10 @@ test('medics have unlimited herbs during Battles', async ({ page }) => {
     game.enemies = [enemy, enemyMedic, enemyAlly];
     stock.herbs = 0;
     startBattleFight();
-    for (let frame = 0; frame < 180 && battle.phase === 'fight'; frame++) update(1 / 60);
+    for (let frame = 0; frame < 180; frame++) {
+      tickSettlers(1 / 60);
+      tickEnemy(enemyMedic, 1 / 60);
+    }
     return {
       playerBag: playerMedic.bagHerbs,
       playerHealed: ally.hp > 60,

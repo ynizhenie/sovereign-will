@@ -27,6 +27,7 @@ test('the red side never breaks its own walls; the green breaks into them; the r
   const r = await page.evaluate(() => {
     battle.lineup = [];
     ring(30, 12, false); put('u', 'humans:sword', 30, 12); put('u', 'humans:sword', 10, 12);
+    enemies[0].damage = 0; // the test covers wall ownership and breaching, not a random duel
     fight(40);
     const walledIn = { walls: buildings.filter(b => b.type === 'wall_stone').length, winner: battle.winner, red: buildings.filter(b => b.type === 'wall_stone').every(b => b.side === 'red') };
     battle.phase = 'setup'; battle.lineup = [];
