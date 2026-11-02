@@ -11,7 +11,7 @@ import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
-import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
+import { hasLineOfFire, hasMeleeReach, leadPoint } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
 import { enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
@@ -88,7 +88,10 @@ export function tickEnemy(en, dt) {
     game.pathTick - (en.struckTick || -Infinity) < STRUCK_TICKS ? en.struckBy : null;
   if (struck) en.attackTarget = struck;
   const { target, minDist } = chooseEnemyTarget(en);
-  const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
+  let { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
+  // (#326, 26.10, 21) an archer with one up close draws its dagger (a melee kind of its own: its dagger's blows, see enemyStrike)
+  const dagger = enemyDef.ranged && (GAME_CONFIG.weapons[enemyDef.weapon] || {}).dagger;
+  if (shooting && dagger && target !== townHall && minDist < dagger.drawTiles * TILE_SIZE) { shooting = false; meleeDef = { ...enemyDef }; }
   // (#326) an archer out of arrows (and tents to fill up at) draws its dagger, as the player's do
   en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : meleeDef.weapon || 'sword';
   const inMelee = !shooting && moveTarget === target;
@@ -315,7 +318,8 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
   const shot = shotOf(enemyDef), reach = fromTower ? fromTower.tower.reach || 1 : 1;
   en.attackCooldown = (en.attackCooldown || 0) - dt;
   if (clearShot && minDist < shot.range * reach && en.attackCooldown <= 0) {
-    let angle = Math.atan2(target.y - en.y, target.x - en.x);
+    const aim = target === townHall ? target : leadPoint(en, target, shot.arrowSpeed); // (#326, 30.10, 5: led)
+    let angle = Math.atan2(aim.y - en.y, aim.x - en.x);
     const bolt = enemyDef.weapon === 'crossbow';
     playSound(bolt ? 'crossbow' : 'bow', en);
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * shot.arrowSpeed, vy: Math.sin(angle) * shot.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
@@ -340,11 +344,11 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
     if (!own && isShelter(touchingBuilding) && !turned) {
-      breakBuilding(touchingBuilding, enemyDef, dt);
+      breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else if (!own && (turned ? en.isBlockedPath : en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
       // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
       // way in over spikes squeezes past the walls beside them
-      breakBuilding(touchingBuilding, enemyDef, dt);
+      breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else {
       let dx = en.x - touchingBuilding.x;
       let dy = en.y - touchingBuilding.y;
@@ -363,8 +367,18 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
   else if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
 }
 
-function breakBuilding(building, enemyDef, dt) {
-  building.hp -= dt * enemyDef.siege.buildings;
+// (#326, 30.10, 6; 26.10, 23) A blow at a time, as at a settler: one every cooldown of its weapon (an archer's dagger's:
+// no arrows on walls), as much as that many seconds of its siege; it swings at it. It took hp off a little every tick
+function breakBuilding(en, building, enemyDef, dt) {
+  faceTowards(en, building.x, building.y);
+  const dagger = enemyDef.ranged && (GAME_CONFIG.weapons[enemyDef.weapon] || {}).dagger;
+  if (dagger) en.weapon = 'dagger';
+  if (game.pathTick < (en.nextStrikeTick || 0)) return;
+  const cooldown = dagger ? dagger.cooldown : enemyHitCooldown(enemyDef);
+  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
+  startSwing(en, Math.min(0.5, cooldown)); en.struckAt = game.pathTick;
+  building.hp -= cooldown * enemyDef.siege.buildings;
+  playSound('hit', building);
   if (building.hp <= 0) removeBuilding(building);
 }
 
