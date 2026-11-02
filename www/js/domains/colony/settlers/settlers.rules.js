@@ -269,7 +269,7 @@ export function tickMeals(dt) {
       // its meal eaten here, not only while goEat runs: put to bed, called away or in a wave, it's done in its time
       // and doesn't stay frozen at its mouth (#279); asleep, it's put away
       if (isPet(s)) continue; // (fed their own way, #314)
-      if (s.eating) { s.eating.left -= dt; if (s.eating.left <= 0 || s.asleep) { if (s.eating.left <= 0) s.ateAt = game.pathTick; s.eating = null; } } // (ateAt: a pet fed after it, #326 26.10, 30)
+      if (s.eating) { s.eating.left -= dt; if (s.eating.left <= 0 || s.asleep) s.eating = null; }
       if (s.asleep) continue; // (it stands still in its sleep, #257)
       s.hunger -= dt * (isNight() ? meals.nightFactor : 1); // (awake at night, slower, #279)
       // hungry: it goes and gets its meal (goEat, #248); the last one still not eaten, it's eaten on the go

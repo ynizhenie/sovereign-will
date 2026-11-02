@@ -913,7 +913,6 @@ export const ukLanguage = {
       'activity.strikeBack': 'Відбивається',
       'info.morale': 'мораль {n}',
       'info.panic': '[[warn]] у паніці',
-      'info.sleepDebt': '[[moon]] не виспався: досипати {seconds} с',
       'activity.panic': 'У паніці',
       'activity.cook': 'Готує',
       'activity.deliverMaterials': 'Несе матеріали на будову',

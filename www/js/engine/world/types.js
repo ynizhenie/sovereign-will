@@ -62,10 +62,6 @@
  * @property {any} [skipBoar]           one it gave up on, left till skipUntil
  * @property {number} [skipUntil]
  * @property {any} [feedingPen]         the pen it's taking food to
- * @property {number} [sleptTonight]     (#326, 26.10, 26) seconds asleep this night
- * @property {number} [sleepDebt]        seconds of sleep it's short of, slept by day
- * @property {number} [ateAt]            (26.10, 30) when it last finished a meal (pathTick): a pet fed after it
- * @property {any} [petKeeper]           a pet's: the soldier it keeps by
  * @property {string|boolean} [armor]
  * @property {boolean} [backpack]
  * @property {boolean} [wateringCan]
