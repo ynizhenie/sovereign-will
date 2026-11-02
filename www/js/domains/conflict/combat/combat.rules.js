@@ -68,7 +68,29 @@ export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   return true;
 }
 
-export function performAttack(attacker, targetX, targetY) {
+// (#326, 30.10, 5) How far everyone moved this step (motionX/Y, px a step), for shots that lead their target (update)
+export function trackMotion() {
+  for (const list of [game.settlers, game.enemies, game.boars]) {
+    for (const u of list) {
+      u.motionX = u.x - (u.lastStepX ?? u.x); u.motionY = u.y - (u.lastStepY ?? u.y);
+      u.lastStepX = u.x; u.lastStepY = u.y;
+    }
+  }
+}
+
+// Where to aim at a moving target so a shot (speed: px a step) meets it: where it'll be by the time the shot gets
+// there, as it's going now (a couple of rounds of the guess are close enough)
+export function leadPoint(from, target, speed) {
+  const vx = target.motionX || 0, vy = target.motionY || 0;
+  if (!speed || (!vx && !vy)) return { x: target.x, y: target.y };
+  let t = Math.hypot(target.x - from.x, target.y - from.y) / speed;
+  for (let i = 0; i < 2; i++) t = Math.hypot(target.x + vx * t - from.x, target.y + vy * t - from.y) / speed;
+  t = Math.min(t, 120);
+  return { x: target.x + vx * t, y: target.y + vy * t };
+}
+
+// target (#326, 30.10, 5): the one aimed at, if it moves: an arrow's led to where it'll be
+export function performAttack(attacker, targetX, targetY, target = null) {
   attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
   if (attacker.attackCooldown > 0) return;
   faceTowards(attacker, targetX, targetY);
@@ -79,7 +101,8 @@ export function performAttack(attacker, targetX, targetY) {
   if (isRangedWeapon(attacker.weapon) && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
     const bolt = isCrossbowWeapon(attacker.weapon);
-    let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
+    const aim = target ? leadPoint(attacker, target, stats.projectileSpeed) : { x: targetX, y: targetY };
+    let angle = Math.atan2(aim.y - attacker.y, aim.x - attacker.x);
     game.projectiles.push({ 
       x: attacker.x, 
       y: attacker.y, 

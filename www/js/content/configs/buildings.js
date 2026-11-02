@@ -60,6 +60,13 @@ export const buildingsConfig = {
     // a mine (#326, 27.10, 26): on an iron or coal source (onSpawner); built, the source is worked for its ore by
     // anyone with a pickaxe, unmarked, as ore is (slowly, never used up). A source without one can't be marked
     mine: { id: 'mine', group: 'economy', icon: 'mine', cost: { wood: 15, stone: 10 }, demolishRefund: { wood: 8, stone: 5 }, onSpawner: true, build: { maxProgress: 80, hp: 150 } },
+    // (#326, 27.10, 28) a boar pen: a soldier with a lasso brings a boar it caught hiding in the grass here, while there
+    // are fewer than catchUpTo (it holds `holds`); two grown ones with food in them have a piglet every breedSeconds,
+    // grown in growSeconds; three grown ones: soldiers kill one and it's butchered as any. Fed (one of `foods` from the
+    // stock) every foodSeconds by a soldier, else a worker with free hands, else any worker: hungry, they neither
+    // breed nor grow
+    pen: { id: 'pen', group: 'economy', icon: 'pen', cost: { wood: 20, rope: 2 }, demolishRefund: { wood: 10 },
+      pen: { holds: 3, catchUpTo: 2, breedSeconds: 120, growSeconds: 180, foodSeconds: 120, foods: ['berries', 'apples', 'wheat'] }, build: { maxProgress: 60, hp: 120 } },
     fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 6, herbs: 2 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a torch post (#257): lit at dusk by a worker (postFirewood), it lights the ground round it till morning
     torch: { id: 'torch', group: 'defense', icon: 'torch', cost: { torches: 1 }, demolishRefund: { torches: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },

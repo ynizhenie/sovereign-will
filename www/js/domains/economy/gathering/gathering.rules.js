@@ -47,6 +47,7 @@ export function getWorkableResources(found = () => {}) {
   // it's within BOAR_STRAY tiles of it
   const stray = BOAR_STRAY * TILE_SIZE;
   for (const b of game.boars) {
+    if (b.ledBy || (b.pen && !b.cull && !b.isCarcass)) continue; // (#326, 27.10, 28: penned, but one of three grown for the pot)
     if (inTerritory(b.x, b.y)) b.homeZone = true;
     else if (!b.homeZone || b.x < box.x0 - stray || b.x > box.x1 + stray || b.y < box.y0 - stray || b.y > box.y1 + stray) continue;
     all.push(b); found(b, game.boars);
