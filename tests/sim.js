@@ -162,16 +162,13 @@ window.sim = (() => {
     for (let i = 0; i < count; i++) enemies.push(createNormalEnemy(getRandomBorderPos(), 'raider'));
     let stuckFrames = 0;
     const walls0 = buildings.length;
-    // (#326, 30.10, 6: walls are broken blow by blow, so "not losing hp" is over the last second, not the last step)
-    const lastHit = new Map();
     for (let f = 0; f < seconds * 60; f++) {
       waveTimer = 999;
       const before = new Map(buildings.map(b => [b, b.hp]));
       update(TICK);
-      for (const b of buildings) if (b.hp !== before.get(b)) lastHit.set(b, f);
       for (const e of enemies) {
         const pressed = buildings.filter(b => b.type !== 'door' && collidesWithBoxList(e.x, e.y, e.radius + 1, [b], 14));
-        if (pressed.length && !isBuildingSingle(pressed[0]) && pressed.every(b => f - (lastHit.get(b) ?? -1e9) > 60)) stuckFrames++;
+        if (pressed.length && !isBuildingSingle(pressed[0]) && pressed.every(b => b.hp === before.get(b))) stuckFrames++;
       }
     }
     return { wallsBroken: walls0 - buildings.length, secondsStuckAtWall: stuckFrames / 60 };
