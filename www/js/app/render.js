@@ -53,7 +53,6 @@ export function render() {
   drawPriorityMarks();
   drawBlueprints();
   drawBuildings();
-  drawBoars(true); // (in their pens, over its floor: #326, 27.10, 28)
   drawUpgrades(); // (over what they replace, #261)
   drawStoreContents(); // (#248)
   drawEnemyTents();

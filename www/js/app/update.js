@@ -11,7 +11,7 @@ import { tickMenuScene } from '../modes/menu/index.js';
 import { growCrops } from '../domains/economy/farming/index.js';
 import { fadeClearedBlight, makeBonesAndRot, raiseOnBlight, tickLanterns, updateTemporaryZombies } from '../domains/factions/undead/index.js';
 import { separateAllies, separateSettlersFromEnemies } from '../engine/movement/index.js';
-import { tickBoarRespawn, tickBoars, tickIronTraps, tickPens } from '../domains/economy/hunting/index.js';
+import { tickBoarRespawn, tickBoars, tickIronTraps } from '../domains/economy/hunting/index.js';
 import { keepStoresInStep } from '../domains/colony/storage/index.js';
 import { tickDemonCamp } from '../domains/factions/demons/index.js';
 import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from '../domains/conflict/combat/index.js';
@@ -48,7 +48,6 @@ export function update(dt) {
   tickBoarRespawn(dt);
   growCrops(dt);
   tickBoars(dt);
-  tickPens(dt); // (#326, 27.10, 28)
   tickCampfires(dt);
   tickFishPopulation(dt);
   tickFishTraps(dt);

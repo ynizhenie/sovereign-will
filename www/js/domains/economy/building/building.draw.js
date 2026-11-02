@@ -271,13 +271,6 @@ export function drawBuildings() {
       drawWorkshopArt(b.x, b.y); // (#248)
     } else if (b.type === 'smithy') {
       drawSmithyArt(b.x, b.y); // (#211)
-    } else if (b.type === 'pen') {
-      // (#326, 27.10, 28) a boar pen: trodden ground, a fence of posts and rails round the tile (its boars drawn with the rest)
-      ctx.fillStyle = '#7a6044'; ctx.fillRect(b.x - 14, b.y - 14, 28, 28);
-      ctx.strokeStyle = '#a1887f'; ctx.lineWidth = 1.6;
-      ctx.strokeRect(b.x - 14, b.y - 14, 28, 28); ctx.strokeRect(b.x - 11, b.y - 11, 22, 22); // (two rails all round)
-      ctx.fillStyle = '#5d4037';
-      for (const [px, py] of [[-14, -14], [0, -14], [14, -14], [-14, 0], [14, 0], [-14, 14], [0, 14], [14, 14]]) ctx.fillRect(b.x + px - 1.5, b.y + py - 1.5, 3, 3);
     } else if (b.type === 'mine') {
       drawIcon(ctx, 'mine', b.x, b.y, 28); // (#326, 27.10, 26: over the source)
     } else if (b.type === 'fish_trap') {

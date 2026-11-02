@@ -30,8 +30,7 @@ function drawBoarBody(b, dead) {
   const digging = !dead && b.rest && b.rest.stage === 'dig', lying = !dead && b.rest && b.rest.stage === 'lie';
   ctx.save();
   ctx.translate(b.x, b.y + (lying ? 4 : 0));
-  const size = look.size * (b.pen ? (b.young > 0 ? 0.38 : 0.6) : 1); // (#326, 27.10, 28: in a pen, a piglet smaller still)
-  ctx.scale(d * size, (dead ? -1 : 1) * size);
+  ctx.scale(d * look.size, (dead ? -1 : 1) * look.size);
   if (!dead) { ctx.save(); ctx.scale(d, 1); castShadow(ctx, 0, lying ? 5 : 9, 12, 3.5, lying ? 6 : 12); ctx.restore(); } // (#307)
   // legs (folded under it lying)
   const step = dead || lying ? 0 : Math.sin((b.step || 0) * 0.5) * 1.6;
@@ -93,12 +92,10 @@ export function drawWallows() {
   }
 }
 
-// Boars (faded while hidden), and carcasses being butchered. penned (#326, 27.10, 28): only those in a pen, drawn
-// after the buildings (over the pen's floor); otherwise all the rest
-export function drawBoars(penned = false) {
+// Boars (faded while hidden), and carcasses being butchered
+export function drawBoars() {
   const v = getViewRect(40); // (#299: those on the screen)
   game.boars.forEach(b => {
-    if (!!b.pen !== penned) return;
     if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1 || !isVisible(b.x, b.y)) return; // (#299: and the colony sees it)
     ctx.save();
     if (b.isCarcass) {
@@ -109,8 +106,6 @@ export function drawBoars(penned = false) {
       return;
     }
     if (b.hidden) ctx.globalAlpha = 0.4;
-    // (#326, 27.10, 28) on a lasso: the rope to the one leading it
-    if (b.ledBy) { ctx.strokeStyle = '#a9824f'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(b.x - 4, b.y - 4); ctx.lineTo(b.ledBy.x, b.ledBy.y); ctx.stroke(); }
     drawBoarBody(b, false);
     drawBodyBlood(b, 11);
     if (b.hp < b.maxHp) {
