@@ -11,6 +11,7 @@ import { getPlayerFaction } from '../domains/factions/index.js';
 import { getSelectedSettler } from '../domains/colony/settlers/index.js';
 import { craftPlace } from '../domains/colony/equipment/index.js';
 import { isShelter } from '../domains/conflict/healing/index.js';
+import { isPenHungry, pennedIn } from '../domains/economy/hunting/index.js';
 import { escapeHtml, getResourceIconName, iconHtml, setRichText } from './icons.js';
 import { getOpenSheet, openSheet } from './sheets.js';
 import { showNotification } from './toasts.js';
@@ -102,6 +103,12 @@ export function renderBuildingCard() {
   if (b.type === 'fish_trap' || b.type === 'iron_trap') {
     const bait = b.type === 'fish_trap' ? b.baitLeft || 0 : b.bait || 0;
     info.push(bait > 0 ? t('card.bait', { n: bait }) : t('card.noBait'));
+  }
+  // (#326, 27.10, 28) a pen: its boars (the young ones), and whether they're fed
+  if (b.type === 'pen') {
+    const inIt = pennedIn(b), young = inIt.filter(o => o.young > 0).length;
+    info.push(t('card.pen', { n: inIt.length, max: GAME_CONFIG.buildings.pen.pen.holds, young: young ? t('card.penYoung', { n: young }) : '' }));
+    if (inIt.length) info.push(isPenHungry(b) ? t('card.penHungry') : t('card.penFed', { seconds: Math.ceil(b.fedFor || 0) }));
   }
   if (b.type === 'dung_heap') info.push(t('card.dung', { n: b.dung || 0, max: GAME_CONFIG.buildings.dung_heap.dungCapacity })); // (#232)
   if (b.type === 'campfire') info.push(t('card.fuel', { n: Math.round(b.fuelLeft || 0) }));

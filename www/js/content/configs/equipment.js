@@ -81,6 +81,9 @@ export const equipmentConfig = {
     // captain: in a wave it fights, and every `everySeconds` gives one of its squad an enemy to go for
     whistle: { id: 'whistle', icon: 'whistle', madeBy: 'hand', craftSeconds: 2, cost: { wood: 2, rope: 2 }, commands: { squad: 3, everySeconds: 6, reach: 50, focusSeconds: 45, rangeTiles: 5 } },
     banner: { id: 'banner', icon: 'banner', cost: { wood: 4, leather: 2, rope: 2 }, commands: { squad: 5, everySeconds: 3, reach: 150, armSeconds: 25, rangeTiles: 5 } },
+    // (#326, 27.10, 28) a lasso, a soldier's side slot: it catches a boar hiding in the grass (one backs off from it into
+    // the grass) and leads it to a pen with room (see buildings.pen); catches within reach px
+    lasso: { id: 'lasso', icon: 'rope', madeBy: 'hand', craftSeconds: 2, cost: { rope: 2 }, lasso: { reach: 24 } },
     // (#326) the undead's soul lantern, in a necromancer's side slot: a soul flies into it for each zombie it raises (no limit to
     // what it holds); near a grave or the hall (nearTiles) one flies out every releaseSeconds into the stock
     soul_lantern: { id: 'soul_lantern', icon: 'soul_lantern', factions: ['undead'], madeBy: 'hand', craftSeconds: 3, cost: { bones: 6, rot: 3 }, lantern: { nearTiles: 3, releaseSeconds: 0.6, flySeconds: 0.9 } }

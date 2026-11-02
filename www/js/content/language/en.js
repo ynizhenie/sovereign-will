@@ -72,6 +72,7 @@ export const enLanguage = {
         campfire: 'Campfire',
         smelter: 'Smelter',
         mine: 'Mine',
+        pen: 'Boar pen',
         watchtower: 'Platform',
         torch: 'Torch',
         warehouse: 'Warehouse',
@@ -141,6 +142,7 @@ export const enLanguage = {
         wateringCan: 'Watering can',
         whistle: 'Foreman\'s whistle',
         banner: 'Banner',
+        lasso: 'Lasso',
         soul_lantern: 'Soul lantern'
       },
       recipes: {
@@ -199,6 +201,7 @@ export const enLanguage = {
         wateringCan: 'The farmer waters the crops: they grow faster.',
         whistle: 'Makes a worker a foreman: it goes to its 3 nearest workers in turn and tells each what\'s needed most, and to swap tools from the store for it.',
         banner: 'Makes a soldier a captain: in a wave it gives up to 5 soldiers each an enemy to go for.',
+        lasso: 'In a soldier\'s side slot: catches a boar hiding in the grass and leads it to a pen with room.',
         soul_lantern: 'A necromancer\'s: a soul flies into it for each zombie raised (no limit); near a grave or the hall they fly out into the stock. A ghost costs one.'
       },
       buildings: {
@@ -223,6 +226,7 @@ export const enLanguage = {
         campfire: 'Cooks raw food; burns firewood or coal.',
         smelter: 'Smelts ore with coal into iron.',
         mine: 'Goes on an iron or coal source: workers with a pickaxe mine its ore by themselves, endlessly.',
+        pen: 'A soldier with a lasso brings boars here (up to 2, 3 in all). Two fed grown ones have a piglet; of three grown, soldiers butcher one. The boars need feeding.',
         watchtower: 'An archer climbs it and shoots farther, with the arrows in its own quiver.',
         torch: 'Lit at dusk by a worker (1 firewood), it lights the ground round it till morning.',
         warehouse: 'A storage nearer than the town hall, to bring things to and fetch them from.',
@@ -945,6 +949,13 @@ export const enLanguage = {
       'build.onSpawner': '[[no]] A mine goes on an iron or coal source',
       'mark.needsMine': '[[no]] To mine a source, build a mine on it',
       'card.fish': 'Fish {n}/{max}',
+      'card.pen': 'Boars: {n}/{max}{young}',
+      'card.penYoung': ' ({n} young)',
+      'card.penHungry': '[[warn]] Hungry: berries, apples or wheat',
+      'card.penFed': 'Fed for {seconds} s more',
+      'activity.catchBoar': 'Catching a boar',
+      'activity.leadBoar': 'Leading a boar to the pen',
+      'activity.feedPen': 'Feeding the penned boars',
       'activity.restockQuiver': 'Fetching arrows',
       'activity.idleCampfire': 'Sitting by the fire',
       'activity.idleTalk': 'Chatting',
