@@ -3,7 +3,6 @@
 
 export { activeTab, createConfigButton, isTabShown, makeTile, openTab, rebuildConfigHud, renderConfigHud, renderedFaction, tileMark } from './bottom-panel.js';
 export { renderSheetStock, updateSeedHud, updateUI } from './hud.js';
-export { applySavedLooks, initLooksEditor, renderLooks, resetLooks } from './looks-editor.js';
 export { updateUnitsTab } from './units-tab.js';
 export { closeSelectedCard, isSelectedCardVisible, openSelectedCard } from './selected-card-state.js';
 export { drawIcon, escapeHtml, fillRichText, getResourceIcon, getResourceIconName, iconHtml, initIcons, plainText, richText, setRichText } from './icons.js';
