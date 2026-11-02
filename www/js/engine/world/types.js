@@ -223,6 +223,7 @@
  * @property {boolean} [fled]          ran off the map's edge
  * @property {boolean} [deadNoted]     its fall has shaken (and heartened) those around
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
+ * @property {any} [escort]            (#326, 26.10, 11) a ghost's: the necromancer of its side it keeps by
  * @property {boolean} [shield]
  * @property {boolean} [helmet]  (#326, 27.10, 27)
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
