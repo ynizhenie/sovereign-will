@@ -283,13 +283,27 @@ Object.assign(window.sim, (() => {
     const kinds = [...new Set(enemies.map(en => en.enemyKey))].sort();
     clearResources();
     settlers = [];
+    const necroDef = GAME_CONFIG.enemies.undead_necromancer.necromancer;
     const necro = createConfiguredEnemy(nearHall(-8, -8), 'undead_necromancer');
     necro.fromWave = true;
     enemies = [necro];
-    corpses = [corpseAt(nearHall(-6, -8))];
-    run(6, { holdWaves: true });
+    const grave = nearHall(-10, -8);
+    enemyTents = [{ x: grave.x, y: grave.y, hp: 100, maxHp: 100, summonTimer: 0, summonsLeft: 0 }];
+    corpses = [-16, -17, -18].flatMap(dx => [-8, -9].map(dy => corpseAt(nearHall(dx, dy))));
+    let maxHeld = 0, ranOut = false, recharged = false;
+    run(20, { holdWaves: true, each: () => {
+      const held = enemies.filter(en => en.raisedBy === necro && en.temporary !== undefined && en.hp > 0).length;
+      maxHeld = Math.max(maxHeld, held);
+      if (necro.raisesLeft === 0) ranOut = true;
+      if (ranOut && necro.raisesLeft === necroDef.raises) recharged = true;
+    } });
     const zombie = enemies.find(en => en.enemyKey === 'undead_zombie');
-    return { kinds, zombies: enemies.filter(en => en.enemyKey === 'undead_zombie').length, corpses: corpses.length, temporary: !!zombie && zombie.temporary > 0 };
+    const playerNecro = GAME_CONFIG.tools.necro_staff.necromancer;
+    return { kinds, zombies: enemies.filter(en => en.enemyKey === 'undead_zombie').length, corpses: corpses.length, temporary: !!zombie && zombie.temporary > 0,
+      raises: necroDef.raises, maxZombies: necroDef.maxZombies, range: necroDef.range, seekRange: necroDef.seekRange, maxHeld, recharged, healing: {
+        player: { range: playerNecro.healRange, rate: playerNecro.healPerSecond },
+        enemy: { range: necroDef.healRange, rate: necroDef.healPerSecond }
+      } };
   }
 
   return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerControl, soulsAndGhosts, necromancerHeals, undeadBlight: blight, undeadEnemies };

@@ -19,15 +19,13 @@ import { getPlayerFaction } from '../domains/factions/index.js';
 import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
-import { commandTap, orderTap } from '../domains/conflict/combat/index.js';
+import { commandTap } from '../domains/conflict/combat/index.js';
 import { scoutTapped } from '../domains/conflict/waves/index.js';
 
 export function handleCanvasClick() {
-  // battle mode: placing while setting up; in a fight, orders for a possessed unit
+  // battle mode: the field is editable only during setup; combat runs without player commands
   if (game.gameMode === 'battle') {
     if (battle.phase === 'setup') battleTap(mouse.x, mouse.y);
-    else if (battle.phase === 'fight' && getPossessed()) orderPossessed(getPossessed(), mouse.x, mouse.y);
-    else if (battle.phase === 'fight') orderTap(mouse.x, mouse.y); // (orders, #255)
     return;
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }

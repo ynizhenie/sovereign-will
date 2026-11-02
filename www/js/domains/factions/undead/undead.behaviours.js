@@ -10,6 +10,7 @@ import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/move
 import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
 import { engageEnemy, getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../index.js';
+import { playerNecromancerKeepsBack } from '../../conflict/morale/index.js';
 
 // The undead's necromancer: heals the wounded around it; in a fight raises corpses (any, a big one into a
 // big zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,
@@ -28,6 +29,7 @@ export function necromancy(s, tick) {
     const reach = necro.commandTiles * TILE_SIZE;
     for (const en of game.enemies) if (en.hp > 0 && dist(en) < reach && (!s.zombieTarget || dist(en) < dist(s.zombieTarget))) s.zombieTarget = en;
   }
+  if (game.gameMode === 'battle' && !game.settlers.some(o => o !== s && o.hp > 0 && o.tool !== 'necro_staff' && o.role !== 'pet')) return false;
 
   // (#279: no more stepping back from an enemy close by: it stepped back, went to heal one of its own
   // among the enemies, stepped back again... It keeps calmly to its work; hit, it strikes back, strikeBack)
@@ -127,6 +129,7 @@ export function necromancy(s, tick) {
   }
   // between waves (not with one coming), a grave worked for its bones and rot (#253)
   if (!tick.isWaveActive && !isDefenseAlert() && workGrave(s, tick)) return true;
+  if (playerNecromancerKeepsBack(s, dt)) return true;
   return false;
 }
 

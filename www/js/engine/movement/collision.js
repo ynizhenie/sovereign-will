@@ -136,13 +136,16 @@ export function separateAllies(units, fightingOnly = false) {
     const a = live[i], ar = Math.min(a.visualRadius || a.radius, 13) * 0.85;
     for (let j = i + 1; j < live.length; j++) {
       const b = live[j], br = Math.min(b.visualRadius || b.radius, 13) * 0.85;
+      if (fightingOnly && game.gameMode === 'battle' && a.fightTarget &&
+        a.fightTarget === b.fightTarget && game.enemies.includes(a.fightTarget) && a.fightTarget.hp > 0) continue;
       let dx = a.x - b.x, dy = a.y - b.y;
       if (Math.abs(dx) > ar + br || Math.abs(dy) > ar + br) continue;
       let dist = Math.hypot(dx, dy);
       const overlap = ar + br - dist;
       if (overlap <= 0) continue;
       if (dist === 0) { dx = (i % 2 ? 1 : -1); dy = 0; dist = 1; }
-      const push = overlap * ALLY_PUSH, nx = dx / dist * push, ny = dy / dist * push;
+      const push = overlap * ALLY_PUSH;
+      const nx = dx / dist * push, ny = dy / dist * push;
       if (!a.isPossessed && !collidesWithWall(a.x + nx, a.y + ny, Math.min(a.radius, 13))) { a.x += nx; a.y += ny; }
       if (!b.isPossessed && !collidesWithWall(b.x - nx, b.y - ny, Math.min(b.radius, 13))) { b.x -= nx; b.y -= ny; }
     }

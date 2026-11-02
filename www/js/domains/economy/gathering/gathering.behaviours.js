@@ -271,7 +271,7 @@ export function pickApplesFrom(s, target, dt) {
       s.pickProgress = 0;
       for (const [item, amount] of Object.entries(apples.yield)) giveResourceToSettler(s, item, amount);
       addCarryLoad(s);
-      for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) addResources({ [item]: 1 });
+      for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) giveResourceToSettler(s, item, 1);
       target.applesReady = false;
       target.appleGrowth = 0;
       target.pickShare = 0;

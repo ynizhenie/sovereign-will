@@ -16,15 +16,23 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('gameCanvas')).filter)).not.toContain('blur');
   const scene = name => page.evaluate(name => {
     enterMenuWorld(name);
+    const water = new Set(waterTiles.map(tile => `${tile.x},${tile.y}`));
+    const sand = new Set([...game.desertTiles, ...game.beachTiles].map(tile => `${tile.x},${tile.y}`));
+    const shoreViolations = Object.entries(GAME_CONFIG.mapResources).flatMap(([kind, definition]) =>
+      (game[definition.list] || []).filter(resource => {
+        const key = `${resource.x},${resource.y}`;
+        return water.has(key) || (sand.has(key) && !['natural_rock', 'boulder', 'pebble'].includes(kind));
+      }).map(() => kind));
     return {
       settlers: settlers.map(s => [s.weapon, s.tool, !!s.shield, s.armor || null, !!s.backpack, !!s.wateringCan]),
-      buildings: buildings.map(b => b.type), water: waterTiles.length, fishing: waterTiles.filter(w => w.isFishing).length, zones: farmZones.length, boars: boars.length
+      buildings: buildings.map(b => b.type), water: waterTiles.length, fishing: waterTiles.filter(w => w.isFishing).length, zones: farmZones.length, boars: boars.length,
+      shoreViolations
     };
   }, name);
-  expect(await scene('hunt')).toMatchObject({ settlers: [['spear', 'none', false, null, false, false]], boars: 3 });
-  expect(await scene('fishing')).toMatchObject({ settlers: [['fist', 'rod', false, null, false, false], ['fist', 'none', false, null, false, false]], buildings: ['campfire'], water: 4, fishing: 1, boars: 0 });
-  expect(await scene('fight')).toMatchObject({ settlers: [['sword', 'none', true, null, false, false], ['sword', 'none', true, null, false, false], ['fist', 'medbag', false, 'iron', false, false]] });
-  expect(await scene('farm')).toMatchObject({ settlers: [['fist', 'hoe', false, null, true, true]], buildings: ['dung_heap'], water: 1, zones: 6 });
+  expect(await scene('hunt')).toMatchObject({ settlers: [['spear', 'none', false, null, false, false]], boars: 3, shoreViolations: [] });
+  expect(await scene('fishing')).toMatchObject({ settlers: [['fist', 'rod', false, null, false, false], ['fist', 'none', false, null, false, false]], buildings: ['campfire'], water: 4, fishing: 1, boars: 0, shoreViolations: [] });
+  expect(await scene('fight')).toMatchObject({ settlers: [['sword', 'none', true, null, false, false], ['sword', 'none', true, null, false, false], ['fist', 'medbag', false, 'iron', false, false]], shoreViolations: [] });
+  expect(await scene('farm')).toMatchObject({ settlers: [['fist', 'hoe', false, null, true, true]], buildings: ['dung_heap'], water: 1, zones: 6, shoreViolations: [] });
   // the farm runs: the farmer plants
   const planted = await page.evaluate(() => { for (let f = 0; f < 60 * 30; f++) stepGame(1 / 60); return farmPlots.length + blueprints.filter(b => b.type === 'wheat').length; });
   expect(planted).toBeGreaterThan(0);

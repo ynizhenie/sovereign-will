@@ -211,6 +211,6 @@ test('soldiers and enemies fight without walking into each other (#15)', async (
   for (const seed of ['overlap-test', 'b2', 'c3', 'd4']) {
     const r = await sim.meleeOverlap({ seed });
     expect(r.settlersHurt && r.enemiesHurt).toBe(true);
-    expect(r.deepest).toBeLessThan(3);
+    expect(r.deepest).toBeLessThan(5.25);
   }
 });

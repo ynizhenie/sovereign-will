@@ -28,3 +28,31 @@ test('the undead against the undead want no brains, demons against them no fresh
   expect(r).toEqual({ undeadBoth: false, undeadVsHumans: true, demonsVsUndead: false, noWalls: false, walls: true });
   expect(errors).toEqual([]);
 });
+
+test('enemies say their hurt phrase below 30% even just after a player speaks', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    isPaused = true;
+    const speaker = createSettler('normal', 1, 300, 300);
+    const playerSpoke = says(speaker, 'hired', true);
+    const enemy = createConfiguredEnemy({ x: townHall.x + 200, y: townHall.y }, 'raider');
+    const enemySpoke = speak(enemy, 'humans', 'taunt', true);
+    enemy.hp = enemy.maxHp * 0.31;
+    damageEnemy(enemy, enemy.maxHp * 0.02);
+    const first = { text: enemy.say?.text, spokeAt: enemy.spokeAt };
+    damageEnemy(enemy, enemy.maxHp * 0.02);
+    const alreadyLow = createConfiguredEnemy({ x: townHall.x + 240, y: townHall.y }, 'raider');
+    alreadyLow.hp = alreadyLow.maxHp * 0.29;
+    tickEnemy(alreadyLow, 0);
+    return {
+      playerSpoke,
+      enemySpoke,
+      firstPhrase: t('voice.humans.hurt').split('|').includes(first.text),
+      spokeOnce: enemy.spokeAt === first.spokeAt,
+      catchesAlreadyLow: t('voice.humans.hurt').split('|').includes(alreadyLow.say?.text)
+    };
+  });
+  expect(result).toEqual({ playerSpoke: true, enemySpoke: true, firstPhrase: true, spokeOnce: true, catchesAlreadyLow: true });
+  expect(errors).toEqual([]);
+});

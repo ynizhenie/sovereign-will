@@ -89,6 +89,10 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
     enemy.arrows = definition.quiver.arrows;
     game.enemyArrowStock += definition.quiver.tentStock;
   }
+  if (definition.healer) {
+    enemy.herbs = definition.healer.bagSize;
+    if (game.gameMode !== 'battle') game.enemyHerbStock += definition.healer.tentStock;
+  }
   return enemy;
 }
 
