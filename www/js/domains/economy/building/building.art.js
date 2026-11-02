@@ -162,7 +162,7 @@ export function drawSmithyArt(x, y) {
 }
 
 // (#326) The smelter, as the others are seen (from above, a little from the front): a squat furnace of stone
-// courses, its domed top, a glowing mouth in its front, a chimney at the back (26.10, 15: no smoke)
+// courses, its domed top, a glowing mouth in its front, a chimney at the back with a wisp of smoke
 export function drawSmelterArt(x, y) {
   shadow(x, y, 26, 24, 8);
   // the body: its front face of stone courses
@@ -176,8 +176,11 @@ export function drawSmelterArt(x, y) {
   ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.ellipse(x, y - 2, 12, 9, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = 'rgba(255, 255, 255, 0.18)'; ctx.beginPath(); ctx.ellipse(x - 3, y - 7, 6, 3, -0.2, 0, Math.PI * 2); ctx.fill();
-  // the chimney at the back
+  // the chimney at the back, smoke
   rect(x + 3, y - 15, 5, 7, '#5d6d7e', '#2c3e50');
+  const t = performance.now() / 900 + x;
+  ctx.fillStyle = 'rgba(200, 200, 200, 0.35)';
+  for (let k = 0; k < 3; k++) { const p = (t + k / 3) % 1; ctx.beginPath(); ctx.arc(x + 5.5 + Math.sin((t + k) * 2) * 2, y - 16 - p * 10, 1.5 + p * 2.5, 0, Math.PI * 2); ctx.fill(); }
   // its mouth, glowing
   const glow = 0.75 + Math.sin(performance.now() / 300 + x) * 0.15;
   ctx.fillStyle = '#2c1a0e'; ctx.beginPath(); ctx.roundRect(x - 5, y + 3, 10, 8, [4, 4, 0, 0]); ctx.fill();
