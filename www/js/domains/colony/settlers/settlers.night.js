@@ -50,7 +50,10 @@ export function nightReach(s) {
 export function tickNight() {
   if (game.gameMode !== 'endless') return;
   const night = isNight();
-  if (night && !game.wasNight) { game.nightId = (game.nightId || 0) + 1; playSound('owl'); } // (#252)
+  if (night && !game.wasNight) {
+    game.nightId = (game.nightId || 0) + 1; playSound('owl'); // (#252)
+    for (const s of game.settlers) s.sleptTonight = 0; // (#326, 26.10, 26: its sleep counted from here)
+  }
   if (!night && game.wasNight) {
     playSound('dawn');
     someoneSays(game.settlers, getPlayerFaction().id, 'morning'); // (#252)
@@ -61,6 +64,10 @@ export function tickNight() {
       s.today = {}; // (a new day to tell of, #279)
       // awake: hungry (#257: hunger stood still in its sleep)
       if (s.asleep) { s.asleep = false; if (getPlayerFaction().eats) s.hunger = Math.min(s.hunger ?? 1, 1); }
+      // (#326, 26.10, 26) short of half a night's sleep: the rest slept by day (one here all night only; not a pet, nor a raised one)
+      const need = config().night * config().sleepNeed - config().sleepGrace;
+      s.sleepDebt = s.sleptTonight !== undefined && s.role !== 'pet' && s.temporary === undefined ? Math.max(0, need - s.sleptTonight) : 0;
+      s.sleptTonight = undefined;
     }
   }
   game.wasNight = night;
@@ -151,8 +158,30 @@ function shelterFor(s) {
   return homes.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || townHall;
 }
 
-// At night (a behaviour, early): to bed, unless on watch, on fuel duty, possessed or with a wave coming
+// (#326, 26.10, 26) By day, one short of its sleep (sleepDebt): to bed till it's slept it off, unless there's a wave, it's
+// possessed or carrying, or hungry (its meal first); the player's order for it: it does that, drowsy, as at night
+function sleepByDay(s, tick) {
+  const debt = s.sleepDebt || 0;
+  const ordered = debt > 0 && (hasPlayerOrderFor(s, tick) || !!s.orderSpot || !!s.orderTarget);
+  s.drowsy = ordered && !s.isPossessed;
+  const up = debt <= 0 || ordered || s.isPossessed || s.temporary !== undefined || tick.isWaveActive || isDefenseAlert() ||
+    (getPlayerFaction().eats && (s.wantsMeal || s.eating));
+  if (up) {
+    if (s.asleep) { s.asleep = false; s.sleepSpot = null; }
+    return false;
+  }
+  if (s.carrying) return false;
+  if (goToBed(s, tick)) {
+    if (s.asleep) { s.sleepDebt = debt - tick.dt; if (s.sleepDebt <= 0) { s.sleepDebt = 0; s.asleep = false; s.sleepSpot = null; } }
+    return true;
+  }
+  return false;
+}
+
+// At night (a behaviour, early): to bed, unless on watch, on fuel duty, possessed or with a wave coming;
+// (#326, 26.10, 26) by day, the sleep it's short of (sleepByDay)
 export function sleepAtNight(s, tick) {
+  if (!isNight()) return sleepByDay(s, tick);
   const ordered = isNight() && !waveDue() && !onWatch(s) && !onFuelDuty(s) && upForOrder(s, tick);
   s.drowsy = ordered;
   if (ordered && !s.asleep && game.pathTick - (s.grumbledAt || -1e9) > 60 * 25 && says(s, 'sleepy')) s.grumbledAt = game.pathTick; // (once said, not again for a while)
@@ -172,6 +201,13 @@ export function sleepAtNight(s, tick) {
     return false;
   }
   if (s.carrying || tick.isWaveActive) return false; // (its load home first)
+  const asleep = goToBed(s, tick);
+  if (s.asleep) s.sleptTonight = (s.sleptTonight || 0) + tick.dt; // (#326, 26.10, 26)
+  return asleep;
+}
+
+// To its shelter and asleep there (true while it's on its way or asleep)
+function goToBed(s, tick) {
   const home = shelterFor(s);
   s.patrolTarget = null;
   // (#279) a corpse lying by where it sleeps: taken away first (carryCorpse takes it on to the heap)
