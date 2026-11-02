@@ -36,7 +36,7 @@ import { isPet } from './settlers.rules.js';
 import { feedPet, tickPet } from '../pets/index.js';
 import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
-import { baitTrap } from '../../economy/hunting/index.js';
+import { baitTrap, catchBoar, feedPen, leadBoar } from '../../economy/hunting/index.js';
 import { raidOrders, restWhileRaid } from '../../../modes/endless/index.js';
 import { battleOrders } from '../../../modes/battle/index.js';
 
@@ -267,6 +267,7 @@ export const SETTLER_BEHAVIOURS = [
   sleepAtNight,
   fetchNightTorch,
   carryCaptive,
+  leadBoar, // (#326, 27.10, 28: one caught, into the pen)
   captainOrders,
   captainArms, // (#279: weapons lent before a wave, back after)
   goToSacrifice,
@@ -280,6 +281,8 @@ export const SETTLER_BEHAVIOURS = [
   equip,
   goEat,
   feedPet, // (#314: a hungry pet fed)
+  feedPen, // (#326, 27.10, 28: the penned boars)
+  catchBoar, // (#326, 27.10, 28: with a lasso, one for the pen)
   foremanOrders,
   harvestMarked, // (the player's marks before the chores, #298)
   cook,

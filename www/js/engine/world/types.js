@@ -50,6 +50,14 @@
  * @property {number} [arrows]
  * @property {boolean} [shield]
  * @property {boolean} [helmet]  (#326, 27.10, 27)
+ * @property {boolean} [lasso]          (#326, 27.10, 28) a lasso in its side slot
+ * @property {any} [leading]            a boar it caught, on its lasso
+ * @property {any} [leadTo]             the pen it's leading that boar to
+ * @property {any} [catching]           the boar it's after
+ * @property {number} [catchSince]      since when (pathTick)
+ * @property {any} [skipBoar]           one it gave up on, left till skipUntil
+ * @property {number} [skipUntil]
+ * @property {any} [feedingPen]         the pen it's taking food to
  * @property {string|boolean} [armor]
  * @property {boolean} [backpack]
  * @property {boolean} [wateringCan]
@@ -232,6 +240,8 @@
  * @typedef {Object} Building
  * @property {string} type           GAME_CONFIG.buildings key
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {number} [fedFor]       a boar pen: seconds its boars stay fed (#326, 27.10, 28)
+ * @property {number} [breed]        a boar pen: seconds to its next piglet, counted up
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} [progress]
