@@ -64,7 +64,7 @@ export function huntBoar(s, boar, tick) {
   } else {
     if (isRangedWeapon(s.weapon)) {
       // only with a clear shot: no arrows wasted on trees and stones in the way
-      if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y, boar);
+      if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y);
       else moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else if (!((boar.fleeTimer || 0) > 0 && boar.sprinting) && s.attackCooldown <= 0) { // not mid-sprint
       woundBoar(boar, hunt.damage * hunt.multiplier, s, s.x, s.y);
