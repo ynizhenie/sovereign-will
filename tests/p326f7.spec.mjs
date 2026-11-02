@@ -56,3 +56,23 @@ test('enemies say their hurt phrase below 30% even just after a player speaks', 
   expect(result).toEqual({ playerSpoke: true, enemySpoke: true, firstPhrase: true, spokeOnce: true, catchesAlreadyLow: true });
   expect(errors).toEqual([]);
 });
+
+test('a player necromancer does not follow allies between waves in Endless', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'undead');
+    game.gameMode = 'endless';
+    game.enemies = [];
+    game.portalQueue = [];
+    game.waveTimer = 99999;
+    const necromancer = Object.assign(createSettler('zombie', 1, 300, 300), { tool: 'necro_staff' });
+    const ally = createSettler('zombie', 2, 500, 300);
+    game.settlers = [necromancer, ally];
+    const before = { x: necromancer.x, y: necromancer.y };
+    const acted = necromancy(necromancer, createSettlerTick(1 / 60));
+    return { acted, moved: necromancer.x !== before.x || necromancer.y !== before.y };
+  });
+  expect(result).toEqual({ acted: false, moved: false });
+  expect(errors).toEqual([]);
+});

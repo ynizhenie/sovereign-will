@@ -10,7 +10,6 @@
 import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, runLoading, setRichText, updateSeedHud } from '../../ui/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { createWorldSeed, game, resetTileIndex, setWorldSize, townHall, WORLD_LISTS } from '../../engine/world/index.js';
-import { updateUnitCounts } from '../../domains/colony/settlers/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
@@ -181,7 +180,6 @@ export function loadGame(data) {
   Object.assign(camera, data.camera);
   clampCamera();
   updateSeedHud();
-  updateUnitCounts();
   game.gameStarted = true;
   setPaused(false);
   syncCards(); // (an offer it was saved with shows again, #255)
