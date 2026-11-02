@@ -5,10 +5,11 @@
 // the tents.
 
 import { game } from '../../../engine/world/index.js';
-import { getWeaponStats, isRangedWeapon } from '../../colony/equipment/index.js';
+import { getWeaponStats, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { faceTowards, getRecentAttacker, getSelectedSettler, getSelection, toggleInGroup } from '../../colony/settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, performAttack } from './combat.rules.js';
+import { drawDaggerAt } from './combat.behaviours.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const nearest = (from, list) => list.reduce((best, o) => (!best || dist(o, from) < dist(best, from) ? o : best), null);
@@ -41,12 +42,14 @@ export function orderTap(x, y) {
 
 // Walk up to a target and strike it (an archer: from where it has a clear shot; a tent from its reach)
 function strike(s, target, dt) {
-  const combat = getWeaponStats(s, 'combat');
   const tent = game.enemyTents.includes(target);
+  if (isRangedWeapon(s.weapon) && tent) s.daggerDrawn = true; // (#326, 26.10, 23: a tent with its dagger)
+  drawDaggerAt(s, target); // (26.10, 21: one up close)
+  const combat = getWeaponStats(s, 'combat');
   const reach = tent ? combat.tentReach + (target.outpost ? 10 : 0) : combat.approach + (target.radius || 10);
-  const bow = isRangedWeapon(s.weapon);
+  const bow = isRangedWeapon(s.weapon) && !usesDagger(s);
   if (dist(s, target) > reach || (bow && !hasLineOfFire(s.x, s.y, target.x, target.y))) moveEntityTowards(s, target.x, target.y, s.speed, false, dt);
-  else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y); }
+  else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y, target); }
 }
 
 // One unit's tick under orders (auto: the auto battle). Its spot: where it stood when the fight began,

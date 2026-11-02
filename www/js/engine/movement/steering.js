@@ -224,10 +224,11 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius) {
       dist = Math.hypot(dx, dy);
     } else {
       // there: onto the exact point, unless that's inside something it can't walk (a campfire it cooks
-      // at, a wall): it stays beside it then, never stuck inside
+      // at, a wall): it stays beside it then, never stuck inside. (#326, 30.10, 4) Only from close by: a way to
+      // somewhere walled in stops short (#356), and the last step put it there through the wall
       if (!isEnemy) {
         const t = getGridPos(targetX, targetY);
-        if (!isTileBlockedForSettler(t.gx, t.gy)) {
+        if (!isTileBlockedForSettler(t.gx, t.gy) && Math.hypot(targetX - entity.x, targetY - entity.y) <= 16) {
           entity.x = targetX;
           entity.y = targetY;
         }

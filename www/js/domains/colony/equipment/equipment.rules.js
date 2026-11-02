@@ -243,8 +243,9 @@ export function isRangedWeapon(weapon) { return isBowWeapon(weapon) || isCrossbo
 // in woundBoar, #232; a hunt's range is the weapon's reach, a ranged weapon's its shooting distance). Damage:
 // the weapon's, or, for fists, the carried tool's, else bare hands; times the settler type's multiplier.
 // (#326) An archer out of arrows, with its dagger out instead (arrows never run out in a battle)
+// (#326, 26.10, 21) or drawn this tick: an enemy up close, a building broken (daggerDrawn, see engageEnemy)
 export function usesDagger(s) {
-  return isRangedWeapon(s.weapon) && !!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle';
+  return isRangedWeapon(s.weapon) && ((!!s.quiver && (s.arrows || 0) <= 0 && game.gameMode !== 'battle') || !!s.daggerDrawn);
 }
 
 export function getWeaponStats(s, use) {

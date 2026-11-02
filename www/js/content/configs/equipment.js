@@ -50,13 +50,14 @@ export const equipmentConfig = {
       combat: { damage: 40, range: 65, cooldown: 0.7, approach: 45, tentReach: 25 } },
     bow: { id: 'bow', icon: 'bow', cost: { wood: 15, leather: 3, rope: 2 }, family: 'bow',
       combat: { damage: 30, cooldown: 1, approach: 210, tentReach: 210, projectileSpeed: 4.5, projectileLife: 80 },
-      // (#326) out of arrows an archer draws its dagger (the bow on its back) and stabs at what comes close: weak
-      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
+      // (#326) out of arrows an archer draws its dagger (the bow on its back) and stabs at what comes close: weak;
+      // (26.10, 21) with arrows too, at one within drawTiles of it, and at a building it breaks (no arrows on walls)
+      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3, drawTiles: 1.5 } },
     // (#326) a crossbow: slower to load than a bow, but it hits harder and shoots farther; it uses the same
     // arrows (a quiver), and out of them its bearer draws a dagger as an archer does
     crossbow: { id: 'crossbow', icon: 'crossbow', cost: { wood: 20, iron: 4, rope: 4 }, family: 'crossbow',
       combat: { damage: 65, cooldown: 2.2, approach: 310, tentReach: 310, projectileSpeed: 7.2, projectileLife: 115 },
-      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
+      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3, drawTiles: 1.5 } },
     // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },
 
