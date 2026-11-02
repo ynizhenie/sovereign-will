@@ -51,7 +51,7 @@ export const mechanicsConfig = {
   // healPerHerb hp for one herb every healSeconds. Herbs come from the bag, filled at the town hall with
   // up to bagSize from the stock.
   // a medic's herb heals healPerHerb (#279: no more potions)
-  medic: { healPerHerb: 30, healSeconds: 1.2, range: 26, bagSize: 5 },
+  medic: { healPerHerb: 30, healSeconds: 1.2, range: 30, bagSize: 5 },
 
   // blood on a hurt unit, under it, and on the melee weapon that hit it: it starts to fade after
   // fadeAfter seconds over fadeSeconds, except on a unit at woundedShare of its hp or less

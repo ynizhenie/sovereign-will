@@ -5,12 +5,15 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/index.js';
+import { hasToolFamily } from '../../colony/equipment/index.js';
 import { getBlightKeys, getNecromancy, raiseTemporaryZombie, zombiesOf } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
 import { engageEnemy, getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../index.js';
 import { playerNecromancerKeepsBack } from '../../conflict/morale/index.js';
+
+/** @typedef {import('../../../engine/world/types.js').Settler & { healTarget?: import('../../../engine/world/types.js').Settler | null }} SettlerWithHealTarget */
 
 // The undead's necromancer: heals the wounded around it; in a fight raises corpses (any, a big one into a
 // big zombie) while it has raises and there's room in the colony; with raises spent, or nothing to raise,
@@ -21,6 +24,8 @@ export function necromancy(s, tick) {
   if (s.raisesLeft === undefined) s.raisesLeft = necro.raises;
   const dt = tick.dt;
   const dist = o => Math.hypot(o.x - s.x, o.y - s.y);
+  const isSupport = unit => unit.tool === 'necro_staff' || (unit.role === 'worker' && hasToolFamily(unit.tool, 'medic'));
+  const support = /** @type {SettlerWithHealTarget} */ (s);
 
   // (#326) the zombies it holds (up to maxZombies), sent at the nearest enemy within commandTiles of it
   const zombies = zombiesOf(s);
@@ -29,7 +34,8 @@ export function necromancy(s, tick) {
     const reach = necro.commandTiles * TILE_SIZE;
     for (const en of game.enemies) if (en.hp > 0 && dist(en) < reach && (!s.zombieTarget || dist(en) < dist(s.zombieTarget))) s.zombieTarget = en;
   }
-  if (game.gameMode === 'battle' && !game.settlers.some(o => o !== s && o.hp > 0 && o.tool !== 'necro_staff' && o.role !== 'pet')) return false;
+  if (game.gameMode === 'battle' && !game.settlers.some(o => o !== s && o.hp > 0 && o.role !== 'pet' &&
+    (o.tool !== 'necro_staff' || o.hp < o.maxHp))) return false;
 
   // (#279: no more stepping back from an enemy close by: it stepped back, went to heal one of its own
   // among the enemies, stepped back again... It keeps calmly to its work; hit, it strikes back, strikeBack)
@@ -67,11 +73,30 @@ export function necromancy(s, tick) {
   // a corpse within its reach first (no walking for it), then its wounded, then a corpse farther off
   if (corpse && dist(corpse) <= necro.raiseReach) return raise();
 
-  let patient = null;
-  for (const other of game.settlers) {
-    if (other !== s && other.hp < other.maxHp && dist(other) < necro.range / 2 && (!patient || dist(other) < dist(patient))) patient = other;
+  const isWounded = other => other.hp > 0 && other.hp < other.maxHp;
+  const available = other => isWounded(other) && !tick.patients.has(other) &&
+    !game.settlers.some(unit => unit !== s && unit.hp > 0 && isSupport(unit) &&
+      /** @type {SettlerWithHealTarget} */ (unit).healTarget === other);
+  let patient = support.healTarget && game.settlers.includes(support.healTarget) && available(support.healTarget) &&
+    dist(support.healTarget) < necro.range / 2 ? support.healTarget : null;
+  let patientScore = patient ? -1 : Infinity;
+  if (!patient) {
+    for (const other of game.settlers) {
+      if (other === s || !available(other) || dist(other) >= necro.range / 2) continue;
+      const score = dist(other) + (other.role === 'worker' ? 10000 : 0);
+      if (score < patientScore) { patientScore = score; patient = other; }
+    }
+  }
+  if (!patient) {
+    for (const other of game.settlers) {
+      if (other === s || !isWounded(other) || dist(other) >= necro.range / 2) continue;
+      const score = dist(other) + (other.role === 'worker' ? 10000 : 0);
+      if (score < patientScore) { patientScore = score; patient = other; }
+    }
   }
   if (patient) {
+    support.healTarget = patient;
+    tick.patients.add(patient);
     s.patrolTarget = null;
     if (dist(patient) > necro.healRange) {
       moveEntityTowards(s, patient.x, patient.y, s.speed, false, dt);
@@ -82,6 +107,7 @@ export function necromancy(s, tick) {
     }
     return true;
   }
+  support.healTarget = null;
   if (corpse) return raise();
   // itself last of all (#279), where it stands
   if (s.hp < s.maxHp && (tick.isWaveActive || getRecentAttacker(s))) {
@@ -129,7 +155,7 @@ export function necromancy(s, tick) {
   }
   // between waves (not with one coming), a grave worked for its bones and rot (#253)
   if (!tick.isWaveActive && !isDefenseAlert() && workGrave(s, tick)) return true;
-  if (playerNecromancerKeepsBack(s, dt)) return true;
+  if ((tick.isWaveActive || isDefenseAlert()) && playerNecromancerKeepsBack(s, dt)) return true;
   return false;
 }
 

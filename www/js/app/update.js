@@ -1,7 +1,7 @@
 // One step of the game: every mechanic's turn, in order
 
 import { game, resetTileIndex } from '../engine/world/index.js';
-import { removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, tickVoices, updatePossessionView, updateUnitCounts } from '../domains/colony/settlers/index.js';
+import { removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, tickVoices, updatePossessionView } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
 import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickScouts, tickWaveTimer } from '../domains/conflict/waves/index.js';
@@ -86,7 +86,6 @@ export function update(dt) {
   if (!isRaiding()) tickCards(); // (#255)
   tickRaidCamp(dt); // (#255)
   tickRaid(dt);
-  updateUnitCounts();
   updateUI();
   refreshAffordability();
 }

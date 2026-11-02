@@ -52,6 +52,7 @@ export function updateUI() {
     setText(total, String(Math.floor(sum)));
   }
   setText(document.getElementById('pop-txt'), `${getCurrentPop()}/${getMaxPop()}`);
+  updatePopulationIcon('population-icon');
   setText(document.getElementById('base-hp-txt'), `${Math.max(0, Math.ceil(townHall.hp))}/${townHall.maxHp}`);
 
   let btnUpgrade = document.getElementById('btn-upgrade-big');
@@ -203,7 +204,7 @@ export function renderResourceStrip() {
   const strip = document.getElementById('resource-strip');
   if (!strip) return;
   const chip = (icon, id) => `<span class="strip-chip">${iconHtml(icon)} <b id="${id}">0</b></span>`;
-  let html = chip('hall', 'strip-base') + chip('worker', 'strip-pop');
+  let html = chip('hall', 'strip-base') + `<span class="strip-chip"><span id="strip-pop-icon"></span> <b id="strip-pop">0</b></span>`;
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned && isForPlayerFaction(g))) {
     const resource = GAME_CONFIG.resources[group.members[0]];
     if (resource) html += chip(resource.icon || group.icon, `strip-${resource.id}`);
@@ -215,8 +216,18 @@ function updateResourceStrip() {
   const set = (id, text) => setText(document.getElementById(id), text);
   set('strip-base', String(Math.max(0, Math.ceil(townHall.hp))));
   set('strip-pop', `${getCurrentPop()}/${getMaxPop()}`);
+  updatePopulationIcon('strip-pop-icon');
   for (const group of GAME_CONFIG.resourceGroups.filter(g => g.pinned)) {
     set(`strip-${group.members[0]}`, String(Math.floor(getResourceAmount(group.members[0]))));
+  }
+}
+
+function updatePopulationIcon(id) {
+  const element = document.getElementById(id);
+  const icon = GAME_CONFIG.settlerTypes[getPlayerFaction().startUnits].icon;
+  if (element && element.dataset.icon !== icon) {
+    element.dataset.icon = icon;
+    setRichText(element, `[[${icon}]]`);
   }
 }
 
@@ -306,7 +317,7 @@ export function renderResourceTiles() {
   };
   const top = line('');
   top.innerHTML = `<span class="res-chip">${iconHtml('hall')} ${escapeHtml(t('hud.base'))} <b id="base-hp-txt" style="color: #e74c3c;">100/100</b></span>` +
-    `<span class="res-chip population-tile">${iconHtml('worker')} <b id="pop-txt" style="color: #2ecc71;">2/5</b> (${iconHtml('worker')} <b id="workers-cnt">0</b> ${iconHtml('swords')} <b id="warriors-cnt">0</b>)</span>`;
+    `<span class="res-chip population-tile"><span id="population-icon"></span> <b id="pop-txt" style="color: #2ecc71;">2/5</b></span>`;
   const grouped = new Set();
   const singles = [];
   for (const group of GAME_CONFIG.resourceGroups) {

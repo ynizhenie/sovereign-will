@@ -13,6 +13,8 @@ import { isWaterReachable } from '../../world/index.js';
 import { joinsTentAssault } from '../combat/index.js';
 import { playSound } from '../../../app/index.js';
 
+/** @typedef {import('../../../engine/world/types.js').Settler & { healTarget?: import('../../../engine/world/types.js').Settler | null }} SettlerWithHealTarget */
+
 // Workers mend a damaged tent unless enemies are right next to it
 export function repairTent(s, tick) {
   if (s.role === 'worker' && !s.isPossessed) {
@@ -78,27 +80,36 @@ export function healAtTent(s, tick) {
 // soldiers before workers, one medic per patient, a herb (healPerHerb hp) each (#279: no more potions)
 // from its bag, filled at a storage. With the wave beaten and a tent (grave) to heal at for free, it keeps
 // its herbs (#199)
-export function treatWounded(s, tick) {
+export function treatWounded(s, tick, stayBack = false) {
   const battle = game.gameMode === 'battle';
   if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || (!tick.isWaveActive && !battle)) return false;
   if (!battle && tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
   const medic = GAME_CONFIG.medic;
   const unlimitedHerbs = battle;
   if (!unlimitedHerbs && !(s.bagHerbs > 0) && stock.herbs <= 0) return false;
-  let patient = null, best = Infinity;
-  for (const other of game.settlers) {
-    if (other === s || other.hp >= other.maxHp || other.towerAssignment || tick.patients.has(other)) continue;
-    const d = Math.hypot(other.x - s.x, other.y - s.y) + (other.role === 'worker' ? 10000 : 0); // soldiers first
-    if (d < best) { best = d; patient = other; }
+  const support = /** @type {SettlerWithHealTarget} */ (s);
+  const isSupport = other => other.role === 'worker' && hasToolFamily(other.tool, 'medic') || other.tool === 'necro_staff';
+  const isAvailable = other => other.hp > 0 && other.hp < other.maxHp && !other.towerAssignment && !tick.patients.has(other) &&
+    !game.settlers.some(unit => unit !== s && unit.hp > 0 && isSupport(unit) &&
+      /** @type {SettlerWithHealTarget} */ (unit).healTarget === other);
+  let patient = support.healTarget && game.settlers.includes(support.healTarget) && isAvailable(support.healTarget) ? support.healTarget : null;
+  let best = patient ? -1 : Infinity;
+  if (!patient) {
+    for (const other of game.settlers) {
+      if (other === s || !isAvailable(other)) continue;
+      const d = Math.hypot(other.x - s.x, other.y - s.y) + (other.role === 'worker' ? 10000 : 0); // soldiers first
+      if (d < best) { best = d; patient = other; }
+    }
   }
-  if (!patient && s.hp < s.maxHp && !tick.patients.has(s)) patient = s; // itself last of all (#279)
-  if (!patient) { s.healTimer = 0; return false; }
+  if (!patient && s.hp < s.maxHp && isAvailable(s)) patient = s; // itself last of all (#279)
+  if (!patient) { support.healTarget = null; s.healTimer = 0; return false; }
+  support.healTarget = patient;
   s.patrolTarget = null;
   // an empty bag gets filled with herbs at the nearest storage first
   if (!unlimitedHerbs && !(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
   tick.patients.add(patient);
   if (patient !== s && Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
-    moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
+    if (!stayBack) moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
   } else {
     s.healTimer = (s.healTimer || 0) + tick.dt;
     s.working = 0.1; s.workKind = 'heal'; // (#326: herbs pressed onto the wound, the bag at its hip)

@@ -9,17 +9,6 @@ import { getPossessed, getUpgrade, spawnSettler, upgradeToBig } from './settlers
 import { formatCost } from '../storage/index.js';
 import { getMorale } from '../../conflict/morale/index.js';
 
-export function updateUnitCounts() {
-  const workers = game.settlers.filter(s => s.role === 'worker').length;
-  const warriors = game.settlers.filter(s => s.role === 'soldier' || s.role === 'archer').length;
-
-  const workersElem = document.getElementById('workers-cnt');
-  const warriorsElem = document.getElementById('warriors-cnt');
-
-  setText(workersElem, String(workers));
-  setText(warriorsElem, String(warriors));
-}
-
 // The selected settler's info: what it's doing, when it's next hungry, what it carries (#326: a line each, all of it)
 export function renderSettlerInfo(s) {
   const activity = `activity.${s.activity || 'patrol'}`;
