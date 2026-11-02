@@ -26,6 +26,7 @@ export function* resetGameSteps(map) {
   for (const id of Object.keys(GAME_CONFIG.resources)) stock[id] = 0;
   addResources(GAME_CONFIG.start.resources);
   addResources(getPlayerFaction().startResources);
+  if (game.gameMode === 'endless') addResources({ torches: 3 });
   if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food
   if (renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings
   game.waveTimer = game.waveInterval; game.boarRespawnTimer = 25; game.waveNum = 1;

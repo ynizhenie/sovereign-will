@@ -709,6 +709,7 @@ export function drawWater(terrain) {
       const phase = clock + (hash % 100) / 13;
       const swim = sinOf(phase) * 6, f = sinOf(phase + 1.5708) < 0 ? -1 : 1;
       const fx = w.x + swim, fy = w.y + sinOf(phase * 0.7 + 1.5708) * 3;
+      ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
       ctx.beginPath();
       ctx.ellipse(fx, fy, 4, 2, 0, 0, Math.PI * 2);
       ctx.moveTo(fx - 3 * f, fy); ctx.lineTo(fx - 6 * f, fy - 2); ctx.lineTo(fx - 6 * f, fy + 2); ctx.closePath();

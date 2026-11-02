@@ -120,3 +120,129 @@ test('walls and doors join (a run, corners, a T, a cross, a lone post) and a doo
   expect(r.ironShut).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('connected walls and doors cast one combined shadow; the door leaf shadow follows its angle', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const originals = { roundRect: ctx.roundRect, fill: ctx.fill };
+    const shadowFills = [];
+    const shapes = [];
+    const isShadow = context => String(context.fillStyle).startsWith('rgba(0, 0, 0,');
+    ctx.roundRect = function (...args) {
+      if (isShadow(this)) {
+        const transform = this.getTransform();
+        shapes.push({ args, transform: [transform.a, transform.b, transform.c, transform.d] });
+      }
+      return originals.roundRect.apply(this, args);
+    };
+    ctx.fill = function (...args) {
+      if (isShadow(this)) shadowFills.push(shapes.length);
+      return originals.fill.apply(this, args);
+    };
+    try {
+      drawWallShadows([
+        { x: 300, y: 300, type: 'wall_wood', mask: 2 },
+        { x: 330, y: 300, type: 'wall_stone', mask: 10 },
+        { x: 360, y: 300, type: 'door', mask: 10, open: 0, swing: { x: 0, y: 1 } }
+      ]);
+      const closedLeaf = shapes.find(shape => shape.args[0] === 0 && shape.args[2] === 20);
+      const combinedFillCount = shadowFills.length;
+      shapes.length = 0;
+      shadowFills.length = 0;
+      drawWallShadows([{ x: 360, y: 300, type: 'door', mask: 10, open: 1, swing: { x: 0, y: 1 } }]);
+      const openLeaf = shapes.find(shape => shape.args[0] === 0 && shape.args[2] === 14);
+      return {
+        combinedFillCount,
+        doorLeafTurnsWhenOpened: closedLeaf.transform.some((value, i) => Math.abs(value - openLeaf.transform[i]) > 0.1)
+      };
+    } finally {
+      ctx.roundRect = originals.roundRect;
+      ctx.fill = originals.fill;
+    }
+  });
+  expect(result.combinedFillCount).toBe(1);
+  expect(result.doorLeafTurnsWhenOpened).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('buildings higher on the map are drawn behind buildings lower on the map', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const fills = await page.evaluate(() => {
+    const g = getGridPos(townHall.x, townHall.y);
+    const upper = createBuildingBlueprint('wall_wood', (g.gx + 5) * TILE_SIZE + 15, (g.gy + 3) * TILE_SIZE + 15);
+    const lower = createBuildingBlueprint('wall_stone', (g.gx + 5) * TILE_SIZE + 15, (g.gy + 4) * TILE_SIZE + 15);
+    delete upper.progress; delete upper.maxProgress;
+    delete lower.progress; delete lower.maxProgress;
+    game.buildings = [lower, upper];
+
+    const fillRect = ctx.fillRect, order = [];
+    ctx.fillRect = function (...args) {
+      if (this.fillStyle === '#7a4a20' || this.fillStyle === '#52616a') order.push(this.fillStyle);
+      return fillRect.apply(this, args);
+    };
+    try {
+      drawBuildings();
+    } finally {
+      ctx.fillRect = fillRect;
+    }
+    return order;
+  });
+  expect(fills.indexOf('#7a4a20')).toBeGreaterThanOrEqual(0);
+  expect(fills.indexOf('#52616a')).toBeGreaterThan(fills.indexOf('#7a4a20'));
+  expect(errors).toEqual([]);
+});
+
+test('stone walls use the wooden wall post-and-arm shape with masonry detail', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const shapes = await page.evaluate(() => {
+    const fillRect = ctx.fillRect, drawn = [];
+    ctx.fillRect = function (x, y, w, h) {
+      drawn.push({ x, y, w, h, fill: this.fillStyle });
+      return fillRect.call(this, x, y, w, h);
+    };
+    try {
+      drawStoneWall(300, 300, 15);
+    } finally {
+      ctx.fillRect = fillRect;
+    }
+    return drawn;
+  });
+  expect(shapes).toEqual(expect.arrayContaining([
+    expect.objectContaining({ x: 293, y: 289, w: 14, h: 24, fill: '#52616a' }),
+    expect.objectContaining({ x: 293, y: 287.5, w: 14, h: 7, fill: '#71818a' }),
+    expect.objectContaining({ x: 289.25, y: 288, w: 5.5, h: 25, fill: '#71818a' })
+  ]));
+  expect(shapes.some(shape => shape.fill === '#87969a')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('stone wall shadow follows its stone post and connected arms', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const shadows = await page.evaluate(() => {
+    const rect = ctx.rect, shapes = [];
+    ctx.rect = function (...args) {
+      if (String(this.fillStyle).startsWith('rgba(0, 0, 0,')) shapes.push(args);
+      return rect.apply(this, args);
+    };
+    try {
+      drawWallShadows([{ x: 300, y: 300, type: 'wall_stone', mask: LINK.e | LINK.s }]);
+      return shapes;
+    } finally {
+      ctx.rect = rect;
+    }
+  });
+  expect(shadows).toEqual(expect.arrayContaining([
+    [-7, -11, 14, 24],
+    [5.25, -12, 5.5, 25],
+    [10.75, -12, 5.5, 25],
+    [16.25, -12, 5.5, 25],
+    [-7, 5.5, 14, 7],
+    [-7, 11.5, 14, 7],
+    [-7, 17.5, 14, 7]
+  ]));
+  expect(errors).toEqual([]);
+});

@@ -8,7 +8,7 @@ import { givableTo } from '../domains/colony/equipment/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
 import { iconHtml, setRichText } from './icons.js';
 import { fillGiveList, updateUI } from './hud.js';
-import { closeSheet } from './sheets.js';
+import { closeSheet, setSheetCloseHandler } from './sheets.js';
 import { openSelectedCard } from './selected-card-state.js';
 
 const ORDER = { soldier: 0, archer: 1, worker: 2, pet: 3 };
@@ -46,6 +46,13 @@ function openUnitCard(s) {
 
 function toggleGive(s) {
   openGiveId = openGiveId === s.id ? null : s.id;
+  shown = '';
+  updateUnitsTab(true);
+}
+
+export function closeUnitGiveMenu() {
+  if (openGiveId === null) return;
+  openGiveId = null;
   shown = '';
   updateUnitsTab(true);
 }
@@ -146,3 +153,5 @@ export function updateUnitsTab(force = false) {
     pane.appendChild(list);
   }
 }
+
+setSheetCloseHandler(closeUnitGiveMenu);

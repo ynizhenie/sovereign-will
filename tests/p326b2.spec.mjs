@@ -82,6 +82,79 @@ test('a red archer goes up its side\'s platform and shoots from it; the red go t
   expect(r).toEqual({ up: true, shot: true, through: true });
 });
 
+test('archers on opposing platforms can hit each other', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    battle.lineup = [];
+    put('b', 'watchtower', 14, 12);
+    put('b', 'watchtower', 21, 12);
+    put('u', 'humans:bow', 12, 12);
+    put('u', 'humans:bow', 23, 12);
+    for (const unit of [...settlers, ...enemies]) unit.hp = unit.maxHp = 100000;
+    let playerWasOnPlatform = false, playerShot = false, enemyShot = false;
+    fight(10, () => {
+      playerWasOnPlatform = playerWasOnPlatform || !!settlers[0]?.towerAssignment;
+      playerShot = playerShot || projectiles.some(projectile => projectile.fromTower && !projectile.fromEnemy);
+      enemyShot = enemyShot || projectiles.some(projectile => projectile.fromTower && projectile.fromEnemy);
+      return false;
+    });
+    const player = settlers[0], enemy = enemies[0];
+    return {
+      playerOnPlatform: !!player?.towerAssignment,
+      playerWasOnPlatform,
+      playerShot,
+      enemyShot,
+      enemyOnPlatform: !!enemy?.platform,
+      playerHitEnemy: enemy?.hp < enemy?.maxHp,
+      enemyHitPlayer: player?.hp < player?.maxHp,
+    };
+  });
+  expect(result).toEqual({
+    playerOnPlatform: true,
+    playerWasOnPlatform: true,
+    playerShot: true,
+    enemyShot: true,
+    enemyOnPlatform: true,
+    playerHitEnemy: true,
+    enemyHitPlayer: true
+  });
+});
+
+test('crossbowmen on opposing platforms can hit each other', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    battle.lineup = [];
+    put('b', 'watchtower', 14, 12);
+    put('b', 'watchtower', 21, 12);
+    put('u', 'humans:crossbow', 12, 12);
+    put('u', 'humans:crossbow', 23, 12);
+    for (const unit of [...settlers, ...enemies]) unit.hp = unit.maxHp = 100000;
+    let playerShot = false, enemyShot = false;
+    fight(10, () => {
+      playerShot = playerShot || projectiles.some(projectile => projectile.fromTower && !projectile.fromEnemy);
+      enemyShot = enemyShot || projectiles.some(projectile => projectile.fromTower && projectile.fromEnemy);
+      return false;
+    });
+    const player = settlers[0], enemy = enemies[0];
+    return {
+      playerOnPlatform: !!player?.towerAssignment,
+      enemyOnPlatform: !!enemy?.platform,
+      playerShot,
+      enemyShot,
+      playerHitEnemy: enemy?.hp < enemy?.maxHp,
+      enemyHitPlayer: player?.hp < player?.maxHp
+    };
+  });
+  expect(result).toEqual({
+    playerOnPlatform: true,
+    enemyOnPlatform: true,
+    playerShot: true,
+    enemyShot: true,
+    playerHitEnemy: true,
+    enemyHitPlayer: true
+  });
+});
+
 test('a battle\'s settings: night and rain are only to look at; blight is unavailable; torches given lit in the dark (#326)', async ({ page }) => {
   const errors = await openBattle(page);
   await page.click('[data-dock="battle-settings"]');

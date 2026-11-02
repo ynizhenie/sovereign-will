@@ -18,6 +18,26 @@ test('no sharpening, smoking or wheat stalk among the pastimes any more (#298, 5
   expect(errors).toEqual([]);
 });
 
+test('soldier patrol distance follows buildings only on that side of the base', async ({ page }) => {
+  const errors = await openGame(page);
+  const radii = await page.evaluate(() => {
+    window.sim.start('directional-patrol');
+    const { makeSettler } = window.sim.helpers;
+    game.buildings = [{ x: townHall.x + 10 * TILE_SIZE, y: townHall.y, type: 'wall_stone' }];
+    const patrol = (id, angle) => {
+      const s = makeSettler(id, townHall.x + Math.cos(angle) * 80, townHall.y + Math.sin(angle) * 80, { weapon: 'sword', role: 'soldier' });
+      s.idle = { act: 'patrolEdge', left: 10, angle };
+      idlePastime(s, { dt: 1 / 60 });
+      return Math.hypot(s.pathTarget.x - townHall.x, s.pathTarget.y - townHall.y);
+    };
+    return { east: patrol(1, 0), north: patrol(2, -Math.PI / 2) };
+  });
+  expect(radii.east).toBeGreaterThan(10 * 30);
+  expect(radii.north).toBeLessThan(6 * 30);
+  expect(radii.east - radii.north).toBeGreaterThan(100);
+  expect(errors).toEqual([]);
+});
+
 test('the camp\'s enemies are the same whichever party comes (#298, 6)', async ({ page }) => {
   const errors = await openGame(page);
   await sim(page, 'campOpens', { soldiers: 4 });

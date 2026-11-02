@@ -20,16 +20,16 @@ export const buildingsConfig = {
     // boarChance (otherwise the boar eats the bait); an enemy stepping on it takes enemyDamage and is held
     // holdSeconds, then it's free and the trap sets itself again in rearmSeconds. Settlers walk round it,
     // enemies don't see it
-    iron_trap: { id: 'iron_trap', group: 'defense', icon: 'iron_trap', cost: { wood: 2, iron: 3 }, demolishRefund: { iron: 1 }, walkable: true, arrowsPass: true,
+    iron_trap: { id: 'iron_trap', group: 'defense', icon: 'iron_trap', cost: { iron: 3 }, demolishRefund: { iron: 1 }, walkable: true, arrowsPass: true,
       ironTrap: { bait: [{ food: 1 }, { rawMeat: 1 }, { bones: 1 }], lureRange: 240, boarChance: 0.5, enemyDamage: 60, holdSeconds: 6, rearmSeconds: 4 }, build: { maxProgress: 40, hp: 80 } },
     // tent: +population to the limit; settlers heal at it (healPerSecond), workers mend it (repairPerSecond)
     // factions: only these factions build it; tents are the humans', graves the undead's
-    tent: { id: 'tent', group: 'homes', icon: 'tent', factions: ['humans'], cost: { wood: 10, leather: 2, herbs: 2 }, demolishRefund: { wood: 5 }, population: 2, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
+    tent: { id: 'tent', group: 'homes', icon: 'tent', factions: ['humans'], cost: { wood: 8, leather: 2, rope: 2, herbs: 2 }, demolishRefund: { wood: 5 }, population: 2, healPerSecond: 20, repairPerSecond: 15, build: { maxProgress: 70, hp: 80 } },
     // a grave: the undead's tent, also where necromancers get their raises back; it makes bones
     // the demons': a sacrificial circle adds population, and a settler sent into it heals everyone;
     // portals come in pairs (the 1st with the 2nd, the 3rd with the 4th...) and settlers step through
     // (#250) a den is the demons' home (population, no healing at it); the circle is only for sacrifices now
-    demon_den: { id: 'demon_den', group: 'homes', icon: 'demon_den', factions: ['demons'], cost: { stone: 8, wood: 4 }, demolishRefund: { stone: 4 }, population: 2, build: { maxProgress: 70, hp: 120 } },
+    demon_den: { id: 'demon_den', group: 'homes', icon: 'demon_den', factions: ['demons'], cost: { stone: 10, wood: 4 }, demolishRefund: { stone: 4 }, population: 2, build: { maxProgress: 70, hp: 120 } },
     sacrifice_circle: { id: 'sacrifice_circle', group: 'homes', icon: 'sacrifice_circle', factions: ['demons'], cost: { stone: 15 }, demolishRefund: { stone: 7 }, sacrifice: true, build: { maxProgress: 80, hp: 60 } },
     // (#250) a corpse pit: soldiers carry corpses in, up to `holds`; in it they keep (age at keepShare of the
     // speed); a wounded demon eats from it. A cage holds one badly wounded enemy caught at a wave's end, to
@@ -45,7 +45,7 @@ export const buildingsConfig = {
       smelter: { maxOre: 6, maxCoal: 6, maxIron: 6, seconds: 4 } } },
     // (#326) the Platform (its id from when it was a watchtower): an archer climbs it and shoots farther from it, with
     // the arrows in its own quiver; it keeps none
-    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 25, stone: 20, herbs: 4 }, demolishRefund: { wood: 12, stone: 10 }, build: { maxProgress: 140, hp: 100, tower: { capacity: 1, minEnemies: 2, reach: 1.35, idleSeconds: 4, restSeconds: 10 } } },
+    watchtower: { id: 'watchtower', group: 'defense', icon: 'watchtower', cost: { wood: 10, stone: 5, rope: 2 }, demolishRefund: { wood: 12, stone: 10 }, arrowsPass: true, build: { maxProgress: 140, hp: 100, tower: { capacity: 1, minEnemies: 2, reach: 1.35, idleSeconds: 4, restSeconds: 10 } } },
     // crafts: where things are made (#211, #248): the workshop everything without iron in it, the smithy
     // everything with
     workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 80 } },
@@ -60,7 +60,7 @@ export const buildingsConfig = {
     // a mine (#326, 27.10, 26): on an iron or coal source (onSpawner); built, the source is worked for its ore by
     // anyone with a pickaxe, unmarked, as ore is (slowly, never used up). A source without one can't be marked
     mine: { id: 'mine', group: 'economy', icon: 'mine', cost: { wood: 15, stone: 10 }, demolishRefund: { wood: 8, stone: 5 }, onSpawner: true, build: { maxProgress: 80, hp: 150 } },
-    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 6, herbs: 2 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
+    fish_trap: { id: 'fish_trap', group: 'economy', icon: 'fish_trap', cost: { wood: 3, rope: 3 }, demolishRefund: { wood: 4 }, onWater: true, fishTrap: { seconds: 25, holds: 4, baitCatches: 3 }, build: { maxProgress: 50, hp: 60 } },
     // a torch post (#257): lit at dusk by a worker (postFirewood), it lights the ground round it till morning
     torch: { id: 'torch', group: 'defense', icon: 'torch', cost: { torches: 1 }, demolishRefund: { torches: 1 }, build: { maxProgress: 20, hp: 30 }, arrowsPass: true },
     // a place nearer than the town hall to bring resources to and fetch them from

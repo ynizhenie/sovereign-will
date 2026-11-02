@@ -4,4 +4,4 @@
 export { equip } from './equipment.behaviours.js';
 export { armorOf, assignTool, canUseShield, countHeld, craftArrows, craftRecipe, craftWeapon, disarmSettler, getHeldItems, getToolFamily, getWeaponStats, givableTo, giveStored, giveStoredTo, hasAxeTool, hasGear, hasPickaxeTool, hasToolFamily, hasWorkingShield, isArmorGear, isBowWeapon, isClubWeapon, isCrossbowWeapon, isRangedWeapon, isSpearWeapon, isSwordWeapon, makeToStore, orderGear, orderGearOff, putOnGear, refundEquipment, takeApartRecipe, takeApartStored, takeFromArmory, usesDagger } from './equipment.rules.js';
 export { renderCraftLists, showCraftKind, updateCraftLists } from './equipment.panel.js';
-export { craftItem, craftPlace, findWorkplace, orderCraft } from './equipment.crafting.js';
+export { craftItem, craftPlace, findWorkplace, getCraftOrderCost, getCraftOrderPlan, orderCraft } from './equipment.crafting.js';

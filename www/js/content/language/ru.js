@@ -241,6 +241,7 @@ export const ruLanguage = {
       cost: 'Цена',
       left: 'Останется',
       short: 'Не хватает',
+      willCraft: 'Недостающие материалы будут изготовлены',
       hp: 'Здоровье',
       speed: 'Скорость',
       strength: 'Сила',

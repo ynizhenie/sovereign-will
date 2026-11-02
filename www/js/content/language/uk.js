@@ -241,6 +241,7 @@ export const ukLanguage = {
       cost: 'Ціна',
       left: 'Залишиться',
       short: 'Бракує',
+      willCraft: 'Матеріали, яких бракує, будуть виготовлені',
       hp: 'Здоров\'я',
       speed: 'Швидкість',
       strength: 'Сила',

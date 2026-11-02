@@ -125,7 +125,7 @@ export function makeBattleUnit(entry) {
     if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
     if (entry.shield && enemyCanShield(enemyKey)) en.shield = true;
     if (entry.helmet && !def.pet) en.helmet = true; // (#326, 27.10, 27)
-    if (entry.banner && en.type === 'normal' && !def.pet && !def.healer && !def.necromancer) en.captain = true;
+    if (entry.banner && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     if (entry.torch && !def.pet && isDark()) en.torch = true; // (#326)
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);

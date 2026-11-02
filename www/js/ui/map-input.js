@@ -5,6 +5,7 @@ import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInput
 import { TILE_SIZE, game, isBorderZone, thingAt, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
+import { craftRecipe } from '../domains/colony/equipment/index.js';
 import { inTerritory, isWaterReachable, markFishingChanged, toggleZone } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
@@ -302,9 +303,19 @@ function placeBlueprint({ gx, gy }) {
   const replaces = upgradeTarget(building, gx, gy);
   if (isLocked('buildings', game.buildMode)) {
     showNotification(t('cards.locked', { name: building.label }), true);
-  } else if (!canBuild(game.buildMode)) {
-    showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
   } else if (replaces || building.onWater || building.onSpawner || isBuildLocationAllowed(gx, gy)) {
+    if (!canBuild(game.buildMode)) {
+      const costs = Object.entries(building.cost || {});
+      const missing = costs.filter(([id, amount]) => getFreeStock(id) < amount);
+      const canPayOtherCosts = missing.length === 1 &&
+        costs.filter(([id]) => id !== missing[0][0]).every(([id, amount]) => getFreeStock(id) >= amount);
+      const resource = canPayOtherCosts ? missing[0][0] : null;
+      const recipe = resource && Object.values(GAME_CONFIG.recipes).find(item => item.produces[resource]);
+      if (!recipe || !craftRecipe(recipe.id, Math.ceil((missing[0][1] - getFreeStock(resource)) / (recipe.produces[resource] / (recipe.batches || 1))))) {
+        if (resource !== 'rope' && resource !== 'torches') showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
+        return;
+      }
+    }
     // its cost stays in storage until builders bring it
     const bp = createBuildingBlueprint(game.buildMode, gx, gy);
     bp.needs = { ...(building.cost || {}) };

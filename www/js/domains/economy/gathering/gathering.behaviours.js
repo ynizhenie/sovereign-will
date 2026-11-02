@@ -112,7 +112,11 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
   let settlerReach = null;
   const reachOf = () => settlerReach || (settlerReach = getSettlerReach(s));
   // at night with no torch, nothing past the base (#257)
-  const night = nightReach(s), withinNight = r => night === Infinity || Math.hypot(r.x - townHall.x, r.y - townHall.y) <= night;
+  const nightLimited = nightReach(s) !== Infinity;
+  const withinNight = r => {
+    const night = nightReach(s, r);
+    return night === Infinity || Math.hypot(r.x - townHall.x, r.y - townHall.y) <= night;
+  };
   // resources this settler recently found no spot next to (see harvest())
   const skipped = r => s.skippedResource === r && game.pathTick < s.skippedUntilTick;
   let assignedRes = null;
@@ -137,7 +141,7 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
   }
   s.markTarget = assignedRes;
   // (#326) up at night for a mark past the base, with no torch: it says it won't go out there in the dark
-  if (!assignedRes && s.drowsy && night !== Infinity && tick.markedResources.some(r => !withinNight(r) && canSettlerHarvest(s, r, tick))) says(s, 'noTorch');
+  if (!assignedRes && s.drowsy && nightLimited && tick.markedResources.some(r => !withinNight(r) && canSettlerHarvest(s, r, tick))) says(s, 'noTorch');
   if (!assignedRes && (s.drowsy || markedOnly)) return null; // (up at night for what was marked, or the marks first: only that, #298)
 
   if (!assignedRes) {

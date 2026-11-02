@@ -7,7 +7,7 @@ import { TILE_SIZE, forEachInRect, game, isBorderZone, townHall } from '../../..
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
+import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { tileVariantHash } from '../../world/index.js';
 
@@ -226,15 +226,24 @@ export function drawBuildings() {
   const v = getViewRect(90), nearby = [];
   forEachInRect(game.buildings, v.x0, v.y0, v.x1, v.y1, b => nearby.push(b));
   const links = wallLinks(nearby);
-  nearby.forEach(b => {
+  const doorStates = new Map();
+  const wallShadows = nearby.filter(b => isWallPiece(b)).map(b => {
+    const mask = links.get(b) || 0;
+    if (b.type !== 'door' && b.type !== 'iron_door') return { x: b.x, y: b.y, type: b.type, mask };
+    const state = { open: doorOpening(b, dt), swing: doorSwing(b, mask) };
+    doorStates.set(b, state);
+    return { x: b.x, y: b.y, type: b.type, mask, ...state };
+  });
+  drawWallShadows(wallShadows);
+  nearby.sort((a, b) => a.y - b.y || a.x - b.x).forEach(b => {
     // (the look: building.art.js, #251)
     if (b.type === 'wall_wood') {
       drawWoodWall(b.x, b.y, links.get(b) || 0);
     } else if (b.type === 'wall_stone') {
       drawStoneWall(b.x, b.y, links.get(b) || 0);
     } else if (b.type === 'door' || b.type === 'iron_door') {
-      const open = doorOpening(b, dt);
-      drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, open, doorSwing(b, links.get(b) || 0));
+      const state = doorStates.get(b);
+      drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, state.open, state.swing);
     } else if (b.type === 'iron_trap') {
       // an iron trap (#248): open, with food in it when baited; shut on whoever it holds
       shadow(b.x, b.y, 22, 18, 6); // (#326: a shadow under everything)
