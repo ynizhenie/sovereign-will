@@ -108,7 +108,7 @@ test('smoke: saves loaded a few ticks after they were made, no frame fails (the 
     for (let later = 0; later < 4; later++) {
       for (let f = 0; f < 3; f++) update(1 / 60);
       await saveCurrentGame();
-      const data = await saveDataOf(latestSave(worldSeed.value));
+      const data = await saveDataOf(loadSaves()[`world:${worldSeed.value}`]);
       for (let f = 0; f < later; f++) update(1 / 60);
       await loadGame(data);
       settlers.forEach(s => { s.hunger = 999; });

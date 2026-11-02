@@ -42,9 +42,9 @@
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
 
-        <!-- (#326, 30.10, 3) the saves: their own screen, the whole list -->
         <div class="wave-settings" id="save-settings" hidden>
-            <button id="open-saves" class="menu-button">Saves</button>
+            <div data-i18n="save.list">Saved games:</div>
+            <div id="save-list"></div>
         </div>
 
         <div class="wave-settings faction-settings">
@@ -218,19 +218,6 @@
         <button id="open-music-player" class="menu-button" data-i18n="menu.openMusicPlayer">Open music player</button>
     </div>
 
-    <!-- (#326, 30.10, 3) the saves, all of them: saving (a new one, or over one) or loading; to a file and back -->
-    <div class="main-menu-content saves-screen" data-screen="saves" id="saves-screen" hidden>
-        <button class="menu-back" id="saves-back" data-i18n="menu.back">[[back]] Back</button>
-        <h1 id="saves-title" data-i18n="save.screenLoad">Load game</h1>
-        <div class="saves-top">
-            <button id="saves-new" class="menu-button menu-button-primary" data-i18n="save.new">New save</button>
-            <button id="saves-import" class="fps-option" data-i18n="save.import">From a file</button>
-            <input id="saves-import-file" type="file" accept=".swsave,application/json" hidden />
-        </div>
-        <div id="saves-note" class="saves-note"></div>
-        <div id="saves-list" class="saves-list"></div>
-    </div>
-
     <div class="main-menu-content" data-screen="music" hidden>
         <button class="menu-back" data-back-to="settings" data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="music.player">Music player</h1>
@@ -245,8 +232,9 @@
         <div class="pause-seed"><span data-i18n="pause.seed">World seed</span>: <span id="hud-seed">-</span></div>
         <button id="resume-button" class="menu-button menu-button-primary" data-i18n="pause.continue">Continue</button>
         <button id="save-game-button" class="menu-button" data-i18n="save.button">Save game</button>
-        <!-- the saves: a screen of their own to save on or load from (#254; #326, 30.10, 3) -->
+        <!-- the saves, to load one (#254) -->
         <button id="load-game-button" class="menu-button" data-i18n="save.load">Load game</button>
+        <div id="pause-load" class="wave-settings" hidden><div id="pause-load-list"></div></div>
         <button id="pause-settings-button" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-to-menu-button" class="menu-button" data-i18n="pause.exit">Exit to main menu</button>
     </div>

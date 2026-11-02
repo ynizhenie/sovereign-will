@@ -12,20 +12,20 @@ test('a game saves even with a loop through the fallen (it silently didn\'t); on
     const dead = window.sim.helpers.makeSettler(900, 0, 0, {}), foe = createConfiguredEnemy({ x: 0, y: 0 }, 'raider');
     dead.lastHitBy = foe; foe.attackTarget = dead; settlers[0].lastHitBy = foe;
     await saveCurrentGame();
-    const looped = !!latestSave(worldSeed.value);
+    const looped = !!loadSaves()[`world:${worldSeed.value}`];
     localStorage.clear();
     // on its way to the camp
     startRaid(settlers.filter(s => s.role === 'soldier'));
     for (let f = 0; f < 30; f++) update(1 / 60);
     setPaused(true); const shownMarching = !document.getElementById('save-game-button').hidden; setPaused(false);
     await saveCurrentGame();
-    const marching = !!latestSave(worldSeed.value);
-    const raiderSaved = JSON.stringify(await saveDataOf(latestSave(worldSeed.value))).includes('"raider":true');
+    const marching = !!loadSaves()[`world:${worldSeed.value}`];
+    const raiderSaved = JSON.stringify(await saveDataOf(loadSaves()[`world:${worldSeed.value}`])).includes('"raider":true');
     for (let f = 0; f < 3600 && !document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])'); f++) update(1 / 60);
     enterCamp();
     localStorage.clear();
     await saveCurrentGame();
-    const inCamp = !!latestSave(worldSeed.value);
+    const inCamp = !!loadSaves()[`world:${worldSeed.value}`];
     const said = document.getElementById('save-game-button').textContent;
     return { looped, shownMarching, marching, raiderSaved, inCamp, said };
   });
