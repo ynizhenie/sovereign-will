@@ -370,6 +370,7 @@ export function tickSettlers(dt) {
     if (isPet(s)) {
       if (s.targetEquipment) s.targetEquipment = null;
       // (#326) let go, or sent somewhere by the player (with no soldier about too): that first, as a settler does
+      if (s.order || s.orderSpot || s.orderTarget || s.leaving) s.petSleep = 0; // (#326, 30.10, 2: sent somewhere, it wakes up and walks)
       if (!s.isPossessed && (leaveColony(s, tick) || followCommand(s, tick))) { s.activity = s.leaving ? 'leaveColony' : 'followCommand'; return; }
       tickPet(s, tick); return; // (its own ways, #314)
     }

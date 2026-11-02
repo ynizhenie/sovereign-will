@@ -9,6 +9,7 @@ import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { BATTLE_PRESETS, battlePresetLabel, bigPresetOf, getBattleBuildings } from './battle.roster.js';
 import { battle, battleArmor, clearBattleSide, setBattleDifficulty, setBattleField, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
+import { battleThemeFaction } from '../../app/index.js';
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
@@ -150,13 +151,12 @@ function renderBattleMusic() {
   box.appendChild(row);
   const button = (theme, label) => {
     const b = document.createElement('button');
-    b.className = 'btn sub-tab' + (battle.theme === theme ? ' on' : '');
+    b.className = 'btn sub-tab' + (battleThemeFaction().id === theme ? ' on' : '');
     b.dataset.theme = theme;
     b.textContent = label;
     onTap(b, () => { battle.theme = theme; renderBattlePanel(); });
     row.appendChild(b);
   };
-  button('arena', t('battle.themeArena'));
   for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) button(faction.id, faction.label);
 }
 
