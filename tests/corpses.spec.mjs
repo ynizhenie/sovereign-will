@@ -30,6 +30,27 @@ test('fallen settlers and enemies leave grey corpses that disappear after a whil
   expect(errors).toEqual([]);
 });
 
+test('corpses keep the fallen unit body type and faction visuals', async ({ page }) => {
+  const errors = await openGame(page);
+  const result = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    window.sim.start('corpse-visual-test');
+    const settler = makeSettler(1, townHall.x + 80, townHall.y, { weapon: 'spear', look: { female: true, style: 0, shade: 1 } });
+    const enemy = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, 'demon_brute');
+    addCorpse(settler, 'settler', settler.type);
+    addCorpse(enemy, 'enemy', enemy.enemyKey);
+    const [playerCorpse, enemyCorpse] = corpses;
+    drawCorpses();
+    return {
+      player: { type: playerCorpse.type, weapon: playerCorpse.weapon, look: playerCorpse.look, kin: unitKin(playerCorpse) },
+      enemy: { type: enemyCorpse.type, enemyKey: enemyCorpse.enemyKey, bigBody: enemyCorpse.bigBody, weapon: enemyCorpse.weapon, kin: unitKin(enemyCorpse) }
+    };
+  });
+  expect(result.player).toMatchObject({ type: 'normal', weapon: 'spear', kin: 'humans', look: { female: true, style: 0, shade: 1 } });
+  expect(result.enemy).toMatchObject({ enemyKey: 'demon_brute', bigBody: true, weapon: 'spear', kin: 'demons' });
+  expect(errors).toEqual([]);
+});
+
 test('the worms on an old corpse crawl and wriggle as the game goes on', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {

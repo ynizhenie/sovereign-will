@@ -28,6 +28,27 @@ Object.assign(window.sim, (() => {
     return { healed: hurt.hp > 40, holdsBag: getEnemyDef(medic).tool === 'medbag' };
   }
 
+  function enemyHealerHerbs({ seed = 'enemy-healer-herbs' } = {}) {
+    start(seed);
+    game.gameMode = 'endless';
+    clearResources();
+    settlers = [];
+    const medic = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, 'raider_medic');
+    const hurt = createConfiguredEnemy({ x: medic.x + 20, y: medic.y }, 'raider');
+    hurt.hp = 1;
+    enemies = [hurt, medic];
+    game.enemyTents = [{ x: medic.x, y: medic.y, hp: 60, maxHp: 60 }];
+    game.enemyHerbStock = 0;
+    medic.herbs = 1;
+    tickEnemy(medic, 1.3);
+    const afterUse = { herbs: medic.herbs, hp: hurt.hp };
+    game.enemyHerbStock = 5;
+    tickEnemy(medic, 0.1);
+    const afterRefill = { herbs: medic.herbs, stock: game.enemyHerbStock };
+    tickEnemy(medic, 1.3);
+    return { afterUse, afterRefill, healingResumed: hurt.hp > afterUse.hp };
+  }
+
   // A worker carrying wood home is hit: it turns on the enemy rather than walk on (#208)
   function struckWhileCarrying({ seed = 'struck-carrying' } = {}) {
     start(seed);
@@ -58,5 +79,5 @@ Object.assign(window.sim, (() => {
     return { most, bothFought: enemies.every(en => en.hp < en.maxHp) };
   }
 
-  return { struckWhileCarrying, meleeSlots, enemyHealer, oneBlow };
+  return { struckWhileCarrying, meleeSlots, enemyHealer, enemyHealerHerbs, oneBlow };
 })());

@@ -105,7 +105,7 @@ export function renderBuildingCard() {
   }
   if (b.type === 'dung_heap') info.push(t('card.dung', { n: b.dung || 0, max: GAME_CONFIG.buildings.dung_heap.dungCapacity })); // (#232)
   if (b.type === 'campfire') info.push(t('card.fuel', { n: Math.round(b.fuelLeft || 0) }));
-  if (isHall || b.type === 'warehouse') info.push(t('card.stored', { n: Math.floor(storedTotal(b)), max: storeCapacity(b) })); // (#248)
+  if (isHall || b.type === 'warehouse') info.push(t('card.stored', { n: Math.floor(storedTotal(b)), max: game.gameMode === 'menu' ? '∞' : storeCapacity(b) })); // (#248)
   if (b.type === 'smelter') info.push(t('card.smelter', { ore: b.oreLoaded || 0, coal: b.coalLoaded || 0, iron: b.ironProduced || 0 }));
   if (def && def.desc) info.push(def.desc);
   if (queueText) info.push(t('card.queue', { list: queueText }));

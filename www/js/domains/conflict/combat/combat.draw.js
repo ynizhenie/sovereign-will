@@ -6,7 +6,7 @@ import { ctx, getViewRect } from '../../../engine/platform/index.js';
 import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
 import { corpseHasWorms } from '../../economy/fishing/index.js';
 import { tileVariantHash } from '../../world/index.js';
-import { drawFigure } from '../../colony/settlers/index.js';
+import { drawFigure, unitKin } from '../../colony/settlers/index.js';
 import { getEnemyColor, getSettlerColor } from '../../factions/index.js';
 
 // Blood on the blade of the held item, fading (see bleed). A bare hand has no blade to bleed on: bleed gives
@@ -123,9 +123,9 @@ export function drawCorpses() {
     // a figure lying on its side, crosses for its eyes (#251), its skin grey and its clothes its side's colour
     // gone dull (#326: all of it was grey); a pet's own body
     const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
-    const cloth = dull(c.side === 'enemy' ? getEnemyColor(null) : getSettlerColor(null));
+    const cloth = dull(c.side === 'enemy' ? getEnemyColor(null) : getSettlerColor(null)), kin = unitKin(c);
     if (c.pet) drawPetCorpse(c, grey);
-    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', lying: true, dead: true });
+    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', horns: kin === 'demons', lying: true, dead: true });
     if (corpseHasWorms(c)) drawWorms(c);
     ctx.globalAlpha = 1;
   });

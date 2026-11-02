@@ -4,7 +4,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { closeSheet, escapeHtml, iconHtml, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
-import { onTap, setDragPainter, t } from '../../engine/platform/index.js';
+import { loadData, onTap, saveData, setDragPainter, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { openGenerator } from '../endless/index.js';
@@ -51,6 +51,7 @@ export function renderEditorPanel() {
   updateEditorTitle();
   if (editor.tool === 'erase') chosen = document.getElementById('editor-erase').innerHTML;
   if (chosen) showPlacing(chosen);
+  rememberEditorChoices();
 }
 
 // The top bar's middle: the map's name (as typed), or that it has none yet
@@ -68,7 +69,7 @@ export function renderEditorFaction() {
     button.className = 'faction-option' + (editor.faction === faction.id ? ' active' : '');
     button.dataset.faction = faction.id;
     button.textContent = faction.label;
-    onTap(button, () => { editor.faction = faction.id; renderEditorFaction(); });
+    onTap(button, () => { editor.faction = faction.id; rememberEditorChoices(); renderEditorFaction(); });
     row.appendChild(button);
   }
 }
@@ -87,6 +88,19 @@ let editorUsesCustomSize = false;
 const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
 const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
 const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
+const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, faction: 'humans', startTime: 'morning', brush: 1, dragPaint: false, category: 'nature', tool: 'tree' };
+const rememberEditorChoices = () => saveData('editor-choices', {
+  size: editorNewSize,
+  custom: editorUsesCustomSize,
+  cols: editorMapCols.value,
+  rows: editorMapRows.value,
+  faction: editor.faction,
+  startTime: editor.startTime,
+  brush: editor.brush,
+  dragPaint: editor.dragPaint,
+  category: editor.category,
+  tool: editor.tool
+});
 const editorDimensions = () => {
   if (!editorUsesCustomSize) return { cols: editorNewSize, rows: editorNewSize };
   const dimension = input => {
@@ -98,12 +112,28 @@ const editorDimensions = () => {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEditorPanel() {
+  const saved = loadData('editor-choices', EDITOR_DEFAULTS);
+  editorNewSize = [128, 192, 256].includes(Number(saved.size)) ? Number(saved.size) : EDITOR_DEFAULTS.size;
+  editorUsesCustomSize = !!saved.custom;
+  editorMapCols.value = String(Math.max(128, Math.min(512, Number(saved.cols) || EDITOR_DEFAULTS.cols)));
+  editorMapRows.value = String(Math.max(128, Math.min(512, Number(saved.rows) || EDITOR_DEFAULTS.rows)));
+  editor.faction = GAME_CONFIG.factions[saved.faction]?.ready ? saved.faction : EDITOR_DEFAULTS.faction;
+  editor.startTime = ['morning', 'day', 'evening', 'night'].includes(saved.startTime) ? saved.startTime : EDITOR_DEFAULTS.startTime;
+  editor.brush = [1, 3, 5].includes(Number(saved.brush)) ? Number(saved.brush) : EDITOR_DEFAULTS.brush;
+  editor.dragPaint = !!saved.dragPaint;
+  editor.category = ['terrain', 'nature', 'buildings'].includes(saved.category) ? saved.category : EDITOR_DEFAULTS.category;
+  editor.tool = EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
+  editorCustomSize.hidden = !editorUsesCustomSize;
+  document.querySelectorAll('[data-editor-size]').forEach(button => button.classList.toggle('active',
+    button.dataset.editorSize === (editorUsesCustomSize ? 'custom' : String(editorNewSize))));
   document.querySelectorAll('[data-editor-size]').forEach(button => onTap(button, () => {
     editorUsesCustomSize = button.dataset.editorSize === 'custom';
     if (!editorUsesCustomSize) editorNewSize = Number(button.dataset.editorSize);
     editorCustomSize.hidden = !editorUsesCustomSize;
     document.querySelectorAll('[data-editor-size]').forEach(b => b.classList.toggle('active', b === button));
+    rememberEditorChoices();
   }));
+  [editorMapCols, editorMapRows].forEach(input => input.addEventListener('change', rememberEditorChoices));
   document.getElementById('mode-editor').disabled = false;
   onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
   onTap(document.getElementById('editor-new-empty'), () => startEditor({ ...editorDimensions(), generate: false }));
@@ -111,23 +141,24 @@ export function initEditorPanel() {
   // (#326, 27.10, 19) the shared seed panel's generator settings
   onTap(document.getElementById('editor-open-generator'), () => openGenerator('editor'));
   onTap(document.getElementById('editor-save'), saveEditorMap);
-  document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); renderEditorPanel(); }));
+  document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); rememberEditorChoices(); renderEditorPanel(); }));
   // the dock: a category's sheet opens (again: closes); the eraser is picked at once
   document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
     editor.category = /** @type {string} */ (button.dataset.editorCategory);
     if (editor.tool !== 'erase') editor.tool = /** @type {{ id: string }} */ (EDITOR_TOOLS.find(tl => tl.category === editor.category)).id;
+    rememberEditorChoices();
     renderEditorPanel();
     toggleSheet('editor', editor.category);
   }));
-  onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; closeSheet(); renderEditorPanel(); });
+  onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; rememberEditorChoices(); closeSheet(); renderEditorPanel(); });
   document.getElementById('editor-name').addEventListener('input', updateEditorTitle);
   // (#255) a drag paints with the brush when that's on; undo, redo; play the map; clear it
   setDragPainter(editorPaint);
-  onTap(document.getElementById('editor-drag'), () => { editor.dragPaint = !editor.dragPaint; renderEditorPanel(); });
+  onTap(document.getElementById('editor-drag'), () => { editor.dragPaint = !editor.dragPaint; rememberEditorChoices(); renderEditorPanel(); });
   onTap(document.getElementById('editor-undo'), undoEditor);
   onTap(document.getElementById('editor-redo'), redoEditor);
   onTap(document.getElementById('editor-clear'), clearEditorMap);
-  document.querySelectorAll('[data-start-time]').forEach(b => onTap(b, () => { editor.startTime = /** @type {string} */ (b.dataset.startTime); renderEditorPanel(); })); // (#257)
+  document.querySelectorAll('[data-start-time]').forEach(b => onTap(b, () => { editor.startTime = /** @type {string} */ (b.dataset.startTime); rememberEditorChoices(); renderEditorPanel(); })); // (#257)
   document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
     const [side, delta] = /** @type {string} */ (button.dataset.resize).split(':');
     resizeEditorMap(side, Number(delta));

@@ -52,16 +52,47 @@ test('in a battle a medic starts with its bag full (#326, 17)', async ({ page })
   expect(r.bag).toBe(r.size);
 });
 
-test('the main menu\'s warehouse holds the same, and its fight is the undead in their colour, whatever the Endless screen picked (#326, 23)', async ({ page }) => {
+test('menu scenes start with an empty warehouse and unlimited capacity; the fight keeps its enemy faction', async ({ page }) => {
   await page.goto('/');
   const r = await page.evaluate(() => {
     setSideFaction('player', 'undead'); setSideFaction('enemy', 'demons');
-    enterMenuWorld('fight');
-    const held = { ...stock };
-    const zombie = enemies[0] || null;
-    return { stock: Object.fromEntries(Object.entries(held).filter(([, n]) => n > 0)), want: MENU_WORLD.stock, enemyColor: zombie ? getEnemyColor(zombie).toLowerCase() : getEnemyFaction().color, undead: GAME_CONFIG.factions.undead.color.toLowerCase() };
+    let acceptedOverOldLimit = false;
+    let stayedEmptyDuringStartup = false;
+    let restockedAfterStartup = false;
+    let enemyColor;
+    const scenes = MENU_SCENES.map(scene => {
+      enterMenuWorld(scene);
+      const state = {
+        scene, empty: Object.values(stock).every(amount => amount === 0),
+        capacity: storeCapacity(townHall), room: roomIn(townHall)
+      };
+      if (scene === 'hunt') {
+        storeInto(townHall, 'wood', 500);
+        acceptedOverOldLimit = townHall.store.wood === 500 && !game.piles.length;
+      }
+      if (scene === 'fight') {
+        enemyColor = getEnemyFaction().color.toLowerCase();
+      }
+      if (scene === 'farm') {
+        tickMenuScene(1);
+        stayedEmptyDuringStartup = Object.values(stock).every(amount => amount === 0);
+        tickMenuScene(1);
+        restockedAfterStartup = stock.wheatSeeds >= 10;
+      }
+      return state;
+    });
+    leaveMenuWorld();
+    return {
+      scenes, normalCapacity: storeCapacity(townHall), acceptedOverOldLimit,
+      stayedEmptyDuringStartup, restockedAfterStartup, enemyColor,
+      expectedNormalCapacity: GAME_CONFIG.storage.capacity.hall,
+      undead: GAME_CONFIG.factions.undead.color.toLowerCase()
+    };
   });
-  for (const [id, n] of Object.entries(r.want)) expect(r.stock[id]).toBeGreaterThanOrEqual(n);
-  expect(r.stock.bones || 0).toBe(0);
+  expect(r.scenes).toEqual(['hunt', 'fishing', 'fight', 'farm'].map(scene => ({ scene, empty: true, capacity: Infinity, room: Infinity })));
+  expect(r.acceptedOverOldLimit).toBe(true);
+  expect(r.stayedEmptyDuringStartup).toBe(true);
+  expect(r.restockedAfterStartup).toBe(true);
+  expect(r.normalCapacity).toBe(r.expectedNormalCapacity);
   expect(r.enemyColor).toBe(r.undead);
 });
