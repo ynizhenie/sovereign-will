@@ -568,12 +568,13 @@ test('medics have unlimited herbs during Battles', async ({ page }) => {
       playerBag: playerMedic.bagHerbs,
       playerHealed: ally.hp > 60,
       enemyBag: enemyMedic.herbs,
-      enemyHealed: enemyAlly.hp > enemyAlly.maxHp - 20
+      enemyHealed: enemyAlly.hp > enemyAlly.maxHp - 20,
+      expectedEnemyBag: GAME_CONFIG.enemies.raider_medic.healer.bagSize
     };
   });
   expect(result.playerBag).toBe(0);
   expect(result.playerHealed).toBe(true);
-  expect(result.enemyBag).toBe(GAME_CONFIG.enemies.raider_medic.healer.bagSize);
+  expect(result.enemyBag).toBe(result.expectedEnemyBag);
   expect(result.enemyHealed).toBe(true);
 });
 
