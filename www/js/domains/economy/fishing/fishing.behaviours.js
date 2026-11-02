@@ -57,7 +57,7 @@ export function fishAt(s, fishSpot, dt) {
     if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
       for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
       playSound('catch', s);
-      noteDay(s, 'fished'); // (its day, #306)
+      noteDay(s, 'fished', 'fished', 0.25); // (its day, #306; a word on it now and then, #326 26.10, 24)
       addCarryLoad(s);
       s.bait = false;
       fishSpot.fishCount--;
