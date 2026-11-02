@@ -241,6 +241,7 @@ export const enLanguage = {
       cost: 'Cost',
       left: 'Left after',
       short: 'Short of',
+      willCraft: 'Missing materials will be crafted',
       hp: 'Health',
       speed: 'Speed',
       strength: 'Strength',

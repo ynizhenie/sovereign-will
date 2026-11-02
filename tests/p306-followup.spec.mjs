@@ -68,6 +68,53 @@ test('marked fishing spots show moving fish, deplete when caught, and replenish 
   expect(errors).toEqual([]);
 });
 
+test('a marked fishing spot does not tint other fish shoals yellow', async ({ page }) => {
+  const errors = await openGame(page);
+  const styles = await page.evaluate(() => {
+    const { x0, x1, y0, y1 } = getViewRect();
+    const originalWater = game.waterTiles;
+    const spots = [];
+    for (let y = Math.ceil(y0 / TILE_SIZE) * TILE_SIZE + 15; y < y1 && spots.length < 2; y += TILE_SIZE) {
+      for (let x = Math.ceil(x0 / TILE_SIZE) * TILE_SIZE + 15; x < x1 && spots.length < 2; x += TILE_SIZE) {
+        const hash = tileVariantHash(x, y);
+        if (hash % 28 === 0) spots.push({ x, y, isFishing: true, fishCount: GAME_CONFIG.fishing.fishCapacity });
+      }
+    }
+    if (spots.length !== 2) throw new Error('Could not find two visible fish shoals');
+    game.waterTiles = spots;
+    markFishingChanged();
+    drawSand();
+
+    const fishStyles = [];
+    const ellipse = ctx.ellipse, fill = ctx.fill;
+    let fishPath = false;
+    ctx.ellipse = function (...args) {
+      if (args[2] === 4 && args[3] === 2) fishPath = true;
+      return ellipse.apply(this, args);
+    };
+    ctx.fill = function (...args) {
+      if (fishPath) {
+        fishStyles.push(String(this.fillStyle));
+        fishPath = false;
+      }
+      return fill.apply(this, args);
+    };
+    try {
+      drawWater();
+    } finally {
+      ctx.ellipse = ellipse;
+      ctx.fill = fill;
+      game.waterTiles = originalWater;
+      markFishingChanged();
+      drawSand();
+    }
+    return fishStyles;
+  });
+  expect(styles.length).toBeGreaterThanOrEqual(2);
+  expect(new Set(styles)).toEqual(new Set(['rgba(18, 67, 91, 0.82)']));
+  expect(errors).toEqual([]);
+});
+
 test('cached character heads keep hair visible and centered (#306 follow-up)', async ({ page }) => {
   const errors = await openGame(page);
   const hair = await page.evaluate(() => {

@@ -5,7 +5,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game, onceThisTick, townHall } from '../../../engine/world/index.js';
-import { canAfford, findNearestStorage, isAtStorage, payCost, stock, walkToStorage } from '../storage/index.js';
+import { findNearestStorage, getFreeStock, isAtStorage, payCost, stock, walkToStorage } from '../storage/index.js';
 import { faceTowards, noteDay } from '../settlers/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
@@ -39,7 +39,7 @@ export function findWorkplace(place, from = townHall) {
 
 // Expand missing recipe outputs into prerequisite jobs; their ingredients are paid for with the final order.
 function craftOrderPlan(category, id) {
-  const totalCost = {}, available = { ...stock }, planned = {}, recipeOrders = [];
+  const totalCost = {}, available = Object.fromEntries(Object.keys(stock).map(resource => [resource, getFreeStock(resource)])), planned = {}, recipeOrders = [];
   const resolveCost = (cost, waitFor, ancestors = new Set()) => {
     for (const [resource, amount] of Object.entries(cost)) {
       let missing = Number(amount || 0);
@@ -94,8 +94,12 @@ function craftOrderPlan(category, id) {
   return { totalCost, recipeOrders, waitFor };
 }
 
+export function getCraftOrderPlan(category, id) {
+  return craftOrderPlan(category, id);
+}
+
 export function getCraftOrderCost(category, id) {
-  return craftOrderPlan(category, id).totalCost;
+  return getCraftOrderPlan(category, id).totalCost;
 }
 
 // Order one made: 'ordered', or why not ('noSmithy', 'noWorkshop', 'cantAfford'). Made, it waits in the
@@ -105,7 +109,7 @@ export function orderCraft(category, id) {
   const place = craftPlace(category, id);
   if (!findWorkplace(place)) return place === 'smithy' ? 'noSmithy' : 'noWorkshop'; // (by hand: always)
   const { totalCost, recipeOrders, waitFor } = craftOrderPlan(category, id);
-  if (!canAfford(totalCost)) return 'cantAfford';
+  if (!Object.entries(totalCost).every(([resource, amount]) => getFreeStock(resource) >= amount)) return 'cantAfford';
   payCost(totalCost);
   game.craftOrders.push(...recipeOrders);
   game.craftOrders.push({

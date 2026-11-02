@@ -77,6 +77,7 @@
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)
  * @property {{ resource: string, until: number } | null} [focus] what its foreman said to gather first (#248)
  * @property {Object | null} [captainTarget] the enemy its captain gave it (#248)
+ * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {number[]} [squadIds]   a commander's squad
  * @property {number} [orderIn]      seconds till a commander's next order
  * @property {number} [armIn]        seconds till a captain's next arming order (#279)
@@ -169,6 +170,7 @@
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
+ * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)

@@ -7,6 +7,7 @@ import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../engine/world/index.js';
 import { isVisible } from './world.fog.js';
 import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
+import { getBuildingColor, getEnemyColor, getSettlerColor } from '../factions/index.js';
 
 const config = () => GAME_CONFIG.daytime;
 const dayLength = () => { const c = config(); return c.morning + c.day + c.evening + c.night; };
@@ -59,25 +60,50 @@ export function getDarkness() {
   return c.darkness * ((t - c.morning - c.day) / c.evening);
 }
 
-// What gives light, and how far (px): [{ x, y, r }]
+function staffLightPosition(unit) {
+  const radius = unit.visualRadius || unit.radius || 11, facing = unit.facing || 0;
+  const big = radius > 14 ? 1.3 : 1;
+  let angle = 0, push = 0;
+  if (unit.swingT > 0) {
+    const progress = 1 - unit.swingT / (unit.swingLen || 0.3);
+    const arc = Math.sin(Math.PI * progress);
+    angle = (-1.6 + 2.3 * progress * progress) * big;
+    push = 3 * arc;
+  } else if (unit.working > 0) {
+    const beat = Math.sin(game.pathTick * 0.3);
+    if (unit.workKind === 'build' || (unit.crafting && unit.crafting.until >= game.pathTick)) angle = -0.9 + 0.9 * Math.abs(beat);
+    else if (unit.workKind === 'butcher') push = 4 + 3 * beat;
+    else if (unit.workKind === 'pick') { angle = 0.2 * beat; push = 6 + 4 * Math.abs(beat); }
+    else if (unit.workKind === 'heal') { angle = 0.3; push = 6 + 3 * beat; }
+    else angle = 0.8 * beat - 0.3;
+  }
+  const rotation = facing + angle, along = push + radius * 0.72 + 21, across = radius * 0.5;
+  return {
+    x: unit.x + Math.cos(rotation) * along - Math.sin(rotation) * across,
+    y: unit.y + Math.sin(rotation) * along + Math.cos(rotation) * across
+  };
+}
+
+// What gives light, and how far (px): [{ x, y, r, color? }]
 export function getLights() {
   const c = config();
   const lights = [{ x: townHall.x, y: townHall.y, r: townHall.radius + c.hallLightTiles * TILE_SIZE }];
   for (const b of game.buildings) {
     if (b.type === 'torch' && b.lit) lights.push({ x: b.x, y: b.y, r: c.torchLightTiles * TILE_SIZE });
     else if (b.type === 'campfire' && ((b.fuelLeft || 0) > 0 || (b.burning || 0) > 0)) lights.push({ x: b.x, y: b.y, r: c.campfireLightTiles * TILE_SIZE });
-    else if (b.type === 'portal') lights.push({ x: b.x, y: b.y, r: c.portalLightTiles * TILE_SIZE });
+    else if (b.type === 'portal') lights.push({ x: b.x, y: b.y, r: c.portalLightTiles * TILE_SIZE, color: getBuildingColor(b) });
+    else if ((b.type === 'tent' || b.type === 'demon_den') && getDarkness() > 0.01) lights.push({ x: b.x, y: b.y, r: c.shelterLightTiles * TILE_SIZE });
   }
-  for (const t of game.enemyTents) if (t.portal) lights.push({ x: t.x, y: t.y, r: c.portalLightTiles * TILE_SIZE });
+  for (const t of game.enemyTents) if (t.portal) lights.push({ x: t.x, y: t.y, r: c.portalLightTiles * TILE_SIZE, color: getEnemyColor(null) });
   const staff = u => !!(getDefinition('tools', u.tool) || {}).necromancer;
   for (const s of game.settlers) {
-    if (s.torchInHand) lights.push({ x: s.x, y: s.y, r: c.handTorchTiles * TILE_SIZE });
-    else if (staff(s)) lights.push({ x: s.x, y: s.y, r: c.staffLightTiles * TILE_SIZE });
+    if (staff(s)) lights.push({ ...staffLightPosition(s), r: c.staffLightTiles * TILE_SIZE, color: getSettlerColor(null) });
+    else if (s.torchInHand) lights.push({ x: s.x, y: s.y, r: c.handTorchTiles * TILE_SIZE });
   }
   for (const en of game.enemies) {
     if (!isVisible(en.x, en.y)) continue; // (#326: its torch isn't seen in the fog)
-    if (en.torch) lights.push({ x: en.x, y: en.y, r: c.handTorchTiles * TILE_SIZE });
-    else if (en.enemyKey === 'undead_necromancer') lights.push({ x: en.x, y: en.y, r: c.staffLightTiles * TILE_SIZE });
+    if (en.enemyKey === 'undead_necromancer') lights.push({ ...staffLightPosition(en), r: c.staffLightTiles * TILE_SIZE, color: getEnemyColor(en) });
+    else if (en.torch) lights.push({ x: en.x, y: en.y, r: c.handTorchTiles * TILE_SIZE });
   }
   return lights;
 }
@@ -103,6 +129,7 @@ export function drawDarkness() {
   const scale = getViewScale() * SHEET_SCALE;
   const flicker = 1 + Math.sin(performance.now() / 120) * 0.02;
   for (const light of getLights()) {
+    if (light.color) continue;
     const x = (light.x - camera.x) * scale + sheet.width / 2, y = (light.y - camera.y) * scale + sheet.height / 2;
     const r = light.r * scale * flicker;
     if (x < -r || y < -r || x > sheet.width + r || y > sheet.height + r) continue;
@@ -114,6 +141,25 @@ export function drawDarkness() {
   }
   ctx.save(); ctx.imageSmoothingEnabled = true;
   ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
+  const viewScale = getViewScale();
+  ctx.globalCompositeOperation = 'screen';
+  for (const light of getLights()) {
+    if (!light.color) continue;
+    const match = /^#([\da-f]{6})$/i.exec(light.color);
+    if (!match) continue;
+    const value = Number.parseInt(match[1], 16);
+    const color = `${value >> 16}, ${(value >> 8) & 255}, ${value & 255}`;
+    const x = (light.x - camera.x) * viewScale + canvas.width / 2;
+    const y = (light.y - camera.y) * viewScale + canvas.height / 2;
+    const r = light.r * viewScale * flicker;
+    if (x < -r || y < -r || x > canvas.width + r || y > canvas.height + r) continue;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
+    glow.addColorStop(0, `rgba(${color}, 0.24)`);
+    glow.addColorStop(0.55, `rgba(${color}, 0.12)`);
+    glow.addColorStop(1, `rgba(${color}, 0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -136,4 +182,3 @@ export function castShadow(c, x, y, rx, ry, height = 10) {
   c.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
   c.beginPath(); c.ellipse(x + ox * 0.5, y + oy * 0.5, rx + Math.abs(ox) * 0.5, ry + Math.abs(oy) * 0.25, 0, 0, Math.PI * 2); c.fill();
 }
-

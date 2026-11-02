@@ -84,6 +84,20 @@ Object.assign(window.sim, (() => {
     return { torch: !!s.torchInHand, torches: stock.torches, reach: nightReach(s) === Infinity ? 'any' : 'base' };
   }
 
+  function directionalNightReach({ seed = 'night-directional-reach' } = {}) {
+    start(seed); clearResources();
+    const east = nearHall(12, 0);
+    placeBuilding('wall_wood', east.x, east.y);
+    invalidateAllPaths();
+    const s = makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier' });
+    settlers = [s];
+    stock.torches = 0;
+    dayTime = nightStart() + 1;
+    const eastTarget = { x: townHall.x + 300, y: townHall.y };
+    const westTarget = { x: townHall.x - 300, y: townHall.y };
+    return { east: nightReach(s, eastTarget), west: nightReach(s, westTarget) };
+  }
+
   // A night wave: some of its enemies carry torches; and what gives light at night
   function nightWave({ seed = 'night-wave' } = {}) {
     start(seed); clearResources();
@@ -125,5 +139,5 @@ Object.assign(window.sim, (() => {
     return { cutterUp, firewoodMade: (stock.firewood || 0) > 0, otherAsleep: !!other.asleep };
   }
 
-  return { nightPhases: phases, nightSleep: sleep, nightWoken: woken, nightTorchPost: torchPost, nightHandTorch: handTorch, nightWave, nightFuelDuty: fuelDuty };
+  return { nightPhases: phases, nightSleep: sleep, nightWoken: woken, nightTorchPost: torchPost, nightHandTorch: handTorch, directionalNightReach, nightWave, nightFuelDuty: fuelDuty };
 })());

@@ -275,3 +275,42 @@ test('pets in Battles on both sides, and possessed: a dog bites what\'s tapped, 
   expect(r.bitten).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
+
+test('a ghost that hits an enemy clears its selection and ends possession', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    const selectedGhost = createSettler('ghost', 1, 300, 300);
+    const nearbyEnemy = createNormalEnemy({ x: 305, y: 300 }, 'raider');
+    game.settlers = [selectedGhost];
+    game.enemies = [nearbyEnemy];
+    game.selectedSettler = selectedGhost;
+    game.selectedGroup = [];
+    tickSettlers(1 / 60);
+    const selectedCase = {
+      attacked: selectedGhost.ghostGone > 0,
+      selectionCleared: game.selectedSettler === null
+    };
+
+    const possessedGhost = createSettler('ghost', 2, 500, 300);
+    const target = createNormalEnemy({ x: 505, y: 300 }, 'raider');
+    game.settlers = [possessedGhost];
+    game.enemies = [target];
+    game.selectedSettler = possessedGhost;
+    possessedGhost.isPossessed = true;
+    orderPossessed(possessedGhost, target.x, target.y);
+    tickSettlers(1 / 60);
+    return {
+      selectedCase,
+      possessedCase: {
+        attacked: possessedGhost.ghostGone > 0,
+        selectionCleared: game.selectedSettler === null,
+        possessionEnded: !possessedGhost.isPossessed
+      }
+    };
+  });
+  expect(result).toEqual({
+    selectedCase: { attacked: true, selectionCleared: true },
+    possessedCase: { attacked: true, selectionCleared: true, possessionEnded: true }
+  });
+  expect(errors).toEqual([]);
+});

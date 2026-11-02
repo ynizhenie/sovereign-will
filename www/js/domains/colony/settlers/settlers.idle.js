@@ -9,7 +9,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { getBaseRadius, hasLineOfFire, isDefenseAlert, isInSafeArea, performAttack } from '../../conflict/combat/index.js';
+import { baseRadiusToward, getBaseRadius, hasLineOfFire, isDefenseAlert, isInSafeArea, performAttack } from '../../conflict/combat/index.js';
 import { isRangedWeapon, usesDagger } from '../equipment/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -256,7 +256,7 @@ export function idlePastime(s, tick) {
 // A patrol's waypoint at `angle` round the town hall: a tile past the base's edge, or nearer in where
 // that's blocked (a wall, water, a tree)
 function edgePoint(angle) {
-  const r = getBaseRadius() + TILE_SIZE;
+  const r = baseRadiusToward(angle) + TILE_SIZE;
   for (let k = 0; k < 4; k++) {
     const p = { x: townHall.x + Math.cos(angle) * (r - k * TILE_SIZE), y: townHall.y + Math.sin(angle) * (r - k * TILE_SIZE) };
     const g = getGridPos(p.x, p.y);

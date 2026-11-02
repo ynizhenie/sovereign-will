@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game } from '../../../engine/world/index.js';
-import { addResources, canAfford, payCost, showCostError, stock } from '../storage/index.js';
+import { addResources, canAfford, getFreeStock, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
@@ -384,20 +384,32 @@ export function takeFromArmory(key) {
 // A recipe makes something for the stock, not conjured (#249): paid for at once, then `batches` jobs of
 // produces/batches each where it's made (craftPlace); arrows by the archers (anyone free while there are
 // none)
-export function craftRecipe(id) {
+export function craftRecipe(id, orderCount = 1) {
   const recipe = GAME_CONFIG.recipes[id];
-  const result = orderCraft('recipes', id);
-  if (result === 'locked') { showNotification(t('cards.locked', { name: recipe.label }), true); return; } // (#306)
-  if (result === 'noSmithy' || result === 'noWorkshop') { showNotification(t(result === 'noSmithy' ? 'craft.needSmithy' : 'craft.needWorkshop', { name: recipe.label }), true); return; }
-  if (result !== 'ordered') { showCostError(getCraftOrderCost('recipes', id), t('cost.needs', { name: recipe.label })); return; }
-  const batches = recipe.batches || 1;
-  const yields = Object.fromEntries(Object.entries(recipe.produces).map(([res, n]) => [res, n / batches]));
-  game.craftOrders[game.craftOrders.length - 1].yields = yields;
-  game.craftOrders[game.craftOrders.length - 1].for = null;
-  for (let i = 1; i < batches; i++) {
-    game.craftOrders.push({ key: `recipes:${id}`, category: 'recipes', id, crafter: null, stage: 'fetch', progress: 0, for: null, yields });
+  if (!Number.isInteger(orderCount) || orderCount < 1) return false;
+  const cost = getCraftOrderCost('recipes', id);
+  if (orderCount > 1 && !Object.entries(cost).every(([resource, amount]) => getFreeStock(resource) >= amount * orderCount)) {
+    showCostError(Object.fromEntries(Object.entries(cost).map(([resource, amount]) => [resource, amount * orderCount])), t('cost.needs', { name: recipe.label }));
+    return false;
   }
-  showNotification(id === 'arrows' ? t('arrows.ordered', { count: recipe.produces.arrows }) : t(`craft.at${{ hand: 'Hall', workshop: 'Workshop', smithy: 'Smithy' }[craftPlace('recipes', id)]}`, { name: recipe.label }), false);
+  for (let i = 0; i < orderCount; i++) {
+    const result = orderCraft('recipes', id);
+    if (result !== 'ordered') {
+      if (result === 'locked') showNotification(t('cards.locked', { name: recipe.label }), true); // (#306)
+      else if (result === 'noSmithy' || result === 'noWorkshop') showNotification(t(result === 'noSmithy' ? 'craft.needSmithy' : 'craft.needWorkshop', { name: recipe.label }), true);
+      else showCostError(getCraftOrderCost('recipes', id), t('cost.needs', { name: recipe.label }));
+      return false;
+    }
+    const order = game.craftOrders[game.craftOrders.length - 1];
+    order.for = null;
+    const yields = Object.fromEntries(Object.entries(recipe.produces).map(([res, n]) => [res, n / (recipe.batches || 1)]));
+    order.yields = yields;
+    for (let j = 1; j < (recipe.batches || 1); j++) {
+      game.craftOrders.push({ key: `recipes:${id}`, category: 'recipes', id, crafter: null, stage: 'fetch', progress: 0, for: null, yields });
+    }
+  }
+  showNotification(id === 'arrows' ? t('arrows.ordered', { count: recipe.produces.arrows * orderCount }) : t(`craft.at${{ hand: 'Hall', workshop: 'Workshop', smithy: 'Smithy' }[craftPlace('recipes', id)]}`, { name: recipe.label }), false);
+  return true;
 }
 
 export function craftArrows() { craftRecipe('arrows'); }

@@ -14,6 +14,12 @@ test('lots of corpses, three carriers: each corpse carried out once, none back a
   expect(sim.manyCorpses({ walled: true })).toEqual({ total: true, mostCarries: 0, carried: 0, out: false, heapOut: null });
 });
 
+test('the corpse heap is four tiles beyond the base radius in its chosen direction', () => {
+  const result = sim.directionalCorpseHeap({});
+  expect(result.heap).toBe(true);
+  expect(result.beyondBaseTiles).toBeCloseTo(4, 0);
+});
+
 test('in a wave a medic heals with its herbs (30 hp each); with the wave beaten and a tent it keeps them (#279: no potions)', () => {
   expect(sim.medicHeal({})).toEqual({ hp: 40, herbsLeft: 1 });
   expect(sim.medicHeal({ waveOver: true })).toEqual({ hp: 10, herbsLeft: 2 });

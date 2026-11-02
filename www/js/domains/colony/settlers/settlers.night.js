@@ -9,7 +9,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { fetchFromStorage, findNearestStorage, getFreeStock, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../storage/index.js';
-import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
+import { baseRadiusToward, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getLights, getDayPhase, isNight, nightProgress } from '../../world/index.js';
 import { faceTowards } from './settlers.draw.js';
@@ -41,9 +41,11 @@ export function onFuelDuty(s) {
 }
 
 // How far a settler may go now: at night with no torch to be had, only the base (#257)
-export function nightReach(s) {
+export function nightReach(s, target = s || townHall) {
   if (!isNight() || !needsTorches() || (s && (s.torchInHand || onFuelDuty(s)))) return Infinity;
-  return getFreeStock('torches') > 0 ? Infinity : getBaseRadius() + TILE_SIZE;
+  if (getFreeStock('torches') > 0) return Infinity;
+  const angle = Math.atan2(target.y - townHall.y, target.x - townHall.x);
+  return baseRadiusToward(angle) + TILE_SIZE;
 }
 
 // Each tick: a new night counted, the morning puts torches out; who's awake out of the light takes a torch

@@ -91,8 +91,8 @@ test('playing leaves the menu world for a real game, and the menu brings it back
   await page.evaluate(() => enterMenuWorld('hunt')); // (the boar hunt: one scene of the menu's, #256)
   await page.click('#mode-endless');
   await page.click('#play-button');
-  const game = await page.evaluate(() => ({ mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'), settlers: settlers.length, waveTimer: Number.isFinite(waveTimer) }));
-  expect(game).toEqual({ mode: 'endless', started: true, cls: false, settlers: 2, waveTimer: true });
+  const game = await page.evaluate(() => ({ mode: gameMode, started: gameStarted, cls: document.body.classList.contains('menu-world'), settlers: settlers.length, waveTimer: Number.isFinite(waveTimer), torches: stock.torches }));
+  expect(game).toEqual({ mode: 'endless', started: true, cls: false, settlers: 2, waveTimer: true, torches: 3 });
   await expect(page.locator('#dock')).toBeVisible();
   await page.evaluate(() => exitToMainMenu());
   await page.waitForTimeout(300);
