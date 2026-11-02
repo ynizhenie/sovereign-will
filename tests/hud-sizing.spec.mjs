@@ -14,6 +14,7 @@ test('bottom sheets fit their contents and unit status does not resize its tile'
   expect(buildingSize.height).toBeLessThan(buildingSize.maxHeight);
 
   await page.evaluate(() => {
+    isPaused = true; // (the game standing still: its own tick re-made the list as the tile was measured, and it was gone)
     const unit = window.sim.helpers.makeSettler(1, townHall.x, townHall.y, {});
     unit.activity = 'patrol';
     settlers = [unit];
