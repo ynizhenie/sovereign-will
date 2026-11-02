@@ -913,7 +913,6 @@ export const enLanguage = {
       'activity.strikeBack': 'Fighting back',
       'info.morale': 'morale {n}',
       'info.panic': '[[warn]] in a panic',
-      'info.sleepDebt': '[[moon]] short of sleep: {seconds} s to sleep off',
       'activity.panic': 'Panicking',
       'activity.cook': 'Cooking',
       'activity.deliverMaterials': 'Carrying materials to a build',

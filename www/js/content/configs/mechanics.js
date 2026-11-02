@@ -96,10 +96,7 @@ export const mechanicsConfig = {
     wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
     handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, postFirewood: 1, enemyTorchShare: 0.3,
-    sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5,
-    // (#326, 26.10, 26) everyone needs sleepNeed of the night asleep (less sleepGrace s, the walk to bed): short of it, it
-    // sleeps the rest by day (as much as it's short); ordered to work meanwhile, it works drowsy, as at night
-    sleepNeed: 0.5, sleepGrace: 12 },
+    sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5 },
   // paths (#248): every everyTicks a settler walking (minStep px since) on a tile in the base wears it by
   // `wear`, up to 1; every fadeTicks each worn tile loses `fade`; one past `shows` is drawn as a path
   paths: { everyTicks: 20, minStep: 4, wear: 0.012, fadeTicks: 600, fade: 0.02, shows: 0.35 },

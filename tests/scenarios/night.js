@@ -42,7 +42,6 @@ Object.assign(window.sim, (() => {
       hungerStill: workers[0].hunger === hungerAsleep, onWatch: soldiers.filter(s => !s.asleep).length, watchAsleep: soldiers.filter(s => s.asleep).length
     };
     dayTime = nightStart() + day().night - 0.5; // (the night nearly over)
-    settlers.forEach(s => { s.sleptTonight = day().night; }); // (#326, 26.10, 26: as if the whole of it was slept, not skipped)
     const wanted = new Set();
     run(3, { each: () => { calm(); workers.forEach(s => { if (s.wantsMeal || s.eating) wanted.add(s); }); } });
     return { ...r, awake: settlers.every(s => !s.asleep), hungry: wanted.size === workers.length };

@@ -65,7 +65,6 @@ function tickBeast(s, tick, kind) {
   // (#326) in a battle the hall's out of the way in a corner: by the nearest of its side instead (it ran there)
   const own = game.gameMode === 'battle' ? nearest(game.settlers.filter(o => o !== s && !petKindOf(o) && o.hp > 0), s) : null;
   const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : own || (game.gameMode === 'battle' ? s : townHall);
-  s.petKeeper = anchor === keeper ? keeper : null; // (its keeper feeds it after its own meal, #326 26.10, 30)
   const guard = c.guardTiles * TILE_SIZE;
   const foe = nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s);
   // asleep: till an enemy comes near or a wave's on
@@ -228,17 +227,9 @@ export function haunt(s, foe) {
 
 // ---- Fed by a settler
 
-// (#326, 26.10, 30) A pet is fed by one that's just eaten, before it goes back to work: its keeper (the soldier it keeps
-// by), or with none a worker; it takes the pet's food from the storage it ate at and brings it. One very hungry
-// (STARVING) is fed by any worker with nothing better to do, as before
-const ATE_TICKS = 3 * 60, STARVING = 1.5;
-const feeds = (s, pet) => {
-  const ateNow = s.ateAt !== undefined && game.pathTick - s.ateAt < ATE_TICKS;
-  if (ateNow && (pet.petKeeper ? pet.petKeeper === s : s.role === 'worker')) return true;
-  return (pet.petHunger || 0) >= STARVING && s.role === 'worker';
-};
+// A worker with nothing better to do takes a pet's food from the stock and gives it (one at a time to a pet)
 export function feedPet(s, tick) {
-  if ((s.role !== 'worker' && s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.leaving || tick.isWaveActive || petKindOf(s)) return false;
+  if (s.role !== 'worker' || s.isPossessed || s.leaving || tick.isWaveActive || petKindOf(s)) return false;
   const carryingFood = s.carrying && s.carrying.forPet;
   let pet = s.feeding;
   if (pet && (!game.settlers.includes(pet) || !isPetHungry(pet))) {
@@ -251,7 +242,7 @@ export function feedPet(s, tick) {
     const fed = claimedPets();
     let nearestD = Infinity;
     for (const o of game.settlers) {
-      if (!isPetHungry(o) || fed.has(o) || o.isPossessed || petKindOf(o) === 'ghost' || !feeds(s, o)) continue;
+      if (!isPetHungry(o) || fed.has(o) || o.isPossessed || petKindOf(o) === 'ghost') continue;
       const d = Math.hypot(o.x - s.x, o.y - s.y);
       if (d < nearestD) { nearestD = d; pet = o; }
     }
@@ -269,7 +260,7 @@ export function feedPet(s, tick) {
   faceTowards(s, pet.x, pet.y);
   pet.petHunger = 0; pet.petHungry = false; pet.petSleep = 0;
   petAte(pet);
-  s.carrying = null; s.feeding = null; s.ateAt = undefined;
+  s.carrying = null; s.feeding = null;
   playSound('eat', pet);
   return true;
 }

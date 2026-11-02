@@ -28,7 +28,6 @@ export function renderSettlerInfo(s) {
   if (s.temporary !== undefined) parts.push(t('info.crumbles', { seconds: Math.ceil(s.temporary) }));
   if ((s.trained || 0) >= 0.01) parts.push(t('info.trained', { n: Math.round(s.trained * 100) })); // (#199)
   parts.push(s.panic ? t('info.panic') : t('info.morale', { n: Math.round(getMorale(s)) })); // (#207)
-  if ((s.sleepDebt || 0) > 0) parts.push(t('info.sleepDebt', { seconds: Math.ceil(s.sleepDebt) })); // (#326, 26.10, 26)
   const items = s.carrying ? (s.carrying.items || [s.carrying]) : [];
   const carried = items.filter(item => item.amount > 0).map(item => `${Math.round(item.amount)}[[${getResourceIconName(item.type)}]]`).join(' ');
   if (carried) parts.push(`${t('info.carries')} ${carried}`);
