@@ -34,3 +34,28 @@ test('the weather changes by spells, comes on and goes off; rain waters the crop
   expect(r).toMatchObject({ ramps: true, wetGrows: true, wetBurns: true, sways: true });
   expect(errors).toEqual([]);
 });
+
+test('fog renders as a mottled pale veil rather than round banks (#308)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const texture = await page.evaluate(() => {
+    weather = { ...weather, kind: 'fog', level: 1, wind: 0.3 };
+    isPaused = true;
+    let alpha = null;
+    const draw = ctx.drawImage;
+    ctx.drawImage = function (...args) {
+      const source = args[0];
+      if (source.width === 128 && source.height === 128 && args[3] === 900 && args[4] === 900) {
+        alpha = source.getContext('2d').getImageData(0, 0, 128, 128).data.filter((_, i) => i % 4 === 3);
+      }
+      return draw.apply(this, args);
+    };
+    try { render(); } finally { ctx.drawImage = draw; }
+    if (!alpha) return null;
+    const values = new Set(alpha);
+    return { clear: alpha.some(value => value === 0), covered: alpha.some(value => value > 0), shades: values.size };
+  });
+  expect(texture).toMatchObject({ clear: true, covered: true });
+  expect(texture.shades).toBeGreaterThan(8);
+  expect(errors).toEqual([]);
+});

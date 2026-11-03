@@ -5,7 +5,7 @@
 // of grass is painted leaning a few ways, and laid down as the wind has it now.
 
 import { ctx, getViewScale } from '../../../engine/platform/index.js';
-import { getSun, tileVariantHash, windSway } from '../../world/index.js';
+import { drawShadowPath, getSun, MIN_SHADOW_ALPHA, tileVariantHash, windSway } from '../../world/index.js';
 import { SHADOWS, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawPebblesArt, drawStickArt, drawStumpArt, drawTreeArt, paintOn, paintVariant } from './gathering.art.js';
 
 // each kind: how many variants, the box round where it stands that its picture covers (x0, y0, x1, y1), how it's painted
@@ -50,21 +50,41 @@ function spriteOf(kind, o, res) {
   return c;
 }
 
-// The things of a kind given, each laid down from its picture, their shadows first as one shape
+// A kind's shadows are filled together and only once where they meet other shadows.
 /** @param {string} kind @param {any[]} things */
-export function drawSprites(kind, things) {
-  if (!things.length) return;
-  const res = resOf(), [x0, y0] = KINDS[kind].box, [dx, dy, rx, ry] = SHADOWS[kind];
-  const windTime = performance.now() / 1000;
-  const sun = getSun(), height = rx * 0.9, ox = sun.dx * height, oy = sun.dy * height;
-  const ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
+export function drawSpriteShadows(kind, things) {
+  drawSpriteShadowGroups([{ kind, things }]);
+}
+
+/** @param {{ kind: string, things: any[] }[]} groups */
+export function drawSpriteShadowGroups(groups) {
+  const sun = getSun();
+  if (sun.alpha * ctx.globalAlpha < MIN_SHADOW_ALPHA) return;
   const shadow = new Path2D();
-  for (const o of things) {
-    const cx = o.x + dx + ox * 0.5, cy = o.y + dy + 4 + oy * 0.5;
-    shadow.moveTo(cx + ex, cy); shadow.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const { kind, things } of groups) {
+    if (!things.length) continue;
+    const [dx, dy, rx, ry] = SHADOWS[kind];
+    const height = rx * 0.9, ox = sun.dx * height, oy = sun.dy * height;
+    const ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
+    for (const o of things) {
+      const cx = o.x + dx + ox * 0.5, cy = o.y + dy + 4 + oy * 0.5;
+      shadow.moveTo(cx + ex, cy); shadow.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
+      minX = Math.min(minX, cx - ex); minY = Math.min(minY, cy - ey);
+      maxX = Math.max(maxX, cx + ex); maxY = Math.max(maxY, cy + ey);
+    }
   }
-  ctx.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
-  ctx.fill(shadow);
+  if (!Number.isFinite(minX)) return;
+  drawShadowPath(ctx, shadow, sun.alpha, null, { x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+}
+
+// The things of a kind given, each laid down from its picture
+/** @param {string} kind @param {any[]} things @param {boolean} [drawShadows] */
+export function drawSprites(kind, things, drawShadows = true) {
+  if (!things.length) return;
+  const res = resOf(), [x0, y0] = KINDS[kind].box;
+  const windTime = performance.now() / 1000;
+  if (drawShadows) drawSpriteShadows(kind, things);
   for (const o of things) {
     const c = spriteOf(kind, o, res);
     if (kind === 'grass') {

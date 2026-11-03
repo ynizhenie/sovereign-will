@@ -1,11 +1,11 @@
 // How far a resource is worked through
 
 import { TILE_SIZE, forEachInRect, game, listStamp, worldEpoch } from '../../../engine/world/index.js';
-import { paintOn, paintStill, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
+import { paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
-import { drawSprites } from './gathering.sprites.js';
-import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached } from '../../world/index.js';
+import { drawSpriteShadowGroups, drawSprites } from './gathering.sprites.js';
+import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, wasChunkDrawn } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
@@ -25,7 +25,7 @@ const onScreen = (list, fn) => { const v = getViewRect(2 * TILE_SIZE); forEachIn
 const seenOf = list => { /** @type {any[]} */ const found = []; onScreen(list, o => { found.push(o); }); return found; };
 // (#322) a kind laid down from its pictures (gathering.sprites.js), then the bars of those being worked
 /** @param {string} kind @param {any[]} list @param {number} [width] */
-const drawKind = (kind, list, width = 24) => { const things = seenOf(list); drawSprites(kind, things); for (const o of things) drawHarvestProgress(o, width); };
+const drawKind = (kind, list, width = 24, drawShadows = true) => { const things = seenOf(list); drawSprites(kind, things, drawShadows); for (const o of things) drawHarvestProgress(o, width); };
 
 // Sticks and pebbles, and minable ore
 export function drawSticksPebblesOre() {
@@ -145,19 +145,20 @@ const natureStamps = stamper(natureLists), tuftStamps = stamper(() => [game.gras
 /** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
 function paintNature(g, x0, y0, x1, y1) {
   paintOn(g);
+  paintVariant(null, false);
   try {
     for (const st of around(game.stumps, x0, y0, x1, y1)) drawStumpArt(st);
     for (const t of around(game.trees, x0, y0, x1, y1, standing)) drawTreeArt(t);
     for (const o of around(game.cacti, x0, y0, x1, y1)) drawCactusArt(o);
     for (const o of around(game.boulders, x0, y0, x1, y1)) drawBoulderArt(o);
     for (const o of around(game.berryBushes, x0, y0, x1, y1)) drawBushArt(o);
-  } finally { paintOn(null); }
+  } finally { paintVariant(null); paintOn(null); }
 }
 
 /** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
 function paintTufts(g, x0, y0, x1, y1) {
-  paintOn(g); paintStill(true);
-  try { for (const o of around(game.grassList, x0, y0, x1, y1)) drawGrassArt(o); } finally { paintStill(false); paintOn(null); }
+  paintOn(g); paintVariant(null, false); paintStill(true);
+  try { for (const o of around(game.grassList, x0, y0, x1, y1)) drawGrassArt(o); } finally { paintVariant(null); paintStill(false); paintOn(null); }
 }
 
 // The tufts of grass in pictures too, when so far out that their swaying can't be seen (and the look is the same, still)
@@ -194,13 +195,28 @@ function drawPicturedNature() {
   for (const [o, width] of over.others) drawHarvestProgress(o, width);
 }
 
+export function drawNatureShadows() {
+  const cacheNature = pictured(), res = natureRes();
+  const ready = (layer, things) => cacheNature ? things.filter(o => wasChunkDrawn(layer, res, o.x, o.y)) : things;
+  const grass = seenOf(game.grassList);
+  const shadowedGrass = cacheNature && tuftsPictured() ? ready('tufts', grass) : grass;
+  drawSpriteShadowGroups([
+    { kind: 'stump', things: ready('nature', seenOf(game.stumps)) },
+    { kind: 'tree', things: ready('nature', seenOf(game.trees).filter(t => !t.isGrowing && !t.fallen)) },
+    { kind: 'cactus', things: ready('nature', seenOf(game.cacti)) },
+    { kind: 'boulder', things: ready('nature', seenOf(game.boulders)) },
+    { kind: 'bush', things: ready('nature', seenOf(game.berryBushes)) },
+    { kind: 'grass', things: shadowedGrass }
+  ]);
+}
+
 // Trees: saplings growing, grown trees, apple trees with their apples (and the stumps of those felled)
 export function drawTrees() {
   if (pictured()) return; // (with the others, in drawCactiBouldersGrassBushes)
   // (before the trees: a tree grown there covers its own stump, a felled one's log covers it)
-  drawSprites('stump', seenOf(game.stumps));
+  drawSprites('stump', seenOf(game.stumps), false);
   const trees = seenOf(game.trees);
-  drawSprites('tree', trees.filter(t => !t.isGrowing && !t.fallen));
+  drawSprites('tree', trees.filter(t => !t.isGrowing && !t.fallen), false);
   for (const t of trees) drawTreeNear(t, !t.isGrowing && !t.fallen); // (a sapling, a felled tree as they are; a standing one's bars)
 }
 
@@ -231,10 +247,10 @@ export function drawCactiBouldersGrassBushes() {
     drawKind('grass', game.grassList, 20);
     return;
   }
-  drawKind('cactus', game.cacti);
-  drawKind('boulder', game.boulders); // (a loose, rounded stone, not the square rock that joins up)
-  drawKind('grass', game.grassList, 20);
-  drawKind('bush', game.berryBushes, 22); // (blue berries, as the Berries icon)
+  drawKind('cactus', game.cacti, 24, false);
+  drawKind('boulder', game.boulders, 24, false); // (a loose, rounded stone, not the square rock that joins up)
+  drawKind('grass', game.grassList, 20, false);
+  drawKind('bush', game.berryBushes, 22, false); // (blue berries, as the Berries icon)
 }
 
 // The player's marks on resources: a square around it and a pointer over it, "here" (#232)

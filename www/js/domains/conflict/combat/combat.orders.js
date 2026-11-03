@@ -75,6 +75,7 @@ export function fightByOrders(s, dt, auto) {
 export function followCommand(s, tick) {
   if (game.gameMode !== 'endless' || s.raider || (!s.orderTarget && !s.orderSpot)) return false;
   if (s.orderSpot && !s.holdOrder && !getSelection().includes(s)) { delete s.orderSpot; if (!s.orderTarget) return false; }
+  if (s.asleep) { s.asleep = false; s.sleepSpot = null; }
   const spotGiven = !!s.orderSpot;
   fightByOrders(s, tick.dt, false);
   if (!spotGiven) {
