@@ -19,7 +19,9 @@
     <!-- the game's name, big, on top of the main menu's first screen -->
     <div class="menu-title" id="menu-title"><span>Sovereign Will</span></div>
     <!-- put the menu away to watch the scene behind it; there, change the scene or bring the menu back (#256) -->
-    <button id="menu-hide" class="btn" data-i18n-title="menu.hideMenu" aria-label="Hide the menu"><i class="ic ic-eye"></i></button>
+    <div class="flag-box menu-eye-box" id="menu-eye-box">
+        <button id="menu-hide" class="flag-button menu-eye-button" data-i18n-title="menu.hideMenu" aria-label="Hide the menu"><i class="ic ic-eye"></i></button>
+    </div>
     <div id="menu-scene-bar">
         <button id="menu-next-scene" class="btn" data-i18n="menu.nextScene">[[reroll]] Next scene</button>
         <button id="menu-show" class="btn" data-i18n="menu.showMenu">[[menu]] Menu</button>

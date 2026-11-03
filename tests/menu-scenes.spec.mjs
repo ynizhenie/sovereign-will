@@ -70,6 +70,17 @@ test('the menu put away to watch, the scene changed there, the menu brought back
   await page.goto('/');
   await opened(page);
   await page.evaluate(() => enterMenuWorld('hunt'));
+  await expect(page.locator('#menu-eye-box #menu-hide')).toBeVisible();
+  expect(await page.locator('#menu-hide').evaluate(button => button.parentElement.id)).toBe('menu-eye-box');
+  expect(await page.locator('#menu-eye-box').evaluate(box => getComputedStyle(box).right)).toBe('12px');
+  const controlSizes = await page.evaluate(() => {
+    const bounds = selector => {
+      const { width, height } = document.querySelector(selector).getBoundingClientRect();
+      return { width, height };
+    };
+    return { eye: bounds('#menu-hide'), flag: bounds('#menu-flags .flag-button') };
+  });
+  expect(controlSizes.eye).toEqual(controlSizes.flag);
   await page.click('#menu-hide');
   await expect(page.locator('#main-menu .main-menu-content[data-screen="home"]')).toBeHidden();
   await expect(page.locator('#menu-scene-bar')).toBeVisible();

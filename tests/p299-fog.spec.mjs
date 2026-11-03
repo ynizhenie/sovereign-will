@@ -29,6 +29,99 @@ test('fog of war: the start land explored, the rest dark; a settler going out ex
   expect(errors).toEqual([]);
 });
 
+test('the fog overlay covers exactly the map bounds', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('.map-option[data-map-size="256"]');
+  await page.click('#play-button');
+  const overlay = await page.evaluate(() => {
+    isPaused = true;
+    resetFog();
+    const calls = [], original = ctx.drawImage, fills = [], fillRect = ctx.fillRect;
+    ctx.drawImage = function (...args) {
+      if (args[0].width === COLS && args[0].height === ROWS) calls.push(args);
+      return original.apply(this, args);
+    };
+    ctx.fillRect = function (...args) {
+      fills.push(args);
+      return fillRect.apply(this, args);
+    };
+    try { drawFog(); } finally { ctx.drawImage = original; ctx.fillRect = fillRect; }
+    const originalRect = ctx.rect, originalClip = ctx.clip, originalBeginPath = ctx.beginPath, originalStroke = ctx.stroke;
+    let mapRect = false, mapClips = 0, needsFreshPath = false, staleBoundaryStroke = false;
+    ctx.rect = function (...args) {
+      const tolerance = 1 / getViewScale();
+      mapRect = Math.abs(args[0]) <= tolerance && Math.abs(args[1]) <= tolerance &&
+        Math.abs(args[2] - WORLD_WIDTH) <= tolerance && Math.abs(args[3] - WORLD_HEIGHT) <= tolerance;
+      return originalRect.apply(this, args);
+    };
+    ctx.clip = function (...args) {
+      if (mapRect) { mapClips++; needsFreshPath = true; }
+      mapRect = false;
+      return originalClip.apply(this, args);
+    };
+    ctx.beginPath = function (...args) {
+      needsFreshPath = false;
+      return originalBeginPath.apply(this, args);
+    };
+    ctx.stroke = function (...args) {
+      if (needsFreshPath) staleBoundaryStroke = true;
+      return originalStroke.apply(this, args);
+    };
+    try { render(); } finally {
+      ctx.rect = originalRect; ctx.clip = originalClip; ctx.beginPath = originalBeginPath; ctx.stroke = originalStroke;
+    }
+    return { calls, fills, mapClips, staleBoundaryStroke, cols: COLS, rows: ROWS, gameMode: game.gameMode, hasFog: hasFog(), edgeFog: fogAt(0) };
+  });
+  const width = await page.evaluate(() => WORLD_WIDTH);
+  const height = await page.evaluate(() => WORLD_HEIGHT);
+  expect(overlay.cols).toBe(256);
+  expect(overlay.rows).toBe(256);
+  expect(overlay.gameMode).toBe('endless');
+  expect(overlay.hasFog).toBe(true);
+  expect(overlay.edgeFog).toBe(0);
+  expect(overlay.calls).toHaveLength(1);
+  expect(overlay.calls[0].slice(1)).toEqual([0, 0, width, height]);
+  expect(overlay.fills).toEqual([]);
+  expect(overlay.mapClips).toBe(1);
+  expect(overlay.staleBoundaryStroke).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test('unexplored continent edges blend into the outside map background', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('.map-option[data-map-size="256"]');
+  await page.click('#play-button');
+  const edgeDifferences = await page.evaluate(() => {
+    isPaused = true;
+    game.weather = null;
+    const mismatches = [];
+    for (const scale of [0.19, 0.27, 0.38, 0.53]) {
+      camera.zoom = scale / getBaseScale();
+      const actualScale = getViewScale(), edgeX = Math.floor(canvas.width * 0.8), edgeY = Math.floor(canvas.height * 0.9);
+      camera.x = WORLD_WIDTH - (edgeX - canvas.width / 2) / actualScale;
+      camera.y = WORLD_HEIGHT - (edgeY - canvas.height / 2) / actualScale;
+      render();
+      const left = canvas.width / 2 - camera.x * actualScale, top = canvas.height / 2 - camera.y * actualScale;
+      const right = left + WORLD_WIDTH * actualScale, bottom = top + WORLD_HEIGHT * actualScale;
+      const pixel = (x, y) => [...ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data].slice(0, 3);
+      const rightOutside = pixel(Math.ceil(right) + 5, canvas.height / 2);
+      const bottomOutside = pixel(canvas.width / 2, Math.ceil(bottom) + 5);
+      for (let offset = -3; offset <= 3; offset++) {
+        for (const [px, py, outside] of [
+          [Math.floor(right) + offset, canvas.height / 2, rightOutside],
+          [canvas.width / 2, Math.floor(bottom) + offset, bottomOutside]
+        ]) {
+          const actual = pixel(px, py);
+          if (actual.some((channel, index) => channel !== outside[index])) mismatches.push({ scale: actualScale, px, py, actual, outside });
+        }
+      }
+    }
+    return mismatches;
+  });
+  expect(edgeDifferences).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 test('a watchtower sees farther than a building; what\'s explored is saved and loaded; Battles have no fog (#299)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(async () => {

@@ -329,6 +329,44 @@ test('overlapping shadows do not compound their darkness', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('shadow masks are composited only where their bounds overlap', async ({ page }) => {
+  const errors = await openGame(page);
+  const copies = await page.evaluate(() => {
+    const surface = document.createElement('canvas');
+    surface.width = 800; surface.height = 600;
+    const shadowContext = surface.getContext('2d');
+    beginShadowFrame(shadowContext);
+    const building = new Path2D();
+    building.rect(20, 20, 20, 20);
+    addBuildingShadowOccluders(shadowContext, building, { x: 20, y: 20, width: 20, height: 20 });
+
+    const original = CanvasRenderingContext2D.prototype.drawImage;
+    let offscreenCopies = 0;
+    CanvasRenderingContext2D.prototype.drawImage = function (...args) {
+      if (this.canvas !== surface) offscreenCopies++;
+      return original.apply(this, args);
+    };
+    try {
+      const draw = (x, y) => {
+        const shadow = new Path2D();
+        shadow.rect(x, y, 20, 20);
+        drawShadowPath(shadowContext, shadow, 0.3, null, { x, y, width: 20, height: 20 });
+      };
+      draw(100, 100);
+      offscreenCopies = 0;
+      draw(400, 400);
+      const disjoint = offscreenCopies;
+      offscreenCopies = 0;
+      draw(405, 405);
+      return { disjoint, overlapping: offscreenCopies };
+    } finally {
+      CanvasRenderingContext2D.prototype.drawImage = original;
+    }
+  });
+  expect(copies).toEqual({ disjoint: 1, overlapping: 2 });
+  expect(errors).toEqual([]);
+});
+
 test('building occluders block lower shadows but not building shadows', async ({ page }) => {
   const errors = await openGame(page);
   const alpha = await page.evaluate(() => {
