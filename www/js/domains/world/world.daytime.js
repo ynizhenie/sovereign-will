@@ -4,9 +4,9 @@
 // hand, the demons' portals, a necromancer's staff
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { TILE_SIZE, forEachInRect, game, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, game, townHall } from '../../engine/world/index.js';
 import { isVisible } from './world.fog.js';
-import { camera, canvas, ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 import { getBuildingColor, getEnemyColor, getSettlerColor } from '../factions/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -85,40 +85,22 @@ function staffLightPosition(unit) {
 }
 
 // What gives light, and how far (px): [{ x, y, r, color? }]
-// Rendering only needs lights close enough to affect the current view; the default keeps the full list for callers.
-export function getLights(visibleOnly = false) {
+export function getLights() {
   const c = config();
   const lights = [{ x: townHall.x, y: townHall.y, r: townHall.radius + c.hallLightTiles * TILE_SIZE }];
-  const dark = getDarkness() > 0.01;
-  const view = getViewRect(3 * TILE_SIZE);
-  const nearby = visibleOnly
-    ? (x, y) => x >= view.x0 && x <= view.x1 && y >= view.y0 && y <= view.y1
-    : () => true;
-  const visitBuildings = visibleOnly
-    ? fn => forEachInRect(game.buildings, view.x0, view.y0, view.x1, view.y1, fn)
-    : fn => { for (const building of game.buildings) fn(building); };
-  visitBuildings(b => {
-    if (!nearby(b.x, b.y)) return;
+  for (const b of game.buildings) {
     if (b.type === 'torch' && b.lit) lights.push({ x: b.x, y: b.y, r: c.torchLightTiles * TILE_SIZE });
     else if (b.type === 'campfire' && ((b.fuelLeft || 0) > 0 || (b.burning || 0) > 0)) lights.push({ x: b.x, y: b.y, r: c.campfireLightTiles * TILE_SIZE });
     else if (b.type === 'portal') lights.push({ x: b.x, y: b.y, r: c.portalLightTiles * TILE_SIZE, color: getBuildingColor(b) });
-    else if ((b.type === 'tent' || b.type === 'demon_den') && dark) lights.push({ x: b.x, y: b.y, r: c.shelterLightTiles * TILE_SIZE });
-  });
-  if (visibleOnly) {
-    forEachInRect(game.enemyTents, view.x0, view.y0, view.x1, view.y1, t => {
-      if (t.portal) lights.push({ x: t.x, y: t.y, r: c.portalLightTiles * TILE_SIZE, color: getEnemyColor(null) });
-    });
-  } else {
-    for (const t of game.enemyTents) if (t.portal) lights.push({ x: t.x, y: t.y, r: c.portalLightTiles * TILE_SIZE, color: getEnemyColor(null) });
+    else if ((b.type === 'tent' || b.type === 'demon_den') && getDarkness() > 0.01) lights.push({ x: b.x, y: b.y, r: c.shelterLightTiles * TILE_SIZE });
   }
+  for (const t of game.enemyTents) if (t.portal) lights.push({ x: t.x, y: t.y, r: c.portalLightTiles * TILE_SIZE, color: getEnemyColor(null) });
   const staff = u => !!(getDefinition('tools', u.tool) || {}).necromancer;
   for (const s of game.settlers) {
-    if (!nearby(s.x, s.y)) continue;
     if (staff(s)) lights.push({ ...staffLightPosition(s), r: c.staffLightTiles * TILE_SIZE, color: getSettlerColor(null) });
     else if (s.torchInHand) lights.push({ x: s.x, y: s.y, r: c.handTorchTiles * TILE_SIZE });
   }
   for (const en of game.enemies) {
-    if (!nearby(en.x, en.y)) continue;
     if (!isVisible(en.x, en.y)) continue; // (#326: its torch isn't seen in the fog)
     if (en.enemyKey === 'undead_necromancer') lights.push({ ...staffLightPosition(en), r: c.staffLightTiles * TILE_SIZE, color: getEnemyColor(en) });
     else if (en.torch) lights.push({ x: en.x, y: en.y, r: c.handTorchTiles * TILE_SIZE });
@@ -144,7 +126,7 @@ export function drawDarkness() {
   g.fillStyle = `rgba(8, 12, 35, ${dark})`;
   g.fillRect(0, 0, sheet.width, sheet.height);
   g.globalCompositeOperation = 'destination-out';
-  const scale = getViewScale() * SHEET_SCALE, lights = getLights(true);
+  const scale = getViewScale() * SHEET_SCALE, lights = getLights();
   const flicker = 1 + Math.sin(performance.now() / 120) * 0.02;
   for (const light of lights) {
     if (light.color) continue;
@@ -202,11 +184,13 @@ const SHADOW_MASK_SCALE = 0.5;
 
 function clearShadowBounds(c, bounds) {
   if (!bounds) return;
+  c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.globalCompositeOperation = 'source-over';
   c.globalAlpha = 1;
   c.filter = 'none';
   c.clearRect(...bounds);
+  c.restore();
 }
 
 function includeBounds(current, x0, y0, x1, y1) {
@@ -271,17 +255,15 @@ export function addShadowOccluders(c, path, bounds) {
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds @param {HTMLCanvasElement} canvas @param {CanvasRenderingContext2D} target @param {[number, number, number, number] | null} previousBounds */
 function addOccluderPath(c, path, bounds, canvas, target, previousBounds) {
   const transform = c.getTransform();
-  const x0 = bounds.x, x1 = bounds.x + bounds.width, y0 = bounds.y, y1 = bounds.y + bounds.height;
-  const sx0 = transform.a * x0 + transform.c * y0 + transform.e, sx1 = transform.a * x1 + transform.c * y0 + transform.e;
-  const sx2 = transform.a * x0 + transform.c * y1 + transform.e, sx3 = transform.a * x1 + transform.c * y1 + transform.e;
-  const sy0 = transform.b * x0 + transform.d * y0 + transform.f, sy1 = transform.b * x1 + transform.d * y0 + transform.f;
-  const sy2 = transform.b * x0 + transform.d * y1 + transform.f, sy3 = transform.b * x1 + transform.d * y1 + transform.f;
+  const corners = [[bounds.x, bounds.y], [bounds.x + bounds.width, bounds.y], [bounds.x, bounds.y + bounds.height], [bounds.x + bounds.width, bounds.y + bounds.height]]
+    .map(([x, y]) => [transform.a * x + transform.c * y + transform.e, transform.b * x + transform.d * y + transform.f]);
   const padding = 2 * SHADOW_MASK_SCALE;
-  const left = Math.max(0, Math.floor(Math.min(sx0, sx1, sx2, sx3) * SHADOW_MASK_SCALE - padding));
-  const top = Math.max(0, Math.floor(Math.min(sy0, sy1, sy2, sy3) * SHADOW_MASK_SCALE - padding));
-  const right = Math.min(canvas.width, Math.ceil(Math.max(sx0, sx1, sx2, sx3) * SHADOW_MASK_SCALE + padding));
-  const bottom = Math.min(canvas.height, Math.ceil(Math.max(sy0, sy1, sy2, sy3) * SHADOW_MASK_SCALE + padding));
+  const left = Math.max(0, Math.floor(Math.min(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE - padding));
+  const top = Math.max(0, Math.floor(Math.min(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE - padding));
+  const right = Math.min(canvas.width, Math.ceil(Math.max(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE + padding));
+  const bottom = Math.min(canvas.height, Math.ceil(Math.max(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE + padding));
   if (right <= left || bottom <= top) return previousBounds;
+  target.save();
   target.setTransform(
     transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
     transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
@@ -292,6 +274,7 @@ function addOccluderPath(c, path, bounds, canvas, target, previousBounds) {
   target.filter = 'none';
   target.fillStyle = '#000';
   target.fill(path);
+  target.restore();
   return includeBounds(previousBounds, left, top, right, bottom);
 }
 
@@ -322,24 +305,23 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
   const { mask, fresh, maskCtx, freshCtx } = state;
   const filter = c.filter;
   if (state.freshBounds) {
+    freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
     freshCtx.globalCompositeOperation = 'source-over';
     freshCtx.globalAlpha = 1;
     freshCtx.filter = 'none';
     freshCtx.clearRect(...state.freshBounds);
+    freshCtx.restore();
   }
   const b = bounds || { x: 0, y: 0, width: c.canvas.width, height: c.canvas.height };
   const boundsTransform = bounds ? transform : new DOMMatrix();
-  const x0 = b.x, x1 = b.x + b.width, y0 = b.y, y1 = b.y + b.height;
-  const sx0 = boundsTransform.a * x0 + boundsTransform.c * y0 + boundsTransform.e, sx1 = boundsTransform.a * x1 + boundsTransform.c * y0 + boundsTransform.e;
-  const sx2 = boundsTransform.a * x0 + boundsTransform.c * y1 + boundsTransform.e, sx3 = boundsTransform.a * x1 + boundsTransform.c * y1 + boundsTransform.e;
-  const sy0 = boundsTransform.b * x0 + boundsTransform.d * y0 + boundsTransform.f, sy1 = boundsTransform.b * x1 + boundsTransform.d * y0 + boundsTransform.f;
-  const sy2 = boundsTransform.b * x0 + boundsTransform.d * y1 + boundsTransform.f, sy3 = boundsTransform.b * x1 + boundsTransform.d * y1 + boundsTransform.f;
+  const corners = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]]
+    .map(([x, y]) => [boundsTransform.a * x + boundsTransform.c * y + boundsTransform.e, boundsTransform.b * x + boundsTransform.d * y + boundsTransform.f]);
   const padding = (filter === 'none' ? 2 : 8) * SHADOW_MASK_SCALE;
-  const left = Math.max(0, Math.floor(Math.min(sx0, sx1, sx2, sx3) * SHADOW_MASK_SCALE - padding));
-  const top = Math.max(0, Math.floor(Math.min(sy0, sy1, sy2, sy3) * SHADOW_MASK_SCALE - padding));
-  const right = Math.min(mask.width, Math.ceil(Math.max(sx0, sx1, sx2, sx3) * SHADOW_MASK_SCALE + padding));
-  const bottom = Math.min(mask.height, Math.ceil(Math.max(sy0, sy1, sy2, sy3) * SHADOW_MASK_SCALE + padding));
+  const left = Math.max(0, Math.floor(Math.min(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE - padding));
+  const top = Math.max(0, Math.floor(Math.min(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE - padding));
+  const right = Math.min(mask.width, Math.ceil(Math.max(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE + padding));
+  const bottom = Math.min(mask.height, Math.ceil(Math.max(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE + padding));
   if (opacity <= 0 || right <= left || bottom <= top) return;
   state.freshBounds = [
     left,
@@ -347,6 +329,7 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
     right - left,
     bottom - top
   ];
+  freshCtx.save();
   freshCtx.setTransform(
     transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
     transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
@@ -362,28 +345,35 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
     freshCtx.globalCompositeOperation = 'destination-out';
     freshCtx.fill(cutout);
   }
+  freshCtx.restore();
 
   if (state.occludersBounds) {
+    freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
     freshCtx.globalCompositeOperation = 'destination-out';
     freshCtx.globalAlpha = 1;
     freshCtx.filter = 'none';
     freshCtx.drawImage(state.occluders, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.restore();
   }
   if (state.buildingOccludersBounds) {
+    freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
     freshCtx.globalCompositeOperation = 'destination-out';
     freshCtx.globalAlpha = 1;
     freshCtx.filter = 'none';
     freshCtx.drawImage(state.buildingOccluders, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.restore();
   }
 
   if (state.hasShadow) {
+    freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
     freshCtx.globalCompositeOperation = 'destination-out';
     freshCtx.globalAlpha = 1;
     freshCtx.filter = 'none';
     freshCtx.drawImage(mask, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.restore();
   }
 
   c.save();
@@ -397,11 +387,13 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
   c.drawImage(fresh, left, top, right - left, bottom - top, screenLeft, screenTop, screenWidth, screenHeight);
   c.restore();
 
+  maskCtx.save();
   maskCtx.setTransform(1, 0, 0, 1, 0, 0);
   maskCtx.globalCompositeOperation = 'source-over';
   maskCtx.globalAlpha = 1;
   maskCtx.filter = 'none';
   maskCtx.drawImage(fresh, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+  maskCtx.restore();
   state.maskBounds = includeBounds(state.maskBounds, left, top, right, bottom);
   state.hasShadow = true;
 }
@@ -416,20 +408,4 @@ export function castShadow(c, x, y, rx, ry, height = 10) {
   const cx = x + ox * 0.5, cy = y + oy * 0.5, ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
   path.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
   drawShadowPath(c, path, sun.alpha, null, { x: cx - ex, y: cy - ey, width: ex * 2, height: ey * 2 });
-}
-
-/** @param {CanvasRenderingContext2D} c @param {{ x: number, y: number }[]} things @param {number} rx @param {number} ry @param {number} height @param {number} [offsetY] */
-export function castShadowGroup(c, things, rx, ry, height, offsetY = 0) {
-  const sun = getSun();
-  if (!things.length || sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
-  const ox = sun.dx * height, oy = sun.dy * height, ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
-  const shadow = new Path2D();
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const thing of things) {
-    const cx = thing.x + ox * 0.5, cy = thing.y + offsetY + oy * 0.5;
-    shadow.moveTo(cx + ex, cy); shadow.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
-    minX = Math.min(minX, cx - ex); minY = Math.min(minY, cy - ey);
-    maxX = Math.max(maxX, cx + ex); maxY = Math.max(maxY, cy + ey);
-  }
-  drawShadowPath(c, shadow, sun.alpha, null, { x: minX, y: minY, width: maxX - minX, height: maxY - minY });
 }

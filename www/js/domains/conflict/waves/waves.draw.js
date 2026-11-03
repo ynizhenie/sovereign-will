@@ -11,7 +11,7 @@ import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
-import { castShadow, castShadowGroup, getDarkness, isExplored, isVisible } from '../../world/index.js';
+import { castShadow, getDarkness, isExplored, isVisible } from '../../world/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
@@ -66,11 +66,11 @@ function drawOutpost(et) {
 export function drawLoot() {
   const v = getViewRect(30), visible = [];
   forEachInRect(game.loot, v.x0, v.y0, v.x1, v.y1, pile => visible.push(pile));
-  castShadowGroup(ctx, visible, 8, 3, 6, 5);
   for (const pile of visible) {
     const key = (pile.items || [])[0];
     const [category, id] = key ? key.split(':') : [];
     const item = key && GAME_CONFIG[category] && GAME_CONFIG[category][id];
+    castShadow(ctx, pile.x, pile.y + 5, 8, 3, 6); // (#326: by the sun, as everything else)
     // (no thing in it: what it yields, as a crumbled zombie's rot and bones, #253)
     const res = !item && Object.keys(pile.yield || {}).find(id => GAME_CONFIG.resources[id]);
     drawIcon(ctx, item ? item.icon : res ? GAME_CONFIG.resources[res].icon : 'bundle', pile.x, pile.y, 18);

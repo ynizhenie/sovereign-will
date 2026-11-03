@@ -30,10 +30,8 @@ const drawKind = (kind, list, width = 24, drawShadows = true) => { const things 
 // Sticks and pebbles, and minable ore
 export function drawSticksPebblesOre() {
   // (the look: gathering.art.js, #251)
-  const sticks = seenOf(game.sticks), pebbles = seenOf(game.pebbles);
-  drawSpriteShadowGroups([{ kind: 'stick', things: sticks }, { kind: 'pebbles', things: pebbles }]);
-  drawSprites('stick', sticks, false);
-  drawSprites('pebbles', pebbles, false);
+  drawSprites('stick', seenOf(game.sticks));
+  drawSprites('pebbles', seenOf(game.pebbles));
   onScreen(game.logs, drawLogArt); // (#298)
 
   // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)

@@ -6,7 +6,7 @@ import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { forEachInRect, game, townHall } from '../../../engine/world/index.js';
 import { stock } from './storage.rules.js';
 import { ctx, getViewRect } from '../../../engine/platform/index.js';
-import { castShadowGroup } from '../../world/index.js';
+import { castShadow } from '../../world/index.js';
 import { storeCapacity } from './storage.stores.js';
 
 // the kinds it holds, the most first, with how many
@@ -15,11 +15,11 @@ const kinds = store => Object.entries(store || {}).filter(([, n]) => n >= 1).sor
 export function drawPiles() {
   const v = getViewRect(20), seen = [];
   forEachInRect(game.piles, v.x0, v.y0, v.x1, v.y1, p => seen.push(p)); // (#322: those on the screen)
-  castShadowGroup(ctx, seen.filter(p => !(p.layer || 0)), 4.5, 2, 6, 3.5);
   for (const layer of [0, 1, 2]) {
     for (const p of seen) {
       if ((p.layer || 0) !== layer) continue;
       const y = p.y - layer * 4;
+      if (!layer) castShadow(ctx, p.x, p.y + 3.5, 4.5, 2, 6); // (#326: by the sun)
       drawIcon(ctx, getResourceIconName(p.type), p.x, y, 9);
       // the cord round it
       ctx.strokeStyle = 'rgba(92, 58, 23, 0.85)'; ctx.lineWidth = 1;
