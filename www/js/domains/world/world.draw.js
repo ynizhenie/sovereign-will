@@ -661,9 +661,6 @@ function previewTerrain(x0, y0, x1, y1) {
 
 const inView = (list, fn) => forEachInRect(list, view.x0, view.y0, view.x1, view.y1, fn);
 
-/** @type {{ world: number, rocks: Set<string> | null, sand: Set<string> | null, byTile: WeakMap<object, number[]> }} */
-let rockShadowRadii = { world: -1, rocks: null, sand: null, byTile: new WeakMap() };
-
 export function drawSand() {
   // this frame: zoomed out (the pictures), or the tiles on screen (with a tile's margin)
   view = getViewRect(TILE_SIZE);
@@ -678,22 +675,11 @@ export function drawNaturalRockShadows() {
   const height = 18, ox = sun.dx * height, oy = sun.dy * height;
   const view = getViewRect(), margin = Math.max(Math.abs(ox), Math.abs(oy)) + TILE_SIZE;
   const shadow = new Path2D(), occluders = new Path2D(), tiles = getTileIndex();
-  const sand = getSandKeys();
-  const epoch = worldEpoch();
-  if (rockShadowRadii.world !== epoch || rockShadowRadii.rocks !== tiles.rockAndOre || rockShadowRadii.sand !== sand) {
-    rockShadowRadii = { world: epoch, rocks: tiles.rockAndOre, sand, byTile: new WeakMap() };
-  }
   const min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
   const occluderMin = { x: Infinity, y: Infinity }, occluderMax = { x: -Infinity, y: -Infinity };
   const addTileShadow = tile => {
-    let shape = rockShadowRadii.byTile.get(tile);
-    if (!shape) {
-      const open = openSides(tiles.rockAndOre, tile.x, tile.y), occupied = terrainCornerOccupancy(tile.x, tile.y, tiles, false);
-      const corners = cornerRadii(open, occupied);
-      shape = [corners.nw, corners.ne, corners.se, corners.sw];
-      rockShadowRadii.byTile.set(tile, shape);
-    }
-    const radii = shape;
+    const open = openSides(tiles.rockAndOre, tile.x, tile.y), occupied = terrainCornerOccupancy(tile.x, tile.y, tiles, false);
+    const { nw, ne, se, sw } = cornerRadii(open, occupied), radii = [nw, ne, se, sw];
     occluders.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
     occluderMin.x = Math.min(occluderMin.x, tile.x - 15);
     occluderMin.y = Math.min(occluderMin.y, tile.y - 15);
