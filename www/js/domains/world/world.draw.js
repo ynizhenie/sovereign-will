@@ -6,7 +6,7 @@ import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
-import { addShadowOccluders, drawShadowPath, getSun, MIN_SHADOW_ALPHA, setShadowOccluders } from './world.daytime.js';
+import { addBuildingShadowOccluders, drawShadowPath, getSun, MIN_SHADOW_ALPHA, setShadowOccluders } from './world.daytime.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -725,7 +725,7 @@ export function drawNaturalRockShadows() {
     addBuilding(townHall, townHall.radius, townHall.radius, townHall.radius);
   }
   if (Number.isFinite(buildingMin.x)) {
-    addShadowOccluders(ctx, buildingOccluders, {
+    addBuildingShadowOccluders(ctx, buildingOccluders, {
       x: buildingMin.x, y: buildingMin.y,
       width: buildingMax.x - buildingMin.x, height: buildingMax.y - buildingMin.y
     });

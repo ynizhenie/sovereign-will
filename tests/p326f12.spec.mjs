@@ -27,6 +27,7 @@ test('buildings and every kind of zone are kept one tile clear of the town hall'
     toggleZone(near.x, near.y, 'path');
     toggleFarmZone(near.x, near.y, 'wheat');
     toggleBlightZone(near.x, near.y, hall.gx + 1, hall.gy + 1, false);
+    const zones = [reliefZones.length, postZones.length, pathZones.length, farmZones.length, blightZones.length];
 
     const blockedRegion = [];
     for (let gy = hall.gy - 2; gy <= hall.gy + 1; gy++) {
@@ -44,7 +45,7 @@ test('buildings and every kind of zone are kept one tile clear of the town hall'
 
     return {
       buildBlocked: blueprints.length === 0,
-      zones: [reliefZones.length, postZones.length, pathZones.length, farmZones.length, blightZones.length],
+      zones,
       regionIsFourByFour: blockedRegion.length === 16 && blockedRegion.every(Boolean),
       outsideBuffer: !isWithinTownHallBuffer(justOutside.x, justOutside.y),
       outsideBuildAllowed: isBuildLocationAllowed(justOutside.x, justOutside.y),
