@@ -203,6 +203,14 @@
         </div>
 
         <div class="wave-settings">
+            <div data-i18n="menu.shadows">Shadows:</div>
+            <div class="wave-options" id="shadows-options">
+                <button class="fps-option" data-shadows="off" data-i18n="menu.off">Off</button>
+                <button class="fps-option" data-shadows="on" data-i18n="menu.on">On</button>
+            </div>
+        </div>
+
+        <div class="wave-settings">
             <div data-i18n="menu.sound">Sound:</div>
             <div class="wave-options">
                 <button class="fps-option" data-sound="off" data-i18n="menu.off">Off</button>
@@ -466,6 +474,12 @@
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-field="glade" data-i18n="battle.fieldGlade">Glade</button>
           <button class="btn sub-tab" data-battle-field="desert" data-i18n="battle.fieldDesert">Desert</button>
+        </div>
+        <div class="panel-heading" data-i18n="battle.fieldHighlightHeading">Side highlights:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-highlight="classic" data-i18n="battle.fieldHighlightClassic">Green and red</button>
+          <button class="btn sub-tab" data-battle-highlight="team" data-i18n="battle.fieldHighlightTeam">Unit colours</button>
+          <button class="btn sub-tab" data-battle-highlight="off" data-i18n="battle.fieldHighlightOff">Off</button>
         </div>
         <!-- (#326) how the battle looks: its time of day and weather -->
         <div class="panel-heading" data-i18n="battle.timeHeading">Time of day:</div>

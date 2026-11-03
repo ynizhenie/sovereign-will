@@ -35,6 +35,45 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.afterRemove).toBe(0);
 });
 
+test('battle field highlights can use classic colours, side colours, or be disabled', async ({ page }) => {
+  await openBattle(page);
+  await page.click('[data-dock="battle-settings"]');
+  await page.evaluate(() => {
+    setBattleColor('green', '#3498db');
+    setBattleColor('red', '#9b59b6');
+  });
+  const capture = () => page.evaluate(() => {
+    const fills = [], originalFill = ctx.fillRect, originalStroke = ctx.stroke;
+    ctx.fillRect = function (...args) {
+      fills.push({ color: ctx.fillStyle, alpha: ctx.globalAlpha, rect: args });
+      return originalFill.apply(this, args);
+    };
+    let strokes = 0;
+    ctx.stroke = function (...args) { strokes++; return originalStroke.apply(this, args); };
+    try { drawBattleOverlay(); } finally { ctx.fillRect = originalFill; ctx.stroke = originalStroke; }
+    const saved = loadData('battle-choices', null);
+    return { fills, strokes, saved: saved && saved.fieldHighlight };
+  });
+
+  await expect(page.locator('[data-battle-highlight="classic"]')).toHaveClass(/on/);
+  const classic = await capture();
+  expect(classic.fills.map(fill => fill.color)).toEqual(['#2ecc71', '#c0392b']);
+  expect(classic.fills.map(fill => fill.alpha)).toEqual([0.06, 0.06]);
+
+  await page.click('[data-battle-highlight="team"]');
+  const team = await capture();
+  expect(team.fills.map(fill => fill.color)).toEqual(['#3498db', '#9b59b6']);
+  expect(team.fills.map(fill => fill.alpha)).toEqual([0.06, 0.06]);
+  expect(team.saved).toBe('team');
+
+  await page.click('[data-battle-highlight="off"]');
+  const off = await capture();
+  expect(off.fills).toEqual([]);
+  expect(off.strokes).toBe(1);
+  expect(off.saved).toBe('off');
+  await expect(page.locator('[data-battle-highlight="off"]')).toHaveClass(/on/);
+});
+
 test('battle taps cannot select a friendly unit or mark an enemy during a fight', async ({ page }) => {
   await openBattle(page);
   const result = await page.evaluate(() => {

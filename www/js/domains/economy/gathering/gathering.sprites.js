@@ -5,7 +5,7 @@
 // of grass is painted leaning a few ways, and laid down as the wind has it now.
 
 import { ctx, getViewScale } from '../../../engine/platform/index.js';
-import { drawShadowPath, getSun, MIN_SHADOW_ALPHA, tileVariantHash, windSway } from '../../world/index.js';
+import { areShadowsEnabled, drawShadowPath, getSun, MIN_SHADOW_ALPHA, tileVariantHash, windSway } from '../../world/index.js';
 import { SHADOWS, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawPebblesArt, drawStickArt, drawStumpArt, drawTreeArt, paintOn, paintVariant } from './gathering.art.js';
 
 // each kind: how many variants, the box round where it stands that its picture covers (x0, y0, x1, y1), how it's painted
@@ -58,6 +58,7 @@ export function drawSpriteShadows(kind, things) {
 
 /** @param {{ kind: string, things: any[] }[]} groups */
 export function drawSpriteShadowGroups(groups) {
+  if (!areShadowsEnabled()) return;
   const sun = getSun();
   if (sun.alpha * ctx.globalAlpha < MIN_SHADOW_ALPHA) return;
   const shadow = new Path2D();

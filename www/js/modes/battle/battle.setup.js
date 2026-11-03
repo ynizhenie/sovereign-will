@@ -26,7 +26,7 @@ export const BATTLE_RESULT_SECONDS = 4;
  *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
- *   difficulty: string, savedDifficulty: string | null, theme: string }} */
+ *   difficulty: string, savedDifficulty: string | null, theme: string, fieldHighlight: string }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'units',  // the panel's category
@@ -48,18 +48,19 @@ export const battle = {
   savedMapSettings: null,
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   savedDifficulty: null, // the Endless choice, back when the battle's left
-  theme: 'arena'        // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
+  theme: 'arena',       // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
+  fieldHighlight: 'classic' // classic green/red, chosen side colours, or none
 };
 
 const BATTLE_DEFAULTS = {
   category: 'units', preset: 'humans:sword', building: 'wall_wood',
   armor: false, shield: false, helmet: false, big: false, banner: false, torch: false,
-  field: 'glade', time: 'day', weather: 'clear', difficulty: 'normal', theme: 'arena'
+  field: 'glade', time: 'day', weather: 'clear', difficulty: 'normal', theme: 'arena', fieldHighlight: 'classic'
 };
 
 export function saveBattleChoices() {
-  const { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme } = battle;
-  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme });
+  const { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme, fieldHighlight } = battle;
+  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme, fieldHighlight });
 }
 
 export function restoreBattleChoices() {
@@ -75,6 +76,7 @@ export function restoreBattleChoices() {
   if (['clear', 'rain', 'fog', 'storm'].includes(saved.weather)) battle.weather = saved.weather;
   if (saved.difficulty === 'normal' || saved.difficulty === 'hard') battle.difficulty = saved.difficulty;
   if (saved.theme === 'arena' || GAME_CONFIG.factions[saved.theme]?.ready) battle.theme = saved.theme;
+  if (['classic', 'team', 'off'].includes(saved.fieldHighlight)) battle.fieldHighlight = saved.fieldHighlight;
 }
 
 // (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
@@ -257,6 +259,12 @@ export function setBattleLook(key, value) {
   battle[key] = value;
   applyBattleLook();
   resetBattleUnits();
+  saveBattleChoices();
+}
+
+export function setBattleFieldHighlight(mode) {
+  if (mode !== 'classic' && mode !== 'team' && mode !== 'off') return;
+  battle.fieldHighlight = mode;
   saveBattleChoices();
 }
 

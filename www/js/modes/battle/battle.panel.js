@@ -7,7 +7,7 @@ import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { BATTLE_PRESETS, battlePresetLabel, bigPresetOf, getBattleBuildings } from './battle.roster.js';
-import { battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleLook, startBattleMode } from './battle.setup.js';
+import { battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 export function renderBattlePanel() {
@@ -25,6 +25,7 @@ export function renderBattlePanel() {
     b.classList.toggle('on', b.dataset.battleField === battle.field);
     /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
   });
+  document.querySelectorAll('[data-battle-highlight]').forEach(b => b.classList.toggle('on', b.dataset.battleHighlight === battle.fieldHighlight));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
   // what the chosen difficulty does to the red side (#255)
   const hint = document.getElementById('battle-difficulty-hint');
@@ -190,5 +191,6 @@ export function initBattlePanel() {
   }));
   // the battle's settings (#255): the field and difficulty
   document.querySelectorAll('[data-battle-field]').forEach(b => onTap(b, () => { setBattleField(b.dataset.battleField); renderBattlePanel(); }));
+  document.querySelectorAll('[data-battle-highlight]').forEach(b => onTap(b, () => { setBattleFieldHighlight(b.dataset.battleHighlight); renderBattlePanel(); }));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => onTap(b, () => { setBattleDifficulty(b.dataset.battleDifficulty); renderBattlePanel(); }));
 }
