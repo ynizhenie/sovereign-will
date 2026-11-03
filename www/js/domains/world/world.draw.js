@@ -696,14 +696,14 @@ export function drawNaturalRockShadows() {
   for (const list of [game.ironOres, game.coalOres]) {
     forEachInRect(list, view.x0 - margin, view.y0 - margin, view.x1 + margin, view.y1 + margin, addTileShadow);
   }
-  if (Number.isFinite(occluderMin.x)) {
-    setShadowOccluders(ctx, occluders, {
-      x: occluderMin.x, y: occluderMin.y, width: occluderMax.x - occluderMin.x, height: occluderMax.y - occluderMin.y
-    });
-  }
   if (Number.isFinite(min.x)) {
     drawShadowPath(ctx, shadow, sun.alpha, occluders, {
       x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y
+    });
+  }
+  if (Number.isFinite(occluderMin.x)) {
+    setShadowOccluders(ctx, occluders, {
+      x: occluderMin.x, y: occluderMin.y, width: occluderMax.x - occluderMin.x, height: occluderMax.y - occluderMin.y
     });
   }
 

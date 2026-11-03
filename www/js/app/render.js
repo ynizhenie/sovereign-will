@@ -11,7 +11,7 @@ import { drawCactiBouldersGrassBushes, drawNatureShadows, drawPriorityMarks, dra
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
-import { beginShadowFrame, clearBuildingShadowOccluders, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawNaturalRockShadows, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
+import { beginShadowFrame, clearBuildingShadowOccluders, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawNaturalRockShadows, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -26,6 +26,18 @@ export function render() {
   const viewScale = getViewScale();
   ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
   ctx.scale(viewScale, viewScale);
+  if (isContinentMap()) {
+    const transform = ctx.getTransform();
+    // Keep the clip edge on screen pixels; fractional edges leave a resampling fringe outside the map.
+    const left = Math.ceil(transform.e), top = Math.ceil(transform.f);
+    const right = Math.floor(transform.a * game.WORLD_WIDTH + transform.e);
+    const bottom = Math.floor(transform.d * game.WORLD_HEIGHT + transform.f);
+    ctx.beginPath();
+    ctx.rect((left - transform.e) / transform.a, (top - transform.f) / transform.d,
+      (right - left) / transform.a, (bottom - top) / transform.d);
+    ctx.clip();
+    ctx.beginPath();
+  }
 
   drawGrassGround();
   drawPaths(); // (#248)

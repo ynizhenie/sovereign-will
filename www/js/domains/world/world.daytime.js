@@ -200,6 +200,13 @@ function includeBounds(current, x0, y0, x1, y1) {
   return [left, top, right - left, bottom - top];
 }
 
+function intersectBounds(bounds, left, top, right, bottom) {
+  if (!bounds) return null;
+  const x = Math.max(left, bounds[0]), y = Math.max(top, bounds[1]);
+  const x2 = Math.min(right, bounds[0] + bounds[2]), y2 = Math.min(bottom, bounds[1] + bounds[3]);
+  return x2 > x && y2 > y ? [x, y, x2 - x, y2 - y] : null;
+}
+
 function shadowMaskFor(c) {
   const canvas = c.canvas;
   const isMain = canvas === ctx.canvas;
@@ -347,34 +354,21 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
   }
   freshCtx.restore();
 
-  if (state.occludersBounds) {
+  const subtract = (source, bounds) => {
+    const overlap = intersectBounds(bounds, left, top, right, bottom);
+    if (!overlap) return;
     freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
     freshCtx.globalCompositeOperation = 'destination-out';
     freshCtx.globalAlpha = 1;
     freshCtx.filter = 'none';
-    freshCtx.drawImage(state.occluders, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.drawImage(source, ...overlap, ...overlap);
     freshCtx.restore();
-  }
-  if (state.buildingOccludersBounds) {
-    freshCtx.save();
-    freshCtx.setTransform(1, 0, 0, 1, 0, 0);
-    freshCtx.globalCompositeOperation = 'destination-out';
-    freshCtx.globalAlpha = 1;
-    freshCtx.filter = 'none';
-    freshCtx.drawImage(state.buildingOccluders, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
-    freshCtx.restore();
-  }
+  };
+  subtract(state.occluders, state.occludersBounds);
+  subtract(state.buildingOccluders, state.buildingOccludersBounds);
 
-  if (state.hasShadow) {
-    freshCtx.save();
-    freshCtx.setTransform(1, 0, 0, 1, 0, 0);
-    freshCtx.globalCompositeOperation = 'destination-out';
-    freshCtx.globalAlpha = 1;
-    freshCtx.filter = 'none';
-    freshCtx.drawImage(mask, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
-    freshCtx.restore();
-  }
+  if (state.hasShadow) subtract(mask, state.maskBounds);
 
   c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
