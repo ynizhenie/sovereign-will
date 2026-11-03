@@ -177,7 +177,7 @@ export function getSun() {
 
 export const MIN_SHADOW_ALPHA = 0.1;
 
-/** @typedef {{ mask: HTMLCanvasElement, fresh: HTMLCanvasElement, occluders: HTMLCanvasElement, maskCtx: CanvasRenderingContext2D, freshCtx: CanvasRenderingContext2D, occludersCtx: CanvasRenderingContext2D, maskBounds: [number, number, number, number] | null, freshBounds: [number, number, number, number] | null, occludersBounds: [number, number, number, number] | null, hasShadow: boolean }} ShadowMask */
+/** @typedef {{ mask: HTMLCanvasElement, fresh: HTMLCanvasElement, occluders: HTMLCanvasElement, buildingOccluders: HTMLCanvasElement, maskCtx: CanvasRenderingContext2D, freshCtx: CanvasRenderingContext2D, occludersCtx: CanvasRenderingContext2D, buildingOccludersCtx: CanvasRenderingContext2D, maskBounds: [number, number, number, number] | null, freshBounds: [number, number, number, number] | null, occludersBounds: [number, number, number, number] | null, buildingOccludersBounds: [number, number, number, number] | null, hasShadow: boolean }} ShadowMask */
 /** @type {ShadowMask | null} */
 let mainShadowMask = null, offscreenShadowMask = null;
 const SHADOW_MASK_SCALE = 0.5;
@@ -207,12 +207,14 @@ function shadowMaskFor(c) {
   const width = Math.max(1, Math.ceil(canvas.width * SHADOW_MASK_SCALE));
   const height = Math.max(1, Math.ceil(canvas.height * SHADOW_MASK_SCALE));
   if (!state || state.mask.width !== width || state.mask.height !== height) {
-    const mask = document.createElement('canvas'), fresh = document.createElement('canvas'), occluders = document.createElement('canvas');
-    mask.width = fresh.width = occluders.width = width;
-    mask.height = fresh.height = occluders.height = height;
-    const maskCtx = mask.getContext('2d'), freshCtx = fresh.getContext('2d'), occludersCtx = occluders.getContext('2d');
-    if (!maskCtx || !freshCtx || !occludersCtx) throw new Error('Unable to create shadow mask canvases');
-    state = { mask, fresh, occluders, maskCtx, freshCtx, occludersCtx, maskBounds: null, freshBounds: null, occludersBounds: null, hasShadow: false };
+    const mask = document.createElement('canvas'), fresh = document.createElement('canvas');
+    const occluders = document.createElement('canvas'), buildingOccluders = document.createElement('canvas');
+    mask.width = fresh.width = occluders.width = buildingOccluders.width = width;
+    mask.height = fresh.height = occluders.height = buildingOccluders.height = height;
+    const maskCtx = mask.getContext('2d'), freshCtx = fresh.getContext('2d');
+    const occludersCtx = occluders.getContext('2d'), buildingOccludersCtx = buildingOccluders.getContext('2d');
+    if (!maskCtx || !freshCtx || !occludersCtx || !buildingOccludersCtx) throw new Error('Unable to create shadow mask canvases');
+    state = { mask, fresh, occluders, buildingOccluders, maskCtx, freshCtx, occludersCtx, buildingOccludersCtx, maskBounds: null, freshBounds: null, occludersBounds: null, buildingOccludersBounds: null, hasShadow: false };
     if (isMain) mainShadowMask = state;
     else offscreenShadowMask = state;
   }
@@ -225,9 +227,11 @@ export function beginShadowFrame(c) {
   clearShadowBounds(state.maskCtx, state.maskBounds);
   clearShadowBounds(state.freshCtx, state.freshBounds);
   clearShadowBounds(state.occludersCtx, state.occludersBounds);
+  clearShadowBounds(state.buildingOccludersCtx, state.buildingOccludersBounds);
   state.maskBounds = null;
   state.freshBounds = null;
   state.occludersBounds = null;
+  state.buildingOccludersBounds = null;
   state.hasShadow = false;
 }
 
@@ -244,28 +248,48 @@ export function setShadowOccluders(c, path, bounds) {
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
 export function addShadowOccluders(c, path, bounds) {
   if (typeof document === 'undefined') return;
-  const state = shadowMaskFor(c), transform = c.getTransform();
+  const state = shadowMaskFor(c);
+  state.occludersBounds = addOccluderPath(c, path, bounds, state.occluders, state.occludersCtx, state.occludersBounds);
+}
+
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds @param {HTMLCanvasElement} canvas @param {CanvasRenderingContext2D} target @param {[number, number, number, number] | null} previousBounds */
+function addOccluderPath(c, path, bounds, canvas, target, previousBounds) {
+  const transform = c.getTransform();
   const corners = [[bounds.x, bounds.y], [bounds.x + bounds.width, bounds.y], [bounds.x, bounds.y + bounds.height], [bounds.x + bounds.width, bounds.y + bounds.height]]
     .map(([x, y]) => [transform.a * x + transform.c * y + transform.e, transform.b * x + transform.d * y + transform.f]);
   const padding = 2 * SHADOW_MASK_SCALE;
   const left = Math.max(0, Math.floor(Math.min(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE - padding));
   const top = Math.max(0, Math.floor(Math.min(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE - padding));
-  const right = Math.min(state.occluders.width, Math.ceil(Math.max(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE + padding));
-  const bottom = Math.min(state.occluders.height, Math.ceil(Math.max(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE + padding));
-  if (right <= left || bottom <= top) return;
-  state.occludersCtx.save();
-  state.occludersCtx.setTransform(
+  const right = Math.min(canvas.width, Math.ceil(Math.max(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE + padding));
+  const bottom = Math.min(canvas.height, Math.ceil(Math.max(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE + padding));
+  if (right <= left || bottom <= top) return previousBounds;
+  target.save();
+  target.setTransform(
     transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
     transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
     transform.e * SHADOW_MASK_SCALE, transform.f * SHADOW_MASK_SCALE
   );
-  state.occludersCtx.globalCompositeOperation = 'source-over';
-  state.occludersCtx.globalAlpha = 1;
-  state.occludersCtx.filter = 'none';
-  state.occludersCtx.fillStyle = '#000';
-  state.occludersCtx.fill(path);
-  state.occludersCtx.restore();
-  state.occludersBounds = includeBounds(state.occludersBounds, left, top, right, bottom);
+  target.globalCompositeOperation = 'source-over';
+  target.globalAlpha = 1;
+  target.filter = 'none';
+  target.fillStyle = '#000';
+  target.fill(path);
+  target.restore();
+  return includeBounds(previousBounds, left, top, right, bottom);
+}
+
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
+export function addBuildingShadowOccluders(c, path, bounds) {
+  if (typeof document === 'undefined') return;
+  const state = shadowMaskFor(c);
+  state.buildingOccludersBounds = addOccluderPath(c, path, bounds, state.buildingOccluders, state.buildingOccludersCtx, state.buildingOccludersBounds);
+}
+
+export function clearBuildingShadowOccluders(c) {
+  if (typeof document === 'undefined') return;
+  const state = shadowMaskFor(c);
+  clearShadowBounds(state.buildingOccludersCtx, state.buildingOccludersBounds);
+  state.buildingOccludersBounds = null;
 }
 
 // Draw only the portion of a shadow not already covered by another shadow this frame.
@@ -323,13 +347,14 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
   }
   freshCtx.restore();
 
-  if (state.occludersBounds) {
+  for (const [occluder, occluderBounds] of [[state.occluders, state.occludersBounds], [state.buildingOccluders, state.buildingOccludersBounds]]) {
+    if (!occluderBounds) continue;
     freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
     freshCtx.globalCompositeOperation = 'destination-out';
     freshCtx.globalAlpha = 1;
     freshCtx.filter = 'none';
-    freshCtx.drawImage(state.occluders, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.drawImage(occluder, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
     freshCtx.restore();
   }
 

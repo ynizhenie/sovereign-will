@@ -5,7 +5,7 @@ export { CHUNK, chunkStats, drawChunks, markFishingChanged, drawGrassGround, dra
 export { drawPaths, isPathTile, tickPaths } from './world.paths.js';
 export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones.js';
 export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStandingWeather, tickWeather, windSway } from './world.weather.js';
-export { addShadowOccluders, beginShadowFrame, castShadow, drawShadowPath, drawDarkness, getDarkness, getDayPhase, getLights, getSun, isNight, MIN_SHADOW_ALPHA, nightProgress, setShadowOccluders, tickDaytime, timeOfPhase } from './world.daytime.js';
+export { addBuildingShadowOccluders, addShadowOccluders, beginShadowFrame, castShadow, clearBuildingShadowOccluders, drawShadowPath, drawDarkness, getDarkness, getDayPhase, getLights, getSun, isNight, MIN_SHADOW_ALPHA, nightProgress, setShadowOccluders, tickDaytime, timeOfPhase } from './world.daytime.js';
 export { ORE_KINDS, generateMap, generateMapSteps, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, isDesertTile, isWaterReachable, placeBeaches, placeOre, pointIn, spawnForestAware, spawnResource, startingBoarCount } from './world.generator.js';
 export { drawTerritory, getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inTerritory, isOutskirts, setTerritoryEnabled } from './world.territory.js';
 export { drawFog, exportFog, fogAt, hasFog, importFog, isExplored, isVisible, resetFog, tickFog } from './world.fog.js';

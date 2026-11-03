@@ -11,7 +11,7 @@ import { drawCactiBouldersGrassBushes, drawNatureShadows, drawPriorityMarks, dra
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
-import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawNaturalRockShadows, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
+import { beginShadowFrame, clearBuildingShadowOccluders, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawNaturalRockShadows, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -48,6 +48,7 @@ export function render() {
   drawSticksPebblesOre();
   drawLoot();
   drawPiles(); // (#248)
+  clearBuildingShadowOccluders(ctx);
   drawTownHall();
   drawTrees();
   drawCactiBouldersGrassBushes();

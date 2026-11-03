@@ -1,6 +1,6 @@
 // How far a resource is worked through
 
-import { TILE_SIZE, forEachInRect, game, listStamp, worldEpoch } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, worldEpoch } from '../../../engine/world/index.js';
 import { paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
@@ -78,7 +78,11 @@ const natureRes = () => {
 };
 const standing = o => !o.isGrowing && !o.fallen;
 const sunKey = () => { const s = getSun(); return `${Math.round(s.dx * 10)},${Math.round(s.dy * 10)},${Math.round(s.alpha * 50)}`; };
-const natureLists = () => [game.stumps, game.trees, game.cacti, game.boulders, game.berryBushes];
+/** @param {any[][]} lists */
+const natureLists = lists => {
+  lists[0] = game.stumps; lists[1] = game.trees; lists[2] = game.cacti; lists[3] = game.boulders; lists[4] = game.berryBushes;
+  return lists;
+};
 
 // the things of a list in and round a rectangle, in rows of tiles (the same order whichever piece paints them)
 /** @param {any[]} list @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {((o: any) => boolean) | null} [keep] */
@@ -93,11 +97,17 @@ function around(list, x0, y0, x1, y1, keep = null) {
 // again once it's REFRESH_TICKS old, and no more than STAMPS_PER_FRAME in a frame (all of them at once, with the
 // pieces of a screen x five lists, was a tenth of a frame); a list changing makes them all due, not all made at once
 const STAMPS_PER_FRAME = 4;
-/** @param {() => any[][]} listsOf */
+/** @param {(lists: any[][]) => any[][]} listsOf */
 function stamper(listsOf) {
   /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, stamps: Map<string, { tick: number, epoch: number, stamp: string }>, dirty: Set<string> }} */
   const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), stamps: new Map(), dirty: new Set() };
-  const sameSignature = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  /** @type {any[][]} */
+  const current = [];
+  /** @param {any[]} list */
+  const signatureOf = list => [list, list.length, list[0], list[list.length - 1]];
+  /** @param {any[] | undefined} signature @param {any[]} list */
+  const signatureMatches = (signature, list) => signature && signature[0] === list && signature[1] === list.length &&
+    signature[2] === list[0] && signature[3] === list[list.length - 1];
   const dirtyObject = o => {
     const size = CHUNK * TILE_SIZE;
     const x0 = Math.floor((o.x - MARGIN) / size), x1 = Math.floor((o.x + MARGIN) / size);
@@ -108,18 +118,26 @@ function stamper(listsOf) {
       if (state.world !== worldEpoch()) {
         state.world = worldEpoch(); state.signatures = []; state.members = []; state.epoch++; state.stamps.clear(); state.dirty.clear();
       }
-      const current = listsOf(), signatures = current.map(listStamp);
-      if (!state.signatures.length) state.members = current.map(list => [...list]);
-      else if (signatures.length !== state.signatures.length || signatures.some((v, i) => !sameSignature(v, state.signatures[i]))) {
-        for (let n = 0; n < current.length; n++) {
-          if (state.signatures[n] && sameSignature(signatures[n], state.signatures[n])) continue;
-          const before = new Set(state.members[n] || []), after = new Set(current[n] || []);
-          for (const o of before) if (!after.has(o)) dirtyObject(o);
-          for (const o of after) if (!before.has(o)) dirtyObject(o);
-          state.members[n] = [...(current[n] || [])];
+      listsOf(current);
+      if (!state.signatures.length) {
+        state.members = current.map(list => [...list]);
+        state.signatures = current.map(signatureOf);
+      } else {
+        let changed = current.length !== state.signatures.length;
+        for (let n = 0; !changed && n < current.length; n++) changed = !signatureMatches(state.signatures[n], current[n]);
+        if (changed) {
+          for (let n = 0; n < current.length; n++) {
+            if (signatureMatches(state.signatures[n], current[n])) continue;
+            const before = new Set(state.members[n] || []), after = new Set(current[n] || []);
+            for (const o of before) if (!after.has(o)) dirtyObject(o);
+            for (const o of after) if (!before.has(o)) dirtyObject(o);
+            state.members[n] = [...(current[n] || [])];
+            state.signatures[n] = signatureOf(current[n]);
+          }
+          state.members.length = current.length;
+          state.signatures.length = current.length;
         }
       }
-      state.signatures = signatures;
       const key = `${cx},${cy}`, kept = state.stamps.get(key);
       const due = !kept || state.dirty.has(key) || kept.epoch !== state.epoch || game.pathTick - kept.tick >= STAMP_TICKS || game.pathTick < kept.tick;
       if (kept && (!due || state.made >= STAMPS_PER_FRAME)) return kept.stamp;
@@ -140,7 +158,9 @@ function stamper(listsOf) {
     stamp
   };
 }
-const natureStamps = stamper(natureLists), tuftStamps = stamper(() => [game.grassList]);
+/** @param {any[][]} lists */
+const tuftLists = lists => { lists[0] = game.grassList; return lists; };
+const natureStamps = stamper(natureLists), tuftStamps = stamper(tuftLists);
 
 /** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
 function paintNature(g, x0, y0, x1, y1) {

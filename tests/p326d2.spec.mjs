@@ -108,10 +108,10 @@ test('walls and doors join (a run, corners, a T, a cross, a lone post) and a doo
     const { makeSettler } = window.sim.helpers;
     const walker = makeSettler(1, door.x, door.y + 8, {}); settlers = [walker];
     const frames = async n => { for (let f = 0; f < n; f++) { await new Promise(res => setTimeout(res, 100)); render(); } }; // (the animation runs by the clock)
-    await frames(8);
+    await frames(12);
     const opened = door.openness;
     settlers = [];
-    await frames(8);
+    await frames(12);
     return { start: open[0], opened, shut: door.openness, ironShut: iron.openness };
   });
   expect(r.start).toBe(0);
@@ -329,6 +329,29 @@ test('overlapping shadows do not compound their darkness', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('building occluders block lower shadows but not building shadows', async ({ page }) => {
+  const errors = await openGame(page);
+  const alpha = await page.evaluate(() => {
+    const surface = document.createElement('canvas');
+    surface.width = surface.height = 64;
+    const shadowContext = surface.getContext('2d');
+    beginShadowFrame(shadowContext);
+    const building = new Path2D(), shadow = new Path2D();
+    building.rect(20, 20, 20, 20);
+    shadow.rect(24, 24, 12, 12);
+    addBuildingShadowOccluders(shadowContext, building, { x: 20, y: 20, width: 20, height: 20 });
+    drawShadowPath(shadowContext, shadow, 0.3);
+    const lowerShadow = shadowContext.getImageData(28, 28, 1, 1).data[3];
+    clearBuildingShadowOccluders(shadowContext);
+    drawShadowPath(shadowContext, shadow, 0.3);
+    const buildingShadow = shadowContext.getImageData(28, 28, 1, 1).data[3];
+    return { lowerShadow, buildingShadow };
+  });
+  expect(alpha.lowerShadow).toBe(0);
+  expect(alpha.buildingShadow).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+
 test('imperceptibly faint shadows are skipped while brighter shadows still render', async ({ page }) => {
   const errors = await openGame(page);
   const alpha = await page.evaluate(() => {
@@ -395,6 +418,6 @@ test('shadow mask buffers use half the screen resolution', async ({ page }) => {
       document.createElement = original;
     }
   });
-  expect(dimensions).toEqual([[402, 304], [402, 304]]);
+  expect(dimensions).toEqual(Array.from({ length: 4 }, () => [402, 304]));
   expect(errors).toEqual([]);
 });
