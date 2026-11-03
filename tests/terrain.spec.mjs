@@ -50,7 +50,8 @@ test('ore seams and ore source rocks cast shadows', async ({ page }) => {
     }
   });
   expect(shadows.oreShadows).toBe(0);
-  expect(shadows.sourceShadows).toBe(4);
+  // (the two tiles' shadows; their silhouettes were worked out in the frames before and are kept)
+  expect(shadows.sourceShadows).toBe(2);
   expect(errors).toEqual([]);
 });
 

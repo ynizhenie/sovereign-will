@@ -363,7 +363,8 @@ test('shadow masks are composited only where their bounds overlap', async ({ pag
       CanvasRenderingContext2D.prototype.drawImage = original;
     }
   });
-  expect(copies).toEqual({ disjoint: 1, overlapping: 2 });
+  // (a shadow takes out of itself only the earlier shadows it meets; nothing is copied into a mask after it)
+  expect(copies).toEqual({ disjoint: 0, overlapping: 1 });
   expect(errors).toEqual([]);
 });
 
@@ -427,13 +428,15 @@ test('shadow buffers clear only the bounds used by the previous frame', async ({
       return original.call(this, x, y, width, height);
     };
     try {
+      // (a shadow's canvas is cleared as it is used again, the next frame)
       beginShadowFrame(shadowContext);
+      drawShadowPath(shadowContext, shadow, 0.3, null, { x: 100, y: 120, width: 20, height: 20 });
       return calls;
     } finally {
       CanvasRenderingContext2D.prototype.clearRect = original;
     }
   });
-  expect(cleared.length).toBe(2);
+  expect(cleared.length).toBe(1);
   expect(cleared.every(([width, height]) => width < 100 && height < 100)).toBe(true);
   expect(errors).toEqual([]);
 });
@@ -456,6 +459,8 @@ test('shadow mask buffers use half the screen resolution', async ({ page }) => {
       document.createElement = original;
     }
   });
-  expect(dimensions).toEqual(Array.from({ length: 4 }, () => [402, 304]));
+  // (the shadows so far put together, the terrain's silhouettes, the buildings' footprints; each shadow's own
+  // canvas is made as it is first drawn, its size)
+  expect(dimensions).toEqual(Array.from({ length: 3 }, () => [402, 304]));
   expect(errors).toEqual([]);
 });
