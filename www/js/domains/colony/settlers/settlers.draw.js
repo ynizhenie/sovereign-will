@@ -360,7 +360,7 @@ export function drawFigure(unit, o) {
   // arms, hands, eyes, gear and idle signs would be sub-pixel clutter, and were most of a big colony's work
   if (o.simple) {
     if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
-    if (!o.lying) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.72, r * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
+    if (!o.lying) castShadow(ctx, 0, r * 1.02, r * 0.72, r * 0.3, r * 1.6);
     ctx.fillStyle = shade(o.body, -0.4);
     ctx.beginPath(); ctx.roundRect(-r * 0.3, r * 0.25, r * 0.6, r * 0.72, r * 0.12); ctx.fill();
     ctx.fillStyle = o.body;

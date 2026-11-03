@@ -5,7 +5,7 @@
 
 import { ctx } from '../../../engine/platform/index.js';
 import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
-import { getSun } from '../../world/index.js';
+import { drawShadowPath, getSun } from '../../world/index.js';
 
 const rect = (x, y, w, h, fill, stroke, lw = 1) => {
   ctx.fillStyle = fill; ctx.fillRect(x, y, w, h);
@@ -21,8 +21,10 @@ const line = (x0, y0, x1, y1, color, lw = 1) => { ctx.strokeStyle = color; ctx.l
 // A soft shadow cast away from the sun (#307: by the time of day, getSun), long in the morning and evening
 export function shadow(x, y, w, h, r = 4) {
   const sun = getSun(), H = h * 0.35, ox = sun.dx * H, oy = sun.dy * H;
-  ctx.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
-  ctx.beginPath(); ctx.roundRect(x - w / 2 + Math.min(0, ox) + Math.max(0, ox) * 0.5, y - h / 2 + oy, w + Math.abs(ox) * 0.5, h, r); ctx.fill();
+  const path = new Path2D();
+  const sx = x - w / 2 + Math.min(0, ox) + Math.max(0, ox) * 0.5, sy = y - h / 2 + oy, sw = w + Math.abs(ox) * 0.5;
+  path.roundRect(sx, sy, sw, h, r);
+  drawShadowPath(ctx, path, sun.alpha, null, { x: sx, y: sy, width: sw, height: h });
 }
 
 // A house seen from above at a slant: a pitched roof (its far half lighter), its front wall below with a door
@@ -52,80 +54,84 @@ const ARMS = [[LINK.n, 0, -1], [LINK.e, 1, 0], [LINK.s, 0, 1], [LINK.w, -1, 0]];
 export function drawWallShadows(pieces) {
   if (!pieces.length) return;
   const sun = getSun();
-  ctx.save();
-  ctx.filter = 'blur(2px)';
-  ctx.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
-  ctx.beginPath();
+  const shadow = new Path2D();
   for (const piece of pieces) {
     const wood = piece.type === 'wall_wood', stone = piece.type === 'wall_stone';
     const door = piece.type === 'door' || piece.type === 'iron_door';
-    const height = wood || stone ? 18 : 16;
-    ctx.save();
-    ctx.translate(piece.x + sun.dx * height, piece.y + sun.dy * height);
+    const height = wood || stone ? 10 : 8;
+    const shape = new Path2D();
     if (wood) {
-      ctx.roundRect(-7, -11, 14, 24, 2);
+      shape.roundRect(-7, -11, 14, 24, 2);
       for (const [bit, dx, dy] of ARMS) {
         if (!(piece.mask & bit)) continue;
         if (dy) {
-          for (let k = 0; k < 3; k++) ctx.roundRect(-7, dy * (9 + k * 6) - 3.5, 14, 7, 3);
+          for (let k = 0; k < 3; k++) shape.roundRect(-7, dy * (9 + k * 6) - 3.5, 14, 7, 2);
         } else {
-          for (let k = 0; k < 3; k++) ctx.roundRect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25, 2);
+          for (let k = 0; k < 3; k++) shape.roundRect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25, 2);
         }
       }
     } else if (stone) {
-      ctx.rect(-7, -11, 14, 24);
+      shape.rect(-7, -11, 14, 24);
       for (const [bit, dx, dy] of ARMS) {
         if (!(piece.mask & bit)) continue;
         if (dy) {
-          for (let k = 0; k < 3; k++) ctx.rect(-7, dy * (9 + k * 6) - 3.5, 14, 7);
+          for (let k = 0; k < 3; k++) shape.rect(-7, dy * (9 + k * 6) - 3.5, 14, 7);
         } else {
-          for (let k = 0; k < 3; k++) ctx.rect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25);
+          for (let k = 0; k < 3; k++) shape.rect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25);
         }
       }
     } else if (door) {
       const vertical = (piece.mask & (LINK.n | LINK.s)) && !(piece.mask & (LINK.e | LINK.w));
-      ctx.save();
-      if (vertical) ctx.rotate(Math.PI / 2);
+      const orientation = new DOMMatrix().rotate(vertical ? 90 : 0), frame = new Path2D();
       const along = vertical ? [piece.mask & LINK.s, piece.mask & LINK.n] : [piece.mask & LINK.w, piece.mask & LINK.e];
       for (const [connected, dx] of along.map((value, i) => [value, i ? 1 : -1])) {
-        if (connected) ctx.roundRect(dx < 0 ? -15 : 11, -7, 4, 14, 1);
+        if (connected) frame.rect(dx < 0 ? -15 : 11, -7, 4, 14);
       }
-      ctx.roundRect(-15, -9, 5, 18, 1);
-      ctx.roundRect(10, -9, 5, 18, 1);
+      frame.rect(-15, -9, 5, 18);
+      frame.rect(10, -9, 5, 18);
+      shape.addPath(frame, orientation);
       const swing = piece.swing || { x: 0, y: 1 };
       const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
       const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
       const open = piece.open || 0, leaf = open < 0.98 ? 20 - open * 6 : 14;
-      ctx.translate(-10, 0);
-      ctx.rotate(sign * open * Math.PI * 0.46);
-      ctx.roundRect(0, -3, leaf, 6, 1);
-      ctx.restore();
+      const leafPath = new Path2D(), leafTransform = orientation.multiply(new DOMMatrix().translate(-10, 0).rotate(sign * open * 0.46 * 180 / Math.PI));
+      leafPath.rect(0, -3, leaf, 6);
+      shape.addPath(leafPath, leafTransform);
     } else {
-      ctx.rect(-8, -8, 16, 16);
+      shape.rect(-8, -8, 16, 16);
       for (const [bit, dx, dy] of ARMS) {
         if (!(piece.mask & bit)) continue;
-        if (dy) ctx.rect(-7, dy < 0 ? -15 : 7, 14, 8);
-        else ctx.rect(dx < 0 ? -15 : 7, -7, 8, 14);
+        if (dy) shape.rect(-7, dy < 0 ? -15 : 7, 14, 8);
+        else shape.rect(dx < 0 ? -15 : 7, -7, 8, 14);
       }
     }
-    ctx.restore();
+    const ox = sun.dx * height, oy = sun.dy * height;
+    shadow.addPath(shape, new DOMMatrix().translate(piece.x + ox * 0.35, piece.y + oy * 0.35));
   }
-  ctx.fill();
+  const xs = pieces.map(piece => piece.x), ys = pieces.map(piece => piece.y), reach = 32;
+  ctx.save();
+  ctx.filter = 'blur(1.5px)';
+  drawShadowPath(ctx, shadow, sun.alpha, null, {
+    x: Math.min(...xs) - reach, y: Math.min(...ys) - reach,
+    width: Math.max(...xs) - Math.min(...xs) + reach * 2, height: Math.max(...ys) - Math.min(...ys) + reach * 2
+  });
   ctx.restore();
 }
 
 // A palisade: logs side by side, their sharpened tops, bands of rope across
-export function drawWoodWall(x, y, mask = 0) {
+export function drawWoodWall(x, y, mask = 0, doorMask = 0) {
   for (const [bit, dx, dy] of ARMS) {
     if (!(mask & bit)) continue;
     if (dy) { // north-south: log tops stacked
       for (let k = 0; k < 3; k++) {
+        if (k === 2 && doorMask & bit) continue;
         const cy = y + dy * (9 + k * 6);
         ctx.fillStyle = '#5c3a17'; ctx.beginPath(); ctx.ellipse(x, cy, 7, 3.6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = k % 2 ? '#8e5a2b' : '#9b6633'; ctx.beginPath(); ctx.ellipse(x, cy - 1, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
       }
     } else { // east-west: logs side by side
       for (let k = 0; k < 3; k++) {
+        if (k === 2 && doorMask & bit) continue;
         const lx = x + dx * (8 + k * 5.5) - 2.75;
         rect(lx, y - 12, 5.5, 25, k % 2 ? '#8e5a2b' : '#9b6633', '#5c3a17');
         poly([[lx, y - 12], [lx + 2.75, y - 15], [lx + 5.5, y - 12]], '#b07a42');
@@ -177,26 +183,36 @@ export function drawStoneWall(x, y, mask = 0) {
 export function drawDoorArt(x, y, iron, mask = 0, open = 0, swing = { x: 0, y: 1 }) {
   const vertical = (mask & (LINK.n | LINK.s)) && !(mask & (LINK.e | LINK.w));
   // the wall each side, in the local frame (along x); a door with no wall by it stands in a bare frame
-  const post = '#6d4520', ironPost = '#4d5656';
+  const post = '#7a4a20', ironPost = '#4d5656';
   ctx.save(); ctx.translate(x, y); if (vertical) ctx.rotate(Math.PI / 2);
   const along = vertical ? [mask & LINK.s, mask & LINK.n] : [mask & LINK.w, mask & LINK.e]; // local -x, +x
   [-1, 1].forEach((d, i) => {
     if (!along[i]) return;
-    if (iron) rect(d < 0 ? -15 : 11, -6, 4, 12, '#5d6d7e', '#2c3e50');
-    else for (let k = 0; k < 2; k++) rect(d * (11 + k * 2.2) - (d < 0 ? 2.2 : 0), -10, 2.2, 20, k ? '#8e5a2b' : '#9b6633', '#5c3a17');
+    if (iron) rect(d < 0 ? -15 : 11, -7, 4, 14, '#5d6d7e', '#2c3e50');
+    else for (let k = 0; k < 2; k++) rect(d * (11 + k * 2.2) - (d < 0 ? 2.2 : 0), -11, 2.2, 22, k ? '#8e5a2b' : '#9b6633', '#5c3a17');
   });
-  rect(-15, -9, 5, 18, iron ? ironPost : post, '#2e1d0c'); rect(10, -9, 5, 18, iron ? ironPost : post, '#2e1d0c');
+  rect(-15, -10, 5, 20, iron ? ironPost : post, '#2e1d0c'); rect(10, -10, 5, 20, iron ? ironPost : post, '#2e1d0c');
   // the ground in the doorway
   rect(-10, -7, 20, 14, 'rgba(60, 40, 20, 0.35)');
-  // the leaf, hinged at the left post; the local +y direction's sign on the swing decides which way it turns
+  // The gate pivots at the left post; its local +y direction decides which side it opens toward.
   const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
   const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
   ctx.translate(-10, 0); ctx.rotate(sign * open * Math.PI * 0.46);
-  const leaf = open < 0.98 ? 20 - open * 6 : 14; // seen end-on as it opens
-  rect(0, -3, leaf, 6, iron ? '#7b5a3c' : '#a0522d', '#3e2723');
-  for (const px of [5, 10, 15]) if (px < leaf) line(px, -2.5, px, 2.5, 'rgba(0, 0, 0, 0.25)');
-  if (iron) for (const px of [3, 10, 17]) if (px < leaf) { rect(px - 1.5, -3, 3, 6, '#7f8c8d'); }
-  ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(Math.min(18, leaf - 2), 0, 1.4, 0, Math.PI * 2); ctx.fill();
+  const leaf = open < 0.98 ? 20 - open * 6 : 14;
+  if (iron) {
+    rect(0, -7, leaf, 14, '#4d5656', '#263238');
+    for (const px of [3, 8, 13, 18]) if (px < leaf) rect(px - 1, -6, 2, 12, '#9aa5a7', '#37474f', 0.6);
+    rect(0, -5, leaf, 2, '#7f8c8d');
+    rect(0, 3, leaf, 2, '#7f8c8d');
+  } else {
+    rect(0, -7, leaf, 14, '#6d4520', '#4e3016');
+    for (const px of [2, 7, 12, 17]) if (px < leaf) {
+      rect(px, -6, 3, 12, '#9b6633', '#5c3a17', 0.8);
+    }
+    rect(0, -5, leaf, 2, '#8e5a2b', '#5c3a17', 0.7);
+    rect(0, 3, leaf, 2, '#8e5a2b', '#5c3a17', 0.7);
+  }
+  ctx.fillStyle = '#f39c12'; ctx.fillRect(Math.min(leaf - 2, 16), -1, 2, 2);
   ctx.restore();
 }
 

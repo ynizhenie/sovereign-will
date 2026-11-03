@@ -126,9 +126,9 @@ export function drawDarkness() {
   g.fillStyle = `rgba(8, 12, 35, ${dark})`;
   g.fillRect(0, 0, sheet.width, sheet.height);
   g.globalCompositeOperation = 'destination-out';
-  const scale = getViewScale() * SHEET_SCALE;
+  const scale = getViewScale() * SHEET_SCALE, lights = getLights();
   const flicker = 1 + Math.sin(performance.now() / 120) * 0.02;
-  for (const light of getLights()) {
+  for (const light of lights) {
     if (light.color) continue;
     const x = (light.x - camera.x) * scale + sheet.width / 2, y = (light.y - camera.y) * scale + sheet.height / 2;
     const r = light.r * scale * flicker;
@@ -143,7 +143,7 @@ export function drawDarkness() {
   ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
   const viewScale = getViewScale();
   ctx.globalCompositeOperation = 'screen';
-  for (const light of getLights()) {
+  for (const light of lights) {
     if (!light.color) continue;
     const match = /^#([\da-f]{6})$/i.exec(light.color);
     if (!match) continue;
@@ -175,10 +175,172 @@ export function getSun() {
   return { dx: x * len, dy: 0.45, alpha: 0.24 - Math.abs(x) * 0.07 };
 }
 
+export const MIN_SHADOW_ALPHA = 0.1;
+
+/** @typedef {{ mask: HTMLCanvasElement, fresh: HTMLCanvasElement, maskCtx: CanvasRenderingContext2D, freshCtx: CanvasRenderingContext2D, maskBounds: [number, number, number, number] | null, freshBounds: [number, number, number, number] | null, hasShadow: boolean }} ShadowMask */
+/** @type {ShadowMask | null} */
+let mainShadowMask = null, offscreenShadowMask = null;
+const SHADOW_MASK_SCALE = 0.5;
+
+function clearShadowBounds(c, bounds) {
+  if (!bounds) return;
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-over';
+  c.globalAlpha = 1;
+  c.filter = 'none';
+  c.clearRect(...bounds);
+  c.restore();
+}
+
+function includeBounds(current, x0, y0, x1, y1) {
+  if (!current) return [x0, y0, x1 - x0, y1 - y0];
+  const left = Math.min(current[0], x0), top = Math.min(current[1], y0);
+  const right = Math.max(current[0] + current[2], x1), bottom = Math.max(current[1] + current[3], y1);
+  return [left, top, right - left, bottom - top];
+}
+
+function shadowMaskFor(c) {
+  const canvas = c.canvas;
+  const isMain = canvas === ctx.canvas;
+  let state = isMain ? mainShadowMask : offscreenShadowMask;
+  const width = Math.max(1, Math.ceil(canvas.width * SHADOW_MASK_SCALE));
+  const height = Math.max(1, Math.ceil(canvas.height * SHADOW_MASK_SCALE));
+  if (!state || state.mask.width !== width || state.mask.height !== height) {
+    const mask = document.createElement('canvas'), fresh = document.createElement('canvas');
+    mask.width = fresh.width = width;
+    mask.height = fresh.height = height;
+    const maskCtx = mask.getContext('2d'), freshCtx = fresh.getContext('2d');
+    if (!maskCtx || !freshCtx) throw new Error('Unable to create shadow mask canvases');
+    state = { mask, fresh, maskCtx, freshCtx, maskBounds: null, freshBounds: null, hasShadow: false };
+    if (isMain) mainShadowMask = state;
+    else offscreenShadowMask = state;
+  }
+  return state;
+}
+
+export function beginShadowFrame(c) {
+  if (typeof document === 'undefined') return;
+  const state = shadowMaskFor(c);
+  clearShadowBounds(state.maskCtx, state.maskBounds);
+  clearShadowBounds(state.freshCtx, state.freshBounds);
+  state.maskBounds = null;
+  state.freshBounds = null;
+  state.hasShadow = false;
+}
+
+// Draw only the portion of a shadow not already covered by another shadow this frame.
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha @param {Path2D | null} [cutout] @param {{ x: number, y: number, width: number, height: number } | null} [bounds] */
+export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
+  if (alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
+  if (typeof document === 'undefined') {
+    c.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+    c.fill(path);
+    return;
+  }
+  const state = shadowMaskFor(c), transform = c.getTransform(), opacity = alpha * c.globalAlpha;
+  const { mask, fresh, maskCtx, freshCtx } = state;
+  const filter = c.filter;
+  if (state.freshBounds) {
+    freshCtx.save();
+    freshCtx.setTransform(1, 0, 0, 1, 0, 0);
+    freshCtx.globalCompositeOperation = 'source-over';
+    freshCtx.globalAlpha = 1;
+    freshCtx.filter = 'none';
+    freshCtx.clearRect(...state.freshBounds);
+    freshCtx.restore();
+  }
+  const b = bounds || { x: 0, y: 0, width: c.canvas.width, height: c.canvas.height };
+  const boundsTransform = bounds ? transform : new DOMMatrix();
+  const corners = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]]
+    .map(([x, y]) => [boundsTransform.a * x + boundsTransform.c * y + boundsTransform.e, boundsTransform.b * x + boundsTransform.d * y + boundsTransform.f]);
+  const padding = (filter === 'none' ? 2 : 8) * SHADOW_MASK_SCALE;
+  const left = Math.max(0, Math.floor(Math.min(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE - padding));
+  const top = Math.max(0, Math.floor(Math.min(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE - padding));
+  const right = Math.min(mask.width, Math.ceil(Math.max(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE + padding));
+  const bottom = Math.min(mask.height, Math.ceil(Math.max(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE + padding));
+  if (opacity <= 0 || right <= left || bottom <= top) return;
+  state.freshBounds = [
+    left,
+    top,
+    right - left,
+    bottom - top
+  ];
+  freshCtx.save();
+  freshCtx.setTransform(
+    transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
+    transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
+    transform.e * SHADOW_MASK_SCALE, transform.f * SHADOW_MASK_SCALE
+  );
+  freshCtx.globalCompositeOperation = 'source-over';
+  freshCtx.globalAlpha = 1;
+  freshCtx.filter = filter;
+  freshCtx.fillStyle = '#000';
+  freshCtx.fill(path);
+  if (cutout) {
+    freshCtx.filter = 'none';
+    freshCtx.globalCompositeOperation = 'destination-out';
+    freshCtx.fill(cutout);
+  }
+  freshCtx.restore();
+
+  if (state.hasShadow) {
+    freshCtx.save();
+    freshCtx.setTransform(1, 0, 0, 1, 0, 0);
+    freshCtx.globalCompositeOperation = 'destination-out';
+    freshCtx.globalAlpha = 1;
+    freshCtx.filter = 'none';
+    freshCtx.drawImage(mask, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.restore();
+  }
+
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-over';
+  c.globalAlpha = opacity;
+  c.filter = 'none';
+  c.imageSmoothingEnabled = true;
+  const screenLeft = left / SHADOW_MASK_SCALE, screenTop = top / SHADOW_MASK_SCALE;
+  const screenWidth = (right - left) / SHADOW_MASK_SCALE, screenHeight = (bottom - top) / SHADOW_MASK_SCALE;
+  c.drawImage(fresh, left, top, right - left, bottom - top, screenLeft, screenTop, screenWidth, screenHeight);
+  c.restore();
+
+  maskCtx.save();
+  if (cutout) {
+    maskCtx.setTransform(
+      transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
+      transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
+      transform.e * SHADOW_MASK_SCALE, transform.f * SHADOW_MASK_SCALE
+    );
+    maskCtx.globalCompositeOperation = 'source-over';
+    maskCtx.globalAlpha = 1;
+    maskCtx.filter = filter;
+    maskCtx.fillStyle = '#000';
+    maskCtx.fill(path);
+    maskCtx.globalCompositeOperation = 'destination-out';
+    maskCtx.fill(cutout);
+  } else {
+    // `fresh` already contains only this shadow's uncovered pixels; reuse it instead of rasterizing
+    // the same potentially large Path2D a second time.
+    maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+    maskCtx.globalCompositeOperation = 'source-over';
+    maskCtx.globalAlpha = 1;
+    maskCtx.filter = 'none';
+    maskCtx.drawImage(fresh, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+  }
+  maskCtx.restore();
+  state.maskBounds = includeBounds(state.maskBounds, left, top, right, bottom);
+  state.hasShadow = true;
+}
+
 // A thing's shadow on the ground: an ellipse round its foot (x, y) of rx by ry, cast away from the sun by its
 // height and stretched along the way it falls. c: where to draw
 export function castShadow(c, x, y, rx, ry, height = 10) {
-  const sun = getSun(), ox = sun.dx * height, oy = sun.dy * height;
-  c.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
-  c.beginPath(); c.ellipse(x + ox * 0.5, y + oy * 0.5, rx + Math.abs(ox) * 0.5, ry + Math.abs(oy) * 0.25, 0, 0, Math.PI * 2); c.fill();
+  const sun = getSun();
+  if (sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
+  const ox = sun.dx * height, oy = sun.dy * height;
+  const path = new Path2D();
+  const cx = x + ox * 0.5, cy = y + oy * 0.5, ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
+  path.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
+  drawShadowPath(c, path, sun.alpha, null, { x: cx - ex, y: cy - ey, width: ex * 2, height: ey * 2 });
 }

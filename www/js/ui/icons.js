@@ -115,6 +115,36 @@ export const icArrow = (c, x) => {
   icFill(c, '#d5dbdb', [[x, 22], [x + 3.5, 29], [x + 3.5, 24], [x, 18]]);
 };
 
+function icWoodFence(c) {
+  icRect(c, '#4e3016', 3, 10, 26, 4);
+  icRect(c, '#4e3016', 3, 21, 26, 4);
+  for (const x of [6, 16, 26]) {
+    icRect(c, '#6d4520', x - 3, 8, 6, 19);
+    icRect(c, '#9b6633', x - 2, 9, 4, 17);
+    icFill(c, '#b07a42', [[x - 3, 9], [x, 4], [x + 3, 9]]);
+    icLine(c, '#5c3a17', 0.8, [[x - 2, 12], [x - 2, 24]]);
+  }
+}
+
+function icWoodGate(c) {
+  icRect(c, '#6d4520', 3, 7, 5, 20);
+  icRect(c, '#9b6633', 4, 8, 3, 18);
+  icRect(c, '#6d4520', 25, 7, 5, 20);
+  icRect(c, '#9b6633', 26, 8, 3, 18);
+  c.save();
+  c.translate(7, 16);
+  c.rotate(-Math.PI / 5);
+  icRect(c, '#4e3016', 0, -6.5, 19, 13);
+  icRect(c, '#6d4520', 0, -5.5, 18, 11);
+  for (const x of [2, 7, 12]) {
+    icRect(c, '#9b6633', x, -4.5, 3, 9);
+  }
+  icRect(c, '#8e5a2b', 0, -4.5, 17, 1.5);
+  icRect(c, '#8e5a2b', 0, 3, 17, 1.5);
+  c.restore();
+  icRect(c, '#f39c12', 6, 15, 2, 2);
+}
+
 export const ICONS = {
   // ---- Messages and controls
   no: c => { icLine(c, '#e74c3c', 5.5, [[8, 8], [24, 24]]); icLine(c, '#e74c3c', 5.5, [[24, 8], [8, 24]]); },
@@ -656,27 +686,23 @@ export const ICONS = {
   },
 
   // ---- Buildings
-  wall_wood: c => {
-    icRect(c, '#8e5a2b', 4, 6, 24, 21);
-    for (const x of [10, 16, 22]) icLine(c, '#5c3a17', 1.3, [[x, 6], [x, 27]]);
-    icRect(c, '#5c3a17', 4, 4, 24, 3);
-  },
+  wall_wood: icWoodFence,
   wall_stone: c => {
-    icRect(c, '#7f8c8d', 4, 6, 24, 21);
-    c.strokeStyle = '#2c3e50'; c.lineWidth = 1.3;
-    for (const y of [13, 20]) { c.beginPath(); c.moveTo(4, y); c.lineTo(28, y); c.stroke(); }
-    for (const [x, y] of [[12, 6], [22, 6], [8, 13], [17, 13], [12, 20], [22, 20]]) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 7); c.stroke(); }
+    icRect(c, '#35434b', 3, 11, 26, 12);
+    icRect(c, '#71818a', 4, 12, 24, 10);
+    for (const x of [5, 11, 17, 23]) icRect(c, '#4b5961', x, 12, 1, 10);
+    icRect(c, '#52616a', 12, 7, 8, 18);
+    icRect(c, '#71818a', 13, 8, 6, 16);
+    icLine(c, 'rgba(255, 255, 255, 0.35)', 1, [[13, 9], [18, 9]]);
+    icLine(c, '#4b5961', 1, [[13, 16], [19, 16]]);
+    icLine(c, '#4b5961', 1, [[13, 21], [19, 21]]);
   },
   // (#306) as in the world: a wooden base, iron points on it
   spikes: c => {
     icRect(c, '#6d4c2f', 3, 3, 26, 26);
     for (const [px, py] of [[-7, -7], [5, -7], [-7, 5], [5, 5], [-1, -1]]) icFill(c, '#b0bec5', [[16 + px - 3, 16 + py + 3], [16 + px, 16 + py - 4], [16 + px + 3, 16 + py + 3]]);
   },
-  door: c => {
-    icRound(c, '#a0522d', 7, 4, 18, 25, 2);
-    icLine(c, '#6d4520', 1.2, [[13, 5], [13, 28]]); icLine(c, '#6d4520', 1.2, [[19, 5], [19, 28]]);
-    icCircle(c, '#f39c12', 21.5, 17, 1.8);
-  },
+  door: icWoodGate,
   // (#326) a soul: a pale drop with a tail and two dark eyes
   soul: c => {
     icFill(c, 'rgba(160, 215, 255, 0.55)', [[16, 3], [24, 14], [22, 25], [16, 29], [10, 25], [8, 14]]);
@@ -712,10 +738,21 @@ export const ICONS = {
     icLine(c, '#c8a46a', 3, [[24, 18], [27, 27]]);
   },
   iron_door: c => {
-    // a plank door bound with iron bands and rivets (#248)
-    icRound(c, '#8d5a34', 7, 4, 18, 25, 2);
-    for (const y of [8, 16, 24]) { icRect(c, '#7f8c8d', 7, y - 1.5, 18, 3); icCircle(c, '#bdc3c7', 10, y, 1); icCircle(c, '#bdc3c7', 22, y, 1); }
-    icCircle(c, '#2c3e50', 21.5, 20, 1.8);
+    icRect(c, '#263238', 3, 7, 5, 20);
+    icRect(c, '#5d6d7e', 4, 8, 3, 18);
+    icRect(c, '#263238', 25, 7, 5, 20);
+    icRect(c, '#5d6d7e', 26, 8, 3, 18);
+    c.save();
+    c.translate(7, 16);
+    c.rotate(-Math.PI / 5);
+    icRect(c, '#263238', 0, -7, 20, 14);
+    icRect(c, '#4d5656', 1, -6, 18, 12);
+    for (const x of [3, 8, 13]) icRect(c, '#9aa5a7', x, -5, 2, 10);
+    icRect(c, '#7f8c8d', 1, -4, 18, 1.7);
+    icRect(c, '#7f8c8d', 1, 2.5, 18, 1.7);
+    for (const x of [3, 17]) { icCircle(c, '#cfd8dc', x, -3.2, 0.7); icCircle(c, '#cfd8dc', x, 3.2, 0.7); }
+    c.restore();
+    icRect(c, '#cfd8dc', 6, 15, 2, 2);
   },
   iron_trap: c => {
     // a jaw trap, open: a ring of iron with teeth round it (#248)

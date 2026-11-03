@@ -109,7 +109,7 @@
  * @property {Object<string, number>} [today]  what it did today, for its story by the fire (#279)
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
- * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, progress?: { x: number, y: number }, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)

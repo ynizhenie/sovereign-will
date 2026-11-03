@@ -7,11 +7,11 @@ import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlers } from '../dom
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
-import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
+import { drawCactiBouldersGrassBushes, drawNatureShadows, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
-import { drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
+import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawNaturalRockShadows, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -21,6 +21,7 @@ export function render() {
   if (game.loading) return; // (#326) the loading screen's: the last frame stays under it
   // (#326) past the map's edge: the fog's own dark
   ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  beginShadowFrame(ctx);
   ctx.save();
   const viewScale = getViewScale();
   ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
@@ -39,7 +40,9 @@ export function render() {
   drawBuildGrid();
   drawWater(terrain);
   drawRocks(terrain);
+  drawNaturalRockShadows();
   drawTerritory(); // (the base's land, #299)
+  drawNatureShadows();
   drawWallows(); // (the ground boars dug, on the ground, #326)
   drawSelectedPaths(); // (where the picked ones are going, #326)
   drawSticksPebblesOre();
