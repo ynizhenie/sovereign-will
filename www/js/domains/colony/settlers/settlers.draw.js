@@ -683,7 +683,7 @@ export function drawFigureShadows(units, view, radiusOf = unit => unit.visualRad
     const cx = unit.x + sway + ox * 0.5, cy = unit.y + r * 1.02 + oy * 0.5;
     const rx = r * 0.7 + Math.abs(ox) * 0.5, ry = r * 0.22 + Math.abs(oy) * 0.25;
     const opacity = unit.temporary !== undefined ? 0.7 : 1;
-    const key = `${opacity}:${Math.floor(unit.x / 256)}:${Math.floor(unit.y / 256)}`;
+    const key = opacity; // (one shadow for all at the same opacity: each drawn costs more than its size does)
     let group = groups.get(key);
     if (!group) { group = { path: new Path2D(), alpha: opacity, bounds: [Infinity, Infinity, -Infinity, -Infinity] }; groups.set(key, group); }
     const bounds = group.bounds;

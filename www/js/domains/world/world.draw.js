@@ -669,44 +669,57 @@ export function drawSand() {
   paintSandGround(ctx, view.x0, view.y0, view.x1, view.y1);
 }
 
+// The rock and ore tiles round the view, with their corners worked out (each looks at its neighbours, a dozen
+// lookups a tile), and their silhouettes: found again only when the view moves on a few tiles or the tiles change,
+// not every frame. Round the view by more than the longest shadow (18 high at the sun's longest, 2.25 a unit)
+/** @type {{ key: string, tiles: object | null, list: { x: number, y: number, radii: number[] }[], occluders: Path2D, bounds: { x: number, y: number, width: number, height: number } | null }} */
+let rockShadowTiles = { key: '', tiles: null, list: [], occluders: new Path2D(), bounds: null };
+function rocksForShadows() {
+  const tiles = getTileIndex(), step = 4 * TILE_SIZE, margin = 3 * TILE_SIZE, v = getViewRect();
+  const x0 = Math.floor((v.x0 - margin) / step) * step, y0 = Math.floor((v.y0 - margin) / step) * step;
+  const x1 = Math.ceil((v.x1 + margin) / step) * step, y1 = Math.ceil((v.y1 + margin) / step) * step;
+  const key = `${x0},${y0},${x1},${y1}`;
+  if (rockShadowTiles.key === key && rockShadowTiles.tiles === tiles) return rockShadowTiles;
+  const list = [], occluders = new Path2D();
+  const min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
+  const addTile = tile => {
+    const open = openSides(tiles.rockAndOre, tile.x, tile.y), occupied = terrainCornerOccupancy(tile.x, tile.y, tiles, false);
+    const { nw, ne, se, sw } = cornerRadii(open, occupied), radii = [nw, ne, se, sw];
+    occluders.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
+    min.x = Math.min(min.x, tile.x - 15);
+    min.y = Math.min(min.y, tile.y - 15);
+    max.x = Math.max(max.x, tile.x + 15);
+    max.y = Math.max(max.y, tile.y + 15);
+    list.push({ x: tile.x, y: tile.y, radii });
+  };
+  forEachInRect(game.naturalRocks, x0, y0, x1, y1, addTile);
+  for (const ores of [game.ironOres, game.coalOres]) forEachInRect(ores, x0, y0, x1, y1, addTile);
+  const bounds = Number.isFinite(min.x) ? { x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y } : null;
+  rockShadowTiles = { key, tiles, list, occluders, bounds };
+  return rockShadowTiles;
+}
+
 export function drawNaturalRockShadows() {
   if (!areShadowsEnabled()) return;
   const sun = getSun();
   if (sun.alpha * ctx.globalAlpha < MIN_SHADOW_ALPHA) return;
   const height = 18, ox = sun.dx * height, oy = sun.dy * height;
-  const view = getViewRect(), margin = Math.max(Math.abs(ox), Math.abs(oy)) + TILE_SIZE;
-  const shadow = new Path2D(), occluders = new Path2D(), tiles = getTileIndex();
+  const rocks = rocksForShadows(), shadow = new Path2D();
   const min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
-  const occluderMin = { x: Infinity, y: Infinity }, occluderMax = { x: -Infinity, y: -Infinity };
-  const addTileShadow = tile => {
-    const open = openSides(tiles.rockAndOre, tile.x, tile.y), occupied = terrainCornerOccupancy(tile.x, tile.y, tiles, false);
-    const { nw, ne, se, sw } = cornerRadii(open, occupied), radii = [nw, ne, se, sw];
-    occluders.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
-    occluderMin.x = Math.min(occluderMin.x, tile.x - 15);
-    occluderMin.y = Math.min(occluderMin.y, tile.y - 15);
-    occluderMax.x = Math.max(occluderMax.x, tile.x + 15);
-    occluderMax.y = Math.max(occluderMax.y, tile.y + 15);
-    if (cached && !wasChunkDrawn('terrain', terrainRes(), tile.x, tile.y)) return;
-    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), radii);
+  for (const tile of rocks.list) {
+    if (cached && !wasChunkDrawn('terrain', terrainRes(), tile.x, tile.y)) continue;
+    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), tile.radii);
     min.x = Math.min(min.x, tile.x - 15 + Math.min(0, ox));
     min.y = Math.min(min.y, tile.y - 15 + Math.min(0, oy));
     max.x = Math.max(max.x, tile.x + 15 + Math.max(0, ox));
     max.y = Math.max(max.y, tile.y + 15 + Math.max(0, oy));
-  };
-  forEachInRect(game.naturalRocks, view.x0 - margin, view.y0 - margin, view.x1 + margin, view.y1 + margin, addTileShadow);
-  for (const list of [game.ironOres, game.coalOres]) {
-    forEachInRect(list, view.x0 - margin, view.y0 - margin, view.x1 + margin, view.y1 + margin, addTileShadow);
   }
   if (Number.isFinite(min.x)) {
-    drawShadowPath(ctx, shadow, sun.alpha, occluders, {
+    drawShadowPath(ctx, shadow, sun.alpha, rocks.occluders, {
       x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y
     });
   }
-  if (Number.isFinite(occluderMin.x)) {
-    setShadowOccluders(ctx, occluders, {
-      x: occluderMin.x, y: occluderMin.y, width: occluderMax.x - occluderMin.x, height: occluderMax.y - occluderMin.y
-    });
-  }
+  if (rocks.bounds) setShadowOccluders(ctx, rocks.occluders, rocks.bounds);
 
   const buildingOccluders = new Path2D();
   const buildingMin = { x: Infinity, y: Infinity }, buildingMax = { x: -Infinity, y: -Infinity };

@@ -49,72 +49,89 @@ function house(x, y, w, h, { roof, roofDark, wall, wallDark, door = '#3e2723' })
 export const LINK = { n: 1, e: 2, s: 4, w: 8 };
 const ARMS = [[LINK.n, 0, -1], [LINK.e, 1, 0], [LINK.s, 0, 1], [LINK.w, -1, 0]];
 
+/** @typedef {{ x: number, y: number, type: string, mask: number, open?: number, swing?: { x: number, y: number } }} WallShadowPiece */
+// A piece's shadow shape, round its middle
+/** @param {WallShadowPiece} piece */
+function wallShadowShape(piece) {
+  const wood = piece.type === 'wall_wood', stone = piece.type === 'wall_stone';
+  const door = piece.type === 'door' || piece.type === 'iron_door';
+  const shape = new Path2D();
+  if (wood) {
+    shape.roundRect(-7, -11, 14, 24, 2);
+    for (const [bit, dx, dy] of ARMS) {
+      if (!(piece.mask & bit)) continue;
+      if (dy) {
+        for (let k = 0; k < 3; k++) shape.roundRect(-7, dy * (9 + k * 6) - 3.5, 14, 7, 2);
+      } else {
+        for (let k = 0; k < 3; k++) shape.roundRect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25, 2);
+      }
+    }
+  } else if (stone) {
+    shape.rect(-7, -11, 14, 24);
+    for (const [bit, dx, dy] of ARMS) {
+      if (!(piece.mask & bit)) continue;
+      if (dy) {
+        for (let k = 0; k < 3; k++) shape.rect(-7, dy * (9 + k * 6) - 3.5, 14, 7);
+      } else {
+        for (let k = 0; k < 3; k++) shape.rect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25);
+      }
+    }
+  } else if (door) {
+    const vertical = (piece.mask & (LINK.n | LINK.s)) && !(piece.mask & (LINK.e | LINK.w));
+    const orientation = new DOMMatrix().rotate(vertical ? 90 : 0), frame = new Path2D();
+    const along = vertical ? [piece.mask & LINK.s, piece.mask & LINK.n] : [piece.mask & LINK.w, piece.mask & LINK.e];
+    for (const [connected, dx] of along.map((value, i) => [value, i ? 1 : -1])) {
+      if (connected) frame.rect(dx < 0 ? -15 : 11, -7, 4, 14);
+    }
+    frame.rect(-15, -9, 5, 18);
+    frame.rect(10, -9, 5, 18);
+    shape.addPath(frame, orientation);
+    const swing = piece.swing || { x: 0, y: 1 };
+    const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
+    const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
+    const open = piece.open || 0, leaf = open < 0.98 ? 20 - open * 6 : 14;
+    const leafPath = new Path2D(), leafTransform = orientation.multiply(new DOMMatrix().translate(-10, 0).rotate(sign * open * 0.46 * 180 / Math.PI));
+    leafPath.rect(0, -3, leaf, 6);
+    shape.addPath(leafPath, leafTransform);
+  } else {
+    shape.rect(-8, -8, 16, 16);
+    for (const [bit, dx, dy] of ARMS) {
+      if (!(piece.mask & bit)) continue;
+      if (dy) shape.rect(-7, dy < 0 ? -15 : 7, 14, 8);
+      else shape.rect(dx < 0 ? -15 : 7, -7, 8, 14);
+    }
+  }
+  return shape;
+}
+
+// The pieces' shapes where they stand, the walls' (10 high) and the doors' (8): put together again only when the
+// pieces in view change or a door moves, not every frame; the sun moves them along as it goes
+/** @type {{ key: string, tall: Path2D, low: Path2D }} */
+let wallShadowShapes = { key: '', tall: new Path2D(), low: new Path2D() };
+
 // Fill one combined silhouette so connected wall sections do not darken each other's shadows.
-/** @param {{ x: number, y: number, type: string, mask: number, open?: number, swing?: { x: number, y: number } }[]} pieces */
+/** @param {WallShadowPiece[]} pieces */
 export function drawWallShadows(pieces) {
   if (!pieces.length) return;
   const sun = getSun();
-  const shadow = new Path2D();
+  let key = '', x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const piece of pieces) {
-    const wood = piece.type === 'wall_wood', stone = piece.type === 'wall_stone';
-    const door = piece.type === 'door' || piece.type === 'iron_door';
-    const height = wood || stone ? 10 : 8;
-    const shape = new Path2D();
-    if (wood) {
-      shape.roundRect(-7, -11, 14, 24, 2);
-      for (const [bit, dx, dy] of ARMS) {
-        if (!(piece.mask & bit)) continue;
-        if (dy) {
-          for (let k = 0; k < 3; k++) shape.roundRect(-7, dy * (9 + k * 6) - 3.5, 14, 7, 2);
-        } else {
-          for (let k = 0; k < 3; k++) shape.roundRect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25, 2);
-        }
-      }
-    } else if (stone) {
-      shape.rect(-7, -11, 14, 24);
-      for (const [bit, dx, dy] of ARMS) {
-        if (!(piece.mask & bit)) continue;
-        if (dy) {
-          for (let k = 0; k < 3; k++) shape.rect(-7, dy * (9 + k * 6) - 3.5, 14, 7);
-        } else {
-          for (let k = 0; k < 3; k++) shape.rect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25);
-        }
-      }
-    } else if (door) {
-      const vertical = (piece.mask & (LINK.n | LINK.s)) && !(piece.mask & (LINK.e | LINK.w));
-      const orientation = new DOMMatrix().rotate(vertical ? 90 : 0), frame = new Path2D();
-      const along = vertical ? [piece.mask & LINK.s, piece.mask & LINK.n] : [piece.mask & LINK.w, piece.mask & LINK.e];
-      for (const [connected, dx] of along.map((value, i) => [value, i ? 1 : -1])) {
-        if (connected) frame.rect(dx < 0 ? -15 : 11, -7, 4, 14);
-      }
-      frame.rect(-15, -9, 5, 18);
-      frame.rect(10, -9, 5, 18);
-      shape.addPath(frame, orientation);
-      const swing = piece.swing || { x: 0, y: 1 };
-      const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
-      const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
-      const open = piece.open || 0, leaf = open < 0.98 ? 20 - open * 6 : 14;
-      const leafPath = new Path2D(), leafTransform = orientation.multiply(new DOMMatrix().translate(-10, 0).rotate(sign * open * 0.46 * 180 / Math.PI));
-      leafPath.rect(0, -3, leaf, 6);
-      shape.addPath(leafPath, leafTransform);
-    } else {
-      shape.rect(-8, -8, 16, 16);
-      for (const [bit, dx, dy] of ARMS) {
-        if (!(piece.mask & bit)) continue;
-        if (dy) shape.rect(-7, dy < 0 ? -15 : 7, 14, 8);
-        else shape.rect(dx < 0 ? -15 : 7, -7, 8, 14);
-      }
-    }
-    const ox = sun.dx * height, oy = sun.dy * height;
-    shadow.addPath(shape, new DOMMatrix().translate(piece.x + ox * 0.35, piece.y + oy * 0.35));
+    key += `${piece.type} ${piece.x} ${piece.y} ${piece.mask} ${piece.open || 0} ${piece.swing ? piece.swing.x + 2 * piece.swing.y : ''};`;
+    x0 = Math.min(x0, piece.x); y0 = Math.min(y0, piece.y); x1 = Math.max(x1, piece.x); y1 = Math.max(y1, piece.y);
   }
-  const xs = pieces.map(piece => piece.x), ys = pieces.map(piece => piece.y), reach = 32;
+  if (key !== wallShadowShapes.key) {
+    const tall = new Path2D(), low = new Path2D();
+    for (const piece of pieces) {
+      (piece.type === 'wall_wood' || piece.type === 'wall_stone' ? tall : low).addPath(wallShadowShape(piece), new DOMMatrix().translate(piece.x, piece.y));
+    }
+    wallShadowShapes = { key, tall, low };
+  }
+  const shadow = new Path2D(), reach = 32;
+  shadow.addPath(wallShadowShapes.tall, new DOMMatrix().translate(sun.dx * 10 * 0.35, sun.dy * 10 * 0.35));
+  shadow.addPath(wallShadowShapes.low, new DOMMatrix().translate(sun.dx * 8 * 0.35, sun.dy * 8 * 0.35));
   ctx.save();
   ctx.filter = 'blur(1.5px)';
-  drawShadowPath(ctx, shadow, sun.alpha, null, {
-    x: Math.min(...xs) - reach, y: Math.min(...ys) - reach,
-    width: Math.max(...xs) - Math.min(...xs) + reach * 2, height: Math.max(...ys) - Math.min(...ys) + reach * 2
-  });
+  drawShadowPath(ctx, shadow, sun.alpha, null, { x: x0 - reach, y: y0 - reach, width: x1 - x0 + reach * 2, height: y1 - y0 + reach * 2 });
   ctx.restore();
 }
 
