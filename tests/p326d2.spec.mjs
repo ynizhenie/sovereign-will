@@ -329,6 +329,38 @@ test('overlapping shadows do not compound their darkness', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('grouped ground shadows match individual shadows, including overlaps', async ({ page }) => {
+  const errors = await openGame(page);
+  const differences = await page.evaluate(() => {
+    game.gameMode = 'battle';
+    const things = [{ x: 30, y: 30 }, { x: 42, y: 34 }, { x: 88, y: 82 }];
+    const renderShadows = grouped => {
+      const surface = document.createElement('canvas');
+      surface.width = surface.height = 128;
+      const context = surface.getContext('2d');
+      beginShadowFrame(context);
+      if (grouped) castShadowGroup(context, things, 8, 3, 6, 5);
+      else for (const thing of things) castShadow(context, thing.x, thing.y + 5, 8, 3, 6);
+      return context.getImageData(0, 0, surface.width, surface.height).data;
+    };
+    const individual = renderShadows(false), grouped = renderShadows(true);
+    let differentPixels = 0, maxDelta = 0;
+    for (let i = 0; i < individual.length; i += 4) {
+      let changed = false;
+      for (let channel = 0; channel < 4; channel++) {
+        const delta = Math.abs(individual[i + channel] - grouped[i + channel]);
+        if (delta) changed = true;
+        maxDelta = Math.max(maxDelta, delta);
+      }
+      if (changed) differentPixels++;
+    }
+    return { differentPixels, maxDelta };
+  });
+  expect(differences.differentPixels).toBeLessThan(200);
+  expect(differences.maxDelta).toBeLessThan(10);
+  expect(errors).toEqual([]);
+});
+
 test('building occluders block lower shadows but not building shadows', async ({ page }) => {
   const errors = await openGame(page);
   const alpha = await page.evaluate(() => {

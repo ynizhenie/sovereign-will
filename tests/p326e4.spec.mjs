@@ -135,3 +135,29 @@ test('necromancer staffs and portals cast faction-coloured light; tents and dens
   expect(r.dayLightCount).toBeLessThan(r.nightLightCount);
   expect(errors).toEqual([]);
 });
+
+test('night rendering only collects lights close enough to affect the view', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    mapSettings = { cols: 256, rows: 256 };
+    window.sim.start('lights-in-view');
+    game.isPaused = true;
+    game.gameMode = 'endless';
+    game.dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 20;
+    const farTorches = Array.from({ length: 1000 }, (_, i) => ({
+      type: 'torch', x: townHall.x + 1800 + i * 3, y: townHall.y, lit: true
+    }));
+    game.buildings = [...farTorches, { type: 'torch', x: townHall.x + 50, y: townHall.y, lit: true }];
+    const allLights = getLights();
+    const visibleLights = getLights(true);
+    mapSettings = { cols: 40, rows: 40 };
+    return {
+      allHasFarLights: allLights.length > 1000,
+      visibleHasNearby: visibleLights.some(light => light.x === townHall.x + 50),
+      visibleHasNoFarLights: !visibleLights.some(light => light.x >= townHall.x + 1800)
+    };
+  });
+  expect(result).toEqual({ allHasFarLights: true, visibleHasNearby: true, visibleHasNoFarLights: true });
+  expect(errors).toEqual([]);
+});
