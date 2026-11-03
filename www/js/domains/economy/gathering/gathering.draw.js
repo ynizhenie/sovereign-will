@@ -5,6 +5,7 @@ import { paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCac
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawSpriteShadowGroups, drawSprites } from './gathering.sprites.js';
+import { areShadowsEnabled } from '../../world/index.js';
 import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, wasChunkDrawn } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
@@ -216,6 +217,7 @@ function drawPicturedNature() {
 }
 
 export function drawNatureShadows() {
+  if (!areShadowsEnabled()) return;
   const cacheNature = pictured(), res = natureRes();
   const ready = (layer, things) => cacheNature ? things.filter(o => wasChunkDrawn(layer, res, o.x, o.y)) : things;
   const grass = seenOf(game.grassList);

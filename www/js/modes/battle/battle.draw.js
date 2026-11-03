@@ -9,13 +9,20 @@ import { sides } from '../../domains/factions/index.js';
 import { battle } from './battle.setup.js';
 
 export function drawBattleOverlay() {
+  if (battle.fieldHighlight !== 'off') {
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = battle.fieldHighlight === 'team' ? sides.battle.green : '#2ecc71';
+    ctx.fillRect(0, 0, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT);
+    ctx.fillStyle = battle.fieldHighlight === 'team' ? sides.battle.red : '#c0392b';
+    ctx.fillRect(game.WORLD_WIDTH / 2, 0, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT);
+    ctx.restore();
+  }
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
   ctx.lineWidth = 3;
   ctx.setLineDash([12, 8]);
   ctx.beginPath(); ctx.moveTo(game.WORLD_WIDTH / 2, 0); ctx.lineTo(game.WORLD_WIDTH / 2, game.WORLD_HEIGHT); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(46, 204, 113, 0.06)'; ctx.fillRect(0, 0, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT);
-  ctx.fillStyle = 'rgba(231, 76, 60, 0.06)'; ctx.fillRect(game.WORLD_WIDTH / 2, 0, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT);
 }
 
 // (#326) Who won, in words (the side's colour named): "The red won!", or a draw

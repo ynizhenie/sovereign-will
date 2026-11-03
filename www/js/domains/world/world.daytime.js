@@ -6,11 +6,19 @@
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../engine/world/index.js';
 import { isVisible } from './world.fog.js';
-import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewScale, loadSetting, saveSetting } from '../../engine/platform/index.js';
 import { getBuildingColor, getEnemyColor, getSettlerColor } from '../factions/index.js';
 
 const config = () => GAME_CONFIG.daytime;
 const dayLength = () => { const c = config(); return c.morning + c.day + c.evening + c.night; };
+let shadowsEnabled = loadSetting('shadows', 'on') !== 'off';
+
+export const areShadowsEnabled = () => shadowsEnabled;
+
+export function setShadowsEnabled(enabled) {
+  shadowsEnabled = enabled;
+  return saveSetting('shadows', enabled ? 'on' : 'off');
+}
 
 export function tickDaytime(dt) {
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
@@ -229,7 +237,7 @@ function shadowMaskFor(c) {
 }
 
 export function beginShadowFrame(c) {
-  if (typeof document === 'undefined') return;
+  if (!shadowsEnabled || typeof document === 'undefined') return;
   const state = shadowMaskFor(c);
   clearShadowBounds(state.maskCtx, state.maskBounds);
   clearShadowBounds(state.freshCtx, state.freshBounds);
@@ -245,7 +253,7 @@ export function beginShadowFrame(c) {
 // Terrain silhouettes block every shadow drawn later in this frame.
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
 export function setShadowOccluders(c, path, bounds) {
-  if (typeof document === 'undefined') return;
+  if (!shadowsEnabled || typeof document === 'undefined') return;
   const state = shadowMaskFor(c);
   clearShadowBounds(state.occludersCtx, state.occludersBounds);
   state.occludersBounds = null;
@@ -254,7 +262,7 @@ export function setShadowOccluders(c, path, bounds) {
 
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
 export function addShadowOccluders(c, path, bounds) {
-  if (typeof document === 'undefined') return;
+  if (!shadowsEnabled || typeof document === 'undefined') return;
   const state = shadowMaskFor(c);
   state.occludersBounds = addOccluderPath(c, path, bounds, state.occluders, state.occludersCtx, state.occludersBounds);
 }
@@ -287,13 +295,13 @@ function addOccluderPath(c, path, bounds, canvas, target, previousBounds) {
 
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
 export function addBuildingShadowOccluders(c, path, bounds) {
-  if (typeof document === 'undefined') return;
+  if (!shadowsEnabled || typeof document === 'undefined') return;
   const state = shadowMaskFor(c);
   state.buildingOccludersBounds = addOccluderPath(c, path, bounds, state.buildingOccluders, state.buildingOccludersCtx, state.buildingOccludersBounds);
 }
 
 export function clearBuildingShadowOccluders(c) {
-  if (typeof document === 'undefined') return;
+  if (!shadowsEnabled || typeof document === 'undefined') return;
   const state = shadowMaskFor(c);
   clearShadowBounds(state.buildingOccludersCtx, state.buildingOccludersBounds);
   state.buildingOccludersBounds = null;
@@ -302,7 +310,7 @@ export function clearBuildingShadowOccluders(c) {
 // Draw only the portion of a shadow not already covered by another shadow this frame.
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha @param {Path2D | null} [cutout] @param {{ x: number, y: number, width: number, height: number } | null} [bounds] */
 export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
-  if (alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
+  if (!shadowsEnabled || alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
   if (typeof document === 'undefined') {
     c.fillStyle = `rgba(0, 0, 0, ${alpha})`;
     c.fill(path);
@@ -395,6 +403,7 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
 // A thing's shadow on the ground: an ellipse round its foot (x, y) of rx by ry, cast away from the sun by its
 // height and stretched along the way it falls. c: where to draw
 export function castShadow(c, x, y, rx, ry, height = 10) {
+  if (!shadowsEnabled) return;
   const sun = getSun();
   if (sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
   const ox = sun.dx * height, oy = sun.dy * height;
