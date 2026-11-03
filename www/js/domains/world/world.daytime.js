@@ -177,7 +177,7 @@ export function getSun() {
 
 export const MIN_SHADOW_ALPHA = 0.1;
 
-/** @typedef {{ mask: HTMLCanvasElement, fresh: HTMLCanvasElement, maskCtx: CanvasRenderingContext2D, freshCtx: CanvasRenderingContext2D, maskBounds: [number, number, number, number] | null, freshBounds: [number, number, number, number] | null, hasShadow: boolean }} ShadowMask */
+/** @typedef {{ mask: HTMLCanvasElement, fresh: HTMLCanvasElement, occluders: HTMLCanvasElement, maskCtx: CanvasRenderingContext2D, freshCtx: CanvasRenderingContext2D, occludersCtx: CanvasRenderingContext2D, maskBounds: [number, number, number, number] | null, freshBounds: [number, number, number, number] | null, occludersBounds: [number, number, number, number] | null, hasShadow: boolean }} ShadowMask */
 /** @type {ShadowMask | null} */
 let mainShadowMask = null, offscreenShadowMask = null;
 const SHADOW_MASK_SCALE = 0.5;
@@ -207,12 +207,12 @@ function shadowMaskFor(c) {
   const width = Math.max(1, Math.ceil(canvas.width * SHADOW_MASK_SCALE));
   const height = Math.max(1, Math.ceil(canvas.height * SHADOW_MASK_SCALE));
   if (!state || state.mask.width !== width || state.mask.height !== height) {
-    const mask = document.createElement('canvas'), fresh = document.createElement('canvas');
-    mask.width = fresh.width = width;
-    mask.height = fresh.height = height;
-    const maskCtx = mask.getContext('2d'), freshCtx = fresh.getContext('2d');
-    if (!maskCtx || !freshCtx) throw new Error('Unable to create shadow mask canvases');
-    state = { mask, fresh, maskCtx, freshCtx, maskBounds: null, freshBounds: null, hasShadow: false };
+    const mask = document.createElement('canvas'), fresh = document.createElement('canvas'), occluders = document.createElement('canvas');
+    mask.width = fresh.width = occluders.width = width;
+    mask.height = fresh.height = occluders.height = height;
+    const maskCtx = mask.getContext('2d'), freshCtx = fresh.getContext('2d'), occludersCtx = occluders.getContext('2d');
+    if (!maskCtx || !freshCtx || !occludersCtx) throw new Error('Unable to create shadow mask canvases');
+    state = { mask, fresh, occluders, maskCtx, freshCtx, occludersCtx, maskBounds: null, freshBounds: null, occludersBounds: null, hasShadow: false };
     if (isMain) mainShadowMask = state;
     else offscreenShadowMask = state;
   }
@@ -224,9 +224,48 @@ export function beginShadowFrame(c) {
   const state = shadowMaskFor(c);
   clearShadowBounds(state.maskCtx, state.maskBounds);
   clearShadowBounds(state.freshCtx, state.freshBounds);
+  clearShadowBounds(state.occludersCtx, state.occludersBounds);
   state.maskBounds = null;
   state.freshBounds = null;
+  state.occludersBounds = null;
   state.hasShadow = false;
+}
+
+// Terrain silhouettes block every shadow drawn later in this frame.
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
+export function setShadowOccluders(c, path, bounds) {
+  if (typeof document === 'undefined') return;
+  const state = shadowMaskFor(c);
+  clearShadowBounds(state.occludersCtx, state.occludersBounds);
+  state.occludersBounds = null;
+  addShadowOccluders(c, path, bounds);
+}
+
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
+export function addShadowOccluders(c, path, bounds) {
+  if (typeof document === 'undefined') return;
+  const state = shadowMaskFor(c), transform = c.getTransform();
+  const corners = [[bounds.x, bounds.y], [bounds.x + bounds.width, bounds.y], [bounds.x, bounds.y + bounds.height], [bounds.x + bounds.width, bounds.y + bounds.height]]
+    .map(([x, y]) => [transform.a * x + transform.c * y + transform.e, transform.b * x + transform.d * y + transform.f]);
+  const padding = 2 * SHADOW_MASK_SCALE;
+  const left = Math.max(0, Math.floor(Math.min(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE - padding));
+  const top = Math.max(0, Math.floor(Math.min(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE - padding));
+  const right = Math.min(state.occluders.width, Math.ceil(Math.max(...corners.map(([x]) => x)) * SHADOW_MASK_SCALE + padding));
+  const bottom = Math.min(state.occluders.height, Math.ceil(Math.max(...corners.map(([, y]) => y)) * SHADOW_MASK_SCALE + padding));
+  if (right <= left || bottom <= top) return;
+  state.occludersCtx.save();
+  state.occludersCtx.setTransform(
+    transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
+    transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
+    transform.e * SHADOW_MASK_SCALE, transform.f * SHADOW_MASK_SCALE
+  );
+  state.occludersCtx.globalCompositeOperation = 'source-over';
+  state.occludersCtx.globalAlpha = 1;
+  state.occludersCtx.filter = 'none';
+  state.occludersCtx.fillStyle = '#000';
+  state.occludersCtx.fill(path);
+  state.occludersCtx.restore();
+  state.occludersBounds = includeBounds(state.occludersBounds, left, top, right, bottom);
 }
 
 // Draw only the portion of a shadow not already covered by another shadow this frame.
@@ -284,6 +323,16 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
   }
   freshCtx.restore();
 
+  if (state.occludersBounds) {
+    freshCtx.save();
+    freshCtx.setTransform(1, 0, 0, 1, 0, 0);
+    freshCtx.globalCompositeOperation = 'destination-out';
+    freshCtx.globalAlpha = 1;
+    freshCtx.filter = 'none';
+    freshCtx.drawImage(state.occluders, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
+    freshCtx.restore();
+  }
+
   if (state.hasShadow) {
     freshCtx.save();
     freshCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -306,28 +355,11 @@ export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
   c.restore();
 
   maskCtx.save();
-  if (cutout) {
-    maskCtx.setTransform(
-      transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
-      transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
-      transform.e * SHADOW_MASK_SCALE, transform.f * SHADOW_MASK_SCALE
-    );
-    maskCtx.globalCompositeOperation = 'source-over';
-    maskCtx.globalAlpha = 1;
-    maskCtx.filter = filter;
-    maskCtx.fillStyle = '#000';
-    maskCtx.fill(path);
-    maskCtx.globalCompositeOperation = 'destination-out';
-    maskCtx.fill(cutout);
-  } else {
-    // `fresh` already contains only this shadow's uncovered pixels; reuse it instead of rasterizing
-    // the same potentially large Path2D a second time.
-    maskCtx.setTransform(1, 0, 0, 1, 0, 0);
-    maskCtx.globalCompositeOperation = 'source-over';
-    maskCtx.globalAlpha = 1;
-    maskCtx.filter = 'none';
-    maskCtx.drawImage(fresh, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
-  }
+  maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+  maskCtx.globalCompositeOperation = 'source-over';
+  maskCtx.globalAlpha = 1;
+  maskCtx.filter = 'none';
+  maskCtx.drawImage(fresh, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
   maskCtx.restore();
   state.maskBounds = includeBounds(state.maskBounds, left, top, right, bottom);
   state.hasShadow = true;

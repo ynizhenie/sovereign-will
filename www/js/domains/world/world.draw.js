@@ -1,12 +1,12 @@
 // The ground: grass, water, rock, desert and ore, each joining its own kind
 
 import { drawIcon } from '../../ui/index.js';
-import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, worldEpoch } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, townHall, worldEpoch } from '../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
-import { drawShadowPath, getSun, MIN_SHADOW_ALPHA } from './world.daytime.js';
+import { addShadowOccluders, drawShadowPath, getSun, MIN_SHADOW_ALPHA, setShadowOccluders } from './world.daytime.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -676,12 +676,17 @@ export function drawNaturalRockShadows() {
   const view = getViewRect(), margin = Math.max(Math.abs(ox), Math.abs(oy)) + TILE_SIZE;
   const shadow = new Path2D(), occluders = new Path2D(), tiles = getTileIndex();
   const min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
+  const occluderMin = { x: Infinity, y: Infinity }, occluderMax = { x: -Infinity, y: -Infinity };
   const addTileShadow = tile => {
-    if (cached && !wasChunkDrawn('terrain', terrainRes(), tile.x, tile.y)) return;
     const open = openSides(tiles.rockAndOre, tile.x, tile.y), occupied = terrainCornerOccupancy(tile.x, tile.y, tiles, false);
     const { nw, ne, se, sw } = cornerRadii(open, occupied), radii = [nw, ne, se, sw];
-    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), radii);
     occluders.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
+    occluderMin.x = Math.min(occluderMin.x, tile.x - 15);
+    occluderMin.y = Math.min(occluderMin.y, tile.y - 15);
+    occluderMax.x = Math.max(occluderMax.x, tile.x + 15);
+    occluderMax.y = Math.max(occluderMax.y, tile.y + 15);
+    if (cached && !wasChunkDrawn('terrain', terrainRes(), tile.x, tile.y)) return;
+    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), radii);
     min.x = Math.min(min.x, tile.x - 15 + Math.min(0, ox));
     min.y = Math.min(min.y, tile.y - 15 + Math.min(0, oy));
     max.x = Math.max(max.x, tile.x + 15 + Math.max(0, ox));
@@ -691,10 +696,40 @@ export function drawNaturalRockShadows() {
   for (const list of [game.ironOres, game.coalOres]) {
     forEachInRect(list, view.x0 - margin, view.y0 - margin, view.x1 + margin, view.y1 + margin, addTileShadow);
   }
-  if (!Number.isFinite(min.x)) return;
-  drawShadowPath(ctx, shadow, sun.alpha, occluders, {
-    x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y
+  if (Number.isFinite(occluderMin.x)) {
+    setShadowOccluders(ctx, occluders, {
+      x: occluderMin.x, y: occluderMin.y, width: occluderMax.x - occluderMin.x, height: occluderMax.y - occluderMin.y
+    });
+  }
+  if (Number.isFinite(min.x)) {
+    drawShadowPath(ctx, shadow, sun.alpha, occluders, {
+      x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y
+    });
+  }
+
+  const buildingOccluders = new Path2D();
+  const buildingMin = { x: Infinity, y: Infinity }, buildingMax = { x: -Infinity, y: -Infinity };
+  const addBuilding = (building, halfWidth = 15, top = 15, bottom = 15) => {
+    buildingOccluders.rect(building.x - halfWidth, building.y - top, halfWidth * 2, top + bottom);
+    buildingMin.x = Math.min(buildingMin.x, building.x - halfWidth);
+    buildingMin.y = Math.min(buildingMin.y, building.y - top);
+    buildingMax.x = Math.max(buildingMax.x, building.x + halfWidth);
+    buildingMax.y = Math.max(buildingMax.y, building.y + bottom);
+  };
+  const structureView = getViewRect(TILE_SIZE);
+  forEachInRect(game.buildings, structureView.x0, structureView.y0, structureView.x1, structureView.y1, building => {
+    addBuilding(building, 15, building.type === 'watchtower' ? 30 : 15, 15);
   });
+  if (townHall.x >= structureView.x0 - townHall.radius && townHall.x <= structureView.x1 + townHall.radius
+    && townHall.y >= structureView.y0 - townHall.radius && townHall.y <= structureView.y1 + townHall.radius) {
+    addBuilding(townHall, townHall.radius, townHall.radius, townHall.radius);
+  }
+  if (Number.isFinite(buildingMin.x)) {
+    addShadowOccluders(ctx, buildingOccluders, {
+      x: buildingMin.x, y: buildingMin.y,
+      width: buildingMax.x - buildingMin.x, height: buildingMax.y - buildingMin.y
+    });
+  }
 }
 
 // (#322) Zoomed out, where the tiles are in the pictures, a frame went through every water tile on the screen to find the few with a fish

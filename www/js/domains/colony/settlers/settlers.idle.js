@@ -63,7 +63,7 @@ function pickPastime(s) {
   const c = config();
   const faction = getPlayerFaction().id;
   const options = ['wander'];
-  const seat = freeCampfireSeat(s);
+  const seat = freeCampfireSeat(s, true);
   if (seat) options.push('campfire');
   if (game.settlers.some(o => isFreeCompany(s, o) && Math.hypot(o.x - s.x, o.y - s.y) < c.companyRange)) options.push('talk');
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
@@ -159,7 +159,8 @@ export function idlePastime(s, tick) {
   s.swaying = false;
   switch (idle.act) {
     case 'campfire': {
-      let fire = idle.spot && campfires().find(b => Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
+      let fire = idle.spot && game.buildings.find(b => b.type === 'campfire' && isInSafeArea(b.x, b.y) &&
+        Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
       // (#298) its seat: one of the fire's four sides; none given (the night watch) or taken, another free one
       if (!fire || idle.seat === undefined || seatTaken(fire, idle.seat, s)) {
         const free = freeCampfireSeat(s);
