@@ -24,7 +24,7 @@ export function shadow(x, y, w, h, r = 4) {
   const path = new Path2D();
   const sx = x - w / 2 + Math.min(0, ox) + Math.max(0, ox) * 0.5, sy = y - h / 2 + oy, sw = w + Math.abs(ox) * 0.5;
   path.roundRect(sx, sy, sw, h, r);
-  drawShadowPath(ctx, path, sun.alpha, null, { x: sx, y: sy, width: sw, height: h });
+  drawShadowPath(ctx, path, sun.alpha);
 }
 
 // A house seen from above at a slant: a pitched roof (its far half lighter), its front wall below with a door
@@ -106,32 +106,29 @@ function wallShadowShape(piece) {
 
 // The pieces' shapes where they stand, the walls' (10 high) and the doors' (8): put together again only when the
 // pieces in view change or a door moves, not every frame; the sun moves them along as it goes
-/** @type {{ key: string, tall: Path2D, low: Path2D }} */
-let wallShadowShapes = { key: '', tall: new Path2D(), low: new Path2D() };
+/** @type {{ key: string, tall: Path2D, low: Path2D } | null} */
+let wallShadowShapes = null;
 
 // Fill one combined silhouette so connected wall sections do not darken each other's shadows.
 /** @param {WallShadowPiece[]} pieces */
 export function drawWallShadows(pieces) {
   if (!pieces.length) return;
   const sun = getSun();
-  let key = '', x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const piece of pieces) {
-    key += `${piece.type} ${piece.x} ${piece.y} ${piece.mask} ${piece.open || 0} ${piece.swing ? piece.swing.x + 2 * piece.swing.y : ''};`;
-    x0 = Math.min(x0, piece.x); y0 = Math.min(y0, piece.y); x1 = Math.max(x1, piece.x); y1 = Math.max(y1, piece.y);
-  }
-  if (key !== wallShadowShapes.key) {
+  let key = '';
+  for (const piece of pieces) key += `${piece.type} ${piece.x} ${piece.y} ${piece.mask} ${piece.open || 0} ${piece.swing ? piece.swing.x + 2 * piece.swing.y : ''};`;
+  if (!wallShadowShapes || key !== wallShadowShapes.key) {
     const tall = new Path2D(), low = new Path2D();
     for (const piece of pieces) {
       (piece.type === 'wall_wood' || piece.type === 'wall_stone' ? tall : low).addPath(wallShadowShape(piece), new DOMMatrix().translate(piece.x, piece.y));
     }
     wallShadowShapes = { key, tall, low };
   }
-  const shadow = new Path2D(), reach = 32;
+  const shadow = new Path2D();
   shadow.addPath(wallShadowShapes.tall, new DOMMatrix().translate(sun.dx * 10 * 0.35, sun.dy * 10 * 0.35));
   shadow.addPath(wallShadowShapes.low, new DOMMatrix().translate(sun.dx * 8 * 0.35, sun.dy * 8 * 0.35));
   ctx.save();
   ctx.filter = 'blur(1.5px)';
-  drawShadowPath(ctx, shadow, sun.alpha, null, { x: x0 - reach, y: y0 - reach, width: x1 - x0 + reach * 2, height: y1 - y0 + reach * 2 });
+  drawShadowPath(ctx, shadow, sun.alpha);
   ctx.restore();
 }
 

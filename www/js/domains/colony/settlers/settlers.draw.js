@@ -670,11 +670,12 @@ function eatingAt(s) {
   return { x: rest.x + (mouth.x - rest.x) * bite, y: rest.y + (mouth.y - rest.y) * bite, bite };
 }
 
-// Unit shadows share mask passes instead of rasterizing and compositing one mask for every figure.
+// The figures' shadows, one shape for all those as dark (one at a time cost more than its size did)
 export function drawFigureShadows(units, view, radiusOf = unit => unit.visualRadius || unit.radius || 11) {
   const sun = getSun();
   if (sun.alpha * ctx.globalAlpha < MIN_SHADOW_ALPHA) return;
-  const groups = new Map();
+  /** @type {Map<number, Path2D>} */
+  const shapes = new Map();
   for (const unit of units) {
     if (isPet(unit) || unit.asleep || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
     const r = radiusOf(unit);
@@ -683,19 +684,12 @@ export function drawFigureShadows(units, view, radiusOf = unit => unit.visualRad
     const cx = unit.x + sway + ox * 0.5, cy = unit.y + r * 1.02 + oy * 0.5;
     const rx = r * 0.7 + Math.abs(ox) * 0.5, ry = r * 0.22 + Math.abs(oy) * 0.25;
     const opacity = unit.temporary !== undefined ? 0.7 : 1;
-    const key = opacity; // (one shadow for all at the same opacity: each drawn costs more than its size does)
-    let group = groups.get(key);
-    if (!group) { group = { path: new Path2D(), alpha: opacity, bounds: [Infinity, Infinity, -Infinity, -Infinity] }; groups.set(key, group); }
-    const bounds = group.bounds;
-    group.path.moveTo(cx + rx, cy);
-    group.path.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-    bounds[0] = Math.min(bounds[0], cx - rx); bounds[1] = Math.min(bounds[1], cy - ry);
-    bounds[2] = Math.max(bounds[2], cx + rx); bounds[3] = Math.max(bounds[3], cy + ry);
+    let shape = shapes.get(opacity);
+    if (!shape) shapes.set(opacity, (shape = new Path2D()));
+    shape.moveTo(cx + rx, cy);
+    shape.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   }
-  for (const group of groups.values()) {
-    const [minX, minY, maxX, maxY] = group.bounds;
-    if (Number.isFinite(minX)) drawShadowPath(ctx, group.path, sun.alpha * group.alpha, null, { x: minX, y: minY, width: maxX - minX, height: maxY - minY });
-  }
+  for (const [opacity, shape] of shapes) drawShadowPath(ctx, shape, sun.alpha * opacity);
 }
 
 // (#326) Where the picked ones are going: their way as a dashed line, moving along it, to where it ends (an order's
@@ -722,11 +716,15 @@ export function drawSelectedPaths() {
   ctx.restore();
 }
 
+// The settlers' shadows, into the frame's shadows (drawn under everything standing, see drawShadowLayer)
+export function drawSettlerShadows() {
+  if (!tinyUnit()) drawFigureShadows(game.settlers, getViewRect(60));
+}
+
 export function drawSettlers() {
   // (#306) zoomed out: figures at their simplest, and what's off the screen not drawn at all
   const simple = simpleUnit(), view = getViewRect(60), scale = getViewScale(), tiny = tinyUnit();
   const dab = 1.6 / scale; // (a couple of screen px, in world units)
-  if (!tiny) drawFigureShadows(game.settlers, view);
   game.settlers.forEach(s => {
     if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) return;
     if (isPet(s)) { drawPet(s); return; } // (#314)
