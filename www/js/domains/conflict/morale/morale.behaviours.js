@@ -4,18 +4,19 @@
 // necromancer keeps behind its own
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
 import { getFrontier, isOutskirts, isVisible } from '../../world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { collidesWithWall, findPathAStar, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
 import { getEnemyDef } from '../waves/index.js';
 import { healAtTent } from '../healing/index.js';
 
 const config = () => GAME_CONFIG.morale;
+const supportSpotCache = new WeakMap();
 
 // the one of `list` nearest to `unit`, or null
 /** @template T @param {T[]} list @param {{ x: number, y: number }} unit @returns {T | null} */
@@ -116,59 +117,135 @@ export function boarsPanic() {
   }
 }
 
-// The enemy's necromancer keeps behind its own (#207), a little behind the ally nearest the hall. It doesn't
-// run from a settler that comes for it (#261: it led the soldiers far off and they went back to their
-// posts): one within keepBack px it fights, as any enemy. True: it took the step
-export function necromancerKeepsBack(en, dt, staysBackUnderThreat = false) {
-  if (!staysBackUnderThreat && game.settlers.some(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroKeepBack)) return false;
-  // amid its own, a little behind their middle (#232: behind the front one it was off on its own, its own
-  // out of its reach and panicking): the allies within reach of it, else all of them
-  const allies = game.enemies.filter(o => o !== en && o.hp > 0 && !getEnemyDef(o).necromancer && getEnemyDef(o).pet !== 'ghost');
-  if (!allies.length) return false;
-  const group = allies.filter(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroRange * 2.5);
-  const mid = (group.length ? group : allies).reduce((m, o, i, list) => ({ x: m.x + o.x / list.length, y: m.y + o.y / list.length }), { x: 0, y: 0 });
-  const origin = game.gameMode === 'battle'
-    ? nearest(game.settlers.filter(s => s.hp > 0), mid) || { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2 }
+function chooseSupportAnchor(unit, allies, supports) {
+  const claimed = supports
+    .filter(other => other !== unit && other.hp > 0 && allies.includes(other.supportAnchor))
+    .map(other => other.supportAnchor);
+  const unclaimed = allies.filter(ally => !claimed.includes(ally));
+  const candidates = unclaimed.length ? unclaimed : allies;
+  candidates.sort((a, b) => Math.hypot(a.x - unit.x, a.y - unit.y) - Math.hypot(b.x - unit.x, b.y - unit.y));
+  return candidates[0];
+}
+
+function supportBacklineSpot(anchor, opponents, enemySide) {
+  const isBattle = game.gameMode === 'battle';
+  const origin = isBattle
+    ? nearest(opponents.filter(unit => unit.hp > 0), anchor) || { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2 }
     : townHall;
-  const d = Math.max(1, Math.hypot(mid.x - origin.x, mid.y - origin.y));
-  const spot = { x: mid.x + (mid.x - origin.x) / d * 50, y: mid.y + (mid.y - origin.y) / d * 50 };
-  if (Math.hypot(spot.x - en.x, spot.y - en.y) > 12) moveEntityTowards(en, spot.x, spot.y, en.speed, true, dt);
+  const direction = isBattle || enemySide ? 1 : -1;
+  const distance = Math.max(1, Math.hypot(anchor.x - origin.x, anchor.y - origin.y));
+  return {
+    x: anchor.x + (anchor.x - origin.x) / distance * 50 * direction,
+    y: anchor.y + (anchor.y - origin.y) / distance * 50 * direction
+  };
+}
+
+function reachableSupportSpot(unit, anchor, desired, enemySide) {
+  const tile = getGridPos(desired.x, desired.y);
+  const key = `${tile.gx},${tile.gy}`;
+  const signature = getTileIndex().signature;
+  const blocked = enemySide ? isTileBlockedForEnemyStrict : isTileBlockedForSettler;
+  const collides = point => collidesWithWall(point.x, point.y, unit.radius, enemySide);
+  if (!blocked(tile.gx, tile.gy) && !collides(desired)) {
+    supportSpotCache.delete(unit);
+    return desired;
+  }
+
+  const cached = supportSpotCache.get(unit);
+  if (cached?.anchor === anchor && cached.key === key && cached.signature === signature) return cached.position;
+
+  const candidates = [];
+  for (let radius = 1; radius <= 3; radius++) {
+    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+      const gx = tile.gx + dx, gy = tile.gy + dy;
+      const point = { x: gx * TILE_SIZE + TILE_SIZE / 2, y: gy * TILE_SIZE + TILE_SIZE / 2 };
+      candidates.push({ gx, gy, point, distance: Math.hypot(point.x - desired.x, point.y - desired.y) });
+    }
+  }
+  candidates.sort((a, b) => a.distance - b.distance);
+
+  let position = null;
+  for (const candidate of candidates) {
+    if (blocked(candidate.gx, candidate.gy) || collides(candidate.point)) continue;
+    if (!findPathAStar(unit.x, unit.y, candidate.point.x, candidate.point.y, enemySide).path.length) continue;
+    position = candidate.point;
+    break;
+  }
+  supportSpotCache.set(unit, { anchor, key, signature, position });
+  return position;
+}
+
+function enemySupports() {
+  return game.enemies.filter(unit => {
+    const def = getEnemyDef(unit);
+    return unit.hp > 0 && (def.healer || def.necromancer);
+  });
+}
+
+function playerSupports() {
+  return game.settlers.filter(unit => unit.hp > 0 && (unit.tool === 'medbag' || unit.tool === 'necro_staff'));
+}
+
+function enemySoldiers(unit) {
+  return game.enemies.filter(ally => {
+    if (ally === unit || ally.hp <= 0) return false;
+    const def = getEnemyDef(ally);
+    return !def.pet && !def.healer && !def.necromancer;
+  });
+}
+
+function playerSoldiers(unit) {
+  return game.settlers.filter(ally => ally !== unit && ally.hp > 0 && ally.role !== 'pet' &&
+    ally.tool !== 'medbag' && ally.tool !== 'necro_staff' &&
+    (ally.weapon !== 'fist' || ally.type === 'zombie' || ally.type === 'big_zombie'));
+}
+
+function keepSupportBehind(unit, dt, allies, supports, opponents, enemySide, smooth = false) {
+  if (!allies.length) {
+    unit.supportAnchor = null;
+    supportSpotCache.delete(unit);
+    return false;
+  }
+  const anchor = chooseSupportAnchor(unit, allies, supports);
+  unit.supportAnchor = anchor;
+  const spot = reachableSupportSpot(unit, anchor, supportBacklineSpot(anchor, opponents, enemySide), enemySide);
+  if (!spot) {
+    if (smooth) { unit.moveVx = 0; unit.moveVy = 0; }
+    return true;
+  }
+  if (Math.hypot(spot.x - unit.x, spot.y - unit.y) > 12) {
+    moveEntityTowards(unit, spot.x, spot.y, unit.speed, enemySide, dt, smooth);
+  } else if (smooth) {
+    unit.moveVx = 0;
+    unit.moveVy = 0;
+  }
   return true;
 }
 
-// Enemy medics use the same backline position as player medics, while ignoring nearby threats.
+// The enemy's necromancer keeps behind its fighters (#207), but fights when an opponent gets too close.
+export function necromancerKeepsBack(en, dt, staysBackUnderThreat = false) {
+  if (!staysBackUnderThreat && game.settlers.some(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroKeepBack)) {
+    en.supportAnchor = null;
+    return false;
+  }
+  return keepSupportBehind(en, dt, enemySoldiers(en), enemySupports(),
+    game.settlers.filter(unit => unit.hp > 0), true);
+}
+
+// Enemy medics keep behind a fighter when no wounded ally needs their attention.
 export function enemyMedicKeepsBack(en, dt) {
-  const allies = game.enemies.filter(o => {
-    if (o === en || o.hp <= 0) return false;
-    const def = getEnemyDef(o);
-    return !def.pet && (def.weapon !== 'fist' || def.necromancer);
-  });
-  if (!allies.length) return false;
-  const group = allies.filter(o => Math.hypot(o.x - en.x, o.y - en.y) < config().necroRange * 2.5);
-  const mid = (group.length ? group : allies).reduce((m, o, i, list) => ({ x: m.x + o.x / list.length, y: m.y + o.y / list.length }), { x: 0, y: 0 });
-  const origin = game.gameMode === 'battle'
-    ? nearest(game.settlers.filter(s => s.hp > 0), mid) || { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2 }
-    : townHall;
-  const d = Math.max(1, Math.hypot(mid.x - origin.x, mid.y - origin.y));
-  const spot = { x: mid.x + (mid.x - origin.x) / d * 50, y: mid.y + (mid.y - origin.y) / d * 50 };
-  if (Math.hypot(spot.x - en.x, spot.y - en.y) > 12) moveEntityTowards(en, spot.x, spot.y, en.speed, true, dt);
-  return true;
+  return keepSupportBehind(en, dt, enemySoldiers(en), enemySupports(),
+    game.settlers.filter(unit => unit.hp > 0), true);
 }
 
 function playerSupportKeepsBack(s, dt, isAlly, smooth = false, staysBackUnderThreat = false) {
-  if (!staysBackUnderThreat && game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - s.x, en.y - s.y) < config().necroKeepBack)) return false;
-  const allies = game.settlers.filter(o => o !== s && o.hp > 0 && isAlly(o));
-  if (!allies.length) return false;
-  const group = allies.filter(o => Math.hypot(o.x - s.x, o.y - s.y) < config().necroRange * 2.5);
-  const mid = (group.length ? group : allies).reduce((m, o, i, list) => ({ x: m.x + o.x / list.length, y: m.y + o.y / list.length }), { x: 0, y: 0 });
-  const origin = game.gameMode === 'battle'
-    ? nearest(game.enemies.filter(en => en.hp > 0), mid) || { x: game.WORLD_WIDTH / 2, y: game.WORLD_HEIGHT / 2 }
-    : townHall;
-  const d = Math.max(1, Math.hypot(mid.x - origin.x, mid.y - origin.y));
-  const spot = { x: mid.x + (mid.x - origin.x) / d * 50, y: mid.y + (mid.y - origin.y) / d * 50 };
-  if (Math.hypot(spot.x - s.x, spot.y - s.y) > 12) moveEntityTowards(s, spot.x, spot.y, s.speed, false, dt, smooth);
-  else if (smooth) { s.moveVx = 0; s.moveVy = 0; }
-  return true;
+  if (!staysBackUnderThreat && game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - s.x, en.y - s.y) < config().necroKeepBack)) {
+    s.supportAnchor = null;
+    return false;
+  }
+  return keepSupportBehind(s, dt, playerSoldiers(s).filter(isAlly), playerSupports(),
+    game.enemies.filter(unit => unit.hp > 0), false, smooth);
 }
 
 // The player's necromancer keeps behind its own fighters too, but advances to fight when left alone.

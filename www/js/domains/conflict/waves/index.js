@@ -2,6 +2,6 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { tickEnemies } from './waves.behaviours.js';
-export { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from './waves.draw.js';
+export { drawEnemies, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from './waves.draw.js';
 export { createConfiguredEnemy, enemyFactionOf, enemyPlayerUnit, enemyStats, presetEnemyKey, presetUnit, dropLoot, getEnemyDef, removeDeadEnemies, tickEnemyTents, tickPortalWave, tickWaveTimer } from './waves.rules.js';
 export { scoutTapped, tickScouts } from './waves.scouts.js';

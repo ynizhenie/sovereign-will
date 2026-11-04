@@ -53,6 +53,7 @@ export function updateUI() {
   }
   setText(document.getElementById('pop-txt'), `${getCurrentPop()}/${getMaxPop()}`);
   updatePopulationIcon('population-icon');
+  updatePopulationIcon('tab-units-icon');
   setText(document.getElementById('base-hp-txt'), `${Math.max(0, Math.ceil(townHall.hp))}/${townHall.maxHp}`);
 
   let btnUpgrade = document.getElementById('btn-upgrade-big');

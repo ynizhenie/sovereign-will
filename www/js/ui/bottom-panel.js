@@ -12,7 +12,7 @@ import { renderRecruitRow } from '../domains/colony/settlers/index.js';
 import { renderBuildTab } from '../domains/economy/building/index.js';
 import { setMode } from './map-input.js';
 import { refreshAffordability } from './widgets.js';
-import { updateUnitsTab } from './units-tab.js';
+import { closeUnitGiveMenu, updateUnitsTab } from './units-tab.js';
 import { closeSheet, getOpenSheet, toggleSheet } from './sheets.js';
 import { closeSelectedCard } from './selected-card-state.js';
 
@@ -31,6 +31,7 @@ export function openTab(tabId) {
 }
 
 function showTab(tabId) {
+  if (activeTab === 'tab-units' && tabId !== activeTab) closeUnitGiveMenu();
   closeSelectedCard();
   activeTab = tabId;
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === tabId));

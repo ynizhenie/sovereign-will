@@ -281,12 +281,11 @@ body.menu-world #gameCanvas { filter: brightness(0.8) saturate(0.85);
   transition: filter 0.8s ease, transform 0.8s ease; }
 /* the menu put away to watch the scene (#256): its panels and title gone, the dark edges too; a little bar to
    change the scene and bring the menu back */
-body.menu-ui-hidden #main-menu .main-menu-content, body.menu-ui-hidden #menu-title, body.menu-ui-hidden #menu-hide { display: none !important; }
+body.menu-ui-hidden #main-menu .main-menu-content, body.menu-ui-hidden #menu-title, body.menu-ui-hidden #menu-eye-box { display: none !important; }
 body.menu-ui-hidden #main-menu::before { opacity: 0; }
 body.menu-ui-hidden.menu-world #gameCanvas { filter: none; }
-#menu-hide { position: fixed; right: 12px; bottom: 12px; z-index: 5; width: 40px; height: 40px; padding: 0; border-radius: 50%;
-  display: none; align-items: center; justify-content: center; }
-body.menu-world #menu-hide { display: inline-flex; }
+#menu-eye-box { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: none; }
+body.menu-world #menu-eye-box { display: flex; }
 #menu-scene-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: none; gap: 8px; }
 body.menu-ui-hidden #menu-scene-bar { display: flex; }
 
@@ -596,14 +595,10 @@ body.menu-world #defeat-overlay { display: none !important; }
 .editor-toolbar .fps-option { padding: 6px 10px; white-space: nowrap; }
 .editor-toolbar #editor-name { flex: 1; min-width: 0; }
 .editor-brush { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8a91a0; }
-.editor-resize { display: grid; grid-template-columns: auto repeat(4, 38px); gap: 4px 6px; /* (#326: a side's +10, +1, -1, -10) */ align-items: center; font-size: 11px; color: #aeb4c0; }
-.editor-resize .btn { min-height: 30px; padding: 0; font-size: 15px; }
 .editor-only { display: none; }
 body[data-hud="editor"] .editor-only { display: inline-flex; }
 .btn.editor-only:disabled { opacity: 0.35; }
 #editor-tools .panel-heading:first-child { margin-top: 0; }
-.editor-resize[hidden] { display: none; }
-.editor-resize .fps-option { padding: 2px 0; font-size: 12px; line-height: 1.1; }
 
 /* lists of saved maps and presets (#143): a row each, with its own delete that asks first */
 .item-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; flex-shrink: 0; }
@@ -1191,18 +1186,20 @@ body.booting > * { visibility: hidden; }
 #loading-title { font-size: 1.05rem; margin-bottom: 10px; letter-spacing: 0.04em; }
 .loading-bar { height: 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); overflow: hidden; }
 #loading-fill { height: 100%; width: 0; background: linear-gradient(90deg, #c9a24a, #f0d27a); transition: width 0.15s ease-out; }
-body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-hide, body.loading #menu-scene-bar { display: none !important; }
+body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-eye-box, body.loading #menu-scene-bar { display: none !important; }
 
 /* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
 #btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }
 
-/* (#326) the language flag stays in the lower-left corner, away from the aligned menu buttons */
+/* (#326) the eye and language flag use matching compact control boxes at opposite corners */
 .flag-box { position: fixed; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 5;
   display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px; width: 44px; box-sizing: border-box;
   background: rgba(13, 20, 13, 0.94); border: 1px solid rgba(180, 195, 180, 0.28); border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); }
 body.menu-ui-hidden #menu-flags { display: none; }
 .flag-button { display: flex; padding: 1px; background: none; border: 1px solid transparent; border-radius: 3px; cursor: pointer; line-height: 0; }
+.menu-eye-button { width: 34px; height: 24px; align-items: center; justify-content: center; color: #d5dfd5; }
+.menu-eye-button .ic { width: 20px; height: 20px; }
 .flag-button .flag { width: 100%; height: auto; }
 .flag-button.active { border-color: #46b8da; }
 .language-option { display: inline-flex; align-items: center; gap: 6px; }

@@ -39,6 +39,29 @@ test('every button with a card has a line about it, in every language', async ({
   expect(missing).toEqual([]);
 });
 
+test('item cards count craftable materials toward the displayed cost', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    Object.assign(stock, { wood: 10, stone: 5, herbs: 2, rope: 0 });
+    const platform = itemInfoHtml('buildings:watchtower');
+    Object.assign(stock, { wood: 1, herbs: 2, rope: 0 });
+    const torchRecipe = itemInfoHtml('recipes:torch');
+    return {
+      platformHasShortage: platform.includes('class="info-cost short"'),
+      platformShowsCraftableRope: platform.includes('2/2') && platform.includes('Недостающие материалы будут изготовлены'),
+      recipeHasShortage: torchRecipe.includes('class="info-cost short"'),
+      recipeShowsCraftableRope: torchRecipe.includes('2/1') && torchRecipe.includes('Недостающие материалы будут изготовлены')
+    };
+  });
+  expect(result).toEqual({
+    platformHasShortage: false,
+    platformShowsCraftableRope: true,
+    recipeHasShortage: false,
+    recipeShowsCraftableRope: true
+  });
+});
+
 test.describe('on a touch screen', () => {
   test.use({ hasTouch: true });
   test('the first tap on a button shows its card and doesn\'t press it; a second tap presses it (the friend\'s playtest), a tile too (#261)', async ({ page }) => {

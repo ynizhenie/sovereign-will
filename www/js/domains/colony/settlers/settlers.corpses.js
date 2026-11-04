@@ -6,7 +6,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getFrontier, isOutskirts } from '../../world/index.js';
 import { getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
-import { getBaseRadius } from '../../conflict/combat/index.js';
+import { baseRadiusToward, getBaseRadius } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 
 const config = () => GAME_CONFIG.corpseHaul;
@@ -34,12 +34,13 @@ export function getCorpseHeap() {
   if (heapCache && heapCache.key === key) return heapCache.heap;
   hallHolder.x = townHall.x; hallHolder.y = townHall.y;
   const reach = getSettlerReach(hallHolder);
-  const r = base + config().corpseHeapTiles * TILE_SIZE;
   const f = getFrontier(); // (#299: towards the frontier's nearest side, a default map's edge)
   const edges = [[1, 0, f.x1 - townHall.x], [-1, 0, townHall.x - f.x0], [0, 1, f.y1 - townHall.y], [0, -1, townHall.y - f.y0]].sort((a, b) => a[2] - b[2]);
   let heap = null;
   for (let k = 0; k < 8 && !heap; k++) {
     for (const [dx, dy] of edges) {
+      const angle = Math.atan2(dy, dx);
+      const r = baseRadiusToward(angle) + config().corpseHeapTiles * TILE_SIZE;
       for (const side of [0, 1, -1, 2, -2, 3, -3]) {
         const x = townHall.x + dx * (r + k * TILE_SIZE) + dy * side * TILE_SIZE, y = townHall.y + dy * (r + k * TILE_SIZE) + dx * side * TILE_SIZE;
         const g = getGridPos(x, y);

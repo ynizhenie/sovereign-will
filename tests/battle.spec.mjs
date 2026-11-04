@@ -35,6 +35,45 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.afterRemove).toBe(0);
 });
 
+test('battle field highlights can use classic colours, side colours, or be disabled', async ({ page }) => {
+  await openBattle(page);
+  await page.click('[data-dock="battle-settings"]');
+  await page.evaluate(() => {
+    setBattleColor('green', '#3498db');
+    setBattleColor('red', '#9b59b6');
+  });
+  const capture = () => page.evaluate(() => {
+    const fills = [], originalFill = ctx.fillRect, originalStroke = ctx.stroke;
+    ctx.fillRect = function (...args) {
+      fills.push({ color: ctx.fillStyle, alpha: ctx.globalAlpha, rect: args });
+      return originalFill.apply(this, args);
+    };
+    let strokes = 0;
+    ctx.stroke = function (...args) { strokes++; return originalStroke.apply(this, args); };
+    try { drawBattleOverlay(); } finally { ctx.fillRect = originalFill; ctx.stroke = originalStroke; }
+    const saved = loadData('battle-choices', null);
+    return { fills, strokes, saved: saved && saved.fieldHighlight };
+  });
+
+  await expect(page.locator('[data-battle-highlight="classic"]')).toHaveClass(/on/);
+  const classic = await capture();
+  expect(classic.fills.map(fill => fill.color)).toEqual(['#2ecc71', '#c0392b']);
+  expect(classic.fills.map(fill => fill.alpha)).toEqual([0.06, 0.06]);
+
+  await page.click('[data-battle-highlight="team"]');
+  const team = await capture();
+  expect(team.fills.map(fill => fill.color)).toEqual(['#3498db', '#9b59b6']);
+  expect(team.fills.map(fill => fill.alpha)).toEqual([0.06, 0.06]);
+  expect(team.saved).toBe('team');
+
+  await page.click('[data-battle-highlight="off"]');
+  const off = await capture();
+  expect(off.fills).toEqual([]);
+  expect(off.strokes).toBe(1);
+  expect(off.saved).toBe('off');
+  await expect(page.locator('[data-battle-highlight="off"]')).toHaveClass(/on/);
+});
+
 test('battle taps cannot select a friendly unit or mark an enemy during a fight', async ({ page }) => {
   await openBattle(page);
   const result = await page.evaluate(() => {
@@ -143,6 +182,26 @@ test('a battle has no commander unless the player gives a banner (#279)', async 
   });
   expect(r).toEqual({ auto: { green: 0, red: 0 }, given: { green: 1, red: 1 }, after: { green: 1, red: 1 },
     ownRole: 'soldier', ownType: 'normal', foeType: 'normal', foeKey: 'raider', entries: 2 });
+});
+
+test('a banner makes a big enemy a captain too', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    battle.lineup = [];
+    battle.category = 'units';
+    battle.preset = 'humans:sword';
+    battle.big = true;
+    battle.banner = true;
+    const x = 28 * TILE_SIZE + 15, y = 12 * TILE_SIZE + 15;
+    battleTap(x, y);
+    const captain = enemies[0];
+    return {
+      type: captain?.type,
+      captain: captain?.captain,
+      entryHasBanner: battle.lineup[0]?.banner
+    };
+  });
+  expect(result).toEqual({ type: 'big', captain: true, entryHasBanner: true });
 });
 
 test('the battle settings pick the field: a glade or a desert, and the line-up stays (#279)', async ({ page }) => {
@@ -418,6 +477,79 @@ test('an enemy necromancer keeps behind its allies away from the opposing side i
   expect(movement.moved).toBe(true);
   expect(movement.x).toBe(movement.before.x);
   expect(movement.y).toBe(movement.before.y);
+});
+
+test('player and enemy medics and necromancers follow separate nearby fighters, reusing one only when needed', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const playerNecromancer = Object.assign(createSettler('zombie', 1, 300, 300), { tool: 'necro_staff' });
+    const playerMedic = Object.assign(createSettler('normal', 2, 310, 300), { tool: 'medbag' });
+    const extraPlayerMedic = Object.assign(createSettler('normal', 3, 320, 300), { tool: 'medbag' });
+    const playerFighter1 = Object.assign(createSettler('normal', 4, 400, 300), { weapon: 'sword', role: 'soldier' });
+    const playerFighter2 = Object.assign(createSettler('normal', 5, 500, 300), { weapon: 'sword', role: 'soldier' });
+    game.settlers = [playerNecromancer, playerMedic, extraPlayerMedic, playerFighter1, playerFighter2];
+    const enemyNecromancer = createConfiguredEnemy({ x: 1200, y: 300 }, 'undead_necromancer');
+    const enemyMedic = createConfiguredEnemy({ x: 1210, y: 300 }, 'raider_medic');
+    const extraEnemyNecromancer = createConfiguredEnemy({ x: 1220, y: 300 }, 'undead_necromancer');
+    const enemyFighter1 = createConfiguredEnemy({ x: 1100, y: 300 }, 'raider');
+    const enemyFighter2 = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
+    game.enemies = [enemyNecromancer, enemyMedic, extraEnemyNecromancer, enemyFighter1, enemyFighter2];
+
+    playerNecromancerKeepsBack(playerNecromancer, 1 / 60);
+    playerMedicKeepsBack(playerMedic, 1 / 60);
+    playerMedicKeepsBack(extraPlayerMedic, 1 / 60);
+    necromancerKeepsBack(enemyNecromancer, 1 / 60);
+    enemyMedicKeepsBack(enemyMedic, 1 / 60);
+    necromancerKeepsBack(extraEnemyNecromancer, 1 / 60);
+
+    return {
+      playerFirstTwoChooseNearestAvailable: playerNecromancer.supportAnchor === playerFighter1 && playerMedic.supportAnchor === playerFighter2,
+      playerReusesOnlyAfterAllClaimed: extraPlayerMedic.supportAnchor === playerFighter1,
+      enemyFirstTwoChooseNearestAvailable: enemyNecromancer.supportAnchor === enemyFighter1 && enemyMedic.supportAnchor === enemyFighter2,
+      enemyReusesOnlyAfterAllClaimed: extraEnemyNecromancer.supportAnchor === enemyFighter1
+    };
+  });
+  expect(result).toEqual({
+    playerFirstTwoChooseNearestAvailable: true,
+    playerReusesOnlyAfterAllClaimed: true,
+    enemyFirstTwoChooseNearestAvailable: true,
+    enemyReusesOnlyAfterAllClaimed: true
+  });
+});
+
+test('player supports stay behind advancing soldiers and enemy supports behind their own soldiers in Endless', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    townHall.x = 500;
+    townHall.y = 300;
+    const playerNecromancer = Object.assign(createSettler('zombie', 1, 750, 300), { tool: 'necro_staff' });
+    const playerMedic = Object.assign(createSettler('normal', 2, 750, 340), { tool: 'medbag' });
+    const playerFighter = Object.assign(createSettler('normal', 3, 700, 300), { weapon: 'sword', role: 'soldier' });
+    const enemyNecromancer = createConfiguredEnemy({ x: 270, y: 300 }, 'undead_necromancer');
+    const enemyMedic = createConfiguredEnemy({ x: 270, y: 340 }, 'raider_medic');
+    const enemyFighter = createConfiguredEnemy({ x: 300, y: 300 }, 'raider');
+    game.settlers = [playerNecromancer, playerMedic, playerFighter];
+    game.enemies = [enemyNecromancer, enemyMedic, enemyFighter];
+
+    playerNecromancerKeepsBack(playerNecromancer, 1 / 60);
+    playerMedicKeepsBack(playerMedic, 1 / 60);
+    necromancerKeepsBack(enemyNecromancer, 1 / 60);
+    enemyMedicKeepsBack(enemyMedic, 1 / 60);
+
+    return {
+      playerAnchorsForward: playerNecromancer.supportAnchor === playerFighter && playerMedic.supportAnchor === playerFighter,
+      playerSupportsMoveBehind: playerNecromancer.x < 750 && playerMedic.x < 750,
+      enemyAnchorsForward: enemyNecromancer.supportAnchor === enemyFighter && enemyMedic.supportAnchor === enemyFighter,
+      enemySupportsMoveBehind: enemyNecromancer.x < 270 && enemyMedic.x < 270
+    };
+  });
+  expect(result).toEqual({
+    playerAnchorsForward: true,
+    playerSupportsMoveBehind: true,
+    enemyAnchorsForward: true,
+    enemySupportsMoveBehind: true
+  });
 });
 
 test('an enemy dog follows its soldiers, and advances to fight when none are left', async ({ page }) => {

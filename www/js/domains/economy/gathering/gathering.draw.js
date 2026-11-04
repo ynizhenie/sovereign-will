@@ -1,11 +1,11 @@
 // How far a resource is worked through
 
-import { TILE_SIZE, forEachInRect, game, listStamp, worldEpoch } from '../../../engine/world/index.js';
-import { paintOn, paintStill, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
+import { TILE_SIZE, forEachInRect, game, worldEpoch } from '../../../engine/world/index.js';
+import { SHADOWS, paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawSprites } from './gathering.sprites.js';
-import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached } from '../../world/index.js';
+import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, paintRockShadows } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
@@ -78,7 +78,11 @@ const natureRes = () => {
 };
 const standing = o => !o.isGrowing && !o.fallen;
 const sunKey = () => { const s = getSun(); return `${Math.round(s.dx * 10)},${Math.round(s.dy * 10)},${Math.round(s.alpha * 50)}`; };
-const natureLists = () => [game.stumps, game.trees, game.cacti, game.boulders, game.berryBushes];
+/** @param {any[][]} lists */
+const natureLists = lists => {
+  lists[0] = game.stumps; lists[1] = game.trees; lists[2] = game.cacti; lists[3] = game.boulders; lists[4] = game.berryBushes;
+  return lists;
+};
 
 // the things of a list in and round a rectangle, in rows of tiles (the same order whichever piece paints them)
 /** @param {any[]} list @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {((o: any) => boolean) | null} [keep] */
@@ -93,71 +97,97 @@ function around(list, x0, y0, x1, y1, keep = null) {
 // again once it's REFRESH_TICKS old, and no more than STAMPS_PER_FRAME in a frame (all of them at once, with the
 // pieces of a screen x five lists, was a tenth of a frame); a list changing makes them all due, not all made at once
 const STAMPS_PER_FRAME = 4;
-/** @param {() => any[][]} listsOf */
-function stamper(listsOf) {
-  /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, stamps: Map<string, { tick: number, epoch: number, stamp: string }>, dirty: Set<string> }} */
-  const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), stamps: new Map(), dirty: new Set() };
-  const sameSignature = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+/** @param {(lists: any[][]) => any[][]} listsOf @param {number} [margin] (world px round a piece of what's in it that shows in it) @param {() => string} [sunOf] @param {number} [ticks] (how often a piece is looked at again) */
+function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) {
+  /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, sun: string | null, stamps: Map<string, { tick: number, epoch: number, sun: string, things: number, stamp: string }>, dirty: Set<string> }} */
+  const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), sun: null, stamps: new Map(), dirty: new Set() };
+  /** @type {any[][]} */
+  const current = [];
+  /** @param {any[]} list */
+  const signatureOf = list => [list, list.length, list[0], list[list.length - 1]];
+  /** @param {any[] | undefined} signature @param {any[]} list */
+  const signatureMatches = (signature, list) => signature && signature[0] === list && signature[1] === list.length &&
+    signature[2] === list[0] && signature[3] === list[list.length - 1];
   const dirtyObject = o => {
     const size = CHUNK * TILE_SIZE;
-    const x0 = Math.floor((o.x - MARGIN) / size), x1 = Math.floor((o.x + MARGIN) / size);
-    const y0 = Math.floor((o.y - MARGIN) / size), y1 = Math.floor((o.y + MARGIN) / size);
+    const x0 = Math.floor((o.x - margin) / size), x1 = Math.floor((o.x + margin) / size);
+    const y0 = Math.floor((o.y - margin) / size), y1 = Math.floor((o.y + margin) / size);
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) state.dirty.add(`${cx},${cy}`);
   };
-  const stamp = (cx, cy) => {
+  // (#392) what's changed in the lists, and the sun: once a frame, not for every piece on the screen and round it
+  const look = () => {
       if (state.world !== worldEpoch()) {
         state.world = worldEpoch(); state.signatures = []; state.members = []; state.epoch++; state.stamps.clear(); state.dirty.clear();
       }
-      const current = listsOf(), signatures = current.map(listStamp);
-      if (!state.signatures.length) state.members = current.map(list => [...list]);
-      else if (signatures.length !== state.signatures.length || signatures.some((v, i) => !sameSignature(v, state.signatures[i]))) {
-        for (let n = 0; n < current.length; n++) {
-          if (state.signatures[n] && sameSignature(signatures[n], state.signatures[n])) continue;
-          const before = new Set(state.members[n] || []), after = new Set(current[n] || []);
-          for (const o of before) if (!after.has(o)) dirtyObject(o);
-          for (const o of after) if (!before.has(o)) dirtyObject(o);
-          state.members[n] = [...(current[n] || [])];
+      listsOf(current);
+      if (!state.signatures.length) {
+        state.members = current.map(list => [...list]);
+        state.signatures = current.map(signatureOf);
+      } else {
+        let changed = current.length !== state.signatures.length;
+        for (let n = 0; !changed && n < current.length; n++) changed = !signatureMatches(state.signatures[n], current[n]);
+        if (changed) {
+          for (let n = 0; n < current.length; n++) {
+            if (signatureMatches(state.signatures[n], current[n])) continue;
+            const before = new Set(state.members[n] || []), after = new Set(current[n] || []);
+            for (const o of before) if (!after.has(o)) dirtyObject(o);
+            for (const o of after) if (!before.has(o)) dirtyObject(o);
+            state.members[n] = [...(current[n] || [])];
+            state.signatures[n] = signatureOf(current[n]);
+          }
+          state.members.length = current.length;
+          state.signatures.length = current.length;
         }
       }
-      state.signatures = signatures;
-      const key = `${cx},${cy}`, kept = state.stamps.get(key);
-      const due = !kept || state.dirty.has(key) || kept.epoch !== state.epoch || game.pathTick - kept.tick >= STAMP_TICKS || game.pathTick < kept.tick;
+      state.sun = sunOf();
+  };
+  const stamp = (cx, cy) => {
+      if (state.sun === null) look();
+      // (the sun's step too: the time of day can be changed with the game paused, in the editor)
+      const key = `${cx},${cy}`, kept = state.stamps.get(key), sun = /** @type {string} */ (state.sun);
+      const due = !kept || state.dirty.has(key) || kept.epoch !== state.epoch || kept.sun !== sun || game.pathTick - kept.tick >= ticks || game.pathTick < kept.tick;
       if (kept && (!due || state.made >= STAMPS_PER_FRAME)) return kept.stamp;
       state.made++;
       const size = CHUNK * TILE_SIZE, x0 = cx * size, y0 = cy * size;
       let h = 0;
-      current.forEach((list, n) => forEachInRect(list, x0 - MARGIN, y0 - MARGIN, x0 + size + MARGIN, y0 + size + MARGIN, o => {
+      current.forEach((list, n) => forEachInRect(list, x0 - margin, y0 - margin, x0 + size + margin, y0 + size + margin, o => {
         h = (h * 31 + o.x * 7919 + o.y * 31 + n + (standing(o) ? 1 : 0) + (o.applesReady ? 2 : 0) + (o.apple ? 4 : 0)) | 0;
       }));
-      const value = `${h}|${sunKey()}`;
+      const value = `${h}|${sun}`;
       state.dirty.delete(key);
-      state.stamps.set(key, { tick: game.pathTick, epoch: state.epoch, stamp: value });
+      state.stamps.set(key, { tick: game.pathTick, epoch: state.epoch, sun, things: h, stamp: value });
       return value;
   };
   stamp.dirty = (cx, cy) => state.dirty.has(`${cx},${cy}`);
   return {
-    newFrame() { state.made = 0; },
-    stamp
+    newFrame() { state.made = 0; look(); },
+    stamp,
+    // what's in and round piece (cx, cy), and how it is, as a number (the same while they stay the same)
+    /** @param {number} cx @param {number} cy */
+    thingsIn: (cx, cy) => state.stamps.get(`${cx},${cy}`)?.things
   };
 }
-const natureStamps = stamper(natureLists), tuftStamps = stamper(() => [game.grassList]);
+/** @param {any[][]} lists */
+const tuftLists = lists => { lists[0] = game.grassList; return lists; };
+const natureStamps = stamper(natureLists), tuftStamps = stamper(tuftLists);
 
 /** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
 function paintNature(g, x0, y0, x1, y1) {
   paintOn(g);
+  paintVariant(null, false);
   try {
     for (const st of around(game.stumps, x0, y0, x1, y1)) drawStumpArt(st);
     for (const t of around(game.trees, x0, y0, x1, y1, standing)) drawTreeArt(t);
     for (const o of around(game.cacti, x0, y0, x1, y1)) drawCactusArt(o);
     for (const o of around(game.boulders, x0, y0, x1, y1)) drawBoulderArt(o);
     for (const o of around(game.berryBushes, x0, y0, x1, y1)) drawBushArt(o);
-  } finally { paintOn(null); }
+  } finally { paintVariant(null); paintOn(null); }
 }
 
 /** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
 function paintTufts(g, x0, y0, x1, y1) {
-  paintOn(g); paintStill(true);
-  try { for (const o of around(game.grassList, x0, y0, x1, y1)) drawGrassArt(o); } finally { paintStill(false); paintOn(null); }
+  paintOn(g); paintVariant(null, false); paintStill(true);
+  try { for (const o of around(game.grassList, x0, y0, x1, y1)) drawGrassArt(o); } finally { paintVariant(null); paintStill(false); paintOn(null); }
 }
 
 // The tufts of grass in pictures too, when so far out that their swaying can't be seen (and the look is the same, still)
@@ -192,6 +222,80 @@ function drawPicturedNature() {
   updateOver();
   for (const t of over.trees) drawTreeNear(t, true);
   for (const [o, width] of over.others) drawHarvestProgress(o, width);
+}
+
+// ---- The shadows of what stands still (#392)
+//
+// Trees, stumps, cacti, boulders, bushes, tufts of grass, sticks and stones, and the rock and ore tiles: their
+// shadows painted into pictures of the ground's pieces, black, and laid into the frame's shadows (see world.daytime.js)
+// at every zoom. A piece is painted again when something in or round it comes, goes or changes, or the sun has moved
+// on a step (small enough not to be seen: finer the closer in); till its turn, its old picture stays (a shadow gone
+// for a moment as the zoom changed, waiting to be painted at the new size, read as flicker)
+const SHADOW_MARGIN = 64; // (world px past its foot a thing's shadow reaches, a rock's the longest)
+/** @type {[string, () => any[], ((o: any) => boolean) | null][]} */
+const STILL = [
+  ['stump', () => game.stumps, null], ['tree', () => game.trees, standing], ['cactus', () => game.cacti, null],
+  ['boulder', () => game.boulders, null], ['bush', () => game.berryBushes, null], ['grass', () => game.grassList, null],
+  ['stick', () => game.sticks, null], ['pebbles', () => game.pebbles, null]
+];
+/** @param {any[][]} lists */
+const stillLists = lists => {
+  STILL.forEach(([, listOf], n) => { lists[n] = listOf(); });
+  lists[STILL.length] = game.naturalRocks; lists[STILL.length + 1] = game.ironOres; lists[STILL.length + 2] = game.coalOres;
+  return lists;
+};
+// the pictures' size: the shadows' picture's (half the screen's), a power of two, kept while the zoom is within a little of it
+let heldShadowRes = 0.5;
+const shadowRes = () => {
+  const s = Math.max(getViewScale() / 2, 1 / 32), want = Math.min(2, 2 ** Math.ceil(Math.log2(s)));
+  if (want !== heldShadowRes && s > heldShadowRes * 0.5 * 0.88 && s < heldShadowRes * 1.12) return heldShadowRes;
+  heldShadowRes = want;
+  return want;
+};
+// the sun to a step: a shadow 20 high moves no more than about a screen px a step (the zoom is within twice the
+// pictures' size), so every piece on the screen is painted again every few seconds, not every one
+const sunStep = () => Math.min(0.5, 0.02 / heldShadowRes);
+const stillSun = () => { const sun = getSun(), q = sunStep(); return { dx: Math.round(sun.dx / q) * q, dy: Math.round(sun.dy / q) * q }; };
+// (a piece looked at again every second, for a tree felled or grown: a moment late for its shadow is not seen)
+const shadowStamps = stamper(stillLists, SHADOW_MARGIN, () => { const sun = stillSun(); return `${sunStep()}:${sun.dx},${sun.dy}`; }, 60);
+// what's in and round each piece, by kind, as it was last painted: painted again for the sun, it isn't looked for again
+/** @type {Map<string, { things: number | undefined, feet: number[][] }>} */
+const stillFeet = new Map();
+
+/** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
+function paintStillShadows(g, x0, y0, x1, y1) {
+  const size = CHUNK * TILE_SIZE, cx = Math.floor((x0 + x1) / 2 / size), cy = Math.floor((y0 + y1) / 2 / size), key = `${cx},${cy}`;
+  const things = shadowStamps.thingsIn(cx, cy);
+  let kept = stillFeet.get(key);
+  if (!kept || things === undefined || kept.things !== things) {
+    const feet = STILL.map(([, listOf, keep]) => {
+      /** @type {number[]} */
+      const at = [];
+      forEachInRect(listOf(), x0 - SHADOW_MARGIN, y0 - SHADOW_MARGIN, x1 + SHADOW_MARGIN, y1 + SHADOW_MARGIN, o => { if (!keep || keep(o)) at.push(o.x, o.y); });
+      return at;
+    });
+    stillFeet.delete(key); stillFeet.set(key, (kept = { things, feet }));
+    if (stillFeet.size > 400) stillFeet.delete(/** @type {string} */ (stillFeet.keys().next().value));
+  }
+  const sun = stillSun(), shadow = new Path2D();
+  STILL.forEach(([kind], n) => {
+    const [dx, dy, rx, ry] = SHADOWS[kind], height = rx * 0.9, ox = sun.dx * height, oy = sun.dy * height;
+    const ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25, at = kept.feet[n];
+    for (let i = 0; i < at.length; i += 2) {
+      const sx = at[i] + dx + ox * 0.5, sy = at[i + 1] + dy + 4 + oy * 0.5;
+      shadow.moveTo(sx + ex, sy); shadow.ellipse(sx, sy, ex, ey, 0, 0, Math.PI * 2);
+    }
+  });
+  g.fillStyle = '#000';
+  g.fill(shadow);
+  paintRockShadows(g, x0, y0, x1, y1, sun);
+}
+
+// The still things' shadows into the frame's shadows' picture g (with the world's transform)
+/** @param {CanvasRenderingContext2D} g */
+export function drawStillShadows(g) {
+  shadowStamps.newFrame();
+  drawChunks('shadows', shadowRes(), shadowStamps.stamp, paintStillShadows, undefined, g, true);
 }
 
 // Trees: saplings growing, grown trees, apple trees with their apples (and the stumps of those felled)
@@ -231,8 +335,8 @@ export function drawCactiBouldersGrassBushes() {
     drawKind('grass', game.grassList, 20);
     return;
   }
-  drawKind('cactus', game.cacti);
-  drawKind('boulder', game.boulders); // (a loose, rounded stone, not the square rock that joins up)
+  drawKind('cactus', game.cacti, 24);
+  drawKind('boulder', game.boulders, 24); // (a loose, rounded stone, not the square rock that joins up)
   drawKind('grass', game.grassList, 20);
   drawKind('bush', game.berryBushes, 22); // (blue berries, as the Berries icon)
 }

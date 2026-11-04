@@ -35,6 +35,63 @@ test('sent somewhere it stands there while picked, then back to work; told to Ho
   expect(errors).toEqual([]);
 });
 
+test('a move order wakes a settler sleeping at night (#326)', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(() => {
+    const s = settlers[0];
+    const start = { x: s.x, y: s.y };
+    const spot = { x: townHall.x + 220, y: townHall.y + 160 };
+    s.asleep = true; s.sleepSpot = { x: s.x, y: s.y };
+    selectedSettler = s; selectedGroup = [];
+    commandTap([s], spot.x, spot.y);
+    for (let i = 0; i < 60; i++) update(1 / 60);
+    return {
+      awake: !s.asleep && !s.sleepSpot,
+      moved: Math.hypot(s.x - start.x, s.y - start.y) > 10
+    };
+  });
+  expect(r).toEqual({ awake: true, moved: true });
+  expect(errors).toEqual([]);
+});
+
+test('campfire seats are only offered while the fire is burning (#326)', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(() => {
+    const s = settlers[0];
+    const fire = { type: 'campfire', x: townHall.x + 135, y: townHall.y + 15, fuelLeft: 0, burning: 0 };
+    buildings.push(fire); resetTileIndex();
+    const coldSeat = freeCampfireSeat(s);
+    const watchSeat = freeCampfireSeat(s, true);
+    fire.fuelLeft = 5; game.pathTick++;
+    const litSeat = freeCampfireSeat(s);
+    return { cold: !!coldSeat, watch: !!watchSeat, lit: !!litSeat };
+  });
+  expect(r).toEqual({ cold: false, watch: true, lit: true });
+  expect(errors).toEqual([]);
+});
+
+test('a watchman lights an unlit campfire for a seat when fuel is available (#326)', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(() => {
+    const s = settlers[0];
+    Object.assign(s, { role: 'soldier', weapon: 'sword', x: townHall.x, y: townHall.y, carrying: null });
+    for (const raw of GAME_CONFIG.cooking.raw) stock[raw] = 0;
+    for (const fuel of Object.keys(GAME_CONFIG.cooking.fuel)) stock[fuel] = 0;
+    stock.firewood = 1;
+    const fire = { type: 'campfire', x: townHall.x + 30, y: townHall.y, fuelLeft: 0, burning: 0 };
+    buildings.push(fire);
+    s.idle = { act: 'campfire', spot: { x: fire.x, y: fire.y }, seat: 0 };
+    const tick = { dt: 1 / 60, isWaveActive: false };
+    const fetched = cook(s, tick);
+    const carriedFuel = !!s.carrying && s.carrying.type === 'firewood';
+    const loaded = cook(s, tick);
+    tickCampfires(1 / 60);
+    return { fetched, carriedFuel, loaded, burning: fire.burning > 0, fuelLeft: fire.fuelLeft > 0 };
+  });
+  expect(r).toEqual({ fetched: true, carriedFuel: true, loaded: true, burning: true, fuelLeft: true });
+  expect(errors).toEqual([]);
+});
+
 test('one let go walks to the town hall and is gone there; a dog with no soldier is sent off and let go too (#326, 2)', async ({ page }) => {
   const errors = await start(page);
   const r = await page.evaluate(() => {

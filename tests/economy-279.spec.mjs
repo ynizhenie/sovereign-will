@@ -31,7 +31,18 @@ test('no potions, but rope is back as a supply; a tent houses two (#279, 26, 29,
     potions: !!GAME_CONFIG.resources.potions, rope: !!GAME_CONFIG.resources.rope, ropeRecipe: !!GAME_CONFIG.recipes.rope,
     anyRope: JSON.stringify([GAME_CONFIG.buildings, GAME_CONFIG.tools, GAME_CONFIG.weapons, GAME_CONFIG.gear]).includes('"rope"'),
     bow: GAME_CONFIG.weapons.bow.cost, tent: GAME_CONFIG.buildings.tent.population,
+    costs: Object.fromEntries(['watchtower', 'fish_trap', 'iron_trap', 'tent', 'demon_den'].map(id => [id, GAME_CONFIG.buildings[id].cost])),
     brew: SETTLER_BEHAVIOURS.some(b => b.name === 'brewPotion')
   }));
-  expect(r).toEqual({ potions: false, rope: true, ropeRecipe: true, anyRope: true, bow: { wood: 15, leather: 3, rope: 2 }, tent: 2, brew: false });
+  expect(r).toEqual({
+    potions: false, rope: true, ropeRecipe: true, anyRope: true, bow: { wood: 15, leather: 3, rope: 2 }, tent: 2,
+    costs: {
+      watchtower: { wood: 10, stone: 5, rope: 2 },
+      fish_trap: { wood: 3, rope: 3 },
+      iron_trap: { iron: 3 },
+      tent: { wood: 8, leather: 2, rope: 2, herbs: 2 },
+      demon_den: { stone: 10, wood: 4 }
+    },
+    brew: false
+  });
 });

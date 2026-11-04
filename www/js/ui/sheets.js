@@ -11,6 +11,11 @@ let openName = null;
 let openKey = null;
 /** @type {{ name: string, key: string | null } | null} */
 let lastSheet = null;
+let onSheetClose = () => {};
+
+export function setSheetCloseHandler(handler) {
+  onSheetClose = handler;
+}
 
 // the dock button that opened it lights up: data-dock="<sheet>:<key>" (or just "<sheet>")
 function markDock() {
@@ -39,6 +44,7 @@ export function closeSheet() {
   document.body.classList.remove('sheet-open'); // the frame sinks away with the sheet still in it
   resetItemInfo();
   markDock();
+  onSheetClose();
 }
 
 /** @param {string} name @param {string | null} [key] @returns {boolean} open now */

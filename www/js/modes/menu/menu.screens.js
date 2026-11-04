@@ -4,6 +4,7 @@ import { LANGUAGES } from '../../content/language/index.js';
 import { audio, currentLanguage, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, previewTrack, setTrackOn } from '../../app/index.js';
 import { flagHtml, iconHtml } from '../../ui/index.js';
+import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
 const seedPanel = document.getElementById('seed-settings');
@@ -132,6 +133,12 @@ export function initMenuScreens() {
   showFpsOptions.forEach(button => onTap(button, () => {
     saveSetting('showFps', button.dataset.showFps);
     applyShowFps(button.dataset.showFps);
+  }));
+  const markShadows = enabled => document.querySelectorAll('[data-shadows]').forEach(button => button.classList.toggle('active', (button.dataset.shadows === 'on') === enabled));
+  markShadows(areShadowsEnabled());
+  document.querySelectorAll('[data-shadows]').forEach(button => onTap(button, () => {
+    setShadowsEnabled(button.dataset.shadows === 'on');
+    markShadows(areShadowsEnabled());
   }));
   // (#326) the languages: in Settings each with its flag and its name, and by the Settings button the flag of the one now
   const markLanguage = () => { document.querySelectorAll('[data-language]').forEach(b => b.classList.toggle('active', b.dataset.language === currentLanguage)); renderMusicPlayer(); };

@@ -72,33 +72,5 @@ Object.assign(window.sim, (() => {
     return { treeCleared, replaced, sandCleared, pondCleared };
   }
 
-  // Rows and columns added and taken away at the edges; what's on the map moves with it (#143)
-  function resize() {
-    const notes = recentNotifications; // the messages shown from here on
-    notes.length = 0;
-    startEditor({ cols: 30, rows: 30, generate: false });
-    use('tree', 5, 5);
-    const hall0 = [townHall.x, townHall.y];
-    resizeEditorMap('left', 1);
-    resizeEditorMap('top', -1);
-    resizeEditorMap('bottom', 1);
-    const tree = getGridPos(trees[0].x, trees[0].y);
-    const after = { size: [COLS, ROWS], tree: [tree.gx, tree.gy], hallMoved: [townHall.x - hall0[0], townHall.y - hall0[1]] };
-    // the tree's column goes into the border when enough is taken off the left: it goes
-    for (let i = 0; i < 5; i++) resizeEditorMap('left', -1);
-    const treeGone = trees.length === 0;
-    // never below 20 tiles
-    for (let i = 0; i < 20; i++) resizeEditorMap('right', -1);
-    const minCols = COLS;
-    // the hall near the top edge, and a row taken off there would put it on the border: refused
-    editor.tool = 'town_hall'; editorTap(townHall.x, 3 * TILE_SIZE);
-    const rows = ROWS;
-    resizeEditorMap('top', -1);
-    const unchanged = ROWS === rows;
-    const refused = notes.includes(t('editor.hallInTheWay')) && unchanged;
-    leaveEditor();
-    return { after, treeGone, minCols, refused };
-  }
-
-  return { handMadeMap, generatedRoundTrip, toggleClear, resize };
+  return { handMadeMap, generatedRoundTrip, toggleClear };
 })());

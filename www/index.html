@@ -19,7 +19,9 @@
     <!-- the game's name, big, on top of the main menu's first screen -->
     <div class="menu-title" id="menu-title"><span>Sovereign Will</span></div>
     <!-- put the menu away to watch the scene behind it; there, change the scene or bring the menu back (#256) -->
-    <button id="menu-hide" class="btn" data-i18n-title="menu.hideMenu" aria-label="Hide the menu"><i class="ic ic-eye"></i></button>
+    <div class="flag-box menu-eye-box" id="menu-eye-box">
+        <button id="menu-hide" class="flag-button menu-eye-button" data-i18n-title="menu.hideMenu" aria-label="Hide the menu"><i class="ic ic-eye"></i></button>
+    </div>
     <div id="menu-scene-bar">
         <button id="menu-next-scene" class="btn" data-i18n="menu.nextScene">[[reroll]] Next scene</button>
         <button id="menu-show" class="btn" data-i18n="menu.showMenu">[[menu]] Menu</button>
@@ -197,6 +199,14 @@
             <div class="wave-options" id="show-fps-options">
                 <button class="fps-option" data-show-fps="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-show-fps="on" data-i18n="menu.on">On</button>
+            </div>
+        </div>
+
+        <div class="wave-settings">
+            <div data-i18n="menu.shadows">Shadows:</div>
+            <div class="wave-options" id="shadows-options">
+                <button class="fps-option" data-shadows="off" data-i18n="menu.off">Off</button>
+                <button class="fps-option" data-shadows="on" data-i18n="menu.on">On</button>
             </div>
         </div>
 
@@ -465,6 +475,12 @@
           <button class="btn sub-tab" data-battle-field="glade" data-i18n="battle.fieldGlade">Glade</button>
           <button class="btn sub-tab" data-battle-field="desert" data-i18n="battle.fieldDesert">Desert</button>
         </div>
+        <div class="panel-heading" data-i18n="battle.fieldHighlightHeading">Side highlights:</div>
+        <div class="sub-tabs">
+          <button class="btn sub-tab" data-battle-highlight="classic" data-i18n="battle.fieldHighlightClassic">Green and red</button>
+          <button class="btn sub-tab" data-battle-highlight="team" data-i18n="battle.fieldHighlightTeam">Unit colours</button>
+          <button class="btn sub-tab" data-battle-highlight="off" data-i18n="battle.fieldHighlightOff">Off</button>
+        </div>
         <!-- (#326) how the battle looks: its time of day and weather -->
         <div class="panel-heading" data-i18n="battle.timeHeading">Time of day:</div>
         <div class="sub-tabs">
@@ -502,12 +518,11 @@
           <button class="btn sub-tab on" data-brush="1" data-i18n="editor.brush1">Brush 1</button>
           <button class="btn sub-tab" data-brush="3">3×3</button>
           <button class="btn sub-tab" data-brush="5">5×5</button>
-          <button class="btn sub-tab" id="editor-drag" data-i18n="editor.dragPaint">Drag to paint</button>
         </div>
         <div class="battle-hint" id="editor-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
         <div id="editor-tools"></div>
       </div>
-      <!-- the map's own (#255): its name, saving and playing it; its size; clearing it -->
+      <!-- the map's own (#255): its name, saving and playing it; its starting time; clearing it -->
       <div class="hud-sheet" data-sheet="editor-map">
         <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
         <div class="editor-toolbar">
@@ -520,13 +535,6 @@
           <button class="btn sub-tab" data-start-time="day" data-i18n="daytime.day">Day</button>
           <button class="btn sub-tab" data-start-time="evening" data-i18n="daytime.evening">Evening</button>
           <button class="btn sub-tab" data-start-time="night" data-i18n="daytime.night">Night</button>
-        </div>
-        <div class="panel-heading"><span data-i18n="editor.sizeButton">Size</span> <b id="editor-size">40×40</b></div>
-        <div id="editor-resize-panel" class="editor-resize">
-          <span data-i18n="editor.side.top">Top</span><button class="btn" data-resize="top:10">+10</button><button class="btn" data-resize="top:1">+</button><button class="btn" data-resize="top:-1">−</button><button class="btn" data-resize="top:-10">−10</button>
-          <span data-i18n="editor.side.bottom">Bottom</span><button class="btn" data-resize="bottom:10">+10</button><button class="btn" data-resize="bottom:1">+</button><button class="btn" data-resize="bottom:-1">−</button><button class="btn" data-resize="bottom:-10">−10</button>
-          <span data-i18n="editor.side.left">Left</span><button class="btn" data-resize="left:10">+10</button><button class="btn" data-resize="left:1">+</button><button class="btn" data-resize="left:-1">−</button><button class="btn" data-resize="left:-10">−10</button>
-          <span data-i18n="editor.side.right">Right</span><button class="btn" data-resize="right:10">+10</button><button class="btn" data-resize="right:1">+</button><button class="btn" data-resize="right:-1">−</button><button class="btn" data-resize="right:-10">−10</button>
         </div>
         <div class="editor-toolbar">
           <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">[[broom]] Clear the map</button>
@@ -542,7 +550,7 @@
       <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-build" data-dock="colony:tab-build"><i class="ic ic-build"></i><span data-i18n="dock.build">Build</span></button>
       <button class="tab-btn dock-btn" id="tab-btn-farming" data-action="switchTab" data-arg="tab-farming" data-dock="colony:tab-farming"><i class="ic ic-wheat"></i><span data-i18n="dock.farming">Farm</span></button>
       <button class="tab-btn dock-btn" data-action="switchTab" data-arg="tab-craft" data-dock="colony:tab-craft"><i class="ic ic-hammer"></i><span data-i18n="dock.craft">Craft</span></button>
-      <button class="tab-btn dock-btn" id="tab-btn-units" data-action="switchTab" data-arg="tab-units" data-dock="colony:tab-units"><i class="ic ic-worker"></i><span data-i18n="dock.units">Units</span></button>
+      <button class="tab-btn dock-btn" id="tab-btn-units" data-action="switchTab" data-arg="tab-units" data-dock="colony:tab-units"><i id="tab-units-icon" class="ic ic-worker"></i><span data-i18n="dock.units">Units</span></button>
     </div>
     <div class="dock-row" data-hud-mode="battle">
       <button class="dock-btn" data-battle-category="units" data-dock="battle:units"><i class="ic ic-worker"></i><span data-i18n="battle.cat.units">Units</span></button>

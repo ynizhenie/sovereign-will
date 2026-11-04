@@ -6,10 +6,10 @@
 // Torch posts are lit at dusk by a worker (postFirewood); a woodcutter gets firewood for the campfires.
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, townHall } from '../../../engine/world/index.js';
-import { moveEntityTowards } from '../../../engine/movement/index.js';
+import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { fetchFromStorage, findNearestStorage, getFreeStock, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../storage/index.js';
-import { getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
+import { baseRadiusToward, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { getLights, getDayPhase, isNight, nightProgress } from '../../world/index.js';
 import { faceTowards } from './settlers.draw.js';
@@ -19,6 +19,7 @@ import { freeCampfireSeat } from './settlers.idle.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 
 const config = () => GAME_CONFIG.daytime;
+const hasCampfireFuel = () => Object.keys(GAME_CONFIG.cooking.fuel).some(fuel => (stock[fuel] || 0) > 0);
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
 // a faction with hand torches needs them at night (the undead see in the dark; their torch posts still burn firewood, #326)
 export const needsTorches = () => !!GAME_CONFIG.resources.torches.factions && GAME_CONFIG.resources.torches.factions.includes(getPlayerFaction().id);
@@ -41,9 +42,11 @@ export function onFuelDuty(s) {
 }
 
 // How far a settler may go now: at night with no torch to be had, only the base (#257)
-export function nightReach(s) {
+export function nightReach(s, target = s || townHall) {
   if (!isNight() || !needsTorches() || (s && (s.torchInHand || onFuelDuty(s)))) return Infinity;
-  return getFreeStock('torches') > 0 ? Infinity : getBaseRadius() + TILE_SIZE;
+  if (getFreeStock('torches') > 0) return Infinity;
+  const angle = Math.atan2(target.y - townHall.y, target.x - townHall.x);
+  return baseRadiusToward(angle) + TILE_SIZE;
 }
 
 // Each tick: a new night counted, the morning puts torches out; who's awake out of the light takes a torch
@@ -145,10 +148,51 @@ function nightCrew(tick) {
   return crew;
 }
 
-// The shelter it sleeps at: the nearest of its faction's homes, or the town hall
-function shelterFor(s) {
-  const homes = game.buildings.filter(b => { const def = getDefinition('buildings', b.type) || {}; return def.population || def.healPerSecond; });
-  return homes.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || townHall;
+// A settler's place is one of the eight tiles immediately around its shelter.
+const SLEEP_NEIGHBOURS = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
+function sleepSpotFor(s) {
+  const homes = game.buildings
+    .filter(b => { const def = getDefinition('buildings', b.type) || {}; return def.population || def.healPerSecond; })
+    .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y));
+  const candidates = [...homes, townHall];
+  const reachable = getSettlerReach(s);
+  const occupied = (home, gx, gy) => game.settlers.some(o => {
+    if (o === s || o.sleepAt !== home || !o.sleepSpot) return false;
+    const tile = getGridPos(o.sleepSpot.x, o.sleepSpot.y);
+    return tile.gx === gx && tile.gy === gy;
+  });
+  const canUse = (home, gx, gy) => {
+    const spot = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+    if (isTileBlockedForSettler(gx, gy) || getReachSteps(reachable, gx, gy) === -1 || occupied(home, gx, gy)) return null;
+    return spot;
+  };
+
+  if (s.sleepAt && s.sleepSpot) {
+    const tile = getGridPos(s.sleepSpot.x, s.sleepSpot.y);
+    if (candidates.includes(s.sleepAt) && Math.abs(tile.gx - getGridPos(s.sleepAt.x, s.sleepAt.y).gx) <= 1 &&
+      Math.abs(tile.gy - getGridPos(s.sleepAt.x, s.sleepAt.y).gy) <= 1 &&
+      (tile.gx !== getGridPos(s.sleepAt.x, s.sleepAt.y).gx || tile.gy !== getGridPos(s.sleepAt.x, s.sleepAt.y).gy) &&
+      canUse(s.sleepAt, tile.gx, tile.gy)) {
+      return { home: s.sleepAt, spot: s.sleepSpot };
+    }
+  }
+
+  for (const home of candidates) {
+  const angle = Math.atan2(s.y - home.y, s.x - home.x) + ((s.id % 5) - 2) * 0.25;
+    const grid = getGridPos(home.x, home.y);
+    const desiredX = Math.cos(angle), desiredY = Math.sin(angle);
+    let best = null, bestScore = Infinity;
+    for (const [dx, dy] of SLEEP_NEIGHBOURS) {
+      const gx = grid.gx + dx, gy = grid.gy + dy, spot = canUse(home, gx, gy);
+      if (!spot) continue;
+      const steps = getReachSteps(reachable, gx, gy);
+      const directionPenalty = 1 - (dx * desiredX + dy * desiredY) / Math.hypot(dx, dy);
+      const score = steps * TILE_SIZE + directionPenalty * TILE_SIZE;
+      if (score < bestScore) { best = spot; bestScore = score; }
+    }
+    if (best) return { home, spot: best };
+  }
+  return null;
 }
 
 // At night (a behaviour, early): to bed, unless on watch, on fuel duty, possessed or with a wave coming
@@ -166,25 +210,21 @@ export function sleepAtNight(s, tick) {
     }
     // on watch: walking the edge, or by the campfire (its pastime for the night)
     if (onWatch(s) && !tick.isWaveActive && (!s.idle || (s.idle.act !== 'patrolEdge' && s.idle.act !== 'campfire'))) {
-      const free = s.id % 2 ? freeCampfireSeat(s) : null; // (#298: a seat at it free, or on patrol)
+      let free = s.id % 2 ? freeCampfireSeat(s) : null; // (#298: a seat at it free, or on patrol)
+      if (!free && s.id % 2 && hasCampfireFuel()) free = freeCampfireSeat(s, true);
       s.idle = free ? { act: 'campfire', left: 999, spot: { x: free.fire.x, y: free.fire.y }, partnerId: null, seat: free.seat } : { act: 'patrolEdge', left: 999, spot: null, partnerId: null };
     }
     return false;
   }
   if (s.carrying || tick.isWaveActive) return false; // (its load home first)
-  const home = shelterFor(s);
   s.patrolTarget = null;
+  const assignment = sleepSpotFor(s);
+  if (!assignment) { s.sleepSpot = null; s.sleepAt = null; return false; }
+  const { home, spot } = assignment;
   // (#279) a corpse lying by where it sleeps: taken away first (carryCorpse takes it on to the heap)
   if (!s.asleep && clearSleepingPlace(s, home, tick)) return true;
-  // round its shelter, each its own place
-  const sleepers = game.settlers.filter(o => o.asleep && o.sleepAt === home).length;
-  if (!s.sleepSpot || s.sleepAt !== home) {
-    // (out past its tile's edge: a body can't get into the building), on the side it comes from (#279: a
-    // place by its id could be round the far side of the town hall, and it stood at the hall's wall)
-    const a = Math.atan2(s.y - home.y, s.x - home.x) + ((s.id % 5) - 2) * 0.25, r = (home === townHall ? townHall.radius + 14 : 32) + (sleepers % 3) * 4;
-    s.sleepSpot = { x: home.x + Math.cos(a) * r, y: home.y + Math.sin(a) * r };
-    s.sleepAt = home;
-  }
+  s.sleepSpot = spot;
+  s.sleepAt = home;
   if (Math.hypot(s.sleepSpot.x - s.x, s.sleepSpot.y - s.y) > 12) {
     if (home === townHall && Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 40) moveSettlerToTownHall(s, s.speed, tick.dt);
     else moveEntityTowards(s, s.sleepSpot.x, s.sleepSpot.y, s.speed, false, tick.dt);

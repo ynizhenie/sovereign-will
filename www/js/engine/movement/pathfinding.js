@@ -30,6 +30,7 @@ function buildSettlerBlockedGrid() {
     const def = getDefinition('buildings', b.type) || {}, own = b.side !== 'red';
     if ((!isDoor(b) && !def.walkable) || (own && (b.type === 'spikes' || def.ironTrap)) || (!own && isDoor(b))) mark(b);
   }
+  for (const outpost of game.enemyTents) if (outpost.outpost) mark(outpost);
   for (const list of [game.naturalRocks, game.waterTiles, game.cacti, game.boulders, game.ironOres, game.coalOres]) list.forEach(mark);
   for (const t of game.trees) if (!t.isGrowing) mark(t);
   // round the town hall
@@ -176,7 +177,7 @@ function computeBlockedForEnemyStrict(gx, gy) {
   const tiles = getTileIndex(), k = `${tx},${ty}`;
   // (an iron trap they don't see: they walk right onto it, #248; #326 the player's spikes too, straight over them;
   // through their own doors, round their own spikes and traps)
-  return (tiles.buildings.has(k) && !tiles.ownTraps.has(k) && !tiles.ownSpikes.has(k) && !tiles.redDoors.has(k)) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
+  return (tiles.buildings.has(k) && !tiles.ownTraps.has(k) && !tiles.ownSpikes.has(k) && !tiles.redDoors.has(k)) || tiles.outposts.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
          tiles.cacti.has(k) || tiles.boulders.has(k) || tiles.ores.has(k);
 }
 
@@ -222,7 +223,7 @@ function computeBlockedForEnemyPermissive(gx, gy) {
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore;
   // (#326) not their own buildings, and they keep off their own spikes and traps
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) || tiles.redBuildings.has(k) || tiles.redHazards.has(k);
+  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) || tiles.redBuildings.has(k) || tiles.redHazards.has(k) || tiles.outposts.has(k);
 }
 
 export const PATH_DIRECTIONS = [

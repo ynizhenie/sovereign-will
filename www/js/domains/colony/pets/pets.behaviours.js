@@ -10,7 +10,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, petKindOf, playerControlled } from '../settlers/index.js';
+import { deselectSettler, faceTowards, petKindOf, playerControlled } from '../settlers/index.js';
 import { fetchFromStorage, returnFood, stockLeft, takeFood } from '../storage/index.js';
 import { getWeaponStats } from '../equipment/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
@@ -224,6 +224,8 @@ export function haunt(s, foe) {
   ghostScare(foe, 'enemy'); // (#326: a big one at the second ghost)
   s.ghostGone = config().ghost.backSeconds;
   s.escort = null;
+  s.isPossessed = false;
+  if (game.selectedSettler === s || game.selectedGroup.includes(s)) deselectSettler();
   playSound('ghost', foe);
 }
 

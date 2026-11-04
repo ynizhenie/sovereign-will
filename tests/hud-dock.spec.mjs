@@ -74,6 +74,38 @@ test('the dock sheet stays the same size when the units roster grows', async ({ 
   expect(buildHeight).toBeCloseTo(unitsSize.height, 0);
 });
 
+test('the Units dock icon follows the faction and its Give menu closes with the sheet or tab', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const icon = await page.evaluate(() => {
+    setSideFaction('player', 'demons');
+    updateUI();
+    return {
+      dock: document.getElementById('tab-units-icon').dataset.icon,
+      population: document.getElementById('population-icon').dataset.icon,
+      expected: GAME_CONFIG.settlerTypes[getPlayerFaction().startUnits].icon,
+      faction: getPlayerFaction().id
+    };
+  });
+  expect(icon).toEqual({ dock: icon.expected, population: icon.expected, expected: icon.expected, faction: 'demons' });
+
+  await page.evaluate(() => {
+    game.armory = { 'gear:helmet': 1 };
+    updateUnitsTab(true);
+  });
+  await page.click('#tab-btn-units');
+  await page.locator('#tab-units .unit-tile .tile-act').first().click();
+  await expect(page.locator('#tab-units .unit-give')).toBeVisible();
+  await page.click('[data-arg="tab-build"]');
+  await expect(page.locator('#tab-units .unit-give')).toHaveCount(0);
+
+  await page.click('#tab-btn-units');
+  await page.locator('#tab-units .unit-tile .tile-act').first().click();
+  await expect(page.locator('#tab-units .unit-give')).toBeVisible();
+  await page.click('#tab-btn-units');
+  await expect(page.locator('#tab-units .unit-give')).toHaveCount(0);
+});
+
 test('picking a building puts the sheet away and shows its chip: a tap brings the sheet back, × or Esc puts it down', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');

@@ -6,7 +6,7 @@ import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, drawWorkTool, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
+import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, drawFigureShadows, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, drawWorkTool, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
@@ -93,6 +93,14 @@ export function drawEnemyTentSites() {
 }
 
 // Enemies: body, weapon, quiver, the target mark, health
+// The enemies' shadows (those the colony sees), into the frame's shadows (see drawShadowLayer)
+export function drawEnemyShadows() {
+  if (tinyUnit()) return;
+  const view = getViewRect(60), seen = [];
+  for (const list of [game.enemies, game.scouts]) forEachInRect(list, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) seen.push(en); });
+  drawFigureShadows(seen, view, en => en.radius || 11);
+}
+
 export function drawEnemies() {
   // (#299) only those the colony sees now, and only those on the screen (#306)
   const view = getViewRect(60);
@@ -154,7 +162,7 @@ export function drawEnemy(en) {
       if (handBack) at(inHand);
       at(() => drawMedicBag(false));
     }
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple });
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple, shadow: false });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
     drawHealSparks(en); // (#326)

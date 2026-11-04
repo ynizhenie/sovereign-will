@@ -2,16 +2,16 @@
 
 import { game, getTileIndex } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
-import { drawEnemies, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlers } from '../domains/colony/settlers/index.js';
+import { drawEnemies, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
+import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlerShadows, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
-import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
+import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
-import { drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld } from '../domains/world/index.js';
+import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -25,6 +25,19 @@ export function render() {
   const viewScale = getViewScale();
   ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
   ctx.scale(viewScale, viewScale);
+  if (isContinentMap()) {
+    const transform = ctx.getTransform();
+    // Keep the clip edge on screen pixels; fractional edges leave a resampling fringe outside the map.
+    const left = Math.ceil(transform.e), top = Math.ceil(transform.f);
+    const right = Math.floor(transform.a * game.WORLD_WIDTH + transform.e);
+    const bottom = Math.floor(transform.d * game.WORLD_HEIGHT + transform.f);
+    ctx.beginPath();
+    ctx.rect((left - transform.e) / transform.a, (top - transform.f) / transform.d,
+      (right - left) / transform.a, (bottom - top) / transform.d);
+    ctx.clip();
+    ctx.beginPath();
+  }
+  beginShadowFrame(ctx); // (the shadows drawn in the world from here are kept for the next frame's, see drawShadowLayer)
 
   drawGrassGround();
   drawPaths(); // (#248)
@@ -40,6 +53,8 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
+  // all the shadows at once, on the ground under everything that stands on it (world.daytime.js)
+  drawShadowLayer(drawStillShadows, () => { drawSettlerShadows(); drawEnemyShadows(); });
   drawWallows(); // (the ground boars dug, on the ground, #326)
   drawSelectedPaths(); // (where the picked ones are going, #326)
   drawSticksPebblesOre();
@@ -69,6 +84,7 @@ export function render() {
   drawProjectiles();
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)
   drawFog(); // (what the colony hasn't seen dark, what it doesn't see now dimmed, #299)
+  endShadowFrame();
 
   ctx.restore();
   drawDarkness(); // (night, with its lights, #257)

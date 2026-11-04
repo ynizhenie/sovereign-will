@@ -108,15 +108,265 @@ test('walls and doors join (a run, corners, a T, a cross, a lone post) and a doo
     const { makeSettler } = window.sim.helpers;
     const walker = makeSettler(1, door.x, door.y + 8, {}); settlers = [walker];
     const frames = async n => { for (let f = 0; f < n; f++) { await new Promise(res => setTimeout(res, 100)); render(); } }; // (the animation runs by the clock)
-    await frames(8);
+    await frames(12);
     const opened = door.openness;
     settlers = [];
-    await frames(8);
+    await frames(12);
     return { start: open[0], opened, shut: door.openness, ironShut: iron.openness };
   });
   expect(r.start).toBe(0);
   expect(r.opened).toBeGreaterThan(0.9);
   expect(r.shut).toBe(0);
   expect(r.ironShut).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('connected walls and doors cast one combined angular shadow', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const originals = {
+      rect: Path2D.prototype.rect,
+      roundRect: Path2D.prototype.roundRect,
+      ellipse: Path2D.prototype.ellipse,
+      fill: ctx.fill
+    };
+    const fills = [];
+    let rectangles = 0, ellipses = 0;
+    Path2D.prototype.rect = function (...args) {
+      rectangles++;
+      return originals.rect.apply(this, args);
+    };
+    Path2D.prototype.roundRect = function (...args) {
+      rectangles++;
+      return originals.roundRect.apply(this, args);
+    };
+    Path2D.prototype.ellipse = function (...args) {
+      ellipses++;
+      return originals.ellipse.apply(this, args);
+    };
+    ctx.fill = function (...args) {
+      fills.push(args.length);
+      return originals.fill.apply(this, args);
+    };
+    try {
+      drawWallShadows([
+        { x: 300, y: 300, type: 'wall_wood', mask: 2 },
+        { x: 330, y: 300, type: 'wall_stone', mask: 10 },
+        { x: 360, y: 300, type: 'door', mask: 10, open: 0, swing: { x: 0, y: 1 } }
+      ]);
+      return { rectangles, ellipses, combinedPasses: fills.length };
+    } finally {
+      Path2D.prototype.rect = originals.rect;
+      Path2D.prototype.roundRect = originals.roundRect;
+      Path2D.prototype.ellipse = originals.ellipse;
+      ctx.fill = originals.fill;
+    }
+  });
+  expect(result.rectangles).toBeGreaterThan(0);
+  expect(result.ellipses).toBe(0);
+  expect(result.combinedPasses).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+test('doors draw above the wall and their fence gate rotates with the opening', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const g = getGridPos(townHall.x, townHall.y);
+    const wall = createBuildingBlueprint('wall_wood', (g.gx + 5) * TILE_SIZE + 15, (g.gy + 4) * TILE_SIZE + 15);
+    const door = createBuildingBlueprint('door', wall.x - TILE_SIZE, wall.y);
+    delete wall.progress; delete wall.maxProgress;
+    delete door.progress; delete door.maxProgress;
+    game.buildings = [door, wall];
+    const original = ctx.fillRect, order = [];
+    ctx.fillRect = function (...args) {
+      if (this.fillStyle === '#7a4a20') order.push('wall');
+      if (this.fillStyle === '#f39c12') order.push('door');
+      return original.apply(this, args);
+    };
+    try {
+      drawBuildings();
+      const lastWall = order.lastIndexOf('wall'), doorHandle = order.lastIndexOf('door');
+      const transforms = [];
+      const fill = ctx.fillRect;
+      ctx.fillRect = function (...args) {
+        if (this.fillStyle === '#9b6633') {
+          const matrix = this.getTransform();
+          transforms.push([matrix.a, matrix.b, matrix.c, matrix.d]);
+        }
+        return fill.apply(this, args);
+      };
+      drawDoorArt(300, 300, false, LINK.n | LINK.s, 0, { x: 1, y: 0 });
+      ctx.fillRect = fill;
+      return { doorAboveWall: doorHandle > lastWall, turnedGate: transforms.some(([a, b, c, d]) => Math.abs(b) > 0.9 || Math.abs(c) > 0.9) };
+    } finally {
+      ctx.fillRect = original;
+    }
+  });
+  expect(result.doorAboveWall).toBe(true);
+  expect(result.turnedGate).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('a wood wall arm stops before the frame of a connected door', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const original = ctx.fillRect, connectedLogs = [];
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillRect = function (x, y, width, height) {
+      if (width === 5.5 && height === 25) connectedLogs.push(x);
+      return original.call(this, x, y, width, height);
+    };
+    try {
+      drawWoodWall(100, 100, LINK.e);
+      const withoutDoor = connectedLogs.length;
+      connectedLogs.length = 0;
+      drawWoodWall(100, 100, LINK.e, LINK.e);
+      return { withoutDoor, withDoor: connectedLogs.length };
+    } finally {
+      ctx.fillRect = original;
+      ctx.restore();
+    }
+  });
+  expect(result).toEqual({ withoutDoor: 3, withDoor: 2 });
+  expect(errors).toEqual([]);
+});
+
+test('buildings higher on the map are drawn behind buildings lower on the map', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const fills = await page.evaluate(() => {
+    const g = getGridPos(townHall.x, townHall.y);
+    const upper = createBuildingBlueprint('wall_wood', (g.gx + 5) * TILE_SIZE + 15, (g.gy + 3) * TILE_SIZE + 15);
+    const lower = createBuildingBlueprint('wall_stone', (g.gx + 5) * TILE_SIZE + 15, (g.gy + 4) * TILE_SIZE + 15);
+    delete upper.progress; delete upper.maxProgress;
+    delete lower.progress; delete lower.maxProgress;
+    game.buildings = [lower, upper];
+
+    const fillRect = ctx.fillRect, order = [];
+    ctx.fillRect = function (...args) {
+      if (this.fillStyle === '#7a4a20' || this.fillStyle === '#52616a') order.push(this.fillStyle);
+      return fillRect.apply(this, args);
+    };
+    try {
+      drawBuildings();
+    } finally {
+      ctx.fillRect = fillRect;
+    }
+    return order;
+  });
+  expect(fills.indexOf('#7a4a20')).toBeGreaterThanOrEqual(0);
+  expect(fills.indexOf('#52616a')).toBeGreaterThan(fills.indexOf('#7a4a20'));
+  expect(errors).toEqual([]);
+});
+
+test('stone walls use the wooden wall post-and-arm shape with masonry detail', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const shapes = await page.evaluate(() => {
+    const fillRect = ctx.fillRect, drawn = [];
+    ctx.fillRect = function (x, y, w, h) {
+      drawn.push({ x, y, w, h, fill: this.fillStyle });
+      return fillRect.call(this, x, y, w, h);
+    };
+    try {
+      drawStoneWall(300, 300, 15);
+    } finally {
+      ctx.fillRect = fillRect;
+    }
+    return drawn;
+  });
+  expect(shapes).toEqual(expect.arrayContaining([
+    expect.objectContaining({ x: 293, y: 289, w: 14, h: 24, fill: '#52616a' }),
+    expect.objectContaining({ x: 293, y: 287.5, w: 14, h: 7, fill: '#71818a' }),
+    expect.objectContaining({ x: 289.25, y: 288, w: 5.5, h: 25, fill: '#71818a' })
+  ]));
+  expect(shapes.some(shape => shape.fill === '#87969a')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('stone wall shadow follows its stone post and connected arms without round shapes', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const shadows = await page.evaluate(() => {
+    const rect = Path2D.prototype.rect, shapes = [];
+    Path2D.prototype.rect = function (...args) {
+      shapes.push(args);
+      return rect.apply(this, args);
+    };
+    try {
+      drawWallShadows([{ x: 300, y: 300, type: 'wall_stone', mask: LINK.e | LINK.s }]);
+      return shapes;
+    } finally {
+      Path2D.prototype.rect = rect;
+    }
+  });
+  expect(shadows).toContainEqual([-7, -11, 14, 24]);
+  expect(shadows).toContainEqual([5.25, -12, 5.5, 25]);
+  expect(shadows).toContainEqual([-7, 5.5, 14, 7]);
+  expect(errors).toEqual([]);
+});
+
+test('overlapping shadows in the world are no darker than one', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const red = await page.evaluate(() => {
+    game.isPaused = true;
+    const shadow = new Path2D();
+    shadow.rect(100, 100, 40, 40);
+    const frame = shadows => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 300, 300);
+      beginShadowFrame(ctx); beginShadowFrame(ctx); // (none kept from the frame before)
+      drawShadowLayer(() => {}, () => { for (let i = 0; i < shadows; i++) drawShadowPath(ctx, shadow, getSun().alpha); });
+      endShadowFrame();
+      const value = ctx.getImageData(120, 120, 1, 1).data[0];
+      ctx.restore();
+      return value;
+    };
+    return [frame(1), frame(2)];
+  });
+  expect(red[0]).toBeLessThan(250);
+  expect(red[1]).toBe(red[0]);
+  expect(errors).toEqual([]);
+});
+
+test('imperceptibly faint shadows are skipped while brighter shadows still render', async ({ page }) => {
+  const errors = await openGame(page);
+  const alpha = await page.evaluate(() => {
+    const surface = document.createElement('canvas');
+    surface.width = surface.height = 64;
+    const shadowContext = surface.getContext('2d');
+    beginShadowFrame(shadowContext);
+    const shadow = new Path2D();
+    shadow.rect(12, 12, 32, 32);
+    drawShadowPath(shadowContext, shadow, 0.08);
+    const faint = shadowContext.getImageData(24, 24, 1, 1).data[3];
+    drawShadowPath(shadowContext, shadow, 0.12);
+    return [faint, shadowContext.getImageData(24, 24, 1, 1).data[3]];
+  });
+  expect(alpha[0]).toBe(0);
+  expect(alpha[1]).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+
+test('a frame\'s shadows are laid on the ground once, a picture half the screen\'s size', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const laid = await page.evaluate(() => {
+    game.isPaused = true;
+    const original = ctx.drawImage, half = [Math.ceil(canvas.width / 2), Math.ceil(canvas.height / 2)], seen = [];
+    ctx.drawImage = function (source, ...args) {
+      if (source instanceof HTMLCanvasElement && source.width === half[0] && source.height === half[1]) seen.push([source.width, source.height]);
+      return original.call(this, source, ...args);
+    };
+    try { render(); } finally { ctx.drawImage = original; }
+    return { seen, half };
+  });
+  expect(laid.seen).toEqual([laid.half]);
   expect(errors).toEqual([]);
 });

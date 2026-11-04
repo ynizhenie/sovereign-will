@@ -8,7 +8,7 @@ import { drawIcon, getResourceIconName } from '../../../ui/index.js';
 import { game } from '../../../engine/world/index.js';
 import { armorOf, isCrossbowWeapon, isRangedWeapon, isSpearWeapon, isSwordWeapon, usesDagger } from '../equipment/index.js';
 import { drawHeadTexture, lookOf } from './settlers.looks.js';
-import { castShadow, getDarkness } from '../../world/index.js';
+import { castShadow, drawShadowPath, getDarkness, getSun, MIN_SHADOW_ALPHA } from '../../world/index.js';
 import { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';
 import { getCarryCapacity } from '../storage/index.js';
 import { ctx, getViewRect, getViewScale, setFont } from '../../../engine/platform/index.js';
@@ -347,7 +347,7 @@ function restingHand(unit, r) {
 /**
  * The figure round (x, y), r its old circle's radius.
  * @param {any} unit
- * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null, otherPoint?: { x: number, y: number } | null, simple?: boolean }} o
+ * @param {{ x: number, y: number, r: number, body: string, skin: string, horns?: boolean, lying?: boolean, dead?: boolean, hand?: boolean, shield?: boolean, handPoint?: { x: number, y: number }, carryPoint?: { x: number, y: number }, armor?: string | null, otherPoint?: { x: number, y: number } | null, simple?: boolean, shadow?: boolean }} o
  * (carryPoint: a load in both hands, both arms out to it, #298)
  * (handPoint: what its hand's at — the food it eats, a zombie's reaching hands, #298)
  * (#298) facing away from us, its arms (and what's in its hands, drawn by the caller) are behind its body
@@ -360,7 +360,7 @@ export function drawFigure(unit, o) {
   // arms, hands, eyes, gear and idle signs would be sub-pixel clutter, and were most of a big colony's work
   if (o.simple) {
     if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
-    if (!o.lying) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.72, r * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
+    if (o.shadow !== false && !o.lying) castShadow(ctx, 0, r * 1.02, r * 0.72, r * 0.3, r * 1.6);
     ctx.fillStyle = shade(o.body, -0.4);
     ctx.beginPath(); ctx.roundRect(-r * 0.3, r * 0.25, r * 0.6, r * 0.72, r * 0.12); ctx.fill();
     ctx.fillStyle = o.body;
@@ -381,7 +381,7 @@ export function drawFigure(unit, o) {
   if (o.lying) ctx.rotate(-Math.PI / 2 + 0.15);
   const outline = 'rgba(0, 0, 0, 0.45)';
   // its shadow on the ground
-  if (!o.lying) castShadow(ctx, 0, r * 1.02, r * 0.7, r * 0.22, r * 1.6); // (cast away from the sun, #307)
+  if (o.shadow !== false && !o.lying) castShadow(ctx, 0, r * 1.02, r * 0.7, r * 0.22, r * 1.6); // (cast away from the sun, #307)
   // legs, stepping while it walks (#306: a woman a little shorter)
   const look = lookOf(unit);
   const big = isBigBody(unit); // (#326: drawn a strongman)
@@ -670,6 +670,28 @@ function eatingAt(s) {
   return { x: rest.x + (mouth.x - rest.x) * bite, y: rest.y + (mouth.y - rest.y) * bite, bite };
 }
 
+// The figures' shadows, one shape for all those as dark (one at a time cost more than its size did)
+export function drawFigureShadows(units, view, radiusOf = unit => unit.visualRadius || unit.radius || 11) {
+  const sun = getSun();
+  if (sun.alpha * ctx.globalAlpha < MIN_SHADOW_ALPHA) return;
+  /** @type {Map<number, Path2D>} */
+  const shapes = new Map();
+  for (const unit of units) {
+    if (isPet(unit) || unit.asleep || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    const r = radiusOf(unit);
+    const height = r * 1.6, ox = sun.dx * height, oy = sun.dy * height;
+    const sway = unit.swaying ? Math.sin(performance.now() / 450 + (unit.id ?? 0)) * 2.5 : 0;
+    const cx = unit.x + sway + ox * 0.5, cy = unit.y + r * 1.02 + oy * 0.5;
+    const rx = r * 0.7 + Math.abs(ox) * 0.5, ry = r * 0.22 + Math.abs(oy) * 0.25;
+    const opacity = unit.temporary !== undefined ? 0.7 : 1;
+    let shape = shapes.get(opacity);
+    if (!shape) shapes.set(opacity, (shape = new Path2D()));
+    shape.moveTo(cx + rx, cy);
+    shape.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  }
+  for (const [opacity, shape] of shapes) drawShadowPath(ctx, shape, sun.alpha * opacity);
+}
+
 // (#326) Where the picked ones are going: their way as a dashed line, moving along it, to where it ends (an order's
 // spot without a way worked out yet: straight to it). On the ground, under everyone
 export function drawSelectedPaths() {
@@ -692,6 +714,11 @@ export function drawSelectedPaths() {
     ctx.setLineDash([6, 5]);
   }
   ctx.restore();
+}
+
+// The settlers' shadows, into the frame's shadows (drawn under everything standing, see drawShadowLayer)
+export function drawSettlerShadows() {
+  if (!tinyUnit()) drawFigureShadows(game.settlers, getViewRect(60));
 }
 
 export function drawSettlers() {
@@ -786,7 +813,7 @@ export function drawSettlers() {
     const faction = unitKin(s);
     if (s.temporary !== undefined) ctx.globalAlpha = 0.7; // a raised zombie, for a while
     if (s.asleep) ctx.globalAlpha = 0.85;
-    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, otherPoint: onBack ? null : (bowDraw(s) || {}).other || null, armor: !s.asleep && armorOf(s) ? String(s.armor) : null, simple });
+    drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, otherPoint: onBack ? null : (bowDraw(s) || {}).other || null, armor: !s.asleep && armorOf(s) ? String(s.armor) : null, simple, shadow: false });
     ctx.globalAlpha = 1;
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);

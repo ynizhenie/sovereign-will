@@ -8,7 +8,7 @@ export { closeSelectedCard, isSelectedCardVisible, openSelectedCard } from './se
 export { drawIcon, escapeHtml, fillRichText, getResourceIcon, getResourceIconName, iconHtml, initIcons, plainText, richText, setRichText } from './icons.js';
 export { initMapInput, setMode } from './map-input.js';
 export { initPageActions } from './page-actions.js';
-export { closeOverlays, closeSheet, getOpenSheet, hidePlacing, initSheets, openSheet, showPlacing, syncHudMode, toggleSheet } from './sheets.js';
+export { closeOverlays, closeSheet, getOpenSheet, hidePlacing, initSheets, openSheet, setSheetCloseHandler, showPlacing, syncHudMode, toggleSheet } from './sheets.js';
 export { hideInfo, initItemInfo, showCostOnButton } from './item-info.js';
 export { openBuildingCard, openHallCard, renderBuildingCard, sacrificeSelected } from './building-card.js';
 export { flagHtml } from './flags.js';

@@ -77,6 +77,7 @@
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)
  * @property {{ resource: string, until: number } | null} [focus] what its foreman said to gather first (#248)
  * @property {Object | null} [captainTarget] the enemy its captain gave it (#248)
+ * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {number[]} [squadIds]   a commander's squad
  * @property {number} [orderIn]      seconds till a commander's next order
  * @property {number} [armIn]        seconds till a captain's next arming order (#279)
@@ -108,7 +109,7 @@
  * @property {Object<string, number>} [today]  what it did today, for its story by the fire (#279)
  * @property {{ from: Object, id: string } | null} [sortJob] what it's carrying over to its own storage (#279)
  * @property {number} [haulWalk]    seconds carrying a corpse to the heap (carryCorpse)
- * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
+ * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, progress?: { x: number, y: number }, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
  * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
@@ -169,6 +170,7 @@
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
+ * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
