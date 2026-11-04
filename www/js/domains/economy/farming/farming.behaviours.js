@@ -98,7 +98,7 @@ export function fertilize(s, tick) {
   }
   if (!carriesDung) {
     // from a compost heap (#232): no more farmers going to one than it has dung
-    const heap = near(game.buildings.filter(b => b.type === 'dung_heap' && (b.dung || 0) > (tick.heapTakers.get(b) || 0)));
+    const heap = near(game.buildings.filter(b => b.side !== 'red' && b.type === 'dung_heap' && (b.dung || 0) > (tick.heapTakers.get(b) || 0)));
     if (!heap) return false;
     tick.heapTakers.set(heap, (tick.heapTakers.get(heap) || 0) + 1);
     tick.fertilizeAssignments.add(plot);

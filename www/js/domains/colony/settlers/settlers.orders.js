@@ -12,6 +12,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
+import { inEnemyTerritory } from '../../world/index.js';
 import { getWeaponStats, hasAxeTool, hasToolFamily, isRangedWeapon } from '../equipment/index.js';
 import { canAfford, fetchFromStorage, goDeliver, hasRoomToCarry, moveSettlerToTownHall, payCost, stock, takeStock } from '../storage/index.js';
 import { deliverMaterials, getHallRepairStep, getMissingMaterial, getRepairStep, hallRepairStep, repairStep, workBlueprint } from '../../economy/building/index.js';
@@ -69,7 +70,7 @@ export const ORDERS = [
   },
   {
     kind: 'hunt',
-    find: (p, near) => game.boars.find(b => near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p)),
+    find: (p, near) => game.boars.find(b => !inEnemyTerritory(b.x, b.y) && near(b, 25) && !b.hidden && !b.hideTarget && !(b.isCarcass && b.collector && b.collector !== p)),
     step: (s, target, tick) => {
       if (!game.boars.includes(target) || target.hidden || target.hideTarget) return false;
       if (target.isCarcass && handsFull(s)) return false;
@@ -81,7 +82,7 @@ export const ORDERS = [
     // hand in what it carries at a warehouse or the town hall
     kind: 'deliver',
     find: (p, near) => (!p.carrying ? null
-      : game.buildings.find(b => b.type === 'warehouse' && near(b, 18)) || (near(townHall, townHall.radius + 10) ? townHall : null)),
+      : game.buildings.find(b => b.side !== 'red' && b.type === 'warehouse' && near(b, 18)) || (near(townHall, townHall.radius + 10) ? townHall : null)),
     step: (s, target, tick) => {
       if (!s.carrying) return false;
       goDeliver(s, tick);
@@ -123,10 +124,10 @@ export const ORDERS = [
   },
   {
     kind: 'repair',
-    find: (p, near) => game.buildings.find(b => near(b, 18) && b.hp < b.maxHp),
+    find: (p, near) => game.buildings.find(b => b.side !== 'red' && near(b, 18) && b.hp < b.maxHp),
     check: (p, target) => (canAfford(getRepairStep(target).cost) ? null : 'possess.noRepairCost'),
     step: (s, target, tick) => {
-      if (!game.buildings.includes(target) || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
+      if (!game.buildings.includes(target) || target.side === 'red' || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
       if (Math.hypot(target.x - s.x, target.y - s.y) > 34) walkTo(s, target.x, target.y, tick);
       else repairStep(target, tick.dt);
       return true;
@@ -135,7 +136,7 @@ export const ORDERS = [
   {
     // an apple tree with apples, and no axe to fell it with: pick them
     kind: 'apples',
-    find: (p, near) => game.trees.find(tr => near(tr, 25) && tr.apple && tr.applesReady && !hasAxeTool(p.tool)),
+    find: (p, near) => game.trees.find(tr => !inEnemyTerritory(tr.x, tr.y) && near(tr, 25) && tr.apple && tr.applesReady && !hasAxeTool(p.tool)),
     check: p => (handsFull(p) ? 'possess.handsFull' : null),
     step: (s, target, tick) => {
       if (!game.trees.includes(target) || !target.applesReady || handsFull(s)) return false;
@@ -144,7 +145,7 @@ export const ORDERS = [
   },
   {
     kind: 'harvest',
-    find: (p, near) => getHarvestableResources().find(r => near(r, 25)),
+    find: (p, near) => getHarvestableResources().find(r => !inEnemyTerritory(r.x, r.y) && near(r, 25)),
     check: (p, target) => {
       const kind = getMapResourceKind(target);
       const def = getMapResourceDef(kind);
@@ -156,7 +157,7 @@ export const ORDERS = [
     },
     step: (s, target, tick) => {
       const kind = tick.resourceKind.get(target);
-      if (!kind || !game[getMapResourceDef(kind).list].includes(target) || handsFull(s)) return false;
+      if (!kind || inEnemyTerritory(target.x, target.y) || !game[getMapResourceDef(kind).list].includes(target) || handsFull(s)) return false;
       const spot = getResourceApproachPoint(s, target);
       if (!spot) return false;
       if (Math.hypot(spot.x - s.x, spot.y - s.y) > 10) walkTo(s, spot.x, spot.y, tick);
@@ -239,7 +240,7 @@ export const ORDERS = [
     // workshop or a smithy), till there's no more of it
     kind: 'job',
     find: (p, near) => {
-      const b = game.buildings.find(o => near(o, 18));
+      const b = game.buildings.find(o => o.side !== 'red' && near(o, 18));
       if (b && b.type === 'campfire') return { job: cook };
       if (b && b.type === 'torch' && !b.lit) return { job: lightTorches };
       if (b && b.type === 'dung_heap') return { job: cleanDung };

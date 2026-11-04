@@ -6,7 +6,7 @@ import { camera, getBaseScale, getMaxZoom, onTap, screenPixelRatio, t } from '..
 import { game, townHall } from '../../engine/world/index.js';
 import { unpossess } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, playSound, resetGame } from '../../app/index.js';
-import { isInCamp } from './endless.raid.js';
+import { initRaidControls, isInCamp } from './endless.raid.js';
 
 // Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
 export function isDefeated() {
@@ -54,6 +54,7 @@ export function isCameraLocked() {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessRules() {
+  initRaidControls();
   onTap(document.getElementById('defeat-restart'), () => { resetGame(); openTab('tab-build'); });
   onTap(document.getElementById('defeat-exit'), () => exitToMainMenu());
 }

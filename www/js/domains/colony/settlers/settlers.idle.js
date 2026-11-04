@@ -25,7 +25,7 @@ const byId = id => game.settlers.find(o => o.id === id) || null;
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfiresOnce = onceThisTick();
 // (#306) the fires looked for once a tick: isInSafeArea for every building, for every settler sitting by one
-const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' &&
+const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.side !== 'red' && b.type === 'campfire' &&
   ((b.fuelLeft || 0) > 0 || (b.burning || 0) > 0) && isInSafeArea(b.x, b.y)));
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
 
@@ -43,7 +43,7 @@ const seatTaken = (fire, seat, s) => game.settlers.some(o => o !== s && o.idle &
 // A free seat for `s` at a campfire, the nearest fire's first: { fire, seat } or null
 export function freeCampfireSeat(s, includeUnlit = false) {
   const fires = includeUnlit
-    ? game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y))
+    ? game.buildings.filter(b => b.side !== 'red' && b.type === 'campfire' && isInSafeArea(b.x, b.y))
     : campfires();
   for (const fire of [...fires].sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
     const free = seatsOf(fire, s).filter(p => !seatTaken(fire, p.seat, s)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
@@ -54,7 +54,7 @@ export function freeCampfireSeat(s, includeUnlit = false) {
 // an archer out of arrows doesn't train (#232)
 const canTrain = s => !(isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0));
 // a training dummy with room for one more
-const freeDummy = s => game.buildings.filter(b => b.type === 'dummy' &&
+const freeDummy = s => game.buildings.filter(b => b.side !== 'red' && b.type === 'dummy' &&
   game.settlers.filter(o => o !== s && o.idle && o.idle.act === 'train' && o.idle.spot && Math.hypot(o.idle.spot.x - b.x, o.idle.spot.y - b.y) < 1).length < (GAME_CONFIG.buildings.dummy.trainers || 2))
   .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
 
@@ -159,7 +159,7 @@ export function idlePastime(s, tick) {
   s.swaying = false;
   switch (idle.act) {
     case 'campfire': {
-      let fire = idle.spot && game.buildings.find(b => b.type === 'campfire' && isInSafeArea(b.x, b.y) &&
+      let fire = idle.spot && game.buildings.find(b => b.side !== 'red' && b.type === 'campfire' && isInSafeArea(b.x, b.y) &&
         Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
       // (#298) its seat: one of the fire's four sides; none given (the night watch) or taken, another free one
       if (!fire || idle.seat === undefined || seatTaken(fire, idle.seat, s)) {
@@ -241,7 +241,7 @@ export function idlePastime(s, tick) {
       return true;
     }
     case 'train': {
-      const dummy = game.buildings.find(b => b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
+      const dummy = game.buildings.find(b => b.side !== 'red' && b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
       const shoots = isRangedWeapon(s.weapon) && !usesDagger(s);
       const kept = dummy && dummy.arrowsStuck ? dummy.arrowsStuck.length : 0;
       if (!dummy || (!canTrain(s) && !(shoots && kept)) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
@@ -313,7 +313,7 @@ function nearestGrass(s) {
 
 // The nearest compost heap with room for more dung (#232), or null
 export function findDungHeap(from) {
-  const room = b => b.type === 'dung_heap' && (b.dung || 0) < (GAME_CONFIG.buildings.dung_heap.dungCapacity || 5);
+  const room = b => b.side !== 'red' && b.type === 'dung_heap' && (b.dung || 0) < (GAME_CONFIG.buildings.dung_heap.dungCapacity || 5);
   return game.buildings.filter(room).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0] || null;
 }
 

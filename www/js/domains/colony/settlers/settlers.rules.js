@@ -20,7 +20,7 @@ import { isNight } from '../../world/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
-  return game.buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
+  return game.buildings.reduce((sum, b) => sum + (b.side === 'red' ? 0 : ((getDefinition('buildings', b.type) || {}).population || 0)), GAME_CONFIG.start.population);
 }
 
 // Too many settlers: the hint names the player's own home (a tent, a grave, a sacrificial circle) (#200)
@@ -94,7 +94,7 @@ export function spawnSettler(type = 'normal') {
   }
   // (#326) a ghost: needs a built grave, and at most the base's few plus one a grave (it takes no room otherwise)
   if (settlerType.pet === 'ghost') {
-    const graves = game.buildings.filter(b => b.type === 'grave').length, limit = GAME_CONFIG.pets.ghost.limit;
+    const graves = game.buildings.filter(b => b.type === 'grave' && b.side !== 'red').length, limit = GAME_CONFIG.pets.ghost.limit;
     if (!graves) { showNotification(t('ghost.needGrave'), true); return; }
     if (game.settlers.filter(s => s.type === type).length >= limit.base + graves * limit.perGrave) { showNotification(t('ghost.limit', { n: limit.base + graves * limit.perGrave }), true); return; }
   }

@@ -73,11 +73,13 @@ export function createSettlerTick(dt) {
   const { allResources, resourceSet, resourceKind, doorBlockers, markedResources, activeWaterSpots } = resourceState();
 
   const defendersCount = game.settlers.filter(s => s.weapon !== 'fist').length;
+  const activeEnemies = game.enemies.filter(en => !en.campGuard || game.raidActive);
+  const activeEnemyTents = game.enemyTents.filter(tent => !tent.campStructure || game.raidActive);
 
   return {
     dt,
-    isWaveActive: game.enemies.length > 0 || (game.portalQueue || []).length > 0, // (demons still to come out, #250)
-    tents: game.buildings.filter(isShelter), // tents or graves
+    isWaveActive: activeEnemies.length > 0 || (game.portalQueue || []).length > 0, // camp guards are passive until a raid
+    tents: game.buildings.filter(b => b.side !== 'red' && isShelter(b)), // tents or graves
     allResources,
     resourceSet,
     resourceKind,
@@ -110,7 +112,7 @@ export function createSettlerTick(dt) {
     // unarmed workers only help destroy enemy tents when there's nobody armed to do it
     workersHelpTents: defendersCount === 0,
     // what's left of the wave is down to a few enemies (tent-summoned ones don't count): go destroy the tents
-    tentAssault: game.enemyTents.length > 0 && game.enemies.filter(en => !en.summoned).length <= 5
+    tentAssault: !game.wavePreparation && activeEnemyTents.length > 0 && activeEnemies.filter(en => !en.summoned).length <= 5
   };
 }
 

@@ -20,6 +20,45 @@ Object.assign(window.sim, (() => {
     return { size: wave.length, early, later, captain: !!captain, ordered };
   }
 
+  function wavePreparationTiming({ seed = 'wave-preparation' } = {}) {
+    start(seed);
+    clearResources();
+    const s = makeSettler(1, townHall.x + 200, townHall.y, { weapon: 'fist', role: 'worker', speed: 0 });
+    settlers = [s];
+    const enemy = createConfiguredEnemy({ x: s.x + 10, y: s.y }, 'raider');
+    enemy.fromWave = true;
+    enemy.speed = 0;
+    enemy.muster = { x: enemy.x, y: enemy.y };
+    enemies = [enemy];
+    enemyTents = [{
+      x: s.x + 100, y: s.y, hp: 100, maxHp: 100,
+      summonsLeft: 1, summonTimer: GAME_CONFIG.enemyTents.summonInterval
+    }];
+    game.waveTimer = 20;
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    const hpBefore = s.hp;
+    const prepTentAssault = createSettlerTick(1 / 60).tentAssault;
+    const enemiesBeforeTentTick = enemies.length;
+    tickEnemyTents(1 / 60);
+    const tentHeldFire = enemies.length === enemiesBeforeTentTick;
+    tickEnemy(enemy, 1 / 60);
+    const enemyHeldFire = s.hp === hpBefore;
+    game.wavePreparation = null;
+    tickEnemyTents(1 / 60);
+    const tentFiredAfterStart = enemies.length === enemiesBeforeTentTick + 1;
+    game.waveTimer = 0;
+    enemy.nextStrikeTick = 0;
+    tickEnemy(enemy, 1 / 60);
+    return {
+      prepTentAssault,
+      tentHeldFire,
+      tentFiredAfterStart,
+      enemyHeldFire,
+      enemyAttackedAfterStart: s.hp < hpBefore,
+      tentAssaultAfterStart: createSettlerTick(1 / 60).tentAssault
+    };
+  }
+
   // Scouts between waves: they walk the red band, settlers leave them be, they run when one comes near;
   // pointed at, one is hunted and runs off (23)
   function scoutsBetweenWaves({ seed = 'scouts' } = {}) {
@@ -45,40 +84,34 @@ Object.assign(window.sim, (() => {
     return { count, inBand, notEnemy, hunted, stays, goneOff: !enemies.includes(scout) };
   }
 
-  // Each camp layout builds, the same camp every time for a seed; the party starts past the camp's red line (34, 37)
+  // The camp is a single, persistent part of the Endless map, not a second map that opens after waves.
   function campLayouts({ seed = 'layouts' } = {}) {
-    const out = {};
-    for (const layout of ['square', 'round', 'scattered', 'fort']) {
-      window.sim.campOpens({ seed });
-      raidCamp.layout = layout; raidCamp.seed = 42;
-      const sig = () => buildings.map(b => `${b.type}@${b.x},${b.y}`).sort().join('|') + '#' + enemyTents.length;
-      openRaidPicker(); document.querySelector('#raid-picker [data-raid="go"]').click();
-      step(60, () => { waveTimer = 999; return !!document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])'); });
-      enterCamp();
-      const first = sig(), walls = buildings.filter(b => b.type.startsWith('wall')).length;
-      const band = BORDER_MARGIN * TILE_SIZE;
-      const pastLine = settlers.every(s => s.x < band || s.y < band || s.x > WORLD_WIDTH - band || s.y > WORLD_HEIGHT - band);
-      resetRaid();
-      // again: the same camp
-      window.sim.campOpens({ seed }); raidCamp.layout = layout; raidCamp.seed = 42;
-      openRaidPicker(); document.querySelector('#raid-picker [data-raid="go"]').click();
-      step(60, () => { waveTimer = 999; return !!document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])'); });
-      enterCamp();
-      out[layout] = { walls, same: sig() === first, pastLine, outpost: enemyTents.some(et => et.outpost) };
-      resetRaid();
-    }
-    return out;
+    const first = window.sim.campOpens({ seed });
+    const signature = () => [
+      buildings.filter(building => building.enemyCampStructure).map(building => `${building.type}@${building.x},${building.y}`).sort().join('|'),
+      enemyTents.filter(tent => tent.campStructure).map(tent => `${tent.x},${tent.y},${tent.hp}`).sort().join('|'),
+      enemies.filter(enemy => enemy.campGuard).map(enemy => `${enemy.enemyKey}@${enemy.x},${enemy.y}`).sort().join('|')
+    ].join('#');
+    const before = signature();
+    createEnemyCamp();
+    return {
+      same: before === signature(), campExists: !!enemyCamp,
+      sameWorld: COLS === first.cols && townHall.x === first.hallX,
+      outpost: enemyTents.filter(tent => tent.campStructure).length,
+      campfires: buildings.filter(building => building.enemyCampStructure && building.type === 'campfire').length,
+      guards: enemies.filter(enemy => enemy.campGuard).length
+    };
   }
 
   // A scout sent to the camp: it walks there, looks, is spotted, comes home; the camp is still there (33)
   function scoutTheCamp({ seed = 'scout-camp' } = {}) {
     window.sim.campOpens({ seed });
-    const camp = { ...raidCamp };
+    const camp = { ...enemyCamp };
     const sent = sendScout();
-    let looked = false, cols = 0;
-    step(150, () => { waveTimer = 999; if (raid.phase === 'fight') { looked = true; cols = COLS; } return looked && raid.phase === null; });
-    return { sent, looked, cols, campStays: !!raidCamp && raidCamp.seed === camp.seed, phase: raid.phase, home: settlers.length };
+    let looked = false;
+    step(150, () => { waveTimer = 999; if (raid.phase === 'fight') looked = true; return looked && raid.phase === null; });
+    return { sent, looked, campStays: !!enemyCamp && enemyCamp.seed === camp.seed, phase: raid.phase, home: settlers.length, raidActive };
   }
 
-  return { waveMusters, scoutsBetweenWaves, campLayouts, scoutTheCamp };
+  return { waveMusters, wavePreparationTiming, scoutsBetweenWaves, campLayouts, scoutTheCamp };
 })());

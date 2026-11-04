@@ -12,7 +12,9 @@ import { hasLineOfFire, performAttack } from './combat.rules.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const nearest = (from, list) => list.reduce((best, o) => (!best || dist(o, from) < dist(best, from) ? o : best), null);
-const alive = o => (game.enemies.includes(o) && o.hp > 0) || game.enemyTents.includes(o);
+const targetableEnemy = enemy => !enemy.campGuard || game.raidActive;
+const targetableTent = tent => !tent.campStructure || game.raidActive;
+const alive = o => (game.enemies.includes(o) && o.hp > 0 && targetableEnemy(o)) || (game.enemyTents.includes(o) && targetableTent(o));
 
 // A tap in such a fight; true: it was an order
 export function orderTap(x, y) {
@@ -21,7 +23,7 @@ export function orderTap(x, y) {
   // (#326) picked with a group: adding to it (the card's button), or another picked instead
   if (unit && game.addingToGroup && getSelectedSettler()) { toggleInGroup(unit); return true; }
   if (unit) { game.selectedSettler = game.selectedSettler === unit ? null : unit; game.selectedGroup = []; game.addingToGroup = false; return true; }
-  const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && near(en, en.radius + 12)), ...game.enemyTents.filter(et => near(et, et.outpost ? 30 : 20))]);
+  const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && targetableEnemy(en) && near(en, en.radius + 12)), ...game.enemyTents.filter(et => targetableTent(et) && near(et, et.outpost ? 30 : 20))]);
   const picked = getSelection();
   if (target) {
     const told = picked.length ? picked : game.settlers;
@@ -56,13 +58,13 @@ export function fightByOrders(s, dt, auto) {
   if (s.orderTarget && !alive(s.orderTarget)) s.orderTarget = null;
   const outOfArrows = isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0);
   const attacker = getRecentAttacker(s);
-  const hitter = attacker && game.enemies.includes(attacker) ? attacker : null;
+  const hitter = attacker && game.enemies.includes(attacker) && targetableEnemy(attacker) ? attacker : null;
   let target = null;
   // (#326) told to break a tent or an outpost and hit meanwhile: the one hitting it first, then back to the tent
   const told = s.orderTarget && hitter && game.enemyTents.includes(s.orderTarget) ? hitter : s.orderTarget;
   if (!outOfArrows) {
-    if (auto) target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0)) || nearest(s, game.enemyTents);
-    else target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && dist(en, s) < 90));
+    if (auto) target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && targetableEnemy(en))) || nearest(s, game.enemyTents.filter(targetableTent));
+    else target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && targetableEnemy(en) && dist(en, s) < 90));
   }
   if (target) { strike(s, target, dt); return; }
   if (dist(s, s.orderSpot) > 8) moveEntityTowards(s, s.orderSpot.x, s.orderSpot.y, s.speed, false, dt);
@@ -91,7 +93,7 @@ export function followCommand(s, tick) {
 export function commandTap(picked, x, y) {
   if (!picked.length) return false;
   const near = (o, r) => Math.hypot(o.x - x, o.y - y) < r;
-  const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && near(en, en.radius + 12)), ...game.enemyTents.filter(et => near(et, et.outpost ? 30 : 20))]);
+  const target = nearest({ x, y }, [...game.enemies.filter(en => en.hp > 0 && targetableEnemy(en) && near(en, en.radius + 12)), ...game.enemyTents.filter(et => targetableTent(et) && near(et, et.outpost ? 30 : 20))]);
   for (const s of picked) {
     if (target) s.orderTarget = target;
     else { s.orderTarget = null; s.orderSpot = { x, y }; }

@@ -1,7 +1,7 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, isDoor, someNear, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier, hasFog } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
@@ -19,6 +19,19 @@ import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shak
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
   for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt);
+}
+
+function tendCampfire(en, dt) {
+  if (!en.campFireKeeper) return false;
+  const fire = game.buildings.find(building => building.enemyCampStructure && building.type === 'campfire' && building.hp > 0);
+  if (!fire || !en.guard) return false;
+  if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 6) {
+    moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
+    return true;
+  }
+  faceTowards(en, fire.x, fire.y);
+  if ((fire.fuelLeft || 0) < GAME_CONFIG.raid.fireFuelPerTend) fire.fuelLeft = GAME_CONFIG.raid.fireFuelPerTend;
+  return true;
 }
 
 /** @typedef {import('../../../engine/world/types.js').Settler} Settler */
@@ -163,10 +176,25 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  if (en.campGuard) {
+    if (!game.raidActive) {
+      if (tendCampfire(en, dt)) return;
+      if (en.guard) holdGuardPost(en, dt);
+      return;
+    }
+  }
   if (en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken && !getEnemyDef(en).pet &&
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
   const enemyDef = getEnemyDef(en);
+  if (en.fromWave && game.wavePreparation) {
+    if (en.buildTarget) buildEnemyTent(en, dt);
+    else if (en.muster) {
+      if (Math.hypot(en.muster.x - en.x, en.muster.y - en.y) > 6) moveEntityTowards(en, en.muster.x, en.muster.y, en.speed, true, dt);
+      else faceTowards(en, townHall.x, townHall.y);
+    }
+    return;
+  }
   if (enemyDef.pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
@@ -440,11 +468,11 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
     if (!own && isShelter(touchingBuilding) && !turned) {
-      breakBuilding(touchingBuilding, enemyDef, dt);
+      breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else if (!own && (turned ? en.isBlockedPath : en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
       // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
       // way in over spikes squeezes past the walls beside them
-      breakBuilding(touchingBuilding, enemyDef, dt);
+      breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else {
       let dx = en.x - touchingBuilding.x;
       let dy = en.y - touchingBuilding.y;
@@ -463,8 +491,15 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
   else if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
 }
 
-function breakBuilding(building, enemyDef, dt) {
-  building.hp -= dt * enemyDef.siege.buildings;
+function breakBuilding(en, building, enemyDef, dt) {
+  const cooldown = enemyHitCooldown(enemyDef);
+  if (game.gameMode === 'battle' && en.nextStrikeTick == null) en.nextStrikeTick = game.pathTick + 1;
+  if (game.pathTick < (en.nextStrikeTick || 0)) return;
+  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
+  faceTowards(en, building.x, building.y);
+  startSwing(en, Math.min(0.5, cooldown));
+  en.struckAt = game.pathTick;
+  building.hp -= cooldown * enemyDef.siege.buildings;
   if (building.hp <= 0) removeBuilding(building);
 }
 

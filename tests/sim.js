@@ -161,17 +161,21 @@ window.sim = (() => {
     enemies = [];
     for (let i = 0; i < count; i++) enemies.push(createNormalEnemy(getRandomBorderPos(), 'raider'));
     let stuckFrames = 0;
+    let buildingHitWithSwing = false;
     const walls0 = buildings.length;
     for (let f = 0; f < seconds * 60; f++) {
       waveTimer = 999;
       const before = new Map(buildings.map(b => [b, b.hp]));
       update(TICK);
+      if (buildings.some(b => b.hp < before.get(b)) &&
+          enemies.some(e => e.swingT > 0 && e.struckAt === game.pathTick)) buildingHitWithSwing = true;
       for (const e of enemies) {
         const pressed = buildings.filter(b => b.type !== 'door' && collidesWithBoxList(e.x, e.y, e.radius + 1, [b], 14));
-        if (pressed.length && !isBuildingSingle(pressed[0]) && pressed.every(b => b.hp === before.get(b))) stuckFrames++;
+        const recentlyStruck = e.struckAt !== undefined && game.pathTick - e.struckAt <= 60;
+        if (pressed.length && !isBuildingSingle(pressed[0]) && pressed.every(b => b.hp === before.get(b)) && !recentlyStruck) stuckFrames++;
       }
     }
-    return { wallsBroken: walls0 - buildings.length, secondsStuckAtWall: stuckFrames / 60 };
+    return { wallsBroken: walls0 - buildings.length, secondsStuckAtWall: stuckFrames / 60, buildingHitWithSwing };
   }
 
   // Settlers carrying wood, placed at the farthest reachable tiles, must bring it home unaided

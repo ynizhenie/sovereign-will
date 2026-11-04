@@ -256,7 +256,7 @@ export function createNormalEnemy(pos, enemyKey = 'raider') {
 export function findNearestEnemyTent(origin) {
   let nearest = /** @type {{ x: number, y: number } | null} */ (null);
   let nearestDist = Infinity;
-  game.enemyTents.forEach(tent => {
+  game.enemyTents.filter(tent => !tent.campStructure || game.raidActive).forEach(tent => {
     const dist = Math.hypot(tent.x - origin.x, tent.y - origin.y);
     if (dist < nearestDist) { nearest = tent; nearestDist = dist; }
   });
@@ -317,8 +317,9 @@ export function getNearbyEnemyTentSite(origin) {
 
 // Where a wave's enemy appears: the map's edge, or for the demons one of their portals
 export function getWaveSpawnPos() {
-  if (!getEnemyFaction().portalSpawns || game.enemyTents.length === 0) return getRandomBorderPos();
-  const portal = game.enemyTents[Math.floor(rand() * game.enemyTents.length)];
+  const portals = game.enemyTents.filter(tent => tent.portal && !tent.campStructure);
+  if (!getEnemyFaction().portalSpawns || portals.length === 0) return getRandomBorderPos();
+  const portal = portals[Math.floor(rand() * portals.length)];
   // a free tile beside the portal, never inside a tree, a rock or the water
   const g = getGridPos(portal.x, portal.y);
   const free = [];
@@ -345,7 +346,7 @@ const PLAYER_DEVELOPMENT_ITEMS = new Set([
 ]);
 
 // Combat gear the player has unlocked, made, stored, equipped, or built is a lightweight development signal.
-export function getPlayerDevelopment() {
+function getPlayerDevelopmentItems() {
   const items = new Set();
   for (const [key, count] of Object.entries(game.armory)) if (count > 0) items.add(key);
   for (const [key, unlocked] of Object.entries(game.unlocked)) if (unlocked) items.add(key);
@@ -356,10 +357,15 @@ export function getPlayerDevelopment() {
     if (settler.shield) items.add('gear:shield');
     if (settler.helmet) items.add('gear:helmet');
   }
-  for (const building of game.buildings) items.add(`buildings:${building.type}`);
+  for (const building of game.buildings) if (building.side !== 'red') items.add(`buildings:${building.type}`);
   if (game.playerGear.leather) items.add('gear:leather_armor');
   for (const id of ['armor', 'shield', 'helmet']) if (game.playerGear[id]) items.add(`gear:${id}`);
-  return Math.min(GAME_CONFIG.waveScaling.maxTechItems, [...items].filter(key => PLAYER_DEVELOPMENT_ITEMS.has(key)).length);
+  return items;
+}
+
+export function getPlayerDevelopment() {
+  return Math.min(GAME_CONFIG.waveScaling.maxTechItems,
+    [...getPlayerDevelopmentItems()].filter(key => PLAYER_DEVELOPMENT_ITEMS.has(key)).length);
 }
 
 export function getWaveEnemyCount(wave = game.waveNum) {
@@ -374,7 +380,10 @@ export function getWaveEnemyCount(wave = game.waveNum) {
 
 export function getWaveGearChance(item, wave = game.waveNum) {
   const rule = GAME_CONFIG.waveGear[item];
-  if (!rule || wave < rule.fromWave) return 0;
+  const development = getPlayerDevelopmentItems();
+  const gear = item === 'leather' ? ['gear:leather_armor', 'gear:armor']
+    : [`gear:${item === 'iron' ? 'armor' : item}`];
+  if (!rule || wave < rule.fromWave || !gear.some(key => development.has(key))) return 0;
   const progress = Math.min(1, Math.max(0, (wave - rule.fromWave) / GAME_CONFIG.waveGear.rampWaves));
   return rule.startChance + (rule.endChance - rule.startChance) * progress;
 }
@@ -395,28 +404,25 @@ function dressForWave(enemy, def) {
   if (rand() < getWaveGearChance('helmet')) enemy.helmet = true;
 }
 
-export function startNextWave() {
-  if (game.gameMode === 'endless') playSound('horn');
+export function startNextWave(preparing = false) {
+  if (!preparing && game.gameMode === 'endless') playSound('horn');
   const scaling = GAME_CONFIG.waveScaling;
-  game.enemyTents.forEach(et => {
-    et.summonTimer = 0;
-    et.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
-    et.summonWave = game.waveNum;
-  });
+  if (!preparing) activateEnemyTents();
 
   // difficulty goes up every wavesPerDifficulty waves (starting at 0)
   const difficulty = Math.floor((game.waveNum - 1) / scaling.wavesPerDifficulty);
 
   const maxTentsByDifficulty = Math.min(scaling.maxTents, difficulty + 1);
+  const activeTents = game.enemyTents.filter(tent => !tent.campStructure);
   let tentCount = Math.min(
-    Math.max(0, maxTentsByDifficulty - game.enemyTents.length - game.enemyTentBlueprints.length),
+    Math.max(0, maxTentsByDifficulty - activeTents.length - game.enemyTentBlueprints.length),
     scaling.newTents.min + Math.floor(rand() * (scaling.newTents.max - scaling.newTents.min + 1))
   );
 
   // the demons' portals open first, so the wave can come out of them
   // as many as tents would be, but always one to come out of
   if (getEnemyFaction().portalSpawns) {
-    for (let i = 0; i < (game.enemyTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
+    for (let i = 0; i < (activeTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
     invalidateAllPaths();
   }
 
@@ -427,15 +433,19 @@ export function startNextWave() {
   // the demons' come out of their portals a few at a time (#250): queued, let out by tickPortalWave
   const queued = getEnemyFaction().portalSpawns;
   game.portalQueue = [];
+  const raftUnits = [];
   const spawnWaveEnemy = def => {
     if (queued) { game.portalQueue.push(def.id); spawned++; return; }
     const enemy = createConfiguredEnemy(getWaveSpawnPos(), def.id);
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
     dressForWave(enemy, def);
-    musterAt(enemy); // (it gathers first, #279)
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true; // (a night wave, #257)
-    game.enemies.push(enemy);
+    if (game.enemyCampDestroyed && !queued) raftUnits.push(enemy);
+    else {
+      musterAt(enemy); // (it gathers first, #279)
+      game.enemies.push(enemy);
+    }
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);
   };
@@ -462,11 +472,66 @@ export function startNextWave() {
   }
 
   if (queued) { game.portalTimer = 0; tickPortalWave(0); } // (the first of them at once)
+  if (raftUnits.length) createEnemyRafts(raftUnits);
   regroupBySide(); // (#279: those of a side gather together)
+  if (preparing && game.enemyCamp) setWaveMustersAtCamp(GAME_CONFIG.waveMuster.preparationSeconds);
   pickCaptain(spawned);
-  game.waveSize = game.enemies.filter(en => en.fromWave).length + game.portalQueue.length; // (morale: a wave that's lost most of them runs)
+  game.waveSize = countLiveWaveEnemies() + game.portalQueue.length; // (morale: a wave that's lost most of them runs)
   game.waveRouted = false;
-  game.waveNum++;
+  if (!preparing) game.waveNum++;
+}
+
+function activateEnemyTents() {
+  for (const tent of game.enemyTents) {
+    if (tent.campStructure) continue;
+    tent.summonTimer = 0;
+    tent.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
+    tent.summonWave = game.waveNum;
+  }
+}
+
+function countLiveWaveEnemies() {
+  return game.enemies.filter(enemy => enemy.fromWave).length +
+    game.enemyRafts.reduce((sum, raft) => sum + raft.units.length, 0);
+}
+
+function createEnemyRafts(units) {
+  const capacity = GAME_CONFIG.waveMuster.raftCapacity;
+  for (let i = 0; i < units.length; i += capacity) {
+    const group = units.slice(i, i + capacity);
+    const at = getRandomBorderPos();
+    const edges = [
+      { distance: at.x, dx: 1, dy: 0 },
+      { distance: game.WORLD_WIDTH - at.x, dx: -1, dy: 0 },
+      { distance: at.y, dx: 0, dy: 1 },
+      { distance: game.WORLD_HEIGHT - at.y, dx: 0, dy: -1 }
+    ].sort((a, b) => a.distance - b.distance);
+    const { dx, dy } = edges[0];
+    game.enemyRafts.push({
+      x: at.x - dx * 90, y: at.y - dy * 90,
+      targetX: at.x, targetY: at.y, dx, dy, units: group
+    });
+  }
+}
+
+export function tickEnemyRafts(dt) {
+  for (let i = game.enemyRafts.length - 1; i >= 0; i--) {
+    const raft = game.enemyRafts[i];
+    const distance = Math.hypot(raft.targetX - raft.x, raft.targetY - raft.y);
+    const step = GAME_CONFIG.waveMuster.raftSpeed * dt;
+    if (distance > step) {
+      raft.x += raft.dx * step;
+      raft.y += raft.dy * step;
+      continue;
+    }
+    for (const [index, enemy] of raft.units.entries()) {
+      enemy.x = raft.targetX + Math.cos(index * 2.4) * 12;
+      enemy.y = raft.targetY + Math.sin(index * 2.4) * 12;
+      musterAt(enemy);
+      game.enemies.push(enemy);
+    }
+    game.enemyRafts.splice(i, 1);
+  }
 }
 
 // A wave's demons still to come out of the portals (#250): `batch` of them every `seconds`
@@ -484,6 +549,7 @@ export function tickPortalWave(dt) {
     dressForWave(enemy, GAME_CONFIG.enemies[id]);
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true;
     musterAt(enemy); // (#279)
+    if (game.wavePreparation && game.wavePreparation.stage === 'gather') setWaveMusterAtCamp(enemy, game.waveTimer);
     game.enemies.push(enemy);
   }
   pickCaptain(game.waveSize);
@@ -496,12 +562,24 @@ function musterAt(enemy) {
   enemy.muster = { x: enemy.x + (townHall.x - enemy.x) / d * TILE_SIZE * 1.5, y: enemy.y + (townHall.y - enemy.y) / d * TILE_SIZE * 1.5 };
 }
 
+function setWaveMusterAtCamp(enemy, seconds) {
+  const camp = game.enemyCamp;
+  if (!camp || enemy.buildTarget) return;
+  const angle = rand() * Math.PI * 2, radius = (1 + rand() * 2) * TILE_SIZE;
+  enemy.muster = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
+  enemy.musterUntil = game.pathTick + Math.round(seconds * 60);
+}
+
+function setWaveMustersAtCamp(seconds) {
+  for (const enemy of game.enemies) if (enemy.fromWave && enemy.hp > 0) setWaveMusterAtCamp(enemy, seconds);
+}
+
 // (#279) a wave's enemies that came in on the same side of the map gather together: at the middle of where
 // they came in, a tile and a half in from the edge. (#298) Out of portals (the demons), by the portal each
 // came out of: a tile and a half from it towards the base, not off to the map's edge
 function regroupBySide() {
   const f = getFrontier(), W = f.x1, H = f.y1; // (#299: the frontier's sides, a default map's own)
-  const portals = getEnemyFaction().portalSpawns ? game.enemyTents.filter(et => !et.outpost && et.hp > 0) : [];
+  const portals = getEnemyFaction().portalSpawns ? game.enemyTents.filter(et => et.portal && !et.campStructure && et.hp > 0) : [];
   const nearestPortal = en => portals.reduce((best, p) => (!best || Math.hypot(p.x - en.x, p.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? p : best), null);
   const sideOf = en => portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : /** @type {[string, number][]} */ ([['left', en.x - f.x0], ['right', W - en.x], ['top', en.y - f.y0], ['bottom', H - en.y]]).sort((a, b) => a[1] - b[1])[0][0];
   const groups = {};
@@ -527,17 +605,35 @@ function pickCaptain(size) {
   if (pick) pick.en.captain = true;
 }
 
-// The wave timer: a warning 15 s before, then the wave
+// The wave timer: enemies gather by the camp at 30 s, move into position at 15 s, then attack
 export function tickWaveTimer(dt) {
   const before = game.waveTimer;
   game.waveTimer -= dt;
+  const muster = GAME_CONFIG.waveMuster;
+  if (!game.wavePreparation && game.enemyCamp && before > muster.preparationSeconds && game.waveTimer <= muster.preparationSeconds) {
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    startNextWave(true);
+  }
+  if (game.wavePreparation && game.wavePreparation.stage === 'gather' && before > muster.departureSeconds && game.waveTimer <= muster.departureSeconds) {
+    regroupBySide();
+    for (const enemy of game.enemies) if (enemy.fromWave && enemy.hp > 0 && !enemy.buildTarget) {
+      enemy.musterUntil = game.pathTick + Math.round(muster.departureSeconds * 60);
+    }
+    game.wavePreparation.stage = 'march';
+  }
   // one warning, 15 s before the wave (holds of the timer in tests keep it above)
   if (before > WAVE_WARNING_SECONDS && game.waveTimer <= WAVE_WARNING_SECONDS) {
     showNotification(t('wave.warning', { seconds: WAVE_WARNING_SECONDS }), true);
     someoneSays(game.settlers.filter(s => !s.asleep), getPlayerFaction().id, 'wave', true); // (#252)
   }
   if (game.waveTimer <= 0) {
-    startNextWave();
+    if (game.wavePreparation) {
+      activateEnemyTents();
+      for (const enemy of game.enemies) if (enemy.fromWave) enemy.musterUntil = 0;
+      game.waveNum++;
+      game.wavePreparation = null;
+      if (game.gameMode === 'endless') playSound('horn');
+    } else startNextWave();
     game.waveTimer = game.waveInterval;
   }
 }
@@ -552,7 +648,10 @@ export function tickEnemyTents(dt) {
     }
   }
 
+  if (game.wavePreparation) return;
+
   game.enemyTents.forEach(et => {
+    if (et.campStructure) return;
     et.summonTimer = (et.summonTimer || 0) + dt;
     const tentConfig = GAME_CONFIG.enemyTents;
     if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && game.enemies.length < tentConfig.maxEnemies) {

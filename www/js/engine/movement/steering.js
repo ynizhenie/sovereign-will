@@ -24,7 +24,7 @@ export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
     let nx = entity.x + stepX;
     let ny = entity.y + stepY;
 
-    if (!collidesWithWall(nx, ny, entity.radius) && !collidesWithWater(nx, ny, entity.radius)) {
+    if (!collidesWithWall(nx, ny, entity.radius, false, !!entity.panic) && !collidesWithWater(nx, ny, entity.radius)) {
       let score = Math.hypot(nx - targetX, ny - targetY);
       if (score < bestScore) {
         bestScore = score;
@@ -39,7 +39,7 @@ export function findSafeStepAroundObstacle(entity, targetX, targetY, speed) {
     for (let angle = -Math.PI; angle <= Math.PI; angle += Math.PI / 8) {
       let nx = entity.x + Math.cos(angle) * step * 1.5;
       let ny = entity.y + Math.sin(angle) * step * 1.5;
-      if (!collidesWithWall(nx, ny, entity.radius) && !collidesWithWater(nx, ny, entity.radius)) {
+      if (!collidesWithWall(nx, ny, entity.radius, false, !!entity.panic) && !collidesWithWater(nx, ny, entity.radius)) {
         let score = Math.hypot(nx - targetX, ny - targetY);
         if (score < bestScore) {
           bestScore = score;
@@ -80,11 +80,11 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
 
   tickPathTimers(entity, isEnemy, dt);
   replanIfNeeded(entity, targetX, targetY, isEnemy);
-  if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, bodyRadius)) {
+  if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, bodyRadius, !!entity.panic)) {
     stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy);
     return;
   }
-  if (smooth && !isEnemy && hasClearSettlerLine(entity.x, entity.y, targetX, targetY, bodyRadius) &&
+  if (smooth && !isEnemy && hasClearSettlerLine(entity.x, entity.y, targetX, targetY, bodyRadius, !!entity.panic) &&
     stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, false, true)) return;
   if (!isEnemy && pathBlockedAhead(entity)) {
     entity.path = null;
@@ -95,7 +95,7 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
   else if (!isEnemy) stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth);
 }
 
-function hasClearSettlerLine(startX, startY, targetX, targetY, radius) {
+function hasClearSettlerLine(startX, startY, targetX, targetY, radius, allowBattleBorder = false) {
   const distance = Math.hypot(targetX - startX, targetY - startY);
   if (distance < 1) return true;
   const steps = Math.ceil(distance / 10);
@@ -105,7 +105,7 @@ function hasClearSettlerLine(startX, startY, targetX, targetY, radius) {
     for (const offset of [0, -radius * 0.75, radius * 0.75]) {
       const gx = Math.floor((cx + perpX * offset) / TILE_SIZE);
       const gy = Math.floor((cy + perpY * offset) / TILE_SIZE);
-      if (isTileBlockedForSettler(gx, gy)) return false;
+      if (isTileBlockedForSettler(gx, gy, allowBattleBorder)) return false;
     }
   }
   return true;
@@ -163,8 +163,8 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
     // once the normal search found no way around (walled in), go straight to the breaking-through
     // search for a while instead of exploring the whole map again on every re-path
     let res = isEnemy && entity.strictPathFailTimer > 0
-      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY, false, nodesLeft)
-      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy, nodesLeft);
+      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY, false, nodesLeft, !!entity.panic)
+      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy, nodesLeft, !!entity.panic);
     searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
@@ -205,8 +205,8 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
     if (step > directDist) { directVx *= directDist / step; directVy *= directDist / step; }
     const nextX = entity.x + directVx, nextY = entity.y + directVy;
     const blocked = isEnemy
-      ? collidesWithEnemyNaturalResource(nextX, nextY, bodyRadius) || collidesWithWall(nextX, nextY, bodyRadius, true) || collidesWithWater(nextX, nextY, bodyRadius)
-      : collidesWithWall(nextX, nextY, bodyRadius) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy);
+      ? collidesWithEnemyNaturalResource(nextX, nextY, bodyRadius) || collidesWithWall(nextX, nextY, bodyRadius, true, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius)
+      : collidesWithWall(nextX, nextY, bodyRadius, false, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy);
     if (!blocked) {
       entity.x += directVx;
       entity.y += directVy;
@@ -235,7 +235,7 @@ function pathBlockedAhead(entity) {
   const nextTile = getGridPos(entity.path[0].x, entity.path[0].y);
   const hereTile = getGridPos(entity.x, entity.y);
   const stepsOffTile = nextTile.gx !== hereTile.gx || nextTile.gy !== hereTile.gy;
-  if (stepsOffTile && isTileBlockedForSettler(nextTile.gx, nextTile.gy)) {
+  if (stepsOffTile && isTileBlockedForSettler(nextTile.gx, nextTile.gy, !!entity.panic)) {
     // (#326) the enemy's building it's going to break through, on purpose
     const tiles = getTileIndex(), k = `${nextTile.gx * TILE_SIZE + 15},${nextTile.gy * TILE_SIZE + 15}`;
     return !tiles.redBuildings.has(k) && !tiles.redDoors.has(k);
@@ -264,7 +264,7 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
       // at, a wall): it stays beside it then, never stuck inside
       if (!isEnemy) {
         const t = getGridPos(targetX, targetY);
-        if (!isTileBlockedForSettler(t.gx, t.gy)) {
+        if (!isTileBlockedForSettler(t.gx, t.gy, !!entity.panic)) {
           entity.x = targetX;
           entity.y = targetY;
         }
@@ -294,19 +294,19 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
     }
 
     if (isEnemy && (collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
-        collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, true) ||
+        collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, true, !!entity.panic) ||
         collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius))) {
       entity.moveVx = 0;
       entity.moveVy = 0;
       entity.path = null;
       entity.pathRetryTimer = 0.25;
-    } else if (!isEnemy && ((collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius) && !collidesWithWall(entity.x, entity.y, bodyRadius)) || stepsOntoSpikes(entity, vx, vy))) {
+    } else if (!isEnemy && ((collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, false, !!entity.panic) && !collidesWithWall(entity.x, entity.y, bodyRadius, false, !!entity.panic)) || stepsOntoSpikes(entity, vx, vy))) {
       // the push away from other settlers can shove a settler into a rock corner: try the plain
       // path direction first, then sidestep toward the next path node (not the final target, which
       // around a corner points straight back into the rock)
       const plainVx = (dx / dist) * speed;
       const plainVy = (dy / dist) * speed;
-      let fallback = !collidesWithWall(entity.x + plainVx, entity.y + plainVy, bodyRadius) && !stepsOntoSpikes(entity, plainVx, plainVy)
+      let fallback = !collidesWithWall(entity.x + plainVx, entity.y + plainVy, bodyRadius, false, !!entity.panic) && !stepsOntoSpikes(entity, plainVx, plainVy)
         ? { x: plainVx, y: plainVy }
         : findSafeStepAroundObstacle(entity, nextNode.x, nextNode.y, speed);
       if (fallback && stepsOntoSpikes(entity, fallback.x, fallback.y)) fallback = null;
@@ -343,7 +343,7 @@ function stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth =
     }
 
     // (caught inside something already: it may walk out)
-    if ((!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius) || collidesWithWall(entity.x, entity.y, bodyRadius)) && !stepsOntoSpikes(entity, directVx, directVy)) {
+    if ((!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius, false, !!entity.panic) || collidesWithWall(entity.x, entity.y, bodyRadius, false, !!entity.panic)) && !stepsOntoSpikes(entity, directVx, directVy)) {
       entity.x += directVx;
       entity.y += directVy;
     } else if (smooth) {
@@ -374,7 +374,7 @@ export function getResourceApproachPoint(entity, resource) {
       let x = resource.x + Math.cos(angle) * distance;
       let y = resource.y + Math.sin(angle) * distance;
 
-      if (collidesWithWall(x, y, entRadius) || collidesWithWater(x, y, entRadius)) continue;
+      if (collidesWithWall(x, y, entRadius, false, !!entity.panic) || collidesWithWater(x, y, entRadius)) continue;
 
       let score = Math.hypot(x - entity.x, y - entity.y);
       if (reach) {

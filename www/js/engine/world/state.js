@@ -39,6 +39,11 @@ export const game = {
   armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)
   // the things on the map (WORLD_LISTS)
   settlers: [],
+  enemyCamp: null,          // the enemy's persistent camp on the Endless map
+  enemyCampDestroyed: false,
+  enemyRafts: [],            // rafts bringing a wave after the enemy camp is destroyed
+  wavePreparation: null,     // the next wave gathered before its attack
+  raidActive: false,
   trees: [],
   cacti: [],
   boulders: [],
@@ -99,9 +104,6 @@ export const game = {
   cardsWave: 0,         // waves counted for cards
   /** @type {string[] | null} */
   cardOffer: null,      // the cards offered now, waiting for a pick
-  /** @type {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} */
-  raidCamp: null,       // an enemy camp's zone open beyond a side of the map (#255, endless.raid.js)
-  raidCampWave: 0,      // the waves beaten when the last one opened
   reliefZones: [],      // { x, y } tiles marked to relieve in (#279, world.zones.js)
   postZones: [],        // { x, y } tiles marked for soldiers' posts before a wave
   pathZones: [],        // (#326) { x, y } tiles the player marked as a path: trodden for good
