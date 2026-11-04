@@ -165,7 +165,7 @@ export function presetUnit(factionId, preset) {
 // (#326) The enemy kind that is a faction's preset: one of its own enemies that's that very unit, else one made
 // for it (once, into GAME_CONFIG.enemies) like the nearest of them: an archer like its archer, a medic like the
 // humans' healer, a big one like its big one, any other like its swordsman, holding the preset's weapon. A made
-// one has no waveKey: no wave sends it (the new waves will choose)
+// one has no waveKey: scouts and raid defenders don't use it as their template
 export function presetEnemyKey(factionId, presetId) {
   const preset = GAME_CONFIG.unitPresets.find(p => p.id === presetId);
   const unit = preset && presetUnit(factionId, preset);
@@ -194,6 +194,50 @@ export function presetEnemyKey(factionId, presetId) {
     : undefined;
   GAME_CONFIG.enemies[key] = { ...template, ...body, id: key, faction: factionId, weapon: unit.weapon, tool: unit.tool || undefined, reach, waveKey: undefined, buildsTents: false, ...(ranged ? { ranged } : {}) };
   return key;
+}
+
+// The preset's weapon or trade is weighted independently; its chance changes smoothly between its unlock and
+// the end of the ramp. Human and demon fist presets are never part of a wave.
+export function getWavePresetWeight(preset, wave = game.waveNum, factionId = getEnemyFaction().id) {
+  if (preset.size !== 'pet' && preset.weapon === 'fist' && !preset.tool && factionId !== 'undead') return 0;
+  if (preset.size === 'pet') {
+    const pet = GAME_CONFIG.wavePresets.pet;
+    if (wave < pet.fromWave) return 0;
+    const progress = Math.min(1, Math.max(0, (wave - pet.fromWave) / GAME_CONFIG.wavePresets.rampWaves));
+    return pet.startWeight + (pet.endWeight - pet.startWeight) * progress;
+  }
+  const item = preset.tool === 'medbag' ? 'medic' : preset.tool === 'necro_staff' ? 'necromancer' : preset.weapon;
+  const rule = GAME_CONFIG.wavePresets.items[item];
+  if (!rule || wave < rule.fromWave) return 0;
+  const progress = Math.min(1, Math.max(0, (wave - rule.fromWave) / GAME_CONFIG.wavePresets.rampWaves));
+  let weight = rule.startWeight + (rule.endWeight - rule.startWeight) * progress;
+  if (preset.size !== 'normal') {
+    const size = GAME_CONFIG.wavePresets[preset.size];
+    if (!size || wave < size.fromWave) return 0;
+    const sizeProgress = Math.min(1, Math.max(0, (wave - size.fromWave) / GAME_CONFIG.wavePresets.rampWaves));
+    weight *= size.startWeight + (size.endWeight - size.startWeight) * sizeProgress;
+  }
+  return weight;
+}
+
+export function getWavePresetPool(factionId = getEnemyFaction().id, wave = game.waveNum) {
+  return GAME_CONFIG.unitPresets.flatMap(preset => {
+    const unit = presetUnit(factionId, preset);
+    const weight = getWavePresetWeight(preset, wave, factionId);
+    if (!unit || weight <= 0) return [];
+    const enemyKey = presetEnemyKey(factionId, preset.id);
+    return enemyKey ? [{ preset, enemyKey, weight }] : [];
+  });
+}
+
+function pickWavePreset(pool) {
+  const total = pool.reduce((sum, option) => sum + option.weight, 0);
+  let roll = rand() * total;
+  for (const option of pool) {
+    roll -= option.weight;
+    if (roll < 0) return option;
+  }
+  return pool[pool.length - 1] || null;
 }
 
 // An enemy kind's hp and a hit's damage (an arrow's for an archer) as it would come now, with the
@@ -293,20 +337,62 @@ export function getWaveArmyFactor() {
   return Math.max(army.min, Math.min(army.max, 1 + (units - army.base) * army.perUnit));
 }
 
-// Armour, a shield and a helmet on a wave enemy, by chance, once the player has made them (GAME_CONFIG.enemyGear)
+const PLAYER_DEVELOPMENT_ITEMS = new Set([
+  'weapons:spear', 'weapons:bow', 'weapons:iron_sword', 'weapons:iron_spear', 'weapons:crossbow',
+  'tools:medbag', 'tools:necro_staff',
+  'gear:leather_armor', 'gear:shield', 'gear:helmet', 'gear:armor',
+  'buildings:workshop', 'buildings:smelter', 'buildings:smithy', 'buildings:mine', 'buildings:watchtower'
+]);
+
+// Combat gear the player has unlocked, made, stored, equipped, or built is a lightweight development signal.
+export function getPlayerDevelopment() {
+  const items = new Set();
+  for (const [key, count] of Object.entries(game.armory)) if (count > 0) items.add(key);
+  for (const [key, unlocked] of Object.entries(game.unlocked)) if (unlocked) items.add(key);
+  for (const settler of game.settlers) {
+    if (settler.weapon && settler.weapon !== 'fist') items.add(`weapons:${settler.weapon}`);
+    if (settler.tool) items.add(`tools:${settler.tool}`);
+    if (settler.armor) items.add(`gear:${settler.armor === 'iron' ? 'armor' : 'leather_armor'}`);
+    if (settler.shield) items.add('gear:shield');
+    if (settler.helmet) items.add('gear:helmet');
+  }
+  for (const building of game.buildings) items.add(`buildings:${building.type}`);
+  if (game.playerGear.leather) items.add('gear:leather_armor');
+  for (const id of ['armor', 'shield', 'helmet']) if (game.playerGear[id]) items.add(`gear:${id}`);
+  return Math.min(GAME_CONFIG.waveScaling.maxTechItems, [...items].filter(key => PLAYER_DEVELOPMENT_ITEMS.has(key)).length);
+}
+
+export function getWaveEnemyCount(wave = game.waveNum) {
+  const scaling = GAME_CONFIG.waveScaling;
+  if (wave <= 1) return Math.max(scaling.minimum, scaling.firstWave);
+  const base = scaling.minimum + (wave - 1) * scaling.perWave;
+  const exact = base * getWaveArmyFactor() *
+    (1 + getPlayerDevelopment() * scaling.techPerItem) * getDifficulty().enemyCount;
+  const whole = Math.floor(exact);
+  return Math.max(scaling.minimum, whole + (rand() < exact - whole ? 1 : 0));
+}
+
+export function getWaveGearChance(item, wave = game.waveNum) {
+  const rule = GAME_CONFIG.waveGear[item];
+  if (!rule || wave < rule.fromWave) return 0;
+  const progress = Math.min(1, Math.max(0, (wave - rule.fromWave) / GAME_CONFIG.waveGear.rampWaves));
+  return rule.startChance + (rule.endChance - rule.startChance) * progress;
+}
+
+// Armour, a shield and a helmet become more common as the enemy faction develops.
 function dressForWave(enemy, def) {
-  const gear = GAME_CONFIG.enemyGear;
-  const chance = Math.min(gear.max, (game.waveNum - gear.fromWave + 1) * gear.perWave);
-  if (chance <= 0 || def.pet) return; // (a pet wears nothing, #326)
-  // (the best the player has made: iron, else leather, #298)
-  const armour = game.playerGear.armor ? GAME_CONFIG.gear.armor : game.playerGear.leather ? GAME_CONFIG.gear.leather_armor : null;
-  if (armour && rand() < chance) {
+  if (def.pet) return; // (a pet wears nothing, #326)
+  const ironChance = getWaveGearChance('iron'), leatherChance = getWaveGearChance('leather');
+  const armourRoll = rand();
+  const armour = armourRoll < ironChance ? GAME_CONFIG.gear.armor
+    : armourRoll < ironChance + leatherChance ? GAME_CONFIG.gear.leather_armor : null;
+  if (armour) {
     enemy.armor = armour.armorKind;
     enemy.maxHp += armour.hpBonus;
     enemy.hp = enemy.maxHp;
   }
-  if (game.playerGear.shield && def.type === 'normal' && !def.ranged && !def.healer && !def.necromancer && rand() < chance) enemy.shield = true;
-  if (game.playerGear.helmet && rand() < chance) enemy.helmet = true; // (#326, 27.10, 27)
+  if (!def.ranged && !def.healer && !def.necromancer && rand() < getWaveGearChance('shield')) enemy.shield = true;
+  if (rand() < getWaveGearChance('helmet')) enemy.helmet = true;
 }
 
 export function startNextWave() {
@@ -315,6 +401,7 @@ export function startNextWave() {
   game.enemyTents.forEach(et => {
     et.summonTimer = 0;
     et.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
+    et.summonWave = game.waveNum;
   });
 
   // difficulty goes up every wavesPerDifficulty waves (starting at 0)
@@ -334,23 +421,8 @@ export function startNextWave() {
   }
 
   let normalEnemies = [];
-
-  // squad size grows smoothly, wave by wave, growthPerDifficulty every wavesPerDifficulty waves (#232: it went
-  // up in steps, x3 from wave 1 to 2 and x2 at wave 6), with the player's army; the first waves are lighter,
-  // firstWave at wave 1 and rampPerWave more each wave after up to full
-  const growth = 1 + (Math.max(0, game.waveNum - scaling.growFromWave) / scaling.wavesPerDifficulty) * scaling.growthPerDifficulty;
-  const ramp = Math.min(1, scaling.firstWave + (game.waveNum - 1) * scaling.rampPerWave);
-  const multiplier = growth * getWaveArmyFactor() * ramp;
-
-  // a random base squad from the config
-  const baseGroups = GAME_CONFIG.attackGroups || [];
-  let group = null;
-
-  if (baseGroups.length > 0) {
-    const index = Math.floor(rand() * baseGroups.length);
-    group = baseGroups[index];
-  }
-
+  const factionId = getEnemyFaction().id;
+  const presets = getWavePresetPool(factionId);
   let spawned = 0;
   // the demons' come out of their portals a few at a time (#250): queued, let out by tickPortalWave
   const queued = getEnemyFaction().portalSpawns;
@@ -367,21 +439,12 @@ export function startNextWave() {
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);
   };
-  const waveKinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id) && (!def.fromWave || game.waveNum >= def.fromWave)); // (a pet from its wave on, #314)
-
-  if (group) {
-    // every enemy kind of the enemy's faction with a waveKey, in config order
-    waveKinds.forEach(def => {
-      const baseCount = /** @type {string[]} */ ([]).concat(def.waveKey).reduce((sum, key) => sum + Number(group[key] || 0), 0);
-      // rounded at random, half an enemy under: on average as many as rounding down gave, but without the
-      // small counts of a squad all jumping together once the multiplier passed 1 (#232)
-      const exact = Math.max(0, baseCount * multiplier * getDifficulty().enemyCount * (def.waveScale || 1) - 0.5);
-      const count = Math.floor(exact) + (rand() < exact - Math.floor(exact) ? 1 : 0);
-      for (let i = 0; i < count; i++) spawnWaveEnemy(def);
-    });
+  const count = getWaveEnemyCount();
+  for (let i = 0; i < count && presets.length; i++) {
+    const picked = pickWavePreset(presets);
+    const def = picked && GAME_CONFIG.enemies[picked.enemyKey];
+    if (def) spawnWaveEnemy(def);
   }
-  // never an empty wave: one of the first kind
-  if (spawned === 0 && waveKinds.length) spawnWaveEnemy(waveKinds[0]);
 
   // portals (the demons) have opened by themselves already; tents need builders
   if (getEnemyFaction().portalSpawns) normalEnemies = [];
@@ -493,14 +556,21 @@ export function tickEnemyTents(dt) {
     et.summonTimer = (et.summonTimer || 0) + dt;
     const tentConfig = GAME_CONFIG.enemyTents;
     if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && game.enemies.length < tentConfig.maxEnemies) {
+      const wave = et.summonWave || Math.max(1, game.waveNum - 1);
+      const pool = getWavePresetPool(getEnemyFaction().id, wave);
+      const picked = pickWavePreset(pool);
+      const def = picked && GAME_CONFIG.enemies[picked.enemyKey];
+      if (!def) throw new Error(`No wave preset available for ${getEnemyFaction().id} in wave ${wave}`);
       et.summonTimer = 0;
       et.summonsLeft--;
       let spawnPos = {
         x: Math.max(15, Math.min(game.WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
         y: Math.max(15, Math.min(game.WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
       };
-      const summoned = createConfiguredEnemy(spawnPos, getEnemyFaction().summonEnemy || tentConfig.summonEnemy);
+      const summoned = createConfiguredEnemy(spawnPos, def.id);
       summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
+      dressForWave(summoned, def);
+      if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) summoned.torch = true;
       game.enemies.push(summoned);
     }
   });

@@ -13,7 +13,7 @@ test('units are drawn in their side\'s colour; waves are the enemy faction\'s ki
       settler: getSettlerColor(), enemyBase: getEnemyColor(null),
       enemyDarkened: getEnemyColor({ type: 'normal' }) === shadeColor(getEnemyColor(null), -0.28),
       bigDarker: getEnemyColor({ type: 'big' }) !== '#9b59b6',
-      kindsFromFaction: [...kinds].every(k => getEnemyFaction().enemies.includes(k)), enemies: enemies.length
+      kindsFromFaction: [...kinds].every(k => enemyFactionOf(k).id === sides.enemy.faction), enemies: enemies.length
     };
   })();
   expect(r).toMatchObject({ settler: '#3498db', enemyBase: '#9b59b6', enemyDarkened: true, bigDarker: true, kindsFromFaction: true });
