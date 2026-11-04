@@ -9,6 +9,7 @@ import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides 
 import { resetGameSteps } from '../../app/index.js';
 import { mainMenu } from '../menu/index.js';
 import { loadSavedMaps, renderSavedMapList } from '../editor/index.js';
+import { createEnemyCamp } from './endless.raid.js';
 
 export const playButton = document.getElementById('play-button');
 
@@ -47,6 +48,7 @@ export const startGame = async (e) => {
       const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
       if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
       await runLoading('loading.world', resetGameSteps()); // (#326) the menu's scene stays, a bar over it
+      createEnemyCamp();
       openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
       game.gameStarted = true;
       mainMenu.style.display = 'none';

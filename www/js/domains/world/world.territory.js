@@ -24,7 +24,7 @@ export function setTerritoryEnabled(on) { enabled = on; }
 export const hasTerritory = () => enabled && game.gameMode === 'endless';
 
 function counts(b) {
-  return !config().skip.includes(b.type);
+  return b.side !== 'red' && !config().skip.includes(b.type);
 }
 
 export function getTerritory() {
@@ -53,9 +53,18 @@ export function getTerritory() {
 // Whether (x, y) is on the base's land (anywhere, out of Endless)
 export function inTerritory(x, y) {
   if (!hasTerritory()) return true;
+  if (inEnemyTerritory(x, y)) return false;
   const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
   if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) return false;
   return getTerritory().mask[gy * game.COLS + gx] === 1;
+}
+
+export function inEnemyTerritory(x, y) {
+  const camp = game.gameMode === 'endless' ? game.enemyCamp : null;
+  if (!camp) return false;
+  const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
+  const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
+  return Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
 }
 
 // The box round the base's land (all the map, out of Endless)
@@ -102,6 +111,34 @@ export function drawTerritory() {
   const at = (gx, gy) => gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS && mask[gy * game.COLS + gx] === 1;
   ctx.save();
   ctx.strokeStyle = 'rgba(241, 196, 15, 0.35)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+  ctx.beginPath();
+  for (let gy = gy0; gy <= gy1; gy++) {
+    for (let gx = gx0; gx <= gx1; gx++) {
+      if (!at(gx, gy)) continue;
+      const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
+      if (!at(gx, gy - 1)) { ctx.moveTo(x, y); ctx.lineTo(x + TILE_SIZE, y); }
+      if (!at(gx, gy + 1)) { ctx.moveTo(x, y + TILE_SIZE); ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE); }
+      if (!at(gx - 1, gy)) { ctx.moveTo(x, y); ctx.lineTo(x, y + TILE_SIZE); }
+      if (!at(gx + 1, gy)) { ctx.moveTo(x + TILE_SIZE, y); ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE); }
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+  drawEnemyTerritory();
+}
+
+function drawEnemyTerritory() {
+  const camp = game.gameMode === 'endless' ? game.enemyCamp : null;
+  if (!camp) return;
+  const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0, v = getViewRect(TILE_SIZE);
+  const gx0 = Math.max(centre.gx - radius, Math.floor(v.x0 / TILE_SIZE));
+  const gx1 = Math.min(centre.gx + radius, Math.floor(v.x1 / TILE_SIZE));
+  const gy0 = Math.max(centre.gy - radius, Math.floor(v.y0 / TILE_SIZE));
+  const gy1 = Math.min(centre.gy + radius, Math.floor(v.y1 / TILE_SIZE));
+  if (gx0 > gx1 || gy0 > gy1) return;
+  const at = (gx, gy) => Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(231, 76, 60, 0.35)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
   ctx.beginPath();
   for (let gy = gy0; gy <= gy1; gy++) {
     for (let gx = gx0; gx <= gx1; gx++) {

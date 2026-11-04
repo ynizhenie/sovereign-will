@@ -18,24 +18,38 @@ test('scouts between waves walk the red band, aren\'t enemies; pointed at, one i
   expect(r).toEqual({ count: 1, inBand: true, notEnemy: true, hunted: true, stays: true, goneOff: true });
 });
 
-test('every camp layout builds, the same camp for its seed; the party starts past the camp\'s red line (#279, 34, 37)', async ({ page }) => {
+test('one persistent enemy camp stays on the main map (#255)', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'campLayouts', {});
-  for (const layout of ['square', 'round', 'scattered', 'fort']) expect(r[layout]).toMatchObject({ same: true, pastLine: true, outpost: true });
-  expect(r.scattered.walls).toBe(0);
-  expect(r.fort.walls).toBeGreaterThan(r.square.walls);
+  expect(r).toMatchObject({ same: true, campExists: true, sameWorld: true, outpost: 0, campfires: 1 });
+  expect(r.guards).toBeGreaterThan(0);
 });
 
-test('a scout sent to the camp looks it over and comes home; the camp stays (#279, 33)', async ({ page }) => {
+test('preparation does not start the tent assault or enemy attacks; both begin with the wave', async ({ page }) => {
   const errors = await openGame(page);
-  const r = await sim(page, 'scoutTheCamp', {});
-  expect(r).toMatchObject({ sent: true, looked: true, cols: 26, campStays: true, phase: null });
+  const r = await sim(page, 'wavePreparationTiming', {});
+  expect(r).toEqual({
+    prepTentAssault: false,
+    tentHeldFire: true,
+    tentFiredAfterStart: true,
+    enemyHeldFire: true,
+    enemyAttackedAfterStart: true,
+    tentAssaultAfterStart: true
+  });
   expect(errors).toEqual([]);
 });
 
-test('the camp\'s bar sits over the bottom panel (#279, 32)', async ({ page }) => {
+test('a scout sent from the town hall returns safely; the camp stays (#255)', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await sim(page, 'scoutTheCamp', {});
+  expect(r).toMatchObject({ sent: true, looked: true, campStays: true, phase: null, raidActive: false });
+  expect(errors).toEqual([]);
+});
+
+test('the town hall offers a raid and a scout for the persistent camp (#255)', async ({ page }) => {
   await openGame(page);
   await sim(page, 'campOpens', {});
-  expect(await page.evaluate(() => document.getElementById('raid-bar').parentElement.id)).toBe('hud-bottom');
-  await expect(page.locator('#raid-bar [data-raid-act="scout"]')).toBeVisible();
+  await page.evaluate(() => openHallCard());
+  await expect(page.locator('#card-actions')).toContainText('Отправить в набег');
+  await expect(page.locator('#card-actions')).toContainText('Отправить разведчика');
 });

@@ -107,9 +107,9 @@ export function performAttack(attacker, targetX, targetY) {
     // everything within reach of the blow, and what hitting it does
     const struck = [
       ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker); playSound('hit', en); } })),
-      ...game.enemyTents.filter(et => inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      ...game.enemyTents.filter(et => (!et.campStructure || game.raidActive) && inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
-      ...game.buildings.filter(b => b.side === 'red' && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
+      ...game.buildings.filter(b => b.side === 'red' && (!b.enemyCampStructure || game.raidActive) && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
         .map(b => ({ at: b, hit: () => { b.hp -= dmg; if (b.hp <= 0) removeBuilding(b); } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
@@ -266,6 +266,7 @@ export function isDefenseAlert() {
 export function baseRadiusToward(angle) {
   let far = 0;
   for (const b of game.buildings) {
+    if (b.side === 'red') continue;
     const a = Math.atan2(b.y - townHall.y, b.x - townHall.x);
     if (Math.abs(Math.atan2(Math.sin(a - angle), Math.cos(a - angle))) <= Math.PI * 40 / 180) far = Math.max(far, Math.hypot(b.x - townHall.x, b.y - townHall.y));
   }
@@ -277,7 +278,7 @@ export function baseRadiusToward(angle) {
 const baseRadiusOnce = onceThisTick();
 export function getBaseRadius() {
   return baseRadiusOnce(() => {
-    const far = game.buildings.reduce((max, b) => Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
+    const far = game.buildings.reduce((max, b) => b.side === 'red' ? max : Math.max(max, Math.hypot(b.x - townHall.x, b.y - townHall.y)), 0);
     return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
   });
 }

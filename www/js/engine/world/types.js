@@ -174,6 +174,11 @@
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
+ * @property {boolean} [campGuard]  defender of the persistent Endless camp; passive outside a raid
+ * @property {boolean} [campFireKeeper] the sole guard who tends the camp's fire while remaining at its side
+ * @property {boolean} [campFuelDuty] legacy saved camp-fuel assignment, removed on load
+ * @property {number} [campFuelLoad] legacy saved camp-fuel amount, removed on load
+ * @property {Building} [campFuelTarget] legacy saved camp-fuel target, removed on load
  * @property {boolean} [fleeing]    a scout pointed at, running now (one came near it, or it was hit, #279)
  * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
  * @property {Point} [muster]        where it gathers
@@ -235,6 +240,7 @@
  * @typedef {Object} Blueprint
  * @property {string} type           GAME_CONFIG.buildings key, or 'demolish_building'
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
  * @property {number} y
@@ -252,6 +258,7 @@
  * @typedef {Object} Building
  * @property {string} type           GAME_CONFIG.buildings key
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} [progress]
@@ -393,8 +400,11 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
- * @property {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} raidCamp  an enemy camp's zone open (#255; #279: the army it mirrors and the wave, as when it appeared)
- * @property {number} raidCampWave  the waves beaten when the last one opened
+ * @property {{ x: number, y: number, radius: number, seed: number } | null} enemyCamp  the enemy's persistent camp on the Endless map
+ * @property {boolean} enemyCampDestroyed
+ * @property {Object[]} enemyRafts  rafts bringing a wave after the camp is destroyed
+ * @property {Object | null} wavePreparation  the next wave gathered before its attack
+ * @property {boolean} raidActive
  * @property {Enemy[]} scouts  enemy scouts between waves (#279)
  * @property {Point[]} reliefZones  tiles marked to relieve in (#279)
  * @property {Point[]} postZones    tiles marked for soldiers' posts

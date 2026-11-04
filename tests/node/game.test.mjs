@@ -31,6 +31,7 @@ test('enemies pressed against a wall damage it', async () => {
   const r = await sim.wallContact({});
   expect(r.wallsBroken).toBeGreaterThan(0);
   expect(r.secondsStuckAtWall).toBeLessThan(1);
+  expect(r.buildingHitWithSwing).toBe(true);
 });
 
 test('enemies break into a walled-in player', async () => {

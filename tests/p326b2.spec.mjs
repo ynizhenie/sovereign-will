@@ -44,6 +44,31 @@ test('the red side never breaks its own walls; the green breaks into them; the r
   expect(errors).toEqual([]);
 });
 
+test('green fighters breach separate red enclosures even after the first breach invalidates their paths', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    battle.lineup = [];
+    for (const gy of [10, 26]) {
+      ring(28, gy, false);
+      put('u', 'humans:sword', 28, gy);
+      put('u', 'humans:sword', 8, gy);
+    }
+    for (const enemy of enemies) {
+      enemy.hp = enemy.maxHp = 100000;
+      enemy.damage = 0;
+    }
+    fight(60);
+    return [10, 26].map(gy => ({
+      remainingWalls: buildings.filter(b => b.side === 'red' && b.type === 'wall_stone' &&
+        Math.abs(Math.floor(b.x / TILE_SIZE) - 28) <= 1 && Math.abs(Math.floor(b.y / TILE_SIZE) - gy) <= 1).length
+    }));
+  });
+  expect(result).toHaveLength(2);
+  for (const enclosure of result) {
+    expect(enclosure.remainingWalls).toBeLessThan(8);
+  }
+});
+
 test('spikes: the other side\'s walked straight over, a side\'s own walked round (#326)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {

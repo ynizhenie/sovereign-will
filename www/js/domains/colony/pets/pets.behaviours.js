@@ -179,7 +179,7 @@ function petRelieve(s, tick) {
 
 // The graves it's kept by (the graveyard itself, with none; in a battle, where it was placed: no town hall)
 const ghostHomes = (s) => {
-  const graves = game.buildings.filter(b => b.type === 'grave');
+  const graves = game.buildings.filter(b => b.type === 'grave' && b.side !== 'red');
   if (graves.length) return graves;
   return s && s.battleEntry ? [s.battleEntry] : [townHall];
 };
