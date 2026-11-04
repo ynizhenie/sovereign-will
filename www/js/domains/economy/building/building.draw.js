@@ -77,7 +77,7 @@ function drawMenuWarehouse() {
   if (share <= 0) {
     const shadow = new Path2D();
     shadow.ellipse(x, y + 4, 15, 9, 0, 0, Math.PI * 2);
-    drawShadowPath(ctx, shadow, 0.3, null, { x: x - 15, y: y - 5, width: 30, height: 18 });
+    drawShadowPath(ctx, shadow, 0.3);
     for (const [dx, dy, a, w] of [[-8, 2, 0.4, 16], [4, -3, -0.7, 14], [0, 6, 0.1, 18], [-3, -6, 1.2, 12], [8, 5, 0.9, 10]]) {
       ctx.save(); ctx.translate(x + dx, y + dy); ctx.rotate(a); ctx.fillStyle = '#6d4520'; ctx.fillRect(-w / 2, -1.5, w, 3); ctx.restore();
     }

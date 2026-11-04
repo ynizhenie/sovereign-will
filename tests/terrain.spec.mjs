@@ -32,26 +32,23 @@ test('ore seams and ore source rocks cast shadows', async ({ page }) => {
     const ore = { x: townHall.x + 180, y: townHall.y, hp: 10, maxHp: 10 };
     game.naturalRocks.push(source);
     game.ironOres.push(ore);
-    camera.x = townHall.x; camera.y = townHall.y;
     resetTileIndex();
-    for (let frame = 0; frame < 8; frame++) render();
-    const { drawNaturalRockShadows } = await import('/js/domains/world/world.draw.js');
-    beginShadowFrame(ctx);
+    const g = document.createElement('canvas').getContext('2d');
     const original = { ellipse: Path2D.prototype.ellipse, roundRect: Path2D.prototype.roundRect };
     let ellipses = 0, tiles = 0;
     Path2D.prototype.ellipse = function (...args) { ellipses++; return original.ellipse.apply(this, args); };
     Path2D.prototype.roundRect = function (...args) { tiles++; return original.roundRect.apply(this, args); };
     try {
-      drawNaturalRockShadows();
+      paintRockShadows(g, source.x - 60, source.y - 60, ore.x + 60, ore.y + 60, { dx: 0.5, dy: 0.45 });
       return { oreShadows: ellipses, sourceShadows: tiles };
     } finally {
       Path2D.prototype.ellipse = original.ellipse;
       Path2D.prototype.roundRect = original.roundRect;
     }
   });
+  // (each tile: its shadow, and its top taken out of the shadows)
   expect(shadows.oreShadows).toBe(0);
-  // (the two tiles' shadows; their silhouettes were worked out in the frames before and are kept)
-  expect(shadows.sourceShadows).toBe(2);
+  expect(shadows.sourceShadows).toBe(4);
   expect(errors).toEqual([]);
 });
 

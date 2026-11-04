@@ -6,7 +6,7 @@ import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
-import { addBuildingShadowOccluders, areShadowsEnabled, drawShadowPath, getSun, MIN_SHADOW_ALPHA, setShadowOccluders } from './world.daytime.js';
+import { areShadowsEnabled, getSun, MIN_SHADOW_ALPHA } from './world.daytime.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -57,9 +57,10 @@ const stats = { holes: 0, late: 0, pending: 0 };
 export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
-// paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
-/** @param {string} layer @param {number} res @param {ChunkStamp} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] */
-export function drawChunks(layer, res, stamp, paint, preview) {
+// paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed, laid down on target. keepOld: a piece
+// waiting its turn to be painted shows any picture of it there is meanwhile (out of date, or of another size)
+/** @param {string} layer @param {number} res @param {ChunkStamp} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] @param {CanvasRenderingContext2D} [target] */
+export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keepOld = false) {
   if (typeof document === 'undefined') return;
   const epoch = worldEpoch();
   if (cacheWorldEpoch !== epoch) {
@@ -84,17 +85,18 @@ export function drawChunks(layer, res, stamp, paint, preview) {
     previousView = v; previousScale = scale;
     frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
+    if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
     // is useful only during movement, when a coarse first pass keeps the pan responsive.
     framePaintLayer = moving ? layers[(frameOf - 1) % layers.length] : layers[0];
   } // (the first layer of a frame)
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
-  const m = ctx.getTransform();
+  const m = target.getTransform();
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
   const blit = (p, x0, y0, x1, y1) => {
     const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
-    ctx.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+    target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
@@ -135,8 +137,11 @@ export function drawChunks(layer, res, stamp, paint, preview) {
         }
         if (chunk) chunks.delete(key); // (to the end: the most recently shown)
         if (!free) {
-          if (chunk && !invalidated) {
+          if (chunk && (!invalidated || keepOld)) {
             chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key);
+          } else if (keepOld && oldPicture(chunks, cx, cy)) {
+            blit(oldPicture(chunks, cx, cy), x0, y0, x1, y1);
+            stats.pending++;
           } else {
             // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
             // or rasterize each one this frame: preview it until its turn in the queue.
@@ -167,6 +172,14 @@ export function drawChunks(layer, res, stamp, paint, preview) {
     chunks.delete(key);
   }
 }
+
+// (#392) a piece's picture at any size, the finest first
+const SIZES = [4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
+/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy */
+const oldPicture = (chunks, cx, cy) => {
+  for (const res of SIZES) { const chunk = chunks.get(`${res}|${cx},${cy}`); if (chunk) return chunk; }
+  return null;
+};
 
 export function wasChunkDrawn(layer, res, x, y) {
   const size = CHUNK * TILE_SIZE, cx = Math.floor(x / size), cy = Math.floor(y / size);
@@ -669,81 +682,33 @@ export function drawSand() {
   paintSandGround(ctx, view.x0, view.y0, view.x1, view.y1);
 }
 
-// The rock and ore tiles round the view, with their corners worked out (each looks at its neighbours, a dozen
-// lookups a tile), and their silhouettes: found again only when the view moves on a few tiles or the tiles change,
-// not every frame. Round the view by more than the longest shadow (18 high at the sun's longest, 2.25 a unit)
-/** @type {{ key: string, tiles: object | null, list: { x: number, y: number, radii: number[] }[], occluders: Path2D, bounds: { x: number, y: number, width: number, height: number } | null }} */
-let rockShadowTiles = { key: '', tiles: null, list: [], occluders: new Path2D(), bounds: null };
-function rocksForShadows() {
-  const tiles = getTileIndex(), step = 4 * TILE_SIZE, margin = 3 * TILE_SIZE, v = getViewRect();
-  const x0 = Math.floor((v.x0 - margin) / step) * step, y0 = Math.floor((v.y0 - margin) / step) * step;
-  const x1 = Math.ceil((v.x1 + margin) / step) * step, y1 = Math.ceil((v.y1 + margin) / step) * step;
-  const key = `${x0},${y0},${x1},${y1}`;
-  if (rockShadowTiles.key === key && rockShadowTiles.tiles === tiles) return rockShadowTiles;
-  const list = [], occluders = new Path2D();
-  const min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
+// (each rock tile's rounded corners, worked out once while the tiles stay as they are: a dozen lookups a tile)
+/** @type {{ tiles: object | null, of: Map<object, number[]> }} */
+let rockCorners = { tiles: null, of: new Map() };
+
+// The shadows of the rock and ore tiles round a piece of the ground (x0..x1, y0..y1), cast by the sun (dx, dy),
+// into the shadows' picture g; then the tiles themselves taken out of it, nothing's shadow falling on their tops
+/** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {{ dx: number, dy: number }} sun */
+export function paintRockShadows(g, x0, y0, x1, y1, sun) {
+  const height = 18, ox = sun.dx * height, oy = sun.dy * height, margin = Math.max(Math.abs(ox), Math.abs(oy)) + TILE_SIZE;
+  const tiles = getTileIndex(), shadow = new Path2D(), tops = new Path2D();
+  if (rockCorners.tiles !== tiles) rockCorners = { tiles, of: new Map() };
   const addTile = tile => {
-    const open = openSides(tiles.rockAndOre, tile.x, tile.y), occupied = terrainCornerOccupancy(tile.x, tile.y, tiles, false);
-    const { nw, ne, se, sw } = cornerRadii(open, occupied), radii = [nw, ne, se, sw];
-    occluders.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
-    min.x = Math.min(min.x, tile.x - 15);
-    min.y = Math.min(min.y, tile.y - 15);
-    max.x = Math.max(max.x, tile.x + 15);
-    max.y = Math.max(max.y, tile.y + 15);
-    list.push({ x: tile.x, y: tile.y, radii });
+    let radii = rockCorners.of.get(tile);
+    if (!radii) {
+      const { nw, ne, se, sw } = cornerRadii(openSides(tiles.rockAndOre, tile.x, tile.y), terrainCornerOccupancy(tile.x, tile.y, tiles, false));
+      rockCorners.of.set(tile, (radii = [nw, ne, se, sw]));
+    }
+    tops.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
+    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), radii);
   };
-  forEachInRect(game.naturalRocks, x0, y0, x1, y1, addTile);
-  for (const ores of [game.ironOres, game.coalOres]) forEachInRect(ores, x0, y0, x1, y1, addTile);
-  const bounds = Number.isFinite(min.x) ? { x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y } : null;
-  rockShadowTiles = { key, tiles, list, occluders, bounds };
-  return rockShadowTiles;
-}
-
-export function drawNaturalRockShadows() {
-  if (!areShadowsEnabled()) return;
-  const sun = getSun();
-  if (sun.alpha * ctx.globalAlpha < MIN_SHADOW_ALPHA) return;
-  const height = 18, ox = sun.dx * height, oy = sun.dy * height;
-  const rocks = rocksForShadows(), shadow = new Path2D();
-  const min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
-  for (const tile of rocks.list) {
-    if (cached && !wasChunkDrawn('terrain', terrainRes(), tile.x, tile.y)) continue;
-    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), tile.radii);
-    min.x = Math.min(min.x, tile.x - 15 + Math.min(0, ox));
-    min.y = Math.min(min.y, tile.y - 15 + Math.min(0, oy));
-    max.x = Math.max(max.x, tile.x + 15 + Math.max(0, ox));
-    max.y = Math.max(max.y, tile.y + 15 + Math.max(0, oy));
-  }
-  if (Number.isFinite(min.x)) {
-    drawShadowPath(ctx, shadow, sun.alpha, rocks.occluders, {
-      x: min.x, y: min.y, width: max.x - min.x, height: max.y - min.y
-    });
-  }
-  if (rocks.bounds) setShadowOccluders(ctx, rocks.occluders, rocks.bounds);
-
-  const buildingOccluders = new Path2D();
-  const buildingMin = { x: Infinity, y: Infinity }, buildingMax = { x: -Infinity, y: -Infinity };
-  const addBuilding = (building, halfWidth = 15, top = 15, bottom = 15) => {
-    buildingOccluders.rect(building.x - halfWidth, building.y - top, halfWidth * 2, top + bottom);
-    buildingMin.x = Math.min(buildingMin.x, building.x - halfWidth);
-    buildingMin.y = Math.min(buildingMin.y, building.y - top);
-    buildingMax.x = Math.max(buildingMax.x, building.x + halfWidth);
-    buildingMax.y = Math.max(buildingMax.y, building.y + bottom);
-  };
-  const structureView = getViewRect(TILE_SIZE);
-  forEachInRect(game.buildings, structureView.x0, structureView.y0, structureView.x1, structureView.y1, building => {
-    addBuilding(building, 15, building.type === 'watchtower' ? 30 : 15, 15);
-  });
-  if (townHall.x >= structureView.x0 - townHall.radius && townHall.x <= structureView.x1 + townHall.radius
-    && townHall.y >= structureView.y0 - townHall.radius && townHall.y <= structureView.y1 + townHall.radius) {
-    addBuilding(townHall, townHall.radius, townHall.radius, townHall.radius);
-  }
-  if (Number.isFinite(buildingMin.x)) {
-    addBuildingShadowOccluders(ctx, buildingOccluders, {
-      x: buildingMin.x, y: buildingMin.y,
-      width: buildingMax.x - buildingMin.x, height: buildingMax.y - buildingMin.y
-    });
-  }
+  for (const list of [game.naturalRocks, game.ironOres, game.coalOres]) forEachInRect(list, x0 - margin, y0 - margin, x1 + margin, y1 + margin, addTile);
+  g.save();
+  g.fillStyle = '#000';
+  g.fill(shadow);
+  g.globalCompositeOperation = 'destination-out';
+  g.fill(tops);
+  g.restore();
 }
 
 // (#322) Zoomed out, where the tiles are in the pictures, a frame went through every water tile on the screen to find the few with a fish

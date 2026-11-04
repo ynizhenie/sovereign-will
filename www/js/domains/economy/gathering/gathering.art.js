@@ -3,7 +3,7 @@
 // stamped over and over
 
 import { ctx } from '../../../engine/platform/index.js';
-import { beginShadowFrame, castShadow, drawShadowPath, tileVariantHash, windSway } from '../../world/index.js';
+import { castShadow, drawShadowPath, tileVariantHash, windSway } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 
@@ -11,7 +11,7 @@ import { game } from '../../../engine/world/index.js';
 /** @type {CanvasRenderingContext2D | null} */
 let target = null;
 const pen = () => target || ctx;
-export function paintOn(g) { target = g; if (g) beginShadowFrame(g); }
+export function paintOn(g) { target = g; }
 // (a picture of tufts is painted with the wind still: they're too small to be seen swaying that far out)
 let still = false;
 export function paintStill(on) { still = on; }
@@ -247,7 +247,7 @@ export function drawPebblesArt(pe) {
     const [px, py, rx, ry] = stones[i], rotation = ((h >>> (i * 3 + 8)) % 5 - 2) * 0.12;
     shadows.ellipse(x + px + 1, y + py + 1, rx, ry, rotation, 0, Math.PI * 2);
   }
-  drawShadowPath(g, shadows, 0.25, null, { x: x - 10, y: y - 10, width: 20, height: 20 });
+  drawShadowPath(g, shadows, 0.25);
   for (let i = 0; i < stones.length; i++) {
     const [px, py, rx, ry] = stones[i], rotation = ((h >>> (i * 3 + 8)) % 5 - 2) * 0.12;
     g.fillStyle = stoneColor;

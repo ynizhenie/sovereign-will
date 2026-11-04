@@ -185,230 +185,108 @@ export function getSun() {
 
 export const MIN_SHADOW_ALPHA = 0.1;
 
-// Shadows are drawn at half the screen's resolution. Each shadow drawn in a frame gets a small canvas of its own
-// (a slot) with what it adds to the ground: its shape less the terrain that blocks it, the buildings' footprints
-// (till they are let go) and every shadow drawn before it this frame, so overlapping shadows never darken twice.
-// A slot is written once a frame and only read after: drawing on a canvas another one has just drawn from made the
-// browser copy it first, and those copies were most of what the shadows cost
-/** @typedef {{ canvas: HTMLCanvasElement, g: CanvasRenderingContext2D, x: number, y: number, rect: [number, number, number, number] | null }} ShadowLayer */
-/** @typedef {{ target: HTMLCanvasElement, width: number, height: number, slots: ShadowLayer[], used: number, merged: ShadowLayer, occluders: ShadowLayer, buildingOccluders: ShadowLayer, buildingsBlock: boolean }} ShadowFrame */
-/** @type {ShadowFrame | null} */
-let mainShadowFrame = null, offscreenShadowFrame = null;
-const SHADOW_MASK_SCALE = 0.5;
-// past this many shadows in a frame the slots so far are put together into one canvas, and used again
-const MAX_SHADOW_SLOTS = 32;
+// ---- Shadows
+//
+// A frame's shadows all go into one picture at half the screen's size, black wherever there's a shadow, and that
+// picture is laid on the ground once, as dark as the sun makes shadows: where shadows meet it's no darker than one,
+// and everything standing on the ground is drawn after it, over it. What goes into it:
+// - what stands still (rocks, trees, bushes, grass, stones): from pictures of the ground's pieces, painted again only
+//   when something in a piece changes or the sun has moved on a step (see drawShadowChunks)
+// - the figures: worked out as the picture is made (drawShadowLayer's drawNow)
+// - the rest (buildings, walls and doors, animals, piles): their art draws its shadow as it always has, and that
+//   shadow's shape is kept where it is in the world and put into the next frame's picture (a frame late: they
+//   hardly move in a frame)
+// It used to be a picture per shadow, each taken out of the shadows already drawn and laid down by itself: a few
+// copies of a picture between canvases for every shadow, which was most of what a frame cost
+const SHADOW_SCALE = 0.5;
+/** @typedef {{ path: Path2D, at: DOMMatrix, alpha: number, filter: string }} KeptShadow */
+/** @type {{ canvas: HTMLCanvasElement, g: CanvasRenderingContext2D } | null} */
+let shadowLayer = null;
+/** @type {KeptShadow[]} */
+let keptShadows = [], lastShadows = [];
+// the frame's world transform and its inverse while its shadows are kept (null: they aren't)
+/** @type {DOMMatrix | null} */
+let worldInverse = null;
+// (drawShadowPath fills the picture itself as it's made)
+let fillingLayer = false;
 
-/** @returns {ShadowLayer} */
-function shadowLayer(width, height) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
-  const g = canvas.getContext('2d');
-  if (!g) throw new Error('Unable to create a shadow canvas');
-  return { canvas, g, x: 0, y: 0, rect: null };
+// The frame begins: c's transform is the world's now (the camera's); the shadows drawn in the world from here to
+// endShadowFrame are kept for the next frame's picture
+export function beginShadowFrame(c = ctx) {
+  lastShadows = keptShadows; keptShadows = [];
+  worldInverse = shadowsEnabled && typeof document !== 'undefined' ? c.getTransform().inverse() : null;
 }
 
-/** @param {ShadowLayer} layer */
-function clearShadowLayer(layer) {
-  if (!layer.rect) return;
-  const g = layer.g;
+export function endShadowFrame() { worldInverse = null; }
+
+// (from the screen to the shadows' picture, half its size: a shadow is soft)
+const toLayer = () => new DOMMatrix([SHADOW_SCALE, 0, 0, SHADOW_SCALE, 0, 0]);
+
+/** @param {CanvasRenderingContext2D} g @param {DOMMatrix} transform @param {{ path: Path2D, alpha: number, filter: string }} shape @param {number} sunAlpha */
+function fillShadow(g, transform, shape, sunAlpha) {
   g.save();
+  g.setTransform(transform);
+  g.globalAlpha = Math.min(1, shape.alpha / sunAlpha);
+  g.filter = shape.filter;
+  g.fillStyle = '#000';
+  g.fill(shape.path);
+  g.restore();
+}
+
+// This frame's shadows laid on the ground (with c's transform the world's): drawStill(g) lays the still things' pictures
+// into the shadows' picture g (which has the world's transform), drawNow() draws the figures' shadows
+/** @param {(g: CanvasRenderingContext2D) => void} drawStill @param {() => void} drawNow */
+export function drawShadowLayer(drawStill, drawNow, c = ctx) {
+  if (!shadowsEnabled || typeof document === 'undefined') return;
+  const sun = getSun();
+  if (sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
+  const width = Math.max(1, Math.ceil(c.canvas.width * SHADOW_SCALE)), height = Math.max(1, Math.ceil(c.canvas.height * SHADOW_SCALE));
+  if (!shadowLayer) {
+    const canvas = document.createElement('canvas'), g = canvas.getContext('2d');
+    if (!g) return;
+    shadowLayer = { canvas, g };
+  }
+  const { canvas: layer, g } = shadowLayer;
+  if (layer.width !== width || layer.height !== height) { layer.width = width; layer.height = height; }
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'source-over';
-  g.clearRect(layer.rect[0] - layer.x, layer.rect[1] - layer.y, layer.rect[2], layer.rect[3]);
-  g.restore();
-  layer.rect = null;
-}
-
-/** @typedef {[number, number, number, number]} ShadowRect */
-/** @param {ShadowRect | null} current @returns {ShadowRect} */
-function includeBounds(current, x0, y0, x1, y1) {
-  if (!current) return [x0, y0, x1 - x0, y1 - y0];
-  const left = Math.min(current[0], x0), top = Math.min(current[1], y0);
-  const right = Math.max(current[0] + current[2], x1), bottom = Math.max(current[1] + current[3], y1);
-  return [left, top, right - left, bottom - top];
-}
-
-function intersectBounds(bounds, left, top, right, bottom) {
-  if (!bounds) return null;
-  const x = Math.max(left, bounds[0]), y = Math.max(top, bounds[1]);
-  const x2 = Math.min(right, bounds[0] + bounds[2]), y2 = Math.min(bottom, bounds[1] + bounds[3]);
-  return x2 > x && y2 > y ? [x, y, x2 - x, y2 - y] : null;
-}
-
-// Where bounds (drawn with transform) land on the half-size canvases, a margin round them: [left, top, right, bottom]
-/** @param {DOMMatrix} transform @param {{ x: number, y: number, width: number, height: number }} b @param {ShadowFrame} frame @returns {ShadowRect | null} */
-function shadowRect(transform, b, padding, frame) {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const [x, y] of [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]]) {
-    const sx = transform.a * x + transform.c * y + transform.e, sy = transform.b * x + transform.d * y + transform.f;
-    x0 = Math.min(x0, sx); y0 = Math.min(y0, sy); x1 = Math.max(x1, sx); y1 = Math.max(y1, sy);
-  }
-  const left = Math.max(0, Math.floor(x0 * SHADOW_MASK_SCALE - padding)), top = Math.max(0, Math.floor(y0 * SHADOW_MASK_SCALE - padding));
-  const right = Math.min(frame.width, Math.ceil(x1 * SHADOW_MASK_SCALE + padding)), bottom = Math.min(frame.height, Math.ceil(y1 * SHADOW_MASK_SCALE + padding));
-  return right > left && bottom > top ? [left, top, right, bottom] : null;
-}
-
-// path, drawn with transform, filled black into layer (or cut out of it)
-/** @param {ShadowLayer} layer @param {Path2D} path @param {DOMMatrix} transform */
-function fillShadowLayer(layer, path, transform, filter, operation) {
-  const g = layer.g;
-  g.save();
-  g.setTransform(
-    transform.a * SHADOW_MASK_SCALE, transform.b * SHADOW_MASK_SCALE,
-    transform.c * SHADOW_MASK_SCALE, transform.d * SHADOW_MASK_SCALE,
-    transform.e * SHADOW_MASK_SCALE - layer.x, transform.f * SHADOW_MASK_SCALE - layer.y
-  );
-  g.globalCompositeOperation = operation;
-  g.globalAlpha = 1;
-  g.filter = filter;
-  g.fillStyle = '#000';
-  g.fill(path);
-  g.restore();
-}
-
-// what source holds, taken out of slot where the two meet ([left, top, right, bottom]: the slot's)
-/** @param {ShadowLayer} slot @param {ShadowLayer} source @param {[number, number, number, number]} rect */
-function subtractShadowLayer(slot, source, rect) {
-  const overlap = intersectBounds(source.rect, ...rect);
-  if (!overlap) return;
-  const [x, y, w, h] = overlap, g = slot.g;
-  g.save();
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  g.globalCompositeOperation = 'destination-out';
   g.globalAlpha = 1;
   g.filter = 'none';
-  g.drawImage(source.canvas, x - source.x, y - source.y, w, h, x - slot.x, y - slot.y, w, h);
-  g.restore();
-}
-
-/** @param {ShadowFrame} frame */
-function resetShadowFrame(frame) {
-  clearShadowLayer(frame.merged);
-  clearShadowLayer(frame.occluders);
-  clearShadowLayer(frame.buildingOccluders);
-  frame.used = 0;
-  frame.buildingsBlock = false;
-}
-
-/** @param {CanvasRenderingContext2D} c @returns {ShadowFrame} */
-function shadowFrameFor(c) {
-  const target = c.canvas, isMain = target === ctx.canvas;
-  const width = Math.max(1, Math.ceil(target.width * SHADOW_MASK_SCALE));
-  const height = Math.max(1, Math.ceil(target.height * SHADOW_MASK_SCALE));
-  let frame = isMain ? mainShadowFrame : offscreenShadowFrame;
-  if (!frame || frame.width !== width || frame.height !== height) {
-    frame = {
-      target, width, height, slots: [], used: 0, buildingsBlock: false,
-      merged: shadowLayer(width, height), occluders: shadowLayer(width, height), buildingOccluders: shadowLayer(width, height)
-    };
-    if (isMain) mainShadowFrame = frame;
-    else offscreenShadowFrame = frame;
-  }
-  // (a picture painted off the screen has shadows of its own, not the last picture's)
-  if (frame.target !== target) { resetShadowFrame(frame); frame.target = target; }
-  return frame;
-}
-
-export function beginShadowFrame(c) {
-  if (!shadowsEnabled || typeof document === 'undefined') return;
-  resetShadowFrame(shadowFrameFor(c));
-}
-
-// Terrain silhouettes block every shadow drawn later in this frame.
-/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
-export function setShadowOccluders(c, path, bounds) {
-  if (!shadowsEnabled || typeof document === 'undefined') return;
-  clearShadowLayer(shadowFrameFor(c).occluders);
-  addShadowOccluders(c, path, bounds);
-}
-
-/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
-export function addShadowOccluders(c, path, bounds) {
-  if (!shadowsEnabled || typeof document === 'undefined') return;
-  addOccluderPath(c, path, bounds, shadowFrameFor(c).occluders);
-}
-
-/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds @param {ShadowLayer} layer */
-function addOccluderPath(c, path, bounds, layer) {
-  const transform = c.getTransform(), rect = shadowRect(transform, bounds, 2 * SHADOW_MASK_SCALE, shadowFrameFor(c));
-  if (!rect) return;
-  fillShadowLayer(layer, path, transform, 'none', 'source-over');
-  layer.rect = includeBounds(layer.rect, ...rect);
-}
-
-/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {{ x: number, y: number, width: number, height: number }} bounds */
-export function addBuildingShadowOccluders(c, path, bounds) {
-  if (!shadowsEnabled || typeof document === 'undefined') return;
-  const frame = shadowFrameFor(c);
-  if (!frame.buildingsBlock) clearShadowLayer(frame.buildingOccluders);
-  addOccluderPath(c, path, bounds, frame.buildingOccluders);
-  frame.buildingsBlock = true;
-}
-
-// (the footprints stop blocking; their canvas is cleared as the next frame begins, not now: it was just drawn from)
-export function clearBuildingShadowOccluders(c) {
-  if (!shadowsEnabled || typeof document === 'undefined') return;
-  shadowFrameFor(c).buildingsBlock = false;
-}
-
-// Draw only the portion of a shadow not already covered by another shadow this frame.
-/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha @param {Path2D | null} [cutout] @param {{ x: number, y: number, width: number, height: number } | null} [bounds] */
-export function drawShadowPath(c, path, alpha, cutout = null, bounds = null) {
-  if (!shadowsEnabled || alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
-  if (typeof document === 'undefined') {
-    c.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-    c.fill(path);
-    return;
-  }
-  const frame = shadowFrameFor(c), transform = c.getTransform(), opacity = alpha * c.globalAlpha, filter = c.filter;
-  const rect = bounds
-    ? shadowRect(transform, bounds, (filter === 'none' ? 2 : 8) * SHADOW_MASK_SCALE, frame)
-    : shadowRect(new DOMMatrix(), { x: 0, y: 0, width: c.canvas.width, height: c.canvas.height }, 0, frame);
-  if (opacity <= 0 || !rect) return;
-  if (frame.used === MAX_SHADOW_SLOTS) mergeShadowSlots(frame);
-  const slot = frame.slots[frame.used] || (frame.slots[frame.used] = shadowLayer(64, 64));
-  clearShadowLayer(slot);
-  const [left, top, right, bottom] = rect, width = right - left, height = bottom - top;
-  if (slot.canvas.width < width || slot.canvas.height < height) {
-    slot.canvas.width = Math.max(slot.canvas.width, Math.ceil(width / 64) * 64);
-    slot.canvas.height = Math.max(slot.canvas.height, Math.ceil(height / 64) * 64);
-  }
-  slot.x = left; slot.y = top;
-  fillShadowLayer(slot, path, transform, filter, 'source-over');
-  if (cutout) fillShadowLayer(slot, cutout, transform, 'none', 'destination-out');
-  subtractShadowLayer(slot, frame.occluders, rect);
-  if (frame.buildingsBlock) subtractShadowLayer(slot, frame.buildingOccluders, rect);
-  subtractShadowLayer(slot, frame.merged, rect);
-  for (let i = 0; i < frame.used; i++) subtractShadowLayer(slot, frame.slots[i], rect);
-  slot.rect = [left, top, width, height];
-  frame.used++;
-
+  g.clearRect(0, 0, width, height);
+  g.fillStyle = '#000';
+  const world = toLayer().multiply(c.getTransform());
+  g.setTransform(world);
+  drawStill(g);
+  for (const shadow of lastShadows) fillShadow(g, world.multiply(shadow.at), shadow, sun.alpha);
+  fillingLayer = true;
+  try { drawNow(); } finally { fillingLayer = false; }
   c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.globalCompositeOperation = 'source-over';
-  c.globalAlpha = opacity;
+  c.globalAlpha = sun.alpha;
   c.filter = 'none';
   c.imageSmoothingEnabled = true;
-  c.drawImage(slot.canvas, 0, 0, width, height, left / SHADOW_MASK_SCALE, top / SHADOW_MASK_SCALE, width / SHADOW_MASK_SCALE, height / SHADOW_MASK_SCALE);
+  c.drawImage(layer, 0, 0, width, height, 0, 0, width / SHADOW_SCALE, height / SHADOW_SCALE);
   c.restore();
 }
 
-// The frame's shadows so far into one canvas (rare: a frame with very many), so the slots can be used again
-/** @param {ShadowFrame} frame */
-function mergeShadowSlots(frame) {
-  const g = frame.merged.g;
-  g.save();
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  g.globalCompositeOperation = 'source-over';
-  g.globalAlpha = 1;
-  g.filter = 'none';
-  for (let i = 0; i < frame.used; i++) {
-    const slot = frame.slots[i], [x, y, w, h] = /** @type {[number, number, number, number]} */ (slot.rect);
-    g.drawImage(slot.canvas, 0, 0, w, h, x, y, w, h);
-    frame.merged.rect = includeBounds(frame.merged.rect, x, y, x + w, y + h);
+// A shadow of the shape path (with c's transform) as dark as alpha. In the world it goes into the frame's shadows (see
+// above); anywhere else (a thing's picture, a portrait) it's filled where it is
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha */
+export function drawShadowPath(c, path, alpha) {
+  if (!shadowsEnabled || alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
+  if (c === ctx && shadowLayer && fillingLayer) {
+    fillShadow(shadowLayer.g, toLayer().multiply(c.getTransform()), { path, alpha: alpha * c.globalAlpha, filter: c.filter }, getSun().alpha);
+    return;
   }
-  g.restore();
-  frame.used = 0;
+  if (c === ctx && worldInverse) {
+    keptShadows.push({ path, at: worldInverse.multiply(c.getTransform()), alpha: alpha * c.globalAlpha, filter: c.filter });
+    return;
+  }
+  c.save();
+  c.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+  c.fill(path);
+  c.restore();
 }
 
 // A thing's shadow on the ground: an ellipse round its foot (x, y) of rx by ry, cast away from the sun by its
@@ -421,5 +299,5 @@ export function castShadow(c, x, y, rx, ry, height = 10) {
   const path = new Path2D();
   const cx = x + ox * 0.5, cy = y + oy * 0.5, ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
   path.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
-  drawShadowPath(c, path, sun.alpha, null, { x: cx - ex, y: cy - ey, width: ex * 2, height: ey * 2 });
+  drawShadowPath(c, path, sun.alpha);
 }

@@ -129,9 +129,9 @@ test('connected walls and doors cast one combined angular shadow', async ({ page
       rect: Path2D.prototype.rect,
       roundRect: Path2D.prototype.roundRect,
       ellipse: Path2D.prototype.ellipse,
-      drawImage: ctx.drawImage
+      fill: ctx.fill
     };
-    const composites = [];
+    const fills = [];
     let rectangles = 0, ellipses = 0;
     Path2D.prototype.rect = function (...args) {
       rectangles++;
@@ -145,9 +145,9 @@ test('connected walls and doors cast one combined angular shadow', async ({ page
       ellipses++;
       return originals.ellipse.apply(this, args);
     };
-    ctx.drawImage = function (...args) {
-      composites.push(args.length);
-      return originals.drawImage.apply(this, args);
+    ctx.fill = function (...args) {
+      fills.push(args.length);
+      return originals.fill.apply(this, args);
     };
     try {
       drawWallShadows([
@@ -155,12 +155,12 @@ test('connected walls and doors cast one combined angular shadow', async ({ page
         { x: 330, y: 300, type: 'wall_stone', mask: 10 },
         { x: 360, y: 300, type: 'door', mask: 10, open: 0, swing: { x: 0, y: 1 } }
       ]);
-      return { rectangles, ellipses, combinedPasses: composites.length };
+      return { rectangles, ellipses, combinedPasses: fills.length };
     } finally {
       Path2D.prototype.rect = originals.rect;
       Path2D.prototype.roundRect = originals.roundRect;
       Path2D.prototype.ellipse = originals.ellipse;
-      ctx.drawImage = originals.drawImage;
+      ctx.fill = originals.fill;
     }
   });
   expect(result.rectangles).toBeGreaterThan(0);
@@ -310,84 +310,28 @@ test('stone wall shadow follows its stone post and connected arms without round 
   expect(errors).toEqual([]);
 });
 
-test('overlapping shadows do not compound their darkness', async ({ page }) => {
+test('overlapping shadows in the world are no darker than one', async ({ page }) => {
   const errors = await openGame(page);
-  const alpha = await page.evaluate(() => {
-    const surface = document.createElement('canvas');
-    surface.width = surface.height = 64;
-    const shadowContext = surface.getContext('2d');
-    beginShadowFrame(shadowContext);
+  await page.click('#play-button');
+  const red = await page.evaluate(() => {
+    game.isPaused = true;
     const shadow = new Path2D();
-    shadow.rect(12, 12, 32, 32);
-    drawShadowPath(shadowContext, shadow, 0.3);
-    const once = shadowContext.getImageData(28, 28, 1, 1).data[3];
-    drawShadowPath(shadowContext, shadow, 0.3);
-    return [once, shadowContext.getImageData(28, 28, 1, 1).data[3]];
-  });
-  expect(alpha[0]).toBeGreaterThan(0);
-  expect(alpha[1]).toBe(alpha[0]);
-  expect(errors).toEqual([]);
-});
-
-test('shadow masks are composited only where their bounds overlap', async ({ page }) => {
-  const errors = await openGame(page);
-  const copies = await page.evaluate(() => {
-    const surface = document.createElement('canvas');
-    surface.width = 800; surface.height = 600;
-    const shadowContext = surface.getContext('2d');
-    beginShadowFrame(shadowContext);
-    const building = new Path2D();
-    building.rect(20, 20, 20, 20);
-    addBuildingShadowOccluders(shadowContext, building, { x: 20, y: 20, width: 20, height: 20 });
-
-    const original = CanvasRenderingContext2D.prototype.drawImage;
-    let offscreenCopies = 0;
-    CanvasRenderingContext2D.prototype.drawImage = function (...args) {
-      if (this.canvas !== surface) offscreenCopies++;
-      return original.apply(this, args);
+    shadow.rect(100, 100, 40, 40);
+    const frame = shadows => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 300, 300);
+      beginShadowFrame(ctx); beginShadowFrame(ctx); // (none kept from the frame before)
+      drawShadowLayer(() => {}, () => { for (let i = 0; i < shadows; i++) drawShadowPath(ctx, shadow, getSun().alpha); });
+      endShadowFrame();
+      const value = ctx.getImageData(120, 120, 1, 1).data[0];
+      ctx.restore();
+      return value;
     };
-    try {
-      const draw = (x, y) => {
-        const shadow = new Path2D();
-        shadow.rect(x, y, 20, 20);
-        drawShadowPath(shadowContext, shadow, 0.3, null, { x, y, width: 20, height: 20 });
-      };
-      draw(100, 100);
-      offscreenCopies = 0;
-      draw(400, 400);
-      const disjoint = offscreenCopies;
-      offscreenCopies = 0;
-      draw(405, 405);
-      return { disjoint, overlapping: offscreenCopies };
-    } finally {
-      CanvasRenderingContext2D.prototype.drawImage = original;
-    }
+    return [frame(1), frame(2)];
   });
-  // (a shadow takes out of itself only the earlier shadows it meets; nothing is copied into a mask after it)
-  expect(copies).toEqual({ disjoint: 0, overlapping: 1 });
-  expect(errors).toEqual([]);
-});
-
-test('building occluders block lower shadows but not building shadows', async ({ page }) => {
-  const errors = await openGame(page);
-  const alpha = await page.evaluate(() => {
-    const surface = document.createElement('canvas');
-    surface.width = surface.height = 64;
-    const shadowContext = surface.getContext('2d');
-    beginShadowFrame(shadowContext);
-    const building = new Path2D(), shadow = new Path2D();
-    building.rect(20, 20, 20, 20);
-    shadow.rect(24, 24, 12, 12);
-    addBuildingShadowOccluders(shadowContext, building, { x: 20, y: 20, width: 20, height: 20 });
-    drawShadowPath(shadowContext, shadow, 0.3);
-    const lowerShadow = shadowContext.getImageData(28, 28, 1, 1).data[3];
-    clearBuildingShadowOccluders(shadowContext);
-    drawShadowPath(shadowContext, shadow, 0.3);
-    const buildingShadow = shadowContext.getImageData(28, 28, 1, 1).data[3];
-    return { lowerShadow, buildingShadow };
-  });
-  expect(alpha.lowerShadow).toBe(0);
-  expect(alpha.buildingShadow).toBeGreaterThan(0);
+  expect(red[0]).toBeLessThan(250);
+  expect(red[1]).toBe(red[0]);
   expect(errors).toEqual([]);
 });
 
@@ -410,57 +354,19 @@ test('imperceptibly faint shadows are skipped while brighter shadows still rende
   expect(errors).toEqual([]);
 });
 
-test('shadow buffers clear only the bounds used by the previous frame', async ({ page }) => {
+test('a frame\'s shadows are laid on the ground once, a picture half the screen\'s size', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
-  const cleared = await page.evaluate(() => {
-    const surface = document.createElement('canvas');
-    surface.width = 800; surface.height = 600;
-    const shadowContext = surface.getContext('2d');
-    beginShadowFrame(shadowContext);
-    const shadow = new Path2D();
-    shadow.rect(100, 120, 20, 20);
-    drawShadowPath(shadowContext, shadow, 0.3, null, { x: 100, y: 120, width: 20, height: 20 });
-
-    const original = CanvasRenderingContext2D.prototype.clearRect, calls = [];
-    CanvasRenderingContext2D.prototype.clearRect = function (x, y, width, height) {
-      if (this.canvas !== surface) calls.push([width, height]);
-      return original.call(this, x, y, width, height);
+  const laid = await page.evaluate(() => {
+    game.isPaused = true;
+    const original = ctx.drawImage, half = [Math.ceil(canvas.width / 2), Math.ceil(canvas.height / 2)], seen = [];
+    ctx.drawImage = function (source, ...args) {
+      if (source instanceof HTMLCanvasElement && source.width === half[0] && source.height === half[1]) seen.push([source.width, source.height]);
+      return original.call(this, source, ...args);
     };
-    try {
-      // (a shadow's canvas is cleared as it is used again, the next frame)
-      beginShadowFrame(shadowContext);
-      drawShadowPath(shadowContext, shadow, 0.3, null, { x: 100, y: 120, width: 20, height: 20 });
-      return calls;
-    } finally {
-      CanvasRenderingContext2D.prototype.clearRect = original;
-    }
+    try { render(); } finally { ctx.drawImage = original; }
+    return { seen, half };
   });
-  expect(cleared.length).toBe(1);
-  expect(cleared.every(([width, height]) => width < 100 && height < 100)).toBe(true);
-  expect(errors).toEqual([]);
-});
-
-test('shadow mask buffers use half the screen resolution', async ({ page }) => {
-  const errors = await openGame(page);
-  const dimensions = await page.evaluate(() => {
-    const surface = document.createElement('canvas');
-    surface.width = 803; surface.height = 607;
-    const original = document.createElement.bind(document), created = [];
-    document.createElement = function (name, options) {
-      const element = original(name, options);
-      if (name === 'canvas') created.push(element);
-      return element;
-    };
-    try {
-      beginShadowFrame(surface.getContext('2d'));
-      return created.map(canvas => [canvas.width, canvas.height]);
-    } finally {
-      document.createElement = original;
-    }
-  });
-  // (the shadows so far put together, the terrain's silhouettes, the buildings' footprints; each shadow's own
-  // canvas is made as it is first drawn, its size)
-  expect(dimensions).toEqual(Array.from({ length: 3 }, () => [402, 304]));
+  expect(laid.seen).toEqual([laid.half]);
   expect(errors).toEqual([]);
 });

@@ -93,6 +93,14 @@ export function drawEnemyTentSites() {
 }
 
 // Enemies: body, weapon, quiver, the target mark, health
+// The enemies' shadows (those the colony sees), into the frame's shadows (see drawShadowLayer)
+export function drawEnemyShadows() {
+  if (tinyUnit()) return;
+  const view = getViewRect(60), seen = [];
+  for (const list of [game.enemies, game.scouts]) forEachInRect(list, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) seen.push(en); });
+  drawFigureShadows(seen, view, en => en.radius || 11);
+}
+
 export function drawEnemies() {
   // (#299) only those the colony sees now, and only those on the screen (#306)
   const view = getViewRect(60);
@@ -107,7 +115,6 @@ export function drawEnemies() {
     for (const en of scouts) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
     return;
   }
-  drawFigureShadows(enemies.concat(scouts), view, en => en.radius || 11);
   for (const en of enemies) if (shown(en)) drawEnemy(en);
   for (const en of scouts) if (shown(en)) drawEnemy(en); // (scouts between waves, #279)
 }
