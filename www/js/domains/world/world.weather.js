@@ -10,7 +10,6 @@ import { TILE_SIZE, forEachInRect, game, rand } from '../../engine/world/index.j
 import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
 import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
-import { tileVariantHash } from './world.draw.js';
 
 const config = () => GAME_CONFIG.weather;
 /** @type {{ kind: string, level: number, left: number, wind: number, windTo: number, windAngle: number, flash: number, thunderIn: number, nextBolt: number, bolt: { x: number, seed: number } | null }} */
@@ -134,42 +133,64 @@ export function drawWeatherWorld() {
       shimmer.forEach((path, i) => { ctx.strokeStyle = `rgba(255, 245, 220, ${0.22 * heat * (i + 0.5) / SHIMMER})`; ctx.stroke(path); });
     }
   }
-  // fog: soft banks drifting with the wind over a light haze (#306: they lie on the map, each on its own cell
-  // of a lattice bobbing where it is, not on the screen, so zooming and panning don't drag them along)
+  // Fog: a mottled pale veil drifting across map coordinates, independent of screen panning and zoom.
   const w = getWeather();
   if (w.kind === 'fog' && w.level > 0) {
-    ctx.fillStyle = `rgba(210, 215, 220, ${0.07 * w.level})`;
+    ctx.fillStyle = `rgba(194, 207, 216, ${0.1 * w.level})`;
     ctx.fillRect(camera.x - halfW, camera.y - halfH, halfW * 2, halfH * 2);
-    const cell = 400, drift = 90 * w.wind, bank = fogBank();
+    const tile = 900, drift = t * w.wind * 8, texture = fogTexture();
+    const offsetX = ((drift + Math.sin(t * 0.025) * 90) % tile + tile) % tile;
+    const offsetY = ((Math.cos(t * 0.018) * 45) % tile + tile) % tile;
+    const x0 = camera.x - halfW, x1 = camera.x + halfW;
+    const y0 = camera.y - halfH, y1 = camera.y + halfH;
     ctx.save();
-    ctx.globalAlpha = 0.17 * w.level;
-    for (let gy = Math.floor((camera.y - halfH - cell) / cell); gy <= Math.ceil((camera.y + halfH + cell) / cell); gy++) {
-      for (let gx = Math.floor((camera.x - halfW - cell) / cell); gx <= Math.ceil((camera.x + halfW + cell) / cell); gx++) {
-        const h = tileVariantHash(gx, gy);
-        const bx = gx * cell + (h % cell) + Math.sin(t * 0.06 + (h % 628) / 100) * drift;
-        const by = gy * cell + ((h >>> 9) % cell) + Math.cos(t * 0.05 + (h % 314) / 100) * drift * 0.5;
-        ctx.drawImage(bank, bx - 170, by - 170);
+    ctx.globalAlpha = 0.42 * w.level;
+    for (let gy = Math.floor((y0 - offsetY) / tile); gy <= Math.ceil((y1 - offsetY) / tile); gy++) {
+      for (let gx = Math.floor((x0 - offsetX) / tile); gx <= Math.ceil((x1 - offsetX) / tile); gx++) {
+        ctx.drawImage(texture, gx * tile + offsetX, gy * tile + offsetY, tile, tile);
       }
     }
     ctx.restore();
   }
 }
 
-// A fog bank: one soft round sprite, drawn again and again (made once)
+// A seamless cloudy alpha texture: broad value-noise shapes replace the repeated circular fog banks.
 /** @type {HTMLCanvasElement | null} */
-let fogBankCanvas = null;
-function fogBank() {
-  if (!fogBankCanvas) {
-    fogBankCanvas = document.createElement('canvas');
-    fogBankCanvas.width = fogBankCanvas.height = 340;
-    const c = /** @type {CanvasRenderingContext2D} */ (fogBankCanvas.getContext('2d')), g = c.createRadialGradient(170, 170, 0, 170, 170, 170);
-    g.addColorStop(0, 'rgba(225, 230, 235, 0.9)');
-    g.addColorStop(0.5, 'rgba(225, 230, 235, 0.38)');
-    g.addColorStop(1, 'rgba(225, 230, 235, 0)');
-    c.fillStyle = g;
-    c.fillRect(0, 0, 340, 340);
+let fogTextureCanvas = null;
+function fogTexture() {
+  if (!fogTextureCanvas) {
+    const size = 128, canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const c = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+    const hash = (x, y, salt) => {
+      let h = Math.imul(x + salt, 374761393) + Math.imul(y - salt, 668265263);
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return (h ^ (h >>> 16)) >>> 0;
+    };
+    const smooth = t => t * t * (3 - 2 * t);
+    const noise = (x, y, cells, salt) => {
+      const px = x * cells, py = y * cells, ix = Math.floor(px), iy = Math.floor(py);
+      const fx = smooth(px - ix), fy = smooth(py - iy), wrap = (n, m) => (n % m + m) % m;
+      const sample = (sx, sy) => hash(wrap(sx, cells), wrap(sy, cells), salt) / 0xffffffff;
+      const top = sample(ix, iy) * (1 - fx) + sample(ix + 1, iy) * fx;
+      const bottom = sample(ix, iy + 1) * (1 - fx) + sample(ix + 1, iy + 1) * fx;
+      return top * (1 - fy) + bottom * fy;
+    };
+    const image = c.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const u = x / (size - 1), v = y / (size - 1);
+        const value = noise(u, v, 2, 17) * 0.56 + noise(u, v, 4, 43) * 0.29 + noise(u, v, 8, 91) * 0.15;
+        const cloud = Math.max(0, Math.min(1, (value - 0.42) / 0.28));
+        const alpha = Math.round(smooth(cloud) * 210);
+        const i = (y * size + x) * 4;
+        image.data[i] = 205; image.data[i + 1] = 216; image.data[i + 2] = 222; image.data[i + 3] = alpha;
+      }
+    }
+    c.putImageData(image, 0, 0);
+    fogTextureCanvas = canvas;
   }
-  return fogBankCanvas;
+  return fogTextureCanvas;
 }
 
 // Over the screen (after the darkness): rain's streaks slanting with the wind and a dimmer sky, a storm's

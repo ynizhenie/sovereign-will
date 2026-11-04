@@ -95,7 +95,7 @@ export const mechanicsConfig = {
   weather: { firstClearSeconds: 240, seconds: [60, 130], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
     wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
-    handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, wakeSeconds: 30, postFirewood: 1, enemyTorchShare: 0.3,
+    handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, shelterLightTiles: 1.5, wakeSeconds: 30, postFirewood: 1, enemyTorchShare: 0.3,
     sleepHealPerSecond: 8, sleepCorpseTiles: 3, drowsyPace: 0.5 },
   // paths (#248): every everyTicks a settler walking (minStep px since) on a tile in the base wears it by
   // `wear`, up to 1; every fadeTicks each worn tile loses `fade`; one past `shows` is drawn as a path

@@ -33,7 +33,45 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.mouse.click(spot.x, spot.y);
   expect(await page.evaluate(() => waterTiles.length)).toBe(1);
 
-  await page.locator('[data-dock="editor-map"]').click(); // the map's sheet: its name, size, save
+  await page.locator('[data-editor-category="terrain"]').click();
+  await page.locator('[data-brush="3"]').click();
+  const pond = await page.evaluate(() => {
+    const rect = canvas.getBoundingClientRect();
+    const x = townHall.x + 8 * TILE_SIZE + 15, y = townHall.y + 8 * TILE_SIZE + 15;
+    return { x: rect.left + ((x - camera.x) * getViewScale() + canvas.width / 2) * rect.width / canvas.width,
+      y: rect.top + ((y - camera.y) * getViewScale() + canvas.height / 2) * rect.height / canvas.height };
+  });
+  await page.mouse.click(pond.x, pond.y);
+  expect(await page.evaluate(() => [waterTiles.length, isWaterReachable(waterTiles.find(w => w.x === townHall.x + 8 * TILE_SIZE + 15 && w.y === townHall.y + 8 * TILE_SIZE + 15))])).toEqual([10, false]);
+  await page.locator('[data-editor-category="terrain"]').click();
+  await page.locator('[data-brush="1"]').click();
+
+  // Fish traps only sit on reachable water, and placing/removing one leaves water in place
+  await page.locator('[data-editor-category="buildings"]').click();
+  await page.locator('#editor-tools [data-tool="fish_trap"]').click();
+  const landSpot = await page.evaluate(() => {
+    const rect = canvas.getBoundingClientRect();
+    const x = townHall.x + 5 * TILE_SIZE + 15, y = townHall.y + 15;
+    return { x: rect.left + ((x - camera.x) * getViewScale() + canvas.width / 2) * rect.width / canvas.width,
+      y: rect.top + ((y - camera.y) * getViewScale() + canvas.height / 2) * rect.height / canvas.height };
+  });
+  await page.mouse.click(landSpot.x, landSpot.y);
+  expect(await page.evaluate(() => buildings.filter(b => b.type === 'fish_trap').length)).toBe(0);
+  await page.mouse.click(pond.x, pond.y);
+  expect(await page.evaluate(() => buildings.filter(b => b.type === 'fish_trap').length)).toBe(0);
+  expect(await page.evaluate(() => getDayPhase())).toBe('day');
+  expect(await page.evaluate(() => isWaterReachable(waterTiles.find(w => w.x === townHall.x - 4 * TILE_SIZE + 15 && w.y === townHall.y + 15)))).toBe(true);
+  await page.mouse.click(spot.x, spot.y);
+  expect(await page.evaluate(() => [waterTiles.length, buildings.filter(b => b.type === 'fish_trap').length])).toEqual([10, 1]);
+  await page.mouse.click(spot.x, spot.y);
+  expect(await page.evaluate(() => [waterTiles.length, buildings.filter(b => b.type === 'fish_trap').length])).toEqual([10, 0]);
+
+  await page.locator('[data-dock="editor-map"]').click();
+  await page.locator('[data-start-time="night"]').click();
+  expect(await page.evaluate(() => getDayPhase())).toBe('night');
+  expect(await page.evaluate(() => getDarkness())).toBeGreaterThan(0);
+
+  // the map sheet remains open for saving
   await page.locator('#editor-save').click();
   await expect.poll(() => iconText(page, '#toast-notification')).toEqual(['[[warn]] Сначала назовите карту']);
   await page.locator('#editor-name').fill('Озерцо');
@@ -47,7 +85,8 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
 
   // open it again: the water is still there
   await page.locator('#editor-map-list [data-map="Озерцо"]').click();
-  expect(await page.evaluate(() => [waterTiles.length, COLS])).toEqual([1, 128]);
+  expect(await page.evaluate(() => [waterTiles.length, COLS])).toEqual([10, 128]);
+  expect(await page.evaluate(() => getDayPhase())).toBe('night');
   await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
   await page.locator('#exit-to-menu-button').click();
 
@@ -60,7 +99,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#open-generator')).toBeHidden();
   await page.locator('#play-button').click();
   await started(page);
-  expect(await page.evaluate(() => [COLS, waterTiles.length, gameMode])).toEqual([128, 1, 'endless']);
+  expect(await page.evaluate(() => [COLS, waterTiles.length, gameMode])).toEqual([128, 10, 'endless']);
 
   // delete it in the editor
   await page.evaluate(() => exitToMainMenu());

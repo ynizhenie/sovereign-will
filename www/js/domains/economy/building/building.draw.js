@@ -7,9 +7,9 @@ import { TILE_SIZE, forEachInRect, game, isBorderZone, townHall } from '../../..
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
+import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
-import { tileVariantHash } from '../../world/index.js';
+import { drawShadowPath, tileVariantHash } from '../../world/index.js';
 
 // A damaged building looks it: cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).
@@ -75,7 +75,9 @@ export function drawBuildGrid() {
 function drawMenuWarehouse() {
   const x = townHall.x, y = townHall.y, share = Math.max(0, townHall.hp) / townHall.maxHp;
   if (share <= 0) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(x, y + 4, 15, 9, 0, 0, Math.PI * 2); ctx.fill();
+    const shadow = new Path2D();
+    shadow.ellipse(x, y + 4, 15, 9, 0, 0, Math.PI * 2);
+    drawShadowPath(ctx, shadow, 0.3);
     for (const [dx, dy, a, w] of [[-8, 2, 0.4, 16], [4, -3, -0.7, 14], [0, 6, 0.1, 18], [-3, -6, 1.2, 12], [8, 5, 0.9, 10]]) {
       ctx.save(); ctx.translate(x + dx, y + dy); ctx.rotate(a); ctx.fillStyle = '#6d4520'; ctx.fillRect(-w / 2, -1.5, w, 3); ctx.restore();
     }
@@ -183,7 +185,7 @@ const isWallPiece = b => b.type === 'wall_wood' || b.type === 'wall_stone' || b.
 function wallLinks(buildings = game.buildings) {
   const at = new Map();
   for (const b of buildings) if (isWallPiece(b)) at.set(`${Math.round(b.x / TILE_SIZE)},${Math.round(b.y / TILE_SIZE)}`, b);
-  const links = new Map();
+  const links = new Map(), doorLinks = new Map();
   for (const [key, b] of at) {
     const [cx, cy] = key.split(',').map(Number);
     let mask = 0;
@@ -192,8 +194,16 @@ function wallLinks(buildings = game.buildings) {
     if (at.has(`${cx},${cy + 1}`)) mask |= LINK.s;
     if (at.has(`${cx - 1},${cy}`)) mask |= LINK.w;
     links.set(b, mask);
+    if (b.type === 'wall_wood') {
+      let doorMask = 0;
+      if (['door', 'iron_door'].includes(at.get(`${cx},${cy - 1}`)?.type)) doorMask |= LINK.n;
+      if (['door', 'iron_door'].includes(at.get(`${cx + 1},${cy}`)?.type)) doorMask |= LINK.e;
+      if (['door', 'iron_door'].includes(at.get(`${cx},${cy + 1}`)?.type)) doorMask |= LINK.s;
+      if (['door', 'iron_door'].includes(at.get(`${cx - 1},${cy}`)?.type)) doorMask |= LINK.w;
+      doorLinks.set(b, doorMask);
+    }
   }
-  return links;
+  return { links, doorLinks };
 }
 
 // A door opens as someone comes to it and shuts after (the animation is only drawn, nothing waits for it)
@@ -225,16 +235,28 @@ export function drawBuildings() {
   // buildings on every frame made camera movement scale with the whole map.
   const v = getViewRect(90), nearby = [];
   forEachInRect(game.buildings, v.x0, v.y0, v.x1, v.y1, b => nearby.push(b));
-  const links = wallLinks(nearby);
-  nearby.forEach(b => {
+  const { links, doorLinks } = wallLinks(nearby);
+  const doorStates = new Map();
+  const wallShadows = nearby.filter(b => isWallPiece(b)).map(b => {
+    const mask = links.get(b) || 0;
+    if (b.type !== 'door' && b.type !== 'iron_door') return { x: b.x, y: b.y, type: b.type, mask };
+    const state = { open: doorOpening(b, dt), swing: doorSwing(b, mask) };
+    doorStates.set(b, state);
+    return { x: b.x, y: b.y, type: b.type, mask, ...state };
+  });
+  drawWallShadows(wallShadows);
+  nearby.sort((a, b) => {
+    const doorOrder = Number(a.type === 'door' || a.type === 'iron_door') - Number(b.type === 'door' || b.type === 'iron_door');
+    return doorOrder || a.y - b.y || a.x - b.x;
+  }).forEach(b => {
     // (the look: building.art.js, #251)
     if (b.type === 'wall_wood') {
-      drawWoodWall(b.x, b.y, links.get(b) || 0);
+      drawWoodWall(b.x, b.y, links.get(b) || 0, doorLinks.get(b) || 0);
     } else if (b.type === 'wall_stone') {
       drawStoneWall(b.x, b.y, links.get(b) || 0);
     } else if (b.type === 'door' || b.type === 'iron_door') {
-      const open = doorOpening(b, dt);
-      drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, open, doorSwing(b, links.get(b) || 0));
+      const state = doorStates.get(b);
+      drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, state.open, state.swing);
     } else if (b.type === 'iron_trap') {
       // an iron trap (#248): open, with food in it when baited; shut on whoever it holds
       shadow(b.x, b.y, 22, 18, 6); // (#326: a shadow under everything)

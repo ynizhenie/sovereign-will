@@ -5,7 +5,7 @@
 
 import { ctx } from '../../../engine/platform/index.js';
 import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
-import { getSun } from '../../world/index.js';
+import { drawShadowPath, getSun } from '../../world/index.js';
 
 const rect = (x, y, w, h, fill, stroke, lw = 1) => {
   ctx.fillStyle = fill; ctx.fillRect(x, y, w, h);
@@ -21,8 +21,10 @@ const line = (x0, y0, x1, y1, color, lw = 1) => { ctx.strokeStyle = color; ctx.l
 // A soft shadow cast away from the sun (#307: by the time of day, getSun), long in the morning and evening
 export function shadow(x, y, w, h, r = 4) {
   const sun = getSun(), H = h * 0.35, ox = sun.dx * H, oy = sun.dy * H;
-  ctx.fillStyle = `rgba(0, 0, 0, ${sun.alpha})`;
-  ctx.beginPath(); ctx.roundRect(x - w / 2 + Math.min(0, ox) + Math.max(0, ox) * 0.5, y - h / 2 + oy, w + Math.abs(ox) * 0.5, h, r); ctx.fill();
+  const path = new Path2D();
+  const sx = x - w / 2 + Math.min(0, ox) + Math.max(0, ox) * 0.5, sy = y - h / 2 + oy, sw = w + Math.abs(ox) * 0.5;
+  path.roundRect(sx, sy, sw, h, r);
+  drawShadowPath(ctx, path, sun.alpha);
 }
 
 // A house seen from above at a slant: a pitched roof (its far half lighter), its front wall below with a door
@@ -47,19 +49,103 @@ function house(x, y, w, h, { roof, roofDark, wall, wallDark, door = '#3e2723' })
 export const LINK = { n: 1, e: 2, s: 4, w: 8 };
 const ARMS = [[LINK.n, 0, -1], [LINK.e, 1, 0], [LINK.s, 0, 1], [LINK.w, -1, 0]];
 
+/** @typedef {{ x: number, y: number, type: string, mask: number, open?: number, swing?: { x: number, y: number } }} WallShadowPiece */
+// A piece's shadow shape, round its middle
+/** @param {WallShadowPiece} piece */
+function wallShadowShape(piece) {
+  const wood = piece.type === 'wall_wood', stone = piece.type === 'wall_stone';
+  const door = piece.type === 'door' || piece.type === 'iron_door';
+  const shape = new Path2D();
+  if (wood) {
+    shape.roundRect(-7, -11, 14, 24, 2);
+    for (const [bit, dx, dy] of ARMS) {
+      if (!(piece.mask & bit)) continue;
+      if (dy) {
+        for (let k = 0; k < 3; k++) shape.roundRect(-7, dy * (9 + k * 6) - 3.5, 14, 7, 2);
+      } else {
+        for (let k = 0; k < 3; k++) shape.roundRect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25, 2);
+      }
+    }
+  } else if (stone) {
+    shape.rect(-7, -11, 14, 24);
+    for (const [bit, dx, dy] of ARMS) {
+      if (!(piece.mask & bit)) continue;
+      if (dy) {
+        for (let k = 0; k < 3; k++) shape.rect(-7, dy * (9 + k * 6) - 3.5, 14, 7);
+      } else {
+        for (let k = 0; k < 3; k++) shape.rect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25);
+      }
+    }
+  } else if (door) {
+    const vertical = (piece.mask & (LINK.n | LINK.s)) && !(piece.mask & (LINK.e | LINK.w));
+    const orientation = new DOMMatrix().rotate(vertical ? 90 : 0), frame = new Path2D();
+    const along = vertical ? [piece.mask & LINK.s, piece.mask & LINK.n] : [piece.mask & LINK.w, piece.mask & LINK.e];
+    for (const [connected, dx] of along.map((value, i) => [value, i ? 1 : -1])) {
+      if (connected) frame.rect(dx < 0 ? -15 : 11, -7, 4, 14);
+    }
+    frame.rect(-15, -9, 5, 18);
+    frame.rect(10, -9, 5, 18);
+    shape.addPath(frame, orientation);
+    const swing = piece.swing || { x: 0, y: 1 };
+    const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
+    const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
+    const open = piece.open || 0, leaf = open < 0.98 ? 20 - open * 6 : 14;
+    const leafPath = new Path2D(), leafTransform = orientation.multiply(new DOMMatrix().translate(-10, 0).rotate(sign * open * 0.46 * 180 / Math.PI));
+    leafPath.rect(0, -3, leaf, 6);
+    shape.addPath(leafPath, leafTransform);
+  } else {
+    shape.rect(-8, -8, 16, 16);
+    for (const [bit, dx, dy] of ARMS) {
+      if (!(piece.mask & bit)) continue;
+      if (dy) shape.rect(-7, dy < 0 ? -15 : 7, 14, 8);
+      else shape.rect(dx < 0 ? -15 : 7, -7, 8, 14);
+    }
+  }
+  return shape;
+}
+
+// The pieces' shapes where they stand, the walls' (10 high) and the doors' (8): put together again only when the
+// pieces in view change or a door moves, not every frame; the sun moves them along as it goes
+/** @type {{ key: string, tall: Path2D, low: Path2D } | null} */
+let wallShadowShapes = null;
+
+// Fill one combined silhouette so connected wall sections do not darken each other's shadows.
+/** @param {WallShadowPiece[]} pieces */
+export function drawWallShadows(pieces) {
+  if (!pieces.length) return;
+  const sun = getSun();
+  let key = '';
+  for (const piece of pieces) key += `${piece.type} ${piece.x} ${piece.y} ${piece.mask} ${piece.open || 0} ${piece.swing ? piece.swing.x + 2 * piece.swing.y : ''};`;
+  if (!wallShadowShapes || key !== wallShadowShapes.key) {
+    const tall = new Path2D(), low = new Path2D();
+    for (const piece of pieces) {
+      (piece.type === 'wall_wood' || piece.type === 'wall_stone' ? tall : low).addPath(wallShadowShape(piece), new DOMMatrix().translate(piece.x, piece.y));
+    }
+    wallShadowShapes = { key, tall, low };
+  }
+  const shadow = new Path2D();
+  shadow.addPath(wallShadowShapes.tall, new DOMMatrix().translate(sun.dx * 10 * 0.35, sun.dy * 10 * 0.35));
+  shadow.addPath(wallShadowShapes.low, new DOMMatrix().translate(sun.dx * 8 * 0.35, sun.dy * 8 * 0.35));
+  ctx.save();
+  ctx.filter = 'blur(1.5px)';
+  drawShadowPath(ctx, shadow, sun.alpha);
+  ctx.restore();
+}
+
 // A palisade: logs side by side, their sharpened tops, bands of rope across
-export function drawWoodWall(x, y, mask = 0) {
-  shadow(x, y, 30, 30, 2); // (#326: everything casts one)
+export function drawWoodWall(x, y, mask = 0, doorMask = 0) {
   for (const [bit, dx, dy] of ARMS) {
     if (!(mask & bit)) continue;
     if (dy) { // north-south: log tops stacked
       for (let k = 0; k < 3; k++) {
+        if (k === 2 && doorMask & bit) continue;
         const cy = y + dy * (9 + k * 6);
         ctx.fillStyle = '#5c3a17'; ctx.beginPath(); ctx.ellipse(x, cy, 7, 3.6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = k % 2 ? '#8e5a2b' : '#9b6633'; ctx.beginPath(); ctx.ellipse(x, cy - 1, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
       }
     } else { // east-west: logs side by side
       for (let k = 0; k < 3; k++) {
+        if (k === 2 && doorMask & bit) continue;
         const lx = x + dx * (8 + k * 5.5) - 2.75;
         rect(lx, y - 12, 5.5, 25, k % 2 ? '#8e5a2b' : '#9b6633', '#5c3a17');
         poly([[lx, y - 12], [lx + 2.75, y - 15], [lx + 5.5, y - 12]], '#b07a42');
@@ -75,57 +161,72 @@ export function drawWoodWall(x, y, mask = 0) {
   poly([[x, y - 11], [x + 3.5, y - 16], [x + 7, y - 11]], '#b07a42');
 }
 
-// Masonry: blocks in courses, each set over the joint below, a light top edge
+// Stonework uses the same post-and-arm silhouette as the palisade, with coursed masonry instead of logs.
 export function drawStoneWall(x, y, mask = 0) {
-  shadow(x, y, 30, 30, 2);
-  const block = (x0, y0, w, h, k) => {
-    rect(x0, y0, w, h, '#5d6d7e');
-    for (let row = 0; row * 7 < h - 1; row++) {
-      const by = y0 + row * 7, bh = Math.min(6.5, y0 + h - by - 0.5), shift = row % 2 ? 5 : 0;
-      for (let col = -1; col * 10 < w; col++) {
-        const bx = x0 + col * 10 + shift;
-        const l = Math.max(x0 + 0.5, bx + 0.5), r = Math.min(x0 + w - 0.5, bx + 9.5);
-        if (r <= l || bh <= 0) continue;
-        rect(l, by + 0.5, r - l, bh, (row + col + k) % 3 ? '#95a5a6' : '#8a9a9b');
-        line(l, by + 1, r, by + 1, 'rgba(255, 255, 255, 0.25)');
-      }
+  const stone = (x0, y0, w, h, shade = 0) => {
+    const fill = shade ? '#87969a' : '#71818a';
+    rect(x0, y0, w, h, fill, '#35434b');
+    line(x0 + 1, y0 + 1, x0 + w - 1, y0 + 1, 'rgba(255, 255, 255, 0.32)');
+    if (h > w) {
+      line(x0 + 1, y0 + h / 2, x0 + w - 1, y0 + h / 2, '#4b5961', 1);
+    } else {
+      line(x0 + w / 2, y0 + 1, x0 + w / 2, y0 + h - 1, '#4b5961', 1);
     }
-    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1; ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
   };
   for (const [bit, dx, dy] of ARMS) {
     if (!(mask & bit)) continue;
-    if (dy) block(x - 7, dy < 0 ? y - 15 : y + 7, 14, 8, bit);
-    else block(dx < 0 ? x - 15 : x + 7, y - 7, 8, 14, bit);
+    if (dy) {
+      for (let k = 0; k < 3; k++) stone(x - 7, y + dy * (9 + k * 6) - 3.5, 14, 7, k);
+    } else {
+      for (let k = 0; k < 3; k++) {
+        stone(x + dx * (8 + k * 5.5) - 2.75, y - 12, 5.5, 25, k);
+      }
+    }
   }
-  block(x - 8, y - 8, 16, 16, 1);
+  rect(x - 7, y - 11, 14, 24, '#52616a', '#35434b');
+  rect(x - 6, y - 10, 12, 22, '#71818a');
+  line(x - 6, y - 9, x + 6, y - 9, 'rgba(255, 255, 255, 0.32)');
+  line(x - 6, y - 3, x + 6, y - 3, '#4b5961');
+  line(x, y - 2, x, y + 4, '#4b5961');
+  line(x - 6, y + 5, x + 6, y + 5, '#4b5961');
+  line(x + 1, y + 6, x + 1, y + 11, '#4b5961');
 }
 
 // A door in its frame, in a run of wall: two posts, the leaf hung on one and swung open (open 0..1) away from
 // the hall (swing: where it opens towards). Planks (iron bands and rivets on an iron one)
 export function drawDoorArt(x, y, iron, mask = 0, open = 0, swing = { x: 0, y: 1 }) {
-  shadow(x, y, 30, 30, 2);
   const vertical = (mask & (LINK.n | LINK.s)) && !(mask & (LINK.e | LINK.w));
   // the wall each side, in the local frame (along x); a door with no wall by it stands in a bare frame
-  const post = '#6d4520', ironPost = '#4d5656';
+  const post = '#7a4a20', ironPost = '#4d5656';
   ctx.save(); ctx.translate(x, y); if (vertical) ctx.rotate(Math.PI / 2);
   const along = vertical ? [mask & LINK.s, mask & LINK.n] : [mask & LINK.w, mask & LINK.e]; // local -x, +x
   [-1, 1].forEach((d, i) => {
     if (!along[i]) return;
-    if (iron) rect(d < 0 ? -15 : 11, -6, 4, 12, '#5d6d7e', '#2c3e50');
-    else for (let k = 0; k < 2; k++) rect(d * (11 + k * 2.2) - (d < 0 ? 2.2 : 0), -10, 2.2, 20, k ? '#8e5a2b' : '#9b6633', '#5c3a17');
+    if (iron) rect(d < 0 ? -15 : 11, -7, 4, 14, '#5d6d7e', '#2c3e50');
+    else for (let k = 0; k < 2; k++) rect(d * (11 + k * 2.2) - (d < 0 ? 2.2 : 0), -11, 2.2, 22, k ? '#8e5a2b' : '#9b6633', '#5c3a17');
   });
-  rect(-15, -9, 5, 18, iron ? ironPost : post, '#2e1d0c'); rect(10, -9, 5, 18, iron ? ironPost : post, '#2e1d0c');
+  rect(-15, -10, 5, 20, iron ? ironPost : post, '#2e1d0c'); rect(10, -10, 5, 20, iron ? ironPost : post, '#2e1d0c');
   // the ground in the doorway
   rect(-10, -7, 20, 14, 'rgba(60, 40, 20, 0.35)');
-  // the leaf, hinged at the left post; the local +y direction's sign on the swing decides which way it turns
+  // The gate pivots at the left post; its local +y direction decides which side it opens toward.
   const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
   const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
   ctx.translate(-10, 0); ctx.rotate(sign * open * Math.PI * 0.46);
-  const leaf = open < 0.98 ? 20 - open * 6 : 14; // seen end-on as it opens
-  rect(0, -3, leaf, 6, iron ? '#7b5a3c' : '#a0522d', '#3e2723');
-  for (const px of [5, 10, 15]) if (px < leaf) line(px, -2.5, px, 2.5, 'rgba(0, 0, 0, 0.25)');
-  if (iron) for (const px of [3, 10, 17]) if (px < leaf) { rect(px - 1.5, -3, 3, 6, '#7f8c8d'); }
-  ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(Math.min(18, leaf - 2), 0, 1.4, 0, Math.PI * 2); ctx.fill();
+  const leaf = open < 0.98 ? 20 - open * 6 : 14;
+  if (iron) {
+    rect(0, -7, leaf, 14, '#4d5656', '#263238');
+    for (const px of [3, 8, 13, 18]) if (px < leaf) rect(px - 1, -6, 2, 12, '#9aa5a7', '#37474f', 0.6);
+    rect(0, -5, leaf, 2, '#7f8c8d');
+    rect(0, 3, leaf, 2, '#7f8c8d');
+  } else {
+    rect(0, -7, leaf, 14, '#6d4520', '#4e3016');
+    for (const px of [2, 7, 12, 17]) if (px < leaf) {
+      rect(px, -6, 3, 12, '#9b6633', '#5c3a17', 0.8);
+    }
+    rect(0, -5, leaf, 2, '#8e5a2b', '#5c3a17', 0.7);
+    rect(0, 3, leaf, 2, '#8e5a2b', '#5c3a17', 0.7);
+  }
+  ctx.fillStyle = '#f39c12'; ctx.fillRect(Math.min(leaf - 2, 16), -1, 2, 2);
   ctx.restore();
 }
 

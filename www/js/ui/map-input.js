@@ -1,10 +1,11 @@
 // A tap on the map, by the mode the panel set: select a settler, mark a resource, order, build, mark zones
 
 import { GAME_CONFIG, getDefinition } from '../content/configs/index.js';
-import { canvas, isTap, isTouchScreen, mouse, painted, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
-import { TILE_SIZE, game, isBorderZone, thingAt, townHall } from '../engine/world/index.js';
+import { canvas, isTap, isTouchScreen, mouse, shiftDown, t, updateInputPos } from '../engine/platform/index.js';
+import { TILE_SIZE, game, isBorderZone, isWithinTownHallBuffer, thingAt, townHall } from '../engine/world/index.js';
 import { addResources, canAfford, formatCost, getFreeStock, getMissingCost, showCostError } from '../domains/colony/storage/index.js';
 import { canBuild, createBuildingBlueprint, isBuildLocationAllowed } from '../domains/economy/building/index.js';
+import { craftRecipe } from '../domains/colony/equipment/index.js';
 import { inTerritory, isWaterReachable, markFishingChanged, toggleZone } from '../domains/world/index.js';
 import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
@@ -138,6 +139,10 @@ function canPlaceHere({ gxIdx, gyIdx, gx, gy }) {
     return false;
   }
   const item = getDefinition('buildings', game.buildMode);
+  if (item && isWithinTownHallBuffer(gx, gy)) {
+    showNotification(t('build.onHall'), true);
+    return false;
+  }
   // a door on a wall, an iron door on a door: built over it (#248)
   if (item && upgradeTarget(item, gx, gy)) return true;
   // a fish trap on water a fisher could fish from (#248)
@@ -302,9 +307,19 @@ function placeBlueprint({ gx, gy }) {
   const replaces = upgradeTarget(building, gx, gy);
   if (isLocked('buildings', game.buildMode)) {
     showNotification(t('cards.locked', { name: building.label }), true);
-  } else if (!canBuild(game.buildMode)) {
-    showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
   } else if (replaces || building.onWater || building.onSpawner || isBuildLocationAllowed(gx, gy)) {
+    if (!canBuild(game.buildMode)) {
+      const costs = Object.entries(building.cost || {});
+      const missing = costs.filter(([id, amount]) => getFreeStock(id) < amount);
+      const canPayOtherCosts = missing.length === 1 &&
+        costs.filter(([id]) => id !== missing[0][0]).every(([id, amount]) => getFreeStock(id) >= amount);
+      const resource = canPayOtherCosts ? missing[0][0] : null;
+      const recipe = resource && Object.values(GAME_CONFIG.recipes).find(item => item.produces[resource]);
+      if (!recipe || !craftRecipe(recipe.id, Math.ceil((missing[0][1] - getFreeStock(resource)) / (recipe.produces[resource] / (recipe.batches || 1))))) {
+        if (resource !== 'rope' && resource !== 'torches') showCostError(building.cost || {}, t('cost.needs', { name: building.label }), getFreeStock);
+        return;
+      }
+    }
     // its cost stays in storage until builders bring it
     const bp = createBuildingBlueprint(game.buildMode, gx, gy);
     bp.needs = { ...(building.cost || {}) };
@@ -377,8 +392,6 @@ export function initMapInput() {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     if (e.pointerType === 'touch' && !isTap) return;
-    if (painted) return; // (a stroke of the editor's brush, not a tap, #255)
-
     closeOverlays(); // a tap on the map closes the open sheet (a drag to look around doesn't)
     processInteraction(e.clientX, e.clientY);
   });

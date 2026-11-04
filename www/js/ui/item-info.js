@@ -8,6 +8,7 @@ import { statLabel } from '../engine/platform/index.js';
 import { TILE_SIZE } from '../engine/world/index.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { getFreeStock } from '../domains/colony/storage/index.js';
+import { getCraftOrderPlan } from '../domains/colony/equipment/index.js';
 import { answerPressedButton, pressedAt, pressedButton } from './widgets.js';
 
 const round = (n, digits = 1) => String(Math.round(n * 10 ** digits) / 10 ** digits);
@@ -50,22 +51,33 @@ export function itemInfoHtml(info) {
   const stats = getItemStats(category, item).map(([key, value]) => `<span class="info-stat">${escapeHtml(statLabel(key))}: <b>${escapeHtml(value)}</b></span>`).join('');
   return `<div class="info-title">${item.icon ? iconHtml(item.icon) : ''} ${escapeHtml(item.label || id)}</div>` +
     (item.desc ? `<div class="info-desc">${escapeHtml(item.desc)}</div>` : '') +
-    (stats ? `<div class="info-stats">${stats}</div>` : '') + costHtml(category, item);
+    (stats ? `<div class="info-stats">${stats}</div>` : '') + costHtml(category, id, item);
 }
 
 // What it costs against what the stock has (#232): "wood 10/10 · stone 5/7", then what's left after, or
 // what's short (instead of a notice when its button can't be paid)
-function costHtml(category, item) {
+function costHtml(category, id, item) {
   const cost = Object.entries((category === 'settlerTypes' ? item.hireCost : item.cost) || {}).filter(([, n]) => n > 0);
   if (!cost.length) return '';
-  const rows = cost.map(([id, need]) => ({ id, need, have: Math.floor(getFreeStock(id)) }));
+  const plan = category === 'settlerTypes' ? { totalCost: item.hireCost || {}, recipeOrders: [] } : getCraftOrderPlan(category, id);
+  const affordable = Object.entries(plan.totalCost).every(([resource, amount]) => getFreeStock(resource) >= amount);
+  const crafted = affordable ? plan.recipeOrders.reduce((amounts, order) => {
+    for (const [resource, amount] of Object.entries(order.yields || {})) amounts[resource] = (amounts[resource] || 0) + Number(amount);
+    return amounts;
+  }, {}) : {};
+  const rows = cost.map(([resource, need]) => ({
+    id: resource,
+    need,
+    have: Math.floor(getFreeStock(resource) + Number(crafted[resource] || 0))
+  }));
   const short = rows.filter(r => r.have < r.need);
   const icon = id => iconHtml((GAME_CONFIG.resources[id] || {}).icon || id);
   const parts = rows.map(r => `<span class="info-cost${r.have < r.need ? ' short' : ''}">${icon(r.id)} <b>${r.have}/${r.need}</b></span>`).join('');
   const after = short.length
     ? `<span class="info-cost short">${escapeHtml(statLabel('short'))}: ${short.map(r => `${icon(r.id)} ${r.need - r.have}`).join(' ')}</span>`
     : `<span class="info-cost">${escapeHtml(statLabel('left'))}: ${rows.map(r => `${icon(r.id)} ${r.have - r.need}`).join(' ')}</span>`;
-  return `<div class="info-stats info-costs"><span class="info-stat">${escapeHtml(statLabel('cost'))}:</span>${parts}</div><div class="info-stats">${after}</div>`;
+  const craftNote = affordable && plan.recipeOrders.length ? `<div class="info-stats">${escapeHtml(statLabel('willCraft'))}</div>` : '';
+  return `<div class="info-stats info-costs"><span class="info-stat">${escapeHtml(statLabel('cost'))}:</span>${parts}</div><div class="info-stats">${after}</div>${craftNote}`;
 }
 
 // A button just pressed that couldn't be paid for: its card shows what's short, the button shakes; false

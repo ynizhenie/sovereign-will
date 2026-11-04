@@ -3,6 +3,7 @@
 import { escapeHtml, iconHtml, setRichText } from './icons.js';
 import { onTap, t } from '../engine/platform/index.js';
 import { stock } from '../domains/colony/storage/index.js';
+import { getCraftOrderCost } from '../domains/colony/equipment/index.js';
 
 // Buttons with a price (#UI): what the stock is short of shows in red, and a button that can't be paid
 // for is dimmed, as the stock changes (a few times a second)
@@ -13,7 +14,10 @@ export function refreshAffordability(force = false) {
     const parts = button.querySelectorAll('.cost-part');
     if (!parts.length) continue;
     let short = false;
-    const craftCost = button.dataset.craftCost ? JSON.parse(button.dataset.craftCost) : null;
+    const info = button.dataset.info || '';
+    const buildType = info.startsWith('buildings:') ? info.slice('buildings:'.length) : null;
+    const craftCost = button.dataset.craftCost ? JSON.parse(button.dataset.craftCost)
+      : buildType ? getCraftOrderCost('buildings', buildType) : null;
     if (craftCost) {
       for (const [resource, amount] of Object.entries(craftCost)) {
         if (Number(stock[resource] || 0) < Number(amount)) short = true;

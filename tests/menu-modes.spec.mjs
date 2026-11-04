@@ -24,6 +24,37 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   expect(errors).toEqual([]);
 });
 
+test('shadows can be disabled in settings and the choice is remembered', async ({ page }) => {
+  const errors = await openFresh(page);
+  await page.click('#open-settings');
+  await expect(page.locator('[data-shadows="on"]')).toHaveClass(/active/);
+  await page.click('[data-shadows="off"]');
+  await expect(page.locator('[data-shadows="off"]')).toHaveClass(/active/);
+  expect(await page.evaluate(() => areShadowsEnabled())).toBe(false);
+  expect(await page.evaluate(() => localStorage.getItem('sovereign-will-shadows'))).toBe('off');
+
+  const shadowCalls = await page.evaluate(() => {
+    let fills = 0;
+    const fill = ctx.fill;
+    ctx.fill = function (...args) { fills++; return fill.apply(this, args); };
+    try {
+      const path = new Path2D(); path.rect(0, 0, 10, 10);
+      drawShadowPath(ctx, path, 1);
+      castShadow(ctx, 10, 10, 5, 3);
+    } finally { ctx.fill = fill; }
+    return fills;
+  });
+  expect(shadowCalls).toBe(0);
+
+  await page.reload();
+  await page.click('#open-settings');
+  await expect(page.locator('[data-shadows="off"]')).toHaveClass(/active/);
+  expect(await page.evaluate(() => areShadowsEnabled())).toBe(false);
+  await page.click('[data-shadows="on"]');
+  expect(await page.evaluate(() => areShadowsEnabled())).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('two difficulties: on Hard enemies are as strong as the player\'s own units (#39, #255)', async ({ page }) => {
   await openFresh(page);
   await page.click('#mode-endless');

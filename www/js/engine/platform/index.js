@@ -6,5 +6,5 @@ export { camera, clampCamera, getMaxZoom, getViewRect, setZoom, updateInputPos }
 export { VSYNC, canvas, canvasCssSize, ctx, drawProgressBar, fitCanvasToScreen, getBaseScale, getViewScale, initCanvas, screenPixelRatio, setFont } from './canvas.js';
 export { onTap } from './dom.js';
 export { applyPageTexts, currentLanguage, initI18n, setLanguage, statLabel, t } from './i18n.js';
-export { initInput, isTap, isTouchScreen, keys, mouse, painted, setDragPainter, shiftDown } from './input.js';
+export { initInput, isTap, isTouchScreen, keys, mouse, shiftDown } from './input.js';
 export { loadData, loadSetting, saveData, saveSetting } from './storage.js';

@@ -3,7 +3,7 @@
 // stamped over and over
 
 import { ctx } from '../../../engine/platform/index.js';
-import { castShadow, tileVariantHash, windSway } from '../../world/index.js';
+import { castShadow, drawShadowPath, tileVariantHash, windSway } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 
@@ -31,7 +31,7 @@ const blob = (x, y, r, fill) => { pen().fillStyle = fill; pen().beginPath(); pen
 // (#307) cast away from the sun by the thing's height (about its size)
 const groundShadow = (x, y, rx, ry) => { if (shadows) castShadow(pen(), x, y + 4, rx, ry, rx * 0.9); };
 // each kind's shadow as its art casts it: [dx, dy, rx, ry] from where the thing stands (for the shadows laid down together)
-export const SHADOWS = { stump: [0, -2, 4, 2], tree: [0, 0, 14, 10], cactus: [0, 6, 8, 4], boulder: [0, 2, 12, 8], grass: [0, -2, 5, 1.6], bush: [0, 2, 11, 7], stick: [0, -3, 7, 2], pebbles: [0, -3, 5, 2] };
+export const SHADOWS = { stump: [0, -2, 4, 2], tree: [0, 0, 14, 10], cactus: [0, 6, 8, 4], boulder: [0, 2, 12, 8], grass: [0, -2, 8, 2.8], bush: [0, 2, 11, 7], stick: [0, -3, 7, 2], pebbles: [0, -3, 5, 2] };
 
 // A tree: its shadow, a bit of trunk under a crown of overlapping leafy clumps, lit from the top left.
 // (#279) Felled, it falls over away from its cutter (turned about its foot), and lies there, a log with its
@@ -158,7 +158,7 @@ export function drawBoulderArt(b) {
 // A tuft of tall grass: curved blades in a few greens, now and then a small flower
 export function drawGrassArt(g) {
   const h = variant(g), x = g.x, y = g.y;
-  groundShadow(x, y - 2, 5, 1.6); // (#326)
+  groundShadow(x, y - 2, 8, 2.8); // (#326)
   const greens = ['#2ecc71', '#27ae60', '#58d68d'];
   pen().lineWidth = 1.6; pen().lineCap = 'round';
   for (let k = 0; k < 7; k++) {
@@ -242,10 +242,14 @@ export function drawPebblesArt(pe) {
   const colors = [['#95a5a6', '#d0d3d4'], ['#858f91', '#c4ccce'], ['#a1a7a5', '#e0dfd7'], ['#777f82', '#b9c1c2']];
   const [stoneColor, lightColor] = colors[(h >>> 4) % colors.length];
   groundShadow(x, y - 3, 5, 2); // (#326: by the sun, as the rest)
+  const shadows = new Path2D();
   for (let i = 0; i < stones.length; i++) {
     const [px, py, rx, ry] = stones[i], rotation = ((h >>> (i * 3 + 8)) % 5 - 2) * 0.12;
-    g.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    g.beginPath(); g.ellipse(x + px + 1, y + py + 1, rx, ry, rotation, 0, Math.PI * 2); g.fill();
+    shadows.ellipse(x + px + 1, y + py + 1, rx, ry, rotation, 0, Math.PI * 2);
+  }
+  drawShadowPath(g, shadows, 0.25);
+  for (let i = 0; i < stones.length; i++) {
+    const [px, py, rx, ry] = stones[i], rotation = ((h >>> (i * 3 + 8)) % 5 - 2) * 0.12;
     g.fillStyle = stoneColor;
     g.beginPath(); g.ellipse(x + px, y + py, rx, ry, rotation, 0, Math.PI * 2); g.fill();
     g.fillStyle = lightColor;

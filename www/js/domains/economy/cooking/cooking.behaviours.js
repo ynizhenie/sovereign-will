@@ -59,8 +59,12 @@ export function cook(s, tick) {
   let fire = job && game.buildings.includes(job) ? job : null;
   if (!fire) {
     if (s.carrying) return false; // its fire is gone: deliverCarrying puts it back in the stock
-    if (!cooking.raw.some(r => stock[r] > 0)) return false;
-    fire = game.buildings.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && ((b.fuelLeft || 0) > 0 || findFuel()))
+    const restFire = soldier && s.idle && s.idle.act === 'campfire' &&
+      game.buildings.find(b => b.type === 'campfire' && s.idle.spot && Math.hypot(b.x - s.idle.spot.x, b.y - s.idle.spot.y) < 1);
+    const needsRestFuel = restFire && !(restFire.fuelLeft > 0) && !(restFire.burning > 0) && findFuel();
+    if (!cooking.raw.some(r => stock[r] > 0) && !needsRestFuel) return false;
+    const candidates = needsRestFuel ? [restFire] : game.buildings;
+    fire = candidates.filter(b => b.type === 'campfire' && isBuildingJobFree(b, 'cook', s) && ((b.fuelLeft || 0) > 0 || findFuel()))
       .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (!fire) return false;
   }

@@ -9,7 +9,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { getBaseRadius, hasLineOfFire, isDefenseAlert, isInSafeArea, performAttack } from '../../conflict/combat/index.js';
+import { baseRadiusToward, getBaseRadius, hasLineOfFire, isDefenseAlert, isInSafeArea, performAttack } from '../../conflict/combat/index.js';
 import { isRangedWeapon, usesDagger } from '../equipment/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -25,7 +25,8 @@ const byId = id => game.settlers.find(o => o.id === id) || null;
 const isFreeCompany = (s, o) => o !== s && o.isIdle && !o.isPossessed && !o.carrying && (!o.idle || o.idle.act === 'wander' || o.idle.act === 'talk');
 const campfiresOnce = onceThisTick();
 // (#306) the fires looked for once a tick: isInSafeArea for every building, for every settler sitting by one
-const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y)));
+const campfires = () => campfiresOnce(() => game.buildings.filter(b => b.type === 'campfire' &&
+  ((b.fuelLeft || 0) > 0 || (b.burning || 0) > 0) && isInSafeArea(b.x, b.y)));
 const isFighter = s => (s.role === 'soldier' || s.role === 'archer') && !s.towerAssignment;
 
 // (#298) the places to sit by a campfire: on each of its four sides, a tile that's free and that `s` can get
@@ -40,8 +41,11 @@ function seatsOf(fire, s) {
 const seatTaken = (fire, seat, s) => game.settlers.some(o => o !== s && o.idle && o.idle.act === 'campfire' && o.idle.seat === seat &&
   o.idle.spot && Math.hypot(o.idle.spot.x - fire.x, o.idle.spot.y - fire.y) < 1);
 // A free seat for `s` at a campfire, the nearest fire's first: { fire, seat } or null
-export function freeCampfireSeat(s) {
-  for (const fire of [...campfires()].sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
+export function freeCampfireSeat(s, includeUnlit = false) {
+  const fires = includeUnlit
+    ? game.buildings.filter(b => b.type === 'campfire' && isInSafeArea(b.x, b.y))
+    : campfires();
+  for (const fire of [...fires].sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))) {
     const free = seatsOf(fire, s).filter(p => !seatTaken(fire, p.seat, s)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (free) return { fire, seat: free.seat };
   }
@@ -59,7 +63,7 @@ function pickPastime(s) {
   const c = config();
   const faction = getPlayerFaction().id;
   const options = ['wander'];
-  const seat = freeCampfireSeat(s);
+  const seat = freeCampfireSeat(s, true);
   if (seat) options.push('campfire');
   if (game.settlers.some(o => isFreeCompany(s, o) && Math.hypot(o.x - s.x, o.y - s.y) < c.companyRange)) options.push('talk');
   if (faction === 'demons' && game.settlers.some(o => o !== s && o.isIdle && !o.carrying && (!o.idle || o.idle.act === 'wander'))) options.push('spar', 'spar');
@@ -155,7 +159,8 @@ export function idlePastime(s, tick) {
   s.swaying = false;
   switch (idle.act) {
     case 'campfire': {
-      let fire = idle.spot && campfires().find(b => Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
+      let fire = idle.spot && game.buildings.find(b => b.type === 'campfire' && isInSafeArea(b.x, b.y) &&
+        Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 5);
       // (#298) its seat: one of the fire's four sides; none given (the night watch) or taken, another free one
       if (!fire || idle.seat === undefined || seatTaken(fire, idle.seat, s)) {
         const free = freeCampfireSeat(s);
@@ -210,11 +215,29 @@ export function idlePastime(s, tick) {
       // round the base just past its edge, waypoint to waypoint (each soldier its own way round)
       const dir = Math.floor(s.id) % 2 ? 1 : -1;
       if (idle.angle === undefined) idle.angle = Math.atan2(s.y - townHall.y, s.x - townHall.x);
-      const point = edgePoint(idle.angle);
-      idle.onPoint = (idle.onPoint || 0) + tick.dt;
-      // there, or can't get there for long: on to the next
-      if (Math.hypot(point.x - s.x, point.y - s.y) < 14 || idle.onPoint > 8) { idle.angle += dir * c.patrolStep; idle.onPoint = 0; }
-      else moveEntityTowards(s, point.x, point.y, s.speed * 0.7, false, tick.dt);
+      let point = edgePoint(s, idle.angle);
+      for (let tries = 0; !point && tries < 8; tries++) {
+        idle.angle += dir * c.patrolStep;
+        point = edgePoint(s, idle.angle);
+      }
+      if (!point) { idle.left = 0; return false; }
+      if (Math.hypot(point.x - s.x, point.y - s.y) < 14) {
+        idle.angle += dir * c.patrolStep;
+        idle.onPoint = 0;
+        idle.progress = { x: s.x, y: s.y };
+      } else {
+        const progress = idle.progress;
+        if (!progress || Math.hypot(s.x - progress.x, s.y - progress.y) >= 8) {
+          idle.progress = { x: s.x, y: s.y };
+          idle.onPoint = 0;
+        } else idle.onPoint = (idle.onPoint || 0) + tick.dt;
+        // Only abandon a waypoint after being stuck; a detour around the town hall can take longer.
+        if (idle.onPoint > 8) {
+          idle.angle += dir * c.patrolStep;
+          idle.onPoint = 0;
+          idle.progress = { x: s.x, y: s.y };
+        } else moveEntityTowards(s, point.x, point.y, s.speed * 0.7, false, tick.dt);
+      }
       return true;
     }
     case 'train': {
@@ -255,14 +278,25 @@ export function idlePastime(s, tick) {
 
 // A patrol's waypoint at `angle` round the town hall: a tile past the base's edge, or nearer in where
 // that's blocked (a wall, water, a tree)
-function edgePoint(angle) {
-  const r = getBaseRadius() + TILE_SIZE;
-  for (let k = 0; k < 4; k++) {
-    const p = { x: townHall.x + Math.cos(angle) * (r - k * TILE_SIZE), y: townHall.y + Math.sin(angle) * (r - k * TILE_SIZE) };
-    const g = getGridPos(p.x, p.y);
-    if (!isTileBlockedForSettler(g.gx, g.gy)) return { x: g.gx * TILE_SIZE + 15, y: g.gy * TILE_SIZE + 15 };
+function edgePoint(s, angle) {
+  const r = baseRadiusToward(angle) + TILE_SIZE;
+  const target = { x: townHall.x + Math.cos(angle) * r, y: townHall.y + Math.sin(angle) * r };
+  const grid = getGridPos(target.x, target.y), reach = getSettlerReach(s);
+  for (let ring = 0; ring <= 4; ring++) {
+    let best = null, bestDistance = Infinity;
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring || dx * dx + dy * dy > 16) continue;
+        const gx = grid.gx + dx, gy = grid.gy + dy;
+        if (isTileBlockedForSettler(gx, gy) || getReachSteps(reach, gx, gy) === -1) continue;
+        const point = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+        const distance = Math.hypot(point.x - target.x, point.y - target.y);
+        if (distance < bestDistance) { best = point; bestDistance = distance; }
+      }
+    }
+    if (best) return best;
   }
-  return { x: townHall.x + Math.cos(angle) * r, y: townHall.y + Math.sin(angle) * r };
+  return null;
 }
 
 // The nearest grass in the base (#199: a fisher digs for worms there)

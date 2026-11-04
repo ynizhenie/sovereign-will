@@ -3,13 +3,14 @@
 // ---- Panels
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, escapeHtml, iconHtml, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
-import { loadData, onTap, saveData, setDragPainter, t } from '../../engine/platform/index.js';
+import { closeSheet, escapeHtml, iconHtml, showPlacing, toggleSheet } from '../../ui/index.js';
+import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
+import { timeOfPhase } from '../../domains/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { openGenerator } from '../endless/index.js';
 import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
-import { EDITOR_TOOLS, clearEditorMap, editor, editorPaint, redoEditor, resizeEditorMap, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
+import { EDITOR_TOOLS, clearEditorMap, editor, redoEditor, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
 
 export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
@@ -42,11 +43,8 @@ export function renderEditorPanel() {
     tools.appendChild(grid);
   }
   document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('on', Number(b.dataset.brush) === editor.brush));
-  document.getElementById('editor-drag').classList.toggle('on', editor.dragPaint);
   document.querySelectorAll('[data-start-time]').forEach(b => b.classList.toggle('on', b.dataset.startTime === editor.startTime));
-  setRichText(document.getElementById('editor-hint'), t(editor.dragPaint ? 'editor.hintDrag' : 'editor.hint'));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
-  document.getElementById('editor-size').textContent = `${game.COLS}×${game.ROWS}`;
   document.getElementById('editor-top-size').textContent = `${game.COLS}×${game.ROWS}`;
   updateEditorTitle();
   if (editor.tool === 'erase') chosen = document.getElementById('editor-erase').innerHTML;
@@ -88,7 +86,7 @@ let editorUsesCustomSize = false;
 const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
 const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
 const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
-const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, faction: 'humans', startTime: 'morning', brush: 1, dragPaint: false, category: 'nature', tool: 'tree' };
+const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, faction: 'humans', startTime: 'day', brush: 1, category: 'nature', tool: 'tree' };
 const rememberEditorChoices = () => saveData('editor-choices', {
   size: editorNewSize,
   custom: editorUsesCustomSize,
@@ -97,7 +95,6 @@ const rememberEditorChoices = () => saveData('editor-choices', {
   faction: editor.faction,
   startTime: editor.startTime,
   brush: editor.brush,
-  dragPaint: editor.dragPaint,
   category: editor.category,
   tool: editor.tool
 });
@@ -120,7 +117,6 @@ export function initEditorPanel() {
   editor.faction = GAME_CONFIG.factions[saved.faction]?.ready ? saved.faction : EDITOR_DEFAULTS.faction;
   editor.startTime = ['morning', 'day', 'evening', 'night'].includes(saved.startTime) ? saved.startTime : EDITOR_DEFAULTS.startTime;
   editor.brush = [1, 3, 5].includes(Number(saved.brush)) ? Number(saved.brush) : EDITOR_DEFAULTS.brush;
-  editor.dragPaint = !!saved.dragPaint;
   editor.category = ['terrain', 'nature', 'buildings'].includes(saved.category) ? saved.category : EDITOR_DEFAULTS.category;
   editor.tool = EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
   editorCustomSize.hidden = !editorUsesCustomSize;
@@ -152,15 +148,14 @@ export function initEditorPanel() {
   }));
   onTap(document.getElementById('editor-erase'), () => { editor.tool = 'erase'; rememberEditorChoices(); closeSheet(); renderEditorPanel(); });
   document.getElementById('editor-name').addEventListener('input', updateEditorTitle);
-  // (#255) a drag paints with the brush when that's on; undo, redo; play the map; clear it
-  setDragPainter(editorPaint);
-  onTap(document.getElementById('editor-drag'), () => { editor.dragPaint = !editor.dragPaint; rememberEditorChoices(); renderEditorPanel(); });
+  // (#255) undo, redo, play the map; clear it
   onTap(document.getElementById('editor-undo'), undoEditor);
   onTap(document.getElementById('editor-redo'), redoEditor);
   onTap(document.getElementById('editor-clear'), clearEditorMap);
-  document.querySelectorAll('[data-start-time]').forEach(b => onTap(b, () => { editor.startTime = /** @type {string} */ (b.dataset.startTime); rememberEditorChoices(); renderEditorPanel(); })); // (#257)
-  document.querySelectorAll('[data-resize]').forEach(button => onTap(button, () => {
-    const [side, delta] = /** @type {string} */ (button.dataset.resize).split(':');
-    resizeEditorMap(side, Number(delta));
-  }));
+  document.querySelectorAll('[data-start-time]').forEach(b => onTap(b, () => {
+    editor.startTime = /** @type {string} */ (b.dataset.startTime);
+    game.dayTime = timeOfPhase(editor.startTime);
+    rememberEditorChoices();
+    renderEditorPanel();
+  })); // (#257)
 }

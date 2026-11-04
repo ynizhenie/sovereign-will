@@ -219,7 +219,10 @@ export function findReliefSpot(s) {
 export function patrol(s, tick) {
   if (game.gameMode === 'battle') return true; // nothing to wander around: stand
   // caught outside the base when the alert starts, or at night with no torch (#257): straight back
-  if (!isInSafeArea(s.x, s.y) || Math.hypot(s.x - townHall.x, s.y - townHall.y) > nightReach(s)) {
+  const nightPatrol = s.idle && s.idle.act === 'patrolEdge';
+  // Edge patrol waypoints already follow the directional night limit; checking the current angle here
+  // sends a guard back to the hall while it moves between sectors with different radii.
+  if (!isInSafeArea(s.x, s.y) || (!nightPatrol && Math.hypot(s.x - townHall.x, s.y - townHall.y) > nightReach(s))) {
     s.patrolTarget = null;
     moveSettlerToTownHall(s, s.speed, tick.dt);
     return true;

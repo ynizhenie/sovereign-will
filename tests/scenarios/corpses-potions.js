@@ -63,6 +63,19 @@ Object.assign(window.sim, (() => {
       heapOut: heap ? Math.hypot(heap.x - townHall.x, heap.y - townHall.y) > edge + TILE_SIZE : null };
   }
 
+  function directionalCorpseHeap({ seed = 'directional-corpse-heap' } = {}) {
+    asFaction('humans', seed);
+    const east = nearHall(12, 0);
+    placeBuilding('wall_wood', east.x, east.y);
+    invalidateAllPaths();
+    const heap = getCorpseHeap();
+    if (!heap) { back(); return { heap: false, beyondBaseTiles: null }; }
+    const angle = Math.atan2(heap.y - townHall.y, heap.x - townHall.x);
+    const beyondBaseTiles = (Math.hypot(heap.x - townHall.x, heap.y - townHall.y) - baseRadiusToward(angle)) / TILE_SIZE;
+    back();
+    return { heap: true, beyondBaseTiles };
+  }
+
   // In a wave a medic heals with its herbs, 30 each (#279: no potions). With the wave beaten and a tent, it keeps its herbs
   function heal({ seed = 'medic-heal', waveOver = false } = {}) {
     asFaction('humans', seed);
@@ -77,5 +90,5 @@ Object.assign(window.sim, (() => {
     return { hp: Math.round(patient.hp), herbsLeft: medic.bagHerbs || 0 };
   }
 
-  return { porterCorpses: corpsesOut, manyCorpses, medicHeal: heal };
+  return { porterCorpses: corpsesOut, manyCorpses, directionalCorpseHeap, medicHeal: heal };
 })());

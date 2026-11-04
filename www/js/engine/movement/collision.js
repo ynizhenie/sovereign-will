@@ -1,6 +1,6 @@
 // Bodies and what stops them: walls, water, natural obstacles, the map's edge, and units pushed apart
 
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../world/index.js';
 import { forEachSettlerNear } from './neighbours.js';
 
 export function collidesWithBoxList(x, y, radius, objects, halfSize) {
@@ -59,6 +59,7 @@ export const WALL_COLLISION_KINDS = [['walls', 14], ['redDoors', 14], ['rocks', 
 const ENEMY_WALL_KINDS = WALL_COLLISION_KINDS.filter(([set]) => set !== 'redDoors');
 
 export function collidesWithWall(x, y, radius, isEnemy = false) {
+  if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + radius) return true;
   return collidesWithTiles(x, y, radius, isEnemy ? ENEMY_WALL_KINDS : WALL_COLLISION_KINDS);
 }
 

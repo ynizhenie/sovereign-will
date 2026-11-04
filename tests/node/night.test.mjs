@@ -24,6 +24,11 @@ test('at night a soldier out of the light fetches a crafted torch; without one, 
   expect(sim.nightHandTorch({ torches: 0 })).toEqual({ torch: false, torches: 0, reach: 'base' });
 });
 
+test('at night without torches, work reach follows the base edge in the target direction', () => {
+  const { east, west } = sim.directionalNightReach({});
+  expect(east).toBeGreaterThan(west + 30);
+});
+
 test('a night wave: some of its enemies carry torches; the town hall, a torch, a portal, a necromancer\'s staff give light (#257)', () => {
   expect(sim.nightWave({})).toEqual({ someTorches: true, notAll: true, farTorchesDark: true, lights: { hall: true, enemyTorch: true, portal: true, staff: true } });
 });

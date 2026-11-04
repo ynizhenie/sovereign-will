@@ -1,11 +1,12 @@
 // The ground: grass, water, rock, desert and ore, each joining its own kind
 
 import { drawIcon } from '../../ui/index.js';
-import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, worldEpoch } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, townHall, worldEpoch } from '../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
+import { areShadowsEnabled, getSun, MIN_SHADOW_ALPHA } from './world.daytime.js';
 
 // A few close shades of the base grass color, plus an occasional darker speckle, so the ground
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
@@ -34,6 +35,7 @@ const MAX_PIXELS = 16e6;
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
+const drawnChunks = new Map();
 
 // (#322) Pieces are cached by map chunk. A camera pan can expose many uncached pieces at once,
 // so only one detailed chunk is painted per frame; old-size pictures or lightweight previews
@@ -55,14 +57,16 @@ const stats = { holes: 0, late: 0, pending: 0 };
 export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
-// paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed
-/** @param {string} layer @param {number} res @param {ChunkStamp} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] */
-export function drawChunks(layer, res, stamp, paint, preview) {
+// paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed, laid down on target. keepOld: a piece
+// waiting its turn to be painted shows any picture of it there is meanwhile (out of date, or of another size)
+/** @param {string} layer @param {number} res @param {ChunkStamp} stamp @param {Function} paint @param {(x0: number, y0: number, x1: number, y1: number) => void} [preview] @param {CanvasRenderingContext2D} [target] */
+export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keepOld = false) {
   if (typeof document === 'undefined') return;
   const epoch = worldEpoch();
   if (cacheWorldEpoch !== epoch) {
     // Chunk canvases contain map-specific pixels; don't let equal-sized worlds reuse them.
     chunkLayers.clear();
+    drawnChunks.clear();
     cacheWorldEpoch = epoch;
     previousView = null; previousScale = 0;
     stats.holes = 0; stats.late = 0; stats.pending = 0;
@@ -74,23 +78,25 @@ export function drawChunks(layer, res, stamp, paint, preview) {
   }
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
+  const visible = new Set();
   const size = CHUNK * TILE_SIZE, v = getViewRect(), scale = getViewScale();
   if (layer === 'grass') {
     const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
     previousView = v; previousScale = scale;
     frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
+    if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
     // is useful only during movement, when a coarse first pass keeps the pan responsive.
     framePaintLayer = moving ? layers[(frameOf - 1) % layers.length] : layers[0];
   } // (the first layer of a frame)
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
-  const m = ctx.getTransform();
+  const m = target.getTransform();
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
   const blit = (p, x0, y0, x1, y1) => {
     const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
-    ctx.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+    target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
@@ -131,8 +137,11 @@ export function drawChunks(layer, res, stamp, paint, preview) {
         }
         if (chunk) chunks.delete(key); // (to the end: the most recently shown)
         if (!free) {
-          if (chunk && !invalidated) {
-            chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1);
+          if (chunk && (!invalidated || keepOld)) {
+            chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key);
+          } else if (keepOld && oldPicture(chunks, cx, cy)) {
+            blit(oldPicture(chunks, cx, cy), x0, y0, x1, y1);
+            stats.pending++;
           } else {
             // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
             // or rasterize each one this frame: preview it until its turn in the queue.
@@ -147,11 +156,12 @@ export function drawChunks(layer, res, stamp, paint, preview) {
         }
         const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
         if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now))); framePaints++; stats.late++; }
-        if (chunk) { chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); }
+        if (chunk) { chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key); }
       }
     }
   }
   if (layer === framePaintLayer) priorityPassed = true;
+  drawnChunks.set(layer, visible);
   // the least recently shown dropped past the budget, never one this frame has (on the screen or just round it)
   let pixels = 0;
   for (const c of chunks.values()) pixels += c.canvas.width * c.canvas.height;
@@ -161,6 +171,20 @@ export function drawChunks(layer, res, stamp, paint, preview) {
     pixels -= c.canvas.width * c.canvas.height;
     chunks.delete(key);
   }
+}
+
+// (#392) a piece's picture at any size, the finest first
+const SIZES = [4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
+/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy */
+const oldPicture = (chunks, cx, cy) => {
+  for (const res of SIZES) { const chunk = chunks.get(`${res}|${cx},${cy}`); if (chunk) return chunk; }
+  return null;
+};
+
+export function wasChunkDrawn(layer, res, x, y) {
+  const size = CHUNK * TILE_SIZE, cx = Math.floor(x / size), cy = Math.floor(y / size);
+  const visible = drawnChunks.get(layer);
+  return visible ? visible.has(`${res}|${cx},${cy}`) : false;
 }
 
 // full-size pictures zoomed in, half zoomed out
@@ -305,10 +329,10 @@ export function cornerRadii(open, occupiedCorners = {}) {
   };
 }
 
-function terrainCornerOccupancy(x, y, tiles) {
+function terrainCornerOccupancy(x, y, tiles, includeSand = true) {
   const sand = getSandKeys(), has = (dx, dy) => {
     const key = `${x + dx * TILE_SIZE},${y + dy * TILE_SIZE}`;
-    return tiles.water.has(key) || tiles.rockAndOre.has(key) || sand.has(key);
+    return tiles.water.has(key) || tiles.rockAndOre.has(key) || (includeSand && sand.has(key));
   };
   return { nw: has(-1, -1), ne: has(1, -1), se: has(1, 1), sw: has(-1, 1) };
 }
@@ -316,7 +340,8 @@ function terrainCornerOccupancy(x, y, tiles) {
 function drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners) {
   const G = target || ctx;
   const k = cornerRadii(open, occupiedCorners), x0 = x - 15, y0 = y - 15, x1 = x + 15, y1 = y + 15;
-  G.strokeStyle = edgeColor; G.lineWidth = 2;
+  const transform = G.getTransform(), scale = Math.max(0.001, Math.min(Math.abs(transform.a), Math.abs(transform.d)));
+  G.strokeStyle = edgeColor; G.lineWidth = Math.max(2, 1 / scale); G.lineCap = 'round'; G.lineJoin = 'round';
   G.beginPath();
   if (open.n) { G.moveTo(x0 + k.nw, y0 + 1); G.lineTo(x1 - k.ne, y0 + 1); }
   if (open.s) { G.moveTo(x0 + k.sw, y1 - 1); G.lineTo(x1 - k.se, y1 - 1); }
@@ -327,12 +352,11 @@ function drawJoinedTileOutline(x, y, open, edgeColor, occupiedCorners) {
     G.moveTo(cx + Math.cos(from) * (r - 1), cy + Math.sin(from) * (r - 1));
     G.arc(cx, cy, r - 1, from, from + Math.PI / 2);
   }
+  if (!open.n && !open.w && open.nw) { G.moveTo(x0 + 1, y0); G.lineTo(x0, y0 + 1); }
+  if (!open.n && !open.e && open.ne) { G.moveTo(x1 - 1, y0); G.lineTo(x1, y0 + 1); }
+  if (!open.s && !open.e && open.se) { G.moveTo(x1, y1 - 1); G.lineTo(x1 - 1, y1); }
+  if (!open.s && !open.w && open.sw) { G.moveTo(x0, y1 - 1); G.lineTo(x0 + 1, y1); }
   G.stroke();
-  G.fillStyle = edgeColor;
-  if (!open.n && !open.w && open.nw) G.fillRect(x0, y0, 2, 2);
-  if (!open.n && !open.e && open.ne) G.fillRect(x1 - 2, y0, 2, 2);
-  if (!open.s && !open.w && open.sw) G.fillRect(x0, y1 - 2, 2, 2);
-  if (!open.s && !open.e && open.se) G.fillRect(x1 - 2, y1 - 2, 2, 2);
 }
 
 // The whole tile in its shade, with an outline just inside the sides that have no neighbour of its kind.
@@ -421,7 +445,7 @@ export function drawRockTile(x, y, tiles) {
   // (one shade under a whole desert mass: the layers and facets give it its texture, not a shade a tile)
   const palette = ROCK_PALETTES[rockMassPalettes(tiles).get(`${x},${y}`) || 0];
   const fill = desert ? DESERT_ROCK_SHADES[0] : palette.shades[h % palette.shades.length];
-  const edgeColor = desert ? DESERT_ROCK_EDGE : palette.edge, occupiedCorners = terrainCornerOccupancy(x, y, tiles), k = cornerRadii(open, occupiedCorners);
+  const edgeColor = desert ? DESERT_ROCK_EDGE : palette.edge, occupiedCorners = terrainCornerOccupancy(x, y, tiles, false), k = cornerRadii(open, occupiedCorners);
   drawJoinedTile(x, y, open, edgeColor, fill, false, occupiedCorners);
   G.save(); G.beginPath();
   G.roundRect(x - 15 - over, y - 15 - over, TILE_SIZE + over * 2, TILE_SIZE + over * 2, [k.nw, k.ne, k.se, k.sw]);
@@ -585,8 +609,7 @@ let view = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity }, cached 
 const isRock = r => !r.oreSpawner;
 const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, game.naturalRocks, game.ironOres, game.coalOres];
 
-// What the terrain in and round a piece is like (any tile of it coming or going changes it); worked out
-// again only when one of the lists changed
+// What the terrain in and round a piece is like (any tile coming or going changes it)
 /** @type {{ lists: any[], stamps: Map<string, string> }} */
 let terrainStamps = { lists: [], stamps: new Map() };
 function terrainStamp(cx, cy) {
@@ -659,6 +682,35 @@ export function drawSand() {
   paintSandGround(ctx, view.x0, view.y0, view.x1, view.y1);
 }
 
+// (each rock tile's rounded corners, worked out once while the tiles stay as they are: a dozen lookups a tile)
+/** @type {{ tiles: object | null, of: Map<object, number[]> }} */
+let rockCorners = { tiles: null, of: new Map() };
+
+// The shadows of the rock and ore tiles round a piece of the ground (x0..x1, y0..y1), cast by the sun (dx, dy),
+// into the shadows' picture g; then the tiles themselves taken out of it, nothing's shadow falling on their tops
+/** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {{ dx: number, dy: number }} sun */
+export function paintRockShadows(g, x0, y0, x1, y1, sun) {
+  const height = 18, ox = sun.dx * height, oy = sun.dy * height, margin = Math.max(Math.abs(ox), Math.abs(oy)) + TILE_SIZE;
+  const tiles = getTileIndex(), shadow = new Path2D(), tops = new Path2D();
+  if (rockCorners.tiles !== tiles) rockCorners = { tiles, of: new Map() };
+  const addTile = tile => {
+    let radii = rockCorners.of.get(tile);
+    if (!radii) {
+      const { nw, ne, se, sw } = cornerRadii(openSides(tiles.rockAndOre, tile.x, tile.y), terrainCornerOccupancy(tile.x, tile.y, tiles, false));
+      rockCorners.of.set(tile, (radii = [nw, ne, se, sw]));
+    }
+    tops.roundRect(tile.x - 15, tile.y - 15, TILE_SIZE, TILE_SIZE, radii);
+    shadow.roundRect(tile.x - 15 + Math.min(0, ox), tile.y - 15 + Math.min(0, oy), TILE_SIZE + Math.abs(ox), TILE_SIZE + Math.abs(oy), radii);
+  };
+  for (const list of [game.naturalRocks, game.ironOres, game.coalOres]) forEachInRect(list, x0 - margin, y0 - margin, x1 + margin, y1 + margin, addTile);
+  g.save();
+  g.fillStyle = '#000';
+  g.fill(shadow);
+  g.globalCompositeOperation = 'destination-out';
+  g.fill(tops);
+  g.restore();
+}
+
 // (#322) Zoomed out, where the tiles are in the pictures, a frame went through every water tile on the screen to find the few with a fish
 // or a fishing spot. The tiles that may have a fish are found from the list of the water once, till the list changes (they never
 // move); the fishing spots (the player puts and takes them) are looked for among the water every few ticks, a flag read each, not worked out
@@ -709,6 +761,7 @@ export function drawWater(terrain) {
       const phase = clock + (hash % 100) / 13;
       const swim = sinOf(phase) * 6, f = sinOf(phase + 1.5708) < 0 ? -1 : 1;
       const fx = w.x + swim, fy = w.y + sinOf(phase * 0.7 + 1.5708) * 3;
+      ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
       ctx.beginPath();
       ctx.ellipse(fx, fy, 4, 2, 0, 0, Math.PI * 2);
       ctx.moveTo(fx - 3 * f, fy); ctx.lineTo(fx - 6 * f, fy - 2); ctx.lineTo(fx - 6 * f, fy + 2); ctx.closePath();

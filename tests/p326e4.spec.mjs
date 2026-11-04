@@ -67,3 +67,71 @@ test('a boar in the dark isn\'t workable, in sight it is; an enemy in the fog se
   expect(r).toEqual({ inLand: true, dark: true, hiddenBoar: true, seenBoar: true, sawFar: false, sawNear: true, unseenLit: true });
   expect(errors).toEqual([]);
 });
+
+test('necromancer staffs and portals cast faction-coloured light; tents and dens cast reduced light at night', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    game.isPaused = true;
+    game.gameMode = 'endless';
+    sides.player.color = '#22aa66';
+    sides.enemy.color = '#cc3344';
+    game.buildings = [
+      { type: 'portal', x: townHall.x + 150, y: townHall.y },
+      { type: 'tent', x: townHall.x + 210, y: townHall.y },
+      { type: 'demon_den', x: townHall.x + 270, y: townHall.y }
+    ];
+    game.enemyTents = [{ portal: true, x: townHall.x + 330, y: townHall.y }];
+    const { makeSettler } = window.sim.helpers;
+    const necromancer = makeSettler(1, townHall.x + 390, townHall.y, { tool: 'necro_staff' });
+    necromancer.facing = 0;
+    necromancer.torchInHand = true;
+    game.settlers = [necromancer];
+    game.enemies = [{ x: townHall.x + 60, y: townHall.y, enemyKey: 'undead_necromancer', hp: 10, facing: 0, torch: true }];
+    const c = GAME_CONFIG.daytime;
+    const nightTime = c.morning + c.day + c.evening + 20;
+    game.dayTime = nightTime;
+    const nightLights = getLights();
+    const radius = c.shelterLightTiles * TILE_SIZE;
+    const dayCountBefore = nightLights.length;
+    game.dayTime = c.morning + 10;
+    const dayLights = getLights();
+    const byX = x => nightLights.find(light => Math.abs(light.x - x) < 10);
+    const staffLights = () => nightLights.filter(light => light.x > necromancer.x && light.x < necromancer.x + 60);
+    const restingStaff = staffLights().find(light => light.color === sides.player.color);
+    necromancer.swingT = 0.15;
+    necromancer.swingLen = 0.3;
+    const swingingStaff = getLights().find(light => light.color === sides.player.color && light.x > necromancer.x && light.x < necromancer.x + 60);
+    return {
+      playerPortalColor: byX(townHall.x + 150)?.color,
+      enemyPortalColor: byX(townHall.x + 330)?.color,
+      playerStaffColor: restingStaff?.color,
+      enemyStaffColor: nightLights.find(light => light.x > townHall.x + 60 && light.x < townHall.x + 120)?.color,
+      staffIsAtWand: !!restingStaff && !!swingingStaff && Math.hypot(restingStaff.x - swingingStaff.x, restingStaff.y - swingingStaff.y) > 1,
+      playerHasOnlyStaffLight: staffLights().length === 1 && !nightLights.some(light => Math.abs(light.x - necromancer.x) < 10 && !light.color),
+      enemyHasOnlyStaffLight: nightLights.filter(light => light.x > townHall.x + 60 && light.x < townHall.x + 120).length === 1,
+      portalsHaveOnlyColoredLights: nightLights.filter(light => light.x === townHall.x + 150 || light.x === townHall.x + 330).every(light => !!light.color),
+      shelterRadius: nightLights.find(light => light.x === townHall.x + 210)?.r,
+      denRadius: nightLights.find(light => light.x === townHall.x + 270)?.r,
+      shelterRadiusReduced: radius < c.torchLightTiles * TILE_SIZE,
+      sheltersDarkByDay: !dayLights.some(light => light.x === townHall.x + 210 || light.x === townHall.x + 270),
+      dayLightCount: dayLights.length,
+      nightLightCount: dayCountBefore,
+      radius
+    };
+  });
+  expect(r.playerPortalColor).toBe('#22aa66');
+  expect(r.enemyPortalColor).toBe('#cc3344');
+  expect(r.playerStaffColor).toBe('#22aa66');
+  expect(r.enemyStaffColor).toBe('#cc3344');
+  expect(r.staffIsAtWand).toBe(true);
+  expect(r.playerHasOnlyStaffLight).toBe(true);
+  expect(r.enemyHasOnlyStaffLight).toBe(true);
+  expect(r.portalsHaveOnlyColoredLights).toBe(true);
+  expect(r.shelterRadius).toBe(r.radius);
+  expect(r.denRadius).toBe(r.radius);
+  expect(r.shelterRadiusReduced).toBe(true);
+  expect(r.sheltersDarkByDay).toBe(true);
+  expect(r.dayLightCount).toBeLessThan(r.nightLightCount);
+  expect(errors).toEqual([]);
+});
