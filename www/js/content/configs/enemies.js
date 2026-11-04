@@ -3,7 +3,7 @@
 export const enemiesConfig = {
   // type: normal / big / archer — how it behaves (big: hits everyone around its target and breaks any wall,
   //   cactus or ore in its way; archer: shoots from range instead of melee). radius: body size.
-  // waveKey: its name in attackGroups. buildsTents: can be sent to build an enemy tent.
+  // waveKey: the unit's group for raid defenders and scouts. buildsTents: can build an enemy tent.
   // damage: per second in melee (per arrow for archers). reach: melee reach beyond touching.
   // siege: hp per second it takes off buildings, and off trees / boulders (cacti / ore for big) in its way.
   // ranged: range, keepAway (stops walking this close to its target), cooldown, arrowSpeed, arrowLife.
@@ -14,20 +14,18 @@ export const enemiesConfig = {
   // healer: walks up to the most hurt of its own side within range px and heals it from healRange;
   //   bagSize: herbs carried, tentStock: shared stock in enemy tents, refill: herbs taken at once,
   //   healSeconds: seconds between herbs; tool: what it's drawn holding instead of a weapon.
-  // reward: added to the stock when it dies. Waves spawn kinds in this order.
+  // reward: added to the stock when it dies.
   enemies: {
     raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
-    // a savage with nothing in his hands: the battles' roster has him (bare-handed), no wave sends one
-    // (no waveKey, so the wave kinds leave him out)
-    // (#314) each faction's pet on the enemy's side: in Battles, and now and then in a wave from fromWave
-    // (waveScale of its waveKey's count); a ghost flies into a settler (it panics) and is gone, and can't be hurt
+    // a savage with nothing in his hands: the battles' roster has him (bare-handed)
+    // (#314) each faction's pet on the enemy's side; a ghost flies into a settler (it panics) and is gone, and can't be hurt
     raider_dog: { id: 'raider_dog', pet: 'dog', hp: 45, speed: 1.35, damage: 12, reward: { food: 1 }, weapon: 'fist',
-      type: 'normal', radius: 9, waveKey: 'raider', waveScale: 0.3, fromWave: 5, reach: 4, siege: { buildings: 3, resources: 0 } },
+      type: 'normal', radius: 9, waveKey: 'raider', reach: 4, siege: { buildings: 3, resources: 0 } },
     demon_beast: { id: 'demon_beast', pet: 'beast', hp: 60, speed: 1.3, damage: 14, reward: { food: 1 }, weapon: 'fist',
-      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.3, fromWave: 5, reach: 4, siege: { buildings: 3, resources: 0 } },
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 4, siege: { buildings: 3, resources: 0 } },
     undead_ghost: { id: 'undead_ghost', pet: 'ghost', hp: 30, speed: 1.6, damage: 0, reward: {}, weapon: 'fist',
-      type: 'normal', radius: 8, waveKey: 'raider', waveScale: 0.25, fromWave: 5, reach: 4, siege: { buildings: 0, resources: 0 } },
+      type: 'normal', radius: 8, waveKey: 'raider', reach: 4, siege: { buildings: 0, resources: 0 } },
     raider_fist: { id: 'raider_fist', hp: 50, speed: 0.95, damage: 8, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, reach: 6, siege: { buildings: 5, resources: 1 } },
     raider: { id: 'raider', hp: 70, speed: 0.9, damage: 20, reward: { food: 1 }, weapon: 'sword',
@@ -40,16 +38,16 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } },
     // a medic with a bag of herbs: heals the other raiders (#203)
     raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
-      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.5, reach: 6, siege: { buildings: 5, resources: 1 },
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
       healer: { range: 220, healRange: 30, healPerSecond: 10, bagSize: 5, tentStock: 10, refill: 5, healSeconds: 1.2 } },
     // the undead: slow zombies, big zombies, zombie archers, and necromancers that raise the dead
     // (necromancer: raises up to raises corpses before recharging at a grave, maxZombies at once;
-    // heals within healRange by healPerSecond). waveScale: share of its waveKey's count in a wave.
+    // heals within healRange by healPerSecond).
     undead_zombie: { id: 'undead_zombie', hp: 60, speed: 0.7, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
     // a zombie that picked up a sword (#203)
     undead_zombie_sword: { id: 'undead_zombie_sword', hp: 60, speed: 0.7, damage: 18, reward: { food: 1 }, weapon: 'sword',
-      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.66, reach: 12, siege: { buildings: 10, resources: 2 } },
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 12, siege: { buildings: 10, resources: 2 } },
     undead_big_zombie: { id: 'undead_big_zombie', hp: 150, speed: 0.55, damage: 25, reward: { food: 2 }, weapon: 'club',
       type: 'big', radius: 18, waveKey: 'brute', reach: 20, siege: { buildings: 25, resources: 4 }, splash: { radius: 60, share: 0.5 } },
     // an archer of theirs is a zombie with a bow (#249: no skeletons)
@@ -58,7 +56,7 @@ export const enemiesConfig = {
       ranged: { range: 180, keepAway: 150, cooldown: 1.5, arrowSpeed: 3.8, arrowLife: 75 },
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
     undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
-      type: 'normal', radius: 10, waveKey: 'raider', waveScale: 0.34, reach: 6, siege: { buildings: 5, resources: 1 },
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
       necromancer: { raises: 3, maxZombies: 3, range: 400, seekRange: 900, raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 8 } },
     // the demons: quick imps, big demons that hit all around, imp archers. They
     // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
@@ -90,32 +88,42 @@ export const enemiesConfig = {
   // that thing itself, lying on the ground (into the armory once carried in); a fallen settler's too (#279)
   loot: { itemChance: 0.35 },
 
-  // armour and shields in waves (#203): once the player has made armour (a shield), each wave enemy from
-  // wave fromWave wears it with a chance growing by perWave a wave, up to max. Shields: melee, not big
-  enemyGear: { fromWave: 4, perWave: 0.04, max: 0.5 },
+  // Waves use battle presets. Each preset's weight changes smoothly after its unlock wave; bigger bodies and
+  // pets enter later. Gear chances also grow independently as the waves advance.
+  wavePresets: {
+    rampWaves: 12,
+    big: { fromWave: 5, startWeight: 0.08, endWeight: 0.45 },
+    pet: { fromWave: 6, startWeight: 0.04, endWeight: 0.16 },
+    items: {
+      fist: { fromWave: 1, startWeight: 55, endWeight: 3 },
+      club: { fromWave: 1, startWeight: 65, endWeight: 5 },
+      sword: { fromWave: 1, startWeight: 35, endWeight: 8 },
+      necromancer: { fromWave: 1, startWeight: 10, endWeight: 16 },
+      medic: { fromWave: 4, startWeight: 7, endWeight: 13 },
+      spear: { fromWave: 4, startWeight: 10, endWeight: 12 },
+      bow: { fromWave: 5, startWeight: 8, endWeight: 10 },
+      iron_sword: { fromWave: 8, startWeight: 4, endWeight: 16 },
+      iron_spear: { fromWave: 8, startWeight: 4, endWeight: 20 },
+      crossbow: { fromWave: 11, startWeight: 3, endWeight: 18 }
+    }
+  },
+  waveGear: {
+    rampWaves: 12,
+    leather: { fromWave: 4, startChance: 0.04, endChance: 0.28 },
+    shield: { fromWave: 6, startChance: 0.05, endChance: 0.32 },
+    helmet: { fromWave: 8, startChance: 0.03, endChance: 0.24 },
+    iron: { fromWave: 10, startChance: 0.03, endChance: 0.22 }
+  },
 
   // enemy tents: builders put them up near the map edge (#326: in Endless at the border of the player's land, outside it
   // borderTiles [from, to] tiles from it); each summons extra enemies during a wave
   enemyTents: {
     borderTiles: [1, 3], hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
-    summonEnemy: 'raider', summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
+    summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
   },
 
-  // wave size: attackGroups counts grow by growthPerDifficulty every wavesPerDifficulty waves, a little each
-  // wave from growFromWave; the first is firstWave of that, rampPerWave more each wave up to full; each wave
-  // sends newTents (min-max) tent builders, up to difficulty + 1 tents on the map, never more than maxTents
-  // and every wave is scaled by the player's army: 1 at
-  // army.base settlers, perUnit more (or less) for each one over (under) it, within min..max. A wave
-  // always has at least one enemy.
-  waveScaling: { wavesPerDifficulty: 5, growthPerDifficulty: 0.5, maxTents: 8, newTents: { min: 1, max: 2 },
-    firstWave: 0.8, rampPerWave: 0.07, growFromWave: 3, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } },
-
-  attackGroups: [
-    // base squad templates (for the starting difficulty)
-    { club: 4, raider: 4, brute: 0, archer: 0 }, // melee crowd
-    { club: 4, raider: 2, brute: 1, archer: 1 }, // crowd with support
-    { club: 3, raider: 2, brute: 0, archer: 3 }, // archer-heavy
-    { club: 3, raider: 2, brute: 2, archer: 1 }, // brute-heavy
-    { club: 2, raider: 2, brute: 2, archer: 2 }  // balanced mixed squad
-  ]
+  // Wave size grows smoothly with wave number and the player's army and combat development. The first wave is
+  // always exactly three basic units. wavesPerDifficulty still controls how quickly enemy camps accumulate.
+  waveScaling: { minimum: 3, firstWave: 3, perWave: 0.55, techPerItem: 0.05, maxTechItems: 8,
+    wavesPerDifficulty: 5, maxTents: 8, newTents: { min: 1, max: 2 }, army: { base: 6, perUnit: 0.08, min: 0.6, max: 3 } }
 };

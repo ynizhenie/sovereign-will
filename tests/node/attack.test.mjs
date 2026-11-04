@@ -20,47 +20,96 @@ test('an enemy medic spends herbs and refills its bag at an enemy tent', async (
   expect(result.healingResumed).toBe(true);
 });
 
-test('every faction\'s waves bring their new kinds: a healer, a zombie and an imp with swords; the demon carries a spear (#203)', async () => {
+test('the first wave is exactly three basic battle presets with no unarmed humans or demons', async () => {
   const r = (() => {
-    // the kinds in waves 4 to 12
-    const kinds = faction => {
+    const firstWave = faction => {
       sides.enemy.faction = faction;
-      window.sim.start('kinds-' + faction);
-      const seen = new Set();
-      for (let wave = 4; wave <= 12; wave++) { waveNum = wave; enemies = []; startNextWave(); enemies.forEach(e => seen.add(e.enemyKey)); }
-      sides.enemy.faction = 'humans';
-      return [...seen];
+      window.sim.start('wave-one-' + faction);
+      waveNum = 1; enemies = []; enemyTents = []; enemyTentBlueprints = [];
+      startNextWave();
+      return enemies.map(enemy => ({ weapon: enemy.weapon, tool: enemy.tool || null }));
     };
-    return { humans: kinds('humans'), undead: kinds('undead'), demons: kinds('demons'), demonWeapon: GAME_CONFIG.enemies.demon_brute.weapon };
+    const result = {
+      humans: firstWave('humans'),
+      undead: firstWave('undead'),
+      demons: firstWave('demons'),
+      humanPool: getWavePresetPool('humans', 1).map(o => o.preset.id).sort(),
+      undeadPool: getWavePresetPool('undead', 1).map(o => o.preset.id).sort(),
+      demonPool: getWavePresetPool('demons', 1).map(o => o.preset.id).sort()
+    };
+    sides.enemy.faction = 'humans';
+    return result;
   })();
-  expect(r.humans).toContain('raider_medic');
-  expect(r.undead).toContain('undead_zombie_sword');
-  expect(r.demons).toContain('demon_imp_sword');
-  expect(r.demonWeapon).toBe('spear');
+  expect(r.humans).toHaveLength(3);
+  expect(r.undead).toHaveLength(3);
+  expect(r.demons).toHaveLength(3);
+  expect(r.humans.every(e => ['club', 'sword'].includes(e.weapon))).toBe(true);
+  expect(r.demons.every(e => ['club', 'sword'].includes(e.weapon))).toBe(true);
+  expect(r.undead.every(e => ['fist', 'club', 'sword'].includes(e.weapon) && (!e.tool || e.tool === 'necro_staff'))).toBe(true);
+  expect(r.humanPool).toEqual(['club', 'sword']);
+  expect(r.undeadPool).toEqual(['club', 'fist', 'necromancer', 'sword']);
+  expect(r.demonPool).toEqual(['club', 'sword']);
 });
 
-test('waves come in armour and with shields once the player has made them, more as the waves go; armour takes damage off (#203)', async () => {
+test('preset and gear odds unlock in stages and shift toward advanced equipment', async () => {
   const r = (() => {
-    const dressed = (gear, wave) => {
-      window.sim.start('enemy-gear');
-      playerGear = gear;
-      waveNum = wave; enemies = []; startNextWave();
-      return { armor: enemies.filter(e => e.armor === 'iron').length, shield: enemies.filter(e => e.shield).length, all: enemies.length };
+    const preset = id => GAME_CONFIG.unitPresets.find(p => p.id === id);
+    const highArmy = () => {
+      settlers = Array.from({ length: 30 }, () => ({ weapon: 'iron_sword', armor: 'iron', shield: true, helmet: true }));
+      buildings = [{ type: 'workshop' }, { type: 'smelter' }, { type: 'smithy' }, { type: 'watchtower' }];
+      armory = { 'weapons:crossbow': 1, 'gear:helmet': 1, 'gear:shield': 1 };
     };
-    const none = dressed({ armor: false, shield: false }, 14);
-    const early = dressed({ armor: true, shield: true }, 2);
-    const late = dressed({ armor: true, shield: true }, 14);
-    const plain = createConfiguredEnemy({ x: 0, y: 0 }, 'raider'), armored = createConfiguredEnemy({ x: 0, y: 0 }, 'raider');
-    armored.armor = 'iron'; armored.shield = true;
-    damageEnemy(plain, 20); damageEnemy(armored, 20);
-    return { none: none.armor + none.shield, early: early.armor + early.shield, late, lost: [plain.maxHp - plain.hp, Math.round(armored.maxHp - armored.hp)] };
+    window.sim.start('wave-progression');
+    const firstCount = getWaveEnemyCount(1);
+    const smallCount = getWaveEnemyCount(12);
+    highArmy();
+    const developedCount = getWaveEnemyCount(12);
+    return {
+      firstCount, smallCount, developedCount,
+      spearLocked: getWavePresetWeight(preset('spear'), 3, 'humans') === 0,
+      spearUnlocked: getWavePresetWeight(preset('spear'), 4, 'humans') > 0,
+      crossbowUnlocked: getWavePresetWeight(preset('crossbow'), 11, 'humans') > 0,
+      clubOddsFall: getWavePresetWeight(preset('club'), 20, 'humans') < getWavePresetWeight(preset('club'), 1, 'humans'),
+      spearOddsRise: getWavePresetWeight(preset('spear'), 20, 'humans') > getWavePresetWeight(preset('spear'), 4, 'humans'),
+      earlyGear: ['leather', 'iron', 'shield', 'helmet'].map(id => getWaveGearChance(id, 1)),
+      lateGear: ['leather', 'iron', 'shield', 'helmet'].map(id => getWaveGearChance(id, 20))
+    };
   })();
-  expect(r.none).toBe(0);
-  expect(r.early).toBe(0);
-  expect(r.late.armor).toBeGreaterThan(0);
-  expect(r.late.shield).toBeGreaterThan(0);
-  expect(r.late.armor).toBeLessThan(r.late.all);
-  expect(r.lost).toEqual([20, 10]); // 20 x 0.65 x 0.75
+  expect(r.firstCount).toBe(3);
+  expect(r.developedCount).toBeGreaterThan(r.smallCount);
+  expect(r.spearLocked).toBe(true);
+  expect(r.spearUnlocked).toBe(true);
+  expect(r.crossbowUnlocked).toBe(true);
+  expect(r.clubOddsFall).toBe(true);
+  expect(r.spearOddsRise).toBe(true);
+  expect(r.earlyGear).toEqual([0, 0, 0, 0]);
+  expect(r.lateGear.every((chance, i) => chance > r.earlyGear[i])).toBe(true);
+  const plain = createConfiguredEnemy({ x: 0, y: 0 }, 'raider'), armored = createConfiguredEnemy({ x: 0, y: 0 }, 'raider');
+  armored.armor = 'iron'; armored.shield = true;
+  damageEnemy(plain, 20); damageEnemy(armored, 20);
+  expect([plain.maxHp - plain.hp, Math.round(armored.maxHp - armored.hp)]).toEqual([20, 10]); // 20 x 0.65 x 0.75
+});
+
+test('enemy tents and faction spawners summon the current wave presets', async () => {
+  const results = (() => {
+    const factions = ['humans', 'undead', 'demons'];
+    return factions.map(faction => {
+      sides.enemy.faction = faction;
+      window.sim.start('spawner-presets-' + faction);
+      waveNum = 21;
+      enemies = [];
+      const tent = { x: townHall.x + 200, y: townHall.y, hp: 1000, maxHp: 1000, summonTimer: 0, summonsLeft: 20, summonWave: 20 };
+      enemyTents = [tent];
+      const allowed = new Set(getWavePresetPool(faction, 20).map(option => option.enemyKey));
+      for (let i = 0; i < 20; i++) tickEnemyTents(GAME_CONFIG.enemyTents.summonInterval);
+      return { enemies: enemies.map(enemy => ({ key: enemy.enemyKey, weapon: enemy.weapon, summoned: enemy.summoned })), allowed: [...allowed] };
+    });
+  })();
+  for (const result of results) {
+    expect(result.enemies).toHaveLength(20);
+    expect(result.enemies.every(enemy => result.allowed.includes(enemy.key) && enemy.summoned)).toBe(true);
+    expect(new Set(result.enemies.map(enemy => enemy.weapon)).size).toBeGreaterThan(1);
+  }
 });
 
 test('hit while carrying wood home, a worker turns on the enemy rather than walk on (#208)', async () => {
