@@ -29,7 +29,7 @@ export function findWorkplace(place, from = townHall) {
   if (place === 'hand') return townHall;
   let best = null, bestD = Infinity;
   for (const b of game.buildings) {
-    if (GAME_CONFIG.buildings[b.type] && GAME_CONFIG.buildings[b.type].crafts === place) {
+    if (b.side !== 'red' && GAME_CONFIG.buildings[b.type] && GAME_CONFIG.buildings[b.type].crafts === place) {
       const d = Math.hypot(b.x - from.x, b.y - from.y);
       if (d < bestD) { bestD = d; best = b; }
     }

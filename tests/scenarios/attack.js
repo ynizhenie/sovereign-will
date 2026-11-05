@@ -37,7 +37,7 @@ Object.assign(window.sim, (() => {
     const hurt = createConfiguredEnemy({ x: medic.x + 20, y: medic.y }, 'raider');
     hurt.hp = 1;
     enemies = [hurt, medic];
-    game.enemyTents = [{ x: medic.x, y: medic.y, hp: 60, maxHp: 60 }];
+    game.enemyTents = [{ x: medic.x, y: medic.y, hp: 60, maxHp: 60, waveActive: true }];
     game.enemyHerbStock = 0;
     medic.herbs = 1;
     tickEnemy(medic, 1.3);
@@ -79,5 +79,123 @@ Object.assign(window.sim, (() => {
     return { most, bothFought: enemies.every(en => en.hp < en.maxHp) };
   }
 
-  return { struckWhileCarrying, meleeSlots, enemyHealer, enemyHealerHerbs, oneBlow };
+  function campProtection({ seed = 'camp-protection' } = {}) {
+    start(seed);
+    clearResources();
+    const s = makeSettler(1, townHall.x + 120, townHall.y, { weapon: 'sword', role: 'soldier' });
+    settlers = [s];
+    enemies = [];
+    const campId = 1;
+    game.raidCampId = campId;
+    const fire = { type: 'campfire', side: 'red', enemyCampStructure: true, campId, x: s.x + 10, y: s.y, hp: 1000, maxHp: 1000 };
+    const tent = { x: s.x + 1000, y: s.y, campStructure: true, campId, markedTarget: true, hp: 1000, maxHp: 1000 };
+    buildings.push(fire);
+    enemyTents = [tent];
+    const tick = createSettlerTick(1 / 60);
+    const markedTargetIgnored = !goForMarkedTent(s, tick);
+    performAttack(s, fire.x, fire.y);
+    const campUntouchedOutsideRaid = fire.hp === 1000 && tent.hp === 1000;
+    game.raidActive = true;
+    s.attackCooldown = 0;
+    performAttack(s, fire.x, fire.y);
+    return { markedTargetIgnored, campUntouchedOutsideRaid, campDamageAllowedInRaid: fire.hp < 1000 };
+  }
+
+  function enemyBuildingWeaponRange({ seed = 'building-weapon-range' } = {}) {
+    start(seed);
+    clearResources();
+    const s = makeSettler(1, townHall.x + 120, townHall.y, { weapon: 'sword', role: 'soldier', speed: 0 });
+    settlers = [s];
+    const enemy = createConfiguredEnemy({ x: s.x + 400, y: s.y }, 'raider');
+    enemy.hp = enemy.maxHp = 1e5;
+    enemies = [enemy];
+    const range = getWeaponStats(s, 'combat').range;
+    const wall = { type: 'wall_wood', side: 'red', x: s.x + range + 5, y: s.y, hp: 1000, maxHp: 1000 };
+    buildings.push(wall);
+    s.path = [{ x: wall.x, y: wall.y }];
+    engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
+    const noHitOutOfRange = wall.hp === 1000;
+    wall.x = s.x + range - 1;
+    s.path = [{ x: wall.x, y: wall.y }];
+    s.attackCooldown = 0;
+    engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
+    return { noHitOutOfRange, hitInRange: wall.hp < 1000 };
+  }
+
+  function rangedUnitsUseDaggersOnStructures({ seed = 'ranged-structure-daggers' } = {}) {
+    start(seed);
+    clearResources();
+    const rangedWeapons = ['bow', 'crossbow'];
+    const playerResults = rangedWeapons.map((weapon, i) => {
+      const s = makeSettler(i + 1, townHall.x + 120 + i * 120, townHall.y, {
+        weapon, role: 'archer', quiver: true, arrows: 8, speed: 0
+      });
+      settlers = [s];
+      const enemy = createConfiguredEnemy({ x: s.x + 400, y: s.y }, 'raider');
+      enemy.fromWave = true;
+      enemies = [enemy];
+      const wall = { type: 'wall_wood', side: 'red', x: s.x + 20, y: s.y, hp: 100, maxHp: 100 };
+      buildings.push(wall);
+      s.path = [{ x: wall.x, y: wall.y }];
+      engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
+      return { weapon, damage: 100 - wall.hp, arrows: s.arrows, swingWeapon: s.swingWeapon };
+    });
+
+    start(`${seed}-ordered`);
+    clearResources();
+    game.gameMode = 'battle';
+    game.raidActive = true;
+    game.raidCampId = 1;
+    const orderedArcher = makeSettler(1, townHall.x + 120, townHall.y, {
+      weapon: 'crossbow', role: 'archer', quiver: true, arrows: 0, speed: 0
+    });
+    const orderedBuilding = {
+      type: 'wall_wood', side: 'red', enemyCampStructure: true, campId: game.raidCampId,
+      x: orderedArcher.x + 25, y: orderedArcher.y, hp: 100, maxHp: 100
+    };
+    settlers = [orderedArcher];
+    buildings.push(orderedBuilding);
+    orderedArcher.orderTarget = orderedBuilding;
+    fightByOrders(orderedArcher, 1 / 60, false);
+    const orderedStructure = { damage: 100 - orderedBuilding.hp, arrows: orderedArcher.arrows,
+      swingWeapon: orderedArcher.swingWeapon };
+
+    const enemyDamage = ['raider', 'raider_fist', 'raider_archer'].map((key, i) => {
+      start(`${seed}-enemy-${i}`);
+      clearResources();
+      game.gameMode = 'endless';
+      game.raidActive = false;
+      const wall = { type: 'wall_wood', x: townHall.x + 180, y: townHall.y, hp: 1000, maxHp: 1000 };
+      buildings.push(wall);
+      const enemy = createConfiguredEnemy({ x: wall.x + 25, y: wall.y }, key);
+      enemy.speed = 0;
+      enemy.isBlockedPath = true;
+      enemies = [enemy];
+      tickEnemy(enemy, 1 / 60);
+      return { key, damage: 1000 - wall.hp, weapon: enemy.weapon };
+    });
+    return { playerResults, orderedStructure, enemyDamage };
+  }
+
+  function holdsBehindBreachedWall({ seed = 'holds-wall' } = {}) {
+    start(seed);
+    clearResources();
+    const wall = { type: 'wall_wood', x: townHall.x + 180, y: townHall.y, hp: 1000, maxHp: 1000 };
+    buildings.push(wall);
+    resetTileIndex();
+    const s = makeSettler(1, wall.x - 70, wall.y, { weapon: 'sword', role: 'soldier', speed: 1.2 });
+    settlers = [s];
+    const enemy = createConfiguredEnemy({ x: wall.x + 22, y: wall.y }, 'raider');
+    enemy.struckAt = pathTick;
+    enemy.hp = enemy.maxHp = 1e5;
+    enemies = [enemy];
+    const before = { x: s.x, y: s.y };
+    engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
+    return {
+      heldPosition: Math.hypot(s.x - before.x, s.y - before.y) < 0.01,
+      enemyTouchesWall: collidesWithBoxList(enemy.x, enemy.y, enemy.radius + 2, [wall], 15)
+    };
+  }
+
+  return { struckWhileCarrying, meleeSlots, enemyHealer, enemyHealerHerbs, oneBlow, campProtection, enemyBuildingWeaponRange, rangedUnitsUseDaggersOnStructures, holdsBehindBreachedWall };
 })());

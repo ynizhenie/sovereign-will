@@ -99,7 +99,7 @@ Object.assign(window.sim, (() => {
     return {
       portals: enemyTents.length, farFromBase: enemyTents.every(p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist),
       byPortals: enemies.every(en => enemyTents.some(p => Math.hypot(p.x - en.x, p.y - en.y) < 2.5 * TILE_SIZE * Math.SQRT2)),
-      demons: kinds.every(k => k.startsWith('demon_')), enemies: enemies.length
+      demons: kinds.every(k => k.startsWith('demons_')), enemies: enemies.length
     };
   }
 

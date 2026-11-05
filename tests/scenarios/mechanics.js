@@ -57,7 +57,7 @@ Object.assign(window.sim, (() => {
       enemies = []; enemyTents = []; enemyTentBlueprints = [];
       worldSeed.setState(12345);
       waveNum = num; startNextWave();
-      return enemies.length;
+      return enemies.length + enemyRafts.reduce((sum, raft) => sum + raft.units.length, 0);
     };
     return { first: wave(1, 6), second: wave(2, 6), small: wave(2, 2), big: wave(2, 20), firstTiny: wave(1, 1) };
   }

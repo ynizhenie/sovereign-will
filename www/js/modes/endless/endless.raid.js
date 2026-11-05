@@ -1,48 +1,41 @@
-// A raid on an enemy camp (#255). Now and then, a wave beaten, a zone with an enemy camp opens beyond a side of
-// the map for a while (GAME_CONFIG.raid). The player picks who goes; while they're away the base waits: its
-// settlers rest and the wave clock stops. The party walks to that side's edge and waits there; Attack! and
-// the base is put away, only the camp's zone is seen (a map of its own, made for it: a palisade round an
-// outpost, tents, defenders as strong as the player's army). There the player gives orders (tap a raider,
-// then an enemy, a tent or a spot; or an enemy with nobody picked: all of them) or turns on the auto battle,
-// which fights as the base's defenders would. The outpost and every enemy down: spoils, the party walks home,
-// the zone goes once they're back, and the next wave waits twice as long. The whole party down: the camp
-// goes at once, the base is back and a wave comes in a few seconds.
-// (#279) The camp is made as it'll be when it appears (its seed, the army it mirrors and the wave then), so what a
-// scout saw is what's attacked (kept as the scout left it). Retreat and a scout spotted:
-// they run back to the edge they came in by, the enemy after them. In the camp a shelter can be pitched: it
-// heals, and the archers fill their quivers there from the arrows taken on the raid.
+// The persistent enemy camp occupies a smaller marked area on the Endless map. Raids wait outside until
+// commanded; scouting stays outside the camp and leaves the world running.
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { camera, clampCamera, ctx, onTap, t } from '../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, WORLD_LISTS, createWorldSeed, game, getGridPos, rand, resetTileIndex, setWorldSize, townHall } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, rand, townHall } from '../../engine/world/index.js';
 import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../engine/movement/index.js';
 import { addResources, canAfford, formatCost, moveSettlerToTownHall, payCost, showCostError, stock, takeStock } from '../../domains/colony/storage/index.js';
-import { faceTowards, someoneSays } from '../../domains/colony/settlers/index.js';
+import { faceTowards } from '../../domains/colony/settlers/index.js';
 import { armorOf, isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
-import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
+import { createConfiguredEnemy, dressForWave, getEnemyDef, getWavePresetPool } from '../../domains/conflict/waves/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../domains/factions/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
-import { generateMap, getFrontier, getFrontierTiles, setTerritoryEnabled } from '../../domains/world/index.js';
+import { inEnemyTerritory, inTerritory, isNight } from '../../domains/world/index.js';
 import { drawIcon, escapeHtml, iconHtml, richText, showNotification } from '../../ui/index.js';
 import { playSound } from '../../app/index.js';
 
 const config = () => GAME_CONFIG.raid;
-const SIDES = ['left', 'right', 'top', 'bottom'];
-const OPPOSITE = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
-
-// The raid under way (not saved: a game can't be saved during one). phase: 'march' to the edge, 'fight' in
-// the camp, 'return' home; home: the base, put away while the party is in the camp
+const CAMP_LAYOUTS = ['square', 'broken', 'open', 'stone'];
+let lastCampGrowthWave = -1;
+const camps = () => game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+const campById = id => camps().find(camp => camp.id === id) || camps()[0] || null;
+const currentRaidCamp = () => campById(raid.targetCampId);
+const selectedRaidCamp = () => campById(game.raidCampId);
+// The raid under way (not saved: a game can't be saved during one). phase: 'march' to the edge, 'staging'
+// waiting outside, 'fight' in the camp, 'return' home; home: the base, put away while the party is raiding
 export const raid = {
-  /** @type {null | 'march' | 'fight' | 'return'} */
+  /** @type {null | 'march' | 'staging' | 'fight' | 'return'} */
   phase: null,
   side: 'right',
   /** @type {any[]} */
   raiders: [],
+  /** @type {number | null} */
+  targetCampId: null,
   /** @type {any} */
   home: null,
   gather: { x: 0, y: 0 },
-  auto: false,
   won: false,
   timer: 0,
   defenders: 0,
@@ -59,7 +52,7 @@ export const raid = {
 };
 
 export const isRaiding = () => raid.phase !== null;
-export const isInCamp = () => raid.phase === 'fight';
+export const isInCamp = () => raid.phase === 'fight' && !raid.scouting;
 // The game waits: the party being picked
 export const isRaidPicking = () => raid.picking;
 
@@ -72,25 +65,11 @@ const standing = (type, at, extra = {}) => {
   delete b.progress; delete b.maxProgress;
   return b;
 };
-const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) || (game.portalQueue || []).length > 0;
-
-// A free tile by a side of the map (#299: of the frontier, getFrontier; a default map's own), near its
-// middle, `depth` tiles in (one the settler `from` can walk to, if given)
-function edgeSpot(side, from = null, firstDepth = BORDER_MARGIN) {
-  const reach = from ? getSettlerReach(from) : null, f = getFrontierTiles();
-  for (let depth = firstDepth; depth < BORDER_MARGIN + 6; depth++) {
-    for (let k = 0; k < 24; k++) {
-      const offset = (k % 2 ? 1 : -1) * Math.ceil(k / 2);
-      const along = (side === 'left' || side === 'right' ? f.gy0 + (f.gy1 - f.gy0 + 1) / 2 : f.gx0 + (f.gx1 - f.gx0 + 1) / 2) + offset;
-      const gx = side === 'left' ? f.gx0 + depth : side === 'right' ? f.gx1 - depth : Math.floor(along);
-      const gy = side === 'top' ? f.gy0 + depth : side === 'bottom' ? f.gy1 - depth : Math.floor(along);
-      if (isTileBlockedForSettler(gx, gy)) continue;
-      if (reach && getReachSteps(reach, gx, gy) === -1) continue;
-      return tileCenter(gx, gy);
-    }
-  }
-  return tileCenter(Math.floor((f.gx0 + f.gx1 + 1) / 2), Math.floor((f.gy0 + f.gy1 + 1) / 2));
-}
+const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) ||
+  game.enemyRafts.some(raft => raft.units.length > 0) ||
+  (game.portalQueue || []).length > 0 ||
+  game.enemyTents.some(tent => !tent.campStructure && (tent.summonsLeft || 0) > 0) ||
+  game.enemyTentBlueprints.length > 0;
 
 // Spots for a party side by side along an edge, round `at`
 function lineUp(at, side, i) {
@@ -107,19 +86,473 @@ const armyOf = settlers => settlers.filter(s => s.weapon !== 'fist' || s.role ==
 
 // Each tick (Endless): a camp opens after a wave beaten, and goes when its time is up
 export function tickRaidCamp(dt) {
-  if (game.gameMode !== 'endless' || !game.gameStarted || isRaiding()) return;
-  const c = config(), beaten = game.waveNum - 1;
-  if (!game.raidCamp && beaten >= c.fromWave && beaten - (game.raidCampWave || 0) >= c.everyWaves && !waveOn()) {
-    game.raidCamp = { side: SIDES[Math.floor(rand() * SIDES.length)], timeLeft: c.seconds, seed: Math.floor(rand() * 1e9), layout: c.layouts[Math.floor(rand() * c.layouts.length)], army: armyOf(game.settlers), wave: game.waveNum };
-    game.raidCampWave = beaten;
-    showNotification(t('raid.appeared'), false);
-    playSound('horn');
+  if (game.gameMode !== 'endless' || !game.gameStarted || !camps().length) return;
+  for (const camp of camps().slice()) {
+    if (!game.buildings.some(building => building.enemyCampStructure && building.campId === camp.id &&
+        building.type === 'campfire' && building.hp > 0)) destroyEnemyCamp(camp);
   }
-  if (game.raidCamp) {
-    game.raidCamp.timeLeft -= dt;
-    if (game.raidCamp.timeLeft <= 0) { game.raidCamp = null; showNotification(t('raid.gone'), true); }
+  if (camps().length && lastCampGrowthWave !== game.waveNum) {
+    lastCampGrowthWave = game.waveNum;
+    growCampDefenders(game.waveNum);
   }
   updateRaidBar();
+}
+
+function destroyEnemyCamp(camp = currentRaidCamp(), notify = true) {
+  if (!camp) return;
+  game.enemyCamps = camps().filter(other => other !== camp);
+  game.enemyCamp = game.enemyCamps[0] || null;
+  game.enemyCampDestroyed = game.enemyCamps.length === 0;
+  if (game.raidCampId === camp.id) game.raidCampId = game.enemyCamps[0]?.id ?? null;
+  game.enemyTents = game.enemyTents.filter(tent => !tent.campStructure || tent.campId !== camp.id);
+  game.buildings = game.buildings.filter(building => !building.enemyCampStructure || building.campId !== camp.id);
+  game.enemies = game.enemies.filter(enemy => !enemy.campGuard || enemy.campId !== camp.id);
+  if (raid.targetCampId === camp.id) game.raidActive = false;
+  if (notify) showNotification(t('raid.campDestroyed'), false);
+  invalidateAllPaths();
+}
+
+function findEnemyCampCentre() {
+  const radius = config().campRadiusTiles;
+  const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
+  const blocked = new Set([...game.waterTiles, ...game.naturalRocks, ...game.buildings]
+    .map(object => `${getGridPos(object.x, object.y).gx},${getGridPos(object.x, object.y).gy}`));
+  for (const camp of camps()) {
+    const centre = getGridPos(camp.x, camp.y);
+    for (let dy = -radius - 1; dy <= radius + 1; dy++) for (let dx = -radius - 1; dx <= radius + 1; dx++) {
+      blocked.add(`${centre.gx + dx},${centre.gy + dy}`);
+    }
+  }
+  for (const boar of game.boars) {
+    const grid = getGridPos(boar.x, boar.y);
+    blocked.add(`${grid.gx},${grid.gy}`);
+  }
+  const candidates = [];
+  for (let gy = radius + BORDER_MARGIN; gy < game.ROWS - radius - BORDER_MARGIN; gy++) {
+    for (let gx = radius + BORDER_MARGIN; gx < game.COLS - radius - BORDER_MARGIN; gx++) {
+      let available = true;
+      for (let dy = -radius; dy <= radius && available; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const x = gx + dx, y = gy + dy;
+          if (blocked.has(`${x},${y}`) || inTerritory(x * TILE_SIZE + 15, y * TILE_SIZE + 15)) { available = false; break; }
+        }
+      }
+      if (!available || getReachSteps(reach, gx, gy) < 0) continue;
+      const distance = Math.hypot(gx * TILE_SIZE - townHall.x, gy * TILE_SIZE - townHall.y);
+      candidates.push({ gx, gy, distance });
+    }
+  }
+  candidates.sort((a, b) => b.distance - a.distance);
+  const far = candidates.slice(0, Math.max(1, Math.ceil(candidates.length * 0.12)));
+  const pick = far[Math.floor(rand() * far.length)];
+  if (!pick) return null;
+  return { gx: pick.gx, gy: pick.gy, radius };
+}
+
+export function createEnemyCamp() {
+  if (game.gameMode !== 'endless' || game.enemyCampDestroyed) return null;
+  const centre = findEnemyCampCentre();
+  if (!centre) { showNotification(t('raid.campUnavailable'), true); return null; }
+  const camp = {
+    id: camps().reduce((max, existing) => Math.max(max, existing.id || 0), 0) + 1,
+    x: centre.gx * TILE_SIZE + TILE_SIZE / 2,
+    y: centre.gy * TILE_SIZE + TILE_SIZE / 2,
+    radius: centre.radius,
+    seed: Math.floor(rand() * 1e9),
+    layout: CAMP_LAYOUTS[Math.floor(rand() * CAMP_LAYOUTS.length)],
+    structureCount: 2 + Math.floor(rand() * 3),
+    structureType: campStructureType()
+  };
+  game.enemyCamps = [...camps(), camp];
+  game.enemyCamp = game.enemyCamps[0];
+  layWorldCamp(centre.gx, centre.gy, camp);
+  invalidateAllPaths();
+  updateRaidBar();
+  return camp;
+}
+
+export function createEnemyCamps(count = game.enemyCampCount ?? 1) {
+  count = Math.max(0, Math.min(3, Math.floor(count)));
+  game.enemyCamps = [];
+  game.enemyCamp = null;
+  game.enemyCampDestroyed = false;
+  for (let i = 0; i < count; i++) {
+    if (!createEnemyCamp()) break;
+  }
+  game.enemyCampDestroyed = game.enemyCamps.length === 0;
+  game.raidCampId = game.enemyCamps[0]?.id ?? null;
+  return game.enemyCamps;
+}
+
+function layWorldCamp(midX, midY, camp) {
+  const c = config(), R = c.campRadiusTiles;
+  const clear = R + 1;
+  const inside = object => {
+    const grid = getGridPos(object.x, object.y);
+    return Math.abs(grid.gx - midX) <= clear && Math.abs(grid.gy - midY) <= clear;
+  };
+  for (const list of ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres', 'beachTiles']) {
+    game[list] = game[list].filter(object => !inside(object));
+  }
+  game.boars = game.boars.filter(boar => !inside(boar));
+  const fireAt = tileCenter(midX, midY);
+  const fire = standing('campfire', fireAt, { side: 'red', enemyCampStructure: true, campId: camp.id });
+  game.buildings.push(fire);
+  ensureCampInfrastructure(midX, midY, fire, camp);
+  const occupied = new Set(game.buildings.map(building => {
+    const grid = getGridPos(building.x, building.y);
+    return `${grid.gx},${grid.gy}`;
+  }));
+  const tentTiles = new Set(game.enemyTents.filter(tent => tent.campStructure).map(tent => {
+    const grid = getGridPos(tent.x, tent.y);
+    return `${grid.gx},${grid.gy}`;
+  }));
+  const free = [];
+  for (let gy = midY - R; gy <= midY + R; gy++) for (let gx = midX - R; gx <= midX + R; gx++) {
+    if (occupied.has(`${gx},${gy}`) || tentTiles.has(`${gx},${gy}`) || inTerritory(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15)) continue;
+    free.push([gx, gy]);
+  }
+  if (!free.length) throw new Error('Enemy camp has no free space for its defenders');
+  const defenders = campDefenders(armyOf(game.settlers), game.waveNum);
+  const keeperIndex = free.reduce((best, point, index) =>
+    Math.hypot(point[0] - midX, point[1] - midY) < Math.hypot(free[best][0] - midX, free[best][1] - midY) ? index : best, 0);
+  const keeperPost = tileCenter(...free.splice(keeperIndex, 1)[0]);
+  let keeperAssigned = false;
+  for (const kind of defenders) {
+    if (!free.length) break;
+    const [gx, gy] = free.splice(Math.floor(rand() * free.length), 1)[0], pos = tileCenter(gx, gy);
+    const enemy = makeCampGuard(pos, kind, camp);
+    if (!enemy) continue;
+    enemy.campFireKeeper = !keeperAssigned;
+    if (!keeperAssigned) {
+      enemy.x = keeperPost.x; enemy.y = keeperPost.y;
+      enemy.guard = { ...keeperPost };
+      keeperAssigned = true;
+    } else enemy.guard = { x: pos.x, y: pos.y };
+    enemy.campGuard = true;
+    enemy.campId = camp.id;
+    game.enemies.push(enemy);
+  }
+}
+
+function makeCampGuard(pos, kind, camp, developmentWave = game.waveNum + 2) {
+  const enemy = createConfiguredEnemy(pos, kind.id);
+  if (!enemy) return null;
+  const armour = armorOf({ armor: kind.armor === true ? 'iron' : kind.armor });
+  if (armour) { enemy.armor = armour.armorKind; enemy.maxHp += armour.hpBonus; enemy.hp = enemy.maxHp; }
+  if (kind.shield) enemy.shield = true;
+  if (kind.helmet) enemy.helmet = true;
+  dressForWave(enemy, getEnemyDef(enemy), developmentWave);
+  enemy.campGuard = true;
+  enemy.campId = camp.id;
+  enemy.guardOff = false;
+  return enemy;
+}
+
+function weaponStrength(enemy) {
+  const weapon = GAME_CONFIG.weapons[getEnemyDef(enemy).weapon || 'sword'] || GAME_CONFIG.weapons.sword;
+  const combat = weapon.combat || {};
+  return (combat.damage || 0) / Math.max(0.1, combat.cooldown || 1) + (combat.range || 0) / 100;
+}
+
+function campGuardSpot(camp) {
+  const centre = getGridPos(camp.x, camp.y);
+  const radius = Math.max(2, (camp.radius || config().campRadiusTiles) - 1);
+  const spots = [];
+  for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+    const gx = centre.gx + dx, gy = centre.gy + dy;
+    const pos = tileCenter(gx, gy);
+    if (Math.abs(dx) === radius || Math.abs(dy) === radius || inTerritory(pos.x, pos.y) ||
+      isTileBlockedForSettler(gx, gy) ||
+      game.buildings.some(building => getGridPos(building.x, building.y).gx === gx && getGridPos(building.x, building.y).gy === gy) ||
+      game.enemyTents.some(tent => getGridPos(tent.x, tent.y).gx === gx && getGridPos(tent.x, tent.y).gy === gy) ||
+      game.enemies.some(enemy => enemy.hp > 0 && Math.hypot(enemy.x - pos.x, enemy.y - pos.y) < 28)) continue;
+    spots.push(pos);
+  }
+  return spots.length ? spots[Math.floor(rand() * spots.length)] : null;
+}
+
+function growCampDefenders(wave) {
+  const targetRoster = campDefenders(armyOf(game.settlers), wave);
+  for (const camp of camps()) {
+    const guards = game.enemies.filter(enemy => enemy.campGuard && enemy.campId === camp.id && enemy.hp > 0);
+    if (!targetRoster.length) continue;
+    for (let i = 0; i < guards.length; i++) {
+      let guard = guards[i];
+      const desired = targetRoster[i % targetRoster.length];
+      const desiredArmour = armorOf({ armor: desired.armor === true ? 'iron' : desired.armor });
+      const needsPlayerGear = (!!desiredArmour && !guard.armor) || (!!desired.shield && !guard.shield) || (!!desired.helmet && !guard.helmet);
+      if (weaponStrength({ enemyKey: desired.id }) > weaponStrength(guard) * 1.03 || needsPlayerGear) {
+        const upgraded = makeCampGuard({ x: guard.x, y: guard.y }, desired, camp, wave + 2);
+        if (upgraded) {
+          Object.assign(upgraded, {
+            guard: guard.guard ? { ...guard.guard } : { x: guard.x, y: guard.y },
+            campFireKeeper: !!guard.campFireKeeper,
+            guardOff: false,
+            campTalkTimer: guard.campTalkTimer
+          });
+          game.enemies[game.enemies.indexOf(guard)] = upgraded;
+          guard = upgraded;
+          guards[i] = upgraded;
+        }
+      } else {
+        const oldHp = guard.maxHp;
+        dressForWave(guard, getEnemyDef(guard), wave + 2);
+        if (guard.maxHp > oldHp) guard.hp += guard.maxHp - oldHp;
+      }
+    }
+    while (guards.length < targetRoster.length) {
+      const pos = campGuardSpot(camp);
+      if (!pos) break;
+      const guard = makeCampGuard(pos, targetRoster[guards.length], camp, wave + 2);
+      if (!guard) break;
+      guard.guard = { ...pos };
+      guard.campFireKeeper = false;
+      game.enemies.push(guard);
+      guards.push(guard);
+    }
+    if (!guards.some(guard => guard.campFireKeeper) && guards.length) guards[0].campFireKeeper = true;
+  }
+  normalizeEnemyCamp();
+}
+
+function ensureCampInfrastructure(midX, midY, fire, camp) {
+  const R = config().campRadiusTiles;
+  const withinCamp = building => {
+    const grid = getGridPos(building.x, building.y);
+    return Math.abs(grid.gx - midX) <= R && Math.abs(grid.gy - midY) <= R;
+  };
+  const campBuildings = game.buildings.filter(building => building.enemyCampStructure &&
+    (building.campId === camp.id || (building.campId === undefined && withinCamp(building))));
+  for (const building of campBuildings) building.campId = camp.id;
+  const outposts = game.enemyTents.filter(tent => tent.campStructure && tent.outpost &&
+    (tent.campId === camp.id || (tent.campId === undefined && withinCamp(tent))));
+  const outpost = outposts[0] || {
+    x: tileCenter(midX, midY).x, y: tileCenter(midX, midY).y,
+    hp: 100, maxHp: 100, outpost: true, campStructure: true, campId: camp.id, campType: 'outpost'
+  };
+  Object.assign(outpost, tileCenter(midX, midY), {
+    hp: outpost.hp || 100, maxHp: outpost.maxHp || 100, outpost: true, campStructure: true, campId: camp.id, campType: 'outpost'
+  });
+  for (const duplicate of outposts.slice(1)) game.enemyTents.splice(game.enemyTents.indexOf(duplicate), 1);
+  if (!game.enemyTents.includes(outpost)) game.enemyTents.push(outpost);
+  camp.structureType ||= campStructureType();
+  camp.structureCount = Math.max(2, Math.min(4, Math.floor(camp.structureCount || 3)));
+  const campHomes = game.enemyTents.filter(tent => tent.campStructure && !tent.outpost && !tent.wavePortal &&
+    (tent.campId === camp.id || (tent.campId === undefined && withinCamp(tent))));
+  for (const home of campHomes) {
+    home.campId = camp.id;
+    home.campType ||= camp.structureType;
+  }
+  const validHomes = new Set();
+  for (const home of campHomes) {
+    const grid = getGridPos(home.x, home.y);
+    const occupiedByBuilding = game.buildings.some(building => {
+      const other = getGridPos(building.x, building.y);
+      return other.gx === grid.gx && other.gy === grid.gy;
+    });
+    const occupiedByCamp = game.enemyTents.some(other => other !== home && other.campStructure &&
+      other.campId === camp.id && getGridPos(other.x, other.y).gx === grid.gx &&
+      getGridPos(other.x, other.y).gy === grid.gy);
+    if (!occupiedByBuilding && !occupiedByCamp) validHomes.add(home);
+  }
+  game.enemyTents = game.enemyTents.filter(tent => !campHomes.includes(tent) || validHomes.has(tent));
+  game.enemyTents = game.enemyTents.filter(tent => tent === outpost || !tent.campStructure ||
+    tent.wavePortal || (tent.campId !== camp.id && (tent.campId !== undefined || !withinCamp(tent))) ||
+    tent.campType === camp.structureType);
+  for (const building of campBuildings.filter(building => building.enemyCampOutpost || building.type === 'warehouse')) {
+    game.buildings.splice(game.buildings.indexOf(building), 1);
+  }
+
+  const fireGrid = getGridPos(fire.x, fire.y);
+  const fireCell = `${fireGrid.gx},${fireGrid.gy}`;
+  const fireNeighbors = [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([dx, dy]) => ({
+    gx: midX + dx, gy: midY + dy, key: `${midX + dx},${midY + dy}`
+  }));
+  const fireSpot = fireNeighbors.find(spot => spot.key === fireCell) ||
+    fireNeighbors.find(spot => !game.buildings.some(building => building !== fire && building !== outpost &&
+      getGridPos(building.x, building.y).gx === spot.gx && getGridPos(building.x, building.y).gy === spot.gy));
+  if (!fireSpot) throw new Error('Enemy camp has no clear tile beside its outpost for the fire');
+  Object.assign(fire, tileCenter(fireSpot.gx, fireSpot.gy));
+
+  const towardX = Math.abs(townHall.x - fire.x) >= Math.abs(townHall.y - fire.y);
+  const side = Math.sign(towardX ? townHall.x - fire.x : townHall.y - fire.y) || 1;
+  const gateCell = (dx, dy) => towardX
+    ? dx === side * R && Math.abs(dy) <= 1
+    : dy === side * R && Math.abs(dx) <= 1;
+  const torchPoints = towardX
+    ? [[side * R, -2], [side * R, 2]]
+    : [[-2, side * R], [2, side * R]];
+  const isTorchCell = (dx, dy) => torchPoints.some(([tx, ty]) => tx === dx && ty === dy);
+  const rearOpening = camp.layout === 'open' ? 1 : camp.layout === 'broken' ? 0 : -1;
+  const rearGateCell = (dx, dy) => towardX
+    ? dx === -side * R && Math.abs(dy) <= rearOpening
+    : dy === -side * R && Math.abs(dx) <= rearOpening;
+  const hasWall = (dx, dy) =>
+    (Math.abs(dx) === R || Math.abs(dy) === R) && !gateCell(dx, dy) &&
+    !rearGateCell(dx, dy) && !isTorchCell(dx, dy);
+  const occupied = () => new Set(game.buildings.map(building => {
+    const grid = getGridPos(building.x, building.y);
+    return `${grid.gx},${grid.gy}`;
+  }));
+  for (const building of game.buildings.slice()) {
+    if (!building.enemyCampStructure || building.campId !== camp.id || !/^wall_/.test(building.type)) continue;
+    const grid = getGridPos(building.x, building.y);
+    const dx = grid.gx - midX, dy = grid.gy - midY;
+    if (!hasWall(dx, dy)) game.buildings.splice(game.buildings.indexOf(building), 1);
+  }
+  const torches = game.buildings.filter(building => building.enemyCampStructure && building.campId === camp.id && building.type === 'torch');
+  for (const [dx, dy] of torchPoints) {
+    const gx = midX + dx, gy = midY + dy;
+    const oldWall = game.buildings.find(building => building.enemyCampStructure && building.campId === camp.id && /^wall_/.test(building.type) &&
+      getGridPos(building.x, building.y).gx === gx && getGridPos(building.x, building.y).gy === gy);
+    if (oldWall) game.buildings.splice(game.buildings.indexOf(oldWall), 1);
+    if (!game.buildings.some(building => getGridPos(building.x, building.y).gx === gx &&
+      getGridPos(building.x, building.y).gy === gy)) {
+      game.buildings.push(standing('torch', tileCenter(gx, gy), {
+        side: 'red', enemyCampStructure: true, campId: camp.id, lit: true
+      }));
+      torches.push(game.buildings[game.buildings.length - 1]);
+    }
+  }
+  const wallType = camp.layout === 'stone' ? 'wall_stone' : 'wall_wood';
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+    if (!hasWall(dx, dy)) continue;
+    if (occupied().has(`${midX + dx},${midY + dy}`)) continue;
+    game.buildings.push(standing(wallType, tileCenter(midX + dx, midY + dy), {
+      side: 'red', enemyCampStructure: true, campId: camp.id
+    }));
+  }
+
+  const homes = game.enemyTents.filter(tent => tent.campStructure && !tent.outpost &&
+    !tent.wavePortal && tent.campId === camp.id && tent.campType === camp.structureType);
+  const offsets = [
+    [-2, -2], [2, -2], [-2, 2], [2, 2], [0, -3], [3, 0],
+    [0, 3], [-3, 0], [-1, -3], [3, -1], [1, 3], [-3, 1]
+  ];
+  const rotation = CAMP_LAYOUTS.indexOf(camp.layout || 'square');
+  for (let i = homes.length; i < camp.structureCount; i++) {
+    let placed = false;
+    for (let offset = 0; offset < offsets.length; offset++) {
+      const [rawX, rawY] = offsets[(offset + rotation * 3) % offsets.length];
+      const [dx, dy] = rotation % 2 ? [-rawY, rawX] : [rawX, rawY];
+      const gx = midX + dx, gy = midY + dy, point = tileCenter(gx, gy);
+      if (game.buildings.some(building => {
+        const grid = getGridPos(building.x, building.y);
+        return grid.gx === gx && grid.gy === gy;
+      }) || game.enemyTents.some(tent => {
+        const grid = getGridPos(tent.x, tent.y);
+        return grid.gx === gx && grid.gy === gy;
+      }) || inTerritory(point.x, point.y)) continue;
+      const definition = getDefinition('buildings', camp.structureType);
+      const hp = definition?.build?.hp || 80;
+      game.enemyTents.push({
+        ...point, hp, maxHp: hp, campStructure: true, campId: camp.id, campType: camp.structureType
+      });
+      placed = true;
+      break;
+    }
+    if (!placed) break;
+  }
+}
+
+function campStructureType() {
+  const faction = getEnemyFaction().id;
+  return faction === 'undead' ? 'grave' : faction === 'demons' ? 'demon_den' : 'tent';
+}
+
+export function normalizeEnemyCamp() {
+  if (!camps().length) return;
+  game.enemyCamps = camps();
+  game.enemyCamps.forEach((camp, index) => {
+    camp.id = camp.id ?? index + 1;
+    camp.layout ||= CAMP_LAYOUTS[Math.floor(rand() * CAMP_LAYOUTS.length)];
+    camp.structureType ||= campStructureType();
+    camp.structureCount ||= 2 + Math.floor(rand() * 3);
+  });
+  for (const camp of game.enemyCamps) normalizeOneEnemyCamp(camp);
+  game.enemyCamp = game.enemyCamps[0];
+  game.enemyCampDestroyed = false;
+  if (!game.enemyCamps.some(camp => camp.id === game.raidCampId)) game.raidCampId = game.enemyCamps[0].id;
+  game.boars = game.boars.filter(boar => !inEnemyTerritory(boar.x, boar.y));
+  invalidateAllPaths();
+}
+
+function normalizeOneEnemyCamp(camp) {
+  const centre = getGridPos(camp.x, camp.y);
+  const withinCamp = object => {
+    const grid = getGridPos(object.x, object.y);
+    return Math.abs(grid.gx - centre.gx) <= config().campRadiusTiles &&
+      Math.abs(grid.gy - centre.gy) <= config().campRadiusTiles;
+  };
+  const fires = game.buildings.filter(building => building.enemyCampStructure && building.type === 'campfire' &&
+    (building.campId === camp.id || (building.campId === undefined && withinCamp(building))));
+  const fire = fires.sort((a, b) => dist(a, camp) - dist(b, camp))[0] ||
+    standing('campfire', tileCenter(centre.gx, centre.gy), { side: 'red', enemyCampStructure: true, campId: camp.id });
+  fire.side = 'red';
+  fire.enemyCampStructure = true;
+  fire.campId = camp.id;
+  game.buildings = game.buildings.filter(building => !fires.includes(building) || building === fire);
+  if (!game.buildings.includes(fire)) game.buildings.push(fire);
+  for (const building of game.buildings) {
+    if (building.side === 'red' && withinCamp(building) &&
+      ['warehouse', 'wall_wood', 'wall_stone', 'torch'].includes(building.type)) {
+      building.enemyCampStructure = true;
+      building.campId = camp.id;
+    }
+  }
+  const oldOutposts = game.enemyTents.filter(tent => tent.campStructure && tent.outpost &&
+    tent.campId === undefined && withinCamp(tent));
+  oldOutposts.forEach(outpost => { outpost.campId = camp.id; });
+  ensureCampInfrastructure(centre.gx, centre.gy, fire, camp);
+
+  const guards = game.enemies.filter(enemy => enemy.campGuard && enemy.hp > 0 &&
+    (enemy.campId === camp.id || (enemy.campId === undefined && withinCamp(enemy))));
+  guards.forEach(enemy => { enemy.campId = camp.id; });
+  const keeper = guards.find(enemy => enemy.campFireKeeper) || guards[0];
+  for (const enemy of guards) {
+    delete enemy.campFireKeeper;
+  }
+  if (keeper) {
+    const fireGrid = getGridPos(fire.x, fire.y);
+    const spots = [[1, 1], [1, -1], [-1, 1], [-1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]].map(([dx, dy]) =>
+      tileCenter(fireGrid.gx + dx, fireGrid.gy + dy));
+    const hasRoom = spot => {
+      const grid = getGridPos(spot.x, spot.y);
+      return !isTileBlockedForSettler(grid.gx, grid.gy) &&
+        !game.enemies.some(enemy => enemy !== keeper && enemy.hp > 0 &&
+          Math.hypot(enemy.x - spot.x, enemy.y - spot.y) < 26);
+    };
+    const currentDistance = keeper.guard ? dist(keeper.guard, fire) : 0;
+    const currentPost = keeper.guard && currentDistance > TILE_SIZE + 10 &&
+      currentDistance <= TILE_SIZE * Math.SQRT2 + 10 && hasRoom(keeper.guard)
+      ? keeper.guard
+      : null;
+    let spot = currentPost || spots.find(hasRoom);
+    if (!spot) {
+      for (const candidate of spots) {
+        const grid = getGridPos(candidate.x, candidate.y);
+        if (isTileBlockedForSettler(grid.gx, grid.gy)) continue;
+        const occupants = game.enemies.filter(enemy => enemy !== keeper && enemy.hp > 0 &&
+          Math.hypot(enemy.x - candidate.x, enemy.y - candidate.y) < 26);
+        if (!occupants.length || occupants.some(enemy => !enemy.campGuard || enemy.campId !== camp.id)) continue;
+        for (const occupant of occupants) {
+          const replacement = campGuardSpot(camp);
+          if (!replacement) break;
+          occupant.x = replacement.x;
+          occupant.y = replacement.y;
+          occupant.guard = { ...replacement };
+        }
+        if (hasRoom(candidate)) { spot = candidate; break; }
+      }
+    }
+    if (!spot) throw new Error('Enemy camp has no clear campfire keeper post');
+    keeper.campFireKeeper = true;
+    keeper.x = spot.x;
+    keeper.y = spot.y;
+    keeper.guard = { ...spot };
+  }
+  invalidateAllPaths();
 }
 
 // ---- Setting out
@@ -127,15 +560,32 @@ export function tickRaidCamp(dt) {
 // Who can go: anyone (the armed are picked to start with); (#298) asleep too: it's woken
 const canGo = s => s.temporary === undefined;
 
+function campDirection(camp) {
+  const dx = camp.x - townHall.x, dy = camp.y - townHall.y;
+  return Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'west' : 'east') : (dy < 0 ? 'north' : 'south');
+}
+
+function campDistance(camp) {
+  return Math.round(Math.hypot(camp.x - townHall.x, camp.y - townHall.y) / TILE_SIZE);
+}
+
 // The picker: who goes on the raid (any number, and how many arrows they take, #279), or (scout) which one
 // goes to look, one only
 export function openRaidPicker(scout = false) {
-  if (!game.raidCamp || isRaiding()) return;
+  if (!camps().length || isRaiding()) return;
   if (waveOn()) { showNotification(t('raid.waveOn'), true); return; }
   raid.picking = true;
   const el = document.createElement('div');
   el.id = 'raid-picker';
-  el.innerHTML = `<div class="card-offer-title">${escapeHtml(t(scout ? 'raid.scoutPick' : 'raid.pickTitle'))}</div><div class="raid-roster"></div>` +
+  const campSelect = camps().length > 1
+    ? `<label class="raid-camp-select">${escapeHtml(t('raid.chooseCamp'))}<select data-raid="camp">${camps().map((camp, index) =>
+      `<option value="${camp.id}"${camp.id === (selectedRaidCamp()?.id) ? ' selected' : ''}>${escapeHtml(t('raid.campLocated', {
+        n: index + 1,
+        direction: t(`raid.direction.${campDirection(camp)}`),
+        distance: campDistance(camp)
+      }))}</option>`).join('')}</select></label>`
+    : '';
+  el.innerHTML = `<div class="card-offer-title">${escapeHtml(t(scout ? 'raid.scoutPick' : 'raid.pickTitle'))}</div>${campSelect}<div class="raid-roster"></div>` +
     (scout ? '' : `<div class="raid-arrows"><button class="btn" data-raid="less">−</button><span class="raid-arrow-count"></span><button class="btn" data-raid="more">+</button></div>`) +
     `<div class="raid-picker-actions">${scout ? '' : `<button class="btn" data-raid="all">${escapeHtml(t('raid.all'))}</button>`}` +
     `<button class="btn raid-go" data-raid="go">${richText(t(scout ? 'raid.scoutSend' : 'raid.go'))}</button><button class="btn" data-raid="cancel">${escapeHtml(t('raid.cancel'))}</button></div>`;
@@ -163,6 +613,8 @@ export function openRaidPicker(scout = false) {
   const showArrows = () => { const n = el.querySelector('.raid-arrow-count'); if (n) n.innerHTML = richText(t('raid.arrows', { n: arrows })); };
   const offerArrows = () => { if (!touched) arrows = Math.min(stock.arrows || 0, picked().filter(s => isRangedWeapon(s.weapon)).length * config().arrowsPerArcher); showArrows(); };
   const step = d => { touched = true; arrows = Math.max(0, Math.min(stock.arrows || 0, arrows + d)); showArrows(); };
+  const campInput = /** @type {HTMLSelectElement | null} */ (el.querySelector('[data-raid="camp"]'));
+  campInput?.addEventListener('change', () => { game.raidCampId = Number(campInput.value); });
   if (!scout) {
     onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="all"]')), () => { roster.querySelectorAll('.raid-unit').forEach(b => b.classList.add('on')); offerArrows(); });
     onTap(/** @type {HTMLElement} */ (el.querySelector('[data-raid="less"]')), () => step(-6));
@@ -188,9 +640,19 @@ function closeRaidPicker() {
 
 // The party sets out for the zone's side; the rest of the base rests
 export function startRaid(party, scouting = false, arrows = 0) {
-  if (!game.raidCamp || isRaiding() || !party.length) return false;
-  Object.assign(raid, { phase: 'march', side: game.raidCamp.side, raiders: party, auto: false, won: false, timer: 0, scouting, arrows, retreating: false, escaped: [], placing: false });
-  raid.gather = edgeSpot(raid.side, party[0]);
+  const camp = selectedRaidCamp();
+  if (!camp || isRaiding() || !party.length) return false;
+  game.raidCampId = camp.id;
+  raid.targetCampId = camp.id;
+  raid.defenders = game.enemies.filter(enemy => enemy.campGuard && enemy.campId === camp.id && enemy.hp > 0).length;
+  const dx = camp.x - townHall.x, dy = camp.y - townHall.y;
+  raid.side = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'top' : 'bottom');
+  Object.assign(raid, { phase: 'march', raiders: party, won: false, timer: 0, scouting, arrows, retreating: false, escaped: [], placing: false });
+  raid.gather = { x: camp.x, y: camp.y };
+  if (raid.side === 'left') raid.gather.x -= (camp.radius + 1) * TILE_SIZE;
+  else if (raid.side === 'right') raid.gather.x += (camp.radius + 1) * TILE_SIZE;
+  else if (raid.side === 'top') raid.gather.y -= (camp.radius + 1) * TILE_SIZE;
+  else raid.gather.y += (camp.radius + 1) * TILE_SIZE;
   party.forEach((s, i) => {
     s.raider = true; s.isPossessed = false;
     if (s.asleep) { s.asleep = false; s.sleepSpot = null; } // (woken for it, #298)
@@ -209,7 +671,7 @@ function scoutChoice() {
 
 // Sent at once, the one scoutChoice gives (the bar's button opens the picker to choose which)
 export function sendScout() {
-  if (!game.raidCamp || isRaiding()) return false;
+  if (!camps().length || isRaiding()) return false;
   if (waveOn()) { showNotification(t('raid.waveOn'), true); return false; }
   const scout = scoutChoice();
   if (!scout) { showNotification(t('raid.none'), true); return false; }
@@ -218,199 +680,68 @@ export function sendScout() {
   return true;
 }
 
-const arrived = () => raid.raiders.filter(s => game.settlers.includes(s) && dist(s, raid.gather) < 50 + 9 * raid.raiders.length).length;
+const arrived = () => raid.raiders.filter(s => game.settlers.includes(s) &&
+  dist(s, raid.gather) < (raid.scouting ? 8 : 50 + 9 * raid.raiders.length)).length;
+const liveRaiders = () => raid.raiders.filter(s => game.settlers.includes(s) && s.hp > 0);
+const staged = () => liveRaiders().filter(s => dist(s, s.raidSpot) < 12).length;
 
 // ---- The camp: the base put away, the zone's own map
 
-// What each of the base's lists becomes in the camp: arrays and objects empty, the rest (the time of day,
-// the cards' counts...) as they are
-function emptyLike(value) {
-  if (Array.isArray(value)) return [];
-  if (value && typeof value === 'object') return {};
-  return value;
-}
-
-// Put the base away and make the camp; the party comes in by the zone's near side
+// The party reaches the camp and starts its raid there
 export function enterCamp() {
-  if (raid.phase !== 'march') return;
+  if (raid.phase !== 'staging' || raid.scouting) return;
+  const camp = currentRaidCamp();
+  if (!camp) { endRaid(false); return; }
   const party = raid.raiders.filter(s => game.settlers.includes(s) && s.hp > 0);
-  if (!party.length) { endRaid(false); return; }
-  const army = (game.raidCamp && game.raidCamp.army) || armyOf(game.settlers); // (as when it appeared, #279)
-  raid.home = {
-    lists: Object.fromEntries(WORLD_LISTS.map(k => [k, game[k]])),
-    hall: { x: townHall.x, y: townHall.y },
-    cols: game.COLS, rows: game.ROWS,
-    camera: { x: camera.x, y: camera.y, zoom: camera.zoom }
-  };
-  raid.home.lists.settlers = game.settlers.filter(s => !party.includes(s));
-  /** @type {any} */
-  const camp = game.raidCamp || { side: raid.side }; // (taken before the lists are emptied: it's one of them)
-  for (const k of WORLD_LISTS) game[k] = emptyLike(game[k]);
+  if (!party.length) { leaveCamp(false); return; }
   game.selectedSettler = null;
-  setTerritoryEnabled(false); // (the camp's map: no base's land on it, #299)
-  raid.campSeed = camp.seed || 0;
-  if (campCache && campCache.seed === raid.campSeed) restoreCamp(); else buildCamp(army, camp);
-  // the party at the zone's near edge, out past its red line (#279), waiting for orders
-  const entry = edgeSpot(OPPOSITE[raid.side], null, 0);
-  raid.entry = entry;
-  party.forEach((s, i) => {
-    Object.assign(s, lineUp(entry, OPPOSITE[raid.side], i));
-    s.orderSpot = { x: s.x, y: s.y }; s.orderTarget = null; s.path = null; s.pathTarget = null; s.carrying = null;
-  });
-  game.settlers = party;
+  raid.entry = raid.gather;
   raid.raiders = party;
   raid.phase = 'fight';
   raid.timer = 0;
-  // a scout looks over the camp: the view on it (#279); a party sees where it stands
-  const look = raid.scouting ? { x: game.WORLD_WIDTH / 2 * 0.6 + entry.x * 0.4, y: game.WORLD_HEIGHT / 2 * 0.6 + entry.y * 0.4 } : entry;
-  Object.assign(camera, { x: look.x, y: look.y });
+  game.raidActive = !raid.scouting;
+  game.raidCampId = camp.id;
+  for (const enemy of game.enemies) if (enemy.campGuard && enemy.campId === camp.id) enemy.guardOff = false;
+  Object.assign(camera, { x: camp.x, y: camp.y });
   clampCamera();
   invalidateAllPaths();
   if (!raid.scouting) playSound('horn');
   updateRaidBar();
 }
 
-// The camp's map (#279: of its own seed, the same every time it's seen, so a scout's look holds for the raid):
-// the ground as any (made for it), cleared round its middle; the outpost in the middle, round it as its layout
-// has it (a square palisade, a round one, a fort of two rings, or no walls but spikes), tents (calling more out
-// in the fight), campfires and its faction's own buildings, the defenders at their posts
-function buildCamp(army, camp) {
-  const c = config();
-  const worldSeed = game.worldSeed;
-  game.worldSeed = createWorldSeed(`camp-${camp.seed || 0}`);
-  try {
-    setWorldSize(c.zoneTiles, c.zoneTiles);
-    generateMap();
-    game.boars = [];
-    layCamp(army, camp.layout || 'square', camp.wave ?? game.waveNum);
-  } finally { game.worldSeed = worldSeed; }
-  // the base's hall isn't here
-  townHall.x = townHall.y = -100000;
-  resetTileIndex();
-}
-
-// (#279) the camp as a scout left it: the same camp when the raid comes, any it fought still hurt, all back at
-// their posts. Not saved: after loading it's made again from its seed (and the army and wave it was made for)
-/** @type {{ seed: number, lists: Object<string, any>, defenders: number } | null} */
-let campCache = null;
-function keepCamp() {
-  const lists = Object.fromEntries(WORLD_LISTS.filter(k => k !== 'settlers' && game[k] && typeof game[k] === 'object').map(k => [k, game[k]]));
-  campCache = { seed: raid.campSeed, lists, defenders: raid.defenders };
-}
-function restoreCamp() {
-  if (!campCache) return;
-  for (const [k, v] of Object.entries(campCache.lists)) game[k] = v;
-  setWorldSize(config().zoneTiles, config().zoneTiles);
-  townHall.x = townHall.y = -100000;
-  raid.defenders = campCache.defenders;
-  game.projectiles = [];
-  for (const en of game.enemies) if (en.guard && en.hp > 0) { en.x = en.guard.x; en.y = en.guard.y; en.path = null; en.guardOff = false; }
-  resetTileIndex();
-}
-
-// Tiles of a ring round the middle: a square one (the Chebyshev distance r) or a round one
-function ringTiles(mid, r, round) {
-  const out = [];
-  for (let gy = mid - r - 1; gy <= mid + r + 1; gy++) {
-    for (let gx = mid - r - 1; gx <= mid + r + 1; gx++) {
-      const d = round ? Math.hypot(gx - mid, gy - mid) : Math.max(Math.abs(gx - mid), Math.abs(gy - mid));
-      if (round ? Math.abs(d - r) < 0.55 : d === r) out.push([gx, gy]);
-    }
-  }
-  return out;
-}
-
-function layCamp(army, layout, wave) {
-  const c = config();
-  const mid = Math.floor(c.zoneTiles / 2), R = c.wallTiles, centre = tileCenter(mid, mid);
-  const round = layout === 'round', open = layout === 'scattered', fort = layout === 'fort';
-  const span = open ? R + 1 : R;
-  // nothing natural inside the camp or on its walls
-  const clear = span + 2;
-  const inside = o => Math.abs(getGridPos(o.x, o.y).gx - mid) <= clear && Math.abs(getGridPos(o.x, o.y).gy - mid) <= clear;
-  for (const list of ['trees', 'cacti', 'boulders', 'naturalRocks', 'waterTiles', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres', 'beachTiles']) {
-    game[list] = game[list].filter(o => !inside(o));
-  }
-  const entryAngle = { left: Math.PI, right: 0, top: -Math.PI / 2, bottom: Math.PI / 2 }[OPPOSITE[raid.side]];
-  // a ring of wall with ways in: one towards where the party comes from, `gaps` more at random
-  const wallRing = (r, type, gapCount, torches = true) => {
-    const ring = ringTiles(mid, r, round);
-    const angles = [entryAngle];
-    for (let i = 0; i < gapCount; i++) angles.push(rand() * Math.PI * 2);
-    const toward = a => p => Math.hypot(p[0] - (mid + Math.cos(a) * r), p[1] - (mid + Math.sin(a) * r));
-    /** @type {number[][]} */
-    const gapAt = angles.map(a => [...ring].sort((p, q) => toward(a)(p) - toward(a)(q))[0]);
-    const isGap = p => { const [gx, gy] = p; return gapAt.some(([x, y]) => Math.hypot(gx - x, gy - y) < 1.5); };
-    for (const p of ring) if (!isGap(p)) game.buildings.push(standing(type, tileCenter(p[0], p[1]), { side: 'red' })); // (#326: the camp's own)
-    // torches by each way in
-    if (torches) for (const [gx, gy] of gapAt) {
-      for (const p of ring.filter(q => Math.abs(Math.hypot(q[0] - gx, q[1] - gy) - 2) < 0.6).slice(0, 2)) {
-        const at = tileCenter(p[0], p[1]), k = game.buildings.findIndex(b => b.x === at.x && b.y === at.y);
-        if (k >= 0) game.buildings[k] = standing('torch', at, { lit: true, side: 'red' });
-      }
-    }
-  };
-  const stone = wave >= c.stoneFromWave;
-  if (fort) { wallRing(R, 'wall_stone', c.gaps); wallRing(R - 2, 'wall_wood', 0, false); } // (the inner ring: one way in, the party's side)
-  else if (!open) wallRing(R, stone ? 'wall_stone' : 'wall_wood', c.gaps);
-  // what's free inside: not the outpost's tile, not a wall
-  const taken = new Set(game.buildings.map(b => `${getGridPos(b.x, b.y).gx},${getGridPos(b.x, b.y).gy}`));
-  const free = [];
-  for (let gy = mid - span + 1; gy <= mid + span - 1; gy++) {
-    for (let gx = mid - span + 1; gx <= mid + span - 1; gx++) {
-      if ((gx === mid && gy === mid) || taken.has(`${gx},${gy}`)) continue;
-      if (round && Math.hypot(gx - mid, gy - mid) > R - 0.6) continue;
-      free.push([gx, gy]);
-    }
-  }
-  const takeFree = (near = Infinity, far = 0) => {
-    const ok = free.filter(([gx, gy]) => { const d = Math.max(Math.abs(gx - mid), Math.abs(gy - mid)); return d <= near && d >= far; });
-    const from = ok.length ? ok : free;
-    const pick = from[Math.floor(rand() * from.length)];
-    free.splice(free.indexOf(pick), 1);
-    return tileCenter(pick[0], pick[1]);
-  };
-  // fires (more in a camp with no walls), spikes round an open one, and its faction's own buildings
-  for (let i = 0; i < (open ? 3 : 2); i++) game.buildings.push(standing('campfire', takeFree(span - 2), { fuelLeft: 1e6, side: 'red' }));
-  if (open) for (let i = 0; i < 8; i++) game.buildings.push(standing('spikes', takeFree(span, span - 1), { side: 'red' }));
-  for (const type of (c.decor[getEnemyFaction().id] || [])) game.buildings.push(standing(type, takeFree(span - 1, 2), { side: 'red' }));
-  // the outpost, and the tents
-  game.enemyTents.push({ x: centre.x, y: centre.y, hp: c.outpostHp, maxHp: c.outpostHp, outpost: true, summonTimer: 0, summonsLeft: 0 });
-  const tents = c.tents.min + Math.floor(rand() * (c.tents.max - c.tents.min + 1)) + (open ? 1 : 0);
-  for (let i = 0; i < tents; i++) {
-    const at = takeFree(fort ? R - 3 : span - 2);
-    game.enemyTents.push({ x: at.x, y: at.y, hp: GAME_CONFIG.enemyTents.hp, maxHp: GAME_CONFIG.enemyTents.hp, summonTimer: 0, summonsLeft: c.tentSummons });
-  }
-  // the defenders, mirroring the player's army
-  const defenders = campDefenders(army, wave);
-  raid.defenders = defenders.length;
-  for (const kind of defenders) {
-    const at = takeFree();
-    const en = createConfiguredEnemy(at, kind.id);
-    if (!en) continue;
-    const armour = armorOf({ armor: kind.armor === true ? 'iron' : kind.armor }); // (#298: its kind; an old save's true: iron)
-    if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
-    if (kind.shield) en.shield = true;
-    if (kind.helmet) en.helmet = true; // (#326, 27.10, 27)
-    en.guard = { x: at.x, y: at.y };
-    game.enemies.push(en);
-  }
-}
-
-// The camp's defenders: one for each of the player's armed (its kind by the weapon and the body, its
-// armour and shield as theirs), more with the waves
+// The camp draws its own faction roster from the wave presets two levels ahead. Player equipment can
+// influence guard gear, but the player's unit types do not limit the camp's composition.
 export function campDefenders(army, wave = game.waveNum) {
   const c = config().defenders;
+  const campLevel = wave + 2;
   const kinds = Object.values(GAME_CONFIG.enemies).filter(def => def.waveKey && getEnemyFaction().enemies.includes(def.id));
   const ofKey = key => kinds.find(def => /** @type {string[]} */ ([]).concat(def.waveKey).includes(key) && !def.healer && !def.necromancer && !def.pet) || kinds[0]; // (not a pet for a soldier: a dog in armour, #326)
-  const list = army.map(s => {
-    const key = isRangedWeapon(s.weapon) ? 'archer' : (GAME_CONFIG.settlerTypes[s.type] || {}).big ? 'brute' : s.weapon === 'fist' || s.weapon === 'club' ? 'club' : 'raider';
-    const def = ofKey(key);
-    return { id: def.id, armor: s.armor || null, shield: !!s.shield && def.type === 'normal' && !def.ranged, helmet: !!s.helmet };
+  const pool = getWavePresetPool(getEnemyFaction().id, campLevel);
+  const candidates = pool.filter(option => {
+    const def = GAME_CONFIG.enemies[option.enemyKey];
+    return !def.pet && !def.healer && !def.necromancer;
   });
-  const count = Math.max(c.min, Math.round(army.length * c.perSoldier) + Math.floor((wave - 1) / c.extraEveryWaves));
+  const chooseKind = () => {
+    if (!candidates.length) return ofKey('raider');
+    let roll = rand() * candidates.reduce((sum, option) => sum + option.weight, 0);
+    for (const option of candidates) {
+      roll -= option.weight;
+      if (roll < 0) return GAME_CONFIG.enemies[option.enemyKey];
+    }
+    return GAME_CONFIG.enemies[candidates[candidates.length - 1].enemyKey];
+  };
+  const count = Math.max(c.min, Math.round(army.length * c.perSoldier) + Math.floor((campLevel - 1) / c.extraEveryWaves));
   const out = [];
-  for (let i = 0; i < count; i++) out.push(list.length ? list[i % list.length] : { id: ofKey('raider').id, armor: false, shield: false });
+  for (let i = 0; i < count; i++) {
+    const def = chooseKind();
+    const soldier = army[i % army.length];
+    out.push({
+      id: def.id,
+      armor: soldier?.armor || null,
+      shield: !!soldier?.shield && def.type === 'normal' && !def.ranged,
+      helmet: !!soldier?.helmet
+    });
+  }
   return out;
 }
 
@@ -421,8 +752,6 @@ export function raidTap(x, y) {
   if (!isInCamp()) return false;
   if (raid.placing) { pitchShelter(x, y); return true; }
   if (raid.retreating) return true;
-  // a scout: where it creeps to (#279)
-  if (raid.scouting) { const s = game.settlers[0]; if (s) s.orderSpot = { x, y }; return true; }
   orderTap(x, y);
   return true;
 }
@@ -483,7 +812,7 @@ function tickShelters(dt) {
 
 // The rest of the base while a party is out on a raid: it rests by the hall
 export function restWhileRaid(s, tick) {
-  if (!raid.phase || game.gameMode !== 'endless' || s.raider) return false;
+  if (!raid.phase || raid.scouting || game.gameMode !== 'endless' || s.raider) return false;
   if (dist(s, townHall) > townHall.radius + 50) moveSettlerToTownHall(s, s.speed, tick.dt);
   return true;
 }
@@ -495,7 +824,12 @@ export function raidOrders(s, tick) {
   const dt = tick.dt;
   if (raid.phase === 'march') {
     if (dist(s, s.raidSpot) > 6) moveEntityTowards(s, s.raidSpot.x, s.raidSpot.y, s.speed, false, dt);
-    else faceTowards(s, s.raidSpot.x + (raid.side === 'right' ? 10 : raid.side === 'left' ? -10 : 0), s.raidSpot.y + (raid.side === 'bottom' ? 10 : raid.side === 'top' ? -10 : 0));
+    else faceTowards(s, currentRaidCamp()?.x || s.x, currentRaidCamp()?.y || s.y);
+    return true;
+  }
+  if (raid.phase === 'staging') {
+    if (dist(s, s.raidSpot) > 6) moveEntityTowards(s, s.raidSpot.x, s.raidSpot.y, s.speed, false, dt);
+    else faceTowards(s, currentRaidCamp()?.x || s.x, currentRaidCamp()?.y || s.y);
     return true;
   }
   if (raid.phase === 'return') {
@@ -508,10 +842,9 @@ export function raidOrders(s, tick) {
     else { raid.escaped.push(s); game.settlers = game.settlers.filter(o => o !== s); if (game.selectedSettler === s) game.selectedSettler = null; }
     return true;
   }
-  // a scout creeps where it's told (from the edge, to start with), looking at the camp (#279)
+  // A scout observes the camp from outside its zone.
   if (raid.scouting) {
-    if (s.orderSpot && dist(s, s.orderSpot) > 6) moveEntityTowards(s, s.orderSpot.x, s.orderSpot.y, s.speed * 0.7, false, dt);
-    else faceTowards(s, game.WORLD_WIDTH / 2, game.WORLD_HEIGHT / 2);
+    faceTowards(s, currentRaidCamp()?.x || s.x, currentRaidCamp()?.y || s.y);
     return true;
   }
   // the shelter: its builder builds it; in the auto battle the badly hurt go to it, and an archer out of
@@ -520,13 +853,13 @@ export function raidOrders(s, tick) {
   if (site && !s.orderTarget) { buildShelter(s, site, dt); return true; }
   const shelter = shelters().sort((a, b) => dist(a, s) - dist(b, s))[0];
   const empty = isRangedWeapon(s.weapon) && s.quiver && (s.arrows || 0) <= 0 && raid.arrows > 0;
-  if (shelter && !s.orderTarget && ((raid.auto && (s.hp < s.maxHp * config().shelter.woundedShare || (s.healing && s.hp < s.maxHp * 0.9))) || empty)) {
+  if (shelter && !s.orderTarget && ((s.hp < s.maxHp * config().shelter.woundedShare || (s.healing && s.hp < s.maxHp * 0.9)) || empty)) {
     s.healing = s.hp < s.maxHp * 0.9;
     if (dist(s, shelter) > config().shelter.reach - 10) moveEntityTowards(s, shelter.x, shelter.y, s.speed, false, dt);
     return true;
   }
   s.healing = false;
-  fightByOrders(s, dt, raid.auto); // (in the camp)
+  fightByOrders(s, dt, true); // (in the camp)
   return true;
 }
 
@@ -538,23 +871,29 @@ export function tickRaid(dt) {
   if (raid.phase === 'march') {
     raid.raiders = raid.raiders.filter(s => game.settlers.includes(s));
     if (!raid.raiders.length) endRaid(false);
-    else if (raid.scouting && (arrived() >= raid.raiders.length || raid.timer >= config().marchSeconds)) enterCamp(); // (a scout looks at once)
-  } else if (raid.phase === 'fight') {
-    tickShelters(dt);
-    if (!game.settlers.length) { if (raid.escaped.length) leaveCamp(false); else failRaid(); } // (all out, or all down)
-    else if (raid.retreating) { /* (on their way out) */ }
-    else if (raid.scouting) {
-      // a scout is spotted after a while, or as soon as one of them comes near it, or it's hit: it runs back
-      // the way it came, and they come after it (#279)
-      const scout = game.settlers[0];
-      if (raid.timer >= config().scoutSeconds || game.enemies.some(en => en.hp > 0 && dist(en, scout) < config().scoutSeenTiles * TILE_SIZE) || scout.hp < scout.maxHp) {
-        someoneSays(game.enemies, getEnemyFaction().id, 'charge', true);
-        for (const en of game.enemies) if (en.guard && dist(en, scout) < 8 * TILE_SIZE) en.guardOff = true;
-        startRetreat();
-        showNotification(t('raid.scoutSpotted'), true);
+    else if (arrived() >= raid.raiders.length || (!raid.scouting && raid.timer >= config().marchSeconds)) {
+      if (raid.scouting) {
+        raid.phase = 'fight';
+        raid.timer = 0;
+        const scout = raid.raiders[0];
+        Object.assign(camera, { x: raid.gather.x, y: raid.gather.y });
+        if (currentRaidCamp()) faceTowards(scout, currentRaidCamp().x, currentRaidCamp().y);
+        clampCamera();
+        invalidateAllPaths();
+      } else {
+        raid.phase = 'staging';
+        raid.timer = 0;
       }
     }
-    else if (!game.enemies.some(en => en.hp > 0) && !game.enemyTents.length) leaveCamp(true);
+  } else if (raid.phase === 'staging') {
+    if (!raid.raiders.some(s => game.settlers.includes(s) && s.hp > 0)) failRaid();
+  } else if (raid.phase === 'fight') {
+    tickShelters(dt);
+    if (!raid.raiders.some(s => game.settlers.includes(s) && s.hp > 0)) failRaid();
+    else if (raid.scouting) {
+      if (raid.timer >= config().scoutSeconds) leaveCamp(false);
+    }
+    else if (!game.enemies.some(en => en.campGuard && en.hp > 0)) leaveCamp(true);
   } else if (raid.phase === 'return') {
     // home: all near the hall (#279: one pushed a little out by the rest kept it from ending), or none of
     // them going anywhere any more for a few seconds (stuck), or a minute gone
@@ -569,51 +908,64 @@ export function tickRaid(dt) {
 
 // Back to the base: what the camp was is gone; the survivors (if any) at the side's edge
 function restoreHome(survivors) {
-  const home = raid.home;
-  for (const k of WORLD_LISTS) game[k] = home.lists[k];
-  setTerritoryEnabled(true);
-  setWorldSize(home.cols, home.rows);
-  townHall.x = home.hall.x; townHall.y = home.hall.y;
-  Object.assign(camera, home.camera);
-  clampCamera();
-  raid.gather = edgeSpot(raid.side);
-  survivors.forEach((s, i) => {
-    Object.assign(s, lineUp(raid.gather, raid.side, i));
-    s.path = null; s.pathTarget = null; clearOrders(s);
-  });
-  game.settlers = [...game.settlers, ...survivors];
+  clearCampTargets(raid.targetCampId);
+  for (const settler of survivors) {
+    settler.raider = true;
+    settler.path = null;
+    settler.pathTarget = null;
+    clearOrders(settler);
+  }
+  game.raidActive = false;
+  for (const enemy of game.enemies) if (enemy.campGuard) enemy.guardOff = false;
   game.selectedSettler = null;
-  raid.home = null;
   invalidateAllPaths();
+}
+
+function clearCampTargets(campId) {
+  if (campId == null) return;
+  for (const target of [...game.enemies, ...game.enemyTents, ...game.buildings]) {
+    if (target.campId === campId && (target.campGuard || target.campStructure || target.enemyCampStructure)) {
+      delete target.markedTarget;
+    }
+  }
 }
 
 // The camp beaten (won) or left (Retreat): the party walks home with what it took
 // Retreat (#279): not at once; each runs back to its spot on the edge it came in by (the enemy after it), and
 // once all who are left are out, the party's out of the camp
 function startRetreat() {
+  if (raid.phase === 'staging') {
+    const survivors = raid.raiders.filter(s => game.settlers.includes(s) && s.hp > 0);
+    restoreHome(survivors);
+    raid.raiders = survivors;
+    raid.phase = 'return';
+    raid.timer = 0;
+    showNotification(t('raid.retreated'), true);
+    updateRaidBar();
+    return;
+  }
   if (raid.phase !== 'fight' || raid.retreating) return;
-  raid.retreating = true;
   raid.placing = false;
-  game.settlers.forEach((s, i) => { s.exitSpot = lineUp(raid.entry, OPPOSITE[raid.side], i); clearOrders(s); });
+  leaveCamp(false);
   if (!raid.scouting) showNotification(t('raid.retreated'), true);
   updateRaidBar();
 }
 
 export function leaveCamp(won) {
   if (raid.phase !== 'fight') return;
-  const survivors = [...raid.escaped, ...game.settlers.filter(s => s.hp > 0)];
+  const survivors = raid.raiders.filter(s => game.settlers.includes(s) && s.hp > 0);
   survivors.forEach(s => { delete s.exitSpot; delete s.healing; });
-  if (raid.scouting) keepCamp(); else campCache = null; // (a scout's look: the same camp for the raid, #279)
   restoreHome(survivors);
-  raid.escaped = [];
   raid.retreating = false;
   // the arrows not used, back in the stock
   if (raid.arrows > 0 && survivors.length) { stock.arrows = (stock.arrows || 0) + raid.arrows; raid.arrows = 0; }
   raid.raiders = survivors;
-  raid.won = won;
+  raid.won = won && !raid.scouting;
+  raid.scouting = false;
+  if (raid.won) destroyEnemyCamp(currentRaidCamp(), false);
   raid.phase = 'return';
   raid.timer = 0;
-  if (won) {
+  if (raid.won) {
     const c = config(), scale = 1 + c.rewardPerDefender * raid.defenders;
     const reward = Object.fromEntries(Object.entries(c.reward).map(([k, v]) => [k, Math.round(v * scale)]));
     if (!getPlayerFaction().eats) delete reward.food; // (the undead have no food)
@@ -624,98 +976,77 @@ export function leaveCamp(won) {
   updateRaidBar();
 }
 
+function returnScout() {
+  if (!raid.scouting || raid.phase === 'return' || !raid.phase) return;
+  if (raid.phase === 'fight') {
+    leaveCamp(false);
+    return;
+  }
+  if (raid.phase === 'march') {
+    raid.phase = 'return';
+    raid.timer = 0;
+    updateRaidBar();
+  }
+}
+
 // The whole party down: the camp goes at once, the base is back, a wave comes soon
 function failRaid() {
-  if (raid.scouting) { keepCamp(); restoreHome([]); showNotification(t('raid.scoutLost'), true); resetRaidState(); return; } // (the camp stays, no wave sent)
-  campCache = null;
   restoreHome([]);
-  game.raidCamp = null;
-  game.waveTimer = Math.min(game.waveTimer, config().failWaveSeconds);
-  showNotification(t('raid.lost', { seconds: config().failWaveSeconds }), true);
+  showNotification(t('raid.lost', { seconds: 0 }), true);
   playSound('defeat');
+  raid.raiders = [];
   resetRaidState();
 }
 
 // Over: home (or never left). Won: the zone goes and the next wave waits twice as long
 export function endRaid(won) {
   for (const s of raid.raiders) { delete s.raider; delete s.raidSpot; delete s.lastStep; clearOrders(s); }
-  if (!raid.scouting && (raid.phase === 'return' || raid.phase === 'fight')) game.raidCamp = null; // (a scout's look leaves it there)
-  if (won) game.waveTimer += game.waveInterval;
   resetRaidState();
 }
 
 function resetRaidState() {
-  setTerritoryEnabled(true);
+  const campId = raid.targetCampId;
+  game.raidActive = false;
+  clearCampTargets(campId);
   for (const s of game.settlers) { delete s.raider; delete s.raidSpot; clearOrders(s); }
-  Object.assign(raid, { phase: null, raiders: [], home: null, auto: false, won: false, timer: 0, defenders: 0, still: 0, scouting: false, retreating: false, escaped: [], arrows: 0, placing: false });
+  Object.assign(raid, { phase: null, raiders: [], targetCampId: null, home: null, won: false, timer: 0, defenders: 0, still: 0, scouting: false, retreating: false, escaped: [], arrows: 0, placing: false });
   updateRaidBar();
 }
 
 // A new game or one loaded: no raid going on (a party half way is back home, the base as it was)
 export function resetRaid() {
-  campCache = null;
-  if (raid.home) {
-    for (const k of WORLD_LISTS) game[k] = raid.home.lists[k];
-    raid.home = null;
-  }
   closeRaidPicker();
+  lastCampGrowthWave = -1;
   resetRaidState();
 }
 
 // ---- On screen
-
-// The zone beyond the map's edge (in the dark past it: a square with the camp's outpost dimly in it), and
-// the map's edge on that side
-export function drawRaidZone() {
-  if (game.gameMode !== 'endless' || isInCamp() || (!game.raidCamp && raid.phase !== 'return')) return;
-  const side = game.raidCamp ? game.raidCamp.side : raid.side;
-  // (#299: by the frontier, getFrontier; a default map's edge)
-  const f = getFrontier(), band = BORDER_MARGIN * TILE_SIZE, X = f.x0, Y = f.y0, W = f.x1 - f.x0, H = f.y1 - f.y0, Z = config().zoneTiles * TILE_SIZE;
-  const edge = { left: [X, Y, band, H], right: [X + W - band, Y, band, H], top: [X, Y, W, band], bottom: [X, Y + H - band, W, band] }[side];
-  const zone = { left: [X - Z, Y + H / 2 - Z / 2, Z, Z], right: [X + W, Y + H / 2 - Z / 2, Z, Z], top: [X + W / 2 - Z / 2, Y - Z, Z, Z], bottom: [X + W / 2 - Z / 2, Y + H, Z, Z] }[side];
-  const pulse = 0.22 + 0.1 * Math.sin(game.pathTick / 20);
-  ctx.fillStyle = `rgba(150, 20, 20, ${pulse})`;
-  ctx.fillRect(edge[0], edge[1], edge[2], edge[3]);
-  ctx.fillStyle = 'rgba(60, 10, 10, 0.55)';
-  ctx.fillRect(zone[0], zone[1], zone[2], zone[3]);
-  ctx.strokeStyle = 'rgba(231, 76, 60, 0.85)'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
-  ctx.strokeRect(zone[0] + 2, zone[1] + 2, zone[2] - 4, zone[3] - 4);
-  ctx.setLineDash([]);
-  // the camp in it, dimly: its palisade and the outpost
-  const cx = zone[0] + Z / 2, cy = zone[1] + Z / 2, r = config().wallTiles * TILE_SIZE;
-  ctx.strokeStyle = 'rgba(160, 110, 60, 0.6)'; ctx.lineWidth = 6; ctx.setLineDash([22, 14]);
-  ctx.strokeRect(cx - r, cy - r, r * 2, r * 2);
-  ctx.setLineDash([]);
-  drawIcon(ctx, 'swords', cx, cy, 64);
-}
-
 // The bar under the top of the screen: the camp's time, the party on its way, the orders in the camp
 let barKey = '';
 export function updateRaidBar() {
   let bar = document.getElementById('raid-bar');
-  const show = game.gameMode === 'endless' && game.gameStarted && (isRaiding() || !!game.raidCamp);
+  const show = game.gameMode === 'endless' && game.gameStarted && isRaiding();
   if (!show) { if (bar) bar.remove(); barKey = ''; return; }
-  const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   let html = '';
-  if (!isRaiding()) {
-    html = `<button class="btn" data-raid-act="open">${richText(t('raid.button', { time: fmt(Math.max(0, game.raidCamp ? game.raidCamp.timeLeft : 0)) }))}</button>` +
-      `<button class="btn" data-raid-act="scout">${richText(t('raid.scout'))}</button>`;
-  } else if (raid.retreating) {
+  if (raid.retreating) {
     html = `<span>${escapeHtml(t(raid.scouting ? 'raid.scoutRunning' : 'raid.retreating'))}</span>`;
   } else if (raid.scouting) {
     html = `<span>${escapeHtml(t(raid.phase === 'march' ? 'raid.scoutGoing' : raid.phase === 'fight' ? 'raid.scoutLooking' : 'raid.returning'))}</span>` +
-      (raid.phase === 'march' ? `<button class="btn" data-raid-act="call-off">${escapeHtml(t('raid.cancel'))}</button>` : '');
+      (raid.phase === 'march' || raid.phase === 'fight'
+        ? `<button class="btn" data-raid-act="scout-return">${escapeHtml(t('raid.scoutReturn'))}</button>` : '');
   } else if (raid.phase === 'march') {
-    const ready = arrived() >= raid.raiders.length || raid.timer >= config().marchSeconds;
     html = `<span>${escapeHtml(t('raid.marching', { n: arrived(), m: raid.raiders.length }))}</span>` +
-      `<button class="btn raid-go" data-raid-act="attack"${ready ? '' : ' disabled'}>${richText(t('raid.attack'))}</button>` +
       `<button class="btn" data-raid-act="call-off">${escapeHtml(t('raid.cancel'))}</button>`;
+  } else if (raid.phase === 'staging') {
+    const count = staged();
+    const total = liveRaiders().length;
+    html = `<span>${escapeHtml(t('raid.staging', { n: count, m: total }))}</span>` +
+      `<button class="btn" data-raid-act="attack"${count < total ? ' disabled' : ''}>${richText(t('raid.attack'))}</button>` +
+      `<button class="btn" data-raid-act="retreat">${escapeHtml(t('raid.retreat'))}</button>`;
   } else if (raid.phase === 'fight') {
-    const outpost = game.enemyTents.find(et => et.outpost);
     const def = GAME_CONFIG.buildings[shelterType()], pitched = game.blueprints.some(bp => bp.raidShelter) || shelters().length > 0;
-    html = `<span>${escapeHtml(t('raid.left', { n: game.enemies.filter(en => en.hp > 0).length, hp: outpost ? Math.ceil(100 * outpost.hp / outpost.maxHp) : 0 }))}` +
+    html = `<span>${escapeHtml(t('raid.left', { n: game.enemies.filter(en => en.hp > 0 && en.campGuard).length }))}` +
       (raid.arrows > 0 ? ` · ${richText(t('raid.arrows', { n: raid.arrows }))}` : '') + `</span>` +
-      `<button class="btn${raid.auto ? ' on' : ''}" data-raid-act="auto">${richText(t('raid.auto'))}</button>` +
       (pitched ? '' : `<button class="btn${raid.placing ? ' on' : ''}" data-raid-act="shelter">${richText(`[[${def.icon}]] ${def.label}`)} <small>${richText(formatCost(def.cost))}</small></button>`) +
       `<button class="btn" data-raid-act="retreat">${escapeHtml(t('raid.retreat'))}</button>`;
   } else html = `<span>${escapeHtml(t('raid.returning'))}</span>`;
@@ -728,13 +1059,18 @@ export function updateRaidBar() {
 }
 
 export function raidAction(act) {
-  if (act === 'open') openRaidPicker();
-  else if (act === 'scout') openRaidPicker(true); // (which one goes, #279)
-  else if (act === 'attack') enterCamp();
+  if (act === 'attack' && raid.phase === 'staging' && staged() === liveRaiders().length) enterCamp();
   else if (act === 'call-off' && raid.phase === 'march') endRaid(false);
-  else if (act === 'auto') raid.auto = !raid.auto;
+  else if (act === 'scout-return') returnScout();
   else if (act === 'retreat') startRetreat();
   else if (act === 'shelter' && isInCamp()) { raid.placing = !raid.placing; if (raid.placing) showNotification(t('raid.shelterTap'), false); }
   barKey = '';
   updateRaidBar();
+}
+
+export function initRaidControls() {
+  document.addEventListener('endless-raid-action', event => {
+    if (/** @type {CustomEvent} */ (event).detail === 'scout') openRaidPicker(true);
+    else openRaidPicker(false);
+  });
 }

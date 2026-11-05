@@ -5,13 +5,14 @@ import { drawIcon } from '../../../ui/index.js';
 import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
-import { getEnemyColor, getEnemyFaction, shadeColor } from '../../factions/index.js';
+import { getEnemyColor, getEnemyFaction } from '../../factions/index.js';
 import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, drawFigureShadows, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, drawWorkTool, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 import { castShadow, getDarkness, isExplored, isVisible } from '../../world/index.js';
+import { drawDenArt, drawEnemyCampOutpostArt, drawTentArt, shadow } from '../../economy/building/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
@@ -19,22 +20,25 @@ export function drawEnemyTents() {
   forEachInRect(game.enemyTents, v.x0, v.y0, v.x1, v.y1, et => visible.push(et));
   visible.forEach(et => {
     if (!isExplored(et.x, et.y)) return; // (#299: in the dark; once seen, a tent stays shown)
-    if (et.outpost) drawOutpost(et);
-    else if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
-      // the undead's spawners are graves, the demons' portals, ringed in the enemy's colour
-      ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
-      if (getEnemyFaction().spawner === 'portal') drawPortal(et.x, et.y, getEnemyColor());
-      else drawIcon(ctx, getEnemyFaction().spawner, et.x, et.y, 28);
+    if (et.outpost) {
+      drawEnemyCampOutpostArt(et.x, et.y, getEnemyFaction().id);
+    } else if (et.campStructure && et.campType === 'tent') {
+      drawTentArt(et.x, et.y);
+    } else if (et.campStructure && et.campType === 'grave') {
+      shadow(et.x, et.y + 3, 18, 14, 6);
+      drawIcon(ctx, 'grave', et.x, et.y, 28);
+    } else if (et.campStructure && et.campType === 'demon_den') {
+      drawDenArt(et.x, et.y);
+    } else if (getEnemyFaction().spawner === 'portal') {
+      drawPortal(et.x, et.y, getEnemyColor());
+    } else if (getEnemyFaction().spawner === 'grave') {
+      shadow(et.x, et.y + 3, 18, 14, 6);
+      drawIcon(ctx, 'grave', et.x, et.y, 28);
     } else {
-      ctx.fillStyle = '#641e16'; ctx.beginPath();
-      ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#1e272e'; ctx.beginPath();
-      ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
+      drawTentArt(et.x, et.y);
     }
 
-    const size = et.outpost ? 26 : 16;
+    const size = 16;
     if (et.markedTarget) drawTargetMark({ x: et.x, y: et.y, radius: size }); // the player pointed at it (#203)
     if (et.hp < et.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(et.x - size + 2, et.y - size - 6, (size - 2) * 2, 4);
@@ -43,22 +47,23 @@ export function drawEnemyTents() {
   });
 }
 
-// An enemy camp's outpost (#255): a squat log fort with a pointed roof, a banner in the enemy's colour
-function drawOutpost(et) {
-  const x = et.x, y = et.y, color = getEnemyColor();
-  castShadow(ctx, x, y + 6, 24, 16, 26); // (#307)
-  // the log walls
-  ctx.fillStyle = '#6e4a2c'; ctx.fillRect(x - 20, y - 12, 40, 28);
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; ctx.lineWidth = 1;
-  for (let k = -20; k <= 20; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, y - 12); ctx.lineTo(x + k, y + 16); ctx.stroke(); }
-  for (let k = -20; k <= 20; k += 5) { ctx.fillStyle = '#8a5d36'; ctx.beginPath(); ctx.moveTo(x + k - 2.5, y + 16); ctx.lineTo(x + k, y + 20); ctx.lineTo(x + k + 2.5, y + 16); ctx.fill(); }
-  // the roof
-  ctx.fillStyle = shadeColor(color, -0.45); ctx.beginPath(); ctx.moveTo(x - 24, y - 10); ctx.lineTo(x, y - 26); ctx.lineTo(x + 24, y - 10); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = shadeColor(color, -0.65); ctx.lineWidth = 1.5; ctx.stroke();
-  // the door, and the banner on its pole
-  ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.roundRect(x - 5, y + 2, 10, 14, [5, 5, 0, 0]); ctx.fill();
-  ctx.strokeStyle = '#4a3020'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 14, y - 14); ctx.lineTo(x + 14, y - 38); ctx.stroke();
-  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x + 15, y - 38); ctx.lineTo(x + 30, y - 33); ctx.lineTo(x + 15, y - 28); ctx.closePath(); ctx.fill();
+export function drawEnemyRafts() {
+  const view = getViewRect(40);
+  forEachInRect(game.enemyRafts, view.x0, view.y0, view.x1, view.y1, raft => {
+    if (!isVisible(raft.x, raft.y)) return;
+    castShadow(ctx, raft.x, raft.y + 8, 24, 6, 8);
+    ctx.save();
+    ctx.translate(raft.x, raft.y);
+    ctx.rotate(Math.atan2(raft.dy, raft.dx));
+    ctx.fillStyle = '#704923';
+    ctx.beginPath();
+    ctx.moveTo(-26, -11); ctx.lineTo(20, -11); ctx.lineTo(28, 0); ctx.lineTo(20, 11); ctx.lineTo(-26, 11); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#3f2a19'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#9b6b3d'; ctx.lineWidth = 3;
+    for (let x = -17; x <= 13; x += 10) { ctx.beginPath(); ctx.moveTo(x, -9); ctx.lineTo(x, 9); ctx.stroke(); }
+    ctx.restore();
+  });
 }
 
 // Things fallen enemies dropped (#210, #232): the thing itself on the ground, a faint shadow under it (an old
@@ -130,7 +135,7 @@ export function drawEnemy(en) {
     const kin = unitKin(en);
     // (#298) in layers by the way it faces, as a settler: facing away, its weapon, shield and torch behind its
     // body and its quiver in front; facing us, the other way round
-    const handBack = heldBehind(en), backBack = backBehind(en);
+    const handBack = !en.asleep && heldBehind(en), backBack = backBehind(en);
     const at = fn => { ctx.save(); ctx.translate(en.x, en.y); fn(); ctx.restore(); };
     const healing = en.working > 0 && en.workKind === 'heal';
     const drawMedicBag = front => {
@@ -157,16 +162,16 @@ export function drawEnemy(en) {
     const onItsBack = () => {
       if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
     };
-    if (!simple) {
+    if (!simple && !en.asleep) {
       if (backBack) at(onItsBack);
       if (handBack) at(inHand);
       at(() => drawMedicBag(false));
     }
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple, shadow: false });
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, otherPoint: en.asleep ? null : (bowDraw(en) || {}).other || null, simple, shadow: false });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
     drawHealSparks(en); // (#326)
-    if (!simple) {
+    if (!simple && !en.asleep) {
       at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
       if (!backBack) at(onItsBack);
       if (!handBack) at(inHand);

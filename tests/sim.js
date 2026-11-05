@@ -161,17 +161,21 @@ window.sim = (() => {
     enemies = [];
     for (let i = 0; i < count; i++) enemies.push(createNormalEnemy(getRandomBorderPos(), 'raider'));
     let stuckFrames = 0;
+    let buildingHitWithSwing = false;
     const walls0 = buildings.length;
     for (let f = 0; f < seconds * 60; f++) {
       waveTimer = 999;
       const before = new Map(buildings.map(b => [b, b.hp]));
       update(TICK);
+      if (buildings.some(b => b.hp < before.get(b)) &&
+          enemies.some(e => e.swingT > 0 && e.struckAt === game.pathTick)) buildingHitWithSwing = true;
       for (const e of enemies) {
         const pressed = buildings.filter(b => b.type !== 'door' && collidesWithBoxList(e.x, e.y, e.radius + 1, [b], 14));
-        if (pressed.length && !isBuildingSingle(pressed[0]) && pressed.every(b => b.hp === before.get(b))) stuckFrames++;
+        const recentlyStruck = e.struckAt !== undefined && game.pathTick - e.struckAt <= 60;
+        if (pressed.length && !isBuildingSingle(pressed[0]) && pressed.every(b => b.hp === before.get(b)) && !recentlyStruck) stuckFrames++;
       }
     }
-    return { wallsBroken: walls0 - buildings.length, secondsStuckAtWall: stuckFrames / 60 };
+    return { wallsBroken: walls0 - buildings.length, secondsStuckAtWall: stuckFrames / 60, buildingHitWithSwing };
   }
 
   // Settlers carrying wood, placed at the farthest reachable tiles, must bring it home unaided
@@ -264,8 +268,9 @@ window.sim = (() => {
   // (so it doesn't depend on wave balance); returns update cost per game second
   function waveCost({ seed = 'wave-test', wave = 16, minEnemies = 45, seconds = 30 }) {
     start(seed);
-    for (let w = wave; enemies.length < minEnemies && w < wave + 30; w++) { waveNum = w; startNextWave(); }
-    const spawned = enemies.length;
+    const waveUnitCount = () => enemies.length + enemyRafts.reduce((sum, raft) => sum + raft.units.length, 0);
+    for (let w = wave; waveUnitCount() < minEnemies && w < wave + 30; w++) { waveNum = w; startNextWave(); }
+    const spawned = waveUnitCount();
     const t0 = performance.now();
     run(seconds);
     return { spawned, msPerGameSecond: (performance.now() - t0) / seconds };
@@ -556,7 +561,7 @@ window.sim = (() => {
     const spot = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 11 && t.d <= 13)[0];
     const p = tileCenter(spot.gx, spot.gy);
     enemies = [];
-    enemyTents = [{ x: p.x, y: p.y, hp: 900, maxHp: 900, summonTimer: 0, summonsLeft: 4 }];
+    enemyTents = [{ x: p.x, y: p.y, hp: 900, maxHp: 900, summonTimer: 0, summonsLeft: 4, waveActive: true }];
     invalidateAllPaths();
     settlers = [
       makeSettler(1, hx - 40, hy, { weapon: 'sword', role: 'soldier' }),

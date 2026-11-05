@@ -21,7 +21,7 @@ const storages = { buildings: null, length: -1, tick: -1, list: [] };
 export function getStorages() {
   if (storages.buildings !== game.buildings || storages.length !== game.buildings.length || storages.tick !== game.pathTick) {
     Object.assign(storages, { buildings: game.buildings, length: game.buildings.length, tick: game.pathTick,
-      list: [townHall, ...game.buildings.filter(b => b.type === 'warehouse')] });
+      list: [townHall, ...game.buildings.filter(b => b.type === 'warehouse' && b.side !== 'red')] });
   }
   return storages.list;
 }

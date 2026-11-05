@@ -32,6 +32,60 @@ test('sound starts with the first tap; menu music in the menu, the ambient in En
   expect(errors).toEqual([]);
 });
 
+test('passive enemy-camp defenders and structures do not trigger battle music', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    const own = GAME_CONFIG.factions[sides.player.faction].music;
+    const enemy = GAME_CONFIG.factions[sides.enemy.faction].music;
+    enemies = [{ campGuard: true, hp: 100 }];
+    enemyTents = [{ campStructure: true, hp: 100 }];
+    enemyTentBlueprints = [];
+    const camp = musicMix();
+    game.raidCampId = 1;
+    game.raidActive = true;
+    enemies = [{ campGuard: true, campId: 1, hp: 100 }];
+    const raid = musicMix();
+    game.raidActive = false;
+    enemies = [createConfiguredEnemy({ x: townHall.x + 300, y: townHall.y }, GAME_CONFIG.factions[sides.enemy.faction].enemies[0])];
+    const battle = musicMix();
+    return {
+      campIsAmbient: Object.keys(camp).length === 1 && own.ambient.includes(Object.keys(camp)[0]),
+      raidIsBattle: Object.keys(raid).length === 1 && enemy.battle.includes(Object.keys(raid)[0]),
+      waveIsBattle: Object.keys(battle).length === 1 && enemy.battle.includes(Object.keys(battle)[0])
+    };
+  });
+  expect(r).toEqual({ campIsAmbient: true, raidIsBattle: true, waveIsBattle: true });
+  expect(errors).toEqual([]);
+});
+
+test('wave enemies that spawn during preparation do not trigger battle music before the wave starts', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await page.evaluate(() => {
+    const own = GAME_CONFIG.factions[sides.player.faction].music;
+    const enemy = GAME_CONFIG.factions[sides.enemy.faction].music;
+    const waveEnemy = createConfiguredEnemy({ x: townHall.x + 300, y: townHall.y }, GAME_CONFIG.factions[sides.enemy.faction].enemies[0]);
+    waveEnemy.fromWave = true;
+    waveEnemy.prepWave = game.waveNum;
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    enemies = [waveEnemy];
+    enemyTents = [{ hp: 100, waveActive: true }];
+    enemyTentBlueprints = [{ hp: 100, waveActive: true }];
+    musicPick.fighting = false;
+    const preparation = musicMix();
+    delete waveEnemy.prepWave;
+    game.wavePreparation = null;
+    const wave = musicMix();
+    return {
+      preparationIsAmbient: Object.keys(preparation).length === 1 && own.ambient.includes(Object.keys(preparation)[0]),
+      waveIsBattle: Object.keys(wave).length === 1 && enemy.battle.includes(Object.keys(wave)[0])
+    };
+  });
+  expect(r).toEqual({ preparationIsAmbient: true, waveIsBattle: true });
+  expect(errors).toEqual([]);
+});
+
 test('sounds play where things happen on screen, not far off it, and not too often; off in the Settings (#174)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');

@@ -2,7 +2,7 @@
 
 import { game, getTileIndex } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
-import { drawEnemies, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
+import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlerShadows, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
@@ -15,7 +15,6 @@ import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
-import { drawRaidZone } from '../modes/endless/index.js';
 
 export function render() {
   if (game.loading) return; // (#326) the loading screen's: the last frame stays under it
@@ -45,7 +44,6 @@ export function render() {
   const terrain = getTileIndex();
   drawSand(); // (the desert's tiles, over the ground they cover)
   drawMapBorder(); // (over the sand: the field's edge is the same on a desert as on a glade)
-  drawRaidZone(); // (an enemy camp's zone beyond the edge, #255)
   if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing, over the sand too
   drawBlight();
   drawFarmZones();
@@ -71,6 +69,7 @@ export function render() {
   drawUpgrades(); // (over what they replace, #261)
   drawStoreContents(); // (#248)
   drawEnemyTents();
+  drawEnemyRafts();
   drawBloodOnGround();
   drawDung();
   drawCorpses();

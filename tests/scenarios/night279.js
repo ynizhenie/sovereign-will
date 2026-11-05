@@ -77,7 +77,7 @@ Object.assign(window.sim, (() => {
     start(seed); clearResources();
     settlers.length = 0;
     for (let i = 0; i < 2; i++) settlers.push(makeSettler(700 + i, townHall.x + 40 * i, townHall.y + 60, { weapon: 'sword', role: 'soldier' }));
-    enemyTents.push({ x: townHall.x + 300, y: townHall.y, hp: 60, maxHp: 60, summonTimer: 0, summonsLeft: 0 });
+    enemyTents.push({ x: townHall.x + 300, y: townHall.y, hp: 60, maxHp: 60, waveActive: true, summonTimer: 0, summonsLeft: 0 });
     stock.firewood = 10;
     night();
     step(40, () => {});

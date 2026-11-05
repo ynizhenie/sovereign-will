@@ -108,7 +108,7 @@ export function updateTemporaryZombies(dt) {
 export function raiseOnBlight(dt) {
   if (sides.player.faction !== 'undead') return;
   const r = (GAME_CONFIG.graveWork.nearTiles + 0.5) * TILE_SIZE;
-  const graves = game.buildings.filter(b => b.type === 'grave');
+  const graves = game.buildings.filter(b => b.type === 'grave' && b.side !== 'red');
   for (const corpse of [...game.corpses]) {
     if (!isBlighted(corpse.x, corpse.y) || graves.some(g => Math.max(Math.abs(corpse.x - g.x), Math.abs(corpse.y - g.y)) <= r)) continue;
     corpse.blightAge = (corpse.blightAge || 0) + dt;

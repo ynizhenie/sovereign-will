@@ -4,7 +4,7 @@ import { game, resetTileIndex } from '../engine/world/index.js';
 import { removeDeadSettlers, tickAnimation, tickMeals, tickNight, tickSettlers, tickVoices, updatePossessionView } from '../domains/colony/settlers/index.js';
 import { tickSmelters } from '../domains/economy/building/index.js';
 import { refreshAffordability, updateUI } from '../ui/index.js';
-import { removeDeadEnemies, tickEnemies, tickEnemyTents, tickPortalWave, tickScouts, tickWaveTimer } from '../domains/conflict/waves/index.js';
+import { removeDeadEnemies, tickEnemies, tickEnemyRafts, tickEnemyTents, tickPortalWave, tickScouts, tickWaveTimer } from '../domains/conflict/waves/index.js';
 import { updatePendingRespawns } from '../domains/economy/gathering/index.js';
 import { tickDaytime, tickFog, tickPaths, tickWeather } from '../domains/world/index.js';
 import { tickMenuScene } from '../modes/menu/index.js';
@@ -18,14 +18,13 @@ import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trac
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
-import { isInCamp, isRaidPicking, isRaiding, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
+import { isRaidPicking, isRaiding, raid, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 
 export function update(dt) {
   if (game.loading) return; // (#326)
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
   if (game.gameMode === 'endless' && (game.cardOffer || isRaidPicking())) return; // (the game waits for a card or a raid party to be picked, #255)
-  if (game.gameMode === 'endless' && isInCamp()) { updateCamp(dt); return; } // (a raid's camp: the base waits, #255)
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (game.gameMode === 'battle') {
     updateBattle(dt);
@@ -37,7 +36,7 @@ export function update(dt) {
   updatePossessionView();
   tickMorale(dt);
   boarsPanic();
-  if (!isRaiding()) tickWaveTimer(dt); // (a party out on a raid: the wave clock stops, #255)
+  if (!isRaiding() || raid.scouting) tickWaveTimer(dt); // (scouting doesn't pause the world)
   updatePendingRespawns(dt);
   makeBonesAndRot(dt);
   updateTemporaryZombies(dt);
@@ -53,6 +52,7 @@ export function update(dt) {
   tickFishTraps(dt);
   tickSmelters(dt);
   tickSettlers(dt);
+  tickEnemyRafts(dt);
   tickEnemyTents(dt);
   tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
   tickScouts(dt); // (scouts between waves, #279)
@@ -83,34 +83,8 @@ export function update(dt) {
   tickMenuScene(dt); // (the main menu's scene, #256)
   tickNight();
   tickVoices(dt); // (#252)
-  if (!isRaiding()) tickCards(); // (#255)
+  if (!isRaiding() || raid.scouting) tickCards(); // (#255; scouting doesn't pause the world)
   tickRaidCamp(dt); // (#255)
-  tickRaid(dt);
-  updateUI();
-  refreshAffordability();
-}
-
-// A raid's camp (#255): only the fight goes on, the party against the camp; the base is put away
-function updateCamp(dt) {
-  resetTileIndex();
-  game.pathTick++;
-  updatePossessionView();
-  tickSettlers(dt);
-  tickEnemyTents(dt);
-  tickProjectiles(dt);
-  tickEnemies(dt);
-  separateSettlersFromEnemies();
-  separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
-  for (const unit of game.settlers) tickAnimation(unit, dt);
-  for (const unit of game.enemies) tickAnimation(unit, dt);
-  ageBloodAndDung(dt);
-  trackAllFootprints();
-  updateBurning(dt);
-  removeDeadSettlers();
-  removeDeadEnemies();
-  updateCorpses(dt);
-  ageStuckArrows(dt);
-  tickVoices(dt);
   tickRaid(dt);
   updateUI();
   refreshAffordability();

@@ -1,16 +1,16 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, isDoor, someNear, townHall } from '../../../engine/world/index.js';
-import { getFrontier, hasFog } from '../../world/index.js';
+import { TILE_SIZE, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
+import { getFrontier, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
-import { enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
+import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
-import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
+import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -19,6 +19,46 @@ import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shak
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
   for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt);
+}
+
+function tendCampfire(en, dt) {
+  if (!en.campFireKeeper) return false;
+  const fire = game.buildings.find(building => building.enemyCampStructure && building.campId === en.campId &&
+    building.type === 'campfire' && building.hp > 0);
+  const outpost = game.enemyTents.find(tent => tent.campStructure && tent.outpost && tent.campId === en.campId && tent.hp > 0);
+  if (!fire || !outpost || !en.guard) return false;
+  const fuelLeft = fire.fuelLeft || 0;
+  if ((en.campFuelLoad || 0) > 0) {
+    if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 12) {
+      moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
+      return true;
+    }
+    fire.fuelLeft = Math.max(fire.fuelLeft || 0, GAME_CONFIG.raid.fireFuelPerTend);
+    en.campFuelLoad = 0;
+  } else if (fuelLeft <= GAME_CONFIG.raid.fireFuelReserve) {
+    const centre = getGridPos(outpost.x, outpost.y);
+    const fireCell = getGridPos(fire.x, fire.y);
+    const pickup = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+      .map(([dx, dy]) => ({ gx: centre.gx + dx, gy: centre.gy + dy }))
+      .filter(point => (point.gx !== fireCell.gx || point.gy !== fireCell.gy) &&
+        !isTileBlockedForSettler(point.gx, point.gy))
+      .map(point => ({ x: point.gx * TILE_SIZE + TILE_SIZE / 2, y: point.gy * TILE_SIZE + TILE_SIZE / 2 }))[0];
+    if (!pickup) return true;
+    if (Math.hypot(pickup.x - en.x, pickup.y - en.y) > 38) {
+      moveEntityTowards(en, pickup.x, pickup.y, en.speed, true, dt);
+      return true;
+    }
+    en.campFuelLoad = GAME_CONFIG.raid.fireFuelPerTend;
+    moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
+    return true;
+  }
+  if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 6) {
+    moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
+    return true;
+  }
+  faceTowards(en, fire.x, fire.y);
+  campGuardTalk(en, dt);
+  return true;
 }
 
 /** @typedef {import('../../../engine/world/types.js').Settler} Settler */
@@ -163,10 +203,33 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  if (en.portalTransit) return;
+  const activeCampGuard = en.campGuard && game.raidActive && en.campId === game.raidCampId;
+  if (en.campGuard && !activeCampGuard) {
+    if (tendCampfire(en, dt)) return;
+    if (sleepByCampStructure(en, dt)) return;
+    if (en.guard) holdGuardPost(en, dt);
+    return;
+  }
+  if (activeCampGuard) {
+    en.asleep = false;
+    delete en.campSleepSpot;
+  }
   if (en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken && !getEnemyDef(en).pet &&
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
   const enemyDef = getEnemyDef(en);
+  if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
+    if (en.muster) {
+      if (en.musterRoute?.length) {
+        const waypoint = en.musterRoute[0];
+        if (Math.hypot(waypoint.x - en.x, waypoint.y - en.y) <= 10) en.musterRoute.shift();
+        else moveEntityTowards(en, waypoint.x, waypoint.y, en.speed, true, dt);
+      } else if (Math.hypot(en.muster.x - en.x, en.muster.y - en.y) > 6) moveEntityTowards(en, en.muster.x, en.muster.y, en.speed, true, dt);
+      else faceTowards(en, townHall.x, townHall.y);
+    }
+    return;
+  }
   if (enemyDef.pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
@@ -255,9 +318,87 @@ function enemyOnPlatform(en, enemyDef, dt) {
 function holdGuardPost(en, dt) {
   const reach = GAME_CONFIG.raid.guardTiles * 30;
   if (en.guardOff) return false;
-  if (game.settlers.some(s => Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6)) { en.guardOff = true; return false; }
-  if (Math.hypot(en.guard.x - en.x, en.guard.y - en.y) > 6) moveEntityTowards(en, en.guard.x, en.guard.y, en.speed, true, dt);
+  if (game.settlers.some(s => (!s.raider || (game.raidActive && en.campId === game.raidCampId)) &&
+      (Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6))) {
+    en.guardOff = true;
+    return false;
+  }
+  const camp = (game.enemyCamps || []).find(item => item.id === en.campId) || game.enemyCamp;
+  if (!camp) return true;
+  if (en.campPatrolWait > 0) en.campPatrolWait -= dt;
+  if (!en.campPatrolTarget || Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) < 10) {
+    if (!en.campPatrolTarget) en.campPatrolWait = 0;
+    if (en.campPatrolWait <= 0) {
+      const centre = getGridPos(camp.x, camp.y), radius = Math.max(2, (camp.radius || GAME_CONFIG.raid.campRadiusTiles) - 2);
+      const options = [];
+      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+        if (Math.abs(dx) === radius || Math.abs(dy) === radius) continue;
+        const gx = centre.gx + dx, gy = centre.gy + dy, x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+        if (inEnemyTerritory(x, y) && !isTileBlockedForSettler(gx, gy) &&
+          !game.enemies.some(other => other !== en && other.hp > 0 && Math.hypot(other.x - x, other.y - y) < 25)) options.push({ x, y });
+      }
+      en.campPatrolTarget = options.length ? options[Math.floor(rand() * options.length)] : { ...en.guard };
+      en.campPatrolWait = 1.5 + rand() * 2.5;
+    }
+  }
+  if (en.campPatrolTarget && Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) > 6) {
+    moveEntityTowards(en, en.campPatrolTarget.x, en.campPatrolTarget.y, en.speed * 0.6, true, dt);
+  } else faceTowards(en, camp.x, camp.y);
+  campGuardTalk(en, dt);
   return true;
+}
+
+function sleepByCampStructure(en, dt) {
+  if (!isNight() || en.campFireKeeper) {
+    en.asleep = false;
+    delete en.campSleepSpot;
+    return false;
+  }
+  const camp = (game.enemyCamps || []).find(item => item.id === en.campId) || game.enemyCamp;
+  if (!camp) return false;
+  const alertRange = GAME_CONFIG.raid.guardTiles * TILE_SIZE;
+  if (game.settlers.some(settler => (!settler.raider || (game.raidActive && en.campId === game.raidCampId)) &&
+      (Math.hypot(settler.x - en.guard.x, settler.y - en.guard.y) < alertRange ||
+        Math.hypot(settler.x - en.x, settler.y - en.y) < alertRange * 0.6))) {
+    en.asleep = false;
+    delete en.campSleepSpot;
+    return false;
+  }
+  if (!en.campSleepSpot) {
+    const anchors = [
+      ...game.enemyTents.filter(tent => tent.campStructure && tent.campId === en.campId),
+      ...game.buildings.filter(building => building.enemyCampStructure && building.campId === en.campId &&
+        ['campfire', 'warehouse'].includes(building.type))
+    ];
+    const options = [];
+    for (const anchor of anchors) {
+      const base = getGridPos(anchor.x, anchor.y);
+      for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]]) {
+        const gx = base.gx + dx, gy = base.gy + dy, spot = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+        if (inEnemyTerritory(spot.x, spot.y) && !isTileBlockedForSettler(gx, gy) &&
+          !game.enemies.some(other => other !== en && other.hp > 0 && Math.hypot(other.x - spot.x, other.y - spot.y) < 25)) options.push(spot);
+      }
+    }
+    en.campSleepSpot = options.sort((a, b) => Math.hypot(a.x - en.x, a.y - en.y) - Math.hypot(b.x - en.x, b.y - en.y))[0] || en.guard;
+  }
+  if (!en.campSleepSpot) return false;
+  if (Math.hypot(en.campSleepSpot.x - en.x, en.campSleepSpot.y - en.y) > 10) {
+    en.asleep = false;
+    moveEntityTowards(en, en.campSleepSpot.x, en.campSleepSpot.y, en.speed, true, dt);
+  } else {
+    en.asleep = true;
+    campGuardTalk(en, dt);
+  }
+  return true;
+}
+
+function campGuardTalk(en, dt) {
+  en.campTalkTimer = (en.campTalkTimer ?? rand() * 12) - dt;
+  if (en.campTalkTimer > 0 || en.asleep) return;
+  en.campTalkTimer = 15 + rand() * 20;
+  const nearby = game.enemies.some(other => other !== en && other.hp > 0 && other.campGuard &&
+    other.campId === en.campId && Math.hypot(other.x - en.x, other.y - en.y) < TILE_SIZE * 4);
+  if (nearby) speak(en, getEnemyFaction().id, 'camp');
 }
 
 // (#279) a wave's enemy gathering where it came in before it attacks: it stands facing the base and shouts at
@@ -311,18 +452,18 @@ function scoutFlees(en, dt) {
 // A tent builder walks to its site and builds; the tent stands once the work is done
 function buildEnemyTent(en, dt) {
   let site = en.buildTarget;
-  if (!game.enemyTentBlueprints.includes(site)) {
-    en.buildTarget = null;
-    return;
-  }
   const tentConfig = GAME_CONFIG.enemyTents;
   let distToSite = Math.hypot(site.x - en.x, site.y - en.y);
   if (distToSite > tentConfig.buildDistance) {
     moveEntityTowards(en, site.x, site.y, en.speed, true, dt);
   } else {
+    if (!game.enemyTentBlueprints.includes(site)) game.enemyTentBlueprints.push(site);
     site.progress += dt * tentConfig.buildRate;
     if (site.progress >= site.maxProgress) {
-      game.enemyTents.push({ x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp, summonTimer: 0, summonsLeft: tentConfig.summonsPerWave });
+      game.enemyTents.push({
+        x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp,
+        summonTimer: 0, summonsLeft: tentConfig.summonsPerWave, waveActive: !!site.waveActive
+      });
       playSound('tentUp', site);
       game.enemyTentBlueprints.splice(game.enemyTentBlueprints.indexOf(site), 1);
       en.buildTarget = null;
@@ -440,11 +581,11 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
     if (!own && isShelter(touchingBuilding) && !turned) {
-      breakBuilding(touchingBuilding, enemyDef, dt);
+      breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else if (!own && (turned ? en.isBlockedPath : en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
       // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
       // way in over spikes squeezes past the walls beside them
-      breakBuilding(touchingBuilding, enemyDef, dt);
+      breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else {
       let dx = en.x - touchingBuilding.x;
       let dy = en.y - touchingBuilding.y;
@@ -463,8 +604,16 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
   else if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
 }
 
-function breakBuilding(building, enemyDef, dt) {
-  building.hp -= dt * enemyDef.siege.buildings;
+function breakBuilding(en, building, enemyDef, dt) {
+  const { damage, cooldown } = enemyBuildingAttack(enemyDef);
+  if (game.gameMode === 'battle' && en.nextStrikeTick == null) en.nextStrikeTick = game.pathTick + 1;
+  if (game.pathTick < (en.nextStrikeTick || 0)) return;
+  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
+  if (enemyDef.ranged) en.weapon = 'dagger';
+  faceTowards(en, building.x, building.y);
+  startSwing(en, Math.min(0.5, cooldown));
+  en.struckAt = game.pathTick;
+  building.hp -= damage;
   if (building.hp <= 0) removeBuilding(building);
 }
 

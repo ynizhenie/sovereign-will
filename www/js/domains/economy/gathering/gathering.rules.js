@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, forEachInRect, game, rand } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
-import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
+import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inEnemyTerritory, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -18,7 +18,7 @@ export function getPlacedResources(includeGrowingTrees = true) {
 
 // (#326, 27.10, 26) An ore source with a mine built on it: worked unmarked, as ore is; one without, not at all
 export function hasMine(r) {
-  return !!r.oreSpawner && game.buildings.some(b => b.type === 'mine' && b.x === r.x && b.y === r.y);
+  return !!r.oreSpawner && game.buildings.some(b => b.type === 'mine' && b.side !== 'red' && b.x === r.x && b.y === r.y);
 }
 
 export function getHarvestableResources() {
@@ -47,6 +47,7 @@ export function getWorkableResources(found = () => {}) {
   // it's within BOAR_STRAY tiles of it
   const stray = BOAR_STRAY * TILE_SIZE;
   for (const b of game.boars) {
+    if (inEnemyTerritory(b.x, b.y)) continue;
     if (inTerritory(b.x, b.y)) b.homeZone = true;
     else if (!b.homeZone || b.x < box.x0 - stray || b.x > box.x1 + stray || b.y < box.y0 - stray || b.y > box.y1 + stray) continue;
     all.push(b); found(b, game.boars);

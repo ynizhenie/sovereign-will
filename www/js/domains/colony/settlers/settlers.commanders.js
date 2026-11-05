@@ -78,7 +78,7 @@ function mostNeeded(tick, settler) {
   let best = null, bestShare = Infinity;
   for (const [id, amount] of Object.entries(needs)) {
     if (id === 'food' && !getPlayerFaction().eats) continue;
-    if (id === 'ironOre' && !game.buildings.some(b => b.type === 'smelter')) continue;
+    if (id === 'ironOre' && !game.buildings.some(b => b.side !== 'red' && b.type === 'smelter')) continue;
     const share = (stock[id] || 0) / amount;
     if (share < bestShare) { bestShare = share; best = id; }
   }
