@@ -39,10 +39,15 @@ export const game = {
   armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)
   // the things on the map (WORLD_LISTS)
   settlers: [],
+  enemyCamps: [],          // persistent enemy camps on the Endless map
   enemyCamp: null,          // the enemy's persistent camp on the Endless map
+  enemyCampCount: 1,        // selected Endless camp count, 0..3
+  fogEnabled: true,
+  raidCampId: null,
   enemyCampDestroyed: false,
   enemyRafts: [],            // rafts bringing a wave after the enemy camp is destroyed
   wavePreparation: null,     // the next wave gathered before its attack
+  demonWaveTransit: null,
   raidActive: false,
   trees: [],
   cacti: [],

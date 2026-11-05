@@ -280,9 +280,10 @@ Object.assign(window.sim, (() => {
     sides.enemy.faction = 'undead';
     start(seed);
     waveNum = 11; startNextWave();
-    const kinds = [...new Set(enemies.map(en => en.enemyKey))].sort();
+    const kinds = [...new Set(enemies.concat(...enemyRafts.map(raft => raft.units)).map(en => en.enemyKey))].sort();
     clearResources();
     settlers = [];
+    enemyRafts = [];
     const necroDef = GAME_CONFIG.enemies.undead_necromancer.necromancer;
     const necro = createConfiguredEnemy(nearHall(-8, -8), 'undead_necromancer');
     necro.fromWave = true;

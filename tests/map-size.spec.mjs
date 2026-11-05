@@ -51,3 +51,22 @@ test('the menu sets map size and a custom wave interval for the next game (#21)'
   await page.click('#play-button');
   expect(await page.evaluate(() => [COLS, ROWS])).toEqual([128, 128]);
 });
+
+test('Endless camp count, fog and wave interval are independent and persist (#326)', async ({ page }) => {
+  await openGame(page);
+  await page.click('[data-enemy-camp-count="3"]');
+  await page.click('[data-fog-enabled="false"]');
+  await page.click('[data-wave-interval="240"]');
+  const selected = () => page.evaluate(() => ({
+    camps: document.querySelector('.camp-count-option.active')?.dataset.enemyCampCount,
+    fog: document.querySelector('.fog-option.active')?.dataset.fogEnabled,
+    interval: document.querySelector('[data-wave-interval].active')?.dataset.waveInterval,
+    activeByGroup: ['.camp-count-option', '.fog-option', '[data-wave-interval]'].map(selector =>
+      document.querySelectorAll(`${selector}.active`).length)
+  }));
+  expect(await selected()).toEqual({ camps: '3', fog: 'false', interval: '240', activeByGroup: [1, 1, 1] });
+
+  await page.reload();
+  await page.evaluate(() => showMenuScreen('endless'));
+  expect(await selected()).toEqual({ camps: '3', fog: 'false', interval: '240', activeByGroup: [1, 1, 1] });
+});

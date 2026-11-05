@@ -83,6 +83,11 @@ export function serializeGame() {
   };
   const world = {};
   for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? packList(value.map(o => encode(o))) : encode(value);
+  world.enemyCamps = encode(game.enemyCamps);
+  world.enemyCamp = encode(game.enemyCamp);
+  world.enemyCampCount = game.enemyCampCount;
+  world.fogEnabled = game.fogEnabled;
+  world.raidCampId = game.raidCampId;
   return {
     version: 1,
     world,
@@ -155,6 +160,11 @@ export function loadGame(data) {
   game.worldSeed = createWorldSeed(data.seed.value);
   game.worldSeed.setState(data.seed.state);
   for (const [list, value] of Object.entries(data.world)) game[list] = unpackList(value);
+  game.enemyCamps = game.enemyCamps || (game.enemyCamp ? [game.enemyCamp] : []);
+  game.enemyCamp = game.enemyCamp || game.enemyCamps[0] || null;
+  game.enemyCampCount = data.world.enemyCampCount ?? game.enemyCampCount ?? 1;
+  game.fogEnabled = data.world.fogEnabled !== false;
+  game.raidCampId = data.world.raidCampId ?? game.enemyCamps[0]?.id ?? null;
   if (!data.world.logs) game.logs = []; // (a save from before #298)
   if (!data.world.weather) game.weather = null; // (#308)
   for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
@@ -165,7 +175,8 @@ export function loadGame(data) {
   for (const en of game.enemies) if (goneEnemies[en.enemyKey]) en.enemyKey = goneEnemies[en.enemyKey];
   Object.assign(townHall, { store: {} }, data.townHall); // (older saves: nothing in it, filled again from the stock)
   game.piles = game.piles || [];
-  game.enemyCamp = game.enemyCamp || null; game.enemyCampDestroyed = !!game.enemyCampDestroyed; game.enemyRafts = game.enemyRafts || []; game.wavePreparation = game.wavePreparation || null; game.raidActive = false;
+  game.enemyCampDestroyed = game.enemyCamps.length === 0;
+  game.enemyRafts = game.enemyRafts || []; game.wavePreparation = game.wavePreparation || null; game.raidActive = false;
   normalizeEnemyCamp();
   game.scouts = game.scouts || []; game.scoutClock = game.scoutClock || 0; game.reliefZones = game.reliefZones || []; game.postZones = game.postZones || []; game.pathZones = game.pathZones || [];
   game.unlocked = game.unlocked || {}; game.cardsDue = game.cardsDue || 0; game.cardsWave = game.cardsWave || 0; game.cardOffer = game.cardOffer || null; // (older saves: no cards)

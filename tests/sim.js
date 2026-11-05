@@ -268,8 +268,9 @@ window.sim = (() => {
   // (so it doesn't depend on wave balance); returns update cost per game second
   function waveCost({ seed = 'wave-test', wave = 16, minEnemies = 45, seconds = 30 }) {
     start(seed);
-    for (let w = wave; enemies.length < minEnemies && w < wave + 30; w++) { waveNum = w; startNextWave(); }
-    const spawned = enemies.length;
+    const waveUnitCount = () => enemies.length + enemyRafts.reduce((sum, raft) => sum + raft.units.length, 0);
+    for (let w = wave; waveUnitCount() < minEnemies && w < wave + 30; w++) { waveNum = w; startNextWave(); }
+    const spawned = waveUnitCount();
     const t0 = performance.now();
     run(seconds);
     return { spawned, msPerGameSecond: (performance.now() - t0) / seconds };
@@ -560,7 +561,7 @@ window.sim = (() => {
     const spot = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 11 && t.d <= 13)[0];
     const p = tileCenter(spot.gx, spot.gy);
     enemies = [];
-    enemyTents = [{ x: p.x, y: p.y, hp: 900, maxHp: 900, summonTimer: 0, summonsLeft: 4 }];
+    enemyTents = [{ x: p.x, y: p.y, hp: 900, maxHp: 900, summonTimer: 0, summonsLeft: 4, waveActive: true }];
     invalidateAllPaths();
     settlers = [
       makeSettler(1, hx - 40, hy, { weapon: 'sword', role: 'soldier' }),

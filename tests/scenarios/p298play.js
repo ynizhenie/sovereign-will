@@ -47,8 +47,9 @@ Object.assign(window.sim, (() => {
     s.armor = null; s.maxHp = hp0; s.hp = hp0;
     waveNum = 30;
     enemies = [];
+    enemyRafts = [];
     for (let i = 0; i < 3; i++) startNextWave();
-    const wave = enemies.filter(en => en.fromWave);
+    const wave = enemies.concat(...enemyRafts.map(raft => raft.units)).filter(en => en.fromWave);
     return { leatherHp, kind, leatherTaken, swapped, waveLeather: wave.some(en => en.armor === 'leather'), waveIron: wave.some(en => en.armor === 'iron') };
   }
 

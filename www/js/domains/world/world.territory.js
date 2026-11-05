@@ -60,11 +60,13 @@ export function inTerritory(x, y) {
 }
 
 export function inEnemyTerritory(x, y) {
-  const camp = game.gameMode === 'endless' ? game.enemyCamp : null;
-  if (!camp) return false;
+  const camps = game.gameMode === 'endless' ? (game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : []) : [];
+  if (!camps.length) return false;
   const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
-  const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
-  return Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
+  return camps.some(camp => {
+    const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
+    return Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
+  });
 }
 
 // The box round the base's land (all the map, out of Endless)

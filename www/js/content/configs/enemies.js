@@ -115,10 +115,9 @@ export const enemiesConfig = {
     iron: { fromWave: 10, startChance: 0.03, endChance: 0.22 }
   },
 
-  // enemy tents: builders put them up near the map edge (#326: in Endless at the border of the player's land, outside it
-  // borderTiles [from, to] tiles from it); each summons extra enemies during a wave
+  // enemy tents: builders put them up near their wave's rally point; each summons extra enemies during a wave
   enemyTents: {
-    borderTiles: [1, 3], hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
+    hp: 60, buildWork: 180, buildRate: 20, buildDistance: 28,
     summonsPerWave: 2, summonInterval: 5, maxEnemies: 60
   },
 

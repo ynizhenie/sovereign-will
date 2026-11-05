@@ -12,6 +12,7 @@ import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
 import { drawHorns, drawPortal } from '../../factions/demons/index.js';
 import { castShadow, getDarkness, isExplored, isVisible } from '../../world/index.js';
+import { drawDenArt, drawEnemyCampOutpostArt, drawTentArt, shadow } from '../../economy/building/index.js';
 
 // Enemy tents (the undead's graves, the demons' portals), with their health
 export function drawEnemyTents() {
@@ -19,18 +20,22 @@ export function drawEnemyTents() {
   forEachInRect(game.enemyTents, v.x0, v.y0, v.x1, v.y1, et => visible.push(et));
   visible.forEach(et => {
     if (!isExplored(et.x, et.y)) return; // (#299: in the dark; once seen, a tent stays shown)
-    if (getEnemyFaction().spawner === 'grave' || getEnemyFaction().spawner === 'portal') {
-      // the undead's spawners are graves, the demons' portals, ringed in the enemy's colour
-      ctx.strokeStyle = getEnemyColor(); ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(et.x, et.y, 16, 0, Math.PI * 2); ctx.stroke();
-      if (getEnemyFaction().spawner === 'portal') drawPortal(et.x, et.y, getEnemyColor());
-      else drawIcon(ctx, getEnemyFaction().spawner, et.x, et.y, 28);
+    if (et.outpost) {
+      drawEnemyCampOutpostArt(et.x, et.y, getEnemyFaction().id);
+    } else if (et.campStructure && et.campType === 'tent') {
+      drawTentArt(et.x, et.y);
+    } else if (et.campStructure && et.campType === 'grave') {
+      shadow(et.x, et.y + 3, 18, 14, 6);
+      drawIcon(ctx, 'grave', et.x, et.y, 28);
+    } else if (et.campStructure && et.campType === 'demon_den') {
+      drawDenArt(et.x, et.y);
+    } else if (getEnemyFaction().spawner === 'portal') {
+      drawPortal(et.x, et.y, getEnemyColor());
+    } else if (getEnemyFaction().spawner === 'grave') {
+      shadow(et.x, et.y + 3, 18, 14, 6);
+      drawIcon(ctx, 'grave', et.x, et.y, 28);
     } else {
-      ctx.fillStyle = '#641e16'; ctx.beginPath();
-      ctx.moveTo(et.x, et.y - 14); ctx.lineTo(et.x + 14, et.y + 14); ctx.lineTo(et.x - 14, et.y + 14); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#1e272e'; ctx.beginPath();
-      ctx.moveTo(et.x, et.y); ctx.lineTo(et.x + 5, et.y + 14); ctx.lineTo(et.x - 5, et.y + 14); ctx.closePath(); ctx.fill();
+      drawTentArt(et.x, et.y);
     }
 
     const size = 16;
@@ -130,7 +135,7 @@ export function drawEnemy(en) {
     const kin = unitKin(en);
     // (#298) in layers by the way it faces, as a settler: facing away, its weapon, shield and torch behind its
     // body and its quiver in front; facing us, the other way round
-    const handBack = heldBehind(en), backBack = backBehind(en);
+    const handBack = !en.asleep && heldBehind(en), backBack = backBehind(en);
     const at = fn => { ctx.save(); ctx.translate(en.x, en.y); fn(); ctx.restore(); };
     const healing = en.working > 0 && en.workKind === 'heal';
     const drawMedicBag = front => {
@@ -157,16 +162,16 @@ export function drawEnemy(en) {
     const onItsBack = () => {
       if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
     };
-    if (!simple) {
+    if (!simple && !en.asleep) {
       if (backBack) at(onItsBack);
       if (handBack) at(inHand);
       at(() => drawMedicBag(false));
     }
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !!en.shield, armor: en.armor || null, otherPoint: (bowDraw(en) || {}).other || null, simple, shadow: false });
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, otherPoint: en.asleep ? null : (bowDraw(en) || {}).other || null, simple, shadow: false });
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
     drawHealSparks(en); // (#326)
-    if (!simple) {
+    if (!simple && !en.asleep) {
       at(() => { if (en.shield) drawShield(en.radius, handSide(en)); }); // (its armour: drawFigure, #298)
       if (!backBack) at(onItsBack);
       if (!handBack) at(inHand);

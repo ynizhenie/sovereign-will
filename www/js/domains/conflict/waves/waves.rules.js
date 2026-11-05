@@ -8,10 +8,10 @@ import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { armorOf, isRangedWeapon } from '../../colony/equipment/index.js';
-import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict } from '../../../engine/movement/index.js';
-import { addCorpse } from '../combat/index.js';
-import { openDemonPortal } from '../../factions/demons/index.js';
-import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
+import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict, moveEntityTowards } from '../../../engine/movement/index.js';
+import { addCorpse, getBaseRadius } from '../combat/index.js';
+import { openDemonPortal, openDemonPortalAt } from '../../factions/demons/index.js';
+import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inEnemyTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
 import { generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
@@ -61,6 +61,74 @@ export function getRandomBorderPos() {
   }
   if (band.length) { const t = band[Math.floor(rand() * band.length)]; return { x: t.x * TILE_SIZE + 15, y: t.y * TILE_SIZE + 15 }; }
   return { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+}
+
+function getRaftLandingSlots(at, units, joined) {
+  const centre = getGridPos(at.x, at.y), candidates = [];
+  const radius = 4;
+  for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+    const gx = centre.gx + dx, gy = centre.gy + dy;
+    if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS ||
+        joined[gy * game.COLS + gx] !== 1 || isTileBlockedForEnemyStrict(gx, gy)) continue;
+    candidates.push({ x: gx * TILE_SIZE + TILE_SIZE / 2, y: gy * TILE_SIZE + TILE_SIZE / 2 });
+  }
+  candidates.sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y));
+
+  const assigned = new Map(), occupied = game.enemies.filter(enemy => enemy.hp > 0);
+  for (const unit of [...units].sort((a, b) => b.radius - a.radius)) {
+    const spot = candidates.find(candidate =>
+      !occupied.some(enemy => Math.hypot(enemy.x - candidate.x, enemy.y - candidate.y) < enemy.radius + unit.radius + 2) &&
+      [...assigned].every(([other, point]) =>
+        Math.hypot(point.x - candidate.x, point.y - candidate.y) >= other.radius + unit.radius + 2));
+    if (!spot) return null;
+    assigned.set(unit, spot);
+  }
+  return units.map(unit => assigned.get(unit));
+}
+
+function getRaftLandingPos(units, joined = getEnemyReach()) {
+  const landings = [];
+  const maxDepth = Math.ceil(Math.min(game.COLS, game.ROWS) / 2);
+  for (let depth = 0; depth < maxDepth && !landings.length; depth++) {
+    for (let gy = depth; gy < game.ROWS - depth; gy++) for (let gx = depth; gx < game.COLS - depth; gx++) {
+      if (gx !== depth && gx !== game.COLS - 1 - depth &&
+          gy !== depth && gy !== game.ROWS - 1 - depth) continue;
+      if (isTileBlockedForEnemyStrict(gx, gy) || joined[gy * game.COLS + gx] !== 1) continue;
+      const edges = [
+        { distance: gx, side: 'west', dx: 1, dy: 0 },
+        { distance: game.COLS - 1 - gx, side: 'east', dx: -1, dy: 0 },
+        { distance: gy, side: 'north', dx: 0, dy: 1 },
+        { distance: game.ROWS - 1 - gy, side: 'south', dx: 0, dy: -1 }
+      ];
+      const nearest = Math.min(...edges.map(edge => edge.distance));
+      for (const edge of edges.filter(candidate => candidate.distance === nearest)) {
+        const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+        const slots = getRaftLandingSlots({ x, y }, units, joined);
+        if (slots) landings.push({ x, y, ...edge, slots });
+      }
+    }
+  }
+  if (!landings.length) {
+    const at = getRandomBorderPos();
+    const slots = getRaftLandingSlots(at, units, joined);
+    if (!slots) throw new Error('No safe landing area available for an enemy raft');
+    const edges = [
+      { distance: at.x, side: 'west', dx: 1, dy: 0 },
+      { distance: game.WORLD_WIDTH - at.x, side: 'east', dx: -1, dy: 0 },
+      { distance: at.y, side: 'north', dx: 0, dy: 1 },
+      { distance: game.WORLD_HEIGHT - at.y, side: 'south', dx: 0, dy: -1 }
+    ].sort((a, b) => a.distance - b.distance);
+    return { x: at.x, y: at.y, ...edges[0], slots };
+  }
+  const landing = landings[Math.floor(rand() * landings.length)];
+  return {
+    x: landing.x,
+    y: landing.y,
+    side: landing.side,
+    dx: landing.dx,
+    dy: landing.dy,
+    slots: landing.slots
+  };
 }
 
 // The config entry of an enemy on the map
@@ -116,6 +184,20 @@ function unitHit(definition) {
   const tool = unit.tool ? getDefinition('tools', unit.tool) : null;
   const hit = (unit.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage) * kind.damageMultiplier;
   return { kind, hit, cooldown: weapon.combat.cooldown };
+}
+
+// Structures are hit once per weapon cooldown, like they are by the player's units. Ranged units use
+// their dagger rather than arrows against a building.
+export function enemyBuildingAttack(definition) {
+  const unit = enemyPlayerUnit(definition);
+  const kind = GAME_CONFIG.settlerTypes[unit.type] || GAME_CONFIG.settlerTypes.normal;
+  if (kind.bite) return { damage: kind.bite.damage, cooldown: kind.bite.cooldown };
+  const weapon = getDefinition('weapons', unit.weapon) || GAME_CONFIG.weapons.fist;
+  const stats = definition.ranged ? weapon.dagger : weapon.combat;
+  if (!stats) return { damage: 0, cooldown: 1 };
+  const tool = unit.tool ? getDefinition('tools', unit.tool) : null;
+  const damage = unit.weapon === 'fist' && tool && tool.combatDamage != null ? tool.combatDamage : stats.damage;
+  return { damage: damage * kind.damageMultiplier, cooldown: stats.cooldown };
 }
 
 // (#255) Every enemy is exactly the player's own unit of its kind: its kind's speed, the damage in a
@@ -230,6 +312,10 @@ export function getWavePresetPool(factionId = getEnemyFaction().id, wave = game.
   });
 }
 
+export function getWavePresetGroupSize(factionId, preset) {
+  return factionId === 'undead' && preset.size !== 'pet' && preset.weapon === 'fist' && !preset.tool ? 2 : 1;
+}
+
 function pickWavePreset(pool) {
   const total = pool.reduce((sum, option) => sum + option.weight, 0);
   let roll = rand() * total;
@@ -256,7 +342,7 @@ export function createNormalEnemy(pos, enemyKey = 'raider') {
 export function findNearestEnemyTent(origin) {
   let nearest = /** @type {{ x: number, y: number } | null} */ (null);
   let nearestDist = Infinity;
-  game.enemyTents.filter(tent => !tent.campStructure || game.raidActive).forEach(tent => {
+  game.enemyTents.filter(tent => !tent.campStructure || (game.raidActive && tent.campId === game.raidCampId)).forEach(tent => {
     const dist = Math.hypot(tent.x - origin.x, tent.y - origin.y);
     if (dist < nearestDist) { nearest = tent; nearestDist = dist; }
   });
@@ -267,68 +353,65 @@ export function grantEnemyReward(enemy) {
   addResources(enemy.reward);
 }
 
-// (#326) At home (Endless) a wave's tent or grave is put up at the border of the player's land: outside it, one to
-// three tiles from it, the spot nearest its builder of a good few tried. Null with none free (then as ever, by the builder)
-function tentSiteAtBorder(origin) {
-  const box = getTerritoryBox(), c = GAME_CONFIG.enemyTents.borderTiles;
-  const gx0 = Math.floor(box.x0 / TILE_SIZE) - c[1], gx1 = Math.floor(box.x1 / TILE_SIZE) - 1 + c[1];
-  const gy0 = Math.floor(box.y0 / TILE_SIZE) - c[1], gy1 = Math.floor(box.y1 / TILE_SIZE) - 1 + c[1];
-  const centre = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
-  let best = null, bestD = Infinity;
-  for (let attempt = 0; attempt < 160; attempt++) {
-    const gx = gx0 + Math.floor(rand() * (gx1 - gx0 + 1)), gy = gy0 + Math.floor(rand() * (gy1 - gy0 + 1));
-    if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
-    const { x, y } = centre(gx, gy);
-    if (inTerritory(x, y)) continue;
-    let gap = Infinity; // (the tiles from the land: 1 beside it)
-    for (let dy = -c[1]; dy <= c[1] && gap > c[0]; dy++) for (let dx = -c[1]; dx <= c[1]; dx++) {
-      if (inTerritory(x + dx * TILE_SIZE, y + dy * TILE_SIZE)) gap = Math.min(gap, Math.max(Math.abs(dx), Math.abs(dy)));
-    }
-    if (gap < c[0] || gap > c[1]) continue;
-    const occupied = isTileOccupied(x, y) || game.naturalRocks.some(r => r.x === x && r.y === y) || game.waterTiles.some(w => w.x === x && w.y === y) ||
-      game.enemyTents.some(t => t.x === x && t.y === y) || game.enemyTentBlueprints.some(t => t.x === x && t.y === y);
-    if (occupied) continue;
-    const d = Math.hypot(x - origin.x, y - origin.y);
-    if (d < bestD) { bestD = d; best = { x, y }; }
-  }
-  return best ? { x: best.x, y: best.y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null } : null;
-}
-
 export function getNearbyEnemyTentSite(origin) {
-  if (hasTerritory()) { const border = tentSiteAtBorder(origin); if (border) return border; }
-  let originG = getGridPos(origin.x, origin.y);
-  for (let attempt = 0; attempt < 40; attempt++) {
-    let gx = Math.max(0, Math.min(game.COLS - 1, originG.gx + Math.floor(rand() * 9) - 4));
-    let gy = Math.max(0, Math.min(game.ROWS - 1, originG.gy + Math.floor(rand() * 9) - 4));
-    let x = gx * TILE_SIZE + 15;
-    let y = gy * TILE_SIZE + 15;
-    let occupied = isTileOccupied(x, y) ||
-      game.naturalRocks.some(r => r.x === x && r.y === y) ||
-      game.waterTiles.some(w => w.x === x && w.y === y) ||
-      game.enemyTents.some(t => t.x === x && t.y === y) ||
-      game.enemyTentBlueprints.some(t => t.x === x && t.y === y);
-
-    if (isOutskirts(gx, gy) && !occupied && Math.hypot(x - origin.x, y - origin.y) <= 150) {
-      return { x: x, y: y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null };
-    }
+  const rally = origin.muster || origin;
+  const centre = getGridPos(rally.x, rally.y), radius = 6;
+  const candidates = [];
+  for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+    if (Math.hypot(dx, dy) > radius) continue;
+    const gx = centre.gx + dx, gy = centre.gy + dy;
+    if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
+    const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+    const occupied = isTileOccupied(x, y) || game.naturalRocks.some(rock => rock.x === x && rock.y === y) ||
+      game.waterTiles.some(water => water.x === x && water.y === y) ||
+      game.enemyTents.some(tent => tent.x === x && tent.y === y) ||
+      game.enemyTentBlueprints.some(site => site.x === x && site.y === y);
+    if (occupied || inTerritory(x, y) || inEnemyTerritory(x, y)) continue;
+    candidates.push({ x, y, distance: Math.hypot(x - rally.x, y - rally.y) });
   }
-  return null;
+  candidates.sort((a, b) => a.distance - b.distance);
+  const site = candidates[0];
+  return site ? { x: site.x, y: site.y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null } : null;
 }
 
 // Where a wave's enemy appears: the map's edge, or for the demons one of their portals
-export function getWaveSpawnPos() {
-  const portals = game.enemyTents.filter(tent => tent.portal && !tent.campStructure);
-  if (!getEnemyFaction().portalSpawns || portals.length === 0) return getRandomBorderPos();
-  const portal = portals[Math.floor(rand() * portals.length)];
-  // a free tile beside the portal, never inside a tree, a rock or the water
-  const g = getGridPos(portal.x, portal.y);
-  const free = [];
-  for (let dy = -2; dy <= 2; dy++) {
-    for (let dx = -2; dx <= 2; dx++) {
-      if ((dx || dy) && !isTileBlockedForEnemyStrict(g.gx + dx, g.gy + dy)) free.push({ x: (g.gx + dx) * TILE_SIZE + 15, y: (g.gy + dy) * TILE_SIZE + 15 });
+/** @param {{ x: number, y: number } | null} [sourcePortal] */
+export function getWaveSpawnPos(sourcePortal = null) {
+  const portals = sourcePortal ? [sourcePortal] : game.enemyTents.filter(tent => tent.portal && !tent.campStructure);
+  if (getEnemyFaction().portalSpawns && portals.length > 0) {
+    const portal = portals[Math.floor(rand() * portals.length)];
+    const g = getGridPos(portal.x, portal.y);
+    const free = [];
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if ((dx || dy) && !isTileBlockedForEnemyStrict(g.gx + dx, g.gy + dy)) free.push({ x: (g.gx + dx) * TILE_SIZE + 15, y: (g.gy + dy) * TILE_SIZE + 15 });
+      }
     }
+    return free.length ? free[Math.floor(rand() * free.length)] : { x: portal.x, y: portal.y };
   }
-  return free.length ? free[Math.floor(rand() * free.length)] : { x: portal.x, y: portal.y };
+
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  if (camps.length) {
+    const camp = camps.reduce((nearest, current) =>
+      Math.hypot(current.x - townHall.x, current.y - townHall.y) <
+        Math.hypot(nearest.x - townHall.x, nearest.y - townHall.y) ? current : nearest);
+    const centre = getGridPos(camp.x, camp.y);
+    const radius = camp.radius || GAME_CONFIG.raid.campRadiusTiles, toHall = Math.atan2(townHall.y - camp.y, townHall.x - camp.x);
+    const candidates = [];
+    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+      if (Math.hypot(dx, dy) < Math.max(1, radius - 1)) continue;
+      const gx = centre.gx + dx, gy = centre.gy + dy;
+      const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+      if (!isTileBlockedForEnemyStrict(gx, gy) && !inTerritory(x, y)) {
+        const awayFromHall = -(Math.cos(toHall) * dx + Math.sin(toHall) * dy);
+        candidates.push({ x, y, awayFromHall });
+      }
+    }
+    candidates.sort((a, b) => b.awayFromHall - a.awayFromHall);
+    const nearSide = candidates.slice(0, Math.max(1, Math.ceil(candidates.length * 0.35)));
+    if (nearSide.length) return nearSide[Math.floor(rand() * nearSide.length)];
+  }
+  return getRandomBorderPos();
 }
 
 // How much the player's army scales a wave: 1 at army.base settlers, more for a bigger army
@@ -389,19 +472,21 @@ export function getWaveGearChance(item, wave = game.waveNum) {
 }
 
 // Armour, a shield and a helmet become more common as the enemy faction develops.
-function dressForWave(enemy, def) {
+export function dressForWave(enemy, def, wave = game.waveNum) {
   if (def.pet) return; // (a pet wears nothing, #326)
-  const ironChance = getWaveGearChance('iron'), leatherChance = getWaveGearChance('leather');
-  const armourRoll = rand();
-  const armour = armourRoll < ironChance ? GAME_CONFIG.gear.armor
-    : armourRoll < ironChance + leatherChance ? GAME_CONFIG.gear.leather_armor : null;
-  if (armour) {
-    enemy.armor = armour.armorKind;
-    enemy.maxHp += armour.hpBonus;
-    enemy.hp = enemy.maxHp;
+  if (!enemy.armor) {
+    const ironChance = getWaveGearChance('iron', wave), leatherChance = getWaveGearChance('leather', wave);
+    const armourRoll = rand();
+    const armour = armourRoll < ironChance ? GAME_CONFIG.gear.armor
+      : armourRoll < ironChance + leatherChance ? GAME_CONFIG.gear.leather_armor : null;
+    if (armour) {
+      enemy.armor = armour.armorKind;
+      enemy.maxHp += armour.hpBonus;
+      enemy.hp = enemy.maxHp;
+    }
   }
-  if (!def.ranged && !def.healer && !def.necromancer && rand() < getWaveGearChance('shield')) enemy.shield = true;
-  if (rand() < getWaveGearChance('helmet')) enemy.helmet = true;
+  if (!enemy.shield && !def.ranged && !def.healer && !def.necromancer && rand() < getWaveGearChance('shield', wave)) enemy.shield = true;
+  if (!enemy.helmet && rand() < getWaveGearChance('helmet', wave)) enemy.helmet = true;
 }
 
 export function startNextWave(preparing = false) {
@@ -419,10 +504,22 @@ export function startNextWave(preparing = false) {
     scaling.newTents.min + Math.floor(rand() * (scaling.newTents.max - scaling.newTents.min + 1))
   );
 
-  // the demons' portals open first, so the wave can come out of them
-  // as many as tents would be, but always one to come out of
+  /** @type {ReturnType<typeof openDemonPortal>} */
+  let prepPortal = null;
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  // A demon wave waits at a portal in its camp, then crosses to a portal at the colony's edge.
   if (getEnemyFaction().portalSpawns) {
-    for (let i = 0; i < (activeTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
+    if (preparing) {
+      const camp = camps.length ? camps.reduce((nearest, current) =>
+        Math.hypot(current.x - townHall.x, current.y - townHall.y) <
+          Math.hypot(nearest.x - townHall.x, nearest.y - townHall.y) ? current : nearest) : null;
+      prepPortal = openDemonPortal(camp);
+      if (!prepPortal) throw new Error('No safe tile available for the demon wave portal');
+      prepPortal.wavePortal = true;
+      if (game.wavePreparation) game.wavePreparation.portalSource = prepPortal;
+    } else {
+      for (let i = 0; i < (activeTents.length === 0 ? Math.max(1, tentCount) : tentCount); i++) openDemonPortal();
+    }
     invalidateAllPaths();
   }
 
@@ -431,21 +528,20 @@ export function startNextWave(preparing = false) {
   const presets = getWavePresetPool(factionId);
   let spawned = 0;
   // the demons' come out of their portals a few at a time (#250): queued, let out by tickPortalWave
-  const queued = getEnemyFaction().portalSpawns;
+  const queued = getEnemyFaction().portalSpawns && !preparing;
   game.portalQueue = [];
   const raftUnits = [];
   const spawnWaveEnemy = def => {
     if (queued) { game.portalQueue.push(def.id); spawned++; return; }
-    const enemy = createConfiguredEnemy(getWaveSpawnPos(), def.id);
+    const enemy = createConfiguredEnemy(getWaveSpawnPos(prepPortal), def.id);
     if (!enemy) return;
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
+    if (preparing) enemy.prepWave = game.wavePreparation?.wave ?? game.waveNum;
     dressForWave(enemy, def);
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true; // (a night wave, #257)
-    if (game.enemyCampDestroyed && !queued) raftUnits.push(enemy);
-    else {
-      musterAt(enemy); // (it gathers first, #279)
-      game.enemies.push(enemy);
-    }
+    musterAt(enemy);
+    if (!game.enemyCamps?.length && !game.enemyCamp && !queued && !prepPortal) raftUnits.push(enemy);
+    else game.enemies.push(enemy);
     spawned++;
     if (def.buildsTents) normalEnemies.push(enemy);
   };
@@ -453,8 +549,13 @@ export function startNextWave(preparing = false) {
   for (let i = 0; i < count && presets.length; i++) {
     const picked = pickWavePreset(presets);
     const def = picked && GAME_CONFIG.enemies[picked.enemyKey];
-    if (def) spawnWaveEnemy(def);
+    if (def) {
+      for (let member = 0; member < getWavePresetGroupSize(factionId, picked.preset); member++) spawnWaveEnemy(def);
+    }
   }
+
+  if (raftUnits.length) createEnemyRafts(raftUnits);
+  regroupBySide(); // (#279: builders place wave tents near the same rally point as their wave)
 
   // portals (the demons) have opened by themselves already; tents need builders
   if (getEnemyFaction().portalSpawns) normalEnemies = [];
@@ -466,15 +567,16 @@ export function startNextWave(preparing = false) {
 
     if (site) {
       site.builder = builder;
+      site.waveActive = true;
       builder.buildTarget = site;
-      game.enemyTentBlueprints.push(site);
     }
   }
 
-  if (queued) { game.portalTimer = 0; tickPortalWave(0); } // (the first of them at once)
-  if (raftUnits.length) createEnemyRafts(raftUnits);
-  regroupBySide(); // (#279: those of a side gather together)
-  if (preparing && game.enemyCamp) setWaveMustersAtCamp(GAME_CONFIG.waveMuster.preparationSeconds);
+  if (queued) {
+    game.portalWavePrep = preparing ? game.wavePreparation?.wave ?? game.waveNum : null;
+    game.portalTimer = 0;
+    tickPortalWave(0); // (the first of them at once)
+  }
   pickCaptain(spawned);
   game.waveSize = countLiveWaveEnemies() + game.portalQueue.length; // (morale: a wave that's lost most of them runs)
   game.waveRouted = false;
@@ -483,7 +585,8 @@ export function startNextWave(preparing = false) {
 
 function activateEnemyTents() {
   for (const tent of game.enemyTents) {
-    if (tent.campStructure) continue;
+    if (tent.campStructure || tent.wavePortal) continue;
+    tent.waveActive = true;
     tent.summonTimer = 0;
     tent.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
     tent.summonWave = game.waveNum;
@@ -497,19 +600,24 @@ function countLiveWaveEnemies() {
 
 function createEnemyRafts(units) {
   const capacity = GAME_CONFIG.waveMuster.raftCapacity;
+  const joined = getEnemyReach();
   for (let i = 0; i < units.length; i += capacity) {
     const group = units.slice(i, i + capacity);
-    const at = getRandomBorderPos();
-    const edges = [
-      { distance: at.x, dx: 1, dy: 0 },
-      { distance: game.WORLD_WIDTH - at.x, dx: -1, dy: 0 },
-      { distance: at.y, dx: 0, dy: 1 },
-      { distance: game.WORLD_HEIGHT - at.y, dx: 0, dy: -1 }
-    ].sort((a, b) => a.distance - b.distance);
-    const { dx, dy } = edges[0];
+    const { x, y, side, dx, dy, slots } = getRaftLandingPos(group, joined);
+    const clearance = TILE_SIZE * 3;
+    const startX = side === 'west' ? -clearance : side === 'east' ? game.WORLD_WIDTH + clearance : x;
+    const startY = side === 'north' ? -clearance : side === 'south' ? game.WORLD_HEIGHT + clearance : y;
+    const distance = Math.hypot(x - startX, y - startY);
+    const travelX = (x - startX) / distance, travelY = (y - startY) / distance;
+    const arrivalWindow = GAME_CONFIG.waveMuster.preparationSeconds -
+      GAME_CONFIG.waveMuster.departureSeconds - 1;
+    group.forEach(enemy => { enemy.waveArrivalSide = side; });
     game.enemyRafts.push({
-      x: at.x - dx * 90, y: at.y - dy * 90,
-      targetX: at.x, targetY: at.y, dx, dy, units: group
+      x: startX, y: startY,
+      targetX: x, targetY: y, dx: travelX || dx, dy: travelY || dy,
+      speed: Math.max(GAME_CONFIG.waveMuster.raftSpeed, distance / arrivalWindow),
+      departX: startX, departY: startY,
+      arrivalSide: side, phase: 'arriving', units: group, landingSlots: slots
     });
   }
 }
@@ -517,20 +625,34 @@ function createEnemyRafts(units) {
 export function tickEnemyRafts(dt) {
   for (let i = game.enemyRafts.length - 1; i >= 0; i--) {
     const raft = game.enemyRafts[i];
+    if (!raft.phase) raft.phase = 'arriving';
     const distance = Math.hypot(raft.targetX - raft.x, raft.targetY - raft.y);
-    const step = GAME_CONFIG.waveMuster.raftSpeed * dt;
+    const step = (raft.speed || GAME_CONFIG.waveMuster.raftSpeed) * dt;
     if (distance > step) {
-      raft.x += raft.dx * step;
-      raft.y += raft.dy * step;
+      raft.x += (raft.targetX - raft.x) / distance * step;
+      raft.y += (raft.targetY - raft.y) / distance * step;
       continue;
     }
-    for (const [index, enemy] of raft.units.entries()) {
-      enemy.x = raft.targetX + Math.cos(index * 2.4) * 12;
-      enemy.y = raft.targetY + Math.sin(index * 2.4) * 12;
-      musterAt(enemy);
-      game.enemies.push(enemy);
+    raft.x = raft.targetX;
+    raft.y = raft.targetY;
+    if (raft.phase === 'arriving') {
+      for (const [index, enemy] of raft.units.entries()) {
+        const slot = raft.landingSlots?.[index];
+        if (!slot) throw new Error('An enemy raft reached shore without a safe disembarkation tile');
+        enemy.x = slot.x;
+        enemy.y = slot.y;
+        game.enemies.push(enemy);
+      }
+      raft.units = [];
+      raft.phase = 'departing';
+      raft.targetX = raft.departX ?? raft.x - raft.dx * TILE_SIZE * 3;
+      raft.targetY = raft.departY ?? raft.y - raft.dy * TILE_SIZE * 3;
+      const departureDistance = Math.hypot(raft.targetX - raft.x, raft.targetY - raft.y);
+      raft.dx = (raft.targetX - raft.x) / departureDistance;
+      raft.dy = (raft.targetY - raft.y) / departureDistance;
+    } else {
+      game.enemyRafts.splice(i, 1);
     }
-    game.enemyRafts.splice(i, 1);
   }
 }
 
@@ -546,10 +668,10 @@ export function tickPortalWave(dt) {
     const enemy = createConfiguredEnemy(getWaveSpawnPos(), id);
     if (!enemy) continue;
     enemy.fromWave = true;
+    if (game.wavePreparation && game.portalWavePrep === game.wavePreparation.wave) enemy.prepWave = game.wavePreparation.wave;
     dressForWave(enemy, GAME_CONFIG.enemies[id]);
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true;
     musterAt(enemy); // (#279)
-    if (game.wavePreparation && game.wavePreparation.stage === 'gather') setWaveMusterAtCamp(enemy, game.waveTimer);
     game.enemies.push(enemy);
   }
   pickCaptain(game.waveSize);
@@ -562,28 +684,33 @@ function musterAt(enemy) {
   enemy.muster = { x: enemy.x + (townHall.x - enemy.x) / d * TILE_SIZE * 1.5, y: enemy.y + (townHall.y - enemy.y) / d * TILE_SIZE * 1.5 };
 }
 
-function setWaveMusterAtCamp(enemy, seconds) {
-  const camp = game.enemyCamp;
-  if (!camp || enemy.buildTarget) return;
-  const angle = rand() * Math.PI * 2, radius = (1 + rand() * 2) * TILE_SIZE;
-  enemy.muster = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
-  enemy.musterUntil = game.pathTick + Math.round(seconds * 60);
-}
-
-function setWaveMustersAtCamp(seconds) {
-  for (const enemy of game.enemies) if (enemy.fromWave && enemy.hp > 0) setWaveMusterAtCamp(enemy, seconds);
-}
-
 // (#279) a wave's enemies that came in on the same side of the map gather together: at the middle of where
 // they came in, a tile and a half in from the edge. (#298) Out of portals (the demons), by the portal each
 // came out of: a tile and a half from it towards the base, not off to the map's edge
 function regroupBySide() {
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  const waveUnits = game.enemies.concat(game.enemyRafts.flatMap(raft => raft.units));
+  if (camps.length && !getEnemyFaction().portalSpawns) {
+    const camp = camps.reduce((nearest, current) =>
+      Math.hypot(current.x - townHall.x, current.y - townHall.y) <
+        Math.hypot(nearest.x - townHall.x, nearest.y - townHall.y) ? current : nearest);
+    const radius = ((camp.radius || GAME_CONFIG.raid.campRadiusTiles) + 2.5) * TILE_SIZE;
+    const awayFromHall = Math.atan2(camp.y - townHall.y, camp.x - townHall.x);
+    const group = waveUnits.filter(en => en.fromWave && en.musterUntil &&
+      (!game.wavePreparation || en.prepWave === game.wavePreparation.wave));
+    group.forEach((en, i) => {
+      const angle = awayFromHall + (i - (group.length - 1) / 2) * 0.18;
+      en.muster = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
+    });
+    return;
+  }
   const f = getFrontier(), W = f.x1, H = f.y1; // (#299: the frontier's sides, a default map's own)
-  const portals = getEnemyFaction().portalSpawns ? game.enemyTents.filter(et => et.portal && !et.campStructure && et.hp > 0) : [];
+  const portals = getEnemyFaction().portalSpawns ? game.enemyTents.filter(et => et.portal && (!et.campStructure || et.wavePortal) && et.hp > 0) : [];
   const nearestPortal = en => portals.reduce((best, p) => (!best || Math.hypot(p.x - en.x, p.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? p : best), null);
-  const sideOf = en => portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : /** @type {[string, number][]} */ ([['left', en.x - f.x0], ['right', W - en.x], ['top', en.y - f.y0], ['bottom', H - en.y]]).sort((a, b) => a[1] - b[1])[0][0];
+  const sideOf = en => en.waveArrivalSide || (portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : /** @type {[string, number][]} */ ([['left', en.x - f.x0], ['right', W - en.x], ['top', en.y - f.y0], ['bottom', H - en.y]]).sort((a, b) => a[1] - b[1])[0][0]);
   const groups = {};
-  for (const en of game.enemies) if (en.fromWave && en.musterUntil && !en.buildTarget) (groups[sideOf(en)] = groups[sideOf(en)] || []).push(en);
+  for (const en of waveUnits) if (en.fromWave && en.musterUntil && !en.buildTarget &&
+      (!game.wavePreparation || en.prepWave === game.wavePreparation.wave)) (groups[sideOf(en)] = groups[sideOf(en)] || []).push(en);
   for (const [side, group] of Object.entries(groups)) {
     const cx = group.reduce((sum, en) => sum + en.x, 0) / group.length, cy = group.reduce((sum, en) => sum + en.y, 0) / group.length;
     const inset = (BORDER_MARGIN + 1.5) * TILE_SIZE;
@@ -595,28 +722,214 @@ function regroupBySide() {
   }
 }
 
-// (#279) a wave big enough has a commander: one of its melee enemies (not big, not a healer), with a banner
+function stageWaveAtPlayerEdge() {
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  const camp = camps.length ? camps.reduce((nearest, current) =>
+    Math.hypot(current.x - townHall.x, current.y - townHall.y) <
+      Math.hypot(nearest.x - townHall.x, nearest.y - townHall.y) ? current : nearest) : null;
+  const wave = game.enemies.filter(enemy => enemy.fromWave && enemy.hp > 0 &&
+    enemy.prepWave === game.wavePreparation?.wave);
+  for (const raft of game.enemyRafts) {
+    if (raft.phase === 'arriving') wave.push(...raft.units.filter(enemy =>
+      enemy.fromWave && enemy.prepWave === game.wavePreparation?.wave));
+  }
+  if (!wave.length) return;
+  const toCampX = camp ? camp.x - townHall.x : 0, toCampY = camp ? camp.y - townHall.y : 0;
+  const campSide = camp ? Math.abs(toCampX) >= Math.abs(toCampY)
+    ? (toCampX < 0 ? 'west' : 'east')
+    : (toCampY < 0 ? 'north' : 'south') : null;
+  const box = getTerritoryBox();
+  const gx0 = Math.max(1, Math.floor(box.x0 / TILE_SIZE) - 1);
+  const gy0 = Math.max(1, Math.floor(box.y0 / TILE_SIZE) - 1);
+  const gx1 = Math.min(game.COLS - 2, Math.ceil(box.x1 / TILE_SIZE));
+  const gy1 = Math.min(game.ROWS - 2, Math.ceil(box.y1 / TILE_SIZE));
+  const sides = campSide ? [campSide] : [...new Set(wave.map(enemy => enemy.waveArrivalSide).filter(Boolean))];
+  for (const side of sides) {
+    const positions = [];
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+      if (inTerritory(x, y) || inEnemyTerritory(x, y) ||
+        ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inTerritory(x + dx * TILE_SIZE, y + dy * TILE_SIZE))) continue;
+      if ((side === 'east' && x < box.x1) || (side === 'west' && x >= box.x0) ||
+        (side === 'south' && y < box.y1) || (side === 'north' && y >= box.y0)) continue;
+      positions.push({ x, y });
+    }
+    const group = wave.filter(enemy => campSide || enemy.waveArrivalSide === side);
+    if (!positions.length || !group.length) continue;
+    positions.sort((a, b) => Math.abs((side === 'east' || side === 'west' ? a.y - townHall.y : a.x - townHall.x)) -
+      Math.abs((side === 'east' || side === 'west' ? b.y - townHall.y : b.x - townHall.x)));
+    const slots = positions.slice(0, Math.min(positions.length, group.length));
+    slots.sort((a, b) => side === 'east' || side === 'west' ? a.y - b.y : a.x - b.x);
+    group.forEach((enemy, index) => {
+      const slot = Math.min(slots.length - 1, Math.floor((index + 0.5) * slots.length / group.length));
+      enemy.muster = { x: slots[slot].x, y: slots[slot].y };
+      enemy.musterRoute = getTerritoryBypassRoute(enemy, enemy.muster);
+    });
+  }
+}
+
+function getTerritoryBypassRoute(start, target) {
+  if (!hasTerritory()) return [target];
+  const box = getTerritoryBox(), pad = TILE_SIZE;
+  const left = box.x0 - pad, right = box.x1 + pad, top = box.y0 - pad, bottom = box.y1 + pad;
+  const width = right - left, height = bottom - top, perimeter = 2 * (width + height);
+  const corners = [
+    { x: left, y: top, t: 0 },
+    { x: right, y: top, t: width },
+    { x: right, y: bottom, t: width + height },
+    { x: left, y: bottom, t: width * 2 + height }
+  ];
+  const project = point => {
+    const clampX = Math.max(left, Math.min(right, point.x));
+    const clampY = Math.max(top, Math.min(bottom, point.y));
+    const choices = [
+      { side: 'west', x: left, y: clampY, d: Math.hypot(point.x - left, point.y - clampY) },
+      { side: 'east', x: right, y: clampY, d: Math.hypot(point.x - right, point.y - clampY) },
+      { side: 'north', x: clampX, y: top, d: Math.hypot(point.x - clampX, point.y - top) },
+      { side: 'south', x: clampX, y: bottom, d: Math.hypot(point.x - clampX, point.y - bottom) }
+    ].sort((a, b) => a.d - b.d);
+    const p = choices[0];
+    const t = p.side === 'north' ? p.x - left
+      : p.side === 'east' ? width + p.y - top
+        : p.side === 'south' ? width + height + right - p.x
+          : width * 2 + height + bottom - p.y;
+    return { x: p.x, y: p.y, t };
+  };
+  const from = project(start), to = project(target);
+  const clockwise = (to.t - from.t + perimeter) % perimeter;
+  const counterClockwise = perimeter - clockwise;
+  const forward = clockwise <= counterClockwise;
+  const span = Math.min(clockwise, counterClockwise);
+  const nodes = corners.map(corner => {
+    const distance = forward ? (corner.t - from.t + perimeter) % perimeter : (from.t - corner.t + perimeter) % perimeter;
+    return { ...corner, distance };
+  }).filter(corner => corner.distance > 1 && corner.distance < span - 1)
+    .sort((a, b) => a.distance - b.distance);
+  const route = [from, ...nodes, to, target];
+  return route.filter((point, index) => index === 0 ||
+    Math.hypot(point.x - route[index - 1].x, point.y - route[index - 1].y) > 8);
+}
+
+function findDemonWaveExit(camp) {
+  const box = getTerritoryBox();
+  const gx0 = Math.max(0, Math.floor(box.x0 / TILE_SIZE)), gy0 = Math.max(0, Math.floor(box.y0 / TILE_SIZE));
+  const gx1 = Math.min(game.COLS - 1, Math.ceil(box.x1 / TILE_SIZE)), gy1 = Math.min(game.ROWS - 1, Math.ceil(box.y1 / TILE_SIZE));
+  const direction = { x: camp.x - townHall.x, y: camp.y - townHall.y };
+  const length = Math.max(1, Math.hypot(direction.x, direction.y));
+  const candidates = [];
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+    const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+    const edgeDistance = Math.min(x - box.x0, box.x1 - x, y - box.y0, box.y1 - y);
+    if (!inTerritory(x, y) || Math.hypot(x - townHall.x, y - townHall.y) < getBaseRadius() + TILE_SIZE ||
+        isTileBlockedForEnemyStrict(gx, gy) || isTileOccupied(x, y) ||
+        game.enemyTents.some(tent => Math.hypot(tent.x - x, tent.y - y) < 4 * TILE_SIZE)) continue;
+    candidates.push({ x, y, edgeDistance, alignment: ((x - townHall.x) * direction.x + (y - townHall.y) * direction.y) / length });
+  }
+  candidates.sort((a, b) => a.edgeDistance - b.edgeDistance || b.alignment - a.alignment);
+  return candidates[0] || null;
+}
+
+function beginDemonWaveTransit() {
+  const prep = game.wavePreparation;
+  const source = prep?.portalSource;
+  if (!source) throw new Error('The prepared demon wave has no entrance portal');
+  const camp = game.enemyCamps?.find(c => c.id === source.campId) || game.enemyCamp || { x: source.x, y: source.y };
+  const position = findDemonWaveExit(camp);
+  if (!position) throw new Error('No safe tile available for the demon wave exit portal');
+  const exit = openDemonPortalAt(position.x, position.y);
+  if (!exit) throw new Error('Could not open the demon wave exit portal');
+  exit.wavePortal = true;
+  const enemies = game.enemies.filter(enemy => enemy.fromWave && enemy.hp > 0 && enemy.prepWave === prep.wave);
+  game.demonWaveTransit = {
+    source: { x: source.x, y: source.y }, exit: { x: exit.x, y: exit.y },
+    phase: 'entering', timer: 0
+  };
+  for (const enemy of enemies) {
+    enemy.portalTransit = true;
+    enemy.path = null;
+    enemy.musterUntil = 0;
+  }
+  playSound('portal', source);
+  invalidateAllPaths();
+}
+
+function tickDemonWaveTransit(dt) {
+  const transit = game.demonWaveTransit;
+  if (!transit) return;
+  const enemies = game.enemies.filter(enemy => enemy.portalTransit);
+  if (transit.phase === 'entering') {
+    for (const enemy of enemies) {
+      if (Math.hypot(transit.source.x - enemy.x, transit.source.y - enemy.y) > 20) {
+        moveEntityTowards(enemy, transit.source.x, transit.source.y, enemy.speed, true, dt);
+      }
+    }
+    if (enemies.some(enemy => Math.hypot(transit.source.x - enemy.x, transit.source.y - enemy.y) > 20)) return;
+    game.enemyTents = game.enemyTents.filter(tent =>
+      !tent.wavePortal || tent.x !== transit.source.x || tent.y !== transit.source.y);
+    transit.phase = 'exiting';
+    transit.timer = 0;
+    playSound('portal', transit.exit);
+    return;
+  }
+  transit.timer += dt;
+  if (transit.timer < 0.4) return;
+  const g = getGridPos(transit.exit.x, transit.exit.y), used = new Set();
+  const exits = [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]
+    .map(([dx, dy]) => ({ x: transit.exit.x + dx * TILE_SIZE, y: transit.exit.y + dy * TILE_SIZE, gx: g.gx + dx, gy: g.gy + dy }))
+    .filter(point => !isTileBlockedForEnemyStrict(point.gx, point.gy));
+  for (const [index, enemy] of enemies.entries()) {
+    const spot = exits.find(point => !used.has(`${point.gx},${point.gy}`));
+    if (spot) {
+      used.add(`${spot.gx},${spot.gy}`);
+      enemy.x = spot.x;
+      enemy.y = spot.y;
+    } else {
+      enemy.x = transit.exit.x + Math.cos(index * 2.4) * 12;
+      enemy.y = transit.exit.y + Math.sin(index * 2.4) * 12;
+    }
+    delete enemy.portalTransit;
+    delete enemy.prepWave;
+    delete enemy.muster;
+    delete enemy.musterRoute;
+    enemy.musterUntil = 0;
+  }
+  game.enemyTents = game.enemyTents.filter(tent =>
+    !tent.wavePortal || tent.x !== transit.exit.x || tent.y !== transit.exit.y);
+  game.demonWaveTransit = null;
+  invalidateAllPaths();
+}
+
+// (#279) a wave big enough has a commander: a melee fighter, preferring a normal unit over a big one
 function pickCaptain(size) {
   if (size < GAME_CONFIG.waveMuster.captainFrom || game.enemies.some(en => en.captain && en.hp > 0)) return;
-  // (in the biggest group gathering, so it has its own about it; not one off building a tent)
-  const pick = game.enemies.filter(en => en.fromWave && !en.buildTarget && en.type === 'normal' && !getEnemyDef(en).healer && !getEnemyDef(en).necromancer && !getEnemyDef(en).ranged)
+  const pick = game.enemies.filter(en => en.fromWave && !en.buildTarget &&
+    en.type !== 'archer' && !getEnemyDef(en).pet &&
+    !getEnemyDef(en).healer && !getEnemyDef(en).necromancer && !getEnemyDef(en).ranged)
     .map(en => ({ en, near: game.enemies.filter(o => o.muster && en.muster && Math.hypot(o.muster.x - en.muster.x, o.muster.y - en.muster.y) < 120).length }))
-    .sort((a, b) => b.near - a.near)[0];
+    .sort((a, b) => (a.en.type === 'big' ? 1 : 0) - (b.en.type === 'big' ? 1 : 0) || b.near - a.near)[0];
   if (pick) pick.en.captain = true;
 }
 
-// The wave timer: enemies gather by the camp at 30 s, move into position at 15 s, then attack
+// Most factions gather at 30 s and stage outside at 15 s; demons open their camp portal at 15 s.
 export function tickWaveTimer(dt) {
+  tickDemonWaveTransit(dt);
   const before = game.waveTimer;
   game.waveTimer -= dt;
   const muster = GAME_CONFIG.waveMuster;
-  if (!game.wavePreparation && game.enemyCamp && before > muster.preparationSeconds && game.waveTimer <= muster.preparationSeconds) {
-    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  const preparationSeconds = getEnemyFaction().portalSpawns ? muster.departureSeconds : muster.preparationSeconds;
+  const canPrepareWave = !getEnemyFaction().portalSpawns || camps.length > 0;
+  if (canPrepareWave && !game.wavePreparation && before > preparationSeconds && game.waveTimer <= preparationSeconds) {
+    game.wavePreparation = { wave: game.waveNum, stage: getEnemyFaction().portalSpawns ? 'portal' : 'gather' };
     startNextWave(true);
   }
-  if (game.wavePreparation && game.wavePreparation.stage === 'gather' && before > muster.departureSeconds && game.waveTimer <= muster.departureSeconds) {
-    regroupBySide();
-    for (const enemy of game.enemies) if (enemy.fromWave && enemy.hp > 0 && !enemy.buildTarget) {
+  if (!getEnemyFaction().portalSpawns && game.wavePreparation && game.wavePreparation.stage === 'gather' &&
+      before > muster.departureSeconds && game.waveTimer <= muster.departureSeconds) {
+    stageWaveAtPlayerEdge();
+    const waveEnemies = game.enemies.concat(...game.enemyRafts
+      .filter(raft => raft.phase === 'arriving').map(raft => raft.units));
+    for (const enemy of waveEnemies) if (enemy.fromWave && enemy.hp > 0 &&
+        enemy.prepWave === game.wavePreparation.wave) {
       enemy.musterUntil = game.pathTick + Math.round(muster.departureSeconds * 60);
     }
     game.wavePreparation.stage = 'march';
@@ -628,8 +941,13 @@ export function tickWaveTimer(dt) {
   }
   if (game.waveTimer <= 0) {
     if (game.wavePreparation) {
+      if (getEnemyFaction().portalSpawns) beginDemonWaveTransit();
       activateEnemyTents();
-      for (const enemy of game.enemies) if (enemy.fromWave) enemy.musterUntil = 0;
+      for (const enemy of game.enemies) if (enemy.prepWave === game.wavePreparation.wave) {
+        enemy.musterUntil = 0;
+        delete enemy.prepWave;
+      }
+      game.portalWavePrep = null;
       game.waveNum++;
       game.wavePreparation = null;
       if (game.gameMode === 'endless') playSound('horn');
@@ -648,29 +966,36 @@ export function tickEnemyTents(dt) {
     }
   }
 
-  if (game.wavePreparation) return;
+  if (game.wavePreparation || (!game.enemyTents.some(tent => tent.waveActive && tent.summonsLeft > 0) &&
+      !game.enemies.some(enemy => enemy.fromWave || enemy.waveSummoned))) return;
 
   game.enemyTents.forEach(et => {
-    if (et.campStructure) return;
+    if (et.campStructure || !et.waveActive) return;
     et.summonTimer = (et.summonTimer || 0) + dt;
     const tentConfig = GAME_CONFIG.enemyTents;
     if ((et.summonsLeft || 0) > 0 && et.summonTimer >= tentConfig.summonInterval && game.enemies.length < tentConfig.maxEnemies) {
       const wave = et.summonWave || Math.max(1, game.waveNum - 1);
-      const pool = getWavePresetPool(getEnemyFaction().id, wave);
+      const factionId = getEnemyFaction().id;
+      const pool = getWavePresetPool(factionId, wave);
       const picked = pickWavePreset(pool);
       const def = picked && GAME_CONFIG.enemies[picked.enemyKey];
       if (!def) throw new Error(`No wave preset available for ${getEnemyFaction().id} in wave ${wave}`);
+      const groupSize = getWavePresetGroupSize(factionId, picked.preset);
+      if (game.enemies.length + groupSize > tentConfig.maxEnemies) return;
       et.summonTimer = 0;
       et.summonsLeft--;
-      let spawnPos = {
-        x: Math.max(15, Math.min(game.WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
-        y: Math.max(15, Math.min(game.WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
-      };
-      const summoned = createConfiguredEnemy(spawnPos, def.id);
-      summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
-      dressForWave(summoned, def);
-      if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) summoned.torch = true;
-      game.enemies.push(summoned);
+      for (let member = 0; member < groupSize; member++) {
+        const spawnPos = {
+          x: Math.max(15, Math.min(game.WORLD_WIDTH - 15, et.x + (rand() - 0.5) * 30)),
+          y: Math.max(15, Math.min(game.WORLD_HEIGHT - 15, et.y + (rand() - 0.5) * 30))
+        };
+        const summoned = createConfiguredEnemy(spawnPos, def.id);
+        summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
+        summoned.waveSummoned = true;
+        dressForWave(summoned, def);
+        if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) summoned.torch = true;
+        game.enemies.push(summoned);
+      }
     }
   });
 }

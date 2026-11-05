@@ -69,17 +69,22 @@ export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   return true;
 }
 
-export function performAttack(attacker, targetX, targetY) {
+export function performAttack(attacker, targetX, targetY, useDaggerForStructure = false) {
   const pet = attacker.role === 'pet';
   if (!pet) attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
   if (attacker.attackCooldown > 0) return;
   if (pet) attacker.struckAt = game.pathTick; // (a bite animation starts on the actual strike, not each cooldown tick)
   faceTowards(attacker, targetX, targetY);
 
-  const stats = getWeaponStats(attacker, 'combat');
+  const rangedWeapon = isRangedWeapon(attacker.weapon);
+  const dagger = rangedWeapon && useDaggerForStructure
+    ? (getDefinition('weapons', attacker.weapon) || {}).dagger
+    : null;
+  const normalStats = getWeaponStats(attacker, 'combat');
+  const stats = dagger ? { ...dagger, multiplier: normalStats.multiplier } : normalStats;
   const attackCooldown = game.gameMode === 'battle' ? stats.cooldown / (attacker.battleAttackSpeed || 1) : stats.cooldown;
 
-  if (isRangedWeapon(attacker.weapon) && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
+  if (rangedWeapon && !dagger && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
     if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
     const bolt = isCrossbowWeapon(attacker.weapon);
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
@@ -101,15 +106,16 @@ export function performAttack(attacker, targetX, targetY) {
     attacker.shotAt = game.pathTick; attacker.shotLen = attackCooldown; // (its next arrow drawn, #306)
     startSwing(attacker, 0.3);
   } else {
+    attacker.swingWeapon = dagger ? 'dagger' : null;
     const range = stats.range;
     const dmg = stats.damage * stats.multiplier;
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
       ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker); playSound('hit', en); } })),
-      ...game.enemyTents.filter(et => (!et.campStructure || game.raidActive) && inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
+      ...game.enemyTents.filter(et => (!et.campStructure || (game.raidActive && et.campId === game.raidCampId)) && inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
-      ...game.buildings.filter(b => b.side === 'red' && (!b.enemyCampStructure || game.raidActive) && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
+      ...game.buildings.filter(b => b.side === 'red' && (!b.enemyCampStructure || (game.raidActive && b.campId === game.raidCampId)) && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
         .map(b => ({ at: b, hit: () => { b.hp -= dmg; if (b.hp <= 0) removeBuilding(b); } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
@@ -257,7 +263,8 @@ export const NORMAL_BODIES = 21;
 const alertOnce = onceThisTick();
 export function isDefenseAlert() {
   if (game.gameMode === 'battle' || !game.gameStarted) return false;
-  return alertOnce(() => game.waveTimer <= GAME_CONFIG.defense.deploySeconds || game.enemies.some(en => en.fromWave));
+  return alertOnce(() => game.waveTimer <= GAME_CONFIG.defense.deploySeconds ||
+    game.enemies.some(en => en.fromWave && !en.prepWave));
 }
 
 // How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
@@ -311,7 +318,7 @@ export function getThreatArc() {
 export function isInsideBase(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
   return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
-    game.buildings.some(b => Math.hypot(en.x - b.x, en.y - b.y) <= near);
+    game.buildings.some(b => b.side !== 'red' && Math.hypot(en.x - b.x, en.y - b.y) <= near);
 }
 
 // Squads and their posts, rebuilt when the soldiers, the buildings or the wave's side change: squads of
