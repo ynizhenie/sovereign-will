@@ -23,6 +23,10 @@ import { editorTap } from '../modes/editor/index.js';
 import { commandTap } from '../domains/conflict/combat/index.js';
 import { scoutTapped } from '../domains/conflict/waves/index.js';
 
+const isCampTarget = target => !!(target.campStructure || target.campGuard || target.enemyCampStructure);
+const canTargetCamp = target => !isCampTarget(target) ||
+  (game.raidActive && target.campId === game.raidCampId);
+
 export function handleCanvasClick() {
   // battle mode: the field is editable only during setup; combat runs without player commands
   if (game.gameMode === 'battle') {
@@ -110,7 +114,12 @@ function commandAtEnemy() {
   const picked = game.gameMode === 'endless' ? getSelection() : [];
   if (!picked.length) return false;
   const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
-  const onEnemy = game.enemies.some(en => en.hp > 0 && away(en) < en.radius + 12) || game.enemyTents.some(et => away(et) < 20);
+  const campTargets = [...game.enemies, ...game.enemyTents, ...game.buildings].filter(isCampTarget);
+  if (campTargets.some(target => !canTargetCamp(target) && away(target) < (target.radius || 20) + 10)) return true;
+  const onEnemy = game.enemies.some(en => en.hp > 0 && canTargetCamp(en) && away(en) < en.radius + 12) ||
+    game.enemyTents.some(et => canTargetCamp(et) && away(et) < (et.outpost ? 30 : 20)) ||
+    game.buildings.some(building => building.side === 'red' && building.enemyCampStructure &&
+      canTargetCamp(building) && away(building) < (building.radius || 15) + 10);
   if (!onEnemy || game.settlers.some(s => away(s) < s.visualRadius + 8)) return false;
   return commandTap(picked, mouse.x, mouse.y);
 }
@@ -182,7 +191,14 @@ function enemyTapped() {
   const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
   // an enemy tent (a grave, a portal) too: armed settlers go and destroy it (#203)
   const tentRadius = 20;
-  const enemy = [...game.enemies.filter(en => away(en) < en.radius + 12), ...game.enemyTents.filter(et => away(et) < tentRadius)]
+  const campTargets = [...game.enemies, ...game.enemyTents, ...game.buildings].filter(isCampTarget);
+  if (campTargets.some(target => !canTargetCamp(target) && away(target) < (target.radius || 20) + 10)) return true;
+  const enemy = [
+    ...game.enemies.filter(en => en.hp > 0 && canTargetCamp(en) && away(en) < en.radius + 12),
+    ...game.enemyTents.filter(et => canTargetCamp(et) && away(et) < (et.outpost ? 30 : tentRadius)),
+    ...game.buildings.filter(building => building.side === 'red' && building.enemyCampStructure &&
+      canTargetCamp(building) && away(building) < (building.radius || 15) + 10)
+  ]
     .sort((a, b) => away(a) - away(b))[0];
   if (!enemy) return false;
   if (game.settlers.some(s => away(s) < s.visualRadius + 8 && away(s) < away(enemy))) return false;

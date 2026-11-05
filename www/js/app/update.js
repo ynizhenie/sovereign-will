@@ -18,7 +18,7 @@ import { ageBloodAndDung, ageStuckArrows, applySpikeTraps, tickProjectiles, trac
 import { tickCampfires } from '../domains/economy/cooking/index.js';
 import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/index.js';
 import { battle, updateBattle } from '../modes/battle/index.js';
-import { isRaidPicking, isRaiding, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
+import { isRaidPicking, isRaiding, raid, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 
 export function update(dt) {
@@ -36,7 +36,7 @@ export function update(dt) {
   updatePossessionView();
   tickMorale(dt);
   boarsPanic();
-  if (!isRaiding()) tickWaveTimer(dt); // (a party out on a raid: the wave clock stops, #255)
+  if (!isRaiding() || raid.scouting) tickWaveTimer(dt); // (scouting doesn't pause the world)
   updatePendingRespawns(dt);
   makeBonesAndRot(dt);
   updateTemporaryZombies(dt);
@@ -83,7 +83,7 @@ export function update(dt) {
   tickMenuScene(dt); // (the main menu's scene, #256)
   tickNight();
   tickVoices(dt); // (#252)
-  if (!isRaiding()) tickCards(); // (#255)
+  if (!isRaiding() || raid.scouting) tickCards(); // (#255; scouting doesn't pause the world)
   tickRaidCamp(dt); // (#255)
   tickRaid(dt);
   updateUI();

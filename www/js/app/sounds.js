@@ -337,7 +337,10 @@ function pickedMix() {
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
   // a wave is on until the last enemy and enemy tent are gone
-  const fighting = game.enemies.length > 0 || game.enemyTents.length > 0 || game.enemyTentBlueprints.length > 0;
+  const fighting = game.enemies.some(enemy =>
+    (!enemy.campGuard || (game.raidActive && enemy.campId === game.raidCampId)) && !enemy.scout && !enemy.prepWave) ||
+    (!game.wavePreparation && (game.enemyTents.some(tent => !tent.campStructure) ||
+      game.enemyTentBlueprints.some(site => !site.campStructure)));
   const mix = { [trackFor(fighting)]: pause };
   return mix;
 }

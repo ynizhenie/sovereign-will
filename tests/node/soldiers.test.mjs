@@ -51,3 +51,28 @@ test('a tap on an enemy tent marks it: three soldiers leave their posts and dest
 test('once a wave is on the map, the posts move to the side it comes from (#202)', async () => {
   expect(await sim.soldiersPostsToThreat()).toEqual({ westBefore: true, eastAfter: true });
 });
+
+test('soldiers defend the base first, do not target the enemy camp, and may engage a wave enemy outside it', async () => {
+  expect(await sim.soldiersDoNotChaseEnemyCamp()).toEqual({
+    baseThreatChosen: true,
+    campIgnored: true,
+    waveThreatAllowed: true
+  });
+});
+
+test('soldiers engage enemies anywhere in battle mode, even when they are not wave enemies', async () => {
+  expect(await sim.soldiersBattleTargetsEnemies()).toEqual({
+    outsideBase: true,
+    notWaveEnemy: true,
+    acted: true,
+    targetChosen: true
+  });
+});
+
+test('soldiers destroy active wave spawners when only a few wave enemies remain', async () => {
+  expect(await sim.soldiersClearWaveSpawner()).toEqual({
+    waveAssaultEnabled: true,
+    activeSpawnerDamaged: true,
+    inactiveSpawnerIgnored: true
+  });
+});

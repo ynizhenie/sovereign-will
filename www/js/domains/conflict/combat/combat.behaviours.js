@@ -10,11 +10,16 @@ import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseA
 import { getNecromancy } from '../../factions/undead/index.js';
 import { getEnemyDef } from '../waves/index.js';
 
+const isCampGuardUnavailable = en => en.campGuard &&
+  !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
+const canDefendEnemy = en => game.gameMode === 'battle' || isInsideBase(en) ||
+  (!game.wavePreparation && (en.fromWave || en.waveSummoned));
+
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
   let best = null;
   for (const en of game.enemies) {
-    if (en.campGuard && !game.raidActive) continue;
+    if (isCampGuardUnavailable(en)) continue;
     if (!en.markedTarget || (tick.markedAssignments.get(en) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
     if (!best || Math.hypot(en.x - s.x, en.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = en;
   }
@@ -42,7 +47,8 @@ export function holdPost(s, tick) {
     Math.hypot(s.postTarget.x - place.post.x, s.postTarget.y - place.post.y) < reachOf(s.postTarget)) return false;
   let nearest = null, best = Infinity;
   for (const en of game.enemies) {
-    if (en.campGuard && !game.raidActive) continue;
+    if (isCampGuardUnavailable(en)) continue;
+    if (!canDefendEnemy(en)) continue;
     const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
     if (d < reachOf(en) && d < best) { best = d; nearest = en; }
   }
@@ -50,7 +56,8 @@ export function holdPost(s, tick) {
   if (!nearest) {
     best = Infinity;
     for (const en of game.enemies) {
-      if (en.campGuard && !game.raidActive) continue;
+      if (isCampGuardUnavailable(en)) continue;
+      if (!canDefendEnemy(en)) continue;
       const d = Math.hypot(en.x - place.post.x, en.y - place.post.y);
       if (d < best && isInsideBase(en)) { best = d; nearest = en; }
     }
@@ -71,7 +78,8 @@ export function holdPost(s, tick) {
 export function strikeBack(s, tick) {
   if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
   const attacker = getRecentAttacker(s);
-  if (attacker && attacker.campGuard && !game.raidActive) return false;
+  if (attacker && isCampGuardUnavailable(attacker)) return false;
+  if (attacker && !canDefendEnemy(attacker)) return false;
   if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
   if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
@@ -116,15 +124,20 @@ const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
+  const isWaveThreat = en => !game.wavePreparation && (en.fromWave || en.waveSummoned);
+  const candidates = game.enemies.filter(en =>
+    !isCampGuardUnavailable(en) && !(en.toCatch && en.toCatch !== s.id) && canDefendEnemy(en));
+  const baseThreats = candidates.filter(isInsideBase);
+  const prioritized = game.gameMode === 'battle'
+    ? candidates
+    : baseThreats.length ? baseThreats : candidates.filter(isWaveThreat);
   const scoreOf = en => {
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
     // (#326) in a battle the hall's out of the way in a corner: the nearest, not the one nearest the hall
     return game.gameMode === 'battle' ? dToSettler : dToTown + (dToSettler < 180 ? 0 : dToSettler * 0.4);
   };
-  game.enemies.forEach(en => {
-    if (en.campGuard && !game.raidActive) return;
-    if (en.toCatch && en.toCatch !== s.id) return; // (one being caught for a cage, #250)
+  prioritized.forEach(en => {
     const score = scoreOf(en);
     if (score < minBaseDist) { minBaseDist = score; targetEnemy = en; }
   });
@@ -132,7 +145,7 @@ function chooseSettlerTarget(s, tick) {
   // (chooseEnemyTarget): going for whichever was a hair nearer each moment, it walked a zigzag as they all closed in
   // and came into the fight late
   const kept = s.fightTarget;
-  if (kept && kept !== targetEnemy && game.enemies.includes(kept) && kept.hp > 0 && (!kept.campGuard || game.raidActive) && !(kept.toCatch && kept.toCatch !== s.id) && scoreOf(kept) <= minBaseDist + KEEP_TARGET) targetEnemy = kept;
+  if (kept && kept !== targetEnemy && prioritized.includes(kept) && kept.hp > 0 && scoreOf(kept) <= minBaseDist + KEEP_TARGET) targetEnemy = kept;
   s.fightTarget = targetEnemy;
   // enemies the player marked with the Point tool come first, for up to markedSquad of the armed (a
   // squad soldier already got its own from holdPost)...
@@ -142,17 +155,17 @@ function chooseSettlerTarget(s, tick) {
   }
   // ...but whoever is hitting this settler right now comes first of all
   const recentAttacker = getRecentAttacker(s);
-  const attacker = recentAttacker && (!recentAttacker.campGuard || game.raidActive) ? recentAttacker : null;
+  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker) ? recentAttacker : null;
   // a squad soldier goes for the enemy that came near its post (see holdPost)
-  if (s.postTarget && (!game.enemies.includes(s.postTarget) || (s.postTarget.campGuard && !game.raidActive))) s.postTarget = null;
+  if (s.postTarget && (!game.enemies.includes(s.postTarget) || isCampGuardUnavailable(s.postTarget) || !canDefendEnemy(s.postTarget))) s.postTarget = null;
   if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
   // ...or the one its captain gave it (#248), unless the player marked one for it
-  if (s.captainTarget && (!game.enemies.includes(s.captainTarget) || (s.captainTarget.campGuard && !game.raidActive))) s.captainTarget = null;
+  if (s.captainTarget && (!game.enemies.includes(s.captainTarget) || isCampGuardUnavailable(s.captainTarget) || !canDefendEnemy(s.captainTarget))) s.captainTarget = null;
   if (!attacker && s.captainTarget && !(targetEnemy && targetEnemy.markedTarget)) targetEnemy = s.captainTarget;
   if (attacker) targetEnemy = attacker;
   // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
   if (targetEnemy && !attacker && !isRangedWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
-    const others = game.enemies.filter(en => en !== targetEnemy && (!en.campGuard || game.raidActive) && !meleeFull(en, tick));
+    const others = candidates.filter(en => en !== targetEnemy && !meleeFull(en, tick));
     const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
     if (next && Math.hypot(next.x - s.x, next.y - s.y) < 300) targetEnemy = next;
   }
@@ -160,11 +173,10 @@ function chooseSettlerTarget(s, tick) {
   // enemy the player marked, or one at the base, comes first (#261: they went for the tents past both)
   const assaulting = tick.tentAssault && joinsTentAssault(s, tick);
   if (assaulting && !attacker && !(targetEnemy && (targetEnemy.markedTarget || isInsideBase(targetEnemy)))) {
-    targetEnemy = game.enemies.filter(en => (!en.campGuard || game.raidActive) && isInsideBase(en)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+    targetEnemy = prioritized.filter(isInsideBase).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
     if (targetEnemy) return { targetEnemy, attacker };
     let nearest = TENT_ASSAULT_FIGHT_DISTANCE;
-    game.enemies.forEach(en => {
-      if (en.campGuard && !game.raidActive) return;
+    prioritized.forEach(en => {
       const d = Math.hypot(en.x - s.x, en.y - s.y);
       if (d < nearest) { nearest = d; targetEnemy = en; }
     });
@@ -298,22 +310,33 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 // (#326) On a way through the enemy's buildings (findPathAStar's, when the way round is long): the one next on
 // it struck once it's in reach. True while that keeps it busy
 function breakWhatsInTheWay(s) {
-  if (!s.path || !s.path.length || isRangedWeapon(s.weapon)) return false;
-  const reach = getWeaponStats(s, 'combat').range;
+  if (!s.path || !s.path.length) return false;
+  const ranged = isRangedWeapon(s.weapon);
+  const weapon = GAME_CONFIG.weapons[s.weapon] || GAME_CONFIG.weapons.fist;
+  const reach = ranged ? weapon.dagger.range : getWeaponStats(s, 'combat').range;
   // (#326: what's walked onto, spikes and iron traps, isn't broken: it's walked over, as the enemies walk onto the player's)
   const b = s.path.slice(0, 8).map(next =>
-    game.buildings.find(o => o.side === 'red' && (!o.enemyCampStructure || game.raidActive) && !(getDefinition('buildings', o.type) || {}).walkable &&
+    game.buildings.find(o => o.side === 'red' && (!o.enemyCampStructure || (game.raidActive && o.campId === game.raidCampId)) && !(getDefinition('buildings', o.type) || {}).walkable &&
       Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1))
     .find(building => building && Math.hypot(building.x - s.x, building.y - s.y) <= reach);
   if (!b) return false;
-  performAttack(s, b.x, b.y);
+  performAttack(s, b.x, b.y, ranged);
   s.patrolTarget = null;
   return true;
 }
 
 // Who goes to destroy enemy tents: anyone armed, and unarmed workers only when nobody is armed
 export function joinsTentAssault(s, tick) {
-  return s.role !== 'worker' || s.weapon !== 'fist' || tick.workersHelpTents;
+  if (!tick.tentAssault) return false;
+  if (s.role === 'pet' || s.isPossessed) return false;
+  const eligible = settler => settler.hp > 0 && !settler.isPossessed && settler.role !== 'pet';
+  const soldiers = game.settlers.some(settler => eligible(settler) &&
+    (settler.role === 'soldier' || settler.role === 'archer'));
+  if (soldiers) return s.role === 'soldier' || s.role === 'archer';
+  const toolUsers = game.settlers.some(settler => eligible(settler) &&
+    (hasAxeTool(settler.tool) || hasPickaxeTool(settler.tool)));
+  if (toolUsers) return hasAxeTool(s.tool) || hasPickaxeTool(s.tool);
+  return true;
 }
 
 // Enemies closer than this to a settler on its way to the enemy tents get fought on the way
@@ -324,10 +347,10 @@ export const TENT_ASSAULT_FIGHT_DISTANCE = 150;
 export function clearEnemyTents(s, tick) {
   if (goForMarkedTent(s, tick)) return true;
   if (!tick.tentAssault || !joinsTentAssault(s, tick)) return false;
-  if (game.enemies.some(isInsideBase)) return false; // (they're fought first, #261)
+  if (game.enemies.some(en => (en.fromWave || en.waveSummoned) && isInsideBase(en))) return false; // (they're fought first, #261)
   let tent = null, minDist = Infinity;
   game.enemyTents.forEach(et => {
-    if (et.campStructure && !game.raidActive) return;
+    if (!et.waveActive || (et.campStructure && (!game.raidActive || et.campId !== game.raidCampId))) return;
     const d = Math.hypot(et.x - s.x, et.y - s.y);
     if (d < minDist) { minDist = d; tent = et; }
   });
@@ -349,12 +372,14 @@ export function goForMarkedTent(s, tick) {
 // Walk up to a tent and strike it (an archer: from where it has a clear shot)
 function attackTent(s, tent, tick) {
   const dist = Math.hypot(tent.x - s.x, tent.y - s.y);
-  const attackDist = getWeaponStats(s, 'combat').tentReach;
-  const blockedShot = isRangedWeapon(s.weapon) && !hasLineOfFire(s.x, s.y, tent.x, tent.y);
-  if (dist > attackDist || blockedShot) {
+  const ranged = isRangedWeapon(s.weapon);
+  const weapon = GAME_CONFIG.weapons[s.weapon] || GAME_CONFIG.weapons.fist;
+  const attackStats = ranged ? weapon.dagger : getWeaponStats(s, 'combat');
+  const attackDist = attackStats.tentReach;
+  if (dist > attackDist) {
     if (!breakWhatsInTheWay(s)) moveEntityTowards(s, tent.x, tent.y, s.speed, false, tick.dt);
   } else {
-    performAttack(s, tent.x, tent.y);
+    performAttack(s, tent.x, tent.y, ranged);
   }
   s.patrolTarget = null;
 }
@@ -363,7 +388,7 @@ function attackTent(s, tent, tick) {
 function takeMarkedTent(s, tick) {
   let best = null;
   for (const et of game.enemyTents) {
-    if ((et.campStructure && !game.raidActive) || !et.markedTarget ||
+    if ((et.campStructure && (!game.raidActive || et.campId !== game.raidCampId)) || !et.markedTarget ||
         (tick.markedAssignments.get(et) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
     if (!best || Math.hypot(et.x - s.x, et.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = et;
   }

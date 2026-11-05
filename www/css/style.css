@@ -316,6 +316,24 @@ body.menu-world #defeat-overlay { display: none !important; }
   text-align: center;
 }
 
+.main-menu-content[data-screen="endless"] {
+  gap: 9px;
+  padding: 14px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+
+.main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
+.wave-settings.endless-world-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+  text-align: left;
+}
+.endless-world-settings .wave-options { gap: 3px; margin-top: 3px; }
+.endless-world-settings .wave-option { padding: 5px 0; font-size: 11px; }
+
 /* the game's name on the main menu's first screen (no plate behind it): the buttons in the middle of the
    screen, the name in the middle of the space above them. --title-size is its letters' height: 10% of
    the screen's width (it fits a phone's width with room to spare), at least 34px, at most 110px */

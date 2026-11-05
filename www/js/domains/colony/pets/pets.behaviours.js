@@ -31,7 +31,9 @@ const fedOnce = onceThisTick();
 const claimedPets = () => fedOnce(() => new Set(game.settlers.filter(o => o.feeding).map(o => o.feeding)));
 
 // Enemies about: those alive within r of (x, y)
-const foesNear = (x, y, r) => game.enemies.filter(en => en.hp > 0 && !en.crumbled && Math.hypot(en.x - x, en.y - y) <= r);
+const foesNear = (x, y, r) => game.enemies.filter(en => en.hp > 0 && !en.crumbled &&
+  (!en.campGuard || (game.raidActive && en.campId === game.raidCampId)) &&
+  Math.hypot(en.x - x, en.y - y) <= r);
 const nearest = (list, o) => list.reduce((best, x) => (!best || Math.hypot(x.x - o.x, x.y - o.y) < Math.hypot(best.x - o.x, best.y - o.y) ? x : best), null);
 
 // Straight there, through anything (a ghost)

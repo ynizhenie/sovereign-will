@@ -111,13 +111,20 @@ export function says(unit, event, urgent = false) { return speak(unit, getPlayer
 // Each tick: the colony after a wave it beat, and now and then one with nothing to do; an enemy's war cry as a
 // wave comes
 let wasFighting = false, idleClock = 0;
+const hasWaveCombat = () => game.enemies.some(enemy => enemy.hp > 0 && (enemy.fromWave || enemy.waveSummoned)) ||
+  (game.portalQueue || []).length > 0 ||
+  game.enemyRafts.some(raft => raft.units.some(enemy => enemy.hp > 0));
+const hasWaveStructures = () => game.enemyTents.some(tent => !tent.campStructure && tent.hp > 0 && tent.waveActive) ||
+  game.enemyTentBlueprints.some(site => site.waveActive);
+
 export function tickVoices(dt) {
   clock += dt;
   tellStories(dt); // (#279)
   talkInKnots(dt);
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
-  const fighting = game.enemies.some(en => en.fromWave);
-  if (fighting && !wasFighting) someoneSays(game.enemies.filter(en => en.fromWave), getEnemyFaction().id, 'charge', true);
+  const activeCombat = hasWaveCombat();
+  const fighting = activeCombat || hasWaveStructures();
+  if (activeCombat && !wasFighting) someoneSays(game.enemies.filter(en => en.hp > 0 && (en.fromWave || en.waveSummoned)), getEnemyFaction().id, 'charge', true);
   if (!fighting && wasFighting && game.settlers.length) someoneSays(game.settlers, getPlayerFaction().id, 'won', true);
   wasFighting = fighting;
   idleClock += dt;

@@ -9,6 +9,24 @@ const start = async (page, faction) => {
   return errors;
 };
 
+test('a hired unit appears on a reserved cell beside the Town Hall (#326)', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    for (const resource of Object.keys(stock)) stock[resource] = 1000;
+    const before = settlers.length;
+    spawnSettler('normal');
+    const hired = settlers.at(-1);
+    return {
+      added: settlers.length === before + 1,
+      insideBuffer: isWithinTownHallBuffer(hired.x, hired.y),
+      buildAllowed: isBuildLocationAllowed(hired.x, hired.y),
+      outsideHall: Math.hypot(hired.x - townHall.x, hired.y - townHall.y) >= townHall.radius + 15
+    };
+  });
+  expect(result).toEqual({ added: true, insideBuffer: true, buildAllowed: false, outsideHall: true });
+  expect(errors).toEqual([]);
+});
+
 test('a dog is hired at the hall, keeps by a soldier, bites an enemy near, flushes a boar from the grass, gets hungry and is fed (#314)', async ({ page }) => {
   const errors = await start(page, 'humans');
   const r = await page.evaluate(() => {

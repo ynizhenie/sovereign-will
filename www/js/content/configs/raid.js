@@ -1,16 +1,16 @@
 // A raid on an enemy camp (#255): Endless only
 
 export const raidConfig = {
-  // The camp is a small persistent territory on the Endless map, defended by a garrison and centred on one fire.
+  // The camp is a small persistent territory on the Endless map, centred on an outpost and a nearby fire.
   // defenders: perSoldier for each armed settler of the player's (of its kind, in its armour and with its
   // shield, so an army in armour meets one; perSoldier as a settler is stronger than the enemy of its kind),
   // one more every extraEveryWaves waves, never fewer than min. They hold their posts till a raider comes
   // within guardTiles of it.
   // reward: on top of what the defenders carry, times 1 + rewardPerDefender for each of them.
-  // marchSeconds: how long the party waits for stragglers before entering the camp
+  // marchSeconds: how long the party waits for stragglers before staging outside the camp
   raid: {
-    campRadiusTiles: 4, fireFuelPerTend: 4,
-    defenders: { perSoldier: 2, extraEveryWaves: 3, min: 4 },
+    campRadiusTiles: 4, fireFuelReserve: 1, fireFuelPerTend: 30,
+    defenders: { perSoldier: 2, extraEveryWaves: 3, min: 6 },
     guardTiles: 7,
     reward: { wood: 30, stone: 20, iron: 6, leather: 6, food: 25 }, rewardPerDefender: 0.1,
     failWaveSeconds: 15, marchSeconds: 45,

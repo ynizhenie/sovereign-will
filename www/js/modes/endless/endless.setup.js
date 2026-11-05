@@ -9,11 +9,11 @@ import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides 
 import { resetGameSteps } from '../../app/index.js';
 import { mainMenu } from '../menu/index.js';
 import { loadSavedMaps, renderSavedMapList } from '../editor/index.js';
-import { createEnemyCamp } from './endless.raid.js';
+import { createEnemyCamps } from './endless.raid.js';
 
 export const playButton = document.getElementById('play-button');
 
-export const waveOptions = document.querySelectorAll('.wave-option');
+export const waveOptions = document.querySelectorAll('[data-wave-interval]');
 
 export const waveCustom = document.getElementById('wave-custom');
 
@@ -36,6 +36,8 @@ export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapC
 
 // difficulty (Endless)
 export const difficultyOptions = document.querySelectorAll('.difficulty-option');
+const enemyCampCountOptions = document.querySelectorAll('.camp-count-option');
+const fogEnabledOptions = document.querySelectorAll('.fog-option');
 
 let starting = false;
 export const startGame = async (e) => {
@@ -48,7 +50,11 @@ export const startGame = async (e) => {
       const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
       if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
       await runLoading('loading.world', resetGameSteps()); // (#326) the menu's scene stays, a bar over it
-      createEnemyCamp();
+      const selectedCampCount = /** @type {HTMLElement | null} */ (document.querySelector('.camp-count-option.active'));
+      game.enemyCampCount = Math.max(0, Math.min(3, Number(selectedCampCount?.dataset.enemyCampCount ?? 1)));
+      const selectedFog = /** @type {HTMLElement | null} */ (document.querySelector('.fog-option.active'));
+      game.fogEnabled = selectedFog?.dataset.fogEnabled !== 'false';
+      createEnemyCamps(game.enemyCampCount);
       openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
       game.gameStarted = true;
       mainMenu.style.display = 'none';
@@ -131,6 +137,14 @@ export function initEndlessSetup() {
       onTap(button, selectWave); // (a scroll over it doesn't press it, #232)
   });
   waveCustom.addEventListener('change', applyCustomWave);
+  enemyCampCountOptions.forEach(button => onTap(button, () => {
+    game.enemyCampCount = Number(button.dataset.enemyCampCount);
+    enemyCampCountOptions.forEach(option => option.classList.toggle('active', option === button));
+  }));
+  fogEnabledOptions.forEach(button => onTap(button, () => {
+    game.fogEnabled = button.dataset.fogEnabled !== 'false';
+    fogEnabledOptions.forEach(option => option.classList.toggle('active', option === button));
+  }));
   mapOptions.forEach(button => {
       onTap(button, () => {
           const custom = button.dataset.mapSize === 'custom';
@@ -163,7 +177,7 @@ export function initEndlessSetup() {
 // (#326) What's picked on the Endless screen kept from one visit to the next: the difficulty, the cards, the waves' interval,
 // the map's size and where it comes from, the custom numbers (the sides, factions and colours, are kept by factions/). Put
 // back as if tapped, once every screen's buttons are set up (app/boot.js)
-const CHOICES = ['difficulty', 'cards', 'waveInterval', 'mapSize', 'mapSource'];
+const CHOICES = ['difficulty', 'cards', 'waveInterval', 'mapSize', 'mapSource', 'enemyCampCount', 'fogEnabled'];
 const attrOf = name => `data-${name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`;
 export function restoreEndlessChoices() {
   const screen = document.querySelector('[data-screen="endless"]');
@@ -179,7 +193,7 @@ export function restoreEndlessChoices() {
     }
   }
   const remember = () => {
-    /** @type {Record<string, string>} */
+    /** @type {Record<string, string | boolean | null>} */
     const out = { waveCustom: waveCustom.value, mapCols: mapColsInput.value, mapRows: mapRowsInput.value, customMap: game.customMap && game.customMap.name };
     for (const name of CHOICES) { const active = screen.querySelector(`.active[${attrOf(name)}]`); if (active) out[name] = /** @type {string} */ (active.getAttribute(attrOf(name))); }
     saveData('endlessChoices', out);

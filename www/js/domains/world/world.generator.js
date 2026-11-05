@@ -9,6 +9,7 @@ import { placeAppleTrees } from '../economy/farming/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/index.js';
 import { tileVariantHash } from './world.draw.js';
 import { generateContinent, isContinentMap } from './world.continent.js';
+import { inEnemyTerritory } from './world.territory.js';
 
 // counts that grow with the map's area (see getMapAreaScale); the rest are sizes or per-cluster counts
 export const AREA_SCALED_COUNTS = new Set(['trees', 'boulders', 'grass', 'berryBushes', 'sticks', 'pebbles', 'boars',
@@ -203,7 +204,7 @@ export function spawnResource(type, nearX = null, nearY = null, spread = 180, pi
     let cactusOutsideDesert = type === 'cactus' && !inDesert;
     // (#326) a beach: only pebbles and stones on it
     const offBeach = type === 'pebble' || type === 'boulder' || !thingAt(game.beachTiles, tx, ty);
-    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && isSpawnSpotFree(tx, ty) &&
+    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && (type !== 'boar' || !inEnemyTerritory(tx, ty)) && isSpawnSpotFree(tx, ty) &&
         (!inDesert || desertResource) && !cactusOutsideDesert && offBeach) {
       isValid = true;
     }
