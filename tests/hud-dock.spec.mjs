@@ -290,5 +290,5 @@ test('a tap on the town hall opens its card with the hiring; a damaged building\
   });
   await expect(page.locator('#card-title')).toContainText('Деревянная стена');
   await page.locator('#card-actions button', { hasText: 'Починить' }).click();
-  expect(await page.evaluate(() => buildings.find(b => b.type === 'wall_wood').repairRequested)).toBe(true);
+  expect(await page.evaluate(() => buildings.find(b => b.type === 'wall_wood' && !b.enemyCampStructure).repairRequested)).toBe(true);
 });

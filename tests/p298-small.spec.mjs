@@ -114,7 +114,6 @@ test('the camp\'s enemies are the same whichever party comes (#298, 6)', async (
   const errors = await openGame(page);
   await sim(page, 'campOpens', { soldiers: 4 });
   const r = await page.evaluate(() => {
-    raidCamp.layout = 'square';
     const step = (sec, until) => { for (let f = 0; f < sec * 60; f++) { update(1 / 60); waveTimer = 999; if (until && until()) return; } };
     const look = party => {
       startRaid(party);
@@ -126,9 +125,7 @@ test('the camp\'s enemies are the same whichever party comes (#298, 6)', async (
       return { sig, n };
     };
     const soldiers = settlers.filter(s => s.role === 'soldier');
-    const camp = { ...raidCamp };
     const one = look([soldiers[0]]);
-    raidCamp = camp; // (a raid ends the camp: the same camp back, as if it were still there)
     const all = look(soldiers);
     return { one: one.n, all: all.n, same: one.sig === all.sig };
   });
