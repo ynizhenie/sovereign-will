@@ -781,7 +781,7 @@ test('an enemy medic uses the player medic healing animation state', async ({ pa
     ally.hp -= 20;
     game.settlers = [settler];
     game.enemies = [medic, ally];
-    tickEnemy(medic, 1 / 60);
+    for (let frame = 0; frame < 75; frame++) tickEnemy(medic, 1 / 60);
     return { workKind: medic.workKind, working: medic.working, treatedAt: ally.treatedAt, healed: ally.hp > ally.maxHp - 20 };
   });
   expect(result.workKind).toBe('heal');
@@ -815,11 +815,11 @@ test('an enemy medic stops healing when another enemy medic has claimed the only
     const patient = createConfiguredEnemy({ x: 830, y: 300 }, 'raider');
     const fighter = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
     const settler = createSettler('zombie', 1, 500, 300);
-    patient.hp -= 20;
+    patient.hp -= 35;
     game.settlers = [settler];
     game.enemies = [first, second, patient, fighter];
     const before = patient.hp;
-    tickEnemy(first, 1 / 60);
+    for (let frame = 0; frame < 75; frame++) tickEnemy(first, 1 / 60);
     const afterFirst = patient.hp;
     tickEnemy(second, 1 / 60);
     return {

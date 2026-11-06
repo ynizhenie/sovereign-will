@@ -10,7 +10,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { playSound } from '../../../app/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
-import { isNight, isVisible } from '../../world/index.js';
+import { getWeather, isNight, isVisible } from '../../world/index.js';
 
 const VOICE = { globalGap: 2.5, ownGap: 12, showTicks: 150, storyEvery: 20, talkEvery: 7, replyAfter: 2.4 };
 // how each kind sounds: pitch (Hz), and a growl under it
@@ -55,12 +55,19 @@ export function phrasesFor(unit, faction, event) {
   const text = key => { const s = t(key); return s && s !== key ? s.split('|') : []; };
   const against = (unit.enemyKey ? getPlayerFaction() : getEnemyFaction()).id;
   const key = `voice.${faction}.${event}`, vs = text(`${key}.vs.${against}`);
-  const list = vs.length ? vs : text(key);
+  let list = vs.length ? vs : text(key);
+  if (event === 'idle') {
+    const weather = getWeather();
+    const context = weather.level > 0.3 && (weather.kind === 'rain' || weather.kind === 'storm')
+      ? 'wet' : weather.kind === 'clear' ? 'dry' : null;
+    if (context) list = [...list, ...text(`${key}.${context}`)];
+  }
   return game.buildings.some(b => WALLS.includes(b.type) && b.side !== 'red') ? [...list, ...text(`${key}.walls`)] : list;
 }
 
 // What it says, shown and heard
 function voice(unit, text) {
+  if (!unit || isPet(unit) || (unit.enemyKey && GAME_CONFIG.enemies[unit.enemyKey]?.pet)) return false;
   const now = clock;
   unit.say = { text, until: game.pathTick + VOICE.showTicks * (text.length > 34 ? 1.6 : 1) };
   unit.spokeAt = now;

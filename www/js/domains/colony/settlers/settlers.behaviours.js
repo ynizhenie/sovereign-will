@@ -384,6 +384,7 @@ export function tickSettlers(dt) {
       if (s.targetEquipment) s.targetEquipment = null;
       // (#326) let go, or sent somewhere by the player (with no soldier about too): that first, as a settler does
       if (!s.isPossessed && (leaveColony(s, tick) || followCommand(s, tick))) { s.activity = s.leaving ? 'leaveColony' : 'followCommand'; return; }
+      if (raidOrders(s, tick)) { took(s, raidOrders); return; }
       tickPet(s, tick); return; // (its own ways, #314)
     }
     const last = s.lastBehaviour;

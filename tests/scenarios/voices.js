@@ -1,7 +1,7 @@
 // Voices (#252): phrases in bubbles, not too many
 Object.assign(window.sim, (() => {
   const { start, run, helpers: { makeSettler, clearResources } } = window.sim;
-  const EVENTS = ['hired', 'tool', 'wave', 'hurt', 'won', 'built', 'sleep', 'morning', 'hungry', 'idle', 'charge', 'sleepy', 'taunt', 'gathered', 'cooked', 'ate', 'kill'];
+  const EVENTS = ['hired', 'tool', 'wave', 'hurt', 'won', 'built', 'sleep', 'morning', 'hungry', 'idle', 'charge', 'sleepy', 'taunt', 'gathered', 'cooked', 'ate', 'kill', 'healing'];
 
   // every faction has phrases for every event, in every language
   function phrasesEverywhere() {
@@ -28,6 +28,40 @@ Object.assign(window.sim, (() => {
     return { first, known, again, other };
   }
 
+  function idleWeatherContext({ seed = 'voices-weather' } = {}) {
+    start(seed); clearResources();
+    const unit = makeSettler(1, townHall.x + 40, townHall.y);
+    game.weather = { kind: 'rain', level: 1 };
+    const wet = phrasesFor(unit, 'humans', 'idle');
+    game.weather = { kind: 'clear', level: 0 };
+    const dry = phrasesFor(unit, 'humans', 'idle');
+    const rainyPhrase = t('voice.humans.idle.dry').split('|')[0];
+    const wetPhrase = t('voice.humans.idle.wet').split('|')[0];
+    const actionsLocalized = ['en', 'ru', 'uk'].every(lang => {
+      setLanguage(lang);
+      return ['humans', 'demons', 'undead'].every(f => t(`voice.${f}.healing`) !== `voice.${f}.healing`) &&
+        t('voice.undead.raised') !== 'voice.undead.raised';
+    });
+    setLanguage('ru');
+    const storyIsTimeNeutral = !/тихий день|quiet day/i.test(['ru', 'en', 'uk'].map(lang => {
+      setLanguage(lang); return t('voice.story.none');
+    }).join('|'));
+    setLanguage('ru');
+    return { neverAsksForRainWhileWet: !wet.includes(rainyPhrase), acknowledgesRain: wet.includes(wetPhrase),
+      asksForRainWhenDry: dry.includes(rainyPhrase), hasHealingPhrases: ['humans', 'demons', 'undead'].every(f => t(`voice.${f}.healing`) !== `voice.${f}.healing`),
+      hasUndeadRaisePhrases: t('voice.undead.raised') !== 'voice.undead.raised', actionsLocalized, storyIsTimeNeutral };
+  }
+
+  function ghostSilent({ seed = 'voices-ghost' } = {}) {
+    start(seed); clearResources();
+    const ghost = makeSettler(1, townHall.x + 40, townHall.y, { type: 'ghost' });
+    ghost.idle = { act: 'campfire' };
+    settlers = [ghost];
+    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 1;
+    run(25);
+    return { spoke: !!ghost.say };
+  }
+
   // hired: the new one says so
   function hiredSays({ seed = 'voices-hire' } = {}) {
     start(seed); clearResources();
@@ -39,5 +73,6 @@ Object.assign(window.sim, (() => {
     return { said: !!(hired && hired.say && t('voice.humans.hired').split('|').includes(hired.say.text)) };
   }
 
-  return { voicePhrasesEverywhere: phrasesEverywhere, voiceSpeaking: speaking, voiceHiredSays: hiredSays };
+  return { voicePhrasesEverywhere: phrasesEverywhere, voiceSpeaking: speaking, voiceIdleWeatherContext: idleWeatherContext,
+    voiceGhostSilent: ghostSilent, voiceHiredSays: hiredSays };
 })());

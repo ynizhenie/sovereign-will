@@ -11,7 +11,7 @@ import { getBaseRadius } from '../../conflict/combat/index.js';
 // The demons' portals: built in pairs, the 1st with the 2nd, the 3rd with the 4th... (#326) each side its own:
 // the red side's (b.side 'red') or the player's
 export function getPortalPairs(side = 'green') {
-  const portals = game.buildings.filter(b => b.type === 'portal' && (b.side === 'red') === (side === 'red'));
+  const portals = game.buildings.filter(b => b.type === 'portal' && !b.raidPortal && (b.side === 'red') === (side === 'red'));
   const pairs = [];
   for (let i = 0; i + 1 < portals.length; i += 2) pairs.push([portals[i], portals[i + 1]], [portals[i + 1], portals[i]]);
   return pairs;

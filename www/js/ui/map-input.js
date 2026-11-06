@@ -11,13 +11,13 @@ import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
-import { isSelectedCardVisible, openSelectedCard } from './selected-card-state.js';
+import { closeSelectedCard, isSelectedCardVisible, openSelectedCard } from './selected-card-state.js';
 import { ensureUnitName, getPossessed, getSelectedSettler, getSelection, orderPossessed, roleTitle, toggleInGroup } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources, getMapResourceKind, hasMine } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
-import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
+import { isDefeated, isLocked, isPlacingRaidPortal, raid, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 import { commandTap } from '../domains/conflict/combat/index.js';
@@ -35,7 +35,7 @@ export function handleCanvasClick() {
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
   if (isDefeated()) return; // the defeat screen's own buttons
-  if (!getPossessed() && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
+  if ((!getPossessed() || isPlacingRaidPortal()) && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
 
   const p = getPossessed();
   if (p && orderPossessed(p, mouse.x, mouse.y)) return;
@@ -86,6 +86,10 @@ function tapTile() {
 // Point mode on a settler: select it, or unselect it with a second tap. True when a settler was tapped.
 function selectTapped() {
   let clickedSettler = game.settlers.find(s => Math.hypot(mouse.x - s.x, mouse.y - s.y) < s.visualRadius + 8);
+  if (clickedSettler?.raider && raid.scouting) {
+    closeSelectedCard();
+    return true;
+  }
   // (#326) a settler standing on things: the menu has it as well as them
   const here = clickedSettler && inTerritory(mouse.x, mouse.y) ? thingsOnTile() : [];
   if (here.length) {

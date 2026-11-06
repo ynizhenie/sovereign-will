@@ -69,6 +69,8 @@ function tendCampfire(en, dt) {
 function enemyHeal(en, healer, dt) {
   if (en.herbs === undefined) en.herbs = healer.bagSize;
   const battle = game.gameMode === 'battle';
+  const medic = GAME_CONFIG.medic;
+  const healRange = healer.healRange ?? medic.range;
   const isSupport = unit => {
     const def = getEnemyDef(unit);
     return !!(def.healer || def.necromancer);
@@ -83,10 +85,12 @@ function enemyHeal(en, healer, dt) {
   if (!patient) {
     for (const other of game.enemies) {
       if (other === en || !available(other)) continue;
-      const score = Math.hypot(other.x - en.x, other.y - en.y);
+      const def = getEnemyDef(other);
+      const score = Math.hypot(other.x - en.x, other.y - en.y) + (def.type === 'archer' || def.weapon !== 'fist' ? 0 : 10000);
       if (score < best) { best = score; patient = other; }
     }
   }
+  if (!patient && en.hp < en.maxHp && available(en)) patient = en;
   if (!patient) { support.healTarget = null; return false; }
   support.healTarget = patient;
   if (!battle && en.herbs <= 0) {
@@ -100,18 +104,14 @@ function enemyHeal(en, healer, dt) {
     en.herbs += refill;
     game.enemyHerbStock -= refill;
   }
-  if (Math.hypot(patient.x - en.x, patient.y - en.y) > healer.healRange + patient.radius) {
+  if (Math.hypot(patient.x - en.x, patient.y - en.y) > healRange + patient.radius) {
     moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
   } else {
-    if (battle) {
-      patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * dt);
-    } else {
-      en.healTimer = (en.healTimer || 0) + dt;
-      if (en.healTimer >= healer.healSeconds) {
-        en.healTimer = 0;
-        en.herbs--;
-        patient.hp = Math.min(patient.maxHp, patient.hp + healer.healPerSecond * healer.healSeconds);
-      }
+    en.healTimer = (en.healTimer || 0) + dt;
+    if (en.healTimer >= healer.healSeconds) {
+      en.healTimer %= healer.healSeconds;
+      if (!battle) en.herbs--;
+      patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
     }
     patient.treatedAt = game.pathTick; // (#326: green crosses rising off it)
     en.working = 0.1;
@@ -205,7 +205,9 @@ export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
   if (en.portalTransit) return;
   const activeCampGuard = en.campGuard && game.raidActive && en.campId === game.raidCampId;
-  if (en.campGuard && !activeCampGuard) {
+  const chasingScout = en.campGuard && en.scoutChasing && en.attackTarget &&
+    game.settlers.includes(en.attackTarget);
+  if (en.campGuard && !activeCampGuard && !chasingScout) {
     if (tendCampfire(en, dt)) return;
     if (sleepByCampStructure(en, dt)) return;
     if (en.guard) holdGuardPost(en, dt);
@@ -335,12 +337,28 @@ function holdGuardPost(en, dt) {
         if (Math.abs(dx) === radius || Math.abs(dy) === radius) continue;
         const gx = centre.gx + dx, gy = centre.gy + dy, x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
         if (inEnemyTerritory(x, y) && !isTileBlockedForSettler(gx, gy) &&
-          !game.enemies.some(other => other !== en && other.hp > 0 && Math.hypot(other.x - x, other.y - y) < 25)) options.push({ x, y });
+          !game.enemies.some(other => other !== en && other.hp > 0 &&
+            (Math.hypot(other.x - x, other.y - y) < 25 ||
+              (other.campGuard && other.campId === en.campId && other.campPatrolTarget &&
+                Math.hypot(other.campPatrolTarget.x - x, other.campPatrolTarget.y - y) < 25)))) options.push({ x, y });
       }
       en.campPatrolTarget = options.length ? options[Math.floor(rand() * options.length)] : { ...en.guard };
       en.campPatrolWait = 1.5 + rand() * 2.5;
     }
   }
+  if (en.campPatrolTarget) {
+    if (!en.campPatrolProgress) en.campPatrolProgress = { x: en.x, y: en.y, elapsed: 0 };
+    const progress = en.campPatrolProgress;
+    if (Math.hypot(progress.x - en.x, progress.y - en.y) > 2) {
+      progress.x = en.x; progress.y = en.y; progress.elapsed = 0;
+    } else progress.elapsed += dt;
+    if (progress.elapsed > 5) {
+      en.campPatrolTarget = null;
+      en.path = null; en.pathTarget = null;
+      en.campPatrolWait = 0;
+      delete en.campPatrolProgress;
+    }
+  } else delete en.campPatrolProgress;
   if (en.campPatrolTarget && Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) > 6) {
     moveEntityTowards(en, en.campPatrolTarget.x, en.campPatrolTarget.y, en.speed * 0.6, true, dt);
   } else faceTowards(en, camp.x, camp.y);
@@ -376,7 +394,10 @@ function sleepByCampStructure(en, dt) {
       for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]]) {
         const gx = base.gx + dx, gy = base.gy + dy, spot = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
         if (inEnemyTerritory(spot.x, spot.y) && !isTileBlockedForSettler(gx, gy) &&
-          !game.enemies.some(other => other !== en && other.hp > 0 && Math.hypot(other.x - spot.x, other.y - spot.y) < 25)) options.push(spot);
+          !game.enemies.some(other => other !== en && other.hp > 0 &&
+            (Math.hypot(other.x - spot.x, other.y - spot.y) < 25 ||
+              (other.campGuard && other.campId === en.campId && other.campSleepSpot &&
+                Math.hypot(other.campSleepSpot.x - spot.x, other.campSleepSpot.y - spot.y) < 25)))) options.push(spot);
       }
     }
     en.campSleepSpot = options.sort((a, b) => Math.hypot(a.x - en.x, a.y - en.y) - Math.hypot(b.x - en.x, b.y - en.y))[0] || en.guard;
@@ -494,7 +515,8 @@ function chooseEnemyTarget(en) {
   });
 
   let lockedTarget = en.attackTarget;
-  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) || !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1)))) lockedTarget = null;
+  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) ||
+      (!en.scoutChasing && !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1))))) lockedTarget = null;
   if (lockedTarget) {
     let lockedDist = Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y);
     if (!closestSettler || lockedDist <= minDist + 40) {

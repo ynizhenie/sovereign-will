@@ -8,6 +8,7 @@ Object.assign(window.sim, (() => {
     }
     return false;
   };
+  const fundShelter = () => Object.assign(stock, { wood: 50, stone: 50, leather: 10, rope: 10, herbs: 10 });
 
   function campOpens({ seed = 'raid-test', soldiers = 4, gear = {} } = {}) {
     game.mapSettings = { cols: 128, rows: 128 };
@@ -82,6 +83,7 @@ Object.assign(window.sim, (() => {
     const opened = campOpens(opts);
     const hallX = townHall.x, cols = COLS, timerBefore = waveTimer;
     const party = settlers.filter(settler => settler.id >= 500);
+    fundShelter();
     const sent = startRaid(party);
     const arrived = step(60, () => raid.phase === 'staging' &&
       !!document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])'));
@@ -118,17 +120,21 @@ Object.assign(window.sim, (() => {
     waveTimer = 999;
     const sent = startRaid([scout], true);
     const timerBefore = waveTimer;
-    let looked = false, outsideDuringLook = false, guardsPassiveDuringLook = false;
+    let looked = false, outsideDuringLook = false, guardsPassiveBeforeThreat = true, guardChased = false;
     const arrived = step(150, () => {
       if (raid.phase === 'fight') {
         looked = true;
         outsideDuringLook = !inEnemyTerritory(scout.x, scout.y);
-        guardsPassiveDuringLook = enemies.filter(enemy => enemy.campGuard).every(enemy => !enemy.guardOff);
+        if (!raid.scoutThreat || raid.scoutThreat.elapsed < 10) {
+          guardsPassiveBeforeThreat = guardsPassiveBeforeThreat &&
+            enemies.filter(enemy => enemy.campGuard).every(enemy => !enemy.guardOff);
+        }
+        guardChased = guardChased || enemies.some(enemy => enemy.campGuard && enemy.scoutChasing);
       }
       return looked && raid.phase === null;
     });
     return {
-      opened, sent, arrived, looked, outsideDuringLook, guardsPassiveDuringLook, phase: raid.phase, campStays: !!enemyCamp,
+      opened, sent, arrived, looked, outsideDuringLook, guardsPassiveBeforeThreat, guardChased, phase: raid.phase, campStays: !!enemyCamp,
       raidActive, timerAdvanced: waveTimer < timerBefore
     };
   }
@@ -266,6 +272,7 @@ Object.assign(window.sim, (() => {
   function retreatFromStaging({ seed = 'raid-staging-retreat' } = {}) {
     campOpens({ seed, soldiers: 2 });
     const party = settlers.filter(settler => settler.id >= 500);
+    fundShelter();
     const sent = startRaid(party);
     const arrived = step(60, () => raid.phase === 'staging' &&
       !!document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])'));
@@ -279,5 +286,236 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { campOpens, intoCamp, raidOutcome, scoutTheCamp, campFogVisibility, enemyCampStructuresDontRevealFog, campInfrastructure, campOutpostVisuals, campActivity, campBoars, retreatFromStaging };
+  function raidPetAndCargo({ seed = 'raid-pet-cargo' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    createEnemyCamp();
+    fundShelter();
+    const pet = makeSettler(550, townHall.x + 45, townHall.y, { type: 'dog', hp: 70, maxHp: 70 });
+    const carrier = makeSettler(551, townHall.x - 45, townHall.y, { carrying: { type: 'wood', amount: 3 } });
+    settlers.push(pet, carrier);
+    const woodBefore = stock.wood;
+    const sent = startRaid([pet, carrier]);
+    const waitedToUnload = raid.phase === 'loading';
+    const delivered = step(45, () => raid.phase === 'march');
+    step(5);
+    return {
+      sent, waitedToUnload, delivered, cargoReturned: !carrier.carrying && stock.wood >= woodBefore + 3,
+      petJoined: pet.raider && raid.raiders.includes(pet), petMoved: Math.hypot(pet.x - (townHall.x + 45), pet.y - townHall.y) > 10
+    };
+  }
+
+  function stagingShelterPayment({ seed = 'raid-staging-shelter' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    createEnemyCamp();
+    fundShelter();
+    const cost = GAME_CONFIG.buildings[shelterType()].cost;
+    const before = Object.fromEntries(Object.keys(cost).map(resource => [resource, stock[resource]]));
+    const pet = makeSettler(560, townHall.x + 45, townHall.y, { type: 'dog', hp: 70, maxHp: 70 });
+    const builder = makeSettler(561, townHall.x - 45, townHall.y);
+    settlers.push(pet, builder);
+    const sent = startRaid([pet, builder]);
+    for (const settler of raid.raiders) {
+      settler.x = raid.gather.x;
+      settler.y = raid.gather.y;
+    }
+    raid.timer = GAME_CONFIG.raid.marchSeconds;
+    tickRaid(0.1);
+    const petDidNotBuild = !!raid.stagingShelter && raid.stagingShelter.builderId === builder.id;
+    for (let frame = 0; frame < 20 && raid.stagingShelter && !raid.stagingShelter.built; frame++) {
+      builder.x = raid.stagingShelter.x;
+      builder.y = raid.stagingShelter.y;
+      raidOrders(builder, { dt: 1 });
+    }
+    const builtBeforeAttack = !!raid.stagingShelter && raid.stagingShelter.built;
+    const costUnchangedBeforeAttack = Object.keys(cost).every(resource => stock[resource] === before[resource]);
+    for (const settler of raid.raiders) {
+      settler.x = settler.raidSpot.x;
+      settler.y = settler.raidSpot.y;
+    }
+    tickRaid(0.1);
+    raidAction('attack');
+    const costPaidOnAttack = Object.keys(cost).every(resource => stock[resource] === before[resource] - cost[resource]);
+    const attackStarted = raid.phase === 'fight';
+    leaveCamp(false);
+    const shelterRemoved = !game.buildings.some(building => building.raidShelter) &&
+      !game.blueprints.some(blueprint => blueprint.raidShelter);
+    return { sent, petDidNotBuild, builtBeforeAttack, costUnchangedBeforeAttack, costPaidOnAttack, attackStarted, shelterRemoved };
+  }
+
+  function raidAutoDemolition({ seed = 'raid-auto-demolition' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    const camp = createEnemyCamp();
+    game.raidCampId = camp.id;
+    game.raidActive = true;
+    const outpost = enemyTents.find(tent => tent.campStructure && tent.outpost && tent.campId === camp.id);
+    const raider = makeSettler(600, outpost.x + 20, outpost.y, { weapon: 'iron_sword', role: 'soldier' });
+    raider.raider = true;
+    settlers.push(raider);
+    enemies = [];
+    const hpBefore = outpost.hp;
+    for (let frame = 0; frame < 60 && outpost.hp === hpBefore; frame++) fightByOrders(raider, 1 / 60, true);
+    return { structureDamaged: outpost.hp < hpBefore };
+  }
+
+  function demonRaidPortalPlacement({ seed = 'demon-raid-portals' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    sides.player.faction = 'demons';
+    const camp = createEnemyCamp();
+    const raider = makeSettler(650, townHall.x + 45, townHall.y, { weapon: 'sword', role: 'soldier' });
+    settlers.push(raider);
+    const sent = startRaid([raider]);
+    const homePortalCreated = !!raid.homePortal && !raid.exitPortal;
+    raider.x = raid.rally.x;
+    raider.y = raid.rally.y;
+    tickRaid(0.1);
+    const staged = raid.phase === 'staging';
+    raidAction('portal');
+    let portalSpot = null;
+    const centre = getGridPos(camp.x, camp.y);
+    for (let radius = 1; radius <= camp.radius + 2 && !portalSpot; radius++) {
+      for (let dy = -radius; dy <= radius && !portalSpot; dy++) for (let dx = -radius; dx <= radius; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const x = (centre.gx + dx) * TILE_SIZE + 15, y = (centre.gy + dy) * TILE_SIZE + 15;
+        const point = { x, y };
+        if (!isTileBlockedForSettler(centre.gx + dx, centre.gy + dy) &&
+          !inTerritory(x, y) && !buildings.some(building => Math.hypot(building.x - x, building.y - y) < 30) &&
+          !enemyTents.some(tent => Math.hypot(tent.x - x, tent.y - y) < 30) &&
+          !enemies.some(enemy => enemy.hp > 0 && Math.hypot(enemy.x - x, enemy.y - y) < 60)) portalSpot = point;
+      }
+    }
+    if (portalSpot) raidTap(portalSpot.x, portalSpot.y);
+    const exitPortalPlaced = !!raid.exitPortal;
+    if (exitPortalPlaced) raidAction('attack');
+    const entered = raid.phase === 'fight';
+    leaveCamp(false);
+    raidOrders(raider, { dt: 1 / 60 });
+    const returnedThroughPortal = !!raider.returnedViaPortal;
+    tickRaid(1 / 60);
+    return {
+      sent, homePortalCreated, staged, exitPortalPlaced, entered, returnedThroughPortal,
+      portalsCleaned: !buildings.some(building => building.raidPortal)
+    };
+  }
+
+  function undeadCampNoFire({ seed = 'undead-camp-no-fire' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    sides.enemy.faction = 'undead';
+    const camp = createEnemyCamp();
+    normalizeEnemyCamp();
+    const campBuildings = buildings.filter(building => building.enemyCampStructure && building.campId === camp.id);
+    return {
+      noCampfire: !campBuildings.some(building => building.type === 'campfire'),
+      noFireKeeper: !enemies.some(enemy => enemy.campGuard && enemy.campId === camp.id && enemy.campFireKeeper)
+    };
+  }
+
+  function scoutThreatAndBaseWork({ seed = 'scout-threat-work' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    const camp = createEnemyCamp();
+    const scout = makeSettler(700, camp.x + (camp.radius + 1) * TILE_SIZE, camp.y);
+    const worker = settlers[0];
+    settlers.push(scout);
+    startRaid([scout], true);
+    raid.phase = 'fight';
+    raid.scoutThreat = { elapsed: 10 };
+    game.raidActive = false;
+    tickRaid(1 / 60);
+    const guard = raid.scoutThreat && raid.scoutThreat.guard;
+    const targetAssigned = !!guard && guard.attackTarget === scout && guard.scoutChasing;
+    if (guard) {
+      guard.x = scout.x - TILE_SIZE;
+      guard.y = scout.y;
+    }
+    tickRaid(1 / 60);
+    const scoutFled = raid.phase === 'return' && raid.scouting;
+    const baseContinues = !restWhileRaid(worker, { dt: 1 / 60 });
+    return { targetAssigned, scoutFled, baseContinues };
+  }
+
+  function raidWithoutCampAndScoutSelection({ seed = 'raid-without-camp' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    createEnemyCamp();
+    const archer = makeSettler(710, townHall.x + 45, townHall.y, { weapon: 'bow', role: 'archer' });
+    const medic = makeSettler(711, townHall.x + 65, townHall.y, { tool: 'medbag', role: 'worker' });
+    settlers = [archer, medic];
+    Object.assign(stock, { wood: 80, stone: 80, arrows: 30, herbs: 20 });
+    openRaidPicker();
+    const buildCamp = document.querySelector('#raid-picker [data-raid="build-camp"]');
+    buildCamp.checked = false;
+    buildCamp.dispatchEvent(new Event('change', { bubbles: true }));
+    document.querySelector(`#raid-picker [data-unit="${medic.id}"]`).click();
+    document.querySelector('#raid-picker [data-raid="go"]').click();
+    const sent = raid.phase === 'march';
+    const noSuppliesTaken = raid.arrows === 0 && stock.arrows === 30 && stock.herbs === 20 && medic.bagHerbs === 0;
+    const resourcesBefore = Object.fromEntries(['wood', 'stone', 'leather', 'rope', 'herbs', 'arrows']
+      .map(key => [key, stock[key] || 0]));
+    raid.timer = GAME_CONFIG.raid.marchSeconds;
+    tickRaid(0.1);
+    for (const settler of raid.raiders) {
+      settler.x = settler.raidSpot.x;
+      settler.y = settler.raidSpot.y;
+    }
+    const noShelter = raid.phase === 'staging' && !raid.stagingShelter &&
+      !blueprints.some(blueprint => blueprint.raidShelter);
+    updateRaidBar();
+    const attackReady = !!document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])');
+    raidAction('attack');
+    const attackStarted = raid.phase === 'fight';
+    const noCostPaid = Object.entries(resourcesBefore).every(([key, amount]) => (stock[key] || 0) === amount);
+    leaveCamp(false);
+    endRaid(false);
+
+    const scout = archer;
+    game.raidCampId = enemyCamp.id;
+    const scoutSent = startRaid([scout], true);
+    selectedSettler = scout;
+    selectedGroup = [scout];
+    buildMode = 'interact';
+    mouse.x = scout.x;
+    mouse.y = scout.y;
+    handleCanvasClick();
+    const scoutCannotBeSelected = selectedSettler === null && selectedGroup.length === 0;
+    endRaid(false);
+    sides.player.faction = 'demons';
+    const demonSent = startRaid([archer], false, 0, false);
+    const demonNoPortals = !raid.homePortal && !raid.exitPortal && !buildings.some(building => building.raidPortal);
+    endRaid(false);
+    return { sent, noSuppliesTaken, noShelter, attackReady, attackStarted, noCostPaid, scoutSent,
+      scoutCannotBeSelected, demonSent, demonNoPortals };
+  }
+
+  function allCampTerritories({ seed = 'camp-territories' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    game.enemyCamps = [
+      { id: 1, x: townHall.x - TILE_SIZE * 4, y: townHall.y, radius: 2 },
+      { id: 2, x: townHall.x + TILE_SIZE * 4, y: townHall.y, radius: 2 }
+    ];
+    game.enemyCamp = game.enemyCamps[0];
+    camera.x = townHall.x;
+    camera.y = townHall.y;
+    let redZones = 0;
+    const stroke = ctx.stroke;
+    ctx.stroke = function (...args) {
+      if (ctx.strokeStyle === 'rgba(231, 76, 60, 0.35)') redZones++;
+      return stroke.apply(ctx, args);
+    };
+    try { drawTerritory(); }
+    finally { ctx.stroke = stroke; }
+    return { campCount: game.enemyCamps.length, redZones };
+  }
+
+  return {
+    campOpens, intoCamp, raidOutcome, scoutTheCamp, campFogVisibility, enemyCampStructuresDontRevealFog,
+    campInfrastructure, campOutpostVisuals, campActivity, campBoars, retreatFromStaging,
+    raidPetAndCargo, stagingShelterPayment, raidAutoDemolition, demonRaidPortalPlacement,
+    undeadCampNoFire, scoutThreatAndBaseWork, raidWithoutCampAndScoutSelection, allCampTerritories
+  };
 })());

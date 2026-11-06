@@ -50,11 +50,38 @@ Object.assign(window.sim, (() => {
     document.getElementById('seed-input').value = seed;
     startEditor({ cols: 40, rows: 40, generate: true });
     const before = serializeMap('x');
+    const beachesBefore = beachTiles.length;
     resetGame(before);
+    const beachesAfter = beachTiles.length;
     const after = serializeMap('x');
+    const beachRunsPreserved = JSON.stringify(before.beachRuns) === JSON.stringify(after.beachRuns);
     leaveEditor();
     const count = m => Object.values(m.resources).reduce((n, list) => n + list.length, 0) + m.waterRuns.reduce((n, run) => n + run[2], 0);
-    return { same: JSON.stringify(before) === JSON.stringify(after), things: count(before) };
+    return {
+      same: JSON.stringify(before) === JSON.stringify(after), things: count(before),
+      beachesBefore, beachesAfter, beachRunsPreserved
+    };
+  }
+
+  function generatedSavedMapWithoutCameraMove({ seed = 'editor-beaches-no-pan' } = {}) {
+    game.mapSettings = { cols: 40, rows: 40 };
+    document.getElementById('seed-input').value = seed;
+    startEditor({ cols: 40, rows: 40, generate: true });
+    document.getElementById('editor-name').value = 'No camera beach test';
+    const saved = saveEditorMap();
+    const maps = loadSavedMaps();
+    const map = maps['No camera beach test'];
+    const savedBeaches = map?.beachRuns?.reduce((sum, run) => sum + run[2], 0) || 0;
+    game.gameMode = 'endless';
+    game.customMap = map;
+    resetGame();
+    const loadedBeaches = beachTiles.length;
+    map.beachRuns = [];
+    resetGame();
+    const regeneratedBeaches = beachTiles.length;
+    delete maps['No camera beach test'];
+    storeSavedMaps(maps);
+    return { saved, savedBeaches, loadedBeaches, regeneratedBeaches };
   }
 
   // The same tool on a tile that has its thing clears it; another thing replaces it (#143)
@@ -72,5 +99,23 @@ Object.assign(window.sim, (() => {
     return { treeCleared, replaced, sandCleared, pondCleared };
   }
 
-  return { handMadeMap, generatedRoundTrip, toggleClear };
+  function outpostCamps() {
+    startEditor({ cols: 128, rows: 128, generate: false });
+    use('outpost', 36, 64); use('outpost', 92, 64);
+    const map = serializeMap('outposts');
+    leaveEditor();
+    gameMode = 'endless';
+    game.customMap = map;
+    resetGame();
+    createEnemyCamps(0);
+    const placed = enemyCamps.map(camp => [Math.floor(camp.x / TILE_SIZE), Math.floor(camp.y / TILE_SIZE)]);
+    game.customMap = { ...map, outposts: [] };
+    resetGame();
+    createEnemyCamps(3);
+    const none = enemyCamps.length === 0;
+    game.customMap = null;
+    return { markersSaved: map.outposts.length, placed, none };
+  }
+
+  return { handMadeMap, generatedRoundTrip, generatedSavedMapWithoutCameraMove, toggleClear, outpostCamps };
 })());

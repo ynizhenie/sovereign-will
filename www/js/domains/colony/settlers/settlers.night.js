@@ -95,13 +95,14 @@ export function fetchNightTorch(s, tick) {
 
 // A wave coming at night: everyone woken (wakeSeconds before it)
 function waveDue() {
-  return game.waveTimer <= config().wakeSeconds || isDefenseAlert() || game.enemies.length > 0;
+  return game.waveTimer <= config().wakeSeconds || isDefenseAlert() ||
+    game.enemies.some(enemy => !enemy.campGuard || (game.raidActive && enemy.campId === game.raidCampId));
 }
 
 // (#279) the enemy's tents or portals still standing at night: the soldiers stay up to go and break them, or
 // with no soldiers, everyone
 function upForTents(s) {
-  if (!game.enemyTents.length && !game.enemyTentBlueprints.length) return false;
+  if (!game.enemyTents.some(tent => !tent.campStructure) && !game.enemyTentBlueprints.length) return false;
   return isFighter(s) || !game.settlers.some(isFighter);
 }
 

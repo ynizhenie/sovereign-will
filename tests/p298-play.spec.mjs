@@ -15,6 +15,7 @@ test('a game saves even with a loop through the fallen (it silently didn\'t); on
     const looped = !!loadSaves()[`world:${worldSeed.value}`];
     localStorage.clear();
     // on its way to the camp
+    Object.assign(stock, { wood: 100, leather: 100, rope: 100, herbs: 100 });
     startRaid(settlers.filter(s => s.role === 'soldier'));
     for (let f = 0; f < 30; f++) update(1 / 60);
     setPaused(true); const shownMarching = !document.getElementById('save-game-button').hidden; setPaused(false);
@@ -46,6 +47,9 @@ test('at night the asleep can be picked for a raid: they wake and go (#298, 12)'
     sleeper.asleep = true;
     openRaidPicker();
     const listed = !!document.querySelector(`#raid-picker .raid-unit[data-unit="${sleeper.id}"]`);
+    const buildCamp = document.querySelector('#raid-picker [data-raid="build-camp"]');
+    buildCamp.checked = false;
+    buildCamp.dispatchEvent(new Event('change', { bubbles: true }));
     document.querySelector('#raid-picker [data-raid="go"]').click();
     return { listed, going: raid.raiders.includes(sleeper), awake: !sleeper.asleep };
   });
