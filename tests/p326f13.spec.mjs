@@ -18,8 +18,8 @@ test('medics and necromancers find a reachable backline spot when their preferre
     const playerNecromancer = makeSettler(3, 350, 340, { tool: 'necro_staff' });
     const enemyFighter = createConfiguredEnemy({ x: 805, y: 300 }, 'raider');
     const enemyAnchor = createConfiguredEnemy({ x: 1015, y: 700 }, 'raider');
-    const enemyMedic = createConfiguredEnemy({ x: 1150, y: 700 }, 'raider_medic');
-    const enemyNecromancer = createConfiguredEnemy({ x: 1150, y: 740 }, 'undead_necromancer');
+    const enemyMedic = createConfiguredEnemy({ x: 1115, y: 700 }, 'raider_medic');
+    const enemyNecromancer = createConfiguredEnemy({ x: 1115, y: 670 }, 'undead_necromancer');
     game.settlers = [playerFighter, playerMedic, playerNecromancer];
     game.enemies = [enemyFighter, enemyAnchor, enemyMedic, enemyNecromancer];
 

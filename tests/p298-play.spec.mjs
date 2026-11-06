@@ -44,7 +44,7 @@ test('at night the asleep can be picked for a raid: they wake and go (#298, 12)'
   const r = await page.evaluate(() => {
     const sleeper = settlers.find(s => s.role === 'soldier');
     sleeper.asleep = true;
-    raidAction('open');
+    openRaidPicker();
     const listed = !!document.querySelector(`#raid-picker .raid-unit[data-unit="${sleeper.id}"]`);
     document.querySelector('#raid-picker [data-raid="go"]').click();
     return { listed, going: raid.raiders.includes(sleeper), awake: !sleeper.asleep };

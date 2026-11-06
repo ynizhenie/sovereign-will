@@ -83,8 +83,6 @@ export function serializeGame() {
   };
   const world = {};
   for (const [list, value] of WORLD_LISTS.map(list => [list, game[list]])) world[list] = Array.isArray(value) ? packList(value.map(o => encode(o))) : encode(value);
-  world.enemyCamps = encode(game.enemyCamps);
-  world.enemyCamp = encode(game.enemyCamp);
   world.enemyCampCount = game.enemyCampCount;
   world.fogEnabled = game.fogEnabled;
   world.raidCampId = game.raidCampId;

@@ -64,8 +64,8 @@ test('two difficulties: on Hard enemies are as strong as the player\'s own units
     document.getElementById('seed-input').value = 'difficulty-test';
     applySeedFromUI(); resetGame();
     waveNum = 1; startNextWave();
-    const enemy = enemies[0];
-    return { enemies: enemies.length, key: enemy.enemyKey, maxHp: enemy.maxHp, damage: enemy.hitDamage, speed: enemy.speed, stats: enemyStats(enemy.enemyKey) };
+    const enemy = enemies[0] || enemyRafts[0].units[0]; // (no camp on the map: the wave comes by raft)
+    return { enemies: waveSize, key: enemy.enemyKey, maxHp: enemy.maxHp, damage: enemy.hitDamage, speed: enemy.speed, stats: enemyStats(enemy.enemyKey) };
   }));
   expect(r[0].maxHp).toBe(75);
   expect(r[0].stats.hp).toBe(75);
