@@ -6,7 +6,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 import { hasToolFamily } from '../../colony/equipment/index.js';
 import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
-import { faceTowards, getRecentAttacker, noteDay } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker, noteDay, says } from '../../colony/settlers/index.js';
 import { isShelter } from './healing.rules.js';
 import { getReachDistanceToResource, getSettlerReach, moveEntityTowards, someEnemyNear, someSettlerNear } from '../../../engine/movement/index.js';
 import { isWaterReachable } from '../../world/index.js';
@@ -82,11 +82,12 @@ export function healAtTent(s, tick) {
 // its herbs (#199)
 export function treatWounded(s, tick, stayBack = false) {
   const battle = game.gameMode === 'battle';
-  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || (!tick.isWaveActive && !battle)) return false;
-  if (!battle && tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
+  const raid = game.raidActive;
+  if (s.role !== 'worker' || !hasToolFamily(s.tool, 'medic') || (!tick.isWaveActive && !battle && !raid)) return false;
+  if (!battle && !raid && tick.tents.length > 0 && !game.enemies.some(en => en.fromWave)) return false;
   const medic = GAME_CONFIG.medic;
   const unlimitedHerbs = battle;
-  if (!unlimitedHerbs && !(s.bagHerbs > 0) && stock.herbs <= 0) return false;
+  if (!unlimitedHerbs && !(s.bagHerbs > 0) && (raid || stock.herbs <= 0)) return false;
   const support = /** @type {SettlerWithHealTarget} */ (s);
   const isSupport = other => other.role === 'worker' && hasToolFamily(other.tool, 'medic') || other.tool === 'necro_staff';
   const isAvailable = other => other.hp > 0 && other.hp < other.maxHp && !other.towerAssignment && !tick.patients.has(other) &&
@@ -106,7 +107,10 @@ export function treatWounded(s, tick, stayBack = false) {
   support.healTarget = patient;
   s.patrolTarget = null;
   // an empty bag gets filled with herbs at the nearest storage first
-  if (!unlimitedHerbs && !(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
+  if (!unlimitedHerbs && !(s.bagHerbs > 0)) {
+    if (raid) return false;
+    return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
+  }
   tick.patients.add(patient);
   if (patient !== s && Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
     if (!stayBack) moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
@@ -120,6 +124,7 @@ export function treatWounded(s, tick, stayBack = false) {
       if (!unlimitedHerbs) s.bagHerbs--;
       patient.hp = Math.min(patient.maxHp, patient.hp + medic.healPerHerb);
       if (patient !== s) noteDay(s, 'healed'); // (#279)
+      says(s, 'healing');
       playSound('heal', patient);
     }
   }

@@ -176,9 +176,13 @@
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
+ * @property {boolean} [scoutChasing] a camp guard sent after a scout (#279)
  * @property {boolean} [campGuard]  defender of the persistent Endless camp; passive outside a raid
  * @property {number} [campId] the persistent camp this enemy belongs to
  * @property {number} [campTalkTimer] seconds until its next camp conversation
+ * @property {Point} [campPatrolTarget] a camp guard's current patrol destination
+ * @property {{ x: number, y: number, elapsed: number }} [campPatrolProgress] progress tracking for a patrol destination
+ * @property {Point} [campSleepSpot] a camp guard's assigned sleeping spot
  * @property {boolean} [campFireKeeper] the sole guard who tends the camp's fire while remaining at its side
  * @property {boolean} [campFuelDuty] legacy saved camp-fuel assignment, removed on load
  * @property {number} [campFuelLoad] legacy saved camp-fuel amount, removed on load
@@ -249,6 +253,9 @@
  * @typedef {Object} Blueprint
  * @property {string} type           GAME_CONFIG.buildings key, or 'demolish_building'
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
+ * @property {boolean} [raidPortal] a temporary portal used by a demon raid
+ * @property {boolean} [built] a completed structure
  * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
@@ -267,9 +274,13 @@
  * @typedef {Object} Building
  * @property {string} type           GAME_CONFIG.buildings key
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
+ * @property {boolean} [raidPortal] a temporary portal used by a demon raid
+ * @property {boolean} [built] a completed structure
  * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {boolean} [enemyCampOutpost] the camp warehouse that supplies its firekeeper
  * @property {number} [campId] the persistent camp this building belongs to
+ * @property {number | null} [builderId] the settler assigned to build it
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} [progress]
@@ -336,6 +347,7 @@
  * @property {boolean} cardMode  Endless with cards (#255)
  * @property {{ cols: number, rows: number }} mapSettings
  * @property {Object | null} customMap
+ * @property {Point[]} editorOutposts up to three enemy camp markers in a custom map
  * @property {Object | null} worldSeed
  * @property {number} COLS
  * @property {number} ROWS

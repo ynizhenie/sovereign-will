@@ -21,6 +21,8 @@ Object.assign(window.sim, (() => {
   // different game, then the save loaded: the same game, pointers and all, and it goes on the same way
   function roundTrip({ seed = 'save-test' } = {}) {
     start(seed);
+    const originalPlayer = { ...sides.player };
+    sides.player.faction = 'undead';
     const tower = placeBuilding('watchtower', nearHall(4, 0).x, nearHall(4, 0).y);
     const archer = makeSettler(900, townHall.x - 40, townHall.y + 40, { weapon: 'bow', role: 'archer', quiver: true, arrows: 12 });
     settlers.push(archer);
@@ -32,16 +34,19 @@ Object.assign(window.sim, (() => {
     // how it goes on without saving
     run(5, { holdWaves: false });
     const goesOn = snapshot();
+    sides.player.faction = 'humans';
 
     document.getElementById('seed-input').value = 'another-game';
     applySeedFromUI(); resetGame();
     loadGame(saved);
+    const factionRestored = saved.playerFaction === 'undead' && sides.player.faction === 'undead' && getPlayerFaction().id === 'undead';
     const after = snapshot();
     const savedTower = buildings.find(b => b.type === 'watchtower');
     const savedArcher = settlers.find(s => s.id === 900);
     const pointers = savedTower.guards.length === 1 && savedTower.guards[0] === savedArcher && savedArcher.towerAssignment === savedTower;
     run(5, { holdWaves: false });
-    return { same: JSON.stringify(before) === JSON.stringify(after), pointers, sameAfterwards: sameProgress(goesOn, snapshot()) };
+    Object.assign(sides.player, originalPlayer);
+    return { same: JSON.stringify(before) === JSON.stringify(after), pointers, sameAfterwards: sameProgress(goesOn, snapshot()), factionRestored };
   }
 
   return { saveRoundTrip: roundTrip };

@@ -15,8 +15,25 @@ test('a generated map saved from the editor loads back exactly (#37)', async () 
   const r = await sim.generatedRoundTrip();
   expect(r.same).toBe(true);
   expect(r.things).toBeGreaterThan(100);
+  expect(r.beachesBefore).toBeGreaterThan(0);
+  expect(r.beachesAfter).toBe(r.beachesBefore);
+  expect(r.beachRunsPreserved).toBe(true);
+});
+
+test('a generated map saves its beaches before the camera moves, then loads them in Endless', async () => {
+  const result = await sim.generatedSavedMapWithoutCameraMove();
+  expect(result.saved).toBe(true);
+  expect(result.savedBeaches).toBeGreaterThan(0);
+  expect(result.loadedBeaches).toBe(result.savedBeaches);
+  expect(result.regeneratedBeaches).toBe(result.savedBeaches);
 });
 
 test('the same tool again clears the tile; another thing replaces it (#143)', async () => {
   expect(await sim.toggleClear()).toEqual({ treeCleared: true, replaced: true, sandCleared: true, pondCleared: true });
+});
+
+test('editor outposts become enemy camps at their marked tiles; no markers means no camps', () => {
+  expect(sim.outpostCamps({})).toEqual({
+    markersSaved: 2, placed: [[36, 64], [92, 64]], none: true
+  });
 });

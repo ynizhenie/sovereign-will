@@ -11,6 +11,14 @@ test('at night workers sleep at the tent, hunger standing still; half the soldie
   expect(sim.nightSleep({})).toEqual({ workersAsleep: true, byTent: true, hungerStill: true, onWatch: 1, watchAsleep: 1, awake: true, hungry: true });
 });
 
+test('enemy camps do not keep player settlers awake at night', () => {
+  const result = sim.nightSleepAtEnemyCamp({});
+  expect(result.asleep).toBe(true);
+  expect(result.guards).toBeGreaterThanOrEqual(6);
+  expect(result.sleepingGuards).toBeGreaterThan(0);
+  expect(result.keeperAwake).toBe(true);
+});
+
 test('a wave due at night: everyone is woken before it (#257)', () => {
   expect(sim.nightWoken({})).toEqual({ asleep: true, wokenAll: true });
 });
@@ -30,7 +38,7 @@ test('at night without torches, work reach follows the base edge in the target d
 });
 
 test('a night wave: some of its enemies carry torches; the town hall, a torch, a portal, a necromancer\'s staff give light (#257)', () => {
-  expect(sim.nightWave({})).toEqual({ someTorches: true, notAll: true, farTorchesDark: true, lights: { hall: true, enemyTorch: true, portal: true, staff: true } });
+  expect(sim.nightWave({})).toEqual({ someTorches: true, notAll: true, farTorchesDark: true, lights: { hall: true, enemyTorch: true, portal: true, staff: true }, enemyTorchWithoutFog: true });
 });
 
 test('no firewood at night: a woodcutter stays up to get some, guarded by the soldier on watch; the rest sleep (#257)', () => {

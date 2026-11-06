@@ -88,7 +88,11 @@ export function fightByOrders(s, dt, auto) {
     (game.enemyTents.includes(s.orderTarget) || game.buildings.includes(s.orderTarget));
   if (outOfArrows) target = structureOrder ? s.orderTarget : null;
   else {
-    if (auto) target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && targetableEnemy(en))) || nearest(s, game.enemyTents.filter(targetableTent));
+    if (auto) target = told || hitter || nearest(s, [
+      ...game.enemies.filter(en => en.hp > 0 && targetableEnemy(en)),
+      ...game.enemyTents.filter(targetableTent),
+      ...game.buildings.filter(building => building.side === 'red' && building.enemyCampStructure && targetableCampBuilding(building))
+    ]);
     else target = told || hitter || nearest(s, game.enemies.filter(en => en.hp > 0 && targetableEnemy(en) && dist(en, s) < 90));
   }
   if (target) { strike(s, target, dt); return; }

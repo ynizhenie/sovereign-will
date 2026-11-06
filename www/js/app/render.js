@@ -51,6 +51,7 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
+  drawEditorOutposts();
   // all the shadows at once, on the ground under everything that stands on it (world.daytime.js)
   drawShadowLayer(drawStillShadows, () => { drawSettlerShadows(); drawEnemyShadows(); });
   drawWallows(); // (the ground boars dug, on the ground, #326)
@@ -92,4 +93,24 @@ export function render() {
   if (game.gameMode === 'battle') drawBattleResult();
   // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+}
+
+function drawEditorOutposts() {
+  if (game.gameMode !== 'editor') return;
+  game.editorOutposts.forEach((outpost, i) => {
+    ctx.save();
+    ctx.fillStyle = '#641e16';
+    ctx.strokeStyle = '#f5b041';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(outpost.x, outpost.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#f5b041';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), outpost.x, outpost.y);
+    ctx.restore();
+  });
 }

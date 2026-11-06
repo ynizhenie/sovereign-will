@@ -113,3 +113,80 @@ test('defeating the camp garrison clears the camp and ends the raid successfully
   expect(r).toMatchObject({ ended: true, campDestroyed: true });
   expect(errors).toEqual([]);
 });
+
+test('pets join a selected raid, and carried resources are returned before marching', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await sim(page, 'raidPetAndCargo', {});
+  expect(r).toEqual({
+    sent: true, waitedToUnload: true, delivered: true, cargoReturned: true, petJoined: true, petMoved: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('a staging shelter is built by a non-pet, and its cost is paid only when the attack begins', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'stagingShelterPayment', {})).toEqual({
+    sent: true, petDidNotBuild: true, builtBeforeAttack: true, costUnchangedBeforeAttack: true,
+    costPaidOnAttack: true, attackStarted: true, shelterRemoved: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('raids can skip camp construction and supplies, and a scouting settler cannot be selected', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'raidWithoutCampAndScoutSelection', {})).toEqual({
+    sent: true, noSuppliesTaken: true, noShelter: true, attackReady: true,
+    attackStarted: true, noCostPaid: true, scoutSent: true, scoutCannotBeSelected: true,
+    demonSent: true, demonNoPortals: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('every enemy camp draws its own dashed territory', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'allCampTerritories', {})).toEqual({ campCount: 2, redZones: 2 });
+  expect(errors).toEqual([]);
+});
+
+test('auto-raiders can damage enemy camp structures', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'raidAutoDemolition', {})).toEqual({ structureDamaged: true });
+  expect(errors).toEqual([]);
+});
+
+test('demon raids place a chosen exit portal and return through the portal pair', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'demonRaidPortalPlacement', {})).toEqual({
+    sent: true, homePortalCreated: true, staged: true, exitPortalPlaced: true, entered: true,
+    returnedThroughPortal: true, portalsCleaned: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('undead enemy camps have no campfires or fire keepers', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'undeadCampNoFire', {})).toEqual({ noCampfire: true, noFireKeeper: true });
+  expect(errors).toEqual([]);
+});
+
+test('a camp sends a guard to drive off a scout, while the base continues working', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'scoutThreatAndBaseWork', {})).toEqual({
+    targetAssigned: true, scoutFled: true, baseContinues: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('town hall raid and scout actions open their respective pickers', async ({ page }) => {
+  const errors = await openGame(page);
+  await sim(page, 'campOpens', {});
+  await page.evaluate(() => openHallCard());
+
+  await page.getByText('Отправить в набег', { exact: true }).click();
+  await expect(page.locator('#raid-picker')).toContainText('Кто пойдёт в набег?');
+  await page.locator('#raid-picker [data-raid="cancel"]').click();
+
+  await page.getByText('Отправить разведчика', { exact: true }).click();
+  await expect(page.locator('#raid-picker')).toContainText('Кто пойдёт на разведку?');
+  expect(errors).toEqual([]);
+});

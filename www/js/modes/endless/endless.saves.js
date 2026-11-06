@@ -96,6 +96,7 @@ export function serializeGame() {
     playerGear: { ...game.playerGear },
     armory: { ...game.armory },
     sides: JSON.parse(JSON.stringify(sides)),
+    playerFaction: sides.player.faction,
     difficulty: game.gameDifficulty,
     cardMode: game.cardMode,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
@@ -150,8 +151,9 @@ export function resolveRefs(root) {
 export function loadGame(data) {
   resetRaid(); // (#255)
   game.gameMode = 'endless';
-  Object.assign(sides.player, data.sides.player);
-  Object.assign(sides.enemy, data.sides.enemy);
+  Object.assign(sides.player, data.sides && data.sides.player);
+  Object.assign(sides.enemy, data.sides && data.sides.enemy);
+  if (data.playerFaction) sides.player.faction = data.playerFaction;
   game.gameDifficulty = data.difficulty;
   game.cardMode = !!data.cardMode;
   setWorldSize(data.cols, data.rows);

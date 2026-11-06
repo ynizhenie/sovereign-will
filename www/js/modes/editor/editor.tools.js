@@ -45,6 +45,7 @@ export const EDITOR_TOOLS = [
   { id: 'iron_spawner', icon: 'iron_spawner', spawner: 'iron', category: 'terrain', section: 'ore' },
   { id: 'coal_spawner', icon: 'coal_spawner', spawner: 'coal', category: 'terrain', section: 'ore' },
   { id: 'town_hall', icon: 'hall', category: 'buildings', section: 'hall' },
+  { id: 'outpost', icon: 'enemyTent', category: 'buildings', section: 'outposts' },
   // buildings, except crops (those are planted in farm zones)
   ...Object.values(GAME_CONFIG.buildings)
     .filter(b => !Object.values(GAME_CONFIG.farming.crops).includes(b.id))
@@ -68,18 +69,20 @@ export const tileKey = (x, y) => `${x},${y}`;
 export function clearEditorTile(x, y) {
   const here = o => Math.abs(o.x - x) < TILE_SIZE / 2 && Math.abs(o.y - y) < TILE_SIZE / 2;
   for (const list of ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
-    'naturalRocks', 'waterTiles', 'boars', 'buildings']) {
+    'naturalRocks', 'waterTiles', 'boars', 'buildings', 'editorOutposts']) {
     game[list] = game[list].filter(o => !here(o));
   }
 }
 
 export function hasSomethingOn(x, y) {
-  return isTileOccupied(x, y) && Math.hypot(x - townHall.x, y - townHall.y) >= townHall.radius + 15;
+  return (isTileOccupied(x, y) || game.editorOutposts.some(o => o.x === x && o.y === y)) &&
+    Math.hypot(x - townHall.x, y - townHall.y) >= townHall.radius + 15;
 }
 
 // Does the tile already have what this tool puts there?
 export function tileHasTool(tool, gx, gy) {
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+  if (tool.id === 'outpost') return game.editorOutposts.some(o => o.x === x && o.y === y);
   const at = list => game[list].find(o => o.x === x && o.y === y);
   if (tool.id === 'water') return !!at('waterTiles');
   if (tool.id === 'sand') return !!at('desertTiles');
@@ -100,7 +103,8 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
   if (clearing) {
     if (!tileHasTool(tool, gx, gy)) return;
-    if (tool.id === 'sand') game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    if (tool.id === 'outpost') game.editorOutposts = game.editorOutposts.filter(o => o.x !== x || o.y !== y);
+    else if (tool.id === 'sand') game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
     else if (tool.building && GAME_CONFIG.buildings[tool.building].onWater) {
       game.buildings = game.buildings.filter(b => b.x !== x || b.y !== y || b.type !== tool.building);
     }
@@ -122,6 +126,18 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   }
   // the town hall's own tiles stay free
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + 15) return;
+  if (tool.id === 'outpost') {
+    if (game.editorOutposts.length >= 3) { showNotification(t('editor.outpostsLimit'), true); return; }
+    const grid = getGridPos(x, y), hall = getGridPos(townHall.x, townHall.y);
+    const startRadius = GAME_CONFIG.territory.startTiles / 2;
+    if (Math.abs(grid.gx - hall.gx) < startRadius && Math.abs(grid.gy - hall.gy) < startRadius) return;
+    const expansion = GAME_CONFIG.territory.buildingTiles;
+    if (game.buildings.some(building => !GAME_CONFIG.territory.skip.includes(building.type) &&
+      Math.hypot(getGridPos(building.x, building.y).gx - grid.gx, getGridPos(building.x, building.y).gy - grid.gy) <= expansion)) return;
+    clearEditorTile(x, y);
+    game.editorOutposts.push({ x, y });
+    return;
+  }
   // (#248) a fish trap sits on water; keep the water tile beneath it
   if (tool.building && GAME_CONFIG.buildings[tool.building].onWater) {
     const water = game.waterTiles.find(w => w.x === x && w.y === y);
@@ -168,6 +184,7 @@ export function moveTownHall(x, y) {
 
 // The brush on the tile (gx, gy): it and the ones round it, as big as the brush
 function brushAt(tool, gx, gy, clearing) {
+  if (tool.id === 'outpost') { applyEditorTool(tool, gx, gy, clearing); return; }
   const r = (editor.brush - 1) / 2;
   for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) applyEditorTool(tool, gx + dx, gy + dy, clearing);
 }
@@ -248,7 +265,7 @@ export function clearEditorMap() {
 }
 
 export const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
-  'naturalRocks', 'waterTiles', 'desertTiles', 'beachTiles', 'boars', 'buildings'];
+  'naturalRocks', 'waterTiles', 'desertTiles', 'beachTiles', 'boars', 'buildings', 'editorOutposts'];
 
 // ---- Opening and leaving the editor
 

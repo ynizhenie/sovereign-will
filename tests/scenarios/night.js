@@ -47,6 +47,24 @@ Object.assign(window.sim, (() => {
     return { ...r, awake: settlers.every(s => !s.asleep), hungry: wanted.size === workers.length };
   }
 
+  function sleepAtEnemyCamp({ seed = 'night-enemy-camp' } = {}) {
+    const previousMode = game.gameMode;
+    const previousSettings = game.mapSettings;
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed); clearResources();
+    settlers = [makeSettler(1, townHall.x - 40, townHall.y)];
+    createEnemyCamps(1);
+    const guards = enemies.filter(enemy => enemy.campGuard);
+    dayTime = nightStart() + 1;
+    run(30, { each: calm });
+    const sleepers = guards.filter(enemy => enemy.asleep);
+    game.gameMode = previousMode;
+    game.mapSettings = previousSettings;
+    return { asleep: !!settlers[0].asleep, guards: guards.length, sleepingGuards: sleepers.length,
+      keeperAwake: guards.filter(enemy => enemy.campFireKeeper).every(enemy => !enemy.asleep) };
+  }
+
   // A wave due at night: everyone's woken before it
   function woken({ seed = 'night-woken' } = {}) {
     start(seed); clearResources();
@@ -124,6 +142,10 @@ Object.assign(window.sim, (() => {
       enemyTorch: lights.some(l => waveEnemies.some(en => en.torch && en.x === l.x && en.y === l.y)),
       portal: lights.some(l => buildings.some(b => b.type === 'portal' && b.x === l.x && b.y === l.y)),
       staff: lights.some(l => l.color && Math.hypot(l.x - settlers[0].x, l.y - settlers[0].y) < 40) };
+    const fogEnabled = game.fogEnabled;
+    game.fogEnabled = false;
+    r.enemyTorchWithoutFog = getLights().some(l => waveEnemies.some(en => en.torch && en.x === l.x && en.y === l.y));
+    game.fogEnabled = fogEnabled;
     enemies = [];
     return r;
   }
@@ -144,5 +166,5 @@ Object.assign(window.sim, (() => {
     return { cutterUp, firewoodMade: (stock.firewood || 0) > 0, otherAsleep: !!other.asleep };
   }
 
-  return { nightPhases: phases, nightSleep: sleep, nightWoken: woken, nightTorchPost: torchPost, nightHandTorch: handTorch, directionalNightReach, nightWave, nightFuelDuty: fuelDuty };
+  return { nightPhases: phases, nightSleep: sleep, nightSleepAtEnemyCamp: sleepAtEnemyCamp, nightWoken: woken, nightTorchPost: torchPost, nightHandTorch: handTorch, directionalNightReach, nightWave, nightFuelDuty: fuelDuty };
 })());

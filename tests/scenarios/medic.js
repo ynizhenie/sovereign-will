@@ -20,6 +20,24 @@ Object.assign(window.sim, (() => {
     return { soldierHp: soldier.hp, workerHp: worker.hp, herbsLeft: stock.herbs + (medic.bagHerbs || 0), inBag: medic.bagHerbs || 0 };
   }
 
+  function enemyMedicHeal({ seed = 'enemy-medic', mode = 'endless' } = {}) {
+    start(seed);
+    clearResources();
+    settlers = mode === 'battle' ? [makeSettler(1, townHall.x - 100, townHall.y)] : [];
+    const previousMode = gameMode;
+    gameMode = mode;
+    const medic = createConfiguredEnemy({ x: townHall.x + 40, y: townHall.y }, 'raider_medic');
+    const patient = createConfiguredEnemy({ x: townHall.x + 55, y: townHall.y }, 'raider');
+    medic.speed = 0; patient.speed = 0; patient.hp = 20;
+    enemies = [medic, patient];
+    if (mode === 'battle') {
+      for (let frame = 0; frame < (GAME_CONFIG.medic.healSeconds + 0.1) * 60; frame++) tickEnemies(1 / 60);
+    } else run(GAME_CONFIG.medic.healSeconds + 0.1);
+    const result = { hp: patient.hp, herbs: medic.herbs };
+    gameMode = previousMode;
+    return result;
+  }
+
   // No attack: a medic with grass around gathers it and brings herbs home
   function medicGathers({ seed = 'medic-grass-test', seconds = 30 }) {
     start(seed);
@@ -52,5 +70,5 @@ Object.assign(window.sim, (() => {
     return { medic: settlers.find(s => s.tool === 'medbag')?.id ?? null, leather: stock.leather, herbs: stock.herbs };
   }
 
-  return { medicUnderAttack, medicGathers, medbagGoesToEmptyHanded };
+  return { medicUnderAttack, enemyMedicHeal, medicGathers, medbagGoesToEmptyHanded };
 })());

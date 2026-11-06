@@ -136,7 +136,7 @@ test('a scout sent from the town hall returns safely; the camp stays (#255)', as
   const errors = await openGame(page);
   const r = await sim(page, 'scoutTheCamp', {});
   expect(r).toMatchObject({
-    sent: true, looked: true, outsideDuringLook: true, guardsPassiveDuringLook: true, timerAdvanced: true,
+    sent: true, looked: true, outsideDuringLook: true, guardsPassiveBeforeThreat: true, guardChased: true, timerAdvanced: true,
     campStays: true, phase: null, raidActive: false
   });
   expect(errors).toEqual([]);

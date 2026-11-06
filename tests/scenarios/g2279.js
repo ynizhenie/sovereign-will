@@ -63,7 +63,7 @@ Object.assign(window.sim, (() => {
   function campShelter({ seed = 'camp-shelter' } = {}) {
     window.sim.campOpens({ seed, soldiers: 2 });
     settlers.push(makeSettler(850, townHall.x, townHall.y + 90, { weapon: 'bow', role: 'archer', quiver: true, arrows: 0 }));
-    Object.assign(stock, { wood: 100, leather: 10, herbs: 10, rope: 2, stone: 50, arrows: 30 });
+    Object.assign(stock, { wood: 100, leather: 30, herbs: 10, rope: 20, stone: 50, arrows: 30 });
     openRaidPicker();
     const offered = document.querySelector('#raid-picker .raid-arrow-count').textContent.trim();
     document.querySelector('#raid-picker [data-raid="go"]').click();

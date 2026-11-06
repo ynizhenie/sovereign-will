@@ -42,6 +42,7 @@ export const game = {
   enemyCamps: [],          // persistent enemy camps on the Endless map
   enemyCamp: null,          // the enemy's persistent camp on the Endless map
   enemyCampCount: 1,        // selected Endless camp count, 0..3
+  editorOutposts: [],       // editor markers that become enemy camps when their map is played
   fogEnabled: true,
   raidCampId: null,
   enemyCampDestroyed: false,
