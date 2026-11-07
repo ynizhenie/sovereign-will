@@ -185,13 +185,15 @@ test('a ghost hovers by a grave, can\'t be hurt, flies into an enemy that comes 
     spawnSettler('ghost');
     const ghost = settlers.find(s => s.type === 'ghost');
     const grave = buildings.find(b => b.type === 'grave');
+    ghost.x = grave.x; ghost.y = grave.y - 10; // (start at the home whose hovering behavior this tests)
     window.sim.run(3);
     const byGrave = Math.hypot(ghost.x - grave.x, ghost.y - grave.y);
     damageSettler(ghost, 999);
     const unhurt = ghost.hp === ghost.maxHp;
     const enemyGhost = createNormalEnemy({ x: ghost.x + 20, y: ghost.y }, 'raider');
     Object.assign(enemyGhost, { enemyKey: 'undead_ghost', ghostly: true, hp: 30, maxHp: 30 });
-    const en = createNormalEnemy({ x: ghost.x + 100, y: ghost.y }, 'raider'); en.speed = 0; // (a living one: the undead never panic, #326)
+    const en = createNormalEnemy({ x: ghost.x + 10, y: ghost.y }, 'raider');
+    Object.assign(en, { type: 'normal', bigBody: false, speed: 0, morale: 70, captain: false }); // (a living one: the undead never panic, #326)
     enemies = [enemyGhost, en];
     let panicked = false;
     for (let f = 0; f < 300 && !panicked; f++) { update(1 / 60); panicked = !!en.panic; }
