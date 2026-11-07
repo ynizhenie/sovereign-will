@@ -34,6 +34,17 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   expect(await page.evaluate(() => waterTiles.length)).toBe(1);
 
   await page.locator('[data-editor-category="terrain"]').click();
+  await page.locator('#editor-tools [data-tool="savanna"]').click();
+  const savannaSpot = await page.evaluate(() => {
+    const rect = canvas.getBoundingClientRect();
+    const x = townHall.x + 12 * TILE_SIZE + 15, y = townHall.y + 12 * TILE_SIZE + 15;
+    return { x: rect.left + ((x - camera.x) * getViewScale() + canvas.width / 2) * rect.width / canvas.width,
+      y: rect.top + ((y - camera.y) * getViewScale() + canvas.height / 2) * rect.height / canvas.height };
+  });
+  await page.mouse.click(savannaSpot.x, savannaSpot.y);
+  expect(await page.evaluate(() => savannaTiles.length)).toBe(1);
+
+  await page.locator('[data-editor-category="terrain"]').click();
   await page.locator('[data-brush="3"]').click();
   const pond = await page.evaluate(() => {
     const rect = canvas.getBoundingClientRect();
@@ -85,7 +96,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
 
   // open it again: the water is still there
   await page.locator('#editor-map-list [data-map="Озерцо"]').click();
-  expect(await page.evaluate(() => [waterTiles.length, COLS])).toEqual([10, 128]);
+  expect(await page.evaluate(() => [waterTiles.length, savannaTiles.length, COLS])).toEqual([10, 1, 128]);
   expect(await page.evaluate(() => getDayPhase())).toBe('night');
   await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
   await page.locator('#exit-to-menu-button').click();
@@ -99,7 +110,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#open-generator')).toBeHidden();
   await page.locator('#play-button').click();
   await started(page);
-  expect(await page.evaluate(() => [COLS, waterTiles.length, gameMode])).toEqual([128, 10, 'endless']);
+  expect(await page.evaluate(() => [COLS, waterTiles.length, savannaTiles.length, gameMode])).toEqual([128, 10, 1, 'endless']);
 
   // delete it in the editor
   await page.evaluate(() => exitToMainMenu());

@@ -7,7 +7,10 @@ test('save from the pause menu, then carry on from the Endless menu, or delete t
   await page.click('#play-button');
   // paused first: a worker bringing in stone between setting it and saving made it 124 (a slow CI runner)
   await page.click('#btn-pause-toggle');
-  await page.evaluate(() => { stock.stone = 123; waveNum = 4; });
+  await page.evaluate(() => {
+    stock.stone = 123; waveNum = 4;
+    game.savannaTiles = [{ x: townHall.x + 15, y: townHall.y + 15 }];
+  });
   await page.click('#save-game-button');
   // said on the button itself, not in a notice behind the pause menu (#254)
   await expect(page.locator('#save-game-button')).toContainText('Сохранено');
@@ -25,7 +28,7 @@ test('save from the pause menu, then carry on from the Endless menu, or delete t
   await expect(save).toContainText(/^Мир .*Волна 4 · /); // (a tile: its world, its wave and time, #254)
   await save.click();
   // (#299: a save is squeezed, and opened again in a moment)
-  await expect.poll(() => page.evaluate(() => [stock.stone, waveNum, gameStarted])).toEqual([123, 4, true]);
+  await expect.poll(() => page.evaluate(() => [stock.stone, waveNum, gameStarted, savannaTiles.length])).toEqual([123, 4, true, 1]);
   // delete it, asked first
   await page.evaluate(() => exitToMainMenu());
   await page.click('#mode-endless');

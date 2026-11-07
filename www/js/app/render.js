@@ -1,13 +1,13 @@
 // One frame: the ground, then everything on it, layer by layer, then the marks over it
 
 import { game, getTileIndex } from '../engine/world/index.js';
-import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlerShadows, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
-import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
+import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
@@ -62,7 +62,6 @@ export function render() {
   drawTownHall();
   drawTrees();
   drawCactiBouldersGrassBushes();
-  drawBoars();
   drawFarmPlots();
   drawPriorityMarks();
   drawBlueprints();
@@ -75,8 +74,7 @@ export function render() {
   drawDung();
   drawCorpses();
   drawEnemyTentSites();
-  drawSettlers();
-  drawEnemies();
+  drawDepthSortedScene();
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
@@ -93,6 +91,34 @@ export function render() {
   if (game.gameMode === 'battle') drawBattleResult();
   // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+}
+
+export function drawDepthSorted(items) {
+  items.sort((a, b) => a.depth - b.depth || a.order - b.order);
+  for (const item of items) item.draw();
+}
+
+function drawDepthSortedScene() {
+  const trees = depthSortedTrees();
+  if (!trees.length) {
+    drawBoars();
+    drawSettlers();
+    drawEnemies();
+    return;
+  }
+  const view = getViewRect(60);
+  const items = trees.map(tree => ({ depth: tree.y + 13, order: 0, draw: () => drawDepthTree(tree) }));
+  const addActors = (list, offset, order, draw) => {
+    for (const actor of list) {
+      if (actor.x < view.x0 || actor.x > view.x1 || actor.y < view.y0 || actor.y > view.y1) continue;
+      items.push({ depth: actor.y + offset(actor), order, draw: () => draw(actor) });
+    }
+  };
+  addActors(game.boars, () => 9, 1, boar => drawBoars(boar));
+  addActors(game.settlers, settler => (settler.visualRadius || settler.radius || 11) * 0.95, 2, settler => drawSettlers(settler));
+  addActors(game.enemies, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
+  addActors(game.scouts, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
+  drawDepthSorted(items);
 }
 
 function drawEditorOutposts() {

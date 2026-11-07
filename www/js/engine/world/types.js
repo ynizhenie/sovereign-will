@@ -383,6 +383,7 @@
  * @property {number} [fishRegrowTimer] seconds until another fish returns
  * @property {Object[]} desertTiles
  * @property {Object | null} desertRegion
+ * @property {Object[]} savannaTiles
  * @property {Object[]} beachTiles
  * @property {Object[]} sticks
  * @property {Object[]} pebbles

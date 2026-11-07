@@ -160,6 +160,7 @@ export function loadGame(data) {
   game.worldSeed = createWorldSeed(data.seed.value);
   game.worldSeed.setState(data.seed.state);
   for (const [list, value] of Object.entries(data.world)) game[list] = unpackList(value);
+  if (!data.world.savannaTiles) game.savannaTiles = [];
   game.enemyCamps = game.enemyCamps || (game.enemyCamp ? [game.enemyCamp] : []);
   game.enemyCamp = game.enemyCamp || game.enemyCamps[0] || null;
   game.enemyCampCount = data.world.enemyCampCount ?? game.enemyCampCount ?? 1;

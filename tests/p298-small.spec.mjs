@@ -119,7 +119,10 @@ test('the camp\'s enemies are the same whichever party comes (#298, 6)', async (
       startRaid(party);
       step(60, () => !!document.querySelector('#raid-bar [data-raid-act="attack"]:not([disabled])'));
       enterCamp();
-      const sig = enemies.map(en => `${en.enemyKey}@${Math.round(en.x)},${Math.round(en.y)}`).sort().join(' ');
+      const sig = enemies.map(en => {
+        const spot = en.guard || en;
+        return `${en.enemyKey}@${Math.round(spot.x)},${Math.round(spot.y)}`;
+      }).sort().join(' ');
       const n = enemies.length;
       leaveCamp(false); endRaid(false);
       return { sig, n };

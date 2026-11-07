@@ -106,10 +106,11 @@ export function drawEnemyShadows() {
   drawFigureShadows(seen, view, en => en.radius || 11);
 }
 
-export function drawEnemies() {
+export function drawEnemies(only = null) {
   // (#299) only those the colony sees now, and only those on the screen (#306)
   const view = getViewRect(60);
   const shown = en => isVisible(en.x, en.y) && en.x > view.x0 && en.x < view.x1 && en.y > view.y0 && en.y < view.y1;
+  if (only) { if (shown(only)) drawEnemy(only); return; }
   const enemies = [], scouts = [];
   forEachInRect(game.enemies, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) enemies.push(en); });
   forEachInRect(game.scouts, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) scouts.push(en); });
