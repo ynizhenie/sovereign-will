@@ -274,7 +274,7 @@ function drawSideTorch(facing, r) {
 }
 
 // Asleep (#257): a few z's drifting up off it
-function drawSleepZs(x, y) {
+export function drawSleepZs(x, y) {
   const t = performance.now() / 1000;
   ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; setFont('bold 8px sans-serif'); ctx.textAlign = 'center';
   for (let k = 0; k < 3; k++) {

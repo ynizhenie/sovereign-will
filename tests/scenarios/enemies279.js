@@ -437,7 +437,21 @@ Object.assign(window.sim, (() => {
     const hiddenUntilArrival = enemyTentBlueprints.length === 0;
     builder.x = site.x + GAME_CONFIG.enemyTents.buildDistance - 2;
     tickEnemy(builder, 1 / 60);
-    return { hiddenUntilArrival, shownWhenBuilding: enemyTentBlueprints.includes(site), startedProgress: site.progress > 0 };
+    const fillRect = ctx.fillRect;
+    let blueprintTileDrawn = false;
+    ctx.fillRect = function (x, y, width, height) {
+      if (x === site.x - 14 && y === site.y - 14 && width === 28 && height === 28) blueprintTileDrawn = true;
+      return fillRect.call(this, x, y, width, height);
+    };
+    try { drawEnemyTentSites(); }
+    finally { ctx.fillRect = fillRect; }
+    return {
+      hiddenUntilArrival,
+      shownWhenBuilding: enemyTentBlueprints.includes(site),
+      startedProgress: site.progress > 0,
+      builderAnimating: builder.working > 0 && builder.workKind === 'build',
+      blueprintTileDrawn
+    };
   }
 
   function waveTentSitesNearPlayerTerritory({ seed = 'wave-tents-near-player' } = {}) {

@@ -33,6 +33,11 @@ export function update(dt) {
   resetTileIndex();
   game.pathTick++;
 
+  if (game.gameMode === 'menu') {
+    updateMenuScene(dt);
+    return;
+  }
+
   updatePossessionView();
   tickMorale(dt);
   boarsPanic();
@@ -88,4 +93,31 @@ export function update(dt) {
   tickRaid(dt);
   updateUI();
   refreshAffordability();
+}
+
+function updateMenuScene(dt) {
+  boarsPanic();
+  tickBoarRespawn(dt);
+  growCrops(dt);
+  tickBoars(dt);
+  tickCampfires(dt);
+  tickFishPopulation(dt);
+  tickSettlers(dt);
+  tickProjectiles(dt);
+  tickEnemies(dt);
+
+  separateSettlersFromEnemies();
+  separateAllies(game.settlers, true);
+  separateAllies(game.enemies, true);
+  for (const unit of game.settlers) tickAnimation(unit, dt);
+  for (const unit of game.enemies) tickAnimation(unit, dt);
+
+  removeDeadSettlers();
+  removeDeadEnemies();
+  updateCorpses(dt);
+  keepStoresInStep();
+  tickDaytime(dt);
+  tickMenuScene(dt);
+  tickVoices(dt);
+  tickNight();
 }

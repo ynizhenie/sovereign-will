@@ -94,6 +94,31 @@ test('battle taps cannot select a friendly unit or mark an enemy during a fight'
   expect(result).toEqual({ phase: 'fight', selected: null, selectedGroup: 0, target: undefined, marked: undefined });
 });
 
+test('a battle can be cancelled while the winner is being shown', async ({ page }) => {
+  await openBattle(page);
+  await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.lineup = [];
+    battle.preset = 'humans:sword';
+    battleTap(at(10, 10).x, at(10, 10).y);
+    battleTap(at(30, 10).x, at(30, 10).y);
+    startBattleFight();
+    battle.winner = 'green';
+    battle.phase = 'result';
+    battle.resultTimer = BATTLE_RESULT_SECONDS;
+    renderBattlePanel();
+  });
+  await expect(page.locator('#battle-cancel')).toBeVisible();
+  await page.click('#battle-cancel');
+  expect(await page.evaluate(() => ({
+    phase: battle.phase,
+    winner: battle.winner,
+    resultTimer: battle.resultTimer,
+    settlers: settlers.length,
+    enemies: enemies.length
+  }))).toEqual({ phase: 'setup', winner: null, resultTimer: 0, settlers: 1, enemies: 1 });
+});
+
 test('Battles can zoom out enough to see the whole field', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {

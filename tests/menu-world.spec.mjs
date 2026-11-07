@@ -55,6 +55,17 @@ test('a tapped boar is marked and hunted, butchered and its meat carried to the 
   await page.mouse.click(...Object.values(await toPage(page, boar)));
   const marked = await page.evaluate(() => { isPaused = false; return boars.findIndex(b => b.priority > 0); });
   expect(marked).toBe(boar.i);
+  const currentBoar = await page.evaluate(i => {
+    isPaused = true;
+    const b = boars[i];
+    return { x: b.x, y: b.y };
+  }, boar.i);
+  await page.mouse.click(...Object.values(await toPage(page, currentBoar)));
+  expect(await page.evaluate(() => boars.some(b => b.priority > 0))).toBe(false);
+  const unmarkedBoar = await page.evaluate(i => ({ x: boars[i].x, y: boars[i].y }), boar.i);
+  await page.mouse.click(...Object.values(await toPage(page, unmarkedBoar)));
+  expect(await page.evaluate(() => boars.findIndex(b => b.priority > 0))).toBe(boar.i);
+  await page.evaluate(() => { isPaused = false; });
   const hunt = await page.evaluate(i => {
     const target = boars[i];
     let butchered = false;

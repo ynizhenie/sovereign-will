@@ -56,7 +56,7 @@ export function* resetGameSteps(map) {
   yield 0.79;
   updateSeedHud();
   yield 0.82;
-  prewarmVisibleWorldChunks();
+  if (!map?.menuScene) prewarmVisibleWorldChunks();
   yield 0.85;
 
   game.settlers.push(

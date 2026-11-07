@@ -1,7 +1,7 @@
 // The door of domains/world/: what it gives to the rest of the game. Other folders import from
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
-export { CHUNK, chunkStats, drawChunks, markFishingChanged, drawGrassGround, drawMapBorder, drawOreVeins, drawRocks, drawSand, drawWater, isGroundCached, paintRockShadows, prewarmVisibleWorldChunks, tileVariantHash, wasChunkDrawn } from './world.draw.js';
+export { CHUNK, chunkStats, drawChunks, isPrewarmingChunks, markFishingChanged, drawGrassGround, drawMapBorder, drawOreVeins, drawRocks, drawSand, drawWater, isGroundCached, paintRockShadows, prewarmVisibleWorldChunks, setPrewarmingChunks, tileVariantHash, wasChunkDrawn } from './world.draw.js';
 export { drawPaths, isPathTile, tickPaths } from './world.paths.js';
 export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones.js';
 export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStandingWeather, tickWeather, windSway } from './world.weather.js';

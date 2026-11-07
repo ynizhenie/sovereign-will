@@ -95,9 +95,9 @@ export function getTileIndex() {
     // (doors are walked through, spikes and traps walked over: none of them a wall)
     walls: [[game.buildings, game.enemyTents], () => keys([
       ...game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable),
-      ...game.enemyTents.filter(t => t.outpost)
+      ...game.enemyTents.filter(t => t.outpost || (t.campStructure && !t.wavePortal))
     ])],
-    outposts: [[game.enemyTents], () => keys(game.enemyTents.filter(t => t.outpost))],
+    outposts: [[game.enemyTents], () => keys(game.enemyTents.filter(t => t.outpost || (t.campStructure && !t.wavePortal)))],
     spikes: [[game.buildings], () => keys(game.buildings.filter(b => b.type === 'spikes'))],
     // iron traps (#248): settlers keep off them, enemies don't see them
     traps: [[game.buildings], () => keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap))],
