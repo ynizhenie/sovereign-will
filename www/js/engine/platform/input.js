@@ -55,14 +55,15 @@ function bindKeyboard() {
 // The mouse on the map: the pointer, the camera dragged with the middle or right button, the wheel to zoom
 function bindMouse() {
   canvas.addEventListener('mousemove', e => {
+    const coords = getCanvasScreenCoords(e.clientX, e.clientY);
     if (cameraDragging && !isCameraLocked()) {
-      const { renderWidth, renderHeight } = getCanvasScreenCoords(e.clientX, e.clientY);
+      const { renderWidth, renderHeight } = coords;
       camera.x -= (e.clientX - cameraDragPoint.x) * canvas.width / renderWidth / getViewScale();
       camera.y -= (e.clientY - cameraDragPoint.y) * canvas.height / renderHeight / getViewScale();
       cameraDragPoint = { x: e.clientX, y: e.clientY };
       clampCamera();
     }
-    updateInputPos(e.clientX, e.clientY);
+    updateInputPos(e.clientX, e.clientY, coords);
   });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
@@ -121,13 +122,14 @@ function bindTouch() {
       const touch = e.touches[0];
       const distMoved = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
       if (distMoved > 8) isTap = false;
-      const { renderWidth, renderHeight } = getCanvasScreenCoords(touch.clientX, touch.clientY);
+      const coords = getCanvasScreenCoords(touch.clientX, touch.clientY);
+      const { renderWidth, renderHeight } = coords;
       camera.x -= (touch.clientX - touchDragPoint.x) * canvas.width / renderWidth / getViewScale();
       camera.y -= (touch.clientY - touchDragPoint.y) * canvas.height / renderHeight / getViewScale();
       touchDragPoint = { x: touch.clientX, y: touch.clientY };
 
       clampCamera();
-      updateInputPos(touch.clientX, touch.clientY);
+      updateInputPos(touch.clientX, touch.clientY, coords);
     } else if (e.touches.length === 2) {
       isTap = false;
       const dist = Math.hypot(

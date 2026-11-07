@@ -87,15 +87,19 @@ test('the editor shares Endless\' seed and the generator gear: a generated map i
   expect(modeSeeds).toEqual({ endless: 'editor-only-seed', editor: 'editor-only-seed' });
   await expect(page.locator('[data-screen="editor"] #seed-settings')).toBeVisible();
   await expect(page.locator('#editor-seed-input')).toHaveCount(0);
-  const make = seed => page.evaluate(seed => {
-    document.getElementById('seed-input').value = seed;
-    document.querySelector('[data-editor-size="128"]').click();
-    document.getElementById('editor-new-generated').click();
-    const shape = naturalRocks.length + ':' + trees.length + ':' + waterTiles.length;
-    leaveEditor();
-    showMenuScreen('editor');
+  const make = async seed => {
+    await page.evaluate(seed => {
+      document.getElementById('seed-input').value = seed;
+      document.querySelector('[data-editor-size="128"]').click();
+      document.getElementById('editor-new-generated').click();
+    }, seed);
+    await page.waitForFunction(() => game.loading);
+    await page.waitForFunction(() => !game.loading);
+    const shape = await page.evaluate(() => [naturalRocks, trees, waterTiles]
+      .map(list => list.map(({ x, y }) => `${x},${y}`).join(';')).join('|'));
+    await page.evaluate(() => { leaveEditor(); showMenuScreen('editor'); });
     return shape;
-  }, seed);
+  };
   const a = await make('editor-a'), again = await make('editor-a'), b = await make('editor-b');
   expect(again).toBe(a);
   expect(b).not.toBe(a);
