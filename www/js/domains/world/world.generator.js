@@ -2,7 +2,7 @@
 // in the numbers GAME_CONFIG.map asks for (scaled to the map's size)
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, anyWithin, game, getGridPos, getMapAreaScale, isBorderZone, rand, resetTileIndex, someNear, thingAt, townHall } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, anyWithin, game, getGridPos, getMapAreaScale, isBorderZone, isWithinTownHallBuffer, rand, resetTileIndex, someNear, thingAt, townHall } from '../../engine/world/index.js';
 import { isSpawnSpotFree, isTileOccupied } from '../economy/building/index.js';
 import { addMapResource, getMapResourceDef } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
@@ -87,7 +87,7 @@ export function getOreSpotsAround(spawner, radius, keep = null, enough = Infinit
       if (gx === center.gx && gy === center.gy) continue;
       if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
-      if (Math.hypot(x - townHall.x, y - townHall.y) < 150) continue;
+      if (isWithinTownHallBuffer(x, y)) continue;
       // free ground only: ore never replaces natural rock (the desert's sand is free ground too)
       if (keep && !keep({ x, y })) continue;
       if (isSpawnSpotFree(x, y) && spots.push({ x, y }) >= enough) return spots;
@@ -113,7 +113,7 @@ export function placeRockOutcrop() {
     const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 3));
     const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 3));
     const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
-    if (tiles.some(t => Math.hypot(t.x - townHall.x, t.y - townHall.y) < 220 || isTileOccupied(t.x, t.y))) continue;
+    if (tiles.some(t => isWithinTownHallBuffer(t.x, t.y) || isTileOccupied(t.x, t.y))) continue;
     for (const t of tiles) addMapResource('natural_rock', t.x, t.y);
     return true;
   }
@@ -155,7 +155,7 @@ export function placeOreSpawners(kind, count, nearStart = null) {
     };
     // rock far from the hall and from other spawners, with room for ores and at least one reachable spot
     const candidates = game.naturalRocks.filter(r => !r.oreSpawner &&
-      Math.hypot(r.x - townHall.x, r.y - townHall.y) > 220 &&
+      !isWithinTownHallBuffer(r.x, r.y) &&
       !near[Math.floor(r.y / TILE_SIZE) * game.COLS + Math.floor(r.x / TILE_SIZE)] && hasRoom(r));
     const close = n === 0 && nearStart ? candidates.filter(r => Math.hypot(r.x - nearStart.x, r.y - nearStart.y) <= nearStart.r) : [];
     const from = close.length ? close : candidates;
@@ -496,7 +496,7 @@ function placeLakes() {
 
         let dynamicThreshold = Math.max(0.75, 0.9 + Math.sin(angle * waves + phase) * amp);
 
-        if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 160) {
+        if (dist <= dynamicThreshold && !isWithinTownHallBuffer(tx, ty)) {
           if (!thingAt(game.waterTiles, tx, ty)) {
             tempTiles.push({ x: tx, y: ty, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
           }
@@ -615,7 +615,7 @@ function placeRockClusters() {
 
         let dynamicThreshold = 0.85 + Math.sin(angle * waves + phase) * amp;
 
-        if (dist <= dynamicThreshold && Math.hypot(tx - townHall.x, ty - townHall.y) > 150 && !isTileOccupied(tx, ty)) {
+        if (dist <= dynamicThreshold && !isWithinTownHallBuffer(tx, ty) && !isTileOccupied(tx, ty)) {
           addMapResource('natural_rock', tx, ty);
         }
       }
