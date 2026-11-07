@@ -52,6 +52,28 @@ test('a boar left be digs, lies in what it dug, the ground darker there; scared,
   expect(errors).toEqual([]);
 });
 
+test('a sleeping boar has floating Zs (#306, 9)', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const marks = await page.evaluate(() => {
+    const boar = {
+      x: townHall.x + 40, y: townHall.y, hp: 30, maxHp: 30,
+      rest: { stage: 'lie', left: 10 }
+    };
+    boars = [boar];
+    const previous = ctx.fillText;
+    let count = 0;
+    ctx.fillText = function (text, ...args) {
+      if (text === 'z') count++;
+      return previous.call(this, text, ...args);
+    };
+    try { render(); } finally { ctx.fillText = previous; }
+    return count;
+  });
+  expect(marks).toBeGreaterThanOrEqual(3);
+  expect(errors).toEqual([]);
+});
+
 test('the ground a boar dug belongs to its world: a new game and the battle field start without it (#306, 9)', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');

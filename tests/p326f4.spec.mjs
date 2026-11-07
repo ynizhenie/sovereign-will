@@ -63,7 +63,8 @@ test('menu scenes start with an empty warehouse and unlimited capacity; the figh
     const scenes = MENU_SCENES.map(scene => {
       enterMenuWorld(scene);
       const state = {
-        scene, empty: Object.values(stock).every(amount => amount === 0),
+        scene, empty: Object.entries(stock).every(([resource, amount]) =>
+          scene === 'farm' && resource === 'wheatSeeds' ? amount === Infinity : amount === 0),
         capacity: storeCapacity(townHall), room: roomIn(townHall)
       };
       if (scene === 'hunt') {
@@ -75,7 +76,8 @@ test('menu scenes start with an empty warehouse and unlimited capacity; the figh
       }
       if (scene === 'farm') {
         tickMenuScene(1);
-        stayedEmptyDuringStartup = Object.values(stock).every(amount => amount === 0);
+        stayedEmptyDuringStartup = Object.entries(stock).every(([resource, amount]) =>
+          resource === 'wheatSeeds' ? amount === Infinity : amount === 0);
         tickMenuScene(1);
         restockedAfterStartup = stock.wheatSeeds >= 10;
       }

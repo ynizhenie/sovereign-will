@@ -201,7 +201,8 @@ export function sleepAtNight(s, tick) {
   const ordered = isNight() && !waveDue() && !onWatch(s) && !onFuelDuty(s) && upForOrder(s, tick);
   s.drowsy = ordered;
   if (ordered && !s.asleep && game.pathTick - (s.grumbledAt || -1e9) > 60 * 25 && says(s, 'sleepy')) s.grumbledAt = game.pathTick; // (once said, not again for a while)
-  const awake = !isNight() || waveDue() || s.isPossessed || onWatch(s) || onFuelDuty(s) || s.temporary !== undefined || upForTents(s) || ordered;
+  const hasEquipmentWork = !!s.targetEquipment || game.craftOrders.some(order => order.for === s);
+  const awake = !isNight() || waveDue() || s.isPossessed || onWatch(s) || onFuelDuty(s) || s.temporary !== undefined || upForTents(s) || ordered || hasEquipmentWork;
   if (awake) {
     s.sleepSpot = null; // (a new one when it goes to bed again, from where it is then)
     if (s.asleep) {

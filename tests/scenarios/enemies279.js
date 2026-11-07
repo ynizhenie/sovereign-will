@@ -104,12 +104,18 @@ Object.assign(window.sim, (() => {
           tickWaveTimer(0.02);
           const builder = enemies.find(enemy => enemy.fromWave && enemy.waveTentBuilder);
           if (!builder) throw new Error(`The ${faction} ${interval}-second wave has no tent builder`);
-          const departure = Math.min(GAME_CONFIG.waveMuster.departureSeconds, interval / 2);
+          const preparationSeconds = Math.min(GAME_CONFIG.waveMuster.preparationSeconds, interval);
+          const departure = Math.min(GAME_CONFIG.waveMuster.departureSeconds, preparationSeconds / 2);
+          const gatherSeconds = interval > GAME_CONFIG.waveMuster.departureSeconds ? preparationSeconds - departure : 0;
+          for (let frame = 0; frame < gatherSeconds * 60; frame++) {
+            game.pathTick++;
+            tickEnemy(builder, 1 / 60);
+          }
           game.waveTimer = departure + 0.01;
           tickWaveTimer(0.02);
           const site = builder.tentBuildTarget;
           if (!site) throw new Error(`The ${faction} ${interval}-second wave builder has no construction site`);
-          const marchSeconds = interval <= GAME_CONFIG.waveMuster.departureSeconds ? interval : departure;
+          const marchSeconds = interval <= GAME_CONFIG.waveMuster.departureSeconds ? preparationSeconds : departure;
           for (let frame = 0; frame < marchSeconds * 60; frame++) {
             game.pathTick++;
             tickEnemy(builder, 1 / 60);

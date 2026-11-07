@@ -116,3 +116,41 @@ test('a settler changes its sleep destination when an obstacle appears on the re
   expect(result).toEqual({ changed: true, open: true });
   expect(errors).toEqual([]);
 });
+
+test('a sleeping settler wakes to receive equipment', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const s = window.sim.helpers.makeSettler(1, townHall.x, townHall.y);
+    s.asleep = true;
+    s.targetEquipment = { weapon: 'fist', tool: 'axe', role: 'worker' };
+    settlers = [s];
+    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 5;
+    waveTimer = 999;
+    update(1 / 60);
+    return { asleep: s.asleep, tool: s.tool, targetEquipment: s.targetEquipment };
+  });
+  expect(result).toEqual({ asleep: false, tool: 'axe', targetEquipment: null });
+  expect(errors).toEqual([]);
+});
+
+test('a sleeping settler wakes for a craft order assigned to them', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const s = window.sim.helpers.makeSettler(1, townHall.x, townHall.y);
+    s.asleep = true;
+    settlers = [s];
+    game.craftOrders = [{
+      key: 'tools:axe', category: 'tools', id: 'axe', crafter: null, for: s,
+      stage: 'waitResources', progress: 0, waitFor: { wood: 1 }
+    }];
+    stock.wood = 0;
+    dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 5;
+    waveTimer = 999;
+    update(1 / 60);
+    return { asleep: s.asleep, hasOrder: game.craftOrders.some(order => order.for === s) };
+  });
+  expect(result).toEqual({ asleep: false, hasOrder: true });
+  expect(errors).toEqual([]);
+});
