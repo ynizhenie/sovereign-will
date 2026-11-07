@@ -61,6 +61,78 @@ Object.assign(window.sim, (() => {
     };
   }
 
+  function wavePreparationPathAvoidsPlayerTerritory({ seed = 'wave-safe-path' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    clearResources();
+    const territory = getTerritoryBox();
+    const startX = territory.x0 - TILE_SIZE * 4;
+    const targetX = territory.x1 + TILE_SIZE * 4;
+    const enemy = createConfiguredEnemy({ x: startX, y: townHall.y }, 'raider');
+    enemy.fromWave = true;
+    enemy.prepWave = game.waveNum;
+    enemy.muster = { x: targetX, y: townHall.y };
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    enemies = [enemy];
+    let enteredPlayerZone = false;
+    for (let frame = 0; frame < 60 * 25; frame++) {
+      game.pathTick++;
+      tickEnemy(enemy, 1 / 60);
+      if (inTerritory(enemy.x, enemy.y)) enteredPlayerZone = true;
+    }
+    return {
+      enteredPlayerZone,
+      movedTowardTarget: enemy.x > startX,
+      stayedOutDuringPreparation: game.wavePreparation?.stage === 'gather'
+    };
+  }
+
+  function waveBuilderStartsNearRally({ seed = 'wave-builder-rally' } = {}) {
+    const previousFaction = sides.enemy.faction;
+    try {
+      const results = [];
+      for (const faction of ['humans', 'undead']) {
+        sides.enemy.faction = faction;
+        for (const interval of [30, 10]) {
+          game.mapSettings = { cols: 128, rows: 128 };
+          start(`${seed}-${faction}-${interval}`);
+          clearResources();
+          createEnemyCamp();
+          game.waveNum = 12;
+          game.waveInterval = interval;
+          game.waveTimer = interval + 0.01;
+          tickWaveTimer(0.02);
+          const builder = enemies.find(enemy => enemy.fromWave && enemy.waveTentBuilder);
+          if (!builder) throw new Error(`The ${faction} ${interval}-second wave has no tent builder`);
+          const departure = Math.min(GAME_CONFIG.waveMuster.departureSeconds, interval / 2);
+          game.waveTimer = departure + 0.01;
+          tickWaveTimer(0.02);
+          const site = builder.tentBuildTarget;
+          if (!site) throw new Error(`The ${faction} ${interval}-second wave builder has no construction site`);
+          const marchSeconds = interval <= GAME_CONFIG.waveMuster.departureSeconds ? interval : departure;
+          for (let frame = 0; frame < marchSeconds * 60; frame++) {
+            game.pathTick++;
+            tickEnemy(builder, 1 / 60);
+          }
+          game.waveTimer = 0.01;
+          tickWaveTimer(0.02);
+          tickEnemy(builder, 1 / 60);
+          const buildSite = builder.buildTarget;
+          results.push({
+            faction,
+            interval,
+            siteNearRally: !!buildSite && Math.hypot(buildSite.x - builder.muster.x, buildSite.y - builder.muster.y) <= TILE_SIZE * 5,
+            beganBuilding: !!buildSite && buildSite.progress > 0,
+            siteRemainsOutsidePlayerZone: !!buildSite && !inTerritory(buildSite.x, buildSite.y)
+          });
+        }
+      }
+      return results;
+    } finally {
+      sides.enemy.faction = previousFaction;
+    }
+  }
+
   function waveMustersOutsideCamp({ seed = 'wave-muster-outside-camp' } = {}) {
     game.mapSettings = { cols: 128, rows: 128 };
     start(seed);
@@ -476,5 +548,5 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { waveMusters, wavePreparationTiming, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, shortWaveIntervals, waveStructuresSpawnUnits, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
+  return { waveMusters, wavePreparationTiming, wavePreparationPathAvoidsPlayerTerritory, waveBuilderStartsNearRally, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, shortWaveIntervals, waveStructuresSpawnUnits, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
 })());

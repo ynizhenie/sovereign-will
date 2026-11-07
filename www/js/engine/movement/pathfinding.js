@@ -418,8 +418,10 @@ export function pathCost(path) {
 /**
  * @param {number} startX @param {number} startY @param {number} targetX @param {number} targetY
  * @param {boolean} [natureBlocks] @param {number | null} [maxNodes] (the tick's searches' own cap, if less)
+ * @param {boolean} [allowBattleBorder]
+ * @param {((gx: number, gy: number) => boolean) | null} [extraBlocked]
  */
-export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false, maxNodes = null, allowBattleBorder = false) {
+export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false, maxNodes = null, allowBattleBorder = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
   const startG = getGridPos(startX, startY);
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
@@ -430,8 +432,9 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   const PATH_COST = ENEMY_PATH_COST;
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: natureBlocks
-      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
-      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder),
+      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) ||
+        tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
+      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy),
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
@@ -459,8 +462,9 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
  * @param {number} startX @param {number} startY @param {number} targetX @param {number} targetY
  * @param {boolean} [isEnemy] @param {number | null} [maxNodes] (the tick's searches' own cap, if less)
  * @param {boolean} [allowBattleBorder] for a panicking unit fleeing the battlefield
+ * @param {((gx: number, gy: number) => boolean) | null} [extraBlocked]
  */
-export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false, maxNodes = null, allowBattleBorder = false) {
+export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false, maxNodes = null, allowBattleBorder = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
   let startG = getGridPos(startX, startY);
   let endG = getGridPos(targetX, targetY);
   let pathTargetX = targetX, pathTargetY = targetY;
@@ -473,7 +477,7 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false,
   }
 
   const isBlocked = isEnemy
-    ? (gx, gy) => isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder)
+    ? (gx, gy) => isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy)
     : (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder);
 
   if (isBlocked(endG.gx, endG.gy)) {
@@ -505,14 +509,14 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false,
     isBlockedPath: false,
     maxNodes: Math.min(maxNodes || (isEnemy ? ENEMY_MAX_NODES : SETTLER_MAX_NODES), isEnemy ? ENEMY_MAX_NODES : SETTLER_MAX_NODES)
   });
-  if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY, false, null, allowBattleBorder);
+  if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY, false, null, allowBattleBorder, extraBlocked);
   // a long way round (to a far door): breaking through may be quicker; whichever costs less. (#326) Tried once
   // the way round is more than BREAK_DETOUR tiles longer than the straight way
   const dx = Math.abs(endG.gx - startG.gx), dy = Math.abs(endG.gy - startG.gy);
   const straight = Math.max(dx, dy) + 0.41 * Math.min(dx, dy);
   const roundabout = result.path.length === 0 || pathCost(result.path) > straight + BREAK_DETOUR;
   if (isEnemy && roundabout) {
-    const through = findPathAStarPermissive(startX, startY, targetX, targetY, true, null, allowBattleBorder);
+    const through = findPathAStarPermissive(startX, startY, targetX, targetY, true, null, allowBattleBorder, extraBlocked);
     if (through.path.length > 0 && through.cost < pathCost(result.path)) return through;
   }
   // (#326) the player's too, through the enemy's buildings (a battle's red half, a raid's camp)

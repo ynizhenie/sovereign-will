@@ -59,6 +59,10 @@ export function inTerritory(x, y) {
   return getTerritory().mask[gy * game.COLS + gx] === 1;
 }
 
+export function getTerritoryMask() {
+  return hasTerritory() ? getTerritory().mask : null;
+}
+
 export function inEnemyTerritory(x, y) {
   const camps = game.gameMode === 'endless' ? (game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : []) : [];
   if (!camps.length) return false;

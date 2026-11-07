@@ -164,6 +164,8 @@
  * @property {number} [struckTick]
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
+ * @property {number} [pathRetryTimer] movement retry delay
+ * @property {number} [directBlockedTimer] delay before retrying direct movement
  * @property {Enemy | null} [escort] a ghost's necromancer
  * @property {boolean} [petFollowing] a pet closing the last distance to its fighter
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)

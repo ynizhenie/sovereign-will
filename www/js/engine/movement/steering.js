@@ -64,12 +64,13 @@ export function stepsOntoSpikes(entity, vx, vy) {
 
 // (#322) A step's distance is the speed for 1/60 s: a longer or shorter step (dt) goes further or less far, and a settler
 // at half pace (dt halved) walks at half speed
-export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60, smooth = false) {
+/** @param {((gx: number, gy: number) => boolean) | null} [extraBlocked] */
+export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60, smooth = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
   if (!isEnemy && !smooth) { entity.moveVx = 0; entity.moveVy = 0; }
   // the undead's blighted ground holds enemies back
   if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
-  // through a portal pair of its own side (#326: an enemy through the red side's, in a battle)
-  if (game.buildings.length) {
+  // through a portal pair of its own side (#326), except while movement has a territory constraint
+  if (game.buildings.length && !extraBlocked) {
     const via = takePortal(entity, targetX, targetY, isEnemy ? 'red' : 'green');
     if (via === true) return;
     if (via) { targetX = via.x; targetY = via.y; }
@@ -79,9 +80,9 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
   const bodyRadius = Math.min(entity.radius, 13);
 
   tickPathTimers(entity, isEnemy, dt);
-  replanIfNeeded(entity, targetX, targetY, isEnemy);
+  replanIfNeeded(entity, targetX, targetY, isEnemy, extraBlocked);
   if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, bodyRadius, !!entity.panic)) {
-    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy);
+    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy, false, extraBlocked);
     return;
   }
   if (smooth && !isEnemy && hasClearSettlerLine(entity.x, entity.y, targetX, targetY, bodyRadius, !!entity.panic) &&
@@ -91,7 +92,7 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
     entity.pathRetryTimer = 0;
     return;
   }
-  if (entity.path && entity.path.length > 0) stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth);
+  if (entity.path && entity.path.length > 0) stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth, extraBlocked);
   else if (!isEnemy) stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth);
 }
 
@@ -139,7 +140,8 @@ function searchNodesLeft() {
 
 // A new path when there's none, the target moved, an enemy's path is a second old, and no retry is pending.
 // (#322) An enemy far off minds its target moving only by a share of the way to it
-function replanIfNeeded(entity, targetX, targetY, isEnemy) {
+/** @param {((gx: number, gy: number) => boolean) | null} extraBlocked */
+function replanIfNeeded(entity, targetX, targetY, isEnemy, extraBlocked) {
   let threshold = isEnemy ? Math.max(50, Math.hypot(targetX - entity.x, targetY - entity.y) * 0.25) : 25;
   let targetChanged = !entity.pathTarget || Math.hypot(entity.pathTarget.x - targetX, entity.pathTarget.y - targetY) > threshold;
   let needsPath = !entity.path || entity.path.length === 0 || targetChanged || (isEnemy && entity.pathTimer <= 0);
@@ -163,8 +165,8 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
     // once the normal search found no way around (walled in), go straight to the breaking-through
     // search for a while instead of exploring the whole map again on every re-path
     let res = isEnemy && entity.strictPathFailTimer > 0
-      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY, false, nodesLeft, !!entity.panic)
-      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy, nodesLeft, !!entity.panic);
+      ? findPathAStarPermissive(entity.x, entity.y, targetX, targetY, false, nodesLeft, !!entity.panic, extraBlocked)
+      : findPathAStar(entity.x, entity.y, targetX, targetY, isEnemy, nodesLeft, !!entity.panic, extraBlocked);
     searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
@@ -188,7 +190,8 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy) {
 
 // An enemy with a clear line to its target walks straight at it, eased; blocked, it drops the path for a
 // fresh search and leaves the straight line for a while
-function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy, smooth = false) {
+/** @param {((gx: number, gy: number) => boolean) | null} [extraBlocked] */
+function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy, smooth = false, extraBlocked = null) {
   let directDx = targetX - entity.x;
   let directDy = targetY - entity.y;
   let directDist = Math.hypot(directDx, directDy);
@@ -204,9 +207,10 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
     const step = Math.hypot(directVx, directVy);
     if (step > directDist) { directVx *= directDist / step; directVy *= directDist / step; }
     const nextX = entity.x + directVx, nextY = entity.y + directVy;
-    const blocked = isEnemy
+    const next = getGridPos(nextX, nextY);
+    const blocked = (extraBlocked && extraBlocked(next.gx, next.gy)) || (isEnemy
       ? collidesWithEnemyNaturalResource(nextX, nextY, bodyRadius) || collidesWithWall(nextX, nextY, bodyRadius, true, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius)
-      : collidesWithWall(nextX, nextY, bodyRadius, false, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy);
+      : collidesWithWall(nextX, nextY, bodyRadius, false, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy));
     if (!blocked) {
       entity.x += directVx;
       entity.y += directVy;
@@ -245,7 +249,8 @@ function pathBlockedAhead(entity) {
 
 // One step to the path's next node: eased for an enemy, steered round other settlers for a settler, and
 // round what it would walk into
-function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth = false) {
+/** @param {((gx: number, gy: number) => boolean) | null} [extraBlocked] */
+function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth = false, extraBlocked = null) {
   const path = /** @type {{ x: number, y: number }[]} */ (entity.path);
   let nextNode = path[0];
   let dx = nextNode.x - entity.x;
@@ -293,7 +298,9 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
       }
     }
 
-    if (isEnemy && (collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
+    const next = getGridPos(entity.x + vx, entity.y + vy);
+    if (isEnemy && ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
+        collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
         collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, true, !!entity.panic) ||
         collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius))) {
       entity.moveVx = 0;
