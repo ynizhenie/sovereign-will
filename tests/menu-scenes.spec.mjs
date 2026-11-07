@@ -12,6 +12,7 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await opened(page);
+  expect(await page.locator('#main-menu .main-menu-content[data-screen="home"]').evaluate(el => getComputedStyle(el).animationDelay)).toBe('0.2s');
   expect(await page.evaluate(() => MENU_SCENES.includes(menuWorld.scene))).toBe(true); // (one at random)
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('gameCanvas')).filter)).not.toContain('blur');
   const scene = name => page.evaluate(name => {
@@ -116,6 +117,7 @@ test('the menu put away to watch, the scene changed there, the menu brought back
   await expect(page.locator('#menu-scene-bar')).toBeVisible();
   await page.click('#menu-next-scene');
   expect(await page.evaluate(() => menuWorld.scene)).toBe('fishing');
+  expect(await page.evaluate(() => chunkStats())).toMatchObject({ pending: 0, holes: 0 });
   await page.click('#menu-show');
   await expect(page.locator('#main-menu .main-menu-content[data-screen="home"]')).toBeVisible();
   await expect(page.locator('#menu-scene-bar')).toBeHidden();
