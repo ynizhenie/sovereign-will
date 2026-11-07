@@ -43,7 +43,7 @@ function buildSettlerBlockedGrid(blockBattleBorder = false) {
     const def = getDefinition('buildings', b.type) || {}, own = b.side !== 'red';
     if ((!isDoor(b) && !def.walkable) || (own && (b.type === 'spikes' || def.ironTrap)) || (!own && isDoor(b))) mark(b);
   }
-  for (const outpost of game.enemyTents) if (outpost.outpost) mark(outpost);
+  for (const outpost of game.enemyTents) if (outpost.outpost || (outpost.campStructure && !outpost.wavePortal)) mark(outpost);
   for (const list of [game.naturalRocks, game.waterTiles, game.cacti, game.boulders, game.ironOres, game.coalOres]) list.forEach(mark);
   for (const t of game.trees) if (!t.isGrowing) mark(t);
   // round the town hall

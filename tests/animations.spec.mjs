@@ -88,6 +88,60 @@ test('a bare-handed human in a fight boxes: a guard up, a punch out, a step into
   expect(errors).toEqual([]);
 });
 
+test('a large woman has her arms rooted under her torso and small curved chest seams', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    window.sim.start('large-woman-torso-test');
+    const woman = makeSettler(1, 300, 300, {
+      type: 'big', visualRadius: 18, facing: 0, look: { female: true, style: 0, shade: 0 }
+    });
+    const bodyColor = '#b8a04a', radius = woman.visualRadius;
+    const originals = Object.fromEntries(['beginPath', 'moveTo', 'lineTo', 'stroke', 'fill', 'arc', 'quadraticCurveTo']
+      .map(name => [name, ctx[name]]));
+    const points = [];
+    const arms = [];
+    const hands = [];
+    const chest = [];
+    let bodyDrawn = false;
+    try {
+      ctx.beginPath = function () { points.length = 0; return originals.beginPath.apply(this, arguments); };
+      ctx.moveTo = function (x, y) { points.push([x, y]); return originals.moveTo.apply(this, arguments); };
+      ctx.lineTo = function (x, y) { points.push([x, y]); return originals.lineTo.apply(this, arguments); };
+      ctx.stroke = function () {
+        if (this.lineCap === 'round' && this.lineWidth >= radius * 0.34 - 0.01
+          && points.length === 2 && Math.abs(points[0][1] + radius * 0.3) < 0.01) {
+          arms.push({ x: points[0][0], underBody: !bodyDrawn });
+        }
+        return originals.stroke.apply(this, arguments);
+      };
+      ctx.fill = function () {
+        if (this.fillStyle === bodyColor) bodyDrawn = true;
+        return originals.fill.apply(this, arguments);
+      };
+      ctx.arc = function (x, y, r, ...rest) {
+        if (Math.abs(r - radius * 0.15) < 0.01) hands.push(bodyDrawn);
+        return originals.arc.call(this, x, y, r, ...rest);
+      };
+      ctx.quadraticCurveTo = function (x, y, endX, endY) {
+        if (Math.abs(Math.abs(x) - radius * 0.17) < 0.01
+          && Math.abs(y + radius * 0.105) < 0.01 && Math.abs(endY + radius * 0.19) < 0.01) chest.push({ x, y, endX, endY });
+        return originals.quadraticCurveTo.call(this, x, y, endX, endY);
+      };
+      drawFigure(woman, { x: woman.x, y: woman.y, r: radius, body: bodyColor, skin: '#f5cba7', hand: true });
+    } finally {
+      for (const [name, method] of Object.entries(originals)) ctx[name] = method;
+    }
+    return { radius, arms, hands, chest };
+  });
+  expect(r.arms).toHaveLength(2);
+  expect(r.arms.every(a => a.underBody && Math.abs(a.x) <= r.radius * 0.42)).toBe(true);
+  expect(r.hands).toEqual([true, true]);
+  expect(r.chest).toHaveLength(2);
+  expect(r.chest.every(({ y, endY }) => y > endY)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('a hand with nothing in it rests down at its side; what it holds is held at the grip', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {

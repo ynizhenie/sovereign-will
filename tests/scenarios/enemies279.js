@@ -104,12 +104,18 @@ Object.assign(window.sim, (() => {
           tickWaveTimer(0.02);
           const builder = enemies.find(enemy => enemy.fromWave && enemy.waveTentBuilder);
           if (!builder) throw new Error(`The ${faction} ${interval}-second wave has no tent builder`);
-          const departure = Math.min(GAME_CONFIG.waveMuster.departureSeconds, interval / 2);
+          const preparationSeconds = Math.min(GAME_CONFIG.waveMuster.preparationSeconds, interval);
+          const departure = Math.min(GAME_CONFIG.waveMuster.departureSeconds, preparationSeconds / 2);
+          const gatherSeconds = interval > GAME_CONFIG.waveMuster.departureSeconds ? preparationSeconds - departure : 0;
+          for (let frame = 0; frame < gatherSeconds * 60; frame++) {
+            game.pathTick++;
+            tickEnemy(builder, 1 / 60);
+          }
           game.waveTimer = departure + 0.01;
           tickWaveTimer(0.02);
           const site = builder.tentBuildTarget;
           if (!site) throw new Error(`The ${faction} ${interval}-second wave builder has no construction site`);
-          const marchSeconds = interval <= GAME_CONFIG.waveMuster.departureSeconds ? interval : departure;
+          const marchSeconds = interval <= GAME_CONFIG.waveMuster.departureSeconds ? preparationSeconds : departure;
           for (let frame = 0; frame < marchSeconds * 60; frame++) {
             game.pathTick++;
             tickEnemy(builder, 1 / 60);
@@ -437,7 +443,21 @@ Object.assign(window.sim, (() => {
     const hiddenUntilArrival = enemyTentBlueprints.length === 0;
     builder.x = site.x + GAME_CONFIG.enemyTents.buildDistance - 2;
     tickEnemy(builder, 1 / 60);
-    return { hiddenUntilArrival, shownWhenBuilding: enemyTentBlueprints.includes(site), startedProgress: site.progress > 0 };
+    const fillRect = ctx.fillRect;
+    let blueprintTileDrawn = false;
+    ctx.fillRect = function (x, y, width, height) {
+      if (x === site.x - 14 && y === site.y - 14 && width === 28 && height === 28) blueprintTileDrawn = true;
+      return fillRect.call(this, x, y, width, height);
+    };
+    try { drawEnemyTentSites(); }
+    finally { ctx.fillRect = fillRect; }
+    return {
+      hiddenUntilArrival,
+      shownWhenBuilding: enemyTentBlueprints.includes(site),
+      startedProgress: site.progress > 0,
+      builderAnimating: builder.working > 0 && builder.workKind === 'build',
+      blueprintTileDrawn
+    };
   }
 
   function waveTentSitesNearPlayerTerritory({ seed = 'wave-tents-near-player' } = {}) {

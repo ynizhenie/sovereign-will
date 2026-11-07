@@ -6,6 +6,7 @@ import { drawBodyBlood } from '../../conflict/combat/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { boarWallows } from './hunting.rules.js';
 import { castShadow, isVisible } from '../../world/index.js';
+import { drawSleepZs } from '../../colony/settlers/index.js';
 
 // (#326) A boar's look, picked the first time it's drawn and kept (saved with it): its coat, spots or stripes
 // now and then, its size, a sow's short tusks (GAME_CONFIG.mapResources.boar.looks)
@@ -105,6 +106,7 @@ export function drawBoars(only = null) {
     }
     if (b.hidden) ctx.globalAlpha = 0.4;
     drawBoarBody(b, false);
+    if (b.rest?.stage === 'lie') drawSleepZs(b.x + 12, b.y - 8);
     drawBodyBlood(b, 11);
     if (b.hp < b.maxHp) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(b.x - 12, b.y - 16, 24, 3);

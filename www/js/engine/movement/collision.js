@@ -57,6 +57,51 @@ export function collidesWithTiles(x, y, radius, kinds) {
 export const WALL_COLLISION_KINDS = [['walls', 14], ['redDoors', 14], ['rocks', 14], ['water', 15], ['trees', 12], ['solids', 12]];
 // (#326) an enemy goes through its own doors (the red side's): a wall to the player's
 const ENEMY_WALL_KINDS = WALL_COLLISION_KINDS.filter(([set]) => set !== 'redDoors');
+const ENEMY_NON_RESOURCE_WALL_KINDS = ENEMY_WALL_KINDS.filter(([set]) => set !== 'trees' && set !== 'solids');
+const ENEMY_NATURAL_RESOURCE_KINDS = [['trees', 14], ['solids', 14]];
+
+function getTileCollisionDepths(x, y, radius, kinds) {
+  const tiles = getTileIndex(), span = Math.ceil((radius + 15) / TILE_SIZE), g = getGridPos(x, y);
+  const depths = new Map();
+  for (let gy = g.gy - span; gy <= g.gy + span; gy++) {
+    if (gy < 0 || gy >= game.ROWS) continue;
+    for (let gx = g.gx - span; gx <= g.gx + span; gx++) {
+      if (gx < 0 || gx >= game.COLS) continue;
+      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15, at = gy * game.COLS + gx;
+      for (const [set, halfSize] of kinds) {
+        if (!kindGrid(tiles, set)[at]) continue;
+        const dx = x - Math.max(cx - halfSize, Math.min(x, cx + halfSize));
+        const dy = y - Math.max(cy - halfSize, Math.min(y, cy + halfSize));
+        const distance = Math.hypot(dx, dy);
+        if (distance < radius) {
+          const exitDistance = Math.min(radius + halfSize - Math.abs(x - cx), radius + halfSize - Math.abs(y - cy));
+          depths.set(at, Math.max(depths.get(at) || 0, exitDistance));
+        }
+      }
+    }
+  }
+  return depths;
+}
+
+export function canEnemyMoveOutOfNaturalResource(x, y, nextX, nextY, radius, allowBattleBorder = false) {
+  const currentDepths = getTileCollisionDepths(x, y, radius, ENEMY_NATURAL_RESOURCE_KINDS);
+  if (!currentDepths.size) return false;
+  const nextDepths = getTileCollisionDepths(nextX, nextY, radius, ENEMY_NATURAL_RESOURCE_KINDS);
+  let currentDepth = 0, nextDepth = 0;
+  for (const depth of currentDepths.values()) currentDepth += depth;
+  for (const [tile, depth] of nextDepths) {
+    const previousDepth = currentDepths.get(tile);
+    if (previousDepth === undefined || depth > previousDepth + 1e-6) return false;
+    nextDepth += depth;
+  }
+  if (nextDepth >= currentDepth - 1e-6) return false;
+  if (!allowBattleBorder && game.gameMode === 'battle') {
+    const edge = BORDER_MARGIN * TILE_SIZE;
+    if (nextX - radius < edge || nextY - radius < edge || nextX + radius > game.WORLD_WIDTH - edge || nextY + radius > game.WORLD_HEIGHT - edge) return false;
+  }
+  if (Math.hypot(nextX - townHall.x, nextY - townHall.y) < townHall.radius + radius) return false;
+  return !collidesWithTiles(nextX, nextY, radius, ENEMY_NON_RESOURCE_WALL_KINDS);
+}
 
 export function collidesWithWall(x, y, radius, isEnemy = false, allowBattleBorder = false) {
   if (!allowBattleBorder && game.gameMode === 'battle') {

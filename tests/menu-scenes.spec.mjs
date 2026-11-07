@@ -12,6 +12,7 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await opened(page);
+  expect(await page.locator('#main-menu .main-menu-content[data-screen="home"]').evaluate(el => getComputedStyle(el).animationDelay)).toBe('0.2s');
   expect(await page.evaluate(() => MENU_SCENES.includes(menuWorld.scene))).toBe(true); // (one at random)
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('gameCanvas')).filter)).not.toContain('blur');
   const scene = name => page.evaluate(name => {
@@ -26,16 +27,18 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
     return {
       settlers: settlers.map(s => [s.weapon, s.tool, !!s.shield, s.armor || null, !!s.backpack, !!s.wateringCan]),
       buildings: buildings.map(b => b.type), water: waterTiles.length, fishing: waterTiles.filter(w => w.isFishing).length, zones: farmZones.length, boars: boars.length,
+      infiniteWheatSeeds: stock.wheatSeeds === Infinity,
       shoreViolations
     };
   }, name);
   expect(await scene('hunt')).toMatchObject({ settlers: [['spear', 'none', false, null, false, false]], boars: 3, shoreViolations: [] });
   expect(await scene('fishing')).toMatchObject({ settlers: [['fist', 'rod', false, null, false, false], ['fist', 'none', false, null, false, false]], buildings: ['campfire'], water: 4, fishing: 1, boars: 0, shoreViolations: [] });
   expect(await scene('fight')).toMatchObject({ settlers: [['sword', 'none', true, null, false, false], ['sword', 'none', true, null, false, false], ['fist', 'medbag', false, 'iron', false, false]], shoreViolations: [] });
-  expect(await scene('farm')).toMatchObject({ settlers: [['fist', 'hoe', false, null, true, true]], buildings: ['dung_heap'], water: 1, zones: 6, shoreViolations: [] });
+  expect(await scene('farm')).toMatchObject({ settlers: [['fist', 'hoe', false, null, true, true]], buildings: ['dung_heap'], water: 1, zones: 6, infiniteWheatSeeds: true, shoreViolations: [] });
   // the farm runs: the farmer plants
-  const planted = await page.evaluate(() => { for (let f = 0; f < 60 * 30; f++) stepGame(1 / 60); return farmPlots.length + blueprints.filter(b => b.type === 'wheat').length; });
-  expect(planted).toBeGreaterThan(0);
+  const farm = await page.evaluate(() => { for (let f = 0; f < 60 * 30; f++) stepGame(1 / 60); return { planted: farmPlots.length + blueprints.filter(b => b.type === 'wheat').length, infiniteWheatSeeds: stock.wheatSeeds === Infinity }; });
+  expect(farm.planted).toBeGreaterThan(0);
+  expect(farm.infiniteWheatSeeds).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -114,6 +117,7 @@ test('the menu put away to watch, the scene changed there, the menu brought back
   await expect(page.locator('#menu-scene-bar')).toBeVisible();
   await page.click('#menu-next-scene');
   expect(await page.evaluate(() => menuWorld.scene)).toBe('fishing');
+  expect(await page.evaluate(() => chunkStats())).toMatchObject({ pending: 0, holes: 0 });
   await page.click('#menu-show');
   await expect(page.locator('#main-menu .main-menu-content[data-screen="home"]')).toBeVisible();
   await expect(page.locator('#menu-scene-bar')).toBeHidden();

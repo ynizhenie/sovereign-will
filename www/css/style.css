@@ -293,12 +293,12 @@ body.menu-ui-hidden #menu-scene-bar { display: flex; }
    - dark at first: a curtain over everything while the world behind the menu is made;
    - the curtain lifts (#main-menu.lifted) onto the world already out of focus;
    - the name drops in from above with a little bounce, then the buttons fade up */
-#intro-curtain { position: fixed; inset: 0; background: #0b0c0e; pointer-events: none; opacity: 1; transition: opacity 1.6s ease; }
+#intro-curtain { position: fixed; inset: 0; background: #0b0c0e; pointer-events: none; opacity: 1; transition: opacity 0.55s ease; }
 #main-menu.lifted #intro-curtain { opacity: 0; }
 @keyframes title-drop { 0% { opacity: 0; transform: translateY(-60px); } 70% { opacity: 1; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
 @keyframes menu-rise { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
-#main-menu.intro .menu-title span { display: inline-block; animation: title-drop 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1s both; }
-#main-menu.intro .main-menu-content[data-screen="home"] { animation: menu-rise 0.6s ease-out 1.7s both; }
+#main-menu.intro .menu-title span { display: inline-block; animation: title-drop 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+#main-menu.intro .main-menu-content[data-screen="home"] { animation: menu-rise 0.4s ease-out 0.2s both; }
 body.menu-world #defeat-overlay { display: none !important; }
 #main-menu .main-menu-content { position: relative; z-index: 1; flex-shrink: 0; }
 
@@ -895,7 +895,8 @@ body:not([data-hud="battle"]) #battle-actions { display: none; }
 #battle-actions .btn { min-height: 34px; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
 #battle-actions #battle-fight { font-size: 14px; padding: 6px 16px; }
 #battle-actions .btn.on { background: #1e8449; border-color: #27ae60; }
-body:not([data-battle-phase="setup"]) .battle-setup-only, body:not([data-battle-phase="fight"]) .battle-fight-only { display: none; }
+body:not([data-battle-phase="setup"]) .battle-setup-only,
+body:not([data-battle-phase="fight"]):not([data-battle-phase="result"]) .battle-fight-only { display: none; }
 /* (#299) the world map: Endless only */
 body:not([data-hud="endless"]) .btn-worldmap { display: none; }
 .btn-worldmap {
@@ -1201,14 +1202,14 @@ body[data-hud="endless"] .day-clock { display: block; }
 /* (#326) while the game starts: only the dark background, not the menu half made */
 body.booting > * { visibility: hidden; }
 
-/* (#326) the loading screen: the menu's scene stays, its panels away, a bar low on the screen */
-#loading-screen { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12vh; pointer-events: all; }
+/* (#326) a plain black loading screen with a clear, high-contrast progress indicator */
+#loading-screen { position: fixed; inset: 0; z-index: 20000; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12vh; pointer-events: all; background: #000; }
 #loading-screen[hidden] { display: none; }
-.loading-box { width: min(420px, 78vw); text-align: center; color: #f1f1f1; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+.loading-box { width: min(420px, 78vw); text-align: center; color: #fff; }
 #loading-title { font-size: 1.05rem; margin-bottom: 10px; letter-spacing: 0.04em; }
-.loading-bar { height: 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); overflow: hidden; }
+.loading-bar { height: 10px; border-radius: 6px; background: #252525; border: 1px solid #aaa; overflow: hidden; }
 #loading-fill { height: 100%; width: 0; background: linear-gradient(90deg, #c9a24a, #f0d27a); transition: width 0.15s ease-out; }
-body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-eye-box, body.loading #menu-scene-bar { display: none !important; }
+body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-eye-box, body.loading #menu-scene-bar, body.loading #menu-flags { display: none !important; }
 
 /* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
 #btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }

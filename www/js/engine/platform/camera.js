@@ -59,8 +59,8 @@ export function setZoom(zoom) {
   camera.zoom = Math.max(getMinZoom(), Math.min(getMaxZoom(), zoom));
 }
 
-export function updateInputPos(clientX, clientY) {
-  const { screenX, screenY } = getCanvasScreenCoords(clientX, clientY);
+export function updateInputPos(clientX, clientY, coords = getCanvasScreenCoords(clientX, clientY)) {
+  const { screenX, screenY } = coords;
   // screen coords are for UI drawn over the canvas without the camera
   mouse.screenX = screenX;
   mouse.screenY = screenY;

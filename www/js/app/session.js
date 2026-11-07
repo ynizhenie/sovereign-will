@@ -11,7 +11,7 @@ import { generateMapSteps, prewarmVisibleWorldChunks, resetFog } from '../domain
 import { applyFactionCosts, getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
-import { leaveEditor, loadCustomMap } from '../modes/editor/index.js';
+import { leaveEditor, loadCustomMapSteps } from '../modes/editor/index.js';
 import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
 
 export function resetGame(map) {
@@ -42,23 +42,34 @@ export function* resetGameSteps(map) {
   clearBoarWallows(); // (#306) the ground the last world's boars dug goes with that world
   
   yield 0.05;
-  if (map) loadCustomMap(map);
-  else for (const share of generateMapSteps()) yield 0.05 + share * 0.8;
-  yield 0.9;
+  if (map) {
+    for (const share of loadCustomMapSteps(map)) yield 0.05 + share * 0.75;
+  } else {
+    for (const share of generateMapSteps()) yield 0.05 + share * 0.75;
+  }
+  yield 0.7;
   mixStartFood(); // after the map, so the seeded map stays the same
+  yield 0.73;
   resetTileIndex();
+  yield 0.76;
   resetFog(); // (#299: nothing seen yet but the start land)
+  yield 0.79;
   updateSeedHud();
-  prewarmVisibleWorldChunks();
+  yield 0.82;
+  if (!map?.menuScene) prewarmVisibleWorldChunks();
+  yield 0.85;
 
   game.settlers.push(
     createSettler(getPlayerFaction().startUnits, 101, townHall.x - 45, townHall.y),
     createSettler(getPlayerFaction().startUnits, 102, townHall.x + 45, townHall.y)
   );
+  yield 0.88;
   // the undead start with a necromancer too: one more with the staff (#253)
   if (getPlayerFaction().startNecromancer) game.settlers.push(Object.assign(createSettler(getPlayerFaction().startUnits, 103, townHall.x, townHall.y + 45), { tool: 'necro_staff' }));
+  yield 0.89;
 
   syncCards(); // (#255: all locked again, or none out of Endless's cards)
+  yield 0.9;
 }
 
 export function togglePause() {

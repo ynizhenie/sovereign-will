@@ -49,15 +49,16 @@ export const startGame = async (e) => {
       // (#299) the size picked in the menu (its default one too, never tapped)
       const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
       if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
-      await runLoading('loading.world', resetGameSteps()); // (#326) the menu's scene stays, a bar over it
-      const selectedCampCount = /** @type {HTMLElement | null} */ (document.querySelector('.camp-count-option.active'));
-      game.enemyCampCount = Math.max(0, Math.min(3, Number(selectedCampCount?.dataset.enemyCampCount ?? 1)));
-      const selectedFog = /** @type {HTMLElement | null} */ (document.querySelector('.fog-option.active'));
-      game.fogEnabled = selectedFog?.dataset.fogEnabled !== 'false';
-      createEnemyCamps(game.enemyCampCount);
-      openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
-      game.gameStarted = true;
-      mainMenu.style.display = 'none';
+      await runLoading('loading.world', resetGameSteps(), () => {
+        const selectedCampCount = /** @type {HTMLElement | null} */ (document.querySelector('.camp-count-option.active'));
+        game.enemyCampCount = Math.max(0, Math.min(3, Number(selectedCampCount?.dataset.enemyCampCount ?? 1)));
+        const selectedFog = /** @type {HTMLElement | null} */ (document.querySelector('.fog-option.active'));
+        game.fogEnabled = selectedFog?.dataset.fogEnabled !== 'false';
+        createEnemyCamps(game.enemyCampCount);
+        openTab('tab-build'); // a new game starts on the Building tab, its sheet closed
+        game.gameStarted = true;
+        mainMenu.style.display = 'none';
+      }); // (#326) finish preparing the world before the loading screen goes away
     } finally { starting = false; }
 };
 

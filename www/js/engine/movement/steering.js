@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
 import { isBlighted } from '../../domains/factions/undead/index.js';
 import { findPathAStar, findPathAStarPermissive, getReachSteps, getSettlerReach, hasClearEnemyLine, isTileBlockedForSettler, pathCrossesSpikes } from './pathfinding.js';
-import { clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
+import { canEnemyMoveOutOfNaturalResource, clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
 import { someSettlerNear } from './neighbours.js';
 import { takePortal } from '../../domains/factions/demons/index.js';
 
@@ -170,8 +170,8 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy, extraBlocked) {
     searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
-    if (!isEnemy && entity.path.length > 1) {
-      // A* includes the current tile center, which can pull a settler backwards after a replan.
+    if (entity.path.length > 1) {
+      // A* includes the current tile center, which can pull a unit backwards after a replan.
       const start = getGridPos(entity.x, entity.y), first = getGridPos(entity.path[0].x, entity.path[0].y);
       if (start.gx === first.gx && start.gy === first.gy) entity.path.shift();
     }
@@ -211,11 +211,27 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
     const blocked = (extraBlocked && extraBlocked(next.gx, next.gy)) || (isEnemy
       ? collidesWithEnemyNaturalResource(nextX, nextY, bodyRadius) || collidesWithWall(nextX, nextY, bodyRadius, true, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius)
       : collidesWithWall(nextX, nextY, bodyRadius, false, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy));
-    if (!blocked) {
+    const escapingResource = isEnemy && blocked && canEnemyMoveOutOfNaturalResource(
+      entity.x, entity.y, nextX, nextY, bodyRadius, !!entity.panic
+    );
+    if (!blocked || escapingResource) {
       entity.x += directVx;
       entity.y += directVy;
       if (isEnemy) entity.path = [];
       return true;
+    }
+    if (isEnemy) {
+      const escape = enemyResourceEscapeStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked);
+      if (escape) {
+        entity.x += escape.x;
+        entity.y += escape.y;
+        entity.path = null;
+        entity.pathRetryTimer = 0;
+        entity.moveVx = 0;
+        entity.moveVy = 0;
+        return true;
+      }
+      if (enemyObstacleStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked)) return true;
     }
     if (smooth && !isEnemy) {
       entity.moveVx = 0;
@@ -229,6 +245,42 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
     }
   }
   if (isEnemy) entity.path = [];
+  return true;
+}
+
+function enemyResourceEscapeStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked) {
+  let best = null, bestDistance = Infinity;
+  for (let i = 0; i < 16; i++) {
+    const angle = i * Math.PI / 8;
+    const x = Math.cos(angle) * speed, y = Math.sin(angle) * speed;
+    const nextX = entity.x + x, nextY = entity.y + y, next = getGridPos(nextX, nextY);
+    if (extraBlocked && extraBlocked(next.gx, next.gy)) continue;
+    if (!canEnemyMoveOutOfNaturalResource(entity.x, entity.y, nextX, nextY, bodyRadius, !!entity.panic)) continue;
+    const distance = Math.hypot(targetX - nextX, targetY - nextY);
+    if (distance < bestDistance) { bestDistance = distance; best = { x, y }; }
+  }
+  return best;
+}
+
+function enemyObstacleStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked) {
+  let best = null, bestDistance = Infinity;
+  for (let i = 0; i < 16; i++) {
+    const angle = i * Math.PI / 8;
+    const x = Math.cos(angle) * speed, y = Math.sin(angle) * speed;
+    const nextX = entity.x + x, nextY = entity.y + y, next = getGridPos(nextX, nextY);
+    if ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
+        collidesWithWall(nextX, nextY, bodyRadius, true, !!entity.panic) ||
+        collidesWithWater(nextX, nextY, bodyRadius)) continue;
+    const distance = Math.hypot(targetX - nextX, targetY - nextY);
+    if (distance < bestDistance) { bestDistance = distance; best = { x, y }; }
+  }
+  if (!best) return false;
+  entity.x += best.x;
+  entity.y += best.y;
+  entity.path = null;
+  entity.pathRetryTimer = 0;
+  entity.moveVx = 0;
+  entity.moveVy = 0;
   return true;
 }
 
@@ -299,10 +351,26 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
     }
 
     const next = getGridPos(entity.x + vx, entity.y + vy);
-    if (isEnemy && ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
+    const enemyBlocked = isEnemy && ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
         collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
         collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, true, !!entity.panic) ||
-        collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius))) {
+        collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius));
+    const escapingResource = enemyBlocked && !(extraBlocked && extraBlocked(next.gx, next.gy)) &&
+      canEnemyMoveOutOfNaturalResource(entity.x, entity.y, entity.x + vx, entity.y + vy, bodyRadius, !!entity.panic);
+    if (enemyBlocked && !escapingResource) {
+      if (isEnemy) {
+        const escape = enemyResourceEscapeStep(entity, nextNode.x, nextNode.y, speed, bodyRadius, extraBlocked);
+        if (escape) {
+          entity.x += escape.x;
+          entity.y += escape.y;
+          entity.path = null;
+          entity.pathRetryTimer = 0;
+          entity.moveVx = 0;
+          entity.moveVy = 0;
+          return;
+        }
+        if (enemyObstacleStep(entity, nextNode.x, nextNode.y, speed, bodyRadius, extraBlocked)) return;
+      }
       entity.moveVx = 0;
       entity.moveVy = 0;
       entity.path = null;

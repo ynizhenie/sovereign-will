@@ -401,14 +401,34 @@ function ensureCampInfrastructure(midX, midY, fire, camp) {
 
   if (fire) {
     const fireGrid = getGridPos(fire.x, fire.y);
-    const fireCell = `${fireGrid.gx},${fireGrid.gy}`;
-    const fireNeighbors = [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([dx, dy]) => ({
-      gx: midX + dx, gy: midY + dy, key: `${midX + dx},${midY + dy}`
-    }));
-    const fireSpot = fireNeighbors.find(spot => spot.key === fireCell) ||
-      fireNeighbors.find(spot => !game.buildings.some(building => building !== fire && building !== outpost &&
-        getGridPos(building.x, building.y).gx === spot.gx && getGridPos(building.x, building.y).gy === spot.gy));
-    if (!fireSpot) throw new Error('Enemy camp has no clear tile beside its outpost for the fire');
+    const fireDistance = Math.max(Math.abs(fireGrid.gx - midX), Math.abs(fireGrid.gy - midY));
+    const spotIsFree = (gx, gy) =>
+      !game.buildings.some(building => building !== fire && building !== outpost &&
+        getGridPos(building.x, building.y).gx === gx && getGridPos(building.x, building.y).gy === gy) &&
+      !game.enemyTents.some(tent => tent !== outpost &&
+        getGridPos(tent.x, tent.y).gx === gx && getGridPos(tent.x, tent.y).gy === gy);
+    let fireSpot = fireDistance >= 2 && fireDistance <= 3 && spotIsFree(fireGrid.gx, fireGrid.gy)
+      ? fireGrid : null;
+    if (!fireSpot) {
+      const offsets = [];
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+        const distance = Math.max(Math.abs(dx), Math.abs(dy));
+        if (distance < 2 || distance > 3) continue;
+        offsets.push([dx, dy]);
+      }
+      for (let i = offsets.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [offsets[i], offsets[j]] = [offsets[j], offsets[i]];
+      }
+      for (const [dx, dy] of offsets) {
+        const gx = midX + dx, gy = midY + dy;
+        if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS ||
+          inTerritory(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15) || !spotIsFree(gx, gy)) continue;
+        fireSpot = { gx, gy };
+        break;
+      }
+    }
+    if (!fireSpot) throw new Error('Enemy camp has no clear tile within three cells of its outpost for the fire');
     Object.assign(fire, tileCenter(fireSpot.gx, fireSpot.gy));
   }
 

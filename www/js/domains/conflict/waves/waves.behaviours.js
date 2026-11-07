@@ -10,7 +10,7 @@ import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '..
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
-import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
+import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -349,42 +349,59 @@ function holdGuardPost(en, dt) {
   }
   const camp = (game.enemyCamps || []).find(item => item.id === en.campId) || game.enemyCamp;
   if (!camp) return true;
-  if (en.campPatrolWait > 0) en.campPatrolWait -= dt;
+  en.campPatrolWait = Math.max(0, (en.campPatrolWait ?? 8 + rand() * 8) - dt);
   if (!en.campPatrolTarget || Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) < 10) {
-    if (!en.campPatrolTarget) en.campPatrolWait = 0;
     if (en.campPatrolWait <= 0) {
-      const centre = getGridPos(camp.x, camp.y), radius = Math.max(2, (camp.radius || GAME_CONFIG.raid.campRadiusTiles) - 2);
+      const post = getGridPos(en.guard.x, en.guard.y), centre = getGridPos(camp.x, camp.y);
       const options = [];
-      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
-        if (Math.abs(dx) === radius || Math.abs(dy) === radius) continue;
-        const gx = centre.gx + dx, gy = centre.gy + dy, x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
-        if (inEnemyTerritory(x, y) && !isTileBlockedForSettler(gx, gy) &&
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const gx = post.gx + dx, gy = post.gy + dy, x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
+        if (Math.max(Math.abs(gx - centre.gx), Math.abs(gy - centre.gy)) >= 2 &&
+          Math.hypot(x - en.guard.x, y - en.guard.y) >= TILE_SIZE &&
+          inEnemyTerritory(x, y) && !isTileBlockedForEnemyStrict(gx, gy) &&
           !game.enemies.some(other => other !== en && other.hp > 0 &&
-            (Math.hypot(other.x - x, other.y - y) < 25 ||
+            (Math.hypot(other.x - x, other.y - y) < TILE_SIZE * 1.5 ||
               (other.campGuard && other.campId === en.campId && other.campPatrolTarget &&
-                Math.hypot(other.campPatrolTarget.x - x, other.campPatrolTarget.y - y) < 25)))) options.push({ x, y });
+                Math.hypot(other.campPatrolTarget.x - x, other.campPatrolTarget.y - y) < TILE_SIZE * 1.5)))) options.push({ x, y });
       }
-      en.campPatrolTarget = options.length ? options[Math.floor(rand() * options.length)] : { ...en.guard };
-      en.campPatrolWait = 1.5 + rand() * 2.5;
+      if (options.length) {
+        en.campPatrolTarget = options[Math.floor(rand() * options.length)];
+        en.campPatrolWait = 12 + rand() * 10;
+      } else {
+        en.campPatrolTarget = null;
+        en.campPatrolWait = 6 + rand() * 6;
+      }
     }
   }
   if (en.campPatrolTarget) {
-    if (!en.campPatrolProgress) en.campPatrolProgress = { x: en.x, y: en.y, elapsed: 0 };
-    const progress = en.campPatrolProgress;
-    if (Math.hypot(progress.x - en.x, progress.y - en.y) > 2) {
-      progress.x = en.x; progress.y = en.y; progress.elapsed = 0;
-    } else progress.elapsed += dt;
-    if (progress.elapsed > 5) {
-      en.campPatrolTarget = null;
-      en.path = null; en.pathTarget = null;
-      en.campPatrolWait = 0;
+    if (Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) < 10) {
       delete en.campPatrolProgress;
+    } else {
+      if (!en.campPatrolProgress) en.campPatrolProgress = { x: en.x, y: en.y, elapsed: 0 };
+      const progress = en.campPatrolProgress;
+      if (Math.hypot(progress.x - en.x, progress.y - en.y) > 2) {
+        progress.x = en.x; progress.y = en.y; progress.elapsed = 0;
+      } else progress.elapsed += dt;
+      if (progress.elapsed > 5) {
+        en.campPatrolTarget = null;
+        en.path = null; en.pathTarget = null;
+        en.campPatrolWait = 4 + rand() * 4;
+        delete en.campPatrolProgress;
+      }
     }
   } else delete en.campPatrolProgress;
-  if (en.campPatrolTarget && Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) > 6) {
-    moveEntityTowards(en, en.campPatrolTarget.x, en.campPatrolTarget.y, en.speed * 0.6, true, dt);
-  } else faceTowards(en, camp.x, camp.y);
   campGuardTalk(en, dt);
+  const partner = campGuardPartner(en);
+  if ((en.say && en.say.until >= game.pathTick) || (partner?.say && partner.say.until >= game.pathTick)) {
+    if (partner) {
+      faceTowards(en, partner.x, partner.y);
+      faceTowards(partner, en.x, en.y);
+    }
+  } else if (en.campPatrolTarget && Math.hypot(en.campPatrolTarget.x - en.x, en.campPatrolTarget.y - en.y) > 6) {
+    moveEntityTowards(en, en.campPatrolTarget.x, en.campPatrolTarget.y, en.speed * 0.6, true, dt);
+  } else {
+    faceTowards(en, partner?.x ?? en.campPatrolTarget?.x ?? camp.x, partner?.y ?? en.campPatrolTarget?.y ?? camp.y);
+  }
   return true;
 }
 
@@ -415,7 +432,7 @@ function sleepByCampStructure(en, dt) {
       const base = getGridPos(anchor.x, anchor.y);
       for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]]) {
         const gx = base.gx + dx, gy = base.gy + dy, spot = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
-        if (inEnemyTerritory(spot.x, spot.y) && !isTileBlockedForSettler(gx, gy) &&
+        if (inEnemyTerritory(spot.x, spot.y) && !isTileBlockedForEnemyStrict(gx, gy) &&
           !game.enemies.some(other => other !== en && other.hp > 0 &&
             (Math.hypot(other.x - spot.x, other.y - spot.y) < 25 ||
               (other.campGuard && other.campId === en.campId && other.campSleepSpot &&
@@ -437,11 +454,56 @@ function sleepByCampStructure(en, dt) {
 
 function campGuardTalk(en, dt) {
   en.campTalkTimer = (en.campTalkTimer ?? rand() * 12) - dt;
+  const camp = (game.enemyCamps || []).find(item => item.id === en.campId) || game.enemyCamp;
+  const partner = campGuardPartner(en);
+  if (partner && en.say?.until >= game.pathTick) {
+    faceTowards(en, partner.x, partner.y);
+    faceTowards(partner, en.x, en.y);
+  }
   if (en.campTalkTimer > 0 || en.asleep) return;
+  if (!camp) return;
+  if (!partner) {
+    en.campTalkTimer = 8 + rand() * 8;
+    return;
+  }
+  const isReply = !!en.campTalkReply;
+  if (camp.campTalkUntil === undefined) {
+    camp.campTalkUntil = game.pathTick + (20 + rand() * 10) * 60;
+    en.campTalkTimer = 8 + rand() * 8;
+    return;
+  }
+  if (!isReply && game.pathTick < camp.campTalkUntil) {
+    en.campTalkTimer = 8 + rand() * 8;
+    return;
+  }
+  if (!speak(en, getEnemyFaction().id, 'camp', isReply)) {
+    en.campTalkTimer = 4 + rand() * 6;
+    return;
+  }
   en.campTalkTimer = 15 + rand() * 20;
-  const nearby = game.enemies.some(other => other !== en && other.hp > 0 && other.campGuard &&
-    other.campId === en.campId && Math.hypot(other.x - en.x, other.y - en.y) < TILE_SIZE * 4);
-  if (nearby) speak(en, getEnemyFaction().id, 'camp');
+  delete en.campTalkReply;
+  if (!isReply) camp.campTalkUntil = game.pathTick + (30 + rand() * 20) * 60;
+  faceTowards(en, partner.x, partner.y);
+  faceTowards(partner, en.x, en.y);
+  en.campTalkPartnerName = partner.name;
+  partner.campTalkPartnerName = en.name;
+  if (!isReply) {
+    partner.campTalkTimer = Math.min(partner.campTalkTimer ?? Infinity, 2 + rand() * 2);
+    partner.campTalkReply = true;
+  }
+}
+
+function campGuardPartner(en) {
+  const assigned = game.enemies.find(other => other !== en && other.name === en.campTalkPartnerName &&
+    other.hp > 0 && other.campGuard && other.campId === en.campId);
+  if (assigned) return assigned;
+  let partner = null, nearest = TILE_SIZE * 4;
+  for (const other of game.enemies) {
+    if (other === en || other.hp <= 0 || !other.campGuard || other.campId !== en.campId) continue;
+    const distance = Math.hypot(other.x - en.x, other.y - en.y);
+    if (distance < nearest) { nearest = distance; partner = other; }
+  }
+  return partner;
 }
 
 // (#279) a wave's enemy gathering where it came in before it attacks: it stands facing the base and shouts at
@@ -498,8 +560,13 @@ function buildEnemyTent(en, dt) {
   const tentConfig = GAME_CONFIG.enemyTents;
   let distToSite = Math.hypot(site.x - en.x, site.y - en.y);
   if (distToSite > tentConfig.buildDistance) {
+    en.working = 0;
+    en.workKind = null;
     moveEntityTowards(en, site.x, site.y, en.speed, true, dt);
   } else {
+    faceTowards(en, site.x, site.y);
+    en.working = Math.max(en.working || 0, 0.1);
+    en.workKind = 'build';
     if (!game.enemyTentBlueprints.includes(site)) game.enemyTentBlueprints.push(site);
     site.progress += dt * tentConfig.buildRate;
     if (site.progress >= site.maxProgress) {

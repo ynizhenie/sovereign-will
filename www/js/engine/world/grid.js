@@ -31,6 +31,13 @@ export function isWithinTownHallBuffer(x, y) {
   return gx >= hall.gx - 2 && gx <= hall.gx + 1 && gy >= hall.gy - 2 && gy <= hall.gy + 1;
 }
 
+// Resources get a symmetric two-tile clearance; the building/zone buffer follows the hall's four-tile footprint.
+export function isWithinTownHallResourceBuffer(x, y) {
+  const { gx, gy } = getGridPos(x, y);
+  const hall = getGridPos(townHall.x, townHall.y);
+  return Math.abs(gx - hall.gx) <= 2 && Math.abs(gy - hall.gy) <= 2;
+}
+
 // What occupies each tile, keyed "x,y" by tile center. Path searches check thousands of tiles,
 // so they look tiles up here instead of scanning every object list. Rebuilt lazily after
 // resetTileIndex(), which runs every tick and whenever paths are invalidated.
@@ -95,9 +102,9 @@ export function getTileIndex() {
     // (doors are walked through, spikes and traps walked over: none of them a wall)
     walls: [[game.buildings, game.enemyTents], () => keys([
       ...game.buildings.filter(b => !isDoor(b) && !(getDefinition('buildings', b.type) || {}).walkable),
-      ...game.enemyTents.filter(t => t.outpost)
+      ...game.enemyTents.filter(t => t.outpost || (t.campStructure && !t.wavePortal))
     ])],
-    outposts: [[game.enemyTents], () => keys(game.enemyTents.filter(t => t.outpost))],
+    outposts: [[game.enemyTents], () => keys(game.enemyTents.filter(t => t.outpost || (t.campStructure && !t.wavePortal)))],
     spikes: [[game.buildings], () => keys(game.buildings.filter(b => b.type === 'spikes'))],
     // iron traps (#248): settlers keep off them, enemies don't see them
     traps: [[game.buildings], () => keys(game.buildings.filter(b => (getDefinition('buildings', b.type) || {}).ironTrap))],

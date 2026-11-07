@@ -274,7 +274,7 @@ function drawSideTorch(facing, r) {
 }
 
 // Asleep (#257): a few z's drifting up off it
-function drawSleepZs(x, y) {
+export function drawSleepZs(x, y) {
   const t = performance.now() / 1000;
   ctx.fillStyle = 'rgba(236, 240, 241, 0.85)'; setFont('bold 8px sans-serif'); ctx.textAlign = 'center';
   for (let k = 0; k < 3; k++) {
@@ -404,17 +404,22 @@ export function drawFigure(unit, o) {
   const other = carry ? { x: carry.x - across.x, y: carry.y - across.y } : box ? box.guard : o.otherPoint && !o.lying && !o.dead ? o.otherPoint : o.shield ? { x: -right * (r - 1), y: 3 } : shaft ? shaft : { x: -right * r * 0.72, y: r * 0.25 };
   // (both hands out: a load, a boxer, a zombie reaching, a spearman — its other arm's drawn even when behind)
   const both = !!(carry || box || z || shaft);
-  const arm = (from, to) => {
+  const drawHand = point => {
+    ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(point.x, point.y, r * 0.15, 0, Math.PI * 2); ctx.fill();
+  };
+  const arm = (from, to, handOnTop = true) => {
     ctx.strokeStyle = shade(o.body, -0.2); ctx.lineWidth = Math.max(2, r * (big ? 0.34 : 0.26)); ctx.lineCap = 'round'; // (#326: a strongman's thick)
     ctx.beginPath(); ctx.moveTo(from, -r * 0.3); ctx.lineTo(to.x, to.y); ctx.stroke();
     ctx.lineCap = 'butt';
-    ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(to.x, to.y, r * 0.15, 0, Math.PI * 2); ctx.fill();
+    if (handOnTop) drawHand(to);
   };
   // (#298) its hand's arm behind its body when the hand is up behind it (heldBehind); the other in front
   // (a boxer's fists are in front of it, up behind its back when it faces away from us)
   const behind = box ? Math.sin(f0) < -0.1 : !o.lying && !o.dead && (carry ? carry.y < -r * 0.1 : o.handPoint ? facesAway(unit) : hand.y < -r * 0.1);
-  const shoulder = r * (big && !o.lying ? 0.66 : 0.5); // (#326: a strongman's wide)
-  if (behind) { arm(right * shoulder, hand); if (both) arm(-right * shoulder, other); }
+  const largeWoman = look.female && big && !o.lying;
+  const shoulder = r * (largeWoman ? 0.4 : big && !o.lying ? 0.66 : 0.5); // (#326: a strongman's wide)
+  if (largeWoman) { arm(right * shoulder, hand, false); arm(-right * shoulder, other, false); }
+  else if (behind) { arm(right * shoulder, hand); if (both) arm(-right * shoulder, other); }
   // the body (#306: a woman's narrower at the shoulders, a skirt's hem flaring over its legs)
   ctx.fillStyle = o.body; ctx.strokeStyle = outline; ctx.lineWidth = 1;
   if (look.female) {
@@ -423,6 +428,16 @@ export function drawFigure(unit, o) {
     ctx.lineTo(r * 0.38, -r * 0.06); ctx.lineTo(r * 0.5, r * 0.36);
     ctx.lineTo(-r * 0.5, r * 0.36); ctx.lineTo(-r * 0.38, -r * 0.06);
     ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (!facesAway(unit) && !o.armor) {
+      ctx.strokeStyle = shade(o.body, -0.2);
+      ctx.lineWidth = Math.max(0.7, r * 0.04);
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(side * r * 0.04, -r * 0.19);
+        ctx.quadraticCurveTo(side * r * 0.17, -r * 0.105, side * r * 0.3, -r * 0.19);
+        ctx.stroke();
+      }
+    }
     ctx.strokeStyle = shade(o.body, -0.3);
     ctx.beginPath(); ctx.moveTo(-r * 0.38, r * 0.1); ctx.lineTo(r * 0.38, r * 0.1); ctx.stroke();
   } else if (big && !o.lying) {
@@ -441,8 +456,11 @@ export function drawFigure(unit, o) {
   }
   // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
   if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
-  if (!behind) arm(right * shoulder, hand);
-  if (!(both && behind)) arm(-right * shoulder, other);
+  if (largeWoman) { drawHand(hand); drawHand(other); }
+  else {
+    if (!behind) arm(right * shoulder, hand);
+    if (!(both && behind)) arm(-right * shoulder, other);
+  }
   // (#326: no strokes off the hands as they strike any more: the lunge and the arms' reach show the blow)
   // the head, looking the way it faces (its eyes on the side it turns to); a dead one's eyes are crosses
   const hy = -r * 0.9, hr = r * 0.5;

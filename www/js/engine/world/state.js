@@ -12,7 +12,9 @@ export const game = {
   gameMode: 'endless',      // endless / battle / editor (modes/) / menu (the world behind the main menu, modes/menu/menu.world.js)
   gameStarted: false,
   isPaused: false,
-  loading: false,           // (#326) a world being made or a save read: the loading screen is up, nothing drawn or run till it's done
+  loading: false,           // (#326) a world being made or a save read: the loading screen is up, nothing updated till it's done
+  loadingRender: false,
+  loadingRenderFrame: 0,
   gameDifficulty: 'normal', // GAME_CONFIG.difficulty key, set from the menu
   cardMode: false,          // Endless with cards (#255, modes/endless/endless.cards.js), set from the menu
   mapSettings: { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }, // set from the menu, used by resetGame
