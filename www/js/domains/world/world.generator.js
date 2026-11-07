@@ -1,4 +1,4 @@
-// Making a map: water, desert, rock and ore, forests, boulders, beaches, and everything that grows on it,
+// Making a map: water, desert and savanna, rock and ore, forests, boulders, beaches, and everything that grows on it,
 // in the numbers GAME_CONFIG.map asks for (scaled to the map's size)
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
@@ -44,6 +44,10 @@ export function isDesertTile(x, y) {
   return Math.hypot((x - game.desertRegion.x) / (TILE_SIZE * game.desertRegion.rx), (y - game.desertRegion.y) / (TILE_SIZE * game.desertRegion.ry)) <= 1;
 }
 
+export function isSavannaTile(x, y) {
+  return !!thingAt(game.savannaTiles, x, y);
+}
+
 // Rock, ore and ore sources standing in the desert: sand under them too, and the tile counts as desert
 // (the ground it leaves when mined, what may grow there, its look). Only the tiles in the desert are
 // marked: a mass that reaches out of it keeps its ordinary rock outside, tile by tile.
@@ -52,6 +56,7 @@ export function markDesertUnderRocks() {
     if (!thingAt(game.desertTiles, o.x, o.y) && isDesertTile(o.x, o.y)) game.desertTiles.push({ x: o.x, y: o.y });
   }
 }
+
 
 // ---- Ore spawners
 // A spawner is a natural rock tile marked oreSpawner: 'iron' | 'coal'. It blocks and draws like rock but
@@ -332,7 +337,7 @@ export function generateMap() {
 
 // (#326) The map made in steps, each yielding how far along it is (a loading screen draws a frame between them)
 export function* generateMapSteps() {
-  game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.trees = []; game.cacti = []; game.boulders = [];
+  game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.savannaTiles = []; game.trees = []; game.cacti = []; game.boulders = [];
   game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.ironOres = []; game.coalOres = []; game.boars = []; game.beachTiles = []; // (#326: the last map's beaches gone before anything's placed)
   yield 0.1;
   if (isContinentMap()) { yield* generateContinent(); return; } // (#299: a big map, a continent)
@@ -340,6 +345,7 @@ export function* generateMapSteps() {
   placeLakes();
   yield 0.2;
   placeDeserts();
+  placeSavannas();
   placeRockClusters();
   yield 0.3;
 
@@ -352,19 +358,56 @@ export function* generateMapSteps() {
   for (let i = 0; i < getMapCount('berryBushes', 8); i++) spawnForestAware('berry_bush');
   for (let i = 0; i < getMapCount('sticks', 15); i++) spawnForestAware('stick');
   for (let i = 0; i < getMapCount('pebbles', 14); i++) spawnResource('pebble');
+  placeSavannaPlants();
   yield 0.7;
 
   // at least one spawner of each kind, even if the config says 0
   for (const kind of Object.keys(ORE_KINDS)) {
     placeOreSpawners(kind, Math.max(1, getMapCount(ORE_KINDS[kind].spawnerKey, 1)));
   }
-
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
   placeStartingBoars();
-  markDesertUnderRocks();
   yield 0.85;
   placeBeaches();
   placeAppleTrees();
+  markDesertUnderRocks();
+}
+
+function placeSavannas() {
+  const count = getMapCount('savannas', 1);
+  const rxRange = getMapRange('savannaRadiusX', 3, 5);
+  const ryRange = getMapRange('savannaRadiusY', 2, 4);
+  for (let n = 0; n < count; n++) {
+    const rx = rxRange.min + Math.floor(rand() * (rxRange.max - rxRange.min + 1));
+    const ry = ryRange.min + Math.floor(rand() * (ryRange.max - ryRange.min + 1));
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const gx = BORDER_MARGIN + rx + Math.floor(rand() * Math.max(1, game.COLS - 2 * BORDER_MARGIN - 2 * rx));
+      const gy = BORDER_MARGIN + ry + Math.floor(rand() * Math.max(1, game.ROWS - 2 * BORDER_MARGIN - 2 * ry));
+      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15;
+      if (Math.hypot(cx - townHall.x, cy - townHall.y) < townHall.radius + TILE_SIZE ||
+          anyWithin(game.waterTiles, cx, cy, 90) || anyWithin(game.savannaTiles, cx, cy, Math.min(rx, ry) * TILE_SIZE)) continue;
+      for (let dy = -ry; dy <= ry; dy++) for (let dx = -rx; dx <= rx; dx++) {
+        if ((dx / rx) ** 2 + (dy / ry) ** 2 > 1) continue;
+        const x = (gx + dx) * TILE_SIZE + 15, y = (gy + dy) * TILE_SIZE + 15;
+        if (x < BORDER_MARGIN * TILE_SIZE || y < BORDER_MARGIN * TILE_SIZE ||
+            x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE ||
+            Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
+            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || isSavannaTile(x, y)) continue;
+        game.savannaTiles.push({ x, y });
+      }
+      break;
+    }
+  }
+}
+
+function placeSavannaPlants() {
+  for (const tile of game.savannaTiles) {
+    if (Math.hypot(tile.x - townHall.x, tile.y - townHall.y) < 150 ||
+        anyWithin(game.waterTiles, tile.x, tile.y, TILE_SIZE * 1.5) || !isSpawnSpotFree(tile.x, tile.y)) continue;
+    const roll = rand();
+    const kind = roll < 0.06 ? 'tree' : roll < 0.095 ? 'grass' : roll < 0.12 ? 'berry_bush' : null;
+    if (kind) addMapResource(kind, tile.x, tile.y);
+  }
 }
 
 export function startingBoarCount() {
@@ -612,7 +655,8 @@ export function placeBeaches() {
         for (let dy = -1; dy <= 1; dy++) {
           const x = w.x + dx * TILE_SIZE, y = w.y + dy * TILE_SIZE;
           const g = getGridPos(x, y);
-          if (water.has(key(x, y)) || rock.has(key(x, y)) || beach.has(key(x, y)) || isBorderZone(g.gx, g.gy)) continue;
+          if (water.has(key(x, y)) || rock.has(key(x, y)) || beach.has(key(x, y)) ||
+              thingAt(game.desertTiles, x, y) || isBorderZone(g.gx, g.gy)) continue;
           let off = Math.abs(Math.atan2(y - cy, x - cx) - side) % (Math.PI * 2);
           if (off > Math.PI) off = Math.PI * 2 - off;
           if (off <= BEACH_SPREAD) { beach.add(key(x, y)); game.beachTiles.push({ x, y }); }

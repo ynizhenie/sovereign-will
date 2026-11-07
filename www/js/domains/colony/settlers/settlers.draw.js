@@ -722,11 +722,11 @@ export function drawSettlerShadows() {
   if (!tinyUnit()) drawFigureShadows(game.settlers, getViewRect(60));
 }
 
-export function drawSettlers() {
+export function drawSettlers(only = null) {
   // (#306) zoomed out: figures at their simplest, and what's off the screen not drawn at all
   const simple = simpleUnit(), view = getViewRect(60), scale = getViewScale(), tiny = tinyUnit();
   const dab = 1.6 / scale; // (a couple of screen px, in world units)
-  game.settlers.forEach(s => {
+  (only ? [only] : game.settlers).forEach(s => {
     if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) return;
     if (isPet(s)) { drawPet(s); return; } // (#314)
     // (#306) one or two pixels on the screen: a dab of its colour, and the ring of the one picked

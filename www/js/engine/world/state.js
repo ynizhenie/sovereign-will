@@ -63,6 +63,7 @@ export const game = {
   waterTiles: [],
   desertTiles: [],
   desertRegion: null,
+  savannaTiles: [],
   beachTiles: [],       // sand on part of each lake's shore; only drawn, see placeBeaches()
   sticks: [],
   pebbles: [],

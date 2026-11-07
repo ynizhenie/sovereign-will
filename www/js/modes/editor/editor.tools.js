@@ -31,6 +31,7 @@ export const EDITOR_TOOLS = [
   { id: 'water', icon: 'water', category: 'terrain', section: 'ground' },
   { id: 'rock', icon: 'rock', category: 'terrain', section: 'ground' },
   { id: 'sand', icon: 'sand', category: 'terrain', section: 'ground' },
+  { id: 'savanna', icon: 'grass', category: 'terrain', section: 'ground' },
   { id: 'tree', icon: 'tree', kind: 'tree', category: 'nature' },
   { id: 'apple_tree', icon: 'apple_tree', kind: 'tree', category: 'nature' },
   { id: 'cactus', icon: 'cactus', kind: 'cactus', category: 'nature' },
@@ -86,6 +87,7 @@ export function tileHasTool(tool, gx, gy) {
   const at = list => game[list].find(o => o.x === x && o.y === y);
   if (tool.id === 'water') return !!at('waterTiles');
   if (tool.id === 'sand') return !!at('desertTiles');
+  if (tool.id === 'savanna') return !!at('savannaTiles');
   if (tool.id === 'rock') { const r = at('naturalRocks'); return !!r && !r.oreSpawner; }
   if (tool.spawner) { const r = at('naturalRocks'); return !!r && r.oreSpawner === tool.spawner; }
   if (tool.id === 'boar') return !!at('boars');
@@ -105,6 +107,7 @@ export function applyEditorTool(tool, gx, gy, clearing) {
     if (!tileHasTool(tool, gx, gy)) return;
     if (tool.id === 'outpost') game.editorOutposts = game.editorOutposts.filter(o => o.x !== x || o.y !== y);
     else if (tool.id === 'sand') game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    else if (tool.id === 'savanna') game.savannaTiles = game.savannaTiles.filter(d => d.x !== x || d.y !== y);
     else if (tool.building && GAME_CONFIG.buildings[tool.building].onWater) {
       game.buildings = game.buildings.filter(b => b.x !== x || b.y !== y || b.type !== tool.building);
     }
@@ -114,6 +117,7 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   if (tool.id === 'erase') {
     if (hasSomethingOn(x, y)) clearEditorTile(x, y);
     else game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    game.savannaTiles = game.savannaTiles.filter(d => d.x !== x || d.y !== y);
     return;
   }
   // the border is where enemies come from: nothing goes there
@@ -121,7 +125,14 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   if (tool.id === 'sand') {
     game.waterTiles = game.waterTiles.filter(w => w.x !== x || w.y !== y);
     game.naturalRocks = game.naturalRocks.filter(r => r.x !== x || r.y !== y);
+    game.savannaTiles = game.savannaTiles.filter(d => d.x !== x || d.y !== y);
     if (!game.desertTiles.some(d => d.x === x && d.y === y)) game.desertTiles.push({ x, y });
+    return;
+  }
+  if (tool.id === 'savanna') {
+    game.waterTiles = game.waterTiles.filter(w => w.x !== x || w.y !== y);
+    game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    if (!game.savannaTiles.some(d => d.x === x && d.y === y)) game.savannaTiles.push({ x, y });
     return;
   }
   // the town hall's own tiles stay free
@@ -153,6 +164,7 @@ export function applyEditorTool(tool, gx, gy, clearing) {
   clearEditorTile(x, y);
   if (tool.id === 'water') {
     game.desertTiles = game.desertTiles.filter(d => d.x !== x || d.y !== y);
+    game.savannaTiles = game.savannaTiles.filter(d => d.x !== x || d.y !== y);
     game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
   } else if (tool.id === 'rock') {
     addMapResource('natural_rock', x, y);
@@ -265,7 +277,7 @@ export function clearEditorMap() {
 }
 
 export const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres',
-  'naturalRocks', 'waterTiles', 'desertTiles', 'beachTiles', 'boars', 'buildings', 'editorOutposts'];
+  'naturalRocks', 'waterTiles', 'desertTiles', 'savannaTiles', 'beachTiles', 'boars', 'buildings', 'editorOutposts'];
 
 // ---- Opening and leaving the editor
 

@@ -91,9 +91,9 @@ export function drawWallows() {
 }
 
 // Boars (faded while hidden), and carcasses being butchered
-export function drawBoars() {
+export function drawBoars(only = null) {
   const v = getViewRect(40); // (#299: those on the screen)
-  game.boars.forEach(b => {
+  (only ? [only] : game.boars).forEach(b => {
     if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1 || !isVisible(b.x, b.y)) return; // (#299: and the colony sees it)
     ctx.save();
     if (b.isCarcass) {

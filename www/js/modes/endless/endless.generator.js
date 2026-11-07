@@ -12,13 +12,14 @@ import { showMenuScreen } from '../menu/index.js';
 // The settings as the game ships them: the Standard preset
 export const STANDARD_MAP_SETTINGS = JSON.parse(JSON.stringify(GAME_CONFIG.map));
 // (#326) the continent's settings that can be changed (what else is in GAME_CONFIG.continent is the generator's own)
-export const CONTINENT_SHARES = { margin: 0.2, mountains: 0.6, desert: 0.6, forest: 0.8, lakes: 0.2 }; // key: its most (a share of the map or of the land)
-export const CONTINENT_BIOMES = ['grassland', 'forest', 'desert', 'foothills', 'beach'];
+export const CONTINENT_SHARES = { margin: 0.2, mountains: 0.6, desert: 0.6, savanna: 0.5, forest: 0.8, lakes: 0.2 }; // key: its most (a share of the map or of the land)
+export const CONTINENT_BIOMES = ['grassland', 'forest', 'savanna', 'desert', 'foothills', 'beach'];
 const continentSettings = () => ({ ...Object.fromEntries(Object.keys(CONTINENT_SHARES).map(k => [k, GAME_CONFIG.continent[k]])), startCoast: GAME_CONFIG.continent.startCoast, grow: GAME_CONFIG.continent.grow });
 export const STANDARD_CONTINENT_SETTINGS = JSON.parse(JSON.stringify(continentSettings()));
 // GAME_CONFIG.map's a continent uses, in groups (the rest were the small maps' own, 27.10, 18)
 /** @type {[string, string[]][]} */
 export const GENERATOR_GROUPS = [
+  ['biomes', ['savannas', 'savannaRadiusX', 'savannaRadiusY']],
   ['ore', ['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius']],
   ['regrowth', ['respawnDelay', 'oreRespawnDelay']]
 ];
@@ -58,7 +59,7 @@ function renderContinentFields(container) {
     percentField(t('gen.c.margin'), () => C.margin, v => { C.margin = v; }, CONTINENT_SHARES.margin),
     numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; }, 40)
   ]);
-  grid(t('gen.group.cbiomes'), ['mountains', 'desert', 'forest', 'lakes'].map(k => percentField(t(`gen.c.${k}`), () => C[k], v => { C[k] = v; }, CONTINENT_SHARES[k])));
+  grid(t('gen.group.cbiomes'), ['mountains', 'desert', 'savanna', 'forest', 'lakes'].map(k => percentField(t(`gen.c.${k}`), () => C[k], v => { C[k] = v; }, CONTINENT_SHARES[k])));
   for (const biome of CONTINENT_BIOMES) {
     const table = C.grow[biome];
     grid(t(`gen.group.grow.${biome}`), Object.keys(table).map(kind => percentField(t(`gen.res.${kind}`), () => table[kind], v => {

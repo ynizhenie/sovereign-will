@@ -38,7 +38,7 @@ export const battle = {
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   helmet: false,      // (#326, 27.10, 27) the next unit placed gets a helmet (not a pet)
-  field: 'glade',     // glade / desert: what the battle is fought on
+  field: 'glade',     // glade / desert / savanna: what the battle is fought on
   time: 'day',        // (#326) morning / day / evening / night: how it looks (it stands still; nobody sleeps by it)
   weather: 'clear',   // (#326) clear / rain / fog / storm, all through the fight
   lineup: [],         // { presetId, x, y, armor, shield, banner } or { building, x, y }: what's placed, kept between fights
@@ -71,7 +71,7 @@ export function restoreBattleChoices() {
   if (typeof saved.building === 'string' && GAME_CONFIG.buildings[saved.building]) battle.building = saved.building;
   if ([false, 'leather', 'iron'].includes(saved.armor)) battle.armor = saved.armor;
   for (const key of ['shield', 'helmet', 'big', 'banner', 'torch']) if (typeof saved[key] === 'boolean') battle[key] = saved[key];
-  if (saved.field === 'glade' || saved.field === 'desert') battle.field = saved.field;
+  if (saved.field === 'glade' || saved.field === 'desert' || saved.field === 'savanna') battle.field = saved.field;
   if (['morning', 'day', 'evening', 'night'].includes(saved.time)) battle.time = saved.time;
   if (['clear', 'rain', 'fog', 'storm'].includes(saved.weather)) battle.weather = saved.weather;
   if (saved.difficulty === 'normal' || saved.difficulty === 'hard') battle.difficulty = saved.difficulty;
@@ -156,12 +156,16 @@ export function setUpBattleField() {
   game.mapSettings = { cols: 40, rows: 26 };
   resetGame();
   for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs, game.ironOres, game.coalOres, game.boars,
-    game.naturalRocks, game.waterTiles, game.farmPlots, game.desertTiles, game.beachTiles]) list.length = 0;
+    game.naturalRocks, game.waterTiles, game.farmPlots, game.desertTiles, game.savannaTiles, game.beachTiles]) list.length = 0;
   game.desertRegion = null;
   game.forests = [];
   if (battle.field === 'desert') {
     for (let gy = 0; gy < game.ROWS; gy++) {
       for (let gx = 0; gx < game.COLS; gx++) game.desertTiles.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    }
+  } else if (battle.field === 'savanna') {
+    for (let gy = 0; gy < game.ROWS; gy++) {
+      for (let gx = 0; gx < game.COLS; gx++) game.savannaTiles.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     }
   }
   game.settlers = [];
@@ -246,7 +250,7 @@ export function setBattleDifficulty(level) {
 
 // The ground the battle is fought on: the line-up stays, the field is made again
 export function setBattleField(field) {
-  if (battle.phase !== 'setup' || field === battle.field || (field !== 'glade' && field !== 'desert')) return;
+  if (battle.phase !== 'setup' || field === battle.field || !['glade', 'desert', 'savanna'].includes(field)) return;
   battle.field = field;
   setUpBattleField();
   resetBattleUnits();

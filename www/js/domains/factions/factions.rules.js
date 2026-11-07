@@ -119,7 +119,7 @@ export function isForPlayerFaction(item) {
 // bones on top, a share of the rest. Set on each building's `cost` (its own kept as `baseCost`) when the HUD is
 // made for the faction (renderConfigHud), so whatever reads a cost reads the faction's
 export function applyFactionCosts() {
-  const extra = (GAME_CONFIG.factions[sides.player.faction] || {}).buildBones;
+  const extra = getPlayerFaction().buildBones;
   for (const def of Object.values(GAME_CONFIG.buildings)) {
     if (!def.cost && !def.baseCost) continue;
     if (!def.baseCost) def.baseCost = def.cost;

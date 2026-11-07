@@ -39,7 +39,7 @@ test('battle settings survive reload', async ({ page }) => {
   await page.locator('[data-screen="endless"] [data-back]').click();
   await page.locator('#mode-battles').click();
   await page.locator('[data-dock="battle-settings"]').click();
-  await page.locator('[data-battle-field="desert"]').click();
+  await page.locator('[data-battle-field="savanna"]').click();
   await page.locator('[data-battle-look="time"][data-value="night"]').click();
   await page.locator('[data-battle-look="weather"][data-value="storm"]').click();
   await page.locator('[data-battle-difficulty="hard"]').click();
@@ -52,7 +52,7 @@ test('battle settings survive reload', async ({ page }) => {
   await page.locator('#mode-battles').click();
   await expect(page.locator('#battle-panel')).toHaveAttribute('data-category', 'buildings');
   await page.locator('[data-dock="battle-settings"]').click();
-  await expect(page.locator('[data-battle-field="desert"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-battle-field="savanna"]')).toHaveClass(/on/);
   await expect(page.locator('[data-battle-look="time"][data-value="night"]')).toHaveClass(/on/);
   await expect(page.locator('[data-battle-look="weather"][data-value="storm"]')).toHaveClass(/on/);
   await expect(page.locator('[data-battle-difficulty="hard"]')).toHaveClass(/on/);

@@ -136,5 +136,32 @@ Object.assign(window.sim, (() => {
     return { axe, sword };
   }
 
-  return { craftTimes, crafting, lootToArmory, orderGearFor, armorOff };
+  function craftAfterCrafterLeaves({ seed = 'craft-after-crafter-leaves' } = {}) {
+    start(seed);
+    clearResources();
+    const g = getGridPos(townHall.x, townHall.y);
+    const workshop = window.sim.helpers.placeWorkshop();
+    placeBuilding('smithy', (g.gx + 6) * TILE_SIZE + 15, g.gy * TILE_SIZE + 15);
+    const first = makeSettler(1, workshop.x, workshop.y + 15);
+    const second = makeSettler(2, workshop.x, workshop.y + 30);
+    settlers = [first, second];
+    Object.assign(stock, { leather: 24, iron: 3 });
+    for (let i = 0; i < 4; i++) makeToStore('gear', 'leather_armor');
+    makeToStore('gear', 'helmet');
+    run(2.5, { each: () => { settlers.forEach(s => { s.hunger = 999; }); } });
+    const assigned = window.game.craftOrders[0]?.crafter;
+    if (assigned) assigned.isPossessed = true;
+    run(45, { each: () => { settlers.forEach(s => { s.hunger = 999; }); } });
+    return {
+      assigned: assigned === first,
+      releasedBundle: !assigned?.carrying?.forCraft,
+      ordersLeft: window.game.craftOrders.length,
+      leatherArmor: window.game.armory['gear:leather_armor'] || 0,
+      helmets: window.game.armory['gear:helmet'] || 0,
+      leather: stock.leather,
+      iron: stock.iron
+    };
+  }
+
+  return { craftAfterCrafterLeaves, craftTimes, crafting, lootToArmory, orderGearFor, armorOff };
 })());
