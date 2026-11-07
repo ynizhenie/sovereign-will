@@ -61,13 +61,9 @@ const REFRESH_TICKS = 3; // (what's drawn over the pictures: a bar, a sapling)
 const STAMP_TICKS = 20; // (how often a piece's look is worked out again: how a tree stands, apples ripe, take a moment)
 // (a little either side of a threshold the way held stays: at a physical scale of 1 (a 2x screen), a pixel of a window's
 // size drew the one way and the other in turn, a whole screen of pieces painted each time)
-let heldPictured = false;
-const pictured = () => {
-  if (typeof document === 'undefined') return false;
-  const s = getViewScale();
-  if (s < 0.95) heldPictured = true; else if (s >= 1.05) heldPictured = false;
-  return heldPictured;
-};
+// Nature keeps its deterministic sprite at every camera scale. Rasterized chunks used to switch
+// the same tree to a different cached appearance when zooming out.
+const pictured = () => false;
 // as fine as the screen shows (a power of two), never finer than a world unit; a size kept while the zoom is within a little of its range
 let heldRes = 1;
 const natureRes = () => {

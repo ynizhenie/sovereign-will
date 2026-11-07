@@ -221,6 +221,7 @@ export function tickEnemy(en, dt) {
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
   const enemyDef = getEnemyDef(en);
+  if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
     if (en.muster) {
       if (en.musterRoute?.length) {
@@ -236,8 +237,10 @@ export function tickEnemy(en, dt) {
   if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
   if ((enemyDef.pet === 'dog' || enemyDef.pet === 'beast') && enemyPetKeepsNear(en, dt)) return;
-  if (!enemyDef.pet && enemyPanic(en, dt)) { en.buildTarget = null; return; } // in a panic: away to heal (#207)
-  if (en.buildTarget) { buildEnemyTent(en, dt); return; }
+  if (!enemyDef.pet && enemyPanic(en, dt)) {
+    if (!en.buildTarget) return; // in a panic: away to heal (#207)
+    en.musterUntil = 0;
+  }
   if (en.guard && holdGuardPost(en, dt)) return; // (a defender of an enemy camp, #255)
   if (en.scout) { scoutFlees(en, dt); return; } // (a scout the player pointed at: it only runs, #279)
   if (en.captain) captainOrdersEnemies(en, dt); // (gathering too: the one it tells goes at once)
@@ -485,6 +488,12 @@ function buildEnemyTent(en, dt) {
         x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp,
         summonTimer: 0, summonsLeft: tentConfig.summonsPerWave, waveActive: !!site.waveActive
       });
+      const tent = game.enemyTents[game.enemyTents.length - 1];
+      if (site.waveActive && game.wavePreparation) {
+        tent.summonWave = game.wavePreparation.wave;
+      } else if (site.waveActive) {
+        tent.summonWave = game.waveNum;
+      }
       playSound('tentUp', site);
       game.enemyTentBlueprints.splice(game.enemyTentBlueprints.indexOf(site), 1);
       en.buildTarget = null;

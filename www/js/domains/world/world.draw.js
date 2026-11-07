@@ -104,8 +104,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
-  const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
-  const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
+  const cx0 = prewarmingChunks ? 0 : Math.max(0, Math.floor(v.x0 / size)), cx1 = prewarmingChunks ? lastX : Math.min(lastX, Math.floor(v.x1 / size));
+  const cy0 = prewarmingChunks ? 0 : Math.max(0, Math.floor(v.y0 / size)), cy1 = prewarmingChunks ? lastY : Math.min(lastY, Math.floor(v.y1 / size));
   /** @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @param {string} now */
   const painted = (cx, cy, x0, y0, x1, y1, chunk, now) => {
     const startedAt = performance.now();
@@ -200,22 +200,13 @@ export function wasChunkDrawn(layer, res, x, y) {
 // the whole screen of pieces again each time)
 let heldRes = 1;
 const chunkRes = () => {
-  const s = Math.max(getViewScale(), 0.0625), want = Math.min(1, 2 ** Math.floor(Math.log2(s)));
-  if (want !== heldRes && s / heldRes > 0.88 && s / heldRes < 2.3) return Math.min(1, heldRes);
-  heldRes = want;
-  return want;
+  return 1;
 };
 // (#322) The terrain's pieces are laid down at every zoom (what's drawn tile by tile each frame, with its gradients and rounded
 // corners, was most of what a view of lake or desert cost): as fine as the screen shows, up to twice a world unit
 let heldTerrain = 1;
 const terrainRes = () => {
-  const s = getViewScale();
-  let want = s < 0.7 ? chunkRes() : s >= 1.35 ? 2 : 1;
-  // (a size is kept within a band of a tenth or so round each threshold)
-  if (heldTerrain === 2 && s > 1.2) want = 2;
-  else if (heldTerrain === 1 && s >= 0.62 && s < 1.5) want = 1;
-  heldTerrain = want;
-  return want;
+  return 1;
 };
 
 function mixGrassColor(from, to, amount) {
@@ -338,6 +329,7 @@ export function prewarmVisibleWorldChunks() {
     ctx.setTransform(transform);
     prewarmingChunks = false;
   }
+
 }
 
 function grassStamp(cx, cy) {
