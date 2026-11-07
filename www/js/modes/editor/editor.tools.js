@@ -339,6 +339,7 @@ export function saveEditorMap() {
 export function playEditorMap() {
   if (!saveEditorMap()) return;
   const map = loadSavedMaps()[editor.name];
+  game.gameStarted = false;
   game.gameMode = 'endless';
   document.body.classList.remove('editor-mode');
   game.customMap = map;

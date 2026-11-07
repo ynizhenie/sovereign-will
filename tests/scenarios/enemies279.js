@@ -286,6 +286,32 @@ Object.assign(window.sim, (() => {
     return { hiddenUntilArrival, shownWhenBuilding: enemyTentBlueprints.includes(site), startedProgress: site.progress > 0 };
   }
 
+  function waveTentSitesNearPlayerTerritory({ seed = 'wave-tents-near-player' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    clearResources();
+    createEnemyCamp();
+    waveNum = 12;
+    startNextWave(true);
+    const builders = enemies.filter(enemy => enemy.fromWave && enemy.tentBuildTarget);
+    const nearPlayerTerritory = site => {
+      const { gx, gy } = getGridPos(site.x, site.y);
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+        const x = gx + dx, y = gy + dy;
+        if (x >= 0 && y >= 0 && x < COLS && y < ROWS &&
+          inTerritory(x * TILE_SIZE + 15, y * TILE_SIZE + 15)) return true;
+      }
+      return false;
+    };
+    return {
+      builders: builders.length,
+      allNearPlayerTerritory: builders.every(enemy => nearPlayerTerritory(enemy.tentBuildTarget)),
+      allOutsidePlayerTerritory: builders.every(enemy => !inTerritory(enemy.tentBuildTarget.x, enemy.tentBuildTarget.y)),
+      allOutsideCamp: builders.every(enemy =>
+        !inEnemyTerritory(enemy.tentBuildTarget.x, enemy.tentBuildTarget.y))
+    };
+  }
+
   function enemyCampVoicePhrases({ seed = 'enemy-camp-voices' } = {}) {
     start(seed);
     clearResources();
@@ -368,5 +394,5 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { waveMusters, wavePreparationTiming, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
+  return { waveMusters, wavePreparationTiming, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
 })());

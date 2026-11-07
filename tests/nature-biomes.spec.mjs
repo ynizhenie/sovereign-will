@@ -180,6 +180,7 @@ test('berry bushes are drawn before trees at close zoom', async ({ page }) => {
         return originalDrawImage.call(this, image, ...args);
       };
       drawTrees();
+      for (const tree of depthSortedTrees()) drawDepthTree(tree);
       return { expected, actual };
     } finally {
       ctx.drawImage = originalDrawImage;

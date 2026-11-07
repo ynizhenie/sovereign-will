@@ -565,7 +565,9 @@ window.sim = (() => {
     start(seed);
     const hx = townHall.x, hy = townHall.y;
     placeBuilding('tent', hx - 60, hy + 60);
+    clearResources();
     const spot = reachableFromHall(isTileBlockedForSettler).filter(t => t.d >= 11 && t.d <= 13)[0];
+    if (!spot) throw new Error('No reachable enemy-tent test site');
     const p = tileCenter(spot.gx, spot.gy);
     enemies = [];
     enemyTents = [{ x: p.x, y: p.y, hp: 900, maxHp: 900, summonTimer: 0, summonsLeft: 4, waveActive: true }];

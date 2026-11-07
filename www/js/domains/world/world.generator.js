@@ -76,6 +76,27 @@ export function getOreSpawners(kind) {
   return game.naturalRocks.filter(r => r.oreSpawner === kind);
 }
 
+/** @type {{ list: any[] | null, keys: Set<string> }} */
+let waterGridCache = { list: null, keys: new Set() };
+function waterGridKeys() {
+  if (waterGridCache.list !== game.waterTiles) {
+    waterGridCache = {
+      list: game.waterTiles,
+      keys: new Set(game.waterTiles.map(tile => {
+        const grid = getGridPos(tile.x, tile.y);
+        return `${grid.gx},${grid.gy}`;
+      }))
+    };
+  }
+  return waterGridCache.keys;
+}
+
+export function touchesWaterCorner(gx, gy) {
+  const water = waterGridKeys();
+  return [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+    .some(([dx, dy]) => water.has(`${gx + dx},${gy + dy}`));
+}
+
 // Tiles around a spawner where an ore can appear; rock is set when the ore would replace natural rock.
 // keep / enough (#299): only the spots keep() takes, and no more than enough of them (stops there)
 /** @param {any} spawner @param {number} radius @param {((spot: { x: number, y: number }) => boolean) | null} [keep] @param {number} [enough] */

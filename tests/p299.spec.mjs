@@ -155,6 +155,7 @@ test('a far boar on screen moves and animates at the normal fixed-step rate', as
     if (!boar) return null;
     boars = [boar]; settlers = [];
     naturalRocks = []; waterTiles = [];
+    resetTileIndex();
     Object.assign(boar, {
       x: f.x1 + 400, y: townHall.y, targetX: f.x1 + 480, targetY: townHall.y,
       rest: null, hidden: false, hideTarget: null, fleeTimer: 0, wanderTimer: 0,
