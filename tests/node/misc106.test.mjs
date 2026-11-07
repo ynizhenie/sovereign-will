@@ -40,6 +40,7 @@ test('a watchtower is repaired only when ordered, priced like any building (#106
   const r = await (() => {
     const { makeSettler, placeBuilding } = window.sim.helpers;
     window.sim.start('tower-repair-test');
+    window.sim.helpers.clearResources();
     const tower = placeBuilding('watchtower', townHall.x + 90, townHall.y + 90);
     tower.hp = tower.maxHp / 2;
     settlers = [makeSettler(1, townHall.x - 40, townHall.y)];

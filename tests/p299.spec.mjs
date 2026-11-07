@@ -145,6 +145,39 @@ test('on a big map: walking distances only as far as the frontier; boars far off
   expect(errors).toEqual([]);
 });
 
+test('a far boar on screen moves and animates at the normal fixed-step rate', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await page.evaluate(() => {
+    mapSettings = { cols: 256, rows: 256 };
+    window.sim.start('visible-far-boar');
+    const f = getFrontier();
+    const boar = boars.find(b => !b.isCarcass);
+    if (!boar) return null;
+    boars = [boar]; settlers = [];
+    naturalRocks = []; waterTiles = [];
+    Object.assign(boar, {
+      x: f.x1 + 400, y: townHall.y, targetX: f.x1 + 480, targetY: townHall.y,
+      rest: null, hidden: false, hideTarget: null, fleeTimer: 0, wanderTimer: 0,
+      wanderInterval: 100, step: 0, inBase: false
+    });
+    camera.x = boar.x; camera.y = boar.y; clampCamera();
+    const positions = [], steps = [];
+    isPaused = true;
+    for (let frame = 0; frame < 20; frame++) {
+      rememberPositions(); tickBoars(1 / 60);
+      positions.push([boar.x, boar.y]); steps.push(boar.step || 0);
+    }
+    return {
+      maxFrameMove: Math.max(...positions.slice(1).map((p, i) => Math.hypot(p[0] - positions[i][0], p[1] - positions[i][1]))),
+      animated: steps[19] > steps[0]
+    };
+  });
+  expect(r).not.toBeNull();
+  expect(r.maxFrameMove).toBeLessThan(1);
+  expect(r.animated).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('what\'s near a point, found by its tiles, is what going through the list finds, as the lists change; the blocked tiles too (#299)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {

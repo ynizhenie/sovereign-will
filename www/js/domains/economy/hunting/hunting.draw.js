@@ -23,8 +23,6 @@ function boarLook(b) {
 function drawBoarBody(b, dead) {
   const look = boarLook(b), coats = GAME_CONFIG.mapResources.boar.looks.coats;
   const [body, head, bristle] = /** @type {string[]} */ (coats[look.coat] || coats[0]);
-  if (b.lastX !== undefined && Math.abs(b.x - b.lastX) > 0.05) b.faceX = b.x > b.lastX ? 1 : -1;
-  if (!dead) { b.step = ((b.step || 0) + Math.hypot(b.x - (b.lastX ?? b.x), b.y - (b.lastY ?? b.y))) % 1000; b.lastX = b.x; b.lastY = b.y; }
   const d = b.faceX || 1;
   // (#306) digging: its head down and up in the earth, a bit flying; lying: low, its legs under it, eyes shut
   const digging = !dead && b.rest && b.rest.stage === 'dig', lying = !dead && b.rest && b.rest.stage === 'lie';
@@ -93,9 +91,9 @@ export function drawWallows() {
 }
 
 // Boars (faded while hidden), and carcasses being butchered
-export function drawBoars() {
+export function drawBoars(only = null) {
   const v = getViewRect(40); // (#299: those on the screen)
-  game.boars.forEach(b => {
+  (only ? [only] : game.boars).forEach(b => {
     if (b.x < v.x0 || b.x > v.x1 || b.y < v.y0 || b.y > v.y1 || !isVisible(b.x, b.y)) return; // (#299: and the colony sees it)
     ctx.save();
     if (b.isCarcass) {

@@ -396,6 +396,43 @@ export function drawWatchtowerArt(x, y) {
   for (const [px, py] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]) { ctx.fillStyle = '#3e2723'; ctx.beginPath(); ctx.arc(x + px, y + py, 2, 0, Math.PI * 2); ctx.fill(); }
 }
 
+// The persistent enemy camp's outpost: a faction-specific landmark distinct from a warehouse or platform.
+export function drawEnemyCampOutpostArt(x, y, faction) {
+  shadow(x, y + 3, 38, 34, 7);
+  if (faction === 'undead') {
+    poly([[x - 18, y - 10], [x - 12, y - 17], [x + 12, y - 17], [x + 18, y - 10], [x + 15, y + 12], [x - 15, y + 12]], '#55575c', '#24242a', 2);
+    poly([[x - 16, y - 11], [x - 10, y - 20], [x + 11, y - 20], [x + 16, y - 11]], '#85878b', '#303138', 1.5);
+    rect(x - 6, y - 2, 12, 14, '#27252b', '#17151a');
+    poly([[x - 7, y - 2], [x, y - 9], [x + 7, y - 2]], '#77797e', '#303138');
+    rect(x - 2, y + 3, 4, 9, '#111014');
+    line(x, y - 24, x, y - 16, '#c9c4d2', 2);
+    line(x - 3, y - 21, x + 3, y - 21, '#c9c4d2', 2);
+    for (const [dx, dy] of [[-12, 7], [12, 7]]) {
+      ctx.fillStyle = '#a678c2'; ctx.beginPath(); ctx.arc(x + dx, y + dy, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    return;
+  }
+  if (faction === 'demons') {
+    poly([[x - 19, y + 9], [x - 16, y - 5], [x - 9, y - 14], [x + 9, y - 14], [x + 16, y - 5], [x + 19, y + 9], [x + 11, y + 15], [x - 11, y + 15]], '#30201f', '#120b0b', 2);
+    poly([[x - 13, y + 5], [x - 10, y - 4], [x - 5, y - 9], [x + 5, y - 9], [x + 10, y - 4], [x + 13, y + 5]], '#171011', '#5d2724', 1.5);
+    poly([[x - 10, y - 12], [x - 14, y - 23], [x - 4, y - 15]], '#5a2523', '#160d0d');
+    poly([[x + 10, y - 12], [x + 14, y - 23], [x + 4, y - 15]], '#5a2523', '#160d0d');
+    ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.ellipse(x, y + 3, 5, 8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.ellipse(x, y + 5, 2.5, 5, 0, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  rect(x - 17, y - 13, 34, 27, '#795332', '#3e2918', 2);
+  for (const px of [-14, 12]) {
+    rect(x + px, y - 17, 4, 33, '#50351f', '#2b1d12');
+    rect(x + px + 0.8, y - 16, 1.2, 29, '#a47643');
+  }
+  rect(x - 14, y - 16, 28, 4, '#a47643', '#3e2918');
+  rect(x - 14, y + 9, 28, 4, '#6d4520', '#3e2918');
+  rect(x - 4, y + 1, 8, 12, '#3e2723', '#241713');
+  line(x, y - 18, x, y - 26, '#5c3a17', 2);
+  poly([[x, y - 25], [x + 10, y - 22], [x, y - 19]], '#c0392b', '#6d201b', 1);
+}
+
 // The demons' den: a mound of dark stone, horned at the top, its mouth glowing
 export function drawDenArt(x, y) {
   shadow(x, y + 2, 26, 20, 10);

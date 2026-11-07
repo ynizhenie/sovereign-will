@@ -10,7 +10,10 @@ Object.assign(window.sim, (() => {
   function campfire({ seed = 'idle-fire' } = {}) {
     asFaction('humans', seed);
     const fire = placeBuilding('campfire', nearHall(4, 0).x, nearHall(4, 0).y);
-    const s = makeSettler(1, townHall.x - 40, townHall.y + 40);
+    fire.fuelLeft = 1e6;
+    fire.burning = 1;
+    invalidateAllPaths();
+    const s = makeSettler(1, fire.x - 30, fire.y);
     settlers = [s];
     run(0.5, { each: fed });
     s.idle = { act: 'campfire', left: 30, spot: { x: fire.x, y: fire.y }, partnerId: null };

@@ -63,6 +63,8 @@
  * @property {boolean} [banner]      a captain's (#248)
  * @property {number} [working]      seconds it's still shown at work (getHeldItemPose)
  * @property {string | null} [workKind]  what work: 'build', 'butcher', 'pick' (drawn: a hammer, a knife, a hand, #279)
+ * @property {number} [swingT]       seconds left in the current strike animation
+ * @property {string | null} [swingWeapon] temporary weapon shown during a structure strike
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
@@ -174,8 +176,21 @@
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
+ * @property {boolean} [scoutChasing] a camp guard sent after a scout (#279)
+ * @property {boolean} [campGuard]  defender of the persistent Endless camp; passive outside a raid
+ * @property {number} [campId] the persistent camp this enemy belongs to
+ * @property {number} [campTalkTimer] seconds until its next camp conversation
+ * @property {Point} [campPatrolTarget] a camp guard's current patrol destination
+ * @property {{ x: number, y: number, elapsed: number }} [campPatrolProgress] progress tracking for a patrol destination
+ * @property {Point} [campSleepSpot] a camp guard's assigned sleeping spot
+ * @property {boolean} [campFireKeeper] the sole guard who tends the camp's fire while remaining at its side
+ * @property {boolean} [campFuelDuty] legacy saved camp-fuel assignment, removed on load
+ * @property {number} [campFuelLoad] legacy saved camp-fuel amount, removed on load
+ * @property {Building} [campFuelTarget] legacy saved camp-fuel target, removed on load
  * @property {boolean} [fleeing]    a scout pointed at, running now (one came near it, or it was hit, #279)
  * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
+ * @property {Point[]} [musterRoute] safe waypoints around the player's territory before a wave
+ * @property {boolean} [portalTransit] held at a demon wave portal
  * @property {Point} [muster]        where it gathers
  * @property {boolean} [captain]     a commander with a banner, telling its own whom to go for (#279)
  * @property {boolean} [scout]       a scout (#279): walks the edge, doesn't fight, runs from settlers
@@ -213,7 +228,10 @@
  * @property {Enemy} [raisedBy] the necromancer that raised this temporary enemy zombie
  * @property {boolean} [crumbled]
  * @property {boolean} [summoned]     from a tent, not the wave
+ * @property {boolean} [waveSummoned] spawned by a tent during a wave
  * @property {boolean} [fromWave]
+ * @property {number} [prepWave] wave number this enemy is preparing for
+ * @property {'west' | 'east' | 'north' | 'south'} [waveArrivalSide] map edge this wave enemy arrived from
  * @property {boolean} [markedTarget] the player pointed at it
  * @property {boolean} [rewardGranted]
  * @property {Object} [battleEntry]   its place in a battle's line-up
@@ -235,6 +253,10 @@
  * @typedef {Object} Blueprint
  * @property {string} type           GAME_CONFIG.buildings key, or 'demolish_building'
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
+ * @property {boolean} [raidPortal] a temporary portal used by a demon raid
+ * @property {boolean} [built] a completed structure
+ * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
  * @property {number} y
@@ -252,6 +274,13 @@
  * @typedef {Object} Building
  * @property {string} type           GAME_CONFIG.buildings key
  * @property {boolean} [raidShelter] a shelter pitched in an enemy camp (#279)
+ * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
+ * @property {boolean} [raidPortal] a temporary portal used by a demon raid
+ * @property {boolean} [built] a completed structure
+ * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
+ * @property {boolean} [enemyCampOutpost] the camp warehouse that supplies its firekeeper
+ * @property {number} [campId] the persistent camp this building belongs to
+ * @property {number | null} [builderId] the settler assigned to build it
  * @property {number} x              its tile's centre
  * @property {number} y
  * @property {number} [progress]
@@ -318,6 +347,7 @@
  * @property {boolean} cardMode  Endless with cards (#255)
  * @property {{ cols: number, rows: number }} mapSettings
  * @property {Object | null} customMap
+ * @property {Point[]} editorOutposts up to three enemy camp markers in a custom map
  * @property {Object | null} worldSeed
  * @property {number} COLS
  * @property {number} ROWS
@@ -353,6 +383,7 @@
  * @property {number} [fishRegrowTimer] seconds until another fish returns
  * @property {Object[]} desertTiles
  * @property {Object | null} desertRegion
+ * @property {Object[]} savannaTiles
  * @property {Object[]} beachTiles
  * @property {Object[]} sticks
  * @property {Object[]} pebbles
@@ -366,6 +397,8 @@
  * @property {boolean} autoBlightDone none left to blight: the switch is off for good
  * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
  * @property {number} portalTimer
+ * @property {number | null} [portalWavePrep] the wave number assigned to queued portal spawns during preparation
+ * @property {Object | null} [demonWaveTransit] demons entering and leaving their wave portals
  * @property {{ x: number, y: number, type: string, amount: number, layer?: number }[]} piles  stock on the ground by a full storage (#248), in packs (#279)
  * @property {Object<string, number>} armory  tools, weapons, gear in store, by '<category>:<id>'
  * @property {Object[]} ironOres
@@ -393,8 +426,15 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
- * @property {{ side: string, timeLeft: number, seed?: number, layout?: string, army?: any[], wave?: number } | null} raidCamp  an enemy camp's zone open (#255; #279: the army it mirrors and the wave, as when it appeared)
- * @property {number} raidCampWave  the waves beaten when the last one opened
+ * @property {{ id: number, x: number, y: number, radius: number, seed: number, layout?: string, structureType?: string, structureCount?: number } | null} enemyCamp the enemy's persistent camp on the Endless map
+ * @property {{ id: number, x: number, y: number, radius: number, seed: number, layout?: string, structureType?: string, structureCount?: number }[]} enemyCamps persistent enemy camps
+ * @property {number} enemyCampCount number of persistent camps selected in Endless
+ * @property {boolean} fogEnabled whether the Endless map's unexplored area is hidden
+ * @property {number | null} raidCampId the camp currently selected for raid or scouting
+ * @property {boolean} enemyCampDestroyed
+ * @property {Object[]} enemyRafts  rafts bringing a wave after the camp is destroyed
+ * @property {Object | null} wavePreparation  the next wave gathered before its attack
+ * @property {boolean} raidActive
  * @property {Enemy[]} scouts  enemy scouts between waves (#279)
  * @property {Point[]} reliefZones  tiles marked to relieve in (#279)
  * @property {Point[]} postZones    tiles marked for soldiers' posts

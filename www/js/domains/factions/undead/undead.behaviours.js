@@ -8,7 +8,7 @@ import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/in
 import { hasToolFamily } from '../../colony/equipment/index.js';
 import { getBlightKeys, getNecromancy, raiseTemporaryZombie, zombiesOf } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, getRecentAttacker, hasPlayerOrderFor } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker, hasPlayerOrderFor, says } from '../../colony/settlers/index.js';
 import { engageEnemy, getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../index.js';
 import { playerNecromancerKeepsBack } from '../../conflict/morale/index.js';
@@ -67,6 +67,7 @@ export function necromancy(s, tick) {
       s.raiseTimer = 0;
       s.raisesLeft--;
       raiseTemporaryZombie(corpse, s);
+      says(s, 'raised');
     }
     return true;
   };
@@ -95,6 +96,7 @@ export function necromancy(s, tick) {
     }
   }
   if (patient) {
+    if (support.healTarget !== patient) says(s, 'healing');
     support.healTarget = patient;
     tick.patients.add(patient);
     s.patrolTarget = null;

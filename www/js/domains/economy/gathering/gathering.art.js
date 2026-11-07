@@ -5,7 +5,7 @@
 import { ctx } from '../../../engine/platform/index.js';
 import { castShadow, drawShadowPath, tileVariantHash, windSway } from '../../world/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { game } from '../../../engine/world/index.js';
+import { game, thingAt } from '../../../engine/world/index.js';
 
 // Where it's drawn: the screen, or (#322) a picture of a piece of the ground (paintOn)
 /** @type {CanvasRenderingContext2D | null} */
@@ -27,6 +27,7 @@ let fixedSway = null;
 export function paintVariant(h, withShadow = true, sway = null) { forced = h; shadows = withShadow; fixedSway = sway; }
 
 const variant = o => (forced !== null ? forced : tileVariantHash(Math.round(o.x), Math.round(o.y)));
+const isSavanna = o => o.savanna === true || thingAt(game.savannaTiles, o.x, o.y);
 const blob = (x, y, r, fill) => { pen().fillStyle = fill; pen().beginPath(); pen().arc(x, y, r, 0, Math.PI * 2); pen().fill(); };
 // (#307) cast away from the sun by the thing's height (about its size)
 const groundShadow = (x, y, rx, ry) => { if (shadows) castShadow(pen(), x, y + 4, rx, ry, rx * 0.9); };
@@ -73,9 +74,9 @@ function drawLyingTree(t, side, footX, footY, cut) {
     const cx = x0 + side * 30, a = 1 - cut * 2;
     pen().save(); pen().globalAlpha = a;
     groundShadow(cx, y + 4, 12, 5);
-    const dark = t.apple ? '#27501a' : ['#1e3d14', '#1b3912', '#21421a'][h % 3];
-    const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
-    const light = t.apple ? '#5a9a3c' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
+    const dark = t.apple ? '#27501a' : isSavanna(t) ? '#596a2b' : ['#1e3d14', '#1b3912', '#21421a'][h % 3];
+    const mid = t.apple ? '#3f7a2a' : isSavanna(t) ? '#63732e' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
+    const light = t.apple ? '#5a9a3c' : isSavanna(t) ? '#81913a' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
     for (let k = 0; k < 5; k++) blob(cx + side * (k - 2) * 4, y + ((h >>> k) % 3) - 1, 6, dark);
     blob(cx, y - 1, 7, mid);
     for (let k = 0; k < 3; k++) blob(cx + side * (k * 4 - 4), y - 3 + ((h >>> (k * 4)) % 3), 3, light);
@@ -97,19 +98,167 @@ function drawLyingTree(t, side, footX, footY, cut) {
 
 function drawStandingTree(t, lying = false) {
   const h = variant(t), x = t.x, y = t.y;
-  const dark = t.apple ? '#27501a' : ['#1e3d14', '#1b3912', '#21421a'][h % 3];
-  const mid = t.apple ? '#3f7a2a' : ['#2e5d20', '#2a581d', '#336527'][h % 3];
-  const light = t.apple ? '#5a9a3c' : ['#3e7a2c', '#3a7328', '#448434'][h % 3];
-  if (!lying) groundShadow(x, y, 14, 10);
-  pen().fillStyle = '#5d4037'; pen().fillRect(x - 2, y + 4, 4, 9);
-  for (let k = 0; k < 5; k++) {
-    const a = (k / 5) * Math.PI * 2 + (h % 7) * 0.3;
-    blob(x + Math.cos(a) * 7, y - 2 + Math.sin(a) * 6, 8, dark);
+  if (isSavanna(t) && !t.apple) {
+    const shape = h & 1;
+    const width = 18 + (h >>> 4) % 5, lean = (h >>> 9) % 7 - 3;
+    const greens = [
+      ['#596936', '#7b8b43', '#a2ad55'],
+      ['#5d6d38', '#829148', '#b0b45d'],
+      ['#536332', '#73843f', '#99a64d']
+    ][(h >>> 1) % 3];
+    if (!lying) groundShadow(x, y, 20, 6);
+    const g = pen();
+    g.fillStyle = '#67482e';
+    g.beginPath();
+    g.moveTo(x - 2.7, y + 14); g.lineTo(x - 1.4, y - 8);
+    g.lineTo(x - width * 0.92, y - 16); g.lineTo(x - width * 0.84, y - 18);
+    g.lineTo(x - 0.3, y - 11); g.lineTo(x + width * 0.86, y - 19);
+    g.lineTo(x + width * 0.96, y - 17); g.lineTo(x + 1.4, y - 7);
+    g.lineTo(x + 2.4, y + 14); g.closePath(); g.fill();
+    g.strokeStyle = '#a27a4d'; g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x - 0.6, y + 10); g.lineTo(x + 0.1, y - 8);
+    g.moveTo(x - 0.4, y - 8); g.lineTo(x - width * 0.83, y - 16);
+    g.moveTo(x + 0.3, y - 7); g.lineTo(x + width * 0.84, y - 17);
+    g.stroke();
+
+    if (shape) {
+      g.fillStyle = greens[0];
+      g.beginPath();
+      g.moveTo(x - width, y - 12);
+      g.quadraticCurveTo(x - width * 0.94, y - 21, x - width * 0.48, y - 22);
+      g.quadraticCurveTo(x - width * 0.28, y - 29, x + lean * 0.3, y - 26);
+      g.quadraticCurveTo(x + width * 0.42, y - 29, x + width * 0.56, y - 22);
+      g.quadraticCurveTo(x + width * 1.02, y - 21, x + width, y - 12);
+      g.quadraticCurveTo(x + width * 0.55, y - 9, x, y - 14);
+      g.quadraticCurveTo(x - width * 0.58, y - 9, x - width, y - 12);
+      g.closePath(); g.fill();
+      blob(x - width * 0.55, y - 17, 5.5, greens[0]);
+      blob(x + width * 0.52, y - 17, 5.5, greens[0]);
+      g.fillStyle = greens[1];
+      g.beginPath();
+      g.moveTo(x - width * 0.68, y - 15);
+      g.quadraticCurveTo(x - width * 0.5, y - 23, x - width * 0.18 + lean * 0.3, y - 21);
+      g.quadraticCurveTo(x + width * 0.2, y - 25, x + width * 0.68, y - 15);
+      g.quadraticCurveTo(x + lean, y - 12, x - width * 0.68, y - 15);
+      g.closePath(); g.fill();
+      for (let k = 0; k < 5; k++) {
+        blob(x + lean + (k - 2) * width * 0.28, y - 19 - ((h >>> (k + 5)) % 3), 2.8, greens[2]);
+      }
+      return;
+    }
+
+    // A flat, spreading crown with irregular lobes and sunlit leaf clusters.
+    g.fillStyle = greens[0];
+    g.beginPath();
+    g.moveTo(x - width, y - 15);
+    g.quadraticCurveTo(x - width * 1.08, y - 20, x - width * 0.78, y - 21);
+    g.quadraticCurveTo(x - width * 0.65, y - 26, x - width * 0.28 + lean, y - 22);
+    g.quadraticCurveTo(x + lean, y - 27, x + width * 0.32, y - 22);
+    g.quadraticCurveTo(x + width * 0.78, y - 26, x + width, y - 19);
+    g.quadraticCurveTo(x + width * 1.08, y - 15, x + width * 0.76, y - 12);
+    g.quadraticCurveTo(x + width * 0.3, y - 10, x - width * 0.2 + lean, y - 12);
+    g.quadraticCurveTo(x - width * 0.74, y - 10, x - width, y - 15);
+    g.closePath(); g.fill();
+    for (let k = 0; k < 5; k++) {
+      const offset = (k - 2) * width * 0.34;
+      const radius = 4.5 + ((h >>> (k + 3)) % 3) * 0.6;
+      blob(x + lean + offset, y - 18 - ((h >>> (k + 8)) % 2), radius, greens[0]);
+    }
+    g.fillStyle = greens[1];
+    g.beginPath();
+    g.moveTo(x - width * 0.78, y - 17);
+    g.quadraticCurveTo(x - width * 0.58, y - 22, x - width * 0.25 + lean, y - 19);
+    g.quadraticCurveTo(x + lean, y - 24, x + width * 0.3, y - 19);
+    g.quadraticCurveTo(x + width * 0.7, y - 22, x + width * 0.8, y - 17);
+    g.quadraticCurveTo(x + lean, y - 14, x - width * 0.78, y - 17);
+    g.closePath(); g.fill();
+    g.fillStyle = greens[2];
+    for (let k = 0; k < 4; k++) {
+      blob(x + lean - width * 0.48 + k * width * 0.31 + ((h >>> (k * 4)) % 3), y - 20 + (k % 2), 2.8, greens[2]);
+    }
+    return;
   }
-  blob(x, y - 2, 10, mid);
-  for (let k = 0; k < 3; k++) blob(x - 4 + k * 3 + ((h >>> (k * 3)) % 3), y - 6 + ((h >>> (k * 4)) % 4), 4.5, light);
+  const shape = h & 1;
+  const palette = (t.apple
+    ? [['#27501a', '#3f7a2a', '#5a9a3c'], ['#315a22', '#4b8731', '#70aa49']]
+    : [['#1e3d14', '#2e5d20', '#3e7a2c'], ['#254519', '#376b27', '#57903a']])[shape];
+  const [dark, mid, light] = palette;
+  if (!lying) groundShadow(x, y, shape ? 18 : 17, 8);
+  const g = pen();
+  g.fillStyle = '#5d4037';
+  g.beginPath();
+  if (shape) {
+    g.moveTo(x - 2.7, y + 13); g.lineTo(x - 1.8, y - 12);
+    g.lineTo(x - 13, y - 18); g.lineTo(x - 11.5, y - 20);
+    g.lineTo(x - 0.5, y - 15); g.lineTo(x + 9, y - 24);
+    g.lineTo(x + 10.5, y - 22); g.lineTo(x + 1.5, y - 13);
+  } else {
+    g.moveTo(x - 2.5, y + 13); g.lineTo(x - 1.5, y - 4);
+    g.lineTo(x - 12, y - 12); g.lineTo(x - 10.5, y - 14);
+    g.lineTo(x - 0.4, y - 7); g.lineTo(x + 9.5, y - 15);
+    g.lineTo(x + 11, y - 13); g.lineTo(x + 1.5, y - 5);
+  }
+  g.lineTo(x + 2.5, y + 13); g.closePath(); g.fill();
+  g.strokeStyle = '#98714a'; g.lineWidth = 0.9;
+  g.beginPath();
+  g.moveTo(x - 0.5, y + 9); g.lineTo(x, y - (shape ? 17 : 6));
+  g.moveTo(x - 0.3, y - (shape ? 14 : 6)); g.lineTo(x - (shape ? 11 : 9), y - (shape ? 19 : 12));
+  g.moveTo(x + 0.4, y - (shape ? 13 : 5)); g.lineTo(x + (shape ? 8 : 9), y - (shape ? 22 : 13));
+  g.stroke();
+  if (t.apple) {
+    g.fillStyle = dark;
+    g.beginPath();
+    g.moveTo(x - 15, y - 5);
+    g.quadraticCurveTo(x - 20, y - 10, x - 16, y - 17);
+    g.quadraticCurveTo(x - 14, y - 24, x - 7, y - 23);
+    g.quadraticCurveTo(x - 3, y - 29, x + 3, y - 25);
+    g.quadraticCurveTo(x + 11, y - 27, x + 14, y - 19);
+    g.quadraticCurveTo(x + 21, y - 15, x + 16, y - 7);
+    g.quadraticCurveTo(x + 10, y - 2, x + 2, y - 6);
+    g.quadraticCurveTo(x - 7, y - 2, x - 15, y - 5);
+    g.closePath(); g.fill();
+    blob(x - 11, y - 15, 6, dark);
+    blob(x + 10, y - 15, 6.5, dark);
+    blob(x - 7, y - 11, 6.5, mid);
+    blob(x + 5, y - 12, 7, mid);
+    blob(x - 1, y - 19 + (shape ? -1 : 0), 7.5, mid);
+    blob(x - 8, y - 19, 3.8, light);
+    blob(x + 3 + shape * 2, y - 22, 3.6, light);
+    blob(x + 11, y - 10, 3.2, light);
+  } else if (shape) {
+    g.fillStyle = dark;
+    g.beginPath();
+    g.moveTo(x - 18, y - 6);
+    g.quadraticCurveTo(x - 22, y - 15, x - 14, y - 21);
+    g.quadraticCurveTo(x - 8, y - 27, x, y - 25);
+    g.quadraticCurveTo(x + 8, y - 29, x + 12, y - 21);
+    g.quadraticCurveTo(x + 20, y - 17, x + 16, y - 7);
+    g.quadraticCurveTo(x + 9, y - 3, x, y - 8);
+    g.quadraticCurveTo(x - 9, y - 3, x - 18, y - 6);
+    g.closePath(); g.fill();
+    blob(x - 10, y - 13, 6, dark);
+    blob(x + 10, y - 13, 6, dark);
+    blob(x - 7, y - 10, 7, mid);
+    blob(x + 7, y - 10, 7, mid);
+    blob(x, y - 17, 8, mid);
+    blob(x - 5, y - 18, 3.8, light);
+    blob(x + 4, y - 21, 3.6, light);
+    blob(x + 10, y - 10, 3.4, light);
+  } else {
+    // Layered, irregular leaf clumps and small highlights match the savanna trees' painted canopy style.
+    blob(x - 8, y - 8, 7.5, dark);
+    blob(x + 8, y - 8, 7.5, dark);
+    blob(x - 7, y - 1, 7.5, dark);
+    blob(x + 7, y - 1, 7.5, dark);
+    blob(x, y - 5, 10, mid);
+    blob(x - 5, y - 8, 4.5, light);
+    blob(x + 2 + ((h >>> 4) % 3), y - 10 + ((h >>> 6) % 2), 4.2, light);
+    blob(x + 6, y - 3, 3.8, light);
+  }
   if (t.apple && t.applesReady) {
-    for (const [ax, ay] of [[-7, -5], [5, -8], [7, 3], [-4, 5], [1, -1]]) { blob(x + ax, y + ay, 2.3, '#e74c3c'); blob(x + ax - 0.7, y + ay - 0.7, 0.8, '#f5b7b1'); }
+    const fruit = shape ? [[-10, -15], [2, -23], [12, -16], [-5, -8], [7, -8]] : [[-11, -13], [1, -20], [11, -15], [-5, -7], [7, -7]];
+    for (const [ax, ay] of fruit) { blob(x + ax, y + ay, 2.3, '#e74c3c'); blob(x + ax - 0.7, y + ay - 0.7, 0.8, '#f5b7b1'); }
   }
 }
 
@@ -159,7 +308,9 @@ export function drawBoulderArt(b) {
 export function drawGrassArt(g) {
   const h = variant(g), x = g.x, y = g.y;
   groundShadow(x, y - 2, 8, 2.8); // (#326)
-  const greens = ['#2ecc71', '#27ae60', '#58d68d'];
+  const greens = isSavanna(g)
+    ? ['#9a934f', '#817e45', '#b5ad69']
+    : ['#66814a', '#4f6c3c', '#879c5c'];
   pen().lineWidth = 1.6; pen().lineCap = 'round';
   for (let k = 0; k < 7; k++) {
     const bx = x - 7 + k * 2.3, top = y - 7 - ((h >>> (k + 3)) % 6), lean = (((h >>> k) % 5) - 2) * 1.6 + (still ? 0 : fixedSway !== null ? fixedSway * (y + 7 - top) / 10 : windSway(bx, y, y + 7 - top)); // (in the wind, #308)
@@ -174,9 +325,11 @@ export function drawGrassArt(g) {
 export function drawBushArt(b) {
   const h = variant(b), x = b.x, y = b.y;
   groundShadow(x, y + 2, 11, 7);
-  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + (h % 5) * 0.2; blob(x + Math.cos(a) * 6, y + Math.sin(a) * 5, 6, '#1e824c'); }
-  blob(x, y, 7, '#196f3d');
-  blob(x - 3, y - 3, 3.5, '#28a060');
+  const savanna = isSavanna(b);
+  const dark = savanna ? '#6d7930' : '#1e824c', mid = savanna ? '#596c28' : '#196f3d', light = savanna ? '#91a13c' : '#28a060';
+  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + (h % 5) * 0.2; blob(x + Math.cos(a) * 6, y + Math.sin(a) * 5, 6, dark); }
+  blob(x, y, 7, mid);
+  blob(x - 3, y - 3, 3.5, light);
   for (const [bx, by] of [[-5, -3], [4, -2], [1, 4], [-2, 2], [6, 3]]) { blob(x + bx, y + by, 2.4, '#5b6ee1'); blob(x + bx - 0.7, y + by - 0.7, 0.8, '#aab6fb'); }
 }
 

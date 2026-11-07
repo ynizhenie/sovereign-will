@@ -1,13 +1,13 @@
 // One frame: the ground, then everything on it, layer by layer, then the marks over it
 
 import { game, getTileIndex } from '../engine/world/index.js';
-import { camera, canvas, ctx, getViewScale } from '../engine/platform/index.js';
-import { drawEnemies, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale } from '../engine/platform/index.js';
+import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlerShadows, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
-import { drawCactiBouldersGrassBushes, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
+import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
@@ -15,7 +15,6 @@ import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
-import { drawRaidZone } from '../modes/endless/index.js';
 
 export function render() {
   if (game.loading) return; // (#326) the loading screen's: the last frame stays under it
@@ -45,7 +44,6 @@ export function render() {
   const terrain = getTileIndex();
   drawSand(); // (the desert's tiles, over the ground they cover)
   drawMapBorder(); // (over the sand: the field's edge is the same on a desert as on a glade)
-  drawRaidZone(); // (an enemy camp's zone beyond the edge, #255)
   if (game.gameMode === 'battle' && battle.phase === 'setup') drawBattleOverlay(); // the halves only while placing, over the sand too
   drawBlight();
   drawFarmZones();
@@ -53,6 +51,7 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
+  drawEditorOutposts();
   // all the shadows at once, on the ground under everything that stands on it (world.daytime.js)
   drawShadowLayer(drawStillShadows, () => { drawSettlerShadows(); drawEnemyShadows(); });
   drawWallows(); // (the ground boars dug, on the ground, #326)
@@ -63,7 +62,6 @@ export function render() {
   drawTownHall();
   drawTrees();
   drawCactiBouldersGrassBushes();
-  drawBoars();
   drawFarmPlots();
   drawPriorityMarks();
   drawBlueprints();
@@ -71,12 +69,12 @@ export function render() {
   drawUpgrades(); // (over what they replace, #261)
   drawStoreContents(); // (#248)
   drawEnemyTents();
+  drawEnemyRafts();
   drawBloodOnGround();
   drawDung();
   drawCorpses();
   drawEnemyTentSites();
-  drawSettlers();
-  drawEnemies();
+  drawDepthSortedScene();
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
@@ -93,4 +91,52 @@ export function render() {
   if (game.gameMode === 'battle') drawBattleResult();
   // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+}
+
+export function drawDepthSorted(items) {
+  items.sort((a, b) => a.depth - b.depth || a.order - b.order);
+  for (const item of items) item.draw();
+}
+
+function drawDepthSortedScene() {
+  const trees = depthSortedTrees();
+  if (!trees.length) {
+    drawBoars();
+    drawSettlers();
+    drawEnemies();
+    return;
+  }
+  const view = getViewRect(60);
+  const items = trees.map(tree => ({ depth: tree.y + 13, order: 0, draw: () => drawDepthTree(tree) }));
+  const addActors = (list, offset, order, draw) => {
+    for (const actor of list) {
+      if (actor.x < view.x0 || actor.x > view.x1 || actor.y < view.y0 || actor.y > view.y1) continue;
+      items.push({ depth: actor.y + offset(actor), order, draw: () => draw(actor) });
+    }
+  };
+  addActors(game.boars, () => 9, 1, boar => drawBoars(boar));
+  addActors(game.settlers, settler => (settler.visualRadius || settler.radius || 11) * 0.95, 2, settler => drawSettlers(settler));
+  addActors(game.enemies, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
+  addActors(game.scouts, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
+  drawDepthSorted(items);
+}
+
+function drawEditorOutposts() {
+  if (game.gameMode !== 'editor') return;
+  game.editorOutposts.forEach((outpost, i) => {
+    ctx.save();
+    ctx.fillStyle = '#641e16';
+    ctx.strokeStyle = '#f5b041';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(outpost.x, outpost.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#f5b041';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), outpost.x, outpost.y);
+    ctx.restore();
+  });
 }

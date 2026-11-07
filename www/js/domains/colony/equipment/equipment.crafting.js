@@ -29,7 +29,7 @@ export function findWorkplace(place, from = townHall) {
   if (place === 'hand') return townHall;
   let best = null, bestD = Infinity;
   for (const b of game.buildings) {
-    if (GAME_CONFIG.buildings[b.type] && GAME_CONFIG.buildings[b.type].crafts === place) {
+    if (b.side !== 'red' && GAME_CONFIG.buildings[b.type] && GAME_CONFIG.buildings[b.type].crafts === place) {
       const d = Math.hypot(b.x - from.x, b.y - from.y);
       if (d < bestD) { bestD = d; best = b; }
     }
@@ -131,7 +131,10 @@ export function craftItem(s, tick) {
     // (#326) making a thing comes before cooking: one on its way to a fire with food puts it back for it
     if (s.carrying && !s.carrying.forFire) return false;
     // its own first; one for someone else only once that one's gone (#232: who it's for makes it)
-    const open = o => !o.crafter || !game.settlers.includes(o.crafter);
+    const canCraft = unit => !unit.isPossessed && !unit.towerAssignment && unit.role !== 'pet' &&
+      (unit.role === 'worker' || (!tick.isWaveActive && !isDefenseAlert()));
+    const open = o => !o.crafter || !game.settlers.includes(o.crafter) || !canCraft(o.crafter);
+    const availableFor = o => !o.for || !game.settlers.includes(o.for) || !canCraft(o.for);
     // arrows are the archers' to make while there are any (#249; #306: looked for once a tick)
     const archers = archersOnce(() => game.settlers.some(o => o.role === 'archer' && !o.towerAssignment && !o.isPossessed));
     // (#326) a recipe with a tool (firewood: an axe) only for one holding it
@@ -141,8 +144,9 @@ export function craftItem(s, tick) {
       ? (stock.rope || 0) >= o.ropeNeeded
       : o.stage !== 'waitResources' || Object.entries(o.waitFor || {}).every(([resource, amount]) => (stock[resource] || 0) >= amount);
     order = game.craftOrders.find(o => open(o) && ready(o) && o.for === s) ||
-      game.craftOrders.find(o => open(o) && ready(o) && mine(o) && (!o.for || !game.settlers.includes(o.for)));
+      game.craftOrders.find(o => open(o) && ready(o) && mine(o) && availableFor(o));
     if (!order) return false;
+    if (order.crafter && order.crafter !== s && order.crafter.carrying?.forCraft === order) order.crafter.carrying = null;
     if (s.carrying) { stock[s.carrying.type] = (stock[s.carrying.type] || 0) + (s.carrying.amount || 0); s.carrying = null; }
   }
   if (order.stage === 'waitResources') {

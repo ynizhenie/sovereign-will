@@ -1,4 +1,4 @@
-// (#326) Firewood for every faction, a quick club, a wave's tents at the border of the player's land
+// (#326) Firewood for every faction, a quick club, a wave's tents near its rally point
 Object.assign(window.sim, (() => {
   const { start, run, helpers: { tileCenter, makeSettler, clearResources, placeBuilding } } = window.sim;
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
@@ -30,21 +30,25 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
-  // A wave's tent is put up outside the player's land, one to three tiles from it
-  function wavesTentsAtTheBorder({ seed = 'e6-tents' } = {}) {
+  // A wave's tent or grave is built near its group's rally point
+  function wavesTentsAtRally({ seed = 'e6-tents-humans-2' } = {}) {
+    const enemyFaction = sides.enemy.faction;
     mapSettings = { cols: 120, rows: 120 }; // (a map bigger than the base's start land, so there is a border)
+    sides.enemy.faction = 'humans';
     start(seed); clearResources();
     boars = []; boarRespawnTimer = 999; pendingRespawns = []; waveTimer = 999;
     waveNum = 12; // (tents come with the waves)
     enemyTents = []; enemyTentBlueprints = [];
     startNextWave();
-    const gap = site => {
-      let best = Infinity;
-      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (inTerritory(site.x + dx * TILE_SIZE, site.y + dy * TILE_SIZE)) best = Math.min(best, Math.max(Math.abs(dx), Math.abs(dy)));
-      return best;
-    };
-    return { sites: enemyTentBlueprints.length > 0, allOutside: enemyTentBlueprints.every(s => !inTerritory(s.x, s.y)), gaps: [...new Set(enemyTentBlueprints.map(gap))].sort() };
+    run(1);
+    const builders = [...enemies, ...enemyRafts.flatMap(raft => raft.units)].filter(enemy => enemy.buildTarget);
+    const distances = builders.filter(enemy => enemy.muster)
+      .map(enemy => Math.hypot(enemy.buildTarget.x - enemy.muster.x, enemy.buildTarget.y - enemy.muster.y) / TILE_SIZE);
+    sides.enemy.faction = enemyFaction;
+    return { sites: builders.length > 0, allHaveRally: distances.length === builders.length,
+      allOutside: builders.every(enemy => !inTerritory(enemy.buildTarget.x, enemy.buildTarget.y)),
+      allNearRally: distances.every(distance => distance <= 6), distances };
   }
 
-  return { firewoodForAll, wavesTentsAtTheBorder };
+  return { firewoodForAll, wavesTentsAtRally };
 })());

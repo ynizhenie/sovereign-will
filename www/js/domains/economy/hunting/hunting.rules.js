@@ -2,7 +2,8 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BOAR_LIMIT, BORDER_MARGIN, TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
-import { getFrontier, getTerritoryBox, hasTerritory, inTerritory, spawnResource, startingBoarCount } from '../../world/index.js';
+import { getViewRect } from '../../../engine/platform/index.js';
+import { getFrontier, getTerritoryBox, hasTerritory, inEnemyTerritory, inTerritory, spawnResource, startingBoarCount } from '../../world/index.js';
 import { collidesWithWall, collidesWithWater, invalidateAllPaths } from '../../../engine/movement/index.js';
 import { isSpawnSpotFree } from '../building/index.js';
 import { bleed } from '../../conflict/combat/index.js';
@@ -42,6 +43,14 @@ function endRest(boar) {
   const w = boarWallows.find(o => o.boar === boar);
   if (w) w.boar = null;
   boar.rest = null;
+}
+
+function moveBoar(boar, x, y) {
+  const dx = x - boar.x, dy = y - boar.y;
+  if (dx) boar.faceX = Math.sign(dx);
+  boar.step = ((boar.step || 0) + Math.hypot(dx, dy)) % 1000;
+  boar.x = x;
+  boar.y = y;
 }
 
 export function makeBoarFlee(boar, sourceX, sourceY, seekHide = true, wary = false) {
@@ -128,7 +137,7 @@ function spawnTerritoryBoar() {
     const gx = gx0 + Math.floor(rand() * Math.max(1, gx1 - gx0));
     const gy = gy0 + Math.floor(rand() * Math.max(1, gy1 - gy0));
     const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
-    if (!inTerritory(x, y) || Math.hypot(x - townHall.x, y - townHall.y) <= 140 || !isSpawnSpotFree(x, y)) continue;
+    if (!inTerritory(x, y) || inEnemyTerritory(x, y) || Math.hypot(x - townHall.x, y - townHall.y) <= 140 || !isSpawnSpotFree(x, y)) continue;
     game.boars.push({ x, y, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: x, targetY: y, inBase: true });
     return true;
   }
@@ -144,11 +153,13 @@ export function tickBoars(tickDt) {
     if (w.boar && (!game.boars.includes(w.boar) || w.boar.isCarcass || w.boar.rest === null)) w.boar = null;
     if (!w.boar && (w.age += tickDt) > c.wallowFade) boarWallows.splice(i, 1);
   }
-  const f = hasTerritory() ? getFrontier() : null, every = c.farEvery;
+  const f = hasTerritory() ? getFrontier() : null, view = f ? getViewRect(40) : null, every = c.farEvery;
   game.boars.forEach((b, i) => {
     const far = !!f && !b.isCarcass && (b.x < f.x0 || b.x > f.x1 || b.y < f.y0 || b.y > f.y1);
-    if (far && (i + game.pathTick) % every) return;
-    const k = far ? every : 1, dt = tickDt * k; // (its steps and its time, farEvery ticks' worth)
+    const onScreen = !!view && b.x >= view.x0 && b.x <= view.x1 && b.y >= view.y0 && b.y <= view.y1;
+    const skipFarStep = far && !onScreen;
+    if (skipFarStep && (i + game.pathTick) % every) return;
+    const k = skipFarStep ? every : 1, dt = tickDt * k; // (its steps and its time, farEvery ticks' worth)
     if (b.bloodAge !== undefined) b.bloodAge += dt;
     if (b.isCarcass) { endRest(b); return; }
     // a baited iron trap near by: it goes for the food, and may be caught (#248)
@@ -194,8 +205,7 @@ export function tickBoars(tickDt) {
         let hideSpeed = (b.fleeSpeed || 1.35) * GAME_CONFIG.movementScale * k;
         if (!collidesWithWall(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12) &&
             !collidesWithWater(b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed, 12)) {
-          b.x += hideDx * hideSpeed;
-          b.y += hideDy * hideSpeed;
+          moveBoar(b, b.x + hideDx * hideSpeed, b.y + hideDy * hideSpeed);
         } else {
           b.hideTarget = null;
           b.fleeTimer = 0;
@@ -236,8 +246,7 @@ export function tickBoars(tickDt) {
       let vx = (dx / dist) * speed;
       let vy = (dy / dist) * speed;
       if (!collidesWithWall(b.x + vx, b.y + vy, 12) && !collidesWithWater(b.x + vx, b.y + vy, 12)) {
-        b.x += vx;
-        b.y += vy;
+        moveBoar(b, b.x + vx, b.y + vy);
       } else {
         b.wanderTimer = b.wanderInterval || 4.0;
         if (b.fleeTimer > 0) b.fleeTimer = 0;

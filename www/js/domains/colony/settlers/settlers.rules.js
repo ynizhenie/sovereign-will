@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { game, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall } from '../../../engine/world/index.js';
 import { armorOf, hasGear, hasWorkingShield } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
@@ -17,10 +17,11 @@ import { says } from './settlers.voices.js';
 import { newLook } from './settlers.looks.js';
 import { generateUnitName } from './settlers.names.js';
 import { isNight } from '../../world/index.js';
+import { isSpawnSpotFree } from '../../economy/building/index.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
-  return game.buildings.reduce((sum, b) => sum + ((getDefinition('buildings', b.type) || {}).population || 0), GAME_CONFIG.start.population);
+  return game.buildings.reduce((sum, b) => sum + (b.side === 'red' ? 0 : ((getDefinition('buildings', b.type) || {}).population || 0)), GAME_CONFIG.start.population);
 }
 
 // Too many settlers: the hint names the player's own home (a tent, a grave, a sacrificial circle) (#200)
@@ -94,7 +95,7 @@ export function spawnSettler(type = 'normal') {
   }
   // (#326) a ghost: needs a built grave, and at most the base's few plus one a grave (it takes no room otherwise)
   if (settlerType.pet === 'ghost') {
-    const graves = game.buildings.filter(b => b.type === 'grave').length, limit = GAME_CONFIG.pets.ghost.limit;
+    const graves = game.buildings.filter(b => b.type === 'grave' && b.side !== 'red').length, limit = GAME_CONFIG.pets.ghost.limit;
     if (!graves) { showNotification(t('ghost.needGrave'), true); return; }
     if (game.settlers.filter(s => s.type === type).length >= limit.base + graves * limit.perGrave) { showNotification(t('ghost.limit', { n: limit.base + graves * limit.perGrave }), true); return; }
   }
@@ -102,12 +103,30 @@ export function spawnSettler(type = 'normal') {
     showCostError(settlerType.hireCost, t('cost.needs', { name: settlerType.label }));
     return;
   }
+  const spawn = findHireSpawn();
+  if (!spawn) {
+    showNotification(t('hire.noSpawn'), true);
+    return;
+  }
   payCost(settlerType.hireCost);
-  const hired = createSettler(type, Date.now() + rand(), townHall.x + (rand() - 0.5) * 30, townHall.y + (rand() - 0.5) * 30, { armor: null, hasArmor: false }); // (#298: 'none' was taken for armour since leather)
+  const hired = createSettler(type, Date.now() + rand(), spawn.x, spawn.y, { armor: null, hasArmor: false }); // (#298: 'none' was taken for armour since leather)
   game.settlers.push(hired);
   says(hired, 'hired'); // (#252)
   showNotification(t('hire.done', { name: hired.name }), false);
   playSound('hire');
+}
+
+function findHireSpawn() {
+  const centre = getGridPos(townHall.x, townHall.y), candidates = [];
+  for (let gy = centre.gy - 2; gy <= centre.gy + 1; gy++) {
+    for (let gx = centre.gx - 2; gx <= centre.gx + 1; gx++) {
+      const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+      if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS ||
+        !isWithinTownHallBuffer(x, y) || !isSpawnSpotFree(x, y)) continue;
+      candidates.push({ x, y });
+    }
+  }
+  return candidates.length ? candidates[Math.floor(rand() * candidates.length)] : null;
 }
 
 // The faction's upgrade: a worker into a giant, a zombie into a big zombie

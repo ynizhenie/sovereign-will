@@ -35,7 +35,7 @@ export const mechanicsConfig = {
   // making things (#211): seconds a worker works on one, by its kind, at the smithy (anything with iron in
   // it); at a workshop workshopShare of that (#232, #248)
   crafting: { seconds: { tools: 4, weapons: 6, gear: 6, recipes: 2 }, workshopShare: 0.5 },
-  defense: { deploySeconds: 10, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
+  defense: { deploySeconds: 15, squadSize: 3, minRadius: 4, engageTiles: 6, workerAlarm: 160, nearBaseTiles: 3, markedSquad: 3, threatMargin: 0.4 },
 
   // fishers with a rod at a marked spot: one catch every `seconds`, each uses `bait` from the stock
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,

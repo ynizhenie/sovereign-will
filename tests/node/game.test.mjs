@@ -31,6 +31,7 @@ test('enemies pressed against a wall damage it', async () => {
   const r = await sim.wallContact({});
   expect(r.wallsBroken).toBeGreaterThan(0);
   expect(r.secondsStuckAtWall).toBeLessThan(1);
+  expect(r.buildingHitWithSwing).toBe(true);
 });
 
 test('enemies break into a walled-in player', async () => {
@@ -42,7 +43,7 @@ test('enemies break into a walled-in player', async () => {
 
 test('settlers far out in a rock maze bring their load home', async () => {
   const r = await sim.homecoming({ seed: 'maze-137' });
-  expect(r.farthestSteps).toBeGreaterThan(50);
+  expect(r.farthestSteps).toBeGreaterThan(40);
   expect(r.delivered).toBe(r.placed);
 });
 

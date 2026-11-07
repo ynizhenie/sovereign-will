@@ -11,17 +11,21 @@ import { showNotification } from './toasts.js';
 import { escapeHtml, iconHtml } from './icons.js';
 import { closeOverlays, closeSheet, hidePlacing, showPlacing } from './sheets.js';
 import { openBuildingCard } from './building-card.js';
-import { isSelectedCardVisible, openSelectedCard } from './selected-card-state.js';
+import { closeSelectedCard, isSelectedCardVisible, openSelectedCard } from './selected-card-state.js';
 import { ensureUnitName, getPossessed, getSelectedSettler, getSelection, orderPossessed, roleTitle, toggleInGroup } from '../domains/colony/settlers/index.js';
 import { getHarvestableResources, getMapResourceKind, hasMine } from '../domains/economy/gathering/index.js';
 import { toggleFarmZone } from '../domains/economy/farming/index.js';
 import { toggleBlightZone } from '../domains/factions/undead/index.js';
 import { getPlayerFaction } from '../domains/factions/index.js';
-import { isDefeated, isLocked, raidTap } from '../modes/endless/index.js';
+import { isDefeated, isLocked, isPlacingRaidPortal, raid, raidTap } from '../modes/endless/index.js';
 import { battle, battleTap } from '../modes/battle/index.js';
 import { editorTap } from '../modes/editor/index.js';
 import { commandTap } from '../domains/conflict/combat/index.js';
 import { scoutTapped } from '../domains/conflict/waves/index.js';
+
+const isCampTarget = target => !!(target.campStructure || target.campGuard || target.enemyCampStructure);
+const canTargetCamp = target => !isCampTarget(target) ||
+  (game.raidActive && target.campId === game.raidCampId);
 
 export function handleCanvasClick() {
   // battle mode: the field is editable only during setup; combat runs without player commands
@@ -31,7 +35,7 @@ export function handleCanvasClick() {
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
   if (isDefeated()) return; // the defeat screen's own buttons
-  if (!getPossessed() && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
+  if ((!getPossessed() || isPlacingRaidPortal()) && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
 
   const p = getPossessed();
   if (p && orderPossessed(p, mouse.x, mouse.y)) return;
@@ -82,6 +86,10 @@ function tapTile() {
 // Point mode on a settler: select it, or unselect it with a second tap. True when a settler was tapped.
 function selectTapped() {
   let clickedSettler = game.settlers.find(s => Math.hypot(mouse.x - s.x, mouse.y - s.y) < s.visualRadius + 8);
+  if (clickedSettler?.raider && raid.scouting) {
+    closeSelectedCard();
+    return true;
+  }
   // (#326) a settler standing on things: the menu has it as well as them
   const here = clickedSettler && inTerritory(mouse.x, mouse.y) ? thingsOnTile() : [];
   if (here.length) {
@@ -110,7 +118,12 @@ function commandAtEnemy() {
   const picked = game.gameMode === 'endless' ? getSelection() : [];
   if (!picked.length) return false;
   const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
-  const onEnemy = game.enemies.some(en => en.hp > 0 && away(en) < en.radius + 12) || game.enemyTents.some(et => away(et) < 20);
+  const campTargets = [...game.enemies, ...game.enemyTents, ...game.buildings].filter(isCampTarget);
+  if (campTargets.some(target => !canTargetCamp(target) && away(target) < (target.radius || 20) + 10)) return true;
+  const onEnemy = game.enemies.some(en => en.hp > 0 && canTargetCamp(en) && away(en) < en.radius + 12) ||
+    game.enemyTents.some(et => canTargetCamp(et) && away(et) < (et.outpost ? 30 : 20)) ||
+    game.buildings.some(building => building.side === 'red' && building.enemyCampStructure &&
+      canTargetCamp(building) && away(building) < (building.radius || 15) + 10);
   if (!onEnemy || game.settlers.some(s => away(s) < s.visualRadius + 8)) return false;
   return commandTap(picked, mouse.x, mouse.y);
 }
@@ -182,7 +195,14 @@ function enemyTapped() {
   const away = p => Math.hypot(mouse.x - p.x, mouse.y - p.y);
   // an enemy tent (a grave, a portal) too: armed settlers go and destroy it (#203)
   const tentRadius = 20;
-  const enemy = [...game.enemies.filter(en => away(en) < en.radius + 12), ...game.enemyTents.filter(et => away(et) < tentRadius)]
+  const campTargets = [...game.enemies, ...game.enemyTents, ...game.buildings].filter(isCampTarget);
+  if (campTargets.some(target => !canTargetCamp(target) && away(target) < (target.radius || 20) + 10)) return true;
+  const enemy = [
+    ...game.enemies.filter(en => en.hp > 0 && canTargetCamp(en) && away(en) < en.radius + 12),
+    ...game.enemyTents.filter(et => canTargetCamp(et) && away(et) < (et.outpost ? 30 : tentRadius)),
+    ...game.buildings.filter(building => building.side === 'red' && building.enemyCampStructure &&
+      canTargetCamp(building) && away(building) < (building.radius || 15) + 10)
+  ]
     .sort((a, b) => away(a) - away(b))[0];
   if (!enemy) return false;
   if (game.settlers.some(s => away(s) < s.visualRadius + 8 && away(s) < away(enemy))) return false;

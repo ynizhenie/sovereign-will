@@ -9,38 +9,33 @@ Object.assign(window.sim, (() => {
   // appeared (14)
   function campFixed({ seed = 'camp-fixed' } = {}) {
     window.sim.campOpens({ seed, soldiers: 3 });
-    raidCamp.layout = 'square';
     sendScout();
     step(60, () => raid.phase === 'fight');
     const seen = sig(), count = enemies.length;
     leaveCamp(false); endRaid(false);
     // more of them armed after the scout came back
     settlers.push(...[0, 1, 2].map(i => makeSettler(800 + i, townHall.x + 30 * i, townHall.y + 80, { weapon: 'iron_spear', role: 'soldier' })));
-    const army = raidCamp.army.length;
     startRaid(settlers.filter(s => s.role === 'soldier'));
     toEdge(); enterCamp();
     const same = sig() === seen;
-    return { scouted: count > 0, same, army };
+    return { scouted: count > 0, same };
   }
 
-  // Retreat: not at once; they run to the edge they came in by, then out (15)
+  // Retreat: the camp is on the map now, there's no edge to run to: out at once, the party walks home (15)
   function retreatWalks({ seed = 'retreat-walks' } = {}) {
     window.sim.intoCamp({ seed, soldiers: 3 });
     const at = settlers.map(s => ({ x: s.x, y: s.y }));
     enemies.forEach(en => { en.damage = 0; });
     settlers.forEach(s => { s.x = WORLD_WIDTH / 2; s.y = WORLD_HEIGHT / 2 + 40; s.hp = s.maxHp = 1e5; });
     raidAction('retreat');
-    const stillIn = raid.phase === 'fight' && raid.retreating;
-    let took = 0;
-    step(40, () => { took += 1 / 60; return raid.phase !== 'fight'; });
-    return { stillIn, walked: took > 1, out: raid.phase === 'return', home: settlers.filter(s => s.raider).length, entry: at.length };
+    return { out: raid.phase === 'return', home: settlers.filter(s => s.raider).length, entry: at.filter((_, i) => settlers[i].raider).length };
   }
 
   // The scout's picker: one picked, another tapped instead; sent, it's that one. In the camp it isn't seen at
   // once (13)
   function scoutPicked({ seed = 'scout-picked' } = {}) {
     window.sim.campOpens({ seed, soldiers: 2 });
-    raidAction('scout');
+    openRaidPicker(true);
     const units = [...document.querySelectorAll('#raid-picker .raid-unit')];
     const firstOn = units.filter(b => b.classList.contains('on')).length;
     const other = units.find(b => !b.classList.contains('on'));
@@ -68,13 +63,13 @@ Object.assign(window.sim, (() => {
   function campShelter({ seed = 'camp-shelter' } = {}) {
     window.sim.campOpens({ seed, soldiers: 2 });
     settlers.push(makeSettler(850, townHall.x, townHall.y + 90, { weapon: 'bow', role: 'archer', quiver: true, arrows: 0 }));
-    Object.assign(stock, { wood: 100, leather: 10, herbs: 10, rope: 2, stone: 50, arrows: 30 });
-    raidAction('open');
+    Object.assign(stock, { wood: 100, leather: 30, herbs: 10, rope: 20, stone: 50, arrows: 30 });
+    openRaidPicker();
     const offered = document.querySelector('#raid-picker .raid-arrow-count').textContent.trim();
     document.querySelector('#raid-picker [data-raid="go"]').click();
     const took = raid.arrows, left = stock.arrows;
     toEdge(); enterCamp();
-    enemies.forEach(en => { en.speed = 0; en.damage = 0; });
+    enemies.forEach(en => { en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1e6; }); // (the camp not beaten while it's built)
     const archer = settlers.find(s => s.id === 850);
     archer.arrows = 0;
     const spot = { x: archer.x + (archer.x < WORLD_WIDTH / 2 ? 40 : -40), y: archer.y };
@@ -83,7 +78,7 @@ Object.assign(window.sim, (() => {
     const site = blueprints.some(bp => bp.raidShelter);
     step(20, () => buildings.some(b => b.raidShelter));
     const built = buildings.some(b => b.raidShelter);
-    const hurt = settlers.find(s => s.id !== 850);
+    const hurt = raid.raiders.find(s => s.id !== 850); // (the base is on the same map now: one of the party)
     const b = buildings.find(o => o.raidShelter);
     hurt.x = b.x + 20; hurt.y = b.y; hurt.hp = 20; hurt.orderSpot = { x: hurt.x, y: hurt.y };
     archer.orderSpot = { x: archer.x, y: archer.y };

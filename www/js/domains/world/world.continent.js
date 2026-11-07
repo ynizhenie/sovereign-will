@@ -1,12 +1,12 @@
 // (#299, step 2) A big map is a continent: one mass of land in the sea, never touching the map's edge, its
 // shape from noise (a stretched, turned oval, its coast warped and broken up), with a few islands off it.
 // Its land in biomes by height and wetness (GAME_CONFIG.continent): mountains (natural rock) the highest,
-// desert the driest, forest the wettest, grassland the rest, lakes in low wet hollows; sand along the sea.
-// What grows on each biome by its own chances per tile. The base starts on grassland well away from the sea,
+// desert the driest, forest the wettest, savanna the next-driest, grassland the rest, lakes in low wet hollows; sand along the sea.
+// What grows on each biome by its own chances per tile. The base starts on grassland or savanna well away from the sea,
 // with rock and ore near by. A smaller map is made as before (world.generator.js).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { DEFAULT_MAP_TILES, TILE_SIZE, game, rand, townHall } from '../../engine/world/index.js';
+import { DEFAULT_MAP_TILES, TILE_SIZE, game, isWithinTownHallBuffer, rand, townHall } from '../../engine/world/index.js';
 import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
@@ -18,8 +18,8 @@ const config = () => GAME_CONFIG.continent;
 export const isContinentMap = () => Math.min(game.COLS, game.ROWS) >= config().from;
 
 // a tile's biome
-const SEA = 0, LAKE = 1, GRASS = 2, FOREST = 3, DESERT = 4, MOUNTAIN = 5;
-const BIOME_TABLE = { [GRASS]: 'grassland', [FOREST]: 'forest', [DESERT]: 'desert' };
+const SEA = 0, LAKE = 1, GRASS = 2, FOREST = 3, DESERT = 4, MOUNTAIN = 5, SAVANNA = 6;
+const BIOME_TABLE = { [GRASS]: 'grassland', [FOREST]: 'forest', [DESERT]: 'desert', [SAVANNA]: 'savanna' };
 
 // Smooth noise 0..1 from the world's random (so a seed makes the same continent): values on a lattice,
 // blended between; fbm adds octaves of it, each finer and fainter
@@ -129,24 +129,19 @@ export function* generateContinent() {
   /** @param {Float32Array} values @param {number} share @returns {number} */
   const pick = (values, share) => quantile(landTiles.map(i => values[i]), share);
   const mountainAt = pick(height, 1 - C.mountains), desertAt = pick(wet, C.desert), forestAt = pick(wet, 1 - C.forest), lakeAt = pick(hollow, 1 - C.lakes);
+  const savannaAt = pick(wet, Math.min(C.desert + C.savanna, 1 - C.forest));
   const biome = new Uint8Array(n); // (SEA)
   for (const i of landTiles) {
-    biome[i] = height[i] >= mountainAt ? MOUNTAIN : hollow[i] >= lakeAt && coast[i] > 3 ? LAKE : wet[i] <= desertAt ? DESERT : wet[i] >= forestAt ? FOREST : GRASS;
+    biome[i] = height[i] >= mountainAt ? MOUNTAIN : hollow[i] >= lakeAt && coast[i] > 3 ? LAKE :
+      wet[i] <= desertAt ? DESERT : wet[i] >= forestAt ? FOREST : wet[i] <= savannaAt ? SAVANNA : GRASS;
   }
 
-  // ---- The start: grassland far from the sea, with land, rock and trees round it, lakes and deserts few
+  // ---- The start: grassland or savanna far from the sea, with land, rock and trees round it, lakes and deserts few
   yield 0.38;
   const start = chooseStart(biome, coast, cols, rows, C);
   // (on the corner of four tiles, as on a default map: the tiles round it laid out for walking up to it)
   townHall.x = start.gx * TILE_SIZE; townHall.y = start.gy * TILE_SIZE;
   camera.x = townHall.x; camera.y = townHall.y;
-  // clear ground round the hall; rock near by if there's none
-  for (let dy = -6; dy <= 6; dy++) {
-    for (let dx = -6; dx <= 6; dx++) {
-      const gx = start.gx + dx, gy = start.gy + dy;
-      if (dx * dx + dy * dy <= 30 && biome[at(gx, gy)] !== SEA) biome[at(gx, gy)] = GRASS;
-    }
-  }
   if (!countNear(biome, MOUNTAIN, start, C.startNear, cols, rows)) {
     const a = rand() * Math.PI * 2, d = 12 + rand() * 6;
     const bx = Math.round(start.gx + Math.cos(a) * d), by = Math.round(start.gy + Math.sin(a) * d);
@@ -159,15 +154,57 @@ export function* generateContinent() {
     }
   }
 
+  // Natural mountain tiles are first placed near the start, then moved rather than simply removed when they
+  // would occupy the hall's protected three-tile radius.
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      if (biome[at(gx, gy)] !== MOUNTAIN || Math.hypot(gx - start.gx, gy - start.gy) > 3) continue;
+      biome[at(gx, gy)] = GRASS;
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const replacementX = Math.floor(rand() * cols);
+        const replacementY = Math.floor(rand() * rows);
+        const replacement = at(replacementX, replacementY);
+        if (replacementX < 3 || replacementY < 3 || replacementX >= cols - 3 || replacementY >= rows - 3 ||
+            Math.hypot(replacementX - start.gx, replacementY - start.gy) <= 5 ||
+            biome[replacement] === SEA || biome[replacement] === LAKE || biome[replacement] === MOUNTAIN) continue;
+        biome[replacement] = MOUNTAIN;
+        break;
+      }
+    }
+  }
+
+  // Lakes also stay clear of the hall. Move them, rather than leaving a gap in the generated shoreline.
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      if (biome[at(gx, gy)] !== LAKE || !isWithinTownHallBuffer(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15)) continue;
+      biome[at(gx, gy)] = GRASS;
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const replacementX = Math.floor(rand() * cols), replacementY = Math.floor(rand() * rows);
+        const replacement = at(replacementX, replacementY);
+        if (replacementX < 3 || replacementY < 3 || replacementX >= cols - 3 || replacementY >= rows - 3 ||
+            Math.hypot(replacementX - start.gx, replacementY - start.gy) <= 5 ||
+            biome[replacement] === SEA || biome[replacement] === LAKE || biome[replacement] === MOUNTAIN) continue;
+        biome[replacement] = LAKE;
+        break;
+      }
+    }
+  }
+
   // ---- The tiles into the world's lists
   yield 0.47;
-  game.beachTiles = [];
+  game.beachTiles = []; game.savannaTiles = [];
   const tile = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   const sand = new Uint8Array(n);
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
       const i = at(gx, gy), b = biome[i], { x, y } = tile(gx, gy);
       if (b === SEA || b === LAKE) game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
+      else if (b === SAVANNA) {
+        game.savannaTiles.push({ x, y });
+        if (coast[i] === 1 || (coast[i] === 2 && shapeNoise(gx * 0.3, gy * 0.3) > 0.55)) {
+          game.beachTiles.push({ x, y }); sand[i] = 1;
+        }
+      }
       else if (b === MOUNTAIN) {
         addMapResource('natural_rock', x, y);
         // a mountain where the desert's climate is: the sand goes under it, so it counts as desert too
@@ -218,7 +255,7 @@ export function* generateContinent() {
   for (let gy = Math.ceil(hall.gy - startHalf); gy < hall.gy + startHalf; gy++) {
     for (let gx = Math.ceil(hall.gx - startHalf); gx < hall.gx + startHalf; gx++) {
       const b = biome[at(gx, gy)];
-      if ((b !== GRASS && b !== FOREST) || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
+      if ((b !== GRASS && b !== FOREST && b !== SAVANNA) || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
       const { x, y } = tile(gx, gy);
       if (isSpawnSpotFree(x, y)) startBoarSpots.push({ x, y });
     }
@@ -240,7 +277,7 @@ export function* generateContinent() {
       const gx = hall.gx + Math.round((rand() - 0.5) * 2 * C.nearBaseTiles), gy = hall.gy + Math.round((rand() - 0.5) * 2 * C.nearBaseTiles);
       if (gx < 0 || gy < 0 || gx >= cols || gy >= rows || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
       const b = biome[at(gx, gy)], { x, y } = tile(gx, gy);
-      if ((b !== GRASS && b !== FOREST && !(b === DESERT && kind === 'pebble')) || sand[at(gx, gy)] && kind !== 'pebble' || taken.has(`${x},${y}`)) continue;
+      if ((b !== GRASS && b !== FOREST && b !== SAVANNA && !(b === DESERT && kind === 'pebble')) || sand[at(gx, gy)] && kind !== 'pebble' || taken.has(`${x},${y}`)) continue;
       taken.add(`${x},${y}`); addMapResource(kind, x, y); k++;
     }
   }
@@ -280,7 +317,7 @@ function countNear(biome, kind, spot, r, cols, rows) {
   return count;
 }
 
-// The best of some grassland tiles far from the sea: most land round it in a default map's square, some forest
+// The best of some grassland and savanna tiles far from the sea: most land round it in a default map's square, some forest
 // and rock near, few lakes and little desert
 function chooseStart(biome, coast, cols, rows, C) {
   const half = GAME_CONFIG.territory.startTiles / 2;
@@ -291,7 +328,7 @@ function chooseStart(biome, coast, cols, rows, C) {
     const gy = Math.floor(half + rand() * (rows - 2 * half));
     const i = gy * cols + gx;
 
-    if (biome[i] !== GRASS || coast[i] < Math.min(C.startCoast, 6)) continue;
+    if ((biome[i] !== GRASS && biome[i] !== SAVANNA) || coast[i] < Math.min(C.startCoast, 6)) continue;
 
     let landTiles = 0, forest = 0, rock = 0, lake = 0, desert = 0, total = 0;
 
@@ -330,7 +367,7 @@ function chooseStart(biome, coast, cols, rows, C) {
 
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
-      if (biome[gy * cols + gx] !== GRASS) continue;
+      if (biome[gy * cols + gx] !== GRASS && biome[gy * cols + gx] !== SAVANNA) continue;
 
       const distance = (gx - centerX) ** 2 + (gy - centerY) ** 2;
       if (distance < nearest) {

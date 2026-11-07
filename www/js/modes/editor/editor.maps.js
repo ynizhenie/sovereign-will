@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { camera, loadData, saveData, t } from '../../engine/platform/index.js';
-import { TILE_SIZE, game, rand, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, game, newWorldEpoch, rand, townHall } from '../../engine/world/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { placeBeaches } from '../../domains/world/index.js';
 import { addMapResource } from '../../domains/economy/gathering/index.js';
@@ -46,6 +46,7 @@ const fromRuns = runs => runs.flatMap(([gy, gx, n]) => Array.from({ length: n },
 
 // The world as plain data: tiles by grid position
 export function serializeMap(name) {
+  placeBeaches();
   const tile = o => [Math.floor(o.x / TILE_SIZE), Math.floor(o.y / TILE_SIZE)];
   const resources = {};
   for (const [kind, def] of Object.entries(GAME_CONFIG.mapResources)) {
@@ -57,23 +58,27 @@ export function serializeMap(name) {
     hall: [townHall.x, townHall.y],
     waterRuns: toRuns(game.waterTiles),
     sandRuns: toRuns(game.desertTiles),
+    savannaRuns: toRuns(game.savannaTiles),
+    beachRuns: toRuns(game.beachTiles),
     resources,
     apples: game.trees.filter(tr => tr.apple).map(tile),
     spawners: game.naturalRocks.filter(r => r.oreSpawner).map(r => [...tile(r), r.oreSpawner]),
     boars: game.boars.filter(b => !b.isCarcass).map(tile),
+    outposts: game.editorOutposts.map(tile),
     buildings: game.buildings.map(b => [b.type, ...tile(b)])
   };
 }
 
 // Build the world from a saved map, in place of generateMap() (see resetGame)
 export function loadCustomMap(map) {
-  game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.beachTiles = []; game.forests = [];
+  game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.savannaTiles = []; game.beachTiles = []; game.forests = [];
   game.trees = []; game.cacti = []; game.boulders = []; game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.stumps = [];
-  game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = [];
+  game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = []; game.editorOutposts = [];
   const at = ([gx, gy]) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   if (map.hall) { townHall.x = map.hall[0]; townHall.y = map.hall[1]; }
   for (const t of map.waterRuns ? fromRuns(map.waterRuns) : map.water || []) game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
   for (const t of map.sandRuns ? fromRuns(map.sandRuns) : map.sand || []) game.desertTiles.push(at(t));
+  for (const t of map.savannaRuns ? fromRuns(map.savannaRuns) : map.savanna || []) game.savannaTiles.push(at(t));
   for (const [kind, tiles] of Object.entries(map.resources || {})) {
     if (!GAME_CONFIG.mapResources[kind]) continue;
     for (const t of tiles) { const p = at(t); addMapResource(kind, p.x, p.y); }
@@ -90,11 +95,18 @@ export function loadCustomMap(map) {
     const p = at([gx, gy]);
     game.buildings.push(makeBuilt(type, p.x, p.y));
   }
-  placeBeaches();
+  game.editorOutposts = (map.outposts || []).slice(0, 3).map(at);
+  camera.x = townHall.x; camera.y = townHall.y;
+  if (map.beachRuns?.length) {
+    for (const t of fromRuns(map.beachRuns)) game.beachTiles.push(at(t));
+  } else {
+    placeBeaches();
+  }
+  // The terrain chunks may have been painted while this same-sized editor map was still open.
+  newWorldEpoch();
   // the time of day it starts at (#257): a little into that part of the day; the morning as ever by default
   const c = GAME_CONFIG.daytime, startAt = { morning: c.morning / 2, day: c.morning + 1, evening: c.morning + c.day + 1, night: c.morning + c.day + c.evening + 1 };
   game.dayTime = startAt[map.startTime] ?? startAt.day;
-  camera.x = townHall.x; camera.y = townHall.y;
 }
 
 export function placeBoar({ x, y }) {

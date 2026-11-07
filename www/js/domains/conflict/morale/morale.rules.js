@@ -93,10 +93,12 @@ export function onUnitDeath(unit, side) {
 function checkRout() {
   const c = config();
   if (game.waveRouted || !game.waveSize) return;
-  const left = game.enemies.filter(en => en.fromWave).length;
+  const pendingRaftUnits = (game.enemyRafts || []).flatMap(raft => raft.units || []);
+  const wave = [...game.enemies.filter(en => en.fromWave), ...pendingRaftUnits];
+  const left = wave.length;
   if (left > 0 && left <= game.waveSize * (1 - c.routShare) + 1e-9) { // (1 - 0.8 is a hair under 0.2)
     game.waveRouted = true;
-    game.enemies.filter(en => en.fromWave).forEach(en => shakeMorale(en, c.rout, 'enemy', true));
+    wave.forEach(en => shakeMorale(en, c.rout, 'enemy', true));
   }
 }
 
@@ -137,4 +139,3 @@ export function ghostScare(unit, side = sideOf(unit)) {
   if (unit.ghostHits >= (big ? g.bigNeeds : 1)) { unit.ghostHits = 0; shakeMorale(unit, 9999, side, true); }
   else shakeMorale(unit, config().max * 0.3, side, true);
 }
-

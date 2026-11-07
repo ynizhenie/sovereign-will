@@ -44,10 +44,12 @@ Object.assign(window.sim, (() => {
     putOnGear(s, 'armor');
     const swapped = { armor: s.armor, hp: s.maxHp - hp0, stored: armory['gear:leather_armor'] || 0 };
     playerGear = { armor: false, shield: false, leather: true };
+    s.armor = null; s.maxHp = hp0; s.hp = hp0;
     waveNum = 30;
     enemies = [];
+    enemyRafts = [];
     for (let i = 0; i < 3; i++) startNextWave();
-    const wave = enemies.filter(en => en.fromWave);
+    const wave = enemies.concat(...enemyRafts.map(raft => raft.units)).filter(en => en.fromWave);
     return { leatherHp, kind, leatherTaken, swapped, waveLeather: wave.some(en => en.armor === 'leather'), waveIron: wave.some(en => en.armor === 'iron') };
   }
 

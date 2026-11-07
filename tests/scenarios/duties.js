@@ -77,7 +77,7 @@ Object.assign(window.sim, (() => {
     const necro = Object.assign(createSettler('zombie', 1, nearHall(8, 0).x, nearHall(8, 0).y), { tool: 'necro_staff' });
     settlers = [necro, createSettler('zombie', 2, townHall.x - 40, townHall.y + 40)];
     const en = createConfiguredEnemy({ x: necro.x + 70, y: necro.y }, 'raider');
-    en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1000;
+    en.fromWave = true; en.speed = 0; en.damage = 0; en.hp = en.maxHp = 1000;
     enemies = [en];
     corpses = corpse ? [{ x: necro.x - 120, y: necro.y + 30, radius: 10, side: 'enemy', kind: 'raider', age: 0 }] : [];
     run(3, { holdWaves: false, each: () => { waveTimer = 5; } });
