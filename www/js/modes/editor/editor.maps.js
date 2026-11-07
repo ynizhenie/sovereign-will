@@ -42,7 +42,12 @@ function toRuns(list) {
   }
   return runs;
 }
-const fromRuns = runs => runs.flatMap(([gy, gx, n]) => Array.from({ length: n }, (_, k) => [gx + k, gy]));
+const fromRuns = function* (runs) {
+  for (const [gy, gx, count] of runs) {
+    for (let k = 0; k < count; k++) yield [gx + k, gy];
+  }
+};
+const countRunTiles = runs => runs.reduce((count, run) => count + run[2], 0);
 
 // The world as plain data: tiles by grid position
 export function serializeMap(name) {
@@ -71,34 +76,83 @@ export function serializeMap(name) {
 
 // Build the world from a saved map, in place of generateMap() (see resetGame)
 export function loadCustomMap(map) {
+  for (const _ of loadCustomMapSteps(map));
+}
+
+export function* loadCustomMapSteps(map) {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.savannaTiles = []; game.beachTiles = []; game.forests = [];
   game.trees = []; game.cacti = []; game.boulders = []; game.grassList = []; game.berryBushes = []; game.sticks = []; game.pebbles = []; game.logs = []; game.stumps = [];
   game.ironOres = []; game.coalOres = []; game.boars = []; game.buildings = []; game.editorOutposts = [];
   const at = ([gx, gy]) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   if (map.hall) { townHall.x = map.hall[0]; townHall.y = map.hall[1]; }
-  for (const t of map.waterRuns ? fromRuns(map.waterRuns) : map.water || []) game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
-  for (const t of map.sandRuns ? fromRuns(map.sandRuns) : map.sand || []) game.desertTiles.push(at(t));
-  for (const t of map.savannaRuns ? fromRuns(map.savannaRuns) : map.savanna || []) game.savannaTiles.push(at(t));
-  for (const [kind, tiles] of Object.entries(map.resources || {})) {
-    if (!GAME_CONFIG.mapResources[kind]) continue;
-    for (const t of tiles) { const p = at(t); addMapResource(kind, p.x, p.y); }
+  const water = map.waterRuns ? fromRuns(map.waterRuns) : map.water || [];
+  const sand = map.sandRuns ? fromRuns(map.sandRuns) : map.sand || [];
+  const savanna = map.savannaRuns ? fromRuns(map.savannaRuns) : map.savanna || [];
+  const resources = Object.entries(map.resources || {}).filter(([kind]) => !!GAME_CONFIG.mapResources[kind]);
+  const apples = map.apples || [], spawners = map.spawners || [], boars = map.boars || [];
+  const buildings = map.buildings || [], outposts = (map.outposts || []).slice(0, 3);
+  const hasBeachRuns = !!map.beachRuns?.length;
+  const beaches = hasBeachRuns ? fromRuns(map.beachRuns) : [];
+  const count = (runs, entries) => runs ? countRunTiles(runs) : entries.length;
+  const total = Math.max(1, count(map.waterRuns, map.water || []) + count(map.sandRuns, map.sand || []) +
+    count(map.savannaRuns, map.savanna || []) +
+    resources.reduce((sum, [, tiles]) => sum + tiles.length, 0) + apples.length + spawners.length +
+    boars.length + buildings.length + outposts.length + (hasBeachRuns ? countRunTiles(map.beachRuns) : 0));
+  let completed = 0, lastYield = 0;
+  const loadEntries = function* (entries, load) {
+    for (const entry of entries) {
+      load(entry);
+      completed++;
+      if (completed - lastYield >= 128 || completed === total) {
+        lastYield = completed;
+        yield 0.1 + 0.75 * completed / total;
+      }
+    }
+    if (lastYield !== completed) {
+      lastYield = completed;
+      yield 0.1 + 0.75 * completed / total;
+    }
+  };
+  yield 0.1;
+  yield* loadEntries(water, t => game.waterTiles.push({ ...at(t), isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 }));
+  yield* loadEntries(sand, t => game.desertTiles.push(at(t)));
+  yield* loadEntries(savanna, t => game.savannaTiles.push(at(t)));
+  for (const [kind, tiles] of resources) {
+    yield* loadEntries(tiles, t => { const p = at(t); addMapResource(kind, p.x, p.y); });
   }
-  const appleKeys = new Set((map.apples || []).map(t => `${t[0]},${t[1]}`));
-  for (const tr of game.trees) if (appleKeys.has(`${Math.floor(tr.x / TILE_SIZE)},${Math.floor(tr.y / TILE_SIZE)}`)) makeAppleTree(tr);
-  for (const [gx, gy, kind] of map.spawners || []) {
+  if (apples.length) {
+    const appleKeys = new Set(apples.map(([gx, gy]) => `${gx},${gy}`));
+    for (const tree of game.trees) {
+      const key = `${Math.floor(tree.x / TILE_SIZE)},${Math.floor(tree.y / TILE_SIZE)}`;
+      if (!appleKeys.delete(key)) continue;
+      makeAppleTree(tree);
+      completed++;
+      if (completed - lastYield >= 128 || completed === total) {
+        lastYield = completed;
+        yield 0.1 + 0.75 * completed / total;
+      }
+    }
+    if (lastYield < completed) {
+      lastYield = completed;
+      yield 0.1 + 0.75 * completed / total;
+    }
+  }
+  yield* loadEntries(spawners, ([gx, gy, kind]) => {
     const p = at([gx, gy]);
     addMapResource('natural_rock', p.x, p.y).oreSpawner = kind;
-  }
-  for (const t of map.boars || []) placeBoar(at(t));
-  for (const [type, gx, gy] of map.buildings || []) {
-    if (!getDefinition('buildings', type)) continue;
+  });
+  yield* loadEntries(boars, t => placeBoar(at(t)));
+  yield* loadEntries(buildings, ([type, gx, gy]) => {
+    if (!getDefinition('buildings', type)) return;
     const p = at([gx, gy]);
     game.buildings.push(makeBuilt(type, p.x, p.y));
-  }
-  game.editorOutposts = (map.outposts || []).slice(0, 3).map(at);
+  });
+  game.editorOutposts = outposts.map(at);
+  completed += outposts.length;
+  if (outposts.length) yield 0.1 + 0.75 * completed / total;
   camera.x = townHall.x; camera.y = townHall.y;
-  if (map.beachRuns?.length) {
-    for (const t of fromRuns(map.beachRuns)) game.beachTiles.push(at(t));
+  if (hasBeachRuns) {
+    yield* loadEntries(beaches, t => game.beachTiles.push(at(t)));
   } else {
     placeBeaches();
   }
@@ -107,6 +161,7 @@ export function loadCustomMap(map) {
   // the time of day it starts at (#257): a little into that part of the day; the morning as ever by default
   const c = GAME_CONFIG.daytime, startAt = { morning: c.morning / 2, day: c.morning + 1, evening: c.morning + c.day + 1, night: c.morning + c.day + c.evening + 1 };
   game.dayTime = startAt[map.startTime] ?? startAt.day;
+  yield 0.85;
 }
 
 export function placeBoar({ x, y }) {

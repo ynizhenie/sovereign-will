@@ -346,6 +346,8 @@
  * @property {'endless'|'battle'|'editor'|'menu'} gameMode
  * @property {boolean} gameStarted
  * @property {boolean} loading
+ * @property {boolean} loadingRender
+ * @property {number} loadingRenderFrame
  * @property {boolean} isPaused
  * @property {string} gameDifficulty
  * @property {boolean} cardMode  Endless with cards (#255)

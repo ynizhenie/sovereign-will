@@ -1201,14 +1201,14 @@ body[data-hud="endless"] .day-clock { display: block; }
 /* (#326) while the game starts: only the dark background, not the menu half made */
 body.booting > * { visibility: hidden; }
 
-/* (#326) the loading screen: the menu's scene stays, its panels away, a bar low on the screen */
-#loading-screen { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12vh; pointer-events: all; }
+/* (#326) a plain black loading screen with a clear, high-contrast progress indicator */
+#loading-screen { position: fixed; inset: 0; z-index: 20000; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12vh; pointer-events: all; background: #000; }
 #loading-screen[hidden] { display: none; }
-.loading-box { width: min(420px, 78vw); text-align: center; color: #f1f1f1; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+.loading-box { width: min(420px, 78vw); text-align: center; color: #fff; }
 #loading-title { font-size: 1.05rem; margin-bottom: 10px; letter-spacing: 0.04em; }
-.loading-bar { height: 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); overflow: hidden; }
+.loading-bar { height: 10px; border-radius: 6px; background: #252525; border: 1px solid #aaa; overflow: hidden; }
 #loading-fill { height: 100%; width: 0; background: linear-gradient(90deg, #c9a24a, #f0d27a); transition: width 0.15s ease-out; }
-body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-eye-box, body.loading #menu-scene-bar { display: none !important; }
+body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-eye-box, body.loading #menu-scene-bar, body.loading #menu-flags { display: none !important; }
 
 /* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
 #btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }

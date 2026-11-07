@@ -17,7 +17,10 @@ import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/ind
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 
 export function render() {
-  if (game.loading) return; // (#326) the loading screen's: the last frame stays under it
+  if (game.loading) {
+    if (!game.loadingRender) return; // (#326) keep the last frame under the loading screen while the world is made
+    game.loadingRenderFrame = (game.loadingRenderFrame || 0) + 1;
+  }
   // (#326) past the map's edge: the fog's own dark
   ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.save();
