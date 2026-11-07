@@ -2,7 +2,7 @@
 
 import { drawIcon } from '../../ui/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, townHall, worldEpoch } from '../../engine/world/index.js';
-import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
@@ -12,6 +12,8 @@ import { areShadowsEnabled, getSun, MIN_SHADOW_ALPHA } from './world.daytime.js'
 // isn't one flat repeating fill. Picked per-tile from a coordinate hash, not rand(), so it
 // stays put across frames without disturbing the seeded world-gen RNG sequence.
 export const GRASS_SHADES = ['#2d4a22', '#2f4d25', '#2a4620', '#31501f', '#294419', '#2e4b28'];
+const SAVANNA_GRASS_BASE = '#77763a';
+const SAVANNA_GRASS_SHADES = ['#79793d', '#7b7c3d', '#747236', '#7b7c37', '#737034', '#787741'];
 
 export function tileVariantHash(gx, gy) {
   let h = Math.imul(gx, 374761393) + Math.imul(gy, 668265263);
@@ -50,6 +52,7 @@ let frameOf = 0;
 let framePaints = 0, framePaintMs = 0, framePaintLimit = STILL_PAINTS_PER_FRAME, framePaintLayer = 'grass', priorityPassed = false;
 let previousView = null, previousScale = 0;
 let cacheWorldEpoch = -1;
+let prewarmingChunks = false;
 // the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
 // painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
 // `holes` are uncovered base-ground pieces. `pending` also counts chunks still shown from a light preview.
@@ -84,12 +87,14 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
     previousView = v; previousScale = scale;
     frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
+    if (prewarmingChunks) framePaintLimit = Number.MAX_SAFE_INTEGER;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
     if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
     // is useful only during movement, when a coarse first pass keeps the pan responsive.
     framePaintLayer = moving ? layers[(frameOf - 1) % layers.length] : layers[0];
   } // (the first layer of a frame)
+  if (prewarmingChunks) framePaints = 0, framePaintLimit = Number.MAX_SAFE_INTEGER;
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
   const m = target.getTransform();
@@ -99,8 +104,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
-  const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
-  const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
+  const cx0 = prewarmingChunks ? 0 : Math.max(0, Math.floor(v.x0 / size)), cx1 = prewarmingChunks ? lastX : Math.min(lastX, Math.floor(v.x1 / size));
+  const cy0 = prewarmingChunks ? 0 : Math.max(0, Math.floor(v.y0 / size)), cy1 = prewarmingChunks ? lastY : Math.min(lastY, Math.floor(v.y1 / size));
   /** @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @param {string} now */
   const painted = (cx, cy, x0, y0, x1, y1, chunk, now) => {
     const startedAt = performance.now();
@@ -195,65 +200,146 @@ export function wasChunkDrawn(layer, res, x, y) {
 // the whole screen of pieces again each time)
 let heldRes = 1;
 const chunkRes = () => {
-  const s = Math.max(getViewScale(), 0.0625), want = Math.min(1, 2 ** Math.floor(Math.log2(s)));
-  if (want !== heldRes && s / heldRes > 0.88 && s / heldRes < 2.3) return Math.min(1, heldRes);
-  heldRes = want;
-  return want;
+  return 1;
 };
 // (#322) The terrain's pieces are laid down at every zoom (what's drawn tile by tile each frame, with its gradients and rounded
 // corners, was most of what a view of lake or desert cost): as fine as the screen shows, up to twice a world unit
 let heldTerrain = 1;
 const terrainRes = () => {
-  const s = getViewScale();
-  let want = s < 0.7 ? chunkRes() : s >= 1.35 ? 2 : 1;
-  // (a size is kept within a band of a tenth or so round each threshold)
-  if (heldTerrain === 2 && s > 1.2) want = 2;
-  else if (heldTerrain === 1 && s >= 0.62 && s < 1.5) want = 1;
-  heldTerrain = want;
-  return want;
+  return 1;
 };
 
-// The grass (#251: per-tile shades read as a grid): one green under everything, soft patches of the close
-// shades over it, crossing the tiles' edges, and a tuft or a speckle here and there. It never changes
-// (the patches of the tiles round a piece too, for those spilling into it: the same either side of its edge)
+function mixGrassColor(from, to, amount) {
+  const channel = (color, shift) => parseInt(color.slice(shift, shift + 2), 16);
+  const mixed = [1, 3, 5].map(shift => Math.round(channel(from, shift) * (1 - amount) + channel(to, shift) * amount));
+  return `#${mixed.map(value => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+let savannaWeightEpoch = -1;
+let savannaWeightSignature = '';
+const savannaWeightCache = new Map();
+
+function savannaWeightAt(x, y) {
+  const epoch = worldEpoch();
+  const first = game.savannaTiles[0], last = game.savannaTiles[game.savannaTiles.length - 1];
+  const signature = `${epoch}|${game.savannaTiles.length}|${first?.x ?? ''},${first?.y ?? ''}|${last?.x ?? ''},${last?.y ?? ''}`;
+  if (savannaWeightEpoch !== epoch || savannaWeightSignature !== signature) {
+    savannaWeightEpoch = epoch;
+    savannaWeightSignature = signature;
+    savannaWeightCache.clear();
+  }
+  const key = `${x},${y}`;
+  const cached = savannaWeightCache.get(key);
+  if (cached !== undefined) return cached;
+  let weight = 0;
+  const fadeDistance = TILE_SIZE * 2;
+  forEachInRect(game.savannaTiles, x - fadeDistance - 15, y - fadeDistance - 15, x + fadeDistance + 15, y + fadeDistance + 15, tile => {
+    const dx = Math.max(0, Math.abs(tile.x - x) - TILE_SIZE / 2);
+    const dy = Math.max(0, Math.abs(tile.y - y) - TILE_SIZE / 2);
+    const distance = Math.hypot(dx, dy);
+    if (distance === 0) { weight = 1; return; }
+    if (distance < fadeDistance) {
+      const fade = 1 - distance / fadeDistance;
+      weight = Math.max(weight, fade * fade * (3 - 2 * fade));
+    }
+  });
+  savannaWeightCache.set(key, weight);
+  return weight;
+}
+
+// Keep the same patches, tufts and speckles in both biomes; only blend their palette across the biome edge.
 function paintGrass(g, x0, y0, x1, y1) {
   g.fillStyle = '#2d4a22'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
-  // (#326: whole tiles: with the piece's bleed its edge isn't on one, and fractional tiles drew other patches
-  // than the piece beside it, a seam between them)
+  // Whole tiles: with the piece's bleed its edge isn't on one, and fractional tiles drew other patches
+  // than the piece beside them, leaving a seam.
   const gx0 = Math.max(0, Math.floor(x0 / TILE_SIZE) - 1), gx1 = Math.min(game.COLS - 1, Math.ceil(x1 / TILE_SIZE));
   const gy0 = Math.max(0, Math.floor(y0 / TILE_SIZE) - 1), gy1 = Math.min(game.ROWS - 1, Math.ceil(y1 / TILE_SIZE));
+  // Lay every cell's base down first. Otherwise a later cell's fill cuts off patches spilling over its edge.
+  for (let gy = gy0; gy <= gy1; gy++) {
+    for (let gx = gx0; gx <= gx1; gx++) {
+      const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
+      const cornerWeights = [
+        savannaWeightAt(x, y), savannaWeightAt(x + TILE_SIZE, y),
+        savannaWeightAt(x, y + TILE_SIZE), savannaWeightAt(x + TILE_SIZE, y + TILE_SIZE)
+      ];
+      const gradientRows = 10;
+      const rowHeight = TILE_SIZE / gradientRows;
+      for (let row = 0; row < gradientRows; row++) {
+        const t = (row + 0.5) / gradientRows;
+        const leftWeight = cornerWeights[0] * (1 - t) + cornerWeights[2] * t;
+        const rightWeight = cornerWeights[1] * (1 - t) + cornerWeights[3] * t;
+        const gradient = g.createLinearGradient(x, y + row * rowHeight, x + TILE_SIZE, y + row * rowHeight);
+        gradient.addColorStop(0, mixGrassColor('#2d4a22', SAVANNA_GRASS_BASE, leftWeight));
+        gradient.addColorStop(1, mixGrassColor('#2d4a22', SAVANNA_GRASS_BASE, rightWeight));
+        g.fillStyle = gradient;
+        g.fillRect(x, y + row * rowHeight, TILE_SIZE + 0.5, rowHeight + 0.05);
+      }
+    }
+  }
+  // Then draw the texture over all cells so the soft patches can cross their borders uninterrupted.
   for (let gy = gy0; gy <= gy1; gy++) {
     for (let gx = gx0; gx <= gx1; gx++) {
       const hsh = tileVariantHash(gx, gy), x = gx * TILE_SIZE, y = gy * TILE_SIZE;
-      // two patches, anywhere in the tile and spilling out of it
       for (let k = 0; k < 2; k++) {
         const v = k ? hsh >>> 11 : hsh;
-        g.globalAlpha = 0.45 + (v % 5) * 0.06;
-        g.fillStyle = GRASS_SHADES[(v >>> 3) % GRASS_SHADES.length];
+        const px = x + (v >>> 6) % TILE_SIZE, py = y + (v >>> 9) % TILE_SIZE;
+        const patchWeight = savannaWeightAt(px, py);
+        g.globalAlpha = 0.28 + (v % 5) * 0.035;
+        const shade = (v >>> 3) % GRASS_SHADES.length;
+        g.fillStyle = mixGrassColor(GRASS_SHADES[shade], SAVANNA_GRASS_SHADES[shade], patchWeight);
         g.beginPath();
-        g.ellipse(x + (v >>> 6) % TILE_SIZE, y + (v >>> 9) % TILE_SIZE, 9 + (v >>> 12) % 12, 7 + (v >>> 15) % 10, ((v >>> 18) % 6) / 2, 0, Math.PI * 2);
+        g.ellipse(px, py, 13 + (v >>> 12) % 17, 10 + (v >>> 15) % 14, ((v >>> 18) % 6) / 2, 0, Math.PI * 2);
         g.fill();
       }
       g.globalAlpha = 1;
       if (hsh % 5 === 0) {
         // a tuft: a few blades
         const tx = x + 6 + (hsh >>> 7) % 18, ty = y + 10 + (hsh >>> 13) % 14;
-        g.strokeStyle = hsh % 2 ? 'rgba(90, 140, 60, 0.55)' : 'rgba(20, 35, 15, 0.45)'; g.lineWidth = 1;
+        const tuftWeight = savannaWeightAt(tx, ty);
+        g.strokeStyle = mixGrassColor(hsh % 2 ? '#5a8c3c' : '#14230f', hsh % 2 ? '#c1ae5c' : '#34351b', tuftWeight);
+        g.globalAlpha = hsh % 2 ? 0.55 : 0.45; g.lineWidth = 1;
         g.beginPath();
         for (const dx of [-2, 0, 2]) { g.moveTo(tx + dx, ty); g.lineTo(tx + dx * 1.6, ty - 4 - Math.abs(dx)); }
         g.stroke();
+        g.globalAlpha = 1;
       } else if (hsh % 7 === 0) {
         g.fillStyle = 'rgba(0, 0, 0, 0.1)';
         g.fillRect(x + 4 + ((hsh >>> 8) % (TILE_SIZE - 10)), y + 4 + ((hsh >>> 14) % (TILE_SIZE - 10)), 3, 3);
       }
     }
   }
+  g.globalAlpha = 1;
 }
 
 export function drawGrassGround() {
-  drawChunks('grass', chunkRes(), () => '', paintGrass, (x0, y0, x1, y1) => {
+  drawChunks('grass', chunkRes(), grassStamp, paintGrass, (x0, y0, x1, y1) => {
     ctx.fillStyle = '#2d4a22'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   });
+}
+
+export function prewarmVisibleWorldChunks() {
+  prewarmingChunks = true;
+  const transform = ctx.getTransform();
+  const scale = getViewScale();
+  ctx.setTransform(scale, 0, 0, scale, canvas.width / 2 - camera.x * scale, canvas.height / 2 - camera.y * scale);
+  try {
+    drawGrassGround();
+    drawSand();
+  } finally {
+    ctx.setTransform(transform);
+    prewarmingChunks = false;
+  }
+
+}
+
+function grassStamp(cx, cy) {
+  const size = CHUNK * TILE_SIZE;
+  let hash = 0;
+  const margin = TILE_SIZE * 3;
+  forEachInRect(game.savannaTiles, cx * size - margin, cy * size - margin, (cx + 1) * size + margin, (cy + 1) * size + margin, tile => {
+    hash = (hash * 31 + tile.x * 7919 + tile.y * 31) | 0;
+  });
+  return String(hash);
 }
 
 // ---- Terrain that joins up

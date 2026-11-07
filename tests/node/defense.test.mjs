@@ -3,6 +3,12 @@ import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
+test('workers keep working during 30-second wave preparation and defense deploys at 15 seconds', async () => {
+  expect(await sim.preWaveWorkTiming({})).toEqual({
+    workersStillWorking: true, waveInactive: true, alertAtFifteen: true, deploySeconds: 15
+  });
+});
+
 test('ahead of a wave soldiers form squads at posts: the door first, all within the base (#14)', async () => {
   expect(await sim.deployment({})).toEqual({ squads: 3, firstPostByDoor: true, postsWithinBase: true, allAtPosts: true });
 });

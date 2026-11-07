@@ -115,5 +115,69 @@ Object.assign(window.sim, (() => {
     return { westBefore: before.includes(-1), eastAfter: after.every(side => side === 1) };
   }
 
-  return { soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn };
+  function doNotChaseEnemyCamp({ seed = 'soldiers-no-camp-chase' } = {}) {
+    setUp(seed);
+    const soldier = makeSettler(1, townHall.x + 40, townHall.y, { weapon: 'sword', role: 'soldier', speed: 0 });
+    settlers = [soldier];
+    const camp = { x: townHall.x + 700, y: townHall.y, radius: 4 };
+    game.enemyCamp = camp;
+    buildings.push({ type: 'campfire', side: 'red', enemyCampStructure: true, x: camp.x, y: camp.y, hp: 100, maxHp: 100 });
+    const campRaider = createConfiguredEnemy({ x: camp.x + 10, y: camp.y }, 'raider');
+    const waveRaider = createConfiguredEnemy({ x: townHall.x + 700, y: townHall.y + 180 }, 'raider');
+    waveRaider.fromWave = true;
+    const baseRaider = createConfiguredEnemy({ x: townHall.x + 180, y: townHall.y }, 'raider');
+    enemies = [campRaider, waveRaider, baseRaider];
+    game.waveTimer = 5;
+    const tick = createSettlerTick(1 / 60);
+    fightEnemies(soldier, tick);
+    const baseThreatChosen = soldier.fightTarget === baseRaider;
+    enemies = [campRaider];
+    soldier.fightTarget = null;
+    const campIgnored = !fightEnemies(soldier, createSettlerTick(1 / 60));
+    enemies = [waveRaider];
+    soldier.fightTarget = null;
+    game.wavePreparation = { wave: game.waveNum, stage: 'march' };
+    const waveThreatAllowed = fightEnemies(soldier, createSettlerTick(1 / 60)) && soldier.fightTarget === waveRaider;
+    return { baseThreatChosen, campIgnored, waveThreatAllowed };
+  }
+
+  function clearWaveSpawnerWhenFewEnemies({ seed = 'clear-wave-spawner' } = {}) {
+    setUp(seed);
+    const tent = { x: townHall.x + 120, y: townHall.y, hp: 100, maxHp: 100, waveActive: true };
+    const soldier = makeSettler(1, tent.x - 25, tent.y, { weapon: 'sword', role: 'soldier', speed: 0 });
+    settlers = [soldier];
+    enemies = Array.from({ length: 3 }, (_, i) => {
+      const enemy = createConfiguredEnemy({ x: townHall.x + 500 + i * 30, y: townHall.y + 400 }, 'raider');
+      enemy.fromWave = true;
+      return enemy;
+    });
+    enemyTents = [tent];
+    const tick = createSettlerTick(1 / 60);
+    const waveAssaultEnabled = tick.tentAssault;
+    clearEnemyTents(soldier, tick);
+    const activeSpawnerDamaged = tent.hp < tent.maxHp;
+    tent.waveActive = false;
+    tent.hp = tent.maxHp;
+    soldier.attackCooldown = 0;
+    const inactiveSpawnerIgnored = !clearEnemyTents(soldier, createSettlerTick(1 / 60)) && tent.hp === tent.maxHp;
+    return { waveAssaultEnabled, activeSpawnerDamaged, inactiveSpawnerIgnored };
+  }
+
+  function battleTargetsEnemies({ seed = 'soldiers-battle-target' } = {}) {
+    setUp(seed);
+    game.gameMode = 'battle';
+    const soldier = makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier', speed: 0 });
+    const enemy = createConfiguredEnemy({ x: townHall.x + 450, y: townHall.y }, 'raider');
+    settlers = [soldier];
+    enemies = [enemy];
+    const acted = fightEnemies(soldier, createSettlerTick(1 / 60));
+    return {
+      outsideBase: !isInsideBase(enemy),
+      notWaveEnemy: !enemy.fromWave && !enemy.waveSummoned,
+      acted,
+      targetChosen: soldier.fightTarget === enemy
+    };
+  }
+
+  return { soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn, soldiersDoNotChaseEnemyCamp: doNotChaseEnemyCamp, soldiersBattleTargetsEnemies: battleTargetsEnemies, soldiersClearWaveSpawner: clearWaveSpawnerWhenFewEnemies };
 })());

@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, forEachInRect, game, rand } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
-import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
+import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inEnemyTerritory, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
 import { noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
@@ -18,7 +18,7 @@ export function getPlacedResources(includeGrowingTrees = true) {
 
 // (#326, 27.10, 26) An ore source with a mine built on it: worked unmarked, as ore is; one without, not at all
 export function hasMine(r) {
-  return !!r.oreSpawner && game.buildings.some(b => b.type === 'mine' && b.x === r.x && b.y === r.y);
+  return !!r.oreSpawner && game.buildings.some(b => b.type === 'mine' && b.side !== 'red' && b.x === r.x && b.y === r.y);
 }
 
 export function getHarvestableResources() {
@@ -47,6 +47,7 @@ export function getWorkableResources(found = () => {}) {
   // it's within BOAR_STRAY tiles of it
   const stray = BOAR_STRAY * TILE_SIZE;
   for (const b of game.boars) {
+    if (inEnemyTerritory(b.x, b.y)) continue;
     if (inTerritory(b.x, b.y)) b.homeZone = true;
     else if (!b.homeZone || b.x < box.x0 - stray || b.x > box.x1 + stray || b.y < box.y0 - stray || b.y > box.y1 + stray) continue;
     all.push(b); found(b, game.boars);
@@ -91,6 +92,13 @@ export function finishHarvest(settler, resource, kind) {
     resource.harvestProgress = 0;
     resource.stump = { x: resource.x, y: resource.y + 10 };
     game.stumps.push(resource.stump);
+    const fellBonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
+    for (const [item, chance] of Object.entries(fellBonus || {})) {
+      if (rand() < chance) {
+        giveResourceToSettler(settler, item, 1);
+        if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+      }
+    }
     playSound('collapse', resource);
     return;
   }
@@ -104,10 +112,12 @@ export function finishHarvest(settler, resource, kind) {
     noteDay(settler, kind === 'farm' ? 'farmed' : 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
-  for (const [item, chance] of Object.entries(bonus || {})) {
-    if (rand() < chance) {
-      giveResourceToSettler(settler, item, 1);
-      if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+  if (!two) {
+    for (const [item, chance] of Object.entries(bonus || {})) {
+      if (rand() < chance) {
+        giveResourceToSettler(settler, item, 1);
+        if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+      }
     }
   }
   const list = game[def.list];
@@ -146,7 +156,6 @@ export function updatePendingRespawns(dt) {
     const pending = game.pendingRespawns[i];
     pending.timer -= dt;
     if (pending.timer > 0) continue;
-    game.pendingRespawns.splice(i, 1);
     const def = getMapResourceDef(pending.type);
     // it's back (wherever it grew): the stump left where it stood is gone
     if (pending.stump) {
@@ -155,10 +164,16 @@ export function updatePendingRespawns(dt) {
     }
     // (#299) on a big map within the frontier, round the base it was taken from (a default map's is all of it)
     const area = regrowArea();
-    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type), area);
+    let respawned = true;
+    if (def.regrow === 'spawner') respawned = respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type), area);
     else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
     else if (def.regrow === 'forest') spawnForestAware(pending.type, area);
     else spawnResource(pending.type, null, null, 180, area ? pointIn(area) : null);
+    if (!respawned) {
+      pending.timer = 1;
+      continue;
+    }
+    game.pendingRespawns.splice(i, 1);
     // things that need a tool to remove (trees, boulders, cacti, ore) block paths
     if (def.tool) invalidateAllPaths();
   }
@@ -175,10 +190,11 @@ function regrowArea() {
 export function respawnOre(kind, area = null) {
   const all = getOreSpawners(kind), there = area ? all.filter(r => r.x >= area.x0 && r.x <= area.x1 && r.y >= area.y0 && r.y <= area.y1) : all;
   const spawners = there.length ? there : all;
-  if (spawners.length === 0) return;
+  if (spawners.length === 0) return false;
   const spawner = spawners[Math.floor(rand() * spawners.length)];
   const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
-  if (spots.length === 0) return;
+  if (spots.length === 0) return false;
   placeOre(kind, spots[Math.floor(rand() * spots.length)]);
   invalidateAllPaths();
+  return true;
 }

@@ -2,18 +2,17 @@ import { test, expect } from './helpers.mjs';
 import { openGame, sim } from './helpers.mjs';
 
 // The friend's batch of fixes (#279), comment 1, part G2: the enemy camp and scouts (see tests/scenarios/g2279.js)
-test('the camp is as it was when it appeared: what the scout saw is what\'s attacked, made for the army there was when it appeared (#279, c1.14)', async ({ page }) => {
+test('the camp stays as it is: what the scout saw is what\'s attacked, whatever the army has become since (#279, c1.14)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'campFixed', {});
-  expect(r).toEqual({ scouted: true, same: true, army: r.army });
-  expect(r.army).toBeLessThan(6); // (the 3 armed after it appeared aren't in it)
+  expect(r).toEqual({ scouted: true, same: true });
   expect(errors).toEqual([]);
 });
 
-test('a retreat isn\'t at once: the party runs back to the edge it came in by, then out (#279, c1.15)', async ({ page }) => {
+test('a retreat leaves the camp at once: the party walks home, all of it (#279, c1.15)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'retreatWalks', {});
-  expect(r).toMatchObject({ stillIn: true, walked: true, out: true });
+  expect(r.out).toBe(true);
   expect(r.home).toBe(r.entry);
   expect(errors).toEqual([]);
 });

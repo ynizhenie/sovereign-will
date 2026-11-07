@@ -40,7 +40,10 @@ test('the night\'s dark is drawn small and laid over stretched; a busy wave rend
     mapSettings = { cols: 128, rows: 128 }; window.sim.start('night-busy');
     const { makeSettler } = window.sim.helpers;
     for (let i = 0; i < 20; i++) settlers.push(makeSettler(300 + i, townHall.x + (i % 5) * 30, townHall.y + 80 + Math.floor(i / 5) * 30, i % 2 ? { weapon: 'sword', role: 'soldier' } : {}));
-    waveNum = 6; startNextWave(); window.sim.run(8, { holdWaves: false });
+    // (it comes by raft, no camp on this map: on the ground when it's landed)
+    waveNum = 6; startNextWave();
+    for (let f = 0; f < 60 * 60 && !enemies.length; f++) update(1 / 60);
+    window.sim.run(8, { holdWaves: false });
     dayTime = GAME_CONFIG.daytime.morning + GAME_CONFIG.daytime.day + GAME_CONFIG.daytime.evening + 10;
     isPaused = true; render();
     return { enemies: enemies.length, dark: getDarkness() > 0.3 };

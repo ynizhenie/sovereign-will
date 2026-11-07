@@ -316,6 +316,24 @@ body.menu-world #defeat-overlay { display: none !important; }
   text-align: center;
 }
 
+.main-menu-content[data-screen="endless"] {
+  gap: 9px;
+  padding: 14px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+
+.main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
+.wave-settings.endless-world-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+  text-align: left;
+}
+.endless-world-settings .wave-options { gap: 3px; margin-top: 3px; }
+.endless-world-settings .wave-option { padding: 5px 0; font-size: 11px; }
+
 /* the game's name on the main menu's first screen (no plate behind it): the buttons in the middle of the
    screen, the name in the middle of the space above them. --title-size is its letters' height: 10% of
    the screen's width (it fits a phone's width with room to spare), at least 34px, at most 110px */
@@ -1134,11 +1152,15 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .btn.raid-go { background: #922b21; border-color: #e74c3c; color: #fff; }
 #raid-picker { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   padding: 16px; background: rgba(8, 10, 16, 0.75); }
+.raid-camp-options { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: min(560px, 94vw); }
+.raid-camp-option { min-height: 38px; max-width: 260px; white-space: normal; font-size: 12px; }
+.raid-camp-option.on { background: #1e8449; border-color: #27ae60; }
 .raid-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 560px; max-height: 50vh; overflow-y: auto; }
 .raid-unit { display: flex; align-items: center; gap: 2px; padding: 6px 8px; font-size: 18px; opacity: 0.5; }
 .raid-unit.on { opacity: 1; box-shadow: 0 0 0 2px #e74c3c; }
 .raid-hp { font-size: 11px; color: #aeb4c0; margin-left: 3px; }
 .raid-picker-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.raid-scout-status { width: 100%; text-align: center; }
 
 /* the battle's and the editor's sheets as Endless's (#255): long ones scroll; the brush sizes small, dragging wide */
 .editor-brush .sub-tab:last-child { flex: 2.2; }

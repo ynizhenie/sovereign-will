@@ -6,13 +6,14 @@
 
 import { ctx, getViewScale } from '../../../engine/platform/index.js';
 import { tileVariantHash, windSway } from '../../world/index.js';
+import { game, thingAt } from '../../../engine/world/index.js';
 import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawPebblesArt, drawStickArt, drawStumpArt, drawTreeArt, paintOn, paintVariant } from './gathering.art.js';
 
 // each kind: how many variants, the box round where it stands that its picture covers (x0, y0, x1, y1), how it's painted
 /** @type {Record<string, { variants: number, box: number[], paint: (o: any) => void }>} */
 const KINDS = {
   stump: { variants: 1, box: [-6, -5, 6, 5], paint: drawStumpArt },
-  tree: { variants: 48, box: [-22, -22, 22, 16], paint: drawTreeArt },
+  tree: { variants: 48, box: [-24, -27, 24, 16], paint: drawTreeArt },
   cactus: { variants: 2, box: [-17, -16, 17, 16], paint: drawCactusArt },
   boulder: { variants: 24, box: [-15, -14, 15, 14], paint: drawBoulderArt },
   bush: { variants: 10, box: [-15, -14, 15, 14], paint: drawBushArt },
@@ -21,6 +22,7 @@ const KINDS = {
   pebbles: { variants: 12, box: [-8, -8, 8, 8], paint: drawPebblesArt }
 };
 const MAX_SPRITES = 1500;
+const BIOME_SPRITES = new Set(['tree', 'bush', 'grass']);
 
 /** @type {Map<string, HTMLCanvasElement>} */
 const sprites = new Map();
@@ -35,7 +37,8 @@ const resOf = () => Math.min(4, Math.max(0.25, 2 ** Math.ceil(Math.log2(Math.max
 function spriteOf(kind, o, res) {
   const k = KINDS[kind], v = spriteVariantOf(kind, o);
   const apple = kind === 'tree' ? (o.apple ? (o.applesReady ? 2 : 1) : 0) : 0;
-  const key = `${kind}|${v}|${apple}|${res}`;
+  const savanna = BIOME_SPRITES.has(kind) && !!thingAt(game.savannaTiles, o.x, o.y);
+  const key = `${kind}|${v}|${apple}|${savanna ? 1 : 0}|${res}`;
   let c = sprites.get(key);
   if (c) { sprites.delete(key); sprites.set(key, c); return c; }
   const [x0, y0, x1, y1] = k.box;
@@ -44,7 +47,7 @@ function spriteOf(kind, o, res) {
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
   g.setTransform(res, 0, 0, res, 1 - x0 * res, 1 - y0 * res);
   paintOn(g);
-  try { paintVariant(kind === 'cactus' ? v : hashOf(kind, v), false, kind === 'grass' ? 0 : null); k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady }); } finally { paintVariant(null); paintOn(null); }
+  try { paintVariant(kind === 'cactus' ? v : hashOf(kind, v), false, kind === 'grass' ? 0 : null); k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady, savanna }); } finally { paintVariant(null); paintOn(null); }
   sprites.set(key, c);
   if (sprites.size > MAX_SPRITES) sprites.delete(/** @type {string} */ (sprites.keys().next().value));
   return c;

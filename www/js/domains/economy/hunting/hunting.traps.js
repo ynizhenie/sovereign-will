@@ -33,7 +33,7 @@ export function baitTrap(s, tick) {
     if (s.carrying || !((s.tool === 'none' && s.weapon === 'fist') || s.tool === 'rod')) return false;
     let trap = null, best = Infinity;
     for (const b of game.buildings) {
-      if (tick.trapAssignments.has(b) || !wantedBait(b) || game.settlers.some(o => o.carrying && o.carrying.forTrap === b)) continue;
+      if (b.side === 'red' || tick.trapAssignments.has(b) || !wantedBait(b) || game.settlers.some(o => o.carrying && o.carrying.forTrap === b)) continue;
       const d = Math.hypot(b.x - s.x, b.y - s.y);
       if (d < best) { best = d; trap = b; }
     }
@@ -97,7 +97,7 @@ export function boarToBait(b) {
   const def = ironTrapDef();
   let trap = null, best = def.lureRange;
   for (const t of game.buildings) {
-    if (t.type !== 'iron_trap' || !t.bait || t.holding || (t.rearm || 0) > 0) continue;
+    if (t.side === 'red' || t.type !== 'iron_trap' || !t.bait || t.holding || (t.rearm || 0) > 0) continue;
     const d = Math.hypot(t.x - b.x, t.y - b.y);
     if (d < best) { best = d; trap = t; }
   }

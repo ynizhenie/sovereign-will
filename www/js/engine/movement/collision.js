@@ -58,7 +58,11 @@ export const WALL_COLLISION_KINDS = [['walls', 14], ['redDoors', 14], ['rocks', 
 // (#326) an enemy goes through its own doors (the red side's): a wall to the player's
 const ENEMY_WALL_KINDS = WALL_COLLISION_KINDS.filter(([set]) => set !== 'redDoors');
 
-export function collidesWithWall(x, y, radius, isEnemy = false) {
+export function collidesWithWall(x, y, radius, isEnemy = false, allowBattleBorder = false) {
+  if (!allowBattleBorder && game.gameMode === 'battle') {
+    const edge = BORDER_MARGIN * TILE_SIZE;
+    if (x - radius < edge || y - radius < edge || x + radius > game.WORLD_WIDTH - edge || y + radius > game.WORLD_HEIGHT - edge) return true;
+  }
   if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + radius) return true;
   return collidesWithTiles(x, y, radius, isEnemy ? ENEMY_WALL_KINDS : WALL_COLLISION_KINDS);
 }

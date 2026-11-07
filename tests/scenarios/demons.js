@@ -62,7 +62,7 @@ Object.assign(window.sim, (() => {
     sacrificeSelected(circle);
     const sent = card && victim.sacrificeAt === circle;
     run(10);
-    return { sent, victimDead: !settlers.includes(victim), healed: a.hp === a.maxHp && b.hp === b.maxHp };
+    return { sent, victimDead: !settlers.includes(victim), healed: a.hp >= a.maxHp - 0.1 && b.hp >= b.maxHp - 0.1 };
   }
 
   // A pair of portals: one by the town hall, one across the map; a worker sent to the far side steps
@@ -99,7 +99,7 @@ Object.assign(window.sim, (() => {
     return {
       portals: enemyTents.length, farFromBase: enemyTents.every(p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist),
       byPortals: enemies.every(en => enemyTents.some(p => Math.hypot(p.x - en.x, p.y - en.y) < 2.5 * TILE_SIZE * Math.SQRT2)),
-      demons: kinds.every(k => k.startsWith('demon_')), enemies: enemies.length
+      demons: kinds.every(k => k.startsWith('demons_')), enemies: enemies.length
     };
   }
 

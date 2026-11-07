@@ -15,10 +15,12 @@ import { escapeHtml, getResourceIconName, iconHtml, setRichText } from './icons.
 import { getOpenSheet, openSheet } from './sheets.js';
 import { showNotification } from './toasts.js';
 import { closeSelectedCard } from './selected-card-state.js';
+import { raid, raidAction } from '../modes/endless/index.js';
 
 /** @type {any} the town hall or a building */
 let shown = null;
 let shownKey = '';
+let shownActionsKey = '';
 let sacrificeVictim = null;
 
 export function openBuildingCard(target) {
@@ -27,6 +29,7 @@ export function openBuildingCard(target) {
   closeSelectedCard();
   shown = target;
   shownKey = '';
+  shownActionsKey = '';
   openSheet('building', target === townHall ? 'hall' : `${target.type}@${target.x},${target.y}`);
   renderBuildingCard();
 }
@@ -34,6 +37,12 @@ export function openBuildingCard(target) {
 export function openHallCard() {
   openBuildingCard(townHall);
 }
+
+document.addEventListener('endless-raid-status', () => {
+  if (shown !== townHall) return;
+  shownKey = '';
+  renderBuildingCard();
+});
 
 function hallName() {
   const hall = getPlayerFaction().hall || 'hall';
@@ -91,7 +100,7 @@ export function renderBuildingCard() {
   const queue = place ? game.craftOrders.filter(o => craftPlace(o.category, o.id) === place) : [];
   const queueText = queue.map(o => `${GAME_CONFIG[o.category][o.id].label} ${o.stage === 'work' ? `${Math.floor(o.progress * 100)}%` : t('card.waiting')}`).join(', ');
   const storeKey = isHall || b.type === 'warehouse' ? JSON.stringify(b.store || {}) + packsBy(b).map(p => p.join(':')).join(',') : '';
-  const key = [queueText, storeKey, isHall, b.type, b.baitLeft, b.bait, Math.floor(storedTotal(b)), Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id].join('|');
+  const key = [queueText, storeKey, isHall, b.type, b.baitLeft, b.bait, Math.floor(storedTotal(b)), Math.ceil(b.hp), b.repairRequested, b.arrows, b.fuelLeft, b.oreLoaded, b.coalLoaded, b.ironProduced, selected && selected.id, game.enemyCamp ? 'camp' : 'no-camp'].join('|');
   if (key === shownKey) return;
   shownKey = key;
   const { name, icon } = isHall ? hallName() : { name: def ? def.label : b.type, icon: def ? def.icon : 'build' };
@@ -114,6 +123,16 @@ export function renderBuildingCard() {
   document.getElementById('card-hall').hidden = !isHall;
   // actions
   const actions = document.getElementById('card-actions');
+  const actionKey = [
+    isHall, game.gameMode, game.enemyCamps?.map(camp => camp.id).join(',') || (game.enemyCamp ? 'camp' : ''),
+    raid.phase, raid.scouting, b.hp < b.maxHp, b.repairRequested,
+    isHall && b.hp < b.maxHp ? formatCost(getHallRepairStep().left) : '',
+    !isHall && b.hp < b.maxHp ? formatCost(getRepairStep(b).cost) : '',
+    selected && selected.id, selected && selected.name, selected && selected.type,
+    def && def.sacrifice
+  ].join('|');
+  if (actionKey === shownActionsKey) return;
+  shownActionsKey = actionKey;
   actions.innerHTML = '';
   const add = (html, run, className = 'btn') => {
     const button = document.createElement('button');
@@ -122,6 +141,21 @@ export function renderBuildingCard() {
     button.addEventListener('click', () => { run(); shownKey = ''; renderBuildingCard(); });
     actions.appendChild(button);
   };
+  if (isHall && game.gameMode === 'endless' && (game.enemyCamps?.length || game.enemyCamp)) {
+    if (raid.scouting) {
+      const status = raid.phase === 'march' ? 'raid.scoutGoing'
+        : raid.phase === 'fight' ? 'raid.scoutLooking' : 'raid.scoutRunning';
+      actions.insertAdjacentHTML('beforeend', `<span class="card-hint raid-scout-status">${escapeHtml(t(status))}</span>`);
+      if (raid.phase !== 'return') add(t('raid.scoutReturn'), () => {
+        raidAction('scout-return');
+        shownKey = '';
+        renderBuildingCard();
+      });
+    } else {
+      add(t('raid.hallRaid'), () => document.dispatchEvent(new CustomEvent('endless-raid-action', { detail: 'raid' })), 'btn btn-demolish');
+      add(t('raid.hallScout'), () => document.dispatchEvent(new CustomEvent('endless-raid-action', { detail: 'scout' })));
+    }
+  }
   if (b.hp < b.maxHp && !(def && isShelter(b))) {
     const cost = isHall ? getHallRepairStep().left : getRepairStep(b).cost; // (#326: the hall's, all that's left)
     add(b.repairRequested ? t('card.repairCancel') : t('card.repair', { cost: formatCost(cost) }), () => {

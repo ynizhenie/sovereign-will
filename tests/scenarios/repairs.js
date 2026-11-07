@@ -1,11 +1,12 @@
 // Building repairs ordered by the player (#24)
 Object.assign(window.sim, (() => {
-  const { start, run, helpers: { makeSettler, placeBuilding } } = window.sim;
+  const { start, run, helpers: { makeSettler, placeBuilding, clearResources } } = window.sim;
 
   // A half-broken stone wall and one worker with plenty of stone. The wall is left alone until its
   // repair is ordered, then mended to full. Returns hp shares and the stone it cost.
   function wallRepair({ seed = 'repair-test' }) {
     start(seed);
+    clearResources();
     const wall = placeBuilding('wall_stone', townHall.x + 90, townHall.y + 90);
     wall.hp = wall.maxHp / 2;
     settlers = [makeSettler(1, townHall.x - 40, townHall.y)];
@@ -21,6 +22,7 @@ Object.assign(window.sim, (() => {
   // Damaged walls, a door and the town hall; Repair all, then two workers mend everything
   function repairAll({ seed = 'repair-all-test', seconds = 60 }) {
     start(seed);
+    clearResources();
     const damaged = [
       placeBuilding('wall_wood', townHall.x + 90, townHall.y + 90),
       placeBuilding('wall_stone', townHall.x - 90, townHall.y + 90),

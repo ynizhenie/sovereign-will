@@ -45,6 +45,7 @@ test('the undead pay bones for every building, and their blight is in the Zones 
     const humans = cost();
     sides.player.faction = 'undead'; sides.player.color = '#9b59b6'; sides.enemy.color = '#e8572a';
     window.sim.start('costs-undead');
+    window.sim.helpers.clearResources();
     const undead = cost();
     const blight = !document.querySelector('#tab-farming .undead-only').hidden && !document.getElementById('tab-btn-blight');
     // a wall ordered and built: the bones are paid

@@ -9,6 +9,24 @@ const start = async (page, faction) => {
   return errors;
 };
 
+test('a hired unit appears on a reserved cell beside the Town Hall (#326)', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    for (const resource of Object.keys(stock)) stock[resource] = 1000;
+    const before = settlers.length;
+    spawnSettler('normal');
+    const hired = settlers.at(-1);
+    return {
+      added: settlers.length === before + 1,
+      insideBuffer: isWithinTownHallBuffer(hired.x, hired.y),
+      buildAllowed: isBuildLocationAllowed(hired.x, hired.y),
+      outsideHall: Math.hypot(hired.x - townHall.x, hired.y - townHall.y) >= townHall.radius + 15
+    };
+  });
+  expect(result).toEqual({ added: true, insideBuffer: true, buildAllowed: false, outsideHall: true });
+  expect(errors).toEqual([]);
+});
+
 test('a dog is hired at the hall, keeps by a soldier, bites an enemy near, flushes a boar from the grass, gets hungry and is fed (#314)', async ({ page }) => {
   const errors = await start(page, 'humans');
   const r = await page.evaluate(() => {
@@ -67,6 +85,31 @@ test('a dog without allied soldiers advances toward an enemy instead of wanderin
     return { closer: Math.hypot(foe.x - dog.x, foe.y - dog.y) < before, activity: dog.activity };
   });
   expect(result).toEqual({ closer: true, activity: 'petFight' });
+  expect(errors).toEqual([]);
+});
+
+test('a dog ignores wave enemies during preparation and attacks once the wave starts', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    Object.assign(dog, { x: townHall.x + 180, y: townHall.y, petSleep: 0, speed: 0 });
+    settlers = [dog];
+    const foe = createNormalEnemy({ x: dog.x + 20, y: dog.y }, 'raider');
+    foe.speed = 0;
+    foe.fromWave = true;
+    foe.prepWave = game.waveNum;
+    enemies = [foe];
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    const hpBefore = foe.hp;
+    window.sim.run(1);
+    const ignoredDuringPreparation = foe.hp === hpBefore && dog.activity !== 'petFight';
+    game.wavePreparation = null;
+    delete foe.prepWave;
+    window.sim.run(1);
+    return { ignoredDuringPreparation, attackedAfterStart: foe.hp < hpBefore };
+  });
+  expect(result).toEqual({ ignoredDuringPreparation: true, attackedAfterStart: true });
   expect(errors).toEqual([]);
 });
 

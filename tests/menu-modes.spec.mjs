@@ -63,14 +63,18 @@ test('two difficulties: on Hard enemies are as strong as the player\'s own units
     document.querySelector(`.difficulty-option[data-difficulty="${level}"]`).click();
     document.getElementById('seed-input').value = 'difficulty-test';
     applySeedFromUI(); resetGame();
-    waveNum = 11; startNextWave();
-    const raider = enemies.find(e => e.enemyKey === 'raider'), brute = enemies.find(e => e.enemyKey === 'brute');
-    return { enemies: enemies.length, raider: raider && [raider.maxHp, raider.damage, raider.speed], brute: brute && brute.maxHp };
+    waveNum = 1; startNextWave();
+    const enemy = enemies[0] || enemyRafts[0].units[0]; // (no camp on the map: the wave comes by raft)
+    return { enemies: waveSize, key: enemy.enemyKey, maxHp: enemy.maxHp, damage: enemy.hitDamage, speed: enemy.speed, stats: enemyStats(enemy.enemyKey) };
   }));
-  expect(r[0].raider).toEqual([75, 50, 1]);
-  // a settler's: 100 hp, a sword's 20 a hit every 0.4 s, at a settler's pace; a brute as a giant (250)
-  expect(r[1].raider).toEqual([100, 50, 1]);
-  if (r[1].brute) expect(r[1].brute).toBe(250);
+  expect(r[0].maxHp).toBe(75);
+  expect(r[0].stats.hp).toBe(75);
+  // On Normal and Hard, a first-wave enemy uses the same battle preset and damage; only HP changes.
+  expect(r[1].key).toBe(r[0].key);
+  expect(r[1].maxHp).toBe(100);
+  expect(r[1].stats.hp).toBe(100);
+  expect(r[1].damage).toBe(r[0].damage);
+  expect(r[1].speed).toBe(r[0].speed);
   expect(r[1].enemies).toBe(r[0].enemies);
 });
 

@@ -12,7 +12,10 @@ Object.assign(window.sim, (() => {
     const sizes = [];
     for (let w = 1; w <= 12; w++) {
       let sum = 0;
-      for (let k = 0; k < 12; k++) { start('r3-wave-' + k); waveNum = w; enemies = []; startNextWave(); sum += enemies.filter(e => e.fromWave).length; }
+      for (let k = 0; k < 12; k++) {
+        start('r3-wave-' + k); waveNum = w; enemies = []; startNextWave();
+        sum += enemies.concat(...enemyRafts.map(raft => raft.units)).filter(e => e.fromWave).length;
+      }
       sizes.push(sum / 12);
     }
     return sizes;

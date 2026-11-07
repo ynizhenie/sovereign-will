@@ -1,7 +1,7 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
-test('the gear opens a labelled field for each of the ore and regrowth settings a continent uses; none of the small maps\' (#20; #326, 27.10, 18)', async ({ page }) => {
+test('the generator exposes savanna settings and the ore and regrowth settings a continent uses (#20; #326, 27.10, 18)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
@@ -20,7 +20,7 @@ test('the gear opens a labelled field for each of the ore and regrowth settings 
     return { fields: fields.length, keys, labelled, covered, lakes: !!document.querySelector('#generator-fields input[data-key="lakes"]'),
       sections: document.querySelectorAll('#generator-fields h2').length };
   });
-  expect(r.keys).toEqual(['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
+  expect(r.keys).toEqual(['savannas', 'savannaRadiusX', 'savannaRadiusY', 'ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
   expect(r.fields).toBe(r.keys.length);
   expect(r.covered).toBe(true);
   expect(r.labelled).toBe(true);
@@ -114,7 +114,7 @@ test('editor and Endless generate the same seeded terrain and starting boars', a
       game.gameMode = mode;
       game.mapSettings = { cols: size, rows: size };
       window.sim.start('editor-endless-map-parity');
-      const lists = [naturalRocks, waterTiles, desertTiles, trees, cacti, boulders, ironOres, coalOres, berryBushes, grassList, sticks, pebbles, boars];
+      const lists = [naturalRocks, waterTiles, desertTiles, savannaTiles, trees, cacti, boulders, ironOres, coalOres, berryBushes, grassList, sticks, pebbles, boars];
       return { lists: lists.map(list => list.map(o => ({ ...o }))), rng: game.worldSeed.getState() };
     };
     return [40, 128].map(size => {
@@ -187,9 +187,9 @@ test('the continent\'s own settings: its fields, labelled; they shape a continen
   const before = await make();
   await page.evaluate(() => { document.getElementById('main-menu').style.display = ''; showMenuScreen('endless'); document.getElementById('open-generator').click(); }); // (the menu is hidden while a game runs)
   const inputs = page.locator('#generator-fields input:not([data-key])');
-  // (the continent's fields in their order: the sea round it, the base's distance from it, then mountains, desert, forest, lakes)
+  // (the continent's fields in their order: sea, base distance, mountains, desert, savanna, forest, lakes)
   await inputs.nth(2).fill('0'); await inputs.nth(2).dispatchEvent('change');
-  await inputs.nth(4).fill('0'); await inputs.nth(4).dispatchEvent('change');
+  await inputs.nth(5).fill('0'); await inputs.nth(5).dispatchEvent('change');
   const after = await make();
   await page.evaluate(() => { document.getElementById('main-menu').style.display = ''; showMenuScreen('endless'); document.getElementById('open-generator').click(); });
   expect(before.rocks).toBeGreaterThan(after.rocks);

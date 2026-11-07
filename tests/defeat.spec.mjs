@@ -46,3 +46,40 @@ test('on a defeat the panel and possession go dead, the camera flies to the base
   await expect(page.locator('#defeat-overlay')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test('restart after defeat recreates the same world with its original settings', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('.map-option[data-map-size="128"]');
+  await page.click('[data-enemy-camp-count="2"]');
+  await page.click('[data-fog-enabled="false"]');
+  await page.click('[data-wave-interval="240"]');
+  await page.fill('#seed-input', 'same-world-after-defeat');
+  await page.click('#play-button');
+  const before = await page.evaluate(() => ({
+    seed: worldSeed.value,
+    size: [COLS, ROWS],
+    interval: waveInterval,
+    fog: fogEnabled,
+    camps: enemyCamps.map(({ x, y, layout, structureType, structureCount }) =>
+      [x, y, layout, structureType, structureCount]),
+    trees: trees.slice(0, 20).map(({ x, y }) => [x, y]),
+    water: waterTiles.length
+  }));
+  expect(before.camps).toHaveLength(2);
+  await page.evaluate(() => { townHall.hp = 0; });
+  await expect(page.locator('#defeat-restart')).toBeVisible();
+  await page.click('#defeat-restart');
+  await expect(page.locator('#defeat-overlay')).toBeHidden();
+  const after = await page.evaluate(() => ({
+    seed: worldSeed.value,
+    size: [COLS, ROWS],
+    interval: waveInterval,
+    fog: fogEnabled,
+    camps: enemyCamps.map(({ x, y, layout, structureType, structureCount }) =>
+      [x, y, layout, structureType, structureCount]),
+    trees: trees.slice(0, 20).map(({ x, y }) => [x, y]),
+    water: waterTiles.length
+  }));
+  expect(after).toEqual(before);
+  expect(errors).toEqual([]);
+});

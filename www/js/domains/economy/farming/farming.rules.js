@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, isWithinTownHallBuffer, markTilesChanged } from '../../../engine/world/index.js';
-import { isDesertTile, tileVariantHash, rainLevel } from '../../world/index.js';
+import { isDesertTile, isSavannaTile, tileVariantHash, rainLevel } from '../../world/index.js';
 import { showNotification } from '../../../ui/index.js';
 
 // A farm zone goes only on grass ground (not sand, water, rock, a building or a blueprint) with nothing
@@ -39,7 +39,7 @@ export function toggleFarmZone(x, y, crop) {
 export function placeAppleTrees() {
   const share = GAME_CONFIG.appleTrees.share;
   for (const t of game.trees) {
-    if (!t.isGrowing && tileVariantHash(t.x + 7, t.y + 13) % 1000 < share * 1000) makeAppleTree(t);
+    if (!t.isGrowing && !isSavannaTile(t.x, t.y) && tileVariantHash(t.x + 7, t.y + 13) % 1000 < share * 1000) makeAppleTree(t);
   }
 }
 

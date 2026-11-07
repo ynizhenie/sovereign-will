@@ -11,12 +11,13 @@ test('the editor\'s new maps are of Endless\'s sizes, one from the generator is 
   await page.locator('[data-editor-size="128"]').click();
   await page.locator('#editor-new-generated').click();
   const r = await page.evaluate(() => ({
-    size: [COLS, ROWS], gameMode, water: waterTiles.length, rocks: naturalRocks.length, trees: trees.length,
+    size: [COLS, ROWS], gameMode, water: waterTiles.length, savanna: savannaTiles.length, rocks: naturalRocks.length, trees: trees.length,
     play: !!document.getElementById('editor-play'), customMax: Number(document.getElementById('editor-map-cols').max)
   }));
   expect(r.size).toEqual([128, 128]);
   expect(r.gameMode).toBe('editor');
   expect(r.water).toBeGreaterThan(128 * 128 * 0.3); // (a continent in the sea, not a clearing)
+  expect(r.savanna).toBeGreaterThan(0);
   expect(r.rocks).toBeGreaterThan(50);
   expect(r.play).toBe(false);
   expect(r.customMax).toBe(512);
@@ -33,11 +34,11 @@ test('a big map is saved as runs, not tile by tile, and opens as it was; a map s
     document.getElementById('editor-name').value = 'Big one';
     saveEditorMap();
     const saved = loadSavedMaps()['Big one'];
-    const before = { water: waterTiles.length, sand: desertTiles.length, trees: trees.length, rocks: naturalRocks.length };
+    const before = { water: waterTiles.length, sand: desertTiles.length, savanna: savannaTiles.length, trees: trees.length, rocks: naturalRocks.length };
     const asRuns = JSON.stringify(saved.waterRuns).length;
     const oneByOne = JSON.stringify(waterTiles.map(w => [Math.floor(w.x / TILE_SIZE), Math.floor(w.y / TILE_SIZE)])).length;
     loadCustomMap(saved);
-    const after = { water: waterTiles.length, sand: desertTiles.length, trees: trees.length, rocks: naturalRocks.length };
+    const after = { water: waterTiles.length, sand: desertTiles.length, savanna: savannaTiles.length, trees: trees.length, rocks: naturalRocks.length };
     // the old way: `water` and `sand` as tiles
     const old = { ...saved, waterRuns: undefined, sandRuns: undefined, water: [[3, 3], [4, 3], [9, 9]], sand: [[5, 5]] };
     loadCustomMap(old);

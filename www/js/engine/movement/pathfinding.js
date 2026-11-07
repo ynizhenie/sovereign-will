@@ -1,26 +1,39 @@
 // Finding a way: which tiles block whom (settlers, enemies), walking distances, and A* paths
 
 import { getDefinition } from '../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, isDoor, resetTileIndex, townHall } from '../world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, isBorderZone, isDoor, resetTileIndex, townHall } from '../world/index.js';
 
 // isTileBlockedForSettler for the whole map as a Uint8Array (gy * COLS + gx), rebuilt only when the
 // world's blocking tiles change. Settler path searches read this instead of re-checking each tile.
 /** @type {{ signature: number | null, grid: Uint8Array | null }} */
 export let settlerBlockedGrid = { signature: null, grid: null };
+/** @type {{ signature: number | null, grid: Uint8Array | null }} */
+let battleOpenBlockedGrid = { signature: null, grid: null };
 
 /** @returns {Uint8Array} */
-export function getSettlerBlockedGrid() {
-  const signature = getTileIndex().signature;
-  if (settlerBlockedGrid.signature !== signature || !settlerBlockedGrid.grid || settlerBlockedGrid.grid.length !== game.COLS * game.ROWS) {
-    settlerBlockedGrid = { signature, grid: buildSettlerBlockedGrid() };
+export function getSettlerBlockedGrid(allowBattleBorder = false) {
+  const blockBattleBorder = game.gameMode === 'battle' && !allowBattleBorder;
+  const signature = (getTileIndex().signature * 31 + (blockBattleBorder ? 1 : 0)) | 0;
+  const cache = blockBattleBorder ? battleOpenBlockedGrid : settlerBlockedGrid;
+  if (cache.signature !== signature || !cache.grid || cache.grid.length !== game.COLS * game.ROWS) {
+    const updated = { signature, grid: buildSettlerBlockedGrid(blockBattleBorder) };
+    if (blockBattleBorder) battleOpenBlockedGrid = updated;
+    else settlerBlockedGrid = updated;
   }
-  return /** @type {Uint8Array} */ (settlerBlockedGrid.grid);
+  return /** @type {Uint8Array} */ ((blockBattleBorder ? battleOpenBlockedGrid : settlerBlockedGrid).grid);
 }
 
 // (#299) marked from the lists of what blocks, not by asking each tile of a big map: the same as
 // computeTileBlockedForSettler for every tile (something blocks the tile it stands in the middle of)
-function buildSettlerBlockedGrid() {
+function buildSettlerBlockedGrid(blockBattleBorder = false) {
   const grid = new Uint8Array(game.COLS * game.ROWS);
+  if (blockBattleBorder) {
+    for (let gy = 0; gy < game.ROWS; gy++) {
+      for (let gx = 0; gx < game.COLS; gx++) {
+        if (isBorderZone(gx, gy)) grid[gy * game.COLS + gx] = 1;
+      }
+    }
+  }
   const mark = o => {
     const gx = (o.x - 15) / TILE_SIZE, gy = (o.y - 15) / TILE_SIZE;
     if (Number.isInteger(gx) && Number.isInteger(gy) && gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS) grid[gy * game.COLS + gx] = 1;
@@ -44,13 +57,14 @@ function buildSettlerBlockedGrid() {
   return grid;
 }
 
-export function isTileBlockedForSettler(gx, gy) {
+export function isTileBlockedForSettler(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
-  return getSettlerBlockedGrid()[gy * game.COLS + gx] === 1;
+  return getSettlerBlockedGrid(allowBattleBorder)[gy * game.COLS + gx] === 1;
 }
 
-export function computeTileBlockedForSettler(gx, gy) {
+export function computeTileBlockedForSettler(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
+  if (game.gameMode === 'battle' && !allowBattleBorder && isBorderZone(gx, gy)) return true;
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
@@ -84,7 +98,9 @@ const nearTo = (r, index, signature, size) => !!r && r.signature === signature &
 export function getSettlerReach(settler, fullMap = false) {
   const start = getGridPos(settler.x, settler.y);
   const startIndex = start.gy * game.COLS + start.gx;
-  const signature = (getTileIndex().signature * 31 + (fullMap ? 1 : 0)) | 0;
+  const allowBattleBorder = game.gameMode === 'battle' && !!settler.panic;
+  const battle = game.gameMode === 'battle';
+  const signature = (getTileIndex().signature * 31 + (battle ? 4 : 0) + (fullMap ? 2 : 0) + (allowBattleBorder ? 1 : 0)) | 0;
   const size = game.COLS * game.ROWS;
   /** @type {Reach | undefined} */
   const using = settler.reachUse, own = settler.reachCache;
@@ -97,7 +113,7 @@ export function getSettlerReach(settler, fullMap = false) {
     if (found && found.startIndex === index && nearTo(found, startIndex, signature, size)) { settler.reachUse = found; return found.steps; }
   }
 
-  const blocked = getSettlerBlockedGrid();
+  const blocked = getSettlerBlockedGrid(allowBattleBorder);
   // (#306) the settler's own array again, with only what its last walk set cleared: making a new map's worth
   // of -1 for every settler that stepped onto a new tile was a tick's costliest work
   let steps;
@@ -161,8 +177,9 @@ function enemyMemo() {
 }
 let enemyTiles = { signature: /** @type {number | null} */ (null), hallX: 0, hallY: 0, strict: new Int8Array(0), permissive: new Int8Array(0) };
 
-export function isTileBlockedForEnemyStrict(gx, gy) {
+export function isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
+  if (game.gameMode === 'battle' && !allowBattleBorder && isBorderZone(gx, gy)) return true;
   const memo = enemyMemo(), i = gy * game.COLS + gx;
   if (memo.strict[i] === -1) memo.strict[i] = computeBlockedForEnemyStrict(gx, gy) ? 1 : 0;
   return memo.strict[i] === 1;
@@ -210,8 +227,9 @@ export function getEnemyReach() {
   return grid;
 }
 
-export function isTileBlockedForEnemyPermissive(gx, gy) {
+export function isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
+  if (game.gameMode === 'battle' && !allowBattleBorder && isBorderZone(gx, gy)) return true;
   const memo = enemyMemo(), i = gy * game.COLS + gx;
   if (memo.permissive[i] === -1) memo.permissive[i] = computeBlockedForEnemyPermissive(gx, gy) ? 1 : 0;
   return memo.permissive[i] === 1;
@@ -400,8 +418,10 @@ export function pathCost(path) {
 /**
  * @param {number} startX @param {number} startY @param {number} targetX @param {number} targetY
  * @param {boolean} [natureBlocks] @param {number | null} [maxNodes] (the tick's searches' own cap, if less)
+ * @param {boolean} [allowBattleBorder]
+ * @param {((gx: number, gy: number) => boolean) | null} [extraBlocked]
  */
-export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false, maxNodes = null) {
+export function findPathAStarPermissive(startX, startY, targetX, targetY, natureBlocks = false, maxNodes = null, allowBattleBorder = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
   const startG = getGridPos(startX, startY);
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
@@ -412,8 +432,9 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   const PATH_COST = ENEMY_PATH_COST;
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: natureBlocks
-      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy) || tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
-      : isTileBlockedForEnemyPermissive,
+      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) ||
+        tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
+      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy),
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
@@ -440,10 +461,13 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
 /**
  * @param {number} startX @param {number} startY @param {number} targetX @param {number} targetY
  * @param {boolean} [isEnemy] @param {number | null} [maxNodes] (the tick's searches' own cap, if less)
+ * @param {boolean} [allowBattleBorder] for a panicking unit fleeing the battlefield
+ * @param {((gx: number, gy: number) => boolean) | null} [extraBlocked]
  */
-export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false, maxNodes = null) {
+export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false, maxNodes = null, allowBattleBorder = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
   let startG = getGridPos(startX, startY);
   let endG = getGridPos(targetX, targetY);
+  let pathTargetX = targetX, pathTargetY = targetY;
 
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
@@ -452,9 +476,12 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false,
     return { path: [{ x: targetX, y: targetY }], isBlockedPath: false };
   }
 
-  const isBlocked = isEnemy ? isTileBlockedForEnemyStrict : isTileBlockedForSettler;
+  const isBlocked = isEnemy
+    ? (gx, gy) => isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy)
+    : (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder);
 
   if (isBlocked(endG.gx, endG.gy)) {
+    const blockedBattleBorder = game.gameMode === 'battle' && !allowBattleBorder && isBorderZone(endG.gx, endG.gy);
     let neighbors = [
       {gx: endG.gx+1, gy: endG.gy}, {gx: endG.gx-1, gy: endG.gy},
       {gx: endG.gx, gy: endG.gy+1}, {gx: endG.gx, gy: endG.gy-1}
@@ -467,28 +494,34 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false,
         if (d < minD) { minD = d; bestN = n; }
       }
     }
-    if (bestN) endG = bestN;
+    if (bestN) {
+      endG = bestN;
+      if (blockedBattleBorder) {
+        pathTargetX = bestN.gx * TILE_SIZE + 15;
+        pathTargetY = bestN.gy * TILE_SIZE + 15;
+      }
+    }
   }
 
-  const result = findGridPath(startG, endG, targetX, targetY, {
+  const result = findGridPath(startG, endG, pathTargetX, pathTargetY, {
     isBlocked,
     allowCornerCutting: false,
     isBlockedPath: false,
     maxNodes: Math.min(maxNodes || (isEnemy ? ENEMY_MAX_NODES : SETTLER_MAX_NODES), isEnemy ? ENEMY_MAX_NODES : SETTLER_MAX_NODES)
   });
-  if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY);
+  if (isEnemy && result.path.length === 0) return findPathAStarPermissive(startX, startY, targetX, targetY, false, null, allowBattleBorder, extraBlocked);
   // a long way round (to a far door): breaking through may be quicker; whichever costs less. (#326) Tried once
   // the way round is more than BREAK_DETOUR tiles longer than the straight way
   const dx = Math.abs(endG.gx - startG.gx), dy = Math.abs(endG.gy - startG.gy);
   const straight = Math.max(dx, dy) + 0.41 * Math.min(dx, dy);
   const roundabout = result.path.length === 0 || pathCost(result.path) > straight + BREAK_DETOUR;
   if (isEnemy && roundabout) {
-    const through = findPathAStarPermissive(startX, startY, targetX, targetY, true);
+    const through = findPathAStarPermissive(startX, startY, targetX, targetY, true, null, allowBattleBorder, extraBlocked);
     if (through.path.length > 0 && through.cost < pathCost(result.path)) return through;
   }
   // (#326) the player's too, through the enemy's buildings (a battle's red half, a raid's camp)
   if (!isEnemy && roundabout && (getTileIndex().redBuildings.size > 0 || getTileIndex().redDoors.size > 0)) {
-    const through = findSettlerPathThrough(startG, endG, targetX, targetY);
+    const through = findSettlerPathThrough(startG, endG, pathTargetX, pathTargetY, allowBattleBorder);
     if (through.path.length > 0 && (result.path.length === 0 || through.cost < pathCost(result.path))) return through;
   }
   return result;
@@ -504,11 +537,11 @@ const ENEMY_MAX_NODES = 3000;
 
 // (#326) A settler's way through the enemy's buildings (its walls, doors and the like count ENEMY_PATH_COST.building
 // tiles each, to break): isBlockedPath, so it strikes what's in the way (see breakWhatsInTheWay)
-function findSettlerPathThrough(startG, endG, targetX, targetY) {
+function findSettlerPathThrough(startG, endG, targetX, targetY, allowBattleBorder = false) {
   const tiles = getTileIndex();
   const isRed = (gx, gy) => { const k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`; return tiles.redBuildings.has(k) || tiles.redDoors.has(k); };
   const result = findGridPath(startG, endG, targetX, targetY, {
-    isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy) && !isRed(gx, gy),
+    isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) && !isRed(gx, gy),
     allowCornerCutting: false,
     isBlockedPath: true,
     extraCost: (x, y) => (tiles.redBuildings.has(`${x},${y}`) || tiles.redDoors.has(`${x},${y}`) ? ENEMY_PATH_COST.building : 0),
@@ -518,7 +551,7 @@ function findSettlerPathThrough(startG, endG, targetX, targetY) {
   return result;
 }
 
-export function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12) {
+export function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12, allowBattleBorder = false) {
   let distance = Math.hypot(targetX - startX, targetY - startY);
   if (distance < 1) return true;
   let steps = Math.ceil(distance / 10);
@@ -536,7 +569,7 @@ export function hasClearEnemyLine(startX, startY, targetX, targetY, radius = 12)
       let y = cy + perpY * offset;
       let gx = Math.floor(x / TILE_SIZE);
       let gy = Math.floor(y / TILE_SIZE);
-      if (isTileBlockedForEnemyStrict(gx, gy)) return false;
+      if (isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder)) return false;
     }
   }
 

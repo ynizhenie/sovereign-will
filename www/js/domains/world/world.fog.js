@@ -10,7 +10,7 @@ import { GAME_CONFIG } from '../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, townHall } from '../../engine/world/index.js';
 import { ctx } from '../../engine/platform/index.js';
 import { getDefinition } from '../../content/configs/index.js';
-import { hasTerritory } from './world.territory.js';
+import { hasTerritory, inEnemyTerritory } from './world.territory.js';
 import { isNight } from './world.daytime.js';
 
 const config = () => GAME_CONFIG.fog;
@@ -26,7 +26,7 @@ let seenBox = { gx0: 0, gy0: 0, gx1: -1, gy1: -1 };
 /** @type {HTMLCanvasElement | null} */
 let picture = null;
 
-export const hasFog = () => hasTerritory();
+export const hasFog = () => hasTerritory() && game.gameMode === 'endless' && game.fogEnabled !== false;
 
 // A new map: nothing seen but the base's start land (as big as a default map) round the hall
 export function resetFog() {
@@ -110,6 +110,7 @@ export function tickFog(dt) {
   const k = isNight() ? c.nightShare : 1;
   look(townHall.x, townHall.y, c.hallTiles * k);
   for (const b of game.buildings) {
+    if (b.side === 'red' || b.enemyCampStructure || inEnemyTerritory(b.x, b.y)) continue;
     const lit = b.type === 'torch' || (b.type === 'campfire' && ((b.fuelLeft || 0) > 0 || (b.burning || 0) > 0));
     look(b.x, b.y, (b.type === 'watchtower' ? c.towerTiles : c.buildingTiles) * (lit ? 1 : k));
   }
@@ -117,6 +118,26 @@ export function tickFog(dt) {
     if (s.hp <= 0 || s.leaving) continue; // (not one let go, #314)
     const pet = (getDefinition('settlerTypes', s.type) || {}).pet;
     look(s.x, s.y, pet ? c.settlerTiles * c.petShare : c.settlerTiles * (s.torchInHand ? 1 : k));
+  }
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  for (const camp of camps) {
+    if (game.raidCampId !== camp.id) continue;
+    const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
+    const nearbyScout = game.settlers.some(settler => settler.raider &&
+      Math.abs(getGridPos(settler.x, settler.y).gx - centre.gx) <= radius + 1 &&
+      Math.abs(getGridPos(settler.x, settler.y).gy - centre.gy) <= radius + 1);
+    if (!game.raidActive && !nearbyScout) continue;
+    const gx0 = Math.max(0, centre.gx - radius), gy0 = Math.max(0, centre.gy - radius);
+    const gx1 = Math.min(cols - 1, centre.gx + radius), gy1 = Math.min(rows - 1, centre.gy + radius);
+    for (let gy = gy0; gy <= gy1; gy++) {
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const index = gy * cols + gx;
+        seen[index] = 1;
+        explored[index] = 1;
+      }
+    }
+    box.gx0 = Math.min(box.gx0, gx0); box.gy0 = Math.min(box.gy0, gy0);
+    box.gx1 = Math.max(box.gx1, gx1); box.gy1 = Math.max(box.gy1, gy1);
   }
   seenBox = box;
   // painted again where it changed: the old box and the new

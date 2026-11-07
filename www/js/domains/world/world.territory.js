@@ -24,7 +24,7 @@ export function setTerritoryEnabled(on) { enabled = on; }
 export const hasTerritory = () => enabled && game.gameMode === 'endless';
 
 function counts(b) {
-  return !config().skip.includes(b.type);
+  return b.side !== 'red' && !b.raidPortal && !config().skip.includes(b.type);
 }
 
 export function getTerritory() {
@@ -53,9 +53,24 @@ export function getTerritory() {
 // Whether (x, y) is on the base's land (anywhere, out of Endless)
 export function inTerritory(x, y) {
   if (!hasTerritory()) return true;
+  if (inEnemyTerritory(x, y)) return false;
   const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
   if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) return false;
   return getTerritory().mask[gy * game.COLS + gx] === 1;
+}
+
+export function getTerritoryMask() {
+  return hasTerritory() ? getTerritory().mask : null;
+}
+
+export function inEnemyTerritory(x, y) {
+  const camps = game.gameMode === 'endless' ? (game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : []) : [];
+  if (!camps.length) return false;
+  const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
+  return camps.some(camp => {
+    const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
+    return Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
+  });
 }
 
 // The box round the base's land (all the map, out of Endless)
@@ -95,7 +110,7 @@ export function isOutskirts(gx, gy) {
 
 // Its edge on the ground: a soft line along the tiles' sides where the land stops (only on the screen)
 export function drawTerritory() {
-  if (!hasTerritory()) return;
+  if (!hasTerritory() && game.gameMode !== 'editor') return;
   const { mask } = getTerritory(), v = getViewRect(TILE_SIZE);
   const gx0 = Math.max(0, Math.floor(v.x0 / TILE_SIZE)), gx1 = Math.min(game.COLS - 1, Math.floor(v.x1 / TILE_SIZE));
   const gy0 = Math.max(0, Math.floor(v.y0 / TILE_SIZE)), gy1 = Math.min(game.ROWS - 1, Math.floor(v.y1 / TILE_SIZE));
@@ -114,5 +129,38 @@ export function drawTerritory() {
     }
   }
   ctx.stroke();
+  ctx.restore();
+  drawEnemyTerritory();
+}
+
+function drawEnemyTerritory() {
+  const camps = game.gameMode === 'endless'
+    ? game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : []
+    : [];
+  if (!camps.length) return;
+  const v = getViewRect(TILE_SIZE);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(231, 76, 60, 0.35)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+  for (const camp of camps) {
+    const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
+    const gx0 = Math.max(centre.gx - radius, Math.floor(v.x0 / TILE_SIZE));
+    const gx1 = Math.min(centre.gx + radius, Math.floor(v.x1 / TILE_SIZE));
+    const gy0 = Math.max(centre.gy - radius, Math.floor(v.y0 / TILE_SIZE));
+    const gy1 = Math.min(centre.gy + radius, Math.floor(v.y1 / TILE_SIZE));
+    if (gx0 > gx1 || gy0 > gy1) continue;
+    const at = (gx, gy) => Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
+    ctx.beginPath();
+    for (let gy = gy0; gy <= gy1; gy++) {
+      for (let gx = gx0; gx <= gx1; gx++) {
+        if (!at(gx, gy)) continue;
+        const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
+        if (!at(gx, gy - 1)) { ctx.moveTo(x, y); ctx.lineTo(x + TILE_SIZE, y); }
+        if (!at(gx, gy + 1)) { ctx.moveTo(x, y + TILE_SIZE); ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE); }
+        if (!at(gx - 1, gy)) { ctx.moveTo(x, y); ctx.lineTo(x, y + TILE_SIZE); }
+        if (!at(gx + 1, gy)) { ctx.moveTo(x + TILE_SIZE, y); ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE); }
+      }
+    }
+    ctx.stroke();
+  }
   ctx.restore();
 }

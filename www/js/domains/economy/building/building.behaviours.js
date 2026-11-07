@@ -15,7 +15,7 @@ import { isNight } from '../../world/index.js';
 // Pick up smelted iron and carry it home
 export function collectSmelterIron(s, tick) {
   if (!s.carrying && s.role === 'worker' && !s.isPossessed && !s.targetEquipment) {
-    let smelterWithIron = game.buildings.find(b => b.type === 'smelter' && (b.ironProduced || 0) > 0 && isBuildingJobFree(b, 'collector', s));
+    let smelterWithIron = game.buildings.find(b => b.side !== 'red' && b.type === 'smelter' && (b.ironProduced || 0) > 0 && isBuildingJobFree(b, 'collector', s));
     if (smelterWithIron) {
       claimBuildingJob(smelterWithIron, 'collector', s);
       let dist = Math.hypot(smelterWithIron.x - s.x, smelterWithIron.y - s.y);
@@ -40,7 +40,7 @@ export function supplySmelter(s, tick) {
     const loads = [['ironOre', 'oreLoaded', limits.maxOre], ['coal', 'coalLoaded', limits.maxCoal]];
     for (const [resource, loaded, max] of loads) {
       if (stock[resource] <= 0) continue;
-      const smelter = game.buildings.find(b => b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
+      const smelter = game.buildings.find(b => b.side !== 'red' && b.type === 'smelter' && (b[loaded] || 0) < max && isBuildingJobFree(b, 'supplier', s));
       if (!smelter) continue;
       claimBuildingJob(smelter, 'supplier', s);
       return fetchFromStorage(s, resource, tick.dt, () => {
@@ -118,7 +118,7 @@ export function repairBuilding(s, tick) {
   // only one it can walk up to (#232: a wall behind spikes had them trying for good)
   const reach = getSettlerReach(s);
   for (const b of game.buildings) {
-    if (!needsRepair(b) || (tick.repairAssignments.get(b) || 0) >= 2 || !canAfford(getRepairStep(b).cost)) continue;
+    if (b.side === 'red' || !needsRepair(b) || (tick.repairAssignments.get(b) || 0) >= 2 || !canAfford(getRepairStep(b).cost)) continue;
     if (getReachDistanceToResource(reach, b) === Infinity) continue;
     const d = Math.hypot(b.x - s.x, b.y - s.y);
     if (d < best) { best = d; target = b; }
