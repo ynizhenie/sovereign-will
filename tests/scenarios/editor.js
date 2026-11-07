@@ -5,9 +5,9 @@ Object.assign(window.sim, (() => {
   const onTile = (list, gx, gy) => list.find(o => o.x === at(gx, gy).x && o.y === at(gx, gy).y);
 
   // Make a small map by hand, save it, then play it in Endless. Returns what the played world has.
-  function handMadeMap() {
+  async function handMadeMap() {
     localStorage.removeItem('sovereign-will-maps');
-    startEditor({ cols: 30, rows: 30, generate: false });
+    await startEditor({ cols: 30, rows: 30, generate: false });
     const empty = trees.length + waterTiles.length + naturalRocks.length + buildings.length;
     use('water', 6, 6, 3);       // a 3×3 pond...
     use('erase', 7, 7);          // ...with a hole in the middle
@@ -46,9 +46,9 @@ Object.assign(window.sim, (() => {
   }
 
   // A generated map opened in the editor, saved and loaded again is the same map
-  function generatedRoundTrip({ seed = 'editor-round-trip' } = {}) {
+  async function generatedRoundTrip({ seed = 'editor-round-trip' } = {}) {
     document.getElementById('seed-input').value = seed;
-    startEditor({ cols: 40, rows: 40, generate: true });
+    await startEditor({ cols: 40, rows: 40, generate: true });
     const before = serializeMap('x');
     const beachesBefore = beachTiles.length;
     resetGame(before);
@@ -63,10 +63,10 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  function generatedSavedMapWithoutCameraMove({ seed = 'editor-beaches-no-pan' } = {}) {
+  async function generatedSavedMapWithoutCameraMove({ seed = 'editor-beaches-no-pan' } = {}) {
     game.mapSettings = { cols: 40, rows: 40 };
     document.getElementById('seed-input').value = seed;
-    startEditor({ cols: 40, rows: 40, generate: true });
+    await startEditor({ cols: 40, rows: 40, generate: true });
     document.getElementById('editor-name').value = 'No camera beach test';
     const saved = saveEditorMap();
     const maps = loadSavedMaps();
@@ -85,8 +85,8 @@ Object.assign(window.sim, (() => {
   }
 
   // The same tool on a tile that has its thing clears it; another thing replaces it (#143)
-  function toggleClear() {
-    startEditor({ cols: 30, rows: 30, generate: false });
+  async function toggleClear() {
+    await startEditor({ cols: 30, rows: 30, generate: false });
     use('tree', 6, 6); use('tree', 6, 6);
     const treeCleared = trees.length === 0;
     use('tree', 6, 6); use('apple_tree', 6, 6);
@@ -99,8 +99,8 @@ Object.assign(window.sim, (() => {
     return { treeCleared, replaced, sandCleared, pondCleared };
   }
 
-  function outpostCamps() {
-    startEditor({ cols: 128, rows: 128, generate: false });
+  async function outpostCamps() {
+    await startEditor({ cols: 128, rows: 128, generate: false });
     use('outpost', 36, 64); use('outpost', 92, 64);
     const map = serializeMap('outposts');
     leaveEditor();

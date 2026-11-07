@@ -15,7 +15,7 @@ import { isWaterReachable, timeOfPhase } from '../../domains/world/index.js';
 import { closeOverlays, runLoading, showNotification } from '../../ui/index.js';
 import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/index.js';
 import { makeAppleTree } from '../../domains/economy/farming/index.js';
-import { exitToMainMenu, resetGame } from '../../app/index.js';
+import { exitToMainMenu, resetGameSteps } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { setMapSource, startGame } from '../endless/index.js';
@@ -282,38 +282,44 @@ export const EDITOR_LISTS = ['trees', 'cacti', 'boulders', 'grassList', 'berryBu
 // ---- Opening and leaving the editor
 
 // source: { map } a saved map, or { cols, rows, generate } a new one (generate: from the generator, else empty)
-export function startEditor(source) {
+let startingEditor = false;
+export async function startEditor(source) {
+  if (startingEditor) return;
+  startingEditor = true;
   game.gameMode = 'editor';
-  if (source.map) {
-    editor.name = source.map.name;
-    editor.faction = source.map.faction || 'humans';
-    editor.startTime = source.map.startTime || 'day';
-    resetGame(source.map);
-    void runLoading('loading.world', (function* () { yield 1; })());
-  } else {
-    // a generated map: the editor's own seed, the generator's settings (its gear), the size picked here
-    editor.name = '';
-    editor.startTime = 'day';
-    const endlessSize = game.mapSettings;
-    game.mapSettings = { cols: source.cols, rows: source.rows };
-    applySeedFromUI();
-    resetGame(source.generate ? null : { cols: source.cols, rows: source.rows });
-    void runLoading('loading.world', (function* () { yield 1; })());
+  const endlessSize = game.mapSettings;
+  try {
+    if (source.map) {
+      editor.name = source.map.name;
+      editor.faction = source.map.faction || 'humans';
+      editor.startTime = source.map.startTime || 'day';
+    } else {
+      // a generated map: the editor's own seed, the generator's settings (its gear), the size picked here
+      editor.name = '';
+      editor.startTime = 'day';
+      game.mapSettings = { cols: source.cols, rows: source.rows };
+      applySeedFromUI();
+    }
+    const map = source.map || (source.generate ? undefined : { cols: source.cols, rows: source.rows });
+    await runLoading('loading.world', resetGameSteps(map), () => {
+      game.dayTime = timeOfPhase(editor.startTime);
+      game.settlers = []; game.enemies = []; game.corpses = [];
+      game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
+      resetTileIndex();
+      setZoom(0); clampCamera();
+      game.gameStarted = true;
+      document.getElementById('main-menu').style.display = 'none';
+      document.body.classList.add('editor-mode');
+      closeOverlays();
+      document.getElementById('editor-name').value = editor.name;
+      undoStack.length = 0; redoStack.length = 0;
+      updateHistoryButtons();
+      renderEditorPanel();
+    });
+  } finally {
     game.mapSettings = endlessSize;
+    startingEditor = false;
   }
-  game.dayTime = timeOfPhase(editor.startTime);
-  game.settlers = []; game.enemies = []; game.corpses = [];
-  game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
-  resetTileIndex();
-  setZoom(0); clampCamera();
-  game.gameStarted = true;
-  document.getElementById('main-menu').style.display = 'none';
-  document.body.classList.add('editor-mode');
-  closeOverlays();
-  document.getElementById('editor-name').value = editor.name;
-  undoStack.length = 0; redoStack.length = 0;
-  updateHistoryButtons();
-  renderEditorPanel();
 }
 
 export function leaveEditor() {

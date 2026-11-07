@@ -12,6 +12,8 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('.editor-start-options .menu-button-primary')).toHaveCount(2);
   await page.locator('[data-editor-size="128"]').click();
   await page.locator('#editor-new-empty').click();
+  await expect(page.locator('#loading-screen')).toBeVisible();
+  await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock
   await expect(page.locator('[data-arg="tab-build"]')).toBeHidden();
   await page.locator('[data-editor-category="terrain"]').click(); // its sheet
@@ -96,6 +98,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
 
   // open it again: the water is still there
   await page.locator('#editor-map-list [data-map="Озерцо"]').click();
+  await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   expect(await page.evaluate(() => [waterTiles.length, savannaTiles.length, COLS])).toEqual([10, 1, 128]);
   expect(await page.evaluate(() => getDayPhase())).toBe('night');
   await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)

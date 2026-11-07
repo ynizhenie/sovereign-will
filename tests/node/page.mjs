@@ -17,7 +17,7 @@ const byId = id => { if (!elements.has(id)) elements.set(id, element()); return 
 const store = new Map();
 Object.assign(globalThis, {
   window: globalThis,
-  document: new Proxy({ getElementById: byId, querySelector: () => element(), querySelectorAll: () => [], createElement: () => element(), body: element() },
+  document: new Proxy({ getElementById: id => id === 'loading-screen' ? null : byId(id), querySelector: () => element(), querySelectorAll: () => [], createElement: () => element(), body: element() },
     { get: (o, k) => (k in o ? o[k] : nothing) }),
   localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) },
   requestAnimationFrame: () => 0,

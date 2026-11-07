@@ -32,8 +32,8 @@ test('the same tool again clears the tile; another thing replaces it (#143)', as
   expect(await sim.toggleClear()).toEqual({ treeCleared: true, replaced: true, sandCleared: true, pondCleared: true });
 });
 
-test('editor outposts become enemy camps at their marked tiles; no markers means no camps', () => {
-  expect(sim.outpostCamps({})).toEqual({
+test('editor outposts become enemy camps at their marked tiles; no markers means no camps', async () => {
+  expect(await sim.outpostCamps({})).toEqual({
     markersSaved: 2, placed: [[36, 64], [92, 64]], none: true
   });
 });
