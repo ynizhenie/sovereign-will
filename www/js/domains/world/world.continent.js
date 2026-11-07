@@ -6,7 +6,7 @@
 // with rock and ore near by. A smaller map is made as before (world.generator.js).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { DEFAULT_MAP_TILES, TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall } from '../../engine/world/index.js';
+import { DEFAULT_MAP_TILES, TILE_SIZE, game, getGridPos, isWithinTownHallResourceBuffer, rand, townHall } from '../../engine/world/index.js';
 import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
@@ -176,7 +176,7 @@ export function* generateContinent() {
   // Lakes also stay clear of the hall. Move them, rather than leaving a gap in the generated shoreline.
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
-      if (biome[at(gx, gy)] !== LAKE || !isWithinTownHallBuffer(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15)) continue;
+      if (biome[at(gx, gy)] !== LAKE || !isWithinTownHallResourceBuffer(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15)) continue;
       biome[at(gx, gy)] = GRASS;
       for (let attempt = 0; attempt < 200; attempt++) {
         const replacementX = Math.floor(rand() * cols), replacementY = Math.floor(rand() * rows);
