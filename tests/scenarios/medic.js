@@ -63,8 +63,8 @@ Object.assign(window.sim, (() => {
     selectedSettler = null;
     stock.leather = 3; stock.herbs = 2;
     window.sim.helpers.placeWorkshop();
-    assignTool('medbag'); // made at the workshop, into the store (#248)
-    run(10);
+    assignTool('medbag', false, settlers[2]); // made at the workshop, into the store (#248)
+    run(20);
     giveStored('tools', 'medbag'); // handed out
     run(6);
     return { medic: settlers.find(s => s.tool === 'medbag')?.id ?? null, leather: stock.leather, herbs: stock.herbs };

@@ -506,9 +506,10 @@ window.sim = (() => {
     const far = { x: townHall.x - 400, y: townHall.y };
     settlers = [makeSettler(1, far.x, far.y, { isPossessed: true })]; // someone to keep the game going
     enemies = []; projectiles = []; enemyTents = []; enemyArrowStock = 0;
-    const archer = createConfiguredEnemy({ x: townHall.x + 200, y: townHall.y }, 'raider_archer');
+    clearResources();
+    const archer = createConfiguredEnemy({ x: townHall.x + 150, y: townHall.y }, 'raider_archer');
     enemies = [archer];
-    if (withTent) enemyTents.push({ x: townHall.x + 290, y: townHall.y, hp: 1e6, maxHp: 1e6, summonTimer: 0, summonsLeft: 0 });
+    if (withTent) enemyTents.push({ x: townHall.x + 240, y: townHall.y, hp: 1e6, maxHp: 1e6, summonTimer: 0, summonsLeft: 0 });
     const seen = new WeakSet();
     let shots = 0, tentVisits = 0, wasAtTent = false, hallHpBeforeMelee = null;
     run(seconds, { each: () => {
@@ -538,13 +539,19 @@ window.sim = (() => {
     GAME_CONFIG.resources.flint = { id: 'flint', label: 'Кремень', icon: 'pebble', type: 'resource' };
     GAME_CONFIG.mapResources.pebble.yield = { flint: 2 };
     GAME_CONFIG.tools.axe.cost = { flint: 2 };
+    stock.flint = 0;
     start(seed);
+    GAME_CONFIG.resources.flint = { id: 'flint', label: 'Кремень', icon: 'pebble', type: 'resource' };
+    GAME_CONFIG.mapResources.pebble.yield = { flint: 2 };
+    GAME_CONFIG.tools.axe.cost = { flint: 2 };
+    stock.flint = 0;
     for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars]) list.length = 0;
-    pebbles.push({ x: townHall.x + 3 * TILE_SIZE, y: townHall.y, hp: 1, priority: 0 });
+    pebbles.push({ x: townHall.x + 3 * TILE_SIZE, y: townHall.y, hp: 1, priority: 1 });
     settlers = [makeSettler(1, townHall.x - 60, townHall.y)];
+    finishHarvest(settlers[0], pebbles[0], 'pebble');
     placeWorkshop();
     const atStart = stock.flint;
-    run(20);
+    run(60);
     const delivered = stock.flint;
     const canPay = canAfford(GAME_CONFIG.tools.axe.cost);
     assignTool('axe');

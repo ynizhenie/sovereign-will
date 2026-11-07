@@ -559,6 +559,12 @@ export function startNextWave(preparing = false) {
 
   // portals (the demons) have opened by themselves already; tents need builders
   if (getEnemyFaction().portalSpawns) normalEnemies = [];
+  // A raft wave may roll a preset mix with no explicitly marked tent-builder. Give one normal
+  // unit the builder role as well, so every human/undead wave can actually establish its tent or grave.
+  if (!normalEnemies.length) {
+    normalEnemies = game.enemyRafts.flatMap(raft => raft.units).filter(enemy =>
+      !enemy.pet && enemy.type === 'normal').slice(0, 1);
+  }
   tentCount = Math.min(tentCount, normalEnemies.length);
 
   for (let t = 0; t < tentCount; t++) {

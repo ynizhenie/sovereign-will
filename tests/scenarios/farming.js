@@ -30,6 +30,7 @@ Object.assign(window.sim, (() => {
   // Painting and clearing zone tiles; nothing on water
   function farmZonePainting({ seed = 'farm-paint-test' }) {
     start(seed);
+    clearResources();
     const { x, y } = nearHall(3, 0);
     toggleFarmZone(x, y, 'wheat');
     const afterWheat = farmZones.map(z => z.crop);
