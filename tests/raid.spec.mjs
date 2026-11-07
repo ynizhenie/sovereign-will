@@ -33,6 +33,25 @@ test('enemy camps have a central outpost, faction homes, and a fire keeper that 
   expect(errors).toEqual([]);
 });
 
+test('enemy camp guards patrol, pause to talk face-to-face, and show sleep marks at night', async ({ page }) => {
+  const errors = await openGame(page);
+  const routine = await sim(page, 'campRoutine', {});
+  expect(routine.guards).toBeGreaterThan(1);
+  expect(routine.moved).toBe(true);
+  expect(routine.paused).toBe(true);
+  expect(routine.patrolRadius).toBeGreaterThanOrEqual(3);
+  expect(routine.maxDistanceFromPost).toBeLessThan(120);
+  expect(routine.talkedFaceToFace, JSON.stringify(routine)).toBe(true);
+  expect(routine.talkers).toBeGreaterThan(1);
+  expect(routine.phraseCount).toBeLessThanOrEqual(6);
+  expect(routine.avoidedCampBuildings).toBe(true);
+
+  const sleep = await sim(page, 'sleepingCampGuard', {});
+  expect(sleep.sleepers).toBeGreaterThan(0);
+  expect(sleep.sleepMarks).toBe(3);
+  expect(errors).toEqual([]);
+});
+
 test('enemy outposts have distinct human, undead, and demon artwork', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'campOutpostVisuals', {});
@@ -64,6 +83,14 @@ test('boars are removed from the camp and cannot respawn inside it', async ({ pa
   const errors = await openGame(page);
   const r = await sim(page, 'campBoars', {});
   expect(r).toEqual({ existingBoarRemoved: true, noBoarRespawnedInside: true });
+  expect(errors).toEqual([]);
+});
+
+test('natural resources regrow outside enemy camp territory', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await sim(page, 'campResourceRegrowth', {});
+  expect(r.resourcesRegrew).toBe(true);
+  expect(r.noneInsideCamp).toBe(true);
   expect(errors).toEqual([]);
 });
 

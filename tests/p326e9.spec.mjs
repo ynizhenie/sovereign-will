@@ -9,10 +9,25 @@ test('the editor\'s new maps are of Endless\'s sizes, one from the generator is 
   expect(await page.locator('[data-editor-size]').evaluateAll(b => b.map(x => x.dataset.editorSize))).toEqual(['128', '192', '256', 'custom']);
   await page.locator('#mode-editor').click();
   await page.locator('[data-editor-size="128"]').click();
+  await page.evaluate(() => {
+    const fill = document.getElementById('loading-fill');
+    window.loadingWidths = [];
+    window.loadingObserver = new MutationObserver(() => window.loadingWidths.push(Number.parseFloat(fill.style.width)));
+    window.loadingObserver.observe(fill, { attributes: true, attributeFilter: ['style'] });
+  });
   await page.locator('#editor-new-generated').click();
+  await expect(page.locator('#loading-screen')).toBeVisible();
+  await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
+  const progress = await page.evaluate(() => {
+    window.loadingObserver.disconnect();
+    return window.loadingWidths;
+  });
+  expect(progress.length).toBeGreaterThan(3);
+  expect(progress.at(-1)).toBe(100);
+  expect(progress.every((value, index) => index === 0 || value >= progress[index - 1])).toBe(true);
   const r = await page.evaluate(() => ({
     size: [COLS, ROWS], gameMode, water: waterTiles.length, savanna: savannaTiles.length, rocks: naturalRocks.length, trees: trees.length,
-    play: !!document.getElementById('editor-play'), customMax: Number(document.getElementById('editor-map-cols').max)
+    play: !!document.getElementById('editor-play'), customMax: Number(document.getElementById('editor-map-cols').max), chunks: chunkStats()
   }));
   expect(r.size).toEqual([128, 128]);
   expect(r.gameMode).toBe('editor');
@@ -21,6 +36,8 @@ test('the editor\'s new maps are of Endless\'s sizes, one from the generator is 
   expect(r.rocks).toBeGreaterThan(50);
   expect(r.play).toBe(false);
   expect(r.customMax).toBe(512);
+  expect(r.chunks.pending).toBe(0);
+  expect(r.chunks.holes).toBe(0);
   expect(errors).toEqual([]);
 });
 
@@ -30,6 +47,7 @@ test('a big map is saved as runs, not tile by tile, and opens as it was; a map s
   await page.locator('#mode-editor').click();
   await page.locator('[data-editor-size="128"]').click();
   await page.locator('#editor-new-generated').click();
+  await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   const r = await page.evaluate(() => {
     document.getElementById('editor-name').value = 'Big one';
     saveEditorMap();

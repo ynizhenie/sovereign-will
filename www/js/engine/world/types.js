@@ -171,6 +171,7 @@
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
+ * @property {{ text: string, until: number }} [say] its current spoken phrase
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
@@ -182,6 +183,9 @@
  * @property {boolean} [campGuard]  defender of the persistent Endless camp; passive outside a raid
  * @property {number} [campId] the persistent camp this enemy belongs to
  * @property {number} [campTalkTimer] seconds until its next camp conversation
+ * @property {boolean} [campTalkReply] the guard has a reply queued for its next conversation
+ * @property {string} [campTalkPartnerName] the guard it is currently speaking with
+ * @property {number} [campPatrolWait] seconds before its next short patrol
  * @property {Point} [campPatrolTarget] a camp guard's current patrol destination
  * @property {{ x: number, y: number, elapsed: number }} [campPatrolProgress] progress tracking for a patrol destination
  * @property {Point} [campSleepSpot] a camp guard's assigned sleeping spot
@@ -346,6 +350,8 @@
  * @property {'endless'|'battle'|'editor'|'menu'} gameMode
  * @property {boolean} gameStarted
  * @property {boolean} loading
+ * @property {boolean} loadingRender
+ * @property {number} loadingRenderFrame
  * @property {boolean} isPaused
  * @property {string} gameDifficulty
  * @property {boolean} cardMode  Endless with cards (#255)
@@ -430,8 +436,8 @@
  * @property {number} cardsDue   waves come whose card is still to be offered
  * @property {number} cardsWave  waves counted for cards
  * @property {string[] | null} cardOffer  the cards offered now
- * @property {{ id: number, x: number, y: number, radius: number, seed: number, layout?: string, structureType?: string, structureCount?: number } | null} enemyCamp the enemy's persistent camp on the Endless map
- * @property {{ id: number, x: number, y: number, radius: number, seed: number, layout?: string, structureType?: string, structureCount?: number }[]} enemyCamps persistent enemy camps
+ * @property {{ id: number, x: number, y: number, radius: number, seed: number, layout?: string, structureType?: string, structureCount?: number, campTalkUntil?: number } | null} enemyCamp the enemy's persistent camp on the Endless map
+ * @property {{ id: number, x: number, y: number, radius: number, seed: number, layout?: string, structureType?: string, structureCount?: number, campTalkUntil?: number }[]} enemyCamps persistent enemy camps
  * @property {number} enemyCampCount number of persistent camps selected in Endless
  * @property {boolean} fogEnabled whether the Endless map's unexplored area is hidden
  * @property {number | null} raidCampId the camp currently selected for raid or scouting

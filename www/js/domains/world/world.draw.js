@@ -38,6 +38,9 @@ const MAX_PIXELS = 16e6;
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
 const drawnChunks = new Map();
+let prewarmingChunks = false;
+export const isPrewarmingChunks = () => prewarmingChunks;
+export function setPrewarmingChunks(prewarming) { prewarmingChunks = prewarming; }
 
 // (#322) Pieces are cached by map chunk. A camera pan can expose many uncached pieces at once,
 // so only one detailed chunk is painted per frame; old-size pictures or lightweight previews
@@ -52,11 +55,10 @@ let frameOf = 0;
 let framePaints = 0, framePaintMs = 0, framePaintLimit = STILL_PAINTS_PER_FRAME, framePaintLayer = 'grass', priorityPassed = false;
 let previousView = null, previousScale = 0;
 let cacheWorldEpoch = -1;
-let prewarmingChunks = false;
 // the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
 // painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
 // `holes` are uncovered base-ground pieces. `pending` also counts chunks still shown from a light preview.
-const stats = { holes: 0, late: 0, pending: 0 };
+const stats = { holes: 0, late: 0, pending: 0, warmReady: 0, warmTotal: 0 };
 export const chunkStats = () => ({ ...stats });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
@@ -72,7 +74,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     drawnChunks.clear();
     cacheWorldEpoch = epoch;
     previousView = null; previousScale = 0;
-    stats.holes = 0; stats.late = 0; stats.pending = 0;
+    stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0;
     // These derived indexes are tied to world lists and may have identical lengths on a new map.
     sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
     terrainStamps = { lists: [], stamps: new Map() };
@@ -86,15 +88,13 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   if (layer === 'grass') {
     const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
     previousView = v; previousScale = scale;
-    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
-    if (prewarmingChunks) framePaintLimit = Number.MAX_SAFE_INTEGER;
+    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
     if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
     // is useful only during movement, when a coarse first pass keeps the pan responsive.
     framePaintLayer = moving ? layers[(frameOf - 1) % layers.length] : layers[0];
   } // (the first layer of a frame)
-  if (prewarmingChunks) framePaints = 0, framePaintLimit = Number.MAX_SAFE_INTEGER;
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
   const m = target.getTransform();
@@ -104,8 +104,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
-  const cx0 = prewarmingChunks ? 0 : Math.max(0, Math.floor(v.x0 / size)), cx1 = prewarmingChunks ? lastX : Math.min(lastX, Math.floor(v.x1 / size));
-  const cy0 = prewarmingChunks ? 0 : Math.max(0, Math.floor(v.y0 / size)), cy1 = prewarmingChunks ? lastY : Math.min(lastY, Math.floor(v.y1 / size));
+  const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
+  const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
   /** @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @param {string} now */
   const painted = (cx, cy, x0, y0, x1, y1, chunk, now) => {
     const startedAt = performance.now();
@@ -125,10 +125,11 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
       for (let cx = Math.max(0, cx0 - AHEAD); cx <= Math.min(lastX, cx1 + AHEAD); cx++) {
         const shown = cx >= cx0 && cx <= cx1 && cy >= cy0 && cy <= cy1;
         if (shown === ahead) continue;
+        if (shown) stats.warmTotal++;
         const key = `${res}|${cx},${cy}`;
         let chunk = chunks.get(key);
         const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
-        const free = framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed);
+        const free = prewarmingChunks || (framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed));
         const invalidated = typeof stamp.dirty === 'function' && stamp.dirty(cx, cy);
         // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
         if (!shown) {
@@ -143,6 +144,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (chunk) chunks.delete(key); // (to the end: the most recently shown)
         if (!free) {
           if (chunk && (!invalidated || keepOld)) {
+            if (!invalidated) stats.warmReady++;
+            else stats.pending++;
             chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key);
           } else if (keepOld && oldPicture(chunks, cx, cy)) {
             blit(oldPicture(chunks, cx, cy), x0, y0, x1, y1);
@@ -161,7 +164,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         }
         const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
         if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now))); framePaints++; stats.late++; }
-        if (chunk) { chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key); }
+        if (chunk) { stats.warmReady++; chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key); }
       }
     }
   }
@@ -318,7 +321,6 @@ export function drawGrassGround() {
 }
 
 export function prewarmVisibleWorldChunks() {
-  prewarmingChunks = true;
   const transform = ctx.getTransform();
   const scale = getViewScale();
   ctx.setTransform(scale, 0, 0, scale, canvas.width / 2 - camera.x * scale, canvas.height / 2 - camera.y * scale);
@@ -327,9 +329,7 @@ export function prewarmVisibleWorldChunks() {
     drawSand();
   } finally {
     ctx.setTransform(transform);
-    prewarmingChunks = false;
   }
-
 }
 
 function grassStamp(cx, cy) {

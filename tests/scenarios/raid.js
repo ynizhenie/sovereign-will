@@ -187,7 +187,8 @@ Object.assign(window.sim, (() => {
     const centreGrid = getGridPos(camp.x, camp.y), outpostGrid = getGridPos(outpost.x, outpost.y);
     const fireGrid = getGridPos(fire.x, fire.y);
     const outpostAtCenter = outpostGrid.gx === centreGrid.gx && outpostGrid.gy === centreGrid.gy;
-    const fireBesideOutpost = Math.abs(fireGrid.gx - outpostGrid.gx) + Math.abs(fireGrid.gy - outpostGrid.gy) === 1;
+    const fireDistance = Math.max(Math.abs(fireGrid.gx - outpostGrid.gx), Math.abs(fireGrid.gy - outpostGrid.gy));
+    const fireBesideOutpost = fireDistance >= 2 && fireDistance <= 3;
     fire.fuelLeft = 29;
     step(2);
     const keeperWaitsUntilLow = keepers.length === 1 && keepers[0].campFuelLoad === undefined &&
@@ -209,6 +210,82 @@ Object.assign(window.sim, (() => {
       initialGuardTypeCount: new Set(initialGuards.map(enemy => enemy.enemyKey)).size, advancedPresetsAvailable,
       outpostAtCenter, fireBesideOutpost, infiniteOutpostFuel, keeperWaitsUntilLow,
       fireMaintained, keeperStaysByFire, keeperAtPost, keeperNotCarryingFuel, zoneExcluded, storageExcluded, soldierPatrolRadiusStable, playerFuelUnchanged
+    };
+  }
+
+  function campRoutine({ seed = 'camp-routine' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    createEnemyCamp();
+    const guards = enemies.filter(enemy => enemy.campGuard && enemy.campId === enemyCamp.id && enemy.hp > 0);
+    const last = new Map(guards.map(guard => [guard, { x: guard.x, y: guard.y }]));
+    const still = new Map(guards.map(guard => [guard, 0]));
+    let moved = false, paused = false, talkedFaceToFace = false, patrolRadius = 0;
+    const talkers = new Set();
+    const lastSay = new Map();
+    let phraseCount = 0, maxDistanceFromPost = 0, avoidedCampBuildings = true;
+    const campStructureTiles = [
+      ...buildings.filter(building => building.enemyCampStructure),
+      ...enemyTents.filter(tent => tent.campStructure)
+    ].map(structure => getGridPos(structure.x, structure.y));
+    const centre = getGridPos(enemyCamp.x, enemyCamp.y);
+    const faces = (guard, other) => {
+      const expected = Math.atan2(other.y - guard.y, other.x - guard.x);
+      const difference = Math.atan2(Math.sin((guard.facing || 0) - expected), Math.cos((guard.facing || 0) - expected));
+      return Math.abs(difference) < 0.6;
+    };
+    for (let frame = 0; frame < 90 * 60; frame++) {
+      update(1 / 60);
+      for (const guard of guards) {
+        maxDistanceFromPost = Math.max(maxDistanceFromPost,
+          Math.hypot(guard.x - guard.guard.x, guard.y - guard.guard.y));
+        const guardGrid = getGridPos(guard.x, guard.y);
+        avoidedCampBuildings = avoidedCampBuildings &&
+          !campStructureTiles.some(tile => tile.gx === guardGrid.gx && tile.gy === guardGrid.gy);
+        const patrol = guard.campPatrolTarget || guard;
+        const grid = getGridPos(patrol.x, patrol.y);
+        patrolRadius = Math.max(patrolRadius, Math.abs(grid.gx - centre.gx), Math.abs(grid.gy - centre.gy));
+        const previous = last.get(guard);
+        const distance = Math.hypot(guard.x - previous.x, guard.y - previous.y);
+        if (distance > 2) { moved = true; still.set(guard, 0); }
+        else {
+          still.set(guard, still.get(guard) + 1);
+          if (still.get(guard) >= 120) paused = true;
+        }
+        last.set(guard, { x: guard.x, y: guard.y });
+        if (!guard.say || guard.say.until < game.pathTick) continue;
+        const previousSay = lastSay.get(guard);
+        if (!previousSay || previousSay.until !== guard.say.until) phraseCount++;
+        lastSay.set(guard, guard.say);
+        talkers.add(guard);
+        const partner = guards.find(other => other !== guard && Math.hypot(other.x - guard.x, other.y - guard.y) < TILE_SIZE * 4);
+        if (partner && faces(guard, partner) && faces(partner, guard)) talkedFaceToFace = true;
+      }
+    }
+    return {
+      guards: guards.length, moved, paused, talkedFaceToFace, patrolRadius, talkers: talkers.size,
+      phraseCount, maxDistanceFromPost, avoidedCampBuildings
+    };
+  }
+
+  function sleepingCampGuard({ seed = 'sleeping-camp-guard' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    createEnemyCamp();
+    game.dayTime = timeOfPhase('night');
+    step(35);
+    const sleeper = enemies.find(enemy => enemy.campGuard && enemy.asleep);
+    if (!sleeper) return { sleepers: 0, sleepMarks: 0 };
+    const previous = ctx.fillText;
+    let sleepMarks = 0;
+    ctx.fillText = function (text, ...args) {
+      if (text === 'z') sleepMarks++;
+      return previous.call(this, text, ...args);
+    };
+    try { drawEnemy(sleeper); } finally { ctx.fillText = previous; }
+    return {
+      sleepers: enemies.filter(enemy => enemy.campGuard && enemy.asleep).length,
+      sleepMarks
     };
   }
 
@@ -266,6 +343,29 @@ Object.assign(window.sim, (() => {
       existingBoarRemoved: afterNormalize,
       noBoarRespawnedInside: boars.length === countBeforeSpawn &&
         boars.every(boar => !inEnemyTerritory(boar.x, boar.y))
+    };
+  }
+
+  function campResourceRegrowth({ seed = 'camp-resource-regrowth' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    createEnemyCamp();
+    const camp = { ...enemyCamp };
+    const countResources = () => trees.length + cacti.length + boulders.length + grassList.length +
+      berryBushes.length + sticks.length + pebbles.length + ironOres.length + coalOres.length + naturalRocks.length + boars.length;
+    const before = countResources();
+    pendingRespawns.length = 0;
+    for (let i = 0; i < 20; i++) {
+      pendingRespawns.push({ type: 'berry_bush', nearX: camp.x, nearY: camp.y, stump: null, timer: 0 });
+    }
+    updatePendingRespawns(1);
+    const resources = [
+      ...trees, ...cacti, ...boulders, ...grassList, ...berryBushes, ...sticks, ...pebbles,
+      ...ironOres, ...coalOres, ...naturalRocks, ...boars
+    ];
+    return {
+      resourcesRegrew: countResources() > before,
+      noneInsideCamp: resources.every(resource => !inEnemyTerritory(resource.x, resource.y))
     };
   }
 
@@ -514,7 +614,7 @@ Object.assign(window.sim, (() => {
 
   return {
     campOpens, intoCamp, raidOutcome, scoutTheCamp, campFogVisibility, enemyCampStructuresDontRevealFog,
-    campInfrastructure, campOutpostVisuals, campActivity, campBoars, retreatFromStaging,
+    campInfrastructure, campRoutine, sleepingCampGuard, campOutpostVisuals, campActivity, campBoars, campResourceRegrowth, retreatFromStaging,
     raidPetAndCargo, stagingShelterPayment, raidAutoDemolition, demonRaidPortalPlacement,
     undeadCampNoFire, scoutThreatAndBaseWork, raidWithoutCampAndScoutSelection, allCampTerritories
   };

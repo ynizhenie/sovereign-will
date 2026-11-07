@@ -192,7 +192,7 @@ export function respawnOre(kind, area = null) {
   const spawners = there.length ? there : all;
   if (spawners.length === 0) return false;
   const spawner = spawners[Math.floor(rand() * spawners.length)];
-  const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
+  const spots = getOreSpotsAround(spawner, getOreSpawnerRadius()).filter(spot => !inEnemyTerritory(spot.x, spot.y));
   if (spots.length === 0) return false;
   placeOre(kind, spots[Math.floor(rand() * spots.length)]);
   invalidateAllPaths();

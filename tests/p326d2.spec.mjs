@@ -72,15 +72,24 @@ test('the loading screen: a bar over the menu scene while a world is made, the g
     const screen = document.getElementById('loading-screen'), fill = document.getElementById('loading-fill');
     const seen = [];
     await runLoading('loading.world', (function* () {
-      yield 0.3; seen.push({ shown: !screen.hidden, loading: game.loading, width: fill.style.width });
-      yield 0.8; seen.push({ shown: !screen.hidden, loading: game.loading, width: fill.style.width });
+      yield 0.3; seen.push({ shown: !screen.hidden, loading: game.loading, width: fill.style.width,
+        background: getComputedStyle(screen).backgroundColor, zIndex: getComputedStyle(screen).zIndex,
+        flag: getComputedStyle(document.getElementById('menu-flags')).display,
+        title: getComputedStyle(document.getElementById('loading-title')).color });
+      yield 0.8; seen.push({ shown: !screen.hidden, loading: game.loading, width: fill.style.width,
+        background: getComputedStyle(screen).backgroundColor, zIndex: getComputedStyle(screen).zIndex,
+        flag: getComputedStyle(document.getElementById('menu-flags')).display,
+        title: getComputedStyle(document.getElementById('loading-title')).color });
     })());
     // the game's own start goes through it too: the world is made in steps
     let steps = 0;
     for (const share of resetGameSteps()) { steps++; if (share > 1) steps = -1e9; }
     return { seen, after: { shown: !screen.hidden, loading: game.loading }, steps, text: document.getElementById('loading-title').textContent };
   });
-  expect(r.seen).toEqual([{ shown: true, loading: true, width: '30%' }, { shown: true, loading: true, width: '80%' }]);
+  expect(r.seen).toEqual([
+    { shown: true, loading: true, width: '30%', background: 'rgb(0, 0, 0)', zIndex: '20000', flag: 'none', title: 'rgb(255, 255, 255)' },
+    { shown: true, loading: true, width: '80%', background: 'rgb(0, 0, 0)', zIndex: '20000', flag: 'none', title: 'rgb(255, 255, 255)' }
+  ]);
   expect(r.after).toEqual({ shown: false, loading: false });
   expect(r.steps).toBeGreaterThan(5);
   expect(r.text).not.toBe('loading.world');

@@ -37,8 +37,8 @@ test('battles always use automatic combat; the auto-battle option is absent (#25
 
 test('the editor: a 5×5 brush; undo and redo; clearing asks first (#255)', async ({ page }) => {
   await openGame(page);
-  const r = await page.evaluate(([p]) => {
-    startEditor({ cols: 40, rows: 40, generate: false });
+  const r = await page.evaluate(async ([p]) => {
+    await startEditor({ cols: 40, rows: 40, generate: false });
     const trees = () => game.trees.length;
     editor.tool = 'tree'; editor.brush = 5;
     editorTap(p.x, p.y);
@@ -56,8 +56,8 @@ test('the editor: a 5×5 brush; undo and redo; clearing asks first (#255)', asyn
 test('the editor\'s Play: saved, then Endless on that map (#255)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => localStorage.removeItem('sovereign-will-maps'));
-  await page.evaluate(([p]) => {
-    startEditor({ cols: 30, rows: 30, generate: false });
+  await page.evaluate(async ([p]) => {
+    await startEditor({ cols: 30, rows: 30, generate: false });
     editor.tool = 'boulder'; editorTap(p.x, p.y);
     document.getElementById('editor-name').value = 'Play test';
     playEditorMap();

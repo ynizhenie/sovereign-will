@@ -112,25 +112,33 @@ export function drawTownHall() {
   }
 }
 
+// The faint tile showing where a building will stand.
+export function drawBlueprintTile(type, x, y) {
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  if (type === 'demolish_building') ctx.fillStyle = '#e74c3c';
+  else if (type === 'wall_wood') ctx.fillStyle = '#8e5a2b';
+  else if (type === 'wall_stone' || type === 'grave') ctx.fillStyle = '#7f8c8d';
+  else if (type === 'door' || type === 'iron_door') ctx.fillStyle = '#a0522d';
+  else if (type === 'wheat') ctx.fillStyle = '#f1c40f';
+  else if (type === 'tent') ctx.fillStyle = '#e67e22';
+  else if (type === 'portal') ctx.fillStyle = '#8e44ad';
+  else if (type === 'smelter') ctx.fillStyle = '#c0392b';
+  else if (type === 'watchtower') ctx.fillStyle = '#607d8b';
+  else if (type === 'sapling') ctx.fillStyle = '#2ecc71';
+  else if (type === 'warehouse') ctx.fillStyle = '#a47148';
+  else if (type === 'demon_den') ctx.fillStyle = '#8e44ad';
+  ctx.fillRect(x - 14, y - 14, 28, 28);
+  ctx.restore();
+}
+
 // Blueprints: their shape, the materials still to come, the work done
 export function drawBlueprints() {
   const v = getViewRect(60), visible = [];
   forEachInRect(game.blueprints, v.x0, v.y0, v.x1, v.y1, bp => visible.push(bp));
   visible.forEach(bp => {
     if (bp.replaces) return; // (an upgrade: over the building, drawUpgrades)
-    ctx.save(); ctx.globalAlpha = 0.5;
-    if (bp.type === 'demolish_building') ctx.fillStyle = '#e74c3c';
-    else if (bp.type === 'wall_wood') ctx.fillStyle = '#8e5a2b';
-    else if (bp.type === 'wall_stone') ctx.fillStyle = '#7f8c8d';
-    else if (bp.type === 'door' || bp.type === 'iron_door') ctx.fillStyle = '#a0522d';
-    else if (bp.type === 'wheat') ctx.fillStyle = '#f1c40f';
-    else if (bp.type === 'tent') ctx.fillStyle = '#e67e22';
-    else if (bp.type === 'smelter') ctx.fillStyle = '#c0392b';
-    else if (bp.type === 'watchtower') ctx.fillStyle = '#607d8b';
-    else if (bp.type === 'sapling') ctx.fillStyle = '#2ecc71';
-    else if (bp.type === 'warehouse') ctx.fillStyle = '#a47148';
-    ctx.fillRect(bp.x - 14, bp.y - 14, 28, 28);
-    ctx.restore();
+    drawBlueprintTile(bp.type, bp.x, bp.y);
 
     // materials still to be brought from storage: an orange bar of what's here
     const cost = (getDefinition('buildings', bp.type) || {}).cost;
