@@ -41,12 +41,15 @@ Object.assign(window.sim, (() => {
     enemyTents = []; enemyTentBlueprints = [];
     startNextWave();
     run(1);
-    const builders = [...enemies, ...enemyRafts.flatMap(raft => raft.units)].filter(enemy => enemy.buildTarget);
+    const builders = [...enemies, ...enemyRafts.flatMap(raft => raft.units)].filter(enemy => enemy.buildTarget || enemy.tentBuildTarget);
     const distances = builders.filter(enemy => enemy.muster)
-      .map(enemy => Math.hypot(enemy.buildTarget.x - enemy.muster.x, enemy.buildTarget.y - enemy.muster.y) / TILE_SIZE);
+      .map(enemy => {
+        const site = enemy.buildTarget || enemy.tentBuildTarget;
+        return Math.hypot(site.x - enemy.muster.x, site.y - enemy.muster.y) / TILE_SIZE;
+      });
     sides.enemy.faction = enemyFaction;
     return { sites: builders.length > 0, allHaveRally: distances.length === builders.length,
-      allOutside: builders.every(enemy => !inTerritory(enemy.buildTarget.x, enemy.buildTarget.y)),
+      allOutside: builders.every(enemy => !inTerritory((enemy.buildTarget || enemy.tentBuildTarget).x, (enemy.buildTarget || enemy.tentBuildTarget).y)),
       allNearRally: distances.every(distance => distance <= 6), distances };
   }
 

@@ -383,8 +383,8 @@ export function getNearbyEnemyTentSite(origin) {
     candidates.push({
       x,
       y,
-      distance: Math.hypot(x - townHall.x, y - townHall.y) +
-        Math.hypot(x - rally.x, y - rally.y) * 0.05
+      distance: Math.hypot(x - rally.x, y - rally.y) +
+        Math.hypot(x - townHall.x, y - townHall.y) * 0.05
     });
   }
   candidates.sort((a, b) => a.distance - b.distance);
