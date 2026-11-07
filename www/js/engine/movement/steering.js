@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, getTileIndex } from '../world/index.js';
 import { isBlighted } from '../../domains/factions/undead/index.js';
 import { findPathAStar, findPathAStarPermissive, getReachSteps, getSettlerReach, hasClearEnemyLine, isTileBlockedForSettler, pathCrossesSpikes } from './pathfinding.js';
-import { clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
+import { canEnemyMoveOutOfNaturalResource, clampEntityToBounds, collidesWithEnemyNaturalResource, collidesWithWall, collidesWithWater, getSettlerAvoidance } from './collision.js';
 import { someSettlerNear } from './neighbours.js';
 import { takePortal } from '../../domains/factions/demons/index.js';
 
@@ -170,8 +170,8 @@ function replanIfNeeded(entity, targetX, targetY, isEnemy, extraBlocked) {
     searchNodes.left -= res.looked || 0;
     if (isEnemy && res.isBlockedPath && !(entity.strictPathFailTimer > 0)) entity.strictPathFailTimer = 3;
     entity.path = res.path;
-    if (!isEnemy && entity.path.length > 1) {
-      // A* includes the current tile center, which can pull a settler backwards after a replan.
+    if (entity.path.length > 1) {
+      // A* includes the current tile center, which can pull a unit backwards after a replan.
       const start = getGridPos(entity.x, entity.y), first = getGridPos(entity.path[0].x, entity.path[0].y);
       if (start.gx === first.gx && start.gy === first.gy) entity.path.shift();
     }
@@ -211,7 +211,10 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
     const blocked = (extraBlocked && extraBlocked(next.gx, next.gy)) || (isEnemy
       ? collidesWithEnemyNaturalResource(nextX, nextY, bodyRadius) || collidesWithWall(nextX, nextY, bodyRadius, true, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius)
       : collidesWithWall(nextX, nextY, bodyRadius, false, !!entity.panic) || collidesWithWater(nextX, nextY, bodyRadius) || stepsOntoSpikes(entity, directVx, directVy));
-    if (!blocked) {
+    const escapingResource = isEnemy && blocked && canEnemyMoveOutOfNaturalResource(
+      entity.x, entity.y, nextX, nextY, bodyRadius, !!entity.panic
+    );
+    if (!blocked || escapingResource) {
       entity.x += directVx;
       entity.y += directVy;
       if (isEnemy) entity.path = [];
@@ -299,10 +302,13 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
     }
 
     const next = getGridPos(entity.x + vx, entity.y + vy);
-    if (isEnemy && ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
+    const enemyBlocked = isEnemy && ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
         collidesWithEnemyNaturalResource(entity.x + vx, entity.y + vy, bodyRadius) ||
         collidesWithWall(entity.x + vx, entity.y + vy, bodyRadius, true, !!entity.panic) ||
-        collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius))) {
+        collidesWithWater(entity.x + vx, entity.y + vy, bodyRadius));
+    const escapingResource = enemyBlocked && !(extraBlocked && extraBlocked(next.gx, next.gy)) &&
+      canEnemyMoveOutOfNaturalResource(entity.x, entity.y, entity.x + vx, entity.y + vy, bodyRadius, !!entity.panic);
+    if (enemyBlocked && !escapingResource) {
       entity.moveVx = 0;
       entity.moveVy = 0;
       entity.path = null;

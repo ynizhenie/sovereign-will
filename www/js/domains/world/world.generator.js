@@ -427,7 +427,7 @@ export function spawnResource(type, nearX = null, nearY = null, spread = 180, pi
     let cactusOutsideDesert = type === 'cactus' && !inDesert;
     // (#326) a beach: only pebbles and stones on it
     const offBeach = type === 'pebble' || type === 'boulder' || !thingAt(game.beachTiles, tx, ty);
-    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && (type !== 'boar' || !inEnemyTerritory(tx, ty)) && isSpawnSpotFree(tx, ty) &&
+    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && !inEnemyTerritory(tx, ty) && isSpawnSpotFree(tx, ty) &&
         (!inDesert || desertResource) && !cactusOutsideDesert && offBeach) {
       isValid = true;
     }

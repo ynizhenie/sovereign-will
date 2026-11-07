@@ -163,7 +163,8 @@ test('demons without an enemy camp do not prepare a portal wave before it starts
 test('a wave tent blueprint appears only once its builder starts construction', async ({ page }) => {
   const errors = await openGame(page);
   expect(await sim(page, 'tentBlueprintAppearsOnArrival', {})).toEqual({
-    hiddenUntilArrival: true, shownWhenBuilding: true, startedProgress: true
+    hiddenUntilArrival: true, shownWhenBuilding: true, startedProgress: true,
+    builderAnimating: true, blueprintTileDrawn: true
   });
   expect(errors).toEqual([]);
 });

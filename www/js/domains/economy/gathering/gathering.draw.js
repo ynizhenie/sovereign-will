@@ -5,7 +5,7 @@ import { SHADOWS, paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawSprites } from './gathering.sprites.js';
-import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, paintRockShadows } from '../../world/index.js';
+import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, isPrewarmingChunks, paintRockShadows } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
   if (resource.maxHp) return resource.maxHp;
@@ -142,7 +142,7 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
       // (the sun's step too: the time of day can be changed with the game paused, in the editor)
       const key = `${cx},${cy}`, kept = state.stamps.get(key), sun = /** @type {string} */ (state.sun);
       const due = !kept || state.dirty.has(key) || kept.epoch !== state.epoch || kept.sun !== sun || game.pathTick - kept.tick >= ticks || game.pathTick < kept.tick;
-      if (kept && (!due || state.made >= STAMPS_PER_FRAME)) return kept.stamp;
+      if (kept && (!due || (!isPrewarmingChunks() && state.made >= STAMPS_PER_FRAME))) return kept.stamp;
       state.made++;
       const size = CHUNK * TILE_SIZE, x0 = cx * size, y0 = cy * size;
       let h = 0;

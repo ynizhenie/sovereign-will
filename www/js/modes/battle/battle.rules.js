@@ -8,8 +8,10 @@ import { renderBattlePanel, updateBattleTop } from './battle.panel.js';
 
 // Stop a fight and put the line-up back as it was placed
 export function cancelBattleFight() {
-  if (battle.phase !== 'fight') return;
+  if (battle.phase !== 'fight' && battle.phase !== 'result') return;
   battle.phase = 'setup';
+  battle.winner = null;
+  battle.resultTimer = 0;
   game.settlers.forEach(s => { s.isPossessed = false; });
   resetBattleUnits();
   renderBattlePanel();

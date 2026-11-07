@@ -38,6 +38,9 @@ const MAX_PIXELS = 16e6;
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
 const drawnChunks = new Map();
+let prewarmingChunks = false;
+export const isPrewarmingChunks = () => prewarmingChunks;
+export function setPrewarmingChunks(prewarming) { prewarmingChunks = prewarming; }
 
 // (#322) Pieces are cached by map chunk. A camera pan can expose many uncached pieces at once,
 // so only one detailed chunk is painted per frame; old-size pictures or lightweight previews
@@ -126,7 +129,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         const key = `${res}|${cx},${cy}`;
         let chunk = chunks.get(key);
         const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
-        const free = framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed);
+        const free = prewarmingChunks || (framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed));
         const invalidated = typeof stamp.dirty === 'function' && stamp.dirty(cx, cy);
         // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
         if (!shown) {

@@ -22,7 +22,7 @@ import { changeSettlerType, createSettler } from '../../domains/colony/settlers/
 import { putOnGear } from '../../domains/colony/equipment/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
-import { resetGame } from '../../app/index.js';
+import { prewarmMenuScene, resetGame } from '../../app/index.js';
 
 const MENU_STOCK_START_DELAY = 2;
 
@@ -101,7 +101,7 @@ export function enterMenuWorld(scene = '') {
   const near = (dx, dy) => [hg[0] + (sx > 0 ? dx : -dx - 1), hg[1] + (sy > 0 ? dy : -dy - 1)];
   /** @type {any} */
   const map = {
-    cols, rows, hall,
+    menuScene: true, cols, rows, hall,
     resources: { tree: some(MENU_WORLD.trees), boulder: some(MENU_WORLD.boulders), grass: some(MENU_WORLD.grass) },
     boars: sceneName === 'hunt' ? some(MENU_WORLD.boars) : [],
     buildings: [], water: []
@@ -138,10 +138,12 @@ export function enterMenuWorld(scene = '') {
     const zone = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [3, 2]].map(([dx, dy]) => near(dx, dy));
     for (const [gx, gy] of zone) game.farmZones.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15, crop: 'wheat' });
     game.settlers = [Object.assign(createSettler('normal', 1, hall[0] + 45, hall[1]), { tool: 'hoe', backpack: true, wateringCan: true })];
+    stock.wheatSeeds = Infinity;
   }
   game.waveTimer = Infinity;
   camera.x = centre.x; camera.y = centre.y;
   camera.zoom = MENU_WORLD.cssScale * spr / getBaseScale();
+  if (menuWorld.opened) prewarmMenuScene();
   menuWorld.size = `${canvas.width}x${canvas.height}`;
   if (!menuWorld.opened) {
     // the first time, as the page opens: the curtain lifts once the world has been drawn
@@ -205,7 +207,7 @@ export function tickMenuScene(dt) {
     // herbs in the warehouse while it stands; broken, none (#279)
     stock.herbs = townHall.hp > 0 && canRestock ? Math.max(stock.herbs || 0, 10) : 0;
   } else if (menuWorld.scene === 'farm') {
-    if (canRestock) stock.wheatSeeds = Math.max(stock.wheatSeeds || 0, 10);
+    stock.wheatSeeds = Infinity;
     for (const b of game.buildings) if (b.type === 'dung_heap') b.dung = Math.max(b.dung || 0, 3);
   } else if (menuWorld.scene === 'fishing') {
     if (canRestock) stock.firewood = Math.max(stock.firewood || 0, 50);
@@ -245,9 +247,9 @@ export function menuWorldTap(clientX, clientY) {
   // a boar, only in the hunt (#279: a tap in the other scenes marked their boars to no end)
   const boar = menuWorld.scene === 'hunt' ? game.boars.find(b => !b.isCarcass && Math.hypot(mouse.x - b.x, mouse.y - b.y) < 22) : null;
   if (boar) {
-    // marked, as a tap marks it in the game: the one to hunt
+    const wasMarked = boar.priority > 0;
     game.boars.forEach(b => { b.priority = 0; });
-    boar.priority = 1;
+    if (!wasMarked) boar.priority = 1;
   }
 }
 

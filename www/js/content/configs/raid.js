@@ -1,7 +1,7 @@
 // A raid on an enemy camp (#255): Endless only
 
 export const raidConfig = {
-  // The camp is a small persistent territory on the Endless map, centred on an outpost and a nearby fire.
+  // The camp is a small persistent territory on the Endless map, with a fire two or three tiles from its outpost.
   // defenders: perSoldier for each armed settler of the player's (of its kind, in its armour and with its
   // shield, so an army in armour meets one; perSoldier as a settler is stronger than the enemy of its kind),
   // one more every extraEveryWaves waves, never fewer than min. They hold their posts till a raider comes
