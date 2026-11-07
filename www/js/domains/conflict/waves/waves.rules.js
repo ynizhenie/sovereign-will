@@ -355,19 +355,37 @@ export function grantEnemyReward(enemy) {
 
 export function getNearbyEnemyTentSite(origin) {
   const rally = origin.muster || origin;
-  const centre = getGridPos(rally.x, rally.y), radius = 6;
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
   const candidates = [];
-  for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
-    if (Math.hypot(dx, dy) > radius) continue;
-    const gx = centre.gx + dx, gy = centre.gy + dy;
+  for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) {
     if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
     const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
     const occupied = isTileOccupied(x, y) || game.naturalRocks.some(rock => rock.x === x && rock.y === y) ||
       game.waterTiles.some(water => water.x === x && water.y === y) ||
       game.enemyTents.some(tent => tent.x === x && tent.y === y) ||
       game.enemyTentBlueprints.some(site => site.x === x && site.y === y);
-    if (occupied || inTerritory(x, y) || inEnemyTerritory(x, y)) continue;
-    candidates.push({ x, y, distance: Math.hypot(x - rally.x, y - rally.y) });
+    if (occupied || (hasTerritory() && inTerritory(x, y)) || inEnemyTerritory(x, y)) continue;
+    let withinThreeTilesOfTerritory = false;
+    if (hasTerritory()) {
+      for (let territoryY = gy - 3; territoryY <= gy + 3 && !withinThreeTilesOfTerritory; territoryY++) {
+        for (let territoryX = gx - 3; territoryX <= gx + 3; territoryX++) {
+          if (territoryX >= 0 && territoryY >= 0 && territoryX < game.COLS && territoryY < game.ROWS &&
+            inTerritory(territoryX * TILE_SIZE + 15, territoryY * TILE_SIZE + 15)) {
+            withinThreeTilesOfTerritory = true;
+            break;
+          }
+        }
+      }
+    }
+    if (withinThreeTilesOfTerritory) continue;
+    if (camps.some(camp => Math.hypot(x - camp.x, y - camp.y) <
+      (camp.radius || GAME_CONFIG.raid.campRadiusTiles) * TILE_SIZE + TILE_SIZE)) continue;
+    candidates.push({
+      x,
+      y,
+      distance: Math.hypot(x - townHall.x, y - townHall.y) +
+        Math.hypot(x - rally.x, y - rally.y) * 0.05
+    });
   }
   candidates.sort((a, b) => a.distance - b.distance);
   const site = candidates[0];
@@ -565,6 +583,10 @@ export function startNextWave(preparing = false) {
     normalEnemies = game.enemyRafts.flatMap(raft => raft.units).filter(enemy =>
       !enemy.pet && enemy.type === 'normal').slice(0, 1);
   }
+  if (!normalEnemies.length) {
+    normalEnemies = game.enemies.filter(enemy =>
+      enemy.fromWave && !enemy.pet && enemy.type === 'normal').slice(0, 1);
+  }
   tentCount = Math.min(tentCount, normalEnemies.length);
 
   for (let t = 0; t < tentCount; t++) {
@@ -574,7 +596,7 @@ export function startNextWave(preparing = false) {
     if (site) {
       site.builder = builder;
       site.waveActive = true;
-      builder.buildTarget = site;
+      builder.tentBuildTarget = site;
     }
   }
 
@@ -690,6 +712,27 @@ function musterAt(enemy) {
   enemy.muster = { x: enemy.x + (townHall.x - enemy.x) / d * TILE_SIZE * 1.5, y: enemy.y + (townHall.y - enemy.y) / d * TILE_SIZE * 1.5 };
 }
 
+function keepWaveMusterBeyondTerritory(point) {
+  if (!hasTerritory()) return point;
+  const nearPlayerTerritory = (x, y) => {
+    const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const tileX = gx + dx, tileY = gy + dy;
+      if (tileX >= 0 && tileY >= 0 && tileX < game.COLS && tileY < game.ROWS &&
+        inTerritory(tileX * TILE_SIZE + 15, tileY * TILE_SIZE + 15)) return true;
+    }
+    return false;
+  };
+  if (!nearPlayerTerritory(point.x, point.y)) return point;
+  const length = Math.max(1, Math.hypot(point.x - townHall.x, point.y - townHall.y));
+  const dx = (point.x - townHall.x) / length, dy = (point.y - townHall.y) / length;
+  for (let tiles = 3; tiles <= 12; tiles++) {
+    const outside = { x: point.x + dx * TILE_SIZE * (tiles - 2), y: point.y + dy * TILE_SIZE * (tiles - 2) };
+    if (!nearPlayerTerritory(outside.x, outside.y)) return outside;
+  }
+  return point;
+}
+
 // (#279) a wave's enemies that came in on the same side of the map gather together: at the middle of where
 // they came in, a tile and a half in from the edge. (#298) Out of portals (the demons), by the portal each
 // came out of: a tile and a half from it towards the base, not off to the map's edge
@@ -702,11 +745,12 @@ function regroupBySide() {
         Math.hypot(nearest.x - townHall.x, nearest.y - townHall.y) ? current : nearest);
     const radius = ((camp.radius || GAME_CONFIG.raid.campRadiusTiles) + 2.5) * TILE_SIZE;
     const awayFromHall = Math.atan2(camp.y - townHall.y, camp.x - townHall.x);
-    const group = waveUnits.filter(en => en.fromWave && en.musterUntil &&
+    const group = waveUnits.filter(en => en.fromWave && en.musterUntil && !en.buildTarget && !en.tentBuildTarget &&
       (!game.wavePreparation || en.prepWave === game.wavePreparation.wave));
     group.forEach((en, i) => {
       const angle = awayFromHall + (i - (group.length - 1) / 2) * 0.18;
-      en.muster = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
+      const point = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
+      en.muster = keepWaveMusterBeyondTerritory(point);
     });
     return;
   }
@@ -715,7 +759,7 @@ function regroupBySide() {
   const nearestPortal = en => portals.reduce((best, p) => (!best || Math.hypot(p.x - en.x, p.y - en.y) < Math.hypot(best.x - en.x, best.y - en.y) ? p : best), null);
   const sideOf = en => en.waveArrivalSide || (portals.length ? `portal:${portals.indexOf(nearestPortal(en))}` : /** @type {[string, number][]} */ ([['left', en.x - f.x0], ['right', W - en.x], ['top', en.y - f.y0], ['bottom', H - en.y]]).sort((a, b) => a[1] - b[1])[0][0]);
   const groups = {};
-  for (const en of waveUnits) if (en.fromWave && en.musterUntil && !en.buildTarget &&
+  for (const en of waveUnits) if (en.fromWave && en.musterUntil && !en.buildTarget && !en.tentBuildTarget &&
       (!game.wavePreparation || en.prepWave === game.wavePreparation.wave)) (groups[sideOf(en)] = groups[sideOf(en)] || []).push(en);
   for (const [side, group] of Object.entries(groups)) {
     const cx = group.reduce((sum, en) => sum + en.x, 0) / group.length, cy = group.reduce((sum, en) => sum + en.y, 0) / group.length;
@@ -767,6 +811,7 @@ function stageWaveAtPlayerEdge() {
     const slots = positions.slice(0, Math.min(positions.length, group.length));
     slots.sort((a, b) => side === 'east' || side === 'west' ? a.y - b.y : a.x - b.x);
     group.forEach((enemy, index) => {
+      if (enemy.buildTarget) return;
       const slot = Math.min(slots.length - 1, Math.floor((index + 0.5) * slots.length / group.length));
       enemy.muster = { x: slots[slot].x, y: slots[slot].y };
       enemy.musterRoute = getTerritoryBypassRoute(enemy, enemy.muster);
@@ -908,7 +953,7 @@ function tickDemonWaveTransit(dt) {
 // (#279) a wave big enough has a commander: a melee fighter, preferring a normal unit over a big one
 function pickCaptain(size) {
   if (size < GAME_CONFIG.waveMuster.captainFrom || game.enemies.some(en => en.captain && en.hp > 0)) return;
-  const pick = game.enemies.filter(en => en.fromWave && !en.buildTarget &&
+  const pick = game.enemies.filter(en => en.fromWave && !en.buildTarget && !en.tentBuildTarget &&
     en.type !== 'archer' && !getEnemyDef(en).pet &&
     !getEnemyDef(en).healer && !getEnemyDef(en).necromancer && !getEnemyDef(en).ranged)
     .map(en => ({ en, near: game.enemies.filter(o => o.muster && en.muster && Math.hypot(o.muster.x - en.muster.x, o.muster.y - en.muster.y) < 120).length }))
@@ -949,9 +994,15 @@ export function tickWaveTimer(dt) {
     if (game.wavePreparation) {
       if (getEnemyFaction().portalSpawns) beginDemonWaveTransit();
       activateEnemyTents();
-      for (const enemy of game.enemies) if (enemy.prepWave === game.wavePreparation.wave) {
+      const activeWaveUnits = game.enemies.concat(...game.enemyRafts
+        .filter(raft => raft.phase === 'arriving').map(raft => raft.units));
+      for (const enemy of activeWaveUnits) if (enemy.prepWave === game.wavePreparation.wave) {
         enemy.musterUntil = 0;
         delete enemy.prepWave;
+        if (enemy.tentBuildTarget) {
+          enemy.buildTarget = enemy.tentBuildTarget;
+          delete enemy.tentBuildTarget;
+        }
       }
       game.portalWavePrep = null;
       game.waveNum++;

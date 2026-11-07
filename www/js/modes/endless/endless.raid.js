@@ -86,7 +86,7 @@ const standing = (type, at, extra = {}) => {
 const waveOn = () => game.enemies.some(en => en.fromWave && en.hp > 0) ||
   game.enemyRafts.some(raft => raft.units.length > 0) ||
   (game.portalQueue || []).length > 0 ||
-  game.enemyTents.some(tent => !tent.campStructure && (tent.summonsLeft || 0) > 0) ||
+  game.enemyTents.some(tent => !tent.campStructure && tent.hp > 0) ||
   game.enemyTentBlueprints.length > 0;
 
 // Spots for a party side by side along an edge, round `at`
@@ -699,7 +699,7 @@ function closeRaidPicker() {
 // The party sets out for the zone's side; the rest of the base rests
 export function startRaid(party, scouting = false, arrows = 0, buildCamp = true) {
   const camp = selectedRaidCamp();
-  if (!camp || isRaiding() || !party.length) return false;
+  if (!camp || isRaiding() || waveOn() || !party.length) return false;
   const demonRaid = !scouting && buildCamp && getPlayerFaction().id === 'demons';
   const cost = scouting || !buildCamp || demonRaid ? null : GAME_CONFIG.buildings[shelterType()].cost;
   if (cost && !canAfford(cost)) { showCostError(cost, GAME_CONFIG.buildings[shelterType()].label); return false; }

@@ -92,6 +92,13 @@ export function finishHarvest(settler, resource, kind) {
     resource.harvestProgress = 0;
     resource.stump = { x: resource.x, y: resource.y + 10 };
     game.stumps.push(resource.stump);
+    const fellBonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
+    for (const [item, chance] of Object.entries(fellBonus || {})) {
+      if (rand() < chance) {
+        giveResourceToSettler(settler, item, 1);
+        if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+      }
+    }
     playSound('collapse', resource);
     return;
   }
@@ -105,10 +112,12 @@ export function finishHarvest(settler, resource, kind) {
     noteDay(settler, kind === 'farm' ? 'farmed' : 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
-  for (const [item, chance] of Object.entries(bonus || {})) {
-    if (rand() < chance) {
-      giveResourceToSettler(settler, item, 1);
-      if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+  if (!two) {
+    for (const [item, chance] of Object.entries(bonus || {})) {
+      if (rand() < chance) {
+        giveResourceToSettler(settler, item, 1);
+        if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+      }
     }
   }
   const list = game[def.list];

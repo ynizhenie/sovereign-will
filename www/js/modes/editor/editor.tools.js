@@ -12,7 +12,7 @@ import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js'
 import { TILE_SIZE, applySeedFromUI, game, getGridPos, isBorderZone, resetTileIndex, townHall } from '../../engine/world/index.js';
 import { isTileOccupied } from '../../domains/economy/building/index.js';
 import { isWaterReachable, timeOfPhase } from '../../domains/world/index.js';
-import { closeOverlays, showNotification } from '../../ui/index.js';
+import { closeOverlays, runLoading, showNotification } from '../../ui/index.js';
 import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/index.js';
 import { makeAppleTree } from '../../domains/economy/farming/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
@@ -289,6 +289,7 @@ export function startEditor(source) {
     editor.faction = source.map.faction || 'humans';
     editor.startTime = source.map.startTime || 'day';
     resetGame(source.map);
+    void runLoading('loading.world', (function* () { yield 1; })());
   } else {
     // a generated map: the editor's own seed, the generator's settings (its gear), the size picked here
     editor.name = '';
@@ -297,6 +298,7 @@ export function startEditor(source) {
     game.mapSettings = { cols: source.cols, rows: source.rows };
     applySeedFromUI();
     resetGame(source.generate ? null : { cols: source.cols, rows: source.rows });
+    void runLoading('loading.world', (function* () { yield 1; })());
     game.mapSettings = endlessSize;
   }
   game.dayTime = timeOfPhase(editor.startTime);
