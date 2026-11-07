@@ -124,6 +124,18 @@ test('a wave tent blueprint appears only once its builder starts construction', 
   expect(errors).toEqual([]);
 });
 
+test('wave tent builders choose sites within three tiles of the player territory', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await sim(page, 'waveTentSitesNearPlayerTerritory', {});
+  expect(r.builders).toBeGreaterThan(0);
+  expect(r).toMatchObject({
+    allNearPlayerTerritory: true,
+    allOutsidePlayerTerritory: true,
+    allOutsideCamp: true
+  });
+  expect(errors).toEqual([]);
+});
+
 test('enemy camp guards use faction camp chatter instead of civilian idle chatter', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'enemyCampVoicePhrases', {});

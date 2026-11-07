@@ -751,7 +751,7 @@ export function sendScout() {
 }
 
 const arrived = () => raid.raiders.filter(s => game.settlers.includes(s) &&
-  dist(s, raid.rally || raid.gather) < (raid.scouting ? 8 : 50 + 9 * raid.raiders.length)).length;
+  dist(s, raid.rally || raid.gather) < (raid.scouting ? TILE_SIZE : 50 + 9 * raid.raiders.length)).length;
 const liveRaiders = () => raid.raiders.filter(s => game.settlers.includes(s) && s.hp > 0);
 const staged = () => liveRaiders().filter(s => dist(s, s.raidSpot) < 12).length;
 

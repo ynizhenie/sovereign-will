@@ -6,12 +6,12 @@
 // with rock and ore near by. A smaller map is made as before (world.generator.js).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { DEFAULT_MAP_TILES, TILE_SIZE, game, isWithinTownHallBuffer, rand, townHall } from '../../engine/world/index.js';
+import { DEFAULT_MAP_TILES, TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall } from '../../engine/world/index.js';
 import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
 import { isSpawnSpotFree } from '../economy/building/index.js';
-import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners, startingBoarCount } from './world.generator.js';
+import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners, startingBoarCount, touchesWaterCorner } from './world.generator.js';
 
 const config = () => GAME_CONFIG.continent;
 
@@ -304,6 +304,13 @@ export function* generateContinent() {
     placeOreSpawners(kind, Math.max(1, Math.round(getUnscaledMapCount(ORE_KINDS[kind].spawnerKey, 1) * perLand)), { x: townHall.x, y: townHall.y, r: C.startNear * TILE_SIZE });
     yield 0.85;
   }
+  const clearWaterCorners = list => list.filter(resource => {
+    const grid = getGridPos(resource.x, resource.y);
+    return !touchesWaterCorner(grid.gx, grid.gy);
+  });
+  game.naturalRocks = clearWaterCorners(game.naturalRocks);
+  game.ironOres = clearWaterCorners(game.ironOres);
+  game.coalOres = clearWaterCorners(game.coalOres);
   placeAppleTrees();
   markDesertUnderRocks(); // (rock and ore standing in the desert: sand under them, and the tile counts as desert)
 }
