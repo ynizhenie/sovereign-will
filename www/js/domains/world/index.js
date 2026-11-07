@@ -8,5 +8,5 @@ export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStanding
 export { areShadowsEnabled, beginShadowFrame, castShadow, drawShadowLayer, drawShadowPath, drawDarkness, getDarkness, getDayPhase, getLights, getSun, endShadowFrame, isNight, MIN_SHADOW_ALPHA, nightProgress, setShadowsEnabled, tickDaytime, timeOfPhase } from './world.daytime.js';
 export { ORE_KINDS, generateMap, generateMapSteps, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, isDesertTile, isSavannaTile, isWaterReachable, placeBeaches, placeOre, pointIn, spawnForestAware, spawnResource, startingBoarCount } from './world.generator.js';
 export { isContinentMap } from './world.continent.js';
-export { drawTerritory, getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inEnemyTerritory, inTerritory, isOutskirts, setTerritoryEnabled } from './world.territory.js';
+export { drawTerritory, getFrontier, getFrontierTiles, getTerritoryBox, getTerritoryMask, hasTerritory, inEnemyTerritory, inTerritory, isOutskirts, setTerritoryEnabled } from './world.territory.js';
 export { drawFog, exportFog, fogAt, hasFog, importFog, isExplored, isVisible, resetFog, tickFog } from './world.fog.js';

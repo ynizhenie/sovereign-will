@@ -44,6 +44,26 @@ test('preparation does not start the tent assault or enemy attacks; both begin w
   expect(errors).toEqual([]);
 });
 
+test('wave enemies path around player territory while moving to their preparation positions', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'wavePreparationPathAvoidsPlayerTerritory', {})).toEqual({
+    enteredPlayerZone: false, movedTowardTarget: true, stayedOutDuringPreparation: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('wave builders start their tent or grave near the rally when the wave begins', async ({ page }) => {
+  const errors = await openGame(page);
+  const results = await sim(page, 'waveBuilderStartsNearRally', {});
+  expect(results).toHaveLength(4);
+  for (const result of results) {
+    expect(result.siteNearRally).toBe(true);
+    expect(result.beganBuilding, JSON.stringify(result)).toBe(true);
+    expect(result.siteRemainsOutsidePlayerZone).toBe(true);
+  }
+  expect(errors).toEqual([]);
+});
+
 test('wave enemies spawn at their camp and stage outside both territories', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'waveMustersOutsideCamp', {});

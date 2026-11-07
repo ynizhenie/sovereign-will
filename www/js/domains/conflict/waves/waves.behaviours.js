@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
-import { getFrontier, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
+import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
 import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
@@ -15,6 +15,22 @@ import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
 import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
+
+let waveTerritoryMaskTick = -1;
+let waveTerritoryMask = null;
+let waveEnemyCamps = [];
+
+function blocksPlayerTerritory(gx, gy) {
+  if (waveTerritoryMaskTick !== game.pathTick) {
+    waveTerritoryMaskTick = game.pathTick;
+    waveTerritoryMask = getTerritoryMask();
+    const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+    waveEnemyCamps = camps.map(camp => ({ ...getGridPos(camp.x, camp.y), radius: camp.radius || 0 }));
+  }
+  if (!waveTerritoryMask || gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS ||
+      !waveTerritoryMask[gy * game.COLS + gx]) return false;
+  return !waveEnemyCamps.some(camp => Math.abs(gx - camp.gx) <= camp.radius && Math.abs(gy - camp.gy) <= camp.radius);
+}
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
@@ -228,8 +244,10 @@ export function tickEnemy(en, dt) {
       if (en.musterRoute?.length) {
         const waypoint = en.musterRoute[0];
         if (Math.hypot(waypoint.x - en.x, waypoint.y - en.y) <= 10) en.musterRoute.shift();
-        else moveEntityTowards(en, waypoint.x, waypoint.y, en.speed, true, dt);
-      } else if (Math.hypot(en.muster.x - en.x, en.muster.y - en.y) > 6) moveEntityTowards(en, en.muster.x, en.muster.y, en.speed, true, dt);
+        else moveEntityTowards(en, waypoint.x, waypoint.y, en.speed, true, dt, false, blocksPlayerTerritory);
+      } else if (Math.hypot(en.muster.x - en.x, en.muster.y - en.y) > 6) {
+        moveEntityTowards(en, en.muster.x, en.muster.y, en.speed, true, dt, false, blocksPlayerTerritory);
+      }
       else faceTowards(en, townHall.x, townHall.y);
     }
     return;

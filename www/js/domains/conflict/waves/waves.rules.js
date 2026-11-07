@@ -827,6 +827,12 @@ function stageWaveAtPlayerEdge() {
       const slot = Math.min(slots.length - 1, Math.floor((index + 0.5) * slots.length / group.length));
       enemy.muster = { x: slots[slot].x, y: slots[slot].y };
       enemy.musterRoute = getTerritoryBypassRoute(enemy, enemy.muster) || [];
+      enemy.path = null;
+      enemy.pathTarget = null;
+      enemy.pathRetryTimer = 0;
+      enemy.directBlockedTimer = 0;
+      enemy.moveVx = 0;
+      enemy.moveVy = 0;
     });
   }
   const builders = wave.filter(enemy => enemy.waveTentBuilder || enemy.tentBuildTarget);
@@ -994,6 +1000,34 @@ function tickDemonWaveTransit(dt) {
   invalidateAllPaths();
 }
 
+function stageWaveForMarch(seconds) {
+  stageWaveAtPlayerEdge();
+  const waveEnemies = game.enemies.concat(...game.enemyRafts
+    .filter(raft => raft.phase === 'arriving').map(raft => raft.units));
+  for (const enemy of waveEnemies) if (enemy.fromWave && enemy.hp > 0 &&
+      enemy.prepWave === game.wavePreparation?.wave) {
+    enemy.musterUntil = game.pathTick + Math.round(seconds * 60);
+  }
+  if (game.wavePreparation) game.wavePreparation.stage = 'march';
+}
+
+function moveWaveBuildSiteNearBuilder(enemy) {
+  const site = enemy.tentBuildTarget;
+  if (!site || Math.hypot(site.x - enemy.x, site.y - enemy.y) <= GAME_CONFIG.enemyTents.buildDistance) return;
+  const rally = enemy.muster;
+  enemy.muster = { x: enemy.x, y: enemy.y };
+  delete enemy.tentBuildTarget;
+  const nearby = getNearbyEnemyTentSite(enemy);
+  enemy.muster = rally;
+  if (nearby && Math.hypot(nearby.x - enemy.x, nearby.y - enemy.y) <= GAME_CONFIG.enemyTents.buildDistance) {
+    nearby.builder = enemy;
+    nearby.waveActive = true;
+    enemy.tentBuildTarget = nearby;
+  } else {
+    enemy.tentBuildTarget = site;
+  }
+}
+
 // (#279) a wave big enough has a commander: a melee fighter, preferring a normal unit over a big one
 function pickCaptain(size) {
   if (size < GAME_CONFIG.waveMuster.captainFrom || game.enemies.some(en => en.captain && en.hp > 0)) return;
@@ -1022,17 +1056,13 @@ export function tickWaveTimer(dt) {
   if (canPrepareWave && !game.wavePreparation && before >= preparationSeconds && game.waveTimer <= preparationSeconds) {
     game.wavePreparation = { wave: game.waveNum, stage: getEnemyFaction().portalSpawns ? 'portal' : 'gather' };
     startNextWave(true);
+    if (!getEnemyFaction().portalSpawns && game.waveInterval <= muster.departureSeconds) {
+      stageWaveForMarch(preparationSeconds);
+    }
   }
   if (!getEnemyFaction().portalSpawns && game.wavePreparation && game.wavePreparation.stage === 'gather' &&
       before > departureSeconds && game.waveTimer <= departureSeconds) {
-    stageWaveAtPlayerEdge();
-    const waveEnemies = game.enemies.concat(...game.enemyRafts
-      .filter(raft => raft.phase === 'arriving').map(raft => raft.units));
-    for (const enemy of waveEnemies) if (enemy.fromWave && enemy.hp > 0 &&
-        enemy.prepWave === game.wavePreparation.wave) {
-      enemy.musterUntil = game.pathTick + Math.round(muster.departureSeconds * 60);
-    }
-    game.wavePreparation.stage = 'march';
+    stageWaveForMarch(muster.departureSeconds);
   }
   // one warning, 15 s before the wave (holds of the timer in tests keep it above)
   if (before > WAVE_WARNING_SECONDS && game.waveTimer <= WAVE_WARNING_SECONDS) {
@@ -1050,6 +1080,7 @@ export function tickWaveTimer(dt) {
         delete enemy.prepWave;
         delete enemy.waveTentBuilder;
         if (enemy.tentBuildTarget) {
+          moveWaveBuildSiteNearBuilder(enemy);
           enemy.buildTarget = enemy.tentBuildTarget;
           delete enemy.tentBuildTarget;
         }
