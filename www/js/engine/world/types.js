@@ -218,6 +218,7 @@
  * @property {Object<string, number>} reward   what killing it adds to the stock
  * @property {Settler | null} [attackTarget]
  * @property {Object | null} buildTarget     the tent site it's building
+ * @property {Object | null} [tentBuildTarget] the tent site reserved for a wave builder
  * @property {Point[] | null} path
  * @property {Point | null} pathTarget
  * @property {number} [arrows]
