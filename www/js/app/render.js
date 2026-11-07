@@ -16,6 +16,9 @@ import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 
+/** @type {{ depth: number, order: number, actor: any, draw: (actor: any) => void }[]} */
+const sceneItems = [];
+
 export function render() {
   if (game.loading) {
     if (!game.loadingRender) return; // (#326) keep the last frame under the loading screen while the world is made
@@ -110,18 +113,27 @@ function drawDepthSortedScene() {
     return;
   }
   const view = getViewRect(60);
-  const items = trees.map(tree => ({ depth: tree.y + 13, order: 0, draw: () => drawDepthTree(tree) }));
+  let count = 0;
+  const add = (actor, depth, order, draw) => {
+    let item = sceneItems[count];
+    if (!item) sceneItems[count] = item = { depth, order, actor, draw };
+    else { item.depth = depth; item.order = order; item.actor = actor; item.draw = draw; }
+    count++;
+  };
+  for (const tree of trees) add(tree, tree.y + 13, 0, drawDepthTree);
   const addActors = (list, offset, order, draw) => {
     for (const actor of list) {
       if (actor.x < view.x0 || actor.x > view.x1 || actor.y < view.y0 || actor.y > view.y1) continue;
-      items.push({ depth: actor.y + offset(actor), order, draw: () => draw(actor) });
+      add(actor, actor.y + offset(actor), order, draw);
     }
   };
   addActors(game.boars, () => 9, 1, boar => drawBoars(boar));
   addActors(game.settlers, settler => (settler.visualRadius || settler.radius || 11) * 0.95, 2, settler => drawSettlers(settler));
   addActors(game.enemies, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
   addActors(game.scouts, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
-  drawDepthSorted(items);
+  sceneItems.length = count;
+  sceneItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
+  for (const item of sceneItems) item.draw(item.actor);
 }
 
 function drawEditorOutposts() {
