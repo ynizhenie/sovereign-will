@@ -108,10 +108,14 @@ Object.assign(window.sim, (() => {
     const toCamp = { x: camp.x - townHall.x, y: camp.y - townHall.y };
     const stagingAtBoundary = targets.every(target => target &&
       [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inTerritory(target.x + dx * TILE_SIZE, target.y + dy * TILE_SIZE)));
+    const allHaveSafeRoutes = wave.every(enemy => enemy.musterRoute?.length > 0);
     const stagingOnCampSide = targets.every(target => (target.x - townHall.x) * toCamp.x +
       (target.y - townHall.y) * toCamp.y > Math.hypot(toCamp.x, toCamp.y) ** 2 * 0.25);
     const previousWaveUnaffected = previousWaveEnemy.muster.x === previousMuster.x &&
       previousWaveEnemy.muster.y === previousMuster.y && previousWaveEnemy.musterUntil == null;
+    const tentBuilders = wave.filter(enemy => enemy.tentBuildTarget);
+    const buildersNearStaging = tentBuilders.length > 0 && tentBuilders.every(enemy =>
+      Math.hypot(enemy.tentBuildTarget.x - enemy.muster.x, enemy.tentBuildTarget.y - enemy.muster.y) <= TILE_SIZE * 5);
     let enteredPlayerZone = false;
     for (let frame = 0; frame < 15 * 60; frame++) {
       game.pathTick++;
@@ -126,9 +130,71 @@ Object.assign(window.sim, (() => {
       stagingAtBoundary,
       stagingOnCampSide,
       previousWaveUnaffected,
+      buildersNearStaging,
+      allHaveSafeRoutes,
       allTargetsOutsidePlayerZone: targets.every(target => !inTerritory(target.x, target.y)),
       enteredPlayerZone
     };
+  }
+
+  function shortWaveIntervals({ seed = 'short-wave-intervals' } = {}) {
+    return [30, 10].map(interval => {
+      game.mapSettings = { cols: 128, rows: 128 };
+      start(`${seed}-${interval}`);
+      clearResources();
+      createEnemyCamp();
+      waveNum = 1;
+      game.waveInterval = interval;
+      game.waveTimer = interval;
+      tickWaveTimer(1 / 60);
+      const spawnedBeforeStart = enemies.filter(enemy => enemy.fromWave && enemy.prepWave === waveNum).length;
+      for (let frame = 1; frame <= interval * 60 && waveNum === 1; frame++) tickWaveTimer(1 / 60);
+      return {
+        interval,
+        spawnedBeforeStart,
+        waveStarted: waveNum === 2 && !game.wavePreparation,
+        waveEnemiesRemain: enemies.some(enemy => enemy.fromWave)
+      };
+    });
+  }
+
+  function waveStructuresSpawnUnits({ seed = 'wave-structure-spawns' } = {}) {
+    const previousFaction = sides.enemy.faction;
+    try {
+      const results = [];
+      for (const faction of ['humans', 'undead']) {
+        sides.enemy.faction = faction;
+        game.mapSettings = { cols: 128, rows: 128 };
+        start(`${seed}-${faction}`);
+        clearResources();
+        createEnemyCamp();
+        game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+        startNextWave(true);
+        const builder = enemies.find(enemy => enemy.tentBuildTarget);
+        if (!builder) throw new Error(`The ${faction} wave spawned without a structure builder`);
+        const site = builder.tentBuildTarget;
+        game.waveTimer = 0.01;
+        tickWaveTimer(0.02);
+        if (!builder.buildTarget) throw new Error(`The ${faction} builder did not start construction with the wave`);
+        builder.x = site.x;
+        builder.y = site.y;
+        tickEnemy(builder, site.maxProgress / GAME_CONFIG.enemyTents.buildRate + 1);
+        const structure = enemyTents.find(tent => tent.waveActive && tent.x === site.x && tent.y === site.y);
+        if (!structure) throw new Error(`The ${faction} wave structure was not completed`);
+        const enemyCount = enemies.length;
+        const frames = Math.ceil((GAME_CONFIG.enemyTents.summonInterval * GAME_CONFIG.enemyTents.summonsPerWave + 0.1) * 60);
+        for (let frame = 0; frame < frames; frame++) tickEnemyTents(1 / 60);
+        results.push({
+          faction,
+          spawner: structure.spawner,
+          expectedSpawner: getEnemyFaction().spawner || 'tent',
+          spawnedUnit: enemies.length > enemyCount && enemies.slice(enemyCount).some(enemy => enemy.waveSummoned)
+        });
+      }
+      return results;
+    } finally {
+      sides.enemy.faction = previousFaction;
+    }
   }
 
   function wavesArriveByRaftWithoutCamp({ seed = 'waves-by-raft' } = {}) {
@@ -255,15 +321,31 @@ Object.assign(window.sim, (() => {
     game.waveTimer = 0.01;
     tickWaveTimer(0.02);
     const transit = game.demonWaveTransit;
-    const exit = transit?.exit;
-    const exitAtColonyEdge = !!exit && inTerritory(exit.x, exit.y) &&
-      Math.hypot(exit.x - townHall.x, exit.y - townHall.y) > getBaseRadius();
-    step(5, () => { waveTimer = 10; });
+    const exitPosition = transit?.exit;
+    const exit = exitPosition && enemyTents.find(portal =>
+      portal.x === exitPosition.x && portal.y === exitPosition.y);
+    const exitAtColonyEdge = !!exitPosition && inTerritory(exitPosition.x, exitPosition.y) &&
+      Math.hypot(exitPosition.x - townHall.x, exitPosition.y - townHall.y) > getBaseRadius();
+    step(6, () => { waveTimer = 10; });
+    const sourceRemoved = !enemyTents.includes(source);
+    const exitRemains = !!exit && enemyTents.includes(exit);
+    const exitSpawnsUnits = !!exit && exit.waveActive && exit.summonsLeft < GAME_CONFIG.enemyTents.summonsPerWave &&
+      enemies.some(enemy => enemy.waveSummoned);
+    let soldierCanDamageExit = false;
+    if (exitRemains) {
+      enemies = [];
+      enemyTents = [exit];
+      const soldier = makeSettler(1, exit.x + 10, exit.y, { weapon: 'sword', role: 'soldier' });
+      settlers = [soldier];
+      const hpBefore = exit.hp;
+      clearEnemyTents(soldier, { tentAssault: true, dt: 1 / 60, markedAssignments: new Map() });
+      soldierCanDamageExit = exit.hp < hpBefore;
+    }
     return {
       preparedAtCamp, stayedAtCamp, exitAtColonyEdge,
-      sourceRemoved: !enemyTents.includes(source),
-      exitRemovedAfterEmergence: !!exit && !enemyTents.includes(exit),
-      emerged: !!exit && wave.length > 0 && wave.every(enemy =>
+      sourceRemoved,
+      exitRemains, exitSpawnsUnits, soldierCanDamageExit,
+      emerged: !!exitPosition && wave.length > 0 && wave.every(enemy =>
         !enemy.portalTransit && inTerritory(enemy.x, enemy.y)),
       prepCleared: game.wavePreparation === null
     };
@@ -394,5 +476,5 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { waveMusters, wavePreparationTiming, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
+  return { waveMusters, wavePreparationTiming, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, shortWaveIntervals, waveStructuresSpawnUnits, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
 })());

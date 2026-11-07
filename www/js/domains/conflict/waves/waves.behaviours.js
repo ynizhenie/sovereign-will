@@ -223,6 +223,7 @@ export function tickEnemy(en, dt) {
   const enemyDef = getEnemyDef(en);
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
+    if (en.musterRoute && en.musterRoute.length === 0) return;
     if (en.muster) {
       if (en.musterRoute?.length) {
         const waypoint = en.musterRoute[0];
@@ -486,7 +487,8 @@ function buildEnemyTent(en, dt) {
     if (site.progress >= site.maxProgress) {
       game.enemyTents.push({
         x: site.x, y: site.y, hp: tentConfig.hp, maxHp: tentConfig.hp,
-        summonTimer: 0, summonsLeft: tentConfig.summonsPerWave, waveActive: !!site.waveActive
+        summonTimer: 0, summonsLeft: tentConfig.summonsPerWave, waveActive: !!site.waveActive,
+        spawner: getEnemyFaction().spawner || 'tent'
       });
       const tent = game.enemyTents[game.enemyTents.length - 1];
       if (site.waveActive && game.wavePreparation) {

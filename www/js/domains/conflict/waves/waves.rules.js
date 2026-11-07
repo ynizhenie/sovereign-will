@@ -353,43 +353,51 @@ export function grantEnemyReward(enemy) {
   addResources(enemy.reward);
 }
 
+/** @returns {{ x: number, y: number, progress: number, maxProgress: number, builder: import('../../../engine/world/types.js').Enemy | null, waveActive?: boolean } | null} */
 export function getNearbyEnemyTentSite(origin) {
   const rally = origin.muster || origin;
   const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
-  const candidates = [];
-  for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) {
-    if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isBorderZone(gx, gy)) continue;
-    const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15;
-    const occupied = isTileOccupied(x, y) || game.naturalRocks.some(rock => rock.x === x && rock.y === y) ||
-      game.waterTiles.some(water => water.x === x && water.y === y) ||
-      game.enemyTents.some(tent => tent.x === x && tent.y === y) ||
-      game.enemyTentBlueprints.some(site => site.x === x && site.y === y);
-    if (occupied || (hasTerritory() && inTerritory(x, y)) || inEnemyTerritory(x, y)) continue;
-    let withinThreeTilesOfTerritory = false;
-    if (hasTerritory()) {
-      for (let territoryY = gy - 3; territoryY <= gy + 3 && !withinThreeTilesOfTerritory; territoryY++) {
-        for (let territoryX = gx - 3; territoryX <= gx + 3; territoryX++) {
-          if (territoryX >= 0 && territoryY >= 0 && territoryX < game.COLS && territoryY < game.ROWS &&
-            inTerritory(territoryX * TILE_SIZE + 15, territoryY * TILE_SIZE + 15)) {
-            withinThreeTilesOfTerritory = true;
-            break;
-          }
-        }
+  const centre = getGridPos(rally.x, rally.y), radius = 32;
+  const territory = hasTerritory();
+  const nearTerritory = new Uint8Array(game.COLS * game.ROWS);
+  if (territory) {
+    const minX = Math.max(0, centre.gx - radius - 3), maxX = Math.min(game.COLS - 1, centre.gx + radius + 3);
+    const minY = Math.max(0, centre.gy - radius - 3), maxY = Math.min(game.ROWS - 1, centre.gy + radius + 3);
+    for (let gy = minY; gy <= maxY; gy++) for (let gx = minX; gx <= maxX; gx++) {
+      if (inTerritory(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15)) nearTerritory[gy * game.COLS + gx] = 1;
+    }
+  }
+  const reserved = new Set(game.enemies.map(enemy => enemy.tentBuildTarget)
+    .filter(Boolean).map(site => `${site.x},${site.y}`));
+  const territoryNear = (gx, gy) => {
+    for (let territoryY = Math.max(0, gy - 3); territoryY <= Math.min(game.ROWS - 1, gy + 3); territoryY++) {
+      for (let territoryX = Math.max(0, gx - 3); territoryX <= Math.min(game.COLS - 1, gx + 3); territoryX++) {
+        if (nearTerritory[territoryY * game.COLS + territoryX]) return true;
       }
     }
-    if (camps.length ? !withinThreeTilesOfTerritory : withinThreeTilesOfTerritory) continue;
-    if (camps.some(camp => Math.hypot(x - camp.x, y - camp.y) <
-      (camp.radius || GAME_CONFIG.raid.campRadiusTiles) * TILE_SIZE + TILE_SIZE)) continue;
-    candidates.push({
-      x,
-      y,
-      distance: Math.hypot(x - rally.x, y - rally.y) +
-        Math.hypot(x - townHall.x, y - townHall.y) * 0.05
-    });
+    return false;
+  };
+  let best = null, bestDistance = Infinity;
+  for (let gy = Math.max(0, centre.gy - radius); gy <= Math.min(game.ROWS - 1, centre.gy + radius); gy++) {
+    for (let gx = Math.max(0, centre.gx - radius); gx <= Math.min(game.COLS - 1, centre.gx + radius); gx++) {
+      if (Math.hypot(gx - centre.gx, gy - centre.gy) > radius || isBorderZone(gx, gy)) continue;
+      const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15, key = `${x},${y}`;
+      if (reserved.has(key) || game.enemyTentBlueprints.some(site => site.x === x && site.y === y) ||
+          game.enemyTents.some(tent => tent.x === x && tent.y === y) || isTileOccupied(x, y) ||
+          (territory && inTerritory(x, y)) || inEnemyTerritory(x, y)) continue;
+      const nearPlayer = territory && territoryNear(gx, gy);
+      if (camps.length ? !nearPlayer : nearPlayer) continue;
+      if (camps.some(camp => Math.hypot(x - camp.x, y - camp.y) <
+        (camp.radius || GAME_CONFIG.raid.campRadiusTiles) * TILE_SIZE + TILE_SIZE)) continue;
+      const distance = Math.hypot(x - rally.x, y - rally.y) +
+        Math.hypot(x - townHall.x, y - townHall.y) * 0.05;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = { x, y };
+      }
+    }
   }
-  candidates.sort((a, b) => a.distance - b.distance);
-  const site = candidates[0];
-  return site ? { x: site.x, y: site.y, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null } : null;
+  return best ? { ...best, progress: 0, maxProgress: GAME_CONFIG.enemyTents.buildWork, builder: null } : null;
 }
 
 // Where a wave's enemy appears: the map's edge, or for the demons one of their portals
@@ -592,6 +600,7 @@ export function startNextWave(preparing = false) {
 
     for (let t = 0; t < tentCount; t++) {
       let builder = normalEnemies[t];
+      builder.waveTentBuilder = true;
       let site = getNearbyEnemyTentSite(builder);
 
       if (site) {
@@ -615,7 +624,7 @@ export function startNextWave(preparing = false) {
 
 function activateEnemyTents() {
   for (const tent of game.enemyTents) {
-    if (tent.campStructure || tent.wavePortal) continue;
+    if (tent.campStructure) continue;
     tent.waveActive = true;
     tent.summonTimer = 0;
     tent.summonsLeft = GAME_CONFIG.enemyTents.summonsPerWave;
@@ -753,6 +762,7 @@ function regroupBySide() {
       const angle = awayFromHall + (i - (group.length - 1) / 2) * 0.18;
       const point = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
       en.muster = keepWaveMusterBeyondTerritory(point);
+      en.musterRoute = getTerritoryBypassRoute(en, en.muster) || [];
     });
     return;
   }
@@ -816,51 +826,85 @@ function stageWaveAtPlayerEdge() {
       if (enemy.buildTarget) return;
       const slot = Math.min(slots.length - 1, Math.floor((index + 0.5) * slots.length / group.length));
       enemy.muster = { x: slots[slot].x, y: slots[slot].y };
-      enemy.musterRoute = getTerritoryBypassRoute(enemy, enemy.muster);
+      enemy.musterRoute = getTerritoryBypassRoute(enemy, enemy.muster) || [];
     });
+  }
+  const builders = wave.filter(enemy => enemy.waveTentBuilder || enemy.tentBuildTarget);
+  const staleSites = new Set(builders.map(builder => builder.tentBuildTarget));
+  game.enemyTentBlueprints = game.enemyTentBlueprints.filter(site => !staleSites.has(site));
+  for (const builder of builders) delete builder.tentBuildTarget;
+  for (const builder of builders) {
+    const site = getNearbyEnemyTentSite(builder);
+    if (!site) continue;
+    site.builder = builder;
+    site.waveActive = true;
+    builder.tentBuildTarget = site;
   }
 }
 
 function getTerritoryBypassRoute(start, target) {
   if (!hasTerritory()) return [target];
-  const box = getTerritoryBox(), pad = TILE_SIZE;
+  const box = getTerritoryBox(), pad = TILE_SIZE * 2;
   const left = box.x0 - pad, right = box.x1 + pad, top = box.y0 - pad, bottom = box.y1 + pad;
   const width = right - left, height = bottom - top, perimeter = 2 * (width + height);
+  const project = point => {
+    const clampX = Math.max(left, Math.min(right, point.x));
+    const clampY = Math.max(top, Math.min(bottom, point.y));
+    return [
+      { x: clampX, y: top, t: clampX - left },
+      { x: right, y: clampY, t: width + clampY - top },
+      { x: clampX, y: bottom, t: width + height + right - clampX },
+      { x: left, y: clampY, t: width * 2 + height + bottom - clampY }
+    ];
+  };
+  const pointAt = distance => {
+    const t = (distance + perimeter) % perimeter;
+    if (t <= width) return { x: left + t, y: top };
+    if (t <= width + height) return { x: right, y: top + t - width };
+    if (t <= width * 2 + height) return { x: right - (t - width - height), y: bottom };
+    return { x: left, y: bottom - (t - width * 2 - height) };
+  };
+  const segmentIsSafe = (from, to) => {
+    const distance = Math.hypot(to.x - from.x, to.y - from.y);
+    const steps = Math.ceil(distance / TILE_SIZE);
+    for (let step = 1; step <= steps; step++) {
+      const progress = step / steps;
+      if (inTerritory(from.x + (to.x - from.x) * progress, from.y + (to.y - from.y) * progress)) return false;
+    }
+    return true;
+  };
+  if (segmentIsSafe(start, target)) return [target];
+  const starts = project(start).filter(point => segmentIsSafe(start, point));
+  const targets = project(target).filter(point => segmentIsSafe(point, target));
+  if (!starts.length || !targets.length) return null;
+  /** @type {import('../../../engine/world/types.js').Point[] | null} */
+  let bestRoute = null;
+  let bestDistance = Infinity;
   const corners = [
     { x: left, y: top, t: 0 },
     { x: right, y: top, t: width },
     { x: right, y: bottom, t: width + height },
     { x: left, y: bottom, t: width * 2 + height }
   ];
-  const project = point => {
-    const clampX = Math.max(left, Math.min(right, point.x));
-    const clampY = Math.max(top, Math.min(bottom, point.y));
-    const choices = [
-      { side: 'west', x: left, y: clampY, d: Math.hypot(point.x - left, point.y - clampY) },
-      { side: 'east', x: right, y: clampY, d: Math.hypot(point.x - right, point.y - clampY) },
-      { side: 'north', x: clampX, y: top, d: Math.hypot(point.x - clampX, point.y - top) },
-      { side: 'south', x: clampX, y: bottom, d: Math.hypot(point.x - clampX, point.y - bottom) }
-    ].sort((a, b) => a.d - b.d);
-    const p = choices[0];
-    const t = p.side === 'north' ? p.x - left
-      : p.side === 'east' ? width + p.y - top
-        : p.side === 'south' ? width + height + right - p.x
-          : width * 2 + height + bottom - p.y;
-    return { x: p.x, y: p.y, t };
-  };
-  const from = project(start), to = project(target);
-  const clockwise = (to.t - from.t + perimeter) % perimeter;
-  const counterClockwise = perimeter - clockwise;
-  const forward = clockwise <= counterClockwise;
-  const span = Math.min(clockwise, counterClockwise);
-  const nodes = corners.map(corner => {
-    const distance = forward ? (corner.t - from.t + perimeter) % perimeter : (from.t - corner.t + perimeter) % perimeter;
-    return { ...corner, distance };
-  }).filter(corner => corner.distance > 1 && corner.distance < span - 1)
-    .sort((a, b) => a.distance - b.distance);
-  const route = [from, ...nodes, to, target];
-  return route.filter((point, index) => index === 0 ||
-    Math.hypot(point.x - route[index - 1].x, point.y - route[index - 1].y) > 8);
+  for (const from of starts) for (const to of targets) {
+    const clockwise = (to.t - from.t + perimeter) % perimeter;
+    for (const forward of [true, false]) {
+      const span = forward ? clockwise : perimeter - clockwise;
+      const route = [start, from];
+      const direction = forward ? 1 : -1;
+      const nodes = corners.map(corner => {
+        const distance = forward ? (corner.t - from.t + perimeter) % perimeter : (from.t - corner.t + perimeter) % perimeter;
+        return { ...corner, distance };
+      }).filter(corner => corner.distance > 1 && corner.distance < span - 1)
+        .sort((a, b) => a.distance - b.distance);
+      route.push(...nodes.map(corner => pointAt(from.t + direction * corner.distance)));
+      route.push(to, target);
+      const length = route.slice(1).reduce((sum, point, index) =>
+        sum + Math.hypot(point.x - route[index].x, point.y - route[index].y), 0);
+      if (length < bestDistance) { bestDistance = length; bestRoute = route; }
+    }
+  }
+  return bestRoute;
 }
 
 function findDemonWaveExit(camp) {
@@ -946,8 +990,6 @@ function tickDemonWaveTransit(dt) {
     delete enemy.musterRoute;
     enemy.musterUntil = 0;
   }
-  game.enemyTents = game.enemyTents.filter(tent =>
-    !tent.wavePortal || tent.x !== transit.exit.x || tent.y !== transit.exit.y);
   game.demonWaveTransit = null;
   invalidateAllPaths();
 }
@@ -970,14 +1012,19 @@ export function tickWaveTimer(dt) {
   game.waveTimer -= dt;
   const muster = GAME_CONFIG.waveMuster;
   const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
-  const preparationSeconds = getEnemyFaction().portalSpawns ? muster.departureSeconds : muster.preparationSeconds;
+  const preparationSeconds = getEnemyFaction().portalSpawns
+    ? Math.min(muster.departureSeconds, game.waveInterval)
+    : Math.min(muster.preparationSeconds, game.waveInterval);
+  const departureSeconds = getEnemyFaction().portalSpawns
+    ? muster.departureSeconds
+    : Math.min(muster.departureSeconds, preparationSeconds / 2);
   const canPrepareWave = !getEnemyFaction().portalSpawns || camps.length > 0;
-  if (canPrepareWave && !game.wavePreparation && before > preparationSeconds && game.waveTimer <= preparationSeconds) {
+  if (canPrepareWave && !game.wavePreparation && before >= preparationSeconds && game.waveTimer <= preparationSeconds) {
     game.wavePreparation = { wave: game.waveNum, stage: getEnemyFaction().portalSpawns ? 'portal' : 'gather' };
     startNextWave(true);
   }
   if (!getEnemyFaction().portalSpawns && game.wavePreparation && game.wavePreparation.stage === 'gather' &&
-      before > muster.departureSeconds && game.waveTimer <= muster.departureSeconds) {
+      before > departureSeconds && game.waveTimer <= departureSeconds) {
     stageWaveAtPlayerEdge();
     const waveEnemies = game.enemies.concat(...game.enemyRafts
       .filter(raft => raft.phase === 'arriving').map(raft => raft.units));
@@ -1001,6 +1048,7 @@ export function tickWaveTimer(dt) {
       for (const enemy of activeWaveUnits) if (enemy.prepWave === game.wavePreparation.wave) {
         enemy.musterUntil = 0;
         delete enemy.prepWave;
+        delete enemy.waveTentBuilder;
         if (enemy.tentBuildTarget) {
           enemy.buildTarget = enemy.tentBuildTarget;
           delete enemy.tentBuildTarget;

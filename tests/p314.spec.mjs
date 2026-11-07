@@ -88,6 +88,31 @@ test('a dog without allied soldiers advances toward an enemy instead of wanderin
   expect(errors).toEqual([]);
 });
 
+test('a dog ignores wave enemies during preparation and attacks once the wave starts', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    Object.assign(dog, { x: townHall.x + 180, y: townHall.y, petSleep: 0, speed: 0 });
+    settlers = [dog];
+    const foe = createNormalEnemy({ x: dog.x + 20, y: dog.y }, 'raider');
+    foe.speed = 0;
+    foe.fromWave = true;
+    foe.prepWave = game.waveNum;
+    enemies = [foe];
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    const hpBefore = foe.hp;
+    window.sim.run(1);
+    const ignoredDuringPreparation = foe.hp === hpBefore && dog.activity !== 'petFight';
+    game.wavePreparation = null;
+    delete foe.prepWave;
+    window.sim.run(1);
+    return { ignoredDuringPreparation, attackedAfterStart: foe.hp < hpBefore };
+  });
+  expect(result).toEqual({ ignoredDuringPreparation: true, attackedAfterStart: true });
+  expect(errors).toEqual([]);
+});
+
 test('a player dog bite timestamp is not refreshed during its attack cooldown', async ({ page }) => {
   const errors = await start(page, 'humans');
   const result = await page.evaluate(() => {

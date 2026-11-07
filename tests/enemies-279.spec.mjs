@@ -63,9 +63,32 @@ test('wave enemies stage outside the player boundary on the camp-facing side bef
     stagingAtBoundary: true,
     stagingOnCampSide: true,
     previousWaveUnaffected: true,
+    buildersNearStaging: true,
+    allHaveSafeRoutes: true,
     allTargetsOutsidePlayerZone: true,
     enteredPlayerZone: false
   });
+  expect(errors).toEqual([]);
+});
+
+test('waves still spawn and stage when the interval is 30 seconds or less', async ({ page }) => {
+  const errors = await openGame(page);
+  const results = await sim(page, 'shortWaveIntervals', {});
+  expect(results).toHaveLength(2);
+  for (const result of results) {
+    expect(result.spawnedBeforeStart).toBeGreaterThan(0);
+    expect(result.waveStarted).toBe(true);
+    expect(result.waveEnemiesRemain).toBe(true);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('wave builders construct and activate faction-specific spawners when the wave starts', async ({ page }) => {
+  const errors = await openGame(page);
+  expect(await sim(page, 'waveStructuresSpawnUnits', {})).toEqual([
+    { faction: 'humans', spawner: 'tent', expectedSpawner: 'tent', spawnedUnit: true },
+    { faction: 'undead', spawner: 'grave', expectedSpawner: 'grave', spawnedUnit: true }
+  ]);
   expect(errors).toEqual([]);
 });
 
@@ -94,12 +117,13 @@ test('raft waves sail from beyond the map, land, leave, and stage outside the ba
   expect(errors).toEqual([]);
 });
 
-test('a demon wave opens in its camp at 15 seconds and crosses to a temporary portal at the colony edge', async ({ page }) => {
+test('a demon wave crosses from its camp portal to a persistent, hostile portal at the colony edge', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'demonCampWavePortals', {});
   expect(r).toEqual({
     preparedAtCamp: true, stayedAtCamp: true, exitAtColonyEdge: true,
-    sourceRemoved: true, exitRemovedAfterEmergence: true, emerged: true, prepCleared: true
+    sourceRemoved: true, exitRemains: true, exitSpawnsUnits: true, soldierCanDamageExit: true,
+    emerged: true, prepCleared: true
   });
   expect(errors).toEqual([]);
 });
