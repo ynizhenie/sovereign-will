@@ -95,6 +95,20 @@ test('a fish trap queues enough rope recipes when its cost exceeds one recipe yi
   expect(result).toEqual({ blueprint: 'fish_trap', ropeOrders: 2, herbs: 0 });
 });
 
+test('a crafter who becomes unavailable releases queued gear orders to another worker', async ({ page }) => {
+  await openGame(page);
+  const result = await sim(page, 'craftAfterCrafterLeaves', {});
+  expect(result).toEqual({
+    assigned: true,
+    releasedBundle: true,
+    ordersLeft: 0,
+    leatherArmor: 4,
+    helmets: 1,
+    leather: 0,
+    iron: 0
+  });
+});
+
 test('buildings that can afford their missing rope recipe stay active', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');

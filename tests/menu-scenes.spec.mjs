@@ -39,6 +39,34 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
   expect(errors).toEqual([]);
 });
 
+test('the menu farm keeps working when Endless is set to the undead', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'undead');
+    enterMenuWorld('farm');
+    for (let f = 0; f < 60 * 30; f++) stepGame(1 / 60);
+    const scene = {
+      configuredFaction: sides.player.faction,
+      sceneFaction: getPlayerFaction().id,
+      planted: farmPlots.length + blueprints.filter(b => b.type === 'wheat').length,
+      cropNeedsBones: !!GAME_CONFIG.buildings.wheat.cost.bones
+    };
+    resetGame();
+    return {
+      ...scene,
+      newGameFaction: getPlayerFaction().id,
+      newGameCropNeedsBones: !!GAME_CONFIG.buildings.wheat.cost.bones
+    };
+  });
+  expect(result.configuredFaction).toBe('undead');
+  expect(result.sceneFaction).toBe('humans');
+  expect(result.planted).toBeGreaterThan(0);
+  expect(result.cropNeedsBones).toBe(false);
+  expect(result.newGameFaction).toBe('undead');
+  expect(result.newGameCropNeedsBones).toBe(true);
+});
+
 test('the fight: zombies keep coming; a tapped one falls; the squad gone, a new one comes (#256)', async ({ page }) => {
   await page.goto('/');
   await opened(page);

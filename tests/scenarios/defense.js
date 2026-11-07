@@ -3,6 +3,26 @@ Object.assign(window.sim, (() => {
   const { start, run, helpers: { tileCenter, makeSettler, placeBuilding, clearResources } } = window.sim;
   const nearHall = (dx, dy) => { const g = getGridPos(townHall.x, townHall.y); return tileCenter(g.gx + dx, g.gy + dy); };
 
+  function preWaveWorkTiming({ seed = 'pre-wave-work-timing' } = {}) {
+    start(seed);
+    game.waveTimer = 30;
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    const enemy = createConfiguredEnemy({ x: townHall.x + 300, y: townHall.y }, 'raider');
+    enemy.fromWave = true;
+    enemy.prepWave = game.waveNum;
+    enemies = [enemy];
+    const raftEnemy = { ...enemy, enemyKey: enemy.enemyKey, hp: enemy.hp, prepWave: game.waveNum };
+    enemyRafts = [{ units: [raftEnemy] }];
+    enemyTents = [{ hp: 100, waveActive: true }];
+    const workersStillWorking = !isDefenseAlert();
+    const waveInactive = !createSettlerTick(1 / 60).isWaveActive;
+    game.waveTimer = 15;
+    game.pathTick++;
+    const alertAtFifteen = isDefenseAlert();
+    game.wavePreparation = null;
+    return { workersStillWorking, waveInactive, alertAtFifteen, deploySeconds: GAME_CONFIG.defense.deploySeconds };
+  }
+
   // 7 swordsmen and 2 archers, a door and a few walls, 9 s before a wave. Returns the plan and where they stand.
   function deployment({ seed = 'defense-test', seconds = 12 }) {
     start(seed);
@@ -121,5 +141,5 @@ Object.assign(window.sim, (() => {
     return { allInside: settlers.every(s => isInSafeArea(s.x, s.y)), leftBase, applesLeft: apple.applesReady };
   }
 
-  return { deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack };
+  return { preWaveWorkTiming, deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack };
 })());

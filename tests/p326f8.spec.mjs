@@ -7,22 +7,19 @@ test('a mine goes only on a source, one each; a source can\'t be marked; built (
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
-    let source, spot, worker;
-    for (const seed of ['maze-283', 'maze-137', 'ore-a']) {
-      window.sim.start(seed);
-      ironOres = []; coalOres = []; pendingRespawns = [];
-      worker = makeSettler(1, townHall.x, townHall.y, { tool: 'pickaxe' });
-      settlers = [worker];
-      const reachable = getOreSpawners('iron')
-        .map(resource => ({ resource, spot: getResourceApproachPoint(worker, resource) }))
-        .filter(candidate => candidate.spot)
-        .sort((a, b) => Math.hypot(a.spot.x - worker.x, a.spot.y - worker.y) - Math.hypot(b.spot.x - worker.x, b.spot.y - worker.y));
-      if (reachable.length) {
-        ({ resource: source, spot } = reachable[0]);
-        break;
-      }
-    }
-    if (!source) throw new Error('No reachable iron spawner on the test maps');
+    mapSettings = { cols: 40, rows: 40 };
+    window.sim.start('mine-on-source');
+    window.sim.helpers.clearResources();
+    unlocked['buildings:mine'] = true;
+    ironOres = []; coalOres = []; pendingRespawns = [];
+    const hall = getGridPos(townHall.x, townHall.y);
+    const source = { x: (hall.gx + 3) * TILE_SIZE + 15, y: hall.gy * TILE_SIZE + 15, hp: 100, maxHp: 100, oreSpawner: 'iron' };
+    naturalRocks = [source];
+    const worker = makeSettler(1, townHall.x, townHall.y, { tool: 'pickaxe' });
+    settlers = [worker];
+    resetTileIndex();
+    const spot = getResourceApproachPoint(worker, source);
+    if (!spot) throw new Error('No reachable approach to the test iron spawner');
     const quiet = () => { waveTimer = 999; ironOres = []; coalOres = []; pendingRespawns = []; };
     const run = (seconds, each) => { for (let f = 0; f < seconds * 60; f++) { quiet(); update(1 / 60); if (each) each(); } };
     // tapped with Point: not marked, a notice instead

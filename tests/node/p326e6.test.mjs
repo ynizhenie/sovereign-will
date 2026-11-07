@@ -1,4 +1,4 @@
-// (#326) firewood for every faction, a quick club, a wave's tents at the border of the player's land
+// (#326) firewood for every faction, a quick club, a wave's tents near its rally point
 import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
@@ -9,12 +9,6 @@ test('firewood is every faction\'s: the undead order it in Craft (1 wood into 2)
   });
 });
 
-test('a wave\'s tents are put up outside the player\'s land, one to three tiles from it (#326)', async () => {
-  const tents = await sim.wavesTentsAtTheBorder();
-  expect(tents).toMatchObject({ sites: true, allOutside: true });
-  expect(tents.gaps.length).toBeGreaterThan(0);
-  for (const gap of tents.gaps) {
-    expect(gap).toBeGreaterThanOrEqual(1);
-    expect(gap).toBeLessThanOrEqual(3);
-  }
+test('a wave\'s tents and graves are placed near the rally point, outside the player\'s land (#326)', async () => {
+  expect(await sim.wavesTentsAtRally()).toMatchObject({ sites: true, allHaveRally: true, allOutside: true, allNearRally: true });
 });

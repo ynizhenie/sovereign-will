@@ -64,7 +64,8 @@ export function getHeldItemPose(unit) {
   const enemyDef = unit.enemyKey && getDefinition('enemies', unit.enemyKey);
   const enemyNecromancer = enemyDef && enemyDef.necromancer;
   const enemyMedic = enemyDef && enemyDef.healer;
-  const item = unit.tool === 'necro_staff' || enemyNecromancer ? 'necro_staff'
+  const item = unit.swingT > 0 && unit.swingWeapon ? unit.swingWeapon
+    : unit.tool === 'necro_staff' || enemyNecromancer ? 'necro_staff'
     : unit.tool === 'medbag' || enemyMedic ? 'medbag'
     : unit.weapon && unit.weapon !== 'fist' ? unit.weapon : (unit.tool && unit.tool !== 'none' ? unit.tool : 'fist');
   const big = (unit.visualRadius || unit.radius || 11) > 14 ? 1.3 : 1;
@@ -721,11 +722,11 @@ export function drawSettlerShadows() {
   if (!tinyUnit()) drawFigureShadows(game.settlers, getViewRect(60));
 }
 
-export function drawSettlers() {
+export function drawSettlers(only = null) {
   // (#306) zoomed out: figures at their simplest, and what's off the screen not drawn at all
   const simple = simpleUnit(), view = getViewRect(60), scale = getViewScale(), tiny = tinyUnit();
   const dab = 1.6 / scale; // (a couple of screen px, in world units)
-  game.settlers.forEach(s => {
+  (only ? [only] : game.settlers).forEach(s => {
     if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) return;
     if (isPet(s)) { drawPet(s); return; } // (#314)
     // (#306) one or two pixels on the screen: a dab of its colour, and the ring of the one picked
@@ -754,7 +755,8 @@ export function drawSettlers() {
     const k = itemScale(s);
     const blade = isSwordWeapon(s.weapon) || isSpearWeapon(s.weapon);
     // (#326) a medic at work: herbs in its hand; an archer out of arrows in a fight: its dagger (the bow on its back)
-    const daggerOut = usesDagger(s) && game.pathTick - (s.struckAt ?? -1e9) < 180;
+    const daggerOut = (usesDagger(s) || (s.swingWeapon === 'dagger' && (s.swingT || 0) > 0)) &&
+      game.pathTick - (s.struckAt ?? -1e9) < 180;
     const workTool = s.asleep ? null : crafting || ((s.working || 0) > 0 && s.workKind === 'build') ? 'hammer' : (s.working || 0) > 0 && s.workKind === 'butcher' && !blade ? 'knife'
       : isHealing(s) ? 'herbs' : daggerOut ? 'dagger' : null;
     const picking = (s.working || 0) > 0 && s.workKind === 'pick';
@@ -774,7 +776,7 @@ export function drawSettlers() {
       if (onBack) applyBackPose(s); else applyHeldItemPose(s);
       if (getNecromancy(s) && s.weapon === 'fist') {
         drawStaff(getSettlerColor(null), getDarkness()); // (#326: its side's colour, glowing in the dark)
-      } else if (!drawHeldWeapon(s.weapon, k, onBack ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
+      } else if (!drawHeldWeapon((s.swingT || 0) > 0 && s.swingWeapon && !onBack ? s.swingWeapon : s.weapon, k, onBack ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
         if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
         else drawHeldTool(s.tool || 'none', k, game.gameMode === 'battle' && s.tool === 'medbag' ? 1 : Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
       }

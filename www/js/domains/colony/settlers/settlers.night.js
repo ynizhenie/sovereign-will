@@ -35,7 +35,7 @@ export function onWatch(s) {
 // The one up getting firewood for the night (a woodcutter, while a soldier's on watch to guard it)
 export function onFuelDuty(s) {
   if (!isNight() || (stock.firewood || 0) >= 1) return false;
-  if (!game.buildings.some(b => b.type === 'torch' || b.type === 'campfire')) return false;
+  if (!game.buildings.some(b => b.side !== 'red' && (b.type === 'torch' || b.type === 'campfire'))) return false;
   if (!game.settlers.some(o => onWatch(o))) return false;
   const cutter = game.settlers.filter(o => o.role === 'worker' && getDefinition('tools', o.tool) && getDefinition('tools', o.tool).family === 'axe' && !o.isPossessed).sort((a, b) => a.id - b.id)[0];
   return cutter === s;
@@ -57,7 +57,7 @@ export function tickNight() {
   if (!night && game.wasNight) {
     playSound('dawn');
     someoneSays(game.settlers, getPlayerFaction().id, 'morning'); // (#252)
-    for (const b of game.buildings) if (b.type === 'torch') b.lit = false;
+    for (const b of game.buildings) if (b.side !== 'red' && b.type === 'torch') b.lit = false;
     for (const s of game.settlers) {
       s.torchInHand = false;
       s.torchPickup = false;
@@ -95,13 +95,14 @@ export function fetchNightTorch(s, tick) {
 
 // A wave coming at night: everyone woken (wakeSeconds before it)
 function waveDue() {
-  return game.waveTimer <= config().wakeSeconds || isDefenseAlert() || game.enemies.length > 0;
+  return game.waveTimer <= config().wakeSeconds || isDefenseAlert() ||
+    game.enemies.some(enemy => !enemy.campGuard || (game.raidActive && enemy.campId === game.raidCampId));
 }
 
 // (#279) the enemy's tents or portals still standing at night: the soldiers stay up to go and break them, or
 // with no soldiers, everyone
 function upForTents(s) {
-  if (!game.enemyTents.length && !game.enemyTentBlueprints.length) return false;
+  if (!game.enemyTents.some(tent => !tent.campStructure) && !game.enemyTentBlueprints.length) return false;
   return isFighter(s) || !game.settlers.some(isFighter);
 }
 
@@ -152,7 +153,7 @@ function nightCrew(tick) {
 const SLEEP_NEIGHBOURS = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
 function sleepSpotFor(s) {
   const homes = game.buildings
-    .filter(b => { const def = getDefinition('buildings', b.type) || {}; return def.population || def.healPerSecond; })
+    .filter(b => { const def = getDefinition('buildings', b.type) || {}; return b.side !== 'red' && (def.population || def.healPerSecond); })
     .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y));
   const candidates = [...homes, townHall];
   const reachable = getSettlerReach(s);
@@ -263,7 +264,7 @@ export function lightTorches(s, tick) {
   const phase = getDayPhase();
   if (phase !== 'evening' && phase !== 'night') return false;
   const load = s.carrying && s.carrying.forTorch ? s.carrying : null;
-  const want = b => b.type === 'torch' && !b.lit && !game.settlers.some(o => o !== s && o.carrying && o.carrying.forTorch === b);
+  const want = b => b.side !== 'red' && b.type === 'torch' && !b.lit && !game.settlers.some(o => o !== s && o.carrying && o.carrying.forTorch === b);
   if (!load) {
     if (s.carrying || (stock.firewood || 0) < config().postFirewood) return false;
     const post = game.buildings.filter(want).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
@@ -273,7 +274,7 @@ export function lightTorches(s, tick) {
     return fetchFromStorage(s, 'firewood', tick.dt, () => { s.carrying = { type: 'firewood', amount: takeStock('firewood', config().postFirewood), forTorch: post }; s.torchTarget = null; });
   }
   const post = load.forTorch;
-  if (!game.buildings.includes(post) || post.lit) { delete load.forTorch; return false; } // (back to the stock)
+  if (!game.buildings.includes(post) || post.side === 'red' || post.lit) { delete load.forTorch; return false; } // (back to the stock)
   s.patrolTarget = null;
   if (Math.hypot(post.x - s.x, post.y - s.y) > 26) { moveEntityTowards(s, post.x, post.y, s.speed, false, tick.dt); return true; }
   faceTowards(s, post.x, post.y);

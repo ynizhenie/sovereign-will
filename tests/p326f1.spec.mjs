@@ -5,7 +5,7 @@ import { openGame } from './helpers.mjs';
 
 const start = async page => {
   const errors = await openGame(page);
-  await page.evaluate(() => { setSideFaction('player', 'humans'); mapSettings = { cols: 40, rows: 40 }; window.sim.start('f1'); stock.food = 200; isPaused = false; game.waveTimer = 99999; buildings.push({ type: 'tent', x: townHall.x - 135, y: townHall.y + 105, hp: 100, maxHp: 100 }); resetTileIndex(); });
+  await page.evaluate(() => { setSideFaction('player', 'humans'); mapSettings = { cols: 40, rows: 40 }; window.sim.start('f1'); window.sim.helpers.clearResources(); stock.food = 200; isPaused = false; game.waveTimer = 99999; buildings.push({ type: 'tent', x: townHall.x - 135, y: townHall.y + 105, hp: 100, maxHp: 100 }); resetTileIndex(); });
   return errors;
 };
 

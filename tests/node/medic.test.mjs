@@ -15,6 +15,14 @@ test('without herbs a medic can not heal (#28)', async () => {
   expect(r).toEqual({ soldierHp: 20, workerHp: 50, herbsLeft: 0, inBag: 0 });
 });
 
+test('enemy healers use the same timed herb heal as player healers', () => {
+  expect(sim.enemyMedicHeal({})).toEqual({ hp: 50, herbs: 4 });
+});
+
+test('enemy healers keep their herbs in battle but heal at the same rate', () => {
+  expect(sim.enemyMedicHeal({ mode: 'battle' })).toEqual({ hp: 50, herbs: 5 });
+});
+
 test('when not busy a medic gathers grass and brings herbs home (#28)', async () => {
   const r = await sim.medicGathers({});
   expect(r.grassLeft).toBe(0);

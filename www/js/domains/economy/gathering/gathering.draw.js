@@ -1,6 +1,6 @@
 // How far a resource is worked through
 
-import { TILE_SIZE, forEachInRect, game, worldEpoch } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, thingAt, worldEpoch } from '../../../engine/world/index.js';
 import { SHADOWS, paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
@@ -61,13 +61,9 @@ const REFRESH_TICKS = 3; // (what's drawn over the pictures: a bar, a sapling)
 const STAMP_TICKS = 20; // (how often a piece's look is worked out again: how a tree stands, apples ripe, take a moment)
 // (a little either side of a threshold the way held stays: at a physical scale of 1 (a 2x screen), a pixel of a window's
 // size drew the one way and the other in turn, a whole screen of pieces painted each time)
-let heldPictured = false;
-const pictured = () => {
-  if (typeof document === 'undefined') return false;
-  const s = getViewScale();
-  if (s < 0.95) heldPictured = true; else if (s >= 1.05) heldPictured = false;
-  return heldPictured;
-};
+// Nature keeps its deterministic sprite at every camera scale. Rasterized chunks used to switch
+// the same tree to a different cached appearance when zooming out.
+const pictured = () => false;
 // as fine as the screen shows (a power of two), never finer than a world unit; a size kept while the zoom is within a little of its range
 let heldRes = 1;
 const natureRes = () => {
@@ -80,7 +76,7 @@ const standing = o => !o.isGrowing && !o.fallen;
 const sunKey = () => { const s = getSun(); return `${Math.round(s.dx * 10)},${Math.round(s.dy * 10)},${Math.round(s.alpha * 50)}`; };
 /** @param {any[][]} lists */
 const natureLists = lists => {
-  lists[0] = game.stumps; lists[1] = game.trees; lists[2] = game.cacti; lists[3] = game.boulders; lists[4] = game.berryBushes;
+  lists[0] = game.stumps; lists[1] = game.trees; lists[2] = game.cacti; lists[3] = game.boulders; lists[4] = game.berryBushes; lists[5] = game.savannaTiles;
   return lists;
 };
 
@@ -151,7 +147,8 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
       const size = CHUNK * TILE_SIZE, x0 = cx * size, y0 = cy * size;
       let h = 0;
       current.forEach((list, n) => forEachInRect(list, x0 - margin, y0 - margin, x0 + size + margin, y0 + size + margin, o => {
-        h = (h * 31 + o.x * 7919 + o.y * 31 + n + (standing(o) ? 1 : 0) + (o.applesReady ? 2 : 0) + (o.apple ? 4 : 0)) | 0;
+        h = (h * 31 + o.x * 7919 + o.y * 31 + n + (standing(o) ? 1 : 0) + (o.applesReady ? 2 : 0) + (o.apple ? 4 : 0) +
+          (thingAt(game.savannaTiles, o.x, o.y) ? 8 : 0)) | 0;
       }));
       const value = `${h}|${sun}`;
       state.dirty.delete(key);
@@ -168,7 +165,7 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
   };
 }
 /** @param {any[][]} lists */
-const tuftLists = lists => { lists[0] = game.grassList; return lists; };
+const tuftLists = lists => { lists[0] = game.grassList; lists[1] = game.savannaTiles; return lists; };
 const natureStamps = stamper(natureLists), tuftStamps = stamper(tuftLists);
 
 /** @param {CanvasRenderingContext2D} g @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
@@ -177,10 +174,10 @@ function paintNature(g, x0, y0, x1, y1) {
   paintVariant(null, false);
   try {
     for (const st of around(game.stumps, x0, y0, x1, y1)) drawStumpArt(st);
+    for (const o of around(game.berryBushes, x0, y0, x1, y1)) drawBushArt(o);
     for (const t of around(game.trees, x0, y0, x1, y1, standing)) drawTreeArt(t);
     for (const o of around(game.cacti, x0, y0, x1, y1)) drawCactusArt(o);
     for (const o of around(game.boulders, x0, y0, x1, y1)) drawBoulderArt(o);
-    for (const o of around(game.berryBushes, x0, y0, x1, y1)) drawBushArt(o);
   } finally { paintVariant(null); paintOn(null); }
 }
 
@@ -242,6 +239,7 @@ const STILL = [
 const stillLists = lists => {
   STILL.forEach(([, listOf], n) => { lists[n] = listOf(); });
   lists[STILL.length] = game.naturalRocks; lists[STILL.length + 1] = game.ironOres; lists[STILL.length + 2] = game.coalOres;
+  lists[STILL.length + 3] = game.savannaTiles;
   return lists;
 };
 // the pictures' size: the shadows' picture's (half the screen's), a power of two, kept while the zoom is within a little of it
@@ -279,9 +277,12 @@ function paintStillShadows(g, x0, y0, x1, y1) {
   }
   const sun = stillSun(), shadow = new Path2D();
   STILL.forEach(([kind], n) => {
-    const [dx, dy, rx, ry] = SHADOWS[kind], height = rx * 0.9, ox = sun.dx * height, oy = sun.dy * height;
-    const ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25, at = kept.feet[n];
+    const [dx, dy, defaultRx, defaultRy] = SHADOWS[kind], at = kept.feet[n];
     for (let i = 0; i < at.length; i += 2) {
+      const acacia = kind === 'tree' && thingAt(game.savannaTiles, at[i], at[i + 1]);
+      const rx = acacia ? 19 : defaultRx, ry = acacia ? 6 : defaultRy;
+      const height = rx * 0.9, ox = sun.dx * height, oy = sun.dy * height;
+      const ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
       const sx = at[i] + dx + ox * 0.5, sy = at[i + 1] + dy + 4 + oy * 0.5;
       shadow.moveTo(sx + ex, sy); shadow.ellipse(sx, sy, ex, ey, 0, 0, Math.PI * 2);
     }
@@ -303,9 +304,18 @@ export function drawTrees() {
   if (pictured()) return; // (with the others, in drawCactiBouldersGrassBushes)
   // (before the trees: a tree grown there covers its own stump, a felled one's log covers it)
   drawSprites('stump', seenOf(game.stumps));
-  const trees = seenOf(game.trees);
-  drawSprites('tree', trees.filter(t => !t.isGrowing && !t.fallen));
-  for (const t of trees) drawTreeNear(t, !t.isGrowing && !t.fallen); // (a sapling, a felled tree as they are; a standing one's bars)
+  drawKind('bush', game.berryBushes, 22);
+}
+
+export function depthSortedTrees() {
+  return pictured() ? [] : seenOf(game.trees);
+}
+
+export function drawDepthTree(t) {
+  if (!t.isGrowing && !t.fallen) {
+    drawSprites('tree', [t]);
+    drawTreeNear(t, true);
+  } else drawTreeNear(t);
 }
 
 // A tree as it is close up (over its picture, standing: only what's changing, its bar)
@@ -338,7 +348,6 @@ export function drawCactiBouldersGrassBushes() {
   drawKind('cactus', game.cacti, 24);
   drawKind('boulder', game.boulders, 24); // (a loose, rounded stone, not the square rock that joins up)
   drawKind('grass', game.grassList, 20);
-  drawKind('bush', game.berryBushes, 22); // (blue berries, as the Berries icon)
 }
 
 // The player's marks on resources: a square around it and a pointer over it, "here" (#232)

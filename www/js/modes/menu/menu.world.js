@@ -17,7 +17,7 @@
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../engine/world/index.js';
 import { camera, canvas, fitCanvasToScreen, getBaseScale, mouse, onTap, screenPixelRatio, updateInputPos } from '../../engine/platform/index.js';
-import { getPlayerFaction } from '../../domains/factions/index.js';
+import { applyFactionCosts, getPlayerFaction } from '../../domains/factions/index.js';
 import { changeSettlerType, createSettler } from '../../domains/colony/settlers/index.js';
 import { putOnGear } from '../../domains/colony/equipment/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
@@ -120,6 +120,7 @@ export function enterMenuWorld(scene = '') {
   for (const id of Object.keys(stock)) stock[id] = 0;
   game.foodMix = {};
   game.gameMode = 'menu';
+  applyFactionCosts(); // (#326) use the scene's faction, not the Endless settings used to build the map
   menuWorld.stockAge = 0;
   game.settlers = [];
   if (sceneName === 'hunt') {

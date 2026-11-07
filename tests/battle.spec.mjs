@@ -204,7 +204,7 @@ test('a banner makes a big enemy a captain too', async ({ page }) => {
   expect(result).toEqual({ type: 'big', captain: true, entryHasBanner: true });
 });
 
-test('the battle settings pick the field: a glade or a desert, and the line-up stays (#279)', async ({ page }) => {
+test('the battle settings pick the field: a glade, desert, or savanna, and the line-up stays (#279)', async ({ page }) => {
   await openBattle(page);
   await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
@@ -212,12 +212,16 @@ test('the battle settings pick the field: a glade or a desert, and the line-up s
   });
   await page.click('[data-dock="battle-settings"]');
   await page.click('[data-battle-field="desert"]');
-  const desert = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, total: COLS * ROWS, units: settlers.length }));
+  const desert = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, total: COLS * ROWS, units: settlers.length }));
   await expect(page.locator('[data-battle-field="desert"]')).toHaveClass(/on/);
-  expect(desert).toEqual({ field: 'desert', sand: 40 * 26, total: 40 * 26, units: 1 });
+  expect(desert).toEqual({ field: 'desert', sand: 40 * 26, savanna: 0, total: 40 * 26, units: 1 });
+  await page.click('[data-battle-field="savanna"]');
+  const savanna = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, units: settlers.length }));
+  await expect(page.locator('[data-battle-field="savanna"]')).toHaveClass(/on/);
+  expect(savanna).toEqual({ field: 'savanna', sand: 0, savanna: 40 * 26, units: 1 });
   await page.click('[data-battle-field="glade"]');
-  const glade = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, units: settlers.length }));
-  expect(glade).toEqual({ field: 'glade', sand: 0, units: 1 });
+  const glade = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, units: settlers.length }));
+  expect(glade).toEqual({ field: 'glade', sand: 0, savanna: 0, units: 1 });
 });
 
 test('the desert field keeps the midline and the green and red halves of the glade (#279)', async ({ page }) => {
@@ -781,7 +785,7 @@ test('an enemy medic uses the player medic healing animation state', async ({ pa
     ally.hp -= 20;
     game.settlers = [settler];
     game.enemies = [medic, ally];
-    tickEnemy(medic, 1 / 60);
+    for (let frame = 0; frame < 75; frame++) tickEnemy(medic, 1 / 60);
     return { workKind: medic.workKind, working: medic.working, treatedAt: ally.treatedAt, healed: ally.hp > ally.maxHp - 20 };
   });
   expect(result.workKind).toBe('heal');
@@ -815,11 +819,11 @@ test('an enemy medic stops healing when another enemy medic has claimed the only
     const patient = createConfiguredEnemy({ x: 830, y: 300 }, 'raider');
     const fighter = createConfiguredEnemy({ x: 1000, y: 300 }, 'raider');
     const settler = createSettler('zombie', 1, 500, 300);
-    patient.hp -= 20;
+    patient.hp -= 35;
     game.settlers = [settler];
     game.enemies = [first, second, patient, fighter];
     const before = patient.hp;
-    tickEnemy(first, 1 / 60);
+    for (let frame = 0; frame < 75; frame++) tickEnemy(first, 1 / 60);
     const afterFirst = patient.hp;
     tickEnemy(second, 1 / 60);
     return {

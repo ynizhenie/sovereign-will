@@ -102,7 +102,7 @@ export function emptyFishTrap(s, tick) {
   if (!fisher && !(s.tool === 'none' && s.weapon === 'fist')) return false;
   let trap = null, best = Infinity;
   for (const b of game.buildings) {
-    if (b.type !== 'fish_trap' || (b.fish || 0) < (fisher ? 2 : holds) || tick.trapAssignments.has(b)) continue;
+    if (b.side === 'red' || b.type !== 'fish_trap' || (b.fish || 0) < (fisher ? 2 : holds) || tick.trapAssignments.has(b)) continue;
     const d = Math.hypot(b.x - s.x, b.y - s.y);
     if (d < best) { best = d; trap = b; }
   }

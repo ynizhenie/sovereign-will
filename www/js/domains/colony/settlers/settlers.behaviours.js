@@ -73,11 +73,18 @@ export function createSettlerTick(dt) {
   const { allResources, resourceSet, resourceKind, doorBlockers, markedResources, activeWaterSpots } = resourceState();
 
   const defendersCount = game.settlers.filter(s => s.weapon !== 'fist').length;
+  const activeEnemies = game.enemies.filter(en => !en.campGuard || (game.raidActive && en.campId === game.raidCampId));
+  const activeEnemyTents = game.enemyTents.filter(tent => tent.waveActive &&
+    (!tent.campStructure || (game.raidActive && tent.campId === game.raidCampId)));
+  const waveEnemies = activeEnemies.filter(en => en.fromWave || en.waveSummoned);
+  const pendingRaftEnemies = game.enemyRafts.some(raft => raft.units.some(enemy => enemy.hp > 0 && !enemy.prepWave));
+  const waveEnemiesToFight = waveEnemies.filter(enemy => !enemy.summoned).length;
 
   return {
     dt,
-    isWaveActive: game.enemies.length > 0 || (game.portalQueue || []).length > 0, // (demons still to come out, #250)
-    tents: game.buildings.filter(isShelter), // tents or graves
+    isWaveActive: activeEnemies.some(enemy => enemy.hp > 0 && !enemy.prepWave) || (game.portalQueue || []).length > 0 ||
+      pendingRaftEnemies || (!game.wavePreparation && activeEnemyTents.length > 0), // active wave structures remain an active threat
+    tents: game.buildings.filter(b => b.side !== 'red' && isShelter(b)), // tents or graves
     allResources,
     resourceSet,
     resourceKind,
@@ -107,10 +114,11 @@ export function createSettlerTick(dt) {
     activeWaterSpots,
     assignedFishersCount: 0,
     defendersCount,
-    // unarmed workers only help destroy enemy tents when there's nobody armed to do it
+    // tents are cleared in stages: soldiers, then tool users, then anyone else
     workersHelpTents: defendersCount === 0,
-    // what's left of the wave is down to a few enemies (tent-summoned ones don't count): go destroy the tents
-    tentAssault: game.enemyTents.length > 0 && game.enemies.filter(en => !en.summoned).length <= 5
+    // Once the first wave group is nearly gone (or all enemies are gone), clear its active spawners.
+    tentAssault: !game.wavePreparation && activeEnemyTents.length > 0 &&
+      !(game.portalQueue || []).length && !pendingRaftEnemies && waveEnemiesToFight <= 5
   };
 }
 
@@ -376,6 +384,7 @@ export function tickSettlers(dt) {
       if (s.targetEquipment) s.targetEquipment = null;
       // (#326) let go, or sent somewhere by the player (with no soldier about too): that first, as a settler does
       if (!s.isPossessed && (leaveColony(s, tick) || followCommand(s, tick))) { s.activity = s.leaving ? 'leaveColony' : 'followCommand'; return; }
+      if (raidOrders(s, tick)) { took(s, raidOrders); return; }
       tickPet(s, tick); return; // (its own ways, #314)
     }
     const last = s.lastBehaviour;

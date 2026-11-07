@@ -71,8 +71,46 @@ export function drawBlight() {
   for (const key of blight.keys) {
     const [bx, by] = key.split(',').map(Number);
     const share = blight.base.has(key) ? 1 : (fading.get(key) ?? 1);
-    ctx.fillStyle = `rgba(74, 35, 90, ${0.28 * Math.max(0, share)})`;
-    ctx.fillRect(bx - 15, by - 15, TILE_SIZE, TILE_SIZE);
+    const alpha = 0.28 * Math.max(0, share);
+    ctx.fillStyle = `rgba(74, 35, 90, ${alpha})`;
+    ctx.fillRect(bx - TILE_SIZE / 2, by - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+
+    const blend = 8;
+    const neighbours = [
+      [bx - TILE_SIZE, by, -1, 0],
+      [bx + TILE_SIZE, by, 1, 0],
+      [bx, by - TILE_SIZE, 0, -1],
+      [bx, by + TILE_SIZE, 0, 1],
+    ];
+    for (const [nx, ny, dx, dy] of neighbours) {
+      if (blight.keys.has(`${nx},${ny}`)) continue;
+      let gradient;
+      if (dx) {
+        const side = bx + (dx > 0 ? TILE_SIZE / 2 : -TILE_SIZE / 2);
+        gradient = ctx.createLinearGradient(dx > 0 ? side : side - blend, 0, dx > 0 ? side + blend : side, 0);
+        if (dx > 0) {
+          gradient.addColorStop(0, `rgba(74, 35, 90, ${alpha})`);
+          gradient.addColorStop(1, 'rgba(74, 35, 90, 0)');
+        } else {
+          gradient.addColorStop(0, 'rgba(74, 35, 90, 0)');
+          gradient.addColorStop(1, `rgba(74, 35, 90, ${alpha})`);
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(dx > 0 ? side : side - blend, by - TILE_SIZE / 2, blend, TILE_SIZE);
+      } else {
+        const side = by + (dy > 0 ? TILE_SIZE / 2 : -TILE_SIZE / 2);
+        gradient = ctx.createLinearGradient(0, dy > 0 ? side : side - blend, 0, dy > 0 ? side + blend : side);
+        if (dy > 0) {
+          gradient.addColorStop(0, `rgba(74, 35, 90, ${alpha})`);
+          gradient.addColorStop(1, 'rgba(74, 35, 90, 0)');
+        } else {
+          gradient.addColorStop(0, 'rgba(74, 35, 90, 0)');
+          gradient.addColorStop(1, `rgba(74, 35, 90, ${alpha})`);
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(bx - TILE_SIZE / 2, dy > 0 ? side : side - blend, TILE_SIZE, blend);
+      }
+    }
   }
   if (isTabShown('tab-farming')) game.blightZones.forEach(z => {
     if (z.done) return;
