@@ -156,7 +156,6 @@ export function updatePendingRespawns(dt) {
     const pending = game.pendingRespawns[i];
     pending.timer -= dt;
     if (pending.timer > 0) continue;
-    game.pendingRespawns.splice(i, 1);
     const def = getMapResourceDef(pending.type);
     // it's back (wherever it grew): the stump left where it stood is gone
     if (pending.stump) {
@@ -165,10 +164,16 @@ export function updatePendingRespawns(dt) {
     }
     // (#299) on a big map within the frontier, round the base it was taken from (a default map's is all of it)
     const area = regrowArea();
-    if (def.regrow === 'spawner') respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type), area);
+    let respawned = true;
+    if (def.regrow === 'spawner') respawned = respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type), area);
     else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
     else if (def.regrow === 'forest') spawnForestAware(pending.type, area);
     else spawnResource(pending.type, null, null, 180, area ? pointIn(area) : null);
+    if (!respawned) {
+      pending.timer = 1;
+      continue;
+    }
+    game.pendingRespawns.splice(i, 1);
     // things that need a tool to remove (trees, boulders, cacti, ore) block paths
     if (def.tool) invalidateAllPaths();
   }
@@ -185,10 +190,11 @@ function regrowArea() {
 export function respawnOre(kind, area = null) {
   const all = getOreSpawners(kind), there = area ? all.filter(r => r.x >= area.x0 && r.x <= area.x1 && r.y >= area.y0 && r.y <= area.y1) : all;
   const spawners = there.length ? there : all;
-  if (spawners.length === 0) return;
+  if (spawners.length === 0) return false;
   const spawner = spawners[Math.floor(rand() * spawners.length)];
   const spots = getOreSpotsAround(spawner, getOreSpawnerRadius());
-  if (spots.length === 0) return;
+  if (spots.length === 0) return false;
   placeOre(kind, spots[Math.floor(rand() * spots.length)]);
   invalidateAllPaths();
+  return true;
 }
