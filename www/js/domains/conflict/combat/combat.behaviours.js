@@ -13,7 +13,7 @@ import { getEnemyDef } from '../waves/index.js';
 const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
 const canDefendEnemy = en => game.gameMode === 'battle' || isInsideBase(en) ||
-  (!game.wavePreparation && (en.fromWave || en.waveSummoned));
+  ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned));
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
@@ -124,7 +124,8 @@ const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  const isWaveThreat = en => !game.wavePreparation && (en.fromWave || en.waveSummoned);
+  const isWaveThreat = en => (!game.wavePreparation || game.wavePreparation.stage === 'march') &&
+    (en.fromWave || en.waveSummoned);
   const candidates = game.enemies.filter(en =>
     !isCampGuardUnavailable(en) && !(en.toCatch && en.toCatch !== s.id) && canDefendEnemy(en));
   const baseThreats = candidates.filter(isInsideBase);

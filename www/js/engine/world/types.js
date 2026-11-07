@@ -190,6 +190,7 @@
  * @property {boolean} [fleeing]    a scout pointed at, running now (one came near it, or it was hit, #279)
  * @property {number} [musterUntil]  the tick a wave's enemy stops gathering and attacks (#279)
  * @property {Point[]} [musterRoute] safe waypoints around the player's territory before a wave
+ * @property {boolean} [waveTentBuilder] builder assigned to construct this wave's spawner
  * @property {boolean} [portalTransit] held at a demon wave portal
  * @property {Point} [muster]        where it gathers
  * @property {boolean} [captain]     a commander with a banner, telling its own whom to go for (#279)

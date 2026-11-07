@@ -20,6 +20,7 @@ export function drawEnemyTents() {
   forEachInRect(game.enemyTents, v.x0, v.y0, v.x1, v.y1, et => visible.push(et));
   visible.forEach(et => {
     if (!isExplored(et.x, et.y)) return; // (#299: in the dark; once seen, a tent stays shown)
+    const spawner = et.spawner || getEnemyFaction().spawner || 'tent';
     if (et.outpost) {
       drawEnemyCampOutpostArt(et.x, et.y, getEnemyFaction().id);
     } else if (et.campStructure && et.campType === 'tent') {
@@ -29,9 +30,9 @@ export function drawEnemyTents() {
       drawIcon(ctx, 'grave', et.x, et.y, 28);
     } else if (et.campStructure && et.campType === 'demon_den') {
       drawDenArt(et.x, et.y);
-    } else if (getEnemyFaction().spawner === 'portal') {
+    } else if (spawner === 'portal') {
       drawPortal(et.x, et.y, getEnemyColor());
-    } else if (getEnemyFaction().spawner === 'grave') {
+    } else if (spawner === 'grave') {
       shadow(et.x, et.y + 3, 18, 14, 6);
       drawIcon(ctx, 'grave', et.x, et.y, 28);
     } else {

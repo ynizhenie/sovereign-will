@@ -136,7 +136,7 @@ Object.assign(window.sim, (() => {
     const campIgnored = !fightEnemies(soldier, createSettlerTick(1 / 60));
     enemies = [waveRaider];
     soldier.fightTarget = null;
-    game.wavePreparation = null;
+    game.wavePreparation = { wave: game.waveNum, stage: 'march' };
     const waveThreatAllowed = fightEnemies(soldier, createSettlerTick(1 / 60)) && soldier.fightTarget === waveRaider;
     return { baseThreatChosen, campIgnored, waveThreatAllowed };
   }

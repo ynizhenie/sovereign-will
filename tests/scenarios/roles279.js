@@ -24,8 +24,9 @@ Object.assign(window.sim, (() => {
   // A captain lends the unarmed a weapon from the store before a wave, and has it back after (13)
   function captainLends({ seed = 'captain-lends' } = {}) {
     start(seed); clearResources();
-    const c = makeSettler(1, townHall.x + 40, townHall.y + 40, { weapon: 'sword', role: 'soldier', banner: true });
-    const a = makeSettler(2, townHall.x + 70, townHall.y + 40, {}), b = makeSettler(3, townHall.x + 10, townHall.y + 50, {});
+    const c = makeSettler(1, townHall.x + 5, townHall.y + 5, { weapon: 'sword', role: 'soldier', banner: true, speed: 0 });
+    const a = makeSettler(2, townHall.x + 20, townHall.y + 5, { speed: 0 });
+    const b = makeSettler(3, townHall.x - 20, townHall.y - 5, { speed: 0 });
     settlers = [c, a, b];
     armory = { 'weapons:spear': 1, 'weapons:club': 1 };
     waveTimer = 15;
