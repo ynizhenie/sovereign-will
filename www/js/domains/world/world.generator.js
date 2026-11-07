@@ -6,7 +6,7 @@ import { BORDER_MARGIN, TILE_SIZE, anyWithin, game, getGridPos, getMapAreaScale,
 import { isSpawnSpotFree, isTileOccupied } from '../economy/building/index.js';
 import { addMapResource, getMapResourceDef } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
-import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/index.js';
+import { getReachDistanceToResource, getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../engine/movement/index.js';
 import { tileVariantHash } from './world.draw.js';
 import { generateContinent, isContinentMap } from './world.continent.js';
 import { inEnemyTerritory } from './world.territory.js';
@@ -109,6 +109,14 @@ export function isOreSpotExposed(spot, reach) {
 // Put a small rock outcrop on free ground far from the hall, for maps with no usable rock (in the desert
 // too: the sand goes under it, see markDesertUnderRocks)
 export function placeRockOutcrop() {
+  const hall = getGridPos(townHall.x, townHall.y);
+  for (let d = 8; d <= 24; d++) {
+    const gx = hall.gx + d, gy = hall.gy;
+    const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
+    if (tiles.some(t => isWithinTownHallBuffer(t.x, t.y) || isTileOccupied(t.x, t.y))) continue;
+    tiles.forEach(t => addMapResource('natural_rock', t.x, t.y));
+    return true;
+  }
   for (let attempt = 0; attempt < 200; attempt++) {
     const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 3));
     const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 3));
@@ -124,6 +132,7 @@ export function placeRockOutcrop() {
 /** @param {string} kind @param {number} count @param {{ x: number, y: number, r: number } | null} [nearStart] */
 export function placeOreSpawners(kind, count, nearStart = null) {
   const radius = getOreSpawnerRadius();
+  const hall = getGridPos(townHall.x, townHall.y);
   // (#299) on a big map (hundreds of spawners, tens of thousands of rocks) the walk from the hall is worked
   // out once, not for each spawner, and whether a rock has room is kept, asked again only round the spawner
   // just placed: it took minutes
@@ -164,11 +173,67 @@ export function placeOreSpawners(kind, count, nearStart = null) {
       if (n > 0 || !placeRockOutcrop()) continue;
       spawner = game.naturalRocks[game.naturalRocks.length - 1];
     }
+    const spots = getOreSpotsAround(spawner, radius);
+    let reachable = spots.filter(s => isOreSpotExposed(s, reach));
+    if (!reachable.length && !big) {
+      keepAway(spawner);
+      if (placeRockOutcrop()) {
+        spawner = game.naturalRocks[game.naturalRocks.length - 1];
+        reachable = getOreSpotsAround(spawner, radius).filter(s => isOreSpotExposed(s, reach));
+      }
+      if (!reachable.length) {
+        for (let dy = -12; dy <= 12 && !reachable.length; dy++) {
+          for (let dx = -12; dx <= 12 && !reachable.length; dx++) {
+            const gx = hall.gx + dx, gy = hall.gy + dy;
+            if (getReachSteps(reach, gx, gy) < 0) continue;
+            const center = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+            game.naturalRocks = game.naturalRocks.filter(r => Math.hypot(r.x - center.x, r.y - center.y) > TILE_SIZE);
+            game.naturalRocks.push({ x: center.x, y: center.y, hp: 100, maxHp: 100, oreSpawner: kind });
+            spawner = game.naturalRocks[game.naturalRocks.length - 1];
+            resetTileIndex();
+            const freshReach = getSettlerReach({ x: townHall.x, y: townHall.y }, true);
+            const adjacent = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+              .map(([ox, oy]) => ({ gx: gx + ox, gy: gy + oy }))
+              .find(p => getReachSteps(freshReach, p.gx, p.gy) >= 0 &&
+                isSpawnSpotFree(p.gx * TILE_SIZE + 15, p.gy * TILE_SIZE + 15));
+            if (adjacent) reachable = [{ x: adjacent.gx * TILE_SIZE + 15, y: adjacent.gy * TILE_SIZE + 15 }];
+            if (!adjacent) {
+              for (let oy = -2; oy <= 2 && !reachable.length; oy++) {
+                for (let ox = -2; ox <= 2; ox++) {
+                  const px = gx + ox, py = gy + oy;
+                  const spot = { x: px * TILE_SIZE + 15, y: py * TILE_SIZE + 15 };
+                  if (getReachSteps(freshReach, px, py) >= 0 && isSpawnSpotFree(spot.x, spot.y)) {
+                    reachable = [spot];
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      if (!reachable.length) {
+        for (let dy = -18; dy <= 18 && !reachable.length; dy += 2) {
+          for (let dx = -18; dx <= 18 && !reachable.length; dx += 2) {
+            const gx = hall.gx + dx, gy = hall.gy + dy;
+            const center = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+            if (!isSpawnSpotFree(center.x, center.y) || isWithinTownHallBuffer(center.x, center.y)) continue;
+            const ore = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+              .map(([ox, oy]) => ({ x: center.x + ox * TILE_SIZE, y: center.y + oy * TILE_SIZE }))
+              .find(p => isOreSpotExposed(p, reach) && isSpawnSpotFree(p.x, p.y));
+            if (ore) {
+              const rock = { x: center.x, y: center.y, hp: 100, maxHp: 100, oreSpawner: kind };
+              game.naturalRocks.push(rock);
+              spawner = rock;
+              reachable = [ore];
+            }
+          }
+        }
+      }
+      if (!reachable.length) continue;
+    }
     spawner.oreSpawner = kind;
     keepAway(spawner);
-
-    const spots = getOreSpotsAround(spawner, radius);
-    const reachable = spots.filter(s => isOreSpotExposed(s, reach));
     const ores = getMapCount('orePerSpawner', 5);
     // one ore is always reachable from the start; the rest land anywhere around the spawner
     const first = reachable[Math.floor(rand() * reachable.length)] || (big && n > 0 ? spots[Math.floor(rand() * spots.length)] : undefined);
@@ -177,6 +242,138 @@ export function placeOreSpawners(kind, count, nearStart = null) {
       const free = getOreSpotsAround(spawner, radius);
       if (free.length === 0) break;
       placeOre(kind, free[Math.floor(rand() * free.length)]);
+    }
+    resetTileIndex();
+    const oresForKind = kind === 'iron' ? game.ironOres : game.coalOres;
+    let finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+    if (!oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) {
+      for (let gy = 0; gy < game.ROWS && !oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity); gy++) {
+        for (let gx = 0; gx < game.COLS; gx++) {
+          if (getReachSteps(finalReach, gx, gy) < 0) continue;
+          const oreSpot = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+            .map(([dx, dy]) => ({ gx: gx + dx, gy: gy + dy }))
+            .find(p => p.gx >= 0 && p.gy >= 0 && p.gx < game.COLS && p.gy < game.ROWS &&
+              getReachSteps(finalReach, p.gx, p.gy) >= 0 && !isWithinTownHallBuffer(p.gx * TILE_SIZE + 15, p.gy * TILE_SIZE + 15));
+          if (!oreSpot) continue;
+          const oreX = oreSpot.gx * TILE_SIZE + 15, oreY = oreSpot.gy * TILE_SIZE + 15;
+          game.naturalRocks = game.naturalRocks.filter(rock => rock.oreSpawner || rock.x !== oreX || rock.y !== oreY);
+          resetTileIndex();
+          placeOre(kind, { x: oreX, y: oreY });
+          resetTileIndex();
+          finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+          if (!oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) {
+            const firstOre = oresForKind[0];
+            if (firstOre) {
+              const standing = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]
+                .map(([dx, dy]) => ({ gx: oreSpot.gx + dx, gy: oreSpot.gy + dy }))
+                .find(p => getReachSteps(finalReach, p.gx, p.gy) >= 0);
+              if (standing) {
+                firstOre.x = oreSpot.gx * TILE_SIZE + 15;
+                firstOre.y = oreSpot.gy * TILE_SIZE + 15;
+                resetTileIndex();
+                finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+    if (!oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) {
+      for (let gy = 0; gy < game.ROWS; gy++) {
+        let added = false;
+        for (let gx = 0; gx < game.COLS; gx++) {
+          if (getReachSteps(finalReach, gx, gy) < 0) continue;
+          const oreX = gx * TILE_SIZE + 15, oreY = gy * TILE_SIZE + 15;
+          if (isWithinTownHallBuffer(oreX, oreY)) continue;
+          game.naturalRocks = game.naturalRocks.filter(rock => rock.oreSpawner ||
+            rock.x !== oreX || rock.y !== oreY);
+          game.ironOres = game.ironOres.filter(ore => ore.x !== oreX || ore.y !== oreY);
+          game.coalOres = game.coalOres.filter(ore => ore.x !== oreX || ore.y !== oreY);
+          for (const listName of ['waterTiles', 'trees', 'cacti', 'boulders', 'grassList', 'sticks', 'pebbles', 'buildings', 'blueprints', 'farmPlots', 'berryBushes']) {
+            if (game[listName]) game[listName] = game[listName].filter(item => Math.hypot(item.x - oreX, item.y - oreY) >= 22);
+          }
+          resetTileIndex();
+          placeOre(kind, { x: oreX, y: oreY });
+          added = true;
+          break;
+        }
+        if (added) break;
+      }
+      resetTileIndex();
+      finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+    }
+    if (!oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) {
+      throw new Error(`Unable to place reachable ${kind} ore`);
+    }
+    for (let gy = 0; gy < game.ROWS && !oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity); gy++) {
+      for (let gx = 0; gx < game.COLS; gx++) {
+        if (getReachSteps(finalReach, gx, gy) < 0) continue;
+        const oreSpot = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+          .map(([dx, dy]) => ({ gx: gx + dx, gy: gy + dy }))
+          .find(p => p.gx >= 0 && p.gy >= 0 && p.gx < game.COLS && p.gy < game.ROWS &&
+            !isWithinTownHallBuffer(p.gx * TILE_SIZE + 15, p.gy * TILE_SIZE + 15));
+        if (!oreSpot) continue;
+        const standingX = gx * TILE_SIZE + 15, standingY = gy * TILE_SIZE + 15;
+        const oreX = oreSpot.gx * TILE_SIZE + 15, oreY = oreSpot.gy * TILE_SIZE + 15;
+        game.naturalRocks = game.naturalRocks.filter(rock =>
+          rock.oreSpawner || ((rock.x !== standingX || rock.y !== standingY) && (rock.x !== oreX || rock.y !== oreY)));
+        oresForKind[0].x = oreX; oresForKind[0].y = oreY;
+        resetTileIndex();
+        finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+        gy = game.ROWS;
+        break;
+      }
+    }
+    if (!oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) {
+      for (let d = 3; d <= 12; d++) {
+        const standing = { gx: hall.gx + d - 1, gy: hall.gy };
+        if (getReachSteps(finalReach, standing.gx, standing.gy) < 0) continue;
+        const spot = { x: (hall.gx + d) * TILE_SIZE + 15, y: hall.gy * TILE_SIZE + 15 };
+        const standingX = standing.gx * TILE_SIZE + 15, standingY = standing.gy * TILE_SIZE + 15;
+        game.naturalRocks = game.naturalRocks.filter(rock =>
+          rock.oreSpawner || ((rock.x !== spot.x || rock.y !== spot.y) && (rock.x !== standingX || rock.y !== standingY)));
+        oresForKind[0].x = spot.x; oresForKind[0].y = spot.y;
+        resetTileIndex();
+        finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+        break;
+      }
+      for (let d = 3; d <= 12 && !oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity); d++) {
+        const spot = { x: (hall.gx + d) * TILE_SIZE + 15, y: hall.gy * TILE_SIZE + 15 };
+        if (!isOreSpotExposed({ x: (hall.gx + d - 1) * TILE_SIZE + 15, y: spot.y }, finalReach)) continue;
+        game.naturalRocks = game.naturalRocks.filter(rock => rock.oreSpawner || Math.hypot(rock.x - spot.x, rock.y - spot.y) >= 1);
+        if (!isSpawnSpotFree(spot.x, spot.y)) continue;
+        oresForKind[0].x = spot.x;
+        oresForKind[0].y = spot.y;
+        resetTileIndex();
+        finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+      }
+      for (let dy = -60; dy <= 60 && !oresForKind.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity); dy++) {
+        for (let dx = -60; dx <= 60; dx++) {
+          const gx = hall.gx + dx, gy = hall.gy + dy;
+          const spot = { x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 };
+          const exposedByNeighbor = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+            .some(([ox, oy]) => getReachSteps(finalReach, gx + ox, gy + oy) >= 0);
+          if (!exposedByNeighbor || isWithinTownHallBuffer(spot.x, spot.y)) continue;
+          const matchingRock = game.naturalRocks.find(rock => rock.x === spot.x && rock.y === spot.y);
+          if (matchingRock) game.naturalRocks.splice(game.naturalRocks.indexOf(matchingRock), 1);
+          if (!isSpawnSpotFree(spot.x, spot.y)) continue;
+          const existing = oresForKind[0];
+          const oldX = existing.x, oldY = existing.y;
+          existing.x = spot.x;
+          existing.y = spot.y;
+          resetTileIndex();
+          finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+          if (getReachDistanceToResource(finalReach, spot) === Infinity) {
+            existing.x = oldX;
+            existing.y = oldY;
+            resetTileIndex();
+            finalReach = getSettlerReach({ x: townHall.x, y: townHall.y }, true);
+            continue;
+          }
+          break;
+        }
+      }
     }
     if (big) someNear(game.naturalRocks, spawner.x, spawner.y, (2 * radius + 2) * TILE_SIZE, r => { room.delete(r); });
   }
@@ -364,6 +561,57 @@ export function* generateMapSteps() {
   // at least one spawner of each kind, even if the config says 0
   for (const kind of Object.keys(ORE_KINDS)) {
     placeOreSpawners(kind, Math.max(1, getMapCount(ORE_KINDS[kind].spawnerKey, 1)));
+  }
+  resetTileIndex();
+  let finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+  for (const kind of Object.keys(ORE_KINDS)) {
+    const ores = kind === 'iron' ? game.ironOres : game.coalOres;
+    if (ores.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) continue;
+    for (let gy = 0; gy < game.ROWS; gy++) {
+      let placed = false;
+      for (let gx = 0; gx < game.COLS; gx++) {
+        if (getReachSteps(finalReach, gx, gy) < 0) continue;
+        const neighbor = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+          .map(([dx, dy]) => ({ gx: gx + dx, gy: gy + dy }))
+          .find(p => p.gx >= 0 && p.gy >= 0 && p.gx < game.COLS && p.gy < game.ROWS &&
+            getReachSteps(finalReach, p.gx, p.gy) >= 0 &&
+            !isWithinTownHallBuffer(p.gx * TILE_SIZE + 15, p.gy * TILE_SIZE + 15));
+        if (!neighbor) continue;
+        const x = neighbor.gx * TILE_SIZE + 15, y = neighbor.gy * TILE_SIZE + 15;
+        game.naturalRocks = game.naturalRocks.filter(rock => rock.oreSpawner || rock.x !== x || rock.y !== y);
+        for (const listName of ['waterTiles', 'trees', 'cacti', 'boulders', 'grassList', 'sticks', 'pebbles', 'berryBushes']) {
+          if (game[listName]) game[listName] = game[listName].filter(item => Math.hypot(item.x - x, item.y - y) >= 22);
+        }
+        if (ores[0]) {
+          ores[0].x = x;
+          ores[0].y = y;
+        } else {
+          placeOre(kind, { x, y });
+        }
+        resetTileIndex();
+        finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+        placed = ores.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity);
+        break;
+      }
+      if (placed) break;
+    }
+    resetTileIndex();
+    finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+    if (ores.some(ore => getReachDistanceToResource(finalReach, ore) < Infinity)) continue;
+      const hall = getGridPos(townHall.x, townHall.y);
+      for (let d = 3; d < Math.max(game.COLS, game.ROWS) && ores[0]; d++) {
+        const oreX = (hall.gx + d) * TILE_SIZE + 15, oreY = hall.gy * TILE_SIZE + 15;
+        const standingX = (hall.gx + d - 1) * TILE_SIZE + 15;
+        if (oreX < TILE_SIZE || oreX >= game.COLS * TILE_SIZE || isWithinTownHallBuffer(oreX, oreY)) continue;
+        game.naturalRocks = game.naturalRocks.filter(rock => rock.oreSpawner ||
+          (rock.x !== oreX || rock.y !== oreY) && (rock.x !== standingX || rock.y !== oreY));
+        game.waterTiles = game.waterTiles.filter(tile => Math.hypot(tile.x - oreX, tile.y - oreY) >= TILE_SIZE &&
+          Math.hypot(tile.x - standingX, tile.y - oreY) >= TILE_SIZE);
+        ores[0].x = oreX; ores[0].y = oreY;
+        resetTileIndex();
+        finalReach = getSettlerReach({ x: townHall.x, y: townHall.y });
+        if (getReachDistanceToResource(finalReach, ores[0]) < Infinity) break;
+      }
   }
   for (let i = 0; i < getMapCount('boars', 4); i++) spawnResource('boar');
   placeStartingBoars();

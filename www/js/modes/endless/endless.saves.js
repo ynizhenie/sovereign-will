@@ -13,7 +13,7 @@ import { createWorldSeed, game, resetTileIndex, setWorldSize, townHall, WORLD_LI
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
-import { exportFog, importFog } from '../../domains/world/index.js';
+import { exportFog, importFog, prewarmVisibleWorldChunks } from '../../domains/world/index.js';
 import { syncCards } from './endless.cards.js';
 import { isInCamp, normalizeEnemyCamp, resetRaid } from './endless.raid.js';
 
@@ -197,6 +197,7 @@ export function loadGame(data) {
   game.gameStarted = true;
   setPaused(false);
   syncCards(); // (an offer it was saved with shows again, #255)
+  prewarmVisibleWorldChunks();
   document.getElementById('main-menu').style.display = 'none';
 }
 

@@ -7,7 +7,7 @@ import { game, resetTileIndex, setWorldSize, TOWN_HALL_HP, townHall } from '../e
 import { createSettler } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { clearBoarWallows } from '../domains/economy/hunting/index.js';
-import { generateMapSteps, resetFog } from '../domains/world/index.js';
+import { generateMapSteps, prewarmVisibleWorldChunks, resetFog } from '../domains/world/index.js';
 import { applyFactionCosts, getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
@@ -49,6 +49,7 @@ export function* resetGameSteps(map) {
   resetTileIndex();
   resetFog(); // (#299: nothing seen yet but the start land)
   updateSeedHud();
+  prewarmVisibleWorldChunks();
 
   game.settlers.push(
     createSettler(getPlayerFaction().startUnits, 101, townHall.x - 45, townHall.y),

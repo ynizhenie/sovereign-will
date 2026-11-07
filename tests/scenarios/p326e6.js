@@ -40,6 +40,7 @@ Object.assign(window.sim, (() => {
     waveNum = 12; // (tents come with the waves)
     enemyTents = []; enemyTentBlueprints = [];
     startNextWave();
+    run(1);
     const builders = [...enemies, ...enemyRafts.flatMap(raft => raft.units)].filter(enemy => enemy.buildTarget);
     const distances = builders.filter(enemy => enemy.muster)
       .map(enemy => Math.hypot(enemy.buildTarget.x - enemy.muster.x, enemy.buildTarget.y - enemy.muster.y) / TILE_SIZE);

@@ -2,7 +2,7 @@
 
 import { drawIcon } from '../../ui/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, townHall, worldEpoch } from '../../engine/world/index.js';
-import { ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
@@ -52,6 +52,7 @@ let frameOf = 0;
 let framePaints = 0, framePaintMs = 0, framePaintLimit = STILL_PAINTS_PER_FRAME, framePaintLayer = 'grass', priorityPassed = false;
 let previousView = null, previousScale = 0;
 let cacheWorldEpoch = -1;
+let prewarmingChunks = false;
 // the last frame's pieces on the screen not laid down from their own picture (0, but as the zoom changes size), and those
 // painted on the spot (not ahead: 0 as the camera moves at a walk), for the tests
 // `holes` are uncovered base-ground pieces. `pending` also counts chunks still shown from a light preview.
@@ -86,12 +87,14 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
     previousView = v; previousScale = scale;
     frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
+    if (prewarmingChunks) framePaintLimit = Number.MAX_SAFE_INTEGER;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
     if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
     // is useful only during movement, when a coarse first pass keeps the pan responsive.
     framePaintLayer = moving ? layers[(frameOf - 1) % layers.length] : layers[0];
   } // (the first layer of a frame)
+  if (prewarmingChunks) framePaints = 0, framePaintLimit = Number.MAX_SAFE_INTEGER;
   // (#306) a picture lands on whole screen pixels, and its edge is its neighbour's: no hairline of the ground
   // shows between two pieces, which read as square joins between them
   const m = target.getTransform();
@@ -221,7 +224,22 @@ function mixGrassColor(from, to, amount) {
   return `#${mixed.map(value => value.toString(16).padStart(2, '0')).join('')}`;
 }
 
+let savannaWeightEpoch = -1;
+let savannaWeightSignature = '';
+const savannaWeightCache = new Map();
+
 function savannaWeightAt(x, y) {
+  const epoch = worldEpoch();
+  const first = game.savannaTiles[0], last = game.savannaTiles[game.savannaTiles.length - 1];
+  const signature = `${epoch}|${game.savannaTiles.length}|${first?.x ?? ''},${first?.y ?? ''}|${last?.x ?? ''},${last?.y ?? ''}`;
+  if (savannaWeightEpoch !== epoch || savannaWeightSignature !== signature) {
+    savannaWeightEpoch = epoch;
+    savannaWeightSignature = signature;
+    savannaWeightCache.clear();
+  }
+  const key = `${x},${y}`;
+  const cached = savannaWeightCache.get(key);
+  if (cached !== undefined) return cached;
   let weight = 0;
   const fadeDistance = TILE_SIZE * 2;
   forEachInRect(game.savannaTiles, x - fadeDistance - 15, y - fadeDistance - 15, x + fadeDistance + 15, y + fadeDistance + 15, tile => {
@@ -234,6 +252,7 @@ function savannaWeightAt(x, y) {
       weight = Math.max(weight, fade * fade * (3 - 2 * fade));
     }
   });
+  savannaWeightCache.set(key, weight);
   return weight;
 }
 
@@ -262,7 +281,7 @@ function paintGrass(g, x0, y0, x1, y1) {
         gradient.addColorStop(0, mixGrassColor('#2d4a22', SAVANNA_GRASS_BASE, leftWeight));
         gradient.addColorStop(1, mixGrassColor('#2d4a22', SAVANNA_GRASS_BASE, rightWeight));
         g.fillStyle = gradient;
-        g.fillRect(x, y + row * rowHeight, TILE_SIZE + 0.5, rowHeight + 0.5);
+        g.fillRect(x, y + row * rowHeight, TILE_SIZE + 0.5, rowHeight + 0.05);
       }
     }
   }
@@ -305,6 +324,20 @@ export function drawGrassGround() {
   drawChunks('grass', chunkRes(), grassStamp, paintGrass, (x0, y0, x1, y1) => {
     ctx.fillStyle = '#2d4a22'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   });
+}
+
+export function prewarmVisibleWorldChunks() {
+  prewarmingChunks = true;
+  const transform = ctx.getTransform();
+  const scale = getViewScale();
+  ctx.setTransform(scale, 0, 0, scale, canvas.width / 2 - camera.x * scale, canvas.height / 2 - camera.y * scale);
+  try {
+    drawGrassGround();
+    drawSand();
+  } finally {
+    ctx.setTransform(transform);
+    prewarmingChunks = false;
+  }
 }
 
 function grassStamp(cx, cy) {
