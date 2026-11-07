@@ -581,11 +581,11 @@ export function startNextWave(preparing = false) {
   // unit the builder role as well, so every human/undead wave can actually establish its tent or grave.
   if (!normalEnemies.length) {
     normalEnemies = game.enemyRafts.flatMap(raft => raft.units).filter(enemy =>
-      !enemy.pet && enemy.type === 'normal').slice(0, 1);
+      !getEnemyDef(enemy).pet && enemy.type === 'normal').slice(0, 1);
   }
   if (!normalEnemies.length) {
     normalEnemies = game.enemies.filter(enemy =>
-      enemy.fromWave && !enemy.pet && enemy.type === 'normal').slice(0, 1);
+      enemy.fromWave && !getEnemyDef(enemy).pet && enemy.type === 'normal').slice(0, 1);
   }
   tentCount = Math.min(tentCount, normalEnemies.length);
 
