@@ -220,6 +220,19 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
       if (isEnemy) entity.path = [];
       return true;
     }
+    if (isEnemy) {
+      const escape = enemyResourceEscapeStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked);
+      if (escape) {
+        entity.x += escape.x;
+        entity.y += escape.y;
+        entity.path = null;
+        entity.pathRetryTimer = 0;
+        entity.moveVx = 0;
+        entity.moveVy = 0;
+        return true;
+      }
+      if (enemyObstacleStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked)) return true;
+    }
     if (smooth && !isEnemy) {
       entity.moveVx = 0;
       entity.moveVy = 0;
@@ -232,6 +245,42 @@ function stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEne
     }
   }
   if (isEnemy) entity.path = [];
+  return true;
+}
+
+function enemyResourceEscapeStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked) {
+  let best = null, bestDistance = Infinity;
+  for (let i = 0; i < 16; i++) {
+    const angle = i * Math.PI / 8;
+    const x = Math.cos(angle) * speed, y = Math.sin(angle) * speed;
+    const nextX = entity.x + x, nextY = entity.y + y, next = getGridPos(nextX, nextY);
+    if (extraBlocked && extraBlocked(next.gx, next.gy)) continue;
+    if (!canEnemyMoveOutOfNaturalResource(entity.x, entity.y, nextX, nextY, bodyRadius, !!entity.panic)) continue;
+    const distance = Math.hypot(targetX - nextX, targetY - nextY);
+    if (distance < bestDistance) { bestDistance = distance; best = { x, y }; }
+  }
+  return best;
+}
+
+function enemyObstacleStep(entity, targetX, targetY, speed, bodyRadius, extraBlocked) {
+  let best = null, bestDistance = Infinity;
+  for (let i = 0; i < 16; i++) {
+    const angle = i * Math.PI / 8;
+    const x = Math.cos(angle) * speed, y = Math.sin(angle) * speed;
+    const nextX = entity.x + x, nextY = entity.y + y, next = getGridPos(nextX, nextY);
+    if ((extraBlocked && extraBlocked(next.gx, next.gy)) ||
+        collidesWithWall(nextX, nextY, bodyRadius, true, !!entity.panic) ||
+        collidesWithWater(nextX, nextY, bodyRadius)) continue;
+    const distance = Math.hypot(targetX - nextX, targetY - nextY);
+    if (distance < bestDistance) { bestDistance = distance; best = { x, y }; }
+  }
+  if (!best) return false;
+  entity.x += best.x;
+  entity.y += best.y;
+  entity.path = null;
+  entity.pathRetryTimer = 0;
+  entity.moveVx = 0;
+  entity.moveVy = 0;
   return true;
 }
 
@@ -309,6 +358,19 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
     const escapingResource = enemyBlocked && !(extraBlocked && extraBlocked(next.gx, next.gy)) &&
       canEnemyMoveOutOfNaturalResource(entity.x, entity.y, entity.x + vx, entity.y + vy, bodyRadius, !!entity.panic);
     if (enemyBlocked && !escapingResource) {
+      if (isEnemy) {
+        const escape = enemyResourceEscapeStep(entity, nextNode.x, nextNode.y, speed, bodyRadius, extraBlocked);
+        if (escape) {
+          entity.x += escape.x;
+          entity.y += escape.y;
+          entity.path = null;
+          entity.pathRetryTimer = 0;
+          entity.moveVx = 0;
+          entity.moveVy = 0;
+          return;
+        }
+        if (enemyObstacleStep(entity, nextNode.x, nextNode.y, speed, bodyRadius, extraBlocked)) return;
+      }
       entity.moveVx = 0;
       entity.moveVy = 0;
       entity.path = null;
