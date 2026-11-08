@@ -15,6 +15,7 @@ import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
 import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
+import { markPlagueEnemyEscaped, plagueEnemyTarget } from '../../../modes/plague/index.js';
 
 let waveTerritoryMaskTick = -1;
 let waveTerritoryMask = null;
@@ -30,6 +31,20 @@ function blocksPlayerTerritory(gx, gy) {
   if (!waveTerritoryMask || gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS ||
       !waveTerritoryMask[gy * game.COLS + gx]) return false;
   return !waveEnemyCamps.some(camp => Math.abs(gx - camp.gx) <= camp.radius && Math.abs(gy - camp.gy) <= camp.radius);
+}
+
+function plagueEnemyDefinition(enemy) {
+  const enemyDef = getEnemyDef(enemy);
+  if (!game.plagueMode || !enemy.plagueWeapon) return enemyDef;
+  if (enemy.plagueWeapon === 'crossbow') {
+    return {
+      ...enemyDef,
+      weapon: 'crossbow',
+      ranged: { ...enemyDef.ranged, range: 310, keepAway: 250 },
+      quiver: { ...enemyDef.quiver, arrows: 8, refill: 4 }
+    };
+  }
+  return { ...enemyDef, weapon: enemy.plagueWeapon };
 }
 
 // Every enemy's tick, last first
@@ -83,7 +98,8 @@ function tendCampfire(en, dt) {
 
 // An enemy medic (#203) follows one wounded ally at a time and heals at close range. True while it heals.
 function enemyHeal(en, healer, dt) {
-  if (en.herbs === undefined) en.herbs = healer.bagSize;
+  if (game.plagueMode) en.herbs = Infinity;
+  else if (en.herbs === undefined) en.herbs = healer.bagSize;
   const battle = game.gameMode === 'battle';
   const medic = GAME_CONFIG.medic;
   const healRange = healer.healRange ?? medic.range;
@@ -236,7 +252,20 @@ export function tickEnemy(en, dt) {
   if (en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken && !getEnemyDef(en).pet &&
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
-  const enemyDef = getEnemyDef(en);
+  const enemyDef = plagueEnemyDefinition(en);
+  if (game.plagueMode && en.plagueWeapon && !en.plagueWeaponAdjusted) {
+    if (enemyDef.ranged) {
+      const baseDamage = GAME_CONFIG.weapons[getEnemyDef(en).weapon]?.combat?.damage || 1;
+      const weaponDamage = GAME_CONFIG.weapons[enemyDef.weapon]?.combat?.damage || baseDamage;
+      en.damage *= weaponDamage / baseDamage;
+      en.arrows = Math.min(en.arrows || 0, enemyDef.quiver.arrows);
+    } else {
+      const baseDamage = enemyDamagePerSecond(getEnemyDef(en));
+      en.damage *= enemyDamagePerSecond(enemyDef) / (baseDamage || 1);
+    }
+    en.plagueWeaponAdjusted = true;
+  }
+  if (game.plagueMode && tickPlagueEnemy(en, dt)) return;
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
     if (en.musterRoute && en.musterRoute.length === 0) return;
@@ -295,6 +324,22 @@ export function tickEnemy(en, dt) {
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
 const STRUCK_TICKS = 120; // (2 s: how long a hit turns it)
+
+function tickPlagueEnemy(en, dt) {
+  const target = plagueEnemyTarget(en);
+  if (target) { en.attackTarget = target; return false; }
+  en.attackTarget = null;
+  const goal = en.plagueGoal;
+  if (!goal) return false;
+  if (Math.hypot(goal.x - en.x, goal.y - en.y) <= 14) {
+    markPlagueEnemyEscaped(en);
+    const index = game.enemies.indexOf(en);
+    if (index >= 0) game.enemies.splice(index, 1);
+    return true;
+  }
+  moveEntityTowards(en, goal.x, goal.y, en.speed, true, dt);
+  return true;
+}
 
 // (#326) An enemy archer and its own side's platform (a watchtower of the red side's, in a battle): up a free one
 // near it, it shoots from there, farther and over the walls, as the player's archers do from theirs. True
@@ -593,6 +638,10 @@ function buildEnemyTent(en, dt) {
 // settler, or the town hall; and how far that is
 /** @returns {{ target: Settler | TownHall, minDist: number }} */
 function chooseEnemyTarget(en) {
+  if (game.plagueMode) {
+    const target = plagueEnemyTarget(en);
+    return { target: target || en.plagueGoal || townHall, minDist: target ? Math.hypot(en.x - target.x, en.y - target.y) : Math.hypot(en.x - (en.plagueGoal || townHall).x, en.y - (en.plagueGoal || townHall).y) };
+  }
   /** @type {Settler | TownHall} */
   let target = townHall;
   let minDist = Math.hypot(en.x - townHall.x, en.y - townHall.y);
@@ -601,7 +650,7 @@ function chooseEnemyTarget(en) {
   // (#326) in the fog an enemy sees a settler only close to it (an archer: as far as it shoots), or one that has
   // hit it a moment ago; else it knows just its goal, the town hall
   const fog = GAME_CONFIG.fog, foggy = hasFog();
-  const def = getEnemyDef(en);
+  const def = plagueEnemyDefinition(en);
   const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? shotOf(def).range + 30 : 0);
   const sees = (s, d) => !foggy || d <= sight || (en.struckBy === s && game.pathTick - (en.struckTick || -Infinity) < fog.enemyRememberSeconds * 60);
   game.settlers.forEach(s => {
@@ -636,11 +685,15 @@ function chooseEnemyTarget(en) {
 /** @returns {{ shooting: boolean, meleeDef: Object, moveTarget: { x: number, y: number } }} */
 function chooseEnemyAttack(en, enemyDef, target) {
   let shooting = en.type === 'archer';
-  let meleeDef = enemyDef;
+  let meleeDef = game.plagueMode && enemyDef.healer
+    ? getDefinition('enemies', 'raider_club') || enemyDef
+    : enemyDef;
   /** @type {{ x: number, y: number }} */
   let moveTarget = target;
   const quiver = enemyDef.quiver;
-  if (quiver && en.arrows <= 0) {
+  if (quiver && game.plagueMode) {
+    en.arrows = Infinity;
+  } else if (quiver && en.arrows <= 0) {
     const tent = game.enemyArrowStock > 0 ? findNearestEnemyTent(en) : null;
     if (tent) {
       if (Math.hypot(tent.x - en.x, tent.y - en.y) <= GAME_CONFIG.enemyTents.buildDistance) {
@@ -683,7 +736,7 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
     faceTowards(en, target.x, target.y);
     en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
     en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
-    if (enemyDef.quiver && game.gameMode !== 'battle') en.arrows--;
+    if (enemyDef.quiver && game.gameMode !== 'battle' && !game.plagueMode) en.arrows--;
   }
 }
 
@@ -696,6 +749,10 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
   // spikes are walked over, not besieged; (#326) its own doors (the red side's) walked through
   let touchingBuilding = game.buildings.find(b => !(getDefinition('buildings', b.type) || {}).walkable && !(b.side === 'red' && isDoor(b)) && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
   if (touchingBuilding) {
+    if (game.plagueMode && touchingBuilding.plagueCemetery) {
+      moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
+      return;
+    }
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
     if (!own && isShelter(touchingBuilding) && !turned) {

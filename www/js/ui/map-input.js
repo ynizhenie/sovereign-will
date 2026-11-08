@@ -35,6 +35,18 @@ export function handleCanvasClick() {
   }
   if (game.gameMode === 'editor') { editorTap(mouse.x, mouse.y); return; }
   if (isDefeated()) return; // the defeat screen's own buttons
+  if (game.plagueMode) {
+    game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false;
+    closeSelectedCard();
+    const hero = game.settlers.find(s => s.plagueHero && s.hp > 0);
+    if (hero) {
+      hero.plagueMoveTarget = {
+        x: Math.max(hero.radius, Math.min(game.WORLD_WIDTH - hero.radius, mouse.x)),
+        y: Math.max(hero.radius, Math.min(game.WORLD_HEIGHT - hero.radius, mouse.y))
+      };
+    }
+    return;
+  }
   if ((!getPossessed() || isPlacingRaidPortal()) && raidTap(mouse.x, mouse.y)) return; // (orders in a raid's camp, #255)
 
   const p = getPossessed();

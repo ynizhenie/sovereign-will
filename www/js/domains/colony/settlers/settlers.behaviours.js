@@ -12,6 +12,7 @@
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { keys } from '../../../engine/platform/input.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
@@ -19,7 +20,7 @@ import { getTerritoryBox, inReliefZone, isWaterReachable, reliefZoneSpot } from 
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
 import { panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
@@ -379,6 +380,7 @@ export function tickSettlers(dt) {
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
+    if (game.plagueMode && s.plagueHero) { tickPlagueHero(s, tick); return; }
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)
     if (isPet(s)) {
       if (s.targetEquipment) s.targetEquipment = null;
@@ -402,4 +404,74 @@ export function tickSettlers(dt) {
     s.lastBehaviour = null;
   });
   if (game.settlers.some(s => s.leftColony)) game.settlers = game.settlers.filter(s => !s.leftColony); // (#314: let go, gone)
+}
+
+function tickPlagueHero(hero, tick) {
+  let moveX = Number(keys.d) - Number(keys.a);
+  let moveY = Number(keys.s) - Number(keys.w);
+  const joystick = game.plagueJoystick;
+  if (joystick) {
+    moveX += joystick.x;
+    moveY += joystick.y;
+  }
+  const inputStrength = Math.hypot(moveX, moveY);
+  if (inputStrength > 0) {
+    const scale = Math.min(inputStrength, 1);
+    moveX /= inputStrength;
+    moveY /= inputStrength;
+    hero.plagueMoveTarget = null;
+    hero.raising = null;
+    moveEntityTowards(
+      hero,
+      hero.x + moveX * 100,
+      hero.y + moveY * 100,
+      hero.speed * (game.plague?.heroSpeedMultiplier || 1) * scale,
+      false,
+      tick.dt,
+      true
+    );
+    hero.isIdle = false;
+    hero.activity = 'plagueMove';
+    return;
+  }
+  const target = hero.plagueMoveTarget;
+  if (target && Math.hypot(target.x - hero.x, target.y - hero.y) > 18) {
+    hero.raising = null;
+    moveEntityTowards(hero, target.x, target.y, hero.speed * (game.plague?.heroSpeedMultiplier || 1), false, tick.dt, true);
+    hero.isIdle = false;
+    hero.activity = 'plagueMove';
+    return;
+  }
+  hero.plagueMoveTarget = null;
+  hero.moveVx = 0;
+  hero.moveVy = 0;
+  hero.path = null;
+  hero.pathTarget = null;
+  hero.isIdle = true;
+  hero.activity = 'plagueIdle';
+  hero.swaying = true;
+  healPlagueSquad(hero, tick.dt);
+}
+
+function healPlagueSquad(hero, dt) {
+  const plague = game.plague;
+  if (!plague) return;
+  const radius = plague.healRange;
+  const patients = game.settlers
+    .filter(unit => (unit.plagueHero || unit.plagueUnit) && unit.hp > 0 && unit.hp < unit.maxHp &&
+      Math.hypot(unit.x - hero.x, unit.y - hero.y) <= radius)
+    .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || Math.hypot(a.x - hero.x, a.y - hero.y) - Math.hypot(b.x - hero.x, b.y - hero.y))
+    .slice(0, plague.healTargets);
+  if (!patients.length) {
+    hero.raising = null;
+    return;
+  }
+  hero.working = 0.1;
+  hero.workKind = 'plagueHeal';
+  const beamTarget = patients[0];
+  hero.raising = { x: beamTarget.x, y: beamTarget.y, until: game.pathTick + 2 };
+  for (const patient of patients) {
+    patient.hp = Math.min(patient.maxHp, patient.hp + plague.healStrength * dt);
+    patient.treatedAt = game.pathTick;
+  }
 }
