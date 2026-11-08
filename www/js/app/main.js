@@ -79,10 +79,16 @@ export function drawBetweenSteps(alpha, draw) {
       }
     }
   }
-  // (the camera on the one possessed moves with it, between steps too)
+  // Interpolate the camera on the possessed settler or Plague hero between simulation steps.
   const followed = game.settlers.find(s => s.isPossessed);
-  const cam = followed && camera.prevX !== undefined ? { x: camera.x, y: camera.y } : null;
-  if (cam && followed) { camera.x = followed.x; camera.y = followed.y; clampCamera(); }
+  const smoothPlagueCamera = game.plagueMode && !followed && camera.prevX !== undefined;
+  const cam = (followed || smoothPlagueCamera) ? { x: camera.x, y: camera.y } : null;
+  if (followed) { camera.x = followed.x; camera.y = followed.y; clampCamera(); }
+  else if (smoothPlagueCamera) {
+    camera.x = camera.prevX + (camera.x - camera.prevX) * alpha;
+    camera.y = camera.prevY + (camera.y - camera.prevY) * alpha;
+    clampCamera();
+  }
   try { draw(); } finally {
     for (const [o, x, y] of moved) { o.x = x; o.y = y; }
     if (cam) { camera.x = cam.x; camera.y = cam.y; }

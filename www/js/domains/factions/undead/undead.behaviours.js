@@ -166,6 +166,38 @@ export function necromancy(s, tick) {
 export function followMaster(s, tick) {
   if (s.masterId === undefined) return false;
   const master = game.settlers.find(o => o.id === s.masterId && o.hp > 0);
+  if (s.plagueUnit) {
+    if (!master) { s.masterId = undefined; return false; }
+    const squad = game.settlers
+      .filter(unit => unit.plagueUnit && unit.masterId === master.id && unit.hp > 0)
+      .sort((a, b) => a.id - b.id);
+    const slot = squad.indexOf(s);
+    const angle = slot * Math.PI * 2 / Math.max(1, squad.length) - Math.PI / 2;
+    const formation = {
+      x: master.x + Math.cos(angle) * TILE_SIZE * 1.5,
+      y: master.y + Math.sin(angle) * TILE_SIZE * 1.5
+    };
+    const returnToFormation = () => {
+      s.patrolTarget = null;
+      if (Math.hypot(formation.x - s.x, formation.y - s.y) > TILE_SIZE * 0.6) {
+        moveEntityTowards(s, formation.x, formation.y, s.speed, false, tick.dt, true);
+      } else {
+        s.moveVx = 0;
+        s.moveVy = 0;
+        s.path = null;
+        s.pathTarget = null;
+      }
+      return true;
+    };
+    if (master.plagueMoveTarget) {
+      return returnToFormation();
+    }
+    const range = game.plague?.commandRange || 300;
+    const foe = game.enemies.filter(en => en.hp > 0 && Math.hypot(en.x - master.x, en.y - master.y) <= range)
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (foe && engageEnemy(s, tick, foe, foe, tick.dt)) return true;
+    return returnToFormation();
+  }
   const necro = master && getNecromancy(master);
   if (!master || !necro) { s.masterId = undefined; return false; }
   const target = master.zombieTarget && master.zombieTarget.hp > 0 && game.enemies.includes(master.zombieTarget) ? master.zombieTarget : null;

@@ -12,13 +12,13 @@ if (!seedPanel) throw new Error('The shared seed panel is missing');
 const seedInputElement = document.getElementById('seed-input');
 if (!seedInputElement) throw new Error('The shared seed input is missing');
 const seedInput = /** @type {HTMLInputElement} */ (seedInputElement);
-/** @type {'endless' | 'editor' | null} */
+/** @type {'endless' | 'editor' | 'plague' | null} */
 let seedScreen = 'endless';
 
 export function showMenuScreen(name) {
   if (name !== 'settings' && name !== 'music' && musicPreview.id) previewTrack(''); // (a track listened to stops as the menu is left, #326)
   if (name === 'settings' || name === 'music') renderMusicPlayer();
-  if (name === 'endless' || name === 'editor') {
+  if (name === 'endless' || name === 'editor' || name === 'plague') {
     const seedSlot = document.querySelector(`[data-seed-slot="${name}"]`);
     if (!seedSlot) throw new Error(`The ${name} seed slot is missing`);
     seedSlot.appendChild(seedPanel);

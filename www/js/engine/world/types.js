@@ -21,6 +21,10 @@
  * @property {number} x
  * @property {number} y
  * @property {string} type           GAME_CONFIG.settlerTypes key ('normal', 'big', 'zombie'...)
+ * @property {boolean} [plagueHero]
+ * @property {boolean} [plagueUnit]
+ * @property {{x: number, y: number} | null} [plagueMoveTarget]
+ * @property {number} [quiverCapacity]
  * @property {string} role           'worker', 'soldier' or 'archer'
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
  * @property {number} [grumbledAt]   the tick it last said it wants to sleep
@@ -235,6 +239,8 @@
  * @property {number} [temporary]
  * @property {Enemy} [raisedBy] the necromancer that raised this temporary enemy zombie
  * @property {boolean} [crumbled]
+ * @property {number} [plagueGroupId]
+ * @property {Point} [plagueGoal]
  * @property {boolean} [summoned]     from a tent, not the wave
  * @property {boolean} [waveSummoned] spawned by a tent during a wave
  * @property {boolean} [fromWave]
@@ -316,6 +322,7 @@
  * @property {number} [fishTimer]
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
+ * @property {boolean} [plagueCemetery]
  * @property {boolean} [isDemolishing]
  * @property {Building} [targetBuilding] what a demolition blueprint takes down
  * @property {number} [fuelLeft]     a campfire's
@@ -355,6 +362,8 @@
  * @property {boolean} isPaused
  * @property {string} gameDifficulty
  * @property {boolean} cardMode  Endless with cards (#255)
+ * @property {boolean} plagueMode
+ * @property {Object | null} plague
  * @property {{ cols: number, rows: number }} mapSettings
  * @property {Object | null} customMap
  * @property {Point[]} editorOutposts up to three enemy camp markers in a custom map

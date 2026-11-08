@@ -70,6 +70,7 @@ export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
 }
 
 export function performAttack(attacker, targetX, targetY, useDaggerForStructure = false) {
+  if (game.plagueMode && attacker.plagueHero) return;
   const pet = attacker.role === 'pet';
   if (!pet) attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
   if (attacker.attackCooldown > 0) return;
@@ -93,7 +94,8 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
       y: attacker.y, 
       vx: Math.cos(angle) * stats.projectileSpeed, 
       vy: Math.sin(angle) * stats.projectileSpeed, 
-      damage: stats.damage * stats.multiplier,
+      damage: stats.damage * stats.multiplier *
+        (attacker.plagueUnit ? 1 + (game.plague?.minionDamage || 0) : attacker.plagueHero ? attacker.damageMultiplier || 2 : 1),
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
@@ -108,7 +110,8 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
   } else {
     attacker.swingWeapon = dagger ? 'dagger' : null;
     const range = stats.range;
-    const dmg = stats.damage * stats.multiplier;
+    const dmg = stats.damage * stats.multiplier *
+      (attacker.plagueUnit ? 1 + (game.plague?.minionDamage || 0) : attacker.plagueHero ? attacker.damageMultiplier || 2 : 1);
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
@@ -227,15 +230,20 @@ export function addCorpse(unit, side, kind) {
   const big = isBigBody(unit);
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
+  const weapon = side === 'enemy' && def.ranged ? def.weapon : unit.weapon;
   game.corpses.push({
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
-    weapon: unit.weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet,
+    weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet,
     pet: def.pet, stuck: unit.stuck
   }); // (its look and body type, #306; its arrows stay in it, #326)
 }
 
 export function updateCorpses(dt) {
+  if (game.plagueMode) {
+    for (const corpse of game.corpses) corpse.age += dt;
+    return;
+  }
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
@@ -428,7 +436,7 @@ export function tickProjectiles(dt = 1 / 60) {
     let hit = false, host = null;
 
     if (proj.fromEnemy) {
-      if (Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
+      if (!game.plagueMode && Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
         townHall.hp -= proj.damage;
         hit = true;
       }

@@ -13,6 +13,7 @@ import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
 import { leaveEditor, loadCustomMapSteps } from '../modes/editor/index.js';
 import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
+import { exitPlagueMode } from '../modes/plague/index.js';
 
 export function resetGame(map) {
   for (const _ of resetGameSteps(map)); // (all at once)
@@ -87,13 +88,14 @@ export function setPaused(paused) {
   btn.classList.toggle('paused', game.isPaused);
   document.getElementById('pause-menu').hidden = !game.isPaused;
   // saving and loading are Endless's: not in a battle (#254)
-  const endless = game.gameMode === 'endless';
+  const endless = game.gameMode === 'endless' && !game.plagueMode;
   document.getElementById('save-game-button').hidden = !endless || isInCamp(); // (not in a raid's camp, #255; on the way there or back it saves, #298)
   document.getElementById('load-game-button').hidden = !endless;
   document.getElementById('pause-load').hidden = true;
 }
 
 export function exitToMainMenu() {
+  exitPlagueMode();
   setPaused(false);
   resetRaid(); // (#255)
   hidePlacing(); closeSheet(); // (#279: the editor's or a battle's pick stayed on the chip in the next game)

@@ -324,6 +324,25 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
+.main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }
+.plague-menu { gap: 12px; }
+.plague-spawn-settings {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 10px;
+  text-align: left;
+}
+.plague-spawn-settings .menu-number { width: 72px; }
+.plague-spawn-settings .wave-options { grid-column: 1 / -1; }
+.plague-joystick-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.plague-joystick-toggle input { width: 18px; height: 18px; accent-color: #9763b1; }
 .wave-settings.endless-world-settings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1141,6 +1160,214 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .card-kind { font-size: 11px; color: #aeb4c0; }
 .card-cost { font-size: 11px; color: #d5d8dc; margin-top: auto; }
 @media (max-width: 460px) { .card { width: 100px; min-height: 160px; } .card-icon { font-size: 36px; } }
+
+body[data-plague="yes"] #hud-bottom,
+body[data-plague="yes"] #resource-strip,
+body[data-plague="yes"] .top-wave { display: none !important; }
+body[data-plague="yes"] .plague-upgrades-toggle { display: flex; }
+body:not([data-plague="yes"]) .plague-upgrades-toggle { display: none; }
+body[data-hud="plague"] .dock-row[data-hud-mode="plague"] { display: flex; }
+#plague-actions[hidden], .plague-modal[hidden] { display: none !important; }
+.plague-joystick {
+  display: none;
+  position: absolute;
+  z-index: 15;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: calc(var(--dock-h) + 18px);
+  width: 132px;
+  height: 132px;
+  touch-action: none;
+}
+.plague-joystick-base {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(208, 190, 219, 0.48);
+  border-radius: 50%;
+  background: rgba(37, 27, 45, 0.42);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.25);
+}
+.plague-joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px;
+  border: 2px solid rgba(237, 220, 247, 0.85);
+  border-radius: 50%;
+  background: rgba(151, 99, 177, 0.78);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+body[data-plague="yes"][data-plague-joystick="yes"] .plague-joystick:not([hidden]) { display: block; }
+@media (pointer: fine) {
+  .plague-joystick { display: none !important; }
+}
+.dock-row[data-hud-mode="plague"] {
+  height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 3px;
+  padding: 3px 6px 5px;
+}
+#plague-actions { width: min(100%, 360px); }
+.plague-stats { display: none; }
+body[data-hud="plague"] .plague-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100vw - 100px);
+  padding: 3px 5px;
+  border: 1px solid rgba(200, 192, 206, 0.32);
+  border-radius: 10px;
+  background: rgba(7, 11, 7, 0.9);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+}
+.plague-stat {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 7px;
+  color: #e4d8ed;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.plague-stat + .plague-stat { border-left: 1px solid rgba(200, 192, 206, 0.22); }
+.plague-stat .ic { width: 16px; height: 16px; flex: none; }
+.plague-stat b { color: #fff; font-size: 14px; font-variant-numeric: tabular-nums; }
+body[data-hud="plague"] .plague-upgrades-toggle {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  margin-left: 2px;
+  border: 1px solid rgba(200, 192, 206, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+#plague-actions #plague-revive {
+  position: relative;
+  flex: 0 0 50px;
+  align-self: center;
+  flex-direction: row;
+  gap: 6px;
+  width: min(100%, 150px);
+  overflow: hidden;
+}
+#plague-revive .ic { flex: none; font-size: 18px; }
+.plague-revive-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: rgba(164, 112, 190, 0.36);
+  transition: width 0.1s linear;
+}
+#plague-revive .ic, #plague-revive-label {
+  position: relative;
+  z-index: 1;
+}
+#plague-revive:disabled { opacity: 0.85; cursor: default; }
+.plague-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px;
+  overflow: auto;
+  background: rgba(8, 10, 16, 0.9);
+  color: #f5f0e1;
+}
+.plague-card-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 760px; }
+.plague-upgrade-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 180px;
+  min-height: 132px;
+  padding: 14px;
+  border: 1px solid #8e6a9c;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #33273b, #1d2028);
+  color: #f5f0e1;
+  text-align: center;
+  font: inherit;
+  cursor: pointer;
+}
+.plague-upgrade-card span { color: #c8c0ce; font-size: 12px; }
+.plague-upgrades-modal { z-index: 76; }
+.plague-upgrades-content {
+  width: min(560px, 100%);
+  max-height: min(75vh, 640px);
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid #8e6a9c;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #33273b, #1d2028);
+}
+.plague-upgrades-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.plague-upgrades-heading h2 { margin: 0; }
+.plague-character-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+.plague-character-stats h3 {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: #e4d8ed;
+  font-size: 14px;
+}
+.plague-character-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid rgba(200, 192, 206, 0.2);
+  border-radius: 7px;
+  background: rgba(8, 10, 16, 0.36);
+  font-size: 12px;
+}
+.plague-character-stat span { color: #c8c0ce; }
+.plague-character-stat b { color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.plague-upgrades-list { display: grid; gap: 8px; margin-top: 14px; }
+.plague-upgrades-list > p { margin: 0; color: #c8c0ce; text-align: center; }
+.plague-upgrade-entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  padding: 10px;
+  border: 1px solid rgba(200, 192, 206, 0.2);
+  border-radius: 8px;
+  background: rgba(8, 10, 16, 0.36);
+  opacity: 0.62;
+}
+.plague-upgrade-entry.acquired { opacity: 1; border-color: rgba(174, 126, 197, 0.7); }
+.plague-upgrade-entry span { color: #c8c0ce; font-size: 12px; }
+.plague-upgrade-entry p { grid-column: 1 / -1; margin: 0; color: #c8c0ce; font-size: 13px; }
+@media (max-width: 480px) {
+  .dock-row[data-hud-mode="plague"] { padding-inline: 5px; }
+  body[data-hud="plague"] .plague-stats { gap: 1px; max-width: calc(100vw - 92px); padding: 2px 3px; }
+  .plague-stat { gap: 3px; font-size: 8px; padding: 5px 3px; }
+  .plague-stat > span { display: none; }
+  .plague-stat .ic { width: 13px; height: 13px; }
+  .plague-stat b { font-size: 12px; }
+  body[data-hud="plague"] .plague-upgrades-toggle { width: 30px; height: 30px; flex-basis: 30px; }
+  .plague-character-stats { gap: 4px; }
+  .plague-character-stat { padding: 6px; font-size: 11px; }
+  .plague-upgrade-card { width: min(44vw, 170px); min-height: 118px; }
+}
 
 /* A raid on an enemy camp (#255): the bar under the top of the screen, the party picker */
 #raid-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; pointer-events: auto;

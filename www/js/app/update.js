@@ -20,11 +20,13 @@ import { tickFishPopulation, tickFishTraps } from '../domains/economy/fishing/in
 import { battle, updateBattle } from '../modes/battle/index.js';
 import { isRaidPicking, isRaiding, raid, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
+import { plagueCardPending, tickPlague } from '../modes/plague/index.js';
 
 export function update(dt) {
   if (game.loading) return; // (#326)
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
-  if (game.gameMode === 'endless' && (game.cardOffer || isRaidPicking())) return; // (the game waits for a card or a raid party to be picked, #255)
+  if ((game.gameMode === 'endless' && game.cardOffer) || plagueCardPending() || (game.gameMode === 'endless' && isRaidPicking())) return; // (the game waits for a card or a raid party to be picked, #255)
+  tickPlague(dt);
   // battle mode: units stand still while being placed, and the result shows for a moment
   if (game.gameMode === 'battle') {
     updateBattle(dt);

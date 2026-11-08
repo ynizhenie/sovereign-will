@@ -2,7 +2,8 @@
 // selected, and every list of things on the map.
 
 export const TILE_SIZE = 30;
-export const BORDER_MARGIN = 2;
+export let BORDER_MARGIN = 2;
+export function setBorderMargin(margin) { BORDER_MARGIN = margin; }
 // the world's size in tiles, picked in the main menu (setWorldSize); the canvas itself follows the screen
 // (see fitCanvasToScreen)
 export const DEFAULT_MAP_TILES = 40;
@@ -17,6 +18,8 @@ export const game = {
   loadingRenderFrame: 0,
   gameDifficulty: 'normal', // GAME_CONFIG.difficulty key, set from the menu
   cardMode: false,          // Endless with cards (#255, modes/endless/endless.cards.js), set from the menu
+  plagueMode: false,
+  plague: null,
   mapSettings: { cols: DEFAULT_MAP_TILES, rows: DEFAULT_MAP_TILES }, // set from the menu, used by resetGame
   customMap: null,          // a saved map (modes/editor) Endless plays instead of a generated one
   worldSeed: null,          // the world's seed and its random sequence (rng.js)

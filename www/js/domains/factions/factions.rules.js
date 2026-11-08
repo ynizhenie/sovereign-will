@@ -8,6 +8,7 @@ import { mapSource, renderFactionPicker } from '../../modes/endless/index.js';
 import { editor } from '../../modes/editor/index.js';
 import { menuWorld } from '../../modes/menu/index.js';
 import { loadData, saveData } from '../../engine/platform/index.js';
+import { getPlaguePlayerFaction } from '../../modes/plague/index.js';
 
 // the two sides: GAME_CONFIG.factions ids and the colours their units are drawn in
 // (#306) battle: the colours of Battles' two sides, chosen in its settings
@@ -15,6 +16,7 @@ export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: {
 
 // in the map editor, the faction the map is made for
 export function getPlayerFaction() {
+  if (game.plagueMode) return getPlaguePlayerFaction();
   if (game.gameMode === 'editor' && typeof editor !== 'undefined') return GAME_CONFIG.factions[editor.faction];
   if (game.gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction];
   return GAME_CONFIG.factions[sides.player.faction];
@@ -25,6 +27,7 @@ export function getEnemyFaction() { return GAME_CONFIG.factions[game.gameMode ==
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour
 export function getSettlerColor(s) {
+  if (game.plagueMode) return s && s.role !== 'worker' ? shadeColor(GAME_CONFIG.factions.undead.color, -0.28) : GAME_CONFIG.factions.undead.color;
   const color = game.gameMode === 'battle' ? sides.battle.green : game.gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
 }

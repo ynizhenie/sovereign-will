@@ -111,7 +111,7 @@ export function updateUI() {
 let giveOpen = false, shownGive = '';
 export function toggleGiveList() { giveOpen = !giveOpen; shownGive = ''; updateUI(); }
 function renderSelectedActions(s) {
-  const endless = game.gameMode === 'endless', fight = game.gameMode === 'battle' ? document.body.dataset.battlePhase === 'fight' : endless;
+  const endless = game.gameMode === 'endless' && !game.plagueMode, fight = game.gameMode === 'battle' ? document.body.dataset.battlePhase === 'fight' : endless || game.plagueMode;
   const picked = getSelection(), pet = s.role === 'pet';
   const show = (id, on) => { const b = document.getElementById(id); if (b) b.style.display = on ? '' : 'none'; };
   show('btn-give', endless && !pet && !s.temporary);

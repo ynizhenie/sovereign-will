@@ -13,7 +13,7 @@ let battleOpenBlockedGrid = { signature: null, grid: null };
 /** @returns {Uint8Array} */
 export function getSettlerBlockedGrid(allowBattleBorder = false) {
   const blockBattleBorder = game.gameMode === 'battle' && !allowBattleBorder;
-  const signature = (getTileIndex().signature * 31 + (blockBattleBorder ? 1 : 0)) | 0;
+  const signature = (getTileIndex().signature * 31 + (blockBattleBorder ? 1 : 0) + (game.plagueMode ? 2 : 0)) | 0;
   const cache = blockBattleBorder ? battleOpenBlockedGrid : settlerBlockedGrid;
   if (cache.signature !== signature || !cache.grid || cache.grid.length !== game.COLS * game.ROWS) {
     const updated = { signature, grid: buildSettlerBlockedGrid(blockBattleBorder) };
@@ -47,11 +47,13 @@ function buildSettlerBlockedGrid(blockBattleBorder = false) {
   for (const list of [game.naturalRocks, game.waterTiles, game.cacti, game.boulders, game.ironOres, game.coalOres]) list.forEach(mark);
   for (const t of game.trees) if (!t.isGrowing) mark(t);
   // round the town hall
-  const reach = Math.ceil((townHall.radius + 12) / TILE_SIZE) + 1, hall = getGridPos(townHall.x, townHall.y);
-  for (let gy = hall.gy - reach; gy <= hall.gy + reach; gy++) {
-    for (let gx = hall.gx - reach; gx <= hall.gx + reach; gx++) {
-      if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) continue;
-      if (Math.hypot(gx * TILE_SIZE + 15 - townHall.x, gy * TILE_SIZE + 15 - townHall.y) < townHall.radius + 12) grid[gy * game.COLS + gx] = 1;
+  if (!game.plagueMode) {
+    const reach = Math.ceil((townHall.radius + 12) / TILE_SIZE) + 1, hall = getGridPos(townHall.x, townHall.y);
+    for (let gy = hall.gy - reach; gy <= hall.gy + reach; gy++) {
+      for (let gx = hall.gx - reach; gx <= hall.gx + reach; gx++) {
+        if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS) continue;
+        if (Math.hypot(gx * TILE_SIZE + 15 - townHall.x, gy * TILE_SIZE + 15 - townHall.y) < townHall.radius + 12) grid[gy * game.COLS + gx] = 1;
+      }
     }
   }
   return grid;
@@ -68,7 +70,7 @@ export function computeTileBlockedForSettler(gx, gy, allowBattleBorder = false) 
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
-  if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
+  if (!game.plagueMode && Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
 
   const tiles = getTileIndex(), k = `${tx},${ty}`;
   return tiles.walls.has(k) || tiles.redDoors.has(k) || tiles.ownSpikes.has(k) || tiles.ownTraps.has(k) || tiles.rocks.has(k) || tiles.water.has(k) || tiles.trees.has(k) ||
@@ -169,7 +171,7 @@ export function getReachDistanceToResource(reach, resource) {
 // tiles (or the hall) change: an enemy's search and its straight-line checks asked the same tiles over and
 // over, each time making an "x,y" string and looking it up in a dozen sets. -1: not known yet
 function enemyMemo() {
-  const signature = getTileIndex().signature, size = game.COLS * game.ROWS;
+  const signature = (getTileIndex().signature * 31 + (game.plagueMode ? 1 : 0)) | 0, size = game.COLS * game.ROWS;
   if (enemyTiles.signature !== signature || enemyTiles.strict.length !== size || enemyTiles.hallX !== townHall.x || enemyTiles.hallY !== townHall.y) {
     enemyTiles = { signature, hallX: townHall.x, hallY: townHall.y, strict: new Int8Array(size).fill(-1), permissive: new Int8Array(size).fill(-1) };
   }
@@ -189,7 +191,7 @@ function computeBlockedForEnemyStrict(gx, gy) {
   let tx = gx * TILE_SIZE + 15;
   let ty = gy * TILE_SIZE + 15;
   
-  if (Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
+  if (!game.plagueMode && Math.hypot(tx - townHall.x, ty - townHall.y) < townHall.radius + 12) return true;
   // route around buildings when possible; if walled in, the fallback search paths through them and enemies break them
   const tiles = getTileIndex(), k = `${tx},${ty}`;
   // (an iron trap they don't see: they walk right onto it, #248; #326 the player's spikes too, straight over them;
@@ -204,7 +206,7 @@ function computeBlockedForEnemyStrict(gx, gy) {
 /** @type {{ signature: number | null, grid: Uint8Array | null }} */
 let enemyReach = { signature: null, grid: null };
 export function getEnemyReach() {
-  const signature = getTileIndex().signature;
+  const signature = (getTileIndex().signature * 31 + (game.plagueMode ? 1 : 0)) | 0;
   if (enemyReach.signature === signature && enemyReach.grid && enemyReach.grid.length === game.COLS * game.ROWS) return enemyReach.grid;
   const grid = new Uint8Array(game.COLS * game.ROWS), b = reachBounds() || { gx0: 0, gy0: 0, gx1: game.COLS - 1, gy1: game.ROWS - 1 };
   const hall = getGridPos(townHall.x, townHall.y), queue = [];
@@ -241,7 +243,9 @@ function computeBlockedForEnemyPermissive(gx, gy) {
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore;
   // (#326) not their own buildings, and they keep off their own spikes and traps
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) || tiles.redBuildings.has(k) || tiles.redHazards.has(k) || tiles.outposts.has(k);
+  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) ||
+    tiles.redBuildings.has(k) || tiles.redHazards.has(k) || tiles.outposts.has(k) ||
+    (game.plagueMode && tiles.plagueCemeteries.has(k));
 }
 
 export const PATH_DIRECTIONS = [
