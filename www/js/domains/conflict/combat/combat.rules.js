@@ -94,8 +94,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
       y: attacker.y, 
       vx: Math.cos(angle) * stats.projectileSpeed, 
       vy: Math.sin(angle) * stats.projectileSpeed, 
-      damage: stats.damage * stats.multiplier *
-        (attacker.plagueUnit ? 1 + (game.plague?.minionDamage || 0) : 1),
+      damage: stats.damage * stats.multiplier,
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
@@ -110,8 +109,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
   } else {
     attacker.swingWeapon = dagger ? 'dagger' : null;
     const range = stats.range;
-    const dmg = stats.damage * stats.multiplier *
-      (attacker.plagueUnit ? 1 + (game.plague?.minionDamage || 0) : 1);
+    const dmg = stats.damage * stats.multiplier;
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [

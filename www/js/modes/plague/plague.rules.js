@@ -10,7 +10,7 @@ import { isTileOccupied } from '../../domains/economy/building/index.js';
 import { canUseShield, isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { getPlayerFaction, sides } from '../../domains/factions/index.js';
 import { showNotification } from '../../ui/index.js';
-import { resetGame, resetGameSteps, setPaused } from '../../app/index.js';
+import { playSound, resetGame, resetGameSteps, setPaused } from '../../app/index.js';
 import { mainMenu, showMenuScreen } from '../menu/index.js';
 import { runLoading } from '../../ui/index.js';
 
@@ -102,27 +102,33 @@ function showSpawnRanges(settings) {
   }
 }
 
+// (#404) The upgrades, as Lima listed them: each card offered as likely as any other
 const CARD_DEFS = {
-  energy_capacity: { name: 'plague.card.energyCapacity', desc: 'plague.card.energyCapacityDesc', apply: p => { p.maxEnergy += 10; p.energy = Math.min(p.maxEnergy, p.energy + 10); } },
-  energy_regen: { name: 'plague.card.energyRegen', desc: 'plague.card.energyRegenDesc', apply: p => { p.energyRegen += 0.1; } },
-  raise_cost: { name: 'plague.card.raiseCost', desc: 'plague.card.raiseCostDesc', apply: p => { p.raiseCostFactor = Math.max(0.5, p.raiseCostFactor - 0.1); } },
-  revive_cooldown: { name: 'plague.card.reviveCooldown', desc: 'plague.card.reviveCooldownDesc', apply: p => { p.reviveCooldown = Math.max(0.3, p.reviveCooldown - 0.25); } },
-  multi_raise: { name: 'plague.card.multiRaise', desc: 'plague.card.multiRaiseDesc', apply: p => { p.raisesPerCast++; } },
-  squad_size: { name: 'plague.card.squadSize', desc: 'plague.card.squadSizeDesc', apply: p => { p.maxSquad += 3; } },
-  revive_range: { name: 'plague.card.reviveRange', desc: 'plague.card.reviveRangeDesc', apply: p => { p.reviveRange += TILE_SIZE * 2; } },
-  // (#404) one speed for the Necromancer and its dead alike, one card for it
+  // one speed for the Necromancer and its dead alike
   speed: { name: 'plague.card.speed', desc: 'plague.card.speedDesc', apply: p => {
     const before = p.speedFactor;
     p.speedFactor += 0.1;
     for (const unit of game.settlers) if (unit.plagueUnit) unit.speed *= p.speedFactor / before;
   } },
-  hero_health: { name: 'plague.card.heroHealth', desc: 'plague.card.heroHealthDesc', apply: p => { p.heroMaxHp += 20; const hero = game.settlers.find(s => s.plagueHero); if (hero) { hero.maxHp += 20; hero.hp += 20; } } },
-  command_range: { name: 'plague.card.commandRange', desc: 'plague.card.commandRangeDesc', apply: p => { p.commandRange += TILE_SIZE * 2; } },
-  minion_health: { name: 'plague.card.minionHealth', desc: 'plague.card.minionHealthDesc', apply: p => { p.minionHp += 15; for (const s of game.settlers) if (s.plagueUnit) { s.maxHp += 15; s.hp += 15; } } },
-  minion_damage: { name: 'plague.card.minionDamage', desc: 'plague.card.minionDamageDesc', apply: p => { p.minionDamage += 0.15; } },
-  heal_strength: { name: 'plague.card.healStrength', desc: 'plague.card.healStrengthDesc', apply: p => { p.healStrength += 1.5; } },
   heal_targets: { name: 'plague.card.healTargets', desc: 'plague.card.healTargetsDesc', apply: p => { p.healTargets++; } },
-  heal_range: { name: 'plague.card.healRange', desc: 'plague.card.healRangeDesc', apply: p => { p.healRange += TILE_SIZE; } }
+  heal_strength: { name: 'plague.card.healStrength', desc: 'plague.card.healStrengthDesc', apply: p => { p.healStrength += 1.5; } },
+  heal_range: { name: 'plague.card.healRange', desc: 'plague.card.healRangeDesc', apply: p => { p.healRange += TILE_SIZE; } },
+  energy_capacity: { name: 'plague.card.energyCapacity', desc: 'plague.card.energyCapacityDesc', apply: p => { p.maxEnergy += 10; p.energy = Math.min(p.maxEnergy, p.energy + 10); } },
+  energy_regen: { name: 'plague.card.energyRegen', desc: 'plague.card.energyRegenDesc', apply: p => { p.energyRegen += 0.1; } },
+  squad_size: { name: 'plague.card.squadSize', desc: 'plague.card.squadSizeDesc', apply: p => { p.maxSquad += 3; } },
+  command_range: { name: 'plague.card.commandRange', desc: 'plague.card.commandRangeDesc', apply: p => { p.commandRange += TILE_SIZE * 2; } },
+  revive_range: { name: 'plague.card.reviveRange', desc: 'plague.card.reviveRangeDesc', apply: p => { p.reviveRange += TILE_SIZE * 2; } },
+  multi_raise: { name: 'plague.card.multiRaise', desc: 'plague.card.multiRaiseDesc', apply: p => { p.raisesPerCast++; } },
+  revive_cooldown: { name: 'plague.card.reviveCooldown', desc: 'plague.card.reviveCooldownDesc', apply: p => { p.reviveCooldown = Math.max(0.3, p.reviveCooldown - 0.25); } },
+  // the Necromancer's health and its dead's, one card for both
+  health: { name: 'plague.card.health', desc: 'plague.card.healthDesc', apply: p => {
+    p.heroMaxHp += 20;
+    p.minionHp += 15;
+    for (const unit of game.settlers) {
+      if (unit.plagueHero) { unit.maxHp += 20; unit.hp += 20; }
+      else if (unit.plagueUnit) { unit.maxHp += 15; unit.hp += 15; }
+    }
+  } }
 };
 
 const newPlagueState = () => ({
@@ -134,7 +140,7 @@ const newPlagueState = () => ({
   groupId: 0, groups: [], groupsCleared: 0, elapsedTime: 0,
   enemiesKilled: 0, killsTowardUpgrade: 0, nextUpgradeKills: 5,
   offer: null, upgrades: {}, commandRange: TILE_SIZE * 10, heroMaxHp: BASE_HERO_HEALTH,
-  speedFactor: 1, minionHp: 0, minionDamage: 0,
+  speedFactor: 1, minionHp: 0,
   healStrength: 2, healTargets: 1, healRange: 5 * TILE_SIZE
 });
 
@@ -332,6 +338,7 @@ function reviveNearby() {
     unit.speed = GAME_CONFIG.settlerTypes.zombie.speed * p.speedFactor; // (#404: a big one as fast: the squad keeps with the hero)
     game.settlers.push(unit);
     game.corpses.splice(game.corpses.indexOf(corpse), 1);
+    playSound('raise', corpse); // (#404)
     p.energy -= cost;
     raised++;
   }
@@ -413,7 +420,6 @@ function drawCharacterStats(plague) {
     ['plague.stats.reviveRange', tiles(base.reviveRange), tiles(plague.reviveRange)],
     ['plague.stats.squadCapacity', String(base.maxSquad), String(plague.maxSquad)],
     ['plague.stats.minionHealth', `${zombie.hp} / ${big.hp}`, `${zombie.hp + plague.minionHp} / ${big.hp + plague.minionHp}`],
-    ['plague.stats.minionDamage', `+${Math.round(base.minionDamage * 100)}%`, `+${Math.round(plague.minionDamage * 100)}%`],
     ['plague.stats.commandRange', tiles(base.commandRange), tiles(plague.commandRange)],
     ['plague.stats.healRate', perSecond(base.healStrength), perSecond(plague.healStrength)],
     ['plague.stats.healTargets', String(base.healTargets), String(plague.healTargets)],
