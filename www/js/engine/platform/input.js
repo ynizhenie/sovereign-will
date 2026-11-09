@@ -46,23 +46,10 @@ function bindKeyboard() {
     if (e.key === 'Shift') shiftDown = true;
     if (e.code === 'Space' || (e.code === 'KeyP' && !e.repeat && document.activeElement?.tagName !== 'INPUT')) { e.preventDefault(); togglePause(); return; }
     if (e.code === 'Escape') { unpossess(); return; }
-    const plagueMovementKey = document.body.dataset.plague === 'yes'
-      ? ({ KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd' })[e.code]
-      : null;
-    if (plagueMovementKey) e.preventDefault();
-    keys[plagueMovementKey || e.key.toLowerCase()] = true;
+    keys[e.key.toLowerCase()] = true;
   });
-  window.addEventListener('keyup', e => {
-    if (e.key === 'Shift') shiftDown = false;
-    const plagueMovementKey = document.body.dataset.plague === 'yes'
-      ? ({ KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd' })[e.code]
-      : null;
-    keys[plagueMovementKey || e.key.toLowerCase()] = false;
-  });
-  window.addEventListener('blur', () => {
-    shiftDown = false;
-    for (const key of Object.keys(keys)) keys[key] = false;
-  });
+  window.addEventListener('keyup', e => { if (e.key === 'Shift') shiftDown = false; keys[e.key.toLowerCase()] = false; });
+  window.addEventListener('blur', () => { shiftDown = false; });
 }
 
 // The mouse on the map: the pointer, the camera dragged with the middle or right button, the wheel to zoom

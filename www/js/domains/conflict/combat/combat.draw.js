@@ -1,6 +1,7 @@
 // Blood, arrows, flames and the target mark
 
-import { GAME_CONFIG } from '../../../content/configs/index.js';
+import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { drawIcon } from '../../../ui/index.js';
 import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect } from '../../../engine/platform/index.js';
 import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
@@ -128,6 +129,11 @@ export function drawCorpses() {
     if (c.pet) drawPetCorpse(c, grey);
     else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', horns: kin === 'demons', lying: true, dead: true });
     if (!game.plagueMode && corpseHasWorms(c)) drawWorms(c);
+    // (#404) the weapon it will rise with, lying by it
+    else if (game.plagueMode && c.weapon && c.weapon !== 'fist' && !c.pet) {
+      const def = getDefinition('weapons', c.weapon);
+      if (def) drawIcon(ctx, def.icon, c.x + Math.min(c.radius, 16) * 0.9, c.y + 4, 13);
+    }
     ctx.globalAlpha = 1;
   });
 }

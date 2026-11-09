@@ -68,7 +68,7 @@ export function stepsOntoSpikes(entity, vx, vy) {
 export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60, smooth = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
   if (!isEnemy && !smooth) { entity.moveVx = 0; entity.moveVy = 0; }
   // the undead's blighted ground holds enemies back
-  if (isEnemy && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor;
+  if (isEnemy && !game.plagueMode && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor; // (#404: not in the Plague)
   // through a portal pair of its own side (#326), except while movement has a territory constraint
   if (game.buildings.length && !extraBlocked) {
     const via = takePortal(entity, targetX, targetY, isEnemy ? 'red' : 'green');

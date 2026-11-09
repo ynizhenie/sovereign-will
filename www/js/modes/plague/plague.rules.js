@@ -2,12 +2,13 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, loadData, onTap, saveData, setZoom, t } from '../../engine/platform/index.js';
-import { TILE_SIZE, applySeedFromUI, createWorldSeed, game, rand, setBorderMargin, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, applySeedFromUI, createWorldSeed, game, getGridPos, rand, setBorderMargin, townHall } from '../../engine/world/index.js';
+import { isTileBlockedForEnemyStrict } from '../../engine/movement/index.js';
 import { createSettler } from '../../domains/colony/settlers/index.js';
-import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
+import { createConfiguredEnemy, dressForWave, getWavePresetPool, pickWavePreset } from '../../domains/conflict/waves/index.js';
 import { isTileOccupied } from '../../domains/economy/building/index.js';
 import { canUseShield, isRangedWeapon } from '../../domains/colony/equipment/index.js';
-import { getPlayerFaction } from '../../domains/factions/index.js';
+import { getPlayerFaction, sides } from '../../domains/factions/index.js';
 import { showNotification } from '../../ui/index.js';
 import { resetGame, resetGameSteps, setPaused } from '../../app/index.js';
 import { mainMenu, showMenuScreen } from '../menu/index.js';
@@ -18,13 +19,12 @@ const STARTING_MAX_ENERGY = 30;
 const STARTING_SQUAD = 8;
 const BASE_HERO_HEALTH = 180;
 const RAISE_COST = { normal: 5, big: 10 };
-const DEFAULT_GROUP_INTERVAL = 10;
-const MIN_GROUP_INTERVAL = 3;
-const MAX_GROUP_INTERVAL = 60;
-const DEFAULT_GROUPS_PER_SPAWN = 1;
-const MIN_GROUPS_PER_SPAWN = 1;
-const MAX_GROUPS_PER_SPAWN = 10;
-const CROSSBOW_UNLOCK_UPGRADES = 3;
+// (#404) the time between bands (seconds) and how many come each time: a range each, picked anew every time; the
+// default one, or the player's own (kept, to switch back and forth), within the limits
+const SPAWN_RANGES = {
+  interval: { default: [10, 30], limits: [3, 60] },
+  groups: { default: [1, 3], limits: [1, 10] }
+};
 const REVIVE_RANGE = 5 * TILE_SIZE;
 const CEMETERY_CORPSE_INTERVAL = 60;
 const CEMETERY_CORPSE_LIMIT = 3;
@@ -45,39 +45,61 @@ const PLAGUE_MAP_SETTINGS = {
   grass: { min: 10, max: 16 }
 };
 
+/** @typedef {{ custom: boolean, from: number, to: number }} SpawnRange */
+/** @param {string} kind @param {any} saved @returns {SpawnRange} */
+function spawnRange(kind, saved) {
+  const { default: [from, to], limits: [low, high] } = SPAWN_RANGES[kind];
+  const clamp = (value, fallback) => Number.isFinite(Number(value)) ? Math.max(low, Math.min(high, Math.round(Number(value)))) : fallback;
+  const a = clamp(saved?.from, from), b = clamp(saved?.to, to);
+  return { custom: saved?.custom === true, from: Math.min(a, b), to: Math.max(a, b) };
+}
+// the range in play: the player's own, or the default
+const rangeOf = (kind, range) => range?.custom ? [range.from, range.to] : SPAWN_RANGES[kind].default;
+// a whole number from..to, each as likely
+const rollRange = ([from, to]) => from + Math.floor(rand() * (to - from + 1));
+
 function readPlagueSettings() {
   const saved = loadData('plagueChoices', null);
   return {
     difficulty: saved?.difficulty === 'hard' ? 'hard' : 'normal',
-    joystickEnabled: saved?.joystickEnabled === true,
-    groupInterval: Number.isFinite(Number(saved?.groupInterval))
-      ? Math.max(MIN_GROUP_INTERVAL, Math.min(MAX_GROUP_INTERVAL, Math.round(Number(saved.groupInterval))))
-      : DEFAULT_GROUP_INTERVAL,
-    groupsPerSpawn: Number.isFinite(Number(saved?.groupsPerSpawn))
-      ? Math.max(MIN_GROUPS_PER_SPAWN, Math.min(MAX_GROUPS_PER_SPAWN, Math.round(Number(saved.groupsPerSpawn))))
-      : DEFAULT_GROUPS_PER_SPAWN
+    interval: spawnRange('interval', saved?.interval),
+    groups: spawnRange('groups', saved?.groups)
   };
 }
 
+// The menu's settings as they're set now: saved, and shown back (a range put the right way round, within its limits)
 function savePlagueSettings() {
-  const intervalInput = /** @type {HTMLInputElement} */ (document.getElementById('plague-group-interval'));
-  const groupsInput = /** @type {HTMLInputElement} */ (document.getElementById('plague-groups-per-spawn'));
-  const joystickInput = /** @type {HTMLInputElement} */ (document.getElementById('plague-joystick-enabled'));
-  const groupsValue = Math.round(Number(groupsInput.value));
+  /** @param {string} kind */
+  const rangeFromMenu = kind => {
+    const box = /** @type {HTMLElement} */ (document.querySelector(`[data-plague-range="${kind}"]`));
+    const inputs = /** @type {NodeListOf<HTMLInputElement>} */ (box.querySelectorAll('input'));
+    const custom = !!box.querySelector('[data-plague-range-mode="custom"].active');
+    return spawnRange(kind, { custom, from: inputs[0].value, to: inputs[1].value });
+  };
   const settings = {
     difficulty: document.querySelector('#plague-difficulty-options [data-plague-difficulty].active')?.getAttribute('data-plague-difficulty') === 'hard' ? 'hard' : 'normal',
-    joystickEnabled: joystickInput.checked,
-    groupInterval: Math.max(MIN_GROUP_INTERVAL, Math.min(MAX_GROUP_INTERVAL, Math.round(Number(intervalInput.value) || DEFAULT_GROUP_INTERVAL))),
-    groupsPerSpawn: Number.isFinite(groupsValue)
-      ? Math.max(MIN_GROUPS_PER_SPAWN, Math.min(MAX_GROUPS_PER_SPAWN, groupsValue))
-      : DEFAULT_GROUPS_PER_SPAWN
+    interval: rangeFromMenu('interval'),
+    groups: rangeFromMenu('groups')
   };
-  intervalInput.value = String(settings.groupInterval);
-  groupsInput.value = String(settings.groupsPerSpawn);
-  applyPlagueJoystickSetting(settings.joystickEnabled);
+  showSpawnRanges(settings);
   game.plagueSettings = settings;
   game.gameDifficulty = settings.difficulty;
   saveData('plagueChoices', settings);
+}
+
+/** @param {{ interval: SpawnRange, groups: SpawnRange }} settings */
+function showSpawnRanges(settings) {
+  for (const kind of Object.keys(SPAWN_RANGES)) {
+    const range = settings[kind], box = /** @type {HTMLElement} */ (document.querySelector(`[data-plague-range="${kind}"]`));
+    const inputs = /** @type {NodeListOf<HTMLInputElement>} */ (box.querySelectorAll('input'));
+    inputs[0].value = String(range.from); inputs[1].value = String(range.to);
+    box.querySelectorAll('[data-plague-range-mode]').forEach(button =>
+      button.classList.toggle('active', (button.getAttribute('data-plague-range-mode') === 'custom') === range.custom));
+    const [from, to] = SPAWN_RANGES[kind].default;
+    const label = box.querySelector('[data-plague-range-mode="default"]');
+    if (label) label.textContent = t('plague.rangeDefault', { from, to });
+    /** @type {HTMLElement} */ (box.querySelector('.plague-range-fields')).hidden = !range.custom;
+  }
 }
 
 const CARD_DEFS = {
@@ -88,32 +110,31 @@ const CARD_DEFS = {
   multi_raise: { name: 'plague.card.multiRaise', desc: 'plague.card.multiRaiseDesc', apply: p => { p.raisesPerCast++; } },
   squad_size: { name: 'plague.card.squadSize', desc: 'plague.card.squadSizeDesc', apply: p => { p.maxSquad += 3; } },
   revive_range: { name: 'plague.card.reviveRange', desc: 'plague.card.reviveRangeDesc', apply: p => { p.reviveRange += TILE_SIZE * 2; } },
+  // (#404) one speed for the Necromancer and its dead alike, one card for it
+  speed: { name: 'plague.card.speed', desc: 'plague.card.speedDesc', apply: p => {
+    const before = p.speedFactor;
+    p.speedFactor += 0.1;
+    for (const unit of game.settlers) if (unit.plagueUnit) unit.speed *= p.speedFactor / before;
+  } },
   hero_health: { name: 'plague.card.heroHealth', desc: 'plague.card.heroHealthDesc', apply: p => { p.heroMaxHp += 20; const hero = game.settlers.find(s => s.plagueHero); if (hero) { hero.maxHp += 20; hero.hp += 20; } } },
-  hero_damage: { name: 'plague.card.heroDamage', desc: 'plague.card.heroDamageDesc', apply: p => { p.heroDamageMultiplier += 0.25; const hero = game.settlers.find(s => s.plagueHero); if (hero) hero.damageMultiplier = p.heroDamageMultiplier; } },
-  hero_speed: { name: 'plague.card.heroSpeed', desc: 'plague.card.heroSpeedDesc', apply: p => { p.heroSpeedMultiplier += 0.1; } },
   command_range: { name: 'plague.card.commandRange', desc: 'plague.card.commandRangeDesc', apply: p => { p.commandRange += TILE_SIZE * 2; } },
   minion_health: { name: 'plague.card.minionHealth', desc: 'plague.card.minionHealthDesc', apply: p => { p.minionHp += 15; for (const s of game.settlers) if (s.plagueUnit) { s.maxHp += 15; s.hp += 15; } } },
   minion_damage: { name: 'plague.card.minionDamage', desc: 'plague.card.minionDamageDesc', apply: p => { p.minionDamage += 0.15; } },
-  minion_speed: { name: 'plague.card.minionSpeed', desc: 'plague.card.minionSpeedDesc', apply: p => {
-    const previousFactor = p.minionSpeedFactor;
-    p.minionSpeedFactor += 0.1;
-    for (const unit of game.settlers) if (unit.plagueUnit) unit.speed *= p.minionSpeedFactor / previousFactor;
-  } },
   heal_strength: { name: 'plague.card.healStrength', desc: 'plague.card.healStrengthDesc', apply: p => { p.healStrength += 1.5; } },
   heal_targets: { name: 'plague.card.healTargets', desc: 'plague.card.healTargetsDesc', apply: p => { p.healTargets++; } },
   heal_range: { name: 'plague.card.healRange', desc: 'plague.card.healRangeDesc', apply: p => { p.healRange += TILE_SIZE; } }
 };
 
 const newPlagueState = () => ({
-  groupInterval: game.plagueSettings?.groupInterval || DEFAULT_GROUP_INTERVAL,
-  groupsPerSpawn: game.plagueSettings?.groupsPerSpawn || DEFAULT_GROUPS_PER_SPAWN,
+  bandInterval: rangeOf('interval', game.plagueSettings?.interval),
+  bandCount: rangeOf('groups', game.plagueSettings?.groups),
   energy: STARTING_MAX_ENERGY, maxEnergy: STARTING_MAX_ENERGY, energyRegen: 0.2,
   maxSquad: STARTING_SQUAD, raisesPerCast: 1, raiseCostFactor: 1, reviveRange: REVIVE_RANGE,
-  reviveCooldown: 1.5, reviveTimer: 0, groupTimer: game.plagueSettings?.groupInterval || DEFAULT_GROUP_INTERVAL,
+  reviveCooldown: 1.5, reviveTimer: 0, groupTimer: rollRange(rangeOf('interval', game.plagueSettings?.interval)),
   groupId: 0, groups: [], groupsCleared: 0, elapsedTime: 0,
   enemiesKilled: 0, killsTowardUpgrade: 0, nextUpgradeKills: 5,
-  offer: null, upgrades: {}, commandRange: TILE_SIZE * 10, heroMaxHp: BASE_HERO_HEALTH, heroDamageMultiplier: 2,
-  heroSpeedMultiplier: 1, minionHp: 0, minionDamage: 0, minionSpeedFactor: 1,
+  offer: null, upgrades: {}, commandRange: TILE_SIZE * 10, heroMaxHp: BASE_HERO_HEALTH,
+  speedFactor: 1, minionHp: 0, minionDamage: 0,
   healStrength: 2, healTargets: 1, healRange: 5 * TILE_SIZE
 });
 
@@ -168,7 +189,7 @@ function setupPlagueGame() {
   game.settlers = [];
   const hero = createSettler('zombie', nextPlagueUnitId++, townHall.x, townHall.y, {
     plagueHero: true, isPossessed: false, tool: 'necro_staff', weapon: 'fist', role: 'soldier',
-    maxHp: game.plague.heroMaxHp, hp: game.plague.heroMaxHp, damageMultiplier: game.plague.heroDamageMultiplier
+    maxHp: game.plague.heroMaxHp, hp: game.plague.heroMaxHp
   });
   hero.tool = 'necro_staff';
   hero.weapon = 'fist';
@@ -184,10 +205,21 @@ function setupPlagueGame() {
   updatePlagueHud();
 }
 
+// (#404) The Plague's own sides whatever Endless was set to: the player the undead, the enemy humans; Endless's
+// back when the Plague is left
+/** @type {{ player: string, enemy: string } | null} */
+let endlessFactions = null;
+function takePlagueSides() {
+  if (!endlessFactions) endlessFactions = { player: sides.player.faction, enemy: sides.enemy.faction };
+  sides.player.faction = 'undead';
+  sides.enemy.faction = 'humans';
+}
+
 export async function startPlagueGame() {
   if (game.loading) return;
   savePlagueSettings();
   applySeedFromUI();
+  takePlagueSides();
   game.plagueMode = true;
   game.mapSettings = { cols: 40, rows: 40 };
   game.customMap = null;
@@ -210,6 +242,7 @@ export function restartPlagueGame() {
   const seed = game.worldSeed?.value;
   if (!seed) throw new Error('Cannot restart Plague without the current world seed');
   game.worldSeed = createWorldSeed(seed);
+  takePlagueSides();
   game.plagueMode = true;
   game.gameMode = 'endless';
   game.mapSettings = { cols: 40, rows: 40 };
@@ -296,7 +329,7 @@ function reviveNearby() {
     if (unit.shield && !canUseShield(unit)) unit.shield = false;
     unit.maxHp += p.minionHp;
     unit.hp += p.minionHp;
-    unit.speed *= p.minionSpeedFactor;
+    unit.speed = GAME_CONFIG.settlerTypes.zombie.speed * p.speedFactor; // (#404: a big one as fast: the squad keeps with the hero)
     game.settlers.push(unit);
     game.corpses.splice(game.corpses.indexOf(corpse), 1);
     p.energy -= cost;
@@ -361,42 +394,43 @@ function drawUpgradeList() {
   }
 }
 
+// (#404) Each of the Necromancer's numbers as it began and as it is now
 function drawCharacterStats(plague) {
   const panel = document.getElementById('plague-character-stats');
   if (!panel) return;
-  const hero = game.settlers.find(unit => unit.plagueHero);
-  const baseDamage = GAME_CONFIG.tools.necro_staff.combatDamage;
-  const heroDamage = Math.round(baseDamage * (hero?.damageMultiplier ?? plague.heroDamageMultiplier));
-  const minionDamageBonus = Math.round(plague.minionDamage * 100);
+  const base = newPlagueState(), zombie = GAME_CONFIG.settlerTypes.zombie, big = GAME_CONFIG.settlerTypes.big_zombie;
+  const tiles = n => `${n / TILE_SIZE} ${t('plague.stats.tiles')}`, perSecond = n => `${+n.toFixed(2)} ${t('plague.stats.perSecond')}`;
+  const cost = factor => `${Math.ceil(RAISE_COST.normal * factor)} / ${Math.ceil(RAISE_COST.big * factor)}`;
+  /** @type {[string, string, string][]} */
   const stats = [
-    ['plague.stats.health', `${BASE_HERO_HEALTH} → ${hero?.maxHp ?? plague.heroMaxHp}; ${Math.ceil(hero?.hp ?? plague.heroMaxHp)} ${t('plague.stats.current')}`],
-    ['plague.stats.damage', `${heroDamage} (${t('plague.stats.damageMultiplier')})`],
-    ['plague.stats.speed', `${GAME_CONFIG.settlerTypes.zombie.speed.toFixed(2)} × ${plague.heroSpeedMultiplier.toFixed(1)}`],
-    ['plague.stats.energy', `${plague.maxEnergy}; +${plague.energyRegen.toFixed(1)} ${t('plague.stats.perSecond')}`],
-    ['plague.stats.raiseCost', `${Math.ceil(RAISE_COST.normal * plague.raiseCostFactor)} / ${Math.ceil(RAISE_COST.big * plague.raiseCostFactor)}`],
-    ['plague.stats.raiseCooldown', `${plague.reviveCooldown.toFixed(2)} ${t('plague.stats.seconds')}`],
-    ['plague.stats.raisesPerCast', String(plague.raisesPerCast)],
-    ['plague.stats.reviveRange', `${plague.reviveRange / TILE_SIZE} ${t('plague.stats.tiles')}`],
-    ['plague.stats.squadCapacity', String(plague.maxSquad)],
-    ['plague.stats.minionHealth', `${GAME_CONFIG.settlerTypes.zombie.hp + plague.minionHp} / ${GAME_CONFIG.settlerTypes.big_zombie.hp + plague.minionHp}`],
-    ['plague.stats.minionDamage', `+${minionDamageBonus}%`],
-    ['plague.stats.minionSpeed', `×${plague.minionSpeedFactor.toFixed(1)}`],
-    ['plague.stats.commandRange', `${plague.commandRange / TILE_SIZE} ${t('plague.stats.tiles')}`],
-    ['plague.stats.healRate', `${plague.healStrength} ${t('plague.stats.perSecond')}`],
-    ['plague.stats.healTargets', String(plague.healTargets)],
-    ['plague.stats.healRange', `${plague.healRange / TILE_SIZE} ${t('plague.stats.tiles')}`]
+    ['plague.stats.health', String(base.heroMaxHp), String(plague.heroMaxHp)],
+    ['plague.stats.speed', zombie.speed.toFixed(2), (zombie.speed * plague.speedFactor).toFixed(2)],
+    ['plague.stats.energy', String(base.maxEnergy), String(plague.maxEnergy)],
+    ['plague.stats.energyRegen', perSecond(base.energyRegen), perSecond(plague.energyRegen)],
+    ['plague.stats.raiseCost', cost(base.raiseCostFactor), cost(plague.raiseCostFactor)],
+    ['plague.stats.raiseCooldown', `${base.reviveCooldown} ${t('plague.stats.seconds')}`, `${+plague.reviveCooldown.toFixed(2)} ${t('plague.stats.seconds')}`],
+    ['plague.stats.raisesPerCast', String(base.raisesPerCast), String(plague.raisesPerCast)],
+    ['plague.stats.reviveRange', tiles(base.reviveRange), tiles(plague.reviveRange)],
+    ['plague.stats.squadCapacity', String(base.maxSquad), String(plague.maxSquad)],
+    ['plague.stats.minionHealth', `${zombie.hp} / ${big.hp}`, `${zombie.hp + plague.minionHp} / ${big.hp + plague.minionHp}`],
+    ['plague.stats.minionDamage', `+${Math.round(base.minionDamage * 100)}%`, `+${Math.round(plague.minionDamage * 100)}%`],
+    ['plague.stats.commandRange', tiles(base.commandRange), tiles(plague.commandRange)],
+    ['plague.stats.healRate', perSecond(base.healStrength), perSecond(plague.healStrength)],
+    ['plague.stats.healTargets', String(base.healTargets), String(plague.healTargets)],
+    ['plague.stats.healRange', tiles(base.healRange), tiles(plague.healRange)]
   ];
   panel.replaceChildren();
   const heading = document.createElement('h3');
   heading.textContent = t('plague.stats.title');
   panel.appendChild(heading);
-  for (const [label, value] of stats) {
+  for (const [label, from, now] of stats) {
     const row = document.createElement('div');
     row.className = 'plague-character-stat';
     const name = document.createElement('span');
     name.textContent = t(label);
     const amount = document.createElement('b');
-    amount.textContent = value;
+    amount.textContent = `${from} → ${now}`;
+    if (now !== from) amount.classList.add('raised');
     row.append(name, amount);
     panel.appendChild(row);
   }
@@ -413,44 +447,79 @@ function offerUpgrades() {
   drawOffer();
 }
 
+// (#404) Where a band comes in, side by side along an edge, and the spot on the far edge it heads for: on ground
+// it can stand on (not water, rock or a tree) and no nearer the hero than SPAWN_CLEAR. The sides take turns;
+// another side, then another spot, when one has no room. Null when none has
+const SPAWN_CLEAR = 10 * TILE_SIZE;
+const BAND_ROUTES = [
+  { horizontal: true, forward: true },
+  { horizontal: false, forward: true },
+  { horizontal: true, forward: false },
+  { horizontal: false, forward: false }
+];
+const standable = point => {
+  const g = getGridPos(point.x, point.y);
+  return g.gx >= 0 && g.gy >= 0 && g.gx < game.COLS && g.gy < game.ROWS && !isTileBlockedForEnemyStrict(g.gx, g.gy);
+};
+function bandRoute(groupId, count) {
+  const hero = livingHero(), edge = TILE_SIZE / 2;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const { horizontal, forward } = BAND_ROUTES[(groupId - 1 + Math.floor(attempt / 10)) % BAND_ROUTES.length];
+    const side = Math.floor(rand() * (horizontal ? game.ROWS : game.COLS));
+    const start = horizontal
+      ? { x: forward ? edge : game.WORLD_WIDTH - edge, y: side * TILE_SIZE + TILE_SIZE / 2 }
+      : { x: side * TILE_SIZE + TILE_SIZE / 2, y: forward ? edge : game.WORLD_HEIGHT - edge };
+    const goal = horizontal
+      ? { x: forward ? game.WORLD_WIDTH - edge : edge, y: start.y }
+      : { x: start.x, y: forward ? game.WORLD_HEIGHT - edge : edge };
+    const spots = Array.from({ length: count }, (_, i) =>
+      ({ x: start.x + (horizontal ? 0 : (i - 1) * 20), y: start.y + (horizontal ? (i - 1) * 20 : 0) }));
+    if (!standable(goal) || !spots.every(standable)) continue;
+    if (hero && spots.some(spot => Math.hypot(spot.x - hero.x, spot.y - hero.y) < SPAWN_CLEAR)) continue;
+    return { spots, goal };
+  }
+  return null;
+}
+
+// (#404) The player's level: one, and one more for each card taken
+const playerLevel = p => 1 + Object.values(p.upgrades).reduce((total, count) => total + count, 0);
+// A band's level: the player's, give or take up to 3, most often the same (as Endless's wave of that number)
+const LEVEL_SPREAD = [[-3, 1], [-2, 2], [-1, 4], [0, 6], [1, 4], [2, 2], [3, 1]];
+function bandLevel(level) {
+  let roll = rand() * LEVEL_SPREAD.reduce((sum, [, weight]) => sum + weight, 0);
+  for (const [offset, weight] of LEVEL_SPREAD) {
+    roll -= weight;
+    if (roll < 0) return Math.max(1, level + offset);
+  }
+  return level;
+}
+
+// A band of humans crossing the map: 3 to 5 of them to begin with, the most of them one more for every 3 levels
+// (10 at most); each picked and armed as Endless's wave of the band's level is (its kinds and gear by their
+// chances then), no crossbowmen
 function spawnGroup() {
-  const p = game.plague, groupId = ++p.groupId;
-  const upgrades = Object.values(p.upgrades).reduce((total, count) => total + count, 0);
-  const count = Math.min(10, 3 + Math.floor(rand() * 3) + Math.floor(upgrades / 3));
-  const routes = [
-    { horizontal: true, forward: true },
-    { horizontal: false, forward: true },
-    { horizontal: true, forward: false },
-    { horizontal: false, forward: false }
-  ];
-  const { horizontal, forward } = routes[(groupId - 1) % routes.length];
-  const side = Math.floor(rand() * (horizontal ? game.ROWS : game.COLS));
-  const edge = TILE_SIZE / 2;
-  const start = horizontal
-    ? { x: forward ? edge : game.WORLD_WIDTH - edge, y: side * TILE_SIZE + TILE_SIZE / 2 }
-    : { x: side * TILE_SIZE + TILE_SIZE / 2, y: forward ? edge : game.WORLD_HEIGHT - edge };
-  const goal = horizontal
-    ? { x: forward ? game.WORLD_WIDTH - edge : edge, y: start.y }
-    : { x: start.x, y: forward ? game.WORLD_HEIGHT - edge : edge };
-  const group = { id: groupId, size: count, killed: 0, escaped: 0, resolved: false };
+  const p = game.plague, groupId = ++p.groupId, level = playerLevel(p);
+  const count = Math.min(10, 3 + Math.floor(rand() * (3 + Math.floor((level - 1) / 3))));
+  const route = bandRoute(groupId, count);
+  if (!route) return; // (no edge with room for it, away from the hero: the next time)
+  const { spots, goal } = route;
+  const band = bandLevel(level);
+  const pool = getWavePresetPool('humans', band).filter(option => option.preset.weapon !== 'crossbow');
+  const group = { id: groupId, size: 0, killed: 0, escaped: 0, resolved: false };
   p.groups.push(group);
-  const types = ['raider_club', 'raider', 'raider_archer', 'brute', 'raider_medic'];
-  const tier = Math.floor(upgrades / 2);
-  for (let i = 0; i < count; i++) {
-    const enemy = createConfiguredEnemy({ x: start.x + (horizontal ? 0 : (i - 1) * 20), y: start.y + (horizontal ? (i - 1) * 20 : 0) }, types[Math.floor(rand() * types.length)]);
-    if (enemy.enemyKey === 'raider' && rand() < 0.5) enemy.plagueWeapon = 'iron_sword';
-    if (enemy.enemyKey === 'brute' && rand() < 0.5) enemy.plagueWeapon = 'iron_spear';
-    if (upgrades >= CROSSBOW_UNLOCK_UPGRADES && enemy.enemyKey === 'raider_archer' && rand() < 0.5) {
-      enemy.plagueWeapon = 'crossbow';
-    }
+  for (const spot of spots) {
+    const picked = pickWavePreset(pool);
+    const def = picked && GAME_CONFIG.enemies[picked.enemyKey];
+    if (!def) continue;
+    const enemy = createConfiguredEnemy(spot, def.id);
+    if (!enemy) continue;
+    dressForWave(enemy, def, band);
     enemy.plagueGroupId = groupId;
     enemy.plagueGoal = { ...goal };
-    enemy.plagueTier = tier;
-    enemy.hp = Math.round(enemy.hp * (1 + tier * 0.1));
-    enemy.maxHp = enemy.hp;
-    enemy.damage = Math.round(enemy.damage * (1 + tier * 0.08));
+    group.size++;
     game.enemies.push(enemy);
   }
+  if (!group.size) p.groups.splice(p.groups.indexOf(group), 1);
 }
 
 function updateGroups() {
@@ -503,8 +572,8 @@ export function tickPlague(dt) {
   tickCemeteryCorpses(dt);
   p.groupTimer -= dt;
   if (p.groupTimer <= 0) {
-    for (let i = 0; i < p.groupsPerSpawn; i++) spawnGroup();
-    p.groupTimer = p.groupInterval;
+    for (let i = rollRange(p.bandCount); i > 0; i--) spawnGroup();
+    p.groupTimer = rollRange(p.bandInterval);
   }
   updateGroups();
 }
@@ -553,6 +622,9 @@ export function updatePlagueHud() {
   if (energy.textContent !== energyText) energy.textContent = energyText;
   if (squad.textContent !== squadText) squad.textContent = squadText;
   if (experience.textContent !== experienceText) experience.textContent = experienceText;
+  // (#404) the level next to what's left to the next card (three icons of their own: energy, the squad, the level)
+  const level = document.getElementById('plague-level'), levelText = t('plague.level', { n: playerLevel(p) });
+  if (level && level.textContent !== levelText) level.textContent = levelText;
   const revive = document.getElementById('plague-revive');
   const label = document.getElementById('plague-revive-label');
   const progress = document.getElementById('plague-revive-progress');
@@ -567,16 +639,16 @@ export function updatePlagueHud() {
 export function initPlagueRules() {
   onTap(document.getElementById('mode-plague'), () => showMenuScreen('plague'));
   onTap(document.getElementById('plague-play'), startPlagueGame);
-  initPlagueJoystick();
   const plagueSettings = readPlagueSettings();
-  const intervalInput = /** @type {HTMLInputElement} */ (document.getElementById('plague-group-interval'));
-  const groupsInput = /** @type {HTMLInputElement} */ (document.getElementById('plague-groups-per-spawn'));
-  const joystickInput = /** @type {HTMLInputElement} */ (document.getElementById('plague-joystick-enabled'));
-  intervalInput.value = String(plagueSettings.groupInterval);
-  groupsInput.value = String(plagueSettings.groupsPerSpawn);
-  joystickInput.checked = plagueSettings.joystickEnabled;
+  showSpawnRanges(plagueSettings);
   game.plagueSettings = plagueSettings;
-  applyPlagueJoystickSetting(plagueSettings.joystickEnabled);
+  document.querySelectorAll('[data-plague-range]').forEach(box => {
+    box.querySelectorAll('[data-plague-range-mode]').forEach(button => onTap(/** @type {HTMLElement} */ (button), () => {
+      box.querySelectorAll('[data-plague-range-mode]').forEach(option => option.classList.toggle('active', option === button));
+      savePlagueSettings();
+    }));
+    box.querySelectorAll('input').forEach(input => input.addEventListener('change', savePlagueSettings));
+  });
   document.querySelectorAll('#plague-difficulty-options [data-plague-difficulty]').forEach(button => {
     button.classList.toggle('active', button.getAttribute('data-plague-difficulty') === plagueSettings.difficulty);
     onTap(button, () => {
@@ -585,9 +657,6 @@ export function initPlagueRules() {
       savePlagueSettings();
     });
   });
-  intervalInput.addEventListener('change', savePlagueSettings);
-  groupsInput.addEventListener('change', savePlagueSettings);
-  joystickInput.addEventListener('change', savePlagueSettings);
   onTap(document.getElementById('plague-revive'), reviveNearby);
   onTap(document.getElementById('plague-upgrades-toggle'), () => {
     drawUpgradeList();
@@ -599,58 +668,6 @@ export function initPlagueRules() {
     document.getElementById('plague-upgrades-panel').hidden = true;
     setPaused(false);
   });
-}
-
-function initPlagueJoystick() {
-  const joystick = /** @type {HTMLElement} */ (document.getElementById('plague-joystick'));
-  const knob = /** @type {HTMLElement} */ (document.getElementById('plague-joystick-knob'));
-  let pointerId = null;
-
-  const release = () => {
-    pointerId = null;
-    game.plagueJoystick = null;
-    knob.style.transform = '';
-  };
-  const update = (clientX, clientY) => {
-    const rect = joystick.getBoundingClientRect();
-    const radius = Math.max(1, (rect.width - knob.offsetWidth) / 2);
-    const dx = clientX - (rect.left + rect.width / 2);
-    const dy = clientY - (rect.top + rect.height / 2);
-    const distance = Math.min(radius, Math.hypot(dx, dy));
-    const x = Math.hypot(dx, dy) ? dx / Math.hypot(dx, dy) * distance : 0;
-    const y = Math.hypot(dx, dy) ? dy / Math.hypot(dx, dy) * distance : 0;
-    knob.style.transform = `translate(${x}px, ${y}px)`;
-    game.plagueJoystick = { x: x / radius, y: y / radius };
-  };
-
-  joystick.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'mouse') return;
-    event.preventDefault();
-    event.stopPropagation();
-    pointerId = event.pointerId;
-    joystick.setPointerCapture(pointerId);
-    update(event.clientX, event.clientY);
-  });
-  joystick.addEventListener('pointermove', event => {
-    if (event.pointerId !== pointerId) return;
-    event.preventDefault();
-    update(event.clientX, event.clientY);
-  });
-  joystick.addEventListener('pointerup', event => {
-    if (event.pointerId === pointerId) release();
-  });
-  joystick.addEventListener('pointercancel', release);
-  joystick.addEventListener('lostpointercapture', release);
-}
-
-function applyPlagueJoystickSetting(enabled) {
-  const joystick = /** @type {HTMLElement} */ (document.getElementById('plague-joystick'));
-  joystick.hidden = !enabled;
-  document.body.dataset.plagueJoystick = enabled ? 'yes' : 'no';
-  if (!enabled) {
-    game.plagueJoystick = null;
-    document.getElementById('plague-joystick-knob').style.transform = '';
-  }
 }
 
 export function plagueIsDefeated() {
@@ -667,13 +684,11 @@ export function applyPlagueCardOffer() {
 }
 
 export function exitPlagueMode() {
+  if (endlessFactions) { sides.player.faction = endlessFactions.player; sides.enemy.faction = endlessFactions.enemy; endlessFactions = null; }
   game.plagueMode = false;
   game.plague = null;
-  game.plagueJoystick = null;
   setBorderMargin(2);
   delete document.body.dataset.plague;
-  delete document.body.dataset.plagueJoystick;
-  document.getElementById('plague-joystick').hidden = true;
   document.getElementById('plague-card-offer').hidden = true;
 }
 
