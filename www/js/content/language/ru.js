@@ -360,6 +360,7 @@ export const ruLanguage = {
       'menu.settings': 'Настройки',
       'menu.exit': 'Выйти',
       'menu.back': '[[back]] Назад',
+      'menu.close': 'Закрыть',
       'menu.difficulty': 'Сложность:',
       'menu.normal': 'Обычная',
       'menu.hard': 'Сложная',

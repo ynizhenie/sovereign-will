@@ -44,6 +44,7 @@ test('an arrow stays where it hit: in a unit, on in its corpse till it is gone, 
   await page.click('#play-button');
   const r = await page.evaluate(() => {
     isPaused = true;
+    window.sim.helpers.clearResources(); resetTileIndex(); // (a rock by the hall on some maps stopped the arrow short)
     const fire = (x, y, tx, ty, fromEnemy) => game.projectiles.push({ x, y, vx: (tx - x) / 10, vy: (ty - y) / 10, damage: 1, life: 60, fromEnemy, owner: null });
     // into the open: it lies where it fell
     fire(townHall.x + 300, townHall.y + 300, townHall.x + 500, townHall.y + 300, false);

@@ -11,8 +11,8 @@
 // The behaviours themselves live with their mechanic (domains/*/*.behaviours.js); here are the list and
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
+import { keys } from '../../../engine/platform/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { keys } from '../../../engine/platform/input.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
