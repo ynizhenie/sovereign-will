@@ -94,8 +94,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
       y: attacker.y, 
       vx: Math.cos(angle) * stats.projectileSpeed, 
       vy: Math.sin(angle) * stats.projectileSpeed, 
-      damage: stats.damage * stats.multiplier *
-        (attacker.plagueUnit ? 1 + (game.plague?.minionDamage || 0) : attacker.plagueHero ? attacker.damageMultiplier || 2 : 1),
+      damage: stats.damage * stats.multiplier,
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
@@ -103,15 +102,14 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
       training: !!(attacker.idle && attacker.idle.act === 'train') // (#326) at a dummy: it sticks in it
     });
     playSound(bolt ? 'crossbow' : 'bow', attacker);
-    if (game.gameMode !== 'battle') attacker.arrows--; // arrows don't run out in battles
+    if (game.gameMode !== 'battle' && !game.plagueMode) attacker.arrows--; // arrows don't run out in battles (#404: nor in the Plague)
     attacker.attackCooldown = attackCooldown;
     attacker.shotAt = game.pathTick; attacker.shotLen = attackCooldown; // (its next arrow drawn, #306)
     startSwing(attacker, 0.3);
   } else {
     attacker.swingWeapon = dagger ? 'dagger' : null;
     const range = stats.range;
-    const dmg = stats.damage * stats.multiplier *
-      (attacker.plagueUnit ? 1 + (game.plague?.minionDamage || 0) : attacker.plagueHero ? attacker.damageMultiplier || 2 : 1);
+    const dmg = stats.damage * stats.multiplier;
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [

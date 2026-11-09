@@ -40,6 +40,7 @@ function pickKind(after) {
 }
 
 export function tickWeather(dt) {
+  if (game.plagueMode) { game.weather = null; return; } // (#404: always clear)
   if (game.gameMode === 'battle' && game.weather) game.weather.left = Infinity; // (a battle's stands: its wind and lightning go on)
   else if (game.gameMode !== 'endless' || !game.gameStarted) return;
   const c = config();

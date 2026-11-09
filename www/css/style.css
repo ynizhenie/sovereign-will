@@ -326,23 +326,12 @@ body.menu-world #defeat-overlay { display: none !important; }
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
 .main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }
 .plague-menu { gap: 12px; }
-.plague-spawn-settings {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 6px 10px;
-  text-align: left;
-}
+.plague-spawn-settings { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.plague-range { display: flex; flex-direction: column; gap: 6px; }
+.plague-range > div:first-child { font-size: 11px; color: #8a91a0; font-weight: bold; text-align: center; }
+.plague-range-fields { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.plague-range-fields[hidden] { display: none; }
 .plague-spawn-settings .menu-number { width: 72px; }
-.plague-spawn-settings .wave-options { grid-column: 1 / -1; }
-.plague-joystick-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-}
-.plague-joystick-toggle input { width: 18px; height: 18px; accent-color: #9763b1; }
 .wave-settings.endless-world-settings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1168,41 +1157,6 @@ body[data-plague="yes"] .plague-upgrades-toggle { display: flex; }
 body:not([data-plague="yes"]) .plague-upgrades-toggle { display: none; }
 body[data-hud="plague"] .dock-row[data-hud-mode="plague"] { display: flex; }
 #plague-actions[hidden], .plague-modal[hidden] { display: none !important; }
-.plague-joystick {
-  display: none;
-  position: absolute;
-  z-index: 15;
-  left: max(18px, env(safe-area-inset-left));
-  bottom: calc(var(--dock-h) + 18px);
-  width: 132px;
-  height: 132px;
-  touch-action: none;
-}
-.plague-joystick-base {
-  position: absolute;
-  inset: 0;
-  border: 2px solid rgba(208, 190, 219, 0.48);
-  border-radius: 50%;
-  background: rgba(37, 27, 45, 0.42);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.25);
-}
-.plague-joystick-knob {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 54px;
-  height: 54px;
-  margin: -27px;
-  border: 2px solid rgba(237, 220, 247, 0.85);
-  border-radius: 50%;
-  background: rgba(151, 99, 177, 0.78);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-}
-body[data-plague="yes"][data-plague-joystick="yes"] .plague-joystick:not([hidden]) { display: block; }
-@media (pointer: fine) {
-  .plague-joystick { display: none !important; }
-}
 .dock-row[data-hud-mode="plague"] {
   height: 100%;
   flex-direction: column;
@@ -1284,14 +1238,15 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   background: rgba(8, 10, 16, 0.9);
   color: #f5f0e1;
 }
-.plague-card-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 760px; }
+/* (#404) the three side by side, as wide as each other, on a phone's screen too */
+.plague-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: min(640px, 100%); }
 .plague-upgrade-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 180px;
+  min-width: 0;
   min-height: 132px;
   padding: 14px;
   border: 1px solid #8e6a9c;
@@ -1303,6 +1258,12 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   cursor: pointer;
 }
 .plague-upgrade-card span { color: #c8c0ce; font-size: 12px; }
+@media (max-width: 520px) {
+  .plague-card-grid { gap: 6px; }
+  .plague-upgrade-card { min-height: 110px; padding: 8px 6px; gap: 6px; font-size: 13px; overflow-wrap: anywhere; }
+  .plague-upgrade-card span { font-size: 11px; }
+}
+.plague-character-stat b.raised { color: #b8e986; }
 .plague-upgrades-modal { z-index: 76; }
 .plague-upgrades-content {
   width: min(560px, 100%);
@@ -1360,13 +1321,12 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   .dock-row[data-hud-mode="plague"] { padding-inline: 5px; }
   body[data-hud="plague"] .plague-stats { gap: 1px; max-width: calc(100vw - 92px); padding: 2px 3px; }
   .plague-stat { gap: 3px; font-size: 8px; padding: 5px 3px; }
-  .plague-stat > span { display: none; }
+  .plague-stat > span:not(#plague-level) { display: none; } /* (#404: the level stays, by its icon) */
   .plague-stat .ic { width: 13px; height: 13px; }
   .plague-stat b { font-size: 12px; }
   body[data-hud="plague"] .plague-upgrades-toggle { width: 30px; height: 30px; flex-basis: 30px; }
   .plague-character-stats { gap: 4px; }
   .plague-character-stat { padding: 6px; font-size: 11px; }
-  .plague-upgrade-card { width: min(44vw, 170px); min-height: 118px; }
 }
 
 /* A raid on an enemy camp (#255): the bar under the top of the screen, the party picker */

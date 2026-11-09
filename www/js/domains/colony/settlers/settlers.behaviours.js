@@ -11,7 +11,6 @@
 // The behaviours themselves live with their mechanic (domains/*/*.behaviours.js); here are the list and
 // the ones every settler has, whatever its job: being possessed, relief, wandering.
 
-import { keys } from '../../../engine/platform/index.js';
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
@@ -406,38 +405,12 @@ export function tickSettlers(dt) {
   if (game.settlers.some(s => s.leftColony)) game.settlers = game.settlers.filter(s => !s.leftColony); // (#314: let go, gone)
 }
 
+// (#404) the hero walks where the player taps (no stick or keys)
 function tickPlagueHero(hero, tick) {
-  let moveX = Number(keys.d) - Number(keys.a);
-  let moveY = Number(keys.s) - Number(keys.w);
-  const joystick = game.plagueJoystick;
-  if (joystick) {
-    moveX += joystick.x;
-    moveY += joystick.y;
-  }
-  const inputStrength = Math.hypot(moveX, moveY);
-  if (inputStrength > 0) {
-    const scale = Math.min(inputStrength, 1);
-    moveX /= inputStrength;
-    moveY /= inputStrength;
-    hero.plagueMoveTarget = null;
-    hero.raising = null;
-    moveEntityTowards(
-      hero,
-      hero.x + moveX * 100,
-      hero.y + moveY * 100,
-      hero.speed * (game.plague?.heroSpeedMultiplier || 1) * scale,
-      false,
-      tick.dt,
-      true
-    );
-    hero.isIdle = false;
-    hero.activity = 'plagueMove';
-    return;
-  }
   const target = hero.plagueMoveTarget;
   if (target && Math.hypot(target.x - hero.x, target.y - hero.y) > 18) {
     hero.raising = null;
-    moveEntityTowards(hero, target.x, target.y, hero.speed * (game.plague?.heroSpeedMultiplier || 1), false, tick.dt, true);
+    moveEntityTowards(hero, target.x, target.y, hero.speed * (game.plague?.speedFactor || 1), false, tick.dt, true);
     hero.isIdle = false;
     hero.activity = 'plagueMove';
     return;
@@ -447,9 +420,9 @@ function tickPlagueHero(hero, tick) {
   hero.moveVy = 0;
   hero.path = null;
   hero.pathTarget = null;
-  hero.isIdle = true;
+  hero.isIdle = false; // (#404: standing, it neither sways nor shows the idle "zZ")
   hero.activity = 'plagueIdle';
-  hero.swaying = true;
+  hero.swaying = false;
   healPlagueSquad(hero, tick.dt);
 }
 

@@ -22,7 +22,7 @@ export function getNecromancy(s) {
 export let blightCache = { key: '', keys: new Set(), base: new Set() };
 
 export function updateBlightCache() {
-  const cacheKey = `${game.pathTick}|${sides.player.faction}|${game.gameMode}|${game.buildings.length}|${game.blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}|${!!game.battleBlight}`;
+  const cacheKey = `${game.pathTick}|${sides.player.faction}|${game.gameMode}|${!!game.plagueMode}|${game.buildings.length}|${game.blightZones.filter(z => z.done).length}|${townHall.x},${townHall.y}|${!!game.battleBlight}`;
   if (blightCache.key === cacheKey) return blightCache;
   const base = new Set();
   // (#326) a battle on blighted ground (its settings): all of the field, the strip outside the red line too, working as in Endless (the red side slowed on it)
@@ -39,7 +39,7 @@ export function updateBlightCache() {
     };
     // the graveyard stands on the 2×2 tiles round its centre, a tile corner (as far on every side)
     const hx = Math.round(townHall.x / TILE_SIZE), hy = Math.round(townHall.y / TILE_SIZE);
-    around(hx - 1, hy - 1, hx, hy, b.hallTiles);
+    if (!game.plagueMode) around(hx - 1, hy - 1, hx, hy, b.hallTiles); // (#404: the Plague has no graveyard, only its graves)
     for (const grave of game.buildings) {
       if (grave.type !== 'grave') continue;
       const g = getGridPos(grave.x, grave.y);
@@ -106,7 +106,7 @@ export function updateTemporaryZombies(dt) {
 // A corpse on blighted ground rises as a temporary zombie after a while; not one lying by a grave: it's
 // there to keep the grave working (#253)
 export function raiseOnBlight(dt) {
-  if (sides.player.faction !== 'undead') return;
+  if (sides.player.faction !== 'undead' || game.plagueMode) return; // (#404: in the Plague blight is only its look)
   const r = (GAME_CONFIG.graveWork.nearTiles + 0.5) * TILE_SIZE;
   const graves = game.buildings.filter(b => b.type === 'grave' && b.side !== 'red');
   for (const corpse of [...game.corpses]) {

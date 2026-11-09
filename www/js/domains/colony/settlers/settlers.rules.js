@@ -302,7 +302,7 @@ export function tickMeals(dt) {
 // stock. Endless only (a battle's units come back as they were placed)
 export function dropSettlerLoot(s) {
   if (s.bagHerbs > 0) { stock.herbs += s.bagHerbs; s.bagHerbs = 0; }
-  if (game.gameMode !== 'endless') return;
+  if (game.gameMode !== 'endless' || game.plagueMode) return; // (#404: the Plague's dead keep theirs, to rise with it)
   const held = [];
   if (s.weapon && s.weapon !== 'fist' && getDefinition('weapons', s.weapon)) held.push(`weapons:${s.weapon}`);
   if (s.tool && s.tool !== 'none' && getDefinition('tools', s.tool)) held.push(`tools:${s.tool}`);

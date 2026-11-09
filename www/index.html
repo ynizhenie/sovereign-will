@@ -186,15 +186,29 @@
           </div>
         </div>
         <div class="plague-spawn-settings">
-          <label for="plague-group-interval" data-i18n="plague.groupInterval">Group spawn interval (seconds)</label>
-          <input id="plague-group-interval" class="menu-number" type="number" min="3" max="60" step="1" value="10" />
-          <label for="plague-groups-per-spawn" data-i18n="plague.groupsPerSpawn">Groups per spawn</label>
-          <input id="plague-groups-per-spawn" class="menu-number" type="number" min="1" max="10" step="1" value="1" />
+          <div class="plague-range" data-plague-range="interval">
+            <div data-i18n="plague.groupInterval">Group spawn interval (seconds)</div>
+            <div class="wave-options">
+              <button class="difficulty-option active" data-plague-range-mode="default">Default: 10–30</button>
+              <button class="difficulty-option" data-plague-range-mode="custom" data-i18n="plague.rangeCustom">Your own</button>
+            </div>
+            <div class="plague-range-fields" hidden>
+              <span data-i18n="plague.rangeFrom">from</span><input class="menu-number" type="number" min="3" max="60" step="1" value="10" />
+              <span data-i18n="plague.rangeTo">to</span><input class="menu-number" type="number" min="3" max="60" step="1" value="30" />
+            </div>
+          </div>
+          <div class="plague-range" data-plague-range="groups">
+            <div data-i18n="plague.groupsPerSpawn">Groups per spawn</div>
+            <div class="wave-options">
+              <button class="difficulty-option active" data-plague-range-mode="default">Default: 1–3</button>
+              <button class="difficulty-option" data-plague-range-mode="custom" data-i18n="plague.rangeCustom">Your own</button>
+            </div>
+            <div class="plague-range-fields" hidden>
+              <span data-i18n="plague.rangeFrom">from</span><input class="menu-number" type="number" min="1" max="10" step="1" value="1" />
+              <span data-i18n="plague.rangeTo">to</span><input class="menu-number" type="number" min="1" max="10" step="1" value="3" />
+            </div>
+          </div>
         </div>
-        <label class="plague-joystick-toggle">
-          <input id="plague-joystick-enabled" type="checkbox" />
-          <span data-i18n="plague.joystickControl">Use movement joystick (touch)</span>
-        </label>
         <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <div data-seed-slot="plague"></div>
     </div>
@@ -303,9 +317,6 @@
     <div id="fps-counter" hidden></div>
 
     <canvas id="gameCanvas"></canvas>
-    <div id="plague-joystick" class="plague-joystick" role="application" aria-label="Movement joystick" hidden>
-      <div class="plague-joystick-base"><div id="plague-joystick-knob" class="plague-joystick-knob"></div></div>
-    </div>
 
     <!-- Endless lost (#191): over the game, which flies to the base; start again or leave -->
     <div id="defeat-overlay" hidden>
@@ -327,9 +338,9 @@
 
     <div class="top-center">
       <div class="plague-stats">
-        <div class="plague-stat"><i class="ic ic-staff"></i><span data-i18n="plague.energy">Dark energy</span><b id="plague-energy">15/30</b></div>
-        <div class="plague-stat"><i class="ic ic-swords"></i><span data-i18n="plague.squad">Squad</span><b id="plague-squad">0/8</b></div>
-        <div class="plague-stat"><i class="ic ic-swords"></i><span data-i18n="plague.experience">Experience</span><b id="plague-experience">0/5</b></div>
+        <div class="plague-stat"><i class="ic ic-soul"></i><span data-i18n="plague.energy">Dark energy</span><b id="plague-energy">15/30</b></div>
+        <div class="plague-stat"><i class="ic ic-zombie"></i><span data-i18n="plague.squad">Squad</span><b id="plague-squad">0/8</b></div>
+        <div class="plague-stat"><i class="ic ic-card"></i><span id="plague-level">Level 1</span><b id="plague-experience">0/5</b></div>
         <button class="btn-pause-square plague-upgrades-toggle" id="plague-upgrades-toggle" data-i18n-title="plague.upgradesTitle" aria-label="Upgrades"><i class="ic ic-gear"></i></button>
       </div>
       <!-- (#279) Endless: the time of day, a dial of its four parts with a hand on now, the sun or the moon in it -->
