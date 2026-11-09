@@ -281,7 +281,6 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 
     let dist = distToClosestEn;
     if (enemyBreachingBuildingBetween(s, targetEnemy)) {
-      faceTowards(s, targetEnemy.x, targetEnemy.y);
       if (s.siegePathTarget !== targetEnemy.siegeTarget) {
         s.path = null;
         s.pathTarget = null;

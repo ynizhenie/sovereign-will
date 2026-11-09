@@ -1,4 +1,4 @@
-// Battle mode: an empty grass field split down the middle. The player places units of any faction:
+// Battle mode: an empty field split down the middle. The player places units of any faction:
 // on the green side (left) they're theirs, on the red side (right) enemies (#326: any unit on either), buildings
 // anywhere; presses Fight, and
 // they battle it out; the winner is shown and, a few seconds later, the same line-up comes back to adjust.
@@ -7,7 +7,7 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, loadData, saveData, setZoom } from '../../engine/platform/index.js';
-import { TILE_SIZE, game, getGridPos, isBorderZone, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../engine/world/index.js';
 import { canUseShield, isRangedWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy, getEnemyDef, presetEnemyKey } from '../../domains/conflict/waves/index.js';
@@ -17,7 +17,7 @@ import { createSettler, newLook, newPetLook } from '../../domains/colony/settler
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { bigPresetOf, getBattlePreset } from './battle.roster.js';
-import { renderBattlePanel } from './battle.panel.js';
+import { renderBattlePanel, resetBattleSecretTapCount } from './battle.panel.js';
 
 export const BATTLE_RESULT_SECONDS = 4;
 
@@ -38,7 +38,7 @@ export const battle = {
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   helmet: false,      // (#326, 27.10, 27) the next unit placed gets a helmet (not a pet)
-  field: 'glade',     // glade / desert / savanna: what the battle is fought on
+  field: 'glade',     // glade / desert / savanna / backrooms: what the battle is fought on
   time: 'day',        // (#326) morning / day / evening / night: how it looks (it stands still; nobody sleeps by it)
   weather: 'clear',   // (#326) clear / rain / fog / storm, all through the fight
   lineup: [],         // { presetId, x, y, armor, shield, banner } or { building, x, y }: what's placed, kept between fights
@@ -58,9 +58,12 @@ const BATTLE_DEFAULTS = {
   field: 'glade', time: 'day', weather: 'clear', difficulty: 'normal', theme: 'arena', fieldHighlight: 'classic'
 };
 
+let lastNonSecretBattleField = 'glade';
+let backroomsMazeLayout = /** @type {string[]} */ ([]);
+
 export function saveBattleChoices() {
   const { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme, fieldHighlight } = battle;
-  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme, fieldHighlight });
+  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch, field: field === 'backrooms' ? lastNonSecretBattleField : field, time, weather, difficulty, theme, fieldHighlight });
 }
 
 export function restoreBattleChoices() {
@@ -71,12 +74,19 @@ export function restoreBattleChoices() {
   if (typeof saved.building === 'string' && GAME_CONFIG.buildings[saved.building]) battle.building = saved.building;
   if ([false, 'leather', 'iron'].includes(saved.armor)) battle.armor = saved.armor;
   for (const key of ['shield', 'helmet', 'big', 'banner', 'torch']) if (typeof saved[key] === 'boolean') battle[key] = saved[key];
-  if (saved.field === 'glade' || saved.field === 'desert' || saved.field === 'savanna') battle.field = saved.field;
+  if (saved.field === 'glade' || saved.field === 'desert' || saved.field === 'savanna') {
+    battle.field = saved.field;
+    lastNonSecretBattleField = saved.field;
+  } else if (saved.field === 'backrooms') {
+    battle.field = 'glade';
+    lastNonSecretBattleField = 'glade';
+  }
   if (['morning', 'day', 'evening', 'night'].includes(saved.time)) battle.time = saved.time;
   if (['clear', 'rain', 'fog', 'storm'].includes(saved.weather)) battle.weather = saved.weather;
   if (saved.difficulty === 'normal' || saved.difficulty === 'hard') battle.difficulty = saved.difficulty;
   if (saved.theme === 'arena' || GAME_CONFIG.factions[saved.theme]?.ready) battle.theme = saved.theme;
   if (['classic', 'team', 'off'].includes(saved.fieldHighlight)) battle.fieldHighlight = saved.fieldHighlight;
+  if (saved.field === 'backrooms') saveBattleChoices();
 }
 
 // (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
@@ -178,7 +188,8 @@ export function setUpBattleField() {
 
 // The line-up as placed: units standing still until Fight
 export function resetBattleUnits() {
-  game.settlers = []; game.enemies = []; game.projectiles = []; game.stuckArrows = []; game.corpses = []; game.bloodSplats = []; game.dung = []; game.buildings = [];
+  game.settlers = []; game.enemies = []; game.projectiles = []; game.stuckArrows = []; game.corpses = []; game.bloodSplats = []; game.dung = [];
+  game.buildings = battle.field === 'backrooms' ? makeBattleMazeWalls() : [];
   for (const entry of battle.lineup) {
     if (entry.building) {
       // built at once: a building, not a blueprint
@@ -195,7 +206,89 @@ export function resetBattleUnits() {
   invalidateAllPaths();
 }
 
+function makeBattleMazeWalls() {
+  const occupied = new Set(battle.lineup.map(entry => `${Math.floor(entry.x / TILE_SIZE)},${Math.floor(entry.y / TILE_SIZE)}`));
+  return backroomsMazeLayout
+    .filter(key => !occupied.has(key))
+    .map(key => {
+      const [gx, gy] = key.split(',').map(Number);
+      const wall = /** @type {any} */ (createBuildingBlueprint('wall_stone', gx * TILE_SIZE + 15, gy * TILE_SIZE + 15));
+      wall.battleMazeWall = true;
+      return wall;
+    });
+}
+
+function generateBattleMazeLayout() {
+  const walls = new Set();
+  for (let gy = 0; gy < game.ROWS; gy++) {
+    for (let gx = 0; gx < game.COLS; gx++) walls.add(`${gx},${gy}`);
+  }
+  const columns = Math.floor((game.COLS - 6) / 4) + 1;
+  const rows = Math.floor((game.ROWS - 6) / 4) + 1;
+  const open = (gx, gy) => walls.delete(`${gx},${gy}`);
+  const room = (cx, cy) => ({ x: 2 + cx * 4, y: 2 + cy * 4 });
+  const random = max => Math.floor(rand() * max);
+  const openRoom = ({ x, y }) => {
+    for (let dy = 0; dy < 2; dy++) {
+      for (let dx = 0; dx < 2; dx++) open(x + dx, y + dy);
+    }
+  };
+  const connectRooms = (from, to) => {
+    openRoom(from);
+    openRoom(to);
+    if (from.x !== to.x) {
+      for (let offset = 0; offset < 2; offset++) {
+        open(Math.min(from.x, to.x) + 2, from.y + offset);
+        open(Math.min(from.x, to.x) + 3, from.y + offset);
+      }
+    } else {
+      for (let offset = 0; offset < 2; offset++) {
+        open(from.x + offset, Math.min(from.y, to.y) + 2);
+        open(from.x + offset, Math.min(from.y, to.y) + 3);
+      }
+    }
+  };
+  const carveHalf = (firstColumn, lastColumn) => {
+    const visited = new Set([`${firstColumn},0`]);
+    const stack = [{ x: firstColumn, y: 0 }];
+    while (stack.length) {
+      const current = stack[stack.length - 1];
+      const neighbors = [
+        { x: current.x - 1, y: current.y },
+        { x: current.x + 1, y: current.y },
+        { x: current.x, y: current.y - 1 },
+        { x: current.x, y: current.y + 1 }
+      ].filter(n => n.x >= firstColumn && n.x <= lastColumn && n.y >= 0 && n.y < rows && !visited.has(`${n.x},${n.y}`));
+      if (!neighbors.length) { stack.pop(); continue; }
+      const next = neighbors[random(neighbors.length)];
+      visited.add(`${next.x},${next.y}`);
+      connectRooms(room(current.x, current.y), room(next.x, next.y));
+      stack.push(next);
+    }
+  };
+  const middleRoom = Math.ceil(columns / 2);
+  carveHalf(0, middleRoom - 1);
+  carveHalf(middleRoom, columns - 1);
+
+  const crossingRows = Array.from({ length: rows }, (_, row) => row);
+  for (let i = crossingRows.length - 1; i > 0; i--) {
+    const j = random(i + 1);
+    [crossingRows[i], crossingRows[j]] = [crossingRows[j], crossingRows[i]];
+  }
+  const crossings = crossingRows.slice(0, 2 + random(3));
+  for (const row of crossings) {
+    connectRooms(room(middleRoom - 1, row), room(middleRoom, row));
+  }
+
+  return [...walls];
+}
+
 export function startBattleMode() {
+  resetBattleSecretTapCount();
+  if (battle.field === 'backrooms') {
+    battle.field = lastNonSecretBattleField;
+    backroomsMazeLayout = [];
+  }
   if (game.gameMode !== 'battle') battle.savedMapSettings = game.mapSettings; // (the Endless choice comes back)
   game.gameMode = 'battle';
   battle.savedDifficulty = game.gameDifficulty;
@@ -213,6 +306,11 @@ export function startBattleMode() {
 }
 
 export function leaveBattleMode() {
+  resetBattleSecretTapCount();
+  if (battle.field === 'backrooms') {
+    battle.field = lastNonSecretBattleField;
+    backroomsMazeLayout = [];
+  }
   game.gameMode = 'endless';
   battle.phase = 'off';
   document.body.classList.remove('battle-mode');
@@ -228,6 +326,7 @@ export function battleTap(x, y) {
   const g = getGridPos(x, y);
   if (isBorderZone(g.gx, g.gy)) return;
   const cx = g.gx * TILE_SIZE + 15, cy = g.gy * TILE_SIZE + 15;
+  if (game.buildings.some(b => b.battleMazeWall && b.x === cx && b.y === cy)) return;
   const existing = battle.lineup.find(e => e.x === cx && e.y === cy);
   if (existing) {
     battle.lineup.splice(battle.lineup.indexOf(existing), 1);
@@ -252,9 +351,20 @@ export function setBattleDifficulty(level) {
 export function setBattleField(field) {
   if (battle.phase !== 'setup' || field === battle.field || !['glade', 'desert', 'savanna'].includes(field)) return;
   battle.field = field;
+  backroomsMazeLayout = [];
+  lastNonSecretBattleField = field;
   setUpBattleField();
   resetBattleUnits();
   saveBattleChoices();
+}
+
+export function activateBattleBackrooms() {
+  if (battle.phase !== 'setup' || battle.field === 'backrooms') return;
+  battle.field = 'backrooms';
+  battle.lineup = [];
+  setUpBattleField();
+  backroomsMazeLayout = generateBattleMazeLayout();
+  resetBattleUnits();
 }
 
 // (#326) The battle's time of day or weather picked: its look at once, the line-up made again (a torch lit or not)

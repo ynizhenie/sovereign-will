@@ -149,6 +149,7 @@
  * @property {number} [ghostGone]   a ghost gone after flying into an enemy, seconds till it's back
  * @property {any} [escort]          the necromancer a ghost goes to a fight with
  * @property {Point} [ghostPanicFrom] where an enemy ghost touched it
+ * @property {number} [ghostStunnedUntil] pathTick until the undead is stunned by a ghost
  * @property {boolean} [fled]        gone without a corpse or loot
  * @property {any} [feeding]         the pet a settler is feeding
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
@@ -177,6 +178,7 @@
  * @property {boolean} [petFollowing] a pet closing the last distance to its fighter
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
+ * @property {number} [ghostStunnedUntil] pathTick until the undead is stunned by a ghost
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {{ text: string, until: number }} [say] its current spoken phrase
  * @property {string} enemyKey       GAME_CONFIG.enemies key
@@ -273,6 +275,7 @@
  * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
  * @property {boolean} [raidPortal] a temporary portal used by a demon raid
  * @property {boolean} [built] a completed structure
+ * @property {boolean} [battleMazeWall] a non-breakable Backrooms arena wall
  * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
@@ -294,6 +297,7 @@
  * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
  * @property {boolean} [raidPortal] a temporary portal used by a demon raid
  * @property {boolean} [built] a completed structure
+ * @property {boolean} [battleMazeWall] a non-breakable Backrooms arena wall
  * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {boolean} [enemyCampOutpost] the camp warehouse that supplies its firekeeper
  * @property {number} [campId] the persistent camp this building belongs to

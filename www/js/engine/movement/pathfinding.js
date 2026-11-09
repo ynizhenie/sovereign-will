@@ -243,7 +243,7 @@ function computeBlockedForEnemyPermissive(gx, gy) {
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore;
   // (#326) not their own buildings, and they keep off their own spikes and traps
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) ||
+  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) || tiles.battleMazeWalls.has(k) ||
     tiles.redBuildings.has(k) || tiles.redHazards.has(k) || tiles.outposts.has(k) ||
     (game.plagueMode && tiles.plagueCemeteries.has(k));
 }
@@ -432,7 +432,7 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
   const tiles = getTileIndex();
-  const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k); // (traps unseen, #248; its own doors walked through)
+  const isBuilding = k => tiles.buildings.has(k) && !tiles.battleMazeWalls.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k); // (traps unseen, #248; its own doors walked through)
   const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
   const PATH_COST = ENEMY_PATH_COST;
   const isBlocked = natureBlocks

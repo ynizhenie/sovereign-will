@@ -15,7 +15,7 @@ import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlo
 import { hasLineOfFire, hasMeleeReach, shouldUseRangedDagger } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
-import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
+import { enemyMedicKeepsBack, enemyPanic, ghostScare, isGhostStunned, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
 import { markPlagueEnemyEscaped, plagueEnemyTarget } from '../../../modes/plague/index.js';
 
 let waveTerritoryMaskTick = -1;
@@ -156,7 +156,7 @@ function enemyGhost(en) {
   }
 
   const reach = g.diveTiles * TILE_SIZE;
-  const nearby = x => game.settlers.filter(s => s.hp > 0 && !s.panic && !isUntouchable(s) && Math.hypot(s.x - x.x, s.y - x.y) <= reach);
+  const nearby = x => game.settlers.filter(s => s.hp > 0 && !s.panic && !isGhostStunned(s) && !isUntouchable(s) && Math.hypot(s.x - x.x, s.y - x.y) <= reach);
   const targets = [...nearby(en), ...(en.escort ? nearby(en.escort) : [])];
   let target = null, best = Infinity;
   for (const settler of targets) {
@@ -223,6 +223,7 @@ function enemyPetKeepsNear(en, dt) {
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
   if (en.portalTransit) return;
+  if (isGhostStunned(en)) return;
   const activeCampGuard = en.campGuard && game.raidActive && en.campId === game.raidCampId;
   const chasingScout = en.campGuard && en.scoutChasing && en.attackTarget &&
     game.settlers.includes(en.attackTarget);

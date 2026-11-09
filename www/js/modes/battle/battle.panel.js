@@ -7,8 +7,16 @@ import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { BATTLE_PRESETS, battlePresetLabel, bigPresetOf, getBattleBuildings } from './battle.roster.js';
-import { battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleLook, startBattleMode } from './battle.setup.js';
+import { activateBattleBackrooms, battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
+
+let secretFieldClicks = 0;
+let lastSecretFieldClick = 0;
+
+export function resetBattleSecretTapCount() {
+  secretFieldClicks = 0;
+  lastSecretFieldClick = 0;
+}
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
@@ -191,6 +199,25 @@ export function initBattlePanel() {
   }));
   // the battle's settings (#255): the field and difficulty
   document.querySelectorAll('[data-battle-field]').forEach(b => onTap(b, () => { setBattleField(b.dataset.battleField); renderBattlePanel(); }));
+  const secretTrigger = document.querySelector('[data-battle-secret-trigger]');
+  if (secretTrigger) {
+    onTap(secretTrigger, () => {
+      const now = performance.now();
+      secretFieldClicks = now - lastSecretFieldClick > 2000 ? 1 : secretFieldClicks + 1;
+      lastSecretFieldClick = now;
+      if (secretFieldClicks >= 10) {
+        secretFieldClicks = 0;
+        activateBattleBackrooms();
+        renderBattlePanel();
+      }
+    });
+    secretTrigger.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        secretTrigger.click();
+      }
+    });
+  }
   document.querySelectorAll('[data-battle-highlight]').forEach(b => onTap(b, () => { setBattleFieldHighlight(b.dataset.battleHighlight); renderBattlePanel(); }));
   document.querySelectorAll('[data-battle-difficulty]').forEach(b => onTap(b, () => { setBattleDifficulty(b.dataset.battleDifficulty); renderBattlePanel(); }));
 }

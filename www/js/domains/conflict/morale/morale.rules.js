@@ -70,6 +70,13 @@ export function liftMorale(unit, amount, side = sideOf(unit)) {
   setMorale(unit, getMorale(unit) + amount, side);
 }
 
+export function isGhostStunned(unit) {
+  if (unit.ghostStunnedUntil == null) return false;
+  if (unit.ghostStunnedUntil > game.pathTick) return true;
+  delete unit.ghostStunnedUntil;
+  return false;
+}
+
 // A hit: a little each, a lot more as it falls below lowHpShare of its health
 export function shakeOnHit(unit) {
   const c = config();
@@ -129,13 +136,16 @@ export function tickMorale(dt) {
   }
 }
 
-// (#326) A ghost flies into it: a big one panics at the second ghost within ghost.withinSeconds (the first
-// shakes it), anyone else at once (GAME_CONFIG.pets.ghost)
+// (#326) A ghost flies into it: a big one needs a second ghost within ghost.withinSeconds (the first
+// shakes it), anyone else is affected at once. The undead are stunned instead of panicking.
 export function ghostScare(unit, side = sideOf(unit)) {
   const g = GAME_CONFIG.pets.ghost, now = game.pathTick;
   const big = side === 'enemy' ? unit.type === 'big' || !!unit.bigBody : !!(getDefinition('settlerTypes', unit.type) || {}).big;
   unit.ghostHits = (unit.ghostHitsUntil > now ? unit.ghostHits || 0 : 0) + 1;
   unit.ghostHitsUntil = now + g.withinSeconds * 60;
-  if (unit.ghostHits >= (big ? g.bigNeeds : 1)) { unit.ghostHits = 0; shakeMorale(unit, 9999, side, true); }
-  else shakeMorale(unit, config().max * 0.3, side, true);
+  if (unit.ghostHits >= (big ? g.bigNeeds : 1)) {
+    unit.ghostHits = 0;
+    if (factionOf(unit, side) === 'undead') unit.ghostStunnedUntil = now + g.stunSeconds * 60;
+    else shakeMorale(unit, 9999, side, true);
+  } else shakeMorale(unit, config().max * 0.3, side, true);
 }

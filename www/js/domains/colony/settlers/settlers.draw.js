@@ -18,6 +18,7 @@ import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/comb
 import { drawHorns } from '../../factions/demons/index.js';
 import { drawPet } from '../pets/index.js';
 import { isBigBody, isPet } from './settlers.rules.js';
+import { hasClearEnemyLine } from '../../../engine/movement/index.js';
 
 // Keep character detail intact at every camera zoom level.
 export const simpleUnit = () => false;
@@ -34,7 +35,8 @@ export function tickAnimation(unit, dt) {
   if (unit.lastX !== undefined) {
     const dx = unit.x - unit.lastX, dy = unit.y - unit.lastY;
     if (Math.hypot(dx, dy) > 0.3 && !(unit.swingT > 0) && !(unit.working > 0)) {
-      const target = game.gameMode === 'battle' && !unit.isPossessed && game.enemies.includes(unit.fightTarget) && unit.fightTarget.hp > 0
+      const target = game.gameMode === 'battle' && !unit.isPossessed && game.enemies.includes(unit.fightTarget) && unit.fightTarget.hp > 0 &&
+        hasClearEnemyLine(unit.x, unit.y, unit.fightTarget.x, unit.fightTarget.y, unit.radius)
         ? unit.fightTarget
         : null;
       unit.facing = target ? Math.atan2(target.y - unit.y, target.x - unit.x) : Math.atan2(dy, dx);

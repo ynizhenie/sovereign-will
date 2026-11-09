@@ -20,7 +20,7 @@ import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, har
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
-import { panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
+import { isGhostStunned, panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -378,6 +378,7 @@ export function tickSettlers(dt) {
   let drowsyTick = null;
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
+    if (isGhostStunned(s)) { s.isIdle = false; s.swaying = false; s.activity = 'ghostStunned'; return; }
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     if (game.plagueMode && s.plagueHero) { tickPlagueHero(s, tick); return; }
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)

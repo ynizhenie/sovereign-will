@@ -315,6 +315,19 @@ export const ICONS = {
     icTile(c, '#c9a66b', '#a5844e');
     for (const [x, y] of [[9, 10], [20, 9], [14, 17], [23, 21], [9, 23]]) icCircle(c, '#a5844e', x, y, 1.3);
   },
+  savanna: c => {
+    icTile(c, '#b8a85b', '#7f7136');
+    icLine(c, '#856f36', 2, [[16, 25], [16, 16]]);
+    icLine(c, '#856f36', 1.5, [[16, 19], [11, 15]]);
+    icLine(c, '#856f36', 1.5, [[16, 20], [21, 15]]);
+    icEllipse(c, '#4f7137', 16, 12, 11, 3.5);
+    icEllipse(c, '#668344', 11, 11, 5, 2.5);
+    icEllipse(c, '#78904a', 21, 11, 5, 2.5);
+    icLine(c, '#d7bd65', 1.5, [[7, 27], [6, 23]]);
+    icLine(c, '#d7bd65', 1.5, [[7, 27], [9, 23]]);
+    icLine(c, '#d7bd65', 1.5, [[26, 27], [25, 23]]);
+    icLine(c, '#d7bd65', 1.5, [[26, 27], [28, 23]]);
+  },
   eraser: c => {
     c.save(); c.translate(16, 16); c.rotate(-Math.PI / 4);
     icRound(c, '#f1948a', -12, -6, 24, 12, 3); icRect(c, '#5dade2', -12, -6, 9, 12);
