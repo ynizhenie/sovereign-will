@@ -294,6 +294,38 @@ export const musicConfig = {
       drums: { kick: 'X.......', tom: '..x..x.x' },
       extra: { kind: 'chant', chance: 0.06 } },
 
+    // ---- (#404) the Plague's own: gloomy and merry, minor keys on a bounce, the dead dancing; one for each of the
+    // player's levels in turn (plagueMusic below)
+    plague_jig: { bpm: 132, chords: [[50, 53, 57], [43, 46, 50], [45, 49, 52], [50, 53, 57]], chordsB: [[46, 50, 53], [43, 46, 50], [45, 49, 52], [45, 49, 52]],
+      arp: { wave: 'triangle', gain: 0.05, pattern: [0, 2, 1, 0, 2, 1, 0, 2], octave: 12, length: 0.35 },
+      bass: { wave: 'triangle', gain: 0.09, pattern: [0, null, 7, 0, null, 7, 0, null], octave: -12, length: 0.4 },
+      lead: { wave: 'square', gain: 0.025, chance: 0.18, length: 0.4, filter: 1600, scale: [74, 76, 77, 79, 81, 82] },
+      drums: { hat: 'x.xx.xx.', tom: 'x.......' },
+      extra: { kind: 'toll', chance: 0.01 } },
+    plague_waltz: { bpm: 104, chords: [[45, 48, 52], [40, 44, 47], [45, 48, 52], [38, 41, 45]], chordsB: [[41, 45, 48], [38, 41, 45], [40, 44, 47], [40, 44, 47]],
+      pad: { wave: 'sine', gain: 0.06, attack: 0.3, length: 3 },
+      bass: { wave: 'triangle', gain: 0.1, pattern: [0, null, null, 7, null, 7, null, null], octave: -12, length: 0.6 },
+      arp: { wave: 'triangle', gain: 0.04, pattern: [null, null, 1, 2, null, 1, 2, null], octave: 12, length: 0.4 },
+      lead: { wave: 'triangle', gain: 0.06, chance: 0.12, length: 1, scale: [69, 71, 72, 74, 76, 77] },
+      extra: { kind: 'whispers', chance: 0.012 } },
+    plague_polka: { bpm: 144, chords: [[52, 55, 59], [47, 51, 54], [52, 55, 59], [45, 48, 52]], chordsB: [[45, 48, 52], [52, 55, 59], [47, 51, 54], [52, 55, 59]],
+      bass: { wave: 'triangle', gain: 0.1, pattern: [0, null, 7, null, 0, null, 7, null], octave: -12, length: 0.3 },
+      arp: { wave: 'square', gain: 0.02, pattern: [null, 1, null, 2, null, 1, null, 2], octave: 0, length: 0.25, filter: 1400 },
+      lead: { wave: 'triangle', gain: 0.06, chance: 0.22, length: 0.35, scale: [76, 78, 79, 81, 83, 84] },
+      drums: { kick: 'x...x...', snare: '..x...x.', hat: '.x.x.x.x' } },
+    plague_danse: { bpm: 116, chords: [[48, 51, 55], [44, 48, 51], [46, 50, 53], [43, 47, 50]], chordsB: [[41, 44, 48], [43, 47, 50], [44, 48, 51], [43, 47, 50]],
+      arp: { wave: 'triangle', gain: 0.055, pattern: [0, 1, 2, 1, 2, 1, 0, null], octave: 24, length: 0.2 },
+      bass: { wave: 'sawtooth', gain: 0.06, pattern: [0, null, 0, null, 7, null, 6, null], octave: -12, length: 0.3, filter: 600 },
+      lead: { wave: 'sine', gain: 0.05, chance: 0.1, length: 0.6, scale: [72, 75, 77, 79, 80, 82] },
+      drums: { tom: 'x..x..x.', hat: '..x...x.' },
+      extra: { kind: 'chant', chance: 0.01 } },
+    plague_carnival: { bpm: 112, chords: [[55, 58, 62], [48, 52, 55], [55, 58, 62], [50, 54, 57]], chordsB: [[51, 55, 58], [53, 57, 60], [50, 54, 57], [55, 58, 62]],
+      pad: { wave: 'sawtooth', gain: 0.03, attack: 0.2, length: 3.4, filter: 1100 },
+      bass: { wave: 'triangle', gain: 0.09, pattern: [0, null, 7, null, 5, null, 7, null], octave: -12, length: 0.5 },
+      lead: { wave: 'square', gain: 0.025, chance: 0.2, length: 0.5, filter: 1800, scale: [79, 81, 82, 84, 86, 87] },
+      drums: { kick: 'x.....x.', snare: '....x...', hat: 'x.x.x.x.' },
+      extra: { kind: 'crackle', chance: 0.03 } },
+
     // ---- (#326) the Battles' own: a muster while the sides are placed, a clash in the fight, each by day and by night
     // (battleMusic below; a battle's settings pick whose theme plays: this one, or a faction's)
     arena_muster: { bpm: 84, chords: [[50, 53, 57], [46, 50, 53], [48, 52, 55], [45, 49, 52]], chordsB: [[43, 46, 50], [45, 49, 52], [46, 50, 53], [45, 49, 52]],
@@ -341,5 +373,8 @@ export const musicConfig = {
   battleMusic: {
     ambient: ['arena_muster', 'arena_parade'], nightAmbient: ['arena_vigil', 'arena_torches'],
     battle: ['arena_clash', 'arena_onslaught', 'arena_duel'], nightBattle: ['arena_moonclash', 'arena_nightfall']
-  }
+  },
+
+  // (#404) the Plague's: the player's first level the first, the next level the next, round again after the last
+  plagueMusic: ['plague_jig', 'plague_waltz', 'plague_polka', 'plague_danse', 'plague_carnival']
 };
