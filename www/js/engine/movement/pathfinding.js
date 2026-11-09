@@ -351,6 +351,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
   // that fell short, and the search spread over tiles it needn't have looked at. Put a hair over (0.1%) so that of tiles of the same
   // total the one nearer the end is looked at first: on open ground the search goes straight there instead of over a plateau
   const estimate = (gx, gy) => { const dx = Math.abs(gx - endG.gx), dy = Math.abs(gy - endG.gy); return (Math.max(dx, dy) + 0.41 * Math.min(dx, dy)) ; };
+  const blocksCorner = options.blocksDiagonalCorner || isBlocked;
   const startIndex = startG.gy * cols + startG.gx, endIndex = endG.gy * cols + endG.gx;
   // (a start off the map: searched as before, from nothing)
   if (!inMap(startG.gx, startG.gy)) return { path: [], isBlockedPath: options.isBlockedPath, looked: 0 };
@@ -381,7 +382,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
       const next = gy * cols + gx;
       if (a.closed[next] === id || isBlocked(gx, gy)) continue;
       if (!options.allowCornerCutting && direction.dx !== 0 && direction.dy !== 0 &&
-          (isBlocked(cx + direction.dx, cy) || isBlocked(cx, cy + direction.dy))) continue;
+          (blocksCorner(cx + direction.dx, cy) || blocksCorner(cx, cy + direction.dy))) continue;
 
       const extraCost = options.extraCost ? options.extraCost(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15) : 0;
       const tentativeG = a.g[current] + direction.cost + extraCost;
@@ -434,11 +435,13 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   const isBuilding = k => tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k); // (traps unseen, #248; its own doors walked through)
   const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
   const PATH_COST = ENEMY_PATH_COST;
-  const result = findGridPath(startG, endG, targetX, targetY, {
-    isBlocked: natureBlocks
+  const isBlocked = natureBlocks
       ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) ||
         tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
-      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy),
+      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy);
+  const result = findGridPath(startG, endG, targetX, targetY, {
+    isBlocked,
+    blocksDiagonalCorner: (gx, gy) => isBlocked(gx, gy) || isBuilding(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`),
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
@@ -546,6 +549,7 @@ function findSettlerPathThrough(startG, endG, targetX, targetY, allowBattleBorde
   const isRed = (gx, gy) => { const k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`; return tiles.redBuildings.has(k) || tiles.redDoors.has(k); };
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) && !isRed(gx, gy),
+    blocksDiagonalCorner: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) || isRed(gx, gy),
     allowCornerCutting: false,
     isBlockedPath: true,
     extraCost: (x, y) => (tiles.redBuildings.has(`${x},${y}`) || tiles.redDoors.has(`${x},${y}`) ? ENEMY_PATH_COST.building : 0),

@@ -1279,44 +1279,21 @@ body[data-hud="plague"] .plague-upgrades-toggle {
 .plague-character-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 2px 18px;
   margin-top: 12px;
-}
-.plague-character-stats h3 {
-  grid-column: 1 / -1;
-  margin: 0 0 2px;
-  color: #e4d8ed;
-  font-size: 14px;
 }
 .plague-character-stat {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  padding: 7px 9px;
-  border: 1px solid rgba(200, 192, 206, 0.2);
-  border-radius: 7px;
-  background: rgba(8, 10, 16, 0.36);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(200, 192, 206, 0.16);
   font-size: 12px;
 }
-.plague-character-stat span { color: #c8c0ce; }
-.plague-character-stat b { color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.plague-upgrades-list { display: grid; gap: 8px; margin-top: 14px; }
-.plague-upgrades-list > p { margin: 0; color: #c8c0ce; text-align: center; }
-.plague-upgrade-entry {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 10px;
-  padding: 10px;
-  border: 1px solid rgba(200, 192, 206, 0.2);
-  border-radius: 8px;
-  background: rgba(8, 10, 16, 0.36);
-  opacity: 0.62;
-}
-.plague-upgrade-entry.acquired { opacity: 1; border-color: rgba(174, 126, 197, 0.7); }
-.plague-upgrade-entry span { color: #c8c0ce; font-size: 12px; }
-.plague-upgrade-entry p { grid-column: 1 / -1; margin: 0; color: #c8c0ce; font-size: 13px; }
+.plague-character-stat span { flex: 1 1 auto; min-width: 0; color: #c8c0ce; overflow-wrap: anywhere; }
+.plague-character-stat b { flex: 0 0 auto; max-width: 45%; color: #fff; text-align: right; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 @media (max-width: 480px) {
   .dock-row[data-hud-mode="plague"] { padding-inline: 5px; }
   body[data-hud="plague"] .plague-stats { gap: 1px; max-width: calc(100vw - 92px); padding: 2px 3px; }
@@ -1325,8 +1302,9 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   .plague-stat .ic { width: 13px; height: 13px; }
   .plague-stat b { font-size: 12px; }
   body[data-hud="plague"] .plague-upgrades-toggle { width: 30px; height: 30px; flex-basis: 30px; }
-  .plague-character-stats { gap: 4px; }
-  .plague-character-stat { padding: 6px; font-size: 11px; }
+  .plague-upgrades-content { padding: 12px; }
+  .plague-character-stats { gap: 4px 8px; }
+  .plague-character-stat { gap: 4px; padding: 4px 0; font-size: 11px; }
 }
 
 /* A raid on an enemy camp (#255): the bar under the top of the screen, the party picker */

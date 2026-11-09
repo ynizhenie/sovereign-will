@@ -72,6 +72,7 @@ export function getHeldItemPose(unit) {
   if (unit.swingT > 0) {
     const p = 1 - unit.swingT / (unit.swingLen || 0.3);
     const arc = Math.sin(Math.PI * p);
+    if (item === 'dagger') return { angle: 0.35, push: 4 + 3 * Math.sin(game.pathTick * 0.3) * big };
     // a crossbow kicks back hard; a bow only a little
     if (isCrossbowWeapon(item)) return { angle: -0.22 * arc * big, push: -8 * arc * big };
     if (isRangedWeapon(item)) return { angle: 0.05 * arc, push: -4 * arc };
@@ -264,13 +265,17 @@ export function drawHandTorch(facing, r) {
 }
 
 // A torch put to its side for a fight (#279): hung at its belt on the other side, angled down, still lit
-function drawSideTorch(facing, r) {
+export function drawSideTorch(facing, r) {
   const f = (facing || 0) + 1.9, x = Math.cos(f) * (r - 2), y = Math.sin(f) * (r - 2);
   ctx.strokeStyle = '#6d4520'; ctx.lineWidth = 2.2;
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2, y + 7); ctx.stroke();
   const k = 1 + Math.sin(performance.now() / 90 + r) * 0.15;
   ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(x - 0.5, y - 2, 2.2 * k, 3.4 * k, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#f9e79f'; ctx.beginPath(); ctx.ellipse(x - 0.5, y - 1.6, 1.1 * k, 1.8 * k, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+export function torchAtSide(unit, hasTorch = !!unit.torchInHand, hasHeldItem = unit.weapon !== 'fist' || unit.tool !== 'none') {
+  return hasTorch && ((game.pathTick - (unit.struckAt ?? -1e9) < 150 && hasHeldItem) || (unit.working || 0) > 0);
 }
 
 // Asleep (#257): a few z's drifting up off it
@@ -767,19 +772,20 @@ export function drawSettlers(only = null) {
     const crafting = isCrafting(s);
     // (#279) fighting with a torch in hand and a weapon or tool: the torch goes to its side, it fights with that
     // (#326) at work too (gathering, building, cooking...): the hands are on the job, the torch at its side
-    const torchAside = s.torchInHand && ((game.pathTick - (s.struckAt ?? -1e9) < 150 && (s.weapon !== 'fist' || s.tool !== 'none')) || (s.working || 0) > 0);
+    const torchAside = torchAtSide(s);
     const torchHeld = s.torchInHand && !torchAside;
     // (#279) at work with a hammer (building, making) or a knife (butchering, with no blade of its own), or
     // reaching into a bush: what it holds goes on its back, the hand's for the work
     const k = itemScale(s);
     const blade = isSwordWeapon(s.weapon) || isSpearWeapon(s.weapon);
     // (#326) a medic at work: herbs in its hand; an archer out of arrows in a fight: its dagger (the bow on its back)
-    const daggerOut = (usesDagger(s) || (s.swingWeapon === 'dagger' && (s.swingT || 0) > 0)) &&
-      game.pathTick - (s.struckAt ?? -1e9) < 180;
+    const daggerSwing = s.swingWeapon === 'dagger' && (s.swingT || 0) > 0;
+    const daggerOut = (usesDagger(s) && game.pathTick - (s.struckAt ?? -1e9) < 180) ||
+      !!s.daggerTarget || daggerSwing;
     const workTool = s.asleep ? null : crafting || ((s.working || 0) > 0 && s.workKind === 'build') ? 'hammer' : (s.working || 0) > 0 && s.workKind === 'butcher' && !blade ? 'knife'
-      : isHealing(s) ? 'herbs' : daggerOut ? 'dagger' : null;
+      : isHealing(s) ? 'herbs' : null;
     const picking = (s.working || 0) > 0 && s.workKind === 'pick';
-    const onBack = isResting(s) || inHands || s.eating || torchHeld || s.asleep || workTool || picking;
+    const onBack = isResting(s) || inHands || s.eating || torchHeld || s.asleep || workTool || picking || daggerOut;
     const food = s.eating && !s.asleep ? eatingAt(s) : null;
 
     // (#298) in layers, by how far from us each thing is (up the screen is further): its hand up behind it
@@ -789,23 +795,25 @@ export function drawSettlers(only = null) {
     const away = facesAway(s) && !s.asleep, side = handSide(s);
     const handBack = heldBehind(s) && !s.asleep, backBack = backBehind(s);
     // its weapon or tool, in its hand or across its back
-    const heldItem = () => {
+    /** @param {boolean} [back] @param {string | null} [weapon] @param {boolean} [showBlood] */
+    const heldItem = (back = onBack, weapon = null, showBlood = true) => {
       if (isHealing(s)) return; // (#326: its bag's at its hip)
       ctx.save();
-      if (onBack) applyBackPose(s); else applyHeldItemPose(s);
+      if (back) applyBackPose(s); else applyHeldItemPose(s);
       if (getNecromancy(s) && s.weapon === 'fist') {
         drawStaff(getSettlerColor(null), getDarkness()); // (#326: its side's colour, glowing in the dark)
-      } else if (!drawHeldWeapon((s.swingT || 0) > 0 && s.swingWeapon && !onBack ? s.swingWeapon : s.weapon, k, onBack ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
+      } else if (!drawHeldWeapon(weapon || ((s.swingT || 0) > 0 && s.swingWeapon && !back ? s.swingWeapon : s.weapon), k, back ? 0 : (bowDraw(s) || { pull: 0 }).pull)) {
         if (s.tool === 'hoe' && s.wateringCan && (s.usingCan || 0) > 0) drawWateringCan(5, 1, 1); // watering: the can in hand (the hoe on its back, drawBackItems)
         else drawHeldTool(s.tool || 'none', k, game.gameMode === 'battle' && s.tool === 'medbag' ? 1 : Math.min(1, (s.bagHerbs || 0) / GAME_CONFIG.medic.bagSize));
       }
-      drawWeaponBlood(s);
+      if (showBlood) drawWeaponBlood(s, weapon || s.weapon);
       ctx.restore(); // pose only moves the held item
     };
     // what's in its hands: its weapon or tool (unless on its back), a load, a hammer or knife, a berry, a torch,
     // its food, its shield
     const inHand = () => {
-      if (!onBack) heldItem();
+      if (!onBack) heldItem(false);
+      else if (daggerOut) heldItem(false, 'dagger');
       if (inHands) drawCarriedInHands(s);
       if (workTool) { ctx.save(); applyHeldItemPose(s); drawWorkTool(workTool, k); ctx.restore(); }
       // a berry in its hand as it draws it back from the bush (#279)
@@ -817,7 +825,7 @@ export function drawSettlers(only = null) {
     // what's on its back: a backpack, a quiver, its weapon or tool when its hands are busy
     const onItsBack = () => {
       if (s.asleep) return;
-      if (onBack) heldItem();
+      if (onBack) heldItem(true, daggerOut ? s.weapon : null, !daggerOut);
       drawBackItems(s);
     };
     const at = fn => { ctx.save(); ctx.translate(s.x, s.y); fn(); ctx.restore(); };
@@ -825,7 +833,7 @@ export function drawSettlers(only = null) {
     if (simple) {
       // (#306) at this size only the figure (drawFigure), its health bar and what's on fire or marked
     } else {
-      if (s.asleep) at(heldItem); // (asleep: lying with it beside it)
+      if (s.asleep) at(() => heldItem(onBack)); // (asleep: lying with it beside it)
       if (backBack) at(onItsBack);
       if (handBack) at(inHand);
       if (!s.asleep) at(() => drawSideItems(s, false));

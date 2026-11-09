@@ -69,6 +69,7 @@
  * @property {string | null} [workKind]  what work: 'build', 'butcher', 'pick' (drawn: a hammer, a knife, a hand, #279)
  * @property {number} [swingT]       seconds left in the current strike animation
  * @property {string | null} [swingWeapon] temporary weapon shown during a structure strike
+ * @property {Object | null} [daggerTarget] nearby target that keeps a ranged unit in melee mode
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
@@ -166,6 +167,8 @@
  * @property {boolean} [nameGenerated]
  * @property {Object} [struckBy]   (#326) the last settler that hit it, and when (struckTick): in the fog it turns on that one
  * @property {number} [struckTick]
+ * @property {Building | null} [siegeTarget] the building the enemy is actively breaking
+ * @property {number} [siegeTargetTick] the last tick it kept attacking that building
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
  * @property {number} [pathRetryTimer] movement retry delay

@@ -1,7 +1,7 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
-test('the generator exposes savanna settings and the ore and regrowth settings a continent uses (#20; #326, 27.10, 18)', async ({ page }) => {
+test('the generator exposes the ore and regrowth settings a continent uses (#20; #326, 27.10, 18)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
@@ -17,15 +17,18 @@ test('the generator exposes savanna settings and the ore and regrowth settings a
     const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
     const labelled = fields.every(f => f.querySelector('span').textContent && !f.querySelector('span').textContent.startsWith('gen.'));
     const covered = keys.every(k => document.querySelector(`#generator-fields input[data-key="${k}"]`));
+    const smallBiomes = ['savannas', 'savannaRadiusX', 'savannaRadiusY'].some(k =>
+      k in GAME_CONFIG.map || !!document.querySelector(`#generator-fields input[data-key="${k}"]`));
     return { fields: fields.length, keys, labelled, covered, lakes: !!document.querySelector('#generator-fields input[data-key="lakes"]'),
-      sections: document.querySelectorAll('#generator-fields h2').length };
+      sections: document.querySelectorAll('#generator-fields h2').length, smallBiomes };
   });
-  expect(r.keys).toEqual(['savannas', 'savannaRadiusX', 'savannaRadiusY', 'ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
+  expect(r.keys).toEqual(['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
   expect(r.fields).toBe(r.keys.length);
   expect(r.covered).toBe(true);
   expect(r.labelled).toBe(true);
   expect(r.lakes).toBe(false);
   expect(r.sections).toBe(0);
+  expect(r.smallBiomes).toBe(false);
 });
 
 test('a setting changed in the generator shapes the next map; Standard puts it back (#20)', async ({ page }) => {

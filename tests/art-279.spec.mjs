@@ -10,10 +10,16 @@ test('each weapon strikes its own way, a big one wider; work has its own (#279, 
     const at = (extra, p) => { const u = makeSettler(1, 0, 0, { swingLen: 0.3, swingT: 0.3 * (1 - p), ...extra }); return getHeldItemPose(u); };
     const sweep = extra => Math.abs(at(extra, 0.95).angle - at(extra, 0.05).angle);
     const reach = extra => at(extra, 0.5).push;
+    const butcher = getHeldItemPose(makeSettler(4, 0, 0, { working: 0.1, workKind: 'butcher' }));
+    const daggerPose = weapon => {
+      const unit = makeSettler(5, 0, 0, { weapon, swingLen: 0.3, swingT: 0.15, swingWeapon: 'dagger' });
+      return getHeldItemPose(unit);
+    };
     return {
       sword: sweep({ weapon: 'sword' }), club: sweep({ weapon: 'club' }), spearReach: reach({ weapon: 'spear' }), spearSweep: sweep({ weapon: 'spear' }),
       bigSword: sweep({ weapon: 'sword', visualRadius: 18 }), punch: reach({}),
       demonClaw: sweep({ enemyKey: 'demon_imp', radius: 10 }), undeadSwipe: sweep({ enemyKey: 'undead_zombie', radius: 10 }),
+      daggerBow: daggerPose('bow'), daggerCrossbow: daggerPose('crossbow'), butcher,
       build: getHeldItemPose(makeSettler(2, 0, 0, { working: 0.1, workKind: 'build' })), pick: getHeldItemPose(makeSettler(3, 0, 0, { working: 0.1, workKind: 'pick' }))
     };
   });
@@ -25,6 +31,9 @@ test('each weapon strikes its own way, a big one wider; work has its own (#279, 
   expect(r.demonClaw).toBeGreaterThan(r.undeadSwipe);
   expect(r.build.angle).toBeLessThan(0);
   expect(r.pick.push).toBeGreaterThanOrEqual(6);
+  expect(r.daggerBow).toEqual(r.daggerCrossbow);
+  expect(r.daggerBow.angle).toBe(r.butcher.angle);
+  expect(r.daggerBow.push).toBe(r.butcher.push);
 });
 
 test('enemy and player necromancers animate their staffs the same way', async ({ page }) => {

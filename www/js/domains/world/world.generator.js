@@ -129,18 +129,26 @@ export function isOreSpotExposed(spot, reach) {
 
 // Put a small rock outcrop on free ground far from the hall, for maps with no usable rock (in the desert
 // too: the sand goes under it, see markDesertUnderRocks)
-export function placeRockOutcrop() {
+export function placeRockOutcrop(startOnly = false) {
   const hall = getGridPos(townHall.x, townHall.y);
-  for (let d = 8; d <= 24; d++) {
+  const startHalf = GAME_CONFIG.territory.startTiles / 2;
+  const maxDistance = startOnly ? Math.floor(startHalf) - 2 : 24;
+  for (let d = 8; d <= maxDistance; d++) {
     const gx = hall.gx + d, gy = hall.gy;
     const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
-    if (tiles.some(t => isWithinTownHallResourceBuffer(t.x, t.y) || isTileOccupied(t.x, t.y))) continue;
+    if (tiles.some(t => isWithinTownHallResourceBuffer(t.x, t.y) || isTileOccupied(t.x, t.y) ||
+      (startOnly && !inStartTerritory(t.x, t.y, hall, startHalf)))) continue;
     tiles.forEach(t => addMapResource('natural_rock', t.x, t.y));
     return true;
   }
   for (let attempt = 0; attempt < 200; attempt++) {
-    const gx = BORDER_MARGIN + 1 + Math.floor(rand() * (game.COLS - 2 * BORDER_MARGIN - 3));
-    const gy = BORDER_MARGIN + 1 + Math.floor(rand() * (game.ROWS - 2 * BORDER_MARGIN - 3));
+    const minGx = startOnly ? Math.max(BORDER_MARGIN + 1, Math.ceil(hall.gx - startHalf)) : BORDER_MARGIN + 1;
+    const minGy = startOnly ? Math.max(BORDER_MARGIN + 1, Math.ceil(hall.gy - startHalf)) : BORDER_MARGIN + 1;
+    const maxGx = startOnly ? Math.min(game.COLS - BORDER_MARGIN - 3, Math.floor(hall.gx + startHalf) - 2) : game.COLS - BORDER_MARGIN - 3;
+    const maxGy = startOnly ? Math.min(game.ROWS - BORDER_MARGIN - 3, Math.floor(hall.gy + startHalf) - 2) : game.ROWS - BORDER_MARGIN - 3;
+    if (maxGx < minGx || maxGy < minGy) return false;
+    const gx = minGx + Math.floor(rand() * (maxGx - minGx + 1));
+    const gy = minGy + Math.floor(rand() * (maxGy - minGy + 1));
     const tiles = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => ({ x: (gx + dx) * TILE_SIZE + 15, y: (gy + dy) * TILE_SIZE + 15 }));
     if (tiles.some(t => isWithinTownHallResourceBuffer(t.x, t.y) || isTileOccupied(t.x, t.y))) continue;
     for (const t of tiles) addMapResource('natural_rock', t.x, t.y);
@@ -149,11 +157,19 @@ export function placeRockOutcrop() {
   return false;
 }
 
+function inStartTerritory(x, y, hall, half) {
+  const g = getGridPos(x, y);
+  return g.gx >= Math.ceil(hall.gx - half) && g.gx < hall.gx + half &&
+    g.gy >= Math.ceil(hall.gy - half) && g.gy < hall.gy + half;
+}
+
 // nearStart (#299): the first one there ({ x, y, r }), if any rock there will do
 /** @param {string} kind @param {number} count @param {{ x: number, y: number, r: number } | null} [nearStart] */
 export function placeOreSpawners(kind, count, nearStart = null) {
   const radius = getOreSpawnerRadius();
   const hall = getGridPos(townHall.x, townHall.y);
+  const startHalf = GAME_CONFIG.territory.startTiles / 2;
+  const startsAtBase = rock => inStartTerritory(rock.x, rock.y, hall, startHalf);
   // (#299) on a big map (hundreds of spawners, tens of thousands of rocks) the walk from the hall is worked
   // out once, not for each spawner, and whether a rock has room is kept, asked again only round the spawner
   // just placed: it took minutes
@@ -183,22 +199,24 @@ export function placeOreSpawners(kind, count, nearStart = null) {
       if (!room.has(r) || room.get(r).key !== key) room.set(r, { key, ok: getOreSpotsAround(r, radius, exposed, 2).length >= 2 });
       return room.get(r).ok;
     };
-    // rock far from the hall and from other spawners, with room for ores and at least one reachable spot
+    // a reachable rock source in the start zone first; further sources stay at least six tiles apart
+    const startingCount = getOreSpawners(kind).filter(startsAtBase).length;
     const candidates = game.naturalRocks.filter(r => !r.oreSpawner &&
       !isWithinTownHallResourceBuffer(r.x, r.y) &&
+      (startingCount === 0 ? startsAtBase(r) : startingCount >= 3 ? !startsAtBase(r) : true) &&
       !near[Math.floor(r.y / TILE_SIZE) * game.COLS + Math.floor(r.x / TILE_SIZE)] && hasRoom(r));
     const close = n === 0 && nearStart ? candidates.filter(r => Math.hypot(r.x - nearStart.x, r.y - nearStart.y) <= nearStart.r) : [];
     const from = close.length ? close : candidates;
     let spawner = from.length ? from[Math.floor(rand() * from.length)] : null;
     if (!spawner) {
-      if (n > 0 || !placeRockOutcrop()) continue;
+      if (startingCount > 0 || !placeRockOutcrop(true)) continue;
       spawner = game.naturalRocks[game.naturalRocks.length - 1];
     }
     const spots = getOreSpotsAround(spawner, radius);
     let reachable = spots.filter(s => isOreSpotExposed(s, reach));
-    if (!reachable.length && !big) {
+    if (!reachable.length && (!big || n === 0)) {
       keepAway(spawner);
-      if (placeRockOutcrop()) {
+      if (placeRockOutcrop(startingCount === 0)) {
         spawner = game.naturalRocks[game.naturalRocks.length - 1];
         reachable = getOreSpotsAround(spawner, radius).filter(s => isOreSpotExposed(s, reach));
       }
@@ -553,6 +571,43 @@ export function generateMap() {
   for (const _ of generateMapSteps()); // (all at once)
 }
 
+function placeSavannas() {
+  const count = getMapCount('savannas', 0);
+  const rxRange = getMapRange('savannaRadiusX', 3, 5);
+  const ryRange = getMapRange('savannaRadiusY', 2, 4);
+  for (let n = 0; n < count; n++) {
+    const rx = rxRange.min + Math.floor(rand() * (rxRange.max - rxRange.min + 1));
+    const ry = ryRange.min + Math.floor(rand() * (ryRange.max - ryRange.min + 1));
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const gx = BORDER_MARGIN + rx + Math.floor(rand() * Math.max(1, game.COLS - 2 * BORDER_MARGIN - 2 * rx));
+      const gy = BORDER_MARGIN + ry + Math.floor(rand() * Math.max(1, game.ROWS - 2 * BORDER_MARGIN - 2 * ry));
+      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15;
+      if (Math.hypot(cx - townHall.x, cy - townHall.y) < townHall.radius + TILE_SIZE ||
+          anyWithin(game.waterTiles, cx, cy, 90) || anyWithin(game.savannaTiles, cx, cy, Math.min(rx, ry) * TILE_SIZE)) continue;
+      for (let dy = -ry; dy <= ry; dy++) for (let dx = -rx; dx <= rx; dx++) {
+        if ((dx / rx) ** 2 + (dy / ry) ** 2 > 1) continue;
+        const x = (gx + dx) * TILE_SIZE + 15, y = (gy + dy) * TILE_SIZE + 15;
+        if (x < BORDER_MARGIN * TILE_SIZE || y < BORDER_MARGIN * TILE_SIZE ||
+            x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE ||
+            Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
+            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || isSavannaTile(x, y)) continue;
+        game.savannaTiles.push({ x, y });
+      }
+      break;
+    }
+  }
+}
+
+function placeSavannaPlants() {
+  for (const tile of game.savannaTiles) {
+    if (Math.hypot(tile.x - townHall.x, tile.y - townHall.y) < 150 ||
+        anyWithin(game.waterTiles, tile.x, tile.y, TILE_SIZE * 1.5) || !isSpawnSpotFree(tile.x, tile.y)) continue;
+    const roll = rand();
+    const kind = roll < 0.06 ? 'tree' : roll < 0.095 ? 'grass' : roll < 0.12 ? 'berry_bush' : null;
+    if (kind) addMapResource(kind, tile.x, tile.y);
+  }
+}
+
 // (#326) The map made in steps, each yielding how far along it is (a loading screen draws a frame between them)
 export function* generateMapSteps() {
   game.naturalRocks = []; game.waterTiles = []; game.desertTiles = []; game.desertRegion = null; game.savannaTiles = []; game.trees = []; game.cacti = []; game.boulders = [];
@@ -640,43 +695,6 @@ export function* generateMapSteps() {
   placeBeaches();
   placeAppleTrees();
   markDesertUnderRocks();
-}
-
-function placeSavannas() {
-  const count = getMapCount('savannas', 1);
-  const rxRange = getMapRange('savannaRadiusX', 3, 5);
-  const ryRange = getMapRange('savannaRadiusY', 2, 4);
-  for (let n = 0; n < count; n++) {
-    const rx = rxRange.min + Math.floor(rand() * (rxRange.max - rxRange.min + 1));
-    const ry = ryRange.min + Math.floor(rand() * (ryRange.max - ryRange.min + 1));
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const gx = BORDER_MARGIN + rx + Math.floor(rand() * Math.max(1, game.COLS - 2 * BORDER_MARGIN - 2 * rx));
-      const gy = BORDER_MARGIN + ry + Math.floor(rand() * Math.max(1, game.ROWS - 2 * BORDER_MARGIN - 2 * ry));
-      const cx = gx * TILE_SIZE + 15, cy = gy * TILE_SIZE + 15;
-      if (Math.hypot(cx - townHall.x, cy - townHall.y) < townHall.radius + TILE_SIZE ||
-          anyWithin(game.waterTiles, cx, cy, 90) || anyWithin(game.savannaTiles, cx, cy, Math.min(rx, ry) * TILE_SIZE)) continue;
-      for (let dy = -ry; dy <= ry; dy++) for (let dx = -rx; dx <= rx; dx++) {
-        if ((dx / rx) ** 2 + (dy / ry) ** 2 > 1) continue;
-        const x = (gx + dx) * TILE_SIZE + 15, y = (gy + dy) * TILE_SIZE + 15;
-        if (x < BORDER_MARGIN * TILE_SIZE || y < BORDER_MARGIN * TILE_SIZE ||
-            x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE ||
-            Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
-            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || isSavannaTile(x, y)) continue;
-        game.savannaTiles.push({ x, y });
-      }
-      break;
-    }
-  }
-}
-
-function placeSavannaPlants() {
-  for (const tile of game.savannaTiles) {
-    if (Math.hypot(tile.x - townHall.x, tile.y - townHall.y) < 150 ||
-        anyWithin(game.waterTiles, tile.x, tile.y, TILE_SIZE * 1.5) || !isSpawnSpotFree(tile.x, tile.y)) continue;
-    const roll = rand();
-    const kind = roll < 0.06 ? 'tree' : roll < 0.095 ? 'grass' : roll < 0.12 ? 'berry_bush' : null;
-    if (kind) addMapResource(kind, tile.x, tile.y);
-  }
 }
 
 export function startingBoarCount() {

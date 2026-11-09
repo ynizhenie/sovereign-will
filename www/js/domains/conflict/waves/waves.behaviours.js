@@ -1,9 +1,10 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
+import { isRangedWeapon } from '../../colony/equipment/index.js';
 import { TILE_SIZE, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
-import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
+import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
@@ -11,7 +12,7 @@ import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
+import { hasLineOfFire, hasMeleeReach, shouldUseRangedDagger } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
 import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
@@ -272,7 +273,12 @@ export function tickEnemy(en, dt) {
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
   if (enemyDef.healer && enemyMedicKeepsBack(en, dt)) return;
-  if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) return;
+  if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) {
+    en.weapon = enemyDef.weapon;
+    en.daggerTarget = null;
+    en.swingWeapon = null;
+    return;
+  }
   // (#326) one that hit it a moment ago, still on its feet: it turns on that one, not on with the wall or tent it was breaking
   const struck = en.struckBy && game.settlers.includes(en.struckBy) && en.struckBy.hp > 0 && !isUntouchable(en.struckBy) &&
     game.pathTick - (en.struckTick || -Infinity) < STRUCK_TICKS ? en.struckBy : null;
@@ -294,7 +300,7 @@ export function tickEnemy(en, dt) {
   const canStrike = inMelee && minDist < attackRange && (target === townHall || hasMeleeReach(en, target));
   const canShoot = shooting && clearShot && minDist < shotOf(enemyDef).range;
   const holdsGround = keepsAway || canStrike || canShoot;
-  walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck);
+  walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck, canStrike || canShoot);
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
 const STRUCK_TICKS = 120; // (2 s: how long a hit turns it)
@@ -666,7 +672,17 @@ function chooseEnemyAttack(en, enemyDef, target) {
   /** @type {{ x: number, y: number }} */
   let moveTarget = target;
   const quiver = enemyDef.quiver;
-  if (quiver && game.plagueMode) {
+  const closeDagger = !!quiver && shouldUseRangedDagger(
+    en,
+    target === townHall ? null : target,
+    enemyDef.weapon,
+    !!target && en.struckBy === target && !isRangedWeapon(target.weapon) &&
+      game.pathTick - (en.struckTick ?? -Infinity) < STRUCK_TICKS
+  );
+  if (closeDagger) {
+    shooting = false;
+    meleeDef = getDefinition('enemies', quiver.melee) || enemyDef;
+  } else if (quiver && game.plagueMode) {
     en.arrows = Infinity;
   } else if (quiver && en.arrows <= 0) {
     const tent = game.enemyArrowStock > 0 ? findNearestEnemyTent(en) : null;
@@ -710,14 +726,15 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
-    en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
+    en.swingWeapon = null;
+    en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; en.struckAt = game.pathTick; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle' && !game.plagueMode) en.arrows--;
   }
 }
 
 // Walking on, or breaking what's in the way: a building it touches, or (on a blocked path) a resource.
 // turned: going for one that just hit it: a building it touches is broken only if it's what blocks the only way there
-function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = false) {
+function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = false, prioritizeTarget = false) {
   // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
@@ -730,11 +747,11 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     }
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
-    if (!own && isShelter(touchingBuilding) && !turned) {
+    if (!prioritizeTarget && !own && isShelter(touchingBuilding) && !turned) {
       breakBuilding(en, touchingBuilding, enemyDef, dt);
-    } else if (!own && (turned ? en.isBlockedPath : en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
-      // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
-      // way in over spikes squeezes past the walls beside them
+    } else if (!prioritizeTarget && !own && en.isBlockedPath) {
+      // Break only when the chosen path actually goes through it. Once a breach opens, connected
+      // neighbouring walls are no longer treated as obstacles if the replanned route goes around.
       breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else {
       let dx = en.x - touchingBuilding.x;
@@ -750,16 +767,18 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     return;
   }
   const blockedRes = en.isBlockedPath ? findBlockingResource(en, contactRadius) : null;
-  if (blockedRes) breakResource(en, blockedRes, enemyDef, dt);
+  if (blockedRes && !prioritizeTarget) breakResource(en, blockedRes, enemyDef, dt);
   else if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
 }
 
 function breakBuilding(en, building, enemyDef, dt) {
   const { damage, cooldown } = enemyBuildingAttack(enemyDef);
+  en.siegeTarget = building;
+  en.siegeTargetTick = game.pathTick;
   if (game.gameMode === 'battle' && en.nextStrikeTick == null) en.nextStrikeTick = game.pathTick + 1;
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
   en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
-  if (enemyDef.ranged) en.weapon = 'dagger';
+  if (enemyDef.ranged) { en.weapon = 'dagger'; en.swingWeapon = 'dagger'; }
   faceTowards(en, building.x, building.y);
   startSwing(en, Math.min(0.5, cooldown));
   en.struckAt = game.pathTick;
@@ -837,6 +856,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
   const attackCooldown = game.gameMode === 'battle' ? cooldown / (en.battleAttackSpeed || 1) : cooldown;
   en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(attackCooldown / dt));
+  en.swingWeapon = dagger ? 'dagger' : null;
   startSwing(en, enemyDef.healer ? 0.3 : Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
   const blow = cooldown * shaken;
   if (en.type === 'big') {

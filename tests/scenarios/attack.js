@@ -113,10 +113,12 @@ Object.assign(window.sim, (() => {
     const wall = { type: 'wall_wood', side: 'red', x: s.x + range + 5, y: s.y, hp: 1000, maxHp: 1000 };
     buildings.push(wall);
     s.path = [{ x: wall.x, y: wall.y }];
+    s.isBlockedPath = true;
     engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
     const noHitOutOfRange = wall.hp === 1000;
     wall.x = s.x + range - 1;
     s.path = [{ x: wall.x, y: wall.y }];
+    s.isBlockedPath = true;
     s.attackCooldown = 0;
     engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
     return { noHitOutOfRange, hitInRange: wall.hp < 1000 };
@@ -137,6 +139,7 @@ Object.assign(window.sim, (() => {
       const wall = { type: 'wall_wood', side: 'red', x: s.x + 20, y: s.y, hp: 100, maxHp: 100 };
       buildings.push(wall);
       s.path = [{ x: wall.x, y: wall.y }];
+      s.isBlockedPath = true;
       engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
       return { weapon, damage: 100 - wall.hp, arrows: s.arrows, swingWeapon: s.swingWeapon };
     });
@@ -186,13 +189,15 @@ Object.assign(window.sim, (() => {
     const s = makeSettler(1, wall.x - 70, wall.y, { weapon: 'sword', role: 'soldier', speed: 1.2 });
     settlers = [s];
     const enemy = createConfiguredEnemy({ x: wall.x + 22, y: wall.y }, 'raider');
-    enemy.struckAt = pathTick;
+    enemy.fromWave = true;
+    enemy.siegeTarget = wall;
+    enemy.siegeTargetTick = pathTick;
     enemy.hp = enemy.maxHp = 1e5;
     enemies = [enemy];
     const before = { x: s.x, y: s.y };
     engageEnemy(s, createSettlerTick(1 / 60), enemy, null, 1 / 60);
     return {
-      heldPosition: Math.hypot(s.x - before.x, s.y - before.y) < 0.01,
+      movedAroundWall: Math.hypot(s.x - before.x, s.y - before.y) > 0.01,
       enemyTouchesWall: collidesWithBoxList(enemy.x, enemy.y, enemy.radius + 2, [wall], 15)
     };
   }

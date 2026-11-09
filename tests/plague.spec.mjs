@@ -13,6 +13,7 @@ async function startPlague(page) {
 test('Plague bands come in on standable ground away from the hero, armed as Endless\'s waves, no crossbowmen (#404, 2, 3, 8)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
+  expect(await page.evaluate(() => savannaTiles.length)).toBeGreaterThan(0);
   const r = await page.evaluate(() => {
     const hero = settlers.find(s => s.plagueHero);
     const seen = [];
@@ -40,7 +41,7 @@ test('Plague bands come in on standable ground away from the hero, armed as Endl
   expect(errors).toEqual([]);
 });
 
-test('Plague: the twelve upgrades, one speed card for the hero and the squad, stats from base to now; the hero stands still (#404, 4, 5)', async ({ page }) => {
+test('Plague: upgrade cards affect the hero and squad, while the menu shows only current stats (#404, 4, 5)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
   const r = await page.evaluate(() => {
@@ -55,18 +56,36 @@ test('Plague: the twelve upgrades, one speed card for the hero and the squad, st
     cards[0].click();
     document.getElementById('plague-upgrades-toggle').click();
     const stats = [...document.querySelectorAll('#plague-character-stats .plague-character-stat b')].map(b => b.textContent);
-    const cardsListed = document.querySelectorAll('#plague-upgrades-list .plague-upgrade-entry').length;
+    const hasDisclosure = !!document.querySelector('#plague-character-stats details');
+    const hasUpgradeList = !!document.querySelector('#plague-upgrades-list');
     document.getElementById('plague-upgrades-close').click();
     return {
       oneRow: new Set(rows).size === 1, speedFactor: plague.speedFactor, squadSpeed: +(zombie.speed / GAME_CONFIG.settlerTypes.zombie.speed).toFixed(2),
-      allArrows: stats.length > 10 && stats.every(text => text.includes('→')),
-      level: document.getElementById('plague-level').textContent, cardsListed,
+      currentOnly: stats.length === 14 && stats.every(text => !text.includes('→')), hasDisclosure,
+      level: document.getElementById('plague-level').textContent, hasUpgradeList,
       standing: (() => { isPaused = false; update(1 / 60); isPaused = true; return { swaying: !!hero.swaying, idle: !!hero.isIdle }; })()
     };
   });
-  expect(r).toMatchObject({ oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, allArrows: true, cardsListed: 12 });
+  expect(r).toMatchObject({ oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, currentOnly: true, hasDisclosure: false, hasUpgradeList: false });
   expect(r.standing).toEqual({ swaying: false, idle: false }); // (no sway, no "zZ" over it)
   expect(r.level).toContain('2');
+  expect(errors).toEqual([]);
+});
+
+test('Plague upgrade text fits on a phone screen', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const errors = await openGame(page);
+  await startPlague(page);
+  await page.click('#plague-upgrades-toggle');
+  const result = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.plague-character-stat')];
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      overflowingRows: rows.filter(row => row.scrollWidth > row.clientWidth + 1).length,
+      offscreenRows: rows.filter(row => row.getBoundingClientRect().right > document.documentElement.clientWidth + 1).length
+    };
+  });
+  expect(result).toEqual({ viewportWidth: 360, overflowingRows: 0, offscreenRows: 0 });
   expect(errors).toEqual([]);
 });
 
@@ -131,5 +150,28 @@ test('Plague: the dead keep their weapons, a corpse shows its, arrows never run 
   });
   expect(r).toMatchObject({ arrows: 12, loot: 0, corpseWeapon: 'iron_sword', drew: true });
   expect(r.tracks).toEqual(['plague_jig', 'plague_waltz', 'plague_jig']);
+  expect(errors).toEqual([]);
+});
+
+test('Plague corpses fade away after their lifetime without worms', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(() => {
+    const life = GAME_CONFIG.corpses.seconds;
+    const corpse = { x: townHall.x + 60, y: townHall.y + 60, radius: 11, side: 'settler', kind: 'zombie', age: life * 0.6, big: false, wormsTaken: false };
+    corpses = [corpse];
+    const original = ctx.lineTo;
+    let wormLines = 0;
+    ctx.lineTo = function (...args) {
+      if (String(ctx.strokeStyle) === '#e91e63') wormLines++;
+      return original.apply(this, args);
+    };
+    try { drawCorpses(); } finally { ctx.lineTo = original; }
+    updateCorpses(life - corpse.age - 1);
+    const remainsBeforeExpiry = corpses.length;
+    updateCorpses(2);
+    return { wormLines, remainsBeforeExpiry, remainsAfterExpiry: corpses.length };
+  });
+  expect(result).toEqual({ wormLines: 0, remainsBeforeExpiry: 1, remainsAfterExpiry: 0 });
   expect(errors).toEqual([]);
 });

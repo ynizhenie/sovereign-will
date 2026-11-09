@@ -19,7 +19,6 @@ export const STANDARD_CONTINENT_SETTINGS = JSON.parse(JSON.stringify(continentSe
 // GAME_CONFIG.map's a continent uses, in groups (the rest were the small maps' own, 27.10, 18)
 /** @type {[string, string[]][]} */
 export const GENERATOR_GROUPS = [
-  ['biomes', ['savannas', 'savannaRadiusX', 'savannaRadiusY']],
   ['ore', ['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius']],
   ['regrowth', ['respawnDelay', 'oreRespawnDelay']]
 ];

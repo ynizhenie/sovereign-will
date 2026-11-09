@@ -32,6 +32,10 @@ test('the enemy necromancer doesn\'t run from a settler that comes for it: it fi
   expect(await sim.moraleNecromancerBack({})).toEqual({ stayed: true, hitBack: true });
 });
 
+test('a player ghost makes a panicking enemy flee, even when the enemy side is undead', async () => {
+  expect(await sim.moraleGhostPanicsEnemy({})).toEqual({ panicked: true, fled: true, moved: true });
+});
+
 test('a boar in a panic keeps running from the settler near it', async () => {
   expect(await sim.moraleBoar({})).toEqual({ panic: true, running: true });
 });

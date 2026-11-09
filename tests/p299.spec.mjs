@@ -36,6 +36,36 @@ test('big maps are made in seconds and start as close as a default one; zoomed o
   expect(errors).toEqual([]);
 });
 
+test('iron and coal each have 1–3 ore sources in the player start zone (#299)', async ({ page }) => {
+  test.setTimeout(120000);
+  const errors = await openGame(page);
+  const maps = await page.evaluate(() => {
+    const results = [];
+    for (const size of [40, 128]) {
+      for (let i = 0; i < 8; i++) {
+        mapSettings = { cols: size, rows: size };
+        window.sim.start(`start-ore-${size}-${i}`);
+        results.push({
+          size,
+          savannas: savannaTiles.length,
+          iron: getOreSpawners('iron').filter(source => inTerritory(source.x, source.y)).length,
+          coal: getOreSpawners('coal').filter(source => inTerritory(source.x, source.y)).length
+        });
+      }
+    }
+    mapSettings = { cols: 40, rows: 40 };
+    return results;
+  });
+  for (const map of maps) {
+    expect(map.iron, `iron sources on ${map.size}-tile map`).toBeGreaterThanOrEqual(1);
+    expect(map.iron, `iron sources on ${map.size}-tile map`).toBeLessThanOrEqual(3);
+    expect(map.coal, `coal sources on ${map.size}-tile map`).toBeGreaterThanOrEqual(1);
+    expect(map.coal, `coal sources on ${map.size}-tile map`).toBeLessThanOrEqual(3);
+    if (map.size === 40) expect(map.savannas).toBe(0);
+  }
+  expect(errors).toEqual([]);
+});
+
 test('the base\'s land: a default map\'s square round the hall, a circle round each building but walls; settlers work and the player builds only on it (#299)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
