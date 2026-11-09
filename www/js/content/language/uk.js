@@ -360,6 +360,7 @@ export const ukLanguage = {
       'menu.settings': 'Налаштування',
       'menu.exit': 'Вийти',
       'menu.back': '[[back]] Назад',
+      'menu.close': 'Закрити',
       'menu.difficulty': 'Складність:',
       'menu.normal': 'Звичайна',
       'menu.hard': 'Важка',
