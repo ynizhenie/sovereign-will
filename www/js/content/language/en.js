@@ -360,6 +360,7 @@ export const enLanguage = {
       'menu.settings': 'Settings',
       'menu.exit': 'Exit',
       'menu.back': '[[back]] Back',
+      'menu.close': 'Close',
       'menu.difficulty': 'Difficulty:',
       'menu.normal': 'Normal',
       'menu.hard': 'Hard',
