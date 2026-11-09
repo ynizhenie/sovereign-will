@@ -114,7 +114,9 @@ export function stopPlacing() {
 // Each frame (app/main.js): the bars show the running mode's own row (body[data-hud]). Kept after the game
 // ends, so they slide away as they were
 export function syncHudMode() {
-  if (game.gameStarted && game.gameMode !== 'menu' && document.body.dataset.hud !== game.gameMode) document.body.dataset.hud = game.gameMode;
+  const mode = game.plagueMode ? 'plague' : game.gameMode;
+  if (game.gameStarted && mode !== 'menu' && document.body.dataset.hud !== mode) document.body.dataset.hud = mode;
+  document.getElementById('plague-actions').hidden = !game.plagueMode;
 }
 
 // What this file sets up as the game starts (called by app/boot.js)

@@ -15,6 +15,7 @@ import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inEnemyTe
 import { generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
+import { markEnemyKillForPlague } from '../../../modes/plague/index.js';
 
 export const WAVE_WARNING_SECONDS = 15;
 
@@ -1141,7 +1142,7 @@ export function tickEnemyTents(dt) {
 // What a fallen enemy drops (GAME_CONFIG.loot, #210, #232): for each thing it held, now and then the thing
 // itself, more often part of what it costs; a pile on the ground the settlers pick up
 export function dropLoot(en) {
-  if (game.gameMode !== 'endless') return;
+  if (game.gameMode !== 'endless' || game.plagueMode) return;
   const loot = GAME_CONFIG.loot;
   const held = [];
   // (#326: an archer drops its bow, even with its dagger out; a crossbowman its crossbow)
@@ -1164,6 +1165,7 @@ export function removeDeadEnemies() {
     if (en.hp <= 0 && !en.fled && !en.deadNoted) { en.deadNoted = true; onUnitDeath(en, 'enemy'); noteDay(en.lastHitBy, 'kills', 'kill', 0.25); } // (its slayer's day, #279)
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
+      markEnemyKillForPlague(en);
       if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); dropLoot(en); }
     }
   });

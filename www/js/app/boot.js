@@ -11,6 +11,7 @@ import { initMenuScreens, initMenuWorld } from '../modes/menu/index.js';
 import { initBattlePanel } from '../modes/battle/index.js';
 import { initEditorPanel } from '../modes/editor/index.js';
 import { initSounds } from './sounds.js';
+import { initPlagueRules } from '../modes/plague/index.js';
 
 initIcons();
 initI18n();
@@ -27,6 +28,7 @@ initWorldMap();
 initEndlessSetup();
 initEndlessCards();
 initEndlessRules();
+initPlagueRules();
 initAudio();
 initMain();
 initMenuScreens();

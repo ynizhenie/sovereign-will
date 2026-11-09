@@ -29,6 +29,7 @@
     <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless setup, Settings -->
     <div class="main-menu-content" data-screen="home">
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
+        <button id="mode-plague" class="menu-button" data-i18n="plague.mode">Plague</button>
         <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
         <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>
         <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
@@ -173,6 +174,31 @@
         </div>
     </div>
 
+    <div class="main-menu-content plague-menu" data-screen="plague" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="plague.title">Plague</h1>
+        <p data-i18n="plague.intro">Raise the fallen, lead the dead, and survive the marching enemy bands.</p>
+        <div class="wave-settings">
+          <div data-i18n="menu.difficulty">Difficulty:</div>
+          <div class="wave-options" id="plague-difficulty-options">
+            <button class="difficulty-option active" data-plague-difficulty="normal" data-i18n="menu.normal">Normal</button>
+            <button class="difficulty-option" data-plague-difficulty="hard" data-i18n="menu.hard">Hard</button>
+          </div>
+        </div>
+        <div class="plague-spawn-settings">
+          <label for="plague-group-interval" data-i18n="plague.groupInterval">Group spawn interval (seconds)</label>
+          <input id="plague-group-interval" class="menu-number" type="number" min="3" max="60" step="1" value="10" />
+          <label for="plague-groups-per-spawn" data-i18n="plague.groupsPerSpawn">Groups per spawn</label>
+          <input id="plague-groups-per-spawn" class="menu-number" type="number" min="1" max="10" step="1" value="1" />
+        </div>
+        <label class="plague-joystick-toggle">
+          <input id="plague-joystick-enabled" type="checkbox" />
+          <span data-i18n="plague.joystickControl">Use movement joystick (touch)</span>
+        </label>
+        <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
+        <div data-seed-slot="plague"></div>
+    </div>
+
     <div class="main-menu-content generator-screen" data-screen="generator" hidden>
         <button class="menu-back" data-back-to="endless" data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="menu.generator">Map generator</h1>
@@ -277,6 +303,9 @@
     <div id="fps-counter" hidden></div>
 
     <canvas id="gameCanvas"></canvas>
+    <div id="plague-joystick" class="plague-joystick" role="application" aria-label="Movement joystick" hidden>
+      <div class="plague-joystick-base"><div id="plague-joystick-knob" class="plague-joystick-knob"></div></div>
+    </div>
 
     <!-- Endless lost (#191): over the game, which flies to the base; start again or leave -->
     <div id="defeat-overlay" hidden>
@@ -289,6 +318,7 @@
         </div>
       </div>
     </div>
+    <div id="plague-card-offer" class="plague-modal plague-card-modal" hidden></div>
   </div>
 
   <!-- the top bar: pause on the left, what the mode is at in the middle, its actions on the right -->
@@ -296,6 +326,12 @@
     <button class="btn-pause-square" id="btn-pause-toggle" data-action="togglePause" data-i18n-title="pause.pauseHint" aria-label="Pause"><i class="ic ic-pause"></i></button>
 
     <div class="top-center">
+      <div class="plague-stats">
+        <div class="plague-stat"><i class="ic ic-staff"></i><span data-i18n="plague.energy">Dark energy</span><b id="plague-energy">15/30</b></div>
+        <div class="plague-stat"><i class="ic ic-swords"></i><span data-i18n="plague.squad">Squad</span><b id="plague-squad">0/8</b></div>
+        <div class="plague-stat"><i class="ic ic-swords"></i><span data-i18n="plague.experience">Experience</span><b id="plague-experience">0/5</b></div>
+        <button class="btn-pause-square plague-upgrades-toggle" id="plague-upgrades-toggle" data-i18n-title="plague.upgradesTitle" aria-label="Upgrades"><i class="ic ic-gear"></i></button>
+      </div>
       <!-- (#279) Endless: the time of day, a dial of its four parts with a hand on now, the sun or the moon in it -->
       <div class="day-clock" id="day-clock"><span class="day-hand" id="day-hand"></span><span class="day-face" id="day-face"></span></div>
       <!-- Endless: the wave, the time to it, and a bar running down to it -->
@@ -323,6 +359,17 @@
       <button class="btn editor-only" id="editor-undo" data-i18n-title="editor.undo" aria-label="Undo" disabled><i class="ic ic-undo"></i></button>
       <button class="btn editor-only" id="editor-redo" data-i18n-title="editor.redo" aria-label="Redo" disabled><i class="ic ic-redo"></i></button>
       <button class="btn btn-worldmap" id="btn-world-map" data-action="openWorldMap" data-i18n-title="top.worldMap" aria-label="World map"><i class="ic ic-worldmap"></i></button>
+    </div>
+  </div>
+
+  <div id="plague-upgrades-panel" class="plague-modal plague-upgrades-modal" hidden>
+    <div class="plague-upgrades-content">
+      <div class="plague-upgrades-heading">
+        <h2 data-i18n="plague.upgradesTitle">Upgrades</h2>
+        <button class="btn" id="plague-upgrades-close" data-i18n-title="menu.close" aria-label="Close"><i class="ic ic-close"></i></button>
+      </div>
+      <section id="plague-character-stats" class="plague-character-stats" aria-label="Character stats"></section>
+      <div id="plague-upgrades-list" class="plague-upgrades-list"></div>
     </div>
   </div>
 
@@ -583,6 +630,12 @@
       <button class="dock-btn" data-editor-category="buildings" data-dock="editor:buildings"><i class="ic ic-build"></i><span data-i18n="editor.cat.buildings">Buildings</span></button>
       <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
       <button class="dock-btn" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>
+    </div>
+    <div id="plague-actions" class="dock-row" data-hud-mode="plague" hidden>
+      <button class="dock-btn" id="plague-revive">
+        <span class="plague-revive-progress" id="plague-revive-progress"></span>
+        <i class="ic ic-zombie"></i><span id="plague-revive-label" data-i18n="plague.revive">Raise</span>
+      </button>
     </div>
   </nav>
 </div>

@@ -520,16 +520,17 @@ export function drawBackItems(s) {
 // one (up the screen), after it otherwise: `front` says which pass this is
 const isHealing = s => (s.working || 0) > 0 && s.workKind === 'heal';
 
-// (#326) Being treated: green crosses rising off it, a moment after each touch of the medic's herbs
+// Being treated: healing crosses rise briefly after each heal.
 export function drawHealSparks(u) {
   const since = game.pathTick - (u.treatedAt ?? -1e9);
   if (since > 40) return;
   const r = u.visualRadius || u.radius || 11;
+  const color = game.plagueMode && (u.plagueHero || u.plagueUnit) ? '#bb8fce' : '#2ecc71';
   ctx.save();
   for (let i = 0; i < 3; i++) {
     const t = ((game.pathTick + i * 17) % 50) / 50, px = u.x + (i - 1) * r * 0.6, py = u.y - r * 0.6 - t * r * 1.6;
     ctx.globalAlpha = (1 - t) * Math.min(1, (40 - since) / 15);
-    ctx.fillStyle = '#2ecc71'; ctx.fillRect(px - 0.9, py - 3, 1.8, 6); ctx.fillRect(px - 3, py - 0.9, 6, 1.8);
+    ctx.fillStyle = color; ctx.fillRect(px - 0.9, py - 3, 1.8, 6); ctx.fillRect(px - 3, py - 0.9, 6, 1.8);
   }
   ctx.restore();
 }

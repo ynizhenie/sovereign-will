@@ -47,7 +47,7 @@ export function isWithinTownHallResourceBuffer(x, y) {
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
  *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
  *   towerArrowBuildings: Set<string>, redBuildings: Set<string>, redDoors: Set<string>, ownSpikes: Set<string>, ownTraps: Set<string>,
- *   redHazards: Set<string>, outposts: Set<string>, stamps?: Record<string, string> }} TileIndex
+ *   redHazards: Set<string>, outposts: Set<string>, plagueCemeteries: Set<string>, stamps?: Record<string, string> }} TileIndex
  */
 /** @type {TileIndex | null} */
 export let tileIndex = null;
@@ -115,6 +115,7 @@ export function getTileIndex() {
     redBuildings: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && !isDoor(b) && !isHazard(b) && !(getDefinition('buildings', b.type) || {}).walkable))],
     redDoors: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && isDoor(b)))],
     redHazards: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && isHazard(b)))],
+    plagueCemeteries: [[game.buildings], () => keys(game.buildings.filter(b => b.plagueCemetery))],
     ownSpikes: [[game.buildings], () => keys(game.buildings.filter(b => b.side !== 'red' && b.type === 'spikes'))],
     ownTraps: [[game.buildings], () => keys(game.buildings.filter(b => b.side !== 'red' && (getDefinition('buildings', b.type) || {}).ironTrap))],
     // what stops arrows (see blocksArrows / arrowsPass / towerArrowsPass in GAME_CONFIG)

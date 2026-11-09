@@ -667,6 +667,7 @@ export const isGroundCached = () => cached;
 
 // The border zone round the map, and the line where it starts
 export function drawMapBorder() {
+  if (game.plagueMode) return;
   if (isContinentMap()) return; // (#326: a continent's edge is the sea, no strip or line round it)
   // (#299: only the part of it on the screen)
   const v = getViewRect(TILE_SIZE), M = BORDER_MARGIN * TILE_SIZE, W = game.WORLD_WIDTH, H = game.WORLD_HEIGHT;

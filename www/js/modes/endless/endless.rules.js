@@ -7,9 +7,11 @@ import { createWorldSeed, game, townHall } from '../../engine/world/index.js';
 import { unpossess } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, playSound, resetGame } from '../../app/index.js';
 import { createEnemyCamps, initRaidControls, isInCamp } from './endless.raid.js';
+import { plagueIsDefeated, restartPlagueGame } from '../plague/index.js';
 
 // Endless is lost once the town hall falls or the last settler dies: the defeat screen shows
 export function isDefeated() {
+  if (game.plagueMode) return game.gameStarted && plagueIsDefeated();
   return game.gameStarted && game.gameMode === 'endless' && !isInCamp() && (townHall.hp <= 0 || game.settlers.length === 0); // (a party in a camp: the base waits, #255)
 }
 
@@ -34,9 +36,13 @@ export function updateDefeat(dt) {
     setMode('interact');
     updateUI(); // the HUD as it ended (the hall at 0): nothing updates it after this
     playSound('defeat');
-    document.getElementById('defeat-survived').textContent = t('defeat.survived', { waves: game.waveNum - 1 });
+    document.getElementById('defeat-survived').textContent = game.plagueMode
+      ? t('plague.defeat', { groups: game.plague?.groupsCleared || 0 })
+      : t('defeat.survived', { waves: game.waveNum - 1 });
     const zoom = Math.max(1, Math.min(getMaxZoom(), DEFEAT_CSS_SCALE * screenPixelRatio / getBaseScale()));
-    defeatView = { from: { x: camera.x, y: camera.y, zoom: camera.zoom }, to: { x: townHall.x, y: townHall.y, zoom }, t: 0 };
+    const hero = game.settlers.find(s => s.plagueHero);
+    const target = game.plagueMode && hero ? hero : townHall;
+    defeatView = { from: { x: camera.x, y: camera.y, zoom: camera.zoom }, to: { x: target.x, y: target.y, zoom }, t: 0 };
   }
   if (defeatView.t >= 1) return;
   defeatView.t = Math.min(1, defeatView.t + dt / DEFEAT_FLY_SECONDS);
@@ -56,6 +62,7 @@ export function isCameraLocked() {
 export function initEndlessRules() {
   initRaidControls();
   onTap(document.getElementById('defeat-restart'), () => {
+    if (game.plagueMode) { restartPlagueGame(); return; }
     const seed = game.worldSeed?.value;
     if (!seed) throw new Error('Cannot restart Endless without the current world seed');
     game.worldSeed = createWorldSeed(seed);

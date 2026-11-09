@@ -95,7 +95,7 @@ function staffLightPosition(unit) {
 // What gives light, and how far (px): [{ x, y, r, color? }]
 export function getLights() {
   const c = config();
-  const lights = [{ x: townHall.x, y: townHall.y, r: townHall.radius + c.hallLightTiles * TILE_SIZE }];
+  const lights = game.plagueMode ? [] : [{ x: townHall.x, y: townHall.y, r: townHall.radius + c.hallLightTiles * TILE_SIZE }];
   for (const b of game.buildings) {
     if (!isVisible(b.x, b.y)) continue; // (an enemy camp's torches and fire in the fog lit it up at night)
     if (b.type === 'torch' && b.lit) lights.push({ x: b.x, y: b.y, r: c.torchLightTiles * TILE_SIZE });

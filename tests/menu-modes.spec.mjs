@@ -58,9 +58,9 @@ test('shadows can be disabled in settings and the choice is remembered', async (
 test('two difficulties: on Hard enemies are as strong as the player\'s own units (#39, #255)', async ({ page }) => {
   await openFresh(page);
   await page.click('#mode-endless');
-  expect(await page.locator('.difficulty-option').count()).toBe(2);
+  expect(await page.locator('#difficulty-options .difficulty-option').count()).toBe(2); // (the Plague has its own)
   const r = await page.evaluate(() => ['normal', 'hard'].map(level => {
-    document.querySelector(`.difficulty-option[data-difficulty="${level}"]`).click();
+    document.querySelector(`#difficulty-options .difficulty-option[data-difficulty="${level}"]`).click();
     document.getElementById('seed-input').value = 'difficulty-test';
     applySeedFromUI(); resetGame();
     waveNum = 1; startNextWave();

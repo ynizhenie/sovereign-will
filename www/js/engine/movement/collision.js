@@ -99,7 +99,7 @@ export function canEnemyMoveOutOfNaturalResource(x, y, nextX, nextY, radius, all
     const edge = BORDER_MARGIN * TILE_SIZE;
     if (nextX - radius < edge || nextY - radius < edge || nextX + radius > game.WORLD_WIDTH - edge || nextY + radius > game.WORLD_HEIGHT - edge) return false;
   }
-  if (Math.hypot(nextX - townHall.x, nextY - townHall.y) < townHall.radius + radius) return false;
+  if (!game.plagueMode && Math.hypot(nextX - townHall.x, nextY - townHall.y) < townHall.radius + radius) return false;
   return !collidesWithTiles(nextX, nextY, radius, ENEMY_NON_RESOURCE_WALL_KINDS);
 }
 
@@ -108,7 +108,7 @@ export function collidesWithWall(x, y, radius, isEnemy = false, allowBattleBorde
     const edge = BORDER_MARGIN * TILE_SIZE;
     if (x - radius < edge || y - radius < edge || x + radius > game.WORLD_WIDTH - edge || y + radius > game.WORLD_HEIGHT - edge) return true;
   }
-  if (Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + radius) return true;
+  if (!game.plagueMode && Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + radius) return true;
   return collidesWithTiles(x, y, radius, isEnemy ? ENEMY_WALL_KINDS : WALL_COLLISION_KINDS);
 }
 
@@ -180,7 +180,8 @@ export function separateSettlersFromEnemiesOnce() {
 // few seconds (settlers: two working at one tuft of grass were pushed out of its reach, both, for good)
 const ALLY_PUSH = 0.35, FIGHTING_TICKS = 180;
 export function separateAllies(units, fightingOnly = false) {
-  const live = units.filter(u => !u.asleep && !u.towerAssignment && !u.ghostly && !(u.hp <= 0)
+  const live = units.filter(u => !(game.plagueMode && (u.plagueUnit || u.plagueHero))
+    && !u.asleep && !u.towerAssignment && !u.ghostly && !(u.hp <= 0)
     && (!fightingOnly || (u.struckAt !== undefined && game.pathTick - u.struckAt < FIGHTING_TICKS)));
   for (let i = 0; i < live.length; i++) {
     const a = live[i], ar = Math.min(a.visualRadius || a.radius, 13) * 0.85;

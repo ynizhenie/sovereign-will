@@ -77,6 +77,7 @@ export function holdPost(s, tick) {
 // can't; the possessed are the player's
 export function strikeBack(s, tick) {
   if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
+  if (s.plagueUnit && game.settlers.some(master => master.id === s.masterId && master.plagueMoveTarget)) return false;
   const attacker = getRecentAttacker(s);
   if (attacker && isCampGuardUnavailable(attacker)) return false;
   if (attacker && !canDefendEnemy(attacker)) return false;
