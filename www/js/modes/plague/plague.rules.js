@@ -468,7 +468,7 @@ function updateGroups() {
 function tickCemeteryCorpses(dt) {
   for (const cemetery of game.buildings) {
     if (!cemetery.plagueCemetery || cemetery.hp <= 0) continue;
-    cemetery.plagueCorpseTimer -= dt;
+    cemetery.plagueCorpseTimer = (cemetery.plagueCorpseTimer ?? CEMETERY_CORPSE_INTERVAL) - dt;
     if (cemetery.plagueCorpseTimer > 0) continue;
     cemetery.plagueCorpseTimer = CEMETERY_CORPSE_INTERVAL;
     const corpseCount = game.corpses.filter(corpse => corpse.plagueCemeteryId === cemetery.plagueCemeteryId).length;

@@ -24,6 +24,7 @@
  * @property {boolean} [plagueHero]
  * @property {boolean} [plagueUnit]
  * @property {{x: number, y: number} | null} [plagueMoveTarget]
+ * @property {number} [damageMultiplier] (Plague) the hero's damage, raised by its cards
  * @property {number} [quiverCapacity]
  * @property {string} role           'worker', 'soldier' or 'archer'
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
@@ -241,6 +242,8 @@
  * @property {boolean} [crumbled]
  * @property {number} [plagueGroupId]
  * @property {Point} [plagueGoal]
+ * @property {string} [plagueWeapon] (Plague) the weapon this one carries in place of its kind's
+ * @property {number} [plagueTier] (Plague) how far the plague had grown when it came
  * @property {boolean} [summoned]     from a tent, not the wave
  * @property {boolean} [waveSummoned] spawned by a tent during a wave
  * @property {boolean} [fromWave]
@@ -323,6 +326,8 @@
  * @property {number} [radius]
  * @property {boolean} [repairRequested]
  * @property {boolean} [plagueCemetery]
+ * @property {number} [plagueCemeteryId] (Plague) which cemetery, for the corpses it raises
+ * @property {number} [plagueCorpseTimer] (Plague) seconds till its next corpse
  * @property {boolean} [isDemolishing]
  * @property {Building} [targetBuilding] what a demolition blueprint takes down
  * @property {number} [fuelLeft]     a campfire's
@@ -364,6 +369,8 @@
  * @property {boolean} cardMode  Endless with cards (#255)
  * @property {boolean} plagueMode
  * @property {Object | null} plague
+ * @property {{ difficulty: string, joystickEnabled: boolean, groupInterval: number, groupsPerSpawn: number }} [plagueSettings] (Plague) what was picked for this run
+ * @property {Point | null} [plagueJoystick] (Plague) the on-screen stick's push, -1..1 each way, while held
  * @property {{ cols: number, rows: number }} mapSettings
  * @property {Object | null} customMap
  * @property {Point[]} editorOutposts up to three enemy camp markers in a custom map
