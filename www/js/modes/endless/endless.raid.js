@@ -324,7 +324,10 @@ function growCampDefenders(wave) {
             guard: guard.guard ? { ...guard.guard } : { x: guard.x, y: guard.y },
             campFireKeeper: !!guard.campFireKeeper,
             guardOff: false,
-            campTalkTimer: guard.campTalkTimer
+            campTalkTimer: guard.campTalkTimer,
+            // (the same guard better armed: its name stays, and whom it was talking with)
+            name: guard.name ?? upgraded.name,
+            campTalkPartnerName: guard.campTalkPartnerName
           });
           game.enemies[game.enemies.indexOf(guard)] = upgraded;
           guard = upgraded;
