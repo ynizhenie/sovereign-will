@@ -217,9 +217,12 @@ Object.assign(window.sim, (() => {
     game.mapSettings = { cols: 128, rows: 128 };
     start(seed);
     createEnemyCamp();
-    const guards = enemies.filter(enemy => enemy.campGuard && enemy.campId === enemyCamp.id && enemy.hp > 0);
+    // (the guards as they are each frame: the camp arms them better as it goes, a guard swapped for a better one)
+    const campGuards = () => enemies.filter(enemy => enemy.campGuard && enemy.campId === enemyCamp.id && enemy.hp > 0);
+    let guards = campGuards();
     const last = new Map(guards.map(guard => [guard, { x: guard.x, y: guard.y }]));
     const still = new Map(guards.map(guard => [guard, 0]));
+    const guardCount = guards.length;
     let moved = false, paused = false, talkedFaceToFace = false, patrolRadius = 0;
     const talkers = new Set();
     const lastSay = new Map();
@@ -236,7 +239,9 @@ Object.assign(window.sim, (() => {
     };
     for (let frame = 0; frame < 90 * 60; frame++) {
       update(1 / 60);
+      guards = campGuards();
       for (const guard of guards) {
+        if (!last.has(guard)) { last.set(guard, { x: guard.x, y: guard.y }); still.set(guard, 0); }
         maxDistanceFromPost = Math.max(maxDistanceFromPost,
           Math.hypot(guard.x - guard.guard.x, guard.y - guard.guard.y));
         const guardGrid = getGridPos(guard.x, guard.y);
@@ -257,13 +262,15 @@ Object.assign(window.sim, (() => {
         const previousSay = lastSay.get(guard);
         if (!previousSay || previousSay.until !== guard.say.until) phraseCount++;
         lastSay.set(guard, guard.say);
-        talkers.add(guard);
-        const partner = guards.find(other => other !== guard && Math.hypot(other.x - guard.x, other.y - guard.y) < TILE_SIZE * 4);
+        talkers.add(guard.name);
+        // (the one it's talking with, else the nearest: another standing by isn't the one it turns to)
+        const partner = guards.find(other => other !== guard && other.name === guard.campTalkPartnerName) ||
+          guards.find(other => other !== guard && Math.hypot(other.x - guard.x, other.y - guard.y) < TILE_SIZE * 4);
         if (partner && faces(guard, partner) && faces(partner, guard)) talkedFaceToFace = true;
       }
     }
     return {
-      guards: guards.length, moved, paused, talkedFaceToFace, patrolRadius, talkers: talkers.size,
+      guards: guardCount, moved, paused, talkedFaceToFace, patrolRadius, talkers: talkers.size,
       phraseCount, maxDistanceFromPost, avoidedCampBuildings
     };
   }

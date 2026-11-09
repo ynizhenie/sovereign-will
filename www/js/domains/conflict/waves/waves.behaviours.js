@@ -456,7 +456,8 @@ function campGuardTalk(en, dt) {
   en.campTalkTimer = (en.campTalkTimer ?? rand() * 12) - dt;
   const camp = (game.enemyCamps || []).find(item => item.id === en.campId) || game.enemyCamp;
   const partner = campGuardPartner(en);
-  if (partner && en.say?.until >= game.pathTick) {
+  // (either one talking: the fire keeper too, listening, turns from the fire to the one talking)
+  if (partner && ((en.say?.until ?? -1) >= game.pathTick || (partner.say?.until ?? -1) >= game.pathTick)) {
     faceTowards(en, partner.x, partner.y);
     faceTowards(partner, en.x, en.y);
   }
