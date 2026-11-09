@@ -35,7 +35,7 @@ export const mapColsInput = document.getElementById('map-cols'), mapRowsInput = 
 export const applyCustomMap = () => { game.mapSettings = { cols: clampInput(mapColsInput, 192), rows: clampInput(mapRowsInput, 192) }; };
 
 // difficulty (Endless)
-export const difficultyOptions = document.querySelectorAll('.difficulty-option');
+export const difficultyOptions = document.querySelectorAll('#difficulty-options .difficulty-option');
 const enemyCampCountOptions = document.querySelectorAll('.camp-count-option');
 const fogEnabledOptions = document.querySelectorAll('.fog-option');
 

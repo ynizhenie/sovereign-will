@@ -119,16 +119,39 @@ export function drawCorpses() {
   const v = getViewRect(40);
   forEachInRect(game.corpses, v.x0, v.y0, v.x1, v.y1, c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
-    ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
+    ctx.globalAlpha = game.plagueMode ? 0.9 : Math.max(0, Math.min(1, left / 10)) * 0.9;
+    if (game.plagueMode && c.plagueInReviveRange) drawPlagueCorpseHighlight(c);
     // a figure lying on its side, crosses for its eyes (#251), its skin grey and its clothes its side's colour
     // gone dull (#326: all of it was grey); a pet's own body
     const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
     const cloth = dull(c.side === 'enemy' ? getEnemyColor(null) : getSettlerColor(null)), kin = unitKin(c);
     if (c.pet) drawPetCorpse(c, grey);
     else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', horns: kin === 'demons', lying: true, dead: true });
-    if (corpseHasWorms(c)) drawWorms(c);
+    if (!game.plagueMode && corpseHasWorms(c)) drawWorms(c);
     ctx.globalAlpha = 1;
   });
+}
+
+function drawPlagueCorpseHighlight(corpse) {
+  const planned = corpse.plagueWillRaise;
+  const pulse = 0.78 + Math.sin(game.pathTick * 0.12) * 0.12;
+  const color = planned ? [241, 196, 15] : [187, 143, 206];
+  ctx.save();
+  ctx.translate(corpse.x, corpse.y + Math.min(corpse.radius, 16) * 0.65);
+  ctx.scale(1.35, 0.72);
+  const glow = ctx.createRadialGradient(0, 0, 3, 0, 0, 19);
+  glow.addColorStop(0, `rgba(${color.join(',')}, ${planned ? 0.32 : 0.2})`);
+  glow.addColorStop(1, `rgba(${color.join(',')}, 0)`);
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, 0, 19, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(${color.join(',')}, ${pulse})`;
+  ctx.lineWidth = planned ? 2 : 1.3;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 13, 8, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // A colour (#rrggbb) gone dull: half way to grey, a little darker

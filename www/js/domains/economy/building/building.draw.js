@@ -95,6 +95,7 @@ function drawMenuWarehouse() {
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
 // menu it's drawn as a warehouse, the storage it is there (#200)
 export function drawTownHall() {
+  if (game.plagueMode) return;
   if (game.gameMode === 'menu') { drawMenuWarehouse(); return; } // (as a warehouse in the game, #256)
  // each faction's own, not round (building.art.js, #251)
   drawHallArt(townHall.x, townHall.y);
