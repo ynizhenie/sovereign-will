@@ -40,7 +40,7 @@ test('Plague bands come in on standable ground away from the hero, armed as Endl
   expect(errors).toEqual([]);
 });
 
-test('Plague: one speed card for the hero and the squad, no hero damage card, stats from base to now (#404, 4, 5)', async ({ page }) => {
+test('Plague: the twelve upgrades, one speed card for the hero and the squad, stats from base to now; the hero stands still (#404, 4, 5)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
   const r = await page.evaluate(() => {
@@ -55,14 +55,17 @@ test('Plague: one speed card for the hero and the squad, no hero damage card, st
     cards[0].click();
     document.getElementById('plague-upgrades-toggle').click();
     const stats = [...document.querySelectorAll('#plague-character-stats .plague-character-stat b')].map(b => b.textContent);
+    const cardsListed = document.querySelectorAll('#plague-upgrades-list .plague-upgrade-entry').length;
     document.getElementById('plague-upgrades-close').click();
     return {
       oneRow: new Set(rows).size === 1, speedFactor: plague.speedFactor, squadSpeed: +(zombie.speed / GAME_CONFIG.settlerTypes.zombie.speed).toFixed(2),
       allArrows: stats.length > 10 && stats.every(text => text.includes('→')),
-      level: document.getElementById('plague-level').textContent
+      level: document.getElementById('plague-level').textContent, cardsListed,
+      standing: (() => { isPaused = false; update(1 / 60); isPaused = true; return { swaying: !!hero.swaying, idle: !!hero.isIdle }; })()
     };
   });
-  expect(r).toMatchObject({ oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, allArrows: true });
+  expect(r).toMatchObject({ oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, allArrows: true, cardsListed: 12 });
+  expect(r.standing).toEqual({ swaying: false, idle: false }); // (no sway, no "zZ" over it)
   expect(r.level).toContain('2');
   expect(errors).toEqual([]);
 });

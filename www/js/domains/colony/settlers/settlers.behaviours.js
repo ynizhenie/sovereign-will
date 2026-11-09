@@ -420,9 +420,9 @@ function tickPlagueHero(hero, tick) {
   hero.moveVy = 0;
   hero.path = null;
   hero.pathTarget = null;
-  hero.isIdle = true;
+  hero.isIdle = false; // (#404: standing, it neither sways nor shows the idle "zZ")
   hero.activity = 'plagueIdle';
-  hero.swaying = true;
+  hero.swaying = false;
   healPlagueSquad(hero, tick.dt);
 }
 
