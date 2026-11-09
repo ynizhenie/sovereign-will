@@ -317,7 +317,7 @@ export function getWavePresetGroupSize(factionId, preset) {
   return factionId === 'undead' && preset.size !== 'pet' && preset.weapon === 'fist' && !preset.tool ? 2 : 1;
 }
 
-function pickWavePreset(pool) {
+export function pickWavePreset(pool) {
   const total = pool.reduce((sum, option) => sum + option.weight, 0);
   let roll = rand() * total;
   for (const option of pool) {

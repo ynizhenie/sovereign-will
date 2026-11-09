@@ -9,6 +9,7 @@ import { game } from '../engine/world/index.js';
 import { audio, camera, canvas, canvasCssSize, getViewScale, loadSetting, midi, noise, saveSetting, screenPixelRatio, startAudio, t, tone } from '../engine/platform/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle } from '../modes/battle/index.js';
+import { plagueLevel } from '../modes/plague/index.js';
 import { GAME_CONFIG } from '../content/configs/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../domains/factions/index.js';
 import { isNight } from '../domains/world/index.js';
@@ -266,6 +267,7 @@ export function previewTrack(id) { musicPreview.id = id; if (id) startAudio(); }
 export function musicCatalog() {
   const groups = [{ id: 'menu', label: t('music.group.menu'), tracks: [{ id: 'menu', when: 'music.when.menu' }] }];
   const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind] }))) });
+  groups.push({ id: 'plague', label: t('plague.mode'), tracks: GAME_CONFIG.plagueMusic.map(id => ({ id, when: 'music.when.plague' })) });
   set('arena', t('music.group.arena'), GAME_CONFIG.battleMusic, { ambient: 'music.when.arenaAmbient', nightAmbient: 'music.when.arenaAmbientNight', battle: 'music.when.arenaBattle', nightBattle: 'music.when.arenaBattleNight' });
   for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) {
     set(faction.id, faction.label, faction.music, { ambient: 'music.when.ambient', nightAmbient: 'music.when.ambientNight', battle: 'music.when.battle', nightBattle: 'music.when.battleNight' });
@@ -304,6 +306,13 @@ function trackFor(fighting) {
   return fighting ? musicPick.battle || pickOne(battlesOf(getEnemyFaction())) : ambientFor(getPlayerFaction());
 }
 
+// (#404) The Plague's track: one for each of the player's levels in turn, round again after the last (those switched
+// off left out)
+function plagueTrack() {
+  const list = GAME_CONFIG.plagueMusic.filter(isTrackOn);
+  return list.length ? list[(plagueLevel() - 1) % list.length] : '';
+}
+
 // (#326) A battle's track: of the theme picked in its settings (the Battles' own, or a faction's), the ambient while
 // placing and the battle tracks in the fight, the night's if the battle is at night; one picked each time the phase,
 // the theme or the time of day changes
@@ -336,6 +345,7 @@ function pickedMix() {
   if (game.gameMode === 'battle') { const fight = battle.phase === 'fight'; return { [battleTrack(fight)]: fight ? 1 : 0.8 }; }
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;
+  if (game.plagueMode) return { [plagueTrack()]: pause }; // (#404: its own, not the colony's or the fight's)
   // a wave is on until the last enemy and enemy tent are gone
   const fighting = game.enemies.some(enemy =>
     (!enemy.campGuard || (game.raidActive && enemy.campId === game.raidCampId)) && !enemy.scout && !enemy.prepWave) ||
