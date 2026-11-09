@@ -33,20 +33,6 @@ function blocksPlayerTerritory(gx, gy) {
   return !waveEnemyCamps.some(camp => Math.abs(gx - camp.gx) <= camp.radius && Math.abs(gy - camp.gy) <= camp.radius);
 }
 
-function plagueEnemyDefinition(enemy) {
-  const enemyDef = getEnemyDef(enemy);
-  if (!game.plagueMode || !enemy.plagueWeapon) return enemyDef;
-  if (enemy.plagueWeapon === 'crossbow') {
-    return {
-      ...enemyDef,
-      weapon: 'crossbow',
-      ranged: { ...enemyDef.ranged, range: 310, keepAway: 250 },
-      quiver: { ...enemyDef.quiver, arrows: 8, refill: 4 }
-    };
-  }
-  return { ...enemyDef, weapon: enemy.plagueWeapon };
-}
-
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
   for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt);
@@ -252,19 +238,7 @@ export function tickEnemy(en, dt) {
   if (en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken && !getEnemyDef(en).pet &&
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
-  const enemyDef = plagueEnemyDefinition(en);
-  if (game.plagueMode && en.plagueWeapon && !en.plagueWeaponAdjusted) {
-    if (enemyDef.ranged) {
-      const baseDamage = GAME_CONFIG.weapons[getEnemyDef(en).weapon]?.combat?.damage || 1;
-      const weaponDamage = GAME_CONFIG.weapons[enemyDef.weapon]?.combat?.damage || baseDamage;
-      en.damage *= weaponDamage / baseDamage;
-      en.arrows = Math.min(en.arrows || 0, enemyDef.quiver.arrows);
-    } else {
-      const baseDamage = enemyDamagePerSecond(getEnemyDef(en));
-      en.damage *= enemyDamagePerSecond(enemyDef) / (baseDamage || 1);
-    }
-    en.plagueWeaponAdjusted = true;
-  }
+  const enemyDef = getEnemyDef(en);
   if (game.plagueMode && tickPlagueEnemy(en, dt)) return;
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
@@ -650,7 +624,7 @@ function chooseEnemyTarget(en) {
   // (#326) in the fog an enemy sees a settler only close to it (an archer: as far as it shoots), or one that has
   // hit it a moment ago; else it knows just its goal, the town hall
   const fog = GAME_CONFIG.fog, foggy = hasFog();
-  const def = plagueEnemyDefinition(en);
+  const def = getEnemyDef(en);
   const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? shotOf(def).range + 30 : 0);
   const sees = (s, d) => !foggy || d <= sight || (en.struckBy === s && game.pathTick - (en.struckTick || -Infinity) < fog.enemyRememberSeconds * 60);
   game.settlers.forEach(s => {

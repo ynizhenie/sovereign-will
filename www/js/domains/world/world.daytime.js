@@ -22,6 +22,7 @@ export function setShadowsEnabled(enabled) {
 
 export function tickDaytime(dt) {
   if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  if (game.plagueMode) { const c = config(); game.dayTime = c.morning + c.day / 2; return; } // (#404: always midday)
   game.dayTime = ((game.dayTime || 0) + dt) % dayLength();
 }
 
