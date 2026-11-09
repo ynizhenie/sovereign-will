@@ -12,13 +12,14 @@ import { getEnemyDef } from '../waves/index.js';
 
 const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
-const canDefendEnemy = en => game.gameMode === 'battle' || isInsideBase(en) ||
-  ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned));
+const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || isInsideBase(en) ||
+  ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned)));
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
   let best = null;
   for (const en of game.enemies) {
+    if (en.ghostly) continue;
     if (isCampGuardUnavailable(en)) continue;
     if (!en.markedTarget || (tick.markedAssignments.get(en) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
     if (!best || Math.hypot(en.x - s.x, en.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = en;

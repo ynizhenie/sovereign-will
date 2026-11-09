@@ -781,6 +781,7 @@ function breakBuilding(en, building, enemyDef, dt) {
   if (enemyDef.ranged) { en.weapon = 'dagger'; en.swingWeapon = 'dagger'; }
   faceTowards(en, building.x, building.y);
   startSwing(en, Math.min(0.5, cooldown));
+  playSound('swing', en);
   en.struckAt = game.pathTick;
   building.hp -= damage;
   if (building.hp <= 0) removeBuilding(building);

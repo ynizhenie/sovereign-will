@@ -155,7 +155,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker, dagger ? 'dagger' : attacker.weapon); playSound('hit', en); } })),
+      ...game.enemies.filter(en => !en.ghostly && inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker, dagger ? 'dagger' : attacker.weapon); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => (!et.campStructure || (game.raidActive && et.campId === game.raidCampId)) && inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
       ...game.buildings.filter(b => b.side === 'red' && (!b.enemyCampStructure || (game.raidActive && b.campId === game.raidCampId)) && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)

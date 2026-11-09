@@ -202,5 +202,23 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { struckWhileCarrying, meleeSlots, enemyHealer, enemyHealerHerbs, oneBlow, campProtection, enemyBuildingWeaponRange, rangedUnitsUseDaggersOnStructures, holdsBehindBreachedWall };
+  async function enemyBuildingBreakSound({ seed = 'enemy-building-break-sound' } = {}) {
+    start(seed);
+    clearResources();
+    const wall = { type: 'wall_wood', x: townHall.x + 180, y: townHall.y, hp: 1000, maxHp: 1000 };
+    buildings.push(wall);
+    const enemy = createConfiguredEnemy({ x: wall.x + 25, y: wall.y }, 'raider');
+    enemy.speed = 0;
+    enemy.isBlockedPath = true;
+    enemies = [enemy];
+    const { audio, startAudio } = await import('/js/engine/platform/audio.js');
+    startAudio();
+    if (audio.ctx?.state === 'suspended') await audio.ctx.resume();
+    audio.soundOn = true;
+    audio.last.swing = -Infinity;
+    tickEnemy(enemy, 1 / 60);
+    return { buildingDamaged: wall.hp < wall.maxHp, soundPlayed: Number.isFinite(audio.last.swing) };
+  }
+
+  return { struckWhileCarrying, meleeSlots, enemyHealer, enemyHealerHerbs, oneBlow, campProtection, enemyBuildingWeaponRange, rangedUnitsUseDaggersOnStructures, holdsBehindBreachedWall, enemyBuildingBreakSound };
 })());

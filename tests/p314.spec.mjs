@@ -210,6 +210,40 @@ test('a ghost hovers by a grave, can\'t be hurt, flies into an enemy that comes 
   expect(errors).toEqual([]);
 });
 
+test('player archers do not target enemy ghosts', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    return ['bow', 'crossbow'].map((weapon, i) => {
+      const archer = makeSettler(91 + i, townHall.x + 120, townHall.y, {
+        weapon, role: 'archer', quiver: true, arrows: 5, speed: 0
+      });
+      const ghost = createConfiguredEnemy({ x: archer.x + 20, y: archer.y }, 'undead_ghost');
+      ghost.markedTarget = true;
+      game.settlers = [archer];
+      game.enemies = [ghost];
+      fightEnemies(archer, createSettlerTick(1 / 60));
+      const autoTarget = archer.fightTarget || null;
+      const automaticProjectiles = game.projectiles.filter(projectile => projectile.owner === archer).length;
+      archer.orderTarget = ghost;
+      fightByOrders(archer, 1 / 60, false);
+      return {
+        autoTarget,
+        automaticProjectiles,
+        rejectedOrder: archer.orderTarget === null,
+        target: archer.fightTarget || null,
+        daggerTarget: archer.daggerTarget || null,
+        projectiles: game.projectiles.filter(projectile => projectile.owner === archer).length
+      };
+    });
+  });
+  expect(result).toEqual([
+    { autoTarget: null, automaticProjectiles: 0, rejectedOrder: true, target: null, daggerTarget: null, projectiles: 0 },
+    { autoTarget: null, automaticProjectiles: 0, rejectedOrder: true, target: null, daggerTarget: null, projectiles: 0 }
+  ]);
+  expect(errors).toEqual([]);
+});
+
 test('ghosts are tinted with their side colour', async ({ page }) => {
   await openGame(page);
   const colors = await page.evaluate(() => {

@@ -39,9 +39,9 @@ export const walkTo = (s, x, y, tick) => moveEntityTowards(s, x, y, s.speed, fal
 export const ORDERS = [
   {
     kind: 'attack',
-    find: (p, near) => game.enemies.find(en => near(en, en.radius + 15)) || game.enemyTents.find(et => near(et, 25)),
+    find: (p, near) => game.enemies.find(en => !en.ghostly && near(en, en.radius + 15)) || game.enemyTents.find(et => near(et, 25)),
     step: (s, target, tick) => {
-      if (!game.enemies.includes(target) && !game.enemyTents.includes(target)) return false;
+      if ((!game.enemies.includes(target) || target.ghostly) && !game.enemyTents.includes(target)) return false;
       if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
       const combat = getWeaponStats(s, 'combat');
       const reach = game.enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
