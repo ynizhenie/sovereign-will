@@ -483,6 +483,8 @@ function bandRoute(groupId, count) {
 
 // (#404) The player's level: one, and one more for each card taken
 const playerLevel = p => 1 + Object.values(p.upgrades).reduce((total, count) => total + count, 0);
+// (the music's, #404)
+export const plagueLevel = () => game.plague ? playerLevel(game.plague) : 1;
 // A band's level: the player's, give or take up to 3, most often the same (as Endless's wave of that number)
 const LEVEL_SPREAD = [[-3, 1], [-2, 2], [-1, 4], [0, 6], [1, 4], [2, 2], [3, 1]];
 function bandLevel(level) {

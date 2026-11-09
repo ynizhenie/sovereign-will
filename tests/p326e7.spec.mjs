@@ -50,7 +50,7 @@ test('the music player lists every track with its name and when it plays; a trac
   await expect(page.locator('[data-screen="settings"]')).toBeHidden();
   const r0 = await page.evaluate(() => ({
     rows: [...document.querySelectorAll('#music-player .music-row')].map(r => ({ id: r.dataset.track, text: r.querySelector('.music-name').innerText })),
-    expected: 1 + 9 + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
+    expected: 1 + 9 + GAME_CONFIG.plagueMusic.length + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
   }));
   const rows = r0.rows;
   expect(rows.length).toBe(r0.expected);
