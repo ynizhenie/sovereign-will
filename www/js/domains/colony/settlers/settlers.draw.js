@@ -471,7 +471,9 @@ export function drawFigure(unit, o) {
     if (o.camouflage) {
       const dx = to.x - from, dy = to.y + r * 0.3, length = Math.hypot(dx, dy) || 1;
       const nx = -dy / length, ny = dx / length;
-      for (const [start, end, offset, color] of [[0.2, 0.38, 0.15, camoDark], [0.55, 0.74, -0.14, camoLight]]) {
+      for (const [start, end, offset, color] of /** @type {[number, number, number, string][]} */ (
+        [[0.2, 0.38, 0.15, camoDark], [0.55, 0.74, -0.14, camoLight]]
+      )) {
         ctx.strokeStyle = color; ctx.lineWidth = armWidth * 0.72;
         ctx.beginPath();
         ctx.moveTo(from + dx * start + nx * armWidth * offset, -r * 0.3 + dy * start + ny * armWidth * offset);
@@ -537,10 +539,10 @@ export function drawFigure(unit, o) {
       ctx.lineTo(r * 0.5, r * 0.5); ctx.lineTo(-r * 0.5, r * 0.5); ctx.closePath();
     } else ctx.roundRect(-r * 0.62, -r * 0.48, r * 1.24, r * 0.98, r * 0.32);
     ctx.clip();
-    for (const [x, y, w, h, color] of [
+    for (const [x, y, w, h, color] of /** @type {[number, number, number, number, string][]} */ ([
       [-0.32, -0.22, 0.33, 0.2, camoDark], [0.2, -0.16, 0.38, 0.18, camoLight],
       [-0.05, 0.04, 0.42, 0.2, camoMid], [0.31, 0.3, 0.3, 0.17, camoDark]
-    ]) {
+    ])) {
       ctx.fillStyle = color; ctx.beginPath();
       ctx.ellipse(r * x, r * y, r * w, r * h, x * 0.8, 0, Math.PI * 2); ctx.fill();
     }

@@ -245,13 +245,6 @@ export function tickEnemy(en, dt) {
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
   const enemyDef = getEnemyDef(en);
-  if (game.pathTick % 15 === 0) {
-    const sight = Math.max(GAME_CONFIG.fog.enemySightTiles * TILE_SIZE, enemyDef.ranged ? shotOf(enemyDef).range + 30 : 0);
-    for (const settler of game.settlers) {
-      if (settler.hp <= 0 || isUntouchable(settler) || Math.hypot(settler.x - en.x, settler.y - en.y) > sight) continue;
-      if (tauntOnSight(en, settler)) break;
-    }
-  }
   if (game.plagueMode && tickPlagueEnemy(en, dt)) return;
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
@@ -283,6 +276,13 @@ export function tickEnemy(en, dt) {
   if (en.captain) captainOrdersEnemies(en, dt); // (gathering too: the one it tells goes at once)
   if (en.musterUntil && musterHold(en, dt)) return; // (a wave gathering first, #279)
 
+  if (game.pathTick % 15 === 0) {
+    const sight = Math.max(GAME_CONFIG.fog.enemySightTiles * TILE_SIZE, enemyDef.ranged ? shotOf(enemyDef).range + 30 : 0);
+    for (const settler of game.settlers) {
+      if (settler.hp <= 0 || isUntouchable(settler) || Math.hypot(settler.x - en.x, settler.y - en.y) > sight) continue;
+      if (tauntOnSight(en, settler)) break;
+    }
+  }
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;

@@ -48,14 +48,14 @@ export function speak(unit, faction, event, urgent = false, opponentFaction = nu
   return voice(unit, list[Math.floor(Math.random() * list.length)]);
 }
 
-// A taunt is said once when this unit first sees that opponent.
+// A distinct encounter taunt is said once when this unit first sees that opponent.
 export function tauntOnSight(unit, opponent) {
   if (!unit || !opponent || unit.hp <= 0 || opponent.hp <= 0) return false;
   let opponents = taunted.get(unit);
   if (opponents?.has(opponent)) return false;
   const ownFallback = unit.enemyKey ? getEnemyFaction().id : getPlayerFaction().id;
   const opponentFallback = opponent.enemyKey ? getEnemyFaction().id : getPlayerFaction().id;
-  if (!speak(unit, ownFallback, 'taunt', false, factionOf(opponent, opponentFallback))) return false;
+  if (!speak(unit, ownFallback, 'tauntOnSight', false, factionOf(opponent, opponentFallback))) return false;
   if (!opponents) { opponents = new WeakSet(); taunted.set(unit, opponents); }
   opponents.add(opponent);
   return true;

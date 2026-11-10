@@ -377,6 +377,7 @@ function tauntVisibleEnemy(s) {
   const sight = GAME_CONFIG.fog.settlerTiles * TILE_SIZE;
   for (const enemy of game.enemies) {
     if (enemy.hp <= 0 || (hasFog() && !isVisible(enemy.x, enemy.y)) ||
+        (game.wavePreparation && enemy.prepWave === game.wavePreparation.wave) ||
         Math.hypot(enemy.x - s.x, enemy.y - s.y) > sight) continue;
     if (tauntOnSight(s, enemy)) break;
   }

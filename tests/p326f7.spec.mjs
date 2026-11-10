@@ -243,12 +243,79 @@ test('player and enemy taunt once when they first see an opponent, using the opp
     game.pathTick = 30;
     tickEnemy(enemy, 1 / 60);
     return {
-      playerUsesDemonVsUndead: t('voice.demons.taunt.vs.undead').split('|').includes(playerTaunt),
+      playerUsesDemonVsUndead: t('voice.demons.tauntOnSight.vs.undead').split('|').includes(playerTaunt),
       playerRepeated,
-      enemyUsesUndeadPhrase: t('voice.undead.taunt').split('|').includes(enemy.say?.text)
+      playerPhraseIsSeparate: !t('voice.demons.taunt.vs.undead').split('|').includes(playerTaunt),
+      enemyUsesUndeadPhrase: t('voice.undead.tauntOnSight.vs.demons').split('|').includes(enemy.say?.text),
+      enemyPhraseIsSeparate: !t('voice.undead.taunt').split('|').includes(enemy.say?.text)
     };
   });
-  expect(result).toEqual({ playerUsesDemonVsUndead: true, playerRepeated: false, enemyUsesUndeadPhrase: true });
+  expect(result).toEqual({
+    playerUsesDemonVsUndead: true, playerRepeated: false, playerPhraseIsSeparate: true,
+    enemyUsesUndeadPhrase: true, enemyPhraseIsSeparate: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('every faction matchup has distinct localized encounter taunts', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const missing = await page.evaluate(() => {
+    const factions = ['humans', 'demons', 'undead'];
+    const missing = [];
+    for (const language of ['en', 'ru', 'uk']) {
+      setLanguage(language);
+      for (const speaker of factions) for (const opponent of factions) {
+        const key = `voice.${speaker}.tauntOnSight.vs.${opponent}`;
+        const encounter = t(key);
+        const regular = t(`voice.${speaker}.taunt.vs.${opponent}`);
+        if (encounter === key || !encounter || encounter === regular) missing.push(`${language} ${key}`);
+      }
+    }
+    setLanguage('ru');
+    return missing;
+  });
+  expect(missing).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('encounter taunts wait until wave preparation ends; wave calls remain a separate event', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'humans');
+    setSideFaction('enemy', 'demons');
+    game.pathTick = 15;
+    game.fogEnabled = false;
+    game.wavePreparation = { wave: 1, stage: 'gather' };
+    const player = createSettler('normal', 1, 300, 300);
+    const enemy = createConfiguredEnemy({ x: 350, y: 300 }, 'demon_imp');
+    enemy.fromWave = true;
+    enemy.prepWave = 1;
+    game.settlers = [player];
+    game.enemies = [enemy];
+    tickSettlers(1 / 60);
+    tickEnemy(enemy, 1 / 60);
+    const silentDuringPreparation = !player.say && !enemy.say;
+
+    game.wavePreparation = null;
+    delete enemy.prepWave;
+    game.pathTick = 30;
+    tickSettlers(1 / 60);
+    const playerEncounter = player.say?.text;
+    tickVoices(3);
+    const enemyWaveCall = enemy.say?.text;
+    return {
+      silentDuringPreparation,
+      playerHasEncounterLine: t('voice.humans.tauntOnSight.vs.demons').split('|').includes(playerEncounter),
+      enemyKeepsWaveCall: t('voice.demons.charge').split('|').includes(enemyWaveCall)
+    };
+  });
+  expect(result).toEqual({
+    silentDuringPreparation: true,
+    playerHasEncounterLine: true,
+    enemyKeepsWaveCall: true
+  });
   expect(errors).toEqual([]);
 });
 
