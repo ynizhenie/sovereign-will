@@ -594,8 +594,15 @@ export function plagueEnemyTarget(enemy) {
     group.aggroTarget = null;
     group.aggroUntil = 0;
   }
-  if (group?.aggroTarget && p.elapsedTime < group.aggroUntil) return group.aggroTarget;
-  if (group?.aggroTarget) {
+  let nearest = null, best = ENEMY_AGGRO_RANGE;
+  for (const unit of targets) {
+    const distance = Math.hypot(unit.x - enemy.x, unit.y - enemy.y);
+    if (distance < best) { best = distance; nearest = unit; }
+  }
+  if (group?.aggroTarget && p.elapsedTime < group.aggroUntil) {
+    const lockedDistance = Math.hypot(group.aggroTarget.x - enemy.x, group.aggroTarget.y - enemy.y);
+    if (!nearest || nearest === group.aggroTarget || lockedDistance <= best) return group.aggroTarget;
+  } else if (group?.aggroTarget) {
     group.aggroTarget = null;
     group.aggroSuppressed = true;
   }
@@ -604,16 +611,12 @@ export function plagueEnemyTarget(enemy) {
     const allTargetsFar = members.every(member => targets.every(target =>
       Math.hypot(target.x - member.x, target.y - member.y) >= ENEMY_AGGRO_RESET_RANGE));
     if (allTargetsFar) group.aggroSuppressed = false;
-    else return null;
-  }
-  let nearest = null, best = ENEMY_AGGRO_RANGE;
-  for (const unit of targets) {
-    const distance = Math.hypot(unit.x - enemy.x, unit.y - enemy.y);
-    if (distance < best) { best = distance; nearest = unit; }
+    else if (!nearest) return null;
   }
   if (nearest && group) {
     group.aggroTarget = nearest;
     group.aggroUntil = p.elapsedTime + ENEMY_CHASE_SECONDS;
+    group.aggroSuppressed = false;
   }
   return nearest;
 }

@@ -45,6 +45,17 @@ export const startGame = async (e) => {
     if (starting) return; // (a second tap while the world is made)
     starting = true;
     try {
+      const selectedCards = /** @type {HTMLElement | null} */ (document.querySelector('.cards-option.active'));
+      game.cardMode = selectedCards?.dataset.cards === 'on';
+      const selectedWave = /** @type {HTMLElement | null} */ (document.querySelector('[data-wave-interval].active'));
+      if (selectedWave) {
+        const custom = selectedWave.dataset.waveInterval === 'custom';
+        waveCustom.hidden = !custom;
+        if (custom) applyCustomWave();
+        else { game.waveInterval = Number(selectedWave.dataset.waveInterval); game.waveTimer = game.waveInterval; }
+      }
+      const selectedDifficulty = /** @type {HTMLElement | null} */ (document.querySelector('.difficulty-option.active'));
+      if (selectedDifficulty) game.gameDifficulty = /** @type {string} */ (selectedDifficulty.dataset.difficulty);
       applySeedFromUI();
       // (#299) the size picked in the menu (its default one too, never tapped)
       const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));

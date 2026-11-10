@@ -126,6 +126,40 @@ test('Plague upgrade text fits on a phone screen', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('Plague enemies switch from the Necromancer to a nearer squad member', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const switched = await page.evaluate(() => {
+    const hero = settlers.find(unit => unit.plagueHero);
+    const zombie = createSettler('zombie', 990, hero.x + 120, hero.y, { plagueUnit: true, masterId: hero.id });
+    settlers.push(zombie);
+    const group = { id: 990, aggroTarget: hero, aggroUntil: plague.elapsedTime + 8 };
+    plague.groups.push(group);
+    const enemy = { x: hero.x + 150, y: hero.y, plagueGroupId: group.id };
+    return plagueEnemyTarget(enemy) === zombie;
+  });
+  expect(switched).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Endless reapplies its selected wave and card settings after Plague', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('endless'));
+  await page.click('[data-cards="off"]');
+  await page.click('[data-wave-interval="custom"]');
+  await page.locator('#wave-custom').fill('480');
+  await page.locator('#wave-custom').dispatchEvent('change');
+  await startPlague(page);
+  await page.evaluate(() => exitToMainMenu());
+  await page.click('#mode-endless');
+  await page.click('#play-button');
+  await page.waitForFunction(() => gameStarted && !loading && !plagueMode, null, { timeout: 60000 });
+  const settings = await page.evaluate(() => ({ waveInterval, waveTimer, cardMode }));
+  expect(settings).toMatchObject({ waveInterval: 480, cardMode: false });
+  expect(settings.waveTimer).toBeGreaterThan(479.5);
+  expect(errors).toEqual([]);
+});
+
 for (const viewport of [{ name: 'phone', width: 360, height: 800 }, { name: 'desktop', width: 1280, height: 800 }]) {
 test(`Plague top stats show only icons and values on ${viewport.name}`, async ({ page }) => {
   await page.setViewportSize({ width: viewport.width, height: viewport.height });

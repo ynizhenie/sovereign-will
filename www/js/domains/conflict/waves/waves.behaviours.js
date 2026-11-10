@@ -793,7 +793,7 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     const own = touchingBuilding.side === 'red';
     if (!prioritizeTarget && !own && isShelter(touchingBuilding) && !turned) {
       breakBuilding(en, touchingBuilding, enemyDef, dt);
-    } else if (!prioritizeTarget && !own && en.isBlockedPath) {
+    } else if (!own && en.isBlockedPath) {
       // Break only when the chosen path actually goes through it. Once a breach opens, connected
       // neighbouring walls are no longer treated as obstacles if the replanned route goes around.
       breakBuilding(en, touchingBuilding, enemyDef, dt);
