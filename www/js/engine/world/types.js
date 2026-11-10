@@ -58,6 +58,8 @@
  * @property {number} [hunger]       seconds until its next meal
  * @property {boolean} [quiver]
  * @property {number} [arrows]
+ * @property {number} [rifleAmmo]
+ * @property {boolean} [camouflage]
  * @property {boolean} [shield]
  * @property {boolean} [helmet]  (#326, 27.10, 27)
  * @property {string|boolean} [armor]
@@ -238,6 +240,8 @@
  * @property {Point[] | null} path
  * @property {Point | null} pathTarget
  * @property {number} [arrows]
+ * @property {number} [rifleAmmo]
+ * @property {boolean} [camouflage]
  * @property {number} [facing]
  * @property {Look} [look]         how it's drawn, given when it's made (#306)
  * @property {number} [burning]

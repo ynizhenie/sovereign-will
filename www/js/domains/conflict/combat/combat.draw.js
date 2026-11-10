@@ -227,6 +227,10 @@ export function drawProjectiles() {
   game.projectiles.forEach(proj => {
     // fireballs bigger and orange; a bolt is short and thick; everything else is an arrow, pointing where it flies
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
+    else if (proj.bullet) {
+      ctx.save(); ctx.translate(proj.x, proj.y); ctx.rotate(Math.atan2(proj.vy, proj.vx));
+      ctx.fillStyle = '#f2d16b'; ctx.fillRect(-3, -1, 6, 2); ctx.restore(); return;
+    }
     else if (proj.bolt) { drawBolt(proj); return; }
     else { drawArrow(proj); return; }
     ctx.beginPath(); ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2); ctx.fill();

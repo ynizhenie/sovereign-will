@@ -28,7 +28,7 @@ export const equipmentConfig = {
         raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 8, blightSeconds: 2, blightRot: 1 } }
   },
 
-  // family: club / sword / spear / bow / crossbow — how it's drawn and used (bows and crossbows shoot
+  // family: club / sword / spear / bow / crossbow / rifle — how it's drawn and used (bows and crossbows shoot
   //   arrows). combat: damage per hit, range of a hit, cooldown (s) between hits, approach: how close the
   //   settler walks to an enemy before striking (a ranged weapon: shooting distance), tentReach: same for
   //   enemy tents; ranged weapons also: projectileSpeed, projectileLife (ticks).
@@ -56,6 +56,9 @@ export const equipmentConfig = {
     // arrows (a quiver), and out of them its bearer draws a dagger as an archer does
     crossbow: { id: 'crossbow', icon: 'crossbow', cost: { wood: 20, iron: 4, rope: 4 }, family: 'crossbow',
       combat: { damage: 65, cooldown: 2.2, approach: 310, tentReach: 310, projectileSpeed: 7.2, projectileLife: 115 },
+      dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
+    rifle: { id: 'rifle', icon: 'rifle', cost: {}, family: 'rifle', hidden: true,
+      combat: { damage: 45, cooldown: 0.35, approach: 310, tentReach: 310, projectileSpeed: 7.2, projectileLife: 115, magazine: 30, reload: 2.4 },
       dagger: { damage: 15, range: 30, cooldown: 0.5, approach: 22, tentReach: 25, closeTiles: 3 } },
     // the fire imps' fireballs: shot like a bow (arrows are their charges), not made in the Weapons tab
   },

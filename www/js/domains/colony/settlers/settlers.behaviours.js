@@ -142,6 +142,9 @@ export function prepareSettler(s, dt) {
   }
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) { s.attackCooldown -= dt; if (s.attackCooldown < 1e-6) s.attackCooldown = 0; } // (#326, 27.10, 16: 0.4 s less 24 steps left a hair over 0, a step lost a blow)
+  if (s.weapon === 'rifle' && game.gameMode === 'battle' && (s.rifleAmmo || 0) <= 0 && s.attackCooldown === 0) {
+    s.rifleAmmo = GAME_CONFIG.weapons.rifle.combat.magazine;
+  }
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
 }
 

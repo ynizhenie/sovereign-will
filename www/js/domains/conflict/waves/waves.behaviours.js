@@ -222,6 +222,10 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  if (en.weapon === 'rifle' && game.gameMode === 'battle') {
+    en.attackCooldown = Math.max(0, (en.attackCooldown || 0) - dt);
+    if ((en.rifleAmmo || 0) <= 0 && en.attackCooldown === 0) en.rifleAmmo = GAME_CONFIG.weapons.rifle.combat.magazine;
+  }
   if (en.portalTransit) return;
   if (isGhostStunned(en)) return;
   const activeCampGuard = en.campGuard && game.raidActive && en.campId === game.raidCampId;
@@ -717,16 +721,21 @@ function shotOf(enemyDef) {
 /** @param {any} [fromTower] */
 function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = null) {
   const shot = shotOf(enemyDef), reach = fromTower ? fromTower.tower.reach || 1 : 1;
-  en.attackCooldown = (en.attackCooldown || 0) - dt;
+  if (enemyDef.weapon !== 'rifle') en.attackCooldown = (en.attackCooldown || 0) - dt;
   if (clearShot && minDist < shot.range * reach && en.attackCooldown <= 0) {
     let angle = Math.atan2(target.y - en.y, target.x - en.x);
     const bolt = enemyDef.weapon === 'crossbow';
-    playSound(bolt ? 'crossbow' : 'bow', en);
+    const rifle = enemyDef.weapon === 'rifle';
+    if (rifle && (en.rifleAmmo || 0) <= 0) return;
+    playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', en);
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * shot.arrowSpeed, vy: Math.sin(angle) * shot.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
-      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt });
+      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt, bullet: rifle });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
-    en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
+    if (rifle) {
+      en.rifleAmmo--;
+      en.attackCooldown = en.rifleAmmo === 0 ? GAME_CONFIG.weapons.rifle.combat.reload : shot.cooldown / (en.battleAttackSpeed || 1);
+    } else en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
     en.swingWeapon = null;
     en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; en.struckAt = game.pathTick; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle' && !game.plagueMode) en.arrows--;

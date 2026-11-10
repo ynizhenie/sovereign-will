@@ -25,7 +25,7 @@ export const BATTLE_RESULT_SECONDS = 4;
  *   shield: boolean, helmet: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string,
  *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
- *   winner: string | null, resultTimer: number, nextId: number, savedMapSettings: { cols: number, rows: number } | null,
+ *   winner: string | null, resultTimer: number, nextId: number, rifleUnlocked: boolean, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, savedDifficulty: string | null, theme: string, fieldHighlight: string }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
@@ -45,6 +45,7 @@ export const battle = {
   winner: null,       // green / red / draw
   resultTimer: 0,
   nextId: 1,
+  rifleUnlocked: false,
   savedMapSettings: null,
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   savedDifficulty: null, // the Endless choice, back when the battle's left
@@ -125,10 +126,13 @@ export function makeBattleUnit(entry) {
   const pet = GAME_CONFIG.settlerTypes[preset.type].pet;
   const look = entry.look || (entry.look = pet ? newPetLook(pet) : newLook());
   // (#326) on the red half: an enemy, the very same unit
-  const enemyKey = battleSide(entry.x) === 'red' ? presetEnemyKey(preset.faction, preset.preset) : null;
+  const enemyKey = battleSide(entry.x) === 'red'
+    ? preset.preset === 'rifle' ? battleRifleEnemyKey(preset.faction) : presetEnemyKey(preset.faction, preset.preset)
+    : null;
   if (enemyKey) {
     const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, enemyKey);
     en.battleEntry = entry;
+    if (preset.preset === 'rifle') Object.assign(en, { camouflage: true, rifleAmmo: GAME_CONFIG.weapons.rifle.combat.magazine });
     en.look = look;
     // (#279) armour and a shield as yours can have (a shield: a melee one); a banner too,
     // given by the player, not picked by the game
@@ -144,11 +148,14 @@ export function makeBattleUnit(entry) {
     return;
   }
   const archer = isRangedWeapon(preset.weapon);
+  const quiver = preset.weapon === 'bow' || preset.weapon === 'crossbow';
   const id = entry.id ?? (entry.id = battle.nextId++); // (kept: a tap re-makes the line-up, a pet's tail shouldn't jump)
   const s = createSettler(preset.type, id, entry.x, entry.y, { look });
   Object.assign(s, {
     weapon: preset.weapon, tool: preset.tool || 'none',
-    role: s.role === 'pet' ? 'pet' : archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver: archer, quiverCapacity: 30, arrows: archer ? 30 : 0, battleEntry: entry
+    role: s.role === 'pet' ? 'pet' : archer ? 'archer' : preset.tool ? 'worker' : 'soldier', quiver, quiverCapacity: 30, arrows: quiver ? 30 : 0,
+    ...(preset.preset === 'rifle' ? { camouflage: true, rifleAmmo: GAME_CONFIG.weapons.rifle.combat.magazine } : {}),
+    battleEntry: entry
   });
   s.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI;
   const armour = s.role === 'pet' ? null : battleArmor(entry.armor); // (a pet wears nothing, #314)
@@ -159,6 +166,27 @@ export function makeBattleUnit(entry) {
   if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
   if (s.tool === 'medbag') s.bagHerbs = GAME_CONFIG.medic.bagSize; // (#326: a medic starts with its bag full)
   game.settlers.push(s);
+}
+
+function battleRifleEnemyKey(factionId) {
+  const faction = GAME_CONFIG.factions[factionId];
+  const factionEnemies = faction.enemies || [];
+  const baseId = factionEnemies.find(id => GAME_CONFIG.enemies[id]?.weapon === 'sword') || factionEnemies[0] || 'raider';
+  const base = GAME_CONFIG.enemies[baseId] || GAME_CONFIG.enemies.raider;
+  const id = `${factionId}_battle_rifle`;
+  GAME_CONFIG.enemies[id] ||= {
+    ...base,
+    id,
+    faction: factionId,
+    type: 'archer',
+    weapon: 'rifle',
+    ranged: { range: 310, keepAway: 264, cooldown: GAME_CONFIG.weapons.rifle.combat.cooldown, arrowSpeed: GAME_CONFIG.weapons.rifle.combat.projectileSpeed, arrowLife: GAME_CONFIG.weapons.rifle.combat.projectileLife },
+    dagger: { damage: 15, cooldown: 0.5 },
+    waveKey: undefined,
+    buildsTents: false,
+    quiver: undefined
+  };
+  return id;
 }
 
 // A clear field: the ground picked in the settings, the town hall out of the way, no waves, no animals
@@ -285,6 +313,8 @@ function generateBattleMazeLayout() {
 
 export function startBattleMode() {
   resetBattleSecretTapCount();
+  battle.rifleUnlocked = false;
+  if (battle.preset.endsWith(':rifle')) battle.preset = 'humans:sword';
   if (battle.field === 'backrooms') {
     battle.field = lastNonSecretBattleField;
     backroomsMazeLayout = [];
@@ -307,6 +337,8 @@ export function startBattleMode() {
 
 export function leaveBattleMode() {
   resetBattleSecretTapCount();
+  battle.rifleUnlocked = false;
+  if (battle.preset.endsWith(':rifle')) battle.preset = 'humans:sword';
   if (battle.field === 'backrooms') {
     battle.field = lastNonSecretBattleField;
     backroomsMazeLayout = [];

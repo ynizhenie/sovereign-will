@@ -54,7 +54,7 @@ test('an archer out of arrows draws its dagger and stabs at one close by (weakly
   expect(r.enemyWeapon).toBe('dagger');
 });
 
-test('ranged fighters use a dagger against adjacent enemies, but keep shooting from watchtowers', async ({ page }) => {
+test('bow fighters use a dagger at close range while rifle fighters keep shooting', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
@@ -113,6 +113,20 @@ test('ranged fighters use a dagger against adjacent enemies, but keep shooting f
     fightEnemies(crossbow, createSettlerTick(1 / 60));
     const crossbowMelee = { weapon: crossbow.swingWeapon, arrows: crossbow.arrows, damage: 1e4 - crossbowTarget.hp };
 
+    const rifle = makeSettler(9, x + 1200, y, { weapon: 'rifle', role: 'soldier', rifleAmmo: 30 });
+    const rifleTarget = createNormalEnemy({ x: rifle.x + 10, y }, 'raider');
+    rifleTarget.fromWave = true;
+    rifleTarget.hp = rifleTarget.maxHp = 1e4;
+    enemies = [rifleTarget]; settlers = [rifle];
+    const rifleShots = game.projectiles.length;
+    fightEnemies(rifle, createSettlerTick(1 / 60));
+    const rifleCloseFight = {
+      shots: game.projectiles.length - rifleShots,
+      weapon: rifle.swingWeapon,
+      daggerTarget: rifle.daggerTarget,
+      ammo: rifle.rifleAmmo
+    };
+
     const target = makeSettler(2, x + 300, y, { weapon: 'fist', role: 'worker' });
     const enemyArcher = createNormalEnemy({ x: target.x + 10, y }, 'raider_archer');
     target.hp = target.maxHp = 1e4; enemyArcher.hp = enemyArcher.maxHp = 1e4;
@@ -156,12 +170,13 @@ test('ranged fighters use a dagger against adjacent enemies, but keep shooting f
     tickEnemy(towerArcher, 1 / 60);
     const enemyTowerShot = towerArcher.platform === tower && towerArcher.weapon === 'bow' &&
       game.projectiles.length > enemyTowerShots && game.projectiles.at(-1).owner === towerArcher;
-    return { playerMelee, crossbowMelee, immediateDagger, enemyMelee, playerKeepsDagger, playerUsesDaggerAfterMeleeHit, enemyUsesDaggerAfterMeleeHit, playerKeepsBow, enemyKeepsBow, playerTowerShot, enemyTowerShot };
+    return { playerMelee, crossbowMelee, rifleCloseFight, immediateDagger, enemyMelee, playerKeepsDagger, playerUsesDaggerAfterMeleeHit, enemyUsesDaggerAfterMeleeHit, playerKeepsBow, enemyKeepsBow, playerTowerShot, enemyTowerShot };
   });
   expect(r.playerMelee).toMatchObject({ arrows: 5, shots: 0, swingWeapon: 'dagger', weaponBloodAge: 0 });
   expect(r.playerMelee.damage).toBeGreaterThan(0);
   expect(r.crossbowMelee).toMatchObject({ weapon: 'dagger', arrows: 5 });
   expect(r.crossbowMelee.damage).toBeGreaterThan(0);
+  expect(r.rifleCloseFight).toEqual({ shots: 1, weapon: null, daggerTarget: null, ammo: 29 });
   expect(r.immediateDagger.weapon).toBe('dagger');
   expect(r.immediateDagger.damage).toBeGreaterThan(0);
   expect(r.immediateDagger.animation).toBe(true);

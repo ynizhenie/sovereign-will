@@ -166,7 +166,57 @@ test('one Units sheet for both sides, every faction under its heading in the sam
   expect(shown).toEqual(expect.arrayContaining(['wall_wood', 'watchtower', 'grave', 'portal', 'sacrifice_circle']));
 });
 
-test('any unit on either side: on the left one of yours, on the right an enemy, the very same unit (#326)', async ({ page }) => {
+test('holding Units for five seconds unlocks the battle rifle and releasing resets progress', async ({ page }) => {
+  await openBattle(page);
+  expect(await page.locator('[data-preset="humans:rifle"]').count()).toBe(0);
+  const units = page.locator('[data-battle-category="units"]');
+  await units.evaluate(button => { for (let i = 0; i < 10; i++) button.click(); });
+  expect(await page.evaluate(() => battle.rifleUnlocked)).toBe(false);
+  await units.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0 });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, pointerType: 'mouse' })));
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => battle.rifleUnlocked)).toBe(false);
+  await units.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0 });
+  await page.waitForTimeout(5100);
+  expect(await page.evaluate(() => battle.rifleUnlocked)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2, pointerType: 'mouse' })));
+  await units.click();
+  await expect(page.locator('#battle-panel')).toHaveClass(/open/);
+  await expect(page.locator('[data-preset="humans:rifle"]')).toBeVisible();
+  const result = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:rifle';
+    const green = at(10, 10), red = at(30, 10);
+    battleTap(green.x, green.y);
+    battleTap(red.x, red.y);
+    const player = settlers[0];
+    const aimingHand = bowDraw(player).other;
+    for (let i = 0; i < 30; i++) {
+      player.attackCooldown = 0;
+      performAttack(player, player.x + 100, player.y);
+    }
+    const reloadingHand = bowDraw(player).other;
+    return {
+      unlocked: battle.rifleUnlocked,
+      rosterCount: document.querySelectorAll('[data-preset$=":rifle"]').length,
+      player: { weapon: player.weapon, camouflage: player.camouflage, ammo: player.rifleAmmo, reload: player.attackCooldown },
+      enemy: { weapon: enemies[0].weapon, camouflage: enemies[0].camouflage, ammo: enemies[0].rifleAmmo },
+      hands: { aim: aimingHand, reload: reloadingHand },
+      bullets: game.projectiles.filter(projectile => projectile.bullet).length
+    };
+  });
+  expect(result.unlocked).toBe(true);
+  expect(result.rosterCount).toBeGreaterThanOrEqual(3);
+  expect(result.player).toEqual({ weapon: 'rifle', camouflage: true, ammo: 0, reload: 2.4 });
+  expect(result.enemy).toEqual({ weapon: 'rifle', camouflage: true, ammo: 30 });
+  expect(result.hands.aim.x).toBeGreaterThan(8);
+  expect(Math.abs(result.hands.aim.y)).toBeLessThan(1);
+  expect(result.hands.reload.y).toBeGreaterThan(result.hands.aim.y + 2);
+  expect(result.bullets).toBe(30);
+});
+
+test('any unit on either side: on the left one of yours, on the right an enemy, the  very same unit (#326)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });

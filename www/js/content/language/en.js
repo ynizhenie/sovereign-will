@@ -54,7 +54,8 @@ export const enLanguage = {
         iron_sword: 'Iron sword',
         iron_spear: 'Iron spear',
         bow: 'Bow',
-        crossbow: 'Crossbow'
+        crossbow: 'Crossbow',
+        rifle: 'Rifle'
       },
       buildings: {
         smithy: 'Smithy',
@@ -188,7 +189,8 @@ export const enLanguage = {
         iron_sword: 'An iron sword: stronger than a plain one.',
         iron_spear: 'An iron spear: stronger than a plain one.',
         bow: 'Shoots from afar; needs arrows.',
-        crossbow: 'Shoots farther and much harder, but reloads slowly. Needs arrows.'
+        crossbow: 'Shoots farther and much harder, but reloads slowly. Needs arrows.',
+        rifle: 'Powerful shots at crossbow range; reloads after 30 rounds.'
       },
       gear: {
         leather_armor: 'A little more health, a little less damage taken. Weaker than iron.',
@@ -933,6 +935,7 @@ export const enLanguage = {
       'preset.iron_spear': 'Iron spear',
       'preset.bow': 'Archer',
       'preset.crossbow': 'Crossbowman',
+      'preset.rifle': 'Rifleman',
       'preset.medic': 'Medic',
       'preset.necromancer': 'Necromancer',
       'preset.raider_club': 'Savage',

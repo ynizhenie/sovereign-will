@@ -139,7 +139,7 @@ export function drawEnemy(en) {
     const healing = en.working > 0 && en.workKind === 'heal';
     const building = en.working > 0 && en.workKind === 'build';
     const enemyDef = getEnemyDef(en);
-    const torchAside = torchAtSide(en, !!en.torch, en.weapon !== 'fist' || (enemyDef.tool && enemyDef.tool !== 'none') || enemyDef.necromancer);
+    const torchAside = (en.weapon === 'rifle' && en.torch) || torchAtSide(en, !!en.torch, en.weapon !== 'fist' || (enemyDef.tool && enemyDef.tool !== 'none') || enemyDef.necromancer);
     const torchHeld = en.torch && !torchAside;
     const drawMedicBag = front => {
       if (!healing || !enemyDef.healer) return;
@@ -172,7 +172,7 @@ export function drawEnemy(en) {
       if (handBack) at(inHand);
       at(() => drawMedicBag(false));
     }
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, otherPoint: en.asleep ? null : (bowDraw(en) || {}).other || null, simple, shadow: false });
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), camoColor: getEnemyColor(en), camouflage: !!en.camouflage, skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, otherPoint: en.asleep ? null : (bowDraw(en) || {}).other || null, simple, shadow: false });
     if (en.asleep) drawSleepZs(en.x + en.radius, en.y - en.radius);
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);

@@ -1,21 +1,58 @@
 // The battle's panel: units and buildings by faction, what to place, armour and shield; its buttons
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, escapeHtml, hidePlacing, iconHtml, richText, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
+import { closeSheet, escapeHtml, hidePlacing, iconHtml, openSheet, richText, setRichText, showPlacing, toggleSheet } from '../../ui/index.js';
 import { isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
-import { BATTLE_PRESETS, battlePresetLabel, bigPresetOf, getBattleBuildings } from './battle.roster.js';
+import { battlePresetLabel, bigPresetOf, getBattleBuildings, getBattlePresets } from './battle.roster.js';
 import { activateBattleBackrooms, battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 let secretFieldClicks = 0;
 let lastSecretFieldClick = 0;
+const SECRET_RIFLE_HOLD_MS = 5000;
+/** @type {{ button: HTMLElement, pointerId: number, unlockTimer: number } | null} */
+let secretRifleHold = null;
+let suppressNextUnitsTap = false;
 
 export function resetBattleSecretTapCount() {
   secretFieldClicks = 0;
   lastSecretFieldClick = 0;
+  suppressNextUnitsTap = false;
+  cancelSecretRifleHold();
+}
+
+function cancelSecretRifleHold() {
+  if (!secretRifleHold) return;
+  clearTimeout(secretRifleHold.unlockTimer);
+  secretRifleHold = null;
+}
+
+/** @param {HTMLElement} button @param {PointerEvent} event */
+function startSecretRifleHold(button, event) {
+  if (battle.phase !== 'setup' || battle.rifleUnlocked || !event.isPrimary ||
+      (event.pointerType === 'mouse' && event.button !== 0)) return;
+  suppressNextUnitsTap = false;
+  cancelSecretRifleHold();
+  const unlockTimer = setTimeout(() => {
+    if (!secretRifleHold || secretRifleHold.button !== button) return;
+    if (battle.phase === 'setup') {
+      battle.rifleUnlocked = true;
+      battle.preset = 'humans:rifle';
+      setBattleCategory('units');
+      openSheet('battle', 'units');
+      suppressNextUnitsTap = true;
+    }
+    cancelSecretRifleHold();
+  }, SECRET_RIFLE_HOLD_MS);
+  secretRifleHold = { button, pointerId: event.pointerId, unlockTimer };
+}
+
+/** @param {PointerEvent} event */
+function endSecretRifleHold(event) {
+  if (secretRifleHold && event.pointerId === secretRifleHold.pointerId) cancelSecretRifleHold();
 }
 
 export function renderBattlePanel() {
@@ -83,7 +120,7 @@ export function renderBattlePanel() {
   } else {
     for (const faction of factions) {
       section(faction.label);
-      for (const preset of BATTLE_PRESETS.filter(p => p.faction === faction.id && p.size !== 'big')) {
+      for (const preset of getBattlePresets().filter(p => p.faction === faction.id && p.size !== 'big')) {
         const shown = (battle.big && bigPresetOf(preset)) || preset; // (#326: as a big one, when the switch is on)
         const { icons, hp, damage } = presetStats(shown);
         add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(shown), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
@@ -180,10 +217,26 @@ export function initBattlePanel() {
   onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
   onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
   // the dock: a category's sheet opens (again: closes)
-  document.querySelectorAll('[data-battle-category]').forEach(b => onTap(b, () => {
-    setBattleCategory(b.dataset.battleCategory);
-    toggleSheet('battle', b.dataset.battleCategory);
-  }));
+  document.querySelectorAll('[data-battle-category]').forEach(b => {
+    if (b.dataset.battleCategory === 'units') {
+      b.addEventListener('pointerdown', event => startSecretRifleHold(b, event));
+      b.addEventListener('pointerleave', endSecretRifleHold);
+      b.addEventListener('lostpointercapture', endSecretRifleHold);
+      b.addEventListener('contextmenu', event => { if (secretRifleHold) event.preventDefault(); });
+    }
+    onTap(b, () => {
+      if (b.dataset.battleCategory === 'units' && suppressNextUnitsTap) {
+        suppressNextUnitsTap = false;
+        return;
+      }
+      setBattleCategory(b.dataset.battleCategory);
+      toggleSheet('battle', b.dataset.battleCategory);
+    });
+  });
+  window.addEventListener('pointerup', endSecretRifleHold, true);
+  window.addEventListener('pointercancel', endSecretRifleHold, true);
+  window.addEventListener('blur', cancelSecretRifleHold);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelSecretRifleHold(); });
   // (the armour: off, leather, iron, off again; the shield and the banner: on or off, #298, #279)
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
     const gear = /** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear);

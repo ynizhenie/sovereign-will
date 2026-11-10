@@ -54,7 +54,8 @@ export const ukLanguage = {
         iron_sword: 'Залізний меч',
         iron_spear: 'Залізний спис',
         bow: 'Лук',
-        crossbow: 'Арбалет'
+        crossbow: 'Арбалет',
+        rifle: 'Гвинтівка'
       },
       buildings: {
         smithy: 'Кузня',
@@ -188,7 +189,8 @@ export const ukLanguage = {
         iron_sword: 'Залізний меч: сильніший за звичайний.',
         iron_spear: 'Залізний спис: сильніший за звичайний.',
         bow: 'Стріляє здалеку; потрібні стріли.',
-        crossbow: 'Бʼє далі й значно сильніше, та перезаряджається довго. Потрібні стріли.'
+        crossbow: 'Бʼє далі й значно сильніше, та перезаряджається довго. Потрібні стріли.',
+        rifle: 'Потужні постріли на відстань арбалета; магазин на 30 набоїв.'
       },
       gear: {
         leather_armor: 'Трохи більше здоров\'я і менше шкоди. Слабша за залізну.',
@@ -933,6 +935,7 @@ export const ukLanguage = {
       'preset.iron_spear': 'Залізний спис',
       'preset.bow': 'Лучник',
       'preset.crossbow': 'Арбалетник',
+      'preset.rifle': 'Стрілець із гвинтівки',
       'preset.medic': 'Лікар',
       'preset.necromancer': 'Некромант',
       'preset.raider_club': 'Дикун',

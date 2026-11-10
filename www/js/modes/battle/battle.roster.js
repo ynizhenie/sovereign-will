@@ -16,6 +16,13 @@ export const BATTLE_PRESETS = Object.values(GAME_CONFIG.factions).filter(f => f.
   .filter(({ unit }) => unit)
   .map(({ preset, unit }) => ({ id: `${f.id}:${preset.id}`, preset: preset.id, size: preset.size, ...unit })));
 
+export function getBattlePresets() {
+  if (!battle.rifleUnlocked) return BATTLE_PRESETS;
+  return [...BATTLE_PRESETS, ...Object.values(GAME_CONFIG.factions)
+    .filter(f => f.ready && (f.units || ['normal']).length > 0)
+    .map(f => ({ id: `${f.id}:rifle`, preset: 'rifle', size: 'normal', faction: f.id, type: (f.units || ['normal'])[0], weapon: 'rifle', tool: null }))];
+}
+
 // buildings any faction has, then each faction's own (those with `factions` in GAME_CONFIG.buildings); (#279)
 // all of them now, but a fish trap (on water) and crops
 export const BATTLE_BUILDINGS = ['wall_wood', 'wall_stone', 'door', 'iron_door', 'spikes', 'iron_trap', 'watchtower', 'dummy', 'warehouse', 'workshop', 'smithy', 'smelter',
@@ -28,7 +35,7 @@ export function bigPresetOf(preset) {
 }
 
 export function getBattlePreset(id) {
-  return BATTLE_PRESETS.find(p => p.id === id);
+  return getBattlePresets().find(p => p.id === id);
 }
 
 // What a preset is called: every faction's as the humans' (Unarmed, Club, Archer...; 27.10, 32: an archer, not

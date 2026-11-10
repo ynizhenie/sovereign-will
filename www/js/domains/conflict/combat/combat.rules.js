@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
-import { armorOf, getWeaponStats, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { armorOf, getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
@@ -32,7 +32,7 @@ export function areAdjacentTiles(a, b) {
 
 export function shouldUseRangedDagger(unit, target, weaponId, wasHitByMelee) {
   const dagger = (getDefinition('weapons', weaponId) || {}).dagger;
-  if (!target || !dagger) {
+  if (!isArrowWeapon(weaponId) || !target || !dagger) {
     unit.daggerTarget = null;
     return false;
   }
@@ -119,7 +119,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
   faceTowards(attacker, targetX, targetY);
 
   const rangedWeapon = isRangedWeapon(attacker.weapon);
-  const dagger = rangedWeapon && (useDaggerForStructure || usesDagger(attacker))
+  const dagger = isArrowWeapon(attacker.weapon) && (useDaggerForStructure || usesDagger(attacker))
     ? (getDefinition('weapons', attacker.weapon) || {}).dagger
     : null;
   const normalStats = getWeaponStats(attacker, 'combat');
@@ -127,7 +127,9 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
   const attackCooldown = game.gameMode === 'battle' ? stats.cooldown / (attacker.battleAttackSpeed || 1) : stats.cooldown;
 
   if (rangedWeapon && !dagger && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
-    if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
+    const rifle = attacker.weapon === 'rifle';
+    if (rifle && (attacker.rifleAmmo || 0) <= 0) return;
+    if (!rifle && (!attacker.quiver || (attacker.arrows || 0) <= 0)) return;
     const bolt = isCrossbowWeapon(attacker.weapon);
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
     game.projectiles.push({ 
@@ -140,11 +142,15 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
       fromEnemy: false, 
       owner: attacker,
       bolt,
+      bullet: rifle,
       training: !!(attacker.idle && attacker.idle.act === 'train') // (#326) at a dummy: it sticks in it
     });
-    playSound(bolt ? 'crossbow' : 'bow', attacker);
+    playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', attacker);
     if (game.gameMode !== 'battle' && !game.plagueMode) attacker.arrows--; // arrows don't run out in battles (#404: nor in the Plague)
-    attacker.attackCooldown = attackCooldown;
+    if (rifle) {
+      attacker.rifleAmmo--;
+      attacker.attackCooldown = attacker.rifleAmmo === 0 ? stats.reload : attackCooldown;
+    } else attacker.attackCooldown = attackCooldown;
     attacker.shotAt = game.pathTick; attacker.shotLen = attackCooldown; // (its next arrow drawn, #306)
     attacker.swingWeapon = null;
     startSwing(attacker, 0.3);
@@ -434,13 +440,14 @@ export function getDefensePlan() {
 // where it fell. It fades after a while, in a corpse it goes with it. Nobody can pick it up (a dummy's, its
 // trainers collect).
 function stickInto(host, proj) {
+  if (proj.bullet) return;
   const keep = GAME_CONFIG.stuckArrows, arrow = { x: proj.x - host.x, y: proj.y - host.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy, bolt: !!proj.bolt };
   if (!host.stuck) host.stuck = [];
   if (host.stuck.length >= keep.perUnit) host.stuck.shift();
   host.stuck.push(arrow);
 }
 function dropOnGround(proj) {
-  if (proj.fire) return;
+  if (proj.fire || proj.bullet) return;
   const keep = GAME_CONFIG.stuckArrows;
   game.stuckArrows.push({ x: proj.x, y: proj.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy, bolt: !!proj.bolt });
   if (game.stuckArrows.length > keep.ground) game.stuckArrows.shift();
