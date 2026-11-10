@@ -1192,6 +1192,16 @@ body[data-hud="plague"] .plague-stats {
 }
 .plague-stat + .plague-stat { border-left: 1px solid rgba(200, 192, 206, 0.22); }
 .plague-stat .ic { width: 16px; height: 16px; flex: none; }
+.plague-stat-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .plague-stat b { color: #fff; font-size: 14px; font-variant-numeric: tabular-nums; }
 body[data-hud="plague"] .plague-upgrades-toggle {
   display: flex;
@@ -1278,9 +1288,31 @@ body[data-hud="plague"] .plague-upgrades-toggle {
 .plague-upgrades-heading h2 { margin: 0; }
 .plague-character-stats {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.plague-character-group {
+  min-width: 0;
+  padding: 8px 10px 6px;
+  border: 1px solid rgba(142, 106, 156, 0.38);
+  border-radius: 9px;
+  background: linear-gradient(120deg, rgba(142, 106, 156, 0.1), rgba(29, 32, 40, 0.48));
+}
+.plague-character-group-title {
+  margin: 0 0 4px;
+  padding: 0 0 5px;
+  border-bottom: 1px solid rgba(187, 143, 206, 0.34);
+  color: #d7b5e5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.plague-character-group-stats {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px 18px;
-  margin-top: 12px;
 }
 .plague-character-stat {
   display: flex;
@@ -1298,13 +1330,14 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   .dock-row[data-hud-mode="plague"] { padding-inline: 5px; }
   body[data-hud="plague"] .plague-stats { gap: 1px; max-width: calc(100vw - 92px); padding: 2px 3px; }
   .plague-stat { gap: 3px; font-size: 8px; padding: 5px 3px; }
-  .plague-stat > span:not(#plague-level) { display: none; } /* (#404: the level stays, by its icon) */
   .plague-stat .ic { width: 13px; height: 13px; }
   .plague-stat b { font-size: 12px; }
   body[data-hud="plague"] .plague-upgrades-toggle { width: 30px; height: 30px; flex-basis: 30px; }
   .plague-upgrades-content { padding: 12px; }
-  .plague-character-stats { gap: 4px 8px; }
-  .plague-character-stat { gap: 4px; padding: 4px 0; font-size: 11px; }
+  .plague-character-stats { gap: 7px; }
+  .plague-character-group { padding: 7px 8px 5px; }
+  .plague-character-group-stats { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .plague-character-stat { gap: 8px; padding: 5px 0; font-size: 11px; }
 }
 
 /* A raid on an enemy camp (#255): the bar under the top of the screen, the party picker */

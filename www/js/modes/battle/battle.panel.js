@@ -13,7 +13,7 @@ import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 let secretFieldClicks = 0;
 let lastSecretFieldClick = 0;
 const SECRET_RIFLE_HOLD_MS = 5000;
-/** @type {{ button: HTMLElement, pointerId: number, unlockTimer: number } | null} */
+/** @type {{ button: HTMLElement, pointerId: number, unlockTimer: ReturnType<typeof setTimeout> } | null} */
 let secretRifleHold = null;
 let suppressNextUnitsTap = false;
 
@@ -217,7 +217,9 @@ export function initBattlePanel() {
   onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
   onTap(document.getElementById('battle-clear-red'), () => clearBattleSide('red'));
   // the dock: a category's sheet opens (again: closes)
-  document.querySelectorAll('[data-battle-category]').forEach(b => {
+  /** @type {NodeListOf<HTMLElement>} */
+  const battleCategories = document.querySelectorAll('[data-battle-category]');
+  battleCategories.forEach(b => {
     if (b.dataset.battleCategory === 'units') {
       b.addEventListener('pointerdown', event => startSecretRifleHold(b, event));
       b.addEventListener('pointerleave', endSecretRifleHold);
@@ -252,7 +254,7 @@ export function initBattlePanel() {
   }));
   // the battle's settings (#255): the field and difficulty
   document.querySelectorAll('[data-battle-field]').forEach(b => onTap(b, () => { setBattleField(b.dataset.battleField); renderBattlePanel(); }));
-  const secretTrigger = document.querySelector('[data-battle-secret-trigger]');
+  const secretTrigger = /** @type {HTMLButtonElement | null} */ (document.querySelector('[data-battle-secret-trigger]'));
   if (secretTrigger) {
     onTap(secretTrigger, () => {
       const now = performance.now();
@@ -264,7 +266,7 @@ export function initBattlePanel() {
         renderBattlePanel();
       }
     });
-    secretTrigger.addEventListener('keydown', event => {
+    secretTrigger.addEventListener('keydown', /** @param {KeyboardEvent} event */ event => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         secretTrigger.click();

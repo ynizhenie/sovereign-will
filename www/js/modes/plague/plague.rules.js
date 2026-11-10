@@ -134,14 +134,14 @@ const CARD_DEFS = {
 const newPlagueState = () => ({
   bandInterval: rangeOf('interval', game.plagueSettings?.interval),
   bandCount: rangeOf('groups', game.plagueSettings?.groups),
-  energy: STARTING_MAX_ENERGY, maxEnergy: STARTING_MAX_ENERGY, energyRegen: 0.2,
+  energy: STARTING_MAX_ENERGY, maxEnergy: STARTING_MAX_ENERGY, energyRegen: 0.25,
   maxSquad: STARTING_SQUAD, raisesPerCast: 1, raiseCostFactor: 1, reviveRange: REVIVE_RANGE,
   reviveCooldown: 1.5, reviveTimer: 0, groupTimer: rollRange(rangeOf('interval', game.plagueSettings?.interval)),
   groupId: 0, groups: [], groupsCleared: 0, elapsedTime: 0,
   enemiesKilled: 0, killsTowardUpgrade: 0, nextUpgradeKills: 5,
-  offer: null, upgrades: {}, commandRange: TILE_SIZE * 10, heroMaxHp: BASE_HERO_HEALTH,
+  offer: null, upgrades: {}, commandRange: TILE_SIZE * 6, heroMaxHp: BASE_HERO_HEALTH,
   speedFactor: 1, minionHp: 0,
-  healStrength: 2, healTargets: 1, healRange: 5 * TILE_SIZE
+  healStrength: 2.5, healTargets: 1, healRange: 5 * TILE_SIZE
 });
 
 function placeCemeteries() {
@@ -389,34 +389,55 @@ function drawCharacterStats(plague) {
   if (!panel) return;
   const zombie = GAME_CONFIG.settlerTypes.zombie, big = GAME_CONFIG.settlerTypes.big_zombie;
   const tiles = n => `${n / TILE_SIZE} ${t('plague.stats.tiles')}`, perSecond = n => `${+n.toFixed(2)} ${t('plague.stats.perSecond')}`;
-  const cost = factor => `${Math.ceil(RAISE_COST.normal * factor)} / ${Math.ceil(RAISE_COST.big * factor)}`;
-  /** @type {[string, string][]} */
-  const stats = [
-    ['plague.stats.health', String(plague.heroMaxHp)],
-    ['plague.stats.speed', (zombie.speed * plague.speedFactor).toFixed(2)],
-    ['plague.stats.energy', String(plague.maxEnergy)],
-    ['plague.stats.energyRegen', perSecond(plague.energyRegen)],
-    ['plague.stats.raiseCost', cost(plague.raiseCostFactor)],
-    ['plague.stats.raiseCooldown', `${+plague.reviveCooldown.toFixed(2)} ${t('plague.stats.seconds')}`],
-    ['plague.stats.raisesPerCast', String(plague.raisesPerCast)],
-    ['plague.stats.reviveRange', tiles(plague.reviveRange)],
-    ['plague.stats.squadCapacity', String(plague.maxSquad)],
-    ['plague.stats.minionHealth', `${zombie.hp + plague.minionHp} / ${big.hp + plague.minionHp}`],
-    ['plague.stats.commandRange', tiles(plague.commandRange)],
-    ['plague.stats.healRate', perSecond(plague.healStrength)],
-    ['plague.stats.healTargets', String(plague.healTargets)],
-    ['plague.stats.healRange', tiles(plague.healRange)]
+  /** @type {{ title: string, stats: [string, string][] }[]} */
+  const groups = [
+    { title: 'plague.stats.groupHealth', stats: [
+      ['plague.stats.health', String(plague.heroMaxHp)],
+      ['plague.stats.minionHealth', `${zombie.hp + plague.minionHp} / ${big.hp + plague.minionHp}`]
+    ] },
+    { title: 'plague.stats.groupMovement', stats: [
+      ['plague.stats.speed', (zombie.speed * plague.speedFactor).toFixed(2)]
+    ] },
+    { title: 'plague.stats.groupEnergy', stats: [
+      ['plague.stats.energy', String(plague.maxEnergy)],
+      ['plague.stats.energyRegen', perSecond(plague.energyRegen)]
+    ] },
+    { title: 'plague.stats.groupRaising', stats: [
+      ['plague.stats.raiseCooldown', `${+plague.reviveCooldown.toFixed(2)} ${t('plague.stats.seconds')}`],
+      ['plague.stats.raisesPerCast', String(plague.raisesPerCast)],
+      ['plague.stats.reviveRange', tiles(plague.reviveRange)]
+    ] },
+    { title: 'plague.stats.groupSquad', stats: [
+      ['plague.stats.squadCapacity', String(plague.maxSquad)],
+      ['plague.stats.commandRange', tiles(plague.commandRange)]
+    ] },
+    { title: 'plague.stats.groupHealing', stats: [
+      ['plague.stats.healRate', perSecond(plague.healStrength)],
+      ['plague.stats.healTargets', String(plague.healTargets)],
+      ['plague.stats.healRange', tiles(plague.healRange)]
+    ] }
   ];
   panel.replaceChildren();
-  for (const [label, amount] of stats) {
-    const row = document.createElement('div');
-    row.className = 'plague-character-stat';
-    const name = document.createElement('span');
-    name.textContent = t(label);
-    const value = document.createElement('b');
-    value.textContent = amount;
-    row.append(name, value);
-    panel.appendChild(row);
+  for (const group of groups) {
+    const section = document.createElement('div');
+    section.className = 'plague-character-group';
+    const heading = document.createElement('h3');
+    heading.className = 'plague-character-group-title';
+    heading.textContent = t(group.title);
+    const rows = document.createElement('div');
+    rows.className = 'plague-character-group-stats';
+    for (const [label, amount] of group.stats) {
+      const row = document.createElement('div');
+      row.className = 'plague-character-stat';
+      const name = document.createElement('span');
+      name.textContent = t(label);
+      const value = document.createElement('b');
+      value.textContent = amount;
+      row.append(name, value);
+      rows.appendChild(row);
+    }
+    section.append(heading, rows);
+    panel.appendChild(section);
   }
 }
 
@@ -609,7 +630,7 @@ export function updatePlagueHud() {
   if (squad.textContent !== squadText) squad.textContent = squadText;
   if (experience.textContent !== experienceText) experience.textContent = experienceText;
   // (#404) the level next to what's left to the next card (three icons of their own: energy, the squad, the level)
-  const level = document.getElementById('plague-level'), levelText = t('plague.level', { n: playerLevel(p) });
+  const level = document.getElementById('plague-level'), levelText = String(playerLevel(p));
   if (level && level.textContent !== levelText) level.textContent = levelText;
   const revive = document.getElementById('plague-revive');
   const label = document.getElementById('plague-revive-label');

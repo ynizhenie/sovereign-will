@@ -145,6 +145,11 @@ function cutIntoLogs(tree, def, two, factor) {
 // respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti). A tree hands
 // over the stump it was felled at: that goes once the tree's back, wherever it grew
 
+/**
+ * @param {string} kind
+ * @param {number | null} x
+ * @param {number | null} y
+ */
 function nearestOreSpawner(kind, x = null, y = null) {
   const spawners = getOreSpawners(kind);
   if (!spawners.length) return null;
@@ -157,6 +162,13 @@ function nearestOreSpawner(kind, x = null, y = null) {
   return nearest;
 }
 
+/**
+ * @param {string} type
+ * @param {number | null} nearX
+ * @param {number | null} nearY
+ * @param {Object | null} stump
+ * @param {{ oreSpawnerX?: number, oreSpawnerY?: number, zoneBound?: boolean, zoneRegrowths?: number } | null} resource
+ */
 export function scheduleRespawn(type, nearX = null, nearY = null, stump = null, resource = null) {
   const isOre = getMapResourceDef(type).regrow === 'spawner';
   const oreKind = isOre ? Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === type) : null;
