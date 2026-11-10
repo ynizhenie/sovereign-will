@@ -7,7 +7,7 @@ export { orderPossessed } from './settlers.orders.js';
 export { getHungerSeconds, renderRecruitRow, renderSettlerInfo, updatePossessionView } from './settlers.panel.js';
 export { changeSettlerType, createSettler, damageSettler, deselectSettler, dismissSettler, dropSettlerLoot, getCurrentPop, getMaxPop, getPossessed, getRecentAttacker, getSelectedSettler, getSelection, getUpgrade, isBigBody, isPet, isUntouchable, newPetLook, petKindOf, removeDeadSettlers, selectAllSoldiers, spawnSettler, switchPossession, tickMeals, toggleInGroup, unpossess, upgradeRank, upgradeToBig } from './settlers.rules.js';
 export { fetchNightTorch, lightTorches, needsTorches, nightReach, onFuelDuty, onWatch, sleepAtNight, tickNight } from './settlers.night.js';
-export { drawAllSpeech, drawSpeech, noteDay, says, someoneSays, speak, tickVoices } from './settlers.voices.js';
+export { drawAllSpeech, drawSpeech, noteDay, says, someoneSays, speak, tauntOnSight, tickVoices } from './settlers.voices.js';
 export { hasPlayerOrderFor } from './settlers.corpses.js';
 export { roleTitle } from './settlers.commanders.js';
 export { drawHeldTool, drawHeldWeapon, drawWorkTool } from './settlers.items.js';

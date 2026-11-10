@@ -34,6 +34,7 @@
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
+ * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
  * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
@@ -186,6 +187,7 @@
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
+ * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
@@ -246,7 +248,8 @@
  * @property {Look} [look]         how it's drawn, given when it's made (#306)
  * @property {number} [burning]
  * @property {number} [temporary]
- * @property {Enemy} [raisedBy] the necromancer that raised this temporary enemy zombie
+ * @property {Enemy | null} [raisedBy] the necromancer that raised this temporary enemy zombie
+ * @property {string} [raisedWeapon] weapon the temporary zombie took from its corpse
  * @property {boolean} [crumbled]
  * @property {number} [plagueGroupId]
  * @property {Point} [plagueGoal]

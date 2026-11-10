@@ -57,6 +57,201 @@ test('enemies say their hurt phrase below 30% even just after a player speaks', 
   expect(errors).toEqual([]);
 });
 
+test('necromancer healing shows purple pluses for player and enemy in every mode', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const tick = game.pathTick;
+    const oldMode = game.gameMode, oldPlague = game.plagueMode;
+    const colors = [];
+    const fillRect = ctx.fillRect;
+    ctx.fillRect = function (...args) {
+      colors.push(ctx.fillStyle);
+      return fillRect.apply(this, args);
+    };
+    try {
+      const modes = ['endless', 'battle', 'plague'];
+      const healing = [];
+      for (const mode of modes) {
+        game.gameMode = mode;
+        game.plagueMode = mode === 'plague';
+        game.pathTick = tick + 100;
+        setSideFaction('player', 'undead');
+        const necromancer = Object.assign(createSettler('zombie', 1, 300, 300), { tool: 'necro_staff' });
+        const patient = Object.assign(createSettler('zombie', 2, 330, 300), { hp: 20 });
+        game.settlers = [necromancer, patient];
+        necromancy(necromancer, createSettlerTick(1 / 60));
+        healing.push({ side: 'player', mode, marked: patient.necroTreatedAt === game.pathTick });
+
+        const enemyNecromancer = createConfiguredEnemy({ x: 500, y: 300 }, 'undead_necromancer');
+        const enemyPatient = createConfiguredEnemy({ x: 530, y: 300 }, 'undead_zombie');
+        enemyPatient.hp = 20;
+        game.enemies = [enemyNecromancer, enemyPatient];
+        enemyNecromancy(enemyNecromancer, GAME_CONFIG.enemies.undead_necromancer.necromancer, 1 / 60);
+        healing.push({ side: 'enemy', mode, marked: enemyPatient.necroTreatedAt === game.pathTick });
+
+        colors.length = 0;
+        drawHealSparks(patient);
+        healing.push({ side: 'visual', mode, purple: colors.length === 6 && colors.every(color => color === '#bb8fce') });
+      }
+      return healing;
+    } finally {
+      ctx.fillRect = fillRect;
+      game.gameMode = oldMode;
+      game.plagueMode = oldPlague;
+    }
+  });
+  expect(result).toEqual(['endless', 'battle', 'plague'].flatMap(mode => [
+    { side: 'player', mode, marked: true },
+    { side: 'enemy', mode, marked: true },
+    { side: 'visual', mode, purple: true }
+  ]));
+  expect(errors).toEqual([]);
+});
+
+test('a player necromancer claims a distant corpse before refilling its remaining charges', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'undead');
+    const necromancer = Object.assign(createSettler('zombie', 1, townHall.x + 90, townHall.y), {
+      tool: 'necro_staff', raisesLeft: 1
+    });
+    const corpse = { x: necromancer.x + 200, y: necromancer.y, big: false };
+    game.settlers = [necromancer];
+    game.enemies = [];
+    game.corpses = [corpse];
+    game.buildings = [{ type: 'grave', x: necromancer.x, y: necromancer.y }];
+    const tick = createSettlerTick(1 / 60);
+    tick.isWaveActive = true;
+    necromancy(necromancer, tick);
+    const playerOwns = corpse.raisedBy === necromancer;
+    const enemyNecromancer = createConfiguredEnemy({ x: corpse.x + 200, y: corpse.y }, 'undead_necromancer');
+    game.enemies = [enemyNecromancer];
+    const enemyClaimed = enemyNecromancy(enemyNecromancer,
+      GAME_CONFIG.enemies.undead_necromancer.necromancer, 1 / 60);
+    necromancer.hp = 0;
+    const releasedAfterDeath = enemyNecromancy(enemyNecromancer,
+      GAME_CONFIG.enemies.undead_necromancer.necromancer, 1 / 60);
+    return {
+      raisesLeft: necromancer.raisesLeft,
+      claimed: tick.raiseAssignments.has(corpse),
+      playerOwns,
+      enemyClaimed,
+      releasedAfterDeath: releasedAfterDeath && corpse.raisedBy === enemyNecromancer
+    };
+  });
+  expect(result).toEqual({
+    raisesLeft: 1, claimed: true, playerOwns: true, enemyClaimed: false, releasedAfterDeath: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('raised zombies take corpse gear in Battle and enemy zombies attack nearby units then return to their necromancer', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    game.gameMode = 'battle';
+    game.plagueMode = false;
+    game.loot = [];
+    const necromancer = Object.assign(createSettler('zombie', 1, 300, 300), { tool: 'necro_staff' });
+    game.settlers = [necromancer];
+    const playerCorpse = {
+      x: 320, y: 300, big: false, weapon: 'sword', armor: 'iron', shield: true, helmet: true
+    };
+    game.corpses = [playerCorpse];
+    const playerZombie = raiseTemporaryZombie(playerCorpse, necromancer);
+
+    const enemyNecromancer = createConfiguredEnemy({ x: 500, y: 300 }, 'undead_necromancer');
+    enemyNecromancer.raisesLeft = 3;
+    const enemyCorpse = {
+      x: 520, y: 300, big: false, weapon: 'sword', armor: 'leather', shield: true, helmet: true
+    };
+    game.enemies = [enemyNecromancer];
+    game.corpses = [enemyCorpse];
+    enemyNecromancy(enemyNecromancer, GAME_CONFIG.enemies.undead_necromancer.necromancer, 2);
+    const enemyZombie = game.enemies.find(unit => unit.raisedBy === enemyNecromancer);
+
+    const alphaAtBar = [];
+    const fillRect = ctx.fillRect;
+    ctx.fillRect = function (...args) {
+      if (ctx.fillStyle === '#e74c3c') alphaAtBar.push(ctx.globalAlpha);
+      return fillRect.apply(this, args);
+    };
+    try { drawEnemy(enemyZombie); } finally { ctx.fillRect = fillRect; }
+
+    game.gameMode = 'endless';
+    const lootNecromancer = Object.assign(createSettler('zombie', 5, 600, 300), { tool: 'necro_staff' });
+    const lootCorpse = { x: 620, y: 300, big: false };
+    game.settlers = [lootNecromancer];
+    game.corpses = [lootCorpse];
+    game.loot = [{
+      x: 620, y: 300, hp: 1, maxHp: 1, priority: 0, yield: {},
+      items: ['weapons:bow', 'gear:leather_armor', 'gear:helmet']
+    }];
+    const lootZombie = raiseTemporaryZombie(lootCorpse, lootNecromancer);
+    const endlessLoadout = [lootZombie.weapon, lootZombie.armor, lootZombie.helmet, lootZombie.quiver];
+
+    game.pathTick = 16;
+    game.fogEnabled = false;
+    enemyNecromancer.x = 250; enemyNecromancer.y = 300;
+    enemyZombie.x = 380; enemyZombie.y = 300;
+    game.settlers = [];
+    for (let i = 0; i < 30; i++) { game.pathTick++; tickEnemy(enemyZombie, 1 / 60); }
+    const returnTarget = enemyZombie.pathTarget;
+
+    const target = createSettler('normal', 4, 320, 300);
+    game.settlers = [target];
+    enemyZombie.x = 380; enemyZombie.y = 300; enemyZombie.attackTarget = null;
+    tickEnemy(enemyZombie, 1 / 60);
+    return {
+      playerLoadout: [playerZombie.weapon, playerZombie.armor, playerZombie.shield, playerZombie.helmet],
+      enemyLoadout: [enemyZombie.weapon, enemyZombie.armor, enemyZombie.shield, enemyZombie.helmet],
+      endlessLoadout,
+      enemyAlpha: alphaAtBar[0],
+      returnsToMaster: returnTarget?.x === enemyNecromancer.x && returnTarget?.y === enemyNecromancer.y,
+      attacksNearbyUnit: enemyZombie.attackTarget === target
+    };
+  });
+  expect(result).toEqual({
+    playerLoadout: ['sword', 'iron', true, true],
+    enemyLoadout: ['sword', 'leather', true, true],
+    endlessLoadout: ['bow', 'leather', true, true],
+    enemyAlpha: 0.7,
+    returnsToMaster: true,
+    attacksNearbyUnit: true
+  });
+  expect(errors).toEqual([]);
+});
+
+test('player and enemy taunt once when they first see an opponent, using the opponent faction', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'demons');
+    setSideFaction('enemy', 'undead');
+    game.pathTick = 15;
+    game.fogEnabled = false;
+    const player = createSettler('imp', 1, 300, 300);
+    const enemy = createConfiguredEnemy({ x: 400, y: 300 }, 'undead_zombie');
+    game.settlers = [player];
+    game.enemies = [enemy];
+    tickSettlers(1 / 60);
+    const playerTaunt = player.say?.text;
+    const playerRepeated = tauntOnSight(player, enemy);
+    tickVoices(3);
+    game.pathTick = 30;
+    tickEnemy(enemy, 1 / 60);
+    return {
+      playerUsesDemonVsUndead: t('voice.demons.taunt.vs.undead').split('|').includes(playerTaunt),
+      playerRepeated,
+      enemyUsesUndeadPhrase: t('voice.undead.taunt').split('|').includes(enemy.say?.text)
+    };
+  });
+  expect(result).toEqual({ playerUsesDemonVsUndead: true, playerRepeated: false, enemyUsesUndeadPhrase: true });
+  expect(errors).toEqual([]);
+});
+
 test('a player necromancer does not follow allies between waves in Endless', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');

@@ -15,7 +15,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
-import { getTerritoryBox, inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
+import { getTerritoryBox, hasFog, inReliefZone, isVisible, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
@@ -33,6 +33,7 @@ import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
 import { isPet } from './settlers.rules.js';
+import { tauntOnSight } from './settlers.voices.js';
 import { feedPet, tickPet } from '../pets/index.js';
 import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
@@ -371,6 +372,16 @@ function took(s, behaviour) {
   s.activity = s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
 }
 
+function tauntVisibleEnemy(s) {
+  if (game.pathTick % 15 !== 0) return;
+  const sight = GAME_CONFIG.fog.settlerTiles * TILE_SIZE;
+  for (const enemy of game.enemies) {
+    if (enemy.hp <= 0 || (hasFog() && !isVisible(enemy.x, enemy.y)) ||
+        Math.hypot(enemy.x - s.x, enemy.y - s.y) > sight) continue;
+    if (tauntOnSight(s, enemy)) break;
+  }
+}
+
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
@@ -381,6 +392,7 @@ export function tickSettlers(dt) {
   let drowsyTick = null;
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
+    if (!s.leaving && s.hp > 0) tauntVisibleEnemy(s);
     if (isGhostStunned(s)) { s.isIdle = false; s.swaying = false; s.activity = 'ghostStunned'; return; }
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     if (game.plagueMode && s.plagueHero) { tickPlagueHero(s, tick); return; }

@@ -115,8 +115,16 @@ export function drawEnemies(only = null) {
   // (#306) zoomed out to one or two pixels apiece: a dab of their colour each
   if (tinyUnit()) {
     const dab = 1.6 / getViewScale();
-    for (const en of enemies) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
-    for (const en of scouts) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
+    const alpha = ctx.globalAlpha;
+    for (const en of enemies) if (shown(en)) {
+      ctx.globalAlpha = alpha * (en.temporary !== undefined ? 0.7 : 1);
+      ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2);
+    }
+    for (const en of scouts) if (shown(en)) {
+      ctx.globalAlpha = alpha * (en.temporary !== undefined ? 0.7 : 1);
+      ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2);
+    }
+    ctx.globalAlpha = alpha;
     return;
   }
   for (const en of enemies) if (shown(en)) drawEnemy(en);
@@ -125,8 +133,15 @@ export function drawEnemies(only = null) {
 
 // One enemy
 export function drawEnemy(en) {
+  ctx.save();
+  ctx.globalAlpha *= en.temporary !== undefined ? 0.7 : 1;
   const pet = getEnemyDef(en).pet;
-  if (pet) { drawPet(en, pet, true); if (en.markedTarget) drawTargetMark(en); return; } // (#314: a dog, a hellhound, a ghost)
+  if (pet) {
+    drawPet(en, pet, true);
+    if (en.markedTarget) drawTargetMark(en);
+    ctx.restore();
+    return;
+  } // (#314: a dog, a hellhound, a ghost)
   {
     const simple = simpleUnit(); // (#306) zoomed out: its shape and colours, no gear
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
@@ -192,6 +207,7 @@ export function drawEnemy(en) {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(en.x - 12, top - 5, 24, 3);
     ctx.fillStyle = '#e74c3c'; ctx.fillRect(en.x - 12, top - 5, (Math.max(0, en.hp) / en.maxHp) * 24, 3);
   }
+  ctx.restore();
 }
 
 // An enemy commander's banner on its back (#279), in the enemy's colour, turned with it

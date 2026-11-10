@@ -620,10 +620,11 @@ const isHealing = s => (s.working || 0) > 0 && s.workKind === 'heal';
 
 // Being treated: healing crosses rise briefly after each heal.
 export function drawHealSparks(u) {
-  const since = game.pathTick - (u.treatedAt ?? -1e9);
+  const since = Math.min(game.pathTick - (u.treatedAt ?? -1e9), game.pathTick - (u.necroTreatedAt ?? -1e9));
   if (since > 40) return;
   const r = u.visualRadius || u.radius || 11;
-  const color = game.plagueMode && (u.plagueHero || u.plagueUnit) ? '#bb8fce' : '#2ecc71';
+  const necroSince = game.pathTick - (u.necroTreatedAt ?? -1e9);
+  const color = necroSince <= 40 || (game.plagueMode && (u.plagueHero || u.plagueUnit)) ? '#bb8fce' : '#2ecc71';
   ctx.save();
   for (let i = 0; i < 3; i++) {
     const t = ((game.pathTick + i * 17) % 50) / 50, px = u.x + (i - 1) * r * 0.6, py = u.y - r * 0.6 - t * r * 1.6;

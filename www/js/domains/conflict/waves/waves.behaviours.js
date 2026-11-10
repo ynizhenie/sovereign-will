@@ -7,7 +7,7 @@ import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from
 import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
-import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isUntouchable, speak, startSwing, tauntOnSight } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
@@ -245,6 +245,13 @@ export function tickEnemy(en, dt) {
       speak(en, getEnemyFaction().id, 'hurt', true)) en.hurtVoiceSpoken = true;
   clampEntityToBounds(en);
   const enemyDef = getEnemyDef(en);
+  if (game.pathTick % 15 === 0) {
+    const sight = Math.max(GAME_CONFIG.fog.enemySightTiles * TILE_SIZE, enemyDef.ranged ? shotOf(enemyDef).range + 30 : 0);
+    for (const settler of game.settlers) {
+      if (settler.hp <= 0 || isUntouchable(settler) || Math.hypot(settler.x - en.x, settler.y - en.y) > sight) continue;
+      if (tauntOnSight(en, settler)) break;
+    }
+  }
   if (game.plagueMode && tickPlagueEnemy(en, dt)) return;
   if (en.buildTarget) { buildEnemyTent(en, dt); return; }
   if (en.fromWave && game.wavePreparation && en.prepWave === game.wavePreparation.wave) {
@@ -264,8 +271,10 @@ export function tickEnemy(en, dt) {
   if (enemyDef.pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
+  const ownedTemporaryZombie = !!en.raisedBy && en.temporary !== undefined;
+  if (ownedTemporaryZombie && enemyZombieFollowsMaster(en, dt)) return;
   if ((enemyDef.pet === 'dog' || enemyDef.pet === 'beast') && enemyPetKeepsNear(en, dt)) return;
-  if (!enemyDef.pet && enemyPanic(en, dt)) {
+  if (!enemyDef.pet && !ownedTemporaryZombie && enemyPanic(en, dt)) {
     if (!en.buildTarget) return; // in a panic: away to heal (#207)
     en.musterUntil = 0;
   }
@@ -291,7 +300,7 @@ export function tickEnemy(en, dt) {
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
   // (#326) an archer out of arrows (and tents to fill up at) draws its dagger, as the player's do
-  en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : meleeDef.weapon || 'sword';
+  en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : en.raisedWeapon || meleeDef.weapon || 'sword';
   const inMelee = !shooting && moveTarget === target;
   // an archer with no clear shot walks closer instead of standing off
   const clearShot = shooting && hasLineOfFire(en.x, en.y, target.x, target.y);
@@ -309,6 +318,31 @@ export function tickEnemy(en, dt) {
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
 const STRUCK_TICKS = 120; // (2 s: how long a hit turns it)
+
+function enemyZombieFollowsMaster(en, dt) {
+  const master = en.raisedBy;
+  const necro = master && getEnemyDef(master).necromancer;
+  if (!master || !necro || master.hp <= 0 || !game.enemies.includes(master)) {
+    en.raisedBy = null;
+    return false;
+  }
+  const fromMaster = unit => Math.hypot(unit.x - master.x, unit.y - master.y);
+  const commanded = game.settlers.filter(s => s.hp > 0 && !isUntouchable(s) &&
+    fromMaster(s) <= (necro.commandTiles || 10) * TILE_SIZE)
+    .sort((a, b) => Math.hypot(a.x - en.x, a.y - en.y) - Math.hypot(b.x - en.x, b.y - en.y))[0];
+  const guarded = game.settlers.find(s => s.hp > 0 && !isUntouchable(s) &&
+    Math.hypot(s.x - en.x, s.y - en.y) < (necro.guardTiles || 3) * TILE_SIZE);
+  const foe = commanded || guarded;
+  if (foe) {
+    en.attackTarget = foe;
+    return false;
+  }
+  en.attackTarget = null;
+  const away = Math.hypot(master.x - en.x, master.y - en.y);
+  if (away > (necro.leashTiles || 4) * TILE_SIZE) moveEntityTowards(en, master.x, master.y, en.speed, true, dt);
+  else if (away > TILE_SIZE) moveEntityTowards(en, master.x, master.y, en.speed * 0.4, true, dt);
+  return true;
+}
 
 function tickPlagueEnemy(en, dt) {
   const target = plagueEnemyTarget(en);
