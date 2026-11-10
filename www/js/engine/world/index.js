@@ -5,4 +5,4 @@ export { getGridPos, getMapAreaScale, getTileIndex, isBorderZone, isDoor, isWith
 export { applySeedFromUI, createDefaultSeed, createWorldSeed, initRng, rand } from './rng.js';
 export { BOAR_LIMIT, BORDER_MARGIN, DEFAULT_MAP_TILES, setBorderMargin, TILE_SIZE, TOWN_HALL_HP, WORLD_LISTS, game, townHall } from './state.js';
 export { newWorldEpoch, onceThisTick, worldEpoch } from './once.js';
-export { anyWithin, forEachInRect, listStamp, someNear, thingAt } from './spatial.js';
+export { anyWithin, firstOf, forEachInRect, listStamp, someNear, thingAt } from './spatial.js';

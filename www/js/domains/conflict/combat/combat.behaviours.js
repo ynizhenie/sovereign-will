@@ -1,7 +1,7 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, firstOf, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
@@ -14,6 +14,20 @@ const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
 const canDefendEnemy = en => game.gameMode === 'battle' || isInsideBase(en) ||
   ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned));
+
+// (#322) The enemies there are to fight, and which of them are inside the base: the same for every settler of a tick (they
+// move after the settlers have had theirs), so found once in it, not by each of sixty fighters for each of sixty enemies
+/** @returns {{ list: any[], inside: Set<any> }} */
+function threatsThisTick(tick) {
+  if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
+    const inside = new Set(game.enemies.filter(isInsideBase));
+    const marching = !game.wavePreparation || game.wavePreparation.stage === 'march';
+    const list = game.enemies.filter(en => !isCampGuardUnavailable(en) &&
+      (game.gameMode === 'battle' || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
+    tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
+  }
+  return tick.threats;
+}
 
 // An enemy the player pointed at, for this soldier, while fewer than markedSquad soldiers go for it
 export function takeMarkedTarget(s, tick) {
@@ -127,9 +141,9 @@ function chooseSettlerTarget(s, tick) {
   let minBaseDist = Infinity;
   const isWaveThreat = en => (!game.wavePreparation || game.wavePreparation.stage === 'march') &&
     (en.fromWave || en.waveSummoned);
-  const candidates = game.enemies.filter(en =>
-    !isCampGuardUnavailable(en) && !(en.toCatch && en.toCatch !== s.id) && canDefendEnemy(en));
-  const baseThreats = candidates.filter(isInsideBase);
+  const threats = threatsThisTick(tick);
+  const candidates = threats.list.filter(en => !(en.toCatch && en.toCatch !== s.id));
+  const baseThreats = candidates.filter(en => threats.inside.has(en));
   const prioritized = game.gameMode === 'battle'
     ? candidates
     : baseThreats.length ? baseThreats : candidates.filter(isWaveThreat);
@@ -317,8 +331,9 @@ function breakWhatsInTheWay(s) {
   const weapon = GAME_CONFIG.weapons[s.weapon] || GAME_CONFIG.weapons.fist;
   const reach = ranged ? weapon.dagger.range : getWeaponStats(s, 'combat').range;
   // (#326: what's walked onto, spikes and iron traps, isn't broken: it's walked over, as the enemies walk onto the player's)
-  const b = s.path.slice(0, 8).map(next =>
-    game.buildings.find(o => o.side === 'red' && (!o.enemyCampStructure || (game.raidActive && o.campId === game.raidCampId)) && !(getDefinition('buildings', o.type) || {}).walkable &&
+  // (#322: the building on that tile, not looked for through all of them for each of eight tiles, every tick)
+  const b = s.path.slice(0, 8).map(next => firstOf(game.buildings, next.x, next.y, 1,
+    o => o.side === 'red' && (!o.enemyCampStructure || (game.raidActive && o.campId === game.raidCampId)) && !(getDefinition('buildings', o.type) || {}).walkable &&
       Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1))
     .find(building => building && Math.hypot(building.x - s.x, building.y - s.y) <= reach);
   if (!b) return false;
