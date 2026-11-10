@@ -100,7 +100,8 @@ export function drawEnemyTentSites() {
 export function drawEnemyShadows() {
   if (tinyUnit()) return;
   const view = getViewRect(60), seen = [];
-  for (const list of [game.enemies, game.scouts]) forEachInRect(list, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) seen.push(en); });
+  // (one by one: the tiles' buckets are for what stands still, see engine/world/spatial.js)
+  for (const list of [game.enemies, game.scouts]) for (const en of list) if (en.x >= view.x0 && en.x <= view.x1 && en.y >= view.y0 && en.y <= view.y1 && isVisible(en.x, en.y)) seen.push(en);
   drawFigureShadows(seen, view, en => en.radius || 11);
 }
 
@@ -110,8 +111,8 @@ export function drawEnemies(only = null) {
   const shown = en => isVisible(en.x, en.y) && en.x > view.x0 && en.x < view.x1 && en.y > view.y0 && en.y < view.y1;
   if (only) { if (shown(only)) drawEnemy(only); return; }
   const enemies = [], scouts = [];
-  forEachInRect(game.enemies, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) enemies.push(en); });
-  forEachInRect(game.scouts, view.x0, view.y0, view.x1, view.y1, en => { if (isVisible(en.x, en.y)) scouts.push(en); });
+  for (const en of game.enemies) if (shown(en)) enemies.push(en);
+  for (const en of game.scouts) if (shown(en)) scouts.push(en);
   // (#306) zoomed out to one or two pixels apiece: a dab of their colour each
   if (tinyUnit()) {
     const dab = 1.6 / getViewScale();

@@ -1,7 +1,7 @@
 // The start: texts and panel made, the canvas fitted, and the loop: the game in fixed steps of 1/60 s,
 // drawn as often as the frame rate setting allows
 
-import { renderConfigHud, syncHudMode } from '../ui/index.js';
+import { refreshAffordability, renderConfigHud, syncHudMode, updateUI } from '../ui/index.js';
 import { applyPageTexts, camera, clampCamera, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { update } from './update.js';
@@ -23,10 +23,22 @@ export const STEP_BUDGET_MS = 9; // (#322) and the steps of a frame take at most
 export const loop = { lastTime: performance.now(), stepTime: 0, lastDrawn: 0, frameRate: loadSetting('fps', 'display') };
 
 // One step of the game, unless it's lost: then the world stops and no more waves come
-export function stepGame(dt) {
+export function stepGame(dt, hud = true) {
   updateDefeat(dt);
-  if (isDefeated()) return;
-  update(dt);
+  if (isDefeated()) return false;
+  return update(dt, hud) === true;
+}
+
+// (#322) The panels (the stock's numbers, the wave's timer, the cards) are brought up to date HUD_PER_SECOND times a second, not
+// at every step of the game: the page was gone through sixty times a second (and several times a frame on a slow device, a step
+// each), a fifth of what a quiet step cost. Prices short of stock every third time, about as often as before
+const HUD_PER_SECOND = 20;
+const hud = { due: false, last: 0, count: 0 };
+function refreshHud(now) {
+  if (!hud.due || now - hud.last < 1000 / HUD_PER_SECOND - 1) return;
+  hud.due = false; hud.last = now;
+  updateUI();
+  if (++hud.count % 3 === 0) refreshAffordability(true);
 }
 
 export function gameLoop(now) {
@@ -44,11 +56,12 @@ export function gameLoop(now) {
   // (the rest of what's owed is let go) instead of the screen going slow
   while (loop.stepTime >= STEP && steps < MAX_STEPS_PER_FRAME && (steps === 0 || performance.now() - started < STEP_BUDGET_MS)) {
     rememberPositions();
-    stepGame(STEP);
+    if (stepGame(STEP, false)) hud.due = true;
     loop.stepTime -= STEP;
     steps++;
   }
   if (loop.stepTime >= STEP && (steps === MAX_STEPS_PER_FRAME || performance.now() - started >= STEP_BUDGET_MS)) loop.stepTime = 0;
+  refreshHud(now);
 
   if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
