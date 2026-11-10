@@ -32,8 +32,8 @@ const MAX_CHUNKS = 96;
 // (#322) and the pictures of a layer kept no more than this many pixels in all (a sharp piece of the terrain is four times a plain one's)
 const MAX_PIXELS = 16e6;
 
-/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame: number }} Chunk */
-/** @typedef {((cx: number, cy: number) => string) & { dirty?: (cx: number, cy: number) => boolean }} ChunkStamp */
+/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame: number, x0: number, y0: number, x1: number, y1: number }} Chunk */
+/** @typedef {((cx: number, cy: number) => string) & { dirty?: (cx: number, cy: number) => boolean, empty?: (cx: number, cy: number) => boolean, bounds?: (cx: number, cy: number) => number[] | undefined }} ChunkStamp */
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
@@ -77,7 +77,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0;
     // These derived indexes are tied to world lists and may have identical lengths on a new map.
     sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
-    terrainStamps = { lists: [], stamps: new Map() };
+    terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+    grassStamps = { lists: [], stamps: new Map() };
     fishy = { lists: [], list: [] };
     spots = { version: -1, list: [], acc: [], at: 0 };
   }
@@ -99,8 +100,10 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   // shows between two pieces, which read as square joins between them
   const m = target.getTransform();
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
-  const blit = (p, x0, y0, x1, y1) => {
-    const dx0 = snapX(x0), dy0 = snapY(y0), dw = snapX(x1) - dx0, dh = snapY(y1) - dy0;
+  // (a picture covers the rectangle it was painted for: the piece, or the part of it its layer has anything in, see bounds)
+  /** @param {Chunk} p */
+  const blit = p => {
+    const dx0 = snapX(p.x0), dy0 = snapY(p.y0), dw = snapX(p.x1) - dx0, dh = snapY(p.y1) - dy0;
     target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
@@ -117,7 +120,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
     paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
     framePaintMs += performance.now() - startedAt;
-    return { canvas, pad, pw, ph, stamp: now, frame: frameOf };
+    return { canvas, pad, pw, ph, stamp: now, frame: frameOf, x0, y0, x1, y1 };
   };
   // the screen's pieces first (a changed one repainted before any painting ahead), then the ring round it
   for (const ahead of [false, true]) {
@@ -127,8 +130,13 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (shown === ahead) continue;
         if (shown) stats.warmTotal++;
         const key = `${res}|${cx},${cy}`;
+        // (nothing of this layer in the piece: no picture of it)
+        if (stamp.empty && stamp.empty(cx, cy)) { if (shown) stats.warmReady++; continue; }
         let chunk = chunks.get(key);
-        const x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
+        let x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
+        // (#322) only the part of the piece the layer has anything in is painted, kept and laid down
+        const part = stamp.bounds && stamp.bounds(cx, cy);
+        if (part) { x0 = Math.max(x0, part[0]); y0 = Math.max(y0, part[1]); x1 = Math.min(x1, part[2]); y1 = Math.min(y1, part[3]); }
         const free = prewarmingChunks || (framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed));
         const invalidated = typeof stamp.dirty === 'function' && stamp.dirty(cx, cy);
         // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
@@ -146,9 +154,9 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
           if (chunk && (!invalidated || keepOld)) {
             if (!invalidated) stats.warmReady++;
             else stats.pending++;
-            chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key);
+            chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key);
           } else if (keepOld && oldPicture(chunks, cx, cy)) {
-            blit(oldPicture(chunks, cx, cy), x0, y0, x1, y1);
+            blit(/** @type {Chunk} */ (oldPicture(chunks, cx, cy)));
             stats.pending++;
           } else {
             // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
@@ -164,7 +172,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         }
         const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
         if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now))); framePaints++; stats.late++; }
-        if (chunk) { stats.warmReady++; chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk, x0, y0, x1, y1); visible.add(key); }
+        if (chunk) { stats.warmReady++; chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key); }
       }
     }
   }
@@ -332,14 +340,25 @@ export function prewarmVisibleWorldChunks() {
   }
 }
 
+// (#322) What the savanna in and round a piece is like, kept till a tile of it comes or goes: it was worked out for every piece on
+// the screen every frame, from every tile round it (most of what a frame of a quiet map cost)
+/** @type {{ lists: any[], stamps: Map<number, string> }} */
+let grassStamps = { lists: [], stamps: new Map() };
 function grassStamp(cx, cy) {
-  const size = CHUNK * TILE_SIZE;
-  let hash = 0;
-  const margin = TILE_SIZE * 3;
-  forEachInRect(game.savannaTiles, cx * size - margin, cy * size - margin, (cx + 1) * size + margin, (cy + 1) * size + margin, tile => {
-    hash = (hash * 31 + tile.x * 7919 + tile.y * 31) | 0;
-  });
-  return String(hash);
+  const lists = listStamp(game.savannaTiles);
+  if (lists.length !== grassStamps.lists.length || lists.some((v, i) => v !== grassStamps.lists[i])) grassStamps = { lists, stamps: new Map() };
+  const key = cy * 4096 + cx;
+  let stamp = grassStamps.stamps.get(key);
+  if (stamp === undefined) {
+    const size = CHUNK * TILE_SIZE;
+    let hash = 0;
+    const margin = TILE_SIZE * 3;
+    forEachInRect(game.savannaTiles, cx * size - margin, cy * size - margin, (cx + 1) * size + margin, (cy + 1) * size + margin, tile => {
+      hash = (hash * 31 + tile.x * 7919 + tile.y * 31) | 0;
+    });
+    grassStamps.stamps.set(key, (stamp = String(hash)));
+  }
+  return stamp;
 }
 
 // ---- Terrain that joins up
@@ -697,23 +716,40 @@ const isRock = r => !r.oreSpawner;
 const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, game.naturalRocks, game.ironOres, game.coalOres];
 
 // What the terrain in and round a piece is like (any tile coming or going changes it)
-/** @type {{ lists: any[], stamps: Map<string, string> }} */
-let terrainStamps = { lists: [], stamps: new Map() };
+/** @type {{ lists: any[], stamps: Map<string, string>, empty: Set<string>, sea: Set<string>, bounds: Map<string, number[]> }} */
+let terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
 function terrainStamp(cx, cy) {
   const lists = terrainLists().flatMap(listStamp);
-  if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map() };
+  if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
   const key = `${cx},${cy}`;
   let stamp = terrainStamps.stamps.get(key);
   if (stamp === undefined) {
     const size = CHUNK * TILE_SIZE, x0 = cx * size - TILE_SIZE, y0 = cy * size - TILE_SIZE;
-    let h = 0;
+    let h = 0, count = 0, water = 0, bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
     terrainLists().forEach((list, n) => forEachInRect(list, x0, y0, x0 + size + 2 * TILE_SIZE, y0 + size + 2 * TILE_SIZE, o => {
-      h = (h * 31 + o.x * 7919 + o.y * 31 + n + (o.oreSpawner ? 1 : 0)) | 0;
+      h = (h * 31 + o.x * 7919 + o.y * 31 + n + (o.oreSpawner ? 1 : 0)) | 0; count++;
+      if (list === game.waterTiles) water++;
+      if (o.x < bx0) bx0 = o.x; if (o.x > bx1) bx1 = o.x; if (o.y < by0) by0 = o.y; if (o.y > by1) by1 = o.y;
     }));
     terrainStamps.stamps.set(key, (stamp = String(h)));
+    if (!count) terrainStamps.empty.add(key);
+    else terrainStamps.bounds.set(key, [bx0 - TERRAIN_REACH, by0 - TERRAIN_REACH, bx1 + TERRAIN_REACH, by1 + TERRAIN_REACH]);
+    // (every tile of the piece and of the ring round it, as far as the map goes)
+    const gx0 = Math.max(0, cx * CHUNK - 1), gx1 = Math.min(game.COLS - 1, (cx + 1) * CHUNK), gy0 = Math.max(0, cy * CHUNK - 1), gy1 = Math.min(game.ROWS - 1, (cy + 1) * CHUNK);
+    if (water === count && water === (gx1 - gx0 + 1) * (gy1 - gy0 + 1)) terrainStamps.sea.add(key);
   }
   return stamp;
 }
+// (#322) a piece that's all water, and the tiles round it too: the grass under it never shows, so it has no picture of grass (on a
+// big screen zoomed out, a frame's pictures of the ground were more than the browser takes in one go, and it stopped to draw
+// what it had so far at every piece after that)
+// (#322) and the part of a piece its sand, water and rock reach: a few rocks in a meadow had a whole piece's picture, clear but for them
+const TERRAIN_REACH = TILE_SIZE / 2 + 12; // (from a tile's centre: its square, and the band its edge fades into the grass with)
+terrainStamp.bounds = (cx, cy) => { terrainStamp(cx, cy); return terrainStamps.bounds.get(`${cx},${cy}`); };
+const isSea = (cx, cy) => { terrainStamp(cx, cy); return terrainStamps.sea.has(`${cx},${cy}`); };
+grassStamp.empty = isSea;
+// (#322) a piece with no sand, water or rock in or round it has no picture: none made, kept or laid down (plain grass is most of a map)
+terrainStamp.empty = (cx, cy) => { terrainStamp(cx, cy); return terrainStamps.empty.has(`${cx},${cy}`); };
 
 // The tiles of a list round a piece, in rows (the same order whichever piece paints them: no seam)
 function tilesAround(list, x0, y0, x1, y1) {

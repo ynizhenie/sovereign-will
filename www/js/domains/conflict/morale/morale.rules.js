@@ -42,13 +42,15 @@ export function getMorale(unit) {
 
 // (#326) Who keeps its morale whatever comes: the undead (they don't panic at all), and anyone near a captain of its side
 // (a banner: within the reach it gives its orders in), the captain too, and one it gave an order to
-function steadied(unit, side) {
+const isCaptainOf = side => (side === 'settler' ? s => hasGear(s, 'banner') && (s.role === 'soldier' || s.role === 'archer') : en => !!en.captain);
+// its side's captains alive (#322: tickMorale finds them once for all of a side, not again for each unit)
+const captainsOf = side => (side === 'settler' ? game.settlers : game.enemies).filter(a => a.hp > 0 && isCaptainOf(side)(a));
+/** @param {any[]} [captains] */
+function steadied(unit, side, captains) {
   if (side === 'boar') return false;
   if (factionOf(unit, side) === 'undead') return true;
-  const allies = side === 'settler' ? game.settlers : game.enemies;
-  const isCaptain = side === 'settler' ? s => hasGear(s, 'banner') && (s.role === 'soldier' || s.role === 'archer') : en => !!en.captain;
   const reach = GAME_CONFIG.gear.banner.commands.reach;
-  return allies.some(a => a.hp > 0 && isCaptain(a) && (a === unit || unit.captainTarget && unit.orderedBy === a.id || Math.hypot(a.x - unit.x, a.y - unit.y) <= reach));
+  return (captains || captainsOf(side)).some(a => a === unit || unit.captainTarget && unit.orderedBy === a.id || Math.hypot(a.x - unit.x, a.y - unit.y) <= reach);
 }
 
 // below panicBelow: panic, until back at calmAbove (or its own base, if that's lower: the undead's)
@@ -111,9 +113,10 @@ export function tickMorale(dt) {
   /** @type {[string, any[], any[]][]} */
   const groups = [['settler', game.settlers, game.enemies], ['enemy', game.enemies, game.settlers], ['boar', game.boars.filter(b => !b.isCarcass), game.settlers]];
   for (const [side, units, foes] of groups) {
+    const captains = side === 'boar' ? [] : captainsOf(side);
     for (const unit of units) {
       if (unit.morale === undefined) unit.morale = baseMorale(unit, side);
-      if (steadied(unit, side)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side), config().calmAbove), side); continue; }
+      if (steadied(unit, side, captains)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side), config().calmAbove), side); continue; }
       // a panic passes by itself, foes about or not
       if (unit.panic) { setMorale(unit, unit.morale + c.panicRecoverPerSecond * dt, side); continue; }
       const around = list => { let n = 0; for (const o of list) if (o.hp > 0 && Math.abs(o.x - unit.x) <= c.nearRange && Math.abs(o.y - unit.y) <= c.nearRange && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange) n++; return n; };

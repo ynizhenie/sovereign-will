@@ -33,23 +33,33 @@ export const spriteVariantOf = (kind, o) => tileVariantHash(Math.round(o.x), Mat
 // the picture's resolution: the screen's, to the next power of two (a little sharper than needed rather than blurred)
 const resOf = () => Math.min(4, Math.max(0.25, 2 ** Math.ceil(Math.log2(Math.max(getViewScale(), 0.01)))));
 
+// (#322) which picture a thing has, kept with the thing while it's the same one (the zoom's size, its apples, the savanna as it is):
+// working that out for each of a thousand things a frame (a text key made, a tile looked up) cost as much as laying them down
+/** @type {WeakMap<object, { c: HTMLCanvasElement, res: number, apple: number, savanna: any[], count: number, last: any, x: number, y: number }>} */
+const spriteOfThing = new WeakMap();
+
 /** @param {string} kind @param {any} o @param {number} res */
 function spriteOf(kind, o, res) {
-  const k = KINDS[kind], v = spriteVariantOf(kind, o);
   const apple = kind === 'tree' ? (o.apple ? (o.applesReady ? 2 : 1) : 0) : 0;
+  const kept = spriteOfThing.get(o), biome = game.savannaTiles;
+  if (kept && kept.res === res && kept.apple === apple && kept.savanna === biome && kept.count === biome.length && kept.last === biome[biome.length - 1] && kept.x === o.x && kept.y === o.y) return kept.c;
+  const k = KINDS[kind], v = spriteVariantOf(kind, o);
   const savanna = BIOME_SPRITES.has(kind) && !!thingAt(game.savannaTiles, o.x, o.y);
   const key = `${kind}|${v}|${apple}|${savanna ? 1 : 0}|${res}`;
   let c = sprites.get(key);
-  if (c) { sprites.delete(key); sprites.set(key, c); return c; }
-  const [x0, y0, x1, y1] = k.box;
-  c = document.createElement('canvas');
-  c.width = Math.ceil((x1 - x0) * res) + 2; c.height = Math.ceil((y1 - y0) * res) + 2;
-  const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
-  g.setTransform(res, 0, 0, res, 1 - x0 * res, 1 - y0 * res);
-  paintOn(g);
-  try { paintVariant(kind === 'cactus' ? v : hashOf(kind, v), false, kind === 'grass' ? 0 : null); k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady, savanna }); } finally { paintVariant(null); paintOn(null); }
-  sprites.set(key, c);
-  if (sprites.size > MAX_SPRITES) sprites.delete(/** @type {string} */ (sprites.keys().next().value));
+  if (c) { sprites.delete(key); sprites.set(key, c); }
+  else {
+    const [x0, y0, x1, y1] = k.box;
+    c = document.createElement('canvas');
+    c.width = Math.ceil((x1 - x0) * res) + 2; c.height = Math.ceil((y1 - y0) * res) + 2;
+    const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
+    g.setTransform(res, 0, 0, res, 1 - x0 * res, 1 - y0 * res);
+    paintOn(g);
+    try { paintVariant(kind === 'cactus' ? v : hashOf(kind, v), false, kind === 'grass' ? 0 : null); k.paint({ x: 0, y: 0, apple: o.apple, applesReady: o.applesReady, savanna }); } finally { paintVariant(null); paintOn(null); }
+    sprites.set(key, c);
+    if (sprites.size > MAX_SPRITES) sprites.delete(/** @type {string} */ (sprites.keys().next().value));
+  }
+  spriteOfThing.set(o, { c, res, apple, savanna: biome, count: biome.length, last: biome[biome.length - 1], x: o.x, y: o.y });
   return c;
 }
 
@@ -58,20 +68,31 @@ function spriteOf(kind, o, res) {
 export function drawSprites(kind, things) {
   if (!things.length) return;
   const res = resOf(), [x0, y0] = KINDS[kind].box;
-  const windTime = performance.now() / 1000;
-  for (const o of things) {
-    const c = spriteOf(kind, o, res);
-    if (kind === 'grass') {
-      // Reuse the still sprite and shear it around the base of the blades. The wind angle
-      // stays continuous instead of jumping between a few cached lean images.
-      const sway = windSway(o.x, o.y, 18, windTime);
-      ctx.save();
-      ctx.translate(o.x, o.y + 7);
-      ctx.transform(1, 0, -sway / 18, 1, 0, 0);
+  if (kind === 'grass') {
+    // Reuse the still sprite and shear it around the base of the blades. The wind angle
+    // stays continuous instead of jumping between a few cached lean images.
+    // (#322: the shear set straight into the canvas's transform, one call a tuft instead of four round each picture)
+    const windTime = performance.now() / 1000, m = ctx.getTransform();
+    for (const o of things) {
+      const c = spriteOf(kind, o, res), lean = -windSway(o.x, o.y, 18, windTime) / 18, bx = o.x, by = o.y + 7;
+      ctx.setTransform(m.a, m.b, m.a * lean + m.c, m.b * lean + m.d, m.a * bx + m.c * by + m.e, m.b * bx + m.d * by + m.f);
       ctx.drawImage(c, x0 - 1 / res, y0 - 7 - 1 / res, c.width / res, c.height / res);
-      ctx.restore();
-    } else {
-      ctx.drawImage(c, o.x + x0 - 1 / res, o.y + y0 - 1 / res, c.width / res, c.height / res);
     }
+    ctx.setTransform(m);
+    return;
   }
+  for (const o of things) drawSprite(kind, o, res, x0, y0);
+}
+
+/** @param {string} kind @param {any} o */
+function drawSprite(kind, o, res, x0, y0) {
+  const c = spriteOf(kind, o, res);
+  ctx.drawImage(c, o.x + x0 - 1 / res, o.y + y0 - 1 / res, c.width / res, c.height / res);
+}
+
+// One thing of a kind (not a tuft of grass), laid down from its picture
+/** @param {string} kind @param {any} o */
+export function drawOneSprite(kind, o) {
+  const box = KINDS[kind].box;
+  drawSprite(kind, o, resOf(), box[0], box[1]);
 }
