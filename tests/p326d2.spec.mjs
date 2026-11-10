@@ -256,20 +256,21 @@ test('buildings higher on the map are drawn behind buildings lower on the map', 
     delete lower.progress; delete lower.maxProgress;
     game.buildings = [lower, upper];
 
-    const fillRect = ctx.fillRect, order = [];
-    ctx.fillRect = function (...args) {
-      if (this.fillStyle === '#7a4a20' || this.fillStyle === '#52616a') order.push(this.fillStyle);
-      return fillRect.apply(this, args);
+    // (a piece of wall is laid down from its picture: the pictures in the order they're laid, by the tile each lands on)
+    const drawImage = ctx.drawImage, order = [];
+    ctx.drawImage = function (...args) {
+      const row = Math.floor((args[2] + args[4] / 2) / TILE_SIZE);
+      if (row === g.gy + 3) order.push('upper'); else if (row === g.gy + 4) order.push('lower');
+      return drawImage.apply(this, args);
     };
     try {
       drawBuildings();
     } finally {
-      ctx.fillRect = fillRect;
+      ctx.drawImage = drawImage;
     }
     return order;
   });
-  expect(fills.indexOf('#7a4a20')).toBeGreaterThanOrEqual(0);
-  expect(fills.indexOf('#52616a')).toBeGreaterThan(fills.indexOf('#7a4a20'));
+  expect(fills).toEqual(['upper', 'lower']);
   expect(errors).toEqual([]);
 });
 

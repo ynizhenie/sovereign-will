@@ -173,11 +173,45 @@ export function getReachDistanceToResource(reach, resource) {
 function enemyMemo() {
   const signature = (getTileIndex().signature * 31 + (game.plagueMode ? 1 : 0)) | 0, size = game.COLS * game.ROWS;
   if (enemyTiles.signature !== signature || enemyTiles.strict.length !== size || enemyTiles.hallX !== townHall.x || enemyTiles.hallY !== townHall.y) {
-    enemyTiles = { signature, hallX: townHall.x, hallY: townHall.y, strict: new Int8Array(size).fill(-1), permissive: new Int8Array(size).fill(-1), flags: new Int8Array(size).fill(-1) };
+    enemyTiles = { signature, hallX: townHall.x, hallY: townHall.y, strict: new Int8Array(size).fill(-1), permissive: new Int8Array(size).fill(-1), flags: new Int8Array(size).fill(-1), region: new Int32Array(size), regions: 0 };
   }
   return enemyTiles;
 }
-let enemyTiles = { signature: /** @type {number | null} */ (null), hallX: 0, hallY: 0, strict: new Int8Array(0), permissive: new Int8Array(0), flags: new Int8Array(0) };
+let enemyTiles = { signature: /** @type {number | null} */ (null), hallX: 0, hallY: 0, strict: new Int8Array(0), permissive: new Int8Array(0), flags: new Int8Array(0), region: new Int32Array(0), regions: 0 };
+
+// (#322) Walled in, or out. An enemy's search for a way round to someone inside the walls (there is none) went over three thousand
+// tiles before it gave up, every few seconds for every enemy: most of the searching of a siege. The ground an enemy can walk that is
+// shut in on all sides (up to ENCLOSED_MAX tiles of it) is found once, from a tile in it, and kept till the tiles change: each such
+// place has a number of its own, all bigger ground is OPEN. One end of a way in such a place and the other not: no way round
+const ENCLOSED_MAX = 2000, OPEN = -1;
+const floodQueue = new Int32Array(ENCLOSED_MAX + 8);
+function enemyRegion(gx, gy) {
+  if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || isTileBlockedForEnemyStrict(gx, gy)) return 0;
+  const memo = enemyMemo(), cols = game.COLS, region = memo.region, first = gy * cols + gx;
+  if (region[first]) return region[first];
+  // (marked as they're found with a number no place has yet; all made OPEN after, if there turn out to be too many)
+  const id = ++memo.regions;
+  let head = 0, tail = 0, open = false;
+  region[first] = id; floodQueue[tail++] = first;
+  while (head < tail && !open) {
+    const c = floodQueue[head++], cx = c % cols, cy = (c - cx) / cols;
+    for (let d = 0; d < 4; d++) {
+      const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= game.ROWS) continue;
+      const j = ny * cols + nx;
+      if (region[j] === id || isTileBlockedForEnemyStrict(nx, ny)) continue;
+      if (region[j] === OPEN || tail >= ENCLOSED_MAX) { open = true; break; } // (joins open ground, or is as big itself)
+      region[j] = id; floodQueue[tail++] = j;
+    }
+  }
+  if (open) for (let i = 0; i < tail; i++) region[floodQueue[i]] = OPEN;
+  return region[first];
+}
+// No way round for an enemy between the two tiles: one of them is in a shut-in place the other isn't in
+function isCutOffForEnemy(startG, endG) {
+  const a = enemyRegion(startG.gx, startG.gy), b = enemyRegion(endG.gx, endG.gy);
+  return a !== 0 && b !== 0 && a !== b && (a > 0 || b > 0);
+}
 
 // (#322) What stands on a tile that a search through buildings weighs (kept as the tiles' blocking is, above): a search made
 // an "x,y" string and looked it up in three or four sets for every tile it came to, most of what it cost round a walled base
@@ -513,6 +547,12 @@ export function findPathAStar(startX, startY, targetX, targetY, isEnemy = false,
         pathTargetY = bestN.gy * TILE_SIZE + 15;
       }
     }
+  }
+
+  // (#322) shut in or out by walls: the way through them at once, as when a search for a way round finds none (not in a battle,
+  // whose field has its own edge, nor with ground of its own kept out of the search)
+  if (isEnemy && !extraBlocked && game.gameMode !== 'battle' && isCutOffForEnemy(startG, endG)) {
+    return findPathAStarPermissive(startX, startY, targetX, targetY, false, null, allowBattleBorder, extraBlocked);
   }
 
   const result = findGridPath(startG, endG, pathTargetX, pathTargetY, {

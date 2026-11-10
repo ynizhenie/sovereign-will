@@ -7,16 +7,21 @@ import { ctx } from '../../../engine/platform/index.js';
 import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
 import { drawShadowPath, getSun } from '../../world/index.js';
 
+// where the shapes below are drawn: the game's canvas, or a piece of wall's own picture while that's painted (see drawWallPiece)
+/** @type {CanvasRenderingContext2D | null} */
+let own = null;
 const rect = (x, y, w, h, fill, stroke, lw = 1) => {
-  ctx.fillStyle = fill; ctx.fillRect(x, y, w, h);
-  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.strokeRect(x + lw / 2, y + lw / 2, w - lw, h - lw); }
+  const pen = own || ctx;
+  pen.fillStyle = fill; pen.fillRect(x, y, w, h);
+  if (stroke) { pen.strokeStyle = stroke; pen.lineWidth = lw; pen.strokeRect(x + lw / 2, y + lw / 2, w - lw, h - lw); }
 };
 const poly = (points, fill, stroke, lw = 1) => {
-  ctx.beginPath(); points.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath();
-  ctx.fillStyle = fill; ctx.fill();
-  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  const pen = own || ctx;
+  pen.beginPath(); points.forEach(([px, py], i) => (i ? pen.lineTo(px, py) : pen.moveTo(px, py))); pen.closePath();
+  pen.fillStyle = fill; pen.fill();
+  if (stroke) { pen.strokeStyle = stroke; pen.lineWidth = lw; pen.stroke(); }
 };
-const line = (x0, y0, x1, y1, color, lw = 1) => { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); };
+const line = (x0, y0, x1, y1, color, lw = 1) => { const pen = own || ctx; pen.strokeStyle = color; pen.lineWidth = lw; pen.beginPath(); pen.moveTo(x0, y0); pen.lineTo(x1, y1); pen.stroke(); };
 
 // A soft shadow cast away from the sun (#307: by the time of day, getSun), long in the morning and evening
 export function shadow(x, y, w, h, r = 4) {
@@ -106,26 +111,31 @@ function wallShadowShape(piece) {
 
 // The pieces' shapes where they stand, the walls' (10 high) and the doors' (8): put together again only when the
 // pieces in view change or a door moves, not every frame; the sun moves them along as it goes
-/** @type {{ key: string, tall: Path2D, low: Path2D } | null} */
-let wallShadowShapes = null;
+// (#322: the walls' and the doors' apart: a door swinging as a unit passed had every wall's shape put together again each frame)
+/** @type {{ tall: { key: string, path: Path2D } | null, low: { key: string, path: Path2D } | null }} */
+const wallShadowShapes = { tall: null, low: null };
 
 // Fill one combined silhouette so connected wall sections do not darken each other's shadows.
 /** @param {WallShadowPiece[]} pieces */
 export function drawWallShadows(pieces) {
   if (!pieces.length) return;
   const sun = getSun();
-  let key = '';
-  for (const piece of pieces) key += `${piece.type} ${piece.x} ${piece.y} ${piece.mask} ${piece.open || 0} ${piece.swing ? piece.swing.x + 2 * piece.swing.y : ''};`;
-  if (!wallShadowShapes || key !== wallShadowShapes.key) {
-    const tall = new Path2D(), low = new Path2D();
-    for (const piece of pieces) {
-      (piece.type === 'wall_wood' || piece.type === 'wall_stone' ? tall : low).addPath(wallShadowShape(piece), new DOMMatrix().translate(piece.x, piece.y));
-    }
-    wallShadowShapes = { key, tall, low };
-  }
+  const isWall = piece => piece.type === 'wall_wood' || piece.type === 'wall_stone';
+  /** @param {'tall' | 'low'} which */
+  const shapeOf = which => {
+    let key = '';
+    for (const piece of pieces) if (isWall(piece) === (which === 'tall')) key += `${piece.type} ${piece.x} ${piece.y} ${piece.mask} ${piece.open || 0} ${piece.swing ? piece.swing.x + 2 * piece.swing.y : ''};`;
+    const kept = wallShadowShapes[which];
+    if (kept && kept.key === key) return kept.path;
+    const path = new Path2D();
+    for (const piece of pieces) if (isWall(piece) === (which === 'tall')) path.addPath(wallShadowShape(piece), new DOMMatrix().translate(piece.x, piece.y));
+    wallShadowShapes[which] = { key, path };
+    return path;
+  };
+  const tall = shapeOf('tall'), low = shapeOf('low');
   const shadow = new Path2D();
-  shadow.addPath(wallShadowShapes.tall, new DOMMatrix().translate(sun.dx * 10 * 0.35, sun.dy * 10 * 0.35));
-  shadow.addPath(wallShadowShapes.low, new DOMMatrix().translate(sun.dx * 8 * 0.35, sun.dy * 8 * 0.35));
+  shadow.addPath(tall, new DOMMatrix().translate(sun.dx * 10 * 0.35, sun.dy * 10 * 0.35));
+  shadow.addPath(low, new DOMMatrix().translate(sun.dx * 8 * 0.35, sun.dy * 8 * 0.35));
   ctx.save();
   ctx.filter = 'blur(1.5px)';
   drawShadowPath(ctx, shadow, sun.alpha);
@@ -134,14 +144,15 @@ export function drawWallShadows(pieces) {
 
 // A palisade: logs side by side, their sharpened tops, bands of rope across
 export function drawWoodWall(x, y, mask = 0, doorMask = 0) {
+  const pen = own || ctx;
   for (const [bit, dx, dy] of ARMS) {
     if (!(mask & bit)) continue;
     if (dy) { // north-south: log tops stacked
       for (let k = 0; k < 3; k++) {
         if (k === 2 && doorMask & bit) continue;
         const cy = y + dy * (9 + k * 6);
-        ctx.fillStyle = '#5c3a17'; ctx.beginPath(); ctx.ellipse(x, cy, 7, 3.6, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = k % 2 ? '#8e5a2b' : '#9b6633'; ctx.beginPath(); ctx.ellipse(x, cy - 1, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+        pen.fillStyle = '#5c3a17'; pen.beginPath(); pen.ellipse(x, cy, 7, 3.6, 0, 0, Math.PI * 2); pen.fill();
+        pen.fillStyle = k % 2 ? '#8e5a2b' : '#9b6633'; pen.beginPath(); pen.ellipse(x, cy - 1, 6, 3, 0, 0, Math.PI * 2); pen.fill();
       }
     } else { // east-west: logs side by side
       for (let k = 0; k < 3; k++) {
@@ -190,6 +201,30 @@ export function drawStoneWall(x, y, mask = 0) {
   line(x, y - 2, x, y + 4, '#4b5961');
   line(x - 6, y + 5, x + 6, y + 5, '#4b5961');
   line(x + 1, y + 6, x + 1, y + 11, '#4b5961');
+}
+
+// (#322) A piece of wall laid down from a picture of it. A palisade's piece was forty shapes and a stone one's sixty, each a call
+// to the canvas, every frame, for every piece on the screen: a walled base cost a fifth of a frame. A piece looks the same wherever
+// it stands, by its kind and what it joins, so each such look is painted once, at about the screen's sharpness, and laid down with one call
+const WALL_BOX = [-24, -27, 24, 27]; // (round the piece's middle: its arms reach into the tiles beside it)
+/** @type {Map<string, HTMLCanvasElement>} */
+const wallPictures = new Map();
+/** @param {'wall_wood' | 'wall_stone'} type @param {number} x @param {number} y @param {number} scale (canvas px to a world unit now) */
+export function drawWallPiece(type, x, y, mask = 0, doorMask = 0, scale = 1) {
+  if (typeof document === 'undefined') { if (type === 'wall_wood') drawWoodWall(x, y, mask, doorMask); else drawStoneWall(x, y, mask); return; }
+  const res = Math.min(4, Math.max(0.25, 2 ** Math.ceil(Math.log2(Math.max(scale, 0.01)))));
+  const key = `${type}|${mask}|${doorMask}|${res}`, [x0, y0, x1, y1] = WALL_BOX;
+  let c = wallPictures.get(key);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = Math.ceil((x1 - x0) * res); c.height = Math.ceil((y1 - y0) * res);
+    const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
+    g.setTransform(res, 0, 0, res, -x0 * res, -y0 * res);
+    own = g;
+    try { if (type === 'wall_wood') drawWoodWall(0, 0, mask, doorMask); else drawStoneWall(0, 0, mask); } finally { own = null; }
+    wallPictures.set(key, c);
+  }
+  ctx.drawImage(c, x + x0, y + y0, x1 - x0, y1 - y0);
 }
 
 // A door in its frame, in a run of wall: two posts, the leaf hung on one and swung open (open 0..1) away from

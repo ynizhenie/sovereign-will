@@ -2,12 +2,12 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon, fillRichText, getResourceIconName } from '../../../ui/index.js';
-import { ctx, getViewRect, mouse, setFont, t } from '../../../engine/platform/index.js';
+import { ctx, getViewRect, getViewScale, mouse, setFont, t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, forEachInRect, game, isBorderZone, townHall } from '../../../engine/world/index.js';
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
+import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawTentArt, drawTorchPostArt, drawWallPiece, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { drawShadowPath, tileVariantHash } from '../../world/index.js';
 
@@ -192,25 +192,16 @@ export function drawUpgrades() {
 // (#326) Walls and doors join: a piece's neighbours (the four tiles round it that hold a wall or a door)
 const isWallPiece = b => b.type === 'wall_wood' || b.type === 'wall_stone' || b.type === 'door' || b.type === 'iron_door';
 function wallLinks(buildings = game.buildings) {
+  // (#322: a tile's place as a number, not a text made and taken apart for every piece every frame)
+  const SPAN = 4096, keyOf = (cx, cy) => (cy + 8) * SPAN + cx + 8;
   const at = new Map();
-  for (const b of buildings) if (isWallPiece(b)) at.set(`${Math.round(b.x / TILE_SIZE)},${Math.round(b.y / TILE_SIZE)}`, b);
+  for (const b of buildings) if (isWallPiece(b)) at.set(keyOf(Math.round(b.x / TILE_SIZE), Math.round(b.y / TILE_SIZE)), b);
   const links = new Map(), doorLinks = new Map();
+  const isDoorPiece = o => !!o && (o.type === 'door' || o.type === 'iron_door');
   for (const [key, b] of at) {
-    const [cx, cy] = key.split(',').map(Number);
-    let mask = 0;
-    if (at.has(`${cx},${cy - 1}`)) mask |= LINK.n;
-    if (at.has(`${cx + 1},${cy}`)) mask |= LINK.e;
-    if (at.has(`${cx},${cy + 1}`)) mask |= LINK.s;
-    if (at.has(`${cx - 1},${cy}`)) mask |= LINK.w;
-    links.set(b, mask);
-    if (b.type === 'wall_wood') {
-      let doorMask = 0;
-      if (['door', 'iron_door'].includes(at.get(`${cx},${cy - 1}`)?.type)) doorMask |= LINK.n;
-      if (['door', 'iron_door'].includes(at.get(`${cx + 1},${cy}`)?.type)) doorMask |= LINK.e;
-      if (['door', 'iron_door'].includes(at.get(`${cx},${cy + 1}`)?.type)) doorMask |= LINK.s;
-      if (['door', 'iron_door'].includes(at.get(`${cx - 1},${cy}`)?.type)) doorMask |= LINK.w;
-      doorLinks.set(b, doorMask);
-    }
+    const n = at.get(key - SPAN), e = at.get(key + 1), s = at.get(key + SPAN), w = at.get(key - 1);
+    links.set(b, (n ? LINK.n : 0) | (e ? LINK.e : 0) | (s ? LINK.s : 0) | (w ? LINK.w : 0));
+    if (b.type === 'wall_wood') doorLinks.set(b, (isDoorPiece(n) ? LINK.n : 0) | (isDoorPiece(e) ? LINK.e : 0) | (isDoorPiece(s) ? LINK.s : 0) | (isDoorPiece(w) ? LINK.w : 0));
   }
   return { links, doorLinks };
 }
@@ -245,7 +236,7 @@ export function drawBuildings() {
   const v = getViewRect(90), nearby = [];
   forEachInRect(game.buildings, v.x0, v.y0, v.x1, v.y1, b => nearby.push(b));
   const { links, doorLinks } = wallLinks(nearby);
-  const doorStates = new Map();
+  const doorStates = new Map(), viewScale = getViewScale();
   const wallShadows = nearby.filter(b => isWallPiece(b)).map(b => {
     const mask = links.get(b) || 0;
     if (b.type !== 'door' && b.type !== 'iron_door') return { x: b.x, y: b.y, type: b.type, mask };
@@ -260,9 +251,9 @@ export function drawBuildings() {
   }).forEach(b => {
     // (the look: building.art.js, #251)
     if (b.type === 'wall_wood') {
-      drawWoodWall(b.x, b.y, links.get(b) || 0, doorLinks.get(b) || 0);
+      drawWallPiece('wall_wood', b.x, b.y, links.get(b) || 0, doorLinks.get(b) || 0, viewScale);
     } else if (b.type === 'wall_stone') {
-      drawStoneWall(b.x, b.y, links.get(b) || 0);
+      drawWallPiece('wall_stone', b.x, b.y, links.get(b) || 0, 0, viewScale);
     } else if (b.type === 'door' || b.type === 'iron_door') {
       const state = doorStates.get(b);
       drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, state.open, state.swing);
