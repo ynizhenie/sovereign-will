@@ -390,6 +390,7 @@
  * @property {number} waveTimer
  * @property {number} waveNum
  * @property {number} boarRespawnTimer
+ * @property {number} territoryBoarRespawnsPending
  * @property {number} pathTick
  * @property {string} buildMode
  * @property {Settler | null} selectedSettler

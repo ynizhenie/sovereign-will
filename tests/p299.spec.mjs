@@ -263,7 +263,15 @@ test('on a big map what\'s taken grows back within the frontier, round the base,
     // (a forest in it, or an ore's rock, may reach a few tiles past its edge)
     const f = getFrontier(), m = 8 * TILE_SIZE, inside = o => o.x >= f.x0 - m && o.x <= f.x1 + m && o.y >= f.y0 - m && o.y <= f.y1 + m;
     const before = { trees: new Set(trees), sticks: new Set(sticks), iron: new Set(ironOres) };
-    for (let i = 0; i < 20; i++) { scheduleRespawn('tree'); scheduleRespawn('stick'); scheduleRespawn('iron_ore'); }
+    const ore = ironOres.find(resource => {
+      const source = naturalRocks.find(rock => rock.oreSpawner === 'iron' &&
+        rock.x === resource.oreSpawnerX && rock.y === resource.oreSpawnerY);
+      return source && inside(source);
+    }) || ironOres[0];
+    for (let i = 0; i < 20; i++) {
+      scheduleRespawn('tree'); scheduleRespawn('stick');
+      scheduleRespawn('iron_ore', ore.x, ore.y, null, ore);
+    }
     pendingRespawns.forEach(p => { p.timer = 0; });
     updatePendingRespawns(1);
     const grown = [...trees.filter(t => !before.trees.has(t)), ...sticks.filter(s => !before.sticks.has(s)), ...ironOres.filter(o => !before.iron.has(o))];
@@ -272,5 +280,33 @@ test('on a big map what\'s taken grows back within the frontier, round the base,
   });
   expect(r.grown).toBeGreaterThan(30);
   expect(r.inside).toBe(r.grown);
+  expect(errors).toEqual([]);
+});
+
+test('mined ore always grows back beside its original source', async ({ page }) => {
+  const errors = await openGame(page);
+  const result = await page.evaluate(() => {
+    mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('ore-source-regrowth');
+    const ore = ironOres[0];
+    const source = naturalRocks.find(rock => rock.oreSpawner === 'iron' &&
+      rock.x === ore.oreSpawnerX && rock.y === ore.oreSpawnerY);
+    const before = new Set(ironOres);
+    scheduleRespawn('iron_ore', ore.x, ore.y, null, ore);
+    pendingRespawns.at(-1).timer = 0;
+    updatePendingRespawns(1);
+    const regrown = ironOres.find(resource => !before.has(resource));
+    return {
+      hasSource: !!source,
+      sourceDistance: regrown && source
+        ? Math.max(Math.abs(Math.floor(regrown.x / TILE_SIZE) - Math.floor(source.x / TILE_SIZE)),
+          Math.abs(Math.floor(regrown.y / TILE_SIZE) - Math.floor(source.y / TILE_SIZE)))
+        : null,
+      sourceMatches: !!regrown && regrown.oreSpawnerX === source?.x && regrown.oreSpawnerY === source?.y
+    };
+  });
+  expect(result.hasSource).toBe(true);
+  expect(result.sourceDistance).toBeLessThanOrEqual(3);
+  expect(result.sourceMatches).toBe(true);
   expect(errors).toEqual([]);
 });

@@ -117,8 +117,12 @@ export function getOreSpotsAround(spawner, radius, keep = null, enough = Infinit
   return spots;
 }
 
-export function placeOre(kind, spot) {
-  addMapResource(ORE_KINDS[kind].resource, spot.x, spot.y);
+export function placeOre(kind, spot, spawner = null) {
+  const source = spawner || getOreSpawners(kind)
+    .reduce((nearest, rock) => !nearest || Math.hypot(rock.x - spot.x, rock.y - spot.y) < Math.hypot(nearest.x - spot.x, nearest.y - spot.y) ? rock : nearest, null);
+  const ore = addMapResource(ORE_KINDS[kind].resource, spot.x, spot.y);
+  if (source) Object.assign(ore, { oreSpawnerX: source.x, oreSpawnerY: source.y });
+  return ore;
 }
 
 // A spot is exposed when a settler starting at the town hall can stand next to it
@@ -276,11 +280,11 @@ export function placeOreSpawners(kind, count, nearStart = null) {
     const ores = getMapCount('orePerSpawner', 5);
     // one ore is always reachable from the start; the rest land anywhere around the spawner
     const first = reachable[Math.floor(rand() * reachable.length)] || (big && n > 0 ? spots[Math.floor(rand() * spots.length)] : undefined);
-    if (first) placeOre(kind, first);
+    if (first) placeOre(kind, first, spawner);
     for (let i = 1; i < ores; i++) {
       const free = getOreSpotsAround(spawner, radius);
       if (free.length === 0) break;
-      placeOre(kind, free[Math.floor(rand() * free.length)]);
+      placeOre(kind, free[Math.floor(rand() * free.length)], spawner);
     }
     resetTileIndex();
     const oresForKind = kind === 'iron' ? game.ironOres : game.coalOres;
@@ -422,8 +426,9 @@ export function placeOreSpawners(kind, count, nearStart = null) {
 // spread: side of the square (px) around nearX/nearY to pick a spot in
 // pickPoint: optional () => { x, y } to try instead of a square around (nearX, nearY) (forest shapes)
 /** @param {string} type @param {number | null} [nearX] @param {number | null} [nearY] @param {number} [spread]
- * @param {(() => { x: number, y: number }) | null} [pickPoint] */
-export function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null) {
+ * @param {(() => { x: number, y: number }) | null} [pickPoint]
+ * @param {((point: { x: number, y: number }) => boolean) | null} [keep] */
+export function spawnResource(type, nearX = null, nearY = null, spread = 180, pickPoint = null, keep = null) {
   let tx, ty, isValid = false, attempts = 0;
   while (!isValid && attempts < 100) {
     attempts++;
@@ -445,7 +450,7 @@ export function spawnResource(type, nearX = null, nearY = null, spread = 180, pi
     let cactusOutsideDesert = type === 'cactus' && !inDesert;
     // (#326) a beach: only pebbles and stones on it
     const offBeach = type === 'pebble' || type === 'boulder' || !thingAt(game.beachTiles, tx, ty);
-    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && !inEnemyTerritory(tx, ty) && isSpawnSpotFree(tx, ty) &&
+    if (Math.hypot(tx - townHall.x, ty - townHall.y) > 140 && !inEnemyTerritory(tx, ty) && (!keep || keep({ x: tx, y: ty })) && isSpawnSpotFree(tx, ty) &&
         (!inDesert || desertResource) && !cactusOutsideDesert && offBeach) {
       isValid = true;
     }
@@ -453,11 +458,14 @@ export function spawnResource(type, nearX = null, nearY = null, spread = 180, pi
   if (isValid) {
     if (type === 'boar') {
       const hp = GAME_CONFIG.mapResources.boar.hp;
-      game.boars.push({ x: tx, y: ty, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: tx, targetY: ty });
+      const boar = { x: tx, y: ty, hp, maxHp: hp, priority: 0, wanderTimer: rand() * 4, wanderInterval: 3 + rand() * 3, targetX: tx, targetY: ty };
+      game.boars.push(boar);
+      return boar;
     } else {
-      addMapResource(type, tx, ty);
+      return addMapResource(type, tx, ty);
     }
   }
+  return null;
 }
 
 export function spawnResourceCluster(type, count, centerX, centerY, spread = 180) {
@@ -475,16 +483,19 @@ export function getForestSpread() {
 }
 
 // area (#299): only there (a forest in it, a spot in it), when given
-/** @param {string} type @param {{ x0: number, y0: number, x1: number, y1: number } | null} [area] */
-export function spawnForestAware(type, area = null) {
+/** @param {string} type @param {{ x0: number, y0: number, x1: number, y1: number } | null} [area]
+ * @param {((point: { x: number, y: number }) => boolean) | null} [keep] */
+export function spawnForestAware(type, area = null, keep = null) {
   // trees (forestShare 1) always grow back in a forest, so forests don't thin out into a scatter
   const share = getMapResourceDef(type).forestShare ?? GAME_CONFIG.map.forestUndergrowthShare ?? 0.7;
-  const forests = area ? game.forests.filter(f => f.x >= area.x0 && f.x <= area.x1 && f.y >= area.y0 && f.y <= area.y1) : game.forests;
+  const forests = game.forests.filter(f =>
+    (!area || f.x >= area.x0 && f.x <= area.x1 && f.y >= area.y0 && f.y <= area.y1) &&
+    (!keep || keep(f)));
   if (forests.length > 0 && rand() < share) {
     const forest = forests[Math.floor(rand() * forests.length)];
-    spawnResource(type, forest.x, forest.y, getForestSpread(), () => pickForestPoint(forest));
+    return spawnResource(type, forest.x, forest.y, getForestSpread(), () => pickForestPoint(forest), keep);
   } else {
-    spawnResource(type, null, null, 180, area ? pointIn(area) : null);
+    return spawnResource(type, null, null, 180, area ? pointIn(area) : null, keep);
   }
 }
 
@@ -695,6 +706,25 @@ export function* generateMapSteps() {
   placeBeaches();
   placeAppleTrees();
   markDesertUnderRocks();
+}
+
+export function markStartingZoneResources() {
+  const hall = getGridPos(townHall.x, townHall.y), half = GAME_CONFIG.territory.startTiles / 2;
+  const resources = Object.entries(GAME_CONFIG.mapResources)
+    .filter(([, def]) => def.regrow && def.regrow !== 'spawner')
+    .flatMap(([, def]) => (game[def.list] || []).filter(resource =>
+      !resource.isGrowing && inStartTerritory(resource.x, resource.y, hall, half)));
+  for (const resource of resources) {
+    resource.zoneBound = true;
+    resource.zoneRegrowths = 0;
+  }
+}
+
+export function markStartingZoneBoars() {
+  const hall = getGridPos(townHall.x, townHall.y), half = GAME_CONFIG.territory.startTiles / 2;
+  for (const boar of game.boars) {
+    if (!boar.isCarcass && inStartTerritory(boar.x, boar.y, hall, half)) boar.inBase = true;
+  }
 }
 
 export function startingBoarCount() {
