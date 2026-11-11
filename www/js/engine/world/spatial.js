@@ -9,29 +9,45 @@
 
 import { TILE_SIZE, game } from './state.js';
 
-/** @type {WeakMap<any[], { length: number, first: any, last: any, cols: number, buckets: Map<number, any[]> }>} */
+/** @typedef {{ get: (k: number) => any[] | undefined, set: (k: number, bucket: any[]) => void }} Buckets */
+/** @type {WeakMap<any[], { length: number, first: any, last: any, cols: number, buckets: Buckets, blocks: Uint8Array, across: number }>} */
 const indexes = new WeakMap();
 
-const bucketOf = (x, y) => Math.floor(y / TILE_SIZE) * game.COLS + Math.floor(x / TILE_SIZE);
+// (#322) A list with a thing on a good share of the map's tiles (a continent's sea: hundreds of thousands) keeps its buckets in a
+// plain array, one place a tile: a Map that big is slow to look a tile up in, and a screen's worth of tiles is looked up for it
+// several times a frame
+/** @param {any[]} list @returns {Buckets} */
+function makeBuckets(list) {
+  const tiles = game.COLS * game.ROWS;
+  if (list.length * 8 < tiles) return new Map();
+  /** @type {(any[] | undefined)[]} */
+  const cells = new Array(tiles);
+  return { get: k => cells[k], set: (k, bucket) => { if (k >= 0 && k < tiles) cells[k] = bucket; } };
+}
 
-function add(buckets, o) {
-  const k = bucketOf(o.x, o.y), bucket = buckets.get(k);
-  if (bucket) bucket.push(o); else buckets.set(k, [o]);
+// (#322) and which squares of BLOCK x BLOCK tiles have anything of the list at all: a rectangle of tiles gone through skips an
+// empty square in one go (a screen's worth of tiles was looked up one by one for every list, most of them with nothing there)
+const BLOCK = 8;
+function add(index, o) {
+  const gx = Math.floor(o.x / TILE_SIZE), gy = Math.floor(o.y / TILE_SIZE), k = gy * game.COLS + gx, bucket = index.buckets.get(k);
+  if (bucket) bucket.push(o); else index.buckets.set(k, [o]);
+  if (gx >= 0 && gy >= 0 && gx < game.COLS && gy < game.ROWS) index.blocks[Math.floor(gy / BLOCK) * index.across + Math.floor(gx / BLOCK)] = 1;
 }
 
 /** @param {any[]} list */
 function bucketsOf(list) {
   let index = indexes.get(list);
-  if (index && index.cols === game.COLS && index.first === list[0] && index.length === list.length && index.last === list[list.length - 1]) return index.buckets;
+  if (index && index.cols === game.COLS && index.first === list[0] && index.length === list.length && index.last === list[list.length - 1]) return index;
   if (index && index.cols === game.COLS && index.first === list[0] && index.length < list.length && list[index.length - 1] === index.last) {
-    for (let i = index.length; i < list.length; i++) add(index.buckets, list[i]);
+    for (let i = index.length; i < list.length; i++) add(index, list[i]);
   } else {
-    index = { length: 0, first: list[0], last: undefined, cols: game.COLS, buckets: new Map() };
-    for (const o of list) add(index.buckets, o);
+    const across = Math.ceil(game.COLS / BLOCK);
+    index = { length: 0, first: list[0], last: undefined, cols: game.COLS, buckets: makeBuckets(list), blocks: new Uint8Array(across * Math.ceil(game.ROWS / BLOCK)), across };
+    for (const o of list) add(index, o);
     indexes.set(list, index);
   }
   index.length = list.length; index.last = list[list.length - 1];
-  return index.buckets;
+  return index;
 }
 
 // Calls fn for each thing of the list within the square of half-side r round (x, y) (closer ones, not
@@ -39,7 +55,7 @@ function bucketsOf(list) {
 /** @template T @param {T[]} list @param {number} x @param {number} y @param {number} r @param {(o: T) => any} fn */
 export function someNear(list, x, y, r, fn) {
   if (list.length < 24) return list.some(fn); // (a short list: quicker to just go through it)
-  const buckets = bucketsOf(list);
+  const index = bucketsOf(list), buckets = index.buckets;
   const gx0 = Math.floor((x - r) / TILE_SIZE), gx1 = Math.floor((x + r) / TILE_SIZE);
   const gy0 = Math.floor((y - r) / TILE_SIZE), gy1 = Math.floor((y + r) / TILE_SIZE);
   for (let gy = gy0; gy <= gy1; gy++) {
@@ -83,13 +99,16 @@ export function thingAt(list, x, y) {
 export function forEachInRect(list, x0, y0, x1, y1, fn) {
   const inside = o => o.x >= x0 && o.x <= x1 && o.y >= y0 && o.y <= y1;
   if (list.length < 24) { for (const o of list) if (inside(o)) fn(o); return; }
-  const buckets = bucketsOf(list);
+  const index = bucketsOf(list), buckets = index.buckets;
   const gx0 = Math.max(0, Math.floor(x0 / TILE_SIZE)), gx1 = Math.min(game.COLS - 1, Math.floor(x1 / TILE_SIZE));
   const gy0 = Math.max(0, Math.floor(y0 / TILE_SIZE)), gy1 = Math.min(game.ROWS - 1, Math.floor(y1 / TILE_SIZE));
   // (a rectangle bigger than the list: quicker through the list)
   if ((gx1 - gx0 + 1) * (gy1 - gy0 + 1) > list.length) { for (const o of list) if (inside(o)) fn(o); return; }
+  const blocks = index.blocks, across = index.across;
   for (let gy = gy0; gy <= gy1; gy++) {
+    const row = Math.floor(gy / BLOCK) * across;
     for (let gx = gx0; gx <= gx1; gx++) {
+      if (!blocks[row + Math.floor(gx / BLOCK)]) { gx |= BLOCK - 1; continue; } // (on to the next square)
       const bucket = buckets.get(gy * game.COLS + gx);
       if (bucket) for (const o of bucket) if (inside(o)) fn(o);
     }
