@@ -4,7 +4,7 @@
 // screen's resolution, and laid down with one call; the shadows of all of a kind on the screen are filled as one shape. A tuft
 // of grass is painted leaning a few ways, and laid down as the wind has it now.
 
-import { ctx, getViewScale, glFrame, glReady, glSprite } from '../../../engine/platform/index.js';
+import { ctx, getViewScale, glReady, glSprite } from '../../../engine/platform/index.js';
 import { tileVariantHash, windSway } from '../../world/index.js';
 import { game, thingAt } from '../../../engine/world/index.js';
 import { drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawPebblesArt, drawStickArt, drawStumpArt, drawTreeArt, paintOn, paintVariant } from './gathering.art.js';
@@ -63,6 +63,13 @@ function spriteOf(kind, o, res) {
   return c;
 }
 
+// A thing's picture at a size, and the box round where it stands that the picture covers (for what keeps pictures itself,
+// see gathering.card.js)
+/** @param {string} kind @param {any} o @param {number} res */
+export const pictureOf = (kind, o, res) => spriteOf(kind, o, res);
+/** @param {string} kind */
+export const pictureBox = kind => KINDS[kind].box;
+
 // The things of a kind given, each laid down from its picture
 /** @param {string} kind @param {any[]} things */
 export function drawSprites(kind, things) {
@@ -106,14 +113,7 @@ function drawSprite(kind, o, res, x0, y0) {
 
 // One thing of a kind (not a tuft of grass), laid down from its picture
 /** @param {string} kind @param {any} o */
-let cardAt = -1, cardRes = 1;
-/** @type {DOMMatrix | null} */
-let cardMatrix = null;
-export function drawOneSprite(kind, o, onCard = false) {
-  const box = KINDS[kind].box, res = onCard && cardAt === glFrame() ? cardRes : resOf();
-  if (!onCard) { drawSprite(kind, o, res, box[0], box[1]); return; }
-  // (to the graphics card's canvas, under the game's)
-  if (cardAt !== glFrame()) { cardAt = glFrame(); cardMatrix = ctx.getTransform(); cardRes = res; } // (the world's transform, read once a frame)
-  const c = spriteOf(kind, o, cardRes), m = /** @type {DOMMatrix} */ (cardMatrix);
-  glSprite(c, m.a * (o.x + box[0] - 1 / res) + m.e, m.d * (o.y + box[1] - 1 / res) + m.f, m.a * c.width / res, m.d * c.height / res);
+export function drawOneSprite(kind, o) {
+  const box = KINDS[kind].box;
+  drawSprite(kind, o, resOf(), box[0], box[1]);
 }

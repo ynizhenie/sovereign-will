@@ -36,3 +36,34 @@ test('with WebGL off (as it is to begin with) there is no second canvas', async 
   expect(await page.locator('[data-gl="off"]').getAttribute('class')).toContain('active');
   expect(errors).toEqual([]);
 });
+
+test('with WebGL on, nature is kept on the card: a tree felled or taken away leaves it, a new one comes to it', async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-gl', 'on'); } catch (e) { /* none */ } });
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  await page.waitForFunction(() => glReady());
+  const r = await page.evaluate(() => {
+    isPaused = true;
+    const frames = n => { for (let i = 0; i < n; i++) render(); };
+    const standing = () => game.trees.filter(t => !t.isGrowing && !t.fallen).length;
+    frames(Math.ceil(game.trees.length / 400) + 2); // (every tree looked at)
+    const start = { kept: glKept(1), standing: standing(), small: glKept(0), smallThings: game.sticks.length + game.pebbles.length + game.stumps.length + game.berryBushes.length + game.cacti.length + game.boulders.length };
+    // one felled where it stands, one taken away, a sapling planted
+    const felled = game.trees.find(t => !t.isGrowing && !t.fallen);
+    felled.fallen = true;
+    game.trees.splice(game.trees.findIndex(t => t !== felled && !t.isGrowing && !t.fallen), 1);
+    game.trees.push({ x: felled.x + 60, y: felled.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 });
+    frames(Math.ceil(game.trees.length / 400) + 2);
+    const after = { kept: glKept(1), standing: standing() };
+    // the sapling grown
+    game.trees[game.trees.length - 1].isGrowing = false;
+    frames(Math.ceil(game.trees.length / 400) + 2);
+    return { start, after, grown: { kept: glKept(1), standing: standing() } };
+  });
+  expect(r.start.kept).toBe(r.start.standing);
+  expect(r.start.small).toBe(r.start.smallThings);
+  expect(r.after.standing).toBe(r.start.standing - 2);
+  expect(r.after.kept).toBe(r.after.standing);
+  expect(r.grown.kept).toBe(r.after.standing + 1);
+  expect(errors).toEqual([]);
+});

@@ -18,10 +18,21 @@ let app = null;
 let ready = false, failed = false;
 /** @type {HTMLCanvasElement | null} */
 let glCanvas = null;
-// the frame's pictures, in order: sprites kept and used again each frame
+// What's on the card's canvas, from the bottom up: band 0 (the ground, the shadows), the small things kept there, band 1
+// (the tufts of grass), the trees kept there, band 2. A band holds a frame's pictures, said again each frame in the order they
+// lie (sprites used again frame after frame); what's kept is said once and stays till it's dropped (glKeep, glDrop): the
+// card draws it each frame with nothing asked of the game but where the camera is (glCamera)
+const BANDS = 3;
+/** @type {any[][]} */
+const pools = [[], [], []];
+const usedIn = [0, 0, 0], shownIn = [0, 0, 0];
 /** @type {any[]} */
-const pool = [];
-let used = 0, shown = 0;
+let bands = [];
+/** @type {any[]} */
+let keptLayers = [];
+/** @type {Map<object, any>[]} */
+const keptSprites = [new Map(), new Map()];
+let band = 0;
 
 export const glReady = () => ready;
 
@@ -39,6 +50,11 @@ export async function initGl(gameCanvas) {
       background: '#0b0f14', antialias: false, autoStart: false, preference: 'webgl', powerPreference: 'high-performance' });
     /** @type {HTMLElement} */ (gameCanvas.parentElement).insertBefore(glCanvas, gameCanvas);
     app = made;
+    for (let i = 0; i < BANDS; i++) {
+      bands.push(new PIXI.Container());
+      app.stage.addChild(bands[i]);
+      if (i < 2) { keptLayers.push(new PIXI.Container({ isRenderGroup: true, sortableChildren: true })); app.stage.addChild(keptLayers[i]); }
+    }
     ready = true;
   } catch (e) {
     failed = true; // (no WebGL on this device: the game's canvas draws it all, as with the setting off)
@@ -51,17 +67,51 @@ export async function initGl(gameCanvas) {
 export function glBeginFrame(width, height) {
   if (!ready) return;
   if (app.renderer.width !== width || app.renderer.height !== height) app.renderer.resize(width, height);
-  used = 0;
+  usedIn.fill(0);
+  band = 0;
   frames++;
+}
+// The pictures said from here on in this frame go to that band (see above)
+/** @param {number} n */
+export function glBand(n) { band = n; }
+// Where the world is on the screen this frame: canvas px to a world unit, and where the world's corner lands
+/** @param {number} scale @param {number} x @param {number} y */
+export function glCamera(scale, x, y) {
+  for (const layer of keptLayers) { layer.scale.set(scale); layer.position.set(x, y); }
+}
+// A thing's picture kept on the card (layer 0: the small things, 1: the trees), with its top left at (x, y) in the world,
+// w by h world units; among its layer's, those with a greater z lie over those with a lesser. Said again: changed
+/** @param {number} layer @param {object} thing @param {HTMLCanvasElement} picture @param {number} x @param {number} y @param {number} w @param {number} h @param {number} z */
+export function glKeep(layer, thing, picture, x, y, w, h, z) {
+  let sprite = keptSprites[layer].get(thing);
+  if (!sprite) { sprite = new PIXI.Sprite(); keptSprites[layer].set(thing, sprite); keptLayers[layer].addChild(sprite); }
+  sprite.texture = sheetTexture(picture);
+  sprite.position.set(x, y);
+  sprite.scale.set(w / picture.width, h / picture.height);
+  sprite.zIndex = z;
+}
+/** @param {number} layer @param {object} thing */
+export function glDrop(layer, thing) {
+  const sprite = keptSprites[layer].get(thing);
+  if (!sprite) return;
+  keptSprites[layer].delete(thing);
+  sprite.destroy();
+}
+// how many things are kept in a layer (for the tests)
+/** @param {number} layer */
+export const glKept = layer => keptSprites[layer].size;
+export function glDropAll() {
+  for (let layer = 0; layer < keptSprites.length; layer++) { for (const sprite of keptSprites[layer].values()) sprite.destroy(); keptSprites[layer].clear(); }
 }
 // which frame this is (for what's worked out once a frame by those who draw here)
 let frames = 0;
 export const glFrame = () => frames;
 
 function next() {
-  let sprite = pool[used];
-  if (!sprite) { sprite = pool[used] = new PIXI.Sprite(); app.stage.addChild(sprite); }
-  used++;
+  const pool = pools[band];
+  let sprite = pool[usedIn[band]];
+  if (!sprite) { sprite = pool[usedIn[band]] = new PIXI.Sprite(); bands[band].addChild(sprite); }
+  usedIn[band]++;
   sprite.visible = true;
   sprite.alpha = 1;
   return sprite;
@@ -97,11 +147,11 @@ export function glForgetChunk(chunk) {
 }
 
 // ---- A small picture (a tuft, a stone, a bush): all of them on a few big sheets, so the card draws them in one go
-const SHEET = 2048, GAP = 2, MAX_SHEETS = 6;
+const SHEET = 2048, GAP = 4;
 /** @type {{ canvas: HTMLCanvasElement, g: CanvasRenderingContext2D, source: any, x: number, y: number, row: number, dirty: boolean }[]} */
-let sheets = [];
+const sheets = [];
 /** @type {WeakMap<HTMLCanvasElement, any>} */
-let sheetTextures = new WeakMap();
+const sheetTextures = new WeakMap();
 function sheetTexture(picture) {
   let texture = sheetTextures.get(picture);
   if (texture) return texture;
@@ -109,10 +159,8 @@ function sheetTexture(picture) {
   let sheet = sheets[sheets.length - 1];
   if (sheet && sheet.x + w + GAP > SHEET) { sheet.x = 0; sheet.y += sheet.row + GAP; sheet.row = 0; }
   if (!sheet || sheet.y + h + GAP > SHEET) {
-    // (too many sheets, after many changes of zoom: all let go, the pictures on the screen put on new ones as they come)
-    if (sheets.length >= MAX_SHEETS) { for (const s of sheets) s.source.destroy(); sheets = []; sheetTextures = new WeakMap(); }
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = SHEET;
-    sheet = { canvas, g: /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d')), source: new PIXI.CanvasSource({ resource: canvas, scaleMode: 'linear' }), x: 0, y: 0, row: 0, dirty: false };
+    sheet = { canvas, g: /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d')), source: new PIXI.CanvasSource({ resource: canvas, scaleMode: 'linear', autoGenerateMipmaps: true }), x: 0, y: 0, row: 0, dirty: false };
     sheets.push(sheet);
   }
   sheet.g.drawImage(picture, sheet.x, sheet.y);
@@ -161,8 +209,10 @@ export function glLayer(layer, w, h, alpha) {
 // The frame's pictures drawn
 export function glEndFrame() {
   if (!ready) return;
-  for (let i = used; i < shown; i++) pool[i].visible = false;
-  shown = used;
+  for (let b = 0; b < BANDS; b++) {
+    for (let i = usedIn[b]; i < shownIn[b]; i++) pools[b][i].visible = false;
+    shownIn[b] = usedIn[b];
+  }
   for (const sheet of sheets) if (sheet.dirty) { sheet.source.update(); sheet.dirty = false; }
   app.render();
 }
