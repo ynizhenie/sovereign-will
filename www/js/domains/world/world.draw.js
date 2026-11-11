@@ -77,7 +77,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0;
     // These derived indexes are tied to world lists and may have identical lengths on a new map.
     sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
-    terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+    terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() }; terrainListsSeen = -1;
     grassStamps = { lists: [], stamps: new Map() };
     fishy = { lists: [], list: [] };
     spots = { version: -1, list: [], acc: [], at: 0 };
@@ -722,9 +722,14 @@ const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, 
 // What the terrain in and round a piece is like (any tile coming or going changes it)
 /** @type {{ lists: any[], stamps: Map<string, string>, empty: Set<string>, sea: Set<string>, bounds: Map<string, number[]> }} */
 let terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+// (the lists looked at once a frame, not for every piece asked about: that was asked several times a piece)
+let terrainListsSeen = -1;
 function terrainStamp(cx, cy) {
-  const lists = terrainLists().flatMap(listStamp);
-  if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+  if (terrainListsSeen !== frameOf) {
+    terrainListsSeen = frameOf;
+    const lists = terrainLists().flatMap(listStamp);
+    if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+  }
   const key = `${cx},${cy}`;
   let stamp = terrainStamps.stamps.get(key);
   if (stamp === undefined) {
