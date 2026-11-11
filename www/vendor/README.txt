@@ -1,0 +1,1 @@
+PixiJS 8.22.0 (https://pixijs.com), MIT: dist/pixi.min.mjs of the npm package pixi.js as published, named .js so every server gives it as a script. Loaded only when the WebGL setting is on (www/js/engine/platform/gl.js).

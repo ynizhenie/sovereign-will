@@ -327,12 +327,15 @@ export function depthSortedTrees() {
   return pictured() ? [] : seenOf(game.trees);
 }
 
-export function drawDepthTree(t) {
+// onCard: its picture on the graphics card's canvas under the game's (a tree nothing stands by, see drawDepthSortedScene)
+export function drawDepthTree(t, onCard = false) {
   if (!t.isGrowing && !t.fallen) {
-    drawOneSprite('tree', t);
+    drawOneSprite('tree', t, onCard);
     drawTreeNear(t, true);
   } else drawTreeNear(t);
 }
+// a tree that just stands there: only its picture and its bar to draw
+export const isStandingTree = t => !t.isGrowing && !t.fallen;
 
 // A tree as it is close up (over its picture, standing: only what's changing, its bar)
 function drawTreeNear(t, overPicture = false) {

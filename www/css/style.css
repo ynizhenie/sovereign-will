@@ -275,15 +275,15 @@ body.menu-world #main-menu { background: transparent; }
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.55) 100%);
 }
 body.menu-world #main-menu::before { opacity: 1; transition: opacity 0.8s ease; }
-#gameCanvas { transition: filter 0.4s ease, transform 0.4s ease; }
+#gameCanvas, #worldCanvas { transition: filter 0.4s ease, transform 0.4s ease; }
 /* back into the menu from a game: it steps back in 0.8 s (into a game, sharp again in 0.4 s, above) */
-body.menu-world #gameCanvas { filter: brightness(0.8) saturate(0.85);
+body.menu-world #gameCanvas, body.menu-world #worldCanvas { filter: brightness(0.8) saturate(0.85);
   transition: filter 0.8s ease, transform 0.8s ease; }
 /* the menu put away to watch the scene (#256): its panels and title gone, the dark edges too; a little bar to
    change the scene and bring the menu back */
 body.menu-ui-hidden #main-menu .main-menu-content, body.menu-ui-hidden #menu-title, body.menu-ui-hidden #menu-eye-box { display: none !important; }
 body.menu-ui-hidden #main-menu::before { opacity: 0; }
-body.menu-ui-hidden.menu-world #gameCanvas { filter: none; }
+body.menu-ui-hidden.menu-world #gameCanvas, body.menu-ui-hidden.menu-world #worldCanvas { filter: none; }
 #menu-eye-box { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: none; }
 body.menu-world #menu-eye-box { display: flex; }
 #menu-scene-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: none; gap: 8px; }

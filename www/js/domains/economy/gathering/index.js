@@ -2,6 +2,6 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { canGather, getWorkPriority, isFreeHands, harvest, harvestMarked, pickApplesFrom, workResource } from './gathering.behaviours.js';
-export { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawHarvestProgress, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from './gathering.draw.js';
+export { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawHarvestProgress, isStandingTree, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from './gathering.draw.js';
 export { drawFarmPlotArt } from './gathering.art.js';
 export { addMapResource, finishHarvest, getHarvestableResources, hasMine, getMapResourceDef, getWorkableResources, getMapResourceKind, scheduleRespawn, updatePendingRespawns } from './gathering.rules.js';

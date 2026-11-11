@@ -2,7 +2,7 @@
 
 import { drawIcon } from '../../ui/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, townHall, worldEpoch } from '../../engine/world/index.js';
-import { camera, canvas, ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale, glChunk, glForgetChunk, glReady } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
@@ -102,9 +102,12 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
   // (a picture covers the rectangle it was painted for: the piece, or the part of it its layer has anything in, see bounds)
   /** @param {Chunk} p */
+  // (the ground's own pieces go to the graphics card's canvas when that's on, see engine/platform/gl.js)
+  const onCard = target === ctx && (layer === 'grass' || layer === 'terrain') && glReady();
   const blit = p => {
     const dx0 = snapX(p.x0), dy0 = snapY(p.y0), dw = snapX(p.x1) - dx0, dh = snapY(p.y1) - dy0;
-    target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+    if (onCard) glChunk(p, m.e + m.a * dx0, m.f + m.d * dy0, m.a * dw, m.d * dh);
+    else target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
@@ -186,6 +189,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     if (c.frame === frameOf) continue;
     pixels -= c.canvas.width * c.canvas.height;
     chunks.delete(key);
+    if (onCard) glForgetChunk(c);
   }
 }
 
