@@ -4,7 +4,7 @@ import { TILE_SIZE, forEachInRect, game, thingAt, worldEpoch } from '../../../en
 import { SHADOWS, paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
 import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
-import { drawSprites } from './gathering.sprites.js';
+import { drawOneSprite, drawSprites } from './gathering.sprites.js';
 import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, isPrewarmingChunks, paintRockShadows } from '../../world/index.js';
 
 export function getHarvestMaxHp(resource) {
@@ -95,7 +95,7 @@ function around(list, x0, y0, x1, y1, keep = null) {
 const STAMPS_PER_FRAME = 4;
 /** @param {(lists: any[][]) => any[][]} listsOf @param {number} [margin] (world px round a piece of what's in it that shows in it) @param {() => string} [sunOf] @param {number} [ticks] (how often a piece is looked at again) */
 function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) {
-  /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, sun: string | null, stamps: Map<string, { tick: number, epoch: number, sun: string, things: number, stamp: string }>, dirty: Set<string> }} */
+  /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, sun: string | null, stamps: Map<string, { tick: number, epoch: number, sun: string, things: number, count: number, parts: number[], counts: number[], stamp: string }>, dirty: Set<string> }} */
   const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), sun: null, stamps: new Map(), dirty: new Set() };
   /** @type {any[][]} */
   const current = [];
@@ -141,21 +141,37 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
       if (state.sun === null) look();
       // (the sun's step too: the time of day can be changed with the game paused, in the editor)
       const key = `${cx},${cy}`, kept = state.stamps.get(key), sun = /** @type {string} */ (state.sun);
-      const due = !kept || state.dirty.has(key) || kept.epoch !== state.epoch || kept.sun !== sun || game.pathTick - kept.tick >= ticks || game.pathTick < kept.tick;
-      if (kept && (!due || (!isPrewarmingChunks() && state.made >= STAMPS_PER_FRAME))) return kept.stamp;
+      // changed: something came or went (all of it looked at again); old: only how the trees stand may have changed since (the
+      // other lists' things are as they were while they're there)
+      const changed = !kept || state.dirty.has(key) || kept.epoch !== state.epoch;
+      const old = !!kept && (game.pathTick - kept.tick >= ticks || game.pathTick < kept.tick);
+      // (#322) the sun moved on: the same things, nothing looked for (it went through a dozen lists round every piece on the screen)
+      const withSun = entry => { if (entry.sun !== sun) { entry.sun = sun; entry.stamp = `${entry.things}|${sun}`; } return entry.stamp; };
+      if (kept && ((!changed && !old) || (!isPrewarmingChunks() && state.made >= STAMPS_PER_FRAME))) return withSun(kept);
       state.made++;
       const size = CHUNK * TILE_SIZE, x0 = cx * size, y0 = cy * size;
-      let h = 0;
-      current.forEach((list, n) => forEachInRect(list, x0 - margin, y0 - margin, x0 + size + margin, y0 + size + margin, o => {
-        h = (h * 31 + o.x * 7919 + o.y * 31 + n + (standing(o) ? 1 : 0) + (o.applesReady ? 2 : 0) + (o.apple ? 4 : 0) +
-          (thingAt(game.savannaTiles, o.x, o.y) ? 8 : 0)) | 0;
-      }));
+      const parts = kept && !changed ? kept.parts : [], counts = kept && !changed ? kept.counts : [];
+      current.forEach((list, n) => {
+        if (kept && !changed && list !== game.trees) return;
+        let h = 0, count = 0;
+        forEachInRect(list, x0 - margin, y0 - margin, x0 + size + margin, y0 + size + margin, o => {
+          h = (h * 31 + o.x * 7919 + o.y * 31 + n + (standing(o) ? 1 : 0) + (o.applesReady ? 2 : 0) + (o.apple ? 4 : 0) +
+            (thingAt(game.savannaTiles, o.x, o.y) ? 8 : 0)) | 0;
+          count++;
+        });
+        parts[n] = h; counts[n] = list === game.savannaTiles ? 0 : count;
+      });
+      parts.length = counts.length = current.length;
+      let h = 0, count = 0;
+      for (let n = 0; n < parts.length; n++) { h = (h * 31 + parts[n] + n) | 0; count += counts[n]; }
       const value = `${h}|${sun}`;
       state.dirty.delete(key);
-      state.stamps.set(key, { tick: game.pathTick, epoch: state.epoch, sun, things: h, stamp: value });
+      state.stamps.set(key, { tick: game.pathTick, epoch: state.epoch, sun, things: h, count, parts, counts, stamp: value });
       return value;
   };
   stamp.dirty = (cx, cy) => state.dirty.has(`${cx},${cy}`);
+  // (#322) nothing of these lists in or round the piece (as last looked at): it has no picture
+  stamp.empty = (cx, cy) => { const key = `${cx},${cy}`; if (!state.stamps.has(key) || state.dirty.has(key)) stamp(cx, cy); return state.stamps.get(key)?.count === 0; };
   return {
     newFrame() { state.made = 0; look(); },
     stamp,
@@ -313,7 +329,7 @@ export function depthSortedTrees() {
 
 export function drawDepthTree(t) {
   if (!t.isGrowing && !t.fallen) {
-    drawSprites('tree', [t]);
+    drawOneSprite('tree', t);
     drawTreeNear(t, true);
   } else drawTreeNear(t);
 }

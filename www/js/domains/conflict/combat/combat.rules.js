@@ -320,12 +320,24 @@ export function isDefenseAlert() {
 // How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
 // out by far buildings on one side, in the open on the other): its farthest building within 40° of the
 // angle, at least minRadius tiles
+// (#322: each building's angle and distance from the hall worked out once a tick: at night with no torch every settler asked
+// this for every resource it looked at, two arctangents a building each time)
+const bearingsOnce = onceThisTick();
+const buildingBearings = () => bearingsOnce(() => {
+  const own = game.buildings.filter(b => b.side !== 'red');
+  const angles = new Float64Array(own.length), distances = new Float64Array(own.length);
+  own.forEach((b, i) => { angles[i] = Math.atan2(b.y - townHall.y, b.x - townHall.x); distances[i] = Math.hypot(b.x - townHall.x, b.y - townHall.y); });
+  return { angles, distances };
+});
+const TURN = Math.PI * 2, CONE = Math.PI * 40 / 180;
 export function baseRadiusToward(angle) {
+  const { angles, distances } = buildingBearings();
   let far = 0;
-  for (const b of game.buildings) {
-    if (b.side === 'red') continue;
-    const a = Math.atan2(b.y - townHall.y, b.x - townHall.x);
-    if (Math.abs(Math.atan2(Math.sin(a - angle), Math.cos(a - angle))) <= Math.PI * 40 / 180) far = Math.max(far, Math.hypot(b.x - townHall.x, b.y - townHall.y));
+  for (let i = 0; i < angles.length; i++) {
+    if (distances[i] <= far) continue;
+    let d = Math.abs(angles[i] - angle) % TURN; // (the angle between them, the short way round)
+    if (d > Math.PI) d = TURN - d;
+    if (d <= CONE) far = distances[i];
   }
   return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
 }
@@ -367,8 +379,9 @@ export function getThreatArc() {
 // An enemy inside the base, or next to one of its buildings or the town hall
 export function isInsideBase(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
+  // (#322: the buildings near it, not all of them: asked for every enemy by every fighter, every tick)
   return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
-    game.buildings.some(b => b.side !== 'red' && Math.hypot(en.x - b.x, en.y - b.y) <= near);
+    someNear(game.buildings, en.x, en.y, near, b => b.side !== 'red' && Math.hypot(en.x - b.x, en.y - b.y) <= near);
 }
 
 // Squads and their posts, rebuilt when the soldiers, the buildings or the wave's side change: squads of

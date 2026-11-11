@@ -58,6 +58,17 @@ export function anyWithin(list, x, y, r) {
   return someNear(list, x, y, r, o => Math.hypot(o.x - x, o.y - y) < r);
 }
 
+// The first thing of the list (in the list's own order, as `find` gives it) within the square of half-side r round (x, y)
+// that fn is true of
+/** @template T @param {T[]} list @param {number} x @param {number} y @param {number} r @param {(o: T) => any} fn @returns {T | undefined} */
+export function firstOf(list, x, y, r, fn) {
+  if (list.length < 24) return list.find(fn);
+  /** @type {T | undefined} */
+  let found, more = false;
+  someNear(list, x, y, r, o => { if (fn(o)) { if (found === undefined) found = o; else more = true; } return false; });
+  return more ? list.find(fn) : found; // (more than one: the list's first of them)
+}
+
 // The thing of the list exactly at (x, y), if any
 /** @template {{ x: number, y: number }} T @param {T[]} list @param {number} x @param {number} y @returns {T | undefined} */
 export function thingAt(list, x, y) {

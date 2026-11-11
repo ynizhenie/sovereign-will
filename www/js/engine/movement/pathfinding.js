@@ -173,11 +173,27 @@ export function getReachDistanceToResource(reach, resource) {
 function enemyMemo() {
   const signature = (getTileIndex().signature * 31 + (game.plagueMode ? 1 : 0)) | 0, size = game.COLS * game.ROWS;
   if (enemyTiles.signature !== signature || enemyTiles.strict.length !== size || enemyTiles.hallX !== townHall.x || enemyTiles.hallY !== townHall.y) {
-    enemyTiles = { signature, hallX: townHall.x, hallY: townHall.y, strict: new Int8Array(size).fill(-1), permissive: new Int8Array(size).fill(-1) };
+    enemyTiles = { signature, hallX: townHall.x, hallY: townHall.y, strict: new Int8Array(size).fill(-1), permissive: new Int8Array(size).fill(-1), flags: new Int8Array(size).fill(-1) };
   }
   return enemyTiles;
 }
-let enemyTiles = { signature: /** @type {number | null} */ (null), hallX: 0, hallY: 0, strict: new Int8Array(0), permissive: new Int8Array(0) };
+let enemyTiles = { signature: /** @type {number | null} */ (null), hallX: 0, hallY: 0, strict: new Int8Array(0), permissive: new Int8Array(0), flags: new Int8Array(0) };
+
+// (#322) What stands on a tile that a search through buildings weighs (kept as the tiles' blocking is, above): a search made
+// an "x,y" string and looked it up in three or four sets for every tile it came to, most of what it cost round a walled base
+const BUILDING = 1, NATURE = 2, SPIKES = 4, RED = 8;
+function tileFlags(gx, gy) {
+  if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return 0;
+  const memo = enemyMemo(), i = gy * game.COLS + gx;
+  if (memo.flags[i] === -1) {
+    const tiles = getTileIndex(), k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`;
+    memo.flags[i] = (tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k) ? BUILDING : 0) | // (traps unseen, #248; its own doors walked through)
+      (tiles.trees.has(k) || tiles.boulders.has(k) ? NATURE : 0) | (tiles.spikes.has(k) ? SPIKES : 0) |
+      (tiles.redBuildings.has(k) || tiles.redDoors.has(k) ? RED : 0);
+  }
+  return memo.flags[i];
+}
+const flagsAt = (x, y) => tileFlags((x - 15) / TILE_SIZE, (y - 15) / TILE_SIZE); // (a tile's centre)
 
 export function isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
@@ -445,23 +461,16 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
-    // what a tile costs on top of walking it: a building is broken through rather than walked a long way
-    // round (to a far door), spikes are walked over, trees and boulders mostly walked round
-    extraCost: (x, y) => {
-      const k = `${x},${y}`;
-      if (isBuilding(k)) return PATH_COST.building;
-      if (tiles.trees.has(k) || tiles.boulders.has(k)) return PATH_COST.nature;
-      return tiles.spikes.has(k) ? PATH_COST.spikes : 0;
-    },
+    extraCost: (x, y) => costOf(flagsAt(x, y)),
     maxNodes: Math.min(maxNodes || ENEMY_MAX_NODES, ENEMY_MAX_NODES)
   });
+  // (the path's last point is the target itself, anywhere in its tile)
+  const flagsOf = p => tileFlags(Math.floor(p.x / TILE_SIZE), Math.floor(p.y / TILE_SIZE));
+  const onCentre = p => (p.x - 15) % TILE_SIZE === 0 && (p.y - 15) % TILE_SIZE === 0;
   // a way in over spikes only needs nothing broken: the enemy just walks it (see update())
-  if (result.path.length > 0 && !result.path.some(p => isBreakable(`${p.x},${p.y}`))) result.isBlockedPath = false;
+  if (result.path.length > 0 && !result.path.some(p => onCentre(p) && (flagsOf(p) & (BUILDING | NATURE)))) result.isBlockedPath = false;
   // what it costs in tiles of walking, breaking and spikes included
-  result.cost = pathCost(result.path) + result.path.slice(0, -1).reduce((sum, p) => {
-    const k = `${p.x},${p.y}`;
-    return sum + (isBuilding(k) ? PATH_COST.building : (tiles.trees.has(k) || tiles.boulders.has(k)) ? PATH_COST.nature : tiles.spikes.has(k) ? PATH_COST.spikes : 0);
-  }, 0);
+  result.cost = pathCost(result.path) + result.path.slice(0, -1).reduce((sum, p) => sum + costOf(flagsOf(p)), 0);
   return result;
 }
 
@@ -545,17 +554,15 @@ const ENEMY_MAX_NODES = 3000;
 // (#326) A settler's way through the enemy's buildings (its walls, doors and the like count ENEMY_PATH_COST.building
 // tiles each, to break): isBlockedPath, so it strikes what's in the way (see breakWhatsInTheWay)
 function findSettlerPathThrough(startG, endG, targetX, targetY, allowBattleBorder = false) {
-  const tiles = getTileIndex();
-  const isRed = (gx, gy) => { const k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`; return tiles.redBuildings.has(k) || tiles.redDoors.has(k); };
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) && !isRed(gx, gy),
     blocksDiagonalCorner: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) || isRed(gx, gy),
     allowCornerCutting: false,
     isBlockedPath: true,
-    extraCost: (x, y) => (tiles.redBuildings.has(`${x},${y}`) || tiles.redDoors.has(`${x},${y}`) ? ENEMY_PATH_COST.building : 0),
+    extraCost: (x, y) => (flagsAt(x, y) & RED ? ENEMY_PATH_COST.building : 0),
     maxNodes: SETTLER_MAX_NODES
   });
-  result.cost = pathCost(result.path) + result.path.slice(0, -1).filter(p => tiles.redBuildings.has(`${p.x},${p.y}`) || tiles.redDoors.has(`${p.x},${p.y}`)).length * ENEMY_PATH_COST.building;
+  result.cost = pathCost(result.path) + result.path.slice(0, -1).filter(p => flagsAt(p.x, p.y) & RED).length * ENEMY_PATH_COST.building;
   return result;
 }
 

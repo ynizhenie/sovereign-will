@@ -22,7 +22,8 @@ import { isRaidPicking, isRaiding, raid, tickCards, tickRaid, tickRaidCamp } fro
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 import { plagueCardPending, tickPlague } from '../modes/plague/index.js';
 
-export function update(dt) {
+// hud: the panels brought up to date at the end of it (the loop does that itself, a few times a second: see gameLoop)
+export function update(dt, hud = true) {
   if (game.loading) return; // (#326)
   if ((!game.gameStarted && game.gameMode !== 'menu') || game.isPaused || game.gameMode === 'editor') return; // the menu's world runs too
   if ((game.gameMode === 'endless' && game.cardOffer) || plagueCardPending() || (game.gameMode === 'endless' && isRaidPicking())) return; // (the game waits for a card or a raid party to be picked, #255)
@@ -93,8 +94,8 @@ export function update(dt) {
   if (!isRaiding() || raid.scouting) tickCards(); // (#255; scouting doesn't pause the world)
   tickRaidCamp(dt); // (#255)
   tickRaid(dt);
-  updateUI();
-  refreshAffordability();
+  if (hud) { updateUI(); refreshAffordability(); }
+  return true; // (a whole step of the game made: the panels have something new to show)
 }
 
 function updateMenuScene(dt) {

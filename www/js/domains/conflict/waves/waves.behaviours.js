@@ -783,7 +783,8 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
   // spikes are walked over, not besieged; (#326) its own doors (the red side's) walked through
-  let touchingBuilding = game.buildings.find(b => !(getDefinition('buildings', b.type) || {}).walkable && !(b.side === 'red' && isDoor(b)) && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
+  // (#322: among those round it, not every building for every enemy every tick)
+  let touchingBuilding = firstOf(game.buildings, en.x, en.y, contactRadius + 15, b => !(getDefinition('buildings', b.type) || {}).walkable && !(b.side === 'red' && isDoor(b)) && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
   if (touchingBuilding) {
     if (game.plagueMode && touchingBuilding.plagueCemetery) {
       moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
