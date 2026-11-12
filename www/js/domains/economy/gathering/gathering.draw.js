@@ -2,7 +2,7 @@
 
 import { TILE_SIZE, forEachInRect, game, thingAt, worldEpoch } from '../../../engine/world/index.js';
 import { SHADOWS, paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
-import { ctx, drawProgressBar, getViewRect, getViewScale } from '../../../engine/platform/index.js';
+import { ctx, drawProgressBar, getViewRect, getViewScale, glReady } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawOneSprite, drawSprites } from './gathering.sprites.js';
 import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, isPrewarmingChunks, paintRockShadows } from '../../world/index.js';
@@ -29,9 +29,11 @@ const drawKind = (kind, list, width = 24) => { const things = seenOf(list); draw
 
 // Sticks and pebbles, and minable ore
 export function drawSticksPebblesOre() {
-  // (the look: gathering.art.js, #251)
-  drawSprites('stick', seenOf(game.sticks));
-  drawSprites('pebbles', seenOf(game.pebbles));
+  // (the look: gathering.art.js, #251; kept on the graphics card's canvas with the trial on, see gathering.card.js)
+  if (!glReady()) {
+    drawSprites('stick', seenOf(game.sticks));
+    drawSprites('pebbles', seenOf(game.pebbles));
+  }
   onScreen(game.logs, drawLogArt); // (#298)
 
   // minable ore: the spawner's veined rock on a full tile, like natural rock (the spawner adds a frame and crystal)
@@ -319,8 +321,18 @@ export function drawStillShadows(g) {
 export function drawTrees() {
   if (pictured()) return; // (with the others, in drawCactiBouldersGrassBushes)
   // (before the trees: a tree grown there covers its own stump, a felled one's log covers it)
+  if (glReady()) return; // (kept on the graphics card's canvas; their bars with the others', below)
   drawSprites('stump', seenOf(game.stumps));
   drawKind('bush', game.berryBushes, 22);
+}
+
+// With nature kept on the graphics card's canvas: the bars of what's being worked (looked for every few ticks), and the
+// tufts of grass, which sway (said to the card each frame, over the small things)
+function drawOverKeptNature() {
+  updateOver();
+  for (const [o, width] of over.others) drawHarvestProgress(o, width);
+  for (const t of over.trees) if (!t.isGrowing && !t.fallen) { drawHarvestProgress(t); if (t.apple && t.pickShare > 0 && game.pathTick - t.pickTick < 3) drawProgressBar(t.x, t.y, t.pickShare); }
+  for (const g of over.grass) drawHarvestProgress(g, 20); // (the tufts themselves are kept on the card, swaying there)
 }
 
 export function depthSortedTrees() {
@@ -361,6 +373,7 @@ export function drawCactiBouldersGrassBushes() {
     drawKind('grass', game.grassList, 20);
     return;
   }
+  if (glReady()) { drawOverKeptNature(); return; }
   drawKind('cactus', game.cacti, 24);
   drawKind('boulder', game.boulders, 24); // (a loose, rounded stone, not the square rock that joins up)
   drawKind('grass', game.grassList, 20);

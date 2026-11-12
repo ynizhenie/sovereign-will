@@ -4,7 +4,7 @@
 export { CHUNK, chunkStats, drawChunks, isPrewarmingChunks, markFishingChanged, drawGrassGround, drawMapBorder, drawOreVeins, drawRocks, drawSand, drawWater, isGroundCached, paintRockShadows, prewarmVisibleWorldChunks, setPrewarmingChunks, tileVariantHash, wasChunkDrawn } from './world.draw.js';
 export { drawPaths, isPathTile, tickPaths } from './world.paths.js';
 export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones.js';
-export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStandingWeather, tickWeather, windSway } from './world.weather.js';
+export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStandingWeather, tickWeather, windNow, windSway } from './world.weather.js';
 export { areShadowsEnabled, beginShadowFrame, castShadow, drawShadowLayer, drawShadowPath, drawDarkness, getDarkness, getDayPhase, getLights, getSun, endShadowFrame, isNight, MIN_SHADOW_ALPHA, nightProgress, setShadowsEnabled, tickDaytime, timeOfPhase } from './world.daytime.js';
 export { ORE_KINDS, generateMap, generateMapSteps, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, isDesertTile, isSavannaTile, isWaterReachable, markStartingZoneBoars, markStartingZoneResources, placeBeaches, placeOre, pointIn, spawnForestAware, spawnResource, startingBoarCount } from './world.generator.js';
 export { isContinentMap } from './world.continent.js';

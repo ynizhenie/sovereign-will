@@ -6,7 +6,7 @@
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { TILE_SIZE, game, townHall } from '../../engine/world/index.js';
 import { isVisible } from './world.fog.js';
-import { camera, canvas, ctx, getViewScale, loadSetting, saveSetting } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewScale, glLayer, glReady, loadSetting, saveSetting } from '../../engine/platform/index.js';
 import { getBuildingColor, getEnemyColor, getSettlerColor } from '../factions/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -282,6 +282,8 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
   for (const shadow of lastShadows) fillShadow(g, world.multiply(shadow.at), shadow, sun.alpha);
   fillingLayer = true;
   try { drawNow(); } finally { fillingLayer = false; }
+  // (with the ground on the graphics card's canvas the shadows lie there too, on the ground and under what stands on it)
+  if (c === ctx && glReady()) { glLayer(layer, width / SHADOW_SCALE, height / SHADOW_SCALE, sun.alpha); return; }
   c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.globalCompositeOperation = 'source-over';

@@ -6,8 +6,8 @@
 // the air shimmers over the desert, and the water's surface moves (zoomed in).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
-import { TILE_SIZE, forEachInRect, game, rand } from '../../engine/world/index.js';
-import { camera, canvas, ctx, getViewScale } from '../../engine/platform/index.js';
+import { forEachInRect, game, rand, TILE_SIZE, worldEpoch } from '../../engine/world/index.js';
+import { camera, canvas, ctx, getViewScale, glReady, glWaveDropAll, glWaveGroup, glWaves } from '../../engine/platform/index.js';
 import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
 
@@ -84,6 +84,47 @@ export function windSway(x, y, h, time = performance.now() / 1000) {
   return lean * s * h * 0.35;
 }
 
+// The wind as windSway has it: how strong, and which way it leans things (for what sways on the graphics card's canvas)
+export function windNow() {
+  const w = getWeather(), side = Math.cos(w.windAngle || 0);
+  return { wind: w.wind, lean: Math.abs(side) < 0.45 ? (side < 0 ? -0.45 : 0.45) : side };
+}
+
+// The water's wavelets on the graphics card's canvas (the trial): the water round the screen in groups of GROUP x GROUP tiles,
+// each made when it first comes near the screen and kept (the least recently seen dropped past MAX_GROUPS); made again when
+// the water changes. A wavelet is where and when the game's canvas would draw it: the same sums of its tile
+const GROUP = 16, MAX_GROUPS = 240;
+/** @type {{ world: number, list: any[] | null, length: number, first: any, last: any, seen: Map<string, number>, frame: number }} */
+const waveState = { world: -1, list: null, length: -1, first: undefined, last: undefined, seen: new Map(), frame: 0 };
+function keepWavesOnCard(x0, y0, x1, y1, time, half) {
+  const water = game.waterTiles, w = waveState;
+  if (w.world !== worldEpoch() || w.list !== water || w.length !== water.length || w.first !== water[0] || w.last !== water[water.length - 1]) {
+    glWaveDropAll();
+    Object.assign(w, { world: worldEpoch(), list: water, length: water.length, first: water[0], last: water[water.length - 1], seen: new Map() });
+  }
+  w.frame++;
+  const size = GROUP * TILE_SIZE;
+  for (let cy = Math.floor(y0 / size); cy <= Math.floor(y1 / size); cy++) {
+    for (let cx = Math.floor(x0 / size); cx <= Math.floor(x1 / size); cx++) {
+      const key = `${cx},${cy}`;
+      if (!w.seen.has(key)) {
+        /** @type {number[]} */
+        const waves = [];
+        forEachInRect(water, cx * size, cy * size, (cx + 1) * size - 0.01, (cy + 1) * size - 0.01, tile => {
+          const h = (tile.x * 73856093) ^ (tile.y * 19349663);
+          waves.push(tile.x - 12, tile.y - 6 + ((h >>> 8) % 12), (h & 255) / 255, h & 1);
+        });
+        glWaveGroup(key, waves);
+      }
+      w.seen.set(key, w.frame);
+    }
+  }
+  if (w.seen.size > MAX_GROUPS) {
+    for (const [key, frame] of [...w.seen].sort((a, b) => a[1] - b[1]).slice(0, w.seen.size - MAX_GROUPS)) { glWaveGroup(key, []); w.seen.delete(key); }
+  }
+  glWaves(true, time, half);
+}
+
 // ---- On screen
 
 // In the world (before the night's darkness): the water's surface moving and rain's rings on it (zoomed in),
@@ -100,14 +141,17 @@ export function drawWeatherWorld() {
     // and half of them (the other half's alike) when the view's not close
     const WAVES = 6, waves = Array.from({ length: WAVES }, () => new Path2D());
     const sparse = scale < 1.2;
-    for (const tile of seen(game.waterTiles)) {
+    // (with the trial on the wavelets are kept on the graphics card's canvas and move there: only the rain's rings are drawn here)
+    const onCard = glReady();
+    if (onCard) keepWavesOnCard(camera.x - halfW, camera.y - halfH, camera.x + halfW, camera.y + halfH, t, lowDetail || sparse);
+    if (!onCard || rain > 0.05) for (const tile of seen(game.waterTiles)) {
       const h = (tile.x * 73856093) ^ (tile.y * 19349663);
       if ((lowDetail || sparse) && (h & 1)) continue;
       // a light wavelet drifting across it
       const p = ((t * 0.25 + (h & 255) / 255) % 1);
       const wx = tile.x - 12 + p * 20, wy = tile.y - 6 + ((h >>> 8) % 12);
       const path = waves[Math.min(WAVES - 1, Math.floor(Math.sin(p * Math.PI) * WAVES))];
-      path.moveTo(wx - 5, wy); path.quadraticCurveTo(wx, wy - 2, wx + 5, wy);
+      if (!onCard) { path.moveTo(wx - 5, wy); path.quadraticCurveTo(wx, wy - 2, wx + 5, wy); }
       // rain's rings, each spreading and fading
       if (rain > 0.05) {
         for (let k = 0; k < (lowDetail ? 1 : 2); k++) {
@@ -118,7 +162,7 @@ export function drawWeatherWorld() {
       }
     }
     ctx.lineWidth = 1.2;
-    waves.forEach((path, i) => { ctx.strokeStyle = `rgba(255, 255, 255, ${0.16 * (i + 0.5) / WAVES})`; ctx.stroke(path); });
+    if (!onCard) waves.forEach((path, i) => { ctx.strokeStyle = `rgba(255, 255, 255, ${0.16 * (i + 0.5) / WAVES})`; ctx.stroke(path); });
     // the desert's air shimmering in the day's heat (not in rain)
     const heat = Math.max(0, getSun().alpha - 0.16) / 0.08 * (1 - rain);
     if (heat > 0.05) {
@@ -134,6 +178,7 @@ export function drawWeatherWorld() {
       shimmer.forEach((path, i) => { ctx.strokeStyle = `rgba(255, 245, 220, ${0.22 * heat * (i + 0.5) / SHIMMER})`; ctx.stroke(path); });
     }
   }
+  if (scale < 0.75 && glReady()) glWaves(false, t, false);
   // Fog: a mottled pale veil drifting across map coordinates, independent of screen panning and zoom.
   const w = getWeather();
   if (w.kind === 'fog' && w.level > 0) {

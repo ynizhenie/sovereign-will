@@ -4,7 +4,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon } from '../../colony/equipment/index.js';
 import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
-import { finishHarvest, getMapResourceDef, hasMine } from './gathering.rules.js';
+import { finishHarvest, getMapResourceDef, hasMine, appleTreesAmong, markTreesChanged } from './gathering.rules.js';
 import { addCarryLoad, addResources, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { hasFog, inTerritory, isVisible, ORE_KINDS } from '../../world/index.js';
 import { getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, moveEntityTowards, someEnemyNear } from '../../../engine/movement/index.js';
@@ -89,7 +89,7 @@ function workableWithGear(s, tick) {
 // Ripe apple trees on the base's land, worked out once a tick for all the free hands: a ripe tree is no
 // priority of its own, it is simply one more thing to pick, the nearest one first (see pickResourceToHarvest)
 const appleTreesOnce = onceThisTick();
-const ripeAppleTrees = () => appleTreesOnce(() => game.trees.filter(t => t.apple && t.applesReady && inTerritory(t.x, t.y)));
+const ripeAppleTrees = () => appleTreesOnce(() => appleTreesAmong().filter(t => t.apple && t.applesReady && inTerritory(t.x, t.y)));
 
 // Player-marked resources first, otherwise the nearest one the settler can walk to. Of the marked: the one
 // it's already on, until it's done; else the nearest nobody's on yet, and only with none left a second
@@ -279,6 +279,7 @@ export function pickApplesFrom(s, target, dt) {
       for (const [item, chance] of Object.entries(apples.bonusChance || {})) if (rand() < chance) giveResourceToSettler(s, item, 1);
       target.applesReady = false;
       target.appleGrowth = 0;
+      markTreesChanged(); // (its apples grow again)
       target.pickShare = 0;
       if (target.markIntent === 'apples') { target.priority = 0; target.markIntent = null; }
     }

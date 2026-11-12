@@ -3,6 +3,7 @@
 import { game } from '../world/index.js';
 import { camera, clampCamera, getMaxZoom, getMinZoom } from './camera.js';
 import { loadSetting } from './storage.js';
+import { GL, initGl } from './gl.js';
 
 export const canvas = document.getElementById('gameCanvas');
 
@@ -12,7 +13,7 @@ export const canvas = document.getElementById('gameCanvas');
 export const VSYNC = loadSetting('vsync', 'on') !== 'off';
 
 export const ctx = canvas.getContext('2d', {
-  alpha: false,
+  alpha: GL, // (clear where the ground shows through from the graphics card's canvas under it, see gl.js)
   desynchronized: !VSYNC,
   willReadFrequently: false
 });
@@ -81,4 +82,5 @@ export function drawProgressBar(cx, cy, share, width = 24) {
 export function initCanvas() {
   window.addEventListener('resize', () => { markCanvasSizeStale(); fitCanvasToScreen(); });
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(markCanvasSizeStale).observe(canvas);
+  if (GL) initGl(/** @type {HTMLCanvasElement} */ (canvas));
 }

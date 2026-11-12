@@ -4,4 +4,5 @@
 export { canGather, getWorkPriority, isFreeHands, harvest, harvestMarked, pickApplesFrom, workResource } from './gathering.behaviours.js';
 export { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawHarvestProgress, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from './gathering.draw.js';
 export { drawFarmPlotArt } from './gathering.art.js';
-export { addMapResource, finishHarvest, getHarvestableResources, hasMine, getMapResourceDef, getWorkableResources, getMapResourceKind, scheduleRespawn, updatePendingRespawns } from './gathering.rules.js';
+export { addMapResource, finishHarvest, getHarvestableResources, hasMine, getMapResourceDef, getWorkableResources, getMapResourceKind, scheduleRespawn, updatePendingRespawns, appleTreesAmong, growingTrees, markTreesChanged } from './gathering.rules.js';
+export { keepNatureOnCard, treesToDrawOver } from './gathering.card.js';

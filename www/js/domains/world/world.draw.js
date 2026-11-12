@@ -2,7 +2,7 @@
 
 import { drawIcon } from '../../ui/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getTileIndex, listStamp, townHall, worldEpoch } from '../../engine/world/index.js';
-import { camera, canvas, ctx, getViewRect, getViewScale } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale, glChunk, glForgetChunk, glReady } from '../../engine/platform/index.js';
 import { drawHarvestProgress } from '../economy/gathering/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { isContinentMap } from './world.continent.js';
@@ -77,7 +77,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0;
     // These derived indexes are tied to world lists and may have identical lengths on a new map.
     sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
-    terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+    terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() }; terrainListsSeen = -1;
     grassStamps = { lists: [], stamps: new Map() };
     fishy = { lists: [], list: [] };
     spots = { version: -1, list: [], acc: [], at: 0 };
@@ -102,9 +102,12 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   const snapX = x => (Math.round(m.e + m.a * x) - m.e) / m.a, snapY = y => (Math.round(m.f + m.d * y) - m.f) / m.d;
   // (a picture covers the rectangle it was painted for: the piece, or the part of it its layer has anything in, see bounds)
   /** @param {Chunk} p */
+  // (the ground's own pieces go to the graphics card's canvas when that's on, see engine/platform/gl.js)
+  const onCard = target === ctx && (layer === 'grass' || layer === 'terrain') && glReady();
   const blit = p => {
     const dx0 = snapX(p.x0), dy0 = snapY(p.y0), dw = snapX(p.x1) - dx0, dh = snapY(p.y1) - dy0;
-    target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+    if (onCard) glChunk(p, m.e + m.a * dx0, m.f + m.d * dy0, m.a * dw, m.d * dh);
+    else target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
@@ -186,6 +189,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     if (c.frame === frameOf) continue;
     pixels -= c.canvas.width * c.canvas.height;
     chunks.delete(key);
+    if (onCard) glForgetChunk(c);
   }
 }
 
@@ -780,9 +784,14 @@ const terrainLists = () => [game.desertTiles, game.beachTiles, game.waterTiles, 
 // What the terrain in and round a piece is like (any tile coming or going changes it)
 /** @type {{ lists: any[], stamps: Map<string, string>, empty: Set<string>, sea: Set<string>, bounds: Map<string, number[]> }} */
 let terrainStamps = { lists: [], stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+// (the lists looked at once a frame, not for every piece asked about: that was asked several times a piece)
+let terrainListsSeen = -1;
 function terrainStamp(cx, cy) {
-  const lists = terrainLists().flatMap(listStamp);
-  if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+  if (terrainListsSeen !== frameOf) {
+    terrainListsSeen = frameOf;
+    const lists = terrainLists().flatMap(listStamp);
+    if (lists.length !== terrainStamps.lists.length || lists.some((v, i) => v !== terrainStamps.lists[i])) terrainStamps = { lists, stamps: new Map(), empty: new Set(), sea: new Set(), bounds: new Map() };
+  }
   const key = `${cx},${cy}`;
   let stamp = terrainStamps.stamps.get(key);
   if (stamp === undefined) {
