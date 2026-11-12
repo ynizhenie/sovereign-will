@@ -15,12 +15,12 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, forEachInRect, game, getGridPos, listStamp, rand, townHall, worldEpoch } from '../../../engine/world/index.js';
 import { deliverCarrying, deliverWhenNothingToDo, hasRoomToCarry, haulPiles, haulPilesFirst, moveSettlerToTownHall } from '../storage/index.js';
 import { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, findDoorBlockers, isBaseSealed, isTileOccupied, repairBuilding, repairTownHall, supplySmelter } from '../../economy/building/index.js';
-import { getTerritoryBox, inReliefZone, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
+import { getTerritoryBox, hasFog, inReliefZone, isVisible, isWaterReachable, reliefZoneSpot } from '../../world/index.js';
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
 import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
-import { panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
+import { isGhostStunned, panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -33,6 +33,7 @@ import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
 import { isPet } from './settlers.rules.js';
+import { tauntOnSight } from './settlers.voices.js';
 import { feedPet, tickPet } from '../pets/index.js';
 import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
 import { captainArms, captainOrders, foremanOrders } from './settlers.commanders.js';
@@ -142,6 +143,9 @@ export function prepareSettler(s, dt) {
   }
   rescueSettlerFromResource(s);
   if (s.attackCooldown > 0) { s.attackCooldown -= dt; if (s.attackCooldown < 1e-6) s.attackCooldown = 0; } // (#326, 27.10, 16: 0.4 s less 24 steps left a hair over 0, a step lost a blow)
+  if (s.weapon === 'rifle' && game.gameMode === 'battle' && (s.rifleAmmo || 0) <= 0 && s.attackCooldown === 0) {
+    s.rifleAmmo = GAME_CONFIG.weapons.rifle.combat.magazine;
+  }
   if (s.towerAttackCooldown > 0) s.towerAttackCooldown -= dt;
 }
 
@@ -368,6 +372,17 @@ function took(s, behaviour) {
   s.activity = s.isIdle && s.idle && IDLE_ACTIVITIES[s.idle.act] ? IDLE_ACTIVITIES[s.idle.act] : behaviour.name;
 }
 
+function tauntVisibleEnemy(s) {
+  if (game.pathTick % 15 !== 0) return;
+  const sight = GAME_CONFIG.fog.settlerTiles * TILE_SIZE;
+  for (const enemy of game.enemies) {
+    if (enemy.hp <= 0 || (hasFog() && !isVisible(enemy.x, enemy.y)) ||
+        (game.wavePreparation && enemy.prepWave === game.wavePreparation.wave) ||
+        Math.hypot(enemy.x - s.x, enemy.y - s.y) > sight) continue;
+    if (tauntOnSight(s, enemy)) break;
+  }
+}
+
 // Every settler's tick: the first behaviour of SETTLER_BEHAVIOURS that takes it
 export function tickSettlers(dt) {
   const settlerTick = createSettlerTick(dt);
@@ -378,6 +393,8 @@ export function tickSettlers(dt) {
   let drowsyTick = null;
   game.settlers.forEach(s => {
     prepareSettler(s, dt);
+    if (!s.leaving && s.hp > 0) tauntVisibleEnemy(s);
+    if (isGhostStunned(s)) { s.isIdle = false; s.swaying = false; s.activity = 'ghostStunned'; return; }
     const tick = s.drowsy ? (drowsyTick = drowsyTick || { ...settlerTick, dt: dt * GAME_CONFIG.daytime.drowsyPace }) : settlerTick;
     if (game.plagueMode && s.plagueHero) { tickPlagueHero(s, tick); return; }
     s.wasIdle = s.isIdle; // (cleanDung: only one that had nothing to do)

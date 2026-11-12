@@ -124,7 +124,7 @@ export function finishHarvest(settler, resource, kind) {
   const list = game[def.list];
   const index = list.indexOf(resource);
   if (index !== -1) list.splice(index, 1);
-  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y, resource.stump);
+  if (def.regrow) scheduleRespawn(kind, resource.x, resource.y, resource.stump, resource);
   if (def.clearsPath) invalidateAllPaths();
 }
 
@@ -146,10 +146,46 @@ function cutIntoLogs(tree, def, two, factor) {
 // respawnDelay seconds (oreRespawnDelay for ore). nearX/nearY keep it near where it was (cacti). A tree hands
 // over the stump it was felled at: that goes once the tree's back, wherever it grew
 
-export function scheduleRespawn(type, nearX = null, nearY = null, stump = null) {
+/**
+ * @param {string} kind
+ * @param {number | null} x
+ * @param {number | null} y
+ */
+function nearestOreSpawner(kind, x = null, y = null) {
+  const spawners = getOreSpawners(kind);
+  if (!spawners.length) return null;
+  if (x === null || y === null) return spawners[0];
+  let nearest = spawners[0], distance = Math.hypot(nearest.x - x, nearest.y - y);
+  for (const spawner of spawners.slice(1)) {
+    const candidateDistance = Math.hypot(spawner.x - x, spawner.y - y);
+    if (candidateDistance < distance) { nearest = spawner; distance = candidateDistance; }
+  }
+  return nearest;
+}
+
+/**
+ * @param {string} type
+ * @param {number | null} nearX
+ * @param {number | null} nearY
+ * @param {Object | null} stump
+ * @param {{ oreSpawnerX?: number, oreSpawnerY?: number, zoneBound?: boolean, zoneRegrowths?: number } | null} resource
+ */
+export function scheduleRespawn(type, nearX = null, nearY = null, stump = null, resource = null) {
   const isOre = getMapResourceDef(type).regrow === 'spawner';
+  const oreKind = isOre ? Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === type) : null;
+  const source = isOre && oreKind
+    ? resource?.oreSpawnerX !== undefined && resource?.oreSpawnerY !== undefined
+      ? { x: resource.oreSpawnerX, y: resource.oreSpawnerY }
+      : nearestOreSpawner(oreKind, nearX, nearY)
+    : null;
   const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
-  game.pendingRespawns.push({ type, nearX, nearY, stump, timer: delay });
+  game.pendingRespawns.push({
+    type, nearX, nearY, stump, timer: delay,
+    zoneBound: !!resource?.zoneBound,
+    zoneRegrowths: resource?.zoneRegrowths || 0,
+    oreSpawnerX: source?.x,
+    oreSpawnerY: source?.y
+  });
 }
 
 export function updatePendingRespawns(dt) {
@@ -165,14 +201,29 @@ export function updatePendingRespawns(dt) {
     }
     // (#299) on a big map within the frontier, round the base it was taken from (a default map's is all of it)
     const area = regrowArea();
+    const zoneBound = pending.zoneBound && (pending.zoneRegrowths || 0) < 10;
+    const keepInZone = zoneBound ? point => inTerritory(point.x, point.y) : null;
     let respawned = true;
-    if (def.regrow === 'spawner') respawned = respawnOre(Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type), area);
-    else if (def.regrow === 'nearby') spawnResource(pending.type, pending.nearX, pending.nearY);
-    else if (def.regrow === 'forest') spawnForestAware(pending.type, area);
-    else spawnResource(pending.type, null, null, 180, area ? pointIn(area) : null);
+    if (def.regrow === 'spawner') {
+      const oreKind = Object.keys(ORE_KINDS).find(ore => ORE_KINDS[ore].resource === pending.type);
+      if (pending.oreSpawnerX === undefined || pending.oreSpawnerY === undefined) {
+        const source = oreKind && nearestOreSpawner(oreKind, pending.nearX, pending.nearY);
+        if (source) { pending.oreSpawnerX = source.x; pending.oreSpawnerY = source.y; }
+      }
+      respawned = respawnOre(oreKind, pending.oreSpawnerX, pending.oreSpawnerY);
+    }
+    else if (def.regrow === 'nearby') respawned = !!spawnResource(pending.type, pending.nearX, pending.nearY, 180, null, keepInZone);
+    else if (def.regrow === 'forest') respawned = !!spawnForestAware(pending.type, area, keepInZone);
+    else respawned = !!spawnResource(pending.type, null, null, 180, area ? pointIn(area) : null, keepInZone);
     if (!respawned) {
       pending.timer = 1;
       continue;
+    }
+    if (zoneBound) {
+      const defList = game[getMapResourceDef(pending.type).list];
+      const regrown = defList[defList.length - 1];
+      regrown.zoneRegrowths = (pending.zoneRegrowths || 0) + 1;
+      if (regrown.zoneRegrowths < 10) regrown.zoneBound = true;
     }
     game.pendingRespawns.splice(i, 1);
     // things that need a tool to remove (trees, boulders, cacti, ore) block paths
@@ -186,16 +237,16 @@ function regrowArea() {
   return f.x0 > 0 || f.y0 > 0 || f.x1 < game.WORLD_WIDTH || f.y1 < game.WORLD_HEIGHT ? f : null;
 }
 
-// A mined ore grows back around a random spawner of its kind (#299: one in the area, if there's one there)
-/** @param {string | undefined} kind @param {{ x0: number, y0: number, x1: number, y1: number } | null} [area] */
-export function respawnOre(kind, area = null) {
-  const all = getOreSpawners(kind), there = area ? all.filter(r => r.x >= area.x0 && r.x <= area.x1 && r.y >= area.y0 && r.y <= area.y1) : all;
-  const spawners = there.length ? there : all;
-  if (spawners.length === 0) return false;
-  const spawner = spawners[Math.floor(rand() * spawners.length)];
+// A mined ore grows back around the exact spawner it came from.
+/** @param {string | undefined} kind @param {number | undefined} sourceX @param {number | undefined} sourceY */
+export function respawnOre(kind, sourceX = undefined, sourceY = undefined) {
+  if (!kind || sourceX === undefined || sourceY === undefined) return false;
+  const all = getOreSpawners(kind);
+  const spawner = all.find(r => r.x === sourceX && r.y === sourceY);
+  if (!spawner) return false;
   const spots = getOreSpotsAround(spawner, getOreSpawnerRadius()).filter(spot => !inEnemyTerritory(spot.x, spot.y));
   if (spots.length === 0) return false;
-  placeOre(kind, spots[Math.floor(rand() * spots.length)]);
+  placeOre(kind, spots[Math.floor(rand() * spots.length)], spawner);
   invalidateAllPaths();
   return true;
 }

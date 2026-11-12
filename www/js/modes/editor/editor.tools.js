@@ -31,7 +31,7 @@ export const EDITOR_TOOLS = [
   { id: 'water', icon: 'water', category: 'terrain', section: 'ground' },
   { id: 'rock', icon: 'rock', category: 'terrain', section: 'ground' },
   { id: 'sand', icon: 'sand', category: 'terrain', section: 'ground' },
-  { id: 'savanna', icon: 'grass', category: 'terrain', section: 'ground' },
+  { id: 'savanna', icon: 'savanna', category: 'terrain', section: 'ground' },
   { id: 'tree', icon: 'tree', kind: 'tree', category: 'nature' },
   { id: 'apple_tree', icon: 'apple_tree', kind: 'tree', category: 'nature' },
   { id: 'cactus', icon: 'cactus', kind: 'cactus', category: 'nature' },

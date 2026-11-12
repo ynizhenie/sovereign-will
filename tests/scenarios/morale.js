@@ -103,6 +103,21 @@ Object.assign(window.sim, (() => {
     return { stayed: Math.hypot(necro.x - s.x, necro.y - s.y) < GAME_CONFIG.morale.necroKeepBack, hitBack: s.hp < s.maxHp };
   }
 
+  // A player's ghost panics a human enemy even when another undead unit is on the enemy side.
+  function ghostPanicsEnemy({ seed = 'morale-ghost-enemy' } = {}) {
+    asFactions('undead', 'undead', seed);
+    const ghost = createSettler('ghost', 1, townHall.x + 150, townHall.y);
+    const enemy = createConfiguredEnemy(nearHall(8, 0), 'raider');
+    settlers = [ghost]; enemies = [enemy]; enemyTents = [];
+    haunt(ghost, enemy);
+    const panicked = !!enemy.panic;
+    const before = { x: enemy.x, y: enemy.y };
+    const fled = enemyPanic(enemy, 1 / 60);
+    const moved = Math.hypot(enemy.x - before.x, enemy.y - before.y) > 0;
+    back();
+    return { panicked, fled, moved };
+  }
+
   // A boar shaken to a panic keeps running from the settler near it
   function boarPanic({ seed = 'morale-boar' } = {}) {
     asFactions('humans', 'humans', seed);
@@ -115,5 +130,5 @@ Object.assign(window.sim, (() => {
     return { panic: !!boar.panic, running: (boar.fleeTimer || 0) > 0 };
   }
 
-  return { moraleHoldOn: holdOn, moraleBoar: boarPanic, moraleRout: rout, moraleUndead: undeadNerves, moraleBases: bases, moraleDemonBite: demonBite, moraleNecromancerBack: necromancerBack };
+  return { moraleHoldOn: holdOn, moraleBoar: boarPanic, moraleRout: rout, moraleUndead: undeadNerves, moraleBases: bases, moraleDemonBite: demonBite, moraleNecromancerBack: necromancerBack, moraleGhostPanicsEnemy: ghostPanicsEnemy };
 })());

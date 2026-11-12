@@ -1,15 +1,15 @@
-// Platforms (watchtowers): archers climb them while there's tower duty, shoot from them with their own arrows,
-// come down (out of arrows too, to fetch more: #326, a platform keeps none)
+// Platforms (watchtowers): ranged fighters climb while there's tower duty and shoot with their own weapons;
+// arrow users come down when empty (#326), while riflemen reload their magazines on the platform
 
 import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, isCrossbowWeapon, isRangedWeapon } from '../../colony/equipment/index.js';
+import { getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon } from '../../colony/equipment/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
 import { faceTowards, startSwing } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 
-// Archers climb the towers while there's tower duty (they stay up when enemies reach the base, that's
-// when a tower is worth most), as long as they have arrows
+// Ranged fighters climb the towers while there's tower duty (they stay up when enemies reach the base, that's
+// when a tower is worth most), as long as arrow users have arrows
 export function assignTowerArchers() {
   // (#326) the player's own platforms: never one of the red side's (in a battle: its archers' to climb)
   const towers = /** @type {import('../../../engine/world/types.js').Watchtower[]} */ (game.buildings.filter(building => building.type === 'watchtower' && building.side !== 'red'));
@@ -26,16 +26,19 @@ export function assignTowerArchers() {
       }
       settler.towerAssignment = null;
     }
+    const usesArrows = isArrowWeapon(settler.weapon);
     const canGuard = !settler.isPossessed && settler.role === 'archer' &&
-      isRangedWeapon(settler.weapon) && settler.quiver && !settler.carrying && !settler.targetEquipment;
+      isRangedWeapon(settler.weapon) && (usesArrows ? settler.quiver : settler.weapon === 'rifle') &&
+      !settler.carrying && !settler.targetEquipment;
     const hasArrows = (settler.arrows || 0) > 0;
-    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment) && hasArrows;
+    const towerDutyActive = settler.towerAssignment && isTowerDutyOn(settler.towerAssignment) && (!usesArrows || hasArrows);
     if ((!towerDutyActive || !canGuard) && settler.towerAssignment) {
       releaseTowerGuard(settler);
     }
     if (!canGuard || settler.towerAssignment || game.pathTick < (settler.towerRestUntil || 0)) return;
 
-    const tower = hasArrows && towers.find(candidate => isTowerDutyOn(candidate) && candidate.guards.length < candidate.tower.capacity);
+    const tower = (!usesArrows || hasArrows) &&
+      towers.find(candidate => isTowerDutyOn(candidate) && candidate.guards.length < candidate.tower.capacity);
     if (tower) {
       tower.guards.push(settler);
       settler.towerAssignment = tower;
@@ -111,7 +114,8 @@ export function updateTowerGuard(settler, tower, dt) {
   settler.x = tower.x;
   settler.y = tower.y;
 
-  if (settler.arrows <= 0) return;
+  const rifle = settler.weapon === 'rifle';
+  if ((isArrowWeapon(settler.weapon) && settler.arrows <= 0) || (rifle && (settler.rifleAmmo || 0) <= 0)) return;
 
   // (#326) it shoots with its own bow or crossbow, as on the ground (its damage, its rate, its arrows' speed), only farther:
   // the platform adds a share to its reach, nothing else
@@ -134,10 +138,10 @@ export function updateTowerGuard(settler, tower, dt) {
 
   const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
   faceTowards(settler, target.x, target.y);
-  // (#326) the guard's own weapon shows: a crossbowman looses a bolt with its heavy thunk, an archer an arrow;
+  // (#326) the guard's own weapon shows: a rifle fires a bullet, a crossbow looses a bolt with its heavy thunk;
   // and the shot is drawn, as from the ground (its next one cocked while it waits, #306)
   const bolt = isCrossbowWeapon(settler.weapon);
-  playSound(bolt ? 'crossbow' : 'bow', settler);
+  playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', settler);
   game.projectiles.push({
     x: tower.x,
     y: tower.y,
@@ -148,10 +152,19 @@ export function updateTowerGuard(settler, tower, dt) {
     fromEnemy: false,
     owner: settler,
     fromTower: true,
-    bolt
+    bolt,
+    bullet: rifle
   });
   startSwing(settler, 0.3);
-  settler.shotAt = game.pathTick; settler.shotLen = stats.cooldown;
-  if (game.gameMode !== 'battle') settler.arrows--;
-  settler.towerAttackCooldown = stats.cooldown;
+  if (rifle) {
+    settler.rifleAmmo--;
+    const cooldown = settler.rifleAmmo === 0 ? stats.reload : stats.cooldown;
+    settler.attackCooldown = cooldown / (settler.battleAttackSpeed || 1);
+    settler.shotAt = game.pathTick; settler.shotLen = settler.attackCooldown;
+    settler.towerAttackCooldown = settler.attackCooldown;
+  } else {
+    settler.shotAt = game.pathTick; settler.shotLen = stats.cooldown;
+    if (game.gameMode !== 'battle') settler.arrows--;
+    settler.towerAttackCooldown = stats.cooldown;
+  }
 }

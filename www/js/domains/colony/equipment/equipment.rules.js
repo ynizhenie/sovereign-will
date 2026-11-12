@@ -235,8 +235,12 @@ export function isBowWeapon(weapon) { return getWeaponFamily(weapon) === 'bow'; 
 
 export function isCrossbowWeapon(weapon) { return getWeaponFamily(weapon) === 'crossbow'; }
 
-// Bows and crossbows: what shoots arrows from a quiver
-export function isRangedWeapon(weapon) { return isBowWeapon(weapon) || isCrossbowWeapon(weapon); }
+export function isRifleWeapon(weapon) { return getWeaponFamily(weapon) === 'rifle'; }
+
+export function isArrowWeapon(weapon) { return isBowWeapon(weapon) || isCrossbowWeapon(weapon); }
+
+// Bows and crossbows shoot arrows; the battle rifle uses its own magazine.
+export function isRangedWeapon(weapon) { return isBowWeapon(weapon) || isCrossbowWeapon(weapon) || isRifleWeapon(weapon); }
 
 // A settler's weapon stats for `use` ('combat' or 'hunt': the same numbers, a boar takes twice the damage
 // in woundBoar, #232; a hunt's range is the weapon's reach, a ranged weapon's its shooting distance). Damage:

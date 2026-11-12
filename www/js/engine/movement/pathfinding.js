@@ -187,13 +187,14 @@ function tileFlags(gx, gy) {
   const memo = enemyMemo(), i = gy * game.COLS + gx;
   if (memo.flags[i] === -1) {
     const tiles = getTileIndex(), k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`;
-    memo.flags[i] = (tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k) ? BUILDING : 0) | // (traps unseen, #248; its own doors walked through)
+    memo.flags[i] = (tiles.buildings.has(k) && !tiles.battleMazeWalls.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k) ? BUILDING : 0) | // (traps unseen, #248; its own doors walked through)
       (tiles.trees.has(k) || tiles.boulders.has(k) ? NATURE : 0) | (tiles.spikes.has(k) ? SPIKES : 0) |
       (tiles.redBuildings.has(k) || tiles.redDoors.has(k) ? RED : 0);
   }
   return memo.flags[i];
 }
 const flagsAt = (x, y) => tileFlags((x - 15) / TILE_SIZE, (y - 15) / TILE_SIZE); // (a tile's centre)
+const isRed = (gx, gy) => (tileFlags(gx, gy) & RED) !== 0;
 
 export function isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
@@ -259,7 +260,7 @@ function computeBlockedForEnemyPermissive(gx, gy) {
   // enemies can chop trees and boulders and break buildings on the way (see update()), but not cacti or ore;
   // (#326) not their own buildings, and they keep off their own spikes and traps
   const tiles = getTileIndex(), k = `${tx},${ty}`;
-  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) ||
+  return tiles.rocks.has(k) || tiles.water.has(k) || tiles.cacti.has(k) || tiles.ores.has(k) || tiles.battleMazeWalls.has(k) ||
     tiles.redBuildings.has(k) || tiles.redHazards.has(k) || tiles.outposts.has(k) ||
     (game.plagueMode && tiles.plagueCemeteries.has(k));
 }
@@ -367,6 +368,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
   // that fell short, and the search spread over tiles it needn't have looked at. Put a hair over (0.1%) so that of tiles of the same
   // total the one nearer the end is looked at first: on open ground the search goes straight there instead of over a plateau
   const estimate = (gx, gy) => { const dx = Math.abs(gx - endG.gx), dy = Math.abs(gy - endG.gy); return (Math.max(dx, dy) + 0.41 * Math.min(dx, dy)) ; };
+  const blocksCorner = options.blocksDiagonalCorner || isBlocked;
   const startIndex = startG.gy * cols + startG.gx, endIndex = endG.gy * cols + endG.gx;
   // (a start off the map: searched as before, from nothing)
   if (!inMap(startG.gx, startG.gy)) return { path: [], isBlockedPath: options.isBlockedPath, looked: 0 };
@@ -397,7 +399,7 @@ export function findGridPath(startG, endG, targetX, targetY, options) {
       const next = gy * cols + gx;
       if (a.closed[next] === id || isBlocked(gx, gy)) continue;
       if (!options.allowCornerCutting && direction.dx !== 0 && direction.dy !== 0 &&
-          (isBlocked(cx + direction.dx, cy) || isBlocked(cx, cy + direction.dy))) continue;
+          (blocksCorner(cx + direction.dx, cy) || blocksCorner(cx, cy + direction.dy))) continue;
 
       const extraCost = options.extraCost ? options.extraCost(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15) : 0;
       const tentativeG = a.g[current] + direction.cost + extraCost;
@@ -450,10 +452,12 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   // what a tile costs on top of walking it: a building is broken through rather than walked a long way
   // round (to a far door), spikes are walked over, trees and boulders mostly walked round
   const costOf = flags => (flags & BUILDING ? PATH_COST.building : flags & NATURE ? PATH_COST.nature : flags & SPIKES ? PATH_COST.spikes : 0);
+  const isBlocked = natureBlocks
+    ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) || (tileFlags(gx, gy) & NATURE) !== 0
+    : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy);
   const result = findGridPath(startG, endG, targetX, targetY, {
-    isBlocked: natureBlocks
-      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) || (tileFlags(gx, gy) & NATURE) !== 0
-      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy),
+    isBlocked,
+    blocksDiagonalCorner: (gx, gy) => isBlocked(gx, gy) || (tileFlags(gx, gy) & BUILDING) !== 0,
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,
@@ -551,7 +555,9 @@ const ENEMY_MAX_NODES = 3000;
 // tiles each, to break): isBlockedPath, so it strikes what's in the way (see breakWhatsInTheWay)
 function findSettlerPathThrough(startG, endG, targetX, targetY, allowBattleBorder = false) {
   const result = findGridPath(startG, endG, targetX, targetY, {
-    isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) && !(tileFlags(gx, gy) & RED),
+    isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) && !isRed(gx, gy),
+    // (in a battle no squeezing diagonally past the red side's buildings; in a raid's camp that shut raiders in)
+    blocksDiagonalCorner: game.gameMode === 'battle' ? (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) || isRed(gx, gy) : undefined,
     allowCornerCutting: false,
     isBlockedPath: true,
     extraCost: (x, y) => (flagsAt(x, y) & RED ? ENEMY_PATH_COST.building : 0),

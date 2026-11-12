@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
-import { armorOf, getWeaponStats, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { armorOf, getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
@@ -25,22 +25,63 @@ export function isArrowBlockedAt(x, y, fromTower) {
   return isArrowBlockedTile(g.gx, g.gy, fromTower);
 }
 
+export function areAdjacentTiles(a, b) {
+  const first = getGridPos(a.x, a.y), second = getGridPos(b.x, b.y);
+  return Math.max(Math.abs(first.gx - second.gx), Math.abs(first.gy - second.gy)) <= 1;
+}
+
+export function shouldUseRangedDagger(unit, target, weaponId, wasHitByMelee) {
+  const dagger = (getDefinition('weapons', weaponId) || {}).dagger;
+  if (!isArrowWeapon(weaponId) || !target || !dagger) {
+    unit.daggerTarget = null;
+    return false;
+  }
+  const distance = Math.hypot(unit.x - target.x, unit.y - target.y);
+  const lockRange = dagger.closeTiles * TILE_SIZE + TILE_SIZE;
+  const keepDagger = unit.daggerTarget === target && distance <= lockRange;
+  const useDagger = areAdjacentTiles(unit, target) || (wasHitByMelee && distance <= lockRange) || keepDagger;
+  unit.daggerTarget = useDagger ? target : null;
+  return useDagger;
+}
+
 // Whether an arrow from (x1, y1) would fly to (x2, y2) unstopped. Walks every tile the line touches
 // (not just points along it), so an arrow never clips a corner the check missed. The shooter's own
 // tile doesn't count.
 // (#326) A blow from a to b doesn't go through a door or a wall between them (the tiles the line crosses, not
 // their own): no fighting through a shut door
 export function hasMeleeReach(a, b) {
-  const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8);
-  const own = new Set([`${Math.floor(a.x / TILE_SIZE)},${Math.floor(a.y / TILE_SIZE)}`, `${Math.floor(b.x / TILE_SIZE)},${Math.floor(b.y / TILE_SIZE)}`]);
-  for (let i = 1; i < steps; i++) {
-    const x = a.x + (b.x - a.x) * i / steps, y = a.y + (b.y - a.y) * i / steps;
-    const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
-    if (own.has(`${gx},${gy}`)) continue;
-    const building = thingAt(game.buildings, gx * TILE_SIZE + 15, gy * TILE_SIZE + 15);
-    if (building && (isDoor(building) || !(getDefinition('buildings', building.type) || {}).walkable)) return false;
+  if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) return false;
+  let gx = Math.floor(a.x / TILE_SIZE), gy = Math.floor(a.y / TILE_SIZE);
+  const endGx = Math.floor(b.x / TILE_SIZE), endGy = Math.floor(b.y / TILE_SIZE);
+  const own = new Set([`${gx},${gy}`, `${endGx},${endGy}`]);
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const stepX = Math.sign(dx), stepY = Math.sign(dy);
+  let nextX = stepX ? ((stepX > 0 ? gx + 1 : gx) * TILE_SIZE - a.x) / dx : Infinity;
+  let nextY = stepY ? ((stepY > 0 ? gy + 1 : gy) * TILE_SIZE - a.y) / dy : Infinity;
+  const tileX = stepX ? TILE_SIZE / Math.abs(dx) : Infinity;
+  const tileY = stepY ? TILE_SIZE / Math.abs(dy) : Infinity;
+  const blocked = (x, y) => {
+    if (own.has(`${x},${y}`)) return false;
+    const building = thingAt(game.buildings, x * TILE_SIZE + 15, y * TILE_SIZE + 15);
+    return !!building && (isDoor(building) || !(getDefinition('buildings', building.type) || {}).walkable);
+  };
+  let stepsLeft = Math.abs(endGx - gx) + Math.abs(endGy - gy) + 1;
+  while ((gx !== endGx || gy !== endGy) && stepsLeft-- > 0) {
+    if (Math.min(nextX, nextY) >= 1 - 1e-9) {
+      gx = endGx; gy = endGy;
+      break;
+    }
+    if (Math.abs(nextX - nextY) < 1e-9) {
+      if (blocked(gx + stepX, gy) || blocked(gx, gy + stepY)) return false;
+      gx += stepX; gy += stepY; nextX += tileX; nextY += tileY;
+    } else if (nextX < nextY) {
+      gx += stepX; nextX += tileX;
+    } else {
+      gy += stepY; nextY += tileY;
+    }
+    if (blocked(gx, gy)) return false;
   }
-  return true;
+  return gx === endGx && gy === endGy;
 }
 
 export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
@@ -78,7 +119,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
   faceTowards(attacker, targetX, targetY);
 
   const rangedWeapon = isRangedWeapon(attacker.weapon);
-  const dagger = rangedWeapon && useDaggerForStructure
+  const dagger = isArrowWeapon(attacker.weapon) && (useDaggerForStructure || usesDagger(attacker))
     ? (getDefinition('weapons', attacker.weapon) || {}).dagger
     : null;
   const normalStats = getWeaponStats(attacker, 'combat');
@@ -86,7 +127,9 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
   const attackCooldown = game.gameMode === 'battle' ? stats.cooldown / (attacker.battleAttackSpeed || 1) : stats.cooldown;
 
   if (rangedWeapon && !dagger && !usesDagger(attacker)) { // (#326: out of arrows, its dagger in melee)
-    if (!attacker.quiver || (attacker.arrows || 0) <= 0) return;
+    const rifle = attacker.weapon === 'rifle';
+    if (rifle && (attacker.rifleAmmo || 0) <= 0) return;
+    if (!rifle && (!attacker.quiver || (attacker.arrows || 0) <= 0)) return;
     const bolt = isCrossbowWeapon(attacker.weapon);
     let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
     game.projectiles.push({ 
@@ -99,12 +142,17 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
       fromEnemy: false, 
       owner: attacker,
       bolt,
+      bullet: rifle,
       training: !!(attacker.idle && attacker.idle.act === 'train') // (#326) at a dummy: it sticks in it
     });
-    playSound(bolt ? 'crossbow' : 'bow', attacker);
+    playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', attacker);
     if (game.gameMode !== 'battle' && !game.plagueMode) attacker.arrows--; // arrows don't run out in battles (#404: nor in the Plague)
-    attacker.attackCooldown = attackCooldown;
+    if (rifle) {
+      attacker.rifleAmmo--;
+      attacker.attackCooldown = attacker.rifleAmmo === 0 ? stats.reload : attackCooldown;
+    } else attacker.attackCooldown = attackCooldown;
     attacker.shotAt = game.pathTick; attacker.shotLen = attackCooldown; // (its next arrow drawn, #306)
+    attacker.swingWeapon = null;
     startSwing(attacker, 0.3);
   } else {
     attacker.swingWeapon = dagger ? 'dagger' : null;
@@ -113,7 +161,7 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker); playSound('hit', en); } })),
+      ...game.enemies.filter(en => !en.ghostly && inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker, dagger ? 'dagger' : attacker.weapon); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => (!et.campStructure || (game.raidActive && et.campId === game.raidCampId)) && inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
       ...game.buildings.filter(b => b.side === 'red' && (!b.enemyCampStructure || (game.raidActive && b.campId === game.raidCampId)) && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
@@ -137,9 +185,9 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
 
 // A unit was hurt: blood on it, a splat under it (at most every half second per unit) and on the melee
 // weapon that did it (GAME_CONFIG.blood)
-export function bleed(unit, attacker) {
+export function bleed(unit, attacker, weapon = attacker?.weapon) {
   unit.bloodAge = 0;
-  if (attacker && !isRangedWeapon(attacker.weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
+  if (attacker && !isRangedWeapon(weapon) && Math.hypot(attacker.x - unit.x, attacker.y - unit.y) < 80) attacker.weaponBloodAge = 0;
   if (game.pathTick - (unit.lastBleedTick ?? -Infinity) < 30) return;
   unit.lastBleedTick = game.pathTick;
   const h = tileVariantHash(game.pathTick, game.bloodSplats.length);
@@ -238,10 +286,6 @@ export function addCorpse(unit, side, kind) {
 }
 
 export function updateCorpses(dt) {
-  if (game.plagueMode) {
-    for (const corpse of game.corpses) corpse.age += dt;
-    return;
-  }
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
@@ -409,13 +453,14 @@ export function getDefensePlan() {
 // where it fell. It fades after a while, in a corpse it goes with it. Nobody can pick it up (a dummy's, its
 // trainers collect).
 function stickInto(host, proj) {
+  if (proj.bullet) return;
   const keep = GAME_CONFIG.stuckArrows, arrow = { x: proj.x - host.x, y: proj.y - host.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy, bolt: !!proj.bolt };
   if (!host.stuck) host.stuck = [];
   if (host.stuck.length >= keep.perUnit) host.stuck.shift();
   host.stuck.push(arrow);
 }
 function dropOnGround(proj) {
-  if (proj.fire) return;
+  if (proj.fire || proj.bullet) return;
   const keep = GAME_CONFIG.stuckArrows;
   game.stuckArrows.push({ x: proj.x, y: proj.y, a: Math.atan2(proj.vy, proj.vx), age: 0, fromEnemy: !!proj.fromEnemy, bolt: !!proj.bolt });
   if (game.stuckArrows.length > keep.ground) game.stuckArrows.shift();
@@ -466,7 +511,7 @@ export function tickProjectiles(dt = 1 / 60) {
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           damageEnemy(en, proj.damage);
           if (proj.owner) { en.struckBy = proj.owner; en.struckTick = game.pathTick; } // (who it turns on in the fog, #326)
-          bleed(en, proj.owner);
+          bleed(en, proj.owner, null);
           playSound('arrowHit', en);
           if (proj.fire) setBurning(en);
           hit = true; host = en;

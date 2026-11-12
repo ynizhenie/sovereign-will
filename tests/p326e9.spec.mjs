@@ -1,6 +1,9 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
+// (the loading screen and the page's first showing wait on the browser's frames: its own here, see helpers.mjs)
+test.use({ frameMs: 0 });
+
 // The friend's #326, point 35: the map editor's maps are Endless's, big ones, saved compactly; no Play from the editor
 
 test('the editor\'s new maps are of Endless\'s sizes, one from the generator is a continent, and there is no Play button in it (#326, 35)', async ({ page }) => {

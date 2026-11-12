@@ -1,6 +1,9 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
+// (the loading screen and the page's first showing wait on the browser's frames: its own here, see helpers.mjs)
+test.use({ frameMs: 0 });
+
 // The friend's #326, the bugs and small things: in the page
 
 test('the page shows once it\'s made; Point on a tile: only its things, a settler standing there too, wheat named (#326)', async ({ page }) => {

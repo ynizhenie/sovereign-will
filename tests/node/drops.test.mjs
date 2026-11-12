@@ -49,9 +49,13 @@ test('a felled tree falls first, leaving its stump till it grows again elsewhere
     const tree = { x: 40, y: 0, hp: 3, isGrowing: false };
     trees.push(tree);
     logs.length = 0; stumps.length = 0; pendingRespawns.length = 0;
+    // (no sapling in hand: it's a coin toss on felling, GAME_CONFIG.mapResources.tree.bonusChance)
+    const bonus = GAME_CONFIG.mapResources.tree.bonusChance;
+    GAME_CONFIG.mapResources.tree.bonusChance = {};
     finishHarvest(s, tree, 'tree');
     const fell = { fallen: !!tree.fallen, standing: trees.includes(tree), carrying: s.carrying, hp: tree.hp, bar: tree.maxHp, stump: stumps.map(st => [st.x, st.y]) };
     finishHarvest(s, tree, 'tree');
+    GAME_CONFIG.mapResources.tree.bonusChance = bonus;
     // the log's cut up and gone; its stump stays till a tree's grown again
     const cut = { gone: !trees.includes(tree), carrying: s.carrying, pieces: logs.map(l => l.yield.wood).sort(), stump: stumps.length, waiting: pendingRespawns.length };
     pendingRespawns.forEach(p => { p.timer = 0; });

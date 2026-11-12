@@ -1,7 +1,7 @@
 import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
-test('the generator exposes savanna settings and the ore and regrowth settings a continent uses (#20; #326, 27.10, 18)', async ({ page }) => {
+test('the generator exposes the ore and regrowth settings a continent uses (#20; #326, 27.10, 18)', async ({ page }) => {
   await openGame(page);
   await page.click('#open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
@@ -17,15 +17,19 @@ test('the generator exposes savanna settings and the ore and regrowth settings a
     const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
     const labelled = fields.every(f => f.querySelector('span').textContent && !f.querySelector('span').textContent.startsWith('gen.'));
     const covered = keys.every(k => document.querySelector(`#generator-fields input[data-key="${k}"]`));
+    // (not offered: the config keeps them at none, for the Plague to set, see map.js)
+    const smallBiomes = ['savannas', 'savannaRadiusX', 'savannaRadiusY'].some(k =>
+      !!document.querySelector(`#generator-fields input[data-key="${k}"]`));
     return { fields: fields.length, keys, labelled, covered, lakes: !!document.querySelector('#generator-fields input[data-key="lakes"]'),
-      sections: document.querySelectorAll('#generator-fields h2').length };
+      sections: document.querySelectorAll('#generator-fields h2').length, smallBiomes };
   });
-  expect(r.keys).toEqual(['savannas', 'savannaRadiusX', 'savannaRadiusY', 'ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
+  expect(r.keys).toEqual(['ironSpawners', 'coalSpawners', 'orePerSpawner', 'oreSpawnerRadius', 'respawnDelay', 'oreRespawnDelay']);
   expect(r.fields).toBe(r.keys.length);
   expect(r.covered).toBe(true);
   expect(r.labelled).toBe(true);
   expect(r.lakes).toBe(false);
   expect(r.sections).toBe(0);
+  expect(r.smallBiomes).toBe(false);
 });
 
 test('a setting changed in the generator shapes the next map; Standard puts it back (#20)', async ({ page }) => {
@@ -155,6 +159,135 @@ test('an Endless respawn restores the seeded boar count inside the player territ
   expect(result.marked).toBe(true);
   expect(result.target).toBeGreaterThanOrEqual(3);
   expect(result.target).toBeLessThanOrEqual(5);
+});
+
+test('territory boar respawns stay local after more than ten regrowths', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('territory-boar-regrowth-limit');
+    const respawns = [];
+    for (let i = 0; i < 12; i++) {
+      game.boars = [];
+      game.boarRespawnTimer = 0;
+      tickBoarRespawn(1 / 60);
+      respawns.push(game.boars[0] && {
+        inTerritory: inTerritory(game.boars[0].x, game.boars[0].y),
+        marked: game.boars[0].inBase
+      });
+    }
+    return {
+      respawns: respawns.length,
+      allInTerritory: respawns.every(boar => boar?.inTerritory),
+      allMarked: respawns.every(boar => boar?.marked)
+    };
+  });
+  expect(result).toEqual({ respawns: 12, allInTerritory: true, allMarked: true });
+});
+
+test('a boar killed outside the territory respawns anywhere on the map without the starting-count cap', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('outside-boar-respawn-in-territory');
+    const target = startingBoarCount();
+    game.boars = game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y));
+    while (game.boars.length < target) {
+      game.boarRespawnTimer = 0;
+      tickBoarRespawn(1 / 60);
+    }
+    const outside = { x: 3 * TILE_SIZE + 15, y: 3 * TILE_SIZE + 15, hp: 1, maxHp: 1 };
+    if (inTerritory(outside.x, outside.y)) return { outsideIsOutside: false };
+    game.boars.push(outside);
+    woundBoar(outside, 2, null, outside.x - 1, outside.y);
+    game.boarRespawnTimer = 0;
+    tickBoarRespawn(1 / 60);
+    return {
+      outsideIsOutside: true,
+      localCount: game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y)).length,
+      livingCount: game.boars.filter(boar => !boar.isCarcass).length,
+      pending: game.territoryBoarRespawnsPending
+    };
+  });
+  const startingCount = await page.evaluate(() => startingBoarCount());
+  expect(result.outsideIsOutside).toBe(true);
+  expect(result.livingCount).toBe(startingCount + 1);
+  expect(result.localCount).toBeGreaterThanOrEqual(startingCount);
+  expect(result.pending).toBe(0);
+});
+
+test('all initially placed regrowing resources in the start zone are zone-bound', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('zone-bound-resources');
+    const hall = getGridPos(townHall.x, townHall.y), half = GAME_CONFIG.territory.startTiles / 2;
+    const inStart = resource => {
+      const tile = getGridPos(resource.x, resource.y);
+      return tile.gx >= Math.ceil(hall.gx - half) && tile.gx < hall.gx + half &&
+        tile.gy >= Math.ceil(hall.gy - half) && tile.gy < hall.gy + half;
+    };
+    const candidates = Object.entries(GAME_CONFIG.mapResources)
+      .filter(([, def]) => def.regrow && def.regrow !== 'spawner')
+      .flatMap(([, def]) => (game[def.list] || []).filter(resource => !resource.isGrowing && inStart(resource)));
+    return {
+      candidates: candidates.length,
+      bound: candidates.filter(resource => resource.zoneBound).length,
+      oresBound: [...ironOres, ...coalOres].some(resource => resource.zoneBound)
+    };
+  });
+  expect(result.candidates).toBeGreaterThan(0);
+  expect(result.bound).toBe(result.candidates);
+  expect(result.oresBound).toBe(false);
+});
+
+test('resources placed by hand in an editor map receive the same zone-bound assignment', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    game.customMap = {
+      name: 'hand-placed-zone-resources', cols: 128, rows: 128,
+      hall: [64 * TILE_SIZE + 15, 64 * TILE_SIZE + 15],
+      resources: { berry_bush: [[50, 50], [51, 50], [52, 50], [53, 50]] },
+      spawners: [], boars: [], buildings: [], outposts: []
+    };
+    window.sim.start('hand-placed-zone-resources');
+    return {
+      count: berryBushes.length,
+      bound: berryBushes.filter(resource => resource.zoneBound).length,
+      positions: berryBushes.filter(resource => resource.zoneBound)
+        .map(resource => `${Math.floor(resource.x / TILE_SIZE)},${Math.floor(resource.y / TILE_SIZE)}`)
+    };
+  });
+  expect(result.count).toBe(4);
+  expect(result.bound).toBe(4);
+  expect(result.positions.every(position => ['50,50', '51,50', '52,50', '53,50'].includes(position))).toBe(true);
+});
+
+test('boars placed in the editor start zone are bound to the player territory', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    game.mapSettings = { cols: 128, rows: 128 };
+    game.customMap = {
+      name: 'hand-placed-zone-boars', cols: 128, rows: 128,
+      hall: [64 * TILE_SIZE + 15, 64 * TILE_SIZE + 15],
+      resources: {}, spawners: [], boars: [[63, 64], [20, 20]], buildings: [], outposts: []
+    };
+    window.sim.start('hand-placed-zone-boars');
+    return game.boars.map(boar => ({
+      position: `${Math.floor(boar.x / TILE_SIZE)},${Math.floor(boar.y / TILE_SIZE)}`,
+      inBase: boar.inBase
+    }));
+  });
+  expect(result).toEqual([
+    { position: '63,64', inBase: true },
+    { position: '20,20', inBase: undefined }
+  ]);
 });
 
 test('a cactus keeps its coordinate-based orientation in sprite and direct drawing', async ({ page }) => {

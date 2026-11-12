@@ -7,16 +7,38 @@ import { TILE_SIZE, forEachInRect, game, isBorderZone, townHall } from '../../..
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { DUMMY_VARIANTS, LINK, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
+import { DUMMY_VARIANTS, LINK, drawBackroomsWall, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { drawShadowPath, tileVariantHash } from '../../world/index.js';
 
 // A damaged building looks it: cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).
-export function drawDamage(x, y, half, share) {
+export function drawDamage(x, y, half, share, type = 'building') {
   if (!(share < 0.9)) return;
   const harm = 1 - Math.max(0, share);
   const h = tileVariantHash(Math.round(x), Math.round(y));
+  ctx.save();
+  ctx.beginPath();
+  if (type === 'tent') {
+    ctx.moveTo(x, y - 14); ctx.lineTo(x + 14, y + 13); ctx.lineTo(x - 14, y + 13); ctx.closePath();
+  } else if (type === 'campfire') {
+    ctx.ellipse(x, y + 3, 13, 9, 0, 0, Math.PI * 2);
+  } else if (type === 'corpse_pit') {
+    ctx.ellipse(x, y, 13, 11, 0, 0, Math.PI * 2);
+  } else if (type === 'torch') {
+    ctx.roundRect(x - 6, y - 14, 12, 28, 3);
+  } else if (type === 'iron_trap') {
+    ctx.roundRect(x - 12, y - 10, 24, 20, 2);
+  } else if (type === 'spikes') {
+    ctx.roundRect(x - 14, y + 1, 28, 14, 2);
+  } else if (type === 'grave' || type === 'sacrifice_circle') {
+    ctx.ellipse(x, y, type === 'grave' ? 14 : 15, type === 'grave' ? 12 : 15, 0, 0, Math.PI * 2);
+  } else if (type === 'dung_heap') {
+    ctx.roundRect(x - 14, y - 6, 28, 20, 3);
+  } else {
+    ctx.roundRect(x - half + 1, y - half + 1, (half - 1) * 2, (half - 1) * 2, 3);
+  }
+  ctx.clip();
   ctx.fillStyle = `rgba(20, 12, 8, ${0.45 * harm})`;
   ctx.fillRect(x - half, y - half, half * 2, half * 2);
   ctx.strokeStyle = 'rgba(15, 10, 6, 0.85)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
@@ -43,6 +65,7 @@ export function drawDamage(x, y, half, share) {
       ctx.closePath(); ctx.fill();
     }
   }
+  ctx.restore();
 }
 
 // In a build mode: the tile grid, and the tile under the pointer (red where it can't go)
@@ -262,7 +285,8 @@ export function drawBuildings() {
     if (b.type === 'wall_wood') {
       drawWoodWall(b.x, b.y, links.get(b) || 0, doorLinks.get(b) || 0);
     } else if (b.type === 'wall_stone') {
-      drawStoneWall(b.x, b.y, links.get(b) || 0);
+      if (b.battleMazeWall) drawBackroomsWall(b.x, b.y, links.get(b) || 0);
+      else drawStoneWall(b.x, b.y, links.get(b) || 0);
     } else if (b.type === 'door' || b.type === 'iron_door') {
       const state = doorStates.get(b);
       drawDoorArt(b.x, b.y, b.type === 'iron_door', links.get(b) || 0, state.open, state.swing);
@@ -365,7 +389,7 @@ export function drawBuildings() {
 	  }
 }
 
-    drawDamage(b.x, b.y, 14, b.hp / b.maxHp);
+    drawDamage(b.x, b.y, 14, b.hp / b.maxHp, b.type);
 
     // hp of a damaged building, and a wrench while its repair is ordered
     if (b.hp < b.maxHp) {

@@ -19,6 +19,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('[data-editor-category="terrain"]').click(); // its sheet
   await expect(page.locator('#editor-panel')).toBeVisible();
   await expect.poll(() => iconText(page, '#editor-tools [data-tool="water"]')).toEqual(['[[water]] Вода']);
+  await expect.poll(() => iconText(page, '#editor-tools [data-tool="savanna"]')).toEqual(['[[savanna]] Саванна']);
   await page.locator('[data-editor-category="buildings"]').click();
   await expect(page.locator('#editor-tools [data-tool="wall_stone"]')).toContainText('Каменная стена');
 

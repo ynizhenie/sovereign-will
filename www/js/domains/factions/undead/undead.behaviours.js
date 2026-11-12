@@ -46,12 +46,14 @@ export function necromancy(s, tick) {
     // not one with an enemy close to it: it would go for it and step back again (#232)
     const guarded = c => game.enemies.some(en => en.hp > 0 && Math.hypot(en.x - c.x, en.y - c.y) < GAME_CONFIG.morale.necroCorpseClear);
     for (const c of game.corpses) {
-      if (tick.raiseAssignments.has(c) || dist(c) > necro.seekRange || guarded(c)) continue; // (#326: it goes for one far off, not stands)
+      if (tick.raiseAssignments.has(c) || (c.raisedBy && c.raisedBy !== s && c.raisedBy.hp > 0) ||
+        dist(c) > necro.seekRange || guarded(c)) continue; // (#326: it goes for one far off, not stands)
       if (!corpse || dist(c) < dist(corpse)) corpse = c;
     }
   }
   const raise = () => {
     tick.raiseAssignments.add(corpse);
+    corpse.raisedBy = s;
     s.patrolTarget = null;
     // raised from a distance (raiseReach), not standing over it (#203)
     if (dist(corpse) > necro.raiseReach) {
@@ -104,6 +106,7 @@ export function necromancy(s, tick) {
       moveEntityTowards(s, patient.x, patient.y, s.speed, false, dt);
     } else {
       patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      patient.necroTreatedAt = game.pathTick;
       s.working = 0.1;
       faceTowards(s, patient.x, patient.y);
     }
@@ -114,6 +117,7 @@ export function necromancy(s, tick) {
   // itself last of all (#279), where it stands
   if (s.hp < s.maxHp && (tick.isWaveActive || getRecentAttacker(s))) {
     s.hp = Math.min(s.maxHp, s.hp + necro.healPerSecond * dt);
+    s.necroTreatedAt = game.pathTick;
     s.working = 0.1;
     return true;
   }
@@ -143,7 +147,8 @@ export function necromancy(s, tick) {
     return true;
   }
 
-  if (s.raisesLeft < necro.raises) {
+  const enemyClose = game.enemies.some(en => en.hp > 0 && dist(en) < GAME_CONFIG.morale.necroKeepBack);
+  if (s.raisesLeft <= 0 || (enemyClose && s.raisesLeft < necro.raises)) {
     const graves = game.buildings.filter(b => b.type === 'grave');
     const grave = graves.length ? graves.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : townHall;
     s.patrolTarget = null;

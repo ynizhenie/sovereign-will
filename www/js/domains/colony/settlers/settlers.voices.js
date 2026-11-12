@@ -17,6 +17,7 @@ const VOICE = { globalGap: 2.5, ownGap: 12, showTicks: 150, storyEvery: 20, talk
 const PITCH = { normal: [210, false], big: [120, false], imp: [380, false], demon: [95, true], zombie: [150, true], big_zombie: [95, true] };
 let lastSpoke = -Infinity;
 let clock = 1000; // seconds of game played (tickVoices): the gaps are in game time, not stopped by a pause
+const taunted = new WeakMap();
 
 function factionOf(unit, fallback) {
   const factions = Object.values(GAME_CONFIG.factions);
@@ -37,23 +38,36 @@ function voiceOf(unit) {
 
 // A unit says something for `event` of `faction` ('humans', 'demons', 'undead'): true if it spoke. Urgent
 // events (a wave, badly hurt) may interrupt both shared and per-unit gaps.
-export function speak(unit, faction, event, urgent = false) {
+export function speak(unit, faction, event, urgent = false, opponentFaction = null) {
   if (!unit || game.gameMode === 'editor' || isPet(unit) || (unit.enemyKey && GAME_CONFIG.enemies[unit.enemyKey]?.pet)) return false; // (pets bark, they don't talk, #314)
   const now = clock;
   if (!urgent && now - lastSpoke < VOICE.globalGap) return false;
   if (!urgent && now - (unit.spokeAt || -Infinity) < VOICE.ownGap) return false;
-  const list = phrasesFor(unit, factionOf(unit, faction), event);
+  const list = phrasesFor(unit, factionOf(unit, faction), event, opponentFaction);
   if (!list.length) return false;
   return voice(unit, list[Math.floor(Math.random() * list.length)]);
+}
+
+// A distinct encounter taunt is said once when this unit first sees that opponent.
+export function tauntOnSight(unit, opponent) {
+  if (!unit || !opponent || unit.hp <= 0 || opponent.hp <= 0) return false;
+  let opponents = taunted.get(unit);
+  if (opponents?.has(opponent)) return false;
+  const ownFallback = unit.enemyKey ? getEnemyFaction().id : getPlayerFaction().id;
+  const opponentFallback = opponent.enemyKey ? getEnemyFaction().id : getPlayerFaction().id;
+  if (!speak(unit, ownFallback, 'tauntOnSight', false, factionOf(opponent, opponentFallback))) return false;
+  if (!opponents) { opponents = new WeakSet(); taunted.set(unit, opponents); }
+  opponents.add(opponent);
+  return true;
 }
 
 // (#326, 27.10, 24) What it may say: its faction's for the event, or the ones for the side it's against when there
 // are such (voice.<faction>.<event>.vs.<other>: no brains wanted off the undead); about the walls (….walls) only
 // when the colony has a wall or a door
 const WALLS = ['wall_wood', 'wall_stone', 'door', 'iron_door'];
-export function phrasesFor(unit, faction, event) {
+export function phrasesFor(unit, faction, event, opponentFaction = null) {
   const text = key => { const s = t(key); return s && s !== key ? s.split('|') : []; };
-  const against = (unit.enemyKey ? getPlayerFaction() : getEnemyFaction()).id;
+  const against = opponentFaction || (unit.enemyKey ? getPlayerFaction() : getEnemyFaction()).id;
   const key = `voice.${faction}.${event}`, vs = text(`${key}.vs.${against}`);
   let list = vs.length ? vs : text(key);
   if (event === 'idle') {

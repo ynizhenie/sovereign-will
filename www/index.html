@@ -177,6 +177,7 @@
     <div class="main-menu-content plague-menu" data-screen="plague" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="plague.title">Plague</h1>
+        <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <p data-i18n="plague.intro">Raise the fallen, lead the dead, and survive the marching enemy bands.</p>
         <div class="wave-settings">
           <div data-i18n="menu.difficulty">Difficulty:</div>
@@ -209,7 +210,6 @@
             </div>
           </div>
         </div>
-        <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <div data-seed-slot="plague"></div>
     </div>
 
@@ -338,9 +338,9 @@
 
     <div class="top-center">
       <div class="plague-stats">
-        <div class="plague-stat"><i class="ic ic-soul"></i><span data-i18n="plague.energy">Dark energy</span><b id="plague-energy">15/30</b></div>
-        <div class="plague-stat"><i class="ic ic-zombie"></i><span data-i18n="plague.squad">Squad</span><b id="plague-squad">0/8</b></div>
-        <div class="plague-stat"><i class="ic ic-card"></i><span id="plague-level">Level 1</span><b id="plague-experience">0/5</b></div>
+        <div class="plague-stat"><i class="ic ic-soul"></i><span class="plague-stat-label" data-i18n="plague.energy">Dark energy</span><b id="plague-energy">15/30</b></div>
+        <div class="plague-stat"><i class="ic ic-zombie"></i><span class="plague-stat-label" data-i18n="plague.squad">Squad</span><b id="plague-squad">0/8</b></div>
+        <div class="plague-stat"><i class="ic ic-card"></i><span class="plague-stat-label" data-i18n="plague.levelName">Level</span><b id="plague-level">1</b><b id="plague-experience">0/5</b></div>
         <button class="btn-pause-square plague-upgrades-toggle" id="plague-upgrades-toggle" data-i18n-title="plague.upgradesTitle" aria-label="Upgrades"><i class="ic ic-gear"></i></button>
       </div>
       <!-- (#279) Endless: the time of day, a dial of its four parts with a hand on now, the sun or the moon in it -->
@@ -376,11 +376,10 @@
   <div id="plague-upgrades-panel" class="plague-modal plague-upgrades-modal" hidden>
     <div class="plague-upgrades-content">
       <div class="plague-upgrades-heading">
-        <h2 data-i18n="plague.upgradesTitle">Upgrades</h2>
+        <h2 data-i18n="plague.stats.title">Necromancer stats</h2>
         <button class="btn" id="plague-upgrades-close" data-i18n-title="menu.close" aria-label="Close"><i class="ic ic-close"></i></button>
       </div>
       <section id="plague-character-stats" class="plague-character-stats" aria-label="Character stats"></section>
-      <div id="plague-upgrades-list" class="plague-upgrades-list"></div>
     </div>
   </div>
 
@@ -547,7 +546,7 @@
       </div>
       <!-- the battle's own settings (#255): the field and the difficulty -->
       <div class="hud-sheet" data-sheet="battle-settings">
-        <div class="panel-heading" data-i18n="battle.fieldHeading">Battlefield:</div>
+        <div class="panel-heading" data-i18n="battle.fieldHeading" data-battle-secret-trigger role="button" tabindex="0">Battlefield:</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-battle-field="glade" data-i18n="battle.fieldGlade">Glade</button>
           <button class="btn sub-tab" data-battle-field="desert" data-i18n="battle.fieldDesert">Desert</button>

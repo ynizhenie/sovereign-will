@@ -41,6 +41,15 @@ test('a night wave: some of its enemies carry torches; the town hall, a torch, a
   expect(sim.nightWave({})).toEqual({ someTorches: true, notAll: true, farTorchesDark: true, lights: { hall: true, enemyTorch: true, portal: true, staff: true }, enemyTorchWithoutFog: true });
 });
 
+test('a fighter puts a lit torch aside for its weapon and takes it back at rest', () => {
+  expect(sim.nightTorchSwitching()).toEqual({
+    fightsWithWeapon: true,
+    holdsTorchWhenIdle: true,
+    keepsTorchInHandWithFists: true,
+    putsTorchAsideAtWork: true
+  });
+});
+
 test('no firewood at night: a woodcutter stays up to get some, guarded by the soldier on watch; the rest sleep (#257)', () => {
   expect(sim.nightFuelDuty({})).toEqual({ cutterUp: true, firewoodMade: true, otherAsleep: true });
 });

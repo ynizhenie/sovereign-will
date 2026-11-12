@@ -20,6 +20,7 @@ test('apple saplings are carried in the same load as picked apples', async () =>
   expect(r.carried).toBeGreaterThan(160);
   expect(r.carried).toBeLessThan(240);
   expect(r.inStock).toBe(0);
+  expect(r.stalePickCleared).toBe(true);
 });
 
 test('generated maps have a few apple trees, the same ones for the same seed (#34)', async () => {

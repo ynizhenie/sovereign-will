@@ -192,6 +192,32 @@ export function drawStoneWall(x, y, mask = 0) {
   line(x + 1, y + 6, x + 1, y + 11, '#4b5961');
 }
 
+export function drawBackroomsWall(x, y, mask = 0) {
+  const top = !!(mask & LINK.n), right = !!(mask & LINK.e);
+  const bottom = !!(mask & LINK.s), left = !!(mask & LINK.w);
+  shadow(x, y + 2, 32, 30, 1);
+  ctx.fillStyle = '#b7a45e';
+  ctx.fillRect(x - 15.5, y - 15.5, 31, 31);
+  ctx.fillStyle = 'rgba(216, 199, 121, 0.55)';
+  if (!top) ctx.fillRect(x - 15, y - 14, 30, 3);
+  if (!left) ctx.fillRect(x - 14, y - 11, 3, 19);
+  ctx.fillStyle = 'rgba(101, 81, 37, 0.55)';
+  if (!bottom) ctx.fillRect(x - 15, y + 11, 30, 4);
+  if (!right) ctx.fillRect(x + 11, y - 11, 3, 22);
+  ctx.strokeStyle = '#66532f';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if (!top) { ctx.moveTo(x - 15, y - 15); ctx.lineTo(x + 15, y - 15); }
+  if (!right) { ctx.moveTo(x + 15, y - 15); ctx.lineTo(x + 15, y + 15); }
+  if (!bottom) { ctx.moveTo(x + 15, y + 15); ctx.lineTo(x - 15, y + 15); }
+  if (!left) { ctx.moveTo(x - 15, y + 15); ctx.lineTo(x - 15, y - 15); }
+  ctx.stroke();
+  const hash = Math.imul(Math.floor(x / 30) + 1, 374761393) ^ Math.imul(Math.floor(y / 30) + 1, 668265263);
+  ctx.fillStyle = 'rgba(91, 73, 38, 0.16)';
+  ctx.fillRect(x - 10 + ((hash >>> 4) & 11), y - 8 + ((hash >>> 9) & 11), 2, 2);
+  if ((hash & 3) === 0) ctx.fillRect(x + 3, y + 4, 3, 1);
+}
+
 // A door in its frame, in a run of wall: two posts, the leaf hung on one and swung open (open 0..1) away from
 // the hall (swing: where it opens towards). Planks (iron bands and rivets on an iron one)
 export function drawDoorArt(x, y, iron, mask = 0, open = 0, swing = { x: 0, y: 1 }) {

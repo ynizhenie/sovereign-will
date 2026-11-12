@@ -2,18 +2,18 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, firstOf, game, onceThisTick, townHall } from '../../../engine/world/index.js';
-import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isArrowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
 import { collidesWithBoxList, moveEntityTowards } from '../../../engine/movement/index.js';
-import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, isDefenseAlert, isInsideBase, performAttack } from './combat.rules.js';
+import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInsideBase, performAttack, shouldUseRangedDagger } from './combat.rules.js';
 import { getNecromancy } from '../../factions/undead/index.js';
 import { getEnemyDef } from '../waves/index.js';
 
 const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
-const canDefendEnemy = en => game.gameMode === 'battle' || isInsideBase(en) ||
-  ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned));
+const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || isInsideBase(en) ||
+  ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned)));
 
 // (#322) The enemies there are to fight, and which of them are inside the base: the same for every settler of a tick (they
 // move after the settlers have had theirs), so found once in it, not by each of sixty fighters for each of sixty enemies
@@ -22,7 +22,7 @@ function threatsThisTick(tick) {
   if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
     const inside = new Set(game.enemies.filter(isInsideBase));
     const marching = !game.wavePreparation || game.wavePreparation.stage === 'march';
-    const list = game.enemies.filter(en => !isCampGuardUnavailable(en) &&
+    const list = game.enemies.filter(en => !en.ghostly && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
       (game.gameMode === 'battle' || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
     tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
   }
@@ -33,6 +33,7 @@ function threatsThisTick(tick) {
 export function takeMarkedTarget(s, tick) {
   let best = null;
   for (const en of game.enemies) {
+    if (en.ghostly) continue;
     if (isCampGuardUnavailable(en)) continue;
     if (!en.markedTarget || (tick.markedAssignments.get(en) || 0) >= GAME_CONFIG.defense.markedSquad) continue;
     if (!best || Math.hypot(en.x - s.x, en.y - s.y) < Math.hypot(best.x - s.x, best.y - s.y)) best = en;
@@ -45,7 +46,7 @@ export function takeMarkedTarget(s, tick) {
 // to a building), or hits it; then it fights that enemy (fightEnemies) and comes back afterwards
 export function holdPost(s, tick) {
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || !isDefenseAlert()) return false;
-  if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false; // no arrows: no post (#232, fightEnemies)
+  if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false; // no arrows: no post (#232, fightEnemies)
   const place = getDefensePlan().squadOf.get(s);
   if (!place || !place.post) return false;
   if (getRecentAttacker(s)) return false;
@@ -97,7 +98,7 @@ export function strikeBack(s, tick) {
   if (attacker && !canDefendEnemy(attacker)) return false;
   if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
-  if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
+  if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
   return engageEnemy(s, tick, attacker, attacker, tick.dt);
 }
 
@@ -109,13 +110,13 @@ export function fightEnemies(s, tick) {
   const choice = chooseSettlerTarget(s, tick);
   if (!choice) return false; // on the way to the enemy tents, with nothing in the way
   const { targetEnemy, attacker } = choice;
-  if (isRangedWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
+  if (isArrowWeapon(s.weapon) && s.quiver && restockArrows(s, dt)) return true;
   // an archer with nothing to shoot keeps out of the fight at the town hall while there's an enemy about
   // (#232: it went out to its post empty); with none, it gets on with its other work
   // (#326) unless an enemy comes close: then it draws its dagger and stabs at it
   const dagger = (GAME_CONFIG.weapons[s.weapon] || {}).dagger;
   const close = targetEnemy && usesDagger(s) && dagger && Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) < dagger.closeTiles * TILE_SIZE;
-  if (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy && !close) {
+  if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0) && targetEnemy && !close) {
     s.patrolTarget = null;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 20) moveSettlerToTownHall(s, s.speed, dt);
     return true;
@@ -233,31 +234,43 @@ function restockArrows(s, dt) {
 // there are defenders; the rest walk up and strike (an archer shoots from where it has a clear line).
 // False when there's nothing to fight.
 function enemyBreachingBuildingBetween(s, enemy) {
-  if (enemy.struckAt === undefined || game.pathTick - enemy.struckAt > 2) return false;
-  return game.buildings.some(building => {
-    if (building.side === 'red' || building.hp <= 0 || (getDefinition('buildings', building.type) || {}).walkable ||
-        !collidesWithBoxList(enemy.x, enemy.y, enemy.radius + 2, [building], 15)) return false;
-    let first = 0, last = 1;
-    for (const [start, delta, min, max] of [
-      [s.x, enemy.x - s.x, building.x - 15, building.x + 15],
-      [s.y, enemy.y - s.y, building.y - 15, building.y + 15]
-    ]) {
-      if (Math.abs(delta) < 1e-9) {
-        if (start < min || start > max) return false;
-        continue;
-      }
-      const a = (min - start) / delta, b = (max - start) / delta;
-      first = Math.max(first, Math.min(a, b));
-      last = Math.min(last, Math.max(a, b));
-      if (first > last) return false;
+  const building = enemy.siegeTarget;
+  if (!building || !game.buildings.includes(building) || building.hp <= 0 ||
+      game.pathTick - (enemy.siegeTargetTick ?? -Infinity) > 2 ||
+      (getDefinition('buildings', building.type) || {}).walkable ||
+      !collidesWithBoxList(enemy.x, enemy.y, enemy.radius + 2, [building], 15)) return false;
+  let first = 0, last = 1;
+  for (const [start, delta, min, max] of [
+    [s.x, enemy.x - s.x, building.x - 15, building.x + 15],
+    [s.y, enemy.y - s.y, building.y - 15, building.y + 15]
+  ]) {
+    if (Math.abs(delta) < 1e-9) {
+      if (start < min || start > max) return false;
+      continue;
     }
-    return first <= 1 && last >= 0;
-  });
+    const a = (min - start) / delta, b = (max - start) / delta;
+    first = Math.max(first, Math.min(a, b));
+    last = Math.min(last, Math.max(a, b));
+    if (first > last) return false;
+  }
+  return first <= 1 && last >= 0;
 }
 
 export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
-  const shoots = isRangedWeapon(s.weapon) && !usesDagger(s); // (#326: out of arrows, a dagger: melee)
-  let distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
+  const rangedWeapon = isRangedWeapon(s.weapon);
+  const distToClosestEn = targetEnemy ? Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y) : Infinity;
+  const wasCloseDagger = !!s.closeDaggerActive;
+  const daggerTriggered = rangedWeapon && shouldUseRangedDagger(
+    s, targetEnemy, s.weapon,
+    !!targetEnemy && attacker === targetEnemy && !getEnemyDef(targetEnemy).ranged &&
+      game.pathTick - (s.lastAttackedTick ?? -Infinity) < 90
+  );
+  const closeDagger = daggerTriggered && !s.towerAssignment;
+  if (closeDagger && !wasCloseDagger) s.attackCooldown = 0;
+  s.closeDaggerActive = closeDagger;
+  if (s.towerAssignment) s.daggerTarget = null;
+  const emptyQuiverDagger = usesDagger(s); // (#326: out of arrows, a dagger: melee)
+  const shoots = rangedWeapon && !emptyQuiverDagger && !closeDagger;
 
   // (a necromancer's staff fights: it doesn't shelter at the town hall, #232)
   let isUnarmedOrRod = (s.weapon === 'fist') && !getNecromancy(s);
@@ -282,12 +295,22 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 
     let dist = distToClosestEn;
     if (enemyBreachingBuildingBetween(s, targetEnemy)) {
-      faceTowards(s, targetEnemy.x, targetEnemy.y);
+      if (s.siegePathTarget !== targetEnemy.siegeTarget) {
+        s.path = null;
+        s.pathTarget = null;
+        s.siegePathTarget = targetEnemy.siegeTarget;
+      }
+      moveEntityTowards(s, targetEnemy.x, targetEnemy.y, s.speed, false, dt);
       s.patrolTarget = null;
       return true;
     }
+    s.siegePathTarget = null;
     // approach: how close to walk before striking (bows: shoot from under this distance)
-    const stats = getWeaponStats(s, 'combat'), approach = stats.approach;
+    const rangedStats = getWeaponStats(s, 'combat');
+    const stats = closeDagger && !emptyQuiverDagger
+      ? { ...(GAME_CONFIG.weapons[s.weapon] || {}).dagger, multiplier: rangedStats.multiplier }
+      : rangedStats;
+    const approach = stats.approach;
     // bows need a clear line of fire too, or they walk closer. Melee approach is set for a normal settler
     // against a normal enemy (bodies 21 px apart): bigger bodies keep their centres further apart (see
     // separateSettlersFromEnemies), so a big settler or a brute counts as in reach that much sooner
@@ -298,10 +321,10 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     const pastBodies = (s.visualRadius || s.radius) + targetEnemy.radius + Math.max(6, (stats.range || 0) - 30);
     const inReach = shoots
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
-      : dist <= Math.max(approach + extraBody, pastBodies);
+      : dist <= Math.max(approach + extraBody, pastBodies) && hasMeleeReach(s, targetEnemy);
     if (inReach) {
-      performAttack(s, targetEnemy.x, targetEnemy.y);
-    } else if (breakWhatsInTheWay(s)) {
+      performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger);
+    } else if (attacker !== targetEnemy && breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through
     } else if (!shoots) {
       // in melee each takes a side of its own round the enemy (#208)
@@ -326,7 +349,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
 // (#326) On a way through the enemy's buildings (findPathAStar's, when the way round is long): the one next on
 // it struck once it's in reach. True while that keeps it busy
 function breakWhatsInTheWay(s) {
-  if (!s.path || !s.path.length) return false;
+  if (!s.isBlockedPath || !s.path || !s.path.length) return false;
   const ranged = isRangedWeapon(s.weapon);
   const weapon = GAME_CONFIG.weapons[s.weapon] || GAME_CONFIG.weapons.fist;
   const reach = ranged ? weapon.dagger.range : getWeaponStats(s, 'combat').range;
@@ -337,6 +360,7 @@ function breakWhatsInTheWay(s) {
       Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1))
     .find(building => building && Math.hypot(building.x - s.x, building.y - s.y) <= reach);
   if (!b) return false;
+  if (ranged) s.daggerTarget = b;
   performAttack(s, b.x, b.y, ranged);
   s.patrolTarget = null;
   return true;
@@ -442,7 +466,7 @@ export function escortGatherers(s, tick) {
   const state = escortState();
   // (an archer with no arrows guards nobody, #232)
   if ((s.role !== 'soldier' && s.role !== 'archer') || s.isPossessed || s.towerAssignment || s.carrying || tick.isWaveActive || isDefenseAlert() ||
-    (isRangedWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
+    (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0))) {
     guard(state, s, null);
     return false;
   }
@@ -472,7 +496,7 @@ export function escortGatherers(s, tick) {
 // stock): with a wave coming, up to full; otherwise once it's empty. Not with an enemy close (then it fights,
 // restocking from a tower or the storage it's at in fightEnemies), nor on a tower (the tower's arrows)
 export function restockQuiver(s, tick) {
-  if (!isRangedWeapon(s.weapon) || !s.quiver || s.isPossessed || s.towerAssignment || s.carrying || !(stock.arrows > 0)) return false;
+  if (!isArrowWeapon(s.weapon) || !s.quiver || s.isPossessed || s.towerAssignment || s.carrying || !(stock.arrows > 0)) return false;
   const capacity = s.quiverCapacity || 12, have = s.arrows || 0;
   if (!(isDefenseAlert() ? have < capacity : have <= 0)) return false;
   if (getRecentAttacker(s) || game.enemies.some(en => Math.hypot(en.x - s.x, en.y - s.y) < 160)) return false;

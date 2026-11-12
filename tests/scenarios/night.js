@@ -102,6 +102,16 @@ Object.assign(window.sim, (() => {
     return { torch: !!s.torchInHand, torches: stock.torches, reach: nightReach(s) === Infinity ? 'any' : 'base' };
   }
 
+  function torchSwitching() {
+    const tick = game.pathTick, fighting = { weapon: 'sword', torch: true, struckAt: tick };
+    return {
+      fightsWithWeapon: torchAtSide(fighting, true, true),
+      holdsTorchWhenIdle: !torchAtSide({ ...fighting, struckAt: tick - 150 }, true, true),
+      keepsTorchInHandWithFists: !torchAtSide({ ...fighting, weapon: 'fist' }, true, false),
+      putsTorchAsideAtWork: torchAtSide({ ...fighting, struckAt: tick - 150, working: 1 }, true, true)
+    };
+  }
+
   function directionalNightReach({ seed = 'night-directional-reach' } = {}) {
     start(seed); clearResources();
     const east = nearHall(12, 0);
@@ -166,5 +176,5 @@ Object.assign(window.sim, (() => {
     return { cutterUp, firewoodMade: (stock.firewood || 0) > 0, otherAsleep: !!other.asleep };
   }
 
-  return { nightPhases: phases, nightSleep: sleep, nightSleepAtEnemyCamp: sleepAtEnemyCamp, nightWoken: woken, nightTorchPost: torchPost, nightHandTorch: handTorch, directionalNightReach, nightWave, nightFuelDuty: fuelDuty };
+  return { nightPhases: phases, nightSleep: sleep, nightSleepAtEnemyCamp: sleepAtEnemyCamp, nightWoken: woken, nightTorchPost: torchPost, nightHandTorch: handTorch, nightTorchSwitching: torchSwitching, directionalNightReach, nightWave, nightFuelDuty: fuelDuty };
 })());
