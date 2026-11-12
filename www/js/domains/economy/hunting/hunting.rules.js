@@ -26,6 +26,9 @@ export function woundBoar(boar, damage, attacker, fromX, fromY) {
   if (rand() < GAME_CONFIG.mapResources.boar.dungChance) game.dung.push({ x: boar.x, y: boar.y, age: 0, by: null, byLeft: true });
   if (boar.hp > 0) { shakeOnHit(boar); makeBoarFlee(boar, fromX, fromY); return; }
   onUnitDeath(boar, 'boar');
+  if (hasTerritory() && !inTerritory(boar.x, boar.y)) {
+    game.territoryBoarRespawnsPending = (game.territoryBoarRespawnsPending || 0) + 1;
+  }
   if (attacker && game.settlers.includes(attacker)) noteDay(attacker, 'hunted'); // (its day, #306)
   Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
@@ -107,12 +110,24 @@ export function tickBoarRespawn(dt) {
   if (hasTerritory()) {
     const living = game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y));
     living.forEach(boar => { boar.inBase = true; });
+    if (game.territoryBoarRespawnsPending > 0) {
+      game.boarRespawnTimer -= dt;
+      if (game.boarRespawnTimer <= 0) {
+        if (spawnResource('boar')) {
+          game.territoryBoarRespawnsPending--;
+          game.boarRespawnTimer = 25;
+        } else game.boarRespawnTimer = 5;
+      }
+      return;
+    }
     if (living.length >= startingBoarCount()) {
       game.boarRespawnTimer = 25;
       return;
     }
     game.boarRespawnTimer -= dt;
-    if (game.boarRespawnTimer <= 0) game.boarRespawnTimer = spawnTerritoryBoar() ? 25 : 5;
+    if (game.boarRespawnTimer <= 0) {
+      game.boarRespawnTimer = spawnTerritoryBoar() ? 25 : 5;
+    }
     return;
   }
   if (game.boars.length < BOAR_LIMIT) {

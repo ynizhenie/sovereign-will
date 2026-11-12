@@ -28,7 +28,9 @@ Object.assign(window.sim, (() => {
     const outAt = { x: townHall.x + getBaseRadius() + 200, y: townHall.y };
     const out = makeSettler(2, outAt.x, outAt.y);
     settlers = [s, out];
-    const a = { x: townHall.x - 60, y: townHall.y + 60 }, b = { x: townHall.x + 60, y: townHall.y + 60 };
+    // (walked along the middle of one row of tiles: a hall on a tile's edge put y + 60 on the line between two)
+    const g = getGridPos(townHall.x, townHall.y + 60), rowY = tileCenter(g.gx, g.gy).y;
+    const a = { x: townHall.x - 60, y: rowY }, b = { x: townHall.x + 60, y: rowY };
     let f = 0;
     run(120, { each: () => {
       calm(); settlers.forEach(o => { o.hunger = 999; });
@@ -37,7 +39,6 @@ Object.assign(window.sim, (() => {
       out.x = outAt.x + Math.sin(f / 20) * 40; out.y = outAt.y; // (walking about out there, held there)
     } });
     const shows = GAME_CONFIG.paths.shows;
-    const g = getGridPos(townHall.x, townHall.y + 60);
     const worn = (paths[`${g.gx},${g.gy}`] || 0) >= shows;
     const outWorn = Object.keys(paths).some(key => { const [x, y] = key.split(',').map(Number); return Math.hypot(x * TILE_SIZE + 15 - townHall.x, y * TILE_SIZE + 15 - townHall.y) > getBaseRadius() + TILE_SIZE; });
     settlers = [];

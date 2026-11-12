@@ -15,7 +15,7 @@ const poly = (pts, fill, stroke) => {
 };
 const rect = (x, y, w, h, fill) => { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); };
 
-// A weapon; false if it's none of them (the fist). pull (0..1): a bow's string drawn back, an arrow on it (#306)
+// A weapon; false if it's none of them (the fist). pull also animates a rifle magazine being changed.
 export function drawHeldWeapon(weapon, k = 1, pull = 0) {
   ctx.save();
   ctx.scale(k, k);
@@ -87,6 +87,30 @@ export function drawHeldWeapon(weapon, k = 1, pull = 0) {
     }
     rect(0, -2.3, 3, 4.6, '#5c3a17'); // the grip
     ctx.lineCap = 'butt';
+  } else if (weapon === 'rifle') {
+    poly([[-14, -3.2], [-11, -4.5], [-4, -4], [-1, -2.8], [-1, 2.6], [-5, 3.8], [-11, 3.4], [-14, 1.8]], '#69583f', 'rgba(0, 0, 0, 0.55)');
+    ctx.strokeStyle = 'rgba(221, 201, 157, 0.55)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(-12.5, -2.5); ctx.lineTo(-5, -2.8); ctx.stroke();
+    poly([[-3, -3.2], [12, -3.2], [15, -2], [15, 2.1], [11, 3.1], [-3, 2.7]], '#424943', 'rgba(0, 0, 0, 0.65)');
+    rect(11, -1.15, 21, 2.3, '#777d78'); // barrel
+    rect(30, -1.8, 3.5, 3.6, '#454b49'); // muzzle
+    rect(32.4, -1.2, 1, 2.4, '#202729');
+    poly([[7, -3.1], [19, -3], [21, -2], [21, 1.7], [18, 2.6], [8, 2.1]], '#596047', 'rgba(0, 0, 0, 0.55)'); // handguard
+    ctx.strokeStyle = 'rgba(190, 195, 175, 0.5)'; ctx.lineWidth = 0.7;
+    for (const x of [10, 12, 14, 16, 18]) {
+      ctx.beginPath(); ctx.moveTo(x, -2.2); ctx.lineTo(x + 0.5, -0.5); ctx.stroke();
+    }
+    poly([[1, 2.4], [6.8, 2.3], [7, 5], [5.5, 8.5 + pull * 3], [2, 8.2 + pull * 3]], '#333a37', 'rgba(0, 0, 0, 0.55)'); // magazine
+    poly([[-1, 2], [3, 2], [2.4, 6], [-1, 7], [-3, 5]], '#393d38', 'rgba(0, 0, 0, 0.5)'); // pistol grip
+    ctx.strokeStyle = '#252b29'; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(-1, 2.8); ctx.quadraticCurveTo(3.2, 3.2, 3, 5.2); ctx.lineTo(1, 5.2); ctx.stroke(); // trigger guard
+    ctx.strokeStyle = '#252b29'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(12, -3); ctx.lineTo(12, -5); ctx.lineTo(15, -5); ctx.stroke(); // rear sight
+    ctx.beginPath(); ctx.moveTo(25, -2.8); ctx.lineTo(25, -4.4); ctx.lineTo(27, -4.4); ctx.stroke(); // front sight
+    rect(4, -4.1, 6, 1.1, '#252b29'); // top rail
+    rect(5, -4.8, 4, 0.8, '#747a74');
+    ctx.fillStyle = '#adb5a6'; ctx.beginPath(); ctx.arc(0.5, -1.4, 0.65, 0, Math.PI * 2); ctx.fill(); // bolt
+    ctx.fillStyle = '#aeb7ad'; ctx.beginPath(); ctx.arc(9, 1.1, 0.55, 0, Math.PI * 2); ctx.fill(); // receiver pin
   } else drawn = false;
   ctx.restore();
   return drawn;

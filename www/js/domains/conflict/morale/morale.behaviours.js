@@ -6,13 +6,13 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../../../engine/world/index.js';
 import { getFrontier, isOutskirts, isVisible } from '../../world/index.js';
-import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
+import { getPlayerFaction } from '../../factions/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
 import { collidesWithWall, findPathAStar, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
-import { getEnemyDef } from '../waves/index.js';
+import { enemyFactionOf, getEnemyDef } from '../waves/index.js';
 import { healAtTent } from '../healing/index.js';
 
 const config = () => GAME_CONFIG.morale;
@@ -76,8 +76,9 @@ export function panic(s, tick) {
 // True: it took the step
 export function enemyPanic(en, dt) {
   if (!en.panic) return false;
-  if (getEnemyFaction().id === 'undead') return false; // they fight on, weaker (enemyStrike, #232)
-  if (getEnemyFaction().id === 'demons' && healOnAlly(en, game.enemies, dt)) return true;
+  const faction = enemyFactionOf(en.enemyKey).id;
+  if (faction === 'undead') return false; // they fight on, weaker (enemyStrike, #232)
+  if (faction === 'demons' && healOnAlly(en, game.enemies, dt)) return true;
   const tent = nearest(game.enemyTents, en);
   if (tent) {
     if (Math.hypot(tent.x - en.x, tent.y - en.y) > 30) {

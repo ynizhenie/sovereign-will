@@ -7,7 +7,7 @@ import { game, resetTileIndex, setWorldSize, TOWN_HALL_HP, townHall } from '../e
 import { createSettler } from '../domains/colony/settlers/index.js';
 import { addResources, mixStartFood, stock } from '../domains/colony/storage/index.js';
 import { clearBoarWallows } from '../domains/economy/hunting/index.js';
-import { generateMapSteps, prewarmVisibleWorldChunks, resetFog } from '../domains/world/index.js';
+import { generateMapSteps, markStartingZoneBoars, markStartingZoneResources, prewarmVisibleWorldChunks, resetFog } from '../domains/world/index.js';
 import { applyFactionCosts, getPlayerFaction, sides } from '../domains/factions/index.js';
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
@@ -32,7 +32,7 @@ export function* resetGameSteps(map) {
   if (!getPlayerFaction().eats) stock.food = 0; // the undead have no food
   if (fromMenuWorld || renderedFaction !== sides.player.faction) rebuildConfigHud(); // its own units and buildings
   else applyFactionCosts(); // config costs follow the current game, even after the menu scene changed them
-  game.waveTimer = game.waveInterval; game.boarRespawnTimer = 25; game.waveNum = 1;
+  game.waveTimer = game.waveInterval; game.boarRespawnTimer = 25; game.territoryBoarRespawnsPending = 0; game.waveNum = 1;
   setWorldSize((map || game.mapSettings).cols, (map || game.mapSettings).rows);
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
@@ -48,6 +48,8 @@ export function* resetGameSteps(map) {
   } else {
     for (const share of generateMapSteps()) yield 0.05 + share * 0.75;
   }
+  markStartingZoneResources();
+  markStartingZoneBoars();
   yield 0.7;
   mixStartFood(); // after the map, so the seeded map stays the same
   yield 0.73;

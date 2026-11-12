@@ -29,7 +29,8 @@ test('facing away, what\'s in its hands is behind it and its back in front; faci
       away: facesAway(up)
     };
   });
-  expect(r.held).toEqual({ up: true, down: false, left: true, right: false });
+  // (#406: facing left the hand is mirrored, so what it holds is in front)
+  expect(r.held).toEqual({ up: true, down: false, left: false, right: false });
   expect(r.back).toEqual({ up: false, down: true });
   expect(r.carried).toEqual({ up: true, down: false });
   expect(r.shield).toEqual({ right: 1, left: -1 });

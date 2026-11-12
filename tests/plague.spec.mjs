@@ -10,9 +10,36 @@ async function startPlague(page) {
   await page.evaluate(() => { isPaused = true; });
 }
 
+test('Plague defaults use a six-tile squad search, improved recovery and healing, with Play at the top', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-plague');
+  const menuOrder = await page.locator('[data-screen="plague"]').evaluate(screen => {
+    const children = [...screen.children];
+    return children.indexOf(screen.querySelector('#plague-play')) < children.indexOf(screen.querySelector('.plague-spawn-settings')) &&
+      children.indexOf(screen.querySelector('#plague-play')) < children.indexOf(screen.querySelector('[data-seed-slot="plague"]'));
+  });
+  expect(menuOrder).toBe(true);
+  await page.click('#plague-play');
+  await page.waitForFunction(() => gameStarted && !loading && plagueMode, null, { timeout: 60000 });
+  const stats = await page.evaluate(() => {
+    const hero = settlers.find(unit => unit.plagueHero);
+    return {
+      commandRange: plague.commandRange / TILE_SIZE,
+      energyRegen: plague.energyRegen,
+      healStrength: plague.healStrength,
+      heroSpeed: hero.speed,
+      zombieSpeed: GAME_CONFIG.settlerTypes.zombie.speed
+    };
+  });
+  expect(stats).toEqual({ commandRange: 6, energyRegen: 0.25, healStrength: 2.5, heroSpeed: 0.85, zombieSpeed: 0.85 });
+  expect(errors).toEqual([]);
+});
+
 test('Plague bands come in on standable ground away from the hero, armed as Endless\'s waves, no crossbowmen (#404, 2, 3, 8)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
+  expect(await page.evaluate(() => savannaTiles.length)).toBeGreaterThan(0);
   const r = await page.evaluate(() => {
     const hero = settlers.find(s => s.plagueHero);
     const seen = [];
@@ -40,7 +67,7 @@ test('Plague bands come in on standable ground away from the hero, armed as Endl
   expect(errors).toEqual([]);
 });
 
-test('Plague: the twelve upgrades, one speed card for the hero and the squad, stats from base to now; the hero stands still (#404, 4, 5)', async ({ page }) => {
+test('Plague: upgrade cards affect the hero and squad, while the menu shows only current stats (#404, 4, 5)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
   const r = await page.evaluate(() => {
@@ -54,21 +81,108 @@ test('Plague: the twelve upgrades, one speed card for the hero and the squad, st
     const rows = cards.map(card => Math.round(card.getBoundingClientRect().top));
     cards[0].click();
     document.getElementById('plague-upgrades-toggle').click();
-    const stats = [...document.querySelectorAll('#plague-character-stats .plague-character-stat b')].map(b => b.textContent);
-    const cardsListed = document.querySelectorAll('#plague-upgrades-list .plague-upgrade-entry').length;
+    const statRows = [...document.querySelectorAll('#plague-character-stats .plague-character-stat')];
+    const stats = statRows.map(row => row.querySelector('b').textContent);
+    const healthLabels = [...document.querySelectorAll('.plague-character-group')][0]
+      .querySelectorAll('.plague-character-stat span');
+    const groupCount = document.querySelectorAll('.plague-character-group-title').length;
+    const statLabels = statRows.map(row => row.querySelector('span').textContent);
+    const hasDisclosure = !!document.querySelector('#plague-character-stats details');
+    const hasUpgradeList = !!document.querySelector('#plague-upgrades-list');
     document.getElementById('plague-upgrades-close').click();
     return {
       oneRow: new Set(rows).size === 1, speedFactor: plague.speedFactor, squadSpeed: +(zombie.speed / GAME_CONFIG.settlerTypes.zombie.speed).toFixed(2),
-      allArrows: stats.length > 10 && stats.every(text => text.includes('→')),
-      level: document.getElementById('plague-level').textContent, cardsListed,
+      currentOnly: stats.length === 13 && stats.every(text => !text.includes('→')),
+      healthRowsTogether: [...healthLabels].map(label => label.textContent).join(' / ') === 'Здоровье / Здоровье зомби / большого зомби',
+      groupCount,
+      showsRaiseCost: statLabels.some(label => label.includes('Энергия за воскрешение')), hasDisclosure,
+      level: document.getElementById('plague-level').textContent, hasUpgradeList,
       standing: (() => { isPaused = false; update(1 / 60); isPaused = true; return { swaying: !!hero.swaying, idle: !!hero.isIdle }; })()
     };
   });
-  expect(r).toMatchObject({ oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, allArrows: true, cardsListed: 12 });
+  expect(r).toMatchObject({
+    oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, currentOnly: true,
+    healthRowsTogether: true, groupCount: 6, showsRaiseCost: false, hasDisclosure: false, hasUpgradeList: false
+  });
   expect(r.standing).toEqual({ swaying: false, idle: false }); // (no sway, no "zZ" over it)
   expect(r.level).toContain('2');
   expect(errors).toEqual([]);
 });
+
+test('Plague upgrade text fits on a phone screen', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const errors = await openGame(page);
+  await startPlague(page);
+  await page.click('#plague-upgrades-toggle');
+  const result = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.plague-character-stat')];
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      overflowingRows: rows.filter(row => row.scrollWidth > row.clientWidth + 1).length,
+      offscreenRows: rows.filter(row => row.getBoundingClientRect().right > document.documentElement.clientWidth + 1).length
+    };
+  });
+  expect(result).toEqual({ viewportWidth: 360, overflowingRows: 0, offscreenRows: 0 });
+  expect(errors).toEqual([]);
+});
+
+test('Plague enemies switch from the Necromancer to a nearer squad member', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const switched = await page.evaluate(() => {
+    const hero = settlers.find(unit => unit.plagueHero);
+    const zombie = createSettler('zombie', 990, hero.x + 120, hero.y, { plagueUnit: true, masterId: hero.id });
+    settlers.push(zombie);
+    const group = { id: 990, aggroTarget: hero, aggroUntil: plague.elapsedTime + 8 };
+    plague.groups.push(group);
+    const enemy = { x: hero.x + 150, y: hero.y, plagueGroupId: group.id };
+    return plagueEnemyTarget(enemy) === zombie;
+  });
+  expect(switched).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Endless reapplies its selected wave and card settings after Plague', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('endless'));
+  await page.click('[data-cards="off"]');
+  await page.click('[data-wave-interval="custom"]');
+  await page.locator('#wave-custom').fill('480');
+  await page.locator('#wave-custom').dispatchEvent('change');
+  await startPlague(page);
+  await page.evaluate(() => exitToMainMenu());
+  await page.click('#mode-endless');
+  await page.click('#play-button');
+  await page.waitForFunction(() => gameStarted && !loading && !plagueMode, null, { timeout: 60000 });
+  const settings = await page.evaluate(() => ({ waveInterval, waveTimer, cardMode }));
+  expect(settings).toMatchObject({ waveInterval: 480, cardMode: false });
+  expect(settings.waveTimer).toBeGreaterThan(479.5);
+  expect(errors).toEqual([]);
+});
+
+for (const viewport of [{ name: 'phone', width: 360, height: 800 }, { name: 'desktop', width: 1280, height: 800 }]) {
+test(`Plague top stats show only icons and values on ${viewport.name}`, async ({ page }) => {
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  const errors = await openGame(page);
+  await startPlague(page);
+  const stats = await page.locator('.plague-stats').evaluate(panel => {
+    const labels = [...panel.querySelectorAll('.plague-stat-label')];
+    return {
+      labelCount: labels.length,
+      labelsRemainAccessible: labels.every(label => getComputedStyle(label).display !== 'none'),
+      labelsTakeNoSpace: labels.every(label => label.getBoundingClientRect().width <= 1),
+      energy: panel.querySelector('#plague-energy').textContent,
+      values: [...panel.querySelectorAll('.plague-stat b')].slice(1).map(value => value.textContent),
+      icons: panel.querySelectorAll('.plague-stat > .ic').length
+    };
+  });
+  expect(stats).toEqual({
+    labelCount: 3, labelsRemainAccessible: true, labelsTakeNoSpace: true,
+    energy: expect.stringMatching(/^\d+\/30$/), values: ['0/8', '1', '0/5'], icons: 3
+  });
+  expect(errors).toEqual([]);
+});
+}
 
 test('Plague keeps its own sides, midday and clear weather; Endless\'s come back after it (#404, 10, 11)', async ({ page }) => {
   const errors = await openGame(page);
@@ -131,5 +245,28 @@ test('Plague: the dead keep their weapons, a corpse shows its, arrows never run 
   });
   expect(r).toMatchObject({ arrows: 12, loot: 0, corpseWeapon: 'iron_sword', drew: true });
   expect(r.tracks).toEqual(['plague_jig', 'plague_waltz', 'plague_jig']);
+  expect(errors).toEqual([]);
+});
+
+test('Plague corpses fade away after their lifetime without worms', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(() => {
+    const life = GAME_CONFIG.corpses.seconds;
+    const corpse = { x: townHall.x + 60, y: townHall.y + 60, radius: 11, side: 'settler', kind: 'zombie', age: life * 0.6, big: false, wormsTaken: false };
+    corpses = [corpse];
+    const original = ctx.lineTo;
+    let wormLines = 0;
+    ctx.lineTo = function (...args) {
+      if (String(ctx.strokeStyle) === '#e91e63') wormLines++;
+      return original.apply(this, args);
+    };
+    try { drawCorpses(); } finally { ctx.lineTo = original; }
+    updateCorpses(life - corpse.age - 1);
+    const remainsBeforeExpiry = corpses.length;
+    updateCorpses(2);
+    return { wormLines, remainsBeforeExpiry, remainsAfterExpiry: corpses.length };
+  });
+  expect(result).toEqual({ wormLines: 0, remainsBeforeExpiry: 1, remainsAfterExpiry: 0 });
   expect(errors).toEqual([]);
 });

@@ -33,6 +33,7 @@ export const game = {
   waveTimer: 90,
   waveNum: 1,
   boarRespawnTimer: 25,
+  territoryBoarRespawnsPending: 0,
   pathTick: 0,              // game ticks, for short-lived per-settler caches
   // the player's choices and the soldiers' plan
   buildMode: 'interact',

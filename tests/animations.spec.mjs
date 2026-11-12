@@ -14,6 +14,7 @@ test('strikes swing the weapon once, work keeps the tool moving, and both settle
     const soldier = makeSettler(1, townHall.x - 80, townHall.y, { weapon: 'sword', role: 'soldier', isPossessed: true });
     const spear = makeSettler(2, townHall.x - 80, townHall.y + 40, { weapon: 'spear', role: 'soldier', isPossessed: true });
     const cutter = makeSettler(3, treeAt.x - 30, treeAt.y, { tool: 'axe' });
+    const picker = makeSettler(4, treeAt.x - 30, treeAt.y + 30, { working: 0.1, workKind: 'pick' });
     settlers = [soldier, spear, cutter];
     const poses = { sword: [], spear: [], axe: [] };
     performAttack(soldier, soldier.x + 20, soldier.y);
@@ -29,7 +30,8 @@ test('strikes swing the weapon once, work keeps the tool moving, and both settle
     return {
       swordArc: range(poses.sword, 'angle'), swordRestsAfter: poses.sword.at(-1),
       spearThrust: Math.max(...poses.spear.map(p => p.push)), spearAngle: range(poses.spear, 'angle'),
-      axeMoving: range(poses.axe, 'angle') > 0.5, axeWorking: cutter.working > 0
+      axeMoving: range(poses.axe, 'angle') > 0.5, axeWorking: cutter.working > 0,
+      berryPickPush: getHeldItemPose(picker).push
     };
   });
   expect(r.swordArc).toBeGreaterThan(1);
@@ -38,6 +40,7 @@ test('strikes swing the weapon once, work keeps the tool moving, and both settle
   expect(r.spearAngle).toBeLessThan(0.15); // (a thrust, hardly turned, #279)
   expect(r.axeMoving).toBe(true);
   expect(r.axeWorking).toBe(true);
+  expect(r.berryPickPush).toBeLessThanOrEqual(0);
   expect(errors).toEqual([]);
 });
 

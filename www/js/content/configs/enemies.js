@@ -57,7 +57,8 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'undead_zombie' } },
     undead_necromancer: { id: 'undead_necromancer', hp: 50, speed: 0.8, damage: 6, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
-      necromancer: { raises: 3, maxZombies: 3, range: 400, seekRange: 900, raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 8 } },
+      necromancer: { raises: 3, maxZombies: 3, range: 400, seekRange: 900, commandTiles: 10, leashTiles: 4, guardTiles: 3, armReach: 45,
+        raiseReach: 110, raiseSeconds: 1.5, healRange: 80, healPerSecond: 8 } },
     // the demons: quick imps, big demons that hit all around, imp archers. They
     // come out of portals anywhere on the map (see factions.demons). waveKey can list several.
     demon_imp: { id: 'demon_imp', hp: 55, speed: 1.05, damage: 12, reward: { food: 1 }, weapon: 'fist',

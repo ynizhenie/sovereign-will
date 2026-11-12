@@ -92,7 +92,7 @@ export function serializeGame() {
     stock: { ...stock },
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested, store: { ...(townHall.store || {}) } },
     cols: game.COLS, rows: game.ROWS,
-    clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick },
+    clocks: { waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, territoryBoarRespawnsPending: game.territoryBoarRespawnsPending, pathTick: game.pathTick },
     playerGear: { ...game.playerGear },
     armory: { ...game.armory },
     sides: JSON.parse(JSON.stringify(sides)),
@@ -183,7 +183,8 @@ export function loadGame(data) {
   game.unlocked = game.unlocked || {}; game.cardsDue = game.cardsDue || 0; game.cardsWave = game.cardsWave || 0; game.cardOffer = game.cardOffer || null; // (older saves: no cards)
   for (const id of Object.keys(stock)) stock[id] = 0;
   Object.assign(stock, data.stock);
-  ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, pathTick: game.pathTick } = data.clocks);
+  ({ waveTimer: game.waveTimer, waveNum: game.waveNum, waveInterval: game.waveInterval, boarRespawnTimer: game.boarRespawnTimer, territoryBoarRespawnsPending: game.territoryBoarRespawnsPending, pathTick: game.pathTick } = data.clocks);
+  game.territoryBoarRespawnsPending = game.territoryBoarRespawnsPending || 0;
   game.playerGear = { armor: false, shield: false, ...data.playerGear }; // (older saves have none)
   game.armory = { ...data.armory };
   if (renderedFaction !== sides.player.faction) rebuildConfigHud();

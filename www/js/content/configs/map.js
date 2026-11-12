@@ -84,7 +84,8 @@ export const mapConfig = {
     desertCactus: { min: 4, max: 8 },
     desertPebbles: { min: 3, max: 7 },
 
-    savannas: { min: 1, max: 2 },
+    // Internal small-map terrain settings; the Plague mode enables savannas.
+    savannas: { min: 0, max: 0 },
     savannaRadiusX: { min: 3, max: 5 },
     savannaRadiusY: { min: 2, max: 4 },
 

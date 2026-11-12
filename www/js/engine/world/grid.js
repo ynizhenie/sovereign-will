@@ -46,7 +46,7 @@ export function isWithinTownHallResourceBuffer(x, y) {
  * @typedef {{ signature: number, rocks: Set<string>, water: Set<string>, trees: Set<string>, cacti: Set<string>,
  *   boulders: Set<string>, ores: Set<string>, rockAndOre: Set<string>, solids: Set<string>, buildings: Set<string>,
  *   walls: Set<string>, spikes: Set<string>, traps: Set<string>, arrowBlockers: Set<string>, arrowBuildings: Set<string>,
- *   towerArrowBuildings: Set<string>, redBuildings: Set<string>, redDoors: Set<string>, ownSpikes: Set<string>, ownTraps: Set<string>,
+ *   towerArrowBuildings: Set<string>, redBuildings: Set<string>, redDoors: Set<string>, battleMazeWalls: Set<string>, ownSpikes: Set<string>, ownTraps: Set<string>,
  *   redHazards: Set<string>, outposts: Set<string>, plagueCemeteries: Set<string>, stamps?: Record<string, string> }} TileIndex
  */
 /** @type {TileIndex | null} */
@@ -114,6 +114,7 @@ export function getTileIndex() {
     // ownTraps: the player's, which settlers keep off and enemies walk straight onto
     redBuildings: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && !isDoor(b) && !isHazard(b) && !(getDefinition('buildings', b.type) || {}).walkable))],
     redDoors: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && isDoor(b)))],
+    battleMazeWalls: [[game.buildings], () => keys(game.buildings.filter(b => b.battleMazeWall))],
     redHazards: [[game.buildings], () => keys(game.buildings.filter(b => b.side === 'red' && isHazard(b)))],
     plagueCemeteries: [[game.buildings], () => keys(game.buildings.filter(b => b.plagueCemetery))],
     ownSpikes: [[game.buildings], () => keys(game.buildings.filter(b => b.side !== 'red' && b.type === 'spikes'))],

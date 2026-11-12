@@ -3,5 +3,5 @@
 
 export { clampEntityToBounds, collidesWithBoxList, collidesWithWall, collidesWithWater, ejectEntitiesFromTile, separateAllies, separateSettlersFromEnemies } from './collision.js';
 export { forEachSettlerNear, someEnemyNear, someSettlerNear } from './neighbours.js';
-export { findPathAStar, getEnemyReach, getReachDistanceToResource, getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, setReachBounds } from './pathfinding.js';
+export { findPathAStar, getEnemyReach, getReachDistanceToResource, getReachSteps, getSettlerReach, hasClearEnemyLine, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, setReachBounds } from './pathfinding.js';
 export { getResourceApproachPoint, moveEntityTowards, rescueSettlerFromResource } from './steering.js';

@@ -122,28 +122,56 @@ export function zombiesOf(necro) {
   return game.settlers.filter(z => z.masterId === necro.id && z.temporary !== undefined && z.hp > 0);
 }
 
-// (#326) What lies by a corpse (what it dropped: a weapon, armour, a shield) the new zombie takes up: a weapon
-// if it has none (a bow with a quiver of arrows), armour, a shield (a melee one's)
+// (#326) What lies by a corpse (what it dropped: a weapon, armour, a shield) the new zombie takes up.
 function armFromCorpse(zombie, corpse, reach) {
-  const piles = game.loot.filter(p => p.items.length && Math.hypot(p.x - corpse.x, p.y - corpse.y) <= reach);
-  for (const pile of piles) {
-    for (const key of [...pile.items]) {
-      const [category, id] = key.split(':');
-      let taken = false;
-      if (category === 'weapons' && zombie.weapon === 'fist') {
-        zombie.weapon = id; taken = true;
-        if (isRangedWeapon(id)) { zombie.quiver = true; zombie.arrows = 15; }
-      } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
-        if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
-        else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
-        else if (id === 'helmet' && !zombie.helmet) { zombie.helmet = true; taken = true; } // (#326, 27.10, 27)
+  const carriesLoot = game.gameMode === 'battle' || game.plagueMode;
+  if (carriesLoot) {
+    if (corpse.weapon && corpse.weapon !== 'fist' && GAME_CONFIG.weapons[corpse.weapon]) zombie.weapon = corpse.weapon;
+    if (isRangedWeapon(zombie.weapon)) { zombie.quiver = true; zombie.arrows = 15; }
+    if (corpse.armor) putOnGear(zombie, corpse.armor === 'iron' ? 'armor' : 'leather_armor');
+    zombie.shield = !!corpse.shield;
+    zombie.helmet = !!corpse.helmet;
+  } else {
+    const piles = game.loot.filter(p => p.items.length && Math.hypot(p.x - corpse.x, p.y - corpse.y) <= reach);
+    for (const pile of piles) {
+      for (const key of [...pile.items]) {
+        const [category, id] = key.split(':');
+        let taken = false;
+        if (category === 'weapons' && zombie.weapon === 'fist') {
+          zombie.weapon = id; taken = true;
+          if (isRangedWeapon(id)) { zombie.quiver = true; zombie.arrows = 15; }
+        } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
+          if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
+          else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
+          else if (id === 'helmet' && !zombie.helmet) { zombie.helmet = true; taken = true; }
+        }
+        if (taken) pile.items.splice(pile.items.indexOf(key), 1);
       }
-      if (taken) pile.items.splice(pile.items.indexOf(key), 1);
     }
   }
   zombie.role = zombie.weapon === 'fist' ? 'worker' : isRangedWeapon(zombie.weapon) ? 'archer' : 'soldier';
   if (zombie.shield && !canUseShield(zombie)) zombie.shield = false;
   game.loot = game.loot.filter(p => p.items.length || Object.keys(p.yield || {}).length);
+}
+
+function weaponByCorpse(corpse, reach) {
+  if (game.gameMode === 'battle' || game.plagueMode) {
+    return corpse.weapon && GAME_CONFIG.weapons[corpse.weapon] ? corpse.weapon : 'fist';
+  }
+  for (const pile of game.loot) {
+    if (Math.hypot(pile.x - corpse.x, pile.y - corpse.y) > reach) continue;
+    const weapon = pile.items.map(item => item.startsWith('weapons:') ? item.slice(8) : null)
+      .find(id => id && GAME_CONFIG.weapons[id]);
+    if (weapon) return weapon;
+  }
+  return 'fist';
+}
+
+function enemyZombieKey(corpse, weapon) {
+  if (corpse.big) return 'undead_big_zombie';
+  if (isRangedWeapon(weapon)) return 'undead_zombie_archer';
+  if (weapon !== 'fist') return 'undead_zombie_sword';
+  return 'undead_zombie';
 }
 
 // A corpse rises as a temporary zombie: no room taken in the colony; it crumbles into rot after
@@ -204,7 +232,8 @@ export function enemyNecromancy(en, necro, dt) {
     const guarded = c => game.settlers.some(s => s.hp > 0 && Math.hypot(s.x - c.x, s.y - c.y) < GAME_CONFIG.morale.necroCorpseClear);
     for (const c of game.corpses) {
       const d = dist(c);
-      if (d < best && (!c.raisedBy || c.raisedBy === en) && (c.raisedBy === en || !guarded(c))) { best = d; corpse = c; }
+      const claimedByOther = c.raisedBy && c.raisedBy !== en && c.raisedBy.hp > 0;
+      if (d < best && !claimedByOther && (c.raisedBy === en || !guarded(c))) { best = d; corpse = c; }
     }
   }
   const raise = () => {
@@ -222,10 +251,14 @@ export function enemyNecromancy(en, necro, dt) {
       en.raiseTimer = 0;
       en.raisesLeft--;
       game.corpses.splice(game.corpses.indexOf(corpse), 1);
-      const zombie = createConfiguredEnemy(corpse, corpse.big ? 'undead_big_zombie' : 'undead_zombie');
+      const weapon = weaponByCorpse(corpse, necro.armReach || 45);
+      const zombie = createConfiguredEnemy(corpse, enemyZombieKey(corpse, weapon));
+      zombie.weapon = 'fist';
       zombie.fromWave = en.fromWave;
       zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
       zombie.raisedBy = en;
+      zombie.raisedWeapon = weapon;
+      armFromCorpse(zombie, corpse, necro.armReach || 45);
       game.enemies.push(zombie);
       playSound('raise', corpse);
     }
@@ -243,6 +276,7 @@ export function enemyNecromancy(en, necro, dt) {
     if (dist(patient) > necro.healRange) moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
     else {
       patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      patient.necroTreatedAt = game.pathTick;
       en.working = 0.1;
       faceTowards(en, patient.x, patient.y);
     }

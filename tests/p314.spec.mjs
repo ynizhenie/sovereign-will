@@ -210,6 +210,102 @@ test('a ghost hovers by a grave, can\'t be hurt, flies into an enemy that comes 
   expect(errors).toEqual([]);
 });
 
+test('player archers do not target enemy ghosts', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    return ['bow', 'crossbow'].map((weapon, i) => {
+      const archer = makeSettler(91 + i, townHall.x + 120, townHall.y, {
+        weapon, role: 'archer', quiver: true, arrows: 5, speed: 0
+      });
+      const ghost = createConfiguredEnemy({ x: archer.x + 20, y: archer.y }, 'undead_ghost');
+      ghost.markedTarget = true;
+      game.settlers = [archer];
+      game.enemies = [ghost];
+      fightEnemies(archer, createSettlerTick(1 / 60));
+      const autoTarget = archer.fightTarget || null;
+      const automaticProjectiles = game.projectiles.filter(projectile => projectile.owner === archer).length;
+      archer.orderTarget = ghost;
+      fightByOrders(archer, 1 / 60, false);
+      return {
+        autoTarget,
+        automaticProjectiles,
+        rejectedOrder: archer.orderTarget === null,
+        target: archer.fightTarget || null,
+        daggerTarget: archer.daggerTarget || null,
+        projectiles: game.projectiles.filter(projectile => projectile.owner === archer).length
+      };
+    });
+  });
+  expect(result).toEqual([
+    { autoTarget: null, automaticProjectiles: 0, rejectedOrder: true, target: null, daggerTarget: null, projectiles: 0 },
+    { autoTarget: null, automaticProjectiles: 0, rejectedOrder: true, target: null, daggerTarget: null, projectiles: 0 }
+  ]);
+  expect(errors).toEqual([]);
+});
+
+test('ghosts stun undead instead of panicking; big undead need two ghosts', async ({ page }) => {
+  const errors = await start(page, 'undead');
+  const playerResult = await page.evaluate(() => {
+    const { makeSettler } = window.sim.helpers;
+    const playerZombie = makeSettler(101, townHall.x + 120, townHall.y, {
+      type: 'zombie', role: 'soldier', weapon: 'sword', speed: 0
+    });
+    const playerBigZombie = makeSettler(102, townHall.x + 180, townHall.y, {
+      type: 'big_zombie', role: 'soldier', weapon: 'sword', speed: 0
+    });
+    const foe = createNormalEnemy({ x: playerZombie.x + 30, y: playerZombie.y }, 'raider');
+    game.settlers = [playerZombie, playerBigZombie];
+    game.enemies = [foe];
+    const position = { x: playerZombie.x, y: playerZombie.y };
+    const foeHp = foe.hp;
+    ghostScare(playerZombie, 'settler');
+    ghostScare(playerBigZombie, 'settler');
+    const bigStunnedAfterOne = !!playerBigZombie.ghostStunnedUntil;
+    ghostScare(playerBigZombie, 'settler');
+    tickSettlers(1 / 60);
+    return {
+      smallStunned: playerZombie.ghostStunnedUntil > game.pathTick,
+      bigStunnedAfterOne,
+      bigStunnedAfterTwo: playerBigZombie.ghostStunnedUntil > game.pathTick,
+      playerDidNotMove: playerZombie.x === position.x && playerZombie.y === position.y,
+      playerDidNotAttack: foe.hp === foeHp
+    };
+  });
+
+  const enemyResult = await page.evaluate(() => {
+    const enemyZombie = createConfiguredEnemy({ x: townHall.x + 240, y: townHall.y }, 'undead_zombie');
+    const enemyBigZombie = createConfiguredEnemy({ x: townHall.x + 300, y: townHall.y }, 'undead_big_zombie');
+    enemyZombie.speed = enemyBigZombie.speed = 0;
+    const target = window.sim.helpers.makeSettler(103, townHall.x + 210, townHall.y, {
+      weapon: 'sword', role: 'soldier', speed: 0
+    });
+    game.settlers = [target];
+    game.enemies = [enemyZombie, enemyBigZombie];
+    const position = { x: enemyZombie.x, y: enemyZombie.y };
+    ghostScare(enemyZombie, 'enemy');
+    ghostScare(enemyBigZombie, 'enemy');
+    const bigStunnedAfterOne = !!enemyBigZombie.ghostStunnedUntil;
+    ghostScare(enemyBigZombie, 'enemy');
+    tickEnemy(enemyZombie, 1 / 60);
+    return {
+      smallStunned: enemyZombie.ghostStunnedUntil > game.pathTick,
+      bigStunnedAfterOne,
+      bigStunnedAfterTwo: enemyBigZombie.ghostStunnedUntil > game.pathTick,
+      enemyDidNotMove: enemyZombie.x === position.x && enemyZombie.y === position.y
+    };
+  });
+
+  expect(playerResult).toEqual({
+    smallStunned: true, bigStunnedAfterOne: false, bigStunnedAfterTwo: true,
+    playerDidNotMove: true, playerDidNotAttack: true
+  });
+  expect(enemyResult).toEqual({
+    smallStunned: true, bigStunnedAfterOne: false, bigStunnedAfterTwo: true, enemyDidNotMove: true
+  });
+  expect(errors).toEqual([]);
+});
+
 test('ghosts are tinted with their side colour', async ({ page }) => {
   await openGame(page);
   const colors = await page.evaluate(() => {

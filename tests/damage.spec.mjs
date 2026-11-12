@@ -27,3 +27,24 @@ test('damaged buildings and the town hall are drawn with cracks, the more the wo
   expect(r).toEqual({ hurt: true, hall: true });
   expect(errors).toEqual([]);
 });
+
+test('damage textures are clipped to small building silhouettes', async ({ page }) => {
+  const errors = await openGame(page);
+  const result = await page.evaluate(async () => {
+    const { drawDamage } = await import('/js/domains/economy/building/building.draw.js');
+    const originalEllipse = ctx.ellipse, originalClip = ctx.clip;
+    const ellipses = [], clips = [];
+    ctx.ellipse = function (...args) { ellipses.push(args); return originalEllipse.apply(this, args); };
+    ctx.clip = function (...args) { clips.push(args); return originalClip.apply(this, args); };
+    try {
+      drawDamage(150, 150, 14, 0.2, 'campfire');
+      drawDamage(200, 150, 14, 0.2, 'tent');
+    } finally {
+      ctx.ellipse = originalEllipse;
+      ctx.clip = originalClip;
+    }
+    return { silhouetteClips: clips.length, campfireShape: ellipses.some(([, , rx, ry]) => rx === 13 && ry === 9) };
+  });
+  expect(result).toEqual({ silhouetteClips: 2, campfireShape: true });
+  expect(errors).toEqual([]);
+});
