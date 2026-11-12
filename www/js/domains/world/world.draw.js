@@ -576,6 +576,25 @@ export function drawWaterTile(w, tiles) {
   const shore = { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
   edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.24, 8, true, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '44, 131, 189', 0.16, 7, false, occupiedCorners);
+  // foam along the shore: a couple of short light strokes a little way in from the land, each bowed towards the water, at
+  // places of the tile's own (not by rock: the water's deep there)
+  G.strokeStyle = 'rgba(228, 245, 252, 0.34)'; G.lineWidth = 1.1; G.lineCap = 'round';
+  G.beginPath();
+  const HALF = TILE_SIZE / 2;
+  ['n', 's', 'w', 'e'].forEach((side, n) => {
+    if (!shore[side]) return;
+    for (let k = 0; k < 2; k++) {
+      const v = h >>> (n * 5 + k * 3), len = 5 + (v % 5), from = -HALF + 3 + k * 13 + (v >>> 3) % 4, inset = 3 + (v >>> 5) % 3;
+      // (along the side from `from`, `inset` in from the edge; the middle a little further in)
+      const along = side === 'n' || side === 's', sign = side === 'n' || side === 'w' ? 1 : -1;
+      const edge = -sign * HALF + sign * inset;
+      const p = (t, bow) => (along ? [w.x + from + len * t, w.y + edge + sign * bow] : [w.x + edge + sign * bow, w.y + from + len * t]);
+      const [x0, y0] = p(0, 0), [cx, cy] = p(0.5, 1.6), [x1, y1] = p(1, 0);
+      G.moveTo(x0, y0); G.quadraticCurveTo(cx, cy, x1, y1);
+    }
+  });
+  G.stroke();
+  G.lineCap = 'butt';
   // a short light ripple on some tiles
   if (h % 3 === 0) {
     G.strokeStyle = 'rgba(255, 255, 255, 0.18)'; G.lineWidth = 1.5;

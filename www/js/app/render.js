@@ -8,7 +8,7 @@ import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
-import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
+import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
 import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, setPrewarmingChunks } from '../domains/world/index.js';
@@ -93,6 +93,7 @@ export function render() {
 
   ctx.restore();
   drawDarkness(); // (night, with its lights, #257)
+  drawLitWindows(); // (the hall's, bright in the dark)
   drawWeatherScreen(); // (rain, lightning, #308)
 
   if (game.gameMode === 'battle') drawBattleResult();

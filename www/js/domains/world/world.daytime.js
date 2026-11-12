@@ -118,6 +118,21 @@ export function getLights() {
   return lights;
 }
 
+// The low sun's colour over the map: orange through the evening (most in its middle, gone by night), a paler gold through
+// the morning
+function drawDuskTint() {
+  if (!looksByTime()) return;
+  const c = config(), t = game.dayTime || 0, phase = phaseAt(t);
+  if (phase !== 'evening' && phase !== 'morning') return;
+  const p = phase === 'morning' ? t / c.morning : (t - c.morning - c.day) / c.evening;
+  const strength = Math.sin(Math.max(0, Math.min(1, p)) * Math.PI);
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.fillStyle = phase === 'evening' ? `rgba(255, 138, 48, ${0.34 * strength})` : `rgba(255, 205, 130, ${0.22 * strength})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
 // The dark over the map (after the world, before the screen's own marks): a sheet of night with the lights
 // cut out of it, soft at their edges. (#322) A third of the screen's size, laid over it stretched: its edges
 // are all soft anyway, and a phone filled the whole screen twice over for it every frame
@@ -126,6 +141,7 @@ const WARM_LIGHT = '#ffb060'; // (firelight)
 /** @type {HTMLCanvasElement | null} */
 let sheet = null;
 export function drawDarkness() {
+  drawDuskTint();
   const dark = getDarkness();
   if (dark <= 0.01) return;
   if (!sheet) sheet = document.createElement('canvas');
