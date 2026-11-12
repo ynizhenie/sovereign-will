@@ -12,9 +12,9 @@ import { getEnemyColor, getSettlerColor } from '../../factions/index.js';
 
 // Blood on the blade of the held item, fading (see bleed). A bare hand has no blade to bleed on: bleed gives
 // whoever struck in melee weapon blood, and with nothing drawn at the grip it hung in the air in front of it
-export function drawWeaponBlood(unit) {
+export function drawWeaponBlood(unit, weapon = unit.weapon) {
   const alpha = bloodAlpha(unit.weaponBloodAge);
-  const blade = !!(unit.weapon && unit.weapon !== 'fist') || !!(unit.tool && unit.tool !== 'none');
+  const blade = !!(weapon && weapon !== 'fist') || !!(unit.tool && unit.tool !== 'none');
   if (alpha <= 0 || !blade) return;
   ctx.fillStyle = `rgba(120, 0, 0, ${0.85 * alpha})`;
   ctx.fillRect(14, -2, 7, 4);
@@ -120,7 +120,7 @@ export function drawCorpses() {
   const v = getViewRect(40);
   forEachInRect(game.corpses, v.x0, v.y0, v.x1, v.y1, c => {
     const left = GAME_CONFIG.corpses.seconds - c.age;
-    ctx.globalAlpha = game.plagueMode ? 0.9 : Math.max(0, Math.min(1, left / 10)) * 0.9;
+    ctx.globalAlpha = Math.max(0, Math.min(1, left / 10)) * 0.9;
     if (game.plagueMode && c.plagueInReviveRange) drawPlagueCorpseHighlight(c);
     // a figure lying on its side, crosses for its eyes (#251), its skin grey and its clothes its side's colour
     // gone dull (#326: all of it was grey); a pet's own body
@@ -227,6 +227,10 @@ export function drawProjectiles() {
   game.projectiles.forEach(proj => {
     // fireballs bigger and orange; a bolt is short and thick; everything else is an arrow, pointing where it flies
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }
+    else if (proj.bullet) {
+      ctx.save(); ctx.translate(proj.x, proj.y); ctx.rotate(Math.atan2(proj.vy, proj.vx));
+      ctx.fillStyle = '#f2d16b'; ctx.fillRect(-3, -1, 6, 2); ctx.restore(); return;
+    }
     else if (proj.bolt) { drawBolt(proj); return; }
     else { drawArrow(proj); return; }
     ctx.beginPath(); ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2); ctx.fill();

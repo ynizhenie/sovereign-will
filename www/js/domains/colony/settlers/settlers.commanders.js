@@ -152,7 +152,7 @@ export function captainOrders(s, tick) {
   if (Math.hypot(to.x - s.x, to.y - s.y) > c.reach) return false; // (too far to be heard)
   const taken = new Set(squad.filter(o => o !== to).map(o => o.captainTarget).filter(Boolean));
   const from = game.gameMode === 'battle' ? s : townHall; // (a battle has no town hall to defend: the nearest to the captain)
-  const enemy = game.enemies.filter(en => en.hp > 0 && !taken.has(en))
+  const enemy = game.enemies.filter(en => en.hp > 0 && !en.ghostly && !taken.has(en))
     .sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
   if (!enemy) return false;
   to.captainTarget = enemy;

@@ -13,7 +13,7 @@ import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conf
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
 import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, setPrewarmingChunks } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
-import { battle, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
+import { battle, drawBackroomsFloor, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
 
 /** @type {{ depth: number, order: number, actor: any, draw: (actor: any) => void }[]} */
@@ -48,7 +48,8 @@ export function render() {
   }
   beginShadowFrame(ctx); // (the shadows drawn in the world from here are kept for the next frame's, see drawShadowLayer)
 
-  drawGrassGround();
+  if (game.gameMode === 'battle' && battle.field === 'backrooms') drawBackroomsFloor();
+  else drawGrassGround();
   drawPaths(); // (#248)
 
   const terrain = getTileIndex();

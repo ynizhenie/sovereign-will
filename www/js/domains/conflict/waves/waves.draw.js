@@ -6,7 +6,7 @@ import { forEachInRect, game } from '../../../engine/world/index.js';
 import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { getEnemyDef } from './waves.rules.js';
 import { getEnemyColor, getEnemyFaction } from '../../factions/index.js';
-import { SKIN, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, drawFigureShadows, drawSleepZs, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, drawWorkTool, itemScale, simpleUnit, tinyUnit, unitKin } from '../../colony/settlers/index.js';
+import { SKIN, applyBackPose, applyHeldItemPose, drawHealSparks, drawArmor, drawFigure, drawFigureShadows, drawSleepZs, backBehind, bowDraw, handSide, heldBehind, drawHandTorch, drawSideTorch, drawHeldTool, drawHeldWeapon, drawOrderBubble, drawQuiver, drawShield, drawWorkTool, itemScale, simpleUnit, tinyUnit, torchAtSide, unitKin } from '../../colony/settlers/index.js';
 import { drawBodyBlood, drawBurning, drawTargetMark, drawWeaponBlood } from '../combat/index.js';
 import { drawStaff } from '../../factions/undead/index.js';
 import { drawPet } from '../../colony/pets/index.js';
@@ -116,8 +116,16 @@ export function drawEnemies(only = null) {
   // (#306) zoomed out to one or two pixels apiece: a dab of their colour each
   if (tinyUnit()) {
     const dab = 1.6 / getViewScale();
-    for (const en of enemies) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
-    for (const en of scouts) if (shown(en)) { ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2); }
+    const alpha = ctx.globalAlpha;
+    for (const en of enemies) if (shown(en)) {
+      ctx.globalAlpha = alpha * (en.temporary !== undefined ? 0.7 : 1);
+      ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2);
+    }
+    for (const en of scouts) if (shown(en)) {
+      ctx.globalAlpha = alpha * (en.temporary !== undefined ? 0.7 : 1);
+      ctx.fillStyle = getEnemyColor(en); ctx.fillRect(en.x - dab / 2, en.y - dab, dab, dab * 2);
+    }
+    ctx.globalAlpha = alpha;
     return;
   }
   for (const en of enemies) if (shown(en)) drawEnemy(en);
@@ -126,8 +134,15 @@ export function drawEnemies(only = null) {
 
 // One enemy
 export function drawEnemy(en) {
+  ctx.save();
+  ctx.globalAlpha *= en.temporary !== undefined ? 0.7 : 1;
   const pet = getEnemyDef(en).pet;
-  if (pet) { drawPet(en, pet, true); if (en.markedTarget) drawTargetMark(en); return; } // (#314: a dog, a hellhound, a ghost)
+  if (pet) {
+    drawPet(en, pet, true);
+    if (en.markedTarget) drawTargetMark(en);
+    ctx.restore();
+    return;
+  } // (#314: a dog, a hellhound, a ghost)
   {
     const simple = simpleUnit(); // (#306) zoomed out: its shape and colours, no gear
     // enemies as figures in the enemy's colour (big ones darker), holding their weapon the way settlers do
@@ -139,8 +154,11 @@ export function drawEnemy(en) {
     const at = fn => { ctx.save(); ctx.translate(en.x, en.y); fn(); ctx.restore(); };
     const healing = en.working > 0 && en.workKind === 'heal';
     const building = en.working > 0 && en.workKind === 'build';
+    const enemyDef = getEnemyDef(en);
+    const torchAside = (en.weapon === 'rifle' && en.torch) || torchAtSide(en, !!en.torch, en.weapon !== 'fist' || (enemyDef.tool && enemyDef.tool !== 'none') || enemyDef.necromancer);
+    const torchHeld = en.torch && !torchAside;
     const drawMedicBag = front => {
-      if (!healing || !getEnemyDef(en).healer) return;
+      if (!healing || !enemyDef.healer) return;
       const r = en.visualRadius || en.radius, f = en.facing || 0;
       const sideOn = Math.abs(Math.cos(f)) > 0.85, x = sideOn ? -Math.cos(f) * r * 0.3 : -handSide(en) * r * 0.72, y = r * 0.18;
       const farSlot = sideOn || Math.sin(f) < -0.25;
@@ -151,15 +169,16 @@ export function drawEnemy(en) {
     };
     const inHand = () => {
       ctx.save();
-      applyHeldItemPose(en);
-      if (getEnemyDef(en).necromancer) drawStaff(getEnemyColor(null), getDarkness()); // (#326)
+      if (torchHeld) applyBackPose(en); else applyHeldItemPose(en);
+      if (enemyDef.necromancer) drawStaff(getEnemyColor(null), getDarkness()); // (#326)
       else if (building) drawWorkTool('hammer', itemScale(en));
-      else if (healing && getEnemyDef(en).healer) drawWorkTool('herbs', itemScale(en));
-      else if (getEnemyDef(en).tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
-      else drawHeldWeapon(en.weapon, itemScale(en), (bowDraw(en) || { pull: 0 }).pull); // (in its hand, as big as it, #279; drawn, #306)
-      drawWeaponBlood(en);
+      else if (healing && enemyDef.healer) drawWorkTool('herbs', itemScale(en));
+      else if (enemyDef.tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
+      else drawHeldWeapon((en.swingT || 0) > 0 && en.swingWeapon ? en.swingWeapon : en.weapon, itemScale(en), torchHeld ? 0 : (bowDraw(en) || { pull: 0 }).pull); // (in its hand, as big as it, #279; drawn, #306)
+      drawWeaponBlood(en, (en.swingT || 0) > 0 && en.swingWeapon ? en.swingWeapon : en.weapon);
       ctx.restore();
-      if (en.torch) drawHandTorch(en.facing, en.radius); // (a night wave, #257)
+      if (torchHeld) drawHandTorch(en.facing, en.radius);
+      else if (torchAside) drawSideTorch(en.facing, en.radius);
     };
     const onItsBack = () => {
       if ((en.arrows || 0) > 0) { ctx.save(); ctx.translate(-Math.cos(en.facing || 0) * en.radius * 0.55, -Math.sin(en.facing || 0) * en.radius * 0.55); ctx.rotate((en.facing || 0) + Math.PI / 2); drawQuiver(0, en.arrows || 0); ctx.restore(); } // (on its back, turned with it, #251)
@@ -169,7 +188,7 @@ export function drawEnemy(en) {
       if (handBack) at(inHand);
       at(() => drawMedicBag(false));
     }
-    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, otherPoint: en.asleep ? null : (bowDraw(en) || {}).other || null, simple, shadow: false });
+    drawFigure(en, { x: en.x, y: en.y, r: en.radius, body: getEnemyColor(en), camoColor: getEnemyColor(en), camouflage: !!en.camouflage, skin: SKIN[kin], horns: kin === 'demons', hand: true, shield: !en.asleep && !!en.shield, armor: en.asleep ? null : en.armor || null, lying: !!en.asleep, otherPoint: en.asleep ? null : (bowDraw(en) || {}).other || null, simple, shadow: false });
     if (en.asleep) drawSleepZs(en.x + en.radius, en.y - en.radius);
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
     drawBodyBlood(en, en.radius);
@@ -189,6 +208,7 @@ export function drawEnemy(en) {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(en.x - 12, top - 5, 24, 3);
     ctx.fillStyle = '#e74c3c'; ctx.fillRect(en.x - 12, top - 5, (Math.max(0, en.hp) / en.maxHp) * 24, 3);
   }
+  ctx.restore();
 }
 
 // An enemy commander's banner on its back (#279), in the enemy's colour, turned with it

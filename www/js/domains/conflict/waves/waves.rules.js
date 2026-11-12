@@ -162,6 +162,7 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
     enemy.herbs = definition.healer.bagSize;
     if (game.gameMode !== 'battle') game.enemyHerbStock += definition.healer.tentStock;
   }
+  if (definition.weapon === 'rifle') enemy.rifleAmmo = GAME_CONFIG.weapons.rifle.combat.magazine;
   return enemy;
 }
 

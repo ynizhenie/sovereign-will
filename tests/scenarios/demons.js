@@ -61,8 +61,10 @@ Object.assign(window.sim, (() => {
     const card = getOpenSheet() === 'building';
     sacrificeSelected(circle);
     const sent = card && victim.sacrificeAt === circle;
-    run(10);
-    return { sent, victimDead: !settlers.includes(victim), healed: a.hp >= a.maxHp - 0.1 && b.hp >= b.maxHp - 0.1 };
+    // (healed checked as the victim dies: after it the two may take to sparring, which costs a little hp)
+    let healed = false;
+    run(10, { each: () => { if (!healed && !settlers.includes(victim)) healed = a.hp >= a.maxHp - 0.1 && b.hp >= b.maxHp - 0.1; } });
+    return { sent, victimDead: !settlers.includes(victim), healed };
   }
 
   // A pair of portals: one by the town hall, one across the map; a worker sent to the far side steps
@@ -99,7 +101,7 @@ Object.assign(window.sim, (() => {
     return {
       portals: enemyTents.length, farFromBase: enemyTents.every(p => Math.hypot(p.x - townHall.x, p.y - townHall.y) >= minDist),
       byPortals: enemies.every(en => enemyTents.some(p => Math.hypot(p.x - en.x, p.y - en.y) < 2.5 * TILE_SIZE * Math.SQRT2)),
-      demons: kinds.every(k => k.startsWith('demons_')), enemies: enemies.length
+      demons: kinds.every(k => k.startsWith('demon')), enemies: enemies.length
     };
   }
 

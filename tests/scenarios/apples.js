@@ -44,6 +44,7 @@ Object.assign(window.sim, (() => {
     const settler = makeSettler(1, apple.x + 30, apple.y);
     const spot = getResourceApproachPoint(settler, apple);
     settler.x = spot.x; settler.y = spot.y;
+    settler.workKind = 'pick';
     settlers = [settler];
     let carried = 0;
     const saplingsAtStart = stock.appleSaplings;
@@ -54,7 +55,7 @@ Object.assign(window.sim, (() => {
       pickApplesFrom(settler, apple, GAME_CONFIG.appleTrees.pickSeconds);
       if ((settler.carrying.items || [settler.carrying]).some(item => item && item.type === 'appleSaplings')) carried++;
     }
-    return { carried, inStock: stock.appleSaplings - saplingsAtStart };
+    return { carried, inStock: stock.appleSaplings - saplingsAtStart, stalePickCleared: settler.workKind === null };
   }
 
   return { appleOrchard, appleShare, appleSaplingCargo };

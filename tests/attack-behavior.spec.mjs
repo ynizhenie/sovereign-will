@@ -35,9 +35,17 @@ test('ranged units of both sides use dagger damage when breaking structures', as
   expect(errors).toEqual([]);
 });
 
-test('settlers hold behind a wall while an enemy is breaking through it', async ({ page }) => {
+test('settlers route around a wall while an enemy is breaking through it', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'holdsBehindBreachedWall', {});
-  expect(r).toEqual({ heldPosition: true, enemyTouchesWall: true });
+  expect(r).toEqual({ movedAroundWall: true, enemyTouchesWall: true });
+  expect(errors).toEqual([]);
+});
+
+test('enemy building strikes play the swing sound', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const r = await sim(page, 'enemyBuildingBreakSound', {});
+  expect(r).toEqual({ buildingDamaged: true, soundPlayed: true });
   expect(errors).toEqual([]);
 });

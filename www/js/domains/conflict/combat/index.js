@@ -4,4 +4,4 @@
 export { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, holdPost, joinsTentAssault, restockQuiver, strikeBack, TENT_ASSAULT_FIGHT_DISTANCE } from './combat.behaviours.js';
 export { clearOrders, commandTap, fightByOrders, followCommand, holdPosition, orderTap } from './combat.orders.js';
 export { drawBloodOnGround, drawBodyBlood, drawBurning, drawCorpses, drawProjectiles, drawTargetMark, drawWeaponBlood } from './combat.draw.js';
-export { addCorpse, ageBloodAndDung, ageStuckArrows, applySpikeTraps, baseRadiusToward, bleed, damageEnemy, getBaseRadius, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInSafeArea, performAttack, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from './combat.rules.js';
+export { addCorpse, ageBloodAndDung, ageStuckArrows, applySpikeTraps, areAdjacentTiles, baseRadiusToward, bleed, damageEnemy, getBaseRadius, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInSafeArea, performAttack, shouldUseRangedDagger, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from './combat.rules.js';

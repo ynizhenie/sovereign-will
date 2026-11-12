@@ -1,20 +1,21 @@
 // What enemies do by themselves, each tick
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, isDoor, rand, someNear, townHall, firstOf } from '../../../engine/world/index.js';
+import { isRangedWeapon } from '../../colony/equipment/index.js';
+import { TILE_SIZE, firstOf, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
-import { isBuildingSingle, removeBuilding } from '../../economy/building/index.js';
+import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
-import { damageSettler, faceTowards, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
+import { damageSettler, faceTowards, isUntouchable, speak, startSwing, tauntOnSight } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { hasLineOfFire, hasMeleeReach } from '../combat/index.js';
+import { hasLineOfFire, hasMeleeReach, shouldUseRangedDagger } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
-import { enemyMedicKeepsBack, enemyPanic, ghostScare, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
+import { enemyMedicKeepsBack, enemyPanic, ghostScare, isGhostStunned, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
 import { markPlagueEnemyEscaped, plagueEnemyTarget } from '../../../modes/plague/index.js';
 
 let waveTerritoryMaskTick = -1;
@@ -155,7 +156,7 @@ function enemyGhost(en) {
   }
 
   const reach = g.diveTiles * TILE_SIZE;
-  const nearby = x => game.settlers.filter(s => s.hp > 0 && !s.panic && !isUntouchable(s) && Math.hypot(s.x - x.x, s.y - x.y) <= reach);
+  const nearby = x => game.settlers.filter(s => s.hp > 0 && !s.panic && !isGhostStunned(s) && !isUntouchable(s) && Math.hypot(s.x - x.x, s.y - x.y) <= reach);
   const targets = [...nearby(en), ...(en.escort ? nearby(en.escort) : [])];
   let target = null, best = Infinity;
   for (const settler of targets) {
@@ -221,7 +222,12 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  if (en.weapon === 'rifle' && game.gameMode === 'battle') {
+    en.attackCooldown = Math.max(0, (en.attackCooldown || 0) - dt);
+    if ((en.rifleAmmo || 0) <= 0 && en.attackCooldown === 0) en.rifleAmmo = GAME_CONFIG.weapons.rifle.combat.magazine;
+  }
   if (en.portalTransit) return;
+  if (isGhostStunned(en)) return;
   const activeCampGuard = en.campGuard && game.raidActive && en.campId === game.raidCampId;
   const chasingScout = en.campGuard && en.scoutChasing && en.attackTarget &&
     game.settlers.includes(en.attackTarget);
@@ -258,8 +264,10 @@ export function tickEnemy(en, dt) {
   if (enemyDef.pet === 'ghost') { enemyGhost(en); return; } // (#314)
   if (game.gameMode === 'battle' && !game.settlers.some(s => s.hp > 0 && !isUntouchable(s))) return;
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
+  const ownedTemporaryZombie = !!en.raisedBy && en.temporary !== undefined;
+  if (ownedTemporaryZombie && enemyZombieFollowsMaster(en, dt)) return;
   if ((enemyDef.pet === 'dog' || enemyDef.pet === 'beast') && enemyPetKeepsNear(en, dt)) return;
-  if (!enemyDef.pet && enemyPanic(en, dt)) {
+  if (!enemyDef.pet && !ownedTemporaryZombie && enemyPanic(en, dt)) {
     if (!en.buildTarget) return; // in a panic: away to heal (#207)
     en.musterUntil = 0;
   }
@@ -268,11 +276,23 @@ export function tickEnemy(en, dt) {
   if (en.captain) captainOrdersEnemies(en, dt); // (gathering too: the one it tells goes at once)
   if (en.musterUntil && musterHold(en, dt)) return; // (a wave gathering first, #279)
 
+  if (game.pathTick % 15 === 0) {
+    const sight = Math.max(GAME_CONFIG.fog.enemySightTiles * TILE_SIZE, enemyDef.ranged ? shotOf(enemyDef).range + 30 : 0);
+    for (const settler of game.settlers) {
+      if (settler.hp <= 0 || isUntouchable(settler) || Math.hypot(settler.x - en.x, settler.y - en.y) > sight) continue;
+      if (tauntOnSight(en, settler)) break;
+    }
+  }
   if (enemyDef.necromancer && enemyNecromancy(en, enemyDef.necromancer, dt)) return;
   if (enemyDef.necromancer && necromancerKeepsBack(en, dt)) return; // behind its own (#207)
   if (enemyDef.healer && enemyHeal(en, enemyDef.healer, dt)) return;
   if (enemyDef.healer && enemyMedicKeepsBack(en, dt)) return;
-  if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) return;
+  if (enemyDef.ranged && enemyOnPlatform(en, enemyDef, dt)) {
+    en.weapon = enemyDef.weapon;
+    en.daggerTarget = null;
+    en.swingWeapon = null;
+    return;
+  }
   // (#326) one that hit it a moment ago, still on its feet: it turns on that one, not on with the wall or tent it was breaking
   const struck = en.struckBy && game.settlers.includes(en.struckBy) && en.struckBy.hp > 0 && !isUntouchable(en.struckBy) &&
     game.pathTick - (en.struckTick || -Infinity) < STRUCK_TICKS ? en.struckBy : null;
@@ -280,7 +300,7 @@ export function tickEnemy(en, dt) {
   const { target, minDist } = chooseEnemyTarget(en);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
   // (#326) an archer out of arrows (and tents to fill up at) draws its dagger, as the player's do
-  en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : meleeDef.weapon || 'sword';
+  en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : en.raisedWeapon || meleeDef.weapon || 'sword';
   const inMelee = !shooting && moveTarget === target;
   // an archer with no clear shot walks closer instead of standing off
   const clearShot = shooting && hasLineOfFire(en.x, en.y, target.x, target.y);
@@ -294,10 +314,35 @@ export function tickEnemy(en, dt) {
   const canStrike = inMelee && minDist < attackRange && (target === townHall || hasMeleeReach(en, target));
   const canShoot = shooting && clearShot && minDist < shotOf(enemyDef).range;
   const holdsGround = keepsAway || canStrike || canShoot;
-  walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck);
+  walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck, canStrike || canShoot);
   if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
 }
 const STRUCK_TICKS = 120; // (2 s: how long a hit turns it)
+
+function enemyZombieFollowsMaster(en, dt) {
+  const master = en.raisedBy;
+  const necro = master && getEnemyDef(master).necromancer;
+  if (!master || !necro || master.hp <= 0 || !game.enemies.includes(master)) {
+    en.raisedBy = null;
+    return false;
+  }
+  const fromMaster = unit => Math.hypot(unit.x - master.x, unit.y - master.y);
+  const commanded = game.settlers.filter(s => s.hp > 0 && !isUntouchable(s) &&
+    fromMaster(s) <= (necro.commandTiles || 10) * TILE_SIZE)
+    .sort((a, b) => Math.hypot(a.x - en.x, a.y - en.y) - Math.hypot(b.x - en.x, b.y - en.y))[0];
+  const guarded = game.settlers.find(s => s.hp > 0 && !isUntouchable(s) &&
+    Math.hypot(s.x - en.x, s.y - en.y) < (necro.guardTiles || 3) * TILE_SIZE);
+  const foe = commanded || guarded;
+  if (foe) {
+    en.attackTarget = foe;
+    return false;
+  }
+  en.attackTarget = null;
+  const away = Math.hypot(master.x - en.x, master.y - en.y);
+  if (away > (necro.leashTiles || 4) * TILE_SIZE) moveEntityTowards(en, master.x, master.y, en.speed, true, dt);
+  else if (away > TILE_SIZE) moveEntityTowards(en, master.x, master.y, en.speed * 0.4, true, dt);
+  return true;
+}
 
 function tickPlagueEnemy(en, dt) {
   const target = plagueEnemyTarget(en);
@@ -666,7 +711,17 @@ function chooseEnemyAttack(en, enemyDef, target) {
   /** @type {{ x: number, y: number }} */
   let moveTarget = target;
   const quiver = enemyDef.quiver;
-  if (quiver && game.plagueMode) {
+  const closeDagger = !!quiver && shouldUseRangedDagger(
+    en,
+    target === townHall ? null : target,
+    enemyDef.weapon,
+    !!target && en.struckBy === target && !isRangedWeapon(target.weapon) &&
+      game.pathTick - (en.struckTick ?? -Infinity) < STRUCK_TICKS
+  );
+  if (closeDagger) {
+    shooting = false;
+    meleeDef = getDefinition('enemies', quiver.melee) || enemyDef;
+  } else if (quiver && game.plagueMode) {
     en.arrows = Infinity;
   } else if (quiver && en.arrows <= 0) {
     const tent = game.enemyArrowStock > 0 ? findNearestEnemyTent(en) : null;
@@ -700,24 +755,30 @@ function shotOf(enemyDef) {
 /** @param {any} [fromTower] */
 function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = null) {
   const shot = shotOf(enemyDef), reach = fromTower ? fromTower.tower.reach || 1 : 1;
-  en.attackCooldown = (en.attackCooldown || 0) - dt;
+  if (enemyDef.weapon !== 'rifle') en.attackCooldown = (en.attackCooldown || 0) - dt;
   if (clearShot && minDist < shot.range * reach && en.attackCooldown <= 0) {
     let angle = Math.atan2(target.y - en.y, target.x - en.x);
     const bolt = enemyDef.weapon === 'crossbow';
-    playSound(bolt ? 'crossbow' : 'bow', en);
+    const rifle = enemyDef.weapon === 'rifle';
+    if (rifle && (en.rifleAmmo || 0) <= 0) return;
+    playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', en);
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * shot.arrowSpeed, vy: Math.sin(angle) * shot.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
-      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt });
+      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt, bullet: rifle });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
-    en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
-    en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; // (its next arrow drawn, #306)
+    if (rifle) {
+      en.rifleAmmo--;
+      en.attackCooldown = en.rifleAmmo === 0 ? GAME_CONFIG.weapons.rifle.combat.reload : shot.cooldown / (en.battleAttackSpeed || 1);
+    } else en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
+    en.swingWeapon = null;
+    en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; en.struckAt = game.pathTick; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle' && !game.plagueMode) en.arrows--;
   }
 }
 
 // Walking on, or breaking what's in the way: a building it touches, or (on a blocked path) a resource.
 // turned: going for one that just hit it: a building it touches is broken only if it's what blocks the only way there
-function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = false) {
+function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = false, prioritizeTarget = false) {
   // box distance, not center distance: an enemy pressed against a wall off-center is still touching it.
   // Use the same collision body as movement, so big enemies don't hit things beside the corridor.
   const contactRadius = Math.min(en.radius, 13) + 2;
@@ -731,11 +792,11 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     }
     // (#326) its own it never breaks: round it
     const own = touchingBuilding.side === 'red';
-    if (!own && isShelter(touchingBuilding) && !turned) {
+    if (!prioritizeTarget && !own && isShelter(touchingBuilding) && !turned) {
       breakBuilding(en, touchingBuilding, enemyDef, dt);
-    } else if (!own && (turned ? en.isBlockedPath : en.type === 'big' || en.isBlockedPath || (!isBuildingSingle(touchingBuilding) && !en.pathViaSpikes))) {
-      // a lone wall can be walked around, unless it's what blocks the only way in; an enemy on its
-      // way in over spikes squeezes past the walls beside them
+    } else if (!own && en.isBlockedPath) {
+      // Break only when the chosen path actually goes through it. Once a breach opens, connected
+      // neighbouring walls are no longer treated as obstacles if the replanned route goes around.
       breakBuilding(en, touchingBuilding, enemyDef, dt);
     } else {
       let dx = en.x - touchingBuilding.x;
@@ -751,18 +812,21 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
     return;
   }
   const blockedRes = en.isBlockedPath ? findBlockingResource(en, contactRadius) : null;
-  if (blockedRes) breakResource(en, blockedRes, enemyDef, dt);
+  if (blockedRes && !prioritizeTarget) breakResource(en, blockedRes, enemyDef, dt);
   else if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
 }
 
 function breakBuilding(en, building, enemyDef, dt) {
   const { damage, cooldown } = enemyBuildingAttack(enemyDef);
+  en.siegeTarget = building;
+  en.siegeTargetTick = game.pathTick;
   if (game.gameMode === 'battle' && en.nextStrikeTick == null) en.nextStrikeTick = game.pathTick + 1;
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
   en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
-  if (enemyDef.ranged) en.weapon = 'dagger';
+  if (enemyDef.ranged) { en.weapon = 'dagger'; en.swingWeapon = 'dagger'; }
   faceTowards(en, building.x, building.y);
   startSwing(en, Math.min(0.5, cooldown));
+  playSound('swing', en);
   en.struckAt = game.pathTick;
   building.hp -= damage;
   if (building.hp <= 0) removeBuilding(building);
@@ -838,6 +902,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
   const attackCooldown = game.gameMode === 'battle' ? cooldown / (en.battleAttackSpeed || 1) : cooldown;
   en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(attackCooldown / dt));
+  en.swingWeapon = dagger ? 'dagger' : null;
   startSwing(en, enemyDef.healer ? 0.3 : Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
   const blow = cooldown * shaken;
   if (en.type === 'big') {

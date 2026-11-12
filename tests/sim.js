@@ -548,10 +548,14 @@ window.sim = (() => {
     for (const list of [trees, cacti, boulders, grassList, berryBushes, sticks, pebbles, ironOres, coalOres, boars]) list.length = 0;
     pebbles.push({ x: townHall.x + 3 * TILE_SIZE, y: townHall.y, hp: 1, priority: 1 });
     settlers = [makeSettler(1, townHall.x - 60, townHall.y)];
+    // (the pebble doesn't grow back within the run: regrowth rolls 30-60 s, and a regrown one, picked
+    // too, made it 4 on some maps)
+    const regrowth = GAME_CONFIG.map.respawnDelay;
+    GAME_CONFIG.map.respawnDelay = { min: 999, max: 999 };
     finishHarvest(settlers[0], pebbles[0], 'pebble');
     placeWorkshop();
     const atStart = stock.flint;
-    run(60);
+    try { run(60); } finally { GAME_CONFIG.map.respawnDelay = regrowth; }
     const delivered = stock.flint;
     const canPay = canAfford(GAME_CONFIG.tools.axe.cost);
     assignTool('axe');

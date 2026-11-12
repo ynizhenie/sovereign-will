@@ -34,6 +34,7 @@
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
+ * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
  * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
@@ -58,6 +59,8 @@
  * @property {number} [hunger]       seconds until its next meal
  * @property {boolean} [quiver]
  * @property {number} [arrows]
+ * @property {number} [rifleAmmo]
+ * @property {boolean} [camouflage]
  * @property {boolean} [shield]
  * @property {boolean} [helmet]  (#326, 27.10, 27)
  * @property {string|boolean} [armor]
@@ -69,6 +72,7 @@
  * @property {string | null} [workKind]  what work: 'build', 'butcher', 'pick' (drawn: a hammer, a knife, a hand, #279)
  * @property {number} [swingT]       seconds left in the current strike animation
  * @property {string | null} [swingWeapon] temporary weapon shown during a structure strike
+ * @property {Object | null} [daggerTarget] nearby target that keeps a ranged unit in melee mode
  * @property {number} [facing]       the angle its held item points at
  * @property {Object} [order]        a tap order while possessed (settlers.orders.js)
  * @property {Object | null} targetEquipment what it goes to the town hall to swap to (equip): weapon, tool, gear...
@@ -148,6 +152,7 @@
  * @property {number} [ghostGone]   a ghost gone after flying into an enemy, seconds till it's back
  * @property {any} [escort]          the necromancer a ghost goes to a fight with
  * @property {Point} [ghostPanicFrom] where an enemy ghost touched it
+ * @property {number} [ghostStunnedUntil] pathTick until the undead is stunned by a ghost
  * @property {boolean} [fled]        gone without a corpse or loot
  * @property {any} [feeding]         the pet a settler is feeding
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
@@ -166,6 +171,8 @@
  * @property {boolean} [nameGenerated]
  * @property {Object} [struckBy]   (#326) the last settler that hit it, and when (struckTick): in the fog it turns on that one
  * @property {number} [struckTick]
+ * @property {Building | null} [siegeTarget] the building the enemy is actively breaking
+ * @property {number} [siegeTargetTick] the last tick it kept attacking that building
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
  * @property {number} [pathRetryTimer] movement retry delay
@@ -174,11 +181,13 @@
  * @property {boolean} [petFollowing] a pet closing the last distance to its fighter
  * @property {{ x: number, y: number, a: number, age: number, fromEnemy: boolean, bolt?: boolean }[]} [stuck]  (#326) arrows in it, where they struck (offsets from it)
  * @property {boolean} [ghostly]     a ghost (#314): nobody pushes it, it pushes nobody
+ * @property {number} [ghostStunnedUntil] pathTick until the undead is stunned by a ghost
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {{ text: string, until: number }} [say] its current spoken phrase
  * @property {string} enemyKey       GAME_CONFIG.enemies key
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
+ * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
@@ -233,11 +242,14 @@
  * @property {Point[] | null} path
  * @property {Point | null} pathTarget
  * @property {number} [arrows]
+ * @property {number} [rifleAmmo]
+ * @property {boolean} [camouflage]
  * @property {number} [facing]
  * @property {Look} [look]         how it's drawn, given when it's made (#306)
  * @property {number} [burning]
  * @property {number} [temporary]
- * @property {Enemy} [raisedBy] the necromancer that raised this temporary enemy zombie
+ * @property {Enemy | null} [raisedBy] the necromancer that raised this temporary enemy zombie
+ * @property {string} [raisedWeapon] weapon the temporary zombie took from its corpse
  * @property {boolean} [crumbled]
  * @property {number} [plagueGroupId]
  * @property {Point} [plagueGoal]
@@ -270,6 +282,7 @@
  * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
  * @property {boolean} [raidPortal] a temporary portal used by a demon raid
  * @property {boolean} [built] a completed structure
+ * @property {boolean} [battleMazeWall] a non-breakable Backrooms arena wall
  * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {number | null} [builderId] who of the party builds it
  * @property {number} x              its tile's centre
@@ -291,6 +304,7 @@
  * @property {boolean} [raidStagingShelter] a temporary shelter built before a raid (#279)
  * @property {boolean} [raidPortal] a temporary portal used by a demon raid
  * @property {boolean} [built] a completed structure
+ * @property {boolean} [battleMazeWall] a non-breakable Backrooms arena wall
  * @property {boolean} [enemyCampStructure] part of the persistent Endless camp
  * @property {boolean} [enemyCampOutpost] the camp warehouse that supplies its firekeeper
  * @property {number} [campId] the persistent camp this building belongs to
@@ -379,6 +393,7 @@
  * @property {number} waveTimer
  * @property {number} waveNum
  * @property {number} boarRespawnTimer
+ * @property {number} territoryBoarRespawnsPending
  * @property {number} pathTick
  * @property {string} buildMode
  * @property {Settler | null} selectedSettler

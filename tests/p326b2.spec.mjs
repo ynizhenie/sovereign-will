@@ -180,6 +180,45 @@ test('crossbowmen on opposing platforms can hit each other', async ({ page }) =>
   });
 });
 
+test('riflemen on opposing platforms fire bullets and keep their rifles in hand when aiming upward', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    battle.lineup = [];
+    battle.rifleUnlocked = true;
+    put('b', 'watchtower', 14, 12);
+    put('b', 'watchtower', 21, 12);
+    put('u', 'humans:rifle', 12, 12);
+    put('u', 'humans:rifle', 23, 12);
+    for (const unit of [...settlers, ...enemies]) unit.hp = unit.maxHp = 100000;
+    let playerShot = false, enemyShot = false;
+    fight(10, () => {
+      playerShot = playerShot || projectiles.some(projectile => projectile.fromTower && !projectile.fromEnemy && projectile.bullet);
+      enemyShot = enemyShot || projectiles.some(projectile => projectile.fromTower && projectile.fromEnemy && projectile.bullet);
+      return false;
+    });
+    return {
+      playerOnPlatform: !!settlers[0]?.towerAssignment,
+      enemyOnPlatform: !!enemies[0]?.platform,
+      playerShot,
+      enemyShot,
+      bothRiflesInHandWhenAimingUp: [settlers[0], enemies[0]].every(unit =>
+        !heldBehind({ ...unit, facing: -Math.PI / 2 })),
+      rifleSupportHandsClearTheBodyWhenAimingUp: [settlers[0], enemies[0]].every(unit => {
+        const radius = unit.visualRadius || unit.radius;
+        return bowDraw({ ...unit, facing: -Math.PI / 2 }).other.x > radius * 0.3;
+      })
+    };
+  });
+  expect(result).toEqual({
+    playerOnPlatform: true,
+    enemyOnPlatform: true,
+    playerShot: true,
+    enemyShot: true,
+    bothRiflesInHandWhenAimingUp: true,
+    rifleSupportHandsClearTheBodyWhenAimingUp: true
+  });
+});
+
 test('a battle\'s settings: night and rain are only to look at; blight is unavailable; torches given lit in the dark (#326)', async ({ page }) => {
   const errors = await openBattle(page);
   await page.click('[data-dock="battle-settings"]');

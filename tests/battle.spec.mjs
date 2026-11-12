@@ -166,7 +166,57 @@ test('one Units sheet for both sides, every faction under its heading in the sam
   expect(shown).toEqual(expect.arrayContaining(['wall_wood', 'watchtower', 'grave', 'portal', 'sacrifice_circle']));
 });
 
-test('any unit on either side: on the left one of yours, on the right an enemy, the very same unit (#326)', async ({ page }) => {
+test('holding Units for five seconds unlocks the battle rifle and releasing resets progress', async ({ page }) => {
+  await openBattle(page);
+  expect(await page.locator('[data-preset="humans:rifle"]').count()).toBe(0);
+  const units = page.locator('[data-battle-category="units"]');
+  await units.evaluate(button => { for (let i = 0; i < 10; i++) button.click(); });
+  expect(await page.evaluate(() => battle.rifleUnlocked)).toBe(false);
+  await units.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0 });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, pointerType: 'mouse' })));
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => battle.rifleUnlocked)).toBe(false);
+  await units.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0 });
+  await page.waitForTimeout(5100);
+  expect(await page.evaluate(() => battle.rifleUnlocked)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2, pointerType: 'mouse' })));
+  await units.click();
+  await expect(page.locator('#battle-panel')).toHaveClass(/open/);
+  await expect(page.locator('[data-preset="humans:rifle"]')).toBeVisible();
+  const result = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:rifle';
+    const green = at(10, 10), red = at(30, 10);
+    battleTap(green.x, green.y);
+    battleTap(red.x, red.y);
+    const player = settlers[0];
+    const aimingHand = bowDraw(player).other;
+    for (let i = 0; i < 30; i++) {
+      player.attackCooldown = 0;
+      performAttack(player, player.x + 100, player.y);
+    }
+    const reloadingHand = bowDraw(player).other;
+    return {
+      unlocked: battle.rifleUnlocked,
+      rosterCount: document.querySelectorAll('[data-preset$=":rifle"]').length,
+      player: { weapon: player.weapon, camouflage: player.camouflage, ammo: player.rifleAmmo, reload: player.attackCooldown },
+      enemy: { weapon: enemies[0].weapon, camouflage: enemies[0].camouflage, ammo: enemies[0].rifleAmmo },
+      hands: { aim: aimingHand, reload: reloadingHand },
+      bullets: game.projectiles.filter(projectile => projectile.bullet).length
+    };
+  });
+  expect(result.unlocked).toBe(true);
+  expect(result.rosterCount).toBeGreaterThanOrEqual(3);
+  expect(result.player).toEqual({ weapon: 'rifle', camouflage: true, ammo: 0, reload: 2.4 });
+  expect(result.enemy).toEqual({ weapon: 'rifle', camouflage: true, ammo: 30 });
+  expect(result.hands.aim.x).toBeGreaterThan(8);
+  expect(Math.abs(result.hands.aim.y)).toBeLessThan(1);
+  expect(result.hands.reload.y).toBeGreaterThan(result.hands.aim.y + 2);
+  expect(result.bullets).toBe(30);
+});
+
+test('any unit on either side: on the left one of yours, on the right an enemy, the  very same unit (#326)', async ({ page }) => {
   await openBattle(page);
   const r = await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
@@ -247,6 +297,83 @@ test('the battle settings pick the field: a glade, desert, or savanna, and the l
   await page.click('[data-battle-field="glade"]');
   const glade = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, units: settlers.length }));
   expect(glade).toEqual({ field: 'glade', sand: 0, savanna: 0, units: 1 });
+});
+
+test('ten taps on the battlefield heading activate the connected Backrooms maze without saving it', async ({ page }) => {
+  await openBattle(page);
+  await page.click('[data-dock="battle-settings"]');
+  await expect(page.locator('[data-battle-field="backrooms"]')).toHaveCount(0);
+  await page.click('[data-battle-field="desert"]');
+  const beforeActivation = await page.evaluate(() => {
+    battle.category = 'units';
+    battle.preset = 'humans:club';
+    battleTap(10 * TILE_SIZE + 15, 10 * TILE_SIZE + 15);
+    battle.category = 'buildings';
+    battle.building = 'wall_wood';
+    battleTap(11 * TILE_SIZE + 15, 10 * TILE_SIZE + 15);
+    return battle.lineup.length;
+  });
+  expect(beforeActivation).toBe(2);
+  for (let click = 0; click < 9; click++) await page.click('[data-battle-secret-trigger]');
+  expect(await page.evaluate(() => battle.field)).not.toBe('backrooms');
+  await page.click('[data-battle-secret-trigger]');
+  const maze = await page.evaluate(() => {
+    const walls = buildings.filter(building => building.battleMazeWall);
+    const start = { x: 2 * TILE_SIZE + 15, y: 2 * TILE_SIZE + 15 };
+    const finish = { x: 34 * TILE_SIZE + 15, y: 22 * TILE_SIZE + 15 };
+    const playerPath = findPathAStar(start.x, start.y, finish.x, finish.y);
+    const enemyPath = findPathAStar(start.x, start.y, finish.x, finish.y, true);
+    const before = walls.length;
+    // (looked at before the taps below: the second one puts a wall on the open floor)
+    const lineupCleared = battle.lineup.length === 0 && settlers.length === 0 && enemies.length === 0;
+    const wallKeys = new Set(walls.map(building => `${getGridPos(building.x, building.y).gx},${getGridPos(building.x, building.y).gy}`));
+    const crossings = Array.from({ length: 6 }, (_, row) => 2 + row * 4)
+      .filter(y => !wallKeys.has(`20,${y}`) && !wallKeys.has(`21,${y}`) && !wallKeys.has(`20,${y + 1}`) && !wallKeys.has(`21,${y + 1}`)).length;
+    const firstLayout = [...wallKeys].sort().join(';');
+    const wall = walls.find(building => {
+      const { gx, gy } = getGridPos(building.x, building.y);
+      return !isBorderZone(gx, gy);
+    });
+    battleTap(wall.x, wall.y);
+    const placementRejected = battle.lineup.length === 0;
+    battleTap(start.x, start.y);
+    return {
+      field: battle.field,
+      lineupCleared,
+      savedChoice: loadData('battle-choices', null)?.field,
+      walls: before,
+      wallsAfterReset: buildings.filter(building => building.battleMazeWall).length,
+      placementRejected,
+      crossings,
+      playerCanNavigate: playerPath.path.length > 0 && !playerPath.isBlockedPath,
+      enemyCanNavigate: enemyPath.path.length > 0 && !enemyPath.isBlockedPath,
+      firstLayout,
+      secondLayoutDiffers: (() => {
+        setBattleField('glade');
+        activateBattleBackrooms();
+        const differs = [...new Set(buildings.filter(building => building.battleMazeWall).map(building => {
+          const { gx, gy } = getGridPos(building.x, building.y);
+          return `${gx},${gy}`;
+        }))].sort().join(';') !== firstLayout;
+        setBattleField('desert');
+        return differs;
+      })()
+    };
+  });
+  expect(maze.field).toBe('backrooms');
+  expect(maze.lineupCleared).toBe(true);
+  expect(maze.savedChoice).toBe('desert');
+  expect(maze.walls).toBeGreaterThan(100);
+  expect(maze.wallsAfterReset).toBe(maze.walls);
+  expect(maze.placementRejected).toBe(true);
+  expect(maze.crossings).toBeGreaterThanOrEqual(2);
+  expect(maze.crossings).toBeLessThanOrEqual(4);
+  expect(maze.secondLayoutDiffers).toBe(true);
+  expect(maze.playerCanNavigate).toBe(true);
+  expect(maze.enemyCanNavigate).toBe(true);
+  await page.evaluate(() => leaveBattleMode());
+  expect(await page.evaluate(() => battle.field)).not.toBe('backrooms');
+  expect(await page.evaluate(() => loadData('battle-choices', null)?.field)).toBe('desert');
 });
 
 test('the desert field keeps the midline and the green and red halves of the glade (#279)', async ({ page }) => {
@@ -1046,6 +1173,28 @@ test('a fighting settler keeps facing its target while it moves', async ({ page 
   });
   expect(maxAimError.samples).toBeGreaterThan(0);
   expect(maxAimError.maxError).toBeLessThan(0.1);
+});
+
+test('a fighting settler faces its movement direction instead of an enemy behind a wall', async ({ page }) => {
+  await openBattle(page);
+  const facing = await page.evaluate(() => {
+    setBattleDifficulty('hard');
+    battle.preset = 'humans:club'; battleTap(18 * TILE_SIZE + 15, 13 * TILE_SIZE + 15);
+    battle.preset = 'humans:club'; battleTap(22 * TILE_SIZE + 15, 13 * TILE_SIZE + 15);
+    const settler = settlers[0], enemy = enemies[0];
+    buildings.push(createBuildingBlueprint('wall_stone', 20 * TILE_SIZE + 15, 13 * TILE_SIZE + 15));
+    invalidateAllPaths();
+    settler.fightTarget = enemy;
+    settler.lastX = settler.x;
+    settler.lastY = settler.y + 5;
+    tickAnimation(settler, 1 / 60);
+    return {
+      facing: settler.facing,
+      visible: hasClearEnemyLine(settler.x, settler.y, enemy.x, enemy.y, settler.radius)
+    };
+  });
+  expect(facing.visible).toBe(false);
+  expect(facing.facing).toBeCloseTo(-Math.PI / 2, 1);
 });
 
 test('melee units do not recoil while closing on a large enemy', async ({ page }) => {

@@ -13,8 +13,8 @@ import { hasLineOfFire, performAttack } from './combat.rules.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const nearest = (from, list) => list.reduce((best, o) => (!best || dist(o, from) < dist(best, from) ? o : best), null);
-const targetableEnemy = enemy => !enemy.campGuard ||
-  (game.raidActive && enemy.campId === game.raidCampId);
+const targetableEnemy = enemy => !enemy.ghostly && (!enemy.campGuard ||
+  (game.raidActive && enemy.campId === game.raidCampId));
 const targetableTent = tent => !tent.campStructure ||
   (game.raidActive && tent.campId === game.raidCampId);
 const targetableCampBuilding = building => !building.enemyCampStructure ||
