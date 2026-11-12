@@ -16,9 +16,12 @@ import { pageBridgeSource } from './bridge.mjs';
 // The specs' test(): every page it opens (goto, reload) gets the tests' bridge to the game (tests/bridge.mjs)
 // once the page has loaded, and goto/reload wait for it
 const BRIDGE = pageBridgeSource();
+const FRAME_MS = Number(process.env.FRAME_MS ?? 100);
 export { expect };
 export const test = base.extend({
-  page: async ({ page }, use) => {
+  // (a spec that's about the frames themselves, the loading screen waiting on them say: test.use({ frameMs: 0 }))
+  frameMs: [FRAME_MS, { option: true }],
+  page: async ({ page, frameMs }, use) => {
     await page.addInitScript(source => {
       document.addEventListener('DOMContentLoaded', () => {
         const script = document.createElement('script');
@@ -27,6 +30,14 @@ export const test = base.extend({
         document.head.appendChild(script);
       });
     }, BRIDGE);
+    // The game draws a frame as often as the browser asks, and the tests' browser has no graphics card: every frame is painted
+    // by the processor, sixty a second in each of the pages open at once. That was most of what a run of the tests cost (five
+    // times the rest). Here a frame comes every FRAME_MS: the game steps as ever (it catches up the steps a frame owes), only
+    // drawn less often. FRAME_MS=0 for the browser's own frames in every test
+    if (frameMs > 0) await page.addInitScript(every => {
+      window.requestAnimationFrame = fn => setTimeout(() => fn(performance.now()), every);
+      window.cancelAnimationFrame = id => clearTimeout(id);
+    }, frameMs);
     for (const method of ['goto', 'reload']) {
       const original = page[method].bind(page);
       page[method] = async (...args) => {
