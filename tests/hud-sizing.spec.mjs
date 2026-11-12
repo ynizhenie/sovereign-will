@@ -37,7 +37,9 @@ test('bottom sheets fit their contents and unit status does not resize its tile'
     const { width, height } = element.getBoundingClientRect();
     return { width, height };
   });
-  expect(after.width).toBe(before.width);
-  expect(after.height).toBe(before.height);
+  // The panel may still be sliding in at the first measure, and a moving box
+  // is rounded a hair differently, so the sizes are compared to 0.01 px.
+  expect(Math.abs(after.width - before.width)).toBeLessThan(0.01);
+  expect(Math.abs(after.height - before.height)).toBeLessThan(0.01);
   expect(errors).toEqual([]);
 });
