@@ -2,7 +2,7 @@
 
 import { TILE_SIZE, forEachInRect, game, thingAt, worldEpoch } from '../../../engine/world/index.js';
 import { SHADOWS, paintOn, paintStill, paintVariant, drawBoulderArt, drawBushArt, drawCactusArt, drawGrassArt, drawLogArt, drawSaplingArt, drawStumpArt, drawTreeArt } from './gathering.art.js';
-import { ctx, drawProgressBar, getViewRect, getViewScale, glBand, glReady } from '../../../engine/platform/index.js';
+import { ctx, drawProgressBar, getViewRect, getViewScale, glReady } from '../../../engine/platform/index.js';
 import { getMapResourceDef, getMapResourceKind } from './gathering.rules.js';
 import { drawOneSprite, drawSprites } from './gathering.sprites.js';
 import { CHUNK, drawChunks, drawOreVeins, getSun, isGroundCached, isPrewarmingChunks, paintRockShadows } from '../../world/index.js';
@@ -332,8 +332,7 @@ function drawOverKeptNature() {
   updateOver();
   for (const [o, width] of over.others) drawHarvestProgress(o, width);
   for (const t of over.trees) if (!t.isGrowing && !t.fallen) { drawHarvestProgress(t); if (t.apple && t.pickShare > 0 && game.pathTick - t.pickTick < 3) drawProgressBar(t.x, t.y, t.pickShare); }
-  glBand(1);
-  drawKind('grass', game.grassList, 20);
+  for (const g of over.grass) drawHarvestProgress(g, 20); // (the tufts themselves are kept on the card, swaying there)
 }
 
 export function depthSortedTrees() {

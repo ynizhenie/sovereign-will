@@ -53,6 +53,8 @@ export async function initGl(gameCanvas) {
     for (let i = 0; i < BANDS; i++) {
       bands.push(new PIXI.Container());
       app.stage.addChild(bands[i]);
+      if (i === 0) { wavesLayer = new PIXI.Container({ isRenderGroup: true }); app.stage.addChild(wavesLayer); }
+      if (i === 1) { swayLayer = new PIXI.Container({ isRenderGroup: true }); app.stage.addChild(swayLayer); }
       if (i < 2) { keptLayers.push(new PIXI.Container({ isRenderGroup: true, sortableChildren: true })); app.stage.addChild(keptLayers[i]); }
     }
     ready = true;
@@ -78,6 +80,9 @@ export function glBand(n) { band = n; }
 /** @param {number} scale @param {number} x @param {number} y */
 export function glCamera(scale, x, y) {
   for (const layer of keptLayers) { layer.scale.set(scale); layer.position.set(x, y); }
+  swayLayer.scale.set(scale); swayLayer.position.set(x, y);
+  wavesLayer.scale.set(scale); wavesLayer.position.set(x, y);
+  cullGroups(scale, x, y);
 }
 // A thing's picture kept on the card (layer 0: the small things, 1: the trees), with its top left at (x, y) in the world,
 // w by h world units; among its layer's, those with a greater z lie over those with a lesser. Said again: changed
@@ -97,6 +102,8 @@ export function glDrop(layer, thing) {
   keptSprites[layer].delete(thing);
   sprite.destroy();
 }
+// how many groups of tufts and of wavelets are kept (for the tests)
+export const glGroups = () => ({ sway: swayGroups.size, waves: waveGroups.size });
 // how many things are kept in a layer (for the tests)
 /** @param {number} layer */
 export const glKept = layer => keptSprites[layer].size;
@@ -185,6 +192,176 @@ export function glSprite(picture, x, y, w, h, lean = 0, base = 0) {
     sprite.scale.set(sx, sy);
     sprite.position.set(x, y);
   }
+}
+
+// the box round a shape's corners (x, y pairs), with room for its pictures to lean or drift out of it
+/** @param {Float32Array} positions */
+function boxOf(positions) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < positions.length; i += 2) { const x = positions[i], y = positions[i + 1]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return [x0 - 30, y0 - 30, x1 + 30, y1 + 30];
+}
+// A group off the screen isn't drawn (each is a command of its own to the card: a big map has thousands)
+function cullGroups(scale, x, y) {
+  const x0 = -x / scale, y0 = -y / scale, x1 = x0 + app.renderer.width / scale, y1 = y0 + app.renderer.height / scale;
+  const seen = mesh => { const b = mesh.__box; mesh.visible = b[2] >= x0 && b[0] <= x1 && b[3] >= y0 && b[1] <= y1; };
+  for (const meshes of swayGroups.values()) for (const mesh of meshes) seen(mesh);
+  for (const mesh of waveGroups.values()) seen(mesh);
+}
+
+// ---- Things that sway in the wind (the tufts of grass), kept on the card in groups: each group one shape of all its pictures,
+// and the card leans every picture round its foot by the wind as it is now (the game says only the time and the wind,
+// glWind). What a tuft's lean is: world.weather.js's windSway, the same sum here
+/** @type {any} */
+let swayLayer = null;
+/** @type {Map<string, any[]>} */
+const swayGroups = new Map();
+/** @type {Map<any, any>} */
+const swayShaders = new Map(); // (one for each sheet of pictures)
+const swayUniforms = { uTime: { value: 0, type: 'f32' }, uWind: { value: 0, type: 'f32' }, uLean: { value: 0, type: 'f32' } };
+const SWAY_VERTEX = `
+in vec2 aPosition;
+in vec2 aUV;
+in vec2 aFoot;
+out vec2 vUV;
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+uniform float uTime;
+uniform float uWind;
+uniform float uLean;
+void main() {
+  float gust = 0.6 + 0.4 * sin(uTime * 0.7 + aFoot.x * 0.004);
+  float s = uWind * gust * (sin(uTime * 2.4 + aFoot.x * 0.05 + aFoot.y * 0.03) * 0.5 + 0.7);
+  vec2 at = vec2(aPosition.x + uLean * s * 0.35 * (aFoot.y + 7.0 - aPosition.y), aPosition.y);
+  mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+  gl_Position = vec4((mvp * vec3(at, 1.0)).xy, 0.0, 1.0);
+  vUV = aUV;
+}`;
+const SWAY_FRAGMENT = `
+in vec2 vUV;
+uniform sampler2D uTexture;
+void main() { gl_FragColor = texture2D(uTexture, vUV); }`;
+// A group's tufts (said again: changed; none: the group gone). Each: its picture, where its top left is in the world,
+// its size there, and its foot (the thing's own place)
+/** @param {string} key @param {{ picture: HTMLCanvasElement, x: number, y: number, w: number, h: number, fx: number, fy: number }[]} tufts */
+export function glSway(key, tufts) {
+  for (const mesh of swayGroups.get(key) || []) mesh.destroy();
+  swayGroups.delete(key);
+  if (!tufts.length) return;
+  // (a shape for each sheet its pictures are on)
+  /** @type {Map<any, typeof tufts>} */
+  const bySheet = new Map();
+  for (const tuft of tufts) { const source = sheetTexture(tuft.picture).source; const list = bySheet.get(source); if (list) list.push(tuft); else bySheet.set(source, [tuft]); }
+  const meshes = [];
+  for (const [source, list] of bySheet) {
+    const n = list.length, positions = new Float32Array(n * 8), uvs = new Float32Array(n * 8), feet = new Float32Array(n * 8), indices = new Uint32Array(n * 6);
+    list.forEach((tuft, i) => {
+      const frame = sheetTexture(tuft.picture).frame, u0 = frame.x / SHEET, v0 = frame.y / SHEET, u1 = (frame.x + frame.width) / SHEET, v1 = (frame.y + frame.height) / SHEET;
+      positions.set([tuft.x, tuft.y, tuft.x + tuft.w, tuft.y, tuft.x + tuft.w, tuft.y + tuft.h, tuft.x, tuft.y + tuft.h], i * 8);
+      uvs.set([u0, v0, u1, v0, u1, v1, u0, v1], i * 8);
+      for (let k = 0; k < 4; k++) { feet[i * 8 + k * 2] = tuft.fx; feet[i * 8 + k * 2 + 1] = tuft.fy; }
+      indices.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+    });
+    let shader = swayShaders.get(source);
+    if (!shader) {
+      shader = PIXI.Shader.from({ gl: { vertex: SWAY_VERTEX, fragment: SWAY_FRAGMENT }, resources: { uTexture: source, sway: swayUniforms } });
+      swayShaders.set(source, shader);
+    }
+    const geometry = new PIXI.Geometry({ attributes: { aPosition: { buffer: positions, format: 'float32x2' }, aUV: { buffer: uvs, format: 'float32x2' }, aFoot: { buffer: feet, format: 'float32x2' } }, indexBuffer: indices });
+    const mesh = new PIXI.Mesh({ geometry, shader });
+    mesh.__box = boxOf(positions);
+    swayLayer.addChild(mesh);
+    meshes.push(mesh);
+  }
+  swayGroups.set(key, meshes);
+}
+export function glSwayDropAll() {
+  for (const meshes of swayGroups.values()) for (const mesh of meshes) mesh.destroy();
+  swayGroups.clear();
+}
+// The wind now: the time (seconds), how strong it blows, and which way it leans things (-1..1)
+/** @param {number} time @param {number} wind @param {number} lean */
+export function glWind(time, wind, lean) {
+  for (const shader of swayShaders.values()) { const u = shader.resources.sway.uniforms; u.uTime = time; u.uWind = wind; u.uLean = lean; }
+}
+
+// ---- The water's wavelets, kept on the card in groups: each a little white stroke that drifts across its tile and fades in
+// and out by itself (the card moves it by the time; the game says the time and how many to show, glWaves)
+/** @type {any} */
+let wavesLayer = null;
+/** @type {Map<string, any>} */
+const waveGroups = new Map();
+/** @type {any} */
+let waveShader = null;
+const waveUniforms = { uTime: { value: 0, type: 'f32' }, uHalf: { value: 0, type: 'f32' } };
+const WAVE_VERTEX = `
+in vec2 aPosition;
+in vec2 aUV;
+in vec2 aPhase;
+out vec2 vUV;
+out float vAlpha;
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+uniform float uTime;
+uniform float uHalf;
+void main() {
+  float p = fract(uTime * 0.25 + aPhase.x);
+  vec2 at = vec2(aPosition.x + p * 20.0, aPosition.y);
+  mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+  gl_Position = vec4((mvp * vec3(at, 1.0)).xy, 0.0, 1.0);
+  // (six steps of brightness as it fades in and out; every other one not shown when the view isn't close)
+  vAlpha = 0.16 * (min(5.0, floor(sin(p * 3.14159265) * 6.0)) + 0.5) / 6.0 * (1.0 - uHalf * aPhase.y);
+  vUV = aUV;
+}`;
+const WAVE_FRAGMENT = `
+in vec2 vUV;
+in float vAlpha;
+uniform sampler2D uTexture;
+void main() { gl_FragColor = texture2D(uTexture, vUV) * vAlpha; }`;
+/** @type {HTMLCanvasElement | null} */
+let wavePicture = null;
+const WAVE_BOX = [-7, -4, 7, 2], WAVE_RES = 4; // (round the stroke's middle, world units; its picture's sharpness)
+// A group's wavelets (none: the group gone): x, y where each one's stroke starts its drift (its middle), its phase 0..1,
+// and whether it's one of those left out when the view isn't close (1) — four numbers each
+/** @param {string} key @param {number[]} waves */
+export function glWaveGroup(key, waves) {
+  const old = waveGroups.get(key);
+  if (old) { old.destroy(); waveGroups.delete(key); }
+  const n = waves.length / 4;
+  if (!n) return;
+  if (!wavePicture) {
+    const [x0, y0, x1, y1] = WAVE_BOX;
+    wavePicture = document.createElement('canvas'); wavePicture.width = (x1 - x0) * WAVE_RES; wavePicture.height = (y1 - y0) * WAVE_RES;
+    const g = /** @type {CanvasRenderingContext2D} */ (wavePicture.getContext('2d'));
+    g.setTransform(WAVE_RES, 0, 0, WAVE_RES, -x0 * WAVE_RES, -y0 * WAVE_RES);
+    g.strokeStyle = '#fff'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-5, 0); g.quadraticCurveTo(0, -2, 5, 0); g.stroke();
+  }
+  const texture = sheetTexture(wavePicture), frame = texture.frame;
+  const u0 = frame.x / SHEET, v0 = frame.y / SHEET, u1 = (frame.x + frame.width) / SHEET, v1 = (frame.y + frame.height) / SHEET;
+  const positions = new Float32Array(n * 8), uvs = new Float32Array(n * 8), phases = new Float32Array(n * 8), indices = new Uint32Array(n * 6);
+  for (let i = 0; i < n; i++) {
+    const x = waves[i * 4] + WAVE_BOX[0], y = waves[i * 4 + 1] + WAVE_BOX[1], w = WAVE_BOX[2] - WAVE_BOX[0], h = WAVE_BOX[3] - WAVE_BOX[1];
+    positions.set([x, y, x + w, y, x + w, y + h, x, y + h], i * 8);
+    uvs.set([u0, v0, u1, v0, u1, v1, u0, v1], i * 8);
+    for (let k = 0; k < 4; k++) { phases[i * 8 + k * 2] = waves[i * 4 + 2]; phases[i * 8 + k * 2 + 1] = waves[i * 4 + 3]; }
+    indices.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+  }
+  if (!waveShader) waveShader = PIXI.Shader.from({ gl: { vertex: WAVE_VERTEX, fragment: WAVE_FRAGMENT }, resources: { uTexture: texture.source, waves: waveUniforms } });
+  const geometry = new PIXI.Geometry({ attributes: { aPosition: { buffer: positions, format: 'float32x2' }, aUV: { buffer: uvs, format: 'float32x2' }, aPhase: { buffer: phases, format: 'float32x2' } }, indexBuffer: indices });
+  const mesh = new PIXI.Mesh({ geometry, shader: waveShader });
+  mesh.__box = boxOf(positions);
+  wavesLayer.addChild(mesh);
+  waveGroups.set(key, mesh);
+}
+export function glWaveDropAll() { for (const mesh of waveGroups.values()) mesh.destroy(); waveGroups.clear(); }
+// The wavelets this frame: shown or not, the time (seconds), and whether only every other one shows
+/** @param {boolean} shown @param {number} time @param {boolean} half */
+export function glWaves(shown, time, half) {
+  wavesLayer.visible = shown;
+  if (waveShader) { const u = waveShader.resources.waves.uniforms; u.uTime = time; u.uHalf = half ? 1 : 0; }
 }
 
 // ---- A whole layer painted on a canvas of its own each frame (the shadows): laid over what's on the card so far, see-through

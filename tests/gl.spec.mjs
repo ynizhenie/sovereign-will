@@ -44,10 +44,11 @@ test('with WebGL on, nature is kept on the card: a tree felled or taken away lea
   await page.waitForFunction(() => glReady());
   const r = await page.evaluate(() => {
     isPaused = true;
+    setZoom(getMaxZoom()); // (close enough for the wavelets to show)
     const frames = n => { for (let i = 0; i < n; i++) render(); };
     const standing = () => game.trees.filter(t => !t.isGrowing && !t.fallen).length;
     frames(Math.ceil(game.trees.length / 400) + 2); // (every tree looked at)
-    const start = { kept: glKept(1), standing: standing(), small: glKept(0), smallThings: game.sticks.length + game.pebbles.length + game.stumps.length + game.berryBushes.length + game.cacti.length + game.boulders.length };
+    const start = { groups: glGroups(), kept: glKept(1), standing: standing(), small: glKept(0), smallThings: game.sticks.length + game.pebbles.length + game.stumps.length + game.berryBushes.length + game.cacti.length + game.boulders.length };
     // one felled where it stands, one taken away, a sapling planted
     const felled = game.trees.find(t => !t.isGrowing && !t.fallen);
     felled.fallen = true;
@@ -60,6 +61,8 @@ test('with WebGL on, nature is kept on the card: a tree felled or taken away lea
     frames(Math.ceil(game.trees.length / 400) + 2);
     return { start, after, grown: { kept: glKept(1), standing: standing() } };
   });
+  expect(r.start.groups.sway).toBeGreaterThan(0); // (the tufts of grass, kept in groups)
+  expect(r.start.groups.waves).toBeGreaterThan(0); // (the water's wavelets round the screen)
   expect(r.start.kept).toBe(r.start.standing);
   expect(r.start.small).toBe(r.start.smallThings);
   expect(r.after.standing).toBe(r.start.standing - 2);

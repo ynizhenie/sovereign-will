@@ -5,7 +5,7 @@ export { audio, initAudio, midi, noise, setMusicOn, setSoundOn, startAudio, tone
 export { camera, clampCamera, getMaxZoom, getViewRect, setZoom, updateInputPos } from './camera.js';
 export { VSYNC, canvas, canvasCssSize, ctx, drawProgressBar, fitCanvasToScreen, getBaseScale, getViewScale, initCanvas, screenPixelRatio, setFont } from './canvas.js';
 export { onTap } from './dom.js';
-export { GL, glBand, glBeginFrame, glCamera, glChunk, glDrop, glDropAll, glEndFrame, glForgetChunk, glFrame, glKeep, glKept, glLayer, glReady, glSprite } from './gl.js';
+export { GL, glBand, glBeginFrame, glCamera, glChunk, glDrop, glDropAll, glEndFrame, glForgetChunk, glFrame, glGroups, glKeep, glKept, glLayer, glReady, glSprite, glSway, glSwayDropAll, glWaveDropAll, glWaveGroup, glWaves, glWind } from './gl.js';
 export { applyPageTexts, currentLanguage, initI18n, setLanguage, statLabel, t } from './i18n.js';
 export { initInput, isTap, isTouchScreen, keys, mouse, shiftDown } from './input.js';
 export { loadData, loadSetting, saveData, saveSetting } from './storage.js';

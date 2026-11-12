@@ -7,8 +7,9 @@
 // at a few hundred a frame in turn, and at once those a unit stands by. A tree growing or lying felled isn't kept: it's
 // drawn on the game's canvas as ever.
 
-import { TILE_SIZE, game, thingAt, worldEpoch } from '../../../engine/world/index.js';
-import { getBaseScale, getMaxZoom, glDrop, glDropAll, glKeep } from '../../../engine/platform/index.js';
+import { TILE_SIZE, forEachInRect, game, thingAt, worldEpoch } from '../../../engine/world/index.js';
+import { getBaseScale, getMaxZoom, glDrop, glDropAll, glKeep, glSway, glSwayDropAll, glWind } from '../../../engine/platform/index.js';
+import { windNow } from '../../world/index.js';
 import { pictureBox, pictureOf } from './gathering.sprites.js';
 
 // the small things, from the bottom up (as they're drawn on the game's canvas)
@@ -17,14 +18,15 @@ const SMALL = [
   ['stick', () => game.sticks], ['pebbles', () => game.pebbles], ['stump', () => game.stumps],
   ['bush', () => game.berryBushes], ['cactus', () => game.cacti], ['boulder', () => game.boulders]
 ];
-const LOOK_AT_A_FRAME = 400; // (trees looked at again each frame, in turn)
+const LOOK_AT_A_FRAME = 400;
+const GROUP_PX = 16 * TILE_SIZE; // (the tufts kept in groups this wide) // (trees looked at again each frame, in turn)
 
 /** @typedef {{ list: any[] | null, length: number, first: any, last: any, members: Set<any> }} Seen */
 /** @returns {Seen} */
 const nothing = () => ({ list: null, length: -1, first: undefined, last: undefined, members: new Set() });
 const state = {
   world: -1, res: 0,
-  small: SMALL.map(nothing), trees: nothing(),
+  small: SMALL.map(nothing), trees: nothing(), grass: nothing(),
   /** the look each kept tree was kept with (its apples) @type {Map<any, number>} */
   looks: new Map(),
   /** the trees not kept: growing, felled @type {Set<any>} */
@@ -69,9 +71,9 @@ export function keepNatureOnCard() {
   // (pictures as sharp as the closest zoom shows them; the card makes them smaller by itself further out)
   const res = Math.min(4, Math.max(0.25, 2 ** Math.ceil(Math.log2(Math.max(getBaseScale() * getMaxZoom(), 0.01)))));
   if (state.world !== worldEpoch() || state.res !== res) {
-    glDropAll();
+    glDropAll(); glSwayDropAll();
     state.world = worldEpoch(); state.res = res;
-    state.small = SMALL.map(nothing); state.trees = nothing();
+    state.small = SMALL.map(nothing); state.trees = nothing(); state.grass = nothing();
     state.looks.clear(); state.loose.clear(); state.turn = []; state.at = 0;
   }
   SMALL.forEach(([kind, listOf], n) => {
@@ -80,6 +82,23 @@ export function keepNatureOnCard() {
   if (changes(state.trees, game.trees, lookAtTree, t => { glDrop(1, t); state.looks.delete(t); state.loose.delete(t); })) {
     state.turn = game.trees.slice(); state.at = 0;
   }
+  // the tufts of grass, in groups of GROUP x GROUP tiles: a group one came to or went from is made again
+  /** @type {Set<string>} */
+  const stale = new Set();
+  const groupOf = o => { stale.add(`${Math.floor(o.x / GROUP_PX)},${Math.floor(o.y / GROUP_PX)}`); };
+  if (changes(state.grass, game.grassList, groupOf, groupOf)) {
+    const box = pictureBox('grass');
+    for (const key of stale) {
+      const [cx, cy] = key.split(',').map(Number), tufts = [];
+      forEachInRect(game.grassList, cx * GROUP_PX, cy * GROUP_PX, (cx + 1) * GROUP_PX - 0.01, (cy + 1) * GROUP_PX - 0.01, o => {
+        const c = pictureOf('grass', o, res);
+        tufts.push({ picture: c, x: o.x + box[0] - 1 / res, y: o.y + box[1] - 1 / res, w: c.width / res, h: c.height / res, fx: o.x, fy: o.y });
+      });
+      glSway(key, tufts);
+    }
+  }
+  const wind = windNow();
+  glWind(performance.now() / 1000, wind.wind, wind.lean);
   for (let i = 0; i < LOOK_AT_A_FRAME && state.turn.length; i++) {
     if (state.at >= state.turn.length) state.at = 0;
     lookAtTree(state.turn[state.at++]);
