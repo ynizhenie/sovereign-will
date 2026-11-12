@@ -8,6 +8,7 @@ async function openBattle(page) {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.waitForSelector('body[data-hud="battle"]'); // (the bars take the mode's row on the next frame)
   await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     window.put = (id, gx, gy) => { battle.category = 'units'; battle.preset = id; battleTap(at(gx, gy).x, at(gx, gy).y); };
