@@ -118,13 +118,30 @@ export function getLights() {
   return lights;
 }
 
+// The low sun's colour over the map: orange through the evening (most in its middle, gone by night), a paler gold through
+// the morning
+function drawDuskTint() {
+  if (!looksByTime()) return;
+  const c = config(), t = game.dayTime || 0, phase = phaseAt(t);
+  if (phase !== 'evening' && phase !== 'morning') return;
+  const p = phase === 'morning' ? t / c.morning : (t - c.morning - c.day) / c.evening;
+  const strength = Math.sin(Math.max(0, Math.min(1, p)) * Math.PI);
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.fillStyle = phase === 'evening' ? `rgba(255, 138, 48, ${0.34 * strength})` : `rgba(255, 205, 130, ${0.22 * strength})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
 // The dark over the map (after the world, before the screen's own marks): a sheet of night with the lights
 // cut out of it, soft at their edges. (#322) A third of the screen's size, laid over it stretched: its edges
 // are all soft anyway, and a phone filled the whole screen twice over for it every frame
 const SHEET_SCALE = 1 / 3;
+const WARM_LIGHT = '#ffb060'; // (firelight)
 /** @type {HTMLCanvasElement | null} */
 let sheet = null;
 export function drawDarkness() {
+  drawDuskTint();
   const dark = getDarkness();
   if (dark <= 0.01) return;
   if (!sheet) sheet = document.createElement('canvas');
@@ -153,9 +170,11 @@ export function drawDarkness() {
   ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
   const viewScale = getViewScale();
   ctx.globalCompositeOperation = 'screen';
+  // (a fire's or a window's light is warm: where the dark is cut away the ground and those in it take a little of its colour,
+  // more the darker the night; a light with a colour of its own glows in that, as before)
+  const warm = dark / (config().darkness || 1);
   for (const light of lights) {
-    if (!light.color) continue;
-    const match = /^#([\da-f]{6})$/i.exec(light.color);
+    const match = /^#([\da-f]{6})$/i.exec(light.color || WARM_LIGHT);
     if (!match) continue;
     const value = Number.parseInt(match[1], 16);
     const color = `${value >> 16}, ${(value >> 8) & 255}, ${value & 255}`;
@@ -164,8 +183,9 @@ export function drawDarkness() {
     const r = light.r * viewScale * flicker;
     if (x < -r || y < -r || x > canvas.width + r || y > canvas.height + r) continue;
     const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-    glow.addColorStop(0, `rgba(${color}, 0.24)`);
-    glow.addColorStop(0.55, `rgba(${color}, 0.12)`);
+    const strength = light.color ? 1 : warm;
+    glow.addColorStop(0, `rgba(${color}, ${0.24 * strength})`);
+    glow.addColorStop(0.55, `rgba(${color}, ${0.12 * strength})`);
     glow.addColorStop(1, `rgba(${color}, 0)`);
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();

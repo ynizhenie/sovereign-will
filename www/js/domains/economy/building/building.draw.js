@@ -9,7 +9,7 @@ import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rul
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
 import { DUMMY_VARIANTS, LINK, drawBackroomsWall, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
-import { drawShadowPath, tileVariantHash } from '../../world/index.js';
+import { drawShadowPath, getDarkness, tileVariantHash } from '../../world/index.js';
 
 // A damaged building looks it: cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).
@@ -258,6 +258,27 @@ function doorSwing(b, mask) {
   const dx = b.x - home.x, dy = b.y - home.y;
   const horizontalRun = !((mask & (LINK.n | LINK.s)) && !(mask & (LINK.e | LINK.w)));
   return horizontalRun ? { x: 0, y: dy >= 0 ? 1 : -1 } : { x: dx >= 0 ? 1 : -1, y: 0 };
+}
+
+// The hall's windows lit as it gets dark (over the night's dark): the humans' two, bright, each with a little glow round it
+export function drawLitWindows() {
+  const dark = getDarkness();
+  if (dark <= 0.02 || game.plagueMode || game.gameMode === 'menu' || getPlayerFaction().id !== 'humans') return;
+  const v = getViewRect(60);
+  if (townHall.x < v.x0 || townHall.x > v.x1 || townHall.y < v.y0 || townHall.y > v.y1) return;
+  const lit = Math.min(1, dark / 0.3); // (on early in the evening)
+  ctx.save();
+  for (const wx of [-18, 12]) {
+    const x = townHall.x + wx, y = townHall.y + 9;
+    ctx.globalCompositeOperation = 'screen';
+    const glow = ctx.createRadialGradient(x + 3.5, y + 3, 0, x + 3.5, y + 3, 16);
+    glow.addColorStop(0, `rgba(255, 190, 90, ${0.5 * lit})`); glow.addColorStop(1, 'rgba(255, 190, 90, 0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x + 3.5, y + 3, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `rgba(255, 226, 130, ${lit})`; ctx.fillRect(x + 0.5, y + 0.5, 6, 5);
+    ctx.fillStyle = `rgba(92, 58, 23, ${lit})`; ctx.fillRect(x + 3, y + 0.5, 1, 5);
+  }
+  ctx.restore();
 }
 
 // Buildings, each kind its own way, with their damage, health and repair, and demolition marks
