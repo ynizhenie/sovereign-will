@@ -317,7 +317,50 @@ function paintGrass(g, x0, y0, x1, y1) {
         g.fillStyle = 'rgba(0, 0, 0, 0.1)';
         g.fillRect(x + 4 + ((hsh >>> 8) % (TILE_SIZE - 10)), y + 4 + ((hsh >>> 14) % (TILE_SIZE - 10)), 3, 3);
       }
+      paintGroundDetail(g, gx, gy, x, y);
     }
+  }
+  g.globalAlpha = 1;
+}
+
+// Small things in the grass, here and there, so a meadow isn't one flat green: a few flowers, a patch of clover, a couple of
+// little stones, a bare spot of earth. By a hash of the tile (its own, not the one the patches and tufts use), each well
+// inside its tile; in the savanna the flowers are the dry yellows only and there's no clover
+const FLOWERS = ['#e9edda', '#e7c94c', '#d98fab', '#93b3e2'], DRY_FLOWERS = ['#d9b85a', '#c9903f'];
+function paintGroundDetail(g, gx, gy, x, y) {
+  const h = tileVariantHash(gx * 3 + 1, gy * 5 + 2);
+  const at = (shift, span) => 6 + ((h >>> shift) % span); // (a place in the tile, off its edges)
+  const kind = h % 23;
+  if (kind > 6) return;
+  const dry = savannaWeightAt(x + TILE_SIZE / 2, y + TILE_SIZE / 2) > 0.5;
+  if (kind <= 1) {
+    // flowers: three to five, each a few petals round a middle
+    const colours = dry ? DRY_FLOWERS : FLOWERS, colour = colours[(h >>> 5) % colours.length], n = 3 + ((h >>> 8) % 3);
+    for (let i = 0; i < n; i++) {
+      const fx = x + at(10 + i * 3, 18), fy = y + at(12 + i * 4, 18);
+      g.globalAlpha = 0.9; g.fillStyle = colour;
+      g.beginPath();
+      for (const [dx, dy] of [[-1.1, 0], [1.1, 0], [0, -1.1], [0, 1.1]]) { g.moveTo(fx + dx + 0.9, fy + dy); g.arc(fx + dx, fy + dy, 0.9, 0, Math.PI * 2); }
+      g.fill();
+      g.fillStyle = dry ? '#7a5a22' : '#f2d65c'; g.fillRect(fx - 0.5, fy - 0.5, 1, 1);
+    }
+  } else if (kind <= 3 && !dry) {
+    // clover: a few round leaves, a little lighter than the grass
+    g.globalAlpha = 0.55; g.fillStyle = '#42702f';
+    const cx = x + at(6, 16), cy = y + at(11, 16);
+    g.beginPath();
+    for (let i = 0; i < 5; i++) { const lx = cx + ((h >>> (i * 3)) % 9) - 4, ly = cy + ((h >>> (i * 3 + 2)) % 7) - 3; g.moveTo(lx + 2, ly); g.arc(lx, ly, 2, 0, Math.PI * 2); }
+    g.fill();
+  } else if (kind === 4) {
+    // two little stones
+    const sx = x + at(7, 16), sy = y + at(13, 16);
+    g.globalAlpha = 0.8; g.fillStyle = '#5f685e';
+    g.beginPath(); g.ellipse(sx, sy, 2.2, 1.6, 0, 0, Math.PI * 2); g.ellipse(sx + 4, sy + 1.5, 1.5, 1.1, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#8b958a'; g.fillRect(sx - 1, sy - 1, 1.2, 0.8);
+  } else if (kind >= 5) {
+    // a bare spot of earth
+    g.globalAlpha = 0.16; g.fillStyle = '#5a4526';
+    g.beginPath(); g.ellipse(x + at(9, 16), y + at(14, 16), 6 + ((h >>> 20) % 4), 4 + ((h >>> 23) % 3), ((h >>> 17) % 6) / 2, 0, Math.PI * 2); g.fill();
   }
   g.globalAlpha = 1;
 }

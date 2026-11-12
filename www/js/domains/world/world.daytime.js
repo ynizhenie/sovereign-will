@@ -122,6 +122,7 @@ export function getLights() {
 // cut out of it, soft at their edges. (#322) A third of the screen's size, laid over it stretched: its edges
 // are all soft anyway, and a phone filled the whole screen twice over for it every frame
 const SHEET_SCALE = 1 / 3;
+const WARM_LIGHT = '#ffb060'; // (firelight)
 /** @type {HTMLCanvasElement | null} */
 let sheet = null;
 export function drawDarkness() {
@@ -153,9 +154,11 @@ export function drawDarkness() {
   ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
   const viewScale = getViewScale();
   ctx.globalCompositeOperation = 'screen';
+  // (a fire's or a window's light is warm: where the dark is cut away the ground and those in it take a little of its colour,
+  // more the darker the night; a light with a colour of its own glows in that, as before)
+  const warm = dark / (config().darkness || 1);
   for (const light of lights) {
-    if (!light.color) continue;
-    const match = /^#([\da-f]{6})$/i.exec(light.color);
+    const match = /^#([\da-f]{6})$/i.exec(light.color || WARM_LIGHT);
     if (!match) continue;
     const value = Number.parseInt(match[1], 16);
     const color = `${value >> 16}, ${(value >> 8) & 255}, ${value & 255}`;
@@ -164,8 +167,9 @@ export function drawDarkness() {
     const r = light.r * viewScale * flicker;
     if (x < -r || y < -r || x > canvas.width + r || y > canvas.height + r) continue;
     const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-    glow.addColorStop(0, `rgba(${color}, 0.24)`);
-    glow.addColorStop(0.55, `rgba(${color}, 0.12)`);
+    const strength = light.color ? 1 : warm;
+    glow.addColorStop(0, `rgba(${color}, ${0.24 * strength})`);
+    glow.addColorStop(0.55, `rgba(${color}, ${0.12 * strength})`);
     glow.addColorStop(1, `rgba(${color}, 0)`);
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
