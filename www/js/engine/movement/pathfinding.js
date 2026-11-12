@@ -556,7 +556,8 @@ const ENEMY_MAX_NODES = 3000;
 function findSettlerPathThrough(startG, endG, targetX, targetY, allowBattleBorder = false) {
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) && !isRed(gx, gy),
-    blocksDiagonalCorner: (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) || isRed(gx, gy),
+    // (in a battle no squeezing diagonally past the red side's buildings; in a raid's camp that shut raiders in)
+    blocksDiagonalCorner: game.gameMode === 'battle' ? (gx, gy) => isTileBlockedForSettler(gx, gy, allowBattleBorder) || isRed(gx, gy) : undefined,
     allowCornerCutting: false,
     isBlockedPath: true,
     extraCost: (x, y) => (flagsAt(x, y) & RED ? ENEMY_PATH_COST.building : 0),

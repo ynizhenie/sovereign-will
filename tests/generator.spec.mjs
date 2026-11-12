@@ -17,8 +17,9 @@ test('the generator exposes the ore and regrowth settings a continent uses (#20;
     const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
     const labelled = fields.every(f => f.querySelector('span').textContent && !f.querySelector('span').textContent.startsWith('gen.'));
     const covered = keys.every(k => document.querySelector(`#generator-fields input[data-key="${k}"]`));
+    // (not offered: the config keeps them at none, for the Plague to set, see map.js)
     const smallBiomes = ['savannas', 'savannaRadiusX', 'savannaRadiusY'].some(k =>
-      k in GAME_CONFIG.map || !!document.querySelector(`#generator-fields input[data-key="${k}"]`));
+      !!document.querySelector(`#generator-fields input[data-key="${k}"]`));
     return { fields: fields.length, keys, labelled, covered, lakes: !!document.querySelector('#generator-fields input[data-key="lakes"]'),
       sections: document.querySelectorAll('#generator-fields h2').length, smallBiomes };
   });

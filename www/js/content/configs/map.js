@@ -84,7 +84,10 @@ export const mapConfig = {
     desertCactus: { min: 4, max: 8 },
     desertPebbles: { min: 3, max: 7 },
 
-    // (savannas: none on these maps; the Plague mode sets its own, see PLAGUE_MAP_SETTINGS)
+    // Internal small-map terrain settings; the Plague mode enables savannas.
+    savannas: { min: 0, max: 0 },
+    savannaRadiusX: { min: 3, max: 5 },
+    savannaRadiusY: { min: 2, max: 4 },
 
     // forests: centres placed apart; each gets forestTrees trees within forestRadius tiles
     forests: { min: 3, max: 5 },

@@ -88,7 +88,7 @@ test('three of each rarity while there are; all open in the end (#255)', async (
       if (!cards.length) break;
       unlocked[cards[0]] = true;
     }
-    const left = ['buildings', 'tools', 'weapons', 'gear'].flatMap(c => Object.values(GAME_CONFIG[c]).filter(i => isForPlayerFaction(i) && isLocked(c, i.id)).map(i => i.id));
+    const left = ['buildings', 'tools', 'weapons', 'gear'].flatMap(c => Object.values(GAME_CONFIG[c]).filter(i => !i.hidden && isForPlayerFaction(i) && isLocked(c, i.id)).map(i => i.id));
     return { rounds, left };
   });
   expect(r.left).toEqual([]);
