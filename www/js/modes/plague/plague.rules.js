@@ -269,7 +269,10 @@ function applyPlagueMapSettings() {
     GAME_CONFIG.map[key] = value;
   }
   return () => {
-    for (const [key, value] of Object.entries(previous)) GAME_CONFIG.map[key] = value;
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete GAME_CONFIG.map[key]; // (one the map doesn't have, as savannas)
+      else GAME_CONFIG.map[key] = value;
+    }
   };
 }
 

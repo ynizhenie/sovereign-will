@@ -1,7 +1,7 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, onceThisTick, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, firstOf, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isArrowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
@@ -22,7 +22,7 @@ function threatsThisTick(tick) {
   if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
     const inside = new Set(game.enemies.filter(isInsideBase));
     const marching = !game.wavePreparation || game.wavePreparation.stage === 'march';
-    const list = game.enemies.filter(en => !isCampGuardUnavailable(en) &&
+    const list = game.enemies.filter(en => !en.ghostly && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
       (game.gameMode === 'battle' || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
     tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
   }

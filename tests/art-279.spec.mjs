@@ -30,7 +30,7 @@ test('each weapon strikes its own way, a big one wider; work has its own (#279, 
   expect(r.punch).toBeGreaterThan(5);
   expect(r.demonClaw).toBeGreaterThan(r.undeadSwipe);
   expect(r.build.angle).toBeLessThan(0);
-  expect(r.pick.push).toBeGreaterThanOrEqual(6);
+  expect(r.pick.push).toBeLessThanOrEqual(0); // (picking up: the hands kept in close, #406)
   expect(r.daggerBow).toEqual(r.daggerCrossbow);
   expect(r.daggerBow.angle).toBe(r.butcher.angle);
   expect(r.daggerBow.push).toBe(r.butcher.push);

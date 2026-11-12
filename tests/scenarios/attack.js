@@ -203,6 +203,11 @@ Object.assign(window.sim, (() => {
   }
 
   async function enemyBuildingBreakSound({ seed = 'enemy-building-break-sound' } = {}) {
+    // (the sound woken first: while it's awaited the game runs on, and an enemy already there struck the
+    // wall off the screen, its next blow not due by the tick below)
+    const { audio, startAudio } = await import('/js/engine/platform/audio.js');
+    startAudio();
+    if (audio.ctx?.state === 'suspended') await audio.ctx.resume();
     start(seed);
     clearResources();
     const wall = { type: 'wall_wood', x: townHall.x + 180, y: townHall.y, hp: 1000, maxHp: 1000 };
@@ -211,11 +216,9 @@ Object.assign(window.sim, (() => {
     enemy.speed = 0;
     enemy.isBlockedPath = true;
     enemies = [enemy];
-    const { audio, startAudio } = await import('/js/engine/platform/audio.js');
-    startAudio();
-    if (audio.ctx?.state === 'suspended') await audio.ctx.resume();
     audio.soundOn = true;
     audio.last.swing = -Infinity;
+    camera.x = wall.x; camera.y = wall.y; // (a sound off the screen isn't played)
     tickEnemy(enemy, 1 / 60);
     return { buildingDamaged: wall.hp < wall.maxHp, soundPlayed: Number.isFinite(audio.last.swing) };
   }

@@ -324,6 +324,8 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
     const playerPath = findPathAStar(start.x, start.y, finish.x, finish.y);
     const enemyPath = findPathAStar(start.x, start.y, finish.x, finish.y, true);
     const before = walls.length;
+    // (looked at before the taps below: the second one puts a wall on the open floor)
+    const lineupCleared = battle.lineup.length === 0 && settlers.length === 0 && enemies.length === 0;
     const wallKeys = new Set(walls.map(building => `${getGridPos(building.x, building.y).gx},${getGridPos(building.x, building.y).gy}`));
     const crossings = Array.from({ length: 6 }, (_, row) => 2 + row * 4)
       .filter(y => !wallKeys.has(`20,${y}`) && !wallKeys.has(`21,${y}`) && !wallKeys.has(`20,${y + 1}`) && !wallKeys.has(`21,${y + 1}`)).length;
@@ -337,7 +339,7 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
     battleTap(start.x, start.y);
     return {
       field: battle.field,
-      lineupCleared: battle.lineup.length === 0 && settlers.length === 0 && enemies.length === 0,
+      lineupCleared,
       savedChoice: loadData('battle-choices', null)?.field,
       walls: before,
       wallsAfterReset: buildings.filter(building => building.battleMazeWall).length,

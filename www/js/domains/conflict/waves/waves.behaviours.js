@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { isRangedWeapon } from '../../colony/equipment/index.js';
-import { TILE_SIZE, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, firstOf, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
 import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';

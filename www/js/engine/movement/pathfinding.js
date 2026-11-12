@@ -187,13 +187,14 @@ function tileFlags(gx, gy) {
   const memo = enemyMemo(), i = gy * game.COLS + gx;
   if (memo.flags[i] === -1) {
     const tiles = getTileIndex(), k = `${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`;
-    memo.flags[i] = (tiles.buildings.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k) ? BUILDING : 0) | // (traps unseen, #248; its own doors walked through)
+    memo.flags[i] = (tiles.buildings.has(k) && !tiles.battleMazeWalls.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k) ? BUILDING : 0) | // (traps unseen, #248; its own doors walked through)
       (tiles.trees.has(k) || tiles.boulders.has(k) ? NATURE : 0) | (tiles.spikes.has(k) ? SPIKES : 0) |
       (tiles.redBuildings.has(k) || tiles.redDoors.has(k) ? RED : 0);
   }
   return memo.flags[i];
 }
 const flagsAt = (x, y) => tileFlags((x - 15) / TILE_SIZE, (y - 15) / TILE_SIZE); // (a tile's centre)
+const isRed = (gx, gy) => (tileFlags(gx, gy) & RED) !== 0;
 
 export function isTileBlockedForEnemyStrict(gx, gy, allowBattleBorder = false) {
   if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) return true;
@@ -447,17 +448,16 @@ export function findPathAStarPermissive(startX, startY, targetX, targetY, nature
   const endG = getGridPos(targetX, targetY);
   endG.gx = Math.max(0, Math.min(game.COLS - 1, endG.gx));
   endG.gy = Math.max(0, Math.min(game.ROWS - 1, endG.gy));
-  const tiles = getTileIndex();
-  const isBuilding = k => tiles.buildings.has(k) && !tiles.battleMazeWalls.has(k) && !tiles.spikes.has(k) && !tiles.traps.has(k) && !tiles.redDoors.has(k); // (traps unseen, #248; its own doors walked through)
-  const isBreakable = k => tiles.trees.has(k) || tiles.boulders.has(k) || isBuilding(k);
   const PATH_COST = ENEMY_PATH_COST;
+  // what a tile costs on top of walking it: a building is broken through rather than walked a long way
+  // round (to a far door), spikes are walked over, trees and boulders mostly walked round
+  const costOf = flags => (flags & BUILDING ? PATH_COST.building : flags & NATURE ? PATH_COST.nature : flags & SPIKES ? PATH_COST.spikes : 0);
   const isBlocked = natureBlocks
-      ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) ||
-        tiles.trees.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`) || tiles.boulders.has(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`)
-      : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy);
+    ? (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy) || (tileFlags(gx, gy) & NATURE) !== 0
+    : (gx, gy) => isTileBlockedForEnemyPermissive(gx, gy, allowBattleBorder) || extraBlocked?.(gx, gy);
   const result = findGridPath(startG, endG, targetX, targetY, {
     isBlocked,
-    blocksDiagonalCorner: (gx, gy) => isBlocked(gx, gy) || isBuilding(`${gx * TILE_SIZE + 15},${gy * TILE_SIZE + 15}`),
+    blocksDiagonalCorner: (gx, gy) => isBlocked(gx, gy) || (tileFlags(gx, gy) & BUILDING) !== 0,
     // no squeezing diagonally between two rocks
     allowCornerCutting: false,
     isBlockedPath: true,

@@ -2,7 +2,7 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, getGridPos, getTileIndex, isDoor, onceThisTick, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
+import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
