@@ -168,7 +168,10 @@ test('a hellhound eats a corpse by itself when hungry (#314)', async ({ page }) 
     spawnSettler('beast');
     const beast = settlers.find(s => s.type === 'beast');
     beast.petHunger = 1; foodMix = {}; stock.food = 0; stock.rawMeat = 0; stock.cookedMeat = 0; stock.rawFish = 0; stock.cookedFish = 0; stock.bread = 0; stock.berries = 0; stock.apples = 0; // (none at all: a settler would feed it first)
-    const corpse = { x: beast.x + 70, y: beast.y + 10, age: 0, kind: 'raider', side: 'enemy' };
+    // (the corpse lies away from the hall, on the beast's side of it: where the beast comes out depends on which cell by the
+    // hall is free at that moment, and 70 px to its right was sometimes inside the hall, where it can't get)
+    const away = Math.atan2(beast.y - townHall.y, beast.x - townHall.x);
+    const corpse = { x: beast.x + Math.cos(away) * 70, y: beast.y + Math.sin(away) * 70, age: 0, kind: 'raider', side: 'enemy' };
     corpses = [corpse];
     for (let f = 0; f < 60 * 15 && corpses.includes(corpse); f++) update(1 / 60);
     return { eaten: !corpses.includes(corpse), fed: beast.petHunger < 1, units: getPlayerFaction().units };
