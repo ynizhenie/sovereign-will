@@ -1,7 +1,7 @@
 // The main menu's screens: home, settings (language, frame rate, FPS counter, sound, music), and the opening
 
 import { LANGUAGES } from '../../content/language/index.js';
-import { audio, currentLanguage, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
+import { audio, currentLanguage, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, previewTrack, setTrackOn } from '../../app/index.js';
 import { flagHtml, iconHtml } from '../../ui/index.js';
 import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
@@ -128,6 +128,14 @@ export function initMenuScreens() {
     saveSetting('vsync', button.dataset.vsync);
     markVsync(button.dataset.vsync);
     document.getElementById('vsync-note').hidden = (button.dataset.vsync === 'on') === VSYNC;
+  }));
+  // a trial: the ground and nature drawn by the graphics card (remembered, used from the next start)
+  const markGl = value => document.querySelectorAll('[data-gl]').forEach(b => b.classList.toggle('active', b.dataset.gl === value));
+  markGl(GL ? 'on' : 'off');
+  document.querySelectorAll('[data-gl]').forEach(button => onTap(button, () => {
+    saveSetting('gl', button.dataset.gl);
+    markGl(button.dataset.gl);
+    document.getElementById('gl-note').hidden = (button.dataset.gl === 'on') === GL;
   }));
   applyShowFps(loadSetting('showFps', 'off'));
   showFpsOptions.forEach(button => onTap(button, () => {

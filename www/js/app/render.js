@@ -1,13 +1,13 @@
 // One frame: the ground, then everything on it, layer by layer, then the marks over it
 
-import { game, getTileIndex } from '../engine/world/index.js';
-import { camera, canvas, ctx, getViewRect, getViewScale } from '../engine/platform/index.js';
+import { TILE_SIZE, forEachInRect, game, getTileIndex, townHall } from '../engine/world/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale, glBeginFrame, glCamera, glEndFrame, glReady } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
 import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlerShadows, drawSettlers } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
-import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
+import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatureOnCard, treesToDrawOver, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
@@ -25,11 +25,15 @@ export function render() {
     game.loadingRenderFrame = (game.loadingRenderFrame || 0) + 1;
   }
   // (#326) past the map's edge: the fog's own dark
-  ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // (the ground on the graphics card's canvas under this one: this one clear to begin with, see engine/platform/gl.js)
+  const onCard = glReady();
+  if (onCard) { glBeginFrame(canvas.width, canvas.height); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  else { ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
   ctx.save();
   const viewScale = getViewScale();
   ctx.translate(canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale);
   ctx.scale(viewScale, viewScale);
+  if (onCard) { glCamera(viewScale, canvas.width / 2 - camera.x * viewScale, canvas.height / 2 - camera.y * viewScale); keepNatureOnCard(); }
   if (isContinentMap()) {
     const transform = ctx.getTransform();
     // Keep the clip edge on screen pixels; fractional edges leave a resampling fringe outside the map.
@@ -92,6 +96,7 @@ export function render() {
   endShadowFrame();
 
   ctx.restore();
+  if (onCard) glEndFrame();
   drawDarkness(); // (night, with its lights, #257)
   drawWeatherScreen(); // (rain, lightning, #308)
 
@@ -115,8 +120,12 @@ export function drawDepthSorted(items) {
 }
 
 function drawDepthSortedScene() {
-  const trees = depthSortedTrees();
-  if (!trees.length) {
+  // With the trial on, the trees' pictures are kept on the graphics card's canvas (under this one). Here only the trees
+  // that something stands by or behind (a unit, a building) are drawn, in their turn by depth, over their kept picture: so
+  // that they cover what's behind them and are covered by what's in front. `near`: the tiles such trees stand on
+  const onCard = glReady();
+  const trees = onCard ? null : depthSortedTrees();
+  if (trees && !trees.length) {
     drawBoars();
     drawSettlers();
     drawEnemies();
@@ -130,17 +139,30 @@ function drawDepthSortedScene() {
     else { item.depth = depth; item.order = order; item.actor = actor; item.draw = draw; }
     count++;
   };
-  for (const tree of trees) add(tree, tree.y + 13, 0, drawDepthTree);
+  /** @type {Set<number> | null} */
+  const near = onCard ? new Set() : null;
+  const T = TILE_SIZE, SPAN = 4096;
+  const markNear = o => {
+    const gx = Math.floor(o.x / T), gy = Math.floor(o.y / T);
+    for (let dy = -1; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (gx + dx >= 0 && gy + dy >= 0) /** @type {Set<number>} */ (near).add((gy + dy) * SPAN + gx + dx);
+  };
   const addActors = (list, offset, order, draw) => {
     for (const actor of list) {
       if (actor.x < view.x0 || actor.x > view.x1 || actor.y < view.y0 || actor.y > view.y1) continue;
       add(actor, actor.y + offset(actor), order, draw);
+      if (near) markNear(actor);
     }
   };
   addActors(game.boars, () => 9, 1, boar => drawBoars(boar));
   addActors(game.settlers, settler => (settler.visualRadius || settler.radius || 11) * 0.95, 2, settler => drawSettlers(settler));
   addActors(game.enemies, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
   addActors(game.scouts, enemy => (enemy.visualRadius || enemy.radius || 11) * 0.95, 3, enemy => drawEnemies(enemy));
+  if (near) {
+    forEachInRect(game.buildings, view.x0, view.y0, view.x1, view.y1, markNear);
+    for (const list of [game.blueprints, game.enemyTents, game.corpses, game.loot, game.piles]) for (const o of list) if (o.x >= view.x0 && o.x <= view.x1 && o.y >= view.y0 && o.y <= view.y1) markNear(o);
+    markNear(townHall); markNear({ x: townHall.x - T, y: townHall.y - T }); markNear({ x: townHall.x + T, y: townHall.y + T });
+  }
+  for (const tree of near ? treesToDrawOver(near, SPAN, view) : /** @type {any[]} */ (trees)) add(tree, tree.y + 13, 0, drawDepthTree);
   sceneItems.length = count;
   sceneItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
   for (const item of sceneItems) item.draw(item.actor);
