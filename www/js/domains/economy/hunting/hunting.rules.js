@@ -105,11 +105,20 @@ function keepInZone(boar, x, y) {
   boar.targetX = x; boar.targetY = y;
 }
 
+const MANY_BOARS = 100;
+/** @type {{ boars: any[] | null, length: number, tick: number, count: number }} */
+let baseBoars = { boars: null, length: -1, tick: 0, count: 0 };
+
 // A new boar every 25 s while there are fewer than BOAR_LIMIT
 export function tickBoarRespawn(dt) {
   if (hasTerritory()) {
-    const living = game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y));
-    living.forEach(boar => { boar.inBase = true; });
+    // (#322) with a great many boars on a big map, those on the base's land are counted every half a second, not every tick
+    const many = game.boars.length >= MANY_BOARS;
+    if (!many || baseBoars.boars !== game.boars || baseBoars.length !== game.boars.length || game.pathTick < baseBoars.tick || game.pathTick - baseBoars.tick >= 30) {
+      const living = game.boars.filter(boar => !boar.isCarcass && inTerritory(boar.x, boar.y));
+      living.forEach(boar => { boar.inBase = true; });
+      baseBoars = { boars: game.boars, length: game.boars.length, tick: game.pathTick, count: living.length };
+    }
     if (game.territoryBoarRespawnsPending > 0) {
       game.boarRespawnTimer -= dt;
       if (game.boarRespawnTimer <= 0) {
@@ -120,7 +129,7 @@ export function tickBoarRespawn(dt) {
       }
       return;
     }
-    if (living.length >= startingBoarCount()) {
+    if (baseBoars.count >= startingBoarCount()) {
       game.boarRespawnTimer = 25;
       return;
     }

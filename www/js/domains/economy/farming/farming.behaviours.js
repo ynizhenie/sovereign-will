@@ -8,7 +8,7 @@ import { hasToolFamily } from '../../colony/equipment/index.js';
 import { canAfford, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../building/index.js';
 import { isWaterReachable } from '../../world/index.js';
-import { getMapResourceDef, harvest, isFreeHands, pickApplesFrom } from '../gathering/index.js';
+import { getMapResourceDef, harvest, isFreeHands, pickApplesFrom, appleTreesAmong } from '../gathering/index.js';
 import { makeAppleTree } from './farming.rules.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { faceTowards } from '../../colony/settlers/index.js';
@@ -28,7 +28,7 @@ export function pickApples(s, tick) {
   if (handsOnly && freeHandsOnce(() => game.settlers.some(isFreeHands))) return false;
   if (s.carrying && !hasRoomToCarry(s)) return false;
   // (#322) the marked trees, worked out once for all the workers
-  const candidates = appleCandidatesOnce(() => game.trees.filter(t => t.apple && t.applesReady && t.markIntent === 'apples' && t.priority > 0));
+  const candidates = appleCandidatesOnce(() => appleTreesAmong().filter(t => t.apple && t.applesReady && t.markIntent === 'apples' && t.priority > 0));
   if (!candidates.length) return false; // (no walking distances to work out then either)
   const reach = getSettlerReach(s);
   let target = null, best = Infinity;

@@ -281,9 +281,13 @@ test('a tap on the town hall opens its card with the hiring; a damaged building\
   await expect(page.locator('#card-title')).toContainText('Ратуша');
   const settlers0 = await page.evaluate(() => settlers.length);
   await page.click('#btn-hire-normal');
-  expect(await page.evaluate(() => settlers.length)).toBe(settlers0 + 1);
+  // (if nobody was hired, the failure says what the game answered)
+  const hired = await page.evaluate(() => ({ count: settlers.length, said: document.getElementById('toast-notification').textContent }));
+  expect(hired.count, `the game said: "${hired.said}"`).toBe(settlers0 + 1);
   // a damaged wall: its card, its repair
   await page.evaluate(() => {
+    // (nobody stands where the wall goes: a tap there would pick the settler, not the wall)
+    for (const s of settlers) { s.x = townHall.x - 150; s.y = townHall.y; }
     const wall = window.sim.helpers.placeBuilding('wall_wood', townHall.x + 120 + 15 - ((townHall.x + 120) % 30), townHall.y + 15 - (townHall.y % 30));
     wall.hp = wall.maxHp / 2;
     mouse.x = wall.x; mouse.y = wall.y; handleCanvasClick(); updateUI();

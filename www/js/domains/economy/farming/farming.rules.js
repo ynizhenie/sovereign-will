@@ -3,6 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { game, isWithinTownHallBuffer, markTilesChanged } from '../../../engine/world/index.js';
+import { growingTrees, markTreesChanged } from '../gathering/index.js';
 import { isDesertTile, isSavannaTile, tileVariantHash, rainLevel } from '../../world/index.js';
 import { showNotification } from '../../../ui/index.js';
 
@@ -47,6 +48,7 @@ export function makeAppleTree(tree) {
   tree.apple = true;
   tree.appleGrowth = 0;
   tree.applesReady = false;
+  markTreesChanged();
   return tree;
 }
 
@@ -57,7 +59,7 @@ export function growCrops(dt) {
     if (f.growth < 100) f.growth += dt * (100 / GAME_CONFIG.farming.growSeconds) * (wet ? GAME_CONFIG.gear.wateringCan.growthFactor : 1); // (#306: slower)
   });
 
-  game.trees.forEach(t => {
+  growingTrees().forEach(t => {
     if (t.isGrowing) {
       t.growProgress = (t.growProgress || 0) + dt * (t.watered ? GAME_CONFIG.gear.wateringCan.growthFactor : 1);
       if (t.growProgress >= 20) {

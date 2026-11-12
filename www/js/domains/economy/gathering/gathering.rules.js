@@ -1,7 +1,7 @@
 // Resources on the map: which can be gathered, adding one, what a finished one gives, and growing back
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, forEachInRect, game, rand } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, rand, worldEpoch } from '../../../engine/world/index.js';
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
 import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inEnemyTerritory, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
@@ -87,6 +87,7 @@ export function finishHarvest(settler, resource, kind) {
   const two = def.fellInTwo;
   if (two && !resource.fallen) {
     Object.assign(resource, { fallen: true, fallAt: game.pathTick, fallAngle: Math.atan2(resource.y - settler.y, resource.x - settler.x), applesReady: false });
+    markTreesChanged();
     resource.hp = def.hp * two.logHp;
     resource.maxHp = def.hp * two.logHp; // (the lying log has its own bar, from empty: a little of it to cut up)
     resource.harvestProgress = 0;
@@ -249,3 +250,25 @@ export function respawnOre(kind, sourceX = undefined, sourceY = undefined) {
   invalidateAllPaths();
   return true;
 }
+
+// (#322) The trees that have something going on, on a big map: those growing (a sapling, an apple tree's apples) and the apple
+// trees. Every tree of the map was gone through each tick to grow the few that grow, and twice more to find the apple trees to
+// pick: tens of thousands on a big continent. The two lists are made again when a tree comes or goes, when one's state is
+// changed (markTreesChanged: apples picked, a tree felled, one made an apple tree), and every couple of seconds anyway, for
+// anything that changed a tree by itself. A map with few trees is gone through as ever
+const FEW_TREES = 2000, LOOK_AGAIN_TICKS = 120;
+/** @type {{ list: any[], length: number, first: any, last: any, world: number, tick: number, growing: any[], apples: any[] } | null} */
+let keptTrees = null;
+export function markTreesChanged() { keptTrees = null; }
+function treeLists() {
+  const trees = game.trees, k = keptTrees;
+  if (k && k.list === trees && k.length === trees.length && k.first === trees[0] && k.last === trees[trees.length - 1] && k.world === worldEpoch() &&
+    game.pathTick >= k.tick && game.pathTick - k.tick < LOOK_AGAIN_TICKS) return k;
+  keptTrees = { list: trees, length: trees.length, first: trees[0], last: trees[trees.length - 1], world: worldEpoch(), tick: game.pathTick,
+    growing: trees.filter(t => t.isGrowing || (t.apple && !t.applesReady)), apples: trees.filter(t => t.apple) };
+  return keptTrees;
+}
+// the trees that may be growing now (all of them on a map with few)
+export const growingTrees = () => (game.trees.length < FEW_TREES ? game.trees : treeLists().growing);
+// the apple trees (among all the trees, on a map with few: check `apple` yourself)
+export const appleTreesAmong = () => (game.trees.length < FEW_TREES ? game.trees : treeLists().apples);
