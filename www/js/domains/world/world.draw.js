@@ -594,6 +594,38 @@ function edgeBand(G, x, y, open, which, rgb, a, width, inside, occupiedCorners =
   }
 }
 
+// A mass of tiles' edge made uneven, so it reads as drifted sand or a lapping shore and not as a stair of squares. Added
+// to the path G is building (the caller fills it once, in the mass's colour: shapes filled one by one showed where they
+// overlapped), for the tile at (x, y) and its sides in `which`:
+// - along each side three low tongues lying out over what's beside it, each of its own length, depth and place;
+// - where the side has no neighbour of the kind but the diagonal past it has, the inner corner between the two filled
+//   with a fillet curved in towards the corner: every step of a stair has one, so a diagonal edge reads as one slope.
+// All by the tile's hash, and no further out than half a tile: the piece of the ground beside this one adds the same shapes
+// from the same tiles. What's painted after (water over sand, rock over both) lies over them
+// (`fillets`: the corners' fillets and not the tongues: the two go into paths of their own, filled one after the other.
+// In one path a fillet, drawn the other way round, cut itself out of the tongues it lay over)
+function unevenEdge(G, x, y, open, which, fillets, grow = 0) {
+  const hsh = tileVariantHash(x + 7, y + 3), H = TILE_SIZE / 2;
+  if (!fillets) ['n', 's', 'w', 'e'].forEach((side, n) => {
+    if (!which[side]) return;
+    const along = side === 'n' || side === 's', sign = side === 'n' || side === 'w' ? -1 : 1;
+    for (let k = 0; k < 3; k++) {
+      const v = hsh >>> (n * 5 + k * 4);
+      // (a tongue ends by the tile's corner, or it stuck out past it as a spike; `grow`: the same tongue a little bigger, for a rim round it)
+      const at = -12 + k * 9 + (v % 7), long = Math.min(7 + ((v >>> 5) % 7), H + 2 - Math.abs(at)) + grow, deep = 2.5 + ((v >>> 8) % 5) + grow;
+      const cx = along ? x + at : x + sign * H, cy = along ? y + sign * H : y + at;
+      G.moveTo(cx + (along ? long : deep), cy);
+      G.ellipse(cx, cy, along ? long : deep, along ? deep : long, 0, 0, Math.PI * 2);
+    }
+  });
+  else [{ dx: -1, dy: -1, side: 'w', diagonal: 'nw' }, { dx: 1, dy: -1, side: 'e', diagonal: 'ne' }, { dx: 1, dy: 1, side: 'e', diagonal: 'se' }, { dx: -1, dy: 1, side: 'w', diagonal: 'sw' }].forEach(({ dx, dy, side, diagonal }, n) => {
+    if (!which[side] || open[diagonal]) return;
+    // (well past the tongues along the two sides, or it's lost under them)
+    const r = 17 + ((hsh >>> (n * 4 + 3)) % 6), px = x + dx * H, py = y + dy * H;
+    G.moveTo(px - dx, py + dy); G.lineTo(px + dx * r, py + dy); G.quadraticCurveTo(px + dx * r * 0.42, py - dy * r * 0.42, px - dx, py - dy * r); G.closePath();
+  });
+}
+
 // The sand tiles (desert and beach) as keys, worked out again when there are more or fewer of them
 /** @type {{ n: number, desert: typeof game.desertTiles | null, beach: typeof game.beachTiles | null, keys: Set<string> }} */
 let sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
@@ -605,35 +637,34 @@ function getSandKeys() {
   return sandKeys.keys;
 }
 
-export function drawWaterTile(w, tiles) {
+// Which of a water tile's sides have land past them (not rock: the water's deep there)
+function shoreSides(w, tiles, open) {
+  const land = side => open[side] && !tiles.rockAndOre.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
+  return { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
+}
+
+// Foam where the water laps the land: the tile's tongues (see unevenEdge) a little bigger and light, laid down before the
+// water itself, so that only a rim of each shows from under it. A piece of the ground lays down all its tiles' foam first
+// and then the tiles: a tile's foam over its neighbour's water, painted before it, left little hooks at the corners
+function drawShoreFoam(w, tiles) {
+  const G = target || ctx, open = openSides(tiles.water, w.x, w.y), shore = shoreSides(w, tiles, open);
+  if (!shore.n && !shore.s && !shore.w && !shore.e) return;
+  G.beginPath(); unevenEdge(G, w.x, w.y, open, shore, false, 1.4); G.fillStyle = 'rgba(226, 244, 252, 0.6)'; G.fill('nonzero');
+}
+
+export function drawWaterTile(w, tiles, foam = true) {
   const G = target || ctx;
   const h = tileVariantHash(w.x, w.y);
   const open = openSides(tiles.water, w.x, w.y);
   const occupiedCorners = terrainCornerOccupancy(w.x, w.y, tiles);
+  const shore = shoreSides(w, tiles, open);
+  if (foam) drawShoreFoam(w, tiles);
   drawJoinedTile(w.x, w.y, open, '#2c83bd', WATER_SHADES[0], false, occupiedCorners);
-  const land = side => open[side] && !tiles.rockAndOre.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
-  const shore = { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
   edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.24, 8, true, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '44, 131, 189', 0.16, 7, false, occupiedCorners);
-  // foam along the shore: a couple of short light strokes a little way in from the land, each bowed towards the water, at
-  // places of the tile's own (not by rock: the water's deep there)
-  G.strokeStyle = 'rgba(228, 245, 252, 0.34)'; G.lineWidth = 1.1; G.lineCap = 'round';
-  G.beginPath();
-  const HALF = TILE_SIZE / 2;
-  ['n', 's', 'w', 'e'].forEach((side, n) => {
-    if (!shore[side]) return;
-    for (let k = 0; k < 2; k++) {
-      const v = h >>> (n * 5 + k * 3), len = 5 + (v % 5), from = -HALF + 3 + k * 13 + (v >>> 3) % 4, inset = 3 + (v >>> 5) % 3;
-      // (along the side from `from`, `inset` in from the edge; the middle a little further in)
-      const along = side === 'n' || side === 's', sign = side === 'n' || side === 'w' ? 1 : -1;
-      const edge = -sign * HALF + sign * inset;
-      const p = (t, bow) => (along ? [w.x + from + len * t, w.y + edge + sign * bow] : [w.x + edge + sign * bow, w.y + from + len * t]);
-      const [x0, y0] = p(0, 0), [cx, cy] = p(0.5, 1.6), [x1, y1] = p(1, 0);
-      G.moveTo(x0, y0); G.quadraticCurveTo(cx, cy, x1, y1);
-    }
-  });
-  G.stroke();
-  G.lineCap = 'butt';
+  // (the water lapping over the land's edge)
+  G.fillStyle = WATER_SHADES[0];
+  for (const fillets of [true, false]) { G.beginPath(); unevenEdge(G, w.x, w.y, open, shore, fillets); G.fill('nonzero'); }
   // a short light ripple on some tiles
   if (h % 3 === 0) {
     G.strokeStyle = 'rgba(255, 255, 255, 0.18)'; G.lineWidth = 1.5;
@@ -744,6 +775,30 @@ export function paintSandGround(g, x0, y0, x1, y1) {
     const open = openSides(keys, t.x, t.y);
     edgeBand(g, t.x, t.y, open, open, rgb, 0.8, 7, false, terrainCornerOccupancy(t.x, t.y, terrain));
   }
+  // wet sand by the water: a darker band fading up the beach from each side the water's on (a tile's own width exactly:
+  // bands a hair over each other showed as a line a tile)
+  for (const t of tiles) {
+    const x = t.x - 15, y = t.y - 15, T = TILE_SIZE, W = 15;
+    const band = (on, gx0, gy0, gx1, gy1, rx, ry, rw, rh) => {
+      if (!on) return;
+      const grad = g.createLinearGradient(gx0, gy0, gx1, gy1);
+      grad.addColorStop(0, 'rgba(104, 78, 44, 0.42)'); grad.addColorStop(1, 'rgba(104, 78, 44, 0)');
+      g.fillStyle = grad; g.fillRect(rx, ry, rw, rh);
+    };
+    band(terrain.water.has(`${t.x},${t.y - T}`), x, y, x, y + W, x, y, T, W);
+    band(terrain.water.has(`${t.x},${t.y + T}`), x, y + T, x, y + T - W, x, y + T - W, T, W);
+    band(terrain.water.has(`${t.x - T},${t.y}`), x, y, x + W, y, x, y, W, T);
+    band(terrain.water.has(`${t.x + T},${t.y}`), x + T, y, x + T - W, y, x + T - W, y, W, T);
+  }
+  // and its edge isn't a ruler's: tongues of sand lie out over the grass along every open side (see edgeTongues)
+  const edge = tiles.map(t => ({ t, open: openSides(keys, t.x, t.y) })).filter(({ open }) => open.n || open.s || open.w || open.e);
+  g.fillStyle = SAND_BASE;
+  for (const fillets of [true, false]) {
+    g.beginPath();
+    for (const { t, open } of edge) unevenEdge(g, t.x, t.y, open, open, fillets);
+    g.fill('nonzero');
+  }
+  g.globalAlpha = 1;
 }
 
 // Rock with ore veins, shared by ore tiles and ore spawners so they read as the same material.
@@ -850,7 +905,7 @@ function terrainStamp(cx, cy) {
 // big screen zoomed out, a frame's pictures of the ground were more than the browser takes in one go, and it stopped to draw
 // what it had so far at every piece after that)
 // (#322) and the part of a piece its sand, water and rock reach: a few rocks in a meadow had a whole piece's picture, clear but for them
-const TERRAIN_REACH = TILE_SIZE / 2 + 12; // (from a tile's centre: its square, and the band its edge fades into the grass with)
+const TERRAIN_REACH = TILE_SIZE / 2 + 24; // (from a tile's centre: its square, and what lies out past its edge: the band fading into the grass, the tongues, a corner's fillet)
 terrainStamp.bounds = (cx, cy) => { terrainStamp(cx, cy); return terrainStamps.bounds.get(`${cx},${cy}`); };
 const isSea = (cx, cy) => { terrainStamp(cx, cy); return terrainStamps.sea.has(`${cx},${cy}`); };
 grassStamp.empty = isSea;
@@ -870,7 +925,9 @@ function paintTerrain(g, x0, y0, x1, y1) {
   over = Math.max(0.5, 1 / g.getTransform().a); // (#326: a whole pixel over at a small picture's size: no grid of seams)
   try {
     paintSandGround(g, x0, y0, x1, y1);
-    tilesAround(game.waterTiles, x0, y0, x1, y1).forEach(t => drawWaterTile(t, terrain));
+    const water = tilesAround(game.waterTiles, x0, y0, x1, y1);
+    water.forEach(t => drawShoreFoam(t, terrain));
+    water.forEach(t => drawWaterTile(t, terrain, false));
     tilesAround(game.naturalRocks, x0, y0, x1, y1).forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); else drawOreSpawner(r.x, r.y, r.oreSpawner); });
     tilesAround(game.ironOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'iron', 14));
     tilesAround(game.coalOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'coal', 14));
