@@ -2,7 +2,8 @@
 // drawn as often as the frame rate setting allows
 
 import { refreshAffordability, renderConfigHud, syncHudMode, updateUI } from '../ui/index.js';
-import { applyPageTexts, camera, clampCamera, fitCanvasToScreen, loadSetting } from '../engine/platform/index.js';
+import { applyPageTexts, camera, canvas, clampCamera, fitCanvasToScreen, getViewScale, glReady, loadSetting, onTap, saveSetting } from '../engine/platform/index.js';
+import { chunkPaintTotals } from '../domains/world/index.js';
 import { game } from '../engine/world/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
@@ -51,6 +52,8 @@ export function gameLoop(now) {
   loop.lastTime = now;
   let steps = 0;
   const started = performance.now();
+  if (detail.lastFrame) detail.worst = Math.max(detail.worst, now - detail.lastFrame);
+  detail.lastFrame = now;
   // (#322) On a slow device the steps owed are not all made in one frame whatever they cost (that left a frame of many long
   // steps and one drawing, five or six a second): past STEP_BUDGET_MS the frame is drawn, and the game goes a little slow
   // (the rest of what's owed is let go) instead of the screen going slow
@@ -62,10 +65,13 @@ export function gameLoop(now) {
   }
   if (loop.stepTime >= STEP && (steps === MAX_STEPS_PER_FRAME || performance.now() - started >= STEP_BUDGET_MS)) loop.stepTime = 0;
   refreshHud(now);
+  const stepped = performance.now();
+  detail.step += stepped - started;
 
   if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
+    detail.draw += performance.now() - stepped;
     countFrame(now);
   }
 }
@@ -125,14 +131,32 @@ export const fpsCounter = document.getElementById('fps-counter');
 
 export let framesThisSecond = 0, secondStart = 0;
 
+// A tap on the counter opens its detail, for telling what a slow device is slow at: over the last second, what a frame
+// took in the game's steps and in drawing (the page's own work: if these are small and the frames few, it's the graphics
+// card or the browser that can't keep up), the longest wait between two frames, the ground's pieces painted and how long
+// that took, whether the WebGL trial is really on, and the canvas's size and the zoom
+const detail = { on: loadSetting('fpsDetail', 'off') === 'on', step: 0, draw: 0, worst: 0, lastFrame: 0, paints: { count: 0, ms: 0 } };
+
 export function countFrame(now) {
   framesThisSecond++;
   if (now - secondStart >= 1000) {
-    if (!fpsCounter.hidden) fpsCounter.textContent = `${Math.round(framesThisSecond * 1000 / (now - secondStart))} FPS`;
+    if (!fpsCounter.hidden) {
+      let text = `${Math.round(framesThisSecond * 1000 / (now - secondStart))} FPS`;
+      if (detail.on) {
+        const paints = chunkPaintTotals(), n = Math.max(1, framesThisSecond);
+        text += `\nstep ${(detail.step / n).toFixed(1)} draw ${(detail.draw / n).toFixed(1)} worst ${Math.round(detail.worst)} ms`
+          + `\npaints ${paints.count - detail.paints.count} (${Math.round(paints.ms - detail.paints.ms)} ms)`
+          + `\nGL ${glReady() ? 'on' : 'off'} ${canvas.width}x${canvas.height} z${getViewScale().toFixed(2)}`;
+        detail.paints = paints;
+      }
+      fpsCounter.textContent = text;
+    }
+    detail.step = 0; detail.draw = 0; detail.worst = 0;
     framesThisSecond = 0;
     secondStart = now;
   }
 }
+if (fpsCounter) onTap(fpsCounter, () => { detail.on = !detail.on; saveSetting('fpsDetail', detail.on ? 'on' : 'off'); detail.paints = chunkPaintTotals(); });
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initMain() {

@@ -60,6 +60,9 @@ let cacheWorldEpoch = -1;
 // `holes` are uncovered base-ground pieces. `pending` also counts chunks still shown from a light preview.
 const stats = { holes: 0, late: 0, pending: 0, warmReady: 0, warmTotal: 0 };
 export const chunkStats = () => ({ ...stats });
+// how many pieces have been painted since the page opened, and how long that took (the FPS counter's detail, app/main.js)
+const paintTotals = { count: 0, ms: 0 };
+export const chunkPaintTotals = () => ({ ...paintTotals });
 
 // The layer's pictures on the screen at resolution res (canvas pixels per world unit), each painted by
 // paint(g, x0, y0, x1, y1) when it's new or its stamp(cx, cy) changed, laid down on target. keepOld: a piece
@@ -122,7 +125,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
     g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
     paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
-    framePaintMs += performance.now() - startedAt;
+    const took = performance.now() - startedAt;
+    framePaintMs += took; paintTotals.count++; paintTotals.ms += took;
     return { canvas, pad, pw, ph, stamp: now, frame: frameOf, x0, y0, x1, y1 };
   };
   // the screen's pieces first (a changed one repainted before any painting ahead), then the ring round it
@@ -225,6 +229,9 @@ const terrainRes = () => {
 };
 
 function mixGrassColor(from, to, amount) {
+  // (most of the map is all one or all the other: nothing to mix)
+  if (amount <= 0) return from;
+  if (amount >= 1) return to;
   const channel = (color, shift) => parseInt(color.slice(shift, shift + 2), 16);
   const mixed = [1, 3, 5].map(shift => Math.round(channel(from, shift) * (1 - amount) + channel(to, shift) * amount));
   return `#${mixed.map(value => value.toString(16).padStart(2, '0')).join('')}`;
@@ -233,6 +240,7 @@ function mixGrassColor(from, to, amount) {
 let savannaWeightEpoch = -1;
 let savannaWeightSignature = '';
 const savannaWeightCache = new Map();
+let savannaNear = new Uint8Array(0);
 
 function savannaWeightAt(x, y) {
   const epoch = worldEpoch();
@@ -242,7 +250,23 @@ function savannaWeightAt(x, y) {
     savannaWeightEpoch = epoch;
     savannaWeightSignature = signature;
     savannaWeightCache.clear();
+    // (which tiles are savanna, 2, or within the fade's reach of one, 1: anywhere else there's none to look for)
+    savannaNear = new Uint8Array(game.COLS * game.ROWS);
+    for (const tile of game.savannaTiles) {
+      const tx = Math.floor(tile.x / TILE_SIZE), ty = Math.floor(tile.y / TILE_SIZE);
+      for (let gy = Math.max(0, ty - 3); gy <= Math.min(game.ROWS - 1, ty + 3); gy++) {
+        for (let gx = Math.max(0, tx - 3); gx <= Math.min(game.COLS - 1, tx + 3); gx++) if (!savannaNear[gy * game.COLS + gx]) savannaNear[gy * game.COLS + gx] = 1;
+      }
+    }
+    for (const tile of game.savannaTiles) {
+      const tx = Math.floor(tile.x / TILE_SIZE), ty = Math.floor(tile.y / TILE_SIZE);
+      if (tx >= 0 && ty >= 0 && tx < game.COLS && ty < game.ROWS) savannaNear[ty * game.COLS + tx] = 2;
+    }
   }
+  const tx = Math.min(game.COLS - 1, Math.max(0, Math.floor(x / TILE_SIZE))), ty = Math.min(game.ROWS - 1, Math.max(0, Math.floor(y / TILE_SIZE)));
+  const near = savannaNear[ty * game.COLS + tx];
+  if (!near) return 0;
+  if (near === 2 && x >= 0 && y >= 0 && x < game.WORLD_WIDTH && y < game.WORLD_HEIGHT) return 1;
   const key = `${x},${y}`;
   const cached = savannaWeightCache.get(key);
   if (cached !== undefined) return cached;
@@ -277,6 +301,10 @@ function paintGrass(g, x0, y0, x1, y1) {
         savannaWeightAt(x, y), savannaWeightAt(x + TILE_SIZE, y),
         savannaWeightAt(x, y + TILE_SIZE), savannaWeightAt(x + TILE_SIZE, y + TILE_SIZE)
       ];
+      // (a tile all grass is the base already laid; one all savanna is one colour: only a tile on the edge between them is blended row by row)
+      const least = Math.min(...cornerWeights), most = Math.max(...cornerWeights);
+      if (most <= 0) continue;
+      if (least >= 1) { g.fillStyle = SAVANNA_GRASS_BASE; g.fillRect(x, y, TILE_SIZE + 0.5, TILE_SIZE + 0.05); continue; }
       const gradientRows = 10;
       const rowHeight = TILE_SIZE / gradientRows;
       for (let row = 0; row < gradientRows; row++) {
