@@ -24,7 +24,7 @@ test('with WebGL on, the ground, nature and shadows are drawn on a canvas under 
   expect(r.card).toBe(true);
   expect(r.before).toBe(true);
   expect(r.size).toEqual(r.game);
-  expect(r.trees).toBeGreaterThan(20);
+  expect(r.trees).toBeGreaterThan(5); // (a map by chance: a dozen or so in sight on a bare one)
   expect(r.drawn).toBeLessThan(r.trees); // (the trees' pictures, the tufts and the ground's pieces are not laid down on the game's canvas)
   expect(errors).toEqual([]);
 });
