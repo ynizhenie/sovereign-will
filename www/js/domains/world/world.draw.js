@@ -594,6 +594,28 @@ function edgeBand(G, x, y, open, which, rgb, a, width, inside, occupiedCorners =
   }
 }
 
+// A mass of tiles' edge made uneven: along each of the tile's sides in `which`, three low tongues of its colour lying out
+// over what's beside it, each of its own length, depth and place (by the tile's hash), so the shape reads as drifted sand or
+// a lapping shore and not as a stair of squares. No further out than half a tile: the piece of the ground beside this one
+// paints the same tongues from the same tiles. What's painted after (water over sand, rock over both) lies over them
+function edgeTongues(G, x, y, which, shades, alpha) {
+  if (!which.n && !which.s && !which.w && !which.e) return;
+  const hsh = tileVariantHash(x + 7, y + 3);
+  ['n', 's', 'w', 'e'].forEach((side, n) => {
+    if (!which[side]) return;
+    const along = side === 'n' || side === 's', sign = side === 'n' || side === 'w' ? -1 : 1;
+    for (let k = 0; k < 3; k++) {
+      const v = hsh >>> (n * 5 + k * 4);
+      const at = -12 + k * 9 + (v % 7), out = (v >>> 3) % 4, long = 7 + ((v >>> 5) % 7), deep = 3 + ((v >>> 8) % 4);
+      const cx = along ? x + at : x + sign * (15 + out), cy = along ? y + sign * (15 + out) : y + at;
+      G.globalAlpha = alpha + ((v >>> 10) % 4) * 0.08;
+      G.fillStyle = shades[(v >>> 2) % shades.length];
+      G.beginPath(); G.ellipse(cx, cy, along ? long : deep, along ? deep : long, 0, 0, Math.PI * 2); G.fill();
+    }
+  });
+  G.globalAlpha = 1;
+}
+
 // The sand tiles (desert and beach) as keys, worked out again when there are more or fewer of them
 /** @type {{ n: number, desert: typeof game.desertTiles | null, beach: typeof game.beachTiles | null, keys: Set<string> }} */
 let sandKeys = { n: -1, desert: null, beach: null, keys: new Set() };
@@ -615,6 +637,7 @@ export function drawWaterTile(w, tiles) {
   const shore = { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
   edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.24, 8, true, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '44, 131, 189', 0.16, 7, false, occupiedCorners);
+  edgeTongues(G, w.x, w.y, shore, WATER_SHADES, 0.55); // (the water lapping over the land's edge)
   // foam along the shore: a couple of short light strokes a little way in from the land, each bowed towards the water, at
   // places of the tile's own (not by rock: the water's deep there)
   G.strokeStyle = 'rgba(228, 245, 252, 0.34)'; G.lineWidth = 1.1; G.lineCap = 'round';
@@ -744,6 +767,15 @@ export function paintSandGround(g, x0, y0, x1, y1) {
     const open = openSides(keys, t.x, t.y);
     edgeBand(g, t.x, t.y, open, open, rgb, 0.8, 7, false, terrainCornerOccupancy(t.x, t.y, terrain));
   }
+  // wet sand by the water: a darker band fading up the beach from each side the water's on
+  for (const t of tiles) {
+    const wet = { n: terrain.water.has(`${t.x},${t.y - TILE_SIZE}`), s: terrain.water.has(`${t.x},${t.y + TILE_SIZE}`), w: terrain.water.has(`${t.x - TILE_SIZE},${t.y}`), e: terrain.water.has(`${t.x + TILE_SIZE},${t.y}`) };
+    if (!wet.n && !wet.s && !wet.w && !wet.e) continue;
+    edgeBand(g, t.x, t.y, openSides(keys, t.x, t.y), wet, '112, 84, 46', 0.34, 11, true, terrainCornerOccupancy(t.x, t.y, terrain));
+  }
+  // and its edge isn't a ruler's: tongues of sand lie out over the grass along every open side (see edgeTongues)
+  for (const t of tiles) edgeTongues(g, t.x, t.y, openSides(keys, t.x, t.y), DESERT_SHADES, 0.6);
+  g.globalAlpha = 1;
 }
 
 // Rock with ore veins, shared by ore tiles and ore spawners so they read as the same material.
