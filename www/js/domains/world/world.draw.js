@@ -637,41 +637,34 @@ function getSandKeys() {
   return sandKeys.keys;
 }
 
-export function drawWaterTile(w, tiles) {
+// Which of a water tile's sides have land past them (not rock: the water's deep there)
+function shoreSides(w, tiles, open) {
+  const land = side => open[side] && !tiles.rockAndOre.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
+  return { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
+}
+
+// Foam where the water laps the land: the tile's tongues (see unevenEdge) a little bigger and light, laid down before the
+// water itself, so that only a rim of each shows from under it. A piece of the ground lays down all its tiles' foam first
+// and then the tiles: a tile's foam over its neighbour's water, painted before it, left little hooks at the corners
+function drawShoreFoam(w, tiles) {
+  const G = target || ctx, open = openSides(tiles.water, w.x, w.y), shore = shoreSides(w, tiles, open);
+  if (!shore.n && !shore.s && !shore.w && !shore.e) return;
+  G.beginPath(); unevenEdge(G, w.x, w.y, open, shore, false, 1.4); G.fillStyle = 'rgba(226, 244, 252, 0.6)'; G.fill('nonzero');
+}
+
+export function drawWaterTile(w, tiles, foam = true) {
   const G = target || ctx;
   const h = tileVariantHash(w.x, w.y);
   const open = openSides(tiles.water, w.x, w.y);
   const occupiedCorners = terrainCornerOccupancy(w.x, w.y, tiles);
-  const land = side => open[side] && !tiles.rockAndOre.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
-  const shore = { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
-  // foam where the water laps the land: the tongues a little bigger and light, laid down first, so that only a rim of each
-  // shows from under the water painted next
-  G.beginPath(); unevenEdge(G, w.x, w.y, open, shore, false, 1.4); G.fillStyle = 'rgba(226, 244, 252, 0.6)'; G.fill('nonzero');
+  const shore = shoreSides(w, tiles, open);
+  if (foam) drawShoreFoam(w, tiles);
   drawJoinedTile(w.x, w.y, open, '#2c83bd', WATER_SHADES[0], false, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.24, 8, true, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '44, 131, 189', 0.16, 7, false, occupiedCorners);
   // (the water lapping over the land's edge)
   G.fillStyle = WATER_SHADES[0];
   for (const fillets of [true, false]) { G.beginPath(); unevenEdge(G, w.x, w.y, open, shore, fillets); G.fill('nonzero'); }
-  // foam along the shore: a couple of short light strokes a little way in from the land, each bowed towards the water, at
-  // places of the tile's own (not by rock: the water's deep there)
-  G.strokeStyle = 'rgba(228, 245, 252, 0.34)'; G.lineWidth = 1.1; G.lineCap = 'round';
-  G.beginPath();
-  const HALF = TILE_SIZE / 2;
-  ['n', 's', 'w', 'e'].forEach((side, n) => {
-    if (!shore[side]) return;
-    for (let k = 0; k < 2; k++) {
-      const v = h >>> (n * 5 + k * 3), len = 5 + (v % 5), from = -HALF + 3 + k * 13 + (v >>> 3) % 4, inset = 3 + (v >>> 5) % 3;
-      // (along the side from `from`, `inset` in from the edge; the middle a little further in)
-      const along = side === 'n' || side === 's', sign = side === 'n' || side === 'w' ? 1 : -1;
-      const edge = -sign * HALF + sign * inset;
-      const p = (t, bow) => (along ? [w.x + from + len * t, w.y + edge + sign * bow] : [w.x + edge + sign * bow, w.y + from + len * t]);
-      const [x0, y0] = p(0, 0), [cx, cy] = p(0.5, 1.6), [x1, y1] = p(1, 0);
-      G.moveTo(x0, y0); G.quadraticCurveTo(cx, cy, x1, y1);
-    }
-  });
-  G.stroke();
-  G.lineCap = 'butt';
   // a short light ripple on some tiles
   if (h % 3 === 0) {
     G.strokeStyle = 'rgba(255, 255, 255, 0.18)'; G.lineWidth = 1.5;
@@ -932,7 +925,9 @@ function paintTerrain(g, x0, y0, x1, y1) {
   over = Math.max(0.5, 1 / g.getTransform().a); // (#326: a whole pixel over at a small picture's size: no grid of seams)
   try {
     paintSandGround(g, x0, y0, x1, y1);
-    tilesAround(game.waterTiles, x0, y0, x1, y1).forEach(t => drawWaterTile(t, terrain));
+    const water = tilesAround(game.waterTiles, x0, y0, x1, y1);
+    water.forEach(t => drawShoreFoam(t, terrain));
+    water.forEach(t => drawWaterTile(t, terrain, false));
     tilesAround(game.naturalRocks, x0, y0, x1, y1).forEach(r => { if (isRock(r)) drawRockTile(r.x, r.y, terrain); else drawOreSpawner(r.x, r.y, r.oreSpawner); });
     tilesAround(game.ironOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'iron', 14));
     tilesAround(game.coalOres, x0, y0, x1, y1).forEach(o => drawOreVeins(o.x, o.y, 'coal', 14));
