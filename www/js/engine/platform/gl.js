@@ -135,7 +135,7 @@ export function glChunk(chunk, x, y, w, h) {
   if (!texture) {
     // (a piece painted again is a new record of the same canvas: its old texture goes)
     const old = canvasTextures.get(chunk.canvas);
-    if (old) old.destroy(true);
+    if (old) retire(old);
     const source = new PIXI.CanvasSource({ resource: chunk.canvas, scaleMode: 'linear' });
     texture = new PIXI.Texture({ source, frame: new PIXI.Rectangle(chunk.pad, chunk.pad, chunk.pw, chunk.ph) });
     chunkTextures.set(chunk, texture); canvasTextures.set(chunk.canvas, texture);
@@ -146,11 +146,17 @@ export function glChunk(chunk, x, y, w, h) {
   sprite.position.set(x, y);
   sprite.scale.set(w / chunk.pw, h / chunk.ph);
 }
+// A texture goes. A sprite of the pool that showed it last (hidden now, or about to be given another) lets go of it first:
+// the card's batch of sprites, put together in an earlier frame, could still reach for it and stop the frame
+function retire(texture) {
+  for (const pool of pools) for (const sprite of pool) if (sprite.texture === texture) sprite.texture = PIXI.Texture.EMPTY;
+  texture.destroy(true);
+}
 // A piece's picture is dropped (drawChunks keeps only so many)
 /** @param {{ canvas: HTMLCanvasElement }} chunk */
 export function glForgetChunk(chunk) {
   const texture = canvasTextures.get(chunk.canvas);
-  if (texture) { texture.destroy(true); canvasTextures.delete(chunk.canvas); }
+  if (texture) { retire(texture); canvasTextures.delete(chunk.canvas); }
 }
 
 // ---- A small picture (a tuft, a stone, a bush): all of them on a few big sheets, so the card draws them in one go

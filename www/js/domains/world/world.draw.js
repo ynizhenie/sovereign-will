@@ -116,7 +116,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
   /** @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @param {string} now */
-  const painted = (cx, cy, x0, y0, x1, y1, chunk, now) => {
+  const painted = (cx, cy, x0, y0, x1, y1, chunk, now, res) => {
     const startedAt = performance.now();
     const canvas = chunk ? chunk.canvas : document.createElement('canvas');
     const pad = Math.ceil(PAD * res), bleed = pad / res;
@@ -136,7 +136,10 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         const shown = cx >= cx0 && cx <= cx1 && cy >= cy0 && cy <= cy1;
         if (shown === ahead) continue;
         if (shown) stats.warmTotal++;
-        const key = `${res}|${cx},${cy}`;
+        // (a piece round the screen is painted ahead no finer than one pixel to a world unit: a fine one is four times the
+        // memory, and it's only to show till the piece comes onto the screen and is painted fine, see keepOld)
+        const pieceRes = shown ? res : Math.min(res, 1);
+        const key = `${pieceRes}|${cx},${cy}`;
         // (nothing of this layer in the piece: no picture of it)
         if (stamp.empty && stamp.empty(cx, cy)) { if (shown) stats.warmReady++; continue; }
         let chunk = chunks.get(key);
@@ -150,7 +153,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (!shown) {
           if (free) {
             const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
-            if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, painted(cx, cy, x0, y0, x1, y1, chunk, now)); framePaints++; }
+            if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, painted(cx, cy, x0, y0, x1, y1, chunk, now, pieceRes)); framePaints++; }
             else if (chunk) chunk.frame = frameOf;
           }
           else if (chunk) chunk.frame = frameOf;
@@ -163,7 +166,9 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
             else stats.pending++;
             chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key);
           } else if (keepOld && oldPicture(chunks, cx, cy)) {
-            blit(/** @type {Chunk} */ (oldPicture(chunks, cx, cy)));
+            // (shown this frame: not to be dropped at the end of it)
+            const old = /** @type {Chunk} */ (oldPicture(chunks, cx, cy));
+            old.frame = frameOf; blit(old);
             stats.pending++;
           } else {
             // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
@@ -178,7 +183,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
           continue;
         }
         const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
-        if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now))); framePaints++; stats.late++; }
+        if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now, pieceRes))); framePaints++; stats.late++; }
         if (chunk) { stats.warmReady++; chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key); }
       }
     }
@@ -217,16 +222,18 @@ export function wasChunkDrawn(layer, res, x, y) {
 // down sixteen times the pixels that showed, which was most of what that view cost
 // (#322) and a size is kept while the zoom is within a little of it (a hair either side of a threshold painted two sizes in turn, and
 // the whole screen of pieces again each time)
+// Zoomed in past a picture pixel and a half to a screen pixel, the ground's pictures are painted twice as fine: at one
+// size for every zoom the small things in them (the shore's foam, a rock's edge, flowers) were stretched three to five times
+// on a phone and went soft. Few pieces show that close, so it costs little. The size is kept within a band round the
+// threshold, and till a piece is painted at the new size its picture at the old one stays (keepOld), so nothing flashes
 let heldRes = 1;
 const chunkRes = () => {
-  return 1;
+  const s = getViewScale();
+  if (heldRes === 1 && s >= 1.5) heldRes = 2;
+  else if (heldRes === 2 && s < 1.25) heldRes = 1;
+  return heldRes;
 };
-// (#322) The terrain's pieces are laid down at every zoom (what's drawn tile by tile each frame, with its gradients and rounded
-// corners, was most of what a view of lake or desert cost): as fine as the screen shows, up to twice a world unit
-let heldTerrain = 1;
-const terrainRes = () => {
-  return 1;
-};
+const terrainRes = chunkRes;
 
 function mixGrassColor(from, to, amount) {
   // (most of the map is all one or all the other: nothing to mix)
@@ -400,7 +407,7 @@ function paintGroundDetail(g, gx, gy, x, y) {
 export function drawGrassGround() {
   drawChunks('grass', chunkRes(), grassStamp, paintGrass, (x0, y0, x1, y1) => {
     ctx.fillStyle = '#2d4a22'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-  });
+  }, ctx, true);
 }
 
 export function prewarmVisibleWorldChunks() {
@@ -900,7 +907,7 @@ export function drawSand() {
   // this frame: zoomed out (the pictures), or the tiles on screen (with a tile's margin)
   view = getViewRect(TILE_SIZE);
   cached = typeof document !== 'undefined';
-  if (cached) { drawChunks('terrain', terrainRes(), terrainStamp, paintTerrain, previewTerrain); return; }
+  if (cached) { drawChunks('terrain', terrainRes(), terrainStamp, paintTerrain, previewTerrain, ctx, true); return; }
   paintSandGround(ctx, view.x0, view.y0, view.x1, view.y1);
 }
 
