@@ -604,14 +604,15 @@ function edgeBand(G, x, y, open, which, rgb, a, width, inside, occupiedCorners =
 // from the same tiles. What's painted after (water over sand, rock over both) lies over them
 // (`fillets`: the corners' fillets and not the tongues: the two go into paths of their own, filled one after the other.
 // In one path a fillet, drawn the other way round, cut itself out of the tongues it lay over)
-function unevenEdge(G, x, y, open, which, fillets) {
+function unevenEdge(G, x, y, open, which, fillets, grow = 0) {
   const hsh = tileVariantHash(x + 7, y + 3), H = TILE_SIZE / 2;
   if (!fillets) ['n', 's', 'w', 'e'].forEach((side, n) => {
     if (!which[side]) return;
     const along = side === 'n' || side === 's', sign = side === 'n' || side === 'w' ? -1 : 1;
     for (let k = 0; k < 3; k++) {
       const v = hsh >>> (n * 5 + k * 4);
-      const at = -12 + k * 9 + (v % 7), long = 7 + ((v >>> 5) % 7), deep = 2.5 + ((v >>> 8) % 5);
+      // (a tongue ends by the tile's corner, or it stuck out past it as a spike; `grow`: the same tongue a little bigger, for a rim round it)
+      const at = -12 + k * 9 + (v % 7), long = Math.min(7 + ((v >>> 5) % 7), H + 2 - Math.abs(at)) + grow, deep = 2.5 + ((v >>> 8) % 5) + grow;
       const cx = along ? x + at : x + sign * H, cy = along ? y + sign * H : y + at;
       G.moveTo(cx + (along ? long : deep), cy);
       G.ellipse(cx, cy, along ? long : deep, along ? deep : long, 0, 0, Math.PI * 2);
@@ -641,9 +642,12 @@ export function drawWaterTile(w, tiles) {
   const h = tileVariantHash(w.x, w.y);
   const open = openSides(tiles.water, w.x, w.y);
   const occupiedCorners = terrainCornerOccupancy(w.x, w.y, tiles);
-  drawJoinedTile(w.x, w.y, open, '#2c83bd', WATER_SHADES[0], false, occupiedCorners);
   const land = side => open[side] && !tiles.rockAndOre.has(`${w.x + ({ w: -30, e: 30 }[side] || 0)},${w.y + ({ n: -30, s: 30 }[side] || 0)}`);
   const shore = { n: land('n'), s: land('s'), w: land('w'), e: land('e') };
+  // foam where the water laps the land: the tongues a little bigger and light, laid down first, so that only a rim of each
+  // shows from under the water painted next
+  G.beginPath(); unevenEdge(G, w.x, w.y, open, shore, false, 1.4); G.fillStyle = 'rgba(226, 244, 252, 0.6)'; G.fill('nonzero');
+  drawJoinedTile(w.x, w.y, open, '#2c83bd', WATER_SHADES[0], false, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '190, 230, 245', 0.24, 8, true, occupiedCorners);
   edgeBand(G, w.x, w.y, open, shore, '44, 131, 189', 0.16, 7, false, occupiedCorners);
   // (the water lapping over the land's edge)
