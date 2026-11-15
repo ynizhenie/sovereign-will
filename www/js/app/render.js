@@ -112,7 +112,7 @@ function drawUnitLevelIndicators() {
   const view = getViewRect(60);
   for (const unit of game.settlers) {
     if (!hasUnitProgression(unit) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
-    const radius = unit.radius || 11, top = unit.y - radius * 1.45;
+    const radius = unit.visualRadius || unit.radius || 11, top = unit.y - radius * 1.45;
     drawLevelIndicator(unit.x - 18, top - 4, getUnitLevel(unit, getUnitDisplayProgressionTrack(unit)));
   }
   for (const list of [game.enemies, game.scouts]) for (const unit of list) {

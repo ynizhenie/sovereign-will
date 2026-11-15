@@ -86,6 +86,6 @@ test('ripe rice plots draw rice grains instead of wheat heads', async ({ page })
     }
   });
   expect(grainColors.wheat).toContain('#f4d03f');
-  expect(grainColors.rice).toContain('#e6c85c');
+  expect(grainColors.rice).toContain('#7fae48');
   expect(grainColors.rice).not.toContain('#f4d03f');
 });

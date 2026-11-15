@@ -23,6 +23,13 @@ test('nine independent skills reach level 2 with their configured work bonuses',
   expect(result.meleeHealth).toBe(125);
 });
 
+test('a demon cutting up a corpse shows its combat level, while a hunter butchering a boar shows hunting', () => {
+  expect(sim.butcherProgression()).toEqual({
+    demon: { track: 'melee', level: 3 },
+    hunter: { track: 'hunting', level: 2 }
+  });
+});
+
 test('progression increases attack speed without increasing attack damage', () => {
   expect(sim.progressionCombatStats()).toEqual({
     base: { damage: 6, cooldown: 0.7 },

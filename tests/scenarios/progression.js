@@ -15,6 +15,18 @@ function progression() {
 
 sim.progression = progression;
 
+function butcherProgression() {
+  const demon = { type: 'imp', weapon: 'sword', workKind: 'butcher', butcherTarget: {}, progression: { melee: 25, hunting: 0 } };
+  const hunter = { type: 'normal', weapon: 'sword', workKind: 'butcher', progression: { melee: 0, hunting: 10 } };
+  const demonTrack = getUnitDisplayProgressionTrack(demon), hunterTrack = getUnitDisplayProgressionTrack(hunter);
+  return {
+    demon: { track: demonTrack, level: getUnitLevel(demon, demonTrack) },
+    hunter: { track: hunterTrack, level: getUnitLevel(hunter, hunterTrack) }
+  };
+}
+
+sim.butcherProgression = butcherProgression;
+
 function progressionCombatStats() {
   const unit = createSettler('normal', 9002, 0, 0, { weapon: 'sword', role: 'soldier' });
   const base = getWeaponStats(unit, 'combat');

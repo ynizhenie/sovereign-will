@@ -423,7 +423,7 @@ export function drawFarmPlotArt(f) {
     for (let col = 0; col < 4; col++) {
       const sx = x - 9 + col * 6, sy = y - 8 + row * 6, tall = 2 + 7 * g, sway = windSway(sx, sy, tall); // (in the wind, #308)
       if (rice) {
-        pen().strokeStyle = ripe ? '#b79834' : g > 0.6 ? '#85b957' : '#39a868'; pen().lineWidth = 1.1;
+        pen().strokeStyle = ripe ? '#5e8a3c' : g > 0.6 ? '#85b957' : '#39a868'; pen().lineWidth = 1.1;
         pen().beginPath(); pen().moveTo(sx, sy + 2); pen().quadraticCurveTo(sx + sway * 0.3, sy + 2 - tall * 0.6, sx + sway, sy + 2 - tall); pen().stroke();
         if (g > 0.2) {
           for (const side of [-1, 1]) {
@@ -433,9 +433,9 @@ export function drawFarmPlotArt(f) {
         }
         if (ripe) {
           const headX = sx + sway, headY = sy + 2 - tall;
-          pen().strokeStyle = '#b79834'; pen().beginPath(); pen().moveTo(headX, headY);
+          pen().strokeStyle = '#5e8a3c'; pen().beginPath(); pen().moveTo(headX, headY);
           pen().quadraticCurveTo(headX + 1.5, headY + 0.5, headX + 1.8, headY + 3); pen().stroke();
-          pen().fillStyle = '#e6c85c';
+          pen().fillStyle = '#7fae48';
           for (let grain = 0; grain < 3; grain++) {
             pen().beginPath(); pen().ellipse(headX + 1.8 + (grain % 2 ? 0.7 : -0.6), headY + 1 + grain * 1.2, 0.9, 1.3, 0.3, 0, Math.PI * 2); pen().fill();
           }

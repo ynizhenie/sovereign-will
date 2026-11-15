@@ -32,7 +32,7 @@ export function getUnitProgressionTrack(unit) {
 
 export function getUnitDisplayProgressionTrack(unit) {
   if (unit?.workKind === 'build') return 'building';
-  if (unit?.workKind === 'butcher') return 'hunting';
+  if (unit?.workKind === 'butcher' && !unit.butcherTarget) return 'hunting';
   if (unit?.workKind === 'heal') return 'healing';
   return getUnitProgressionTrack(unit);
 }
