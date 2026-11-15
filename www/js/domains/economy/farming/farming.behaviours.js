@@ -77,7 +77,7 @@ export function waterCrops(s, tick) {
 
 // ---- Fertiliser
 
-// A farmer with a backpack, between waves, carries dung from a compost heap (#232) to a wheat plot not fertilised yet;
+// A farmer with a backpack, between waves, carries dung from a compost heap (#232) to a crop not fertilised yet;
 // the plot's next harvest yields more (GAME_CONFIG.fertilizer). Called off its way (a wave), it drops the
 // dung where it is (#201)
 export function fertilize(s, tick) {
@@ -173,7 +173,12 @@ export function tendFarmZones(s, tick) {
       playSound('dig', target);
       const cropId = farming.crops[target.crop];
       payCost(getDefinition('buildings', cropId).cost || {});
-      if (cropId === 'wheat') game.farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
+      if (cropId === 'wheat' || cropId === 'rice') {
+        game.farmPlots.push({
+          x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0,
+          crop: target.crop, yield: { ...farming.harvest[target.crop] }
+        });
+      }
       else {
         const tree = { x: target.x, y: target.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
         game.trees.push(cropId === 'apple_sapling' ? makeAppleTree(tree) : tree);

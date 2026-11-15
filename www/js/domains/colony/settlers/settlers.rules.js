@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall } from '../../../engine/world/index.js';
-import { armorOf, hasGear, hasWorkingShield } from '../equipment/index.js';
+import { armorOf, hasGear, hasWorkingShield, helmetOf } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
@@ -140,7 +140,7 @@ export function getUpgrade() {
 const WEAPON_RANK = { iron: 3, plain: 2, club: 1, fist: 0 };
 export function upgradeRank(s) {
   const weapon = s.weapon === 'fist' ? WEAPON_RANK.fist : s.weapon.startsWith('iron_') ? WEAPON_RANK.iron : s.weapon === 'club' ? WEAPON_RANK.club : WEAPON_RANK.plain;
-  const armour = armorOf(s) ? (armorOf(s).armorKind === 'iron' ? 2 : 1) : 0;
+  const armour = armorOf(s) ? (armorOf(s).armorKind === 'iron' ? 2 : armorOf(s).armorKind === 'leather' ? 1 : 0.5) : 0;
   return (s.role !== 'worker' ? 100 : 0) + weapon * 10 + armour * 3 + (hasWorkingShield(s) ? 1 : 0);
 }
 
@@ -192,6 +192,7 @@ export function dismissSettler(s) {
   if (s.carrying && s.carrying.type && stock[s.carrying.type] !== undefined) stock[s.carrying.type] += s.carrying.amount || 0;
   Object.assign(s, { leaving: true, weapon: 'fist', tool: 'none', role: 'worker', armor: null, carrying: null, targetEquipment: null, isPossessed: false, markTarget: null, path: [], pathTarget: null });
   for (const id of Object.keys(GAME_CONFIG.gear)) if (!GAME_CONFIG.gear[id].armorKind && s[id]) s[id] = false;
+  delete s.helmetGear;
   s.hp = Math.min(s.hp, s.maxHp = GAME_CONFIG.settlerTypes[s.type].hp);
   if (game.selectedSettler === s) game.selectedSettler = null;
   says(s, 'dismissed');
@@ -204,7 +205,8 @@ export function damageSettler(settler, amount, attacker = null) {
   if (isUntouchable(settler)) return; // (a ghost, #314)
   let damage = armorOf(settler) ? amount * (1 - armorOf(settler).damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
-  if (settler.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
+  const helmet = helmetOf(settler);
+  if (helmet) damage *= 1 - helmet.damageReduction; // (#326, 27.10, 27)
   const wasWell = settler.hp >= settler.maxHp * 0.3;
   settler.hp -= damage;
   if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); shakeOnHit(settler); }

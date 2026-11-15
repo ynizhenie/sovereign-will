@@ -326,8 +326,7 @@ export const musicConfig = {
       drums: { kick: 'x.....x.', snare: '....x...', hat: 'x.x.x.x.' },
       extra: { kind: 'crackle', chance: 0.03 } },
 
-    // ---- (#326) the Battles' own: a muster while the sides are placed, a clash in the fight, each by day and by night
-    // (battleMusic below; a battle's settings pick whose theme plays: this one, or a faction's)
+    // ---- (#326) Battles: set-up and fight tracks for day and night, plus their situation-specific themes
     arena_muster: { bpm: 84, chords: [[50, 53, 57], [46, 50, 53], [48, 52, 55], [45, 49, 52]], chordsB: [[43, 46, 50], [45, 49, 52], [46, 50, 53], [45, 49, 52]],
       pad: { wave: 'sawtooth', gain: 0.03, attack: 0.5, length: 4, filter: 900 },
       bass: { wave: 'triangle', gain: 0.08, pattern: [0, null, null, null, 7, null, null, null], octave: -12, length: 1.2 },
@@ -367,12 +366,41 @@ export const musicConfig = {
       pad: { wave: 'sawtooth', gain: 0.035, attack: 0.3, length: 3.6, filter: 650 },
       bass: { wave: 'sawtooth', gain: 0.08, pattern: [0, null, 0, 1, 0, null, 0, null], octave: -12, length: 0.3, filter: 550 },
       drums: { kick: 'X..x..x.', snare: '....x...', tom: '......xx' } },
+    arena_standoff: { bpm: 88, chords: [[50, 53, 57], [49, 52, 56], [45, 49, 52], [50, 53, 57]], chordsB: [[45, 49, 52], [48, 52, 55], [49, 52, 56], [50, 53, 57]],
+      pad: { wave: 'sine', gain: 0.07, attack: 0.9, length: 3.8, filter: 1100 },
+      bass: { wave: 'triangle', gain: 0.08, pattern: [0, null, null, 0, null, null, 7, null], octave: -12, length: 0.8 },
+      lead: { wave: 'triangle', gain: 0.045, chance: 0.08, length: 1.6, scale: [69, 71, 74, 76, 77] },
+      drums: { tom: '....x...' } },
+    arena_outnumbered: { bpm: 116, chords: [[45, 48, 52], [43, 47, 50], [41, 45, 48], [40, 44, 47]], chordsB: [[38, 41, 45], [40, 44, 47], [41, 45, 48], [43, 47, 50]],
+      pad: { wave: 'sawtooth', gain: 0.04, attack: 0.2, length: 2.8, filter: 850 },
+      bass: { wave: 'sawtooth', gain: 0.09, pattern: [0, null, 0, 0, 5, null, 7, null], octave: -12, length: 0.35, filter: 620 },
+      drums: { kick: 'X...x.x.', snare: '....x...', tom: '..x...x.', fill: true } },
+    arena_overwhelmed: { bpm: 148, chords: [[40, 47, 52], [38, 45, 50], [41, 48, 53], [40, 47, 52]],
+      pad: { wave: 'sawtooth', gain: 0.035, attack: 0.05, length: 1.8, filter: 700 },
+      bass: { wave: 'sawtooth', gain: 0.09, pattern: [0, 0, null, 0, 0, 7, null, 0], octave: -12, length: 0.25, filter: 560 },
+      drums: { kick: 'X.x.X.x.', snare: '..x...x.', hat: 'xxxxxxxx', tom: '......xx', fill: true } },
+    backrooms_signal: { bpm: 58, chords: [[38, 45, 51], [40, 47, 53], [37, 44, 50], [38, 45, 51]], chordsB: [[33, 40, 46], [37, 44, 50], [38, 45, 51], [40, 47, 53]],
+      pad: { wave: 'sine', gain: 0.08, attack: 2, length: 5, detune: 0.012, filter: 700 },
+      bass: { wave: 'sine', gain: 0.06, pattern: [0, null, null, null, 1, null, null, null], octave: -12, length: 2.4 },
+      extra: { kind: 'whispers', chance: 0.04 } },
+    backrooms_static: { bpm: 72, chords: [[38, 45, 46, 57], [40, 47, 48, 55], [33, 40, 41, 52], [38, 45, 46, 57]],
+      chordsB: [[31, 38, 39, 50], [38, 45, 46, 57], [35, 42, 43, 54], [40, 47, 48, 59]],
+      pad: { wave: 'sine', gain: 0.075, attack: 1.2, length: 4.5, detune: 0.016, filter: 520 },
+      arp: { wave: 'sine', gain: 0.025, pattern: [null, 3, null, null, null, null, 2, null], octave: 12, length: 0.9, filter: 900 },
+      bass: { wave: 'sine', gain: 0.07, pattern: [0, null, null, null, null, 5, null, null], octave: -12, length: 2, filter: 180 },
+      lead: { wave: 'sine', gain: 0.025, chance: 0.025, length: 1.4, filter: 1100, scale: [82, 83, 89] },
+      drums: { tom: '.......x' },
+      extra: { kind: 'wind', chance: 0.035 } },
   },
 
-  // (#326) the Battles' own music, as a faction's: while the sides are placed (ambient), in the fight (battle), by night too
+  // The Backrooms track is deliberately kept out of the public music player.
   battleMusic: {
     ambient: ['arena_muster', 'arena_parade'], nightAmbient: ['arena_vigil', 'arena_torches'],
-    battle: ['arena_clash', 'arena_onslaught', 'arena_duel'], nightBattle: ['arena_moonclash', 'arena_nightfall']
+    battle: ['arena_clash', 'arena_onslaught'], nightBattle: ['arena_moonclash', 'arena_nightfall'],
+    duel: ['arena_duel', 'arena_standoff'],
+    unfair: ['arena_outnumbered', 'arena_overwhelmed'],
+    backrooms: 'backrooms_signal',
+    backroomsBattle: ['backrooms_signal', 'backrooms_static']
   },
 
   // (#404) the Plague's: the player's first level the first, the next level the next, round again after the last

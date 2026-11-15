@@ -42,6 +42,42 @@ test('a big map is a continent in the sea: its land never at the map\'s edge, of
   expect(errors).toEqual([]);
 });
 
+test('a continent gives beaches to its internal lakes without replacing the sea shore', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await page.evaluate(() => {
+    mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('continent-lake-beaches');
+    const key = tile => `${tile.x},${tile.y}`;
+    const water = new Set(waterTiles.map(key));
+    const sea = new Set(['15,15']), queue = [[15, 15]];
+    for (let i = 0; i < queue.length; i++) {
+      for (const [dx, dy] of [[TILE_SIZE, 0], [-TILE_SIZE, 0], [0, TILE_SIZE], [0, -TILE_SIZE]]) {
+        const next = [queue[i][0] + dx, queue[i][1] + dy], nextKey = `${next[0]},${next[1]}`;
+        if (water.has(nextKey) && !sea.has(nextKey)) { sea.add(nextKey); queue.push(next); }
+      }
+    }
+    const touches = (tile, group) => [-1, 0, 1].some(dx => [-1, 0, 1].some(dy =>
+      group.has(`${tile.x + dx * TILE_SIZE},${tile.y + dy * TILE_SIZE}`)));
+    const lake = new Set(waterTiles.filter(tile => !sea.has(key(tile))).map(key));
+    const lakeBeaches = beachTiles.filter(tile => touches(tile, lake));
+    const seaBeaches = beachTiles.filter(tile => touches(tile, sea));
+    const rock = new Set(naturalRocks.map(key));
+    return {
+      lakes: lake.size,
+      lakeBeaches: lakeBeaches.length,
+      seaBeaches: seaBeaches.length,
+      lakeBeachesTouchWater: lakeBeaches.every(tile => touches(tile, water)),
+      beachesAvoidRockAndWater: beachTiles.every(tile => !water.has(key(tile)) && !rock.has(key(tile)))
+    };
+  });
+  expect(r.lakes).toBeGreaterThan(0);
+  expect(r.lakeBeaches).toBeGreaterThan(0);
+  expect(r.seaBeaches).toBeGreaterThan(0);
+  expect(r.lakeBeachesTouchWater).toBe(true);
+  expect(r.beachesAvoidRockAndWater).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('the start: on grassland far from the sea, room round the hall, rock, ore, trees and food near; settlers walk up to the hall; waves come on land joined to it (#299)', async ({ page }) => {
   test.setTimeout(60000);
   const errors = await openGame(page);

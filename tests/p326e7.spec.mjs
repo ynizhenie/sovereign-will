@@ -50,7 +50,7 @@ test('the music player lists every track with its name and when it plays; a trac
   await expect(page.locator('[data-screen="settings"]')).toBeHidden();
   const r0 = await page.evaluate(() => ({
     rows: [...document.querySelectorAll('#music-player .music-row')].map(r => ({ id: r.dataset.track, text: r.querySelector('.music-name').innerText })),
-    expected: 1 + 9 + GAME_CONFIG.plagueMusic.length + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
+    expected: 1 + Object.values(GAME_CONFIG.battleMusic).filter(Array.isArray).reduce((n, tracks) => n + tracks.length, 0) + GAME_CONFIG.plagueMusic.length + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
   }));
   const rows = r0.rows;
   expect(rows.length).toBe(r0.expected);
@@ -67,13 +67,13 @@ test('the music player lists every track with its name and when it plays; a trac
   await page.click('#open-music-player');
   await page.locator('#music-player [data-track="arena_muster"] .music-toggle').click();
   const r = await page.evaluate(() => {
-    startBattleMode(); battle.theme = 'arena'; battle.phase = 'setup';
+    startBattleMode(); battle.phase = 'setup';
     const picks = new Set();
     for (let i = 0; i < 30; i++) { battle.time = 'night'; musicMix(); battle.time = 'day'; picks.add(Object.keys(musicMix())[0]); } // (a new pick each time the time changes)
     return { picks: [...picks], saved: loadSetting('musicOff', '[]') };
   });
   expect(r.picks).not.toContain('arena_muster');
   expect(r.saved).toContain('arena_muster');
-  expect(await page.evaluate(() => { for (const id of GAME_CONFIG.battleMusic.ambient) setTrackOn(id, false); battle.theme = 'arena'; return JSON.stringify(musicMix()); })).toBe('{}');
+  expect(await page.evaluate(() => { for (const id of GAME_CONFIG.battleMusic.ambient) setTrackOn(id, false); return JSON.stringify(musicMix()); })).toBe('{}');
   expect(errors).toEqual([]);
 });

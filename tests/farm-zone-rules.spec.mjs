@@ -23,3 +23,69 @@ test('nothing can be built on a farm zone until the zone is removed (#92)', asyn
   });
   expect(r).toEqual({ zoned: 1, blockedWhileZoned: true, builtAfterClearing: true });
 });
+
+test('watering darkens soil while fertilizing adds only scattered granules', async ({ page }) => {
+  await openGame(page);
+  const visuals = await page.evaluate(() => {
+    const fillRect = ctx.fillRect, stroke = ctx.stroke, fill = ctx.fill;
+    let current;
+    ctx.fillRect = function (...args) {
+      if (args[2] === 26 && args[3] === 26) current.soil = this.fillStyle;
+      return fillRect.apply(this, args);
+    };
+    ctx.stroke = function (...args) {
+      if (this.strokeStyle === '#79d4de') current.waterMarks++;
+      return stroke.apply(this, args);
+    };
+    ctx.fill = function (...args) {
+      if (this.fillStyle === '#e0b56d') current.fertilizerGranules++;
+      return fill.apply(this, args);
+    };
+    const draw = (state, x) => {
+      current = { soil: null, waterMarks: 0, fertilizerGranules: 0 };
+      drawFarmPlotArt({ x, y: 100, growth: 0, ...state });
+      return { ...current };
+    };
+    try {
+      return {
+        plain: draw({}, 100),
+        watered: draw({ watered: true }, 140),
+        fertilized: draw({ fertilized: true }, 180),
+        both: draw({ watered: true, fertilized: true }, 220)
+      };
+    } finally {
+      ctx.fillRect = fillRect;
+      ctx.stroke = stroke;
+      ctx.fill = fill;
+    }
+  });
+  expect(visuals).toEqual({
+    plain: { soil: '#5c4033', waterMarks: 0, fertilizerGranules: 0 },
+    watered: { soil: '#4a3020', waterMarks: 0, fertilizerGranules: 0 },
+    fertilized: { soil: '#5c4033', waterMarks: 0, fertilizerGranules: 8 },
+    both: { soil: '#4a3020', waterMarks: 0, fertilizerGranules: 8 }
+  });
+});
+
+test('ripe rice plots draw rice grains instead of wheat heads', async ({ page }) => {
+  await openGame(page);
+  const grainColors = await page.evaluate(() => {
+    const fill = ctx.fill, colors = [];
+    ctx.fill = function (...args) {
+      colors.push(this.fillStyle);
+      return fill.apply(this, args);
+    };
+    try {
+      drawFarmPlotArt({ x: 100, y: 100, growth: 100, crop: 'wheat' });
+      const wheat = [...colors];
+      colors.length = 0;
+      drawFarmPlotArt({ x: 140, y: 100, growth: 100, crop: 'rice' });
+      return { wheat, rice: colors };
+    } finally {
+      ctx.fill = fill;
+    }
+  });
+  expect(grainColors.wheat).toContain('#f4d03f');
+  expect(grainColors.rice).toContain('#e6c85c');
+  expect(grainColors.rice).not.toContain('#f4d03f');
+});

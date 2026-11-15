@@ -361,6 +361,11 @@ export function drawSpikesArt(x, y, broken) {
 // helmet; with a painted target on its chest; a wooden pell with arms; one with a battered shield
 /** @type {[string, number][]} */
 export const DUMMY_VARIANTS = [['sack', 40], ['pot', 20], ['target', 20], ['pell', 12], ['shield', 8]];
+export function pickDummyVariant() {
+  let n = Math.random() * DUMMY_VARIANTS.reduce((sum, v) => sum + v[1], 0);
+  return DUMMY_VARIANTS.find(v => (n -= v[1]) < 0)?.[0] || DUMMY_VARIANTS[0][0];
+}
+
 export function drawDummyArt(x, y, variant) {
   shadow(x, y + 6, 14, 10, 5);
   rect(x - 1.5, y - 4, 3, 17, '#6d4520', '#3e2716'); // the post

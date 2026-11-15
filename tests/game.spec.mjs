@@ -10,8 +10,8 @@ const ROCK_SEEDS = ['maze-283', 'maze-137', 'maze-69'];
 test('menu loads and a game runs without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#play-button')).toBeVisible();
-  await expect(page.locator('#build-actions button')).toHaveCount(17); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248), the torch (#257), the mine (#326)
-  await expect(page.locator('#farming-actions button')).toHaveCount(1); // the compost heap (#232; #279: crops only in zones)
+  await expect(page.locator('#build-actions button')).toHaveCount(18); // with the smithy (#211), the dummy and the fish trap (#199), the workshop, the iron door and the iron trap (#248), the torch (#257), the mine (#326), the compost heap (#232)
+  await expect(page.locator('#farming-actions button')).toHaveCount(0); // crops are planted only in zones (#279)
   // what's made, a tile each (#261): tools, weapons (and arrows), gear; the weapons by hand, at a workshop,
   // at a smithy
   await expect(page.locator('#craft-tools .tile')).toHaveCount(7); // (#279: no rope)
@@ -132,10 +132,11 @@ test('clicking an enemy with the Point tool marks and unmarks it (#35)', async (
 
 test('the Zones tab: the farm only by its zones (no crops placed one by one), relief zones and soldiers\' posts (#64, #279)', async ({ page }) => {
   await openGame(page);
-  await expect.poll(() => iconText(page, '#farming-actions button')).toEqual(['[[dung_heap]] Компостная куча 6[[wood]]']);
+  await expect(page.locator('#build-actions #btn-dung_heap')).toHaveCount(1);
+  await expect(page.locator('#farming-actions #btn-dung_heap')).toHaveCount(0);
   await expect(page.locator('#btn-wheat')).toHaveCount(0);
   await expect(page.locator('#btn-sapling')).toHaveCount(0);
-  for (const id of ['zone_wheat', 'zone_sapling', 'zone_apple', 'zone_relief', 'zone_post', 'zone_clear']) await expect(page.locator(`#btn-${id}`)).toHaveCount(1);
+  for (const id of ['zone_wheat', 'zone_rice', 'zone_sapling', 'zone_apple', 'zone_relief', 'zone_post', 'zone_clear']) await expect(page.locator(`#btn-${id}`)).toHaveCount(1);
 });
 
 test('soldiers push through to enemy tents past summoned raiders; workers keep working (#65)', async ({ page }) => {

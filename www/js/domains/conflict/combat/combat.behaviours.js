@@ -12,7 +12,7 @@ import { getEnemyDef } from '../waves/index.js';
 
 const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
-const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || isInsideBase(en) ||
+const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || en.menuThreat || isInsideBase(en) ||
   ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned)));
 
 // (#322) The enemies there are to fight, and which of them are inside the base: the same for every settler of a tick (they
@@ -22,8 +22,8 @@ function threatsThisTick(tick) {
   if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
     const inside = new Set(game.enemies.filter(isInsideBase));
     const marching = !game.wavePreparation || game.wavePreparation.stage === 'march';
-    const list = game.enemies.filter(en => !en.ghostly && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
-      (game.gameMode === 'battle' || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
+    const list = game.enemies.filter(en => !en.ghostly && !en.menuStaged && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
+      (game.gameMode === 'battle' || en.menuThreat || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
     tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
   }
   return tick.threats;
@@ -107,6 +107,14 @@ export function strikeBack(s, tick) {
 // while there are defenders, unless they're being attacked themselves.
 export function fightEnemies(s, tick) {
   const dt = tick.dt;
+  if (game.gameMode === 'menu' && game.menuScene === 'demon' && s.type === 'demon') {
+    const target = game.enemies.filter(enemy => enemy.hp > 0 && !enemy.menuStaged)
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (target) {
+      s.patrolTarget = null;
+      return engageEnemy(s, tick, target, target, dt);
+    }
+  }
   const choice = chooseSettlerTarget(s, tick);
   if (!choice) return false; // on the way to the enemy tents, with nothing in the way
   const { targetEnemy, attacker } = choice;
@@ -122,7 +130,7 @@ export function fightEnemies(s, tick) {
     return true;
   }
   // (#279) the menu's fight: the squad keeps by the warehouse, guarding it, and lets those further off come
-  if (game.gameMode === 'menu' && !targetEnemy && game.enemies.length) {
+  if (game.gameMode === 'menu' && game.menuScene !== 'demon' && !targetEnemy && game.enemies.length) {
     s.patrolTarget = null;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > MENU_GUARD * 0.5) moveSettlerToTownHall(s, s.speed, dt);
     return true;
@@ -140,8 +148,8 @@ const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  const isWaveThreat = en => (!game.wavePreparation || game.wavePreparation.stage === 'march') &&
-    (en.fromWave || en.waveSummoned);
+  const isWaveThreat = en => en.menuThreat || ((!game.wavePreparation || game.wavePreparation.stage === 'march') &&
+    (en.fromWave || en.waveSummoned));
   const threats = threatsThisTick(tick);
   const candidates = threats.list.filter(en => !(en.toCatch && en.toCatch !== s.id));
   const baseThreats = candidates.filter(en => threats.inside.has(en));
@@ -199,7 +207,8 @@ function chooseSettlerTarget(s, tick) {
     });
     if (!targetEnemy) return null;
   }
-  if (game.gameMode === 'menu' && targetEnemy && !attacker && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) > MENU_GUARD) targetEnemy = null; // (#279)
+  if (game.gameMode === 'menu' && targetEnemy && !attacker &&
+      Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) > MENU_GUARD) targetEnemy = null; // (#279)
   return { targetEnemy, attacker };
 }
 

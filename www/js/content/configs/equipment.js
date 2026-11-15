@@ -71,10 +71,12 @@ export const equipmentConfig = {
     backpack: { id: 'backpack', icon: 'backpack', madeBy: 'hand', cost: { leather: 4, rope: 2 }, extraLoads: 1 },
     shield: { id: 'shield', icon: 'shield', cost: { wood: 6, iron: 2 }, damageReduction: 0.25 },
     // (#326, 27.10, 27) a helmet: anyone but a pet, damageReduction off every hit, on top of armour and a shield
-    helmet: { id: 'helmet', icon: 'helmet', cost: { iron: 3 }, damageReduction: 0.15 },
+    helmet: { id: 'helmet', icon: 'helmet', cost: { iron: 3 }, damageReduction: 0.15, helmetKind: 'helmet' },
+    horned_helmet: { id: 'horned_helmet', icon: 'horned_helmet', factions: ['demons'], cost: { iron: 5 }, damageReduction: 0.25, helmetKind: 'helmet' },
     armor: { id: 'armor', icon: 'armor', cost: { iron: 8 }, hpBonus: 50, damageReduction: 0.35, armorKind: 'iron' },
     // (#298) leather armour: weaker than iron (armorKind: what `armor` a unit wearing it has), made at a workshop
     leather_armor: { id: 'leather_armor', icon: 'leather_armor', cost: { leather: 6 }, hpBonus: 25, damageReduction: 0.18, armorKind: 'leather' },
+    bone_armor: { id: 'bone_armor', icon: 'bone_armor', factions: ['undead'], madeBy: 'hand', cost: { bones: 15, rope: 2 }, hpBonus: 15, damageReduction: 0.12, armorKind: 'bone' },
     // farmers (hoe) only, from the Tools tab: fills at water for `charges` crops; a watered crop grows
     // growthFactor times as fast
     wateringCan: { id: 'wateringCan', icon: 'wateringCan', factions: ['humans', 'demons'], cost: { wood: 3, iron: 1 }, charges: 5, growthFactor: 2 },

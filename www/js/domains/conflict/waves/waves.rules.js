@@ -7,7 +7,7 @@ import { addResources } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { armorOf, isRangedWeapon } from '../../colony/equipment/index.js';
+import { armorOf, helmetOf, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict, moveEntityTowards } from '../../../engine/movement/index.js';
 import { addCorpse, getBaseRadius } from '../combat/index.js';
 import { openDemonPortal, openDemonPortalAt } from '../../factions/demons/index.js';
@@ -20,6 +20,9 @@ import { markEnemyKillForPlague } from '../../../modes/plague/index.js';
 export const WAVE_WARNING_SECONDS = 15;
 
 export function getDifficulty() {
+  if (game.gameMode === 'menu') {
+    return GAME_CONFIG.difficulty.normal;
+  }
   return GAME_CONFIG.difficulty[game.gameDifficulty] || GAME_CONFIG.difficulty.normal;
 }
 
@@ -464,19 +467,25 @@ function getPlayerDevelopmentItems() {
   for (const settler of game.settlers) {
     if (settler.weapon && settler.weapon !== 'fist') items.add(`weapons:${settler.weapon}`);
     if (settler.tool) items.add(`tools:${settler.tool}`);
-    if (settler.armor) items.add(`gear:${settler.armor === 'iron' ? 'armor' : 'leather_armor'}`);
+    const armour = armorOf(settler);
+    if (armour) items.add(`gear:${armour.id}`);
     if (settler.shield) items.add('gear:shield');
-    if (settler.helmet) items.add('gear:helmet');
+    const helmet = helmetOf(settler);
+    if (helmet) items.add(`gear:${helmet.id}`);
   }
   for (const building of game.buildings) if (building.side !== 'red') items.add(`buildings:${building.type}`);
-  if (game.playerGear.leather) items.add('gear:leather_armor');
-  for (const id of ['armor', 'shield', 'helmet']) if (game.playerGear[id]) items.add(`gear:${id}`);
+  for (const [id, owned] of Object.entries(game.playerGear)) if (owned) {
+    items.add(`gear:${id === 'leather' ? 'leather_armor' : id}`);
+  }
   return items;
 }
 
 export function getPlayerDevelopment() {
-  return Math.min(GAME_CONFIG.waveScaling.maxTechItems,
-    [...getPlayerDevelopmentItems()].filter(key => PLAYER_DEVELOPMENT_ITEMS.has(key)).length);
+  const equivalentGear = { 'gear:bone_armor': 'gear:leather_armor', 'gear:horned_helmet': 'gear:helmet' };
+  const items = new Set([...getPlayerDevelopmentItems()]
+    .map(key => equivalentGear[key] || key)
+    .filter(key => PLAYER_DEVELOPMENT_ITEMS.has(key)));
+  return Math.min(GAME_CONFIG.waveScaling.maxTechItems, items.size);
 }
 
 export function getWaveEnemyCount(wave = game.waveNum) {
@@ -492,9 +501,10 @@ export function getWaveEnemyCount(wave = game.waveNum) {
 export function getWaveGearChance(item, wave = game.waveNum) {
   const rule = GAME_CONFIG.waveGear[item];
   const development = getPlayerDevelopmentItems();
-  const gear = item === 'leather' ? ['gear:leather_armor', 'gear:armor']
-    : [`gear:${item === 'iron' ? 'armor' : item}`];
-  if (!rule || wave < rule.fromWave || !gear.some(key => development.has(key))) return 0;
+  const gear = item === 'leather' ? ['gear:leather_armor', 'gear:bone_armor', 'gear:armor']
+    : item === 'helmet' ? ['gear:helmet', 'gear:horned_helmet']
+      : [`gear:${item === 'iron' ? 'armor' : item}`];
+  if (!rule || wave < rule.fromWave || (!game.plagueMode && !gear.some(key => development.has(key)))) return 0;
   const progress = Math.min(1, Math.max(0, (wave - rule.fromWave) / GAME_CONFIG.waveGear.rampWaves));
   return rule.startChance + (rule.endChance - rule.startChance) * progress;
 }
@@ -505,16 +515,12 @@ export function dressForWave(enemy, def, wave = game.waveNum) {
   if (!enemy.armor) {
     const ironChance = getWaveGearChance('iron', wave), leatherChance = getWaveGearChance('leather', wave);
     const armourRoll = rand();
-    const armour = armourRoll < ironChance ? GAME_CONFIG.gear.armor
-      : armourRoll < ironChance + leatherChance ? GAME_CONFIG.gear.leather_armor : null;
-    if (armour) {
-      enemy.armor = armour.armorKind;
-      enemy.maxHp += armour.hpBonus;
-      enemy.hp = enemy.maxHp;
-    }
+    const armourId = armourRoll < ironChance ? 'armor'
+      : armourRoll < ironChance + leatherChance ? getEnemyFaction().id === 'undead' ? 'bone_armor' : 'leather_armor' : null;
+    if (armourId) putOnGear(enemy, armourId);
   }
   if (!enemy.shield && !def.ranged && !def.healer && !def.necromancer && rand() < getWaveGearChance('shield', wave)) enemy.shield = true;
-  if (!enemy.helmet && rand() < getWaveGearChance('helmet', wave)) enemy.helmet = true;
+  if (!enemy.helmet && rand() < getWaveGearChance('helmet', wave)) putOnGear(enemy, getEnemyFaction().id === 'demons' ? 'horned_helmet' : 'helmet');
 }
 
 export function startNextWave(preparing = false) {
@@ -1151,7 +1157,8 @@ export function dropLoot(en) {
   if (weapon && weapon !== 'fist' && GAME_CONFIG.weapons[weapon]) held.push(['weapons', weapon]);
   if (armorOf(en)) held.push(['gear', armorOf(en).id]);
   if (en.shield) held.push(['gear', 'shield']);
-  if (en.helmet) held.push(['gear', 'helmet']);
+  const helmet = helmetOf(en);
+  if (helmet) held.push(['gear', helmet.id]);
   // the thing itself, each with itemChance, lying apart (#232: no more bundles of a share of their cost)
   held.forEach(([category, id], i) => {
     if (rand() >= loot.itemChance) return;

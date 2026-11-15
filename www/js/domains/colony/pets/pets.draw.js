@@ -26,13 +26,14 @@ export function drawPet(s, kind = petKindOf(s), enemy = false) {
   const d = Math.cos(s.facing ?? 0) < 0 ? -1 : 1;
   const r = s.visualRadius || s.radius || 11;
   const id = s.id ?? (s.animSeed ??= s.x * 0.013 + s.y * 0.021); // (an enemy has none: one from where it first stands)
+  const sideColor = enemy ? getEnemyColor(null) : getSettlerColor(null);
   ctx.save();
   ctx.translate(s.x, s.y);
   if (s.isPossessed) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, r * 0.7, r * 1.2, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); }
   if (s === game.selectedSettler) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, r * 0.7, r * 1.3, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); }
   ctx.scale(scale, scale);
-  if (kind === 'ghost') drawGhost(s, d, id, enemy ? getEnemyColor(null) : getSettlerColor(null));
-  else drawHound(s, d, kind, id);
+  if (kind === 'ghost') drawGhost(s, d, id, sideColor);
+  else drawHound(s, d, kind, id, sideColor);
   ctx.restore();
   if (kind !== 'ghost') drawBodyBlood(s, r);
   const top = s.y - r * 1.45;
@@ -47,7 +48,7 @@ export function drawPet(s, kind = petKindOf(s), enemy = false) {
 }
 
 // A dog or a hellhound
-function drawHound(s, d, kind, id) {
+function drawHound(s, d, kind, id, sideColor) {
   const [coat, dark] = coatOf(s, kind), beast = kind === 'beast';
   const lying = s.petSleep > 0, eating = (s.working || 0) > 0 && s.workKind === 'devour';
   const step = lying ? 0 : Math.sin((s.walk || 0) * 0.45) * 1.8;
@@ -75,6 +76,15 @@ function drawHound(s, d, kind, id) {
   ctx.translate(0, eating ? 4 : lying ? 1 : 0);
   ctx.fillStyle = coat; ctx.strokeStyle = dark;
   ctx.beginPath(); ctx.ellipse(9, -4, 5, 4.2, 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = sideColor; ctx.strokeStyle = dark; ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(4.2, -6.4);
+  ctx.quadraticCurveTo(6.5, -5.4, 7.4, -2.4);
+  ctx.quadraticCurveTo(7.9, -0.5, 8.6, 1.2);
+  ctx.lineTo(6.7, 2);
+  ctx.quadraticCurveTo(6, -0.2, 5.2, -2);
+  ctx.quadraticCurveTo(4.3, -4, 3.1, -4.9);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
   // the jaws: the lower one dropping open as it bites (its mouth dark, teeth white), shut again as it snaps
   if (gape > 0.05) {
     const open = gape * 3.2;

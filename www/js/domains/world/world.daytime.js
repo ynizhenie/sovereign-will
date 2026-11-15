@@ -4,9 +4,9 @@
 // hand, the demons' portals, a necromancer's staff
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { TILE_SIZE, game, townHall } from '../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, townHall } from '../../engine/world/index.js';
 import { isVisible } from './world.fog.js';
-import { camera, canvas, ctx, getViewScale, glLayer, glReady, loadSetting, saveSetting } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale, glLayer, glReady, loadSetting, saveSetting } from '../../engine/platform/index.js';
 import { getBuildingColor, getEnemyColor, getSettlerColor } from '../factions/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -28,7 +28,8 @@ export function tickDaytime(dt) {
 
 // (#326) a battle has a time of day too, picked in its settings and standing still: only how it looks (the dark,
 // the lights, the shadows); nobody sleeps or eats by it there
-const looksByTime = () => game.gameMode === 'endless' || game.gameMode === 'battle' || game.gameMode === 'editor';
+const looksByTime = () => game.gameMode === 'endless' || game.gameMode === 'battle' ||
+  (game.gameMode === 'editor' && !game.editorHideTimeAndWeather);
 
 // When in a day each of a battle's times is (its middle; the evening's dusk well on)
 export function timeOfPhase(phase) {
@@ -190,6 +191,42 @@ export function drawDarkness() {
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   }
+  ctx.restore();
+}
+
+export function drawFireflies() {
+  if (!looksByTime()) return;
+  const phase = getDayPhase();
+  const scale = getViewScale();
+  if ((phase !== 'evening' && phase !== 'night') || scale < 0.25) return;
+  const view = getViewRect(TILE_SIZE);
+  const seconds = performance.now() / 1000;
+  const dusk = Math.min(1, getDarkness() / (config().darkness || 1));
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  forEachInRect(game.grassList, view.x0, view.y0, view.x1, view.y1, grass => {
+    if (!isVisible(grass.x, grass.y)) return;
+    const gx = Math.floor(grass.x / TILE_SIZE), gy = Math.floor(grass.y / TILE_SIZE);
+    const seed = (Math.imul(gx + 1, 374761393) ^ Math.imul(gy + 1, 668265263)) >>> 0;
+    if ((seed & 15) !== 0) return;
+    const seedPhase = (seed >>> 8) * 0.0001;
+    for (let i = 0; i < 2; i++) {
+      const angle = seconds * 1.4 + seedPhase + i * Math.PI;
+      const x = grass.x + Math.cos(angle) * 9;
+      const y = grass.y - 12 + Math.sin(angle * 1.35) * 5;
+      const sx = (x - camera.x) * scale + canvas.width / 2;
+      const sy = (y - camera.y) * scale + canvas.height / 2;
+      const pulse = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(seconds * 3 + seedPhase + i));
+      ctx.globalAlpha = pulse * (0.3 + 0.7 * dusk);
+      const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 8);
+      glow.addColorStop(0, 'rgba(220, 255, 145, 0.8)');
+      glow.addColorStop(1, 'rgba(220, 255, 145, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#efffa7';
+      ctx.beginPath(); ctx.arc(sx, sy, 1.3, 0, Math.PI * 2); ctx.fill();
+    }
+  });
   ctx.restore();
 }
 

@@ -43,7 +43,6 @@ test('battle settings survive reload', async ({ page }) => {
   await page.locator('[data-battle-look="time"][data-value="night"]').click();
   await page.locator('[data-battle-look="weather"][data-value="storm"]').click();
   await page.locator('[data-battle-difficulty="hard"]').click();
-  await page.locator('#battle-music [data-theme="demons"]').click();
   await page.locator('[data-battle-category="buildings"]').click();
   await page.reload();
 
@@ -56,7 +55,7 @@ test('battle settings survive reload', async ({ page }) => {
   await expect(page.locator('[data-battle-look="time"][data-value="night"]')).toHaveClass(/on/);
   await expect(page.locator('[data-battle-look="weather"][data-value="storm"]')).toHaveClass(/on/);
   await expect(page.locator('[data-battle-difficulty="hard"]')).toHaveClass(/on/);
-  await expect(page.locator('#battle-music [data-theme="demons"]')).toHaveClass(/on/);
+  await expect(page.locator('#battle-music')).toHaveCount(0);
 });
 
 test('map-editor setup choices survive reload', async ({ page }) => {

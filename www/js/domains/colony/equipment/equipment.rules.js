@@ -27,8 +27,10 @@ export const GEAR_RULES = {
   armor: { canWear: () => true, first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   // (#298) not over iron
   leather_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
+  bone_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
   helmet: { canWear: () => true, first: s => s.role === 'soldier' }, // (#326, 27.10, 27)
+  horned_helmet: { canWear: () => true, first: s => s.role === 'soldier' },
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
@@ -42,9 +44,18 @@ export function armorOf(unit) {
   return (unit && unit.armor && Object.values(GAME_CONFIG.gear).find(g => g.armorKind === unit.armor)) || null;
 }
 export const isArmorGear = id => !!(GAME_CONFIG.gear[id] && GAME_CONFIG.gear[id].armorKind);
+export const isHelmetGear = id => !!(GAME_CONFIG.gear[id] && GAME_CONFIG.gear[id].helmetKind);
+
+export function helmetOf(unit) {
+  if (!unit || !unit.helmet) return null;
+  const id = unit.helmetGear || (typeof unit.helmet === 'string' ? unit.helmet : 'helmet');
+  return isHelmetGear(id) ? GAME_CONFIG.gear[id] : null;
+}
 
 export function hasGear(s, id) {
-  return isArmorGear(id) ? s.armor === GAME_CONFIG.gear[id].armorKind : !!s[id];
+  if (isArmorGear(id)) return s.armor === GAME_CONFIG.gear[id].armorKind;
+  if (isHelmetGear(id)) return !!s.helmet && (s.helmetGear || (typeof s.helmet === 'string' ? s.helmet : 'helmet')) === id;
+  return !!s[id];
 }
 
 // Pay for a piece of gear and send a settler to pick it up at the town hall: the one it's for if it can
@@ -197,6 +208,11 @@ export function putOnGear(s, id) {
     s.armor = def.armorKind;
     s.maxHp = (s.maxHp || 100) + def.hpBonus;
     s.hp += def.hpBonus;
+  } else if (isHelmetGear(id)) {
+    const old = helmetOf(s);
+    if (old && old.id !== id) takeOffGear(s, old.id, true);
+    s.helmet = true;
+    s.helmetGear = id;
   } else {
     s[id] = true;
   }
@@ -209,6 +225,9 @@ export function takeOffGear(s, id, keep = false) {
     s.armor = null;
     s.maxHp -= GAME_CONFIG.gear[id].hpBonus;
     s.hp = Math.min(s.hp, s.maxHp);
+  } else if (isHelmetGear(id)) {
+    s.helmet = false;
+    delete s.helmetGear;
   } else {
     s[id] = false;
   }

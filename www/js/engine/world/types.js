@@ -37,6 +37,7 @@
  * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
+ * @property {Point | null} [patrolTarget] menu patrol target while the scene is active
  * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
  * @property {boolean} [healing]     at the camp's shelter till it's mended (#279)
  * @property {number} [orderedBy]  the id of the captain that gave it its target (#326: its morale held meanwhile)
@@ -62,7 +63,8 @@
  * @property {number} [rifleAmmo]
  * @property {boolean} [camouflage]
  * @property {boolean} [shield]
- * @property {boolean} [helmet]  (#326, 27.10, 27)
+ * @property {boolean|string} [helmet]  (#326, 27.10, 27)
+ * @property {string} [helmetGear] the helmet's gear id, while helmet stays true for old saves and callers
  * @property {string|boolean} [armor]
  * @property {boolean} [backpack]
  * @property {boolean} [wateringCan]
@@ -237,6 +239,8 @@
  * @property {number} [shotCooldown] seconds between its shots, a bow's in a settler's hands (#255)
  * @property {Object<string, number>} reward   what killing it adds to the stock
  * @property {Settler | null} [attackTarget]
+ * @property {boolean} [menuStaged]
+ * @property {Point | null} [menuEntryTarget]
  * @property {Object | null} buildTarget     the tent site it's building
  * @property {Object | null} [tentBuildTarget] the tent site reserved for a wave builder
  * @property {Point[] | null} path
@@ -256,6 +260,7 @@
  * @property {boolean} [summoned]     from a tent, not the wave
  * @property {boolean} [waveSummoned] spawned by a tent during a wave
  * @property {boolean} [fromWave]
+ * @property {boolean} [menuThreat] scripted enemy the menu scene's fighters should engage
  * @property {number} [prepWave] wave number this enemy is preparing for
  * @property {'west' | 'east' | 'north' | 'south'} [waveArrivalSide] map edge this wave enemy arrived from
  * @property {boolean} [markedTarget] the player pointed at it
@@ -269,7 +274,8 @@
  * @property {boolean} [hurtVoiceSpoken] spoke after dropping below 30% health
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
  * @property {boolean} [shield]
- * @property {boolean} [helmet]  (#326, 27.10, 27)
+ * @property {boolean|string} [helmet]  (#326, 27.10, 27)
+ * @property {string} [helmetGear] the helmet's gear id, while helmet stays true for old saves and callers
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
@@ -371,6 +377,7 @@
  * The state of the game being played (engine/world/state.js).
  * @typedef {Object} Game
  * @property {'endless'|'battle'|'editor'|'menu'} gameMode
+ * @property {string} menuScene
  * @property {boolean} gameStarted
  * @property {boolean} loading
  * @property {boolean} loadingRender
@@ -428,6 +435,7 @@
  * @property {Point[]} stumps       where a felled tree stood: its stump, till a tree grows again (#306)
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
  * @property {number} dayTime      seconds into the day (#257)
+ * @property {boolean} editorHideTimeAndWeather
  * @property {number} nightId      which night it is
  * @property {boolean} wasNight
  * @property {boolean} autoBlight   the undead's necromancers blight the nearest ground by themselves (#253)
@@ -455,7 +463,7 @@
  * @property {number} enemyHerbStock
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
- * @property {{ armor: boolean, shield: boolean, leather?: boolean, helmet?: boolean }} playerGear  armour / a shield / a helmet the player has made
+ * @property {Object<string, boolean>} playerGear  armour / a shield / a helmet the player has made
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  * @property {Object<string, number>} paths  'gx,gy' -> how worn its ground is (#248)

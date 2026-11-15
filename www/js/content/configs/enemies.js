@@ -40,6 +40,10 @@ export const enemiesConfig = {
     raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
       healer: { range: 220, healRange: 30, bagSize: 5, tentStock: 10, refill: 5, healSeconds: 1.2 } },
+    // The demon scene's medic carries a club as well as its medbag.
+    raider_medic_club: { id: 'raider_medic_club', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'club', tool: 'medbag',
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
+      healer: { range: 220, healRange: 30, bagSize: 5, tentStock: 10, refill: 5, healSeconds: 1.2 } },
     // the undead: slow zombies, big zombies, zombie archers, and necromancers that raise the dead
     // (necromancer: raises up to raises corpses before recharging at a grave, maxZombies at once;
     // heals within healRange by healPerSecond).

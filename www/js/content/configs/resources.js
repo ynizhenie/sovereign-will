@@ -7,6 +7,7 @@ export const resourcesConfig = {
     rawMeat: { id: 'rawMeat', icon: 'rawMeat', type: 'resource' },
     rawFish: { id: 'rawFish', icon: 'rawFish', type: 'resource' },
     wheat: { id: 'wheat', icon: 'wheat', type: 'resource' },
+    rice: { id: 'rice', icon: 'rice', type: 'resource' },
     wood: { id: 'wood', icon: 'wood', type: 'resource' },
     stone: { id: 'stone', icon: 'stone', type: 'resource' },
     coal: { id: 'coal', icon: 'coal', type: 'resource' },
@@ -15,6 +16,7 @@ export const resourcesConfig = {
     leather: { id: 'leather', icon: 'leather', type: 'resource' },
     arrows: { id: 'arrows', icon: 'arrows', type: 'resource' },
     wheatSeeds: { id: 'wheatSeeds', icon: 'wheatSeeds', type: 'resource' },
+    riceSeeds: { id: 'riceSeeds', icon: 'riceSeeds', type: 'resource' },
     saplings: { id: 'saplings', icon: 'saplings', type: 'resource' },
     herbs: { id: 'herbs', icon: 'herbs', type: 'resource' },
     rope: { id: 'rope', icon: 'rope', type: 'resource' },
@@ -42,15 +44,15 @@ export const resourcesConfig = {
     { id: 'rot', members: ['rot'], factions: ['undead'] },
     { id: 'souls', members: ['souls'], factions: ['undead'], pinned: true }, // (#326)
     { id: 'food', members: ['food'], kinds: 'foodKinds', factions: ['humans', 'demons'], pinned: true }, // Food, opening onto what it's made of
-    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'worms'], factions: ['humans', 'demons'] }, // right after Food
+    { id: 'raw', icon: 'rawMeat', members: ['rawMeat', 'rawFish', 'wheat', 'rice', 'worms'], factions: ['humans', 'demons'] }, // right after Food
     { id: 'wood', members: ['wood'], pinned: true },
     { id: 'stone', members: ['stone'], pinned: true },
-    { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'saplings', 'appleSaplings', 'herbs', 'rope'] },
+    { id: 'plants', icon: 'saplings', members: ['wheatSeeds', 'riceSeeds', 'saplings', 'appleSaplings', 'herbs', 'rope'] },
     { id: 'materials', icon: 'stone', members: ['firewood', 'coal', 'ironOre', 'iron', 'leather'] },
     { id: 'supplies', icon: 'arrows', members: ['arrows', 'torches'] },
     // not stock: how many settlers hold each tool / weapon / piece of gear
     { id: 'toolsHeld', icon: 'tools', members: [], held: { tools: 'all', gear: ['backpack', 'wateringCan', 'whistle'] } },
-    { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'leather_armor', 'shield', 'helmet', 'banner'] } }
+    { id: 'weaponsHeld', icon: 'swords', members: [], held: { weapons: 'all', gear: ['armor', 'leather_armor', 'bone_armor', 'shield', 'helmet', 'horned_helmet', 'banner'] } }
   ],
 
   // kinds of ready food. All of it is Food (what hiring costs and the colony eats); the HUD just shows
@@ -58,7 +60,8 @@ export const resourcesConfig = {
   // (loot) goes to whichever kind there's least of; food spent or eaten comes off in this order.
   foodKinds: {
     berries: { id: 'berries', icon: 'berries' }, apples: { id: 'apples', icon: 'apples' },
-    bread: { id: 'bread', icon: 'bread' }, cookedFish: { id: 'cookedFish', icon: 'cookedFish' }, cookedMeat: { id: 'cookedMeat', icon: 'cookedMeat' }
+    bread: { id: 'bread', icon: 'bread' }, cookedFish: { id: 'cookedFish', icon: 'cookedFish' }, cookedMeat: { id: 'cookedMeat', icon: 'cookedMeat' },
+    cookedRice: { id: 'cookedRice', icon: 'cookedRice' }
   },
 
   // ---- Colony
@@ -71,7 +74,7 @@ export const resourcesConfig = {
 
   start: {
     // stock at the start of a game (ids from `resources`)
-    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, torches: 0, rope: 0, food: 25, wheatSeeds: 3, saplings: 0 },
+    resources: { wood: 30, stone: 20, firewood: 10, coal: 0, ironOre: 0, iron: 0, leather: 0, arrows: 0, torches: 0, rope: 0, food: 25, rice: 0, wheatSeeds: 3, riceSeeds: 0, saplings: 0 },
     // population limit before tents (each tent adds buildings.tent.population)
     population: 5
   }

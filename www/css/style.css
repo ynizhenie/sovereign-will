@@ -85,7 +85,7 @@ button {
 button:not(:disabled):active { transform: scale(0.95); filter: brightness(0.85); transition-duration: 0.05s; }
 /* chosen (a faction, a difficulty, a tab...): a soft glow around it */
 .btn.active, .tab-btn.active, .fps-option.active, .difficulty-option.active, .cards-option.active, .faction-option.active,
-.wave-option.active, .map-option.active, .item-row .item-name.active {
+.wave-option.active, .map-option.active, .battle-size-option.active, .item-row .item-name.active {
   box-shadow: 0 0 0 1px rgba(70, 184, 218, 0.6), 0 0 10px rgba(70, 184, 218, 0.45);
 }
 /* a price the stock can't pay: the button dimmed, the parts it's short of in red */
@@ -98,7 +98,7 @@ button.btn-ok { animation: btn-ok 0.45s ease-out; }
 button.btn-no { animation: btn-no 0.35s ease; }
 /* on a phone, room for a finger: no button lower than this */
 @media (pointer: coarse) {
-  .btn, .tab-btn, .fps-option, .difficulty-option, .cards-option, .faction-option, .wave-option, .map-option { min-height: 36px; }
+  .btn, .tab-btn, .fps-option, .difficulty-option, .cards-option, .faction-option, .wave-option, .map-option, .battle-size-option { min-height: 36px; }
   .menu-button, #play-button { min-height: 44px; }
 }
 
@@ -323,6 +323,11 @@ body.menu-world #defeat-overlay { display: none !important; }
   overflow-y: auto;
 }
 
+.main-menu-content[data-screen="battle"] {
+  gap: 9px;
+  padding: 14px;
+}
+
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
 .main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }
 .plague-menu { gap: 12px; }
@@ -444,7 +449,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   cursor: pointer;
 }
 
-.map-option, .map-source-option, .editor-size-option {
+.map-option, .map-source-option, .editor-size-option, .battle-size-option {
   flex: 1;
   padding: 8px 0;
   background: #252830;
@@ -538,7 +543,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   padding: 0;
 }
 
-.wave-option.active, .map-option.active, .map-source-option.active, .editor-size-option.active,
+.wave-option.active, .map-option.active, .battle-size-option.active, .map-source-option.active, .editor-size-option.active,
 .difficulty-option.active, .cards-option.active, .fps-option.active {
   background: #2e6da4;
   color: #fff;
@@ -625,6 +630,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 body[data-hud="editor"] .editor-only { display: inline-flex; }
 .btn.editor-only:disabled { opacity: 0.35; }
 #editor-tools .panel-heading:first-child { margin-top: 0; }
+.editor-visibility-setting { margin: 6px 0; }
 
 /* lists of saved maps and presets (#143): a row each, with its own delete that asks first */
 .item-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; flex-shrink: 0; }
@@ -1104,6 +1110,8 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .sub-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
 .btn.sub-tab { flex: 1; }
 .btn.sub-tab.on { background: #2e6da4; border-color: #46b8da; }
+#battle-panel .battle-gear { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+#battle-panel .battle-gear > .btn { min-width: 0; min-height: 34px; padding: 4px 2px; font-size: 11px; line-height: 1.15; white-space: normal; }
 
 /* the stock's drop-down, one level (#248) */
 #resources-hud.res-lines { display: flex; flex-direction: column; gap: 4px; }

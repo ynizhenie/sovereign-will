@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
-import { armorOf, getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { armorOf, getWeaponStats, helmetOf, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
@@ -280,7 +280,7 @@ export function addCorpse(unit, side, kind) {
   game.corpses.push({
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
-    weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet,
+    weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet, helmetGear: helmetOf(unit)?.id,
     pet: def.pet, stuck: unit.stuck
   }); // (its look and body type, #306; its arrows stay in it, #326)
 }
@@ -296,7 +296,8 @@ export function damageEnemy(en, amount) {
   if (getDefinition('enemies', en.enemyKey)?.pet === 'ghost') return; // (a ghost, #314)
   let damage = armorOf(en) ? amount * (1 - armorOf(en).damageReduction) : amount;
   if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
-  if (en.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
+  const helmet = helmetOf(en);
+  if (helmet) damage *= 1 - helmet.damageReduction; // (#326, 27.10, 27)
   en.hp -= damage;
   if (damage > 0) shakeOnHit(en); // (#207)
   if (en.hp > 0 && en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken &&
@@ -492,7 +493,7 @@ export function tickProjectiles(dt = 1 / 60) {
     let hit = false, host = null;
 
     if (proj.fromEnemy) {
-      if (!game.plagueMode && Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
+      if (!proj.skipTownHall && !game.plagueMode && Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
         townHall.hp -= proj.damage;
         hit = true;
       }

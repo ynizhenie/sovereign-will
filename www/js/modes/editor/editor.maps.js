@@ -4,7 +4,7 @@ import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { camera, loadData, saveData, t } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, newWorldEpoch, rand, townHall } from '../../engine/world/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
-import { placeBeaches } from '../../domains/world/index.js';
+import { placeBeaches, setStartingWeather } from '../../domains/world/index.js';
 import { addMapResource } from '../../domains/economy/gathering/index.js';
 import { makeAppleTree } from '../../domains/economy/farming/index.js';
 import { renderItemList } from '../../ui/index.js';
@@ -59,7 +59,7 @@ export function serializeMap(name) {
     resources[kind] = game[def.list].filter(r => !r.oreSpawner).map(tile);
   }
   return {
-    name, cols: game.COLS, rows: game.ROWS, faction: editor.faction, startTime: editor.startTime,
+    name, cols: game.COLS, rows: game.ROWS, faction: editor.faction, startTime: editor.startTime, weather: editor.weather,
     hall: [townHall.x, townHall.y],
     waterRuns: toRuns(game.waterTiles),
     sandRuns: toRuns(game.desertTiles),
@@ -160,7 +160,8 @@ export function* loadCustomMapSteps(map) {
   newWorldEpoch();
   // the time of day it starts at (#257): a little into that part of the day; the morning as ever by default
   const c = GAME_CONFIG.daytime, startAt = { morning: c.morning / 2, day: c.morning + 1, evening: c.morning + c.day + 1, night: c.morning + c.day + c.evening + 1 };
-  game.dayTime = startAt[map.startTime] ?? startAt.day;
+  game.dayTime = startAt[map.startTime] ?? startAt.morning;
+  setStartingWeather(['clear', 'rain', 'fog', 'storm'].includes(map.weather) ? map.weather : 'clear');
   yield 0.85;
 }
 

@@ -43,9 +43,8 @@ export function drawStoreContents() {
     const room = storeCapacity(b) / 4;
     kinds(b.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, b.x - 8 + (i % 3) * 8, b.y + 3 + Math.floor(i / 3) * 7, 7, room));
   }
-  // (#279) not the town hall's: what's put in it isn't shown. Behind the main menu, where the hall is a warehouse,
-  // it shows what's in stock as a warehouse in the game does (while it stands)
-  if (game.gameMode === 'menu' && townHall.hp > 0) {
+  // The main-menu outposts have no visible stock; ground piles are drawn separately above.
+  if (game.gameMode === 'menu' && game.menuScene !== 'fight' && game.menuScene !== 'demon' && townHall.hp > 0) {
     const store = Object.fromEntries(Object.entries(stock).filter(([id]) => id !== 'food' && id !== 'firewood'));
     kinds(store).slice(0, 6).forEach(([id, n], i) => stack(id, n, townHall.x - 8 + (i % 3) * 8, townHall.y + 3 + Math.floor(i / 3) * 7, 7, 10));
   }

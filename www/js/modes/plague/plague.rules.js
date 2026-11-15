@@ -28,20 +28,28 @@ const SPAWN_RANGES = {
 const REVIVE_RANGE = 5 * TILE_SIZE;
 const CEMETERY_CORPSE_INTERVAL = 60;
 const CEMETERY_CORPSE_LIMIT = 3;
+const GROUP_SPAWN_JITTER = 5;
 const ENEMY_AGGRO_RANGE = 6 * TILE_SIZE;
 const ENEMY_CHASE_SECONDS = 8;
 const ENEMY_AGGRO_RESET_RANGE = 9 * TILE_SIZE;
 let nextPlagueUnitId = 100000;
 const PLAGUE_MAP_SETTINGS = {
   lakes: { min: 1, max: 2 },
-  deserts: { min: 0, max: 0 },
-  savannas: { min: 1, max: 1 },
+  deserts: { min: 0, max: 2 },
+  desertRadiusX: { min: 5, max: 12 },
+  desertRadiusY: { min: 5, max: 12 },
+  desertMaxShare: 0.5,
+  savannaAroundDesert: true,
+  savannas: { min: 0, max: 3 },
+  savannaRadiusX: { min: 4, max: 14 },
+  savannaRadiusY: { min: 4, max: 14 },
+  savannaMaxShare: 0.5,
   forests: { min: 1, max: 2 },
   forestTrees: { min: 3, max: 5 },
   trees: { min: 3, max: 6 },
   boulders: { min: 8, max: 12 },
   boulderPiles: { min: 1, max: 2 },
-  rockClusters: { min: 1, max: 6 },
+  rockClusters: { min: 1, max: 8 },
   grass: { min: 10, max: 16 }
 };
 
@@ -137,7 +145,7 @@ const newPlagueState = () => ({
   energy: STARTING_MAX_ENERGY, maxEnergy: STARTING_MAX_ENERGY, energyRegen: 0.25,
   maxSquad: STARTING_SQUAD, raisesPerCast: 1, raiseCostFactor: 1, reviveRange: REVIVE_RANGE,
   reviveCooldown: 1.5, reviveTimer: 0, groupTimer: rollRange(rangeOf('interval', game.plagueSettings?.interval)),
-  groupId: 0, groups: [], groupsCleared: 0, elapsedTime: 0,
+  groupSpawnQueue: [], groupId: 0, groups: [], groupsCleared: 0, elapsedTime: 0,
   enemiesKilled: 0, killsTowardUpgrade: 0, nextUpgradeKills: 5,
   offer: null, upgrades: {}, commandRange: TILE_SIZE * 6, heroMaxHp: BASE_HERO_HEALTH,
   speedFactor: 1, minionHp: 0,
@@ -184,6 +192,7 @@ function placeCemeteries() {
 
 function setupPlagueGame() {
   game.plague = newPlagueState();
+  scheduleGroupBatch(game.plague, game.plague.groupTimer);
   game.plagueMode = true;
   game.cardMode = true;
   game.mapSettings = { cols: 40, rows: 40 };
@@ -324,7 +333,7 @@ function reviveNearby() {
     const kind = corpse.big ? 'big_zombie' : 'zombie';
     const unit = createSettler(kind, nextPlagueUnitId++, corpse.x, corpse.y, {
       plagueUnit: true, masterId: hero.id, weapon: corpse.weapon || 'fist', tool: 'none',
-      armor: corpse.armor || null, shield: !!corpse.shield, helmet: !!corpse.helmet,
+      armor: corpse.armor || null, shield: !!corpse.shield, helmet: !!corpse.helmet, helmetGear: corpse.helmetGear,
       look: corpse.look || undefined
     });
     unit.weapon = corpse.weapon || 'fist';
@@ -493,6 +502,11 @@ function bandRoute(groupId, count) {
 const playerLevel = p => 1 + Object.values(p.upgrades).reduce((total, count) => total + count, 0);
 // (the music's, #404)
 export const plagueLevel = () => game.plague ? playerLevel(game.plague) : 1;
+export function plagueGroupMaxSize(level) {
+  if (level <= 5) return 5;
+  if (level <= 10) return 5 + Math.floor((level - 5) * 3 / 5);
+  return Math.min(30, 8 + Math.round((level - 10) * 22 / 30));
+}
 // A band's level: the player's, give or take up to 3, most often the same (as Endless's wave of that number)
 const LEVEL_SPREAD = [[-3, 1], [-2, 2], [-1, 4], [0, 6], [1, 4], [2, 2], [3, 1]];
 function bandLevel(level) {
@@ -505,11 +519,12 @@ function bandLevel(level) {
 }
 
 // A band of humans crossing the map: 3 to 5 of them to begin with, the most of them one more for every 3 levels
-// (10 at most); each picked and armed as Endless's wave of the band's level is (its kinds and gear by their
+// (30 at most); each picked and armed as Endless's wave of the band's level is (its kinds and gear by their
 // chances then), no crossbowmen
 function spawnGroup() {
   const p = game.plague, groupId = ++p.groupId, level = playerLevel(p);
-  const count = Math.min(10, 3 + Math.floor(rand() * (3 + Math.floor((level - 1) / 3))));
+  const maxCount = plagueGroupMaxSize(level);
+  const count = 3 + Math.floor(rand() * (maxCount - 2));
   const route = bandRoute(groupId, count);
   if (!route) return; // (no edge with room for it, away from the hero: the next time)
   const { spots, goal } = route;
@@ -530,6 +545,15 @@ function spawnGroup() {
     game.enemies.push(enemy);
   }
   if (!group.size) p.groups.splice(p.groups.indexOf(group), 1);
+}
+
+function scheduleGroupBatch(plague, nominalTime) {
+  const count = rollRange(plague.bandCount);
+  const jitter = Math.min(GROUP_SPAWN_JITTER, plague.bandInterval[0] / 2);
+  for (let i = 0; i < count; i++) {
+    plague.groupSpawnQueue.push(nominalTime + (rand() * 2 - 1) * jitter);
+  }
+  plague.groupSpawnQueue.sort((a, b) => a - b);
 }
 
 function updateGroups() {
@@ -581,9 +605,14 @@ export function tickPlague(dt) {
   if (p.offer) return;
   tickCemeteryCorpses(dt);
   p.groupTimer -= dt;
+  for (let i = 0; i < p.groupSpawnQueue.length; i++) p.groupSpawnQueue[i] -= dt;
   if (p.groupTimer <= 0) {
-    for (let i = rollRange(p.bandCount); i > 0; i--) spawnGroup();
     p.groupTimer = rollRange(p.bandInterval);
+    scheduleGroupBatch(p, p.groupTimer);
+  }
+  while (p.groupSpawnQueue.length && p.groupSpawnQueue[0] <= 0) {
+    p.groupSpawnQueue.shift();
+    spawnGroup();
   }
   updateGroups();
 }

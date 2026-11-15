@@ -7,7 +7,7 @@ import { TILE_SIZE, forEachInRect, game, isBorderZone, townHall } from '../../..
 import { formatCost } from '../../colony/storage/index.js';
 import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rules.js';
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
-import { DUMMY_VARIANTS, LINK, drawBackroomsWall, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, shadow } from './building.art.js';
+import { LINK, drawBackroomsWall, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawEnemyCampOutpostArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, pickDummyVariant, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
 import { drawShadowPath, getDarkness, tileVariantHash } from '../../world/index.js';
 
@@ -96,7 +96,7 @@ export function drawBuildGrid() {
 // (#279) the menu's warehouse: as one in the game, hurt as one is when the zombies get at it, and broken, a heap
 // of planks
 function drawMenuWarehouse() {
-  const x = townHall.x, y = townHall.y, share = Math.max(0, townHall.hp) / townHall.maxHp;
+  const x = townHall.x, y = townHall.y, share = townHall.hp >= townHall.maxHp ? 1 : Math.max(0, townHall.hp) / townHall.maxHp;
   if (share <= 0) {
     const shadow = new Path2D();
     shadow.ellipse(x, y + 4, 15, 9, 0, 0, Math.PI * 2);
@@ -115,11 +115,25 @@ function drawMenuWarehouse() {
   }
 }
 
+function drawMenuOutpost() {
+  const x = townHall.x, y = townHall.y, share = townHall.hp >= townHall.maxHp ? 1 : Math.max(0, townHall.hp) / townHall.maxHp;
+  drawEnemyCampOutpostArt(x, y, getPlayerFaction().id);
+  if (share < 1) {
+    drawDamage(x, y, 34, share);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 30, y - 45, 60, 8);
+    ctx.fillStyle = share > 0.4 ? '#2ecc71' : '#e74c3c'; ctx.fillRect(x - 30, y - 45, share * 60, 8);
+  }
+}
+
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
-// menu it's drawn as a warehouse, the storage it is there (#200)
+// menu, the zombie and demon fights use an outpost; the other scenes use a warehouse.
 export function drawTownHall() {
   if (game.plagueMode) return;
-  if (game.gameMode === 'menu') { drawMenuWarehouse(); return; } // (as a warehouse in the game, #256)
+  if (game.gameMode === 'menu') {
+    if (game.menuScene === 'fight' || game.menuScene === 'demon') drawMenuOutpost();
+    else drawMenuWarehouse();
+    return;
+  }
  // each faction's own, not round (building.art.js, #251)
   drawHallArt(townHall.x, townHall.y);
 
@@ -366,10 +380,7 @@ export function drawBuildings() {
       }
     } else if (b.type === 'dummy') {
       // a training dummy (#199): one of its looks, picked once (#326: the commoner ones more often)
-      if (!b.variant) {
-        let n = Math.random() * DUMMY_VARIANTS.reduce((sum, v) => sum + Number(v[1]), 0);
-        b.variant = String((DUMMY_VARIANTS.find(v => (n -= Number(v[1])) < 0) || DUMMY_VARIANTS[0])[0]);
-      }
+      if (!b.variant) b.variant = pickDummyVariant();
       drawDummyArt(b.x, b.y, b.variant);
     } else if (b.type === 'warehouse') {
       drawWarehouseArt(b.x, b.y);

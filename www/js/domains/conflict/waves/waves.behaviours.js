@@ -222,6 +222,16 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  if (game.gameMode === 'menu' && game.menuScene === 'demon' && en.menuStaged) {
+    const target = en.menuEntryTarget;
+    if (target && Math.hypot(target.x - en.x, target.y - en.y) > 8) {
+      moveEntityTowards(en, target.x, target.y, en.speed, true, dt);
+    }
+    return;
+  }
+  if (en.menuThreat && (!en.attackTarget || !game.settlers.includes(en.attackTarget) || en.attackTarget.hp <= 0)) {
+    if (!en.attackTarget || !game.settlers.includes(en.attackTarget) || en.attackTarget.hp <= 0) return;
+  }
   if (en.weapon === 'rifle' && game.gameMode === 'battle') {
     en.attackCooldown = Math.max(0, (en.attackCooldown || 0) - dt);
     if ((en.rifleAmmo || 0) <= 0 && en.attackCooldown === 0) en.rifleAmmo = GAME_CONFIG.weapons.rifle.combat.magazine;
@@ -681,7 +691,8 @@ function chooseEnemyTarget(en) {
 
   let lockedTarget = en.attackTarget;
   if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) ||
-      (!en.scoutChasing && !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1))))) lockedTarget = null;
+      (!en.scoutChasing &&
+        !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1))))) lockedTarget = null;
   if (lockedTarget) {
     let lockedDist = Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y);
     if (!closestSettler || lockedDist <= minDist + 40) {
@@ -763,7 +774,8 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
     if (rifle && (en.rifleAmmo || 0) <= 0) return;
     playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', en);
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * shot.arrowSpeed, vy: Math.sin(angle) * shot.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
-      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt, bullet: rifle });
+      life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt, bullet: rifle,
+      skipTownHall: game.gameMode === 'menu' && en.attackTarget?.type === 'demon' });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     if (rifle) {
@@ -786,6 +798,10 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
   // (#322: among those round it, not every building for every enemy every tick)
   let touchingBuilding = firstOf(game.buildings, en.x, en.y, contactRadius + 15, b => !(getDefinition('buildings', b.type) || {}).walkable && !(b.side === 'red' && isDoor(b)) && collidesWithBoxList(en.x, en.y, contactRadius, [b], 15));
   if (touchingBuilding) {
+    if (touchingBuilding.battleMazeWall) {
+      if (!holdsGround) moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
+      return;
+    }
     if (game.plagueMode && touchingBuilding.plagueCemetery) {
       moveEntityTowards(en, moveTarget.x, moveTarget.y, en.speed, true, dt);
       return;
@@ -817,6 +833,7 @@ function walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, turned = 
 }
 
 function breakBuilding(en, building, enemyDef, dt) {
+  if (building.battleMazeWall) return;
   const { damage, cooldown } = enemyBuildingAttack(enemyDef);
   en.siegeTarget = building;
   en.siegeTargetTick = game.pathTick;

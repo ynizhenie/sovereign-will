@@ -7,7 +7,7 @@ import { drawFarmPlotArt } from '../gathering/index.js';
 
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
 export function drawFarmZones() {
-  const ZONE_COLORS = { wheat: '241, 196, 15', sapling: '46, 204, 113', apple: '231, 76, 60' };
+  const ZONE_COLORS = { wheat: '241, 196, 15', rice: '52, 152, 219', sapling: '46, 204, 113', apple: '231, 76, 60' };
   if (!isTabShown('tab-farming')) return;
   const v = getViewRect(30), visible = list => {
     const found = [];

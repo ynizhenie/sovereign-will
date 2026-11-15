@@ -6,8 +6,9 @@ import { isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { onTap, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
+import { showMenuScreen } from '../menu/index.js';
 import { battlePresetLabel, bigPresetOf, getBattleBuildings, getBattlePresets } from './battle.roster.js';
-import { activateBattleBackrooms, battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleLook, startBattleMode } from './battle.setup.js';
+import { activateBattleBackrooms, battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleFieldSize, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
 
 let secretFieldClicks = 0;
@@ -57,6 +58,7 @@ function endSecretRifleHold(event) {
 
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
+  renderBattleFieldSizes();
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear)]));
   // (#326) the time of day and weather
   document.querySelectorAll('[data-battle-look]').forEach(b => {
@@ -65,13 +67,24 @@ export function renderBattlePanel() {
   });
   // (#298) the armour button says which: leather, iron, or just "armour" off
   const armourButton = document.querySelector('[data-battle-gear="armor"]');
-  if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(battle.armor === 'leather' ? 'battle.armorLeather' : battle.armor ? 'battle.armorIron' : 'battle.noArmor'));
+  const armour = battleArmor(battle.armor);
+  if (armourButton) setRichText(/** @type {HTMLElement} */ (armourButton), t(armour ? armour.id === 'bone_armor' ? 'battle.armorBone' : armour.id === 'leather_armor' ? 'battle.armorLeather' : 'battle.armorIron' : 'battle.noArmor'));
+  const helmetButton = document.querySelector('[data-battle-gear="helmet"]');
+  if (helmetButton) setRichText(/** @type {HTMLElement} */ (helmetButton), t(battle.helmet === 'horned_helmet' ? 'battle.helmetHorned' : 'battle.helmet'));
   document.querySelectorAll('[data-battle-field]').forEach(b => {
-    b.classList.toggle('on', b.dataset.battleField === battle.field);
-    /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
+    const selected = b.dataset.battleField === battle.field;
+    const inSettings = !!b.closest('[data-sheet="battle-settings"]');
+    b.classList.toggle('active', !inSettings && selected);
+    b.classList.toggle('on', inSettings && selected);
+    if (inSettings) /** @type {HTMLButtonElement} */ (b).disabled = battle.phase !== 'setup';
   });
   document.querySelectorAll('[data-battle-highlight]').forEach(b => b.classList.toggle('on', b.dataset.battleHighlight === battle.fieldHighlight));
-  document.querySelectorAll('[data-battle-difficulty]').forEach(b => b.classList.toggle('on', b.dataset.battleDifficulty === battle.difficulty));
+  document.querySelectorAll('[data-battle-difficulty]').forEach(b => {
+    const selected = b.dataset.battleDifficulty === battle.difficulty;
+    const inSettings = !!b.closest('[data-sheet="battle-settings"]');
+    b.classList.toggle('active', !inSettings && selected);
+    b.classList.toggle('on', inSettings && selected);
+  });
   // what the chosen difficulty does to the red side (#255)
   const hint = document.getElementById('battle-difficulty-hint');
   if (hint) {
@@ -79,7 +92,6 @@ export function renderBattlePanel() {
     setRichText(hint, t(hint.dataset.i18n));
   }
   renderBattleColors();
-  renderBattleMusic();
   panel.dataset.category = battle.category;
   const presets = document.getElementById('battle-presets');
   presets.innerHTML = '';
@@ -123,7 +135,9 @@ export function renderBattlePanel() {
       for (const preset of getBattlePresets().filter(p => p.faction === faction.id && p.size !== 'big')) {
         const shown = (battle.big && bigPresetOf(preset)) || preset; // (#326: as a big one, when the switch is on)
         const { icons, hp, damage } = presetStats(shown);
-        add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(shown), `[[heart]]${hp} [[swords]]${damage}`, () => { battle.preset = preset.id; });
+        add(preset.id, battle.preset === preset.id, icons, battlePresetLabel(shown), `[[heart]]${hp} [[swords]]${damage}`, () => {
+          battle.preset = preset.id;
+        });
       }
     }
   }
@@ -132,6 +146,31 @@ export function renderBattlePanel() {
   if (battle.phase === 'setup') showPlacing(chosen);
   else { hidePlacing(); closeSheet(); }
   updateBattleTop();
+}
+
+function renderBattleFieldSizes() {
+  document.querySelectorAll('[data-battle-size]').forEach(button => {
+    const active = button.dataset.battleSize === battle.fieldSize;
+    const inSettings = !!button.closest('[data-sheet="battle-settings"]');
+    button.classList.toggle('active', !inSettings && active);
+    button.classList.toggle('on', inSettings && active);
+    if (inSettings) {
+      /** @type {HTMLButtonElement} */ (button).disabled = battle.phase !== 'setup';
+    }
+  });
+  document.querySelectorAll('.battle-size-custom').forEach(container => {
+    container.hidden = battle.fieldSize !== 'custom';
+    const width = container.querySelector('input[id$="-cols"]');
+    const height = container.querySelector('input[id$="-rows"]');
+    if (width) {
+      /** @type {HTMLInputElement} */ (width).value = String(battle.fieldCols);
+      /** @type {HTMLInputElement} */ (width).disabled = container.classList.contains('battle-size-ingame') && battle.phase !== 'setup';
+    }
+    if (height) {
+      /** @type {HTMLInputElement} */ (height).value = String(battle.fieldRows);
+      /** @type {HTMLInputElement} */ (height).disabled = container.classList.contains('battle-size-ingame') && battle.phase !== 'setup';
+    }
+  });
 }
 
 // What a unit is: its icons (kind and weapon or tool), hp, and damage (a hit's, an arrow's), with the
@@ -186,32 +225,13 @@ function renderBattleColors() {
   }
 }
 
-// (#326) Whose music: the Battles' own, or a faction's; the game picks the track for the placing and the fight and
-// for the time of day
-function renderBattleMusic() {
-  const box = document.getElementById('battle-music');
-  if (!box) return;
-  box.innerHTML = '';
-  const row = document.createElement('div');
-  row.className = 'sub-tabs battle-music-row';
-  box.appendChild(row);
-  const button = (theme, label) => {
-    const b = document.createElement('button');
-    b.className = 'btn sub-tab' + (battle.theme === theme ? ' on' : '');
-    b.dataset.theme = theme;
-    b.textContent = label;
-    onTap(b, () => { battle.theme = theme; saveBattleChoices(); renderBattlePanel(); });
-    row.appendChild(b);
-  };
-  button('arena', t('battle.themeArena'));
-  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) button(faction.id, faction.label);
-}
-
 // What this file sets up as the game starts (called by app/boot.js)
 export function initBattlePanel() {
   restoreBattleChoices();
+  renderBattleFieldSizes();
   document.getElementById('mode-battles').disabled = false;
-  onTap(document.getElementById('mode-battles'), startBattleMode);
+  onTap(document.getElementById('mode-battles'), () => { renderBattlePanel(); showMenuScreen('battle'); });
+  onTap(document.getElementById('battle-play'), startBattleMode);
   onTap(document.getElementById('battle-fight'), startBattleFight);
   onTap(document.getElementById('battle-cancel'), cancelBattleFight);
   onTap(document.getElementById('battle-clear-green'), () => clearBattleSide('green'));
@@ -239,11 +259,17 @@ export function initBattlePanel() {
   window.addEventListener('pointercancel', endSecretRifleHold, true);
   window.addEventListener('blur', cancelSecretRifleHold);
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelSecretRifleHold(); });
-  // (the armour: off, leather, iron, off again; the shield and the banner: on or off, #298, #279)
+  // (the armour and helmet buttons cycle through their variants; the shield and banner toggle, #298, #279)
   document.querySelectorAll('[data-battle-gear]').forEach(b => onTap(b, () => {
     const gear = /** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear);
-    if (gear === 'armor') battle.armor = !battle.armor ? 'leather' : battle.armor === 'leather' ? 'iron' : false;
-    else battle[gear] = !battle[gear];
+    if (gear === 'armor') {
+      const armour = [false, 'leather', 'bone', 'iron'];
+      battle.armor = armour[(armour.indexOf(battle.armor) + 1) % armour.length];
+    } else if (gear === 'helmet') {
+      const helmets = [false, 'helmet', 'horned_helmet'];
+      const selectedHelmet = battle.helmet === true ? 'helmet' : battle.helmet;
+      battle.helmet = helmets[(helmets.indexOf(selectedHelmet) + 1) % helmets.length];
+    } else battle[gear] = !battle[gear];
     saveBattleChoices();
     renderBattlePanel();
   }));
@@ -253,6 +279,17 @@ export function initBattlePanel() {
     renderBattlePanel();
   }));
   // the battle's settings (#255): the field and difficulty
+  document.querySelectorAll('[data-battle-size]').forEach(button => onTap(button, () => {
+    setBattleFieldSize(button.dataset.battleSize);
+    renderBattlePanel();
+  }));
+  document.querySelectorAll('.battle-size-custom input').forEach(input => input.addEventListener('change', () => {
+    const container = input.closest('.battle-size-custom');
+    const width = container?.querySelector('input[id$="-cols"]');
+    const height = container?.querySelector('input[id$="-rows"]');
+    if (width && height) setBattleFieldSize('custom', Number(/** @type {HTMLInputElement} */ (width).value), Number(/** @type {HTMLInputElement} */ (height).value));
+    renderBattlePanel();
+  }));
   document.querySelectorAll('[data-battle-field]').forEach(b => onTap(b, () => { setBattleField(b.dataset.battleField); renderBattlePanel(); }));
   const secretTrigger = /** @type {HTMLButtonElement | null} */ (document.querySelector('[data-battle-secret-trigger]'));
   if (secretTrigger) {

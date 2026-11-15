@@ -77,6 +77,15 @@ export function addMapResource(kind, x, y) {
   return resource;
 }
 
+function giveChoiceBonus(settler, choice) {
+  if (!choice || !choice.items.length || !(choice.chance > 0)) return;
+  const roll = rand();
+  if (roll >= choice.chance) return;
+  const index = Math.min(choice.items.length - 1, Math.floor((roll / choice.chance) * choice.items.length));
+  giveResourceToSettler(settler, choice.items[index], 1);
+  if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+}
+
 // A resource is done: the settler gets what it yields (more off a fertilised plot, #201), it's removed,
 // and queued to grow back if it does
 export function finishHarvest(settler, resource, kind) {
@@ -100,17 +109,22 @@ export function finishHarvest(settler, resource, kind) {
         if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
       }
     }
+    giveChoiceBonus(settler, resource.bonusChoice || def.bonusChoice);
     playSound('collapse', resource);
     return;
   }
   // (#298) the log cut up: its pieces lie along where it fell, each its share of the wood, to be carried off
   if (two) cutIntoLogs(resource, def, two, factor);
-  else for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
+  else {
+    const cropYield = kind === 'farm' && resource.crop && GAME_CONFIG.farming.harvest[resource.crop];
+    for (const [item, amount] of Object.entries(resource.yield || cropYield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
+  }
   // loot's things are carried to a storage whole, into the armory there (#210; #261: not at once)
   for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
   if (!two) {
     addCarryLoad(settler);
-    noteDay(settler, kind === 'farm' ? 'farmed' : 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
+    const activity = kind === 'farm' ? resource.crop === 'rice' ? 'farmedRice' : 'farmed' : 'gathered';
+    noteDay(settler, activity, 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   if (!two) {
@@ -120,6 +134,7 @@ export function finishHarvest(settler, resource, kind) {
         if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
       }
     }
+    giveChoiceBonus(settler, resource.bonusChoice || def.bonusChoice);
   }
   const list = game[def.list];
   const index = list.indexOf(resource);

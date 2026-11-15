@@ -16,6 +16,9 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock
   await expect(page.locator('[data-arg="tab-build"]')).toBeHidden();
+  expect(await page.evaluate(() => getDayPhase())).toBe('morning');
+  expect(await page.evaluate(() => getDarkness())).toBe(0);
+  await expect(page.locator('#editor-hide-time-weather-options [data-hide-time-weather="on"]')).toHaveClass(/active/);
   await page.locator('[data-editor-category="terrain"]').click(); // its sheet
   await expect(page.locator('#editor-panel')).toBeVisible();
   await expect.poll(() => iconText(page, '#editor-tools [data-tool="water"]')).toEqual(['[[water]] Вода']);
@@ -73,7 +76,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   expect(await page.evaluate(() => buildings.filter(b => b.type === 'fish_trap').length)).toBe(0);
   await page.mouse.click(pond.x, pond.y);
   expect(await page.evaluate(() => buildings.filter(b => b.type === 'fish_trap').length)).toBe(0);
-  expect(await page.evaluate(() => getDayPhase())).toBe('day');
+  expect(await page.evaluate(() => getDayPhase())).toBe('morning');
   expect(await page.evaluate(() => isWaterReachable(waterTiles.find(w => w.x === townHall.x - 4 * TILE_SIZE + 15 && w.y === townHall.y + 15)))).toBe(true);
   await page.mouse.click(spot.x, spot.y);
   expect(await page.evaluate(() => [waterTiles.length, buildings.filter(b => b.type === 'fish_trap').length])).toEqual([10, 1]);
@@ -81,9 +84,16 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   expect(await page.evaluate(() => [waterTiles.length, buildings.filter(b => b.type === 'fish_trap').length])).toEqual([10, 0]);
 
   await page.locator('[data-dock="editor-map"]').click();
+  await page.locator('[data-editor-weather="fog"]').click();
+  expect(await page.evaluate(() => getWeather().kind)).toBe('clear');
+  await page.locator('[data-hide-time-weather="off"]').click();
+  expect(await page.evaluate(() => getWeather().kind)).toBe('fog');
   await page.locator('[data-start-time="night"]').click();
   expect(await page.evaluate(() => getDayPhase())).toBe('night');
+  expect(await page.evaluate(() => getWeather().kind)).toBe('fog');
   expect(await page.evaluate(() => getDarkness())).toBeGreaterThan(0);
+  await page.locator('[data-hide-time-weather="on"]').click();
+  expect(await page.evaluate(() => [getWeather().kind, getDarkness()])).toEqual(['clear', 0]);
 
   // the map sheet remains open for saving
   await page.locator('#editor-save').click();
@@ -115,6 +125,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#play-button').click();
   await started(page);
   expect(await page.evaluate(() => [COLS, waterTiles.length, savannaTiles.length, gameMode])).toEqual([128, 10, 1, 'endless']);
+  expect(await page.evaluate(() => [getWeather().kind, Number.isFinite(game.weather.left), getDarkness() > 0])).toEqual(['fog', true, true]);
 
   // delete it in the editor
   await page.evaluate(() => exitToMainMenu());

@@ -1,6 +1,5 @@
-// Factions: the colony's faction and the enemy's, each with its colour, chosen in the Endless menu
-// and remembered on the device. The enemy's faction decides what its waves and spawners are made of
-// (GAME_CONFIG.factions); every unit is drawn in its side's colour, and the two sides never share one.
+// Factions: the colony's and enemy's colours are chosen in Endless; menu scenes choose a fresh, distinct pair
+// on each scene change. The enemy's faction decides what its waves and spawners are made of (GAME_CONFIG.factions).
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { game } from '../../engine/world/index.js';
@@ -22,13 +21,17 @@ export function getPlayerFaction() {
   return GAME_CONFIG.factions[sides.player.faction];
 }
 
-export function getEnemyFaction() { return GAME_CONFIG.factions[game.gameMode === 'menu' ? 'undead' : sides.enemy.faction]; } // (#326: the menu's fight is against the undead, whatever's picked)
+export function getEnemyFaction() {
+  if (game.gameMode === 'menu') return GAME_CONFIG.factions[menuWorld.scene === 'demon' ? 'humans' : 'undead'];
+  return GAME_CONFIG.factions[sides.enemy.faction];
+} // (#326: the menu's fight is against the undead, except for the human scenes)
 
 // In battle mode the sides stay green and red, as the field is marked
 // Soldiers (and archers) a shade darker than workers, so they stand out in any colour
 export function getSettlerColor(s) {
   if (game.plagueMode) return s && s.role !== 'worker' ? shadeColor(GAME_CONFIG.factions.undead.color, -0.28) : GAME_CONFIG.factions.undead.color;
-  const color = game.gameMode === 'battle' ? sides.battle.green : game.gameMode === 'menu' ? getPlayerFaction().color : sides.player.color;
+  const color = game.gameMode === 'battle' ? sides.battle.green
+    : game.gameMode === 'menu' ? menuWorld.playerColor : sides.player.color;
   return s && s.role !== 'worker' ? shadeColor(color, -0.28) : color;
 }
 
@@ -40,8 +43,9 @@ export function getBuildingColor(b) {
 }
 
 export function getEnemyColor(en) {
-  // (#326) behind the main menu: its own fixed colours, not the Endless screen's
-  const color = game.gameMode === 'battle' ? sides.battle.red : game.gameMode === 'menu' ? getEnemyFaction().color : sides.enemy.color;
+  // (#326) behind the main menu: the scene's chosen colours, not the Endless screen's
+  const color = game.gameMode === 'battle' ? sides.battle.red
+    : game.gameMode === 'menu' ? menuWorld.enemyColor : sides.enemy.color;
   if (!en) return color;
   if (en.type === 'big' || en.bigBody) return shadeColor(color, -0.25);
   const definition = en.enemyKey && GAME_CONFIG.enemies[en.enemyKey];

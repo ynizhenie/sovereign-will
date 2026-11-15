@@ -23,3 +23,9 @@ test('a farmer with a backpack carries dung from the compost heap to a wheat plo
   expect(await sim.fertilizer({})).toEqual({ fertilized: true, dungLeft: 0, wheat: 8 });
   expect(await sim.fertilizer({ backpack: false })).toEqual({ fertilized: false, dungLeft: 1, wheat: 4 });
 });
+
+test('a farmer plants rice seeds in a rice zone and harvests rice plus seeds', async () => {
+  expect(await sim.riceCrop({})).toEqual({
+    planted: true, crop: 'rice', seedsSpent: 1, harvest: { rice: 4, riceSeeds: 1 }
+  });
+});

@@ -6,7 +6,7 @@ import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { closeSheet, escapeHtml, iconHtml, showPlacing, toggleSheet } from '../../ui/index.js';
 import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
-import { timeOfPhase } from '../../domains/world/index.js';
+import { setStartingWeather, timeOfPhase } from '../../domains/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { openGenerator } from '../endless/index.js';
 import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
@@ -44,6 +44,9 @@ export function renderEditorPanel() {
   }
   document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('on', Number(b.dataset.brush) === editor.brush));
   document.querySelectorAll('[data-start-time]').forEach(b => b.classList.toggle('on', b.dataset.startTime === editor.startTime));
+  document.querySelectorAll('[data-editor-weather]').forEach(b => b.classList.toggle('on', b.dataset.editorWeather === editor.weather));
+  document.querySelectorAll('[data-hide-time-weather]').forEach(b =>
+    b.classList.toggle('active', (b.dataset.hideTimeWeather === 'on') === editor.hideTimeAndWeather));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
   document.getElementById('editor-top-size').textContent = `${game.COLS}×${game.ROWS}`;
   updateEditorTitle();
@@ -86,7 +89,7 @@ let editorUsesCustomSize = false;
 const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
 const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
 const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
-const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, faction: 'humans', startTime: 'day', brush: 1, category: 'nature', tool: 'tree' };
+const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, faction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'tree', hideTimeAndWeather: true };
 const rememberEditorChoices = () => saveData('editor-choices', {
   size: editorNewSize,
   custom: editorUsesCustomSize,
@@ -94,6 +97,7 @@ const rememberEditorChoices = () => saveData('editor-choices', {
   rows: editorMapRows.value,
   faction: editor.faction,
   startTime: editor.startTime,
+  hideTimeAndWeather: editor.hideTimeAndWeather,
   brush: editor.brush,
   category: editor.category,
   tool: editor.tool
@@ -116,6 +120,8 @@ export function initEditorPanel() {
   editorMapRows.value = String(Math.max(128, Math.min(512, Number(saved.rows) || EDITOR_DEFAULTS.rows)));
   editor.faction = GAME_CONFIG.factions[saved.faction]?.ready ? saved.faction : EDITOR_DEFAULTS.faction;
   editor.startTime = ['morning', 'day', 'evening', 'night'].includes(saved.startTime) ? saved.startTime : EDITOR_DEFAULTS.startTime;
+  editor.hideTimeAndWeather = saved.hideTimeAndWeather !== false;
+  game.editorHideTimeAndWeather = editor.hideTimeAndWeather;
   editor.brush = [1, 3, 5].includes(Number(saved.brush)) ? Number(saved.brush) : EDITOR_DEFAULTS.brush;
   editor.category = ['terrain', 'nature', 'buildings'].includes(saved.category) ? saved.category : EDITOR_DEFAULTS.category;
   editor.tool = EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
@@ -158,4 +164,16 @@ export function initEditorPanel() {
     rememberEditorChoices();
     renderEditorPanel();
   })); // (#257)
+  document.querySelectorAll('[data-editor-weather]').forEach(b => onTap(b, () => {
+    editor.weather = /** @type {string} */ (b.dataset.editorWeather);
+    setStartingWeather(editor.weather);
+    rememberEditorChoices();
+    renderEditorPanel();
+  }));
+  document.querySelectorAll('[data-hide-time-weather]').forEach(button => onTap(button, () => {
+    editor.hideTimeAndWeather = button.dataset.hideTimeWeather === 'on';
+    game.editorHideTimeAndWeather = editor.hideTimeAndWeather;
+    rememberEditorChoices();
+    renderEditorPanel();
+  }));
 }

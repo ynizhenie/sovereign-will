@@ -7,9 +7,9 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, loadData, saveData, setZoom } from '../../engine/platform/index.js';
-import { TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, newWorldEpoch, rand, resetTileIndex, townHall } from '../../engine/world/index.js';
 import { canUseShield, isRangedWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
-import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
+import { createBuildingBlueprint, pickDummyVariant } from '../../domains/economy/building/index.js';
 import { createConfiguredEnemy, getEnemyDef, presetEnemyKey } from '../../domains/conflict/waves/index.js';
 import { setStandingWeather, timeOfPhase } from '../../domains/world/index.js';
 import { closeOverlays } from '../../ui/index.js';
@@ -21,12 +21,21 @@ import { renderBattlePanel, resetBattleSecretTapCount } from './battle.panel.js'
 
 export const BATTLE_RESULT_SECONDS = 4;
 
+const BATTLE_SIZE_PRESETS = {
+  small: { cols: 20, rows: 13 },
+  medium: { cols: 40, rows: 26 },
+  large: { cols: 80, rows: 52 }
+};
+const BATTLE_SIZE_MIN = { cols: 20, rows: 13 };
+const BATTLE_SIZE_MAX = 128;
+
 /** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
- *   shield: boolean, helmet: boolean, big: boolean, banner: boolean, torch: boolean, field: string, time: string, weather: string,
- *   lineup: { presetId?: string, building?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean, banner?: boolean, torch?: boolean,
+ *   shield: boolean, helmet: boolean | string, big: boolean, banner: boolean, torch: boolean, field: string, fieldSize: string,
+ *   fieldCols: number, fieldRows: number, time: string, weather: string,
+ *   lineup: { presetId?: string, building?: string, variant?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean | string, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, rifleUnlocked: boolean, savedMapSettings: { cols: number, rows: number } | null,
- *   difficulty: string, savedDifficulty: string | null, theme: string, fieldHighlight: string }} */
+ *   difficulty: string, savedDifficulty: string | null, fieldHighlight: string }} */
 export const battle = {
   phase: 'off',       // off / setup / fight / result
   category: 'units',  // the panel's category
@@ -39,6 +48,9 @@ export const battle = {
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   helmet: false,      // (#326, 27.10, 27) the next unit placed gets a helmet (not a pet)
   field: 'glade',     // glade / desert / savanna / backrooms: what the battle is fought on
+  fieldSize: 'medium',
+  fieldCols: 40,
+  fieldRows: 26,
   time: 'day',        // (#326) morning / day / evening / night: how it looks (it stands still; nobody sleeps by it)
   weather: 'clear',   // (#326) clear / rain / fog / storm, all through the fight
   lineup: [],         // { presetId, x, y, armor, shield, banner } or { building, x, y }: what's placed, kept between fights
@@ -49,22 +61,34 @@ export const battle = {
   savedMapSettings: null,
   difficulty: 'normal', // (#255) GAME_CONFIG.difficulty key: the red units have a quarter less hp on Normal, the same as yours on Hard
   savedDifficulty: null, // the Endless choice, back when the battle's left
-  theme: 'arena',       // (#326) whose music: the Battles' own ('arena') or a faction's (its id); the track by the phase and the time of day
   fieldHighlight: 'classic' // classic green/red, chosen side colours, or none
 };
 
 const BATTLE_DEFAULTS = {
   category: 'units', preset: 'humans:sword', building: 'wall_wood',
   armor: false, shield: false, helmet: false, big: false, banner: false, torch: false,
-  field: 'glade', time: 'day', weather: 'clear', difficulty: 'normal', theme: 'arena', fieldHighlight: 'classic'
+  field: 'glade', fieldSize: 'medium', fieldCols: 40, fieldRows: 26,
+  time: 'day', weather: 'clear', difficulty: 'normal', fieldHighlight: 'classic'
 };
 
 let lastNonSecretBattleField = 'glade';
 let backroomsMazeLayout = /** @type {string[]} */ ([]);
 
+function normalizeBattleSize(size, cols, rows) {
+  if (Object.hasOwn(BATTLE_SIZE_PRESETS, size)) return { size, ...BATTLE_SIZE_PRESETS[size] };
+  if (size !== 'custom') return { size: 'small', ...BATTLE_SIZE_PRESETS.small };
+  const width = Number(cols), height = Number(rows);
+  return {
+    size,
+    cols: Number.isFinite(width) ? Math.max(BATTLE_SIZE_MIN.cols, Math.min(BATTLE_SIZE_MAX, Math.round(width))) : BATTLE_SIZE_PRESETS.medium.cols,
+    rows: Number.isFinite(height) ? Math.max(BATTLE_SIZE_MIN.rows, Math.min(BATTLE_SIZE_MAX, Math.round(height))) : BATTLE_SIZE_PRESETS.medium.rows
+  };
+}
+
 export function saveBattleChoices() {
-  const { category, preset, building, armor, shield, helmet, big, banner, torch, field, time, weather, difficulty, theme, fieldHighlight } = battle;
-  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch, field: field === 'backrooms' ? lastNonSecretBattleField : field, time, weather, difficulty, theme, fieldHighlight });
+  const { category, preset, building, armor, shield, helmet, big, banner, torch, field, fieldSize, fieldCols, fieldRows, time, weather, difficulty, fieldHighlight } = battle;
+  return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch,
+    field: field === 'backrooms' ? lastNonSecretBattleField : field, fieldSize, fieldCols, fieldRows, time, weather, difficulty, fieldHighlight });
 }
 
 export function restoreBattleChoices() {
@@ -73,8 +97,11 @@ export function restoreBattleChoices() {
   if (saved.category === 'units' || saved.category === 'buildings') battle.category = saved.category;
   if (typeof saved.preset === 'string' && getBattlePreset(saved.preset)) battle.preset = saved.preset;
   if (typeof saved.building === 'string' && GAME_CONFIG.buildings[saved.building]) battle.building = saved.building;
-  if ([false, 'leather', 'iron'].includes(saved.armor)) battle.armor = saved.armor;
-  for (const key of ['shield', 'helmet', 'big', 'banner', 'torch']) if (typeof saved[key] === 'boolean') battle[key] = saved[key];
+  if (saved.armor === true) battle.armor = 'iron';
+  else if ([false, 'leather', 'bone', 'iron'].includes(saved.armor)) battle.armor = saved.armor;
+  for (const key of ['shield', 'big', 'banner', 'torch']) if (typeof saved[key] === 'boolean') battle[key] = saved[key];
+  if (saved.helmet === true) battle.helmet = 'helmet';
+  else if (saved.helmet === false || saved.helmet === 'helmet' || saved.helmet === 'horned_helmet') battle.helmet = saved.helmet;
   if (saved.field === 'glade' || saved.field === 'desert' || saved.field === 'savanna') {
     battle.field = saved.field;
     lastNonSecretBattleField = saved.field;
@@ -85,14 +112,19 @@ export function restoreBattleChoices() {
   if (['morning', 'day', 'evening', 'night'].includes(saved.time)) battle.time = saved.time;
   if (['clear', 'rain', 'fog', 'storm'].includes(saved.weather)) battle.weather = saved.weather;
   if (saved.difficulty === 'normal' || saved.difficulty === 'hard') battle.difficulty = saved.difficulty;
-  if (saved.theme === 'arena' || GAME_CONFIG.factions[saved.theme]?.ready) battle.theme = saved.theme;
   if (['classic', 'team', 'off'].includes(saved.fieldHighlight)) battle.fieldHighlight = saved.fieldHighlight;
+  const size = normalizeBattleSize(saved.fieldSize, saved.fieldCols, saved.fieldRows);
+  battle.fieldSize = size.size;
+  battle.fieldCols = size.cols;
+  battle.fieldRows = size.rows;
   if (saved.field === 'backrooms') saveBattleChoices();
 }
 
-// (#298) the armour picked: off, 'leather' or 'iron' (true from before: iron); its gear, or null
+// (#298) the armour picked: off, leather, bone, or iron (true from before: iron)
 export function battleArmor(armor) {
-  return armor === 'leather' ? GAME_CONFIG.gear.leather_armor : armor ? GAME_CONFIG.gear.armor : null;
+  if (armor === 'leather') return GAME_CONFIG.gear.leather_armor;
+  if (armor === 'bone') return GAME_CONFIG.gear.bone_armor;
+  return armor ? GAME_CONFIG.gear.armor : null;
 }
 
 // An enemy kind that can carry a shield: one fighting hand to hand, a big one too (27.10, 32)
@@ -138,9 +170,9 @@ export function makeBattleUnit(entry) {
     // given by the player, not picked by the game
     const def = getEnemyDef(en);
     const armour = def.pet ? null : battleArmor(entry.armor); // (a pet wears nothing, #326)
-    if (armour) { en.armor = armour.armorKind; en.maxHp += armour.hpBonus; en.hp = en.maxHp; }
+    if (armour) putOnGear(en, armour.id);
     if (entry.shield && enemyCanShield(enemyKey)) en.shield = true;
-    if (entry.helmet && !def.pet) en.helmet = true; // (#326, 27.10, 27)
+    if (entry.helmet && !def.pet) putOnGear(en, typeof entry.helmet === 'string' ? entry.helmet : 'helmet'); // (#326, 27.10, 27)
     if (entry.banner && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     if (entry.torch && !def.pet && isDark()) en.torch = true; // (#326)
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
@@ -161,7 +193,7 @@ export function makeBattleUnit(entry) {
   const armour = s.role === 'pet' ? null : battleArmor(entry.armor); // (a pet wears nothing, #314)
   if (armour) putOnGear(s, armour.id);
   if (entry.shield && canUseShield(s) && s.role !== 'pet') s.shield = true;
-  if (entry.helmet && s.role !== 'pet') s.helmet = true; // (#326, 27.10, 27)
+  if (entry.helmet && s.role !== 'pet') putOnGear(s, typeof entry.helmet === 'string' ? entry.helmet : 'helmet'); // (#326, 27.10, 27)
   if (entry.banner && (s.role === 'soldier' || s.role === 'archer')) s.banner = true; // (#279) the player gave it
   if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
   if (s.tool === 'medbag') s.bagHerbs = GAME_CONFIG.medic.bagSize; // (#326: a medic starts with its bag full)
@@ -191,10 +223,11 @@ function battleRifleEnemyKey(factionId) {
 
 // A clear field: the ground picked in the settings, the town hall out of the way, no waves, no animals
 export function setUpBattleField() {
-  game.mapSettings = { cols: 40, rows: 26 };
+  game.mapSettings = { cols: battle.fieldCols, rows: battle.fieldRows };
   resetGame();
   for (const list of [game.trees, game.cacti, game.boulders, game.grassList, game.berryBushes, game.sticks, game.pebbles, game.logs, game.ironOres, game.coalOres, game.boars,
     game.naturalRocks, game.waterTiles, game.farmPlots, game.desertTiles, game.savannaTiles, game.beachTiles]) list.length = 0;
+  resetTileIndex();
   game.desertRegion = null;
   game.forests = [];
   if (battle.field === 'desert') {
@@ -206,6 +239,7 @@ export function setUpBattleField() {
       for (let gx = 0; gx < game.COLS; gx++) game.savannaTiles.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     }
   }
+  newWorldEpoch();
   game.settlers = [];
   townHall.x = -10000; townHall.y = -10000; townHall.hp = townHall.maxHp = 1e9;
   game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
@@ -222,6 +256,7 @@ export function resetBattleUnits() {
     if (entry.building) {
       // built at once: a building, not a blueprint
       const b = /** @type {any} */ (createBuildingBlueprint(entry.building, entry.x, entry.y));
+      if (entry.variant) b.variant = entry.variant;
       delete b.progress;
       delete b.maxProgress;
       if (battleSide(entry.x) === 'red') b.side = 'red'; // (#326) the red side's: it keeps off its spikes, the green breaks it
@@ -251,30 +286,67 @@ function generateBattleMazeLayout() {
   for (let gy = 0; gy < game.ROWS; gy++) {
     for (let gx = 0; gx < game.COLS; gx++) walls.add(`${gx},${gy}`);
   }
-  const columns = Math.floor((game.COLS - 6) / 4) + 1;
-  const rows = Math.floor((game.ROWS - 6) / 4) + 1;
+  const columns = Math.floor((game.COLS - 6) / 3) + 1;
+  const rows = Math.floor((game.ROWS - 6) / 3) + 1;
   const open = (gx, gy) => walls.delete(`${gx},${gy}`);
-  const room = (cx, cy) => ({ x: 2 + cx * 4, y: 2 + cy * 4 });
+  const room = (cx, cy) => ({ x: 2 + cx * 3, y: 2 + cy * 3 });
+  const roomKey = point => `${point.x},${point.y}`;
+  const passageKey = (from, to) => [roomKey(from), roomKey(to)].sort().join('|');
   const random = max => Math.floor(rand() * max);
+  const connectedPassages = new Set();
+  const passageTiles = (from, to) => {
+    const tiles = [];
+    const includeRoom = ({ x, y }) => {
+      for (let dy = 0; dy < 2; dy++) {
+        for (let dx = 0; dx < 2; dx++) tiles.push([x + dx, y + dy]);
+      }
+    };
+    includeRoom(from);
+    includeRoom(to);
+    if (from.x !== to.x) {
+      for (let offset = 0; offset < 2; offset++) tiles.push([Math.min(from.x, to.x) + 2, from.y + offset]);
+    } else {
+      for (let offset = 0; offset < 2; offset++) tiles.push([from.x + offset, Math.min(from.y, to.y) + 2]);
+    }
+    return tiles;
+  };
+  const wouldLeaveIsolatedWall = tiles => {
+    const opened = new Set(tiles.map(([gx, gy]) => `${gx},${gy}`));
+    const candidates = new Set();
+    for (const [gx, gy] of tiles) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) candidates.add(`${gx + dx},${gy + dy}`);
+      }
+    }
+    const isOpen = (gx, gy) => !walls.has(`${gx},${gy}`) || opened.has(`${gx},${gy}`);
+    for (const key of candidates) {
+      if (!walls.has(key) || opened.has(key)) continue;
+      const [gx, gy] = key.split(',').map(Number);
+      if ([[0, -1], [1, 0], [0, 1], [-1, 0]].every(([dx, dy]) => isOpen(gx + dx, gy + dy))) return true;
+    }
+    return false;
+  };
   const openRoom = ({ x, y }) => {
     for (let dy = 0; dy < 2; dy++) {
       for (let dx = 0; dx < 2; dx++) open(x + dx, y + dy);
     }
   };
-  const connectRooms = (from, to) => {
+  const connectRooms = (from, to, avoidIsolatedWall = false) => {
+    const tiles = passageTiles(from, to);
+    if (avoidIsolatedWall && wouldLeaveIsolatedWall(tiles)) return false;
+    connectedPassages.add(passageKey(from, to));
     openRoom(from);
     openRoom(to);
     if (from.x !== to.x) {
       for (let offset = 0; offset < 2; offset++) {
         open(Math.min(from.x, to.x) + 2, from.y + offset);
-        open(Math.min(from.x, to.x) + 3, from.y + offset);
       }
     } else {
       for (let offset = 0; offset < 2; offset++) {
         open(from.x + offset, Math.min(from.y, to.y) + 2);
-        open(from.x + offset, Math.min(from.y, to.y) + 3);
       }
     }
+    return true;
   };
   const carveHalf = (firstColumn, lastColumn) => {
     const visited = new Set([`${firstColumn},0`]);
@@ -294,18 +366,41 @@ function generateBattleMazeLayout() {
       stack.push(next);
     }
   };
+  const addOptionalPassage = (firstColumn, lastColumn) => {
+    const candidates = [];
+    for (let cy = 0; cy < rows; cy++) {
+      for (let cx = firstColumn; cx <= lastColumn; cx++) {
+        const from = room(cx, cy);
+        for (const [nextX, nextY] of [[cx + 1, cy], [cx, cy + 1]]) {
+          if (nextX > lastColumn || nextY >= rows) continue;
+          const to = room(nextX, nextY);
+          if (!connectedPassages.has(passageKey(from, to))) candidates.push([from, to]);
+        }
+      }
+    }
+    const count = random(4);
+    let connected = 0;
+    while (connected < count && candidates.length) {
+      const [from, to] = candidates.splice(random(candidates.length), 1)[0];
+      if (connectRooms(from, to, true)) connected++;
+    }
+  };
   const middleRoom = Math.ceil(columns / 2);
   carveHalf(0, middleRoom - 1);
   carveHalf(middleRoom, columns - 1);
+  addOptionalPassage(0, middleRoom - 1);
+  addOptionalPassage(middleRoom, columns - 1);
 
   const crossingRows = Array.from({ length: rows }, (_, row) => row);
   for (let i = crossingRows.length - 1; i > 0; i--) {
     const j = random(i + 1);
     [crossingRows[i], crossingRows[j]] = [crossingRows[j], crossingRows[i]];
   }
-  const crossings = crossingRows.slice(0, 2 + random(3));
-  for (const row of crossings) {
-    connectRooms(room(middleRoom - 1, row), room(middleRoom, row));
+  const crossingCount = 2 + random(3);
+  let crossings = 0;
+  for (const row of crossingRows) {
+    if (crossings >= crossingCount) break;
+    if (connectRooms(room(middleRoom - 1, row), room(middleRoom, row), true)) crossings++;
   }
 
   return [...walls];
@@ -363,7 +458,9 @@ export function battleTap(x, y) {
   if (existing) {
     battle.lineup.splice(battle.lineup.indexOf(existing), 1);
   } else if (battle.category === 'buildings') {
-    battle.lineup.push({ building: battle.building, x: cx, y: cy });
+    const entry = { building: battle.building, x: cx, y: cy };
+    if (entry.building === 'dummy') entry.variant = pickDummyVariant();
+    battle.lineup.push(entry);
   } else {
     const picked = getBattlePreset(battle.preset), big = battle.big && picked ? bigPresetOf(picked) : undefined; // (#326)
     battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, helmet: battle.helmet, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
@@ -373,20 +470,80 @@ export function battleTap(x, y) {
 
 // The difficulty (#255): the red side made again with it
 export function setBattleDifficulty(level) {
+  if (level !== 'normal' && level !== 'hard') return;
   battle.difficulty = level;
-  game.gameDifficulty = level;
+  if (battle.phase !== 'off') game.gameDifficulty = level;
   if (battle.phase === 'setup') resetBattleUnits();
   saveBattleChoices();
 }
 
 // The ground the battle is fought on: the line-up stays, the field is made again
 export function setBattleField(field) {
-  if (battle.phase !== 'setup' || field === battle.field || !['glade', 'desert', 'savanna'].includes(field)) return;
+  if ((battle.phase !== 'setup' && battle.phase !== 'off') || field === battle.field || !['glade', 'desert', 'savanna'].includes(field)) return;
   battle.field = field;
   backroomsMazeLayout = [];
   lastNonSecretBattleField = field;
-  setUpBattleField();
-  resetBattleUnits();
+  if (battle.phase === 'setup') {
+    setUpBattleField();
+    resetBattleUnits();
+  }
+  saveBattleChoices();
+}
+
+function resizeBattleLineup(oldCols, oldRows, newCols, newRows) {
+  const occupied = new Set();
+  const minX = BORDER_MARGIN, maxX = newCols - BORDER_MARGIN - 1;
+  const minY = BORDER_MARGIN, maxY = newRows - BORDER_MARGIN - 1;
+  const redStart = Math.floor(newCols / 2);
+  for (const entry of battle.lineup) {
+    const oldX = Math.floor(entry.x / TILE_SIZE), oldY = Math.floor(entry.y / TILE_SIZE);
+    const green = entry.x < oldCols * TILE_SIZE / 2;
+    const oldMid = oldCols / 2, newMid = newCols / 2;
+    const oldCenterX = oldX + 0.5;
+    const centerX = green
+      ? oldCenterX / oldMid * newMid
+      : newMid + (oldCenterX - oldMid) / (oldCols - oldMid) * (newCols - newMid);
+    const centerY = (oldY + 0.5) / oldRows * newRows;
+    const sideMinX = green ? minX : Math.max(minX, redStart);
+    const sideMaxX = green ? Math.min(maxX, redStart - 1) : maxX;
+    const targetX = Math.max(sideMinX, Math.min(sideMaxX, Math.round(centerX - 0.5)));
+    const targetY = Math.max(minY, Math.min(maxY, Math.round(centerY - 0.5)));
+    let placed = null;
+    for (let distance = 0; distance <= Math.max(newCols, newRows) && !placed; distance++) {
+      for (let dy = -distance; dy <= distance && !placed; dy++) {
+        const dx = distance - Math.abs(dy);
+        for (const offsetX of dx ? [-dx, dx] : [0]) {
+          const gx = targetX + offsetX, gy = targetY + dy, key = `${gx},${gy}`;
+          if (gx >= sideMinX && gx <= sideMaxX && gy >= minY && gy <= maxY && !occupied.has(key)) {
+            placed = { gx, gy, key };
+            break;
+          }
+        }
+      }
+    }
+    if (placed) {
+      occupied.add(placed.key);
+      entry.x = placed.gx * TILE_SIZE + 15;
+      entry.y = placed.gy * TILE_SIZE + 15;
+    }
+  }
+}
+
+export function setBattleFieldSize(size, cols = battle.fieldCols, rows = battle.fieldRows) {
+  if (battle.phase !== 'off' && battle.phase !== 'setup') return;
+  const next = normalizeBattleSize(size, cols, rows);
+  const dimensionsChanged = next.cols !== battle.fieldCols || next.rows !== battle.fieldRows;
+  if (dimensionsChanged && battle.phase === 'setup') {
+    resizeBattleLineup(battle.fieldCols, battle.fieldRows, next.cols, next.rows);
+  }
+  battle.fieldSize = next.size;
+  battle.fieldCols = next.cols;
+  battle.fieldRows = next.rows;
+  if (dimensionsChanged && battle.phase === 'setup') {
+    setUpBattleField();
+    backroomsMazeLayout = battle.field === 'backrooms' ? generateBattleMazeLayout() : [];
+    resetBattleUnits();
+  }
   saveBattleChoices();
 }
 

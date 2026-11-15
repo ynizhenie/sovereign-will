@@ -36,6 +36,156 @@ test('Plague defaults use a six-tile squad search, improved recovery and healing
   expect(errors).toEqual([]);
 });
 
+test('Plague maps keep deserts inside savanna and cap each biome at half the map', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const terrain = await page.evaluate(() => ({
+    total: game.COLS * game.ROWS,
+    savanna: game.savannaTiles.length,
+    desert: game.desertTiles.length,
+    naturalRocks: game.naturalRocks.filter(rock => !rock.oreSpawner).length,
+    unbufferedDesertEdges: game.desertTiles.reduce((total, desert) => {
+      let missing = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const x = desert.x + dx * TILE_SIZE, y = desert.y + dy * TILE_SIZE;
+        if (x < 15 || y < 15 || x >= game.WORLD_WIDTH - 15 || y >= game.WORLD_HEIGHT - 15 ||
+            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y)) continue;
+        if (!thingAt(game.savannaTiles, x, y)) missing++;
+      }
+      return total + missing;
+    }, 0),
+    separateSavanna: game.savannaTiles.some(tile =>
+      ![-1, 0, 1].some(dy => [-1, 0, 1].some(dx =>
+        (dx || dy) && thingAt(game.desertTiles, tile.x + dx * TILE_SIZE, tile.y + dy * TILE_SIZE))))
+  }));
+  expect(terrain.savanna).toBeLessThanOrEqual(terrain.total / 2);
+  expect(terrain.desert).toBeLessThanOrEqual(terrain.total / 2);
+  expect(terrain.savanna + terrain.desert).toBeLessThanOrEqual(terrain.total);
+  expect(terrain.naturalRocks).toBeGreaterThan(0);
+  if (terrain.desert > 0) {
+    expect(terrain.savanna).toBeGreaterThan(0);
+    expect(terrain.unbufferedDesertEdges, JSON.stringify(terrain)).toBe(0);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('Plague can generate no biomes or savanna alone, but never desert alone', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const biomes = await page.evaluate(async () => {
+    const { generateMap } = await import('/js/domains/world/world.generator.js');
+    const { createWorldSeed } = await import('/js/engine/world/rng.js');
+    const originalMap = { ...GAME_CONFIG.map }, originalSeed = game.worldSeed;
+    const results = [];
+    const boundaryMisses = () => game.desertTiles.reduce((total, desert) => {
+      let missing = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const x = desert.x + dx * TILE_SIZE, y = desert.y + dy * TILE_SIZE;
+        if (x < 15 || y < 15 || x >= game.WORLD_WIDTH - 15 || y >= game.WORLD_HEIGHT - 15 ||
+            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y)) continue;
+        if (!thingAt(game.savannaTiles, x, y)) missing++;
+      }
+      return total + missing;
+    }, 0);
+    const generate = (deserts, savannas, seed) => {
+      GAME_CONFIG.map.deserts = { min: deserts, max: deserts };
+      GAME_CONFIG.map.savannas = { min: savannas, max: savannas };
+      GAME_CONFIG.map.desertRadiusX = { min: 8, max: 8 };
+      GAME_CONFIG.map.desertRadiusY = { min: 8, max: 8 };
+      GAME_CONFIG.map.savannaRadiusX = { min: 8, max: 8 };
+      GAME_CONFIG.map.savannaRadiusY = { min: 8, max: 8 };
+      GAME_CONFIG.map.desertMaxShare = GAME_CONFIG.map.savannaMaxShare = 0.5;
+      GAME_CONFIG.map.savannaAroundDesert = true;
+      game.worldSeed = createWorldSeed(seed);
+      generateMap();
+      results.push({
+        deserts: game.desertTiles.length,
+        savannas: game.savannaTiles.length,
+        unbufferedEdges: boundaryMisses()
+      });
+    };
+    try {
+      generate(0, 0, 'plague-empty-biomes');
+      generate(0, 1, 'plague-savanna-only');
+      generate(1, 0, 'plague-desert-with-savanna-ring');
+      return results;
+    } finally {
+      for (const key of Object.keys(GAME_CONFIG.map)) if (!(key in originalMap)) delete GAME_CONFIG.map[key];
+      Object.assign(GAME_CONFIG.map, originalMap);
+      game.worldSeed = originalSeed;
+    }
+  });
+  expect(biomes[0]).toMatchObject({ deserts: 0, savannas: 0 });
+  expect(biomes[1].deserts).toBe(0);
+  expect(biomes[1].savannas).toBeGreaterThan(0);
+  expect(biomes[2].deserts).toBeGreaterThan(0);
+  expect(biomes[2].savannas).toBeGreaterThan(0);
+  expect(biomes[2].unbufferedEdges).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('Plague terrain does not overwrite the hero starting tiles', async ({ page }) => {
+  await openGame(page);
+  await startPlague(page);
+  const overlaps = await page.evaluate(async () => {
+    const { generateMap } = await import('/js/domains/world/world.generator.js');
+    const { createWorldSeed } = await import('/js/engine/world/rng.js');
+    const originalMap = { ...GAME_CONFIG.map }, originalSeed = game.worldSeed;
+    const results = [];
+    Object.assign(GAME_CONFIG.map, {
+      deserts: { min: 2, max: 2 },
+      desertRadiusX: { min: 12, max: 12 },
+      desertRadiusY: { min: 12, max: 12 },
+      desertMaxShare: 0.5,
+      savannas: { min: 0, max: 0 },
+      savannaAroundDesert: true
+    });
+    try {
+      for (let i = 0; i < 24; i++) {
+        game.worldSeed = createWorldSeed(`plague-start-biome-${i}`);
+        generateMap();
+        const underHero = tile => Math.abs(tile.x - townHall.x) <= TILE_SIZE / 2 &&
+          Math.abs(tile.y - townHall.y) <= TILE_SIZE / 2;
+        results.push({
+          desert: game.desertTiles.some(underHero),
+          savanna: game.savannaTiles.some(underHero)
+        });
+      }
+      return results;
+    } finally {
+      for (const key of Object.keys(GAME_CONFIG.map)) if (!(key in originalMap)) delete GAME_CONFIG.map[key];
+      Object.assign(GAME_CONFIG.map, originalMap);
+      game.worldSeed = originalSeed;
+    }
+  });
+  expect(overlaps.some(result => result.desert)).toBe(false);
+  expect(overlaps.some(result => result.savanna)).toBe(false);
+});
+
+test('Plague does not accumulate resources for packs at the hidden town hall', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { makeBonesAndRot } = await import('/js/domains/factions/undead/index.js');
+    const { keepStoresInStep } = await import('/js/domains/colony/storage/index.js');
+    const bones = stock.bones, rot = stock.rot;
+    game.piles = [];
+    townHall.store = {};
+    makeBonesAndRot(1200);
+    keepStoresInStep();
+    return {
+      bonesUnchanged: stock.bones === bones,
+      rotUnchanged: stock.rot === rot,
+      piles: game.piles.length,
+      hallStock: Object.values(townHall.store).reduce((total, amount) => total + amount, 0)
+    };
+  });
+  expect(result).toEqual({ bonesUnchanged: true, rotUnchanged: true, piles: 0, hallStock: 0 });
+  expect(errors).toEqual([]);
+});
+
 test('Plague bands come in on standable ground away from the hero, armed as Endless\'s waves, no crossbowmen (#404, 2, 3, 8)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
@@ -45,7 +195,8 @@ test('Plague bands come in on standable ground away from the hero, armed as Endl
     const seen = [];
     for (let i = 0; i < 40; i++) {
       enemies.length = 0;
-      plague.groupTimer = 0; plague.bandCount = [1, 1];
+      plague.groupTimer = 60; plague.bandCount = [1, 1];
+      plague.groupSpawnQueue = [0];
       tickPlague(1 / 60);
       seen.push(enemies.map(en => ({ x: en.x, y: en.y, key: en.enemyKey, weapon: getEnemyDef(en).weapon })));
     }
@@ -64,6 +215,86 @@ test('Plague bands come in on standable ground away from the hero, armed as Endl
   expect(r.sizes[0]).toBeGreaterThanOrEqual(3);
   expect(r.sizes[1]).toBeLessThanOrEqual(5); // (level 1: 3 to 5)
   expect(r).toMatchObject({ standable: true, far: true, crossbows: 0, humans: true });
+  expect(errors).toEqual([]);
+});
+
+test('Plague groups in the same batch spawn within a five-second jitter window', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-plague');
+  for (const [kind, value] of [['interval', 10], ['groups', 3]]) {
+    const box = page.locator(`[data-plague-range="${kind}"]`);
+    await box.locator('[data-plague-range-mode="custom"]').click();
+    await box.locator('input').nth(0).fill(String(value));
+    await box.locator('input').nth(1).fill(String(value));
+    await box.locator('input').nth(1).dispatchEvent('change');
+  }
+  await page.click('#plague-play');
+  await page.waitForFunction(() => gameStarted && !loading && plagueMode, null, { timeout: 60000 });
+  await page.evaluate(() => { isPaused = true; });
+  const schedule = await page.evaluate(() => ({
+    interval: plague.bandInterval,
+    count: plague.groupSpawnQueue.length,
+    nominalTime: plague.groupTimer,
+    spawnTimes: [...plague.groupSpawnQueue]
+  }));
+  const offsets = schedule.spawnTimes.map(time => time - schedule.nominalTime);
+  expect(schedule.interval).toEqual([10, 10]);
+  expect(schedule.count).toBe(3);
+  expect(offsets.every(offset => offset >= -5 && offset <= 5)).toBe(true);
+  expect(new Set(schedule.spawnTimes).size).toBeGreaterThan(1);
+  expect(errors).toEqual([]);
+});
+
+test('Plague band size grows with level and caps at 30', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { plagueGroupMaxSize } = await import('/js/modes/plague/plague.rules.js');
+    plague.upgrades = { growth: 100 };
+    const sizes = [];
+    for (let i = 0; i < 120; i++) {
+      enemies.length = 0;
+      plague.groups.length = 0;
+      plague.groupTimer = 60;
+      plague.bandCount = [1, 1];
+      plague.groupSpawnQueue = [0];
+      tickPlague(1 / 60);
+      if (plague.groups.length) sizes.push(plague.groups[0].size);
+    }
+    return {
+      sizes,
+      milestones: [5, 10, 15, 20, 25, 30, 35, 40].map(plagueGroupMaxSize)
+    };
+  });
+  expect(result.milestones).toEqual([5, 8, 12, 15, 19, 23, 26, 30]);
+  expect(result.sizes).toContain(30);
+  expect(Math.min(...result.sizes)).toBeGreaterThanOrEqual(3);
+  expect(Math.max(...result.sizes)).toBe(30);
+  expect(errors).toEqual([]);
+});
+
+test('Plague enemy armor progresses by band level without player gear unlocks', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(() => {
+    const armor = [];
+    for (let i = 0; i < 128; i++) {
+      const enemy = createConfiguredEnemy({ x: townHall.x, y: townHall.y }, 'raider');
+      dressForWave(enemy, GAME_CONFIG.enemies.raider, 20);
+      if (enemy.armor) armor.push(enemy.armor);
+    }
+    return {
+      hasGearUnlocks: ['gear:leather_armor', 'gear:armor'].some(key => game.armory[key] > 0 || game.unlocked[key]),
+      earlyChance: getWaveGearChance('leather', 1),
+      lateChance: getWaveGearChance('leather', 20),
+      armoredEnemies: armor.length
+    };
+  });
+  expect(result.hasGearUnlocks).toBe(false);
+  expect(result.earlyChance).toBe(0);
+  expect(result.lateChance).toBeGreaterThan(0);
+  expect(result.armoredEnemies).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
 

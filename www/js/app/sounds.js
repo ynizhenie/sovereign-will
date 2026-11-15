@@ -267,9 +267,13 @@ export function previewTrack(id) { musicPreview.id = id; if (id) startAudio(); }
 // Every track by where it plays: [{ id, label, tracks: [{ id, when }] }] (label: a faction's name or a text key; when: a text key)
 export function musicCatalog() {
   const groups = [{ id: 'menu', label: t('music.group.menu'), tracks: [{ id: 'menu', when: 'music.when.menu' }] }];
-  const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind] }))) });
+  const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle', 'duel', 'unfair'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind] }))) });
   groups.push({ id: 'plague', label: t('plague.mode'), tracks: GAME_CONFIG.plagueMusic.map(id => ({ id, when: 'music.when.plague' })) });
-  set('arena', t('music.group.arena'), GAME_CONFIG.battleMusic, { ambient: 'music.when.arenaAmbient', nightAmbient: 'music.when.arenaAmbientNight', battle: 'music.when.arenaBattle', nightBattle: 'music.when.arenaBattleNight' });
+  set('arena', t('music.group.arena'), GAME_CONFIG.battleMusic, {
+    ambient: 'music.when.arenaAmbient', nightAmbient: 'music.when.arenaAmbientNight',
+    battle: 'music.when.arenaBattle', nightBattle: 'music.when.arenaBattleNight',
+    duel: 'music.when.arenaDuel', unfair: 'music.when.arenaUnfair'
+  });
   for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music)) {
     set(faction.id, faction.label, faction.music, { ambient: 'music.when.ambient', nightAmbient: 'music.when.ambientNight', battle: 'music.when.battle', nightBattle: 'music.when.battleNight' });
   }
@@ -314,15 +318,31 @@ function plagueTrack() {
   return list.length ? list[(plagueLevel() - 1) % list.length] : '';
 }
 
-// (#326) A battle's track: of the theme picked in its settings (the Battles' own, or a faction's), the ambient while
-// placing and the battle tracks in the fight, the night's if the battle is at night; one picked each time the phase,
-// the theme or the time of day changes
+// A battle's music follows its phase, time of day, and the set-up's unit balance.
 const battleKey = { key: '', track: '' };
+function battleSituation() {
+  let green = 0, red = 0;
+  for (const entry of battle.lineup) {
+    if (entry.building) continue;
+    if (entry.x < game.WORLD_WIDTH / 2) green++; else red++;
+  }
+  if (green === 1 && red === 1) return 'duel';
+  if (green > red * 1.5 || red > green * 1.5) return 'unfair';
+  return '';
+}
+
 function battleTrack(fight) {
-  const set = battle.theme === 'arena' || !GAME_CONFIG.factions[battle.theme] ? GAME_CONFIG.battleMusic : GAME_CONFIG.factions[battle.theme].music;
+  const set = GAME_CONFIG.battleMusic;
   const night = battle.time === 'night';
-  const list = fight ? (night && set.nightBattle) || set.battle : (night && set.nightAmbient) || set.ambient;
-  const key = `${battle.theme}|${night}|${fight}`;
+  const situation = fight ? battleSituation() : '';
+  const list = battle.field === 'backrooms'
+    ? fight ? set.backroomsBattle : [set.backrooms]
+    : fight
+    ? situation === 'duel' ? set.duel
+      : situation === 'unfair' ? set.unfair
+        : (night && set.nightBattle) || set.battle
+    : (night && set.nightAmbient) || set.ambient;
+  const key = `${battle.field}|${night}|${fight}|${situation}`;
   if (battleKey.key !== key || !list.includes(battleKey.track) || !isTrackOn(battleKey.track)) { battleKey.key = key; battleKey.track = pickOne(list, battleKey.track); }
   return battleKey.track;
 }
@@ -342,7 +362,7 @@ function pickedMix() {
   const menuShows = game.gameMode === 'menu' || (!game.gameStarted && game.gameMode === 'endless');
   if (menuShows) return { menu: 1 };
   if (game.gameMode === 'editor') return { [ambientFor(getPlayerFaction())]: 0.6 };
-  // (#326) a battle's: its theme's tracks for the time of day, a muster while placing (to hear it) and a clash in the fight
+  // (#326) a battle's own tracks for the time of day: a muster while placing and a clash in the fight
   if (game.gameMode === 'battle') { const fight = battle.phase === 'fight'; return { [battleTrack(fight)]: fight ? 1 : 0.8 }; }
   if (typeof isDefeated === 'function' && isDefeated()) return {};
   const pause = game.isPaused ? 0.4 : 1;

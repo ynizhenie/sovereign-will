@@ -276,8 +276,9 @@ function resourceLook(r) {
   const item = category && GAME_CONFIG[category] && GAME_CONFIG[category][id];
   if (item) return { icon: item.icon, name: item.label };
   if (kind === 'loot') return { icon: 'bundle', name: t('pick.loot') };
-  const name = t(`editor.tool.${kind === 'natural_rock' ? 'rock' : kind}`);
-  return { icon: kind === 'natural_rock' ? 'rock' : kind === 'farm' ? 'wheat' : kind, name: name.startsWith('editor.') ? kind : name };
+  const crop = kind === 'farm' ? r.crop || 'farm' : kind;
+  const name = t(`editor.tool.${kind === 'natural_rock' ? 'rock' : crop}`);
+  return { icon: kind === 'natural_rock' ? 'rock' : kind === 'farm' ? r.crop || 'wheat' : kind, name: name.startsWith('editor.') ? crop : name };
 }
 
 // The menu by the finger: a row for each thing, marked (or unmarked) by a tap on it; a tap anywhere

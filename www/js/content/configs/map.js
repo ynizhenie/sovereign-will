@@ -6,7 +6,8 @@ export const mapConfig = {
   // list: the world list they live in. tool: tool family needed (axe / pickaxe); without one it's
   // gathered by hand, by settlers who have no tool (or anyone, if the player marks it).
   // markOnly: settlers only work it when the player marks it. hp: toughness. blocksArrows: arrows stop at it.
-  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra.
+  // yield: what finishing it gives; bonusChance: { resource: chance } of one extra;
+  // bonusChoice: one item from `items` at the shared `chance`.
   // regrow: where it grows back after map.respawnDelay ('forest', 'anywhere', 'nearby' = around where
   // it was, 'spawner' = around an ore spawner, after map.oreRespawnDelay); none = gone for good.
   // forestShare: share of regrowth in a forest (default map.forestUndergrowthShare).
@@ -38,7 +39,7 @@ export const mapConfig = {
     log: { list: 'logs', hp: 1, yield: { wood: 1 }, work: { pickup: true } },
     // what a fallen enemy dropped (#210): picked up like a stick; its yield and items are its own
     loot: { list: 'loot', hp: 1, yield: {}, work: { pickup: true } },
-    grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChance: { wheatSeeds: 0.5 }, regrow: 'forest', work: { seconds: 1.5 } },
+    grass: { list: 'grassList', hp: 1, yield: { herbs: 1 }, bonusChoice: { chance: 0.5, items: ['wheatSeeds', 'riceSeeds'] }, regrow: 'forest', work: { seconds: 1.5 } },
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { berries: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { wheat: 4, wheatSeeds: 1 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.

@@ -335,6 +335,39 @@ test('ghosts are tinted with their side colour', async ({ page }) => {
   expect(colors.enemy).toContain('#e74c3c');
 });
 
+test('dogs and hellhounds wear collars in their side colour', async ({ page }) => {
+  await openGame(page);
+  const colors = await page.evaluate(() => {
+    game.gameMode = 'endless';
+    sides.player.color = '#3498db';
+    sides.enemy.color = '#e74c3c';
+    const fill = ctx.fill, quadraticCurveTo = ctx.quadraticCurveTo;
+    const colors = [], curvedColors = [];
+    ctx.fill = function (...args) {
+      if (this.fillStyle === '#3498db' || this.fillStyle === '#e74c3c') colors.push(this.fillStyle);
+      return fill.apply(this, args);
+    };
+    ctx.quadraticCurveTo = function (...args) {
+      if (this.fillStyle === '#3498db' || this.fillStyle === '#e74c3c') curvedColors.push(this.fillStyle);
+      return quadraticCurveTo.apply(this, args);
+    };
+    const hound = { x: 100, y: 100, radius: 10, visualRadius: 10, facing: 0, hp: 100, maxHp: 100, look: { coat: 0 } };
+    try {
+      for (const kind of ['dog', 'beast']) {
+        drawPet(hound, kind, false);
+        drawPet(hound, kind, true);
+      }
+      return { colors, curvedColors };
+    } finally {
+      ctx.fill = fill;
+      ctx.quadraticCurveTo = quadraticCurveTo;
+    }
+  });
+  expect(colors.colors).toEqual(['#3498db', '#e74c3c', '#3498db', '#e74c3c']);
+  expect(colors.curvedColors.filter(color => color === '#3498db')).toHaveLength(8);
+  expect(colors.curvedColors.filter(color => color === '#e74c3c')).toHaveLength(8);
+});
+
 test('a settler let go puts its gear in the store and walks away; its place free at once (#314)', async ({ page }) => {
   const errors = await start(page, 'humans');
   await page.evaluate(() => { isPaused = false; });

@@ -57,10 +57,11 @@ test('at night the asleep can be picked for a raid: they wake and go (#298, 12)'
   expect(errors).toEqual([]);
 });
 
-test('Battles: the armour button goes off, leather, iron; the units placed wear that kind (#298, 8)', async ({ page }) => {
+test('Battles: the armour button cycles through leather, bone, iron and off', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play');
   await page.click('[data-battle-category="units"]');
   const b = page.locator('[data-battle-gear="armor"]');
   await b.click();
@@ -71,6 +72,8 @@ test('Battles: the armour button goes off, leather, iron; the units placed wear 
     battle.category = 'units'; battle.preset = 'humans:sword'; battleTap(at(30).x, at(30).y);
     return { mine: settlers[0].armor, theirs: enemies[0].armor };
   });
+  await b.click();
+  await expect(b).toContainText('Костяная');
   await b.click();
   await expect(b).toContainText('Железная');
   await b.click();

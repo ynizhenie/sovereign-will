@@ -38,6 +38,11 @@ export function getMapRange(key, fallbackMin, fallbackMax) {
   return { min, max };
 }
 
+function getBiomeTileLimit(key) {
+  const share = GAME_CONFIG.map?.[key];
+  return Number.isFinite(share) ? Math.floor(game.COLS * game.ROWS * share) : Infinity;
+}
+
 export function isDesertTile(x, y) {
   if (thingAt(game.desertTiles, x, y)) return true;
   if (!game.desertRegion) return false;
@@ -586,7 +591,23 @@ function placeSavannas() {
   const count = getMapCount('savannas', 0);
   const rxRange = getMapRange('savannaRadiusX', 3, 5);
   const ryRange = getMapRange('savannaRadiusY', 2, 4);
-  for (let n = 0; n < count; n++) {
+  const tileLimit = getBiomeTileLimit('savannaMaxShare');
+  if (GAME_CONFIG.map?.savannaAroundDesert) {
+    for (const desert of game.desertTiles) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const x = desert.x + dx * TILE_SIZE, y = desert.y + dy * TILE_SIZE;
+        if (x < BORDER_MARGIN * TILE_SIZE + 15 || y < BORDER_MARGIN * TILE_SIZE + 15 ||
+            x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE - 15 || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE - 15 ||
+            Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
+            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || thingAt(game.savannaTiles, x, y)) continue;
+        if (game.savannaTiles.length >= tileLimit) break;
+        game.savannaTiles.push({ x, y });
+      }
+      if (game.savannaTiles.length >= tileLimit) break;
+    }
+  }
+  for (let n = 0; n < count && game.savannaTiles.length < tileLimit; n++) {
     const rx = rxRange.min + Math.floor(rand() * (rxRange.max - rxRange.min + 1));
     const ry = ryRange.min + Math.floor(rand() * (ryRange.max - ryRange.min + 1));
     for (let attempt = 0; attempt < 60; attempt++) {
@@ -602,6 +623,7 @@ function placeSavannas() {
             x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE ||
             Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
             thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || isSavannaTile(x, y)) continue;
+        if (game.savannaTiles.length >= tileLimit) break;
         game.savannaTiles.push({ x, y });
       }
       break;
@@ -833,11 +855,12 @@ function placeDeserts() {
   const desertRange = getMapRange('deserts', 1, 1);
   const desertRxRange = getMapRange('desertRadiusX', 3, 5);
   const desertRyRange = getMapRange('desertRadiusY', 2, 4);
+  const tileLimit = getBiomeTileLimit('desertMaxShare');
 
   let numDeserts = Math.round((desertRange.min + Math.floor(rand() * (desertRange.max - desertRange.min + 1))) * getMapAreaScale());
   const desertCenters = [];
 
-  for (let d = 0; d < numDeserts; d++) {
+  for (let d = 0; d < numDeserts && game.desertTiles.length < tileLimit; d++) {
     let rx = desertRxRange.min + Math.floor(rand() * (desertRxRange.max - desertRxRange.min + 1));
     let ry = desertRyRange.min + Math.floor(rand() * (desertRyRange.max - desertRyRange.min + 1));
 
@@ -888,8 +911,10 @@ function placeDeserts() {
           if (isInside &&
               tileX >= BORDER_MARGIN * TILE_SIZE + 15 && tileX < (game.COLS - BORDER_MARGIN) * TILE_SIZE - 15 &&
               tileY >= BORDER_MARGIN * TILE_SIZE + 15 && tileY < (game.ROWS - BORDER_MARGIN) * TILE_SIZE - 15 &&
+              Math.hypot(tileX - townHall.x, tileY - townHall.y) >= townHall.radius + TILE_SIZE * 2 &&
               !thingAt(game.waterTiles, tileX, tileY) &&
-              !thingAt(game.desertTiles, tileX, tileY)) {
+              !thingAt(game.desertTiles, tileX, tileY) &&
+              game.desertTiles.length < tileLimit) {
             game.desertTiles.push({ x: tileX, y: tileY });
           }
         }
@@ -945,14 +970,14 @@ function placeRockClusters() {
 // Only drawn: for everything else (building, regrowth, cacti) a beach is ordinary ground.
 export const BEACH_SPREAD = Math.PI * 0.4; // how far around the lake from the chosen side the sand reaches
 
-export function placeBeaches() {
-  game.beachTiles = [];
+function placeBeachesAlong(waters) {
   const key = (x, y) => `${x},${y}`;
   const water = new Set(game.waterTiles.map(w => key(w.x, w.y)));
   const rock = new Set(game.naturalRocks.map(r => key(r.x, r.y)));
-  const beach = new Set();
+  const beach = new Set(game.beachTiles.map(t => key(t.x, t.y)));
+  const added = [];
   const seen = new Set();
-  for (const first of game.waterTiles) {
+  for (const first of waters) {
     if (seen.has(key(first.x, first.y))) continue;
     // one lake: the water tiles joined to this one
     const lake = [first];
@@ -976,9 +1001,25 @@ export function placeBeaches() {
               thingAt(game.desertTiles, x, y) || isBorderZone(g.gx, g.gy)) continue;
           let off = Math.abs(Math.atan2(y - cy, x - cx) - side) % (Math.PI * 2);
           if (off > Math.PI) off = Math.PI * 2 - off;
-          if (off <= BEACH_SPREAD) { beach.add(key(x, y)); game.beachTiles.push({ x, y }); }
+          if (off <= BEACH_SPREAD) {
+            beach.add(key(x, y));
+            const tile = { x, y };
+            game.beachTiles.push(tile);
+            added.push(tile);
+          }
         }
       }
     }
   }
+  return added;
+}
+
+export function placeBeaches() {
+  game.beachTiles = [];
+  placeBeachesAlong(game.waterTiles);
+}
+
+/** @param {{ x: number, y: number }[]} lakeTiles */
+export function placeLakeBeaches(lakeTiles) {
+  return placeBeachesAlong(lakeTiles);
 }

@@ -227,8 +227,11 @@ export function workBlueprint(s, bp, dt) {
         removeBuilding(b); // first: the refund mustn't go into a warehouse being taken down
         addResources(definition && definition.demolishRefund);
       }
-    } else if (bp.type === 'wheat') {
-      game.farmPlots.push({ x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0 });
+    } else if (bp.type === 'wheat' || bp.type === 'rice') {
+      game.farmPlots.push({
+        x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0,
+        crop: bp.type, yield: { ...GAME_CONFIG.farming.harvest[bp.type] }
+      });
     } else if (bp.type === 'sapling' || bp.type === 'apple_sapling') {
       const tree = { x: bp.x, y: bp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
       game.trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);

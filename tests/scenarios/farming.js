@@ -67,5 +67,22 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
-  return { farmZonesPlanted, farmZonePainting, fertilizer };
+  function riceCrop({ seed = 'rice-crop' } = {}) {
+    start(seed);
+    clearResources();
+    const p = nearHall(3, 2);
+    toggleFarmZone(p.x, p.y, 'rice');
+    stock.riceSeeds = 1;
+    settlers = [makeSettler(1, townHall.x + 60, townHall.y, { tool: 'hoe' })];
+    run(5, { each: () => { pendingRespawns.length = 0; } });
+    const plot = farmPlots.find(f => f.x === p.x && f.y === p.y);
+    if (!plot) return { planted: false, crop: null, seedsSpent: 0, harvest: {} };
+    const harvester = makeSettler(2, plot.x, plot.y);
+    finishHarvest(harvester, plot, 'farm');
+    const harvest = {};
+    for (const item of harvester.carrying.items || [harvester.carrying]) harvest[item.type] = (harvest[item.type] || 0) + item.amount;
+    return { planted: true, crop: plot.crop, seedsSpent: 1 - stock.riceSeeds, harvest };
+  }
+
+  return { farmZonesPlanted, farmZonePainting, fertilizer, riceCrop };
 })());

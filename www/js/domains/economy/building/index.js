@@ -3,6 +3,6 @@
 
 export { breakOutOfSealedBase, build, collectSmelterIron, deliverMaterials, deliverToSmelter, hallRepairStep, repairBuilding, repairStep, repairTownHall, supplySmelter, workBlueprint } from './building.behaviours.js';
 export { drawBlueprintTile, drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawTownHall, drawUpgrades } from './building.draw.js';
-export { drawDenArt, drawEnemyCampOutpostArt, drawTentArt, drawWatchtowerArt, drawWarehouseArt, shadow } from './building.art.js';
+export { drawDenArt, drawEnemyCampOutpostArt, drawTentArt, drawWatchtowerArt, drawWarehouseArt, pickDummyVariant, shadow } from './building.art.js';
 export { canBuild, claimBuildingJob, createBuildingBlueprint, findDoorBlockers, getHallRepairStep, getMissingMaterial, getRepairStep, getReservedForBlueprints, isBaseSealed, isBuildingJobFree, isBuildingSingle, isBuildLocationAllowed, isSpawnSpotFree, isTileOccupied, removeBuilding, repairAllBuildings, tickSmelters, toggleBuildingRepair } from './building.rules.js';
 export { renderBuildTab } from './building.panel.js';

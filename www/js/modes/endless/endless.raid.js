@@ -8,7 +8,7 @@ import { getReachSteps, getSettlerReach, invalidateAllPaths, isTileBlockedForSet
 import { addResources, canAfford, deliverWhenNothingToDo, formatCost, moveSettlerToTownHall, payCost, showCostError, stock, takeStock } from '../../domains/colony/storage/index.js';
 import { closeSelectedCard, drawIcon, escapeHtml, iconHtml, richText, showNotification } from '../../ui/index.js';
 import { faceTowards } from '../../domains/colony/settlers/index.js';
-import { armorOf, hasToolFamily, isRangedWeapon } from '../../domains/colony/equipment/index.js';
+import { armorOf, hasToolFamily, helmetOf, isRangedWeapon, putOnGear } from '../../domains/colony/equipment/index.js';
 import { clearOrders, fightByOrders, orderTap } from '../../domains/conflict/combat/index.js';
 import { treatWounded } from '../../domains/conflict/healing/index.js';
 import { createConfiguredEnemy, dressForWave, getEnemyDef, getWavePresetPool } from '../../domains/conflict/waves/index.js';
@@ -100,7 +100,7 @@ function lineUp(at, side, i) {
 // The armed, as the camp's defenders mirror them (#279: taken when the camp appears, so it's the same camp
 // however the army changes after)
 const armyOf = settlers => settlers.filter(s => s.weapon !== 'fist' || s.role === 'soldier' || s.role === 'archer')
-  .map(s => ({ weapon: s.weapon, type: s.type, armor: s.armor || null, shield: !!s.shield, helmet: !!s.helmet }));
+  .map(s => ({ weapon: s.weapon, type: s.type, armor: s.armor || null, shield: !!s.shield, helmet: helmetOf(s)?.id || false }));
 
 // Each tick (Endless): a camp opens after a wave beaten, and goes when its time is up
 export function tickRaidCamp(dt) {
@@ -274,9 +274,9 @@ function makeCampGuard(pos, kind, camp, developmentWave = game.waveNum + 2) {
   const enemy = createConfiguredEnemy(pos, kind.id);
   if (!enemy) return null;
   const armour = armorOf({ armor: kind.armor === true ? 'iron' : kind.armor });
-  if (armour) { enemy.armor = armour.armorKind; enemy.maxHp += armour.hpBonus; enemy.hp = enemy.maxHp; }
+  if (armour) putOnGear(enemy, armour.id);
   if (kind.shield) enemy.shield = true;
-  if (kind.helmet) enemy.helmet = true;
+  if (kind.helmet) putOnGear(enemy, typeof kind.helmet === 'string' ? kind.helmet : 'helmet');
   dressForWave(enemy, getEnemyDef(enemy), developmentWave);
   enemy.campGuard = true;
   enemy.campId = camp.id;
@@ -316,7 +316,9 @@ function growCampDefenders(wave) {
       let guard = guards[i];
       const desired = targetRoster[i % targetRoster.length];
       const desiredArmour = armorOf({ armor: desired.armor === true ? 'iron' : desired.armor });
-      const needsPlayerGear = (!!desiredArmour && !guard.armor) || (!!desired.shield && !guard.shield) || (!!desired.helmet && !guard.helmet);
+      const desiredHelmet = desired.helmet || false;
+      const needsPlayerGear = (!!desiredArmour && armorOf(guard)?.id !== desiredArmour.id) ||
+        (!!desired.shield && !guard.shield) || (!!desiredHelmet && helmetOf(guard)?.id !== desiredHelmet);
       if (weaponStrength({ enemyKey: desired.id }) > weaponStrength(guard) * 1.03 || needsPlayerGear) {
         const upgraded = makeCampGuard({ x: guard.x, y: guard.y }, desired, camp, wave + 2);
         if (upgraded) {
@@ -658,7 +660,7 @@ export function openRaidPicker(scout = false) {
     const type = GAME_CONFIG.settlerTypes[s.type] || GAME_CONFIG.settlerTypes.normal;
     const weapon = getDefinition('weapons', s.weapon) || GAME_CONFIG.weapons.fist;
     const tool = s.weapon === 'fist' && s.tool && s.tool !== 'none' ? getDefinition('tools', s.tool) : null;
-    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${armorOf(s) ? iconHtml(armorOf(s).icon) : ''}${s.shield ? iconHtml('shield') : ''}${s.helmet ? iconHtml('helmet') : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
+    b.innerHTML = `${iconHtml(type.icon)}${iconHtml(tool ? tool.icon : weapon.icon)}${armorOf(s) ? iconHtml(armorOf(s).icon) : ''}${s.shield ? iconHtml('shield') : ''}${helmetOf(s) ? iconHtml(helmetOf(s).icon) : ''}<span class="raid-hp">${Math.ceil(s.hp)}</span>`;
     onTap(b, () => {
       if (scout) roster.querySelectorAll('.raid-unit.on').forEach(o => { if (o !== b) o.classList.remove('on'); });
       b.classList.toggle('on');
@@ -837,7 +839,7 @@ export function campDefenders(army, wave = game.waveNum) {
       id: def.id,
       armor: soldier?.armor || null,
       shield: !!soldier?.shield && def.type === 'normal' && !def.ranged,
-      helmet: !!soldier?.helmet
+      helmet: soldier?.helmet || false
     });
   }
   return out;

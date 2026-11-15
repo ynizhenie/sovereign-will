@@ -11,6 +11,15 @@ async function openBattle(page) {
 }
 const at = (gx, gy) => ({ x: gx * 30 + 15, y: gy * 30 + 15 });
 
+test('battlefield size buttons in Battle settings use the regular button text color', async ({ page }) => {
+  await openBattle(page);
+  const colors = await page.evaluate(() => ({
+    size: getComputedStyle(document.querySelector('[data-sheet="battle-settings"] .battle-size-option:not(.active)')).color,
+    regular: getComputedStyle(document.querySelector('[data-sheet="battle-settings"] [data-battle-field]:not(.active)')).color
+  }));
+  expect(colors.size).toBe(colors.regular);
+});
+
 test('an enemy strikes a blow at a time, as yours do, not hp drained every tick (#326)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
@@ -45,7 +54,7 @@ test('pets wear nothing: not in Battles, not in a wave, not among a camp\'s defe
   expect(r.soldiers.every(p => p === null)).toBe(true);
 });
 
-test('Battles: off the red strip but for one fleeing; ten colours, the winner named by its colour, the brooms on the sides\' colours; the music theme picked (#326)', async ({ page }) => {
+test('Battles: off the red strip but for one fleeing; ten colours, the winner named by its colour, the brooms on the sides\' colours (#326)', async ({ page }) => {
   const errors = await openBattle(page);
   const r = await page.evaluate(() => {
     battle.lineup = []; battle.category = 'units'; battle.preset = 'humans:sword';
@@ -68,10 +77,7 @@ test('Battles: off the red strip but for one fleeing; ten colours, the winner na
   expect(r.colors).toBe(10);
   expect(r.next).toBe('#c0392b'); // (the next one along the wheel, not the first free)
   expect(r.broom).toBe('rgb(192, 57, 43)');
-  await page.click('[data-dock="battle-settings"]');
-  await page.click('#battle-music [data-theme="demons"]');
-  expect(await page.evaluate(() => battle.theme)).toBe('demons');
-  expect(await page.evaluate(() => { audio.musicOn = true; return Object.keys(musicMix()).every(id => GAME_CONFIG.factions.demons.music.ambient.includes(id)); })).toBe(true); // (placing: its ambient)
+  await expect(page.locator('#battle-music')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

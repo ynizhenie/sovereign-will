@@ -41,7 +41,11 @@ export const mechanicsConfig = {
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
   // (#306) growSeconds: from planted to ripe (was 20 s), watered faster (wateringCan.growthFactor)
-  farming: { plantSeconds: 1.5, growSeconds: 45, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
+  farming: {
+    plantSeconds: 1.5, growSeconds: 45,
+    crops: { wheat: 'wheat', rice: 'rice', sapling: 'sapling', apple: 'apple_sapling' },
+    harvest: { wheat: { wheat: 4, wheatSeeds: 1 }, rice: { rice: 4, riceSeeds: 1 } }
+  },
 
   // fertiliser (#201): a farmer with a backpack carries dung to a wheat plot that has none; its next
   // harvest yields yieldFactor times, once
@@ -129,7 +133,7 @@ export const mechanicsConfig = {
   corpses: { seconds: 60 },
 
   // bait: the first of these the stock can pay for, per catch (worms first)
-  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { wheat: 1 }], fishCapacity: 4, fishRegrowSeconds: 2.5 },
+  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { riceSeeds: 1 }, { wheat: 1 }], fishCapacity: 4, fishRegrowSeconds: 2.5 },
   // a woodcutter (an axe) with nothing to do, or with the firewood nearly out, chops firewood at a storage
   // (#199): each wood into `makes` firewood in `seconds`, up to `perTrip` wood a go, while the stock has
   // less than `keep`
@@ -148,8 +152,8 @@ export const mechanicsConfig = {
   // Under lowFood meals per settler plus hireReserve (enough to hire a giant), any worker cooks, tool in
   // hand or in a wave too
   // (#298) a lit campfire burns its fuel down by itself, one unit every fuelSeconds, cooking or not
-  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, firewood: 5 }, fuelSeconds: 6, lowFood: 2, hireReserve: 30,
-    dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat', 'rice'], makes: 1, fuel: { coal: 5, firewood: 5 }, fuelSeconds: 6, lowFood: 2, hireReserve: 30,
+    dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread', rice: 'cookedRice' } },
 
   // demons eating a corpse to heal
   eatCorpseSeconds: 2,

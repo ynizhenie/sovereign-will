@@ -52,7 +52,7 @@ export function makeAppleTree(tree) {
   return tree;
 }
 
-// Wheat grows; saplings grow into trees; apple trees grow apples (faster watered)
+// Field crops grow; saplings grow into trees; apple trees grow apples (faster watered)
 export function growCrops(dt) {
   game.farmPlots.forEach(f => {
     const wet = f.watered || rainLevel() > 0.5; // (rain waters them, #308)

@@ -23,6 +23,10 @@ test('one cook per campfire (#30)', async () => {
   expect((await sim.cookingRun({ workers: 3 })).maxCooks).toBe(1);
 });
 
+test('rice is cooked into cooked rice', async () => {
+  expect(await sim.cookingRice({})).toEqual({ food: 2, rawRice: 0, cookedRice: 2 });
+});
+
 test('boars give raw meat, fishing raw fish, farms grain; berries stay ready food (#31)', async () => {
   const y = await (() => ({
     boar: GAME_CONFIG.mapResources.boar.yield, farm: GAME_CONFIG.mapResources.farm.yield,

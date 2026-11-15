@@ -11,7 +11,7 @@ import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatu
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
-import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, setPrewarmingChunks } from '../domains/world/index.js';
+import { beginShadowFrame, drawDarkness, drawFireflies, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, setPrewarmingChunks } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBackroomsFloor, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -98,6 +98,7 @@ export function render() {
   ctx.restore();
   if (onCard) glEndFrame();
   drawDarkness(); // (night, with its lights, #257)
+  drawFireflies();
   drawLitWindows(); // (the hall's, bright in the dark)
   drawWeatherScreen(); // (rain, lightning, #308)
 

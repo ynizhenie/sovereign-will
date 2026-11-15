@@ -8,7 +8,7 @@ import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
 import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
-import { canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
+import { armorOf, canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -128,9 +128,10 @@ function armFromCorpse(zombie, corpse, reach) {
   if (carriesLoot) {
     if (corpse.weapon && corpse.weapon !== 'fist' && GAME_CONFIG.weapons[corpse.weapon]) zombie.weapon = corpse.weapon;
     if (isRangedWeapon(zombie.weapon)) { zombie.quiver = true; zombie.arrows = 15; }
-    if (corpse.armor) putOnGear(zombie, corpse.armor === 'iron' ? 'armor' : 'leather_armor');
+    const armour = armorOf({ armor: corpse.armor });
+    if (armour) putOnGear(zombie, armour.id);
     zombie.shield = !!corpse.shield;
-    zombie.helmet = !!corpse.helmet;
+    if (corpse.helmet) putOnGear(zombie, corpse.helmetGear || 'helmet');
   } else {
     const piles = game.loot.filter(p => p.items.length && Math.hypot(p.x - corpse.x, p.y - corpse.y) <= reach);
     for (const pile of piles) {
@@ -143,7 +144,7 @@ function armFromCorpse(zombie, corpse, reach) {
         } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
           if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
           else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
-          else if (id === 'helmet' && !zombie.helmet) { zombie.helmet = true; taken = true; }
+          else if (GAME_CONFIG.gear[id].helmetKind && !zombie.helmet) { putOnGear(zombie, id); taken = true; }
         }
         if (taken) pile.items.splice(pile.items.indexOf(key), 1);
       }
@@ -302,9 +303,9 @@ export function enemyNecromancy(en, necro, dt) {
 // them, workGrave, #253); and a grave's rest runs down
 export function makeBonesAndRot(dt) {
   const bonesRate = getPlayerFaction().bonesPerSecond;
-  if (bonesRate && game.gameMode === 'endless') stock.bones += dt * bonesRate.hall;
+  if (!game.plagueMode && bonesRate && game.gameMode === 'endless') stock.bones += dt * bonesRate.hall;
   const rotRate = getPlayerFaction().rotPerSecond;
-  if (rotRate && game.gameMode === 'endless') stock.rot += dt * rotRate.hall;
+  if (!game.plagueMode && rotRate && game.gameMode === 'endless') stock.rot += dt * rotRate.hall;
   for (const b of game.buildings) if (b.type === 'grave' && (b.rest || 0) > 0) b.rest = (b.rest || 0) - dt;
 }
 

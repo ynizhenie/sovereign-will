@@ -11,6 +11,7 @@ export const DEFAULT_MAP_TILES = 40;
 /** @type {import('./types.js').Game} */
 export const game = {
   gameMode: 'endless',      // endless / battle / editor (modes/) / menu (the world behind the main menu, modes/menu/menu.world.js)
+  menuScene: '',
   gameStarted: false,
   isPaused: false,
   loading: false,           // (#326) a world being made or a save read: the loading screen is up, nothing updated till it's done
@@ -78,6 +79,7 @@ export const game = {
   loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
   piles: [],
   dayTime: 0,           // seconds into the day (#257, world.daytime.js); the game starts in the morning
+  editorHideTimeAndWeather: true,
   nightId: 0,           // which night it is (a torch in hand taken once a night)
   wasNight: false,
   autoBlight: false,    // the undead's necromancers blight by themselves (#253); autoBlightDone: none left to
@@ -105,8 +107,8 @@ export const game = {
   waveRouted: false,
   enemyArrowStock: 0,   // arrows in enemy tents, shared by all enemy archers
   enemyHerbStock: 0,    // herbs in enemy tents, shared by all enemy medics
-  /** @type {{ armor: boolean, shield: boolean, leather?: boolean, helmet?: boolean }} */
-  playerGear: { armor: false, shield: false, leather: false, helmet: false }, // armour / a shield the player has made: waves wear them too (#203)
+  /** @type {Object<string, boolean>} */
+  playerGear: { armor: false, shield: false, leather: false, leather_armor: false, helmet: false, horned_helmet: false, bone_armor: false }, // armour / a shield the player has made: waves wear them too (#203)
   forests: [],          // forest centres, see placeForests()
   pendingRespawns: [],  // harvested resources waiting to grow back, see scheduleRespawn()
   /** @type {Object<string, number>} */

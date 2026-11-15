@@ -349,14 +349,14 @@ window.sim = (() => {
   }
 
   // A fisher with a rod and a marked fishing spot; counts catches against the seeds in stock
-  function fishing({ seed = 'fishing-test', seeds, seconds = 90 }) {
+  function fishing({ seed = 'fishing-test', seeds, seedKind = 'wheatSeeds', seconds = 90 }) {
     start(seed);
     // nearest reachable water to the town hall
     const spot = waterTiles.filter(w => isWaterReachable(w))
       .sort((a, b) => Math.hypot(a.x - townHall.x, a.y - townHall.y) - Math.hypot(b.x - townHall.x, b.y - townHall.y))[0];
     spot.isFishing = true;
     settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
-    stock.wheatSeeds = seeds;
+    stock.wheatSeeds = 0; stock.riceSeeds = 0; stock[seedKind] = seeds;
     grassList = []; // (an idle fisher digs for worms in the grass, #199: bait from nowhere here)
     // a catch: the fisher's load of fish grows
     let catches = 0, carried = 0;
@@ -366,7 +366,7 @@ window.sim = (() => {
       if (fish > carried) catches++;
       carried = fish;
     } });
-    return { catches, seedsLeft: stock.wheatSeeds };
+    return { catches, seedsLeft: stock[seedKind] };
   }
 
   // Fell a tree at once and watch the tree count: no instant regrowth, back after respawnDelay
