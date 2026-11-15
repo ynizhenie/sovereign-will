@@ -510,6 +510,55 @@ test('Plague: the dead keep their weapons, a corpse shows its, arrows never run 
   expect(errors).toEqual([]);
 });
 
+test('Plague cemetery corpses spawn on free cells around the grave', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { tickPlague } = await import('/js/modes/plague/plague.rules.js');
+    const { isTileOccupied } = await import('/js/domains/economy/building/index.js');
+    const cemetery = game.buildings.find(building => building.plagueCemetery);
+    const initial = game.corpses.filter(corpse => corpse.plagueCemeteryId === cemetery.plagueCemeteryId);
+    const initialCorpsesAreFree = initial.every(corpse => !isTileOccupied(corpse.x, corpse.y)) &&
+      initial.every((corpse, i) => initial.slice(i + 1).every(other => Math.hypot(corpse.x - other.x, corpse.y - other.y) >= 22));
+    game.corpses = game.corpses.filter(corpse => corpse.plagueCemeteryId !== cemetery.plagueCemeteryId ||
+      corpse === initial[0]);
+    const centre = getGridPos(cemetery.x, cemetery.y);
+    const blockedRing = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const x = (centre.gx + dx) * TILE_SIZE + TILE_SIZE / 2;
+      const y = (centre.gy + dy) * TILE_SIZE + TILE_SIZE / 2;
+      if ((dx + dy) % 2) game.buildings.push({ type: 'wall_wood', x, y, hp: 100, maxHp: 100 });
+      else game.waterTiles.push({ x, y });
+      blockedRing.push({ x, y });
+    }
+    const adjacentRingIsBlocked = blockedRing.every(spot => isTileOccupied(spot.x, spot.y));
+    cemetery.plagueCorpseTimer = 0;
+    const before = new Set(game.corpses);
+    tickPlague(1 / 60);
+    const spawned = game.corpses.find(corpse => corpse.plagueCemeteryId === cemetery.plagueCemeteryId &&
+      !before.has(corpse));
+    const spawnedCell = spawned && getGridPos(spawned.x, spawned.y);
+    return {
+      initialCorpsesAreFree,
+      adjacentRingIsBlocked,
+      spawned: !!spawned,
+      spawnedOnFreeCell: !!spawned && !isTileOccupied(spawned.x, spawned.y),
+      spawnedOutsideBlockedRing: !!spawned && !blockedRing.some(spot => Math.hypot(spot.x - spawned.x, spot.y - spawned.y) < 22),
+      withinFourCells: !!spawned && Math.max(Math.abs(spawnedCell.gx - centre.gx), Math.abs(spawnedCell.gy - centre.gy)) <= 4
+    };
+  });
+  expect(result).toEqual({
+    initialCorpsesAreFree: true,
+    adjacentRingIsBlocked: true,
+    spawned: true,
+    spawnedOnFreeCell: true,
+    spawnedOutsideBlockedRing: true,
+    withinFourCells: true
+  });
+  expect(errors).toEqual([]);
+});
+
 test('Plague corpses fade away after their lifetime without worms', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);

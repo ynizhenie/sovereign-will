@@ -113,6 +113,7 @@
  * @property {Object | null} [butcherTarget] the corpse it's cutting up (#250)
  * @property {number} [butcherTimer]
  * @property {Object | null} [graveTarget] the grave a necromancer works (#253)
+ * @property {Object | null} [lastGraveTarget] the last menu grave a necromancer worked
  * @property {number} [graveTimer]
  * @property {boolean} [asleep]     asleep at night (#257)
  * @property {Object | null} [sleepAt] the shelter it sleeps at

@@ -259,14 +259,24 @@ function corpseBy(grave) {
   return game.corpses.some(c => liesBy(c, grave));
 }
 
-// A necromancer works the nearest grave that isn't resting (another necromancer not on it): a while at it,
-// then its bones and rot; then the grave rests restSeconds, unless a corpse lies by it
+// A necromancer works a grave that isn't resting (another necromancer not on it): a while at it, then its
+// bones and rot; then the grave rests restSeconds, unless a corpse lies by it
 function workGrave(s, tick) {
   const c = graveWork();
+  const menuGraveyard = game.gameMode === 'menu' && game.menuScene === 'graveyard';
   const taken = new Set(game.settlers.filter(o => o !== s && o.graveTarget).map(o => o.graveTarget));
-  const ready = b => b.type === 'grave' && (!((b.rest || 0) > 0) || corpseBy(b)) && !taken.has(b);
+  const ready = b => b.type === 'grave' && (menuGraveyard || !((b.rest || 0) > 0) || corpseBy(b)) && !taken.has(b);
   let grave = s.graveTarget && game.buildings.includes(s.graveTarget) && ready(s.graveTarget) ? s.graveTarget : null;
-  if (!grave) grave = game.buildings.filter(ready).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+  if (!grave) {
+    const choices = game.buildings.filter(ready);
+    if (menuGraveyard) {
+      const otherGraves = choices.filter(b => b !== s.lastGraveTarget);
+      const pool = otherGraves.length ? otherGraves : choices;
+      grave = pool[Math.floor(Math.random() * pool.length)] || null;
+    } else {
+      grave = choices.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] || null;
+    }
+  }
   s.graveTarget = grave;
   if (!grave) return false;
   s.patrolTarget = null;
@@ -280,6 +290,7 @@ function workGrave(s, tick) {
   stock.bones = (stock.bones || 0) + c.bones;
   stock.rot = (stock.rot || 0) + c.rot;
   if (!corpseBy(grave)) grave.rest = c.restSeconds;
+  if (menuGraveyard) s.lastGraveTarget = grave;
   s.graveTarget = null;
   return true;
 }

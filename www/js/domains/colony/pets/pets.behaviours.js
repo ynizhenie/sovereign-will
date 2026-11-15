@@ -208,7 +208,8 @@ function tickGhost(s, tick) {
   }
   // with a necromancer going to a fight (an enemy near it, or a wave on): at most `carry` to one
   const necros = game.settlers.filter(o => o.tool === 'necro_staff' && o.hp > 0 && !o.leaving);
-  const fighting = n => tick.isWaveActive || foesNear(n.x, n.y, 12 * TILE_SIZE).length > 0;
+  const fighting = n => (game.gameMode === 'menu' && game.menuScene === 'graveyard') ||
+    tick.isWaveActive || foesNear(n.x, n.y, 12 * TILE_SIZE).length > 0;
   if (s.escort && (!necros.includes(s.escort) || !fighting(s.escort))) s.escort = null;
   if (!s.escort) {
     const taken = n => game.settlers.filter(o => o !== s && o.escort === n).length;

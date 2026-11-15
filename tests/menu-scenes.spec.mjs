@@ -28,12 +28,18 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
     return {
       settlers: settlers.map(s => [s.weapon, s.tool, !!s.shield, s.armor || null, !!s.backpack, !!s.wateringCan]),
       buildings: buildings.map(b => b.type), water: waterTiles.length, fishing: waterTiles.filter(w => w.isFishing).length, zones: farmZones.length, boars: boars.length,
+      terrain: { desert: game.desertTiles.length, savanna: game.savannaTiles.length, total: game.COLS * game.ROWS },
       farmCrop: menuWorld.farmCrop, zoneCrops: [...new Set(farmZones.map(zone => zone.crop))],
       infiniteCropSeeds: stock[`${menuWorld.farmCrop}Seeds`] === Infinity,
       shoreViolations
     };
   }, name);
-  expect(await scene('hunt')).toMatchObject({ settlers: [['spear', 'none', false, null, false, false]], boars: 3, shoreViolations: [] });
+  const hunt = await scene('hunt');
+  expect(hunt).toMatchObject({
+    settlers: [['spear', 'none', false, null, false, false]], boars: 3, shoreViolations: [],
+    terrain: { desert: 0 }
+  });
+  expect(hunt.terrain.savanna).toBe(hunt.terrain.total);
   expect(await scene('fishing')).toMatchObject({ settlers: [['fist', 'rod', false, null, false, false], ['fist', 'none', false, null, false, false]], buildings: ['campfire'], water: 4, fishing: 1, boars: 0, shoreViolations: [] });
   expect(await scene('fight')).toMatchObject({ settlers: [['sword', 'none', true, null, false, false], ['sword', 'none', true, null, false, false], ['fist', 'medbag', false, 'iron', false, false]], shoreViolations: [] });
   const farm = await scene('farm');
@@ -90,6 +96,78 @@ test('the menu farm keeps working when Endless is set to the undead', async ({ p
   expect(result.newGameCropNeedsBones).toBe(true);
 });
 
+test('graveyard menu scene has ghosts and a necromancer working its graves', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    enterMenuWorld('graveyard');
+    const initial = {
+      scene: menuWorld.scene,
+      faction: getPlayerFaction().id,
+      playerColorMatchesFaction: menuWorld.playerColor === getPlayerFaction().color,
+      hall: getPlayerFaction().hall,
+      desertTiles: game.desertTiles.length,
+      savannaTiles: game.savannaTiles.length,
+      totalTiles: game.COLS * game.ROWS,
+      cacti: game.cacti.length,
+      pebbles: game.pebbles.length,
+      trees: game.trees.length,
+      grass: game.grassList.length,
+      graves: buildings.filter(building => building.type === 'grave').length,
+      gravesHavePassages: buildings.filter(building => building.type === 'grave').every((grave, i, graves) =>
+        graves.slice(i + 1).every(other =>
+          Math.max(Math.abs(Math.floor(grave.x / TILE_SIZE) - Math.floor(other.x / TILE_SIZE)),
+            Math.abs(Math.floor(grave.y / TILE_SIZE) - Math.floor(other.y / TILE_SIZE))) > 1
+        )
+      ),
+      resourceOverlaps: buildings.filter(building => building.type === 'grave').flatMap(grave => {
+        const gx = Math.floor(grave.x / TILE_SIZE), gy = Math.floor(grave.y / TILE_SIZE);
+        return Object.values(GAME_CONFIG.mapResources).flatMap(definition =>
+          (game[definition.list] || []).filter(resource =>
+            Math.floor(resource.x / TILE_SIZE) === gx && Math.floor(resource.y / TILE_SIZE) === gy
+          ).map(() => definition.list)
+        );
+      }),
+      necromancers: settlers.filter(settler => settler.tool === 'necro_staff').length,
+      necromancerType: settlers.find(settler => settler.tool === 'necro_staff')?.type,
+      soulLantern: !!settlers.find(settler => settler.tool === 'necro_staff')?.soul_lantern,
+      ghosts: settlers.filter(settler => settler.type === 'ghost').length,
+      bones: stock.bones,
+      rot: stock.rot
+    };
+    for (let frame = 0; frame < 60 * 30; frame++) stepGame(1 / 60);
+    const necromancer = settlers.find(settler => settler.tool === 'necro_staff');
+    const ghost = settlers.find(settler => settler.type === 'ghost');
+    const restingGraves = buildings.filter(building => building.type === 'grave' && building.rest > 0).length;
+    const graves = buildings.filter(building => building.type === 'grave');
+    necromancer.graveTarget = null;
+    necromancer.lastGraveTarget = graves[0];
+    for (const grave of graves) grave.rest = 100;
+    stepGame(1 / 60);
+    return {
+      ...initial,
+      ghostEscortsNecromancer: ghost?.escort === necromancer,
+      bonesAfter: stock.bones,
+      rotAfter: stock.rot,
+      restingGraves,
+      worksRestingGrave: necromancer.graveTarget?.rest > 0,
+      avoidsLastGrave: necromancer.graveTarget !== graves[0]
+    };
+  });
+  expect(result).toMatchObject({
+    scene: 'graveyard', faction: 'undead', playerColorMatchesFaction: true,
+    hall: 'graveyard', graves: 8, gravesHavePassages: true, resourceOverlaps: [],
+    savannaTiles: 0, cacti: 7, pebbles: 7, trees: 0, grass: 0,
+    necromancers: 1, necromancerType: 'zombie', soulLantern: true,
+    ghosts: 1, ghostEscortsNecromancer: true, bones: 0, rot: 0,
+    worksRestingGrave: true, avoidsLastGrave: true
+  });
+  expect(result.desertTiles).toBe(result.totalTiles);
+  expect(result.bonesAfter).toBeGreaterThan(0);
+  expect(result.rotAfter).toBeGreaterThan(0);
+  expect(result.restingGraves).toBeGreaterThan(1);
+});
+
 test('the fight: zombies keep coming; a tapped one falls; the squad gone, a new one comes (#256)', async ({ page }) => {
   await page.goto('/');
   await opened(page);
@@ -115,6 +193,102 @@ test('the fight: zombies keep coming; a tapped one falls; the squad gone, a new 
     return { gone, settlers: settlers.length, corpses: corpses.length };
   });
   expect(back).toEqual({ gone: true, settlers: 3, corpses: 0 });
+});
+
+test('menu fight squads grow with player levels and demon levels', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(async () => {
+    const { setUnitExperience } = await import('/js/domains/colony/settlers/index.js');
+    enterMenuWorld('fight');
+    const spawnZombieGroup = () => {
+      enemies = [];
+      menuWorld.fight.next = 0;
+      stepGame(1 / 60);
+      return enemies.length;
+    };
+    setUnitExperience(settlers[0], 10, 'melee');
+    const oneLevel = spawnZombieGroup();
+    setUnitExperience(settlers[1], 10, 'melee');
+    const twoLevels = spawnZombieGroup();
+    setUnitExperience(settlers[0], 25, 'melee');
+    const threeLevels = spawnZombieGroup();
+
+    enterMenuWorld('demon');
+    const demon = settlers[0];
+    const spawnDemonGroup = () => {
+      const random = Math.random;
+      try {
+        Math.random = () => 0;
+        enemies = [];
+        menuWorld.demonFight.awaitingMeal = false;
+        menuWorld.demonFight.next = 0;
+        stepGame(1 / 60);
+        return enemies.length;
+      } finally { Math.random = random; }
+    };
+    setUnitExperience(demon, 10, 'melee');
+    const demonLevelTwo = spawnDemonGroup();
+    setUnitExperience(demon, 25, 'melee');
+    const demonLevelThree = spawnDemonGroup();
+    return { oneLevel, twoLevels, threeLevels, demonLevelTwo, demonLevelThree };
+  });
+  expect(result).toEqual({ oneLevel: 2, twoLevels: 2, threeLevels: 3, demonLevelTwo: 5, demonLevelThree: 7 });
+});
+
+test('destroyed fight outpost is restored when the scene restarts', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    enterMenuWorld('fight');
+    settlers.length = 0;
+    townHall.hp = 1;
+    const attacker = createConfiguredEnemy({ x: townHall.x + 25, y: townHall.y }, 'undead_zombie');
+    attacker.speed = 0;
+    enemies.push(attacker);
+    for (let frame = 0; frame < 60 * 2 && townHall.hp > 0; frame++) stepGame(1 / 60);
+    const destroyed = townHall.hp <= 0;
+    for (let frame = 0; frame < 60 * 4; frame++) stepGame(1 / 60);
+    return { destroyed, hp: townHall.hp, maxHp: townHall.maxHp, settlers: settlers.length, enemies: enemies.length };
+  });
+  expect(result.destroyed).toBe(true);
+  expect(result).toMatchObject({ hp: 300, maxHp: 300, settlers: 3, enemies: 0 });
+});
+
+test('damaged menu outpost has contained damage marks and a nearby health bar', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(async () => {
+    const { drawDamage, drawMenuOutpostHealthBar } = await import('/js/domains/economy/building/building.draw.js');
+    enterMenuWorld('fight');
+    townHall.hp = townHall.maxHp / 2;
+    const fills = [];
+    const fillRect = ctx.fillRect;
+    ctx.fillRect = function (x, y, width, height) {
+      fills.push([x, y, width, height]);
+      return fillRect.call(this, x, y, width, height);
+    };
+    try { drawMenuOutpostHealthBar(); }
+    finally { ctx.fillRect = fillRect; }
+
+    const path = [];
+    let damageClip;
+    const beginPath = ctx.beginPath, moveTo = ctx.moveTo, lineTo = ctx.lineTo, clip = ctx.clip;
+    ctx.beginPath = function () { path.length = 0; return beginPath.call(this); };
+    ctx.moveTo = function (x, y) { path.push([x, y]); return moveTo.call(this, x, y); };
+    ctx.lineTo = function (x, y) { path.push([x, y]); return lineTo.call(this, x, y); };
+    ctx.clip = function () { damageClip = path.slice(); return clip.call(this); };
+    try { drawDamage(150, 130, 20, 0.2, 'outpost-human'); }
+    finally {
+      ctx.beginPath = beginPath; ctx.moveTo = moveTo; ctx.lineTo = lineTo; ctx.clip = clip;
+    }
+    return { fills, damageClip, x: townHall.x, y: townHall.y };
+  });
+  expect(result.fills).toEqual([
+    [result.x - 24, result.y - 38, 48, 6],
+    [result.x - 24, result.y - 38, 24, 6]
+  ]);
+  expect(result.damageClip).toEqual([[133, 117], [136, 113], [164, 113], [167, 117], [167, 144], [166, 146], [134, 146], [133, 144]]);
 });
 
 test('menu scenes use random distinct side colours and their fixed difficulties', async ({ page }) => {
@@ -325,7 +499,7 @@ test('the demon menu scene: full health, varied human waves, and a meal before t
   });
   const checkGroup = group => {
     expect(group.units.length).toBeGreaterThanOrEqual(3);
-    expect(group.units.length).toBeLessThanOrEqual(5);
+    expect(group.units.length).toBeLessThanOrEqual(9);
     expect(group.units.filter(unit => unit.enemyKey === 'raider_medic_club').length).toBeGreaterThanOrEqual(1);
     expect(group.units.filter(unit => unit.enemyKey === 'raider_archer').length).toBeLessThanOrEqual(2);
     expect(group.units.every(unit => unit.weapon !== 'fist')).toBe(true);
@@ -351,6 +525,7 @@ test('the defeated demon scene keeps humans until it restarts', async ({ page })
     enterMenuWorld('demon');
     for (let frame = 0; frame < 60 * 3 && !enemies.length; frame++) stepGame(1 / 60);
     const countAtDefeat = enemies.length;
+    townHall.hp = 100;
     settlers[0].hp = 0;
     stepGame(1 / 60);
     const countAfterDefeat = enemies.length;
@@ -360,6 +535,7 @@ test('the defeated demon scene keeps humans until it restarts', async ({ page })
     for (let frame = 0; frame < 60; frame++) stepGame(1 / 60);
     return {
       countAtDefeat, countAfterDefeat, countDuringLoss, outpostHpDuringLoss,
+      outpostHpAfterRestart: townHall.hp,
       countAfterRestart: enemies.length,
       demonRestored: settlers.some(demon => demon.type === 'demon' && demon.hp === demon.maxHp)
     };
@@ -367,7 +543,8 @@ test('the defeated demon scene keeps humans until it restarts', async ({ page })
   expect(result.countAtDefeat).toBeGreaterThan(0);
   expect(result.countAfterDefeat).toBe(result.countAtDefeat);
   expect(result.countDuringLoss).toBe(result.countAtDefeat);
-  expect(result.outpostHpDuringLoss).toBe(300);
+  expect(result.outpostHpDuringLoss).toBe(100);
+  expect(result.outpostHpAfterRestart).toBe(300);
   expect(result.countAfterRestart).toBe(0);
   expect(result.demonRestored).toBe(true);
 });

@@ -6,7 +6,7 @@ import { TILE_SIZE, applySeedFromUI, createWorldSeed, game, getGridPos, rand, se
 import { isTileBlockedForEnemyStrict } from '../../engine/movement/index.js';
 import { copyUnitProgression, createSettler } from '../../domains/colony/settlers/index.js';
 import { createConfiguredEnemy, dressForWave, getWavePresetPool, pickWavePreset } from '../../domains/conflict/waves/index.js';
-import { isTileOccupied } from '../../domains/economy/building/index.js';
+import { isSpawnSpotFree, isTileOccupied } from '../../domains/economy/building/index.js';
 import { canUseShield, isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { getPlayerFaction, sides } from '../../domains/factions/index.js';
 import { showNotification } from '../../ui/index.js';
@@ -179,15 +179,37 @@ function placeCemeteries() {
     });
     const corpseCount = index === 1 ? 3 : 2;
     for (let i = 0; i < corpseCount; i++) {
+      const spot = findCemeteryCorpseSpot({ x: point.x, y: point.y });
+      if (!spot) throw new Error(`Could not find a free cell for plague cemetery ${cemeteryId}`);
       const weapon = i % 2 ? 'sword' : 'club';
       game.corpses.push({
-        x: point.x + (i % 2 ? 18 : -18), y: point.y + (i === 2 ? 18 : -18),
+        ...spot,
         radius: 11, side: 'settler', kind: 'zombie', age: 0, big: false, wormsTaken: false,
         type: 'zombie', weapon, tool: 'none', look: null, plagueCemeteryCorpse: true, plagueCemeteryId: cemeteryId
       });
     }
   }
   if (points.length !== 3) throw new Error(`Could only place ${points.length} of 3 plague cemeteries`);
+}
+
+function findCemeteryCorpseSpot(cemetery) {
+  const centre = getGridPos(cemetery.x, cemetery.y);
+  for (let radius = 1; radius <= 4; radius++) {
+    const spots = [];
+    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+      const gx = centre.gx + dx, gy = centre.gy + dy;
+      if (gx < 0 || gx >= game.COLS || gy < 0 || gy >= game.ROWS) continue;
+      spots.push({ x: gx * TILE_SIZE + TILE_SIZE / 2, y: gy * TILE_SIZE + TILE_SIZE / 2 });
+    }
+    for (let i = spots.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [spots[i], spots[j]] = [spots[j], spots[i]];
+    }
+    const free = spots.find(spot => isSpawnSpotFree(spot.x, spot.y));
+    if (free) return free;
+  }
+  return null;
 }
 
 function setupPlagueGame() {
@@ -579,11 +601,10 @@ function tickCemeteryCorpses(dt) {
     cemetery.plagueCorpseTimer = CEMETERY_CORPSE_INTERVAL;
     const corpseCount = game.corpses.filter(corpse => corpse.plagueCemeteryId === cemetery.plagueCemeteryId).length;
     if (corpseCount >= CEMETERY_CORPSE_LIMIT) continue;
-    const angle = rand() * Math.PI * 2;
-    const distance = 20 + rand() * 8;
+    const spot = findCemeteryCorpseSpot(cemetery);
+    if (!spot) continue;
     game.corpses.push({
-      x: cemetery.x + Math.cos(angle) * distance,
-      y: cemetery.y + Math.sin(angle) * distance,
+      ...spot,
       radius: 11, side: 'settler', kind: 'zombie', age: 0, big: false, wormsTaken: false,
       type: 'zombie', weapon: rand() < 0.5 ? 'club' : 'sword', tool: 'none', look: null,
       plagueCemeteryCorpse: true, plagueCemeteryId: cemetery.plagueCemeteryId

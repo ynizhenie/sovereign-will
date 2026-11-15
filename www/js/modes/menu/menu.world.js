@@ -7,8 +7,9 @@
 //  - fishing: a fisher at the water digs worms for bait and fishes, carries the fish in; a cook at the
 //    campfire by it cooks them;
 //  - a fight: a small squad (two swords with shields, a medic in armour) against zombies that keep coming
-//    in twos from the map's edge (#279), faster and faster, till they fall, and a new squad comes; a tap on a zombie kills it;
+//    in growing groups from the map's edge (#279), faster and faster, till they fall, and a new squad comes; a tap on a zombie kills it;
 //  - the demon: a big, armoured demon fights humans and eats a corpse to heal before the next group arrives;
+//  - the graveyard: a necromancer works the graves while ghosts hover around them;
 //  - the farm: a farmer with a backpack, a hoe and a watering can plants a wheat or rice field, waters it,
 //    brings it dung from the compost heap.
 // No waves come and nobody gets hungry. The world is made to fit the screen: its centre is the screen's,
@@ -20,7 +21,7 @@ import { BORDER_MARGIN, TILE_SIZE, game, townHall } from '../../engine/world/ind
 import { camera, canvas, fitCanvasToScreen, getBaseScale, mouse, onTap, screenPixelRatio, updateInputPos } from '../../engine/platform/index.js';
 import { isTileBlockedForEnemyStrict, moveEntityTowards } from '../../engine/movement/index.js';
 import { applyFactionCosts, getPlayerFaction } from '../../domains/factions/index.js';
-import { changeSettlerType, createSettler } from '../../domains/colony/settlers/index.js';
+import { changeSettlerType, createSettler, getUnitLevel } from '../../domains/colony/settlers/index.js';
 import { putOnGear } from '../../domains/colony/equipment/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
@@ -31,12 +32,12 @@ const MENU_OUTPOST_HP = 300; // same as the menu fight's warehouse base
 
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
-  boars: 3, trees: 7, boulders: 4, grass: 7,
+  boars: 3, trees: 7, cacti: 7, boulders: 4, grass: 7, pebbles: 7,
 };
 
 const DEMON_PATROL_OFFSETS = [[-140, 0], [-100, -100], [0, -140], [100, -100], [140, 0], [100, 100], [0, 140], [-100, 100]];
 
-export const MENU_SCENES = ['hunt', 'fishing', 'fight', 'farm', 'demon'];
+export const MENU_SCENES = ['hunt', 'fishing', 'fight', 'farm', 'demon', 'graveyard'];
 
 export const menuWorld = {
   faction: 'humans',    // whose the soldier is (see getPlayerFaction)
@@ -68,7 +69,15 @@ export function enterMenuWorld(scene = '') {
   if (menuWorld.scene === 'farm' && (sceneChanged || scene === 'farm')) menuWorld.farmCrop = Math.random() < 0.5 ? 'wheat' : 'rice';
   if (menuWorld.scene === 'demon') menuWorld.faction = 'demons';
   else if (menuWorld.scene === 'hunt') menuWorld.faction = menuWorld.huntFaction;
-  else menuWorld.faction = 'humans'; // (the others are the humans')
+  else if (menuWorld.scene === 'graveyard') {
+    menuWorld.faction = 'undead';
+    menuWorld.playerColor = GAME_CONFIG.factions.undead.color;
+    if (menuWorld.enemyColor === menuWorld.playerColor) {
+      const enemyColor = GAME_CONFIG.factionColors.find(color => color !== menuWorld.playerColor);
+      if (!enemyColor) throw new Error('The graveyard scene needs a distinct enemy colour');
+      menuWorld.enemyColor = enemyColor;
+    }
+  } else menuWorld.faction = 'humans'; // (the others are the humans')
   document.body.classList.add('menu-world');
   fitCanvasToScreen();
   const spr = screenPixelRatio;
@@ -115,10 +124,35 @@ export function enterMenuWorld(scene = '') {
   // the screen, its things go up, and so on
   const sx = hall[0] > centre.x ? -1 : 1, sy = hall[1] > centre.y ? -1 : 1;
   const near = (dx, dy) => [hg[0] + (sx > 0 ? dx : -dx - 1), hg[1] + (sy > 0 ? dy : -dy - 1)];
+  const graveSites = [];
+  if (sceneName === 'graveyard') {
+    const candidates = [];
+    for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) if (tileFree(gx, gy)) candidates.push([gx, gy]);
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    for (const [gx, gy] of candidates) {
+      if (graveSites.every(([x, y]) => Math.max(Math.abs(gx - x), Math.abs(gy - y)) > 1)) {
+        graveSites.push([gx, gy]);
+        taken.add(`${gx},${gy}`);
+        if (graveSites.length === 8) break;
+      }
+    }
+  }
+  const terrainTiles = [];
+  if (sceneName === 'hunt' || sceneName === 'graveyard') {
+    for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) terrainTiles.push([gx, gy]);
+  }
+  const resources = sceneName === 'graveyard'
+    ? { cactus: some(MENU_WORLD.cacti), boulder: some(MENU_WORLD.boulders), pebble: some(MENU_WORLD.pebbles) }
+    : { tree: some(MENU_WORLD.trees), boulder: some(MENU_WORLD.boulders), grass: some(MENU_WORLD.grass) };
   /** @type {any} */
   const map = {
     menuScene: true, cols, rows, hall,
-    resources: { tree: some(MENU_WORLD.trees), boulder: some(MENU_WORLD.boulders), grass: some(MENU_WORLD.grass) },
+    ...(sceneName === 'hunt' ? { savanna: terrainTiles } : {}),
+    ...(sceneName === 'graveyard' ? { sand: terrainTiles } : {}),
+    resources,
     boars: sceneName === 'hunt' ? some(MENU_WORLD.boars) : [],
     buildings: [], water: []
   };
@@ -129,6 +163,8 @@ export function enterMenuWorld(scene = '') {
   } else if (sceneName === 'farm') {
     map.water = [near(-3, 3)];
     map.buildings.push(['dung_heap', ...near(-3, 1)]);
+  } else if (sceneName === 'graveyard') {
+    map.buildings.push(...graveSites.map(([gx, gy]) => ['grave', gx, gy]));
   }
   game.gameMode = 'endless';
   resetGame(map);
@@ -156,6 +192,12 @@ export function enterMenuWorld(scene = '') {
   } else if (sceneName === 'demon') {
     menuWorld.demonFight = { next: 2, gap: 6, down: 0, groups: 0, awaitingMeal: false, patrolIndex: 0 };
     demonSquad();
+  } else if (sceneName === 'graveyard') {
+    const graves = game.buildings.filter(building => building.type === 'grave');
+    const necromancer = Object.assign(createSettler('zombie', 1, graves[0].x + 24, graves[0].y + 8), { tool: 'necro_staff' });
+    putOnGear(necromancer, 'soul_lantern');
+    game.settlers = [necromancer, createSettler('ghost', 101, graves[0].x - 18, graves[0].y + 12)];
+    for (const grave of graves) grave.rest = 0;
   } else if (sceneName === 'farm') {
     const zone = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [3, 2]].map(([dx, dy]) => near(dx, dy));
     for (const [gx, gy] of zone) game.farmZones.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15, crop: menuWorld.farmCrop });
@@ -185,7 +227,7 @@ function pickMenuSideColors() {
 function clearShoreResources() {
   const water = new Set(game.waterTiles.map(tile => `${tile.x},${tile.y}`));
   const sand = new Set([...game.desertTiles, ...game.beachTiles].map(tile => `${tile.x},${tile.y}`));
-  const allowedOnSand = new Set(['natural_rock', 'boulder', 'pebble']);
+  const allowedOnSand = new Set(['natural_rock', 'cactus', 'boulder', 'pebble']);
   for (const [kind, definition] of Object.entries(GAME_CONFIG.mapResources)) {
     const resources = game[definition.list];
     if (!Array.isArray(resources)) continue;
@@ -213,10 +255,16 @@ function demonSquad() {
   game.settlers = [demon];
 }
 
+function menuSquadLevelBonus() {
+  const squadLevel = game.settlers.reduce((highest, settler) => Math.max(highest, getUnitLevel(settler)), 1);
+  return squadLevel >= 3 ? 1 : 0;
+}
+
 function spawnDemonHumans(demon) {
   const at = demonEdgeSpot();
   const pick = list => list[Math.floor(Math.random() * list.length)];
-  const count = 3 + Math.floor(Math.random() * 3);
+  const levelBonus = Math.min(2, Math.max(0, getUnitLevel(demon) - 1));
+  const count = 3 + Math.floor(Math.random() * 3) + 2 * levelBonus;
   const melee = ['raider_club', 'raider'];
   /** @type {{ key: string, armor?: boolean }[]} */
   const group = [{ key: 'raider_medic_club' }, { key: pick(melee) }];
@@ -266,16 +314,24 @@ export function tickMenuScene(dt) {
   }
   if (menuWorld.scene === 'fight') {
     const f = menuWorld.fight;
-    if (!game.settlers.length) {
+    if (!game.settlers.length || townHall.hp <= 0) {
       f.down += dt;
-      if (f.down > 3) { game.corpses = []; game.enemies = []; f.gap = 5; f.next = 2; f.down = 0; fightSquad(); }
+      if (f.down > 3) {
+        game.corpses = []; game.enemies = []; game.projectiles = [];
+        townHall.hp = townHall.maxHp;
+        f.gap = 5; f.next = 2; f.down = 0; fightSquad();
+      }
       return;
     }
+    f.down = 0;
     f.next -= dt;
-    // (#279) two at a time, coming in from the edge of the map
-    if (f.next <= 0 && game.enemies.length < 8) {
+    // (#279) reinforcements grow with the player squad's levels
+    const levelBonus = menuSquadLevelBonus();
+    const groupSize = 2 + levelBonus;
+    if (f.next <= 0 && game.enemies.length < 8 + levelBonus) {
       const at = edgeSpot();
-      for (const dx of [-12, 12]) {
+      for (let i = 0; i < groupSize; i++) {
+        const dx = (i - (groupSize - 1) / 2) * 24;
         const z = createConfiguredEnemy({ x: at.x + (at.side ? dx : 0), y: at.y + (at.side ? 0 : dx) }, 'undead_zombie');
         if (z) game.enemies.push(z);
       }
@@ -297,10 +353,11 @@ export function tickMenuScene(dt) {
 function tickDemonMenuFight(dt) {
   const fight = menuWorld.demonFight;
   const demon = game.settlers.find(s => s.type === 'demon');
-  if (!demon) {
+  if (!demon || townHall.hp <= 0) {
     fight.down += dt;
     if (fight.down > 3) {
-      game.corpses = []; game.enemies = [];
+      game.corpses = []; game.enemies = []; game.projectiles = [];
+      townHall.hp = townHall.maxHp;
       demonSquad();
       fight.next = 2; fight.down = 0; fight.awaitingMeal = false;
     }

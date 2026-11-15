@@ -21,6 +21,18 @@ export function drawDamage(x, y, half, share, type = 'building') {
   ctx.beginPath();
   if (type === 'tent') {
     ctx.moveTo(x, y - 14); ctx.lineTo(x + 14, y + 13); ctx.lineTo(x - 14, y + 13); ctx.closePath();
+  } else if (type === 'outpost-undead') {
+    ctx.moveTo(x - 16, y - 11); ctx.lineTo(x - 10, y - 20); ctx.lineTo(x + 11, y - 20);
+    ctx.lineTo(x + 16, y - 11); ctx.lineTo(x + 18, y - 10); ctx.lineTo(x + 15, y + 12);
+    ctx.lineTo(x - 15, y + 12); ctx.lineTo(x - 18, y - 10); ctx.closePath();
+  } else if (type === 'outpost-demons') {
+    ctx.moveTo(x - 19, y + 9); ctx.lineTo(x - 16, y - 5); ctx.lineTo(x - 9, y - 14);
+    ctx.lineTo(x + 9, y - 14); ctx.lineTo(x + 16, y - 5); ctx.lineTo(x + 19, y + 9);
+    ctx.lineTo(x + 11, y + 15); ctx.lineTo(x - 11, y + 15); ctx.closePath();
+  } else if (type.startsWith('outpost')) {
+    ctx.moveTo(x - 17, y - 13); ctx.lineTo(x - 14, y - 17); ctx.lineTo(x + 14, y - 17);
+    ctx.lineTo(x + 17, y - 13); ctx.lineTo(x + 17, y + 14); ctx.lineTo(x + 16, y + 16);
+    ctx.lineTo(x - 16, y + 16); ctx.lineTo(x - 17, y + 14); ctx.closePath();
   } else if (type === 'campfire') {
     ctx.ellipse(x, y + 3, 13, 9, 0, 0, Math.PI * 2);
   } else if (type === 'corpse_pit') {
@@ -117,16 +129,21 @@ function drawMenuWarehouse() {
 
 function drawMenuOutpost() {
   const x = townHall.x, y = townHall.y, share = townHall.hp >= townHall.maxHp ? 1 : Math.max(0, townHall.hp) / townHall.maxHp;
-  drawEnemyCampOutpostArt(x, y, getPlayerFaction().id);
-  if (share < 1) {
-    drawDamage(x, y, 34, share);
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 30, y - 45, 60, 8);
-    ctx.fillStyle = share > 0.4 ? '#2ecc71' : '#e74c3c'; ctx.fillRect(x - 30, y - 45, share * 60, 8);
-  }
+  const faction = getPlayerFaction().id;
+  drawEnemyCampOutpostArt(x, y, faction);
+  if (share < 1) drawDamage(x, y, 20, share, `outpost-${faction}`);
+}
+
+export function drawMenuOutpostHealthBar() {
+  if (game.gameMode !== 'menu' || !['fight', 'demon'].includes(game.menuScene) || townHall.hp >= townHall.maxHp) return;
+  const x = townHall.x, y = townHall.y - 38;
+  const share = Math.max(0, Math.min(1, townHall.hp / townHall.maxHp));
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 24, y, 48, 6);
+  ctx.fillStyle = share > 0.4 ? '#2ecc71' : '#e74c3c'; ctx.fillRect(x - 24, y, share * 48, 6);
 }
 
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
-// menu, the zombie and demon fights use an outpost; the other scenes use a warehouse.
+// menu, the zombie and demon fights use an outpost; the other scenes show a warehouse.
 export function drawTownHall() {
   if (game.plagueMode) return;
   if (game.gameMode === 'menu') {

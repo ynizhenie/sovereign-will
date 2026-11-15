@@ -8,7 +8,7 @@ import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatureOnCard, treesToDrawOver, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
-import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
+import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawMenuOutpostHealthBar, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
 import { beginShadowFrame, drawDarkness, drawFireflies, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, isVisible, setPrewarmingChunks } from '../domains/world/index.js';
@@ -86,6 +86,7 @@ export function render() {
   drawCorpses();
   drawEnemyTentSites();
   drawDepthSortedScene();
+  drawMenuOutpostHealthBar();
   drawUnitLevelIndicators();
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
