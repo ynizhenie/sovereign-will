@@ -168,7 +168,8 @@ function drawDepthSortedScene() {
   const addActors = (list, offset, order, draw) => {
     for (const actor of list) {
       if (actor.x < view.x0 || actor.x > view.x1 || actor.y < view.y0 || actor.y > view.y1) continue;
-      add(actor, actor.y + offset(actor), order, draw);
+      // Ghosts pass through the depth-sorted trees; drawing them above those trees avoids a sudden layer switch.
+      add(actor, actor.ghostly ? Number.MAX_VALUE : actor.y + offset(actor), order, draw);
       if (near) markNear(actor);
     }
   };

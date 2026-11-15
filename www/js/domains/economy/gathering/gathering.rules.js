@@ -196,7 +196,8 @@ export function scheduleRespawn(type, nearX = null, nearY = null, stump = null, 
       ? { x: resource.oreSpawnerX, y: resource.oreSpawnerY }
       : nearestOreSpawner(oreKind, nearX, nearY)
     : null;
-  const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
+  const isMenuFishingGrass = game.gameMode === 'menu' && game.menuScene === 'fishing' && type === 'grass';
+  const delay = isMenuFishingGrass ? 8 : getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
   game.pendingRespawns.push({
     type, nearX, nearY, stump, timer: delay,
     zoneBound: !!resource?.zoneBound,

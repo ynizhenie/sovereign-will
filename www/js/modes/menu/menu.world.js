@@ -32,7 +32,7 @@ const MENU_OUTPOST_HP = 300; // same as the menu fight's warehouse base
 
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
-  boars: 3, trees: 7, cacti: 7, boulders: 4, grass: 7, pebbles: 7,
+  boars: 3, trees: 7, boulders: 4, grass: 7,
 };
 
 const DEMON_PATROL_OFFSETS = [[-140, 0], [-100, -100], [0, -140], [100, -100], [140, 0], [100, 100], [0, 140], [-100, 100]];
@@ -47,6 +47,7 @@ export const menuWorld = {
   size: '',             // the screen it was made for: made again when that changes
   opened: false,        // the game's opening done: the curtain lifted (style.css)
   scene: '',            // which scene (MENU_SCENES): picked at random each time the menu opens
+  terrain: 'grassland',
   farmCrop: 'wheat',
   stockAge: 0,
   fight: { next: 0, gap: 0, down: 0 }, // the fight's clock (tickMenuScene)
@@ -65,6 +66,9 @@ export function enterMenuWorld(scene = '') {
   if (scene) menuWorld.scene = scene;
   else if (!menuWorld.scene || !isMenuWorld()) menuWorld.scene = MENU_SCENES[Math.floor(Math.random() * MENU_SCENES.length)];
   const sceneChanged = !wasMenuWorld || previousScene !== menuWorld.scene;
+  if (sceneChanged || scene) {
+    menuWorld.terrain = Math.random() < 0.5 ? 'grassland' : 'savanna';
+  }
   if (sceneChanged) pickMenuSideColors();
   if (menuWorld.scene === 'farm' && (sceneChanged || scene === 'farm')) menuWorld.farmCrop = Math.random() < 0.5 ? 'wheat' : 'rice';
   if (menuWorld.scene === 'demon') menuWorld.faction = 'demons';
@@ -124,6 +128,14 @@ export function enterMenuWorld(scene = '') {
   // the screen, its things go up, and so on
   const sx = hall[0] > centre.x ? -1 : 1, sy = hall[1] > centre.y ? -1 : 1;
   const near = (dx, dy) => [hg[0] + (sx > 0 ? dx : -dx - 1), hg[1] + (sy > 0 ? dy : -dy - 1)];
+  const farmZone = sceneName === 'farm'
+    ? [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [3, 2]].map(([dx, dy]) => near(dx, dy))
+    : [];
+  for (const [gx, gy] of farmZone) taken.add(`${gx},${gy}`);
+  if (sceneName === 'farm') {
+    const [waterX, waterY] = near(-3, 3);
+    taken.add(`${waterX},${waterY}`);
+  }
   const graveSites = [];
   if (sceneName === 'graveyard') {
     const candidates = [];
@@ -141,18 +153,14 @@ export function enterMenuWorld(scene = '') {
     }
   }
   const terrainTiles = [];
-  if (sceneName === 'hunt' || sceneName === 'graveyard') {
+  if (menuWorld.terrain === 'savanna') {
     for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) terrainTiles.push([gx, gy]);
   }
-  const resources = sceneName === 'graveyard'
-    ? { cactus: some(MENU_WORLD.cacti), boulder: some(MENU_WORLD.boulders), pebble: some(MENU_WORLD.pebbles) }
-    : { tree: some(MENU_WORLD.trees), boulder: some(MENU_WORLD.boulders), grass: some(MENU_WORLD.grass) };
   /** @type {any} */
   const map = {
     menuScene: true, cols, rows, hall,
-    ...(sceneName === 'hunt' ? { savanna: terrainTiles } : {}),
-    ...(sceneName === 'graveyard' ? { sand: terrainTiles } : {}),
-    resources,
+    ...(menuWorld.terrain === 'savanna' ? { savanna: terrainTiles } : {}),
+    resources: { tree: some(MENU_WORLD.trees), boulder: some(MENU_WORLD.boulders), grass: some(MENU_WORLD.grass) },
     boars: sceneName === 'hunt' ? some(MENU_WORLD.boars) : [],
     buildings: [], water: []
   };
@@ -199,8 +207,7 @@ export function enterMenuWorld(scene = '') {
     game.settlers = [necromancer, createSettler('ghost', 101, graves[0].x - 18, graves[0].y + 12)];
     for (const grave of graves) grave.rest = 0;
   } else if (sceneName === 'farm') {
-    const zone = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [3, 2]].map(([dx, dy]) => near(dx, dy));
-    for (const [gx, gy] of zone) game.farmZones.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15, crop: menuWorld.farmCrop });
+    for (const [gx, gy] of farmZone) game.farmZones.push({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15, crop: menuWorld.farmCrop });
     game.settlers = [Object.assign(createSettler('normal', 1, hall[0] + 45, hall[1]), { tool: 'hoe', backpack: true, wateringCan: true })];
     if (menuWorld.farmCrop === 'rice') stock.riceSeeds = Infinity;
     else stock.wheatSeeds = Infinity;

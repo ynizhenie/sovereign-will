@@ -143,11 +143,11 @@ export function drawMenuOutpostHealthBar() {
 }
 
 // The town hall (the demons' Hell Gate, the undead's graveyard), its health and repair. Behind the main
-// menu, the zombie and demon fights use an outpost; the other scenes show a warehouse.
+// menu, fights and the graveyard show an outpost; the other scenes show a warehouse.
 export function drawTownHall() {
   if (game.plagueMode) return;
   if (game.gameMode === 'menu') {
-    if (game.menuScene === 'fight' || game.menuScene === 'demon') drawMenuOutpost();
+    if (['fight', 'demon', 'graveyard'].includes(game.menuScene)) drawMenuOutpost();
     else drawMenuWarehouse();
     return;
   }

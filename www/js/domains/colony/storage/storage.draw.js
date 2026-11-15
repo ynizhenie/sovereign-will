@@ -44,7 +44,7 @@ export function drawStoreContents() {
     kinds(b.store).slice(0, 6).forEach(([id, n], i) => stack(id, n, b.x - 8 + (i % 3) * 8, b.y + 3 + Math.floor(i / 3) * 7, 7, room));
   }
   // The main-menu outposts have no visible stock; ground piles are drawn separately above.
-  if (game.gameMode === 'menu' && game.menuScene !== 'fight' && game.menuScene !== 'demon' && townHall.hp > 0) {
+  if (game.gameMode === 'menu' && !['fight', 'demon', 'graveyard'].includes(game.menuScene) && townHall.hp > 0) {
     const store = Object.fromEntries(Object.entries(stock).filter(([id]) => id !== 'food' && id !== 'firewood'));
     kinds(store).slice(0, 6).forEach(([id, n], i) => stack(id, n, townHall.x - 8 + (i % 3) * 8, townHall.y + 3 + Math.floor(i / 3) * 7, 7, 10));
   }

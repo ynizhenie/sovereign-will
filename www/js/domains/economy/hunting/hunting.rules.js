@@ -109,11 +109,16 @@ function keepInZone(boar, x, y) {
 }
 
 const MANY_BOARS = 100;
+const BOAR_RESPAWN_SECONDS = 25;
+const MENU_HUNT_BOAR_RESPAWN_SECONDS = 8;
 /** @type {{ boars: any[] | null, length: number, tick: number, count: number }} */
 let baseBoars = { boars: null, length: -1, tick: 0, count: 0 };
 
-// A new boar every 25 s while there are fewer than BOAR_LIMIT
+// A new boar every 25 s while there are fewer than BOAR_LIMIT; faster behind the menu's hunt scene.
 export function tickBoarRespawn(dt) {
+  const isMenuHunt = game.gameMode === 'menu' && game.menuScene === 'hunt';
+  const respawnSeconds = isMenuHunt ? MENU_HUNT_BOAR_RESPAWN_SECONDS : BOAR_RESPAWN_SECONDS;
+  if (isMenuHunt) game.boarRespawnTimer = Math.min(game.boarRespawnTimer, respawnSeconds);
   if (hasTerritory()) {
     // (#322) with a great many boars on a big map, those on the base's land are counted every half a second, not every tick
     const many = game.boars.length >= MANY_BOARS;
@@ -127,18 +132,18 @@ export function tickBoarRespawn(dt) {
       if (game.boarRespawnTimer <= 0) {
         if (spawnResource('boar')) {
           game.territoryBoarRespawnsPending--;
-          game.boarRespawnTimer = 25;
+          game.boarRespawnTimer = respawnSeconds;
         } else game.boarRespawnTimer = 5;
       }
       return;
     }
     if (baseBoars.count >= startingBoarCount()) {
-      game.boarRespawnTimer = 25;
+      game.boarRespawnTimer = respawnSeconds;
       return;
     }
     game.boarRespawnTimer -= dt;
     if (game.boarRespawnTimer <= 0) {
-      game.boarRespawnTimer = spawnTerritoryBoar() ? 25 : 5;
+      game.boarRespawnTimer = spawnTerritoryBoar() ? respawnSeconds : 5;
     }
     return;
   }
@@ -146,10 +151,10 @@ export function tickBoarRespawn(dt) {
     game.boarRespawnTimer -= dt;
     if (game.boarRespawnTimer <= 0) {
       spawnResource('boar');
-      game.boarRespawnTimer = 25;
+      game.boarRespawnTimer = respawnSeconds;
     }
   } else {
-    game.boarRespawnTimer = 25;
+    game.boarRespawnTimer = respawnSeconds;
   }
 }
 

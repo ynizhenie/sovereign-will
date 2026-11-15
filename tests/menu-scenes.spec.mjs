@@ -23,31 +23,29 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
     const shoreViolations = Object.entries(GAME_CONFIG.mapResources).flatMap(([kind, definition]) =>
       (game[definition.list] || []).filter(resource => {
         const key = `${resource.x},${resource.y}`;
-        return water.has(key) || (sand.has(key) && !['natural_rock', 'boulder', 'pebble'].includes(kind));
+        return water.has(key) || (sand.has(key) && !['natural_rock', 'cactus', 'boulder', 'pebble'].includes(kind));
       }).map(() => kind));
     return {
       settlers: settlers.map(s => [s.weapon, s.tool, !!s.shield, s.armor || null, !!s.backpack, !!s.wateringCan]),
       buildings: buildings.map(b => b.type), water: waterTiles.length, fishing: waterTiles.filter(w => w.isFishing).length, zones: farmZones.length, boars: boars.length,
-      terrain: { desert: game.desertTiles.length, savanna: game.savannaTiles.length, total: game.COLS * game.ROWS },
+      terrain: { biome: menuWorld.terrain, desert: game.desertTiles.length, savanna: game.savannaTiles.length, total: game.COLS * game.ROWS },
       farmCrop: menuWorld.farmCrop, zoneCrops: [...new Set(farmZones.map(zone => zone.crop))],
       infiniteCropSeeds: stock[`${menuWorld.farmCrop}Seeds`] === Infinity,
       shoreViolations
     };
   }, name);
   const hunt = await scene('hunt');
-  expect(hunt).toMatchObject({
-    settlers: [['spear', 'none', false, null, false, false]], boars: 3, shoreViolations: [],
-    terrain: { desert: 0 }
-  });
-  expect(hunt.terrain.savanna).toBe(hunt.terrain.total);
+  expect(hunt).toMatchObject({ settlers: [['spear', 'none', false, null, false, false]], boars: 3, shoreViolations: [] });
+  expect(['grassland', 'savanna']).toContain(hunt.terrain.biome);
+  expect(hunt.terrain.desert).toBe(0);
   expect(await scene('fishing')).toMatchObject({ settlers: [['fist', 'rod', false, null, false, false], ['fist', 'none', false, null, false, false]], buildings: ['campfire'], water: 4, fishing: 1, boars: 0, shoreViolations: [] });
   expect(await scene('fight')).toMatchObject({ settlers: [['sword', 'none', true, null, false, false], ['sword', 'none', true, null, false, false], ['fist', 'medbag', false, 'iron', false, false]], shoreViolations: [] });
   const farm = await scene('farm');
   expect(['wheat', 'rice']).toContain(farm.farmCrop);
   expect(farm.zoneCrops).toEqual([farm.farmCrop]);
   expect(farm).toMatchObject({ settlers: [['fist', 'hoe', false, null, true, true]], buildings: ['dung_heap'], water: 1, zones: 6, infiniteCropSeeds: true, shoreViolations: [] });
-  const resizedFarm = await page.evaluate(() => { enterMenuWorld(); return { crop: menuWorld.farmCrop, zones: [...new Set(farmZones.map(zone => zone.crop))] }; });
-  expect(resizedFarm).toEqual({ crop: farm.farmCrop, zones: [farm.farmCrop] });
+  const resizedFarm = await page.evaluate(() => { enterMenuWorld(); return { crop: menuWorld.farmCrop, terrain: menuWorld.terrain, zones: [...new Set(farmZones.map(zone => zone.crop))] }; });
+  expect(resizedFarm).toEqual({ crop: farm.farmCrop, terrain: farm.terrain.biome, zones: [farm.farmCrop] });
   const loadFarm = value => page.evaluate(value => {
     const random = Math.random;
     try {
@@ -66,6 +64,57 @@ test('each scene: the hunt, fishing by a campfire, a fight, a farm; and no blur 
   expect(farmRun.planted).toBeGreaterThan(0);
   expect(farmRun.infiniteCropSeeds).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('all menu scenes roll grassland or savanna and the farm remains unobstructed', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    const withRoll = (scene, value) => {
+      const random = Math.random;
+      try {
+        Math.random = () => { Math.random = random; return value; };
+        enterMenuWorld(scene);
+        return menuWorld.terrain;
+      } finally { Math.random = random; }
+    };
+    const rolls = [[0.25, 'grassland'], [0.75, 'savanna']];
+    const choices = Object.fromEntries(MENU_SCENES.map(scene =>
+      [scene, rolls.map(([value]) => withRoll(scene, value))]
+    ));
+    withRoll('farm', 0.75);
+    const savanna = new Set(game.savannaTiles.map(tile => `${Math.floor(tile.x / TILE_SIZE)},${Math.floor(tile.y / TILE_SIZE)}`));
+    const onSavanna = (x, y) => {
+      const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
+      return savanna.has(`${gx},${gy}`);
+    };
+    const fieldClear = farmZones.every(zone => !Object.values(GAME_CONFIG.mapResources).some(definition =>
+      (game[definition.list] || []).some(resource =>
+        Math.floor(resource.x / TILE_SIZE) === Math.floor(zone.x / TILE_SIZE) &&
+        Math.floor(resource.y / TILE_SIZE) === Math.floor(zone.y / TILE_SIZE)
+      )
+    ));
+    return {
+      choices,
+      farm: {
+        terrain: menuWorld.terrain,
+        desertTiles: game.desertTiles.length,
+        savannaTiles: game.savannaTiles.length,
+        totalTiles: game.COLS * game.ROWS,
+        waterOnSavanna: waterTiles.every(tile => onSavanna(tile.x, tile.y)),
+        plotsOnSavanna: farmZones.every(zone => onSavanna(zone.x, zone.y)),
+        warehouseOnSavanna: onSavanna(townHall.x, townHall.y),
+        fieldClear
+      }
+    };
+  });
+  for (const scene of ['hunt', 'fishing', 'fight', 'farm', 'demon', 'graveyard']) {
+    expect(result.choices[scene]).toEqual(['grassland', 'savanna']);
+  }
+  expect(result.farm).toEqual({
+    terrain: 'savanna', desertTiles: 0, savannaTiles: result.farm.totalTiles, totalTiles: result.farm.totalTiles,
+    waterOnSavanna: true, plotsOnSavanna: true, warehouseOnSavanna: true, fieldClear: true
+  });
 });
 
 test('the menu farm keeps working when Endless is set to the undead', async ({ page }) => {
@@ -96,11 +145,40 @@ test('the menu farm keeps working when Endless is set to the undead', async ({ p
   expect(result.newGameCropNeedsBones).toBe(true);
 });
 
+test('menu hunt boars and fishing grass reappear faster', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    enterMenuWorld('hunt');
+    game.settlers.splice(0);
+    game.boars.splice(0);
+    game.boarRespawnTimer = 25;
+    for (let frame = 0; frame < 60 * 9; frame++) stepGame(1 / 60);
+    const boarsAfter = game.boars.length;
+
+    enterMenuWorld('fishing');
+    game.settlers.splice(0);
+    game.grassList.splice(0);
+    game.pendingRespawns.splice(0);
+    scheduleRespawn('grass');
+    const grassDelay = game.pendingRespawns[0].timer;
+    for (let frame = 0; frame < 60 * 9; frame++) stepGame(1 / 60);
+    return { boarsAfter, grassDelay, grassAfter: game.grassList.length };
+  });
+  expect(result.boarsAfter).toBeGreaterThan(0);
+  expect(result.grassDelay).toBeLessThanOrEqual(8);
+  expect(result.grassAfter).toBeGreaterThan(0);
+});
+
 test('graveyard menu scene has ghosts and a necromancer working its graves', async ({ page }) => {
   await page.goto('/');
   await opened(page);
   const result = await page.evaluate(() => {
-    enterMenuWorld('graveyard');
+    const random = Math.random;
+    try {
+      Math.random = () => { Math.random = random; return 0.9; };
+      enterMenuWorld('graveyard');
+    } finally { Math.random = random; }
     const initial = {
       scene: menuWorld.scene,
       faction: getPlayerFaction().id,
@@ -157,15 +235,36 @@ test('graveyard menu scene has ghosts and a necromancer working its graves', asy
   expect(result).toMatchObject({
     scene: 'graveyard', faction: 'undead', playerColorMatchesFaction: true,
     hall: 'graveyard', graves: 8, gravesHavePassages: true, resourceOverlaps: [],
-    savannaTiles: 0, cacti: 7, pebbles: 7, trees: 0, grass: 0,
+    cacti: 0, pebbles: 0, trees: 7, grass: 7,
     necromancers: 1, necromancerType: 'zombie', soulLantern: true,
     ghosts: 1, ghostEscortsNecromancer: true, bones: 0, rot: 0,
     worksRestingGrave: true, avoidsLastGrave: true
   });
-  expect(result.desertTiles).toBe(result.totalTiles);
+  expect(result.desertTiles).toBe(0);
+  expect(result.savannaTiles).toBe(result.totalTiles);
   expect(result.bonesAfter).toBeGreaterThan(0);
   expect(result.rotAfter).toBeGreaterThan(0);
   expect(result.restingGraves).toBeGreaterThan(1);
+});
+
+test("graveyard outpost does not display the necromancer's stored resources", async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const drawnIcons = await page.evaluate(() => {
+    enterMenuWorld('graveyard');
+    stock.bones = 10;
+    stock.rot = 10;
+    const drawImage = ctx.drawImage;
+    let count = 0;
+    try {
+      ctx.drawImage = () => { count++; };
+      drawStoreContents();
+      return count;
+    } finally {
+      ctx.drawImage = drawImage;
+    }
+  });
+  expect(drawnIcons).toBe(0);
 });
 
 test('the fight: zombies keep coming; a tapped one falls; the squad gone, a new one comes (#256)', async ({ page }) => {

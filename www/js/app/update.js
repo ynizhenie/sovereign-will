@@ -37,6 +37,7 @@ export function update(dt, hud = true) {
   game.pathTick++;
 
   if (game.gameMode === 'menu') {
+    if (game.menuScene === 'fishing') updatePendingRespawns(dt);
     updateMenuScene(dt);
     return;
   }
