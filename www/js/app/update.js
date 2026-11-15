@@ -41,7 +41,7 @@ export function update(dt, hud = true) {
     return;
   }
 
-  updatePossessionView();
+  updatePossessionView(dt);
   tickMorale(dt);
   boarsPanic();
   if (!isRaiding() || raid.scouting) tickWaveTimer(dt); // (scouting doesn't pause the world)
