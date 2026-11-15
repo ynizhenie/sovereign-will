@@ -25,7 +25,7 @@ test('on a phone the bottom panel is compact, and the selected settler\'s card s
     const s = settlers[0];
     selectedSettler = s;
     updateUI();
-    const box = () => { const bar = document.getElementById('selected-bar'); const b = bar.getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height), getComputedStyle(bar).overflowY]; };
+    const box = () => { const bar = document.getElementById('selected-bar'); const b = bar.getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height), getComputedStyle(bar.querySelector('.selected-unit-content')).overflowY]; };
     const carryingLineHeight = () => document.querySelector('.selected-carrying-line').getBoundingClientRect().height;
     const empty = box();
     const emptyCarryingLineHeight = carryingLineHeight();

@@ -470,21 +470,23 @@
         <span class="sel-group" id="selected-group-txt"></span>
         <button class="btn" style="display: none;" id="btn-deselect" data-action="deselectSettler"><i class="ic ic-no"></i></button>
       </div>
-      <div id="selected-info" hidden></div>
-      <!-- what the selected settler holds, each with its own "take off" (instead of buttons in the sheets) -->
-      <div class="selected-gear" id="selected-gear" hidden></div>
-      <div class="sel-actions">
-        <button class="btn" id="btn-give" data-action="toggleGiveList" data-i18n="sel.give">[[backpack]] Give</button>
-        <button class="btn" id="btn-possess" data-action="switchPossession" data-i18n="sel.possess">[[eye]] Possess</button>
-        <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
-        <!-- (#314) let the selected one go: asked first -->
-        <button class="btn btn-disarm" id="btn-dismiss" style="display: none;" data-action="dismissSelected" data-i18n="btn.dismiss">Let go</button>
-        <button class="btn" id="btn-hold" data-action="holdSelection" data-i18n="sel.hold">[[stop]] Hold</button>
-        <button class="btn" id="btn-free" data-action="freeSelection" data-i18n="sel.free">[[undo]] Free</button>
+      <div class="selected-unit-content">
+        <div id="selected-info" hidden></div>
+        <!-- what the selected settler holds, each with its own "take off" (instead of buttons in the sheets) -->
+        <div class="selected-gear" id="selected-gear" hidden></div>
+        <div class="sel-actions">
+          <button class="btn" id="btn-give" data-action="toggleGiveList" data-i18n="sel.give">[[backpack]] Give</button>
+          <button class="btn" id="btn-possess" data-action="switchPossession" data-i18n="sel.possess">[[eye]] Possess</button>
+          <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
+          <!-- (#314) let the selected one go: asked first -->
+          <button class="btn btn-disarm" id="btn-dismiss" style="display: none;" data-action="dismissSelected" data-i18n="btn.dismiss">Let go</button>
+          <button class="btn" id="btn-hold" data-action="holdSelection" data-i18n="sel.hold">[[stop]] Hold</button>
+          <button class="btn" id="btn-free" data-action="freeSelection" data-i18n="sel.free">[[undo]] Free</button>
+        </div>
+        <!-- (#326) Give: what's in the armory that it can take, a tap hands it over -->
+        <div class="give-list" id="give-list" hidden></div>
+        <div class="sel-hint" id="sel-hint"></div>
       </div>
-      <!-- (#326) Give: what's in the armory that it can take, a tap hands it over -->
-      <div class="give-list" id="give-list" hidden></div>
-      <div class="sel-hint" id="sel-hint"></div>
     </div>
 
     <!-- a build (or zone, demolish, battle, editor) tool picked: its name; a tap opens its sheet again, × puts it down -->
