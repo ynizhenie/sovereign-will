@@ -17,7 +17,7 @@ sim.progression = progression;
 
 function butcherProgression() {
   const demon = { type: 'imp', weapon: 'sword', workKind: 'butcher', butcherTarget: {}, progression: { melee: 25, hunting: 0 } };
-  const hunter = { type: 'normal', weapon: 'sword', workKind: 'butcher', progression: { melee: 0, hunting: 10 } };
+  const hunter = { type: 'normal', weapon: 'sword', workKind: 'butcher', progression: { melee: 0, hunting: 30 } };
   const demonTrack = getUnitDisplayProgressionTrack(demon), hunterTrack = getUnitDisplayProgressionTrack(hunter);
   return {
     demon: { track: demonTrack, level: getUnitLevel(demon, demonTrack) },
@@ -73,7 +73,7 @@ sim.ghostProgression = ghostProgression;
 function progressionSkills() {
   const unit = { type: 'normal', weapon: 'bow', tool: 'rod', quiver: true, arrows: 8, hp: 100, maxHp: 100 };
   for (const track of ['ranged', 'melee', 'healing', 'hunting', 'fishing', 'farming', 'axe', 'pickaxe', 'building']) {
-    setUnitExperience(unit, 10, track);
+    setUnitExperience(unit, ['ranged', 'melee', 'healing'].includes(track) ? 10 : 30, track);
   }
   return {
     levels: Object.fromEntries(UNIT_PROGRESSION_TRACKS.map(track => [track, getUnitLevel(unit, track)])),

@@ -141,8 +141,9 @@ test('menu scenes use random distinct side colours and their fixed difficulties'
     expect(palette).toContain(scene.enemyColor);
     expect(scene.playerColor).not.toBe(scene.enemyColor);
     expect(scene.enemyHp).toBeCloseTo(baseHp * 0.75);
-    expect(scene.hallHp).toBe(Infinity);
-    expect(scene.hallMaxHp).toBe(Infinity);
+    const hp = scene.scene === 'fight' || scene.scene === 'demon' ? 300 : Infinity;
+    expect(scene.hallHp).toBe(hp);
+    expect(scene.hallMaxHp).toBe(hp);
   }
 });
 
@@ -285,17 +286,17 @@ test('the demon menu scene: full health, varied human waves, and a meal before t
     return {
       scene: menuWorld.scene, playerFaction: getPlayerFaction().id, enemyFaction: getEnemyFaction().id,
       type: demon.type, weapon: demon.weapon, armor: demon.armor, role: demon.role,
-      fullHealth: demon.hp === demon.maxHp, enemies: enemies.length, warehouseHp: townHall.hp
+      fullHealth: demon.hp === demon.maxHp, enemies: enemies.length, outpostHp: townHall.hp
     };
   });
   expect(initial).toEqual({
     scene: 'demon', playerFaction: 'demons', enemyFaction: 'humans',
-    type: 'demon', weapon: 'iron_sword', armor: 'iron', role: 'soldier', fullHealth: true, enemies: 0, warehouseHp: Infinity
+    type: 'demon', weapon: 'iron_sword', armor: 'iron', role: 'soldier', fullHealth: true, enemies: 0, outpostHp: 300
   });
 
   const result = await page.evaluate(() => {
-    let sawEating = false, chasedAttacker = false, firstGroup = null, secondGroup = null, patrolDistance = 0, warehouseDamaged = false;
-    const warehouseHp = townHall.hp;
+    let sawEating = false, chasedAttacker = false, firstGroup = null, secondGroup = null, patrolDistance = 0, outpostDamaged = false;
+    const outpostHp = townHall.hp;
     for (let frame = 0; frame < 60 * 90; frame++) {
       if (settlers[0]?.eatTimer > 0) sawEating = true;
       stepGame(1 / 60);
@@ -304,7 +305,7 @@ test('the demon menu scene: full health, varied human waves, and a meal before t
       if (demon?.lastAttacker && enemies.includes(demon.lastAttacker) &&
           game.pathTick - demon.lastAttackedTick < 90 && demon.patrolTarget == null) chasedAttacker = true;
       if (!enemies.length && demon) patrolDistance = Math.max(patrolDistance, Math.hypot(demon.x - townHall.x, demon.y - townHall.y));
-      if (townHall.hp < warehouseHp) warehouseDamaged = true;
+      if (townHall.hp < outpostHp) outpostDamaged = true;
       const summarizeGroup = () => ({
         units: enemies.map(enemy => ({ enemyKey: enemy.enemyKey, weapon: enemy.weapon, armor: enemy.armor || null })),
         targetsDemon: enemies.every(enemy => enemy.attackTarget === demon),
@@ -315,12 +316,12 @@ test('the demon menu scene: full health, varied human waves, and a meal before t
         secondGroup = summarizeGroup();
         for (let extraFrame = 0; extraFrame < 60 * 12; extraFrame++) {
           stepGame(1 / 60);
-          if (townHall.hp < warehouseHp) warehouseDamaged = true;
+          if (townHall.hp < outpostHp) outpostDamaged = true;
         }
         break;
       }
     }
-    return { sawEating, chasedAttacker, firstGroup, secondGroup, patrolDistance, warehouseDamaged };
+    return { sawEating, chasedAttacker, firstGroup, secondGroup, patrolDistance, outpostDamaged };
   });
   const checkGroup = group => {
     expect(group.units.length).toBeGreaterThanOrEqual(3);
@@ -340,7 +341,7 @@ test('the demon menu scene: full health, varied human waves, and a meal before t
   checkGroup(result.secondGroup);
   expect(result.secondGroup.hp).toBe(result.secondGroup.maxHp);
   expect(result.secondGroup.targetsDemon).toBe(true);
-  expect(result.warehouseDamaged).toBe(false);
+  expect(result.outpostDamaged).toBe(false);
 });
 
 test('the defeated demon scene keeps humans until it restarts', async ({ page }) => {
@@ -355,10 +356,10 @@ test('the defeated demon scene keeps humans until it restarts', async ({ page })
     const countAfterDefeat = enemies.length;
     for (let frame = 0; frame < 60 * 2.5; frame++) stepGame(1 / 60);
     const countDuringLoss = enemies.length;
-    const warehouseHpDuringLoss = townHall.hp;
+    const outpostHpDuringLoss = townHall.hp;
     for (let frame = 0; frame < 60; frame++) stepGame(1 / 60);
     return {
-      countAtDefeat, countAfterDefeat, countDuringLoss, warehouseHpDuringLoss,
+      countAtDefeat, countAfterDefeat, countDuringLoss, outpostHpDuringLoss,
       countAfterRestart: enemies.length,
       demonRestored: settlers.some(demon => demon.type === 'demon' && demon.hp === demon.maxHp)
     };
@@ -366,7 +367,7 @@ test('the defeated demon scene keeps humans until it restarts', async ({ page })
   expect(result.countAtDefeat).toBeGreaterThan(0);
   expect(result.countAfterDefeat).toBe(result.countAtDefeat);
   expect(result.countDuringLoss).toBe(result.countAtDefeat);
-  expect(result.warehouseHpDuringLoss).toBe(Infinity);
+  expect(result.outpostHpDuringLoss).toBe(300);
   expect(result.countAfterRestart).toBe(0);
   expect(result.demonRestored).toBe(true);
 });

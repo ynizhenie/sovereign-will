@@ -29,3 +29,12 @@ test('a farmer plants rice seeds in a rice zone and harvests rice plus seeds', a
     planted: true, crop: 'rice', seedsSpent: 1, harvest: { rice: 4, riceSeeds: 1 }
   });
 });
+
+test('farming progression takes 30 harvests to reach level 2', () => {
+  expect(sim.farmingExperience()).toEqual({
+    beforeLevelTwo: { experience: 29, level: 1 },
+    atLevelTwo: { experience: 30, level: 2 },
+    beforeLevelThree: { experience: 59, level: 2 },
+    atLevelThree: { experience: 60, level: 3 }
+  });
+});

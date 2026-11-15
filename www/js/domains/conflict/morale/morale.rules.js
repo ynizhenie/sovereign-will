@@ -118,7 +118,8 @@ export function tickMorale(dt) {
   const c = config();
   checkRout();
   /** @type {[string, any[], any[]][]} */
-  const groups = [['settler', game.settlers, game.enemies], ['enemy', game.enemies, game.settlers], ['boar', game.boars.filter(b => !b.isCarcass), game.settlers]];
+  const groups = [['settler', game.settlers, game.enemies], ['enemy', game.enemies, game.settlers],
+    ['boar', game.boars.filter(b => !b.isCarcass), [...game.settlers, ...game.enemies]]];
   for (const [side, units, foes] of groups) {
     const captains = side === 'boar' ? [] : captainsOf(side);
     for (const unit of units) {
@@ -127,7 +128,7 @@ export function tickMorale(dt) {
       // a panic passes by itself, foes about or not
       if (unit.panic) { setMorale(unit, unit.morale + c.panicRecoverPerSecond * dt, side); continue; }
       const around = list => { let n = 0; for (const o of list) if (o.hp > 0 && Math.abs(o.x - unit.x) <= c.nearRange && Math.abs(o.y - unit.y) <= c.nearRange && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange) n++; return n; };
-      const foesNear = side === 'boar' ? 0 : around(foes);
+      const foesNear = around(foes);
       if (foesNear > 0 && foesNear > (around(units) + 1) * c.outnumbered) {
         shakeMorale(unit, c.outnumberedPerSecond * dt, side);
       } else if (foesNear === 0) {

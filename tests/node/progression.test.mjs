@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
-test('units gain fixed health and attack speed bonuses at the 10 and 25 experience thresholds', () => {
+test('combat and noncombat progression use their respective thresholds', () => {
   expect(sim.progression()).toEqual([
     { level: 1, maxHp: 100, attackSpeed: 1 },
     { level: 2, maxHp: 125, attackSpeed: 1.1 },

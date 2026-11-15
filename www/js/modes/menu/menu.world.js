@@ -1,6 +1,6 @@
 // Behind the main menu: a little Endless world, run and drawn by the game itself
 // (update() and render()), so everything in it behaves exactly as in the game. The town hall is drawn as a
-// warehouse (no hall in the menu, #200), as big as one in the game (#256). Each time the menu opens, one of
+// warehouse, or as an outpost in fight scenes (no hall in the menu, #200), as big as one in the game (#256). Each time the menu opens, one of
 // its scenes (#256), each by itself, as in the game:
 //  - the hunt: a soldier with a spear hunts boars, butchers them, carries the meat in; tapping it changes
 //    its faction, tapping a boar marks it, as in the game;
@@ -27,6 +27,7 @@ import { createConfiguredEnemy } from '../../domains/conflict/waves/index.js';
 import { prewarmMenuScene, resetGame } from '../../app/index.js';
 
 const MENU_STOCK_START_DELAY = 2;
+const MENU_OUTPOST_HP = 300; // same as the menu fight's warehouse base
 
 export const MENU_WORLD = {
   cssScale: 1.6,        // CSS pixels per world unit, a size up from the game's usual view
@@ -136,7 +137,8 @@ export function enterMenuWorld(scene = '') {
   game.foodMix = {};
   game.gameMode = 'menu';
   game.menuScene = sceneName;
-  townHall.hp = townHall.maxHp = Infinity;
+  const outpostScene = sceneName === 'fight' || sceneName === 'demon';
+  townHall.hp = townHall.maxHp = outpostScene ? MENU_OUTPOST_HP : Infinity;
   applyFactionCosts(); // (#326) use the scene's faction, not the Endless settings used to build the map
   menuWorld.stockAge = 0;
   game.settlers = [];
@@ -195,7 +197,7 @@ function clearShoreResources() {
 }
 
 // The fight's squad (#256): two swords with shields, a medic in armour, by the hall. (#279) They guard the
-// warehouse: the zombies can break it, and then the medic has no herbs to fill its bag with
+// outpost: the zombies can break it, and then the medic has no herbs to fill its bag with
 function fightSquad() {
   const h = { x: townHall.x, y: townHall.y };
   const sword = (id, dy) => Object.assign(createSettler('normal', id, h.x - 50, h.y + dy), { weapon: 'sword', role: 'soldier', shield: true });
@@ -281,7 +283,7 @@ export function tickMenuScene(dt) {
       f.next = f.gap;
     }
     if (game.corpses.length > 12) game.corpses.splice(0, game.corpses.length - 12);
-    // herbs in the warehouse while it stands; broken, none (#279)
+    // herbs in the outpost while it stands; broken, none (#279)
     stock.herbs = townHall.hp > 0 && canRestock ? Math.max(stock.herbs || 0, 10) : 0;
   } else if (menuWorld.scene === 'farm') {
     if (menuWorld.farmCrop === 'rice') stock.riceSeeds = Infinity;

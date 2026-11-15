@@ -179,7 +179,7 @@ export function makeBattleUnit(entry) {
     if (entry.banner && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     if (entry.torch && !def.pet && isDark()) en.torch = true; // (#326)
     const track = getUnitProgressionTrack(en);
-    setUnitExperience(en, track ? entry.progression?.[track] ?? entry.experience ?? getUnitExperienceForLevel(entry.level || 1) : 0, track);
+    setUnitExperience(en, track ? entry.progression?.[track] ?? entry.experience ?? getUnitExperienceForLevel(entry.level || 1, track) : 0, track);
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
     return;
@@ -203,7 +203,7 @@ export function makeBattleUnit(entry) {
   if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
   if (s.tool === 'medbag') s.bagHerbs = GAME_CONFIG.medic.bagSize; // (#326: a medic starts with its bag full)
   const track = getUnitProgressionTrack(s);
-  setUnitExperience(s, track ? entry.progression?.[track] ?? entry.experience ?? getUnitExperienceForLevel(entry.level || 1) : 0, track);
+  setUnitExperience(s, track ? entry.progression?.[track] ?? entry.experience ?? getUnitExperienceForLevel(entry.level || 1, track) : 0, track);
   game.settlers.push(s);
 }
 
@@ -471,7 +471,7 @@ export function battleTap(x, y) {
   } else {
     const picked = getBattlePreset(battle.preset), big = battle.big && picked ? bigPresetOf(picked) : undefined; // (#326)
     const track = getUnitProgressionTrack(picked);
-    const experience = getUnitExperienceForLevel(battle.level);
+    const experience = getUnitExperienceForLevel(battle.level, track);
     battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy,
       ...(track ? { level: battle.level, experience, progression: { [track]: experience } } : {}),
       armor: battle.armor, shield: battle.shield, helmet: battle.helmet, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)

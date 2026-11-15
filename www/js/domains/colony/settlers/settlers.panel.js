@@ -37,8 +37,8 @@ export function renderSettlerInfo(s) {
     const experience = Math.floor(getUnitExperience(s, track));
     const level = getUnitLevel(s, track);
     return level < 3
-      ? t('info.progression', { skill: t(`progression.${track}`), level, experience, next: getUnitExperienceForLevel(level + 1) })
-      : t('info.progressionMax', { skill: t(`progression.${track}`), level, experience: getUnitExperienceForLevel(level) });
+      ? t('info.progression', { skill: t(`progression.${track}`), level, experience, next: getUnitExperienceForLevel(level + 1, track) })
+      : t('info.progressionMax', { skill: t(`progression.${track}`), level, experience: getUnitExperienceForLevel(level, track) });
   });
   const afterProgression = [{ text: s.panic ? t('info.panic') : t('info.morale', { n: Math.round(getMorale(s)) }), className: '' }]; // (#207)
   const items = s.carrying ? (s.carrying.items || [s.carrying]) : [];
@@ -84,8 +84,8 @@ function renderProgressionView(info, s) {
     const experience = Math.floor(getUnitExperience(s, track));
     const level = getUnitLevel(s, track);
     return level < 3
-      ? t('info.progression', { skill: t(`progression.${track}`), level, experience, next: getUnitExperienceForLevel(level + 1) })
-      : t('info.progressionMax', { skill: t(`progression.${track}`), level, experience: getUnitExperienceForLevel(level) });
+      ? t('info.progression', { skill: t(`progression.${track}`), level, experience, next: getUnitExperienceForLevel(level + 1, track) })
+      : t('info.progressionMax', { skill: t(`progression.${track}`), level, experience: getUnitExperienceForLevel(level, track) });
   });
   const text = JSON.stringify(['progression', rows]);
   if (info.dataset.text === text) return;

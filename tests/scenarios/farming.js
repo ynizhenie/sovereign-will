@@ -84,5 +84,30 @@ Object.assign(window.sim, (() => {
     return { planted: true, crop: plot.crop, seedsSpent: 1 - stock.riceSeeds, harvest };
   }
 
-  return { farmZonesPlanted, farmZonePainting, fertilizer, riceCrop };
+  function farmingExperience() {
+    start('farm-progression');
+    clearResources();
+    const farmer = makeSettler(1, townHall.x, townHall.y, { tool: 'hoe' });
+    settlers = [farmer];
+    const harvest = () => {
+      const plot = { x: townHall.x + 60, y: townHall.y, growth: 100, priority: 0, harvestProgress: 0, yield: {} };
+      farmPlots.push(plot);
+      finishHarvest(farmer, plot, 'farm');
+    };
+    for (let i = 0; i < 29; i++) harvest();
+    const beforeLevelTwo = { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') };
+    harvest();
+    const atLevelTwo = { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') };
+    for (let i = 0; i < 29; i++) harvest();
+    const beforeLevelThree = { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') };
+    harvest();
+    return {
+      beforeLevelTwo,
+      atLevelTwo,
+      beforeLevelThree,
+      atLevelThree: { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') }
+    };
+  }
+
+  return { farmZonesPlanted, farmZonePainting, fertilizer, riceCrop, farmingExperience };
 })());

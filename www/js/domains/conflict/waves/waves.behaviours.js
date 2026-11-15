@@ -3,7 +3,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { isRangedWeapon } from '../../colony/equipment/index.js';
 import { TILE_SIZE, firstOf, game, getGridPos, isDoor, rand, someNear, townHall } from '../../../engine/world/index.js';
-import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from '../../world/index.js';
+import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, inTerritory, isNight } from '../../world/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
@@ -56,11 +56,18 @@ function tendCampfire(en, dt) {
   } else if (fuelLeft <= GAME_CONFIG.raid.fireFuelReserve) {
     const centre = getGridPos(outpost.x, outpost.y);
     const fireCell = getGridPos(fire.x, fire.y);
-    const pickup = [[0, -1], [1, 0], [0, 1], [-1, 0]]
-      .map(([dx, dy]) => ({ gx: centre.gx + dx, gy: centre.gy + dy }))
-      .filter(point => (point.gx !== fireCell.gx || point.gy !== fireCell.gy) &&
-        !isTileBlockedForSettler(point.gx, point.gy))
-      .map(point => ({ x: point.gx * TILE_SIZE + TILE_SIZE / 2, y: point.gy * TILE_SIZE + TILE_SIZE / 2 }))[0];
+    let pickup = null;
+    for (let radius = 1; radius <= GAME_CONFIG.raid.campRadiusTiles + 1 && !pickup; radius++) {
+      for (let dy = -radius; dy <= radius && !pickup; dy++) for (let dx = -radius; dx <= radius; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const gx = centre.gx + dx, gy = centre.gy + dy;
+        const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+        if ((gx === fireCell.gx && gy === fireCell.gy) || isTileBlockedForSettler(gx, gy) ||
+            game.enemies.some(enemy => enemy.hp > 0 && Math.hypot(enemy.x - x, enemy.y - y) < 26)) continue;
+        pickup = { x, y };
+        break;
+      }
+    }
     if (!pickup) return true;
     if (Math.hypot(pickup.x - en.x, pickup.y - en.y) > 38) {
       moveEntityTowards(en, pickup.x, pickup.y, en.speed, true, dt);
@@ -77,6 +84,16 @@ function tendCampfire(en, dt) {
   faceTowards(en, fire.x, fire.y);
   campGuardTalk(en, dt);
   return true;
+}
+
+function campGuardIntruder(en) {
+  const camp = (game.enemyCamps || []).find(item => item.id === en.campId) || game.enemyCamp;
+  if (!camp) return null;
+  const reach = GAME_CONFIG.raid.guardTiles * TILE_SIZE;
+  return game.settlers.find(settler => settler.hp > 0 && !isUntouchable(settler) &&
+    (!settler.raider || (game.raidActive && en.campId === game.raidCampId)) &&
+    !inTerritory(settler.x, settler.y) &&
+    Math.hypot(settler.x - camp.x, settler.y - camp.y) <= reach) || null;
 }
 
 /** @typedef {import('../../../engine/world/types.js').Settler} Settler */
@@ -243,10 +260,27 @@ export function tickEnemy(en, dt) {
   const chasingScout = en.campGuard && en.scoutChasing && en.attackTarget &&
     game.settlers.includes(en.attackTarget);
   if (en.campGuard && !activeCampGuard && !chasingScout) {
-    if (tendCampfire(en, dt)) return;
-    if (sleepByCampStructure(en, dt)) return;
-    if (en.guard) holdGuardPost(en, dt);
-    return;
+    const intruder = campGuardIntruder(en);
+    if (intruder) {
+      en.guardOff = true;
+      en.campIntruderTarget = intruder;
+      en.attackTarget = intruder;
+      en.asleep = false;
+      delete en.campSleepSpot;
+      delete en.campPatrolTarget;
+    } else {
+      if (en.campIntruderTarget) {
+        en.attackTarget = null;
+        delete en.campIntruderTarget;
+        en.guardOff = false;
+        en.path = null;
+        en.pathTarget = null;
+      }
+      if (tendCampfire(en, dt)) return;
+      if (sleepByCampStructure(en, dt)) return;
+      if (en.guard) holdGuardPost(en, dt);
+      return;
+    }
   }
   if (activeCampGuard) {
     en.asleep = false;
@@ -416,10 +450,8 @@ function enemyOnPlatform(en, enemyDef, dt) {
 // (#279) once off its post it goes after them, a retreat or a scout running too (guardOff), till the camp's
 // gone back to
 function holdGuardPost(en, dt) {
-  const reach = GAME_CONFIG.raid.guardTiles * 30;
   if (en.guardOff) return false;
-  if (game.settlers.some(s => (!s.raider || (game.raidActive && en.campId === game.raidCampId)) &&
-      (Math.hypot(s.x - en.guard.x, s.y - en.guard.y) < reach || Math.hypot(s.x - en.x, s.y - en.y) < reach * 0.6))) {
+  if (campGuardIntruder(en)) {
     en.guardOff = true;
     return false;
   }
@@ -693,7 +725,7 @@ function chooseEnemyTarget(en) {
 
   let lockedTarget = en.attackTarget;
   if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) ||
-      (!en.scoutChasing &&
+      (!en.scoutChasing && en.campIntruderTarget !== lockedTarget &&
         !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1))))) lockedTarget = null;
   if (lockedTarget) {
     let lockedDist = Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y);

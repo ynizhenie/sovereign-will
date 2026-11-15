@@ -2,6 +2,7 @@ import { GAME_CONFIG } from '../../../content/configs/index.js';
 
 const progression = GAME_CONFIG.unitProgression;
 export const UNIT_PROGRESSION_TRACKS = ['ranged', 'melee', 'healing', 'hunting', 'fishing', 'farming', 'axe', 'pickaxe', 'building'];
+const COMBAT_TRACKS = new Set(['ranged', 'melee', 'healing']);
 const RANGED_WEAPONS = new Set(['bow', 'crossbow', 'rifle']);
 const TOOL_TRACKS = {
   axe: 'axe', iron_axe: 'axe',
@@ -59,15 +60,20 @@ export function getUnitExperience(unit, track = getUnitProgressionTrack(unit)) {
   return Math.max(0, progressionData(unit)[track] || 0);
 }
 
+function getExperienceThresholds(track) {
+  return COMBAT_TRACKS.has(track) ? progression.experienceToLevel.combat : progression.experienceToLevel.other;
+}
+
 export function getUnitLevel(unit, track = getUnitProgressionTrack(unit)) {
   const experience = getUnitExperience(unit, track);
-  if (experience >= progression.experienceToLevel[2]) return 3;
-  if (experience >= progression.experienceToLevel[1]) return 2;
+  const thresholds = getExperienceThresholds(track);
+  if (experience >= thresholds[2]) return 3;
+  if (experience >= thresholds[1]) return 2;
   return 1;
 }
 
-export function getUnitExperienceForLevel(level) {
-  return progression.experienceToLevel[Math.max(0, Math.min(2, level - 1))];
+export function getUnitExperienceForLevel(level, track) {
+  return getExperienceThresholds(track)[Math.max(0, Math.min(2, level - 1))];
 }
 
 export function getUnitHealthBonus(level) {
@@ -108,7 +114,7 @@ export function setUnitExperience(unit, experience, track = getUnitProgressionTr
   }
   const previousLevel = getUnitLevel(unit, track);
   const previousHealthBonus = track === 'melee' ? getUnitHealthBonus(previousLevel) : 0;
-  const nextExperience = Math.max(0, Math.min(progression.experienceToLevel[2], experience));
+  const nextExperience = Math.max(0, Math.min(getExperienceThresholds(track)[2], experience));
   progressionData(unit)[track] = nextExperience;
   const nextLevel = getUnitLevel(unit, track);
   unit.level = nextLevel;

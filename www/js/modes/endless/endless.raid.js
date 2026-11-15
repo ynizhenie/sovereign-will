@@ -1285,7 +1285,10 @@ export function leaveCamp(won) {
   if (raid.won) {
     const c = config(), scale = 1 + c.rewardPerDefender * raid.defenders;
     const reward = Object.fromEntries(Object.entries(c.reward).map(([k, v]) => [k, Math.round(v * scale)]));
-    if (!getPlayerFaction().eats) delete reward.food; // (the undead have no food)
+    if (!getPlayerFaction().eats) {
+      if (getPlayerFaction().id === 'undead') reward.rot = (reward.rot || 0) + (reward.food || 0);
+      delete reward.food;
+    }
     addResources(reward);
     showNotification(t('raid.won', { reward: formatCost(reward) }), false);
     playSound('craftDone');

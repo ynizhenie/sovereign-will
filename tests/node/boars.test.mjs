@@ -10,3 +10,7 @@ test('a soldier catches and kills a boar, in the open and by the map edge (#77)'
     expect(r.downAt).toBeLessThan(20);
   }
 });
+
+test('boars shy away from enemies and run from them when panicked', async () => {
+  expect(await sim.boarFearsEnemy({})).toEqual({ waryOfEnemy: true, runsFromEnemyInPanic: true });
+});

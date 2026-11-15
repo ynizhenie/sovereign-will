@@ -43,10 +43,10 @@ export const mapConfig = {
     berry_bush: { list: 'berryBushes', blocksArrows: true, hp: 1, yield: { berries: 2 }, regrow: 'forest', work: { seconds: 2.0 } },
     farm: { list: 'farmPlots', yield: { wheat: 4, wheatSeeds: 1 }, work: { seconds: 2.5 } },
     // boars are hunted rather than worked (see huntBoar); this is what one gives.
-    // wary: how close a settler can get before a calm boar bolts (see boars.forEach in update()).
+    // wary: how close a unit can get before a calm boar bolts (see tickBoars).
     // (#298) hp 30, hit for an item's damage (no ×2 any more): not down in one blow, but by an arrow or iron
     boar: { list: 'boars', hp: 30, yield: { rawMeat: 6, leather: 2 }, clearsPath: true,
-      // wary: backs off from a settler this close, at waryFleeSpeed (slower than settlers, so it can be
+      // wary: backs off from a unit this close, at waryFleeSpeed (slower than settlers, so it can be
       // caught); fleeSpeed: its sprint once it's actually hit
       wary: 100, waryFleeSpeed: 0.6, fleeSpeed: 1.35,
       // (#306) left be, now and then (restChance at a stop) it digs the ground (digSeconds) and lies there a while

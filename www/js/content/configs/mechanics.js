@@ -27,7 +27,10 @@ export const mechanicsConfig = {
     nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.8, rout: 40,
     tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140, necroCorpseClear: 90, panicDamage: 0.6 },
   unitProgression: {
-    experienceToLevel: [0, 10, 25],
+    experienceToLevel: {
+      combat: [0, 10, 25],
+      other: [0, 30, 60]
+    },
     healthBonus: [0, 25, 50],
     attackSpeedBonus: [0, 0.1, 0.2],
     healingSpeedBonus: [0, 0.1, 0.2],

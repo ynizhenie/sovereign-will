@@ -175,6 +175,7 @@ function spawnTerritoryBoar() {
 // anyone (getFrontier), lives on too, but in steps of farEvery ticks at once, by turns: a big map has hundreds
 export function tickBoars(tickDt) {
   const c = GAME_CONFIG.mapResources.boar;
+  const threats = [...game.settlers, ...game.enemies].filter(unit => unit.hp > 0);
   for (let i = boarWallows.length - 1; i >= 0; i--) {
     const w = boarWallows[i];
     if (w.boar && (!game.boars.includes(w.boar) || w.boar.isCarcass || w.boar.rest === null)) w.boar = null;
@@ -205,12 +206,12 @@ export function tickBoars(tickDt) {
     if (b.fleeTimer > 0) b.fleeTimer -= dt;
 
     if ((b.fleeTimer || 0) <= 0 && !b.hideTarget) {
-      let nearest = /** @type {import('../../../engine/world/types.js').Settler | null} */ (null), nearestDist = Infinity;
-      game.settlers.forEach(s => {
-        let d = Math.hypot(s.x - b.x, s.y - b.y);
-        if (d < nearestDist) { nearestDist = d; nearest = s; }
-      });
-      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
+      let nearest = null, nearestDist = Infinity;
+      for (const unit of threats) {
+        let d = Math.hypot(unit.x - b.x, unit.y - b.y);
+        if (d < nearestDist) { nearestDist = d; nearest = unit; }
+      }
+      if (nearest && nearestDist <= c.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
     }
 
     if (b.hideTarget) {

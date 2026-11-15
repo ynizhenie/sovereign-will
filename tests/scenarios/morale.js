@@ -119,11 +119,14 @@ Object.assign(window.sim, (() => {
   }
 
   // A boar shaken to a panic keeps running from the settler near it
-  function boarPanic({ seed = 'morale-boar' } = {}) {
+  function boarPanic({ seed = 'morale-boar', threat = 'settler' } = {}) {
     asFactions('humans', 'humans', seed);
     const boar = { x: townHall.x + 200, y: townHall.y, hp: 30, maxHp: 30, wanderTimer: 0, priority: 0 };
     boars = [boar];
-    settlers = [makeSettler(1, boar.x + 60, boar.y)];
+    if (threat === 'enemy') {
+      settlers = [];
+      enemies = [createConfiguredEnemy({ x: boar.x + 60, y: boar.y }, 'raider')];
+    } else settlers = [makeSettler(1, boar.x + 60, boar.y)];
     shakeMorale(boar, 40, 'boar');
     boarsPanic();
     back();

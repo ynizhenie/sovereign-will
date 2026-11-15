@@ -210,6 +210,7 @@
  * @property {boolean} [scoutChasing] a camp guard sent after a scout (#279)
  * @property {boolean} [campGuard]  defender of the persistent Endless camp; passive outside a raid
  * @property {number} [campId] the persistent camp this enemy belongs to
+ * @property {Settler} [campIntruderTarget] player unit a camp guard is currently defending its camp from
  * @property {number} [campTalkTimer] seconds until its next camp conversation
  * @property {boolean} [campTalkReply] the guard has a reply queued for its next conversation
  * @property {string} [campTalkPartnerName] the guard it is currently speaking with
