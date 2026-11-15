@@ -277,11 +277,12 @@ export function tickEnemy(en, dt) {
   if (en.trapped) return; // held in an iron trap (#248): it can't move or strike till it's free
   const ownedTemporaryZombie = !!en.raisedBy && en.temporary !== undefined;
   if (ownedTemporaryZombie && enemyZombieFollowsMaster(en, dt)) return;
-  if ((enemyDef.pet === 'dog' || enemyDef.pet === 'beast') && enemyPetKeepsNear(en, dt)) return;
-  if (!enemyDef.pet && !ownedTemporaryZombie && enemyPanic(en, dt)) {
+  const combatPet = enemyDef.pet === 'dog' || enemyDef.pet === 'beast';
+  if ((combatPet || (!enemyDef.pet && !ownedTemporaryZombie)) && enemyPanic(en, dt)) {
     if (!en.buildTarget) return; // in a panic: away to heal (#207)
     en.musterUntil = 0;
   }
+  if (combatPet && enemyPetKeepsNear(en, dt)) return;
   if (en.guard && holdGuardPost(en, dt)) return; // (a defender of an enemy camp, #255)
   if (en.scout) { scoutFlees(en, dt); return; } // (a scout the player pointed at: it only runs, #279)
   if (en.captain) captainOrdersEnemies(en, dt); // (gathering too: the one it tells goes at once)

@@ -23,7 +23,7 @@ test('requested names are available in Russian and their localized equivalents',
   expect(LANGUAGES.ru.names.unitNames.demons.male).toContain('Клауд');
   expect(LANGUAGES.en.names.unitNames.humans.male).toContain('Arthur');
   expect(LANGUAGES.en.names.unitNames.humans.male).toContain('Denis');
-  expect(LANGUAGES.en.names.unitNames.demons.male).toContain('Cloud');
+  expect(LANGUAGES.en.names.unitNames.demons.male).toContain('Claude');
 });
 
 test('a hired unit gets an unused name before a name is reused', () => {

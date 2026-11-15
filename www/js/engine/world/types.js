@@ -35,6 +35,9 @@
  * @property {number} [attackCooldown]
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
  * @property {Enemy | null} [lastAttacker] the enemy that most recently damaged it
+ * @property {number | null} [petKeeperId] the nearby soldier or archer a dog or beast follows in Endless
+ * @property {Enemy | null} [petAttackTarget] an enemy that recently attacked its pet
+ * @property {number} [petAttackTick] when that enemy attacked the pet
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
  * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)

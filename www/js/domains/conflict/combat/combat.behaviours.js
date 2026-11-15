@@ -93,10 +93,12 @@ export function holdPost(s, tick) {
 export function strikeBack(s, tick) {
   if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
   if (s.plagueUnit && game.settlers.some(master => master.id === s.masterId && master.plagueMoveTarget)) return false;
-  const attacker = getRecentAttacker(s);
+  const recentAttacker = getRecentAttacker(s);
+  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
+    ? recentAttacker : getPetAttackTarget(s);
   if (attacker && isCampGuardUnavailable(attacker)) return false;
   if (attacker && !canDefendEnemy(attacker)) return false;
-  if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
+  if (!attacker || (attacker === recentAttacker && game.pathTick - (s.lastAttackedTick || 0) > 90)) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
   if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
   return engageEnemy(s, tick, attacker, attacker, tick.dt);
@@ -142,6 +144,17 @@ const MENU_GUARD = 4 * 30; // (how far from the menu's warehouse its squad goes 
 
 const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
 
+function getPetAttackTarget(s) {
+  const target = s.petAttackTarget;
+  if (!target || game.pathTick - (s.petAttackTick || 0) > 90 || !game.enemies.includes(target) ||
+      isCampGuardUnavailable(target) || !canDefendEnemy(target)) {
+    s.petAttackTarget = null;
+    s.petAttackTick = null;
+    return null;
+  }
+  return target;
+}
+
 // The enemy a settler fights: the one most dangerous to the base, an enemy the player marked, the one near
 // its post, or whoever is hitting it right now. On the way to the enemy tents, only what's in the way
 // (null: nothing is). attacker: the one hitting it, if any.
@@ -180,7 +193,8 @@ function chooseSettlerTarget(s, tick) {
   }
   // ...but whoever is hitting this settler right now comes first of all
   const recentAttacker = getRecentAttacker(s);
-  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker) ? recentAttacker : null;
+  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
+    ? recentAttacker : getPetAttackTarget(s);
   // a squad soldier goes for the enemy that came near its post (see holdPost)
   if (s.postTarget && (!game.enemies.includes(s.postTarget) || isCampGuardUnavailable(s.postTarget) || !canDefendEnemy(s.postTarget))) s.postTarget = null;
   if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;

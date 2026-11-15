@@ -88,6 +88,34 @@ test('a dog without allied soldiers advances toward an enemy instead of wanderin
   expect(errors).toEqual([]);
 });
 
+test('a dog alerts its keeper when attacked and joins the fight after the keeper (#314)', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    const keeper = settlers.find(s => s.type === 'normal');
+    Object.assign(dog, { x: townHall.x + 180, y: townHall.y, speed: 0, petSleep: 0 });
+    Object.assign(keeper, { x: dog.x + 10, y: dog.y, role: 'soldier', weapon: 'sword', speed: 0, attackCooldown: 0 });
+    game.settlers = [dog, keeper];
+    window.sim.run(1 / 60); // the dog records its nearby keeper, even though it comes first in the list
+
+    const foe = createNormalEnemy({ x: dog.x + 20, y: dog.y }, 'raider');
+    Object.assign(foe, { speed: 0, damage: 0, fromWave: true });
+    game.enemies = [foe];
+    damageSettler(dog, 1, foe);
+    const alerted = keeper.petAttackTarget === foe;
+    window.sim.run(1 / 60);
+    return {
+      alerted,
+      keeperTargeted: keeper.fightTarget === foe,
+      dogJoined: dog.activity === 'petFight',
+      enemyDamaged: foe.hp < foe.maxHp
+    };
+  });
+  expect(result).toEqual({ alerted: true, keeperTargeted: true, dogJoined: true, enemyDamaged: true });
+  expect(errors).toEqual([]);
+});
+
 test('a dog ignores wave enemies during preparation and attacks once the wave starts', async ({ page }) => {
   const errors = await start(page, 'humans');
   const result = await page.evaluate(() => {
@@ -178,6 +206,94 @@ test('a hellhound eats a corpse by itself when hungry (#314)', async ({ page }) 
   });
   expect(r).toMatchObject({ eaten: true, fed: true });
   expect(r.units).toContain('beast');
+  expect(errors).toEqual([]);
+});
+
+test('a hellhound alerts its keeper when attacked and joins the fight after the keeper (#314)', async ({ page }) => {
+  const errors = await start(page, 'demons');
+  const result = await page.evaluate(() => {
+    spawnSettler('beast');
+    const beast = settlers.find(s => s.type === 'beast');
+    const keeper = settlers.find(s => s.type !== 'beast' && s.role !== 'pet');
+    Object.assign(beast, { x: townHall.x + 180, y: townHall.y, speed: 0, petSleep: 0 });
+    Object.assign(keeper, { x: beast.x + 10, y: beast.y, role: 'soldier', weapon: 'sword', speed: 0, attackCooldown: 0 });
+    game.settlers = [beast, keeper];
+    window.sim.run(1 / 60);
+
+    const foe = createNormalEnemy({ x: beast.x + 20, y: beast.y }, 'raider');
+    Object.assign(foe, { speed: 0, damage: 0, fromWave: true });
+    game.enemies = [foe];
+    damageSettler(beast, 1, foe);
+    const alerted = keeper.petAttackTarget === foe;
+    window.sim.run(1 / 60);
+    return {
+      alerted,
+      keeperTargeted: keeper.fightTarget === foe,
+      beastJoined: beast.activity === 'petFight',
+      enemyDamaged: foe.hp < foe.maxHp
+    };
+  });
+  expect(result).toEqual({ alerted: true, keeperTargeted: true, beastJoined: true, enemyDamaged: true });
+  expect(errors).toEqual([]);
+});
+
+test('a dog panics and retreats when low health reduces its morale (#314)', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    Object.assign(dog, {
+      x: townHall.x + 260, y: townHall.y, hp: dog.maxHp * 0.25,
+      morale: GAME_CONFIG.morale.panicBelow + 1, wasLow: false, petSleep: 0
+    });
+    game.settlers = [dog];
+    damageSettler(dog, 1);
+    const panicked = dog.panic;
+    window.sim.run(1 / 60);
+    return { panicked, retreated: dog.activity === 'panic' };
+  });
+  expect(result).toEqual({ panicked: true, retreated: true });
+  expect(errors).toEqual([]);
+});
+
+test('a hellhound panics and retreats when low health reduces its morale (#314)', async ({ page }) => {
+  const errors = await start(page, 'demons');
+  const result = await page.evaluate(() => {
+    spawnSettler('beast');
+    const beast = settlers.find(s => s.type === 'beast');
+    Object.assign(beast, {
+      x: townHall.x + 260, y: townHall.y, hp: beast.maxHp * 0.25,
+      morale: GAME_CONFIG.morale.panicBelow + 1, wasLow: false, petSleep: 0
+    });
+    game.settlers = [beast];
+    damageSettler(beast, 1);
+    const panicked = beast.panic;
+    window.sim.run(1 / 60);
+    return { panicked, retreated: beast.activity === 'panic' };
+  });
+  expect(result).toEqual({ panicked: true, retreated: true });
+  expect(errors).toEqual([]);
+});
+
+test('enemy dogs and hellhounds panic and retreat when low health reduces their morale (#314)', async ({ page }) => {
+  const errors = await start(page, 'humans');
+  const result = await page.evaluate(() => ['raider_dog', 'demon_beast'].map(key => {
+    const enemy = createConfiguredEnemy({ x: townHall.x + 250, y: townHall.y }, key);
+    Object.assign(enemy, {
+      hp: enemy.maxHp * 0.25, morale: GAME_CONFIG.morale.panicBelow + 1,
+      wasLow: false, speed: 60
+    });
+    game.enemies = [enemy];
+    damageEnemy(enemy, 1);
+    const panicked = enemy.panic;
+    const before = Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y);
+    window.sim.run(0.5);
+    return { key, panicked, retreated: Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) > before };
+  }));
+  expect(result).toEqual([
+    { key: 'raider_dog', panicked: true, retreated: true },
+    { key: 'demon_beast', panicked: true, retreated: true }
+  ]);
   expect(errors).toEqual([]);
 });
 

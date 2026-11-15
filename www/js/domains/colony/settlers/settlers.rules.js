@@ -220,6 +220,14 @@ export function damageSettler(settler, amount, attacker = null, attackerTrack = 
     settler.lastAttacker = attacker;
     settler.lastAttackerTrack = attackerTrack || getUnitWeaponProgressionTrack(attacker) || undefined;
     settler.lastAttackedTick = game.pathTick;
+    if (game.gameMode === 'endless' && (petKindOf(settler) === 'dog' || petKindOf(settler) === 'beast')) {
+      const keeper = game.settlers.find(s => s.id === settler.petKeeperId);
+      if (keeper && keeper.hp > 0 && !keeper.isPossessed) {
+        keeper.petAttackTarget = attacker;
+        keeper.petAttackTick = game.pathTick;
+        keeper.fightTarget = attacker;
+      }
+    }
   }
 }
 

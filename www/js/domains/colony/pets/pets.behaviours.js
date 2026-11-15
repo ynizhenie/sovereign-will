@@ -10,7 +10,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { deselectSettler, faceTowards, petKindOf, playerControlled } from '../settlers/index.js';
+import { deselectSettler, faceTowards, getRecentAttacker, petKindOf, playerControlled } from '../settlers/index.js';
 import { fetchFromStorage, returnFood, stockLeft, takeFood } from '../storage/index.js';
 import { getWeaponStats } from '../equipment/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
@@ -64,12 +64,21 @@ export function tickPet(s, tick) {
 function tickBeast(s, tick, kind) {
   const c = config(), speed = s.speed * (s.petHungry ? c.hungryPace : 1);
   const keeper = nearest(game.settlers.filter(o => (o.role === 'soldier' || o.role === 'archer') && !o.leaving && o.hp > 0), s);
+  const nearbyKeeper = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : null;
+  s.petKeeperId = game.gameMode === 'endless' && nearbyKeeper ? nearbyKeeper.id : null;
   // (#326) in a battle the hall's out of the way in a corner: by the nearest of its side instead (it ran there)
   const own = game.gameMode === 'battle' ? nearest(game.settlers.filter(o => o !== s && !petKindOf(o) && o.hp > 0), s) : null;
-  const anchor = keeper && Math.hypot(keeper.x - s.x, keeper.y - s.y) < 20 * TILE_SIZE ? keeper : own || (game.gameMode === 'battle' ? s : townHall);
+  const anchor = nearbyKeeper || own || (game.gameMode === 'battle' ? s : townHall);
   const guard = c.guardTiles * TILE_SIZE;
-  const foe = keeper
-    ? nearest([...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])], s)
+  const nearbyFoes = [...foesNear(s.x, s.y, guard), ...(anchor !== townHall ? foesNear(anchor.x, anchor.y, guard) : [])];
+  const keeperTargets = nearbyKeeper && [
+    nearbyKeeper.fightTarget, nearbyKeeper.postTarget, nearbyKeeper.captainTarget,
+    getRecentAttacker(nearbyKeeper), getRecentAttacker(s)
+  ];
+  const foe = nearbyKeeper && !nearbyKeeper.isPossessed && game.gameMode === 'endless'
+    ? nearest(nearbyFoes.filter(enemy => keeperTargets.includes(enemy)), s)
+    : keeper
+      ? nearest(nearbyFoes, s)
     : nearest(foesNear(s.x, s.y, Infinity), s);
   // asleep: till an enemy comes near or a wave's on
   if (s.petSleep > 0) {
