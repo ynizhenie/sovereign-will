@@ -8,7 +8,7 @@ import { moveSettlerToTownHall, stock, takeStock } from '../../colony/storage/in
 import { hasToolFamily } from '../../colony/equipment/index.js';
 import { getBlightKeys, getNecromancy, raiseTemporaryZombie, zombiesOf } from './undead.rules.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, getRecentAttacker, hasPlayerOrderFor, says } from '../../colony/settlers/index.js';
+import { addUnitExperience, faceTowards, getRecentAttacker, getUnitHealingSpeedMultiplier, hasPlayerOrderFor, says } from '../../colony/settlers/index.js';
 import { engageEnemy, getBaseRadius, isDefenseAlert } from '../../conflict/combat/index.js';
 import { getPlayerFaction } from '../index.js';
 import { playerNecromancerKeepsBack } from '../../conflict/morale/index.js';
@@ -64,7 +64,8 @@ export function necromancy(s, tick) {
     s.working = 0.1;
     s.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 }; // its thread (drawRaising)
     faceTowards(s, corpse.x, corpse.y);
-    s.raiseTimer = (s.raiseTimer || 0) + dt;
+    s.raiseTimer = (s.raiseTimer || 0) + dt * getUnitHealingSpeedMultiplier(s);
+    addUnitExperience(s, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
     if (s.raiseTimer >= necro.raiseSeconds) {
       s.raiseTimer = 0;
       s.raisesLeft--;
@@ -105,7 +106,8 @@ export function necromancy(s, tick) {
     if (dist(patient) > necro.healRange) {
       moveEntityTowards(s, patient.x, patient.y, s.speed, false, dt);
     } else {
-      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt * getUnitHealingSpeedMultiplier(s));
+      addUnitExperience(s, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
       patient.necroTreatedAt = game.pathTick;
       s.working = 0.1;
       faceTowards(s, patient.x, patient.y);
@@ -116,7 +118,8 @@ export function necromancy(s, tick) {
   if (corpse) return raise();
   // itself last of all (#279), where it stands
   if (s.hp < s.maxHp && (tick.isWaveActive || getRecentAttacker(s))) {
-    s.hp = Math.min(s.maxHp, s.hp + necro.healPerSecond * dt);
+    s.hp = Math.min(s.maxHp, s.hp + necro.healPerSecond * dt * getUnitHealingSpeedMultiplier(s));
+    addUnitExperience(s, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
     s.necroTreatedAt = game.pathTick;
     s.working = 0.1;
     return true;

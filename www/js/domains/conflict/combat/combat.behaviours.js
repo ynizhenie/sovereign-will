@@ -332,7 +332,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
       : dist <= Math.max(approach + extraBody, pastBodies) && hasMeleeReach(s, targetEnemy);
     if (inReach) {
-      performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger);
+      performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger, targetEnemy);
     } else if (attacker !== targetEnemy && breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through
     } else if (!shoots) {

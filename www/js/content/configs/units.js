@@ -1,5 +1,5 @@
 // The colony's unit kinds, and how fast everyone moves
-
+ 
 export const unitsConfig = {
   // (#306) how they look: a woman femaleChance of the time; five looks each (male: cropped, bald, bearded, long
   // tied back, hooded; female: long, a braid, a bun, a ponytail, a bob), the commoner the bigger its weight;
@@ -13,9 +13,8 @@ export const unitsConfig = {
     }
   },
   // how far everyone moves per game step, times their own speed (settlers, enemies, boars). 2 is the pace
-  // the game was tuned at on a 120 Hz screen, before updates became a fixed 60 per second
   movementScale: 2,
-
+  
   // (#326) what a fighting unit can be, the same for every faction and either side (Battles now, waves with
   // the new waves): its size (the faction's units: first normal, second big, third its pet) and what it
   // holds. A tool that's only some factions' (GAME_CONFIG.tools[].factions) only for them: a medic with a bag
@@ -32,7 +31,7 @@ export const unitsConfig = {
     { id: 'big_necromancer', size: 'big', weapon: 'fist', tool: 'necro_staff' }, // (27.10, 32: any of them big, but a pet)
     { id: 'pet', size: 'pet', weapon: 'fist' }
   ],
-
+  
   // kinds of settlers: stats, how many population slots they take, damage multiplier, and what hiring / upgrading costs.
   // carryLoads: how many gathered loads (one tree, one boulder, one boar...) it carries before going home
   settlerTypes: {
@@ -49,26 +48,24 @@ export const unitsConfig = {
     // (#314) each faction's pet (GAME_CONFIG.pets): pet: which; bite: how it fights (a weapon's combat
     // stats); orders: what it takes when possessed
     dog: { id: 'dog', icon: 'dog', pet: 'dog', hp: 70, speed: 1.35, radius: 9, visualRadius: 10, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { food: 20 },
-      bite: { damage: 7, range: 24, cooldown: 0.45, approach: 18, tentReach: 22 }, orders: ['attack'] },
+      bite: { damage: 12, range: 24, cooldown: 0.45, approach: 18, tentReach: 22 }, orders: ['attack'] },
     beast: { id: 'beast', icon: 'beast', pet: 'beast', hp: 70, speed: 1.3, radius: 10, visualRadius: 11, population: 1, damageMultiplier: 1, carryLoads: 0, hireCost: { food: 20, stone: 5 },
-      bite: { damage: 9, range: 24, cooldown: 0.5, approach: 18, tentReach: 22 }, orders: ['attack', 'devour'] },
+      bite: { damage: 15, range: 24, cooldown: 0.5, approach: 18, tentReach: 22 }, orders: ['attack', 'devour'] },
     ghost: { id: 'ghost', icon: 'ghost', pet: 'ghost', hp: 50, speed: 1.6, radius: 8, visualRadius: 10, population: 0, damageMultiplier: 1, carryLoads: 0, hireCost: { souls: 1 },
       orders: ['dive'] } // (#326: takes no room in the colony; costs a soul, needs a grave, and at most ghost.limit.base + one a grave)
   },
-
+  
   // (#314) pets: hungry every hungerSeconds (slower asleep), then fed by a settler with one of `foods` from the
   // stock (a beast eats a corpse by itself too); hungry, it moves at hungryPace and bites at hungryBite. It
-  // keeps near the nearest soldier (followTiles), goes for an enemy within guardTiles of it, and with no enemy
+  // moves off near the nearest soldier (followTiles), goes for an enemy within guardTiles of it, and with no enemy
   // about now and then (sleepChance a second) sleeps sleepSeconds. A dog flushes a boar hidden in the grass
   // within flushTiles (every flushSeconds at most). A ghost hovers by a grave, goes with a necromancer to a
   // fight (`carry` to one), flies into an enemy within diveTiles (at diveSpeed, through anything): it panics,
   // or briefly stuns the undead, then is gone backSeconds, back by a grave. A pet fed mealsBefore times goes off awayFromBuildings
-  // tiles from the buildings, spotTiles away, and leaves a pile there (relief: seconds at it).
-  // coats: each pet's colours; a female drawn femaleScale
+  // tiles from the buildings, spotTiles away, and leaves a pile there (relief: seconds at it)
   pets: {
     hungerSeconds: 120, hungryPace: 0.7, hungryBite: 0.6, foods: ['rawMeat', 'rawFish', 'cookedMeat', 'cookedFish', 'bread', 'berries', 'apples'],
     followTiles: 1.5, guardTiles: 6, sleepChance: 0.015, sleepSeconds: [20, 40], flushTiles: 8, flushSeconds: 15, devourSeconds: 3,
-    // (#326) a big one panics (or, if undead, is stunned) at the bigNeeds'th ghost within withinSeconds
     ghost: { diveTiles: 5, diveSpeed: 2.6, backSeconds: 30, stunSeconds: 2, carry: 3, bigNeeds: 2, withinSeconds: 15, limit: { base: 3, perGrave: 1 } },
     relief: { mealsBefore: 2, seconds: 1.5, awayFromBuildings: 4, spotTiles: [3, 8] },
     coats: {

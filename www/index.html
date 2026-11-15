@@ -479,8 +479,6 @@
         <button class="btn btn-armor" id="btn-upgrade-big" style="display: none;" data-action="upgradeToBig"></button>
         <!-- (#314) let the selected one go: asked first -->
         <button class="btn btn-disarm" id="btn-dismiss" style="display: none;" data-action="dismissSelected" data-i18n="btn.dismiss">Let go</button>
-        <button class="btn" id="btn-all-soldiers" data-action="selectAllSoldiers" data-i18n="sel.allSoldiers">[[swords]] All soldiers</button>
-        <button class="btn" id="btn-add-more" data-action="toggleAddingToGroup" data-i18n="sel.addMore">[[plus]] Add more</button>
         <button class="btn" id="btn-hold" data-action="holdSelection" data-i18n="sel.hold">[[stop]] Hold</button>
         <button class="btn" id="btn-free" data-action="freeSelection" data-i18n="sel.free">[[undo]] Free</button>
       </div>
@@ -579,6 +577,14 @@
 
       <!-- battle mode (battle.js): who to place (the dock picks yours, the enemies or buildings) -->
       <div id="battle-panel" class="hud-sheet" data-sheet="battle">
+        <div id="battle-unit-level">
+          <div class="panel-heading" data-i18n="battle.levelHeading">Placement level:</div>
+          <div class="sub-tabs">
+            <button class="btn sub-tab" data-battle-level="1">1</button>
+            <button class="btn sub-tab" data-battle-level="2">2</button>
+            <button class="btn sub-tab" data-battle-level="3">3</button>
+          </div>
+        </div>
         <div class="sub-tabs battle-gear">
           <button class="btn sub-tab" data-battle-gear="armor" data-i18n="battle.armor">Armour</button>
           <button class="btn sub-tab" data-battle-gear="shield" data-i18n="battle.shield">Shield</button>

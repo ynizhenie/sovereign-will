@@ -116,15 +116,12 @@ function renderSelectedActions(s) {
   const show = (id, on) => { const b = document.getElementById(id); if (b) b.style.display = on ? '' : 'none'; };
   show('btn-give', endless && !pet && !s.temporary);
   show('btn-possess', fight);
-  show('btn-all-soldiers', endless || fight);
-  show('btn-add-more', endless || fight);
   show('btn-free', endless && picked.some(o => o.orderTarget || o.orderSpot));
   show('btn-hold', endless && picked.some(o => !o.holdOrder)); // (#326)
   const possess = document.getElementById('btn-possess');
   const possessKey = s.isPossessed ? 'sel.unpossess' : 'sel.possess';
   if (possess.dataset.key !== possessKey) { possess.dataset.key = possessKey; setRichText(possess, t(possessKey)); }
   document.getElementById('btn-give').classList.toggle('on', giveOpen);
-  document.getElementById('btn-add-more').classList.toggle('on', game.addingToGroup);
   document.getElementById('selected-group-txt').textContent = picked.length > 1 ? t('sel.group', { n: picked.length }) : '';
   const hint = document.getElementById('sel-hint');
   const hintKey = getPossessed() === s ? 'sel.hintPossessed' : game.addingToGroup ? 'sel.hintAdding' : fight ? 'sel.hintOrders' : '';

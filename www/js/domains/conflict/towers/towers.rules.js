@@ -4,7 +4,7 @@
 import { TILE_SIZE, game, getGridPos, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon } from '../../colony/equipment/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { hasLineOfFire, isDefenseAlert } from '../combat/index.js';
+import { getProjectileAimPoint, hasLineOfFire, isDefenseAlert } from '../combat/index.js';
 import { faceTowards, startSwing } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -136,7 +136,8 @@ export function updateTowerGuard(settler, tower, dt) {
   settler.towerIdle = 0;
   if ((settler.towerAttackCooldown || 0) > 0) return;
 
-  const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
+  const aim = getProjectileAimPoint(settler, target, stats.projectileSpeed, stats.projectileLife, tower.x, tower.y);
+  const angle = Math.atan2(aim.y - tower.y, aim.x - tower.x);
   faceTowards(settler, target.x, target.y);
   // (#326) the guard's own weapon shows: a rifle fires a bullet, a crossbow looses a bolt with its heavy thunk;
   // and the shot is drawn, as from the ground (its next one cocked while it waits, #306)

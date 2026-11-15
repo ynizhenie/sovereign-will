@@ -10,7 +10,7 @@ import { bleed } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 import { boarToBait } from './hunting.traps.js';
-import { noteDay } from '../../colony/settlers/index.js';
+import { addUnitExperience, noteDay } from '../../colony/settlers/index.js';
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
@@ -29,7 +29,10 @@ export function woundBoar(boar, damage, attacker, fromX, fromY) {
   if (hasTerritory() && !inTerritory(boar.x, boar.y)) {
     game.territoryBoarRespawnsPending = (game.territoryBoarRespawnsPending || 0) + 1;
   }
-  if (attacker && game.settlers.includes(attacker)) noteDay(attacker, 'hunted'); // (its day, #306)
+  if (attacker && game.settlers.includes(attacker)) {
+    addUnitExperience(attacker, 1, 'hunting');
+    noteDay(attacker, 'hunted'); // (its day, #306)
+  }
   Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
 

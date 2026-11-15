@@ -32,7 +32,9 @@
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
+ * @property {number} [attackCooldown]
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
+ * @property {Enemy | null} [lastAttacker] the enemy that most recently damaged it
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
  * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
@@ -48,6 +50,10 @@
  * @property {string} tool           GAME_CONFIG.tools key, 'none' for none
  * @property {number} hp
  * @property {number} maxHp
+ * @property {number} [experience]
+ * @property {number} [level]
+ * @property {Object<string, number>} [progression] XP by skill track
+ * @property {string} [lastAttackerTrack] specialization of the enemy that last hit it
  * @property {number} speed
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
@@ -56,6 +62,7 @@
  * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
+ * @property {Point[] | null} [patrolTemplate]
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
  * @property {number} [hunger]       seconds until its next meal
  * @property {boolean} [quiver]
@@ -124,7 +131,6 @@
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, progress?: { x: number, y: number }, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
- * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
  * @property {boolean} [soul_lantern]  (#326) a necromancer's soul lantern at its side
  * @property {number} [lanternSouls]  (#326) the souls in it
  * @property {number} [lanternTimer]  (#326) the time to the next one let out by a grave
@@ -187,11 +193,15 @@
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {{ text: string, until: number }} [say] its current spoken phrase
  * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {number} [experience]
+ * @property {number} [level]
+ * @property {Object<string, number>} [progression] XP by skill track
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
  * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
+ * @property {string} [lastHitTrack] specialization used for its last hit
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
  * @property {boolean} [scoutChasing] a camp guard sent after a scout (#279)
@@ -226,6 +236,7 @@
  * @property {number} [toCatch]      the id of the settler catching it for a cage (#250)
  * @property {number} [trappedFor]   seconds till it's free
  * @property {string} type           'normal', 'big', 'archer'...
+ * @property {boolean} [bigBody]
  * @property {number} x
  * @property {number} y
  * @property {number} hp
@@ -233,6 +244,8 @@
  * @property {number} radius
  * @property {number} speed
  * @property {number} damage      a second in melee, an arrow's for an archer
+ * @property {number} [attackCooldown]
+ * @property {number} [herbs]
  * @property {number} [hitDamage] a melee hit's, the player's own unit's (a battle tile shows it, #255)
  * @property {number} [meleeDamage] an archer out of arrows' melee damage a second, its melee kind's (#255)
  * @property {string} weapon
@@ -245,6 +258,7 @@
  * @property {Object | null} [tentBuildTarget] the tent site reserved for a wave builder
  * @property {Point[] | null} path
  * @property {Point | null} pathTarget
+ * @property {number} [pathTimer]
  * @property {number} [arrows]
  * @property {number} [rifleAmmo]
  * @property {boolean} [camouflage]

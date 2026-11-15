@@ -7,7 +7,7 @@ import { game } from '../../../engine/world/index.js';
 import { addResources, canAfford, getFreeStock, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
+import { changeSettlerType, getPossessed, getSelectedSettler, getUnitAttackSpeedMultiplier, getUnitLevel, isBigBody } from '../settlers/index.js';
 import { craftPlace, getCraftOrderCost, orderCraft } from './equipment.crafting.js';
 
 // A shield only helps a melee soldier: a worker or an archer (a bow or a crossbow) doesn't fight with it
@@ -281,12 +281,12 @@ export function getWeaponStats(s, use) {
   }
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
   // (#314) a pet bites (weaker hungry)
-  if (settlerType && settlerType.bite) return { ...settlerType.bite, multiplier: s.petHungry ? GAME_CONFIG.pets.hungryBite : 1 };
-  // trained at a dummy (#199): a little more in a fight
-  const trained = use === 'combat' ? 1 + (s.trained || 0) : 1;
+  const attackTrack = dagger ? 'melee' : isRangedWeapon(s.weapon) ? 'ranged' : 'melee';
+  if (settlerType && settlerType.bite) return { ...settlerType.bite, cooldown: settlerType.bite.cooldown / getUnitAttackSpeedMultiplier(s, attackTrack), multiplier: s.petHungry ? GAME_CONFIG.pets.hungryBite : 1 };
   // the undead fight on in a panic, weaker (#232; the others run, hitting back at full strength if cornered)
   const shaken = s.panic && getPlayerFaction().id === 'undead' && game.settlers.includes(s) ? GAME_CONFIG.morale.panicDamage : 1;
-  return { ...stats, damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * trained * shaken };
+  return { ...stats, cooldown: use === 'combat' ? stats.cooldown / getUnitAttackSpeedMultiplier(s, attackTrack) : stats.cooldown,
+    damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * shaken };
 }
 
 /** What comes off goes back: the weapon and the tool (only those that come off: #261, taking the tool off

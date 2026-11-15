@@ -314,6 +314,8 @@ test('Plague: upgrade cards affect the hero and squad, while the menu shows only
     document.getElementById('plague-upgrades-toggle').click();
     const statRows = [...document.querySelectorAll('#plague-character-stats .plague-character-stat')];
     const stats = statRows.map(row => row.querySelector('b').textContent);
+    const highlightedStats = statRows.filter(row => row.querySelector('b').classList.contains('raised'))
+      .map(row => row.querySelector('span').textContent);
     const healthLabels = [...document.querySelectorAll('.plague-character-group')][0]
       .querySelectorAll('.plague-character-stat span');
     const groupCount = document.querySelectorAll('.plague-character-group-title').length;
@@ -325,12 +327,14 @@ test('Plague: upgrade cards affect the hero and squad, while the menu shows only
       oneRow: new Set(rows).size === 1, speedFactor: plague.speedFactor, squadSpeed: +(zombie.speed / GAME_CONFIG.settlerTypes.zombie.speed).toFixed(2),
       currentOnly: stats.length === 13 && stats.every(text => !text.includes('→')),
       healthRowsTogether: [...healthLabels].map(label => label.textContent).join(' / ') === 'Здоровье / Здоровье зомби / большого зомби',
+      highlightedStats,
       groupCount,
       showsRaiseCost: statLabels.some(label => label.includes('Энергия за воскрешение')), hasDisclosure,
       level: document.getElementById('plague-level').textContent, hasUpgradeList,
       standing: (() => { isPaused = false; update(1 / 60); isPaused = true; return { swaying: !!hero.swaying, idle: !!hero.isIdle }; })()
     };
   });
+  expect(r.highlightedStats).toEqual(['Скорость']);
   expect(r).toMatchObject({
     oneRow: true, speedFactor: 1.1, squadSpeed: 1.1, currentOnly: true,
     healthRowsTogether: true, groupCount: 6, showsRaiseCost: false, hasDisclosure: false, hasUpgradeList: false
@@ -354,6 +358,33 @@ test('Plague upgrade text fits on a phone screen', async ({ page }) => {
     };
   });
   expect(result).toEqual({ viewportWidth: 360, overflowingRows: 0, offscreenRows: 0 });
+  expect(errors).toEqual([]);
+});
+
+test('Plague character stats close button stays intact on a narrow screen', async ({ page }) => {
+  await page.setViewportSize({ width: 240, height: 800 });
+  const errors = await openGame(page);
+  await startPlague(page);
+  await page.click('#plague-upgrades-toggle');
+  const layout = await page.evaluate(() => {
+    const title = document.querySelector('.plague-upgrades-heading h2').getBoundingClientRect();
+    const close = document.getElementById('plague-upgrades-close').getBoundingClientRect();
+    const icon = document.querySelector('#plague-upgrades-close .ic').getBoundingClientRect();
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      titleRight: title.right,
+      closeLeft: close.left,
+      closeRight: close.right,
+      closeWidth: close.width,
+      iconLeft: icon.left,
+      iconRight: icon.right
+    };
+  });
+  expect(layout.closeWidth).toBeGreaterThanOrEqual(36);
+  expect(layout.titleRight).toBeLessThanOrEqual(layout.closeLeft);
+  expect(layout.closeRight).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.iconLeft).toBeGreaterThanOrEqual(layout.closeLeft);
+  expect(layout.iconRight).toBeLessThanOrEqual(layout.closeRight);
   expect(errors).toEqual([]);
 });
 

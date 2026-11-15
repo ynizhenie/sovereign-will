@@ -6,7 +6,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game } from '../../../engine/world/index.js';
 import { hasToolFamily } from '../../colony/equipment/index.js';
 import { fetchFromStorage, stock, takeStock } from '../../colony/storage/index.js';
-import { faceTowards, getRecentAttacker, noteDay, says } from '../../colony/settlers/index.js';
+import { addUnitExperience, faceTowards, getRecentAttacker, getUnitHealingSpeedMultiplier, noteDay, says } from '../../colony/settlers/index.js';
 import { isShelter } from './healing.rules.js';
 import { getReachDistanceToResource, getSettlerReach, moveEntityTowards, someEnemyNear, someSettlerNear } from '../../../engine/movement/index.js';
 import { isWaterReachable } from '../../world/index.js';
@@ -119,7 +119,8 @@ export function treatWounded(s, tick, stayBack = false) {
   if (patient !== s && Math.hypot(patient.x - s.x, patient.y - s.y) > medic.range + patient.radius) {
     if (!stayBack) moveEntityTowards(s, patient.x, patient.y, s.speed, false, tick.dt);
   } else {
-    s.healTimer = (s.healTimer || 0) + tick.dt;
+    s.healTimer = (s.healTimer || 0) + tick.dt * getUnitHealingSpeedMultiplier(s);
+    addUnitExperience(s, tick.dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
     s.working = 0.1; s.workKind = 'heal'; // (#326: herbs pressed onto the wound, the bag at its hip)
     patient.treatedAt = game.pathTick; // (green crosses rising off it)
     if (patient !== s) faceTowards(s, patient.x, patient.y);

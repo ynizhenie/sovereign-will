@@ -18,6 +18,7 @@ import { newLook } from './settlers.looks.js';
 import { generateUnitName } from './settlers.names.js';
 import { isNight } from '../../world/index.js';
 import { isSpawnSpotFree } from '../../economy/building/index.js';
+import { addUnitExperience, getUnitHealthBonus, getUnitLevel, getUnitWeaponProgressionTrack } from './settlers.progression.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
@@ -61,7 +62,8 @@ export function changeSettlerType(s, type) {
   if (!t || s.type === type) return;
   const share = s.hp / s.maxHp;
   const bonus = armorOf(s) ? armorOf(s).hpBonus : 0;
-  Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, maxHp: t.hp + bonus });
+  Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius,
+    maxHp: t.hp + bonus + getUnitHealthBonus(getUnitLevel(s, 'melee')) });
   s.hp = s.maxHp * share;
 }
 
@@ -71,8 +73,9 @@ export function changeSettlerType(s, type) {
 export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
   const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook());
+  /** @type {import('../../../engine/world/types.js').Settler} */
   const s = {
-    id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
+    id, x, y, hp: t.hp, maxHp: t.hp, ...(t.pet === 'ghost' ? {} : { experience: 0, level: 1 }), ...extra,
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false,
     name: extra.name || generateUnitName(getPlayerFaction().id, look.female, game.settlers, t.pet || null),
@@ -170,8 +173,9 @@ export function upgradeToBig(target) {
   payCost(big.upgradeCost);
 
   target.type = upgrade.to;
-  target.maxHp = big.hp;
-  target.hp = Math.min(target.hp + (big.hp - normal.hp), big.hp);
+  const maxHp = big.hp + (armorOf(target)?.hpBonus || 0) + getUnitHealthBonus(getUnitLevel(target, 'melee'));
+  target.hp = Math.min(target.hp + (maxHp - target.maxHp), maxHp);
+  target.maxHp = maxHp;
   target.speed = big.speed;
   target.radius = big.radius;
   target.visualRadius = big.visualRadius;
@@ -201,7 +205,8 @@ export function dismissSettler(s) {
 }
 
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
-export function damageSettler(settler, amount, attacker = null) {
+/** @param {string | null} [attackerTrack] */
+export function damageSettler(settler, amount, attacker = null, attackerTrack = null) {
   if (isUntouchable(settler)) return; // (a ghost, #314)
   let damage = armorOf(settler) ? amount * (1 - armorOf(settler).damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
@@ -213,6 +218,7 @@ export function damageSettler(settler, amount, attacker = null) {
   if (wasWell && settler.hp > 0 && settler.hp < settler.maxHp * 0.3) says(settler, 'hurt', true); // (#252)
   if (attacker) {
     settler.lastAttacker = attacker;
+    settler.lastAttackerTrack = attackerTrack || getUnitWeaponProgressionTrack(attacker) || undefined;
     settler.lastAttackedTick = game.pathTick;
   }
 }
@@ -322,6 +328,7 @@ export function removeDeadSettlers() {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       if (!s.fled) {
+        addUnitExperience(s.lastAttacker, 1, s.lastAttackerTrack);
         onUnitDeath(s, 'settler');
         dropSettlerLoot(s);
       }

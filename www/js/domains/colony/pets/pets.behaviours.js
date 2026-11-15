@@ -80,7 +80,7 @@ function tickBeast(s, tick, kind) {
   if (foe) {
     const bite = getWeaponStats(s, 'combat');
     if (Math.hypot(foe.x - s.x, foe.y - s.y) > bite.approach + foe.radius) moveEntityTowards(s, foe.x, foe.y, speed, false, tick.dt);
-    else performAttack(s, foe.x, foe.y);
+    else performAttack(s, foe.x, foe.y, false, foe);
     return 'petFight';
   }
   // a beast, hungry: a corpse

@@ -8,8 +8,9 @@ import { game } from '../../engine/world/index.js';
 import { setBattleColor, sides } from '../../domains/factions/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { battlePresetLabel, bigPresetOf, getBattleBuildings, getBattlePresets } from './battle.roster.js';
-import { activateBattleBackrooms, battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleFieldSize, setBattleLook, startBattleMode } from './battle.setup.js';
+import { activateBattleBackrooms, battle, battleArmor, clearBattleSide, restoreBattleChoices, saveBattleChoices, setBattleDifficulty, setBattleField, setBattleFieldHighlight, setBattleFieldSize, setBattleLevel, setBattleLook, startBattleMode } from './battle.setup.js';
 import { cancelBattleFight, startBattleFight } from './battle.rules.js';
+import { getUnitHealthBonus, getUnitProgressionTrack } from '../../domains/colony/settlers/index.js';
 
 let secretFieldClicks = 0;
 let lastSecretFieldClick = 0;
@@ -59,6 +60,15 @@ function endSecretRifleHold(event) {
 export function renderBattlePanel() {
   const panel = document.getElementById('battle-panel');
   renderBattleFieldSizes();
+  const levelPicker = document.getElementById('battle-unit-level');
+  if (levelPicker) {
+    const selectedPreset = getBattlePresets().find(preset => preset.id === battle.preset);
+    levelPicker.hidden = battle.category !== 'units' || !getUnitProgressionTrack(selectedPreset);
+    levelPicker.querySelectorAll('[data-battle-level]').forEach(button => {
+      button.classList.toggle('on', Number(button.dataset.battleLevel) === battle.level);
+      button.disabled = battle.phase !== 'off' && battle.phase !== 'setup';
+    });
+  }
   document.querySelectorAll('[data-battle-gear]').forEach(b => b.classList.toggle('on', !!battle[/** @type {'armor' | 'shield' | 'helmet' | 'banner' | 'torch' | 'big'} */ (b.dataset.battleGear)]));
   // (#326) the time of day and weather
   document.querySelectorAll('[data-battle-look]').forEach(b => {
@@ -180,8 +190,10 @@ function presetStats(preset) {
   const tool = preset.tool && getDefinition('tools', preset.tool);
   const hit = kind.bite ? kind.bite.damage : kind.pet ? 0 : preset.weapon === 'fist' && tool && tool.combatDamage ? tool.combatDamage : weapon.combat.damage;
   const armour = kind.pet ? null : battleArmor(battle.armor);
-  const hp = kind.hp + (armour && !isRangedWeapon(preset.weapon) ? armour.hpBonus : 0);
-  return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp, damage: Math.round(hit * kind.damageMultiplier) };
+  const track = getUnitProgressionTrack(preset), level = track ? battle.level : 1;
+  const hp = kind.hp + (armour && !isRangedWeapon(preset.weapon) ? armour.hpBonus : 0) + getUnitHealthBonus(track === 'melee' ? level : 1);
+  const damage = Math.round(hit * kind.damageMultiplier);
+  return { icons: [kind.icon, tool ? tool.icon : weapon.icon], hp: Math.round(hp), damage };
 }
 
 // The top bar's middle: placing, fighting or who won, and how many stand on each side
@@ -271,6 +283,10 @@ export function initBattlePanel() {
       battle.helmet = helmets[(helmets.indexOf(selectedHelmet) + 1) % helmets.length];
     } else battle[gear] = !battle[gear];
     saveBattleChoices();
+    renderBattlePanel();
+  }));
+  document.querySelectorAll('[data-battle-level]').forEach(button => onTap(button, () => {
+    setBattleLevel(Number(button.dataset.battleLevel));
     renderBattlePanel();
   }));
   document.querySelectorAll('[data-battle-look]').forEach(b => onTap(b, () => {

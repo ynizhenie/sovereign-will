@@ -25,19 +25,24 @@ test('on a phone the bottom panel is compact, and the selected settler\'s card s
     const s = settlers[0];
     selectedSettler = s;
     updateUI();
-    const box = () => { const b = document.getElementById('selected-bar').getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height)]; };
+    const box = () => { const bar = document.getElementById('selected-bar'); const b = bar.getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height), getComputedStyle(bar).overflowY]; };
+    const carryingLineHeight = () => document.querySelector('.selected-carrying-line').getBoundingClientRect().height;
     const empty = box();
+    const emptyCarryingLineHeight = carryingLineHeight();
     s.carrying = { items: [{ type: 'wood', amount: 3 }, { type: 'stone', amount: 2 }, { type: 'leather', amount: 1 }] };
     s.activity = 'deliverCarrying';
     updateUI();
     return { panel: document.getElementById('bottom-panel').getBoundingClientRect().height, empty, carrying: box(), screen: innerHeight,
-      shown: document.getElementById('selected-info').textContent };
+      emptyCarryingLineHeight, carryingLineHeight: carryingLineHeight(), shown: document.getElementById('selected-info').textContent };
   });
   expect(r.panel).toBeLessThan(280);
-  // (#326) the card shows all of it, a line each: as wide, taller by the line, never more than about half the screen
+  // (#326) the card stays the same size as its contents change, within about half the screen
   expect(r.carrying[0]).toBe(r.empty[0]);
-  expect(r.carrying[1]).toBeGreaterThan(r.empty[1]);
-  expect(r.carrying[1]).toBeLessThanOrEqual(Math.min(r.screen * 0.46, 340) + 1);
+  expect(r.carrying[1]).toBe(r.empty[1]);
+  expect(r.carrying[1]).toBeLessThanOrEqual(Math.min(r.screen * 0.3, 220) + 1);
+  expect(r.carrying[2]).toBe('auto');
+  expect(r.emptyCarryingLineHeight).toBeGreaterThan(0);
+  expect(r.carryingLineHeight).toBe(r.emptyCarryingLineHeight);
   expect(r.shown).toContain('3');
 });
 

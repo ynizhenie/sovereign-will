@@ -12,7 +12,7 @@ import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict, moveEnt
 import { addCorpse, getBaseRadius } from '../combat/index.js';
 import { openDemonPortal, openDemonPortalAt } from '../../factions/demons/index.js';
 import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inEnemyTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
-import { generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
+import { addUnitExperience, generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 import { markEnemyKillForPlague } from '../../../modes/plague/index.js';
@@ -146,12 +146,14 @@ export function createConfiguredEnemy(pos, enemyKey, type, radius) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
   const look = definition.pet ? newPetLook(definition.pet) : newLook();
+  /** @type {import('../../../engine/world/types.js').Enemy} */
   const enemy = {
     look, // (#306: a man or a woman, one of their looks; a pet's its own, #314)
     name: generateUnitName(enemyFactionOf(definition.id).id, look.female, game.enemies, definition.pet || null),
     ghostly: definition.pet === 'ghost', // (#314: through everyone)
     type: type || definition.type, enemyKey, x: pos.x, y: pos.y, radius: radius || definition.radius, bigBody: !!definition.big,
     hp: definition.hp, maxHp: definition.hp,
+    ...(definition.pet === 'ghost' ? {} : { experience: 0, level: 1 }),
     weapon: definition.weapon || 'sword', speed: definition.speed, damage: definition.damage,
     reward: { ...(definition.reward || {}) }, attackCooldown: 0,
     path: [], pathTarget: null, pathTimer: 0, buildTarget: null
@@ -1170,7 +1172,12 @@ export function dropLoot(en) {
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
 export function removeDeadEnemies() {
   game.enemies.forEach(en => {
-    if (en.hp <= 0 && !en.fled && !en.deadNoted) { en.deadNoted = true; onUnitDeath(en, 'enemy'); noteDay(en.lastHitBy, 'kills', 'kill', 0.25); } // (its slayer's day, #279)
+    if (en.hp <= 0 && !en.fled && !en.deadNoted) {
+      en.deadNoted = true;
+      addUnitExperience(en.lastHitBy, 1, en.lastHitTrack);
+      onUnitDeath(en, 'enemy');
+      noteDay(en.lastHitBy, 'kills', 'kill', 0.25);
+    } // (its slayer's day, #279)
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
       markEnemyKillForPlague(en);

@@ -5,7 +5,7 @@ import { TILE_SIZE, forEachInRect, game, rand, worldEpoch } from '../../../engin
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
 import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inEnemyTerritory, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
-import { noteDay } from '../../colony/settlers/index.js';
+import { addUnitExperience, noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 
 export function getPlacedResources(includeGrowingTrees = true) {
@@ -141,6 +141,9 @@ export function finishHarvest(settler, resource, kind) {
   if (index !== -1) list.splice(index, 1);
   if (def.regrow) scheduleRespawn(kind, resource.x, resource.y, resource.stump, resource);
   if (def.clearsPath) invalidateAllPaths();
+  if (kind === 'farm') addUnitExperience(settler, 1, 'farming');
+  else if (def.tool === 'axe') addUnitExperience(settler, 1, 'axe');
+  else if (def.tool === 'pickaxe') addUnitExperience(settler, 1, 'pickaxe');
 }
 
 // The pieces of a felled tree's log (#298): its wood shared out in whole pieces (3 into 2: 2 and 1), laid along

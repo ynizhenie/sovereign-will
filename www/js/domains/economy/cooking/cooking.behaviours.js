@@ -9,7 +9,7 @@ import { hasAxeTool } from '../../colony/equipment/index.js';
 import { playWorkSound } from '../../../app/index.js';
 import { claimBuildingJob, isBuildingJobFree } from '../building/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, noteDay } from '../../colony/settlers/index.js';
+import { addUnitExperience, faceTowards, getUnitWorkSpeedMultiplier, noteDay } from '../../colony/settlers/index.js';
 import { isDefenseAlert } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -145,11 +145,12 @@ export function chopFirewood(s, tick) {
   s.patrolTarget = null;
   s.working = 0.1;
   playWorkSound(s, 'chop', 0.5);
-  s.chopTimer = (s.chopTimer || 0) + tick.dt;
+  s.chopTimer = (s.chopTimer || 0) + tick.dt * getUnitWorkSpeedMultiplier(s, 'axe');
   if (s.chopTimer >= c.seconds) {
     s.chopTimer = 0;
     load.amount--;
     stock.firewood = (stock.firewood || 0) + c.makes;
+    addUnitExperience(s, 1, 'axe');
     if (load.amount <= 0) s.carrying = null;
   }
   return true;

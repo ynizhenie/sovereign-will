@@ -13,11 +13,12 @@ import { createBuildingBlueprint, pickDummyVariant } from '../../domains/economy
 import { createConfiguredEnemy, getEnemyDef, presetEnemyKey } from '../../domains/conflict/waves/index.js';
 import { setStandingWeather, timeOfPhase } from '../../domains/world/index.js';
 import { closeOverlays } from '../../ui/index.js';
-import { createSettler, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
+import { createSettler, getUnitProgressionTrack, newLook, newPetLook } from '../../domains/colony/settlers/index.js';
 import { exitToMainMenu, resetGame } from '../../app/index.js';
 import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { bigPresetOf, getBattlePreset } from './battle.roster.js';
 import { renderBattlePanel, resetBattleSecretTapCount } from './battle.panel.js';
+import { getUnitExperienceForLevel, setUnitExperience } from '../../domains/colony/settlers/index.js';
 
 export const BATTLE_RESULT_SECONDS = 4;
 
@@ -31,8 +32,8 @@ const BATTLE_SIZE_MAX = 128;
 
 /** @type {{ phase: string, category: string, preset: string, building: string, armor: boolean | string,
  *   shield: boolean, helmet: boolean | string, big: boolean, banner: boolean, torch: boolean, field: string, fieldSize: string,
- *   fieldCols: number, fieldRows: number, time: string, weather: string,
- *   lineup: { presetId?: string, building?: string, variant?: string, x: number, y: number, armor?: boolean | string, shield?: boolean, helmet?: boolean | string, banner?: boolean, torch?: boolean,
+ *   fieldCols: number, fieldRows: number, time: string, weather: string, level: number,
+ *   lineup: { presetId?: string, building?: string, variant?: string, x: number, y: number, level?: number, experience?: number, progression?: Object<string, number>, armor?: boolean | string, shield?: boolean, helmet?: boolean | string, banner?: boolean, torch?: boolean,
  *   look?: { female: boolean, style: number, shade: number, coat?: number }, id?: number }[],
  *   winner: string | null, resultTimer: number, nextId: number, rifleUnlocked: boolean, savedMapSettings: { cols: number, rows: number } | null,
  *   difficulty: string, savedDifficulty: string | null, fieldHighlight: string }} */
@@ -44,6 +45,7 @@ export const battle = {
   armor: false,       // colony units placed next get armour / a shield (melee only)
   shield: false,
   big: false,         // (#326) the next unit placed is a big one (not a pet)
+  level: 1,
   banner: false,      // (#279) the next unit placed gets a banner: a commander, only if the player gives one
   torch: false,       // (#326) the next unit placed gets a torch at its side: lit in its hand when it's dark
   helmet: false,      // (#326, 27.10, 27) the next unit placed gets a helmet (not a pet)
@@ -66,7 +68,7 @@ export const battle = {
 
 const BATTLE_DEFAULTS = {
   category: 'units', preset: 'humans:sword', building: 'wall_wood',
-  armor: false, shield: false, helmet: false, big: false, banner: false, torch: false,
+  armor: false, shield: false, helmet: false, big: false, banner: false, torch: false, level: 1,
   field: 'glade', fieldSize: 'medium', fieldCols: 40, fieldRows: 26,
   time: 'day', weather: 'clear', difficulty: 'normal', fieldHighlight: 'classic'
 };
@@ -86,9 +88,9 @@ function normalizeBattleSize(size, cols, rows) {
 }
 
 export function saveBattleChoices() {
-  const { category, preset, building, armor, shield, helmet, big, banner, torch, field, fieldSize, fieldCols, fieldRows, time, weather, difficulty, fieldHighlight } = battle;
+  const { category, preset, building, armor, shield, helmet, big, banner, torch, level, field, fieldSize, fieldCols, fieldRows, time, weather, difficulty, fieldHighlight } = battle;
   return saveData('battle-choices', { category, preset, building, armor, shield, helmet, big, banner, torch,
-    field: field === 'backrooms' ? lastNonSecretBattleField : field, fieldSize, fieldCols, fieldRows, time, weather, difficulty, fieldHighlight });
+    level, field: field === 'backrooms' ? lastNonSecretBattleField : field, fieldSize, fieldCols, fieldRows, time, weather, difficulty, fieldHighlight });
 }
 
 export function restoreBattleChoices() {
@@ -100,6 +102,7 @@ export function restoreBattleChoices() {
   if (saved.armor === true) battle.armor = 'iron';
   else if ([false, 'leather', 'bone', 'iron'].includes(saved.armor)) battle.armor = saved.armor;
   for (const key of ['shield', 'big', 'banner', 'torch']) if (typeof saved[key] === 'boolean') battle[key] = saved[key];
+  if ([1, 2, 3].includes(saved.level)) battle.level = saved.level;
   if (saved.helmet === true) battle.helmet = 'helmet';
   else if (saved.helmet === false || saved.helmet === 'helmet' || saved.helmet === 'horned_helmet') battle.helmet = saved.helmet;
   if (saved.field === 'glade' || saved.field === 'desert' || saved.field === 'savanna') {
@@ -175,6 +178,8 @@ export function makeBattleUnit(entry) {
     if (entry.helmet && !def.pet) putOnGear(en, typeof entry.helmet === 'string' ? entry.helmet : 'helmet'); // (#326, 27.10, 27)
     if (entry.banner && !def.pet && !def.healer && !def.necromancer) en.captain = true;
     if (entry.torch && !def.pet && isDark()) en.torch = true; // (#326)
+    const track = getUnitProgressionTrack(en);
+    setUnitExperience(en, track ? entry.progression?.[track] ?? entry.experience ?? getUnitExperienceForLevel(entry.level || 1) : 0, track);
     en.facing = battleSide(entry.x) === 'green' ? 0 : Math.PI; // towards the other side, until they move
     game.enemies.push(en);
     return;
@@ -197,6 +202,8 @@ export function makeBattleUnit(entry) {
   if (entry.banner && (s.role === 'soldier' || s.role === 'archer')) s.banner = true; // (#279) the player gave it
   if (entry.torch && s.role !== 'pet' && isDark()) s.torchInHand = true; // (#326)
   if (s.tool === 'medbag') s.bagHerbs = GAME_CONFIG.medic.bagSize; // (#326: a medic starts with its bag full)
+  const track = getUnitProgressionTrack(s);
+  setUnitExperience(s, track ? entry.progression?.[track] ?? entry.experience ?? getUnitExperienceForLevel(entry.level || 1) : 0, track);
   game.settlers.push(s);
 }
 
@@ -463,9 +470,19 @@ export function battleTap(x, y) {
     battle.lineup.push(entry);
   } else {
     const picked = getBattlePreset(battle.preset), big = battle.big && picked ? bigPresetOf(picked) : undefined; // (#326)
-    battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy, armor: battle.armor, shield: battle.shield, helmet: battle.helmet, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
+    const track = getUnitProgressionTrack(picked);
+    const experience = getUnitExperienceForLevel(battle.level);
+    battle.lineup.push({ presetId: big ? big.id : battle.preset, x: cx, y: cy,
+      ...(track ? { level: battle.level, experience, progression: { [track]: experience } } : {}),
+      armor: battle.armor, shield: battle.shield, helmet: battle.helmet, banner: battle.banner, torch: battle.torch }); // (an enemy too, #279)
   }
   resetBattleUnits();
+}
+
+export function setBattleLevel(level) {
+  if (![1, 2, 3].includes(level) || (battle.phase !== 'off' && battle.phase !== 'setup')) return;
+  battle.level = level;
+  saveBattleChoices();
 }
 
 // The difficulty (#255): the red side made again with it

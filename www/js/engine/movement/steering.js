@@ -389,12 +389,14 @@ function stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smo
         if (smooth) { entity.moveVx = 0; entity.moveVy = 0; }
         entity.x += fallback.x;
         entity.y += fallback.y;
+        if (!isEnemy) { entity.moveVx = fallback.x; entity.moveVy = fallback.y; }
       } else {
         entity.path = null;
       }
     } else {
       entity.x += vx;
       entity.y += vy;
+      if (!isEnemy) { entity.moveVx = vx; entity.moveVy = vy; }
     }
   }
 }
@@ -421,6 +423,7 @@ function stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth =
     if ((!collidesWithWall(entity.x + directVx, entity.y + directVy, bodyRadius, false, !!entity.panic) || collidesWithWall(entity.x, entity.y, bodyRadius, false, !!entity.panic)) && !stepsOntoSpikes(entity, directVx, directVy)) {
       entity.x += directVx;
       entity.y += directVy;
+      if (!smooth) { entity.moveVx = directVx; entity.moveVy = directVy; }
     } else if (smooth) {
       entity.moveVx = 0;
       entity.moveVy = 0;

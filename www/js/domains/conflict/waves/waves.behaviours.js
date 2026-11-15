@@ -7,12 +7,12 @@ import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, isNight } from
 import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
-import { damageSettler, faceTowards, isUntouchable, speak, startSwing, tauntOnSight } from '../../colony/settlers/index.js';
+import { addUnitExperience, damageSettler, faceTowards, getUnitAttackSpeedMultiplier, getUnitHealingSpeedMultiplier, getUnitWeaponProgressionTrack, isUntouchable, speak, startSwing, tauntOnSight } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
 import { clampEntityToBounds, collidesWithBoxList, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
-import { hasLineOfFire, hasMeleeReach, shouldUseRangedDagger } from '../combat/index.js';
+import { getProjectileAimPoint, hasLineOfFire, hasMeleeReach, shouldUseRangedDagger } from '../combat/index.js';
 import { findTowerExit } from '../towers/index.js';
 import { playSound } from '../../../app/index.js';
 import { enemyMedicKeepsBack, enemyPanic, ghostScare, isGhostStunned, necromancerKeepsBack, shakeMorale } from '../morale/index.js';
@@ -126,7 +126,8 @@ function enemyHeal(en, healer, dt) {
   if (Math.hypot(patient.x - en.x, patient.y - en.y) > healRange + patient.radius) {
     moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
   } else {
-    en.healTimer = (en.healTimer || 0) + dt;
+    en.healTimer = (en.healTimer || 0) + dt * getUnitHealingSpeedMultiplier(en);
+    addUnitExperience(en, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
     if (en.healTimer >= healer.healSeconds) {
       en.healTimer %= healer.healSeconds;
       if (!battle) en.herbs--;
@@ -768,20 +769,24 @@ function enemyShoot(en, enemyDef, target, minDist, clearShot, dt, fromTower = nu
   const shot = shotOf(enemyDef), reach = fromTower ? fromTower.tower.reach || 1 : 1;
   if (enemyDef.weapon !== 'rifle') en.attackCooldown = (en.attackCooldown || 0) - dt;
   if (clearShot && minDist < shot.range * reach && en.attackCooldown <= 0) {
-    let angle = Math.atan2(target.y - en.y, target.x - en.x);
+    const origin = fromTower || en;
+    const aim = getProjectileAimPoint(en, target, shot.arrowSpeed, shot.arrowLife * reach, origin.x, origin.y);
+    let angle = Math.atan2(aim.y - origin.y, aim.x - origin.x);
     const bolt = enemyDef.weapon === 'crossbow';
     const rifle = enemyDef.weapon === 'rifle';
     if (rifle && (en.rifleAmmo || 0) <= 0) return;
     playSound(rifle ? 'rifle' : bolt ? 'crossbow' : 'bow', en);
     game.projectiles.push({ x: en.x, y: en.y, vx: Math.cos(angle) * shot.arrowSpeed, vy: Math.sin(angle) * shot.arrowSpeed, damage: en.damage * (en.panic && getEnemyFaction().id === 'undead' ? GAME_CONFIG.morale.panicDamage : 1),
       life: shot.arrowLife * reach, fromEnemy: true, owner: en, fromTower: !!fromTower, bolt, bullet: rifle,
+      progressionTrack: getUnitWeaponProgressionTrack(en),
       skipTownHall: game.gameMode === 'menu' && en.attackTarget?.type === 'demon' });
     startSwing(en, 0.3);
     faceTowards(en, target.x, target.y);
     if (rifle) {
       en.rifleAmmo--;
-      en.attackCooldown = en.rifleAmmo === 0 ? GAME_CONFIG.weapons.rifle.combat.reload : shot.cooldown / (en.battleAttackSpeed || 1);
-    } else en.attackCooldown = game.gameMode === 'battle' ? (en.shotCooldown || shot.cooldown) / (en.battleAttackSpeed || 1) : en.shotCooldown || shot.cooldown; // (a bow's rate in a settler's hands, #255)
+      en.attackCooldown = en.rifleAmmo === 0 ? GAME_CONFIG.weapons.rifle.combat.reload : shot.cooldown / getUnitAttackSpeedMultiplier(en, 'ranged') / (en.battleAttackSpeed || 1);
+    } else en.attackCooldown = (en.shotCooldown || shot.cooldown) /
+      getUnitAttackSpeedMultiplier(en, 'ranged') / (game.gameMode === 'battle' ? en.battleAttackSpeed || 1 : 1); // (a bow's rate in a settler's hands, #255)
     en.swingWeapon = null;
     en.shotAt = game.pathTick; en.shotLen = en.attackCooldown; en.struckAt = game.pathTick; // (its next arrow drawn, #306)
     if (enemyDef.quiver && game.gameMode !== 'battle' && !game.plagueMode) en.arrows--;
@@ -839,7 +844,7 @@ function breakBuilding(en, building, enemyDef, dt) {
   en.siegeTargetTick = game.pathTick;
   if (game.gameMode === 'battle' && en.nextStrikeTick == null) en.nextStrikeTick = game.pathTick + 1;
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
-  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / dt));
+  en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(cooldown / getUnitAttackSpeedMultiplier(en, 'melee') / dt));
   if (enemyDef.ranged) { en.weapon = 'dagger'; en.swingWeapon = 'dagger'; }
   faceTowards(en, building.x, building.y);
   startSwing(en, Math.min(0.5, cooldown));
@@ -917,7 +922,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
     return;
   }
   if (game.pathTick < (en.nextStrikeTick || 0)) return;
-  const attackCooldown = game.gameMode === 'battle' ? cooldown / (en.battleAttackSpeed || 1) : cooldown;
+  const attackCooldown = cooldown / getUnitAttackSpeedMultiplier(en, 'melee') / (game.gameMode === 'battle' ? en.battleAttackSpeed || 1 : 1);
   en.nextStrikeTick = game.pathTick + Math.max(1, Math.round(attackCooldown / dt));
   en.swingWeapon = dagger ? 'dagger' : null;
   startSwing(en, enemyDef.healer ? 0.3 : Math.min(0.5, cooldown)); en.struckAt = game.pathTick; // (#326: a dog's bite drawn from its swing)
@@ -926,7 +931,7 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
     let splashRadius = enemyDef.splash.radius;
     let splashDamage = blow * en.damage * enemyDef.splash.share;
     if (target === townHall) townHall.hp -= blow * en.damage;
-    else damageSettler(target, blow * en.damage, en);
+    else damageSettler(target, blow * en.damage, en, getUnitWeaponProgressionTrack(en));
 
     /** @type {any[]} */
     const around = game.settlers.filter(s => s !== target && Math.hypot(en.x - s.x, en.y - s.y) < splashRadius + s.radius);
@@ -934,10 +939,10 @@ function enemyStrike(en, enemyDef, meleeDef, target, dt) {
     const edge = o => Math.hypot(en.x - o.x, en.y - o.y) - (o.radius || 0);
     for (const o of around.sort((a, b) => edge(a) - edge(b)).slice(0, GAME_CONFIG.combatAI.splashMax - 1)) {
       if (o === townHall) townHall.hp -= splashDamage;
-      else damageSettler(o, splashDamage, en);
+      else damageSettler(o, splashDamage, en, getUnitWeaponProgressionTrack(en));
     }
   } else {
     if (target === townHall) townHall.hp -= cooldown * meleeDamage;
-    else damageSettler(target, cooldown * meleeDamage, en);
+    else damageSettler(target, cooldown * meleeDamage, en, getUnitWeaponProgressionTrack(en));
   }
 }

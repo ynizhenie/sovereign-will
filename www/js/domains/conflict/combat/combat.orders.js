@@ -70,7 +70,7 @@ function strike(s, target, dt) {
       : combat.approach + (target.radius || 10);
   const bow = isRangedWeapon(s.weapon);
   if (dist(s, target) > reach || (bow && !ranged && !hasLineOfFire(s.x, s.y, target.x, target.y))) moveEntityTowards(s, target.x, target.y, s.speed, false, dt);
-  else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y, ranged); }
+  else { faceTowards(s, target.x, target.y); performAttack(s, target.x, target.y, ranged, target); }
 }
 
 // One unit's tick under orders (auto: the auto battle). Its spot: where it stood when the fight began,

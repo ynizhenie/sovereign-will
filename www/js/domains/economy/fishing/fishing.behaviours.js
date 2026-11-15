@@ -5,7 +5,7 @@ import { game } from '../../../engine/world/index.js';
 import { addCarryLoad, findNearestStorage, giveResourceToSettler, isAtStorage, walkToStorage } from '../../colony/storage/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { isInSafeArea } from '../../conflict/combat/index.js';
-import { faceTowards, noteDay } from '../../colony/settlers/index.js';
+import { addUnitExperience, faceTowards, getUnitWorkSpeedMultiplier, noteDay } from '../../colony/settlers/index.js';
 import { corpseHasWorms, getFishingBait, takeFishingBait } from './fishing.rules.js';
 import { canGather } from '../gathering/index.js';
 import { playSound } from '../../../app/index.js';
@@ -51,13 +51,14 @@ export function fishAt(s, fishSpot, dt) {
       s.patrolTarget = null;
       return;
     }
-    fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt;
+    fishSpot.fishTimer = (fishSpot.fishTimer || 0) + dt * getUnitWorkSpeedMultiplier(s, 'fishing');
     s.working = 0.1;
     faceTowards(s, fishSpot.x, fishSpot.y);
     if (fishSpot.fishTimer >= GAME_CONFIG.fishing.seconds) {
       for (const [item, amount] of Object.entries(GAME_CONFIG.fishing.catch)) giveResourceToSettler(s, item, amount);
       playSound('catch', s);
       noteDay(s, 'fished'); // (its day, #306)
+      addUnitExperience(s, 1, 'fishing');
       addCarryLoad(s);
       s.bait = false;
       fishSpot.fishCount--;

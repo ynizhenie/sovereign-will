@@ -22,7 +22,7 @@ export const enemiesConfig = {
     // (#314) each faction's pet on the enemy's side; a ghost flies into a settler (it panics) and is gone, and can't be hurt
     raider_dog: { id: 'raider_dog', pet: 'dog', hp: 45, speed: 1.35, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 9, waveKey: 'raider', reach: 4, siege: { buildings: 3, resources: 0 } },
-    demon_beast: { id: 'demon_beast', pet: 'beast', hp: 60, speed: 1.3, damage: 14, reward: { food: 1 }, weapon: 'fist',
+    demon_beast: { id: 'demon_beast', pet: 'beast', hp: 60, speed: 1.3, damage: 15, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 4, siege: { buildings: 3, resources: 0 } },
     undead_ghost: { id: 'undead_ghost', pet: 'ghost', hp: 30, speed: 1.6, damage: 0, reward: {}, weapon: 'fist',
       type: 'normal', radius: 8, waveKey: 'raider', reach: 4, siege: { buildings: 0, resources: 0 } },

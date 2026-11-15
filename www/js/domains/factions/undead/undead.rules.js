@@ -7,7 +7,7 @@ import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
-import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
+import { addUnitExperience, copyUnitProgression, createSettler, dropSettlerLoot, faceTowards, getUnitHealingSpeedMultiplier } from '../../colony/settlers/index.js';
 import { armorOf, canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
@@ -181,6 +181,7 @@ function enemyZombieKey(corpse, weapon) {
 /** @param {any} corpse @param {import('../../../engine/world/types.js').Settler | null} [master] */
 export function raiseTemporaryZombie(corpse, master = null) {
   const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
+  copyUnitProgression(zombie, corpse);
   zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
   if (master) {
     zombie.masterId = master.id;
@@ -247,7 +248,8 @@ export function enemyNecromancy(en, necro, dt) {
     en.working = 0.1;
     faceTowards(en, corpse.x, corpse.y);
     en.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 };
-    en.raiseTimer = (en.raiseTimer || 0) + dt;
+    en.raiseTimer = (en.raiseTimer || 0) + dt * getUnitHealingSpeedMultiplier(en);
+    addUnitExperience(en, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
     if (en.raiseTimer >= necro.raiseSeconds) {
       en.raiseTimer = 0;
       en.raisesLeft--;
@@ -276,7 +278,8 @@ export function enemyNecromancy(en, necro, dt) {
   if (patient) {
     if (dist(patient) > necro.healRange) moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
     else {
-      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt * getUnitHealingSpeedMultiplier(en));
+      addUnitExperience(en, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
       patient.necroTreatedAt = game.pathTick;
       en.working = 0.1;
       faceTowards(en, patient.x, patient.y);

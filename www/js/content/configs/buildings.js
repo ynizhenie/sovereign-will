@@ -50,8 +50,8 @@ export const buildingsConfig = {
     // everything with
     workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 80 } },
     smithy: { id: 'smithy', group: 'economy', icon: 'smithy', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 80 } },
-    // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
-    // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
+    // a training dummy (#199): idle soldiers and archers gain experience while training; trainers: at most
+    // this many at once
     dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },
     // a fish trap (#199): on a water tile a fisher could fish from (onWater, #248); baited, it catches a fish
     // every fishTrap.seconds, holding up to fishTrap.holds, and a bait (what a fisher uses,

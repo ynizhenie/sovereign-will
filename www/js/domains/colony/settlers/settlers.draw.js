@@ -24,6 +24,20 @@ import { hasClearEnemyLine } from '../../../engine/movement/index.js';
 export const simpleUnit = () => false;
 export const tinyUnit = () => false;
 
+export function drawLevelIndicator(x, y, level) {
+  const text = String(level);
+  ctx.save();
+  ctx.font = 'bold 7px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+  ctx.fillStyle = '#fff';
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 // A strike: the held weapon or tool swings through once over `seconds`
 export function startSwing(unit, seconds) {
   unit.swingT = seconds;
@@ -871,7 +885,10 @@ export function drawSettlers(only = null) {
   const dab = 1.6 / scale; // (a couple of screen px, in world units)
   (only ? [only] : game.settlers).forEach(s => {
     if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) return;
-    if (isPet(s)) { drawPet(s); return; } // (#314)
+    if (isPet(s)) {
+      drawPet(s);
+      return;
+    } // (#314)
     // (#306) one or two pixels on the screen: a dab of its colour, and the ring of the one picked
     if (tiny) {
       ctx.fillStyle = getSettlerColor(s);
