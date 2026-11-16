@@ -1,5 +1,8 @@
 {
   "appId": "com.lima.game",
   "appName": "Sovereign Will",
-  "webDir": "www"
+  "webDir": "www",
+  "android": {
+    "webContentsDebuggingEnabled": true
+  }
 }
