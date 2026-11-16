@@ -1068,6 +1068,7 @@ export const ukLanguage = {
       'info.morale': 'мораль {n}',
       'info.panic': '[[warn]] у паніці',
       'activity.panic': 'У паніці',
+      'activity.shelterFromEnemy': 'Ховається біля ратуші',
       'activity.cook': 'Готує',
       'activity.deliverMaterials': 'Несе матеріали на будову',
       'activity.deliverCarrying': 'Несе на склад',

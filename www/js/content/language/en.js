@@ -1068,6 +1068,7 @@ export const enLanguage = {
       'info.morale': 'morale {n}',
       'info.panic': '[[warn]] in a panic',
       'activity.panic': 'Panicking',
+      'activity.shelterFromEnemy': 'Sheltering at the hall',
       'activity.cook': 'Cooking',
       'activity.deliverMaterials': 'Carrying materials to a build',
       'activity.deliverCarrying': 'Carrying to storage',

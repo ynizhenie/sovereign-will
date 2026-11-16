@@ -188,8 +188,7 @@ test('Plague does not accumulate resources for packs at the hidden town hall', a
 
 test('Plague bands come in on standable ground away from the hero, armed as Endless\'s waves, no crossbowmen (#404, 2, 3, 8)', async ({ page }) => {
   const errors = await openGame(page);
-  await startPlague(page);
-  expect(await page.evaluate(() => savannaTiles.length)).toBeGreaterThan(0);
+  await startPlague(page); // (#418: no check for savanna here: a Plague map may have none, as the test of its biomes says)
   const r = await page.evaluate(() => {
     const hero = settlers.find(s => s.plagueHero);
     const seen = [];

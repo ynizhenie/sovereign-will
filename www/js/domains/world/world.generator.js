@@ -587,26 +587,31 @@ export function generateMap() {
   for (const _ of generateMapSteps()); // (all at once)
 }
 
+// (Plague) savanna round every desert tile, as far as the share allows: before the other savannas, and again
+// once rock in the desert has had sand put under it (markDesertUnderRocks), the desert's edge grown by those
+function wrapDesertsInSavanna(tileLimit = getBiomeTileLimit('savannaMaxShare')) {
+  if (!GAME_CONFIG.map?.savannaAroundDesert) return;
+  for (const desert of game.desertTiles) {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const x = desert.x + dx * TILE_SIZE, y = desert.y + dy * TILE_SIZE;
+      if (x < BORDER_MARGIN * TILE_SIZE + 15 || y < BORDER_MARGIN * TILE_SIZE + 15 ||
+          x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE - 15 || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE - 15 ||
+          Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
+          thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || thingAt(game.savannaTiles, x, y)) continue;
+      if (game.savannaTiles.length >= tileLimit) break;
+      game.savannaTiles.push({ x, y });
+    }
+    if (game.savannaTiles.length >= tileLimit) break;
+  }
+}
+
 function placeSavannas() {
   const count = getMapCount('savannas', 0);
   const rxRange = getMapRange('savannaRadiusX', 3, 5);
   const ryRange = getMapRange('savannaRadiusY', 2, 4);
   const tileLimit = getBiomeTileLimit('savannaMaxShare');
-  if (GAME_CONFIG.map?.savannaAroundDesert) {
-    for (const desert of game.desertTiles) {
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const x = desert.x + dx * TILE_SIZE, y = desert.y + dy * TILE_SIZE;
-        if (x < BORDER_MARGIN * TILE_SIZE + 15 || y < BORDER_MARGIN * TILE_SIZE + 15 ||
-            x >= (game.COLS - BORDER_MARGIN) * TILE_SIZE - 15 || y >= (game.ROWS - BORDER_MARGIN) * TILE_SIZE - 15 ||
-            Math.hypot(x - townHall.x, y - townHall.y) < townHall.radius + TILE_SIZE / 2 ||
-            thingAt(game.waterTiles, x, y) || thingAt(game.desertTiles, x, y) || thingAt(game.savannaTiles, x, y)) continue;
-        if (game.savannaTiles.length >= tileLimit) break;
-        game.savannaTiles.push({ x, y });
-      }
-      if (game.savannaTiles.length >= tileLimit) break;
-    }
-  }
+  wrapDesertsInSavanna(tileLimit);
   for (let n = 0; n < count && game.savannaTiles.length < tileLimit; n++) {
     const rx = rxRange.min + Math.floor(rand() * (rxRange.max - rxRange.min + 1));
     const ry = ryRange.min + Math.floor(rand() * (ryRange.max - ryRange.min + 1));
@@ -728,6 +733,7 @@ export function* generateMapSteps() {
   placeBeaches();
   placeAppleTrees();
   markDesertUnderRocks();
+  wrapDesertsInSavanna();
 }
 
 export function markStartingZoneResources() {

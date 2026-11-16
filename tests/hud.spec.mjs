@@ -73,6 +73,7 @@ test('farm zones and the base night-work boundary are drawn with the Zones tab o
     };
     const onBuild = { wheat: zoneFrames('241, 196, 15, 0.55'), rice: zoneFrames('255, 255, 255, 0.55'), base: baseBoundary() };
     switchTab(document.querySelector('.tab-btn[data-arg="tab-farming"]'), 'tab-farming');
+    game.showBaseZone = true; // (#418: the boundary is off until its button turns it on)
     const onFarming = { wheat: zoneFrames('241, 196, 15, 0.55'), rice: zoneFrames('255, 255, 255, 0.55'), base: baseBoundary() };
     return { onBuild, onFarming };
   });

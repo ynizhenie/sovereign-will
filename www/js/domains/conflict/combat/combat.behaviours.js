@@ -115,7 +115,8 @@ export function strikeBack(s, tick) {
     const distance = Math.hypot(enemy.x - s.x, enemy.y - s.y);
     if (distance < nearestDistance) { nearestDistance = distance; target = enemy; }
   }
-  if (target !== attacker && (nearestDistance >= attackerDistance ||
+  // (another only if it's a tile nearer: two shooting from about as far, it keeps to the one it's after)
+  if (target !== attacker && (nearestDistance >= attackerDistance - TILE_SIZE ||
       (!isRangedWeapon(s.weapon) && meleeFull(target, tick)))) target = attacker;
   s.fightTarget = target;
   return engageEnemy(s, tick, target, target === attacker ? attacker : null, tick.dt);

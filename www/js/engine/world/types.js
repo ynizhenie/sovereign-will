@@ -101,6 +101,7 @@
  * @property {boolean} [trapped]    held in the other side's iron trap (#326)
  * @property {number} [trappedFor]  seconds it's held yet
  * @property {((s: any, tick: any, markedOnly?: boolean) => boolean) | null} [lastBehaviour] the behaviour that took it last tick (everyday work goes on without the whole list, #322)
+ * @property {{ x: number, y: number }} [pathSeen] where it was at the last look for worn paths (kept on it, so in saves)
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)

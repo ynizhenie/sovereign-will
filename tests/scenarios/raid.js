@@ -350,6 +350,7 @@ Object.assign(window.sim, (() => {
     game.mapSettings = { cols: 128, rows: 128 };
     start(seed);
     const camp = createEnemyCamp();
+    update(1 / 60); // (#418: on its first tick a camp may swap a guard for one matched to the army; the one kept is tested)
     const guard = enemies.find(enemy => enemy.campGuard && enemy.campId === camp.id && !enemy.campFireKeeper);
     if (!guard) throw new Error('Enemy camp has no guard to test');
     game.raidActive = false;

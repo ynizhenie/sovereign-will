@@ -1068,6 +1068,7 @@ export const ruLanguage = {
       'info.morale': 'мораль {n}',
       'info.panic': '[[warn]] в панике',
       'activity.panic': 'В панике',
+      'activity.shelterFromEnemy': 'Укрывается у ратуши',
       'activity.cook': 'Готовит',
       'activity.deliverMaterials': 'Несёт материалы на стройку',
       'activity.deliverCarrying': 'Несёт на склад',
