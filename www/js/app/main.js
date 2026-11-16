@@ -8,6 +8,7 @@ import { isPossessionCameraFollowing } from '../domains/colony/settlers/index.js
 import { game } from '../engine/world/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
+import { perfBegin, perfFrame, perfMark } from './perfmon.js';
 import { isDefeated, updateDefeat } from '../modes/endless/index.js';
 import { syncMenuWorld } from '../modes/menu/index.js';
 import { updateMusic } from './sounds.js';
@@ -46,9 +47,11 @@ function refreshHud(now) {
 export function gameLoop(now) {
   // (the next frame asked for first: a frame that fails doesn't stop the game for good)
   requestAnimationFrame(gameLoop);
+  perfBegin();
   if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu
   syncHudMode();
   if (typeof updateMusic === 'function') updateMusic();
+  perfMark('loop');
   loop.stepTime += Math.min(0.25, (now - loop.lastTime) / 1000);
   loop.lastTime = now;
   let steps = 0;
@@ -68,13 +71,17 @@ export function gameLoop(now) {
   refreshHud(now);
   const stepped = performance.now();
   detail.step += stepped - started;
+  perfMark('hud');
 
+  let drawn = 0;
   if (frameDue(now)) {
     fitCanvasToScreen(); // cheap unless the game area changed size (rotation, panels)
     drawBetweenSteps(Math.min(1, loop.stepTime / STEP), render);
-    detail.draw += performance.now() - stepped;
+    drawn = performance.now() - stepped;
+    detail.draw += drawn;
     countFrame(now);
   }
+  perfFrame(now, performance.now(), stepped - started, drawn, steps); // (the performance monitor, when it's on: see perfmon.js)
 }
 
 // (#322) Smooth on a fast screen: the game moves in steps of 1/60 s, but a 120 or 144 Hz screen shows a frame

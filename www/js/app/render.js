@@ -15,6 +15,7 @@ import { beginShadowFrame, drawDarkness, drawFireflies, drawFog, drawGrassGround
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBackroomsFloor, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
+import { perfMark } from './perfmon.js';
 
 /** @type {{ depth: number, order: number, actor: any, draw: (actor: any) => void }[]} */
 const sceneItems = [];
@@ -47,9 +48,11 @@ export function render() {
     ctx.beginPath();
   }
   beginShadowFrame(ctx); // (the shadows drawn in the world from here are kept for the next frame's, see drawShadowLayer)
+  perfMark('d:start');
 
   if (game.gameMode === 'battle' && battle.field === 'backrooms') drawBackroomsFloor();
   else drawGrassGround();
+  perfMark('d:ground');
   drawPaths(); // (#248)
 
   const terrain = getTileIndex();
@@ -63,8 +66,10 @@ export function render() {
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
   drawEditorOutposts();
+  perfMark('d:terrain');
   // all the shadows at once, on the ground under everything that stands on it (world.daytime.js)
   drawShadowLayer(drawStillShadows, () => { drawSettlerShadows(); drawEnemyShadows(); });
+  perfMark('d:shadows');
   drawWallows(); // (the ground boars dug, on the ground, #326)
   drawSelectedPaths(); // (where the picked ones are going, #326)
   drawSticksPebblesOre();
@@ -73,6 +78,7 @@ export function render() {
   drawTownHall();
   drawTrees();
   drawCactiBouldersGrassBushes();
+  perfMark('d:nature');
   drawFarmPlots();
   drawPriorityMarks();
   drawBlueprints();
@@ -85,7 +91,9 @@ export function render() {
   drawDung();
   drawCorpses();
   drawEnemyTentSites();
+  perfMark('d:buildings');
   drawDepthSortedScene();
+  perfMark('d:units');
   drawMenuOutpostHealthBar();
   drawUnitLevelIndicators();
   drawMoraleMarks();
@@ -93,16 +101,20 @@ export function render() {
   drawRaising();
   drawSouls(); // (flying into a necromancer's lantern, out of it into a grave, #326)
   drawProjectiles();
+  perfMark('d:marks');
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)
   drawFog(); // (what the colony hasn't seen dark, what it doesn't see now dimmed, #299)
   endShadowFrame();
+  perfMark('d:weather/fog');
 
   ctx.restore();
   if (onCard) glEndFrame();
+  perfMark('d:gl');
   drawDarkness(); // (night, with its lights, #257)
   drawFireflies();
   drawLitWindows(); // (the hall's, bright in the dark)
   drawWeatherScreen(); // (rain, lightning, #308)
+  perfMark('d:night/rain');
 
   if (game.gameMode === 'battle') drawBattleResult();
   // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)

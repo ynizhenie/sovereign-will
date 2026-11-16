@@ -2,7 +2,7 @@
 
 import { LANGUAGES } from '../../content/language/index.js';
 import { audio, currentLanguage, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
-import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, previewTrack, setTrackOn } from '../../app/index.js';
+import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, perf, previewTrack, setPerfMonitor, setTrackOn } from '../../app/index.js';
 import { flagHtml, iconHtml } from '../../ui/index.js';
 import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
 
@@ -142,6 +142,9 @@ export function initMenuScreens() {
     saveSetting('showFps', button.dataset.showFps);
     applyShowFps(button.dataset.showFps);
   }));
+  const markPerfMonitor = () => document.querySelectorAll('[data-perf-monitor]').forEach(b => b.classList.toggle('active', (b.dataset.perfMonitor === 'on') === perf.on));
+  markPerfMonitor();
+  document.querySelectorAll('[data-perf-monitor]').forEach(button => onTap(button, () => { setPerfMonitor(button.dataset.perfMonitor === 'on'); markPerfMonitor(); }));
   const markShadows = enabled => document.querySelectorAll('[data-shadows]').forEach(button => button.classList.toggle('active', (button.dataset.shadows === 'on') === enabled));
   markShadows(areShadowsEnabled());
   document.querySelectorAll('[data-shadows]').forEach(button => onTap(button, () => {
