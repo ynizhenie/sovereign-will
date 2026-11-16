@@ -90,11 +90,10 @@ export function setPaused(paused) {
   btn.setAttribute('aria-label', t(game.isPaused ? 'pause.resumeHint' : 'pause.pauseHint'));
   btn.classList.toggle('paused', game.isPaused);
   document.getElementById('pause-menu').hidden = !game.isPaused;
-  // saving and loading are Endless's: not in a battle (#254)
+  // Endless and Plague keep separate save lists; battles and the editor have none.
   const endless = game.gameMode === 'endless' && !game.plagueMode;
-  document.getElementById('save-game-button').hidden = !endless || isInCamp(); // (not in a raid's camp, #255; on the way there or back it saves, #298)
-  document.getElementById('load-game-button').hidden = !endless;
-  document.getElementById('pause-load').hidden = true;
+  const plague = game.gameMode === 'endless' && game.plagueMode;
+  document.getElementById('save-game-button').hidden = !(endless || plague) || (endless && isInCamp()); // (not in a raid's camp, #255; on the way there or back it saves, #298)
 }
 
 export function exitToMainMenu() {

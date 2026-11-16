@@ -617,6 +617,52 @@ test('Plague menu: the default ranges or the player\'s own, kept to switch back 
   expect(errors).toEqual([]);
 });
 
+test('Plague saves are separate and available from its setup and pause menus', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.evaluate(() => {
+    localStorage.removeItem('sovereign-will-saves');
+    localStorage.removeItem('sovereign-will-plagueSaves');
+    showMenuScreen('home');
+  });
+  await page.click('#mode-plague');
+  await expect(page.locator('#plague-open-saves')).toBeVisible();
+  await page.click('#plague-open-saves');
+  await expect(page.locator('#save-list [data-save]')).toHaveCount(0);
+  await page.click('[data-screen="saves"] [data-back]');
+  await expect(page.locator('[data-screen="plague"]')).toBeVisible();
+
+  await page.click('#plague-play');
+  await page.waitForFunction(() => gameStarted && !loading && plagueMode, null, { timeout: 60000 });
+  await page.click('#btn-pause-toggle');
+  await expect(page.locator('#save-game-button')).toBeVisible();
+  await page.evaluate(() => { game.plague.energy = 17; });
+  await page.click('#save-game-button');
+  await page.click('#save-new-button');
+  await expect(page.locator('#save-status')).toContainText('Сохранено');
+  await expect(page.locator('#save-list [data-save]')).toHaveCount(1);
+  expect(await page.evaluate(() => ({
+    endless: localStorage.getItem('sovereign-will-saves'),
+    plague: Object.keys(JSON.parse(localStorage.getItem('sovereign-will-plagueSaves'))).length
+  }))).toEqual({ endless: null, plague: 1 });
+
+  await page.click('[data-screen="saves"] [data-back]');
+  await page.evaluate(() => { game.plague.energy = 2; });
+  await page.click('#save-game-button');
+  await page.click('#save-list [data-save]');
+  await expect.poll(() => page.evaluate(() => [plagueMode, Math.floor(game.plague.energy), isPaused])).toEqual([true, 17, false]);
+  await expect(page.locator('#card-offer')).toHaveCount(0);
+
+  await page.click('#btn-pause-toggle');
+  await page.click('#exit-to-menu-button');
+  await page.click('#mode-plague');
+  await page.click('#plague-open-saves');
+  await expect(page.locator('#save-list [data-save]')).toHaveCount(1);
+  await expect(page.locator('[data-screen="saves"] [data-back]')).toHaveAttribute('data-back-to', 'plague');
+  await page.click('[data-screen="saves"] [data-back]');
+  await expect(page.locator('[data-screen="plague"]')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('Plague: the dead keep their weapons, a corpse shows its, arrows never run out, its own music by level (#404, 6, 7, 9, 14)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);

@@ -26,7 +26,7 @@
         <button id="menu-next-scene" class="btn" data-i18n="menu.nextScene">[[reroll]] Next scene</button>
         <button id="menu-show" class="btn" data-i18n="menu.showMenu">[[menu]] Menu</button>
     </div>
-    <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless/Battles setup, Settings -->
+    <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless/Saves/Battles setup, Settings -->
     <div class="main-menu-content" data-screen="home">
         <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
         <button id="mode-plague" class="menu-button" data-i18n="plague.mode">Plague</button>
@@ -38,17 +38,40 @@
     <!-- The current language; tapping its flag cycles languages. -->
     <div class="flag-box" id="menu-flags"></div>
 
+    <div class="main-menu-content save-manager" data-screen="saves" hidden>
+        <button class="menu-back" data-back data-back-to="endless" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="menu.saves">Saves</h1>
+        <div id="save-actions" class="save-manager-actions" hidden>
+            <button id="save-overwrite-button" class="menu-button menu-button-primary" data-i18n="save.overwrite" hidden>Overwrite current save</button>
+            <button id="save-new-button" class="menu-button" data-i18n="save.new">Save as new</button>
+        </div>
+        <div id="save-status" role="status" aria-live="polite"></div>
+        <div class="save-import-actions">
+            <button id="import-save-button" class="menu-button" data-i18n="save.import">Import save</button>
+            <input id="import-save-file" type="file" accept="application/json,.json" hidden>
+        </div>
+        <div data-i18n="save.list">Saved games:</div>
+        <div id="save-list"></div>
+    </div>
+
+    <div class="main-menu-content save-manager map-manager" data-screen="maps" hidden>
+        <button class="menu-back" data-back data-back-to="endless" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="editor.savedMaps">Saved maps</h1>
+        <div id="map-manager-status" role="status" aria-live="polite"></div>
+        <div class="save-import-actions">
+            <button id="map-import-button" class="menu-button" data-i18n="editor.importMap">Import map</button>
+            <input id="map-import-file" type="file" accept="application/json,.json" hidden>
+        </div>
+        <div id="map-manager-list" class="tile-grid save-tiles"></div>
+    </div>
+
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="menu.endless">Endless</h1>
         <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
-
-        <div class="wave-settings" id="save-settings" hidden>
-            <div data-i18n="save.list">Saved games:</div>
-            <div id="save-list"></div>
-        </div>
+        <button id="open-saves" class="menu-button" data-i18n="menu.saves">Saves</button>
 
         <div class="wave-settings faction-settings">
             <div data-i18n="menu.factions">Factions:</div>
@@ -111,7 +134,7 @@
                 <button class="map-source-option active" data-map-source="random" data-i18n="menu.randomMap">Random</button>
                 <button class="map-source-option" data-map-source="custom" data-i18n="menu.customMap">Custom map</button>
             </div>
-            <div id="custom-map-list" class="preset-list custom-map-only"></div>
+            <button id="endless-open-maps" class="menu-button custom-map-only" data-i18n="editor.savedMaps">Saved maps</button>
         </div>
 
         <div class="wave-settings random-map-only">
@@ -202,17 +225,14 @@
             </div>
         </div>
         <div data-seed-slot="editor"></div>
-        <div class="wave-settings">
-            <div data-i18n="editor.savedMaps">Saved maps:</div>
-            <div id="editor-map-list" class="preset-list"></div>
-        </div>
+        <button id="editor-open-maps" class="menu-button" data-i18n="editor.savedMaps">Saved maps</button>
     </div>
 
     <div class="main-menu-content plague-menu" data-screen="plague" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="plague.title">Plague</h1>
         <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
-        <p data-i18n="plague.intro">Raise the fallen, lead the dead, and survive the marching enemy bands.</p>
+        <button id="plague-open-saves" class="menu-button" data-i18n="menu.saves">Saves</button>
         <div class="wave-settings">
           <div data-i18n="menu.difficulty">Difficulty:</div>
           <div class="wave-options" id="plague-difficulty-options">
@@ -344,10 +364,7 @@
         <h1 data-i18n="pause.title">Paused</h1>
         <div class="pause-seed"><span data-i18n="pause.seed">World seed</span>: <span id="hud-seed">-</span></div>
         <button id="resume-button" class="menu-button menu-button-primary" data-i18n="pause.continue">Continue</button>
-        <button id="save-game-button" class="menu-button" data-i18n="save.button">Save game</button>
-        <!-- the saves, to load one (#254) -->
-        <button id="load-game-button" class="menu-button" data-i18n="save.load">Load game</button>
-        <div id="pause-load" class="wave-settings" hidden><div id="pause-load-list"></div></div>
+        <button id="save-game-button" class="menu-button" data-i18n="save.button">Save / Load</button>
         <button id="pause-settings-button" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-to-menu-button" class="menu-button" data-i18n="pause.exit">Exit to main menu</button>
     </div>

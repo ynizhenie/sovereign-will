@@ -15,7 +15,7 @@ const RARITIES = ['common', 'rare', 'legendary'];
 const LOCKABLE = ['buildings', 'tools', 'weapons', 'gear'];
 
 const config = () => GAME_CONFIG.cards;
-const isOn = () => game.cardMode && game.gameMode === 'endless';
+const isOn = () => game.cardMode && game.gameMode === 'endless' && !game.plagueMode;
 const isStart = (category, id) => (config().start[category] || []).includes(id);
 const rarityOf = key => RARITIES.find(r => config().rarity[r].includes(key)) || 'common';
 

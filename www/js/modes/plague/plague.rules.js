@@ -256,6 +256,23 @@ function takePlagueSides() {
   sides.enemy.faction = 'humans';
 }
 
+export function preparePlagueSaveLoad() {
+  takePlagueSides();
+}
+
+export function restorePlagueSaveState(state) {
+  if (!state || typeof state !== 'object') throw new Error('Cannot load a Plague save without its mode state');
+  game.plague = state;
+  game.plagueMode = true;
+  nextPlagueUnitId = Math.max(100000, ...game.settlers.map(unit => Number(unit.id) + 1));
+  setBorderMargin(0);
+  document.body.dataset.plague = 'yes';
+  document.body.classList.remove('defeated');
+  document.getElementById('defeat-overlay').hidden = true;
+  updatePlagueHud();
+  applyPlagueCardOffer();
+}
+
 export async function startPlagueGame() {
   if (game.loading) return;
   savePlagueSettings();

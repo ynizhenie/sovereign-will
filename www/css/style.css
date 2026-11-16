@@ -323,6 +323,13 @@ body.menu-world #defeat-overlay { display: none !important; }
   overflow-y: auto;
 }
 
+.main-menu-content[data-screen="saves"] {
+  gap: 9px;
+  padding: 14px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+
 .main-menu-content[data-screen="battle"] {
   gap: 9px;
   padding: 14px;
@@ -667,7 +674,12 @@ body[data-hud="editor"] .editor-only { display: inline-flex; }
 
 /* saves (#156): only in Endless */
 body.battle-mode #save-game-button, body.editor-mode #save-game-button { display: none; }
-#save-settings[hidden] { display: none; }
+#save-actions[hidden] { display: none; }
+#save-actions { display: flex; gap: 8px; }
+#save-actions > button { flex: 1; }
+#save-status { min-height: 1.1em; }
+.save-import-actions { display: flex; justify-content: center; }
+#save-list { width: 100%; }
 
 /* factions and their colours (#43) */
 .faction-settings { gap: 6px; }
@@ -1098,7 +1110,6 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 /* the save button says how the save went (#254) */
 #save-game-button.save-ok { background: #27ae60; color: #fff; }
 #save-game-button.save-no { background: #c0392b; color: #fff; }
-#pause-load { max-height: 40vh; overflow-y: auto; }
 
 /* every tab's things as tiles (#261): a grid of compact buttons, the icon and name over the cost; a tap
    does it. Craft tiles: how many are stored in a corner, and under one with some, Give and Take apart */
@@ -1133,11 +1144,13 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 
 /* the saves as tiles (#254): its world, its wave and time; a small × in the corner, red while it asks */
 .save-tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
-.save-tile-wrap { position: relative; min-width: 0; }
+.save-tile-wrap { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.save-tile-wrap.current .save-tile { border-color: #9c78e8; }
 .save-tile-wrap .save-tile { min-height: 44px; padding-right: 22px; }
+.save-name-input { width: 100%; min-width: 0; box-sizing: border-box; }
+.save-export { align-self: flex-start; }
 .save-tile-wrap .save-delete { position: absolute; top: 3px; right: 3px; min-height: 0; padding: 2px 4px; font-size: 10px; }
 .save-tile-wrap .save-delete.asking { background: #c0392b; border-color: #e74c3c; color: #fff; }
-#pause-load { margin: 4px 0; }
 
 /* the blight-by-itself switch (#253) */
 #btn-auto-blight.on { background: #6c3483; border-color: #a569bd; }

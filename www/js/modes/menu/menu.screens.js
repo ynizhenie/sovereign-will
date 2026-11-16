@@ -1,4 +1,4 @@
-// The main menu's screens: home, settings (language, frame rate, FPS counter, sound, music), and the opening
+// The main menu's screens: home, Endless setup and saves, settings (language, frame rate, sound, music), and the opening
 
 import { LANGUAGES } from '../../content/language/index.js';
 import { audio, currentLanguage, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
@@ -110,8 +110,10 @@ export function initMenuScreens() {
       delete mainMenu.dataset.fromPause;
       mainMenu.style.display = 'none';
       document.getElementById('pause-menu').hidden = false;
+      showMenuScreen('home');
+      return;
     }
-    showMenuScreen('home');
+    showMenuScreen(button.dataset.backTo || 'home');
   }));
   exitButton.hidden = !nativeApp;
   onTap(exitButton, () => { if (nativeApp) nativeApp.exitApp(); });

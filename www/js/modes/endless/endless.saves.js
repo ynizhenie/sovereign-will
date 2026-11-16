@@ -14,6 +14,8 @@ import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
 import { setPaused } from '../../app/index.js';
 import { exportFog, importFog, prewarmVisibleWorldChunks } from '../../domains/world/index.js';
+import { showMenuScreen } from '../menu/index.js';
+import { exitPlagueMode, preparePlagueSaveLoad, restorePlagueSaveState } from '../plague/index.js';
 import { syncCards } from './endless.cards.js';
 import { isInCamp, normalizeEnemyCamp, resetRaid } from './endless.raid.js';
 
@@ -21,8 +23,15 @@ import { isInCamp, normalizeEnemyCamp, resetRaid } from './endless.raid.js';
 // (#298) and a raid's marks on its party: saved on the way, loaded they're home, the raid over
 export const UNSAVED_FIELDS = new Set(['reachCache', 'reachUse', 'lastBehaviour', 'approachCache', 'raider', 'raidSpot', 'exitSpot', 'lastStep']);
 
-export function loadSaves() {
-  return loadData('saves', {});
+/** @typedef {'endless' | 'plague'} SaveMode */
+/** @type {Record<SaveMode, string | null>} */
+const activeSaveKeys = { endless: null, plague: null };
+/** @type {SaveMode} */
+let saveManagerMode = 'endless';
+
+/** @param {SaveMode} [mode] */
+export function loadSaves(mode = 'endless') {
+  return loadData(mode === 'plague' ? 'plagueSaves' : 'saves', {});
 }
 
 // (#299) A save squeezed (gzip, kept as text), with its world and wave beside it for the list: a big map's
@@ -49,8 +58,9 @@ export async function saveDataOf(save) {
 const seedOf = save => save.seed ?? (save.data && save.data.seed ? save.data.seed.value : undefined);
 const waveOf = save => save.wave ?? (save.data && save.data.clocks ? save.data.clocks.waveNum : '');
 
-export function storeSaves(saves) {
-  return saveData('saves', saves);
+/** @param {Record<string, any>} saves @param {SaveMode} [mode] */
+export function storeSaves(saves, mode = 'endless') {
+  return saveData(mode === 'plague' ? 'plagueSaves' : 'saves', saves);
 }
 
 export function serializeGame() {
@@ -88,6 +98,7 @@ export function serializeGame() {
   world.raidCampId = game.raidCampId;
   return {
     version: 1,
+    mode: game.plagueMode ? 'plague' : 'endless',
     world,
     stock: { ...stock },
     townHall: { x: townHall.x, y: townHall.y, hp: townHall.hp, maxHp: townHall.maxHp, repairRequested: townHall.repairRequested, store: { ...(townHall.store || {}) } },
@@ -101,7 +112,8 @@ export function serializeGame() {
     cardMode: game.cardMode,
     seed: { value: game.worldSeed.value, state: game.worldSeed.getState() },
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom },
-    fog: exportFog() // (#299: what's been explored)
+    fog: exportFog(), // (#299: what's been explored)
+    plague: game.plagueMode ? encode(game.plague) : null
   };
 }
 
@@ -148,8 +160,12 @@ export function resolveRefs(root) {
   walk(root);
 }
 
-export function loadGame(data) {
+/** @param {any} data @param {string | null} [saveKey] */
+export function loadGame(data, saveKey = null) {
   resetRaid(); // (#255)
+  const mode = data.mode === 'plague' ? 'plague' : 'endless';
+  if (mode === 'plague') preparePlagueSaveLoad();
+  else exitPlagueMode();
   game.gameMode = 'endless';
   Object.assign(sides.player, data.sides && data.sides.player);
   Object.assign(sides.enemy, data.sides && data.sides.enemy);
@@ -170,6 +186,11 @@ export function loadGame(data) {
   if (!data.world.logs) game.logs = []; // (a save from before #298)
   if (!data.world.weather) game.weather = null; // (#308)
   for (const value of WORLD_LISTS.map(list => game[list])) resolveRefs(value);
+  if (mode === 'plague') {
+    game.plague = data.plague;
+    resolveRefs(game.plague);
+    restorePlagueSaveState(game.plague);
+  }
   // older saves' archer kinds, gone (#249): a skeleton is a zombie with its bow, a fire imp an imp
   const goneKinds = { skeleton: 'zombie', fire_imp: 'imp' };
   for (const s of game.settlers) if (goneKinds[s.type]) s.type = goneKinds[s.type];
@@ -200,35 +221,118 @@ export function loadGame(data) {
   setPaused(false);
   syncCards(); // (an offer it was saved with shows again, #255)
   prewarmVisibleWorldChunks();
+  activeSaveKeys[mode] = findActiveSaveKey(data, saveKey, mode);
+  delete document.getElementById('main-menu').dataset.fromPause;
   document.getElementById('main-menu').style.display = 'none';
 }
 
-// The most saves kept: one slot a world (#254)
-export const SAVE_SLOTS = 10;
-
-// From the pause menu: one slot a world (its seed), saved over each time; at most SAVE_SLOTS worlds. Says
-// how it went on the save button itself, not in a notice the pause menu hides (#254)
-export function saveCurrentGame() {
-  if (game.gameMode !== 'endless' || !game.gameStarted) return;
-  // (#298) with a party on its way to a camp or home it saves (the base is there; loaded, they're home);
-  // in the camp itself, not: it says so, it used to do nothing at all
-  if (isInCamp()) { flashSaveButton(t('save.inCamp'), false); return; }
-  return saveNow().catch(e => { console.error(e); flashSaveButton(t('save.failed'), false); });
+/** @param {any} data @param {string | null} requestedKey @param {SaveMode} mode */
+function findActiveSaveKey(data, requestedKey, mode) {
+  const saves = loadSaves(mode);
+  if (requestedKey && saves[requestedKey]) return requestedKey;
+  const seed = data.seed.value;
+  const matching = Object.entries(saves).filter(([, save]) => seedOf(save) === seed);
+  const matchingWave = matching.filter(([, save]) => waveOf(save) === data.clocks.waveNum);
+  if (matchingWave.length === 1) return matchingWave[0][0];
+  if (matching.length === 1) return matching[0][0];
+  const legacyKey = `world:${seed}`;
+  return saves[legacyKey] ? legacyKey : null;
 }
 
-async function saveNow() {
+/** @param {SaveMode} [mode] */
+export function clearActiveSave(mode = 'endless') {
+  activeSaveKeys[mode] = null;
+}
+
+/** @param {string} seed @param {SaveMode} [mode] */
+export function selectActiveSaveForSeed(seed, mode = 'endless') {
+  const matching = Object.entries(loadSaves(mode)).filter(([, save]) => seedOf(save) === seed);
+  matching.sort((a, b) => b[1].savedAt - a[1].savedAt);
+  activeSaveKeys[mode] = matching[0]?.[0] ?? null;
+}
+
+/** @param {SaveMode} mode */
+function currentSaveKey(mode) {
+  let key = activeSaveKeys[mode];
+  if (!key || !loadSaves(mode)[key] || seedOf(loadSaves(mode)[key]) !== game.worldSeed.value) {
+    selectActiveSaveForSeed(game.worldSeed.value, mode);
+    key = activeSaveKeys[mode];
+  }
+  const save = key && loadSaves(mode)[key];
+  return save && seedOf(save) === game.worldSeed.value ? key : null;
+}
+
+function openSaveMenuFromPause() {
+  saveManagerMode = game.plagueMode ? 'plague' : 'endless';
+  setSaveBackTarget(saveManagerMode);
+  document.getElementById('pause-menu').hidden = true;
+  const menu = document.getElementById('main-menu');
+  menu.style.display = '';
+  menu.dataset.fromPause = 'yes';
+  showMenuScreen('saves');
+  renderSaveList(saveManagerMode);
+}
+
+/** @param {SaveMode} mode */
+function openSaveMenu(mode) {
+  saveManagerMode = mode;
+  setSaveBackTarget(mode);
+  showMenuScreen('saves');
+  renderSaveList(mode);
+}
+
+/** @param {SaveMode} mode */
+function setSaveBackTarget(mode) {
+  const back = document.querySelector('[data-screen="saves"] [data-back]');
+  if (!back) throw new Error('The save menu back button is missing');
+  back.dataset.backTo = mode;
+}
+
+// From the pause menu, overwrite the save loaded for this game, or create one if this is a new world.
+export function saveCurrentGame() {
+  if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  const mode = game.plagueMode ? 'plague' : 'endless';
+  // (#298) with a party on its way to a camp or home it saves (the base is there; loaded, they're home);
+  // in the camp itself, not: it says so, it used to do nothing at all
+  if (mode === 'endless' && isInCamp()) { flashSaveButton(t('save.inCamp'), false); return; }
+  return saveNow(currentSaveKey(mode), mode).catch(e => { console.error(e); showSaveStatus(t('save.failed'), false); flashSaveButton(t('save.failed'), false); });
+}
+
+/** @param {string | null} overwriteKey @param {SaveMode} [mode] */
+async function saveNow(overwriteKey, mode = game.plagueMode ? 'plague' : 'endless') {
   const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
   const seed = game.worldSeed.value;
-  const name = t('save.name', { world: seed, wave: game.waveNum, time: `${pad(now.getDate())}.${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}` });
-  const save = { name, savedAt: now.getTime(), seed, wave: game.waveNum, ...(await squeeze(serializeGame())) };
-  const saves = loadSaves();
-  // this world's slot (older saves of it, one per save, go into it)
-  for (const [key, s] of Object.entries(saves)) if (seedOf(s) === seed) delete saves[key];
-  if (Object.keys(saves).length >= SAVE_SLOTS) { flashSaveButton(t('save.full', { n: SAVE_SLOTS }), false); return; }
-  saves[`world:${seed}`] = save;
-  if (!storeSaves(saves)) { flashSaveButton(t('save.failed'), false); return; }
+  const saves = loadSaves(mode);
+  const targetKey = overwriteKey && saves[overwriteKey] ? overwriteKey : newSaveKey(saves, seed, now.getTime());
+  const previous = saves[targetKey];
+  const name = previous?.nameEdited ? previous.name : seed;
+  const save = { name, nameEdited: !!previous?.nameEdited, savedAt: now.getTime(), seed, wave: game.waveNum, ...(await squeeze(serializeGame())) };
+  saves[targetKey] = save;
+  if (!storeSaves(saves, mode)) { showSaveStatus(t('save.failed'), false); flashSaveButton(t('save.failed'), false); return; }
+  activeSaveKeys[mode] = targetKey;
+  showSaveStatus(t('save.done'), true);
   flashSaveButton(t('save.done'), true);
+  renderSaveList(mode);
+}
+
+function newSaveKey(saves, seed, savedAt) {
+  const base = `world:${seed}`;
+  if (!saves[base]) return base;
+  let suffix = 0, key;
+  do { key = `world:${seed}:${savedAt}${suffix ? `-${suffix}` : ''}`; suffix++; } while (saves[key]);
+  return key;
+}
+
+function displayedName(save) {
+  return save.nameEdited && save.name ? save.name : String(seedOf(save) ?? '');
+}
+
+function showSaveStatus(text, ok) {
+  const status = document.getElementById('save-status');
+  if (!status) return;
+  setRichText(status, text);
+  status.classList.toggle('save-ok', ok);
+  status.classList.toggle('save-no', !ok);
 }
 
 // The save button says how the save went for a moment, then is itself again
@@ -243,50 +347,62 @@ function flashSaveButton(text, ok) {
   flashTimer = setTimeout(() => { setRichText(button, t('save.button')); button.classList.remove('save-ok', 'save-no'); }, 2200);
 }
 
-// The saves as tiles, newest first (#254): its world in bold, its wave and when it was saved; tapped, it's
-// loaded; its × deletes it, asked first. In the Endless menu all of them; in the pause menu's Load only this
-// world's (its one slot)
-export function renderSaveList(listId = 'save-list') {
-  const all = Object.entries(loadSaves()).sort((a, b) => b[1].savedAt - a[1].savedAt);
-  const thisWorld = listId !== 'save-list';
-  const saves = thisWorld ? all.filter(([, s]) => game.worldSeed && seedOf(s) === game.worldSeed.value) : all;
-  if (!thisWorld) document.getElementById('save-settings').hidden = saves.length === 0;
-  const list = document.getElementById(listId);
+// The saves as tiles, newest first: tap to load, rename, export or delete.
+/** @param {SaveMode} [mode] */
+export function renderSaveList(mode = saveManagerMode) {
+  const all = Object.entries(loadSaves(mode)).sort((a, b) => b[1].savedAt - a[1].savedAt);
+  const saves = all;
+  updateSaveActions(mode);
+  const list = document.getElementById('save-list');
   list.innerHTML = '';
   list.className = 'tile-grid save-tiles';
   if (!saves.length) {
     const empty = document.createElement('div');
     empty.className = 'item-list-empty';
-    empty.textContent = t(thisWorld ? 'save.noneHere' : 'save.none');
+    empty.textContent = t('save.none');
     list.appendChild(empty);
     return;
   }
   const pad = n => String(n).padStart(2, '0');
   for (const [key, s] of saves) {
     const wrap = document.createElement('div');
-    wrap.className = 'save-tile-wrap';
+    wrap.className = `save-tile-wrap${key === activeSaveKeys[mode] ? ' current' : ''}`;
     const tile = document.createElement('button');
     tile.className = 'btn tile save-tile';
     tile.dataset.save = key;
     const at = new Date(s.savedAt);
-    const world = seedOf(s) ?? '';
+    const name = displayedName(s);
     const wave = waveOf(s);
-    tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(t('save.world', { world }))}</b></span>` +
+    tile.innerHTML = `<span class="tile-name"><b>${escapeHtml(name)}</b></span>` +
       `<span class="tile-cost">${escapeHtml(t('save.wave', { wave }))} · ${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${pad(at.getHours())}:${pad(at.getMinutes())}</span>`;
     onTap(tile, async () => {
-      document.getElementById('pause-load').hidden = true;
       let data;
       await runLoading('loading.save', (function* () { // (#326) a bar while it's read and set up
         yield 0.1;
-        yield saveDataOf(loadSaves()[key]).then(read => { data = read; });
+        yield saveDataOf(loadSaves(mode)[key]).then(read => { data = read; });
         yield 0.7;
-        loadGame(data);
+        loadGame(data, key);
       })());
     });
+    const nameInput = document.createElement('input');
+    nameInput.className = 'menu-number save-name-input';
+    nameInput.type = 'text';
+    nameInput.maxLength = 48;
+    nameInput.value = name;
+    nameInput.placeholder = t('save.namePlaceholder');
+    nameInput.setAttribute('aria-label', t('save.rename'));
+    nameInput.dataset.saveName = key;
+    nameInput.addEventListener('change', () => renameSave(key, nameInput.value));
+    const exportButton = document.createElement('button');
+    exportButton.className = 'btn tile-act save-export';
+    exportButton.dataset.exportSave = key;
+    exportButton.textContent = t('save.export');
+    onTap(exportButton, () => exportSave(key));
+    wrap.append(nameInput, exportButton);
     const del = document.createElement('button');
     del.className = 'btn tile-act save-delete';
     del.dataset.deleteSave = key;
-    del.setAttribute('aria-label', t('list.deleteQuestion', { name: s.name }));
+    del.setAttribute('aria-label', t('list.deleteQuestion', { name }));
     del.innerHTML = iconHtml('close');
     // asked first: the × turns into "Delete?", tapped again it's gone
     onTap(del, () => {
@@ -297,21 +413,123 @@ export function renderSaveList(listId = 'save-list') {
         setTimeout(() => { if (del.isConnected) { del.classList.remove('asking'); delete del.dataset.confirmDelete; del.innerHTML = iconHtml('close'); } }, 3000);
         return;
       }
-      const left = loadSaves(); delete left[key]; storeSaves(left); renderSaveList(listId);
+      const left = loadSaves(mode); delete left[key];
+      if (!storeSaves(left, mode)) { showSaveStatus(t('save.failed'), false); return; }
+      if (activeSaveKeys[mode] === key) activeSaveKeys[mode] = null;
+      renderSaveList(mode);
     });
     wrap.append(tile, del);
     list.appendChild(wrap);
   }
 }
 
+/** @param {SaveMode} mode */
+function updateSaveActions(mode) {
+  const actions = document.getElementById('save-actions');
+  if (!actions) return;
+  const fromPause = document.getElementById('main-menu').dataset.fromPause === 'yes';
+  actions.hidden = !fromPause;
+  const overwrite = document.getElementById('save-overwrite-button');
+  overwrite.hidden = !fromPause || !currentSaveKey(mode);
+}
+
+function renameSave(key, value) {
+  const saves = loadSaves(saveManagerMode), save = saves[key];
+  if (!save) return;
+  const seed = String(seedOf(save) ?? '');
+  const name = value.trim().slice(0, 48) || seed;
+  saves[key] = { ...save, name, nameEdited: name !== seed };
+  if (!storeSaves(saves, saveManagerMode)) { showSaveStatus(t('save.failed'), false); return; }
+  showSaveStatus(t('save.done'), true);
+  renderSaveList(saveManagerMode);
+}
+
+function exportSave(key) {
+  const save = loadSaves(saveManagerMode)[key];
+  if (!save) { showSaveStatus(t('save.failed'), false); return; }
+  const blob = new Blob([JSON.stringify({ format: 'sovereign-will-save', version: 1, save }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const filename = [...displayedName(save)].map(char => {
+    const code = char.charCodeAt(0);
+    return code < 32 || '<>:"/\\|?*'.includes(char) ? '-' : char;
+  }).join('').trim().slice(0, 64) || 'save';
+  link.href = url;
+  link.download = `${filename}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function validGameData(data) {
+  const object = value => value && typeof value === 'object' && !Array.isArray(value);
+  return object(data) && data.version === 1 && (data.mode === undefined || data.mode === 'endless' || data.mode === 'plague') &&
+    (data.mode !== 'plague' || object(data.plague)) && object(data.world) && object(data.stock) && object(data.townHall) &&
+    object(data.clocks) && object(data.playerGear) && object(data.armory) && object(data.sides) &&
+    object(data.sides.player) && object(data.sides.enemy) && object(data.camera) && object(data.seed) &&
+    typeof data.seed.value === 'string' && Number.isFinite(data.seed.state) &&
+    Number.isFinite(data.cols) && Number.isFinite(data.rows) &&
+    Number.isFinite(data.clocks.waveNum) && Number.isFinite(data.townHall.x) && Number.isFinite(data.townHall.y) &&
+    Number.isFinite(data.camera.x) && Number.isFinite(data.camera.y) && Number.isFinite(data.camera.zoom);
+}
+
+/** @param {File} file */
+async function importSaveFile(file) {
+  let envelope, data;
+  try {
+    envelope = JSON.parse(await file.text());
+    if (envelope?.format !== 'sovereign-will-save' || envelope.version !== 1 || !envelope.save) throw new Error('Unsupported save file');
+    data = await saveDataOf(envelope.save);
+    if (!validGameData(data)) throw new Error('Invalid save data');
+    if ((data.mode === 'plague' ? 'plague' : 'endless') !== saveManagerMode) throw new Error('Save belongs to a different game mode');
+  } catch (error) {
+    console.error('Could not import save file', error);
+    showSaveStatus(t('save.importFailed'), false);
+    return;
+  }
+  try {
+    const saves = loadSaves(saveManagerMode), now = Date.now(), imported = envelope.save;
+    const seed = data.seed.value;
+    const key = newSaveKey(saves, seed, now);
+    saves[key] = {
+      name: imported.nameEdited ? String(imported.name || seed).slice(0, 48) : seed,
+      nameEdited: !!imported.nameEdited,
+      savedAt: Number.isFinite(imported.savedAt) ? imported.savedAt : now,
+      seed,
+      wave: Number.isFinite(imported.wave) ? imported.wave : data.clocks.waveNum,
+      ...(await squeeze(data))
+    };
+    if (!storeSaves(saves, saveManagerMode)) { showSaveStatus(t('save.failed'), false); return; }
+  } catch (error) {
+    console.error('Could not store imported save', error);
+    showSaveStatus(t('save.importFailed'), false);
+    return;
+  }
+  showSaveStatus(t('save.imported'), true);
+  renderSaveList(saveManagerMode);
+}
+
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessSaves() {
-  onTap(document.getElementById('save-game-button'), saveCurrentGame);
-  onTap(document.getElementById('mode-endless'), () => renderSaveList());
-  // the pause menu's Load: the saves, under the button (#254)
-  onTap(document.getElementById('load-game-button'), () => {
-    const box = document.getElementById('pause-load');
-    box.hidden = !box.hidden;
-    if (!box.hidden) renderSaveList('pause-load-list');
+  onTap(document.getElementById('save-game-button'), openSaveMenuFromPause);
+  onTap(document.getElementById('save-overwrite-button'), () => {
+    if (game.gameMode !== 'endless' || !game.gameStarted) return;
+    if (!game.plagueMode && isInCamp()) { showSaveStatus(t('save.inCamp'), false); return; }
+    return saveCurrentGame();
+  });
+  onTap(document.getElementById('save-new-button'), () => {
+    if (game.gameMode !== 'endless' || !game.gameStarted) return;
+    const mode = game.plagueMode ? 'plague' : 'endless';
+    if (mode === 'endless' && isInCamp()) { showSaveStatus(t('save.inCamp'), false); return; }
+    return saveNow(null, mode).catch(error => { console.error(error); showSaveStatus(t('save.failed'), false); });
+  });
+  onTap(document.getElementById('open-saves'), () => openSaveMenu('endless'));
+  onTap(document.getElementById('plague-open-saves'), () => openSaveMenu('plague'));
+  const importButton = document.getElementById('import-save-button');
+  const importInput = /** @type {HTMLInputElement} */ (document.getElementById('import-save-file'));
+  onTap(importButton, () => importInput.click());
+  importInput.addEventListener('change', () => {
+    const file = importInput.files?.[0];
+    importInput.value = '';
+    if (file) importSaveFile(file);
   });
 }
