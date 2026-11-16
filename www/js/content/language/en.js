@@ -91,6 +91,7 @@ export const enLanguage = {
       },
       enemies: {
         raider_medic: 'Healer',
+        raider_medic_club: 'Healer',
         undead_zombie_sword: 'Zombie with a sword',
         demon_imp_sword: 'Imp with a sword',
         raider_club: 'Savage',

@@ -322,6 +322,7 @@ export function tickMenuScene(dt) {
   if (menuWorld.scene === 'fight') {
     const f = menuWorld.fight;
     if (!game.settlers.length || townHall.hp <= 0) {
+      if (townHall.hp <= 0) stock.herbs = 0; // (broken: no herbs for the medic, #279)
       f.down += dt;
       if (f.down > 3) {
         game.corpses = []; game.enemies = []; game.projectiles = [];

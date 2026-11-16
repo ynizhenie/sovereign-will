@@ -91,6 +91,7 @@ export const ukLanguage = {
       },
       enemies: {
         raider_medic: 'Лікар',
+        raider_medic_club: 'Лікар',
         undead_zombie_sword: 'Зомбі з мечем',
         demon_imp_sword: 'Чорт з мечем',
         raider_club: 'Дикун',

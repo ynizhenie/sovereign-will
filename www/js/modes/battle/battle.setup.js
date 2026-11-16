@@ -288,7 +288,14 @@ function makeBattleMazeWalls() {
     });
 }
 
+// (at least two ways from one half to the other: a layout with fewer is made again)
 function generateBattleMazeLayout() {
+  let layout = makeBattleMazeLayout();
+  for (let tries = 0; layout.crossings < 2 && tries < 20; tries++) layout = makeBattleMazeLayout();
+  return layout.walls;
+}
+
+function makeBattleMazeLayout() {
   const walls = new Set();
   for (let gy = 0; gy < game.ROWS; gy++) {
     for (let gx = 0; gx < game.COLS; gx++) walls.add(`${gx},${gy}`);
@@ -410,7 +417,7 @@ function generateBattleMazeLayout() {
     if (connectRooms(room(middleRoom - 1, row), room(middleRoom, row), true)) crossings++;
   }
 
-  return [...walls];
+  return { walls: [...walls], crossings };
 }
 
 export function startBattleMode() {

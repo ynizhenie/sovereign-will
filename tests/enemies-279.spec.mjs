@@ -4,7 +4,7 @@ import { openGame, sim } from './helpers.mjs';
 // The friend's batch of fixes (#279), part B: the raid, the cards, the enemies
 test('a wave gathers where it came in before it attacks, and a big one has a commander giving orders (#279, 44, 45)', async ({ page }) => {
   await openGame(page);
-  const r = await sim(page, 'waveMusters', {});
+  const r = await sim(page, 'waveMusters', { seed: 'muster-2' }); // (#417: on 'muster' the wave drew no fighter to command it)
   expect(r.size).toBeGreaterThanOrEqual(6);
   expect(r.early).toBeGreaterThan(30); // staging at the outer edge of the enemy camp
   expect(r.later).toBeGreaterThan(150); // (then off)

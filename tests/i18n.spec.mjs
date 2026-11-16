@@ -21,6 +21,7 @@ test('the game starts in English (#41)', async ({ page }) => {
 
 test('picking Ukrainian in the menu switches every text, and is remembered (#41)', async ({ page }) => {
   await openFresh(page);
+  await page.evaluate(() => enterMenuWorld('fishing')); // (the humans' HUD: the menu's scene may be the undead's, #417)
   await page.click('#open-settings');
   await page.click('#language-options button[data-language="uk"]');
   await page.click('#main-menu [data-screen="settings"] [data-back]');

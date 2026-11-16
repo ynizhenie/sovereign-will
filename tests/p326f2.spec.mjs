@@ -7,6 +7,7 @@ async function openBattle(page) {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
     window.put = (kind, id, gx, gy) => {

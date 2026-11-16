@@ -7,6 +7,7 @@ test('Battles: the undead and demons look their own, combat is always automatic,
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
     const kin = type => unitKin(makeSettler(1, 0, 0, { type }));
@@ -26,6 +27,7 @@ test('generated enemy battle presets keep their faction visual when armed', asyn
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const result = await page.evaluate(() => {
     const key = presetEnemyKey('demons', 'spear');
     const enemy = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, key);
@@ -40,6 +42,7 @@ test('generated enemy battle presets speak phrases from their own faction', asyn
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const result = await page.evaluate(() => {
     setSideFaction('enemy', 'humans');
     const key = presetEnemyKey('demons', 'spear');
@@ -58,6 +61,7 @@ test('enemy fighters get the same dark uniform shading as armed player soldiers'
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const result = await page.evaluate(() => {
     const fighter = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, 'raider');
     const medic = createConfiguredEnemy({ x: townHall.x + 160, y: townHall.y }, 'raider_medic');

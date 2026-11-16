@@ -91,6 +91,7 @@ export const ruLanguage = {
       },
       enemies: {
         raider_medic: 'Лекарь',
+        raider_medic_club: 'Лекарь',
         undead_zombie_sword: 'Зомби с мечом',
         demon_imp_sword: 'Чёрт с мечом',
         raider_club: 'Дикарь',
