@@ -293,6 +293,7 @@ export const ICONS = {
     c.save(); c.translate(23.5, 19.5); c.rotate(-0.5); icRound(c, '#8e5a2b', -4.5, -2.6, 9, 5.2, 1.5); c.restore();
   },
   zone_wheat: c => icZone(c, 'rgba(241, 196, 15, 0.45)', '#f1c40f'),
+  zone_rice: c => icZone(c, 'rgba(52, 152, 219, 0.45)', '#3498db'),
   zone_sapling: c => icZone(c, 'rgba(46, 204, 113, 0.45)', '#2ecc71'),
   zone_apple: c => icZone(c, 'rgba(231, 76, 60, 0.45)', '#e74c3c'),
 
@@ -419,6 +420,13 @@ export const ICONS = {
     }
     icEllipse(c, '#f4d03f', 16, 5, 2.2, 3.5);
   },
+  rice: c => {
+    icLine(c, '#398b50', 2, [[16, 29], [16, 8]]);
+    for (const [x, y, r] of [[19, 10, 0.2], [22, 14, 0.4], [23, 19, 0.6], [21, 24, 0.8]]) icEllipse(c, '#e6c85c', x, y, 2, 3, r);
+    icLine(c, '#66a85d', 1.5, [[16, 22], [10, 15], [7, 13]]);
+    icLine(c, '#66a85d', 1.5, [[16, 18], [11, 10], [9, 7]]);
+    icLine(c, '#66a85d', 1.5, [[16, 25], [22, 19], [25, 16]]);
+  },
   wood: c => {
     icRound(c, '#8e5a2b', 4, 9, 22, 14, 3);
     icEllipse(c, '#d4a373', 25, 16, 4.5, 7); icRing(c, '#a0522d', 1.2, 25, 16, 3, 0, Math.PI * 2);
@@ -446,6 +454,9 @@ export const ICONS = {
   arrows: c => { icArrow(c, 10); icArrow(c, 22); },
   wheatSeeds: c => {
     for (const [x, y, r] of [[10, 12, 0.5], [18, 9, -0.4], [22, 18, 0.3], [13, 21, -0.6], [17, 15, 0.1]]) icEllipse(c, '#d4ac0d', x, y, 3.5, 2.2, r);
+  },
+  riceSeeds: c => {
+    for (const [x, y, r] of [[9, 11, -0.6], [17, 9, 0.3], [23, 14, -0.2], [12, 19, 0.5], [20, 23, -0.5]]) icEllipse(c, '#d8c077', x, y, 2.6, 1.4, r);
   },
   saplings: icSprout,
   herbs: c => {
@@ -487,6 +498,11 @@ export const ICONS = {
     for (const x of [-7, 0, 7]) icLine(c, '#f5cba7', 1.8, [[x - 2, 3], [x + 2, -3]]);
     c.restore();
   },
+  cookedRice: c => {
+    icFill(c, '#b97835', [[5, 17], [27, 17], [24, 26], [8, 26]]);
+    icLine(c, '#e0b56d', 1.8, [[5, 17], [27, 17]]);
+    for (const [x, y] of [[11, 14], [16, 12], [21, 14], [13, 17], [19, 17]]) icEllipse(c, '#fff0bd', x, y, 2.5, 1.5, -0.2);
+  },
   cookedFish: c => { icFish(c, '#ca6f1e', '#a04000'); icLine(c, '#6e2c00', 1.2, [[12, 12], [12, 20]]); icLine(c, '#6e2c00', 1.2, [[17, 11], [17, 21]]); },
   cookedMeat: c => {
     icEllipse(c, '#a04000', 13, 13, 10, 8, -0.7); icEllipse(c, '#ca6f1e', 12, 12, 7, 5, -0.7);
@@ -512,6 +528,14 @@ export const ICONS = {
     icRect(c, '#707b7c', 3, 18, 26, 3.5); icRect(c, '#707b7c', 14.5, 19, 3, 9);
     icEllipse(c, 'rgba(255, 255, 255, 0.4)', 11, 12, 4, 2, -0.5);
   },
+  horned_helmet: c => {
+    c.fillStyle = '#65717a'; c.strokeStyle = '#303840'; c.lineWidth = 1.6;
+    c.beginPath(); c.arc(16, 19, 12, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+    icRect(c, '#49545c', 3, 18, 26, 3.5);
+    icLine(c, '#303840', 2.5, [[7, 13], [3, 6], [8, 9], [9, 3]]);
+    icLine(c, '#303840', 2.5, [[25, 13], [29, 6], [24, 9], [23, 3]]);
+    icEllipse(c, 'rgba(255, 255, 255, 0.3)', 11, 12, 4, 2, -0.5);
+  },
   armor: c => {
     icFill(c, '#95a5a6', [[9, 4], [13, 6], [19, 6], [23, 4], [29, 9], [25, 14], [25, 28], [7, 28], [7, 14], [3, 9]]);
     icFill(c, '#bdc3c7', [[13, 6], [19, 6], [16, 13]]);
@@ -523,6 +547,12 @@ export const ICONS = {
     icFill(c, '#a9714a', [[13, 6], [19, 6], [16, 12]]);
     icLine(c, '#d4a373', 1, [[9, 17], [23, 17]]);
     for (const [x, y] of [[11, 22], [21, 22], [16, 25]]) icRect(c, '#d5dbdb', x, y, 1.6, 1.6);
+  },
+  bone_armor: c => {
+    icFill(c, '#d7c9a7', [[9, 4], [13, 6], [19, 6], [23, 4], [29, 9], [25, 14], [25, 28], [7, 28], [7, 14], [3, 9]]);
+    icLine(c, '#796d56', 1.4, [[9, 12], [13, 15], [10, 19], [14, 22], [11, 26]]);
+    icLine(c, '#796d56', 1.4, [[23, 12], [19, 15], [22, 19], [18, 22], [21, 26]]);
+    icLine(c, '#796d56', 1.2, [[16, 11], [16, 27]]);
   },
   wateringCan: c => {
     icRound(c, '#7fa7c9', 5, 13, 16, 13, 2);

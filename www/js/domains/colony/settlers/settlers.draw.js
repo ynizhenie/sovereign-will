@@ -24,6 +24,20 @@ import { hasClearEnemyLine } from '../../../engine/movement/index.js';
 export const simpleUnit = () => false;
 export const tinyUnit = () => false;
 
+export function drawLevelIndicator(x, y, level) {
+  const text = String(level);
+  ctx.save();
+  ctx.font = 'bold 7px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+  ctx.fillStyle = '#fff';
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 // A strike: the held weapon or tool swings through once over `seconds`
 export function startSwing(unit, seconds) {
   unit.swingT = seconds;
@@ -562,9 +576,19 @@ export function drawFigure(unit, o) {
   drawHeadTexture(ctx, look, unitKin(unit), o.skin, 0, hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
   // (#326, 27.10, 27) a helmet: an iron cap over the top of the head, a rim round it
   if (unit.helmet) {
-    ctx.fillStyle = '#8e9aa6'; ctx.strokeStyle = '#4d5660'; ctx.lineWidth = Math.max(0.8, hr * 0.14);
+    const horned = unit.helmetGear === 'horned_helmet' || unit.helmet === 'horned_helmet';
+    ctx.fillStyle = horned ? '#5d6670' : '#8e9aa6'; ctx.strokeStyle = horned ? '#303840' : '#4d5660'; ctx.lineWidth = Math.max(0.8, hr * 0.14);
     ctx.beginPath(); ctx.arc(0, hy - hr * 0.08, hr * 1.06, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.beginPath(); ctx.ellipse(-hr * 0.35, hy - hr * 0.62, hr * 0.28, hr * 0.14, -0.5, 0, Math.PI * 2); ctx.fill();
+    if (horned) {
+      ctx.strokeStyle = '#303840'; ctx.lineWidth = hr * 0.28; ctx.lineCap = 'round';
+      for (const side of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(side * hr * 0.72, hy - hr * 0.45);
+        ctx.quadraticCurveTo(side * hr * 1.35, hy - hr * 1.2, side * hr * 1.08, hy - hr * 1.55);
+        ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
+    }
   }
   // a demon's horns through its hair (and its helmet)
   // (#326: a big demon's curled, a ram's)
@@ -685,9 +709,7 @@ export function applyBackPose(unit) {
 }
 
 // Armour on a figure of that radius, over its body and fitted to it (#298), seen from the front or (back) from
-// behind. Iron: a breastplate with a ridge down its middle, a shine, rounded plates on its shoulders and a row
-// of plates hanging below its belt. Leather: a jerkin laced up the front, stitched at its edges, a belt with a
-// buckle, studs on its shoulders
+// behind. Iron: a breastplate with a ridge down its middle; leather: a stitched jerkin; bone: rib plates.
 export function drawArmor(radius, kind = 'iron', back = false) {
   const r = radius, x0 = -r * 0.6, y0 = -r * 0.46, w = r * 1.2, h = r * 0.8;
   const torso = () => { ctx.beginPath(); ctx.roundRect(x0, y0, w, h, [r * 0.3, r * 0.3, r * 0.14, r * 0.14]); };
@@ -713,6 +735,18 @@ export function drawArmor(radius, kind = 'iron', back = false) {
     shoulders('#7a4b29', '#4e3016');
     ctx.fillStyle = '#d5dbdb';
     for (const sx of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * r * 0.48, -r * 0.38, 0.8, 0, Math.PI * 2); ctx.fill(); }
+    return;
+  }
+  if (kind === 'bone') {
+    ctx.fillStyle = '#d7c9a7'; ctx.strokeStyle = '#796d56'; ctx.lineWidth = 1;
+    torso(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#796d56'; ctx.lineWidth = Math.max(0.8, r * 0.07);
+    for (let k = -1; k <= 1; k++) {
+      ctx.beginPath(); ctx.moveTo(k * r * 0.2, y0 + r * 0.08);
+      ctx.quadraticCurveTo(k * r * 0.48, y0 + h * 0.42, k * r * 0.2, y0 + h * 0.78);
+      ctx.stroke();
+    }
+    shoulders('#e8ddc4', '#796d56');
     return;
   }
   // iron
@@ -851,7 +885,10 @@ export function drawSettlers(only = null) {
   const dab = 1.6 / scale; // (a couple of screen px, in world units)
   (only ? [only] : game.settlers).forEach(s => {
     if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) return;
-    if (isPet(s)) { drawPet(s); return; } // (#314)
+    if (isPet(s)) {
+      drawPet(s);
+      return;
+    } // (#314)
     // (#306) one or two pixels on the screen: a dab of its colour, and the ring of the one picked
     if (tiny) {
       ctx.fillStyle = getSettlerColor(s);

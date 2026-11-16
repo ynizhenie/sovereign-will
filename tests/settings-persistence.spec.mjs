@@ -38,25 +38,26 @@ test('battle settings survive reload', async ({ page }) => {
   await openGame(page);
   await page.locator('[data-screen="endless"] [data-back]').click();
   await page.locator('#mode-battles').click();
+  await page.locator('#battle-play').click(); // (#417: Battles opens its settings first)
   await page.locator('[data-dock="battle-settings"]').click();
-  await page.locator('[data-battle-field="savanna"]').click();
-  await page.locator('[data-battle-look="time"][data-value="night"]').click();
-  await page.locator('[data-battle-look="weather"][data-value="storm"]').click();
-  await page.locator('[data-battle-difficulty="hard"]').click();
-  await page.locator('#battle-music [data-theme="demons"]').click();
+  await page.locator('[data-sheet="battle-settings"] [data-battle-field="savanna"]').click();
+  await page.locator('[data-sheet="battle-settings"] [data-battle-look="time"][data-value="night"]').click();
+  await page.locator('[data-sheet="battle-settings"] [data-battle-look="weather"][data-value="storm"]').click();
+  await page.locator('[data-sheet="battle-settings"] [data-battle-difficulty="hard"]').click();
   await page.locator('[data-battle-category="buildings"]').click();
   await page.reload();
 
   await page.evaluate(() => showMenuScreen('endless'));
   await page.locator('[data-screen="endless"] [data-back]').click();
   await page.locator('#mode-battles').click();
+  await page.locator('#battle-play').click(); // (#417: Battles opens its settings first)
   await expect(page.locator('#battle-panel')).toHaveAttribute('data-category', 'buildings');
   await page.locator('[data-dock="battle-settings"]').click();
-  await expect(page.locator('[data-battle-field="savanna"]')).toHaveClass(/on/);
-  await expect(page.locator('[data-battle-look="time"][data-value="night"]')).toHaveClass(/on/);
-  await expect(page.locator('[data-battle-look="weather"][data-value="storm"]')).toHaveClass(/on/);
-  await expect(page.locator('[data-battle-difficulty="hard"]')).toHaveClass(/on/);
-  await expect(page.locator('#battle-music [data-theme="demons"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-field="savanna"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-look="time"][data-value="night"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-look="weather"][data-value="storm"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-difficulty="hard"]')).toHaveClass(/on/);
+  await expect(page.locator('#battle-music')).toHaveCount(0);
 });
 
 test('map-editor setup choices survive reload', async ({ page }) => {

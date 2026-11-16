@@ -101,9 +101,14 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  function raidOutcome({ win = true, seed = 'raid-test' } = {}) {
+  function raidOutcome({ win = true, seed = 'raid-test', faction = 'humans' } = {}) {
+    const previousFaction = sides.player.faction;
+    sides.player.faction = faction;
     const state = intoCamp({ seed, soldiers: win ? 8 : 2 });
+    sides.player.faction = faction;
     const party = raid.raiders.slice();
+    const defenders = raid.defenders;
+    const notificationStart = recentNotifications.length;
     if (win) {
       enemies.filter(enemy => enemy.campGuard).forEach(enemy => { enemy.hp = 0; });
       enemyTents.filter(tent => tent.campStructure).forEach(tent => { tent.hp = 0; });
@@ -111,7 +116,12 @@ Object.assign(window.sim, (() => {
     step(1);
     const result = { phase: raid.phase, campExists: !!enemyCamp, survivors: raid.raiders.length, waveTimer };
     if (win) step(60, () => { waveTimer = 999; return raid.phase === null; });
-    return { state, result, ended: raid.phase === null, campDestroyed: enemyCampDestroyed };
+    const reward = {
+      defenders,
+      notice: recentNotifications.slice(notificationStart).find(note => note.includes('Лагерь разгромлен')) || ''
+    };
+    sides.player.faction = previousFaction;
+    return { state, result, ended: raid.phase === null, campDestroyed: enemyCampDestroyed, reward };
   }
 
   function scoutTheCamp({ seed = 'scout-camp' } = {}) {
@@ -217,6 +227,7 @@ Object.assign(window.sim, (() => {
     game.mapSettings = { cols: 128, rows: 128 };
     start(seed);
     createEnemyCamp();
+    settlers = [];
     // (the guards as they are each frame: the camp arms them better as it goes, a guard swapped for a better one)
     const campGuards = () => enemies.filter(enemy => enemy.campGuard && enemy.campId === enemyCamp.id && enemy.hp > 0);
     let guards = campGuards();
@@ -333,6 +344,51 @@ Object.assign(window.sim, (() => {
       passiveWave: passive.isWaveActive, passiveTentAssault: passive.tentAssault,
       raidWave: raiding.isWaveActive, waveDetected: wave.isWaveActive
     };
+  }
+
+  function campIntruderDefense({ seed = 'camp-intruder-defense' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    const camp = createEnemyCamp();
+    const guard = enemies.find(enemy => enemy.campGuard && enemy.campId === camp.id && !enemy.campFireKeeper);
+    if (!guard) throw new Error('Enemy camp has no guard to test');
+    game.raidActive = false;
+    game.settlers = [makeSettler(1, camp.x, camp.y, { hp: 10000, maxHp: 10000 })];
+    const intruder = game.settlers[0];
+    const farX = camp.x < 1920 ? 3740 : 100;
+    intruder.x = farX;
+    intruder.y = camp.y;
+    update(1 / 60);
+    const ignoredFarPlayer = !guard.campIntruderTarget && !guard.attackTarget;
+
+    intruder.x = guard.x + 8;
+    intruder.y = guard.y;
+    const initialHp = intruder.hp;
+    for (let frame = 0; frame < 5 * 60 && intruder.hp === initialHp; frame++) update(1 / 60);
+    const attackedNearbyPlayer = intruder.hp < initialHp && guard.campIntruderTarget === intruder;
+
+    intruder.x = farX;
+    update(1 / 60);
+    const returnedToGuardDuty = !guard.campIntruderTarget && !guard.guardOff;
+
+    intruder.x = guard.x + 8;
+    intruder.y = guard.y;
+    update(1 / 60);
+    const dx = camp.x - townHall.x, dy = camp.y - townHall.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    intruder.x = camp.x + dx / distance * 8.5 * TILE_SIZE;
+    intruder.y = camp.y + dy / distance * 8.5 * TILE_SIZE;
+    update(1 / 60);
+    const stoppedBeyondEightTiles = !guard.campIntruderTarget && !guard.guardOff;
+
+    intruder.x = guard.x + 8;
+    intruder.y = guard.y;
+    update(1 / 60);
+    intruder.x = townHall.x;
+    intruder.y = townHall.y;
+    update(1 / 60);
+    const stoppedInPlayerTerritory = !guard.campIntruderTarget && !guard.guardOff;
+    return { ignoredFarPlayer, attackedNearbyPlayer, returnedToGuardDuty, stoppedBeyondEightTiles, stoppedInPlayerTerritory };
   }
 
   function campBoars({ seed = 'camp-boars' } = {}) {
@@ -621,7 +677,7 @@ Object.assign(window.sim, (() => {
 
   return {
     campOpens, intoCamp, raidOutcome, scoutTheCamp, campFogVisibility, enemyCampStructuresDontRevealFog,
-    campInfrastructure, campRoutine, sleepingCampGuard, campOutpostVisuals, campActivity, campBoars, campResourceRegrowth, retreatFromStaging,
+    campInfrastructure, campRoutine, sleepingCampGuard, campOutpostVisuals, campActivity, campIntruderDefense, campBoars, campResourceRegrowth, retreatFromStaging,
     raidPetAndCargo, stagingShelterPayment, raidAutoDemolition, demonRaidPortalPlacement,
     undeadCampNoFire, scoutThreatAndBaseWork, raidWithoutCampAndScoutSelection, allCampTerritories
   };

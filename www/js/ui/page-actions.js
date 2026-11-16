@@ -8,7 +8,7 @@ import { getPlayerFaction } from '../domains/factions/index.js';
 import { openHallCard } from './building-card.js';
 import { craftArrows, disarmSettler, orderGear, orderGearOff, showCraftKind } from '../domains/colony/equipment/index.js';
 import { repairAllBuildings } from '../domains/economy/building/index.js';
-import { deselectSettler, dismissSettler, ensureUnitName, generateUnitName, getSelectedSettler, getSelection, selectAllSoldiers, switchPossession, unpossess, upgradeToBig } from '../domains/colony/settlers/index.js';
+import { deselectSettler, dismissSettler, ensureUnitName, generateUnitName, getSelectedSettler, getSelection, switchPossession, unpossess, upgradeToBig } from '../domains/colony/settlers/index.js';
 import { clearOrders, holdPosition } from '../domains/conflict/combat/index.js';
 import { toggleGiveList, updateUI } from './hud.js';
 import { t } from '../engine/platform/index.js';
@@ -62,8 +62,6 @@ export const PAGE_ACTIONS = {
       selected.nameGenerated = true;
     }
   },
-  selectAllSoldiers: () => selectAllSoldiers(),
-  toggleAddingToGroup: () => { game.addingToGroup = !game.addingToGroup; },
   freeSelection: () => { for (const s of getSelection()) clearOrders(s); },
   holdSelection: () => { for (const s of getSelection()) holdPosition(s); } // (#326)
 };

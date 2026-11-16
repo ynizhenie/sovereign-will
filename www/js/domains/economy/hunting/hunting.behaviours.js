@@ -8,7 +8,7 @@ import { finishHarvest } from '../gathering/index.js';
 import { moveEntityTowards } from '../../../engine/movement/index.js';
 import { woundBoar } from './hunting.rules.js';
 import { hasLineOfFire, performAttack } from '../../conflict/combat/index.js';
-import { faceTowards, startSwing } from '../../colony/settlers/index.js';
+import { faceTowards, getUnitAttackSpeedMultiplier, getUnitHuntingDamageMultiplier, startSwing } from '../../colony/settlers/index.js';
 import { playWorkSound } from '../../../app/index.js';
 
 const SEARCH_ROUND = 4 * TILE_SIZE; // (how far off where it really is a soldier looks for a boar in the dark)
@@ -64,12 +64,13 @@ export function huntBoar(s, boar, tick) {
   } else {
     if (isRangedWeapon(s.weapon)) {
       // only with a clear shot: no arrows wasted on trees and stones in the way
-      if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y);
+      if (hasLineOfFire(s.x, s.y, boar.x, boar.y)) performAttack(s, boar.x, boar.y, false, boar);
       else moveEntityTowards(s, boar.x, boar.y, s.speed, false, dt);
     } else if (!((boar.fleeTimer || 0) > 0 && boar.sprinting) && s.attackCooldown <= 0) { // not mid-sprint
-      woundBoar(boar, hunt.damage * hunt.multiplier, s, s.x, s.y);
-      s.attackCooldown = hunt.cooldown;
-      startSwing(s, Math.min(0.35, hunt.cooldown * 0.8));
+      woundBoar(boar, hunt.damage * hunt.multiplier * getUnitHuntingDamageMultiplier(s), s, s.x, s.y);
+      const attackCooldown = hunt.cooldown / getUnitAttackSpeedMultiplier(s, 'melee');
+      s.attackCooldown = attackCooldown;
+      startSwing(s, Math.min(0.35, attackCooldown * 0.8));
       faceTowards(s, boar.x, boar.y);
     }
   }

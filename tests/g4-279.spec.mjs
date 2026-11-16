@@ -2,7 +2,7 @@ import { test, expect } from './helpers.mjs';
 import { openGame } from './helpers.mjs';
 
 // The friend's batch of fixes (#279), comment 1, part G4: the menu's fight
-test('the menu\'s fight: the warehouse shows what it holds, the squad guards it, the zombies can break it and then the medic has no herbs (#279, c1.1, c1.20)', async ({ page }) => {
+test('the menu\'s fight: the squad guards the outpost, zombies can break it, and the medic then has no herbs (#279, c1.1, c1.20)', async ({ page }) => {
   const errors = await openGame(page);
   const r = await page.evaluate(() => {
     showMenuScreen('home'); enterMenuWorld('fight');

@@ -116,15 +116,12 @@ function renderSelectedActions(s) {
   const show = (id, on) => { const b = document.getElementById(id); if (b) b.style.display = on ? '' : 'none'; };
   show('btn-give', endless && !pet && !s.temporary);
   show('btn-possess', fight);
-  show('btn-all-soldiers', endless || fight);
-  show('btn-add-more', endless || fight);
   show('btn-free', endless && picked.some(o => o.orderTarget || o.orderSpot));
   show('btn-hold', endless && picked.some(o => !o.holdOrder)); // (#326)
   const possess = document.getElementById('btn-possess');
   const possessKey = s.isPossessed ? 'sel.unpossess' : 'sel.possess';
   if (possess.dataset.key !== possessKey) { possess.dataset.key = possessKey; setRichText(possess, t(possessKey)); }
   document.getElementById('btn-give').classList.toggle('on', giveOpen);
-  document.getElementById('btn-add-more').classList.toggle('on', game.addingToGroup);
   document.getElementById('selected-group-txt').textContent = picked.length > 1 ? t('sel.group', { n: picked.length }) : '';
   const hint = document.getElementById('sel-hint');
   const hintKey = getPossessed() === s ? 'sel.hintPossessed' : game.addingToGroup ? 'sel.hintAdding' : fight ? 'sel.hintOrders' : '';
@@ -365,7 +362,7 @@ export function heldGear(s) {
   if (s) {
     if (s.tool && s.tool !== 'none') items.push(['disarmSettler', 'tool', s.tool]);
     if (s.weapon && s.weapon !== 'fist') items.push(['disarmSettler', 'weapon', s.weapon]);
-    for (const id of ['armor', 'leather_armor', 'shield', 'helmet', 'backpack', 'wateringCan', 'whistle', 'banner', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
+    for (const id of ['armor', 'leather_armor', 'bone_armor', 'shield', 'helmet', 'horned_helmet', 'backpack', 'wateringCan', 'whistle', 'banner', 'soul_lantern']) if (hasGear(s, id)) items.push(['orderGearOff', id, id]);
   }
   return items;
 }

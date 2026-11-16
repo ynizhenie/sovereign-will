@@ -11,7 +11,7 @@ import { camera } from '../../engine/platform/index.js';
 import { addMapResource } from '../economy/gathering/index.js';
 import { placeAppleTrees } from '../economy/farming/index.js';
 import { isSpawnSpotFree } from '../economy/building/index.js';
-import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeOreSpawners, startingBoarCount, touchesWaterCorner } from './world.generator.js';
+import { ORE_KINDS, getUnscaledMapCount, makeForestLobes, markDesertUnderRocks, placeLakeBeaches, placeOreSpawners, startingBoarCount, touchesWaterCorner } from './world.generator.js';
 
 const config = () => GAME_CONFIG.continent;
 
@@ -195,10 +195,15 @@ export function* generateContinent() {
   game.beachTiles = []; game.savannaTiles = [];
   const tile = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
   const sand = new Uint8Array(n);
+  const lakeTiles = [];
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
       const i = at(gx, gy), b = biome[i], { x, y } = tile(gx, gy);
-      if (b === SEA || b === LAKE) game.waterTiles.push({ x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 });
+      if (b === SEA || b === LAKE) {
+        const water = { x, y, isFishing: false, fishTimer: 0, fishCount: GAME_CONFIG.fishing.fishCapacity, fishRegrowTimer: 0 };
+        game.waterTiles.push(water);
+        if (b === LAKE) lakeTiles.push(water);
+      }
       else if (b === SAVANNA) {
         game.savannaTiles.push({ x, y });
         if (coast[i] === 1 || (coast[i] === 2 && shapeNoise(gx * 0.3, gy * 0.3) > 0.55)) {
@@ -215,6 +220,10 @@ export function* generateContinent() {
     }
   }
   game.desertRegion = null;
+  for (const beach of placeLakeBeaches(lakeTiles)) {
+    const grid = getGridPos(beach.x, beach.y);
+    sand[at(grid.gx, grid.gy)] = 1;
+  }
 
   // ---- What grows on it: each biome's things by their chances (the foot of the mountains its own)
   yield 0.56;

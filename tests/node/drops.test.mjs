@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { expect } from './expect.mjs';
 import { sim } from './game.mjs';
 
-test('grass always gives herbs and seeds half the time; trees and apple trees drop their own saplings half the time (#103)', async () => {
+test('grass gives herbs and splits its seed chance between wheat and rice; trees drop their own saplings (#103)', async () => {
   const r = await (() => {
     const { makeSettler } = window.sim.helpers;
     window.sim.start('drops-test');
@@ -29,14 +29,19 @@ test('grass always gives herbs and seeds half the time; trees and apple trees dr
     return { grass, tree, apple };
   })();
   expect(r.grass.carried.herbs).toBe(400);
-  expect(r.grass.carried.wheatSeeds).toBeGreaterThan(0.4 * 400);
-  expect(r.grass.carried.wheatSeeds).toBeLessThan(0.6 * 400);
+  expect(r.grass.carried.wheatSeeds).toBeGreaterThan(0.2 * 400);
+  expect(r.grass.carried.wheatSeeds).toBeLessThan(0.3 * 400);
+  expect(r.grass.carried.riceSeeds).toBeGreaterThan(0.2 * 400);
+  expect(r.grass.carried.riceSeeds).toBeLessThan(0.3 * 400);
+  expect(r.grass.carried.wheatSeeds + r.grass.carried.riceSeeds).toBeGreaterThan(0.4 * 400);
+  expect(r.grass.carried.wheatSeeds + r.grass.carried.riceSeeds).toBeLessThan(0.6 * 400);
   expect(r.tree.carried.saplings).toBeGreaterThan(0.4 * 400);
   expect(r.tree.carried.saplings).toBeLessThan(0.6 * 400);
   expect(r.apple.carried.appleSaplings).toBeGreaterThan(0.4 * 400);
   expect(r.apple.carried.appleSaplings).toBeLessThan(0.6 * 400);
   expect(r.apple.carried.saplings).toBeUndefined();
   expect(r.grass.bonus.wheatSeeds).toBeUndefined();
+  expect(r.grass.bonus.riceSeeds).toBeUndefined();
   expect(r.tree.bonus.saplings).toBeUndefined();
   expect(r.apple.bonus.appleSaplings).toBeUndefined();
 });

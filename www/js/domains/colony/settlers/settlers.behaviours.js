@@ -32,7 +32,7 @@ import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
 import { goEat } from './settlers.meals.js';
-import { isPet } from './settlers.rules.js';
+import { isPet, petKindOf } from './settlers.rules.js';
 import { tauntOnSight } from './settlers.voices.js';
 import { feedPet, tickPet } from '../pets/index.js';
 import { fetchNightTorch, lightTorches, nightReach, sleepAtNight } from './settlers.night.js';
@@ -391,7 +391,11 @@ export function tickSettlers(dt) {
 
   // one ordered to work at night goes at half its pace (#279), the rest of its tick as anyone's
   let drowsyTick = null;
-  game.settlers.forEach(s => {
+  const isCombatPet = s => petKindOf(s) === 'dog' || petKindOf(s) === 'beast';
+  const settlers = game.gameMode === 'endless'
+    ? game.settlers.filter(s => !isCombatPet(s)).concat(game.settlers.filter(isCombatPet))
+    : game.settlers;
+  settlers.forEach(s => {
     prepareSettler(s, dt);
     if (!s.leaving && s.hp > 0) tauntVisibleEnemy(s);
     if (isGhostStunned(s)) { s.isIdle = false; s.swaying = false; s.activity = 'ghostStunned'; return; }
@@ -403,6 +407,7 @@ export function tickSettlers(dt) {
       // (#326) let go, or sent somewhere by the player (with no soldier about too): that first, as a settler does
       if (!s.isPossessed && (leaveColony(s, tick) || followCommand(s, tick))) { s.activity = s.leaving ? 'leaveColony' : 'followCommand'; return; }
       if (raidOrders(s, tick)) { took(s, raidOrders); return; }
+      if ((petKindOf(s) === 'dog' || petKindOf(s) === 'beast') && panic(s, tick)) { took(s, panic); return; }
       tickPet(s, tick); return; // (its own ways, #314)
     }
     const last = s.lastBehaviour;

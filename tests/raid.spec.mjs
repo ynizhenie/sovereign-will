@@ -107,6 +107,19 @@ test('passive enemy camp guards do not keep settlers in wave behavior', async ({
   expect(errors).toEqual([]);
 });
 
+test('enemy camp guards attack nearby player units and return to their posts when they leave', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await sim(page, 'campIntruderDefense', {});
+  expect(r).toEqual({
+    ignoredFarPlayer: true,
+    attackedNearbyPlayer: true,
+    returnedToGuardDuty: true,
+    stoppedBeyondEightTiles: true,
+    stoppedInPlayerTerritory: true
+  });
+  expect(errors).toEqual([]);
+});
+
 test('raiders enter the camp without changing or replacing the main world', async ({ page }) => {
   const errors = await openGame(page);
   const r = await sim(page, 'intoCamp', {});
@@ -138,6 +151,15 @@ test('defeating the camp garrison clears the camp and ends the raid successfully
   const r = await sim(page, 'raidOutcome', { win: true });
   expect(r.result).toMatchObject({ campExists: false });
   expect(r).toMatchObject({ ended: true, campDestroyed: true });
+  expect(errors).toEqual([]);
+});
+
+test('undead receive rot instead of food for defeating an enemy camp', async ({ page }) => {
+  const errors = await openGame(page);
+  const r = await sim(page, 'raidOutcome', { win: true, faction: 'undead' });
+  const rotReward = Math.round(25 * (1 + 0.1 * r.reward.defenders));
+  expect(r.reward.notice).toContain(`{{rot:${rotReward}}}`);
+  expect(r.reward.notice).not.toContain('{{food:');
   expect(errors).toEqual([]);
 });
 

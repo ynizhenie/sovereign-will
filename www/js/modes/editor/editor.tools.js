@@ -11,7 +11,7 @@ import { GAME_CONFIG } from '../../content/configs/index.js';
 import { camera, clampCamera, setZoom, t } from '../../engine/platform/index.js';
 import { TILE_SIZE, applySeedFromUI, game, getGridPos, isBorderZone, resetTileIndex, townHall } from '../../engine/world/index.js';
 import { isTileOccupied } from '../../domains/economy/building/index.js';
-import { isWaterReachable, timeOfPhase } from '../../domains/world/index.js';
+import { isWaterReachable, setStartingWeather, timeOfPhase } from '../../domains/world/index.js';
 import { closeOverlays, runLoading, showNotification } from '../../ui/index.js';
 import { addMapResource, getMapResourceDef } from '../../domains/economy/gathering/index.js';
 import { makeAppleTree } from '../../domains/economy/farming/index.js';
@@ -57,7 +57,9 @@ export const editor = {
   tool: 'tree',
   category: 'nature',
   brush: 1,     // 1, 3 or 5: a 3×3 (5×5) brush covers the tapped tile and the ones round it
-  startTime: 'day', // the time of day an Endless game on it starts at (#257): morning, day, evening, night
+  startTime: 'morning', // the time of day an Endless game on it starts at (#257): morning, day, evening, night
+  weather: 'clear',
+  hideTimeAndWeather: true,
   name: '',     // the name it was opened or last saved as
   faction: 'humans' // whose map it is (the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
 };
@@ -292,17 +294,21 @@ export async function startEditor(source) {
     if (source.map) {
       editor.name = source.map.name;
       editor.faction = source.map.faction || 'humans';
-      editor.startTime = source.map.startTime || 'day';
+      editor.startTime = source.map.startTime || 'morning';
+      editor.weather = ['clear', 'rain', 'fog', 'storm'].includes(source.map.weather) ? source.map.weather : 'clear';
     } else {
       // a generated map: the editor's own seed, the generator's settings (its gear), the size picked here
       editor.name = '';
-      editor.startTime = 'day';
+      editor.startTime = 'morning';
+      editor.weather = 'clear';
       game.mapSettings = { cols: source.cols, rows: source.rows };
       applySeedFromUI();
     }
     const map = source.map || (source.generate ? undefined : { cols: source.cols, rows: source.rows });
     await runLoading('loading.world', resetGameSteps(map), () => {
       game.dayTime = timeOfPhase(editor.startTime);
+      setStartingWeather(editor.weather);
+      game.editorHideTimeAndWeather = editor.hideTimeAndWeather;
       game.settlers = []; game.enemies = []; game.corpses = [];
       game.waveTimer = Infinity; game.boarRespawnTimer = Infinity;
       resetTileIndex();

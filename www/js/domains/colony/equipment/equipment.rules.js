@@ -7,7 +7,7 @@ import { game } from '../../../engine/world/index.js';
 import { addResources, canAfford, getFreeStock, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { changeSettlerType, getPossessed, getSelectedSettler, isBigBody } from '../settlers/index.js';
+import { changeSettlerType, getPossessed, getSelectedSettler, getUnitAttackSpeedMultiplier, getUnitLevel, isBigBody } from '../settlers/index.js';
 import { craftPlace, getCraftOrderCost, orderCraft } from './equipment.crafting.js';
 
 // A shield only helps a melee soldier: a worker or an archer (a bow or a crossbow) doesn't fight with it
@@ -27,8 +27,10 @@ export const GEAR_RULES = {
   armor: { canWear: () => true, first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   // (#298) not over iron
   leather_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
+  bone_armor: { canWear: s => s.armor !== 'iron', first: s => s.role === 'soldier' && !isRangedWeapon(s.weapon) },
   shield: { canWear: canUseShield, first: () => true },
   helmet: { canWear: () => true, first: s => s.role === 'soldier' }, // (#326, 27.10, 27)
+  horned_helmet: { canWear: () => true, first: s => s.role === 'soldier' },
   wateringCan: { canWear: s => hasToolFamily(s.tool, 'hoe'), first: () => true },
   // commanders (#248): a foreman a worker, a captain a soldier (or an archer)
   whistle: { canWear: s => s.role === 'worker', first: s => s.tool === 'none' },
@@ -42,9 +44,18 @@ export function armorOf(unit) {
   return (unit && unit.armor && Object.values(GAME_CONFIG.gear).find(g => g.armorKind === unit.armor)) || null;
 }
 export const isArmorGear = id => !!(GAME_CONFIG.gear[id] && GAME_CONFIG.gear[id].armorKind);
+export const isHelmetGear = id => !!(GAME_CONFIG.gear[id] && GAME_CONFIG.gear[id].helmetKind);
+
+export function helmetOf(unit) {
+  if (!unit || !unit.helmet) return null;
+  const id = unit.helmetGear || (typeof unit.helmet === 'string' ? unit.helmet : 'helmet');
+  return isHelmetGear(id) ? GAME_CONFIG.gear[id] : null;
+}
 
 export function hasGear(s, id) {
-  return isArmorGear(id) ? s.armor === GAME_CONFIG.gear[id].armorKind : !!s[id];
+  if (isArmorGear(id)) return s.armor === GAME_CONFIG.gear[id].armorKind;
+  if (isHelmetGear(id)) return !!s.helmet && (s.helmetGear || (typeof s.helmet === 'string' ? s.helmet : 'helmet')) === id;
+  return !!s[id];
 }
 
 // Pay for a piece of gear and send a settler to pick it up at the town hall: the one it's for if it can
@@ -197,6 +208,11 @@ export function putOnGear(s, id) {
     s.armor = def.armorKind;
     s.maxHp = (s.maxHp || 100) + def.hpBonus;
     s.hp += def.hpBonus;
+  } else if (isHelmetGear(id)) {
+    const old = helmetOf(s);
+    if (old && old.id !== id) takeOffGear(s, old.id, true);
+    s.helmet = true;
+    s.helmetGear = id;
   } else {
     s[id] = true;
   }
@@ -209,6 +225,9 @@ export function takeOffGear(s, id, keep = false) {
     s.armor = null;
     s.maxHp -= GAME_CONFIG.gear[id].hpBonus;
     s.hp = Math.min(s.hp, s.maxHp);
+  } else if (isHelmetGear(id)) {
+    s.helmet = false;
+    delete s.helmetGear;
   } else {
     s[id] = false;
   }
@@ -262,12 +281,12 @@ export function getWeaponStats(s, use) {
   }
   const settlerType = GAME_CONFIG.settlerTypes[s.type];
   // (#314) a pet bites (weaker hungry)
-  if (settlerType && settlerType.bite) return { ...settlerType.bite, multiplier: s.petHungry ? GAME_CONFIG.pets.hungryBite : 1 };
-  // trained at a dummy (#199): a little more in a fight
-  const trained = use === 'combat' ? 1 + (s.trained || 0) : 1;
+  const attackTrack = dagger ? 'melee' : isRangedWeapon(s.weapon) ? 'ranged' : 'melee';
+  if (settlerType && settlerType.bite) return { ...settlerType.bite, cooldown: settlerType.bite.cooldown / getUnitAttackSpeedMultiplier(s, attackTrack), multiplier: s.petHungry ? GAME_CONFIG.pets.hungryBite : 1 };
   // the undead fight on in a panic, weaker (#232; the others run, hitting back at full strength if cornered)
   const shaken = s.panic && getPlayerFaction().id === 'undead' && game.settlers.includes(s) ? GAME_CONFIG.morale.panicDamage : 1;
-  return { ...stats, damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * trained * shaken };
+  return { ...stats, cooldown: use === 'combat' ? stats.cooldown / getUnitAttackSpeedMultiplier(s, attackTrack) : stats.cooldown,
+    damage, multiplier: (settlerType ? settlerType.damageMultiplier : 1) * shaken };
 }
 
 /** What comes off goes back: the weapon and the tool (only those that come off: #261, taking the tool off

@@ -18,5 +18,20 @@ Object.assign(window.sim, (() => {
     return { downAt };
   }
 
-  return { boarChase };
+  function boarFearsEnemy({ seed = 'boar-fears-enemy' } = {}) {
+    start(seed);
+    clearResources();
+    settlers = [];
+    const boar = { x: townHall.x + 600, y: townHall.y, hp: 30, maxHp: 30, targetX: townHall.x + 600, targetY: townHall.y };
+    boars = [boar];
+    enemies = [{ x: boar.x - 60, y: boar.y, hp: 100 }];
+    tickBoars(1 / 60);
+    const waryOfEnemy = boar.fleeTimer > 0 && !boar.sprinting;
+    boar.fleeTimer = 0;
+    boar.panic = true;
+    boarsPanic();
+    return { waryOfEnemy, runsFromEnemyInPanic: boar.fleeTimer > 0 && boar.sprinting };
+  }
+
+  return { boarChase, boarFearsEnemy };
 })());

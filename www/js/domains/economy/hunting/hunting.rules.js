@@ -10,7 +10,7 @@ import { bleed } from '../../conflict/combat/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath, shakeOnHit } from '../../conflict/morale/index.js';
 import { boarToBait } from './hunting.traps.js';
-import { noteDay } from '../../colony/settlers/index.js';
+import { addUnitExperience, noteDay } from '../../colony/settlers/index.js';
 
 // sourceX/Y: what it's fleeing from. seekHide: also head for a bush to hide in once out of danger
 // (only when attacked, not when merely startled by a settler walking close — see boars.forEach in update()).
@@ -29,7 +29,10 @@ export function woundBoar(boar, damage, attacker, fromX, fromY) {
   if (hasTerritory() && !inTerritory(boar.x, boar.y)) {
     game.territoryBoarRespawnsPending = (game.territoryBoarRespawnsPending || 0) + 1;
   }
-  if (attacker && game.settlers.includes(attacker)) noteDay(attacker, 'hunted'); // (its day, #306)
+  if (attacker && game.settlers.includes(attacker)) {
+    addUnitExperience(attacker, 1, 'hunting');
+    noteDay(attacker, 'hunted'); // (its day, #306)
+  }
   Object.assign(boar, { isCarcass: true, collector: attacker || null, fleeTimer: 0, hideTarget: null, hidden: false, butcher: 0 });
 }
 
@@ -106,11 +109,16 @@ function keepInZone(boar, x, y) {
 }
 
 const MANY_BOARS = 100;
+const BOAR_RESPAWN_SECONDS = 25;
+const MENU_HUNT_BOAR_RESPAWN_SECONDS = 8;
 /** @type {{ boars: any[] | null, length: number, tick: number, count: number }} */
 let baseBoars = { boars: null, length: -1, tick: 0, count: 0 };
 
-// A new boar every 25 s while there are fewer than BOAR_LIMIT
+// A new boar every 25 s while there are fewer than BOAR_LIMIT; faster behind the menu's hunt scene.
 export function tickBoarRespawn(dt) {
+  const isMenuHunt = game.gameMode === 'menu' && game.menuScene === 'hunt';
+  const respawnSeconds = isMenuHunt ? MENU_HUNT_BOAR_RESPAWN_SECONDS : BOAR_RESPAWN_SECONDS;
+  if (isMenuHunt) game.boarRespawnTimer = Math.min(game.boarRespawnTimer, respawnSeconds);
   if (hasTerritory()) {
     // (#322) with a great many boars on a big map, those on the base's land are counted every half a second, not every tick
     const many = game.boars.length >= MANY_BOARS;
@@ -124,18 +132,18 @@ export function tickBoarRespawn(dt) {
       if (game.boarRespawnTimer <= 0) {
         if (spawnResource('boar')) {
           game.territoryBoarRespawnsPending--;
-          game.boarRespawnTimer = 25;
+          game.boarRespawnTimer = respawnSeconds;
         } else game.boarRespawnTimer = 5;
       }
       return;
     }
     if (baseBoars.count >= startingBoarCount()) {
-      game.boarRespawnTimer = 25;
+      game.boarRespawnTimer = respawnSeconds;
       return;
     }
     game.boarRespawnTimer -= dt;
     if (game.boarRespawnTimer <= 0) {
-      game.boarRespawnTimer = spawnTerritoryBoar() ? 25 : 5;
+      game.boarRespawnTimer = spawnTerritoryBoar() ? respawnSeconds : 5;
     }
     return;
   }
@@ -143,10 +151,10 @@ export function tickBoarRespawn(dt) {
     game.boarRespawnTimer -= dt;
     if (game.boarRespawnTimer <= 0) {
       spawnResource('boar');
-      game.boarRespawnTimer = 25;
+      game.boarRespawnTimer = respawnSeconds;
     }
   } else {
-    game.boarRespawnTimer = 25;
+    game.boarRespawnTimer = respawnSeconds;
   }
 }
 
@@ -172,6 +180,7 @@ function spawnTerritoryBoar() {
 // anyone (getFrontier), lives on too, but in steps of farEvery ticks at once, by turns: a big map has hundreds
 export function tickBoars(tickDt) {
   const c = GAME_CONFIG.mapResources.boar;
+  const threats = [...game.settlers, ...game.enemies].filter(unit => unit.hp > 0);
   for (let i = boarWallows.length - 1; i >= 0; i--) {
     const w = boarWallows[i];
     if (w.boar && (!game.boars.includes(w.boar) || w.boar.isCarcass || w.boar.rest === null)) w.boar = null;
@@ -202,12 +211,12 @@ export function tickBoars(tickDt) {
     if (b.fleeTimer > 0) b.fleeTimer -= dt;
 
     if ((b.fleeTimer || 0) <= 0 && !b.hideTarget) {
-      let nearest = /** @type {import('../../../engine/world/types.js').Settler | null} */ (null), nearestDist = Infinity;
-      game.settlers.forEach(s => {
-        let d = Math.hypot(s.x - b.x, s.y - b.y);
-        if (d < nearestDist) { nearestDist = d; nearest = s; }
-      });
-      if (nearest && nearestDist <= GAME_CONFIG.mapResources.boar.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
+      let nearest = null, nearestDist = Infinity;
+      for (const unit of threats) {
+        let d = Math.hypot(unit.x - b.x, unit.y - b.y);
+        if (d < nearestDist) { nearestDist = d; nearest = unit; }
+      }
+      if (nearest && nearestDist <= c.wary) makeBoarFlee(b, nearest.x, nearest.y, false, true);
     }
 
     if (b.hideTarget) {

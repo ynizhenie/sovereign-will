@@ -23,3 +23,18 @@ test('a farmer with a backpack carries dung from the compost heap to a wheat plo
   expect(await sim.fertilizer({})).toEqual({ fertilized: true, dungLeft: 0, wheat: 8 });
   expect(await sim.fertilizer({ backpack: false })).toEqual({ fertilized: false, dungLeft: 1, wheat: 4 });
 });
+
+test('a farmer plants rice seeds in a rice zone and harvests rice plus seeds', async () => {
+  expect(await sim.riceCrop({})).toEqual({
+    planted: true, crop: 'rice', seedsSpent: 1, harvest: { rice: 4, riceSeeds: 1 }
+  });
+});
+
+test('farming progression takes 30 harvests to reach level 2', () => {
+  expect(sim.farmingExperience()).toEqual({
+    beforeLevelTwo: { experience: 29, level: 1 },
+    atLevelTwo: { experience: 30, level: 2 },
+    beforeLevelThree: { experience: 59, level: 2 },
+    atLevelThree: { experience: 60, level: 3 }
+  });
+});

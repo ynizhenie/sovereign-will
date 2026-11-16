@@ -50,8 +50,8 @@ export const buildingsConfig = {
     // everything with
     workshop: { id: 'workshop', group: 'economy', icon: 'workshop', cost: { wood: 10, stone: 4 }, demolishRefund: { wood: 5 }, crafts: 'workshop', build: { maxProgress: 80, hp: 80 } },
     smithy: { id: 'smithy', group: 'economy', icon: 'smithy', cost: { wood: 10, stone: 15 }, demolishRefund: { stone: 7 }, crafts: 'smithy', build: { maxProgress: 100, hp: 80 } },
-    // a training dummy (#199): idle soldiers and archers between waves train at it, a little more damage
-    // each time (GAME_CONFIG.idle.trainPerSecond, up to trainMax); trainers: at most this many at once
+    // a training dummy (#199): idle soldiers and archers gain experience while training; trainers: at most
+    // this many at once
     dummy: { id: 'dummy', group: 'defense', icon: 'dummy', cost: { wood: 8 }, demolishRefund: { wood: 4 }, trainers: 2, build: { maxProgress: 40, hp: 80 } },
     // a fish trap (#199): on a water tile a fisher could fish from (onWater, #248); baited, it catches a fish
     // every fishTrap.seconds, holding up to fishTrap.holds, and a bait (what a fisher uses,
@@ -67,8 +67,9 @@ export const buildingsConfig = {
     warehouse: { id: 'warehouse', group: 'economy', icon: 'warehouse', cost: { wood: 5 }, demolishRefund: { wood: 2 }, build: { maxProgress: 80, hp: 80 } },
     // a compost heap (#232): settlers with nothing to do bring it the dung lying in the base, up to
     // dungCapacity; farmers with a backpack take it from there to fertilise. Without one nobody gathers dung
-    dung_heap: { id: 'dung_heap', icon: 'dung_heap', factions: ['humans', 'demons'], cost: { wood: 6 }, demolishRefund: { wood: 3 }, dungCapacity: 5, build: { maxProgress: 40, hp: 60 }, tab: 'farming', arrowsPass: true },
+    dung_heap: { id: 'dung_heap', group: 'economy', icon: 'dung_heap', factions: ['humans', 'demons'], cost: { wood: 6 }, demolishRefund: { wood: 3 }, dungCapacity: 5, build: { maxProgress: 40, hp: 60 }, arrowsPass: true },
     wheat: { id: 'wheat', icon: 'wheat', cost: { wheatSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
+    rice: { id: 'rice', icon: 'rice', cost: { riceSeeds: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
     sapling: { id: 'sapling', icon: 'saplings', cost: { saplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true },
     apple_sapling: { id: 'apple_sapling', icon: 'appleSaplings', cost: { appleSaplings: 1 }, build: { maxProgress: 40 }, tab: 'farming', arrowsPass: true }
   },

@@ -12,7 +12,7 @@ import { getEnemyDef } from '../waves/index.js';
 
 const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
-const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || isInsideBase(en) ||
+const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || en.menuThreat || isInsideBase(en) ||
   ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned)));
 
 // (#322) The enemies there are to fight, and which of them are inside the base: the same for every settler of a tick (they
@@ -22,8 +22,8 @@ function threatsThisTick(tick) {
   if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
     const inside = new Set(game.enemies.filter(isInsideBase));
     const marching = !game.wavePreparation || game.wavePreparation.stage === 'march';
-    const list = game.enemies.filter(en => !en.ghostly && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
-      (game.gameMode === 'battle' || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
+    const list = game.enemies.filter(en => !en.ghostly && !en.menuStaged && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
+      (game.gameMode === 'battle' || en.menuThreat || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
     tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
   }
   return tick.threats;
@@ -93,10 +93,12 @@ export function holdPost(s, tick) {
 export function strikeBack(s, tick) {
   if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
   if (s.plagueUnit && game.settlers.some(master => master.id === s.masterId && master.plagueMoveTarget)) return false;
-  const attacker = getRecentAttacker(s);
+  const recentAttacker = getRecentAttacker(s);
+  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
+    ? recentAttacker : getPetAttackTarget(s);
   if (attacker && isCampGuardUnavailable(attacker)) return false;
   if (attacker && !canDefendEnemy(attacker)) return false;
-  if (!attacker || game.pathTick - (s.lastAttackedTick || 0) > 90) return false;
+  if (!attacker || (attacker === recentAttacker && game.pathTick - (s.lastAttackedTick || 0) > 90)) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
   if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
   return engageEnemy(s, tick, attacker, attacker, tick.dt);
@@ -107,6 +109,14 @@ export function strikeBack(s, tick) {
 // while there are defenders, unless they're being attacked themselves.
 export function fightEnemies(s, tick) {
   const dt = tick.dt;
+  if (game.gameMode === 'menu' && game.menuScene === 'demon' && s.type === 'demon') {
+    const target = game.enemies.filter(enemy => enemy.hp > 0 && !enemy.menuStaged)
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (target) {
+      s.patrolTarget = null;
+      return engageEnemy(s, tick, target, target, dt);
+    }
+  }
   const choice = chooseSettlerTarget(s, tick);
   if (!choice) return false; // on the way to the enemy tents, with nothing in the way
   const { targetEnemy, attacker } = choice;
@@ -122,7 +132,7 @@ export function fightEnemies(s, tick) {
     return true;
   }
   // (#279) the menu's fight: the squad keeps by the warehouse, guarding it, and lets those further off come
-  if (game.gameMode === 'menu' && !targetEnemy && game.enemies.length) {
+  if (game.gameMode === 'menu' && game.menuScene !== 'demon' && !targetEnemy && game.enemies.length) {
     s.patrolTarget = null;
     if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > MENU_GUARD * 0.5) moveSettlerToTownHall(s, s.speed, dt);
     return true;
@@ -134,14 +144,25 @@ const MENU_GUARD = 4 * 30; // (how far from the menu's warehouse its squad goes 
 
 const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
 
+function getPetAttackTarget(s) {
+  const target = s.petAttackTarget;
+  if (!target || game.pathTick - (s.petAttackTick || 0) > 90 || !game.enemies.includes(target) ||
+      isCampGuardUnavailable(target) || !canDefendEnemy(target)) {
+    s.petAttackTarget = null;
+    s.petAttackTick = null;
+    return null;
+  }
+  return target;
+}
+
 // The enemy a settler fights: the one most dangerous to the base, an enemy the player marked, the one near
 // its post, or whoever is hitting it right now. On the way to the enemy tents, only what's in the way
 // (null: nothing is). attacker: the one hitting it, if any.
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  const isWaveThreat = en => (!game.wavePreparation || game.wavePreparation.stage === 'march') &&
-    (en.fromWave || en.waveSummoned);
+  const isWaveThreat = en => en.menuThreat || ((!game.wavePreparation || game.wavePreparation.stage === 'march') &&
+    (en.fromWave || en.waveSummoned));
   const threats = threatsThisTick(tick);
   const candidates = threats.list.filter(en => !(en.toCatch && en.toCatch !== s.id));
   const baseThreats = candidates.filter(en => threats.inside.has(en));
@@ -172,7 +193,8 @@ function chooseSettlerTarget(s, tick) {
   }
   // ...but whoever is hitting this settler right now comes first of all
   const recentAttacker = getRecentAttacker(s);
-  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker) ? recentAttacker : null;
+  const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
+    ? recentAttacker : getPetAttackTarget(s);
   // a squad soldier goes for the enemy that came near its post (see holdPost)
   if (s.postTarget && (!game.enemies.includes(s.postTarget) || isCampGuardUnavailable(s.postTarget) || !canDefendEnemy(s.postTarget))) s.postTarget = null;
   if (!attacker && s.postTarget && game.enemies.includes(s.postTarget)) targetEnemy = s.postTarget;
@@ -199,7 +221,8 @@ function chooseSettlerTarget(s, tick) {
     });
     if (!targetEnemy) return null;
   }
-  if (game.gameMode === 'menu' && targetEnemy && !attacker && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) > MENU_GUARD) targetEnemy = null; // (#279)
+  if (game.gameMode === 'menu' && targetEnemy && !attacker &&
+      Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) > MENU_GUARD) targetEnemy = null; // (#279)
   return { targetEnemy, attacker };
 }
 
@@ -323,7 +346,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
       : dist <= Math.max(approach + extraBody, pastBodies) && hasMeleeReach(s, targetEnemy);
     if (inReach) {
-      performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger);
+      performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger, targetEnemy);
     } else if (attacker !== targetEnemy && breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through
     } else if (!shoots) {

@@ -5,6 +5,7 @@ async function openBattle(page) {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
 }
 
 test('ordinary units cannot route through the red battle border, panic units can flee through it', async ({ page }) => {

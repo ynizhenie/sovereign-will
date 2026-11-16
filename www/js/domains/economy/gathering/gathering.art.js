@@ -410,21 +410,53 @@ export function drawPebblesArt(pe) {
   }
 }
 
-// A farm plot: soil in furrows (richer and darker fertilised), wheat in rows that grows from green shoots
-// to golden ears
+// A farm plot: dark, watered soil and scattered fertiliser granules; wheat and rice grow from shoots
+// to grain heads
 export function drawFarmPlotArt(f) {
   const x = f.x, y = f.y, g = Math.max(0, Math.min(100, f.growth || 0)) / 100;
-  pen().fillStyle = f.fertilized ? '#4a3020' : '#5c4033'; pen().fillRect(x - 13, y - 13, 26, 26);
+  const rice = f.crop === 'rice';
+  pen().fillStyle = f.watered ? '#4a3020' : '#5c4033'; pen().fillRect(x - 13, y - 13, 26, 26);
   pen().strokeStyle = 'rgba(0, 0, 0, 0.3)'; pen().lineWidth = 1;
   for (let k = -9; k <= 9; k += 6) { pen().beginPath(); pen().moveTo(x - 12, y + k); pen().lineTo(x + 12, y + k); pen().stroke(); }
-  if (f.fertilized) { pen().strokeStyle = '#3b2412'; pen().lineWidth = 2; pen().strokeRect(x - 12, y - 12, 24, 24); }
   const ripe = g >= 1;
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
       const sx = x - 9 + col * 6, sy = y - 8 + row * 6, tall = 2 + 7 * g, sway = windSway(sx, sy, tall); // (in the wind, #308)
+      if (rice) {
+        pen().strokeStyle = ripe ? '#5e8a3c' : g > 0.6 ? '#85b957' : '#39a868'; pen().lineWidth = 1.1;
+        pen().beginPath(); pen().moveTo(sx, sy + 2); pen().quadraticCurveTo(sx + sway * 0.3, sy + 2 - tall * 0.6, sx + sway, sy + 2 - tall); pen().stroke();
+        if (g > 0.2) {
+          for (const side of [-1, 1]) {
+            pen().beginPath(); pen().moveTo(sx, sy + 2);
+            pen().quadraticCurveTo(sx + side * 2, sy + 2 - tall * 0.35, sx + side * (1.5 + g * 1.5), sy + 2 - tall * 0.65); pen().stroke();
+          }
+        }
+        if (ripe) {
+          const headX = sx + sway, headY = sy + 2 - tall;
+          pen().strokeStyle = '#5e8a3c'; pen().beginPath(); pen().moveTo(headX, headY);
+          pen().quadraticCurveTo(headX + 1.5, headY + 0.5, headX + 1.8, headY + 3); pen().stroke();
+          pen().fillStyle = '#7fae48';
+          for (let grain = 0; grain < 3; grain++) {
+            pen().beginPath(); pen().ellipse(headX + 1.8 + (grain % 2 ? 0.7 : -0.6), headY + 1 + grain * 1.2, 0.9, 1.3, 0.3, 0, Math.PI * 2); pen().fill();
+          }
+        }
+        continue;
+      }
       pen().strokeStyle = ripe ? '#d4ac0d' : g > 0.6 ? '#9acd32' : '#2ecc71'; pen().lineWidth = 1.2;
       pen().beginPath(); pen().moveTo(sx, sy + 2); pen().quadraticCurveTo(sx + sway * 0.3, sy + 2 - tall * 0.6, sx + sway, sy + 2 - tall); pen().stroke();
       if (ripe || g > 0.6) { pen().fillStyle = ripe ? '#f4d03f' : '#c5e384'; pen().beginPath(); pen().ellipse(sx + sway, sy + 1 - tall, 1.4, 2.6, sway * 0.08, 0, Math.PI * 2); pen().fill(); }
     }
+  }
+  if (f.fertilized) {
+    pen().save();
+    pen().fillStyle = '#e0b56d'; pen().strokeStyle = '#6d4c2a'; pen().lineWidth = 0.6;
+    for (const [dx, dy, rx, ry, rotation] of [
+      [-9, -9, 1.2, 0.9, -0.3], [-2, -8, 0.9, 1.2, 0.4], [7, -5, 0.8, 1.1, -0.5],
+      [-6, -1, 1.1, 0.8, 0.2], [4, 2, 0.9, 1.1, -0.4], [-9, 7, 0.8, 1, 0.3],
+      [-1, 6, 1.2, 0.8, -0.2], [8, 9, 1.1, 0.9, 0.5]
+    ]) {
+      pen().beginPath(); pen().ellipse(x + dx, y + dy, rx, ry, rotation, 0, Math.PI * 2); pen().fill(); pen().stroke();
+    }
+    pen().restore();
   }
 }

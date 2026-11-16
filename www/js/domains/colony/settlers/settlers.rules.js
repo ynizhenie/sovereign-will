@@ -4,7 +4,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall } from '../../../engine/world/index.js';
-import { armorOf, hasGear, hasWorkingShield } from '../equipment/index.js';
+import { armorOf, hasGear, hasWorkingShield, helmetOf } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
@@ -18,6 +18,7 @@ import { newLook } from './settlers.looks.js';
 import { generateUnitName } from './settlers.names.js';
 import { isNight } from '../../world/index.js';
 import { isSpawnSpotFree } from '../../economy/building/index.js';
+import { addUnitExperience, getUnitHealthBonus, getUnitLevel, getUnitWeaponProgressionTrack } from './settlers.progression.js';
 
 // The start's limit, plus what each tent (or grave) adds
 export function getMaxPop() {
@@ -61,7 +62,8 @@ export function changeSettlerType(s, type) {
   if (!t || s.type === type) return;
   const share = s.hp / s.maxHp;
   const bonus = armorOf(s) ? armorOf(s).hpBonus : 0;
-  Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, maxHp: t.hp + bonus });
+  Object.assign(s, { type, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius,
+    maxHp: t.hp + bonus + getUnitHealthBonus(getUnitLevel(s, 'melee')) });
   s.hp = s.maxHp * share;
 }
 
@@ -71,8 +73,9 @@ export function changeSettlerType(s, type) {
 export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
   const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook());
+  /** @type {import('../../../engine/world/types.js').Settler} */
   const s = {
-    id, x, y, hp: t.hp, maxHp: t.hp, ...extra,
+    id, x, y, hp: t.hp, maxHp: t.hp, ...(t.pet === 'ghost' ? {} : { experience: 0, level: 1 }), ...extra,
     isPossessed: false, speed: t.speed, radius: t.radius, visualRadius: t.visualRadius, weapon: 'fist', tool: 'none', role: 'worker', type: typeKey,
     carrying: null, targetEquipment: null, attackCooldown: 0, path: [], pathTarget: null, patrolTemplate: null, deadProcessed: false,
     name: extra.name || generateUnitName(getPlayerFaction().id, look.female, game.settlers, t.pet || null),
@@ -140,7 +143,7 @@ export function getUpgrade() {
 const WEAPON_RANK = { iron: 3, plain: 2, club: 1, fist: 0 };
 export function upgradeRank(s) {
   const weapon = s.weapon === 'fist' ? WEAPON_RANK.fist : s.weapon.startsWith('iron_') ? WEAPON_RANK.iron : s.weapon === 'club' ? WEAPON_RANK.club : WEAPON_RANK.plain;
-  const armour = armorOf(s) ? (armorOf(s).armorKind === 'iron' ? 2 : 1) : 0;
+  const armour = armorOf(s) ? (armorOf(s).armorKind === 'iron' ? 2 : armorOf(s).armorKind === 'leather' ? 1 : 0.5) : 0;
   return (s.role !== 'worker' ? 100 : 0) + weapon * 10 + armour * 3 + (hasWorkingShield(s) ? 1 : 0);
 }
 
@@ -170,8 +173,9 @@ export function upgradeToBig(target) {
   payCost(big.upgradeCost);
 
   target.type = upgrade.to;
-  target.maxHp = big.hp;
-  target.hp = Math.min(target.hp + (big.hp - normal.hp), big.hp);
+  const maxHp = big.hp + (armorOf(target)?.hpBonus || 0) + getUnitHealthBonus(getUnitLevel(target, 'melee'));
+  target.hp = Math.min(target.hp + (maxHp - target.maxHp), maxHp);
+  target.maxHp = maxHp;
   target.speed = big.speed;
   target.radius = big.radius;
   target.visualRadius = big.visualRadius;
@@ -192,6 +196,7 @@ export function dismissSettler(s) {
   if (s.carrying && s.carrying.type && stock[s.carrying.type] !== undefined) stock[s.carrying.type] += s.carrying.amount || 0;
   Object.assign(s, { leaving: true, weapon: 'fist', tool: 'none', role: 'worker', armor: null, carrying: null, targetEquipment: null, isPossessed: false, markTarget: null, path: [], pathTarget: null });
   for (const id of Object.keys(GAME_CONFIG.gear)) if (!GAME_CONFIG.gear[id].armorKind && s[id]) s[id] = false;
+  delete s.helmetGear;
   s.hp = Math.min(s.hp, s.maxHp = GAME_CONFIG.settlerTypes[s.type].hp);
   if (game.selectedSettler === s) game.selectedSettler = null;
   says(s, 'dismissed');
@@ -200,18 +205,29 @@ export function dismissSettler(s) {
 }
 
 // attacker: the enemy dealing the damage, remembered so the settler can strike back (see update())
-export function damageSettler(settler, amount, attacker = null) {
+/** @param {string | null} [attackerTrack] */
+export function damageSettler(settler, amount, attacker = null, attackerTrack = null) {
   if (isUntouchable(settler)) return; // (a ghost, #314)
   let damage = armorOf(settler) ? amount * (1 - armorOf(settler).damageReduction) : amount;
   if (hasWorkingShield(settler)) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
-  if (settler.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
+  const helmet = helmetOf(settler);
+  if (helmet) damage *= 1 - helmet.damageReduction; // (#326, 27.10, 27)
   const wasWell = settler.hp >= settler.maxHp * 0.3;
   settler.hp -= damage;
   if (damage > 0) { bleed(settler, attacker); playSound('hurt', settler); shakeOnHit(settler); }
   if (wasWell && settler.hp > 0 && settler.hp < settler.maxHp * 0.3) says(settler, 'hurt', true); // (#252)
   if (attacker) {
     settler.lastAttacker = attacker;
+    settler.lastAttackerTrack = attackerTrack || getUnitWeaponProgressionTrack(attacker) || undefined;
     settler.lastAttackedTick = game.pathTick;
+    if (game.gameMode === 'endless' && (petKindOf(settler) === 'dog' || petKindOf(settler) === 'beast')) {
+      const keeper = game.settlers.find(s => s.id === settler.petKeeperId);
+      if (keeper && keeper.hp > 0 && !keeper.isPossessed) {
+        keeper.petAttackTarget = attacker;
+        keeper.petAttackTick = game.pathTick;
+        keeper.fightTarget = attacker;
+      }
+    }
   }
 }
 
@@ -320,6 +336,7 @@ export function removeDeadSettlers() {
     if (s.hp <= 0 && !s.deadProcessed) {
       s.deadProcessed = true;
       if (!s.fled) {
+        addUnitExperience(s.lastAttacker, 1, s.lastAttackerTrack);
         onUnitDeath(s, 'settler');
         dropSettlerLoot(s);
       }

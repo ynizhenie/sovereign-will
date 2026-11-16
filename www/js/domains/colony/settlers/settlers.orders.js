@@ -23,6 +23,7 @@ import { getHarvestableResources, getMapResourceDef, getMapResourceKind, workRes
 import { getResourceApproachPoint, moveEntityTowards } from '../../../engine/movement/index.js';
 import { performAttack } from '../../conflict/combat/index.js';
 import { faceTowards } from './settlers.draw.js';
+import { addUnitExperience, getUnitHealingSpeedMultiplier } from './settlers.progression.js';
 import { fetchBait, fishAt, getFishingBait } from '../../economy/fishing/index.js';
 import { huntBoar } from '../../economy/hunting/index.js';
 import { pickApplesFrom, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
@@ -46,7 +47,7 @@ export const ORDERS = [
       const combat = getWeaponStats(s, 'combat');
       const reach = game.enemyTents.includes(target) ? combat.tentReach : combat.approach + target.radius;
       if (Math.hypot(target.x - s.x, target.y - s.y) > reach) walkTo(s, target.x, target.y, tick);
-      else performAttack(s, target.x, target.y);
+      else performAttack(s, target.x, target.y, false, target);
       return true;
     }
   },
@@ -129,7 +130,7 @@ export const ORDERS = [
     step: (s, target, tick) => {
       if (!game.buildings.includes(target) || target.side === 'red' || target.hp >= target.maxHp || !canAfford(getRepairStep(target).cost)) return false;
       if (Math.hypot(target.x - s.x, target.y - s.y) > 34) walkTo(s, target.x, target.y, tick);
-      else repairStep(target, tick.dt);
+      else repairStep(target, tick.dt, s);
       return true;
     }
   },
@@ -177,7 +178,8 @@ export const ORDERS = [
       if (!(s.bagHerbs > 0)) return fetchFromStorage(s, 'herbs', tick.dt, () => { s.bagHerbs = takeStock('herbs', medic.bagSize); });
       if (Math.hypot(target.x - s.x, target.y - s.y) > medic.range + target.radius) { walkTo(s, target.x, target.y, tick); return true; }
       s.working = 0.1; faceTowards(s, target.x, target.y);
-      s.healTimer = (s.healTimer || 0) + tick.dt;
+      s.healTimer = (s.healTimer || 0) + tick.dt * getUnitHealingSpeedMultiplier(s);
+      addUnitExperience(s, tick.dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
       if (s.healTimer >= medic.healSeconds) { s.healTimer = 0; s.bagHerbs--; target.hp = Math.min(target.maxHp, target.hp + medic.healPerHerb); }
       return true;
     }
@@ -193,7 +195,8 @@ export const ORDERS = [
       if (Math.hypot(target.x - s.x, target.y - s.y) > necro.raiseReach) { walkTo(s, target.x, target.y, tick); return true; }
       s.working = 0.1; faceTowards(s, target.x, target.y);
       s.raising = { x: target.x, y: target.y, until: game.pathTick + 2 };
-      s.raiseTimer = (s.raiseTimer || 0) + tick.dt;
+      s.raiseTimer = (s.raiseTimer || 0) + tick.dt * getUnitHealingSpeedMultiplier(s);
+      addUnitExperience(s, tick.dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
       if (s.raiseTimer < necro.raiseSeconds) return true;
       s.raiseTimer = 0; s.raisesLeft = (s.raisesLeft ?? necro.raises) - 1;
       raiseTemporaryZombie(target, s);

@@ -7,6 +7,7 @@ const openBattle = async page => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play');
 };
 const at = (gx, gy) => ({ x: gx * 30 + 15, y: gy * 30 + 15 });
 
@@ -15,7 +16,7 @@ test('a battle\'s difficulty: on Hard the red side is as strong as yours; Endles
   const place = () => page.evaluate(([p]) => { battle.category = 'units'; battle.preset = 'humans:sword'; battle.lineup = []; battleTap(p.x, p.y); return [enemies[0].maxHp, enemies[0].damage]; }, [at(30, 10)]);
   expect(await place()).toEqual([75, 50]);
   await page.click('[data-dock="battle-settings"]');
-  await page.click('[data-battle-difficulty="hard"]');
+  await page.locator('[data-battle-difficulty="hard"]:visible').click();
   expect(await page.evaluate(() => [enemies[0].maxHp, enemies[0].damage])).toEqual([100, 50]); // (made again at once)
   await page.evaluate(() => { closeSheet(); setBattleCategory('units'); });
   expect(await page.locator('#battle-presets [data-preset="humans:sword"] .tile-cost').innerText()).toContain('100'); // (a tile shows the unit as one of yours, #326)

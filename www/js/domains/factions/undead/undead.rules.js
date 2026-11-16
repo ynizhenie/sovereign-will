@@ -7,8 +7,8 @@ import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
 import { showNotification } from '../../../ui/index.js';
-import { createSettler, dropSettlerLoot, faceTowards } from '../../colony/settlers/index.js';
-import { canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
+import { addUnitExperience, copyUnitProgression, createSettler, dropSettlerLoot, faceTowards, getUnitHealingSpeedMultiplier } from '../../colony/settlers/index.js';
+import { armorOf, canUseShield, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { playSound } from '../../../app/index.js';
 
@@ -128,9 +128,10 @@ function armFromCorpse(zombie, corpse, reach) {
   if (carriesLoot) {
     if (corpse.weapon && corpse.weapon !== 'fist' && GAME_CONFIG.weapons[corpse.weapon]) zombie.weapon = corpse.weapon;
     if (isRangedWeapon(zombie.weapon)) { zombie.quiver = true; zombie.arrows = 15; }
-    if (corpse.armor) putOnGear(zombie, corpse.armor === 'iron' ? 'armor' : 'leather_armor');
+    const armour = armorOf({ armor: corpse.armor });
+    if (armour) putOnGear(zombie, armour.id);
     zombie.shield = !!corpse.shield;
-    zombie.helmet = !!corpse.helmet;
+    if (corpse.helmet) putOnGear(zombie, corpse.helmetGear || 'helmet');
   } else {
     const piles = game.loot.filter(p => p.items.length && Math.hypot(p.x - corpse.x, p.y - corpse.y) <= reach);
     for (const pile of piles) {
@@ -143,7 +144,7 @@ function armFromCorpse(zombie, corpse, reach) {
         } else if (category === 'gear' && GAME_CONFIG.gear[id]) {
           if (GAME_CONFIG.gear[id].armorKind) { if (!zombie.armor) { putOnGear(zombie, id); taken = true; } }
           else if (id === 'shield' && !zombie.shield) { zombie.shield = true; taken = true; }
-          else if (id === 'helmet' && !zombie.helmet) { zombie.helmet = true; taken = true; }
+          else if (GAME_CONFIG.gear[id].helmetKind && !zombie.helmet) { putOnGear(zombie, id); taken = true; }
         }
         if (taken) pile.items.splice(pile.items.indexOf(key), 1);
       }
@@ -180,6 +181,7 @@ function enemyZombieKey(corpse, weapon) {
 /** @param {any} corpse @param {import('../../../engine/world/types.js').Settler | null} [master] */
 export function raiseTemporaryZombie(corpse, master = null) {
   const zombie = createSettler(corpse.big ? 'big_zombie' : 'zombie', Date.now() + rand(), corpse.x, corpse.y);
+  copyUnitProgression(zombie, corpse);
   zombie.temporary = GAME_CONFIG.temporaryZombie.lifeSeconds;
   if (master) {
     zombie.masterId = master.id;
@@ -246,7 +248,8 @@ export function enemyNecromancy(en, necro, dt) {
     en.working = 0.1;
     faceTowards(en, corpse.x, corpse.y);
     en.raising = { x: corpse.x, y: corpse.y, until: game.pathTick + 2 };
-    en.raiseTimer = (en.raiseTimer || 0) + dt;
+    en.raiseTimer = (en.raiseTimer || 0) + dt * getUnitHealingSpeedMultiplier(en);
+    addUnitExperience(en, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
     if (en.raiseTimer >= necro.raiseSeconds) {
       en.raiseTimer = 0;
       en.raisesLeft--;
@@ -275,7 +278,8 @@ export function enemyNecromancy(en, necro, dt) {
   if (patient) {
     if (dist(patient) > necro.healRange) moveEntityTowards(en, patient.x, patient.y, en.speed, true, dt);
     else {
-      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt);
+      patient.hp = Math.min(patient.maxHp, patient.hp + necro.healPerSecond * dt * getUnitHealingSpeedMultiplier(en));
+      addUnitExperience(en, dt / GAME_CONFIG.unitProgression.healingSecondsPerExperience, 'healing');
       patient.necroTreatedAt = game.pathTick;
       en.working = 0.1;
       faceTowards(en, patient.x, patient.y);
@@ -302,9 +306,9 @@ export function enemyNecromancy(en, necro, dt) {
 // them, workGrave, #253); and a grave's rest runs down
 export function makeBonesAndRot(dt) {
   const bonesRate = getPlayerFaction().bonesPerSecond;
-  if (bonesRate && game.gameMode === 'endless') stock.bones += dt * bonesRate.hall;
+  if (!game.plagueMode && bonesRate && game.gameMode === 'endless') stock.bones += dt * bonesRate.hall;
   const rotRate = getPlayerFaction().rotPerSecond;
-  if (rotRate && game.gameMode === 'endless') stock.rot += dt * rotRate.hall;
+  if (!game.plagueMode && rotRate && game.gameMode === 'endless') stock.rot += dt * rotRate.hall;
   for (const b of game.buildings) if (b.type === 'grave' && (b.rest || 0) > 0) b.rest = (b.rest || 0) - dt;
 }
 

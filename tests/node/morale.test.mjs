@@ -39,3 +39,7 @@ test('a player ghost makes a panicking enemy flee, even when the enemy side is u
 test('a boar in a panic keeps running from the settler near it', async () => {
   expect(await sim.moraleBoar({})).toEqual({ panic: true, running: true });
 });
+
+test('a boar in a panic also runs from an enemy near it', async () => {
+  expect(await sim.moraleBoar({ threat: 'enemy' })).toEqual({ panic: true, running: true });
+});

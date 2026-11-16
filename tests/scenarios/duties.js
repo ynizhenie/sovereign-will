@@ -30,7 +30,7 @@ Object.assign(window.sim, (() => {
     return { roundTheEdge: offEdge / samples < 0.1, turned: turned > 1.5, activity: s.activity };
   }
 
-  // A soldier at a training dummy: its damage grows a little, by trainPerSecond a second
+  // A soldier at a training dummy earns experience but gains no combat bonus before levelling
   function train({ seed = 'duty-train' } = {}) {
     asFaction('humans', seed);
     const dummy = placeBuilding('dummy', nearHall(3, 2).x, nearHall(3, 2).y);
@@ -39,9 +39,9 @@ Object.assign(window.sim, (() => {
     run(0.5, { each: fed });
     const before = getWeaponStats(s, 'combat');
     s.idle = { act: 'train', left: 60, spot: { x: dummy.x, y: dummy.y }, partnerId: null };
-    run(30, { each: fed });
+    run(60, { each: fed });
     const after = getWeaponStats(s, 'combat');
-    return { atDummy: Math.hypot(s.x - dummy.x, s.y - dummy.y) < 35, trained: s.trained > 0.015 && s.trained < 0.04, stronger: after.multiplier > before.multiplier, activity: s.activity };
+    return { atDummy: Math.hypot(s.x - dummy.x, s.y - dummy.y) < 35, experience: s.experience || 0, stronger: after.multiplier > before.multiplier, activity: s.activity };
   }
 
   // A worker cutting a tree far out of the base: an idle soldier goes and stands guard by it
@@ -94,7 +94,7 @@ Object.assign(window.sim, (() => {
     const boar = { x: townHall.x + 200, y: townHall.y, hp: 30, maxHp: 30, wanderTimer: 0, wanderInterval: 999, priority: 0, targetX: townHall.x + 200, targetY: townHall.y };
     const acts = new Set();
     run(30, { each: () => { a.hunger = 999; boars = [boar]; boarRespawnTimer = 999; pendingRespawns = []; acts.add(a.activity); if (a.idle && a.idle.act === 'train') acts.add('train'); } });
-    return { hunted: acts.has('harvest'), trained: acts.has('train') || (a.trained || 0) > 0, dummy: !!dummy };
+    return { hunted: acts.has('harvest'), trained: acts.has('train') || (a.experience || 0) > 0, dummy: !!dummy };
   }
 
   return { dutyArcherNoArrows: archerNoArrows, dutyPatrol: patrol, dutyTrain: train, dutyGuard: guard, dutyBones: bones, dutyKeepBack: keepBack };

@@ -17,6 +17,7 @@ const CLEAR = { kind: 'clear', level: 0, left: 0, wind: 0.3, windTo: 0.3, windAn
 
 /** @returns {typeof CLEAR} */
 export function getWeather() {
+  if (game.gameMode === 'editor') return game.editorHideTimeAndWeather ? CLEAR : game.weather || CLEAR;
   return (game.gameMode === 'endless' || game.gameMode === 'battle') && game.weather ? game.weather : CLEAR;
 }
 
@@ -25,6 +26,15 @@ export function setStandingWeather(kind) {
   if (kind === 'clear' || !config().wind[kind]) { game.weather = null; return; }
   const [lo, hi] = config().wind[kind];
   game.weather = { ...CLEAR, kind, level: 1, left: Infinity, wind: (lo + hi) / 2, windTo: (lo + hi) / 2 };
+}
+
+export function setStartingWeather(kind) {
+  const c = config();
+  if (!c.wind[kind]) { game.weather = { ...CLEAR, left: c.firstClearSeconds }; return; }
+  const [lo, hi] = c.wind[kind];
+  const left = kind === 'clear' ? c.firstClearSeconds : c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
+  const wind = (lo + hi) / 2;
+  game.weather = { ...CLEAR, kind, level: kind === 'clear' ? 0 : 1, left, wind, windTo: wind };
 }
 // rain falling now, 0..1 (a storm is rain too)
 export const rainLevel = () => { const w = getWeather(); return w.kind === 'rain' || w.kind === 'storm' ? w.level : 0; };

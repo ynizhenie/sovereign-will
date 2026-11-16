@@ -2,7 +2,7 @@
 // an idle settler sits by a campfire (its morale rises faster, and a little past its usual), stands with
 // others in a knot "talking", or does its faction's own thing: demons spar in pairs (morale up, a little
 // health down), the undead stand and sway (#298: no sharpening, smoking or wheat stalk any more); soldiers
-// and archers also walk the edge of the base on patrol, or train at a dummy (their damage grows). Each
+// and archers also walk the edge of the base on patrol, or train at a dummy (experience toward a level). Each
 // pastime lasts a while (GAME_CONFIG.idle.seconds), then another is picked. And any settler free between
 // waves a farmer with a backpack carries dung lying about the base to a compost heap, to fertilise from.
 
@@ -14,6 +14,7 @@ import { isRangedWeapon, usesDagger } from '../equipment/index.js';
 import { baseMorale, getMorale, liftMorale } from '../../conflict/morale/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { faceTowards, startSwing } from './settlers.draw.js';
+import { addUnitExperience, getUnitLevel, getUnitWeaponProgressionTrack } from './settlers.progression.js';
 
 const config = () => GAME_CONFIG.idle;
 
@@ -71,7 +72,7 @@ function pickPastime(s) {
   if (s.tool === 'rod' && nearestGrass(s)) options.push('digWorms', 'digWorms'); // a fisher digs for worms (#199)
   if (isFighter(s)) {
     options.push('patrolEdge', 'patrolEdge');
-    if (freeDummy(s) && canTrain(s) && (s.trained || 0) < c.trainMax) options.push('train', 'train', 'train');
+    if (freeDummy(s) && canTrain(s) && getUnitLevel(s, getUnitWeaponProgressionTrack(s)) < 3) options.push('train', 'train', 'train');
   }
   const act = options[Math.floor(rand() * options.length)];
   const seconds = c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
@@ -244,7 +245,7 @@ export function idlePastime(s, tick) {
       const dummy = game.buildings.find(b => b.side !== 'red' && b.type === 'dummy' && Math.hypot(b.x - idle.spot.x, b.y - idle.spot.y) < 1);
       const shoots = isRangedWeapon(s.weapon) && !usesDagger(s);
       const kept = dummy && dummy.arrowsStuck ? dummy.arrowsStuck.length : 0;
-      if (!dummy || (!canTrain(s) && !(shoots && kept)) || (s.trained || 0) >= c.trainMax) { idle.left = 0; return false; }
+      if (!dummy || (!canTrain(s) && !(shoots && kept)) || getUnitLevel(s, getUnitWeaponProgressionTrack(s)) >= 3) { idle.left = 0; return false; }
       if (shoots) {
         // (#326) an archer practises from a few tiles off, the dummy keeping the arrows (up to 5); when it
         // holds all it can, or the quiver's empty, it goes to the dummy and takes them back
@@ -260,7 +261,7 @@ export function idlePastime(s, tick) {
         if (Math.hypot(place.x - s.x, place.y - s.y) > 8) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }
         faceTowards(s, dummy.x, dummy.y);
         if ((s.attackCooldown || 0) <= 0) performAttack(s, dummy.x, dummy.y);
-        s.trained = Math.min(c.trainMax, (s.trained || 0) + c.trainPerSecond * tick.dt);
+        addUnitExperience(s, tick.dt / GAME_CONFIG.unitProgression.trainingSecondsPerExperience, getUnitWeaponProgressionTrack(s));
         return true;
       }
       const place = ringPlace(s, dummy, c.trainRing, 'train');
@@ -268,7 +269,7 @@ export function idlePastime(s, tick) {
       if (Math.hypot(place.x - s.x, place.y - s.y) > 6 && Math.hypot(dummy.x - s.x, dummy.y - s.y) > c.trainRing + 10) { moveEntityTowards(s, place.x, place.y, s.speed * 0.7, false, tick.dt); return true; }
       faceTowards(s, dummy.x, dummy.y);
       if ((s.attackCooldown || 0) <= 0) { startSwing(s, 0.3); s.attackCooldown = 0.9; }
-      s.trained = Math.min(c.trainMax, (s.trained || 0) + c.trainPerSecond * tick.dt);
+      addUnitExperience(s, tick.dt / GAME_CONFIG.unitProgression.trainingSecondsPerExperience, getUnitWeaponProgressionTrack(s));
       return true;
     }
     default:

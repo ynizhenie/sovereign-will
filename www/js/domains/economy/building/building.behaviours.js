@@ -8,7 +8,7 @@ import { claimBuildingJob, getHallRepairStep, getMissingMaterial, getRepairStep,
 import { finishHarvest, getMapResourceDef } from '../gathering/index.js';
 import { makeAppleTree } from '../farming/index.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getResourceApproachPoint, getSettlerReach, invalidateAllPaths, moveEntityTowards } from '../../../engine/movement/index.js';
-import { faceTowards, noteDay, says } from '../../colony/settlers/index.js';
+import { addUnitExperience, faceTowards, getUnitWorkSpeedMultiplier, noteDay, says } from '../../colony/settlers/index.js';
 import { playSound, playWorkSound } from '../../../app/index.js';
 import { isNight } from '../../world/index.js';
 
@@ -85,11 +85,12 @@ export function deliverToSmelter(s, tick) {
 export function hallRepairStep(s, tick, repair = getHallRepairStep()) {
   faceTowards(s, townHall.x, townHall.y);
   s.working = 0.1; s.workKind = 'build';
-  s.hallRepairTimer = (s.hallRepairTimer || 0) + tick.dt;
+  s.hallRepairTimer = (s.hallRepairTimer || 0) + tick.dt * getUnitWorkSpeedMultiplier(s, 'building');
   if (s.hallRepairTimer < repair.seconds) return true;
   s.hallRepairTimer = 0;
   payCost(repair.cost);
   townHall.hp = Math.min(townHall.maxHp, townHall.hp + repair.hp);
+  addUnitExperience(s, 1, 'building');
   if (townHall.hp >= townHall.maxHp) townHall.repairRequested = false;
   return true;
 }
@@ -128,21 +129,23 @@ export function repairBuilding(s, tick) {
   if (best > 34) {
     moveEntityTowards(s, target.x, target.y, s.speed, false, tick.dt);
   } else {
-    repairStep(target, tick.dt);
+    repairStep(target, tick.dt, s);
   }
   s.patrolTarget = null;
   return true;
 }
 
 // One repair step's worth of time at a building: pays getRepairStep's cost every interval
-export function repairStep(b, dt) {
+export function repairStep(b, dt, worker = null) {
   const step = getRepairStep(b);
   b.repairTimer = (b.repairTimer || 0) - dt;
   if (b.repairTimer <= 0) {
     payCost(step.cost);
     b.hp = Math.min(b.maxHp, b.hp + step.hp);
     if (b.usesLeft !== undefined) b.usesLeft = Math.floor(b.hp); // a trap's uses (#232)
-    b.repairTimer = step.interval;
+    const speed = worker ? getUnitWorkSpeedMultiplier(worker, 'building') : 1;
+    b.repairTimer = step.interval / speed;
+    if (worker) addUnitExperience(worker, 1, 'building');
     if (b.hp >= b.maxHp) b.repairRequested = false;
   }
 }
@@ -214,7 +217,7 @@ export function build(s, tick) {
 
 // Work on a blueprint the settler is standing at; finished, it becomes what it was for
 export function workBlueprint(s, bp, dt) {
-  bp.progress += dt * 40;
+  bp.progress += dt * 40 * getUnitWorkSpeedMultiplier(s, 'building');
   s.working = 0.1; s.workKind = 'build'; // (a hammer in its hand, #279)
   faceTowards(s, bp.x, bp.y);
   playWorkSound(s, 'hammer', 0.45);
@@ -227,8 +230,11 @@ export function workBlueprint(s, bp, dt) {
         removeBuilding(b); // first: the refund mustn't go into a warehouse being taken down
         addResources(definition && definition.demolishRefund);
       }
-    } else if (bp.type === 'wheat') {
-      game.farmPlots.push({ x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0 });
+    } else if (bp.type === 'wheat' || bp.type === 'rice') {
+      game.farmPlots.push({
+        x: bp.x, y: bp.y, growth: 0, priority: 0, harvestProgress: 0,
+        crop: bp.type, yield: { ...GAME_CONFIG.farming.harvest[bp.type] }
+      });
     } else if (bp.type === 'sapling' || bp.type === 'apple_sapling') {
       const tree = { x: bp.x, y: bp.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
       game.trees.push(bp.type === 'apple_sapling' ? makeAppleTree(tree) : tree);
@@ -248,6 +254,7 @@ export function workBlueprint(s, bp, dt) {
       ejectEntitiesFromTile(bp.x, bp.y);
       invalidateAllPaths();
     }
+    if (bp.type !== 'demolish_building') addUnitExperience(s, 1, 'building');
     game.blueprints.splice(game.blueprints.indexOf(bp), 1);
   }
 }

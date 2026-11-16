@@ -29,12 +29,12 @@ test('an archer trains at a dummy from a few tiles off, the dummy keeps at most 
       if (tookBack) break;
       if (s.idle && s.idle.act !== 'train') break;
     }
-    return { most, farthest, tookBack, trained: s.trained || 0, flying: game.projectiles.length, lying: game.stuckArrows.length };
+    return { most, farthest, tookBack, experience: s.experience || 0, flying: game.projectiles.length, lying: game.stuckArrows.length };
   });
   expect(r.most).toBeGreaterThan(0);
   expect(r.most).toBeLessThanOrEqual(5);
   expect(r.farthest).toBeGreaterThan(60);
-  expect(r.trained).toBeGreaterThan(0);
+  expect(r.experience).toBeGreaterThan(0);
   expect(r.tookBack).toBe(true);
   expect(errors).toEqual([]);
 });

@@ -66,6 +66,10 @@ export async function openGame(page) {
   await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-language', 'ru'); } catch (e) { /* none */ } });
   await page.goto('/');
   await page.evaluate(() => showMenuScreen('endless')); // the play button and game setup live there
+  // (#417) the menu's demon or graveyard scene makes the HUD and the costs that faction's: the humans' for the tests
+  // (it's made on the next frame, a tenth of a second in the tests: waited for first)
+  await page.waitForFunction(() => !!menuWorld.scene, null, { timeout: 5000 }).catch(() => {});
+  await page.evaluate(() => { if (['demon', 'graveyard'].includes(menuWorld.scene)) { enterMenuWorld('fishing'); rebuildConfigHud(); } });
   await page.addScriptTag({ path: 'tests/sim.js' });
   const files = existsSync(SCENARIOS) ? readdirSync(SCENARIOS).filter(f => f.endsWith('.js')).sort() : [];
   for (const file of files) await page.addScriptTag({ path: `${SCENARIOS}/${file}` });

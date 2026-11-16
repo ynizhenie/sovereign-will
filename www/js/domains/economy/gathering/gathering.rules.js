@@ -5,7 +5,7 @@ import { TILE_SIZE, forEachInRect, game, rand, worldEpoch } from '../../../engin
 import { addCarryLoad, addResources, giveResourceToSettler } from '../../colony/storage/index.js';
 import { ORE_KINDS, getFrontier, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, getTerritoryBox, inEnemyTerritory, inTerritory, placeOre, pointIn, spawnForestAware, spawnResource } from '../../world/index.js';
 import { invalidateAllPaths } from '../../../engine/movement/index.js';
-import { noteDay } from '../../colony/settlers/index.js';
+import { addUnitExperience, noteDay } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 
 export function getPlacedResources(includeGrowingTrees = true) {
@@ -77,6 +77,15 @@ export function addMapResource(kind, x, y) {
   return resource;
 }
 
+function giveChoiceBonus(settler, choice) {
+  if (!choice || !choice.items.length || !(choice.chance > 0)) return;
+  const roll = rand();
+  if (roll >= choice.chance) return;
+  const index = Math.min(choice.items.length - 1, Math.floor((roll / choice.chance) * choice.items.length));
+  giveResourceToSettler(settler, choice.items[index], 1);
+  if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
+}
+
 // A resource is done: the settler gets what it yields (more off a fertilised plot, #201), it's removed,
 // and queued to grow back if it does
 export function finishHarvest(settler, resource, kind) {
@@ -100,17 +109,22 @@ export function finishHarvest(settler, resource, kind) {
         if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
       }
     }
+    giveChoiceBonus(settler, resource.bonusChoice || def.bonusChoice);
     playSound('collapse', resource);
     return;
   }
   // (#298) the log cut up: its pieces lie along where it fell, each its share of the wood, to be carried off
   if (two) cutIntoLogs(resource, def, two, factor);
-  else for (const [item, amount] of Object.entries(resource.yield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
+  else {
+    const cropYield = kind === 'farm' && resource.crop && GAME_CONFIG.farming.harvest[resource.crop];
+    for (const [item, amount] of Object.entries(resource.yield || cropYield || def.yield || {})) giveResourceToSettler(settler, item, amount * factor);
+  }
   // loot's things are carried to a storage whole, into the armory there (#210; #261: not at once)
   for (const key of resource.items || []) giveResourceToSettler(settler, `armory:${key}`, 1);
   if (!two) {
     addCarryLoad(settler);
-    noteDay(settler, kind === 'farm' ? 'farmed' : 'gathered', 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
+    const activity = kind === 'farm' ? resource.crop === 'rice' ? 'farmedRice' : 'farmed' : 'gathered';
+    noteDay(settler, activity, 'gathered', 0.1); // (its day, and now and then a word, #279; the harvest its own, #306)
   }
   const bonus = resource.apple ? GAME_CONFIG.appleTrees.fellBonusChance : def.bonusChance;
   if (!two) {
@@ -120,12 +134,16 @@ export function finishHarvest(settler, resource, kind) {
         if (settler.carrying && settler.carrying.loads === undefined) settler.carrying.loads = 0;
       }
     }
+    giveChoiceBonus(settler, resource.bonusChoice || def.bonusChoice);
   }
   const list = game[def.list];
   const index = list.indexOf(resource);
   if (index !== -1) list.splice(index, 1);
   if (def.regrow) scheduleRespawn(kind, resource.x, resource.y, resource.stump, resource);
   if (def.clearsPath) invalidateAllPaths();
+  if (kind === 'farm') addUnitExperience(settler, 1, 'farming');
+  else if (def.tool === 'axe') addUnitExperience(settler, 1, 'axe');
+  else if (def.tool === 'pickaxe') addUnitExperience(settler, 1, 'pickaxe');
 }
 
 // The pieces of a felled tree's log (#298): its wood shared out in whole pieces (3 into 2: 2 and 1), laid along
@@ -178,7 +196,8 @@ export function scheduleRespawn(type, nearX = null, nearY = null, stump = null, 
       ? { x: resource.oreSpawnerX, y: resource.oreSpawnerY }
       : nearestOreSpawner(oreKind, nearX, nearY)
     : null;
-  const delay = getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
+  const isMenuFishingGrass = game.gameMode === 'menu' && game.menuScene === 'fishing' && type === 'grass';
+  const delay = isMenuFishingGrass ? 8 : getMapCount(isOre ? 'oreRespawnDelay' : 'respawnDelay', isOre ? 90 : 45);
   game.pendingRespawns.push({
     type, nearX, nearY, stump, timer: delay,
     zoneBound: !!resource?.zoneBound,

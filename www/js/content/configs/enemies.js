@@ -22,7 +22,7 @@ export const enemiesConfig = {
     // (#314) each faction's pet on the enemy's side; a ghost flies into a settler (it panics) and is gone, and can't be hurt
     raider_dog: { id: 'raider_dog', pet: 'dog', hp: 45, speed: 1.35, damage: 12, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 9, waveKey: 'raider', reach: 4, siege: { buildings: 3, resources: 0 } },
-    demon_beast: { id: 'demon_beast', pet: 'beast', hp: 60, speed: 1.3, damage: 14, reward: { food: 1 }, weapon: 'fist',
+    demon_beast: { id: 'demon_beast', pet: 'beast', hp: 60, speed: 1.3, damage: 15, reward: { food: 1 }, weapon: 'fist',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 4, siege: { buildings: 3, resources: 0 } },
     undead_ghost: { id: 'undead_ghost', pet: 'ghost', hp: 30, speed: 1.6, damage: 0, reward: {}, weapon: 'fist',
       type: 'normal', radius: 8, waveKey: 'raider', reach: 4, siege: { buildings: 0, resources: 0 } },
@@ -38,6 +38,10 @@ export const enemiesConfig = {
       quiver: { arrows: 12, tentStock: 12, refill: 6, melee: 'raider_club' } },
     // a medic with a bag of herbs: heals the other raiders (#203)
     raider_medic: { id: 'raider_medic', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'fist', tool: 'medbag',
+      type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
+      healer: { range: 220, healRange: 30, bagSize: 5, tentStock: 10, refill: 5, healSeconds: 1.2 } },
+    // The demon scene's medic carries a club as well as its medbag.
+    raider_medic_club: { id: 'raider_medic_club', hp: 55, speed: 0.9, damage: 6, reward: { food: 1 }, weapon: 'club', tool: 'medbag',
       type: 'normal', radius: 10, waveKey: 'raider', reach: 6, siege: { buildings: 5, resources: 1 },
       healer: { range: 220, healRange: 30, bagSize: 5, tentStock: 10, refill: 5, healSeconds: 1.2 } },
     // the undead: slow zombies, big zombies, zombie archers, and necromancers that raise the dead

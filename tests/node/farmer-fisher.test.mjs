@@ -23,6 +23,10 @@ test('fishers take worms off old corpses (1, 2 off a big one) and fish with them
   expect(r.caughtFish).toBe(true);
 });
 
+test('rice seeds can be used as fishing bait', async () => {
+  expect(await sim.fishing({ seeds: 2, seedKind: 'riceSeeds' })).toEqual({ catches: 2, seedsLeft: 0 });
+});
+
 test('a harvested wheat plot always gives a seed back (#106)', async () => {
   expect(await (() => GAME_CONFIG.mapResources.farm.yield)()).toEqual({ wheat: 4, wheatSeeds: 1 });
 });

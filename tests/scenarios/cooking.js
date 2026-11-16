@@ -32,5 +32,13 @@ Object.assign(window.sim, (() => {
       maxCooks, carriedFood, fuelTrips, cooks: [...cooks].sort() };
   }
 
-  return { cookingRun };
+  function cookingRice({ seed = 'cooking-rice-test' } = {}) {
+    const result = cookingRun({
+      seed, food: 0, raw: { rawMeat: 0, rawFish: 0, wheat: 0, rice: 2 },
+      fuel: { firewood: 1, coal: 0 }, seconds: 30
+    });
+    return { food: result.food, rawRice: stock.rice, cookedRice: foodMix.cookedRice };
+  }
+
+  return { cookingRun, cookingRice };
 })());

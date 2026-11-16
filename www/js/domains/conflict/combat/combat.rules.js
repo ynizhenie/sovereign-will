@@ -3,8 +3,8 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
-import { armorOf, getWeaponStats, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
-import { damageSettler, faceTowards, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
+import { armorOf, getWeaponStats, helmetOf, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
+import { damageSettler, faceTowards, getUnitHuntingDamageMultiplier, getUnitLevel, getUnitWeaponProgressionTrack, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
@@ -23,6 +23,34 @@ export function isArrowBlockedTile(gx, gy, fromTower) {
 export function isArrowBlockedAt(x, y, fromTower) {
   const g = getGridPos(x, y);
   return isArrowBlockedTile(g.gx, g.gy, fromTower);
+}
+
+export function getProjectileAimPoint(shooter, target, projectileSpeed, projectileLife = Infinity, originX = shooter.x, originY = shooter.y) {
+  const point = { x: target.x, y: target.y };
+  if (!['bow', 'crossbow', 'rifle'].includes(shooter.weapon) || getUnitLevel(shooter, 'ranged') < 2 || projectileSpeed <= 0) return point;
+
+  const dx = target.x - originX, dy = target.y - originY;
+  const vx = target.moveVx || 0, vy = target.moveVy || 0;
+  const a = vx * vx + vy * vy - projectileSpeed * projectileSpeed;
+  const b = 2 * (dx * vx + dy * vy);
+  const c = dx * dx + dy * dy;
+  let flight = null;
+  if (Math.abs(a) < 1e-8) {
+    if (Math.abs(b) > 1e-8) {
+      const time = -c / b;
+      if (time > 0) flight = time;
+    }
+  } else {
+    const discriminant = b * b - 4 * a * c;
+    if (discriminant >= 0) {
+      const root = Math.sqrt(discriminant);
+      const times = [(-b - root) / (2 * a), (-b + root) / (2 * a)].filter(time => time > 0);
+      if (times.length) flight = Math.min(...times);
+    }
+  }
+  if (flight === null) flight = Math.hypot(dx, dy) / projectileSpeed;
+  flight = Math.min(flight, projectileLife);
+  return { x: target.x + vx * flight, y: target.y + vy * flight };
 }
 
 export function areAdjacentTiles(a, b) {
@@ -110,7 +138,7 @@ export function hasLineOfFire(x1, y1, x2, y2, fromTower = false) {
   return true;
 }
 
-export function performAttack(attacker, targetX, targetY, useDaggerForStructure = false) {
+export function performAttack(attacker, targetX, targetY, useDaggerForStructure = false, target = null) {
   if (game.plagueMode && attacker.plagueHero) return;
   const pet = attacker.role === 'pet';
   if (!pet) attacker.struckAt = game.pathTick; // (fighting: a torch in hand goes to its side, #279)
@@ -131,16 +159,18 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
     if (rifle && (attacker.rifleAmmo || 0) <= 0) return;
     if (!rifle && (!attacker.quiver || (attacker.arrows || 0) <= 0)) return;
     const bolt = isCrossbowWeapon(attacker.weapon);
-    let angle = Math.atan2(targetY - attacker.y, targetX - attacker.x);
+    const aim = target ? getProjectileAimPoint(attacker, target, stats.projectileSpeed, stats.projectileLife) : { x: targetX, y: targetY };
+    let angle = Math.atan2(aim.y - attacker.y, aim.x - attacker.x);
     game.projectiles.push({ 
       x: attacker.x, 
       y: attacker.y, 
       vx: Math.cos(angle) * stats.projectileSpeed, 
       vy: Math.sin(angle) * stats.projectileSpeed, 
-      damage: stats.damage * stats.multiplier,
+      damage: stats.damage * stats.multiplier * (target && game.boars.includes(target) ? getUnitHuntingDamageMultiplier(attacker) : 1),
       life: stats.projectileLife, 
       fromEnemy: false, 
       owner: attacker,
+      progressionTrack: getUnitWeaponProgressionTrack(attacker),
       bolt,
       bullet: rifle,
       training: !!(attacker.idle && attacker.idle.act === 'train') // (#326) at a dummy: it sticks in it
@@ -161,14 +191,14 @@ export function performAttack(attacker, targetX, targetY, useDaggerForStructure 
     const inReach = (o, pad) => Math.hypot(o.x - attacker.x, o.y - attacker.y) <= range + pad;
     // everything within reach of the blow, and what hitting it does
     const struck = [
-      ...game.enemies.filter(en => !en.ghostly && inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { damageEnemy(en, dmg); en.lastHitBy = attacker; en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker, dagger ? 'dagger' : attacker.weapon); playSound('hit', en); } })),
+      ...game.enemies.filter(en => !en.ghostly && inReach(en, en.radius) && hasMeleeReach(attacker, en)).map(en => ({ at: en, hit: () => { en.lastHitBy = attacker; en.lastHitTrack = getUnitWeaponProgressionTrack(attacker) || undefined; damageEnemy(en, dmg); en.struckBy = attacker; en.struckTick = game.pathTick; bleed(en, attacker, dagger ? 'dagger' : attacker.weapon); playSound('hit', en); } })),
       ...game.enemyTents.filter(et => (!et.campStructure || (game.raidActive && et.campId === game.raidCampId)) && inReach(et, 15)).map(et => ({ at: et, hit: () => { et.hp -= dmg; } })),
       // (#326) the enemy's buildings (a battle's red half, a raid's camp): broken through when in the way
       ...game.buildings.filter(b => b.side === 'red' && (!b.enemyCampStructure || (game.raidActive && b.campId === game.raidCampId)) && b.type !== 'spikes' && inReach(b, 15) && !(getDefinition('buildings', b.type) || {}).walkable)
         .map(b => ({ at: b, hit: () => { b.hp -= dmg; if (b.hp <= 0) removeBuilding(b); } })),
       ...game.boars.filter(b => !b.isCarcass && !b.hidden && !b.hideTarget && inReach(b, 12) && !((b.fleeTimer || 0) > 0 && b.sprinting))
         .map(b => ({ at: b, hit: () => {
-          woundBoar(b, dmg, attacker, attacker.x, attacker.y);
+          woundBoar(b, dmg * getUnitHuntingDamageMultiplier(attacker), attacker, attacker.x, attacker.y);
         } }))
     ];
     // a big settler's blow hits up to splashMax round it, the one aimed at first (#209); anyone else hits
@@ -280,7 +310,8 @@ export function addCorpse(unit, side, kind) {
   game.corpses.push({
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
-    weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet,
+    experience: unit.experience || 0, progression: unit.progression ? { ...unit.progression } : undefined,
+    weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet, helmetGear: helmetOf(unit)?.id,
     pet: def.pet, stuck: unit.stuck
   }); // (its look and body type, #306; its arrows stay in it, #326)
 }
@@ -296,7 +327,8 @@ export function damageEnemy(en, amount) {
   if (getDefinition('enemies', en.enemyKey)?.pet === 'ghost') return; // (a ghost, #314)
   let damage = armorOf(en) ? amount * (1 - armorOf(en).damageReduction) : amount;
   if (en.shield) damage *= 1 - GAME_CONFIG.gear.shield.damageReduction;
-  if (en.helmet) damage *= 1 - GAME_CONFIG.gear.helmet.damageReduction; // (#326, 27.10, 27)
+  const helmet = helmetOf(en);
+  if (helmet) damage *= 1 - helmet.damageReduction; // (#326, 27.10, 27)
   en.hp -= damage;
   if (damage > 0) shakeOnHit(en); // (#207)
   if (en.hp > 0 && en.hp < en.maxHp * 0.3 && !en.hurtVoiceSpoken &&
@@ -492,7 +524,7 @@ export function tickProjectiles(dt = 1 / 60) {
     let hit = false, host = null;
 
     if (proj.fromEnemy) {
-      if (!game.plagueMode && Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
+      if (!proj.skipTownHall && !game.plagueMode && Math.hypot(townHall.x - proj.x, townHall.y - proj.y) < townHall.radius) {
         townHall.hp -= proj.damage;
         hit = true;
       }
@@ -500,7 +532,7 @@ export function tickProjectiles(dt = 1 / 60) {
         if (hit) break;
         if (isUntouchable(s)) continue; // (through a ghost, #314)
         if (Math.hypot(s.x - proj.x, s.y - proj.y) < s.radius + 3) {
-          damageSettler(s, proj.damage, proj.owner);
+          damageSettler(s, proj.damage, proj.owner, proj.progressionTrack);
           if (proj.fire) setBurning(s);
           hit = true; host = s;
         }
@@ -510,7 +542,12 @@ export function tickProjectiles(dt = 1 / 60) {
         let en = game.enemies[j];
         if (Math.hypot(en.x - proj.x, en.y - proj.y) < en.radius + 3) {
           damageEnemy(en, proj.damage);
-          if (proj.owner) { en.struckBy = proj.owner; en.struckTick = game.pathTick; } // (who it turns on in the fog, #326)
+          if (proj.owner) {
+            en.lastHitBy = proj.owner;
+            en.lastHitTrack = proj.progressionTrack || getUnitWeaponProgressionTrack(proj.owner);
+            en.struckBy = proj.owner;
+            en.struckTick = game.pathTick;
+          } // (who it turns on in the fog, #326)
           bleed(en, proj.owner, null);
           playSound('arrowHit', en);
           if (proj.fire) setBurning(en);

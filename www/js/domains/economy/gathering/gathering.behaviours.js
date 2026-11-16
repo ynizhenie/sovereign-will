@@ -3,7 +3,7 @@
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { TILE_SIZE, game, onceThisTick, rand, townHall } from '../../../engine/world/index.js';
 import { hasAxeTool, hasPickaxeTool, hasToolFamily, isRangedWeapon } from '../../colony/equipment/index.js';
-import { faceTowards, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
+import { addUnitExperience, faceTowards, getUnitWorkSpeedMultiplier, isBigBody, nightReach, says } from '../../colony/settlers/index.js';
 import { finishHarvest, getMapResourceDef, hasMine, appleTreesAmong, markTreesChanged } from './gathering.rules.js';
 import { addCarryLoad, addResources, giveResourceToSettler, hasRoomToCarry } from '../../colony/storage/index.js';
 import { hasFog, inTerritory, isVisible, ORE_KINDS } from '../../world/index.js';
@@ -225,22 +225,25 @@ export function workResource(s, assignedRes, tick) {
   s.workKind = kind === 'berry_bush' ? 'pick' : null; // (berries picked by hand, #279)
   faceTowards(s, assignedRes.x, assignedRes.y);
   const work = def.work;
+  const progressionTrack = kind === 'farm' ? 'farming' : def.tool === 'axe' || def.tool === 'pickaxe' ? def.tool : null;
+  const workDt = progressionTrack ? dt * getUnitWorkSpeedMultiplier(s, progressionTrack) : dt;
   playWorkSound(s, def.tool === 'axe' ? 'chop' : def.tool === 'pickaxe' ? 'mine' : 'rustle', def.tool ? 0.5 : 0.7);
 
   if (assignedRes.oreSpawner) {
     // an ore spawner (#248): slow, one ore at a time, never used up
-    assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
+    assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + workDt;
     if (assignedRes.harvestProgress >= def.spawnerWork.seconds[s.tool]) {
       assignedRes.harvestProgress = 0;
       for (const [item, amount] of Object.entries(getMapResourceDef(ORE_KINDS[assignedRes.oreSpawner].resource).yield)) giveResourceToSettler(s, item, Math.min(1, amount));
       addCarryLoad(s);
+      addUnitExperience(s, 1, 'pickaxe');
     }
   } else if (work.pickup) {
     finishHarvest(s, assignedRes, kind);
     playSound('pickup', s); // (#252)
   } else if (work.seconds !== undefined) {
     const duration = typeof work.seconds === 'number' ? work.seconds : (work.seconds[s.tool] ?? Object.values(work.seconds)[0]);
-    assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + dt;
+    assignedRes.harvestProgress = (assignedRes.harvestProgress || 0) + workDt;
     if (def.hp !== undefined) {
       assignedRes.harvestDuration = duration;
       assignedRes.hp = Math.max(0, def.hp * (1 - assignedRes.harvestProgress / assignedRes.harvestDuration));
@@ -248,10 +251,10 @@ export function workResource(s, assignedRes, tick) {
     if (assignedRes.harvestProgress >= duration) finishHarvest(s, assignedRes, kind);
   } else if (work.chop) {
     // by body, not by kind: a zombie or an imp chops like a worker, a big zombie or a demon like a giant
-    assignedRes.hp -= dt * work.chop[isBigBody(s) ? 'big' : 'normal'] * ((work.toolBonus && work.toolBonus[s.tool]) || 1);
+    assignedRes.hp -= workDt * work.chop[isBigBody(s) ? 'big' : 'normal'] * ((work.toolBonus && work.toolBonus[s.tool]) || 1);
     if (assignedRes.hp <= 0) finishHarvest(s, assignedRes, kind);
   } else if (work.drain) {
-    assignedRes.hp -= dt * work.drain[s.tool];
+    assignedRes.hp -= workDt * work.drain[s.tool];
     if (assignedRes.hp <= 0) finishHarvest(s, assignedRes, kind);
   }
   s.patrolTarget = null;

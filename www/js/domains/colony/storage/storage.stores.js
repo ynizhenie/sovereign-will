@@ -159,7 +159,7 @@ function misplaced(taken, storages) {
 // refund, a recipe's yield, the start) goes into the hall (on a pile by it if full); less (a cost paid,
 // food eaten) comes off the piles, then the warehouses, then the hall. Piles of nothing go
 export function keepStoresInStep() {
-  if (game.gameMode !== 'endless') return;
+  if (game.gameMode !== 'endless' || game.plagueMode) return;
   townHall.store = townHall.store || {};
   const storages = getStorages();
   /** @type {Object<string, number>} */

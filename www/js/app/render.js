@@ -2,16 +2,16 @@
 
 import { TILE_SIZE, forEachInRect, game, getTileIndex, townHall } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewRect, getViewScale, glBeginFrame, glCamera, glEndFrame, glReady } from '../engine/platform/index.js';
-import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawSelectedPaths, drawSettlerShadows, drawSettlers } from '../domains/colony/settlers/index.js';
+import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot, getEnemyDef } from '../domains/conflict/waves/index.js';
+import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatureOnCard, treesToDrawOver, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
-import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
+import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawMenuOutpostHealthBar, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
 import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
-import { beginShadowFrame, drawDarkness, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, setPrewarmingChunks } from '../domains/world/index.js';
+import { beginShadowFrame, drawDarkness, drawFireflies, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, isVisible, setPrewarmingChunks } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBackroomsFloor, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
 import { drawMoraleMarks } from '../domains/conflict/morale/index.js';
@@ -86,6 +86,8 @@ export function render() {
   drawCorpses();
   drawEnemyTentSites();
   drawDepthSortedScene();
+  drawMenuOutpostHealthBar();
+  drawUnitLevelIndicators();
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
@@ -98,12 +100,28 @@ export function render() {
   ctx.restore();
   if (onCard) glEndFrame();
   drawDarkness(); // (night, with its lights, #257)
+  drawFireflies();
   drawLitWindows(); // (the hall's, bright in the dark)
   drawWeatherScreen(); // (rain, lightning, #308)
 
   if (game.gameMode === 'battle') drawBattleResult();
   // lost: the world dims a little under the defeat screen (an HTML overlay, see updateDefeat)
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+}
+
+function drawUnitLevelIndicators() {
+  const view = getViewRect(60);
+  for (const unit of game.settlers) {
+    if (!hasUnitProgression(unit) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    const radius = unit.visualRadius || unit.radius || 11, top = unit.y - radius * 1.45;
+    drawLevelIndicator(unit.x - 18, top - 4, getUnitLevel(unit, getUnitDisplayProgressionTrack(unit)));
+  }
+  for (const list of [game.enemies, game.scouts]) for (const unit of list) {
+    if (!hasUnitProgression(unit) || !isVisible(unit.x, unit.y) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    const radius = unit.radius || 11, top = unit.y - radius * 1.45;
+    drawLevelIndicator(unit.x - 15, top - 3.5,
+      getUnitLevel(unit, getUnitDisplayProgressionTrack(unit)));
+  }
 }
 
 export function prewarmMenuScene() {
@@ -150,7 +168,8 @@ function drawDepthSortedScene() {
   const addActors = (list, offset, order, draw) => {
     for (const actor of list) {
       if (actor.x < view.x0 || actor.x > view.x1 || actor.y < view.y0 || actor.y > view.y1) continue;
-      add(actor, actor.y + offset(actor), order, draw);
+      // Ghosts pass through the depth-sorted trees; drawing them above those trees avoids a sudden layer switch.
+      add(actor, actor.ghostly ? Number.MAX_VALUE : actor.y + offset(actor), order, draw);
       if (near) markNear(actor);
     }
   };

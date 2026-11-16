@@ -43,6 +43,7 @@ test('in a battle a medic starts with its bag full (#326, 17)', async ({ page })
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const r = await page.evaluate(() => {
     battle.category = 'units'; battle.preset = 'humans:medic'; battleTap(6 * TILE_SIZE + 15, 12 * TILE_SIZE + 15);
     startBattleFight();
@@ -64,7 +65,7 @@ test('menu scenes start with an empty warehouse and unlimited capacity; the figh
       enterMenuWorld(scene);
       const state = {
         scene, empty: Object.entries(stock).every(([resource, amount]) =>
-          scene === 'farm' && resource === 'wheatSeeds' ? amount === Infinity : amount === 0),
+          scene === 'farm' && (resource === 'wheatSeeds' || resource === 'riceSeeds') ? amount === Infinity || amount === 0 : amount === 0),
         capacity: storeCapacity(townHall), room: roomIn(townHall)
       };
       if (scene === 'hunt') {
@@ -75,11 +76,12 @@ test('menu scenes start with an empty warehouse and unlimited capacity; the figh
         enemyColor = getEnemyFaction().color.toLowerCase();
       }
       if (scene === 'farm') {
+        const seeds = menuWorld.farmCrop === 'rice' ? 'riceSeeds' : 'wheatSeeds'; // (wheat or rice, picked at random, #417)
         tickMenuScene(1);
         stayedEmptyDuringStartup = Object.entries(stock).every(([resource, amount]) =>
-          resource === 'wheatSeeds' ? amount === Infinity : amount === 0);
+          resource === seeds ? amount === Infinity : amount === 0);
         tickMenuScene(1);
-        restockedAfterStartup = stock.wheatSeeds >= 10;
+        restockedAfterStartup = stock[seeds] >= 10;
       }
       return state;
     });
@@ -91,7 +93,7 @@ test('menu scenes start with an empty warehouse and unlimited capacity; the figh
       undead: GAME_CONFIG.factions.undead.color.toLowerCase()
     };
   });
-  expect(r.scenes).toEqual(['hunt', 'fishing', 'fight', 'farm'].map(scene => ({ scene, empty: true, capacity: Infinity, room: Infinity })));
+  expect(r.scenes).toEqual(['hunt', 'fishing', 'fight', 'farm', 'demon', 'graveyard'].map(scene => ({ scene, empty: true, capacity: Infinity, room: Infinity })));
   expect(r.acceptedOverOldLimit).toBe(true);
   expect(r.stayedEmptyDuringStartup).toBe(true);
   expect(r.restockedAfterStartup).toBe(true);

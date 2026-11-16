@@ -40,7 +40,7 @@ Object.assign(window.sim, (() => {
       { ...nearHall(5, 2), radius: 11, side: 'enemy', kind: 'raider', age: 0, big: false, wormsTaken: false } // too fresh
     ];
     settlers = [makeSettler(1, townHall.x + 40, townHall.y, { tool: 'rod' })];
-    Object.assign(stock, { worms: 0, wheatSeeds: 0, wheat: 0 });
+    Object.assign(stock, { worms: 0, wheatSeeds: 0, riceSeeds: 0, wheat: 0 });
     const fresh = corpses[2], laid = [...corpses]; // (corpses leave the list as they rot away)
     run(seconds, { each: () => { fresh.age = Math.min(fresh.age, 1); } });
     // worms gathered: what was taken off the corpses (1 each, 2 off a big one); spent as bait: what of

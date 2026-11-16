@@ -43,6 +43,15 @@ test('the page shows once it\'s made; Point on a tile: only its things, a settle
     mouse.x = plot.x; mouse.y = plot.y; handleCanvasClick();
   });
   await expect(rows.filter({ hasText: 'Пшеница' })).toHaveCount(1);
+  await page.evaluate(() => {
+    hidePickMenu();
+    buildMode = 'interact';
+    const plot = { x: window.stick.x + TILE_SIZE, y: window.stick.y + TILE_SIZE, growth: 100, priority: 0, crop: 'rice' };
+    farmPlots.push(plot);
+    addMapResource('stick', plot.x + 4, plot.y);
+    mouse.x = plot.x; mouse.y = plot.y; handleCanvasClick();
+  });
+  await expect(rows.filter({ hasText: 'Рис' })).toHaveCount(1);
 });
 
 test('the hall is mended in steps, each with its hammering; no flute; ghosts scare the big in two; no hitting through a wall (#326)', async ({ page }) => {

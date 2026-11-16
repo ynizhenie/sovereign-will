@@ -39,7 +39,7 @@ export function goDeliver(s, tick) {
   if (s.carrying.counted) { storeInto(storage, s.carrying.type, s.carrying.amount); s.carrying = null; return; } // (in the stock already)
   const into = getPlayerFaction().foodInto; // the undead: food turns into bones or rot
   for (const item of s.carrying.items || [s.carrying]) {
-    const isFood = isFoodKind(item.type) || ['food', 'rawMeat', 'rawFish', 'wheat'].includes(item.type);
+    const isFood = isFoodKind(item.type) || ['food', 'rawMeat', 'rawFish', 'wheat', 'rice'].includes(item.type);
     const type = into && isFood ? (into[item.type] || into.default) : item.type;
     if (type.startsWith('armory:')) game.armory[type.slice(7)] = (game.armory[type.slice(7)] || 0) + item.amount; // (loot, #261)
     else if (GAME_CONFIG.resources[type]) { stock[type] += item.amount; storeInto(storage, type, item.amount); }

@@ -67,5 +67,47 @@ Object.assign(window.sim, (() => {
     return r;
   }
 
-  return { farmZonesPlanted, farmZonePainting, fertilizer };
+  function riceCrop({ seed = 'rice-crop' } = {}) {
+    start(seed);
+    clearResources();
+    const p = nearHall(3, 2);
+    toggleFarmZone(p.x, p.y, 'rice');
+    stock.riceSeeds = 1;
+    settlers = [makeSettler(1, townHall.x + 60, townHall.y, { tool: 'hoe' })];
+    run(5, { each: () => { pendingRespawns.length = 0; } });
+    const plot = farmPlots.find(f => f.x === p.x && f.y === p.y);
+    if (!plot) return { planted: false, crop: null, seedsSpent: 0, harvest: {} };
+    const harvester = makeSettler(2, plot.x, plot.y);
+    finishHarvest(harvester, plot, 'farm');
+    const harvest = {};
+    for (const item of harvester.carrying.items || [harvester.carrying]) harvest[item.type] = (harvest[item.type] || 0) + item.amount;
+    return { planted: true, crop: plot.crop, seedsSpent: 1 - stock.riceSeeds, harvest };
+  }
+
+  function farmingExperience() {
+    start('farm-progression');
+    clearResources();
+    const farmer = makeSettler(1, townHall.x, townHall.y, { tool: 'hoe' });
+    settlers = [farmer];
+    const harvest = () => {
+      const plot = { x: townHall.x + 60, y: townHall.y, growth: 100, priority: 0, harvestProgress: 0, yield: {} };
+      farmPlots.push(plot);
+      finishHarvest(farmer, plot, 'farm');
+    };
+    for (let i = 0; i < 29; i++) harvest();
+    const beforeLevelTwo = { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') };
+    harvest();
+    const atLevelTwo = { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') };
+    for (let i = 0; i < 29; i++) harvest();
+    const beforeLevelThree = { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') };
+    harvest();
+    return {
+      beforeLevelTwo,
+      atLevelTwo,
+      beforeLevelThree,
+      atLevelThree: { experience: getUnitExperience(farmer, 'farming'), level: getUnitLevel(farmer, 'farming') }
+    };
+  }
+
+  return { farmZonesPlanted, farmZonePainting, fertilizer, riceCrop, farmingExperience };
 })());

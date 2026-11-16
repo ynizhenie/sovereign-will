@@ -7,8 +7,13 @@ test('a soldier on patrol walks round the base just past its edge', () => {
   expect(sim.dutyPatrol({})).toEqual({ roundTheEdge: true, turned: true, activity: 'idlePatrol' });
 });
 
-test('a soldier trains at a dummy: its damage grows a little', () => {
-  expect(sim.dutyTrain({})).toEqual({ atDummy: true, trained: true, stronger: true, activity: 'idleTrain' });
+test('a soldier trains at a dummy: it earns experience toward a level', () => {
+  const result = sim.dutyTrain({});
+  expect(result.atDummy).toBe(true);
+  expect(result.experience).toBeGreaterThan(0.8);
+  expect(result.experience).toBeLessThan(1.1);
+  expect(result.stronger).toBe(false);
+  expect(result.activity).toBe('idleTrain');
 });
 
 test('an idle soldier guards a worker gathering far out of the base', () => {

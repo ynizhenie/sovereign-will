@@ -109,12 +109,13 @@ function nearestEdge(unit) {
   return edges.reduce((a, b) => (Math.hypot(a.x - unit.x, a.y - unit.y) < Math.hypot(b.x - unit.x, b.y - unit.y) ? a : b));
 }
 
-// Boars in a panic keep running from the nearest settler
+// Boars in a panic keep running from the nearest unit
 export function boarsPanic() {
+  const threats = [...game.settlers, ...game.enemies].filter(unit => unit.hp > 0);
   for (const boar of game.boars) {
     if (!boar.panic || boar.isCarcass || (boar.fleeTimer || 0) > 0) continue;
-    const s = nearest(game.settlers, boar);
-    if (s && Math.hypot(s.x - boar.x, s.y - boar.y) < 300) makeBoarFlee(boar, s.x, s.y);
+    const threat = nearest(threats, boar);
+    if (threat && Math.hypot(threat.x - boar.x, threat.y - boar.y) < 300) makeBoarFlee(boar, threat.x, threat.y);
   }
 }
 

@@ -26,6 +26,19 @@ export const mechanicsConfig = {
     scaryFoes: { humans: { demons: -10, undead: -10 } }, hit: 3, lowHp: 10, lowHpShare: 0.3, allyDeath: 10, foeDeath: 6,
     nearRange: 150, outnumbered: 2, outnumberedPerSecond: 2, recoverPerSecond: 4, panicRecoverPerSecond: 6, armedShare: 0.25, routShare: 0.8, rout: 40,
     tentHealPerSecond: 10, demonHeal: 12, necroRange: 160, necroKeepBack: 140, necroCorpseClear: 90, panicDamage: 0.6 },
+  unitProgression: {
+    experienceToLevel: {
+      combat: [0, 10, 25],
+      other: [0, 30, 60]
+    },
+    healthBonus: [0, 25, 50],
+    attackSpeedBonus: [0, 0.1, 0.2],
+    healingSpeedBonus: [0, 0.1, 0.2],
+    workSpeedBonus: [0, 0.1, 0.2],
+    huntingDamageBonus: [0, 0.1, 0.2],
+    trainingSecondsPerExperience: 60,
+    healingSecondsPerExperience: 10
+  },
   // fighting (#208): at most meleePerEnemy settlers in melee on one enemy (meleePerBig on a big one), round
   // it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
   // health when an armed one is within coverRange px to hold the line (alone, only below a quarter). (Archers
@@ -41,7 +54,11 @@ export const mechanicsConfig = {
   // farm zones the player paints in the Farming tab: farmers (hoe) plant the empty tiles with the crop,
   // which is the building of that id (its cost is the seed), taking plantSeconds per tile
   // (#306) growSeconds: from planted to ripe (was 20 s), watered faster (wateringCan.growthFactor)
-  farming: { plantSeconds: 1.5, growSeconds: 45, crops: { wheat: 'wheat', sapling: 'sapling', apple: 'apple_sapling' } },
+  farming: {
+    plantSeconds: 1.5, growSeconds: 45,
+    crops: { wheat: 'wheat', rice: 'rice', sapling: 'sapling', apple: 'apple_sapling' },
+    harvest: { wheat: { wheat: 4, wheatSeeds: 1 }, rice: { rice: 4, riceSeeds: 1 } }
+  },
 
   // fertiliser (#201): a farmer with a backpack carries dung to a wheat plot that has none; its next
   // harvest yields yieldFactor times, once
@@ -113,12 +130,12 @@ export const mechanicsConfig = {
   // campfireMoralePerSecond, up to campfireAbove past its usual), talking in a knot (company within
   // companyRange px), demons sparring (morale up to sparAbove past its usual, health down to sparMinHp of
   // its most); soldiers and archers also patrol the edge of the base (patrolStep radians a waypoint) and
-  // train at a dummy (their damage up trainPerSecond of itself a second, up to trainMax); a soldier guards a
+  // train at a dummy (experience toward the next level); a soldier guards a
   // gatherer more than guardBeyondTiles past the base's edge, keeping within guardRange px; an idle
   // necromancer takes `bones` bones from a corpse in boneSeconds
   idle: { seconds: [8, 16], campfireMoralePerSecond: 6, campfireAbove: 10, talkRing: 24, companyRange: 260,
     sparReach: 24, sparHpPerSecond: 0.5, sparMinHp: 0.7, sparMoralePerSecond: 4, sparAbove: 10,
-    trainPerSecond: 0.001, trainMax: 0.25, trainRing: 22, trainShootTiles: 3, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
+    trainRing: 22, trainShootTiles: 3, patrolStep: 0.45, guardBeyondTiles: 2, guardRange: 45, boneSeconds: 3, bones: 3 },
   relief: { mealsBefore: 5, seconds: 2, awayFromBuildings: 4, dungSeconds: 120, giveUpSeconds: 20, maxTries: 3 },
 
   // (#326) arrows that stop stay where they hit: on the ground and in a unit `seconds` (at most `ground` of
@@ -129,7 +146,7 @@ export const mechanicsConfig = {
   corpses: { seconds: 60 },
 
   // bait: the first of these the stock can pay for, per catch (worms first)
-  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { wheat: 1 }], fishCapacity: 4, fishRegrowSeconds: 2.5 },
+  fishing: { seconds: 3, catch: { rawFish: 2 }, bait: [{ worms: 1 }, { wheatSeeds: 1 }, { riceSeeds: 1 }, { wheat: 1 }], fishCapacity: 4, fishRegrowSeconds: 2.5 },
   // a woodcutter (an axe) with nothing to do, or with the firewood nearly out, chops firewood at a storage
   // (#199): each wood into `makes` firewood in `seconds`, up to `perTrip` wood a go, while the stock has
   // less than `keep`
@@ -148,8 +165,8 @@ export const mechanicsConfig = {
   // Under lowFood meals per settler plus hireReserve (enough to hire a giant), any worker cooks, tool in
   // hand or in a wave too
   // (#298) a lit campfire burns its fuel down by itself, one unit every fuelSeconds, cooking or not
-  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat'], makes: 1, fuel: { coal: 5, firewood: 5 }, fuelSeconds: 6, lowFood: 2, hireReserve: 30,
-    dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread' } },
+  cooking: { seconds: 1.5, batch: 5, raw: ['rawMeat', 'rawFish', 'wheat', 'rice'], makes: 1, fuel: { coal: 5, firewood: 5 }, fuelSeconds: 6, lowFood: 2, hireReserve: 30,
+    dish: { rawMeat: 'cookedMeat', rawFish: 'cookedFish', wheat: 'bread', rice: 'cookedRice' } },
 
   // demons eating a corpse to heal
   eatCorpseSeconds: 2,

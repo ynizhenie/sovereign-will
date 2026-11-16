@@ -88,6 +88,7 @@ test('in the pause menu Load is this world\'s slot only; a battle has no saving 
   // a battle: no Save, no Load in its pause menu
   await page.evaluate(() => { exitToMainMenu(); showMenuScreen('home'); });
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await expect(page.locator('[data-battle-category="units"]')).toBeVisible();
   await page.click('#btn-pause-toggle');
   await expect(page.locator('#pause-menu')).toBeVisible();

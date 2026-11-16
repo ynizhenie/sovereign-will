@@ -32,11 +32,17 @@
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
+ * @property {number} [attackCooldown]
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
+ * @property {Enemy | null} [lastAttacker] the enemy that most recently damaged it
+ * @property {number | null} [petKeeperId] the nearby soldier or archer a dog or beast follows in Endless
+ * @property {Enemy | null} [petAttackTarget] an enemy that recently attacked its pet
+ * @property {number} [petAttackTick] when that enemy attacked the pet
  * @property {number} [treatedAt]   (#326) the tick a medic last worked on it
  * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {boolean} [raider]      in the party of a raid on an enemy camp (#255)
  * @property {Point} [raidSpot]      its place in the party's line at the map's edge (#255)
+ * @property {Point | null} [patrolTarget] menu patrol target while the scene is active
  * @property {Point} [exitSpot]      where it runs to, out of an enemy camp (#279)
  * @property {boolean} [healing]     at the camp's shelter till it's mended (#279)
  * @property {number} [orderedBy]  the id of the captain that gave it its target (#326: its morale held meanwhile)
@@ -47,6 +53,10 @@
  * @property {string} tool           GAME_CONFIG.tools key, 'none' for none
  * @property {number} hp
  * @property {number} maxHp
+ * @property {number} [experience]
+ * @property {number} [level]
+ * @property {Object<string, number>} [progression] XP by skill track
+ * @property {string} [lastAttackerTrack] specialization of the enemy that last hit it
  * @property {number} speed
  * @property {number} radius         the collision body
  * @property {number} visualRadius   the drawn body (a big one is drawn larger than it collides)
@@ -55,6 +65,7 @@
  * @property {{ type: string, amount: number, loads?: number, forFire?: Building, forBlueprint?: Building, corpse?: Object, toHeap?: boolean, forChop?: boolean, forTrap?: Building, counted?: boolean, forPit?: Building, forCage?: Building, forGrave?: Building, forTorch?: Building, captive?: Object } | null} carrying
  * @property {Point[] | null} path   the way it walks, tile by tile (moveEntityTowards)
  * @property {Point | null} pathTarget
+ * @property {Point[] | null} [patrolTemplate]
  * @property {string} [activity]     the behaviour that took its last tick (for the selected settler's info)
  * @property {number} [hunger]       seconds until its next meal
  * @property {boolean} [quiver]
@@ -62,7 +73,8 @@
  * @property {number} [rifleAmmo]
  * @property {boolean} [camouflage]
  * @property {boolean} [shield]
- * @property {boolean} [helmet]  (#326, 27.10, 27)
+ * @property {boolean|string} [helmet]  (#326, 27.10, 27)
+ * @property {string} [helmetGear] the helmet's gear id, while helmet stays true for old saves and callers
  * @property {string|boolean} [armor]
  * @property {boolean} [backpack]
  * @property {boolean} [wateringCan]
@@ -101,6 +113,7 @@
  * @property {Object | null} [butcherTarget] the corpse it's cutting up (#250)
  * @property {number} [butcherTimer]
  * @property {Object | null} [graveTarget] the grave a necromancer works (#253)
+ * @property {Object | null} [lastGraveTarget] the last menu grave a necromancer worked
  * @property {number} [graveTimer]
  * @property {boolean} [asleep]     asleep at night (#257)
  * @property {Object | null} [sleepAt] the shelter it sleeps at
@@ -122,7 +135,6 @@
  * @property {{ act: string, left: number, spot: { x: number, y: number } | null, partnerId: number | null, angle?: number, onPoint?: number, progress?: { x: number, y: number }, dug?: number, seat?: number } | null} [idle]  its pastime (#199)
  * @property {{ icon?: string, progress: number, until: number } | null} [crafting]  a thing it's making (drawn, #232)
  * @property {boolean} [swaying]     an idle undead swaying
- * @property {number} [trained]     damage won at a training dummy, a share of its own (#199)
  * @property {boolean} [soul_lantern]  (#326) a necromancer's soul lantern at its side
  * @property {number} [lanternSouls]  (#326) the souls in it
  * @property {number} [lanternTimer]  (#326) the time to the next one let out by a grave
@@ -185,16 +197,21 @@
  * @property {{ icon: string, until: number } | null} [orderBubble] an order showing over it (a commander's, #279)
  * @property {{ text: string, until: number }} [say] its current spoken phrase
  * @property {string} enemyKey       GAME_CONFIG.enemies key
+ * @property {number} [experience]
+ * @property {number} [level]
+ * @property {Object<string, number>} [progression] XP by skill track
  * @property {Building | null} [platform] (#326) the red side's platform it's going up, or shooting from
  * @property {number} [treatedAt]  (#326) the tick a medic last worked on it
  * @property {number} [necroTreatedAt] the tick a necromancer last healed it
  * @property {Object | null} [supportAnchor] the fighter this medic/necromancer follows
  * @property {Object} [lastHitBy]     who struck it last (its slayer's day, #279)
+ * @property {string} [lastHitTrack] specialization used for its last hit
  * @property {Point} [guard]         its post in an enemy camp (#255): it holds it till a raider comes near
  * @property {boolean} [guardOff]   off its post, going after the raiders (#279)
  * @property {boolean} [scoutChasing] a camp guard sent after a scout (#279)
  * @property {boolean} [campGuard]  defender of the persistent Endless camp; passive outside a raid
  * @property {number} [campId] the persistent camp this enemy belongs to
+ * @property {Settler} [campIntruderTarget] player unit a camp guard is currently defending its camp from
  * @property {number} [campTalkTimer] seconds until its next camp conversation
  * @property {boolean} [campTalkReply] the guard has a reply queued for its next conversation
  * @property {string} [campTalkPartnerName] the guard it is currently speaking with
@@ -224,6 +241,7 @@
  * @property {number} [toCatch]      the id of the settler catching it for a cage (#250)
  * @property {number} [trappedFor]   seconds till it's free
  * @property {string} type           'normal', 'big', 'archer'...
+ * @property {boolean} [bigBody]
  * @property {number} x
  * @property {number} y
  * @property {number} hp
@@ -231,16 +249,21 @@
  * @property {number} radius
  * @property {number} speed
  * @property {number} damage      a second in melee, an arrow's for an archer
+ * @property {number} [attackCooldown]
+ * @property {number} [herbs]
  * @property {number} [hitDamage] a melee hit's, the player's own unit's (a battle tile shows it, #255)
  * @property {number} [meleeDamage] an archer out of arrows' melee damage a second, its melee kind's (#255)
  * @property {string} weapon
  * @property {number} [shotCooldown] seconds between its shots, a bow's in a settler's hands (#255)
  * @property {Object<string, number>} reward   what killing it adds to the stock
  * @property {Settler | null} [attackTarget]
+ * @property {boolean} [menuStaged]
+ * @property {Point | null} [menuEntryTarget]
  * @property {Object | null} buildTarget     the tent site it's building
  * @property {Object | null} [tentBuildTarget] the tent site reserved for a wave builder
  * @property {Point[] | null} path
  * @property {Point | null} pathTarget
+ * @property {number} [pathTimer]
  * @property {number} [arrows]
  * @property {number} [rifleAmmo]
  * @property {boolean} [camouflage]
@@ -256,6 +279,7 @@
  * @property {boolean} [summoned]     from a tent, not the wave
  * @property {boolean} [waveSummoned] spawned by a tent during a wave
  * @property {boolean} [fromWave]
+ * @property {boolean} [menuThreat] scripted enemy the menu scene's fighters should engage
  * @property {number} [prepWave] wave number this enemy is preparing for
  * @property {'west' | 'east' | 'north' | 'south'} [waveArrivalSide] map edge this wave enemy arrived from
  * @property {boolean} [markedTarget] the player pointed at it
@@ -269,7 +293,8 @@
  * @property {boolean} [hurtVoiceSpoken] spoke after dropping below 30% health
  * @property {string} [armor]          'iron': a wave enemy in armour (#203)
  * @property {boolean} [shield]
- * @property {boolean} [helmet]  (#326, 27.10, 27)
+ * @property {boolean|string} [helmet]  (#326, 27.10, 27)
+ * @property {string} [helmetGear] the helmet's gear id, while helmet stays true for old saves and callers
  * @property {{ x: number, y: number, until: number }} [raising] a necromancer's corpse being raised, till pathTick until
  */
 
@@ -371,6 +396,7 @@
  * The state of the game being played (engine/world/state.js).
  * @typedef {Object} Game
  * @property {'endless'|'battle'|'editor'|'menu'} gameMode
+ * @property {string} menuScene
  * @property {boolean} gameStarted
  * @property {boolean} loading
  * @property {boolean} loadingRender
@@ -428,6 +454,7 @@
  * @property {Point[]} stumps       where a felled tree stood: its stump, till a tree grows again (#306)
  * @property {Object[]} loot          piles fallen enemies dropped: { x, y, yield, items }
  * @property {number} dayTime      seconds into the day (#257)
+ * @property {boolean} editorHideTimeAndWeather
  * @property {number} nightId      which night it is
  * @property {boolean} wasNight
  * @property {boolean} autoBlight   the undead's necromancers blight the nearest ground by themselves (#253)
@@ -455,7 +482,7 @@
  * @property {number} enemyHerbStock
  * @property {number} waveSize        how many the last wave brought
  * @property {boolean} waveRouted     it's lost most of them and run (#207)
- * @property {{ armor: boolean, shield: boolean, leather?: boolean, helmet?: boolean }} playerGear  armour / a shield / a helmet the player has made
+ * @property {Object<string, boolean>} playerGear  armour / a shield / a helmet the player has made
  * @property {Object[]} forests
  * @property {Object[]} pendingRespawns
  * @property {Object<string, number>} paths  'gx,gy' -> how worn its ground is (#248)

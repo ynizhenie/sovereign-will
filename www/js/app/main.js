@@ -4,6 +4,7 @@
 import { refreshAffordability, renderConfigHud, syncHudMode, updateUI } from '../ui/index.js';
 import { applyPageTexts, camera, canvas, clampCamera, fitCanvasToScreen, getViewScale, glReady, loadSetting, onTap, saveSetting } from '../engine/platform/index.js';
 import { chunkPaintTotals } from '../domains/world/index.js';
+import { isPossessionCameraFollowing } from '../domains/colony/settlers/index.js';
 import { game } from '../engine/world/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
@@ -98,11 +99,16 @@ export function drawBetweenSteps(alpha, draw) {
       }
     }
   }
-  // Interpolate the camera on the possessed settler or Plague hero between simulation steps.
+  // Interpolate the camera following a possessed settler or Plague hero between simulation steps.
   const followed = game.settlers.find(s => s.isPossessed);
   const smoothPlagueCamera = game.plagueMode && !followed && camera.prevX !== undefined;
+  const smoothPossessionCamera = followed && isPossessionCameraFollowing() && camera.prevX !== undefined;
   const cam = (followed || smoothPlagueCamera) ? { x: camera.x, y: camera.y } : null;
-  if (followed) { camera.x = followed.x; camera.y = followed.y; clampCamera(); }
+  if (smoothPossessionCamera) {
+    camera.x = camera.prevX + (camera.x - camera.prevX) * alpha;
+    camera.y = camera.prevY + (camera.y - camera.prevY) * alpha;
+    clampCamera();
+  } else if (followed) { camera.x = followed.x; camera.y = followed.y; clampCamera(); }
   else if (smoothPlagueCamera) {
     camera.x = camera.prevX + (camera.x - camera.prevX) * alpha;
     camera.y = camera.prevY + (camera.y - camera.prevY) * alpha;

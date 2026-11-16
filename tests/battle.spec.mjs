@@ -2,10 +2,13 @@ import { test, expect } from './helpers.mjs';
 import { openGame, started } from './helpers.mjs';
 
 // Battle mode from the main menu, with taps placed straight in world coordinates
-async function openBattle(page) {
+async function openBattle(page, size) {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-battles');
+  await expect(page.locator('[data-screen="battle"]')).toBeVisible();
+  if (size) await page.click(`[data-screen="battle"] [data-battle-size="${size}"]`);
+  await page.click('#battle-play');
   await expect(page.locator('[data-battle-category="units"]')).toBeVisible();
 }
 
@@ -33,6 +36,73 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
   expect(r.field).toEqual({ trees: 0, water: 0, rock: 0, boars: 0 });
   expect(r.placed).toEqual({ settlers: 1, enemies: 1, green: 'sword', red: 'big' });
   expect(r.afterRemove).toBe(0);
+});
+
+test('battle menu and Battle settings choose and apply the battlefield size', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  await expect(page.locator('[data-screen="battle"] [data-battle-size="medium"]')).toHaveClass(/active/);
+  const activeColors = await page.evaluate(() => [
+    getComputedStyle(document.querySelector('[data-screen="battle"] [data-battle-size="medium"]')).backgroundColor,
+    getComputedStyle(document.querySelector('.map-option.active')).backgroundColor
+  ]);
+  expect(activeColors[0]).toBe(activeColors[1]);
+  await page.click('[data-screen="battle"] [data-battle-difficulty="hard"]');
+  await page.click('[data-screen="battle"] [data-battle-field="desert"]');
+  await page.click('[data-screen="battle"] [data-battle-size="custom"]');
+  await page.locator('#battle-menu-cols').fill('15');
+  await page.locator('#battle-menu-rows').fill('10');
+  await page.locator('#battle-menu-rows').press('Tab');
+  await expect(page.locator('#battle-menu-cols')).toHaveValue('20');
+  await expect(page.locator('#battle-menu-rows')).toHaveValue('13');
+  await page.locator('#battle-menu-cols').fill('50');
+  await page.locator('#battle-menu-rows').fill('30');
+  await page.locator('#battle-menu-rows').press('Tab');
+  await expect(page.locator('#battle-menu-cols')).toHaveValue('50');
+  await expect(page.locator('#battle-menu-rows')).toHaveValue('30');
+  await page.reload();
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  await expect(page.locator('[data-screen="battle"] [data-battle-difficulty="hard"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-screen="battle"] [data-battle-field="desert"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-screen="battle"] [data-battle-size="custom"]')).toHaveClass(/active/);
+  await expect(page.locator('#battle-menu-cols')).toHaveValue('50');
+  await expect(page.locator('#battle-menu-rows')).toHaveValue('30');
+
+  await page.click('#battle-play');
+
+  const initialSize = await page.evaluate(() => ({ cols: COLS, rows: ROWS, difficulty: game.gameDifficulty, field: battle.field }));
+  expect(initialSize).toEqual({ cols: 50, rows: 30, difficulty: 'hard', field: 'desert' });
+
+  await page.evaluate(() => {
+    battle.preset = 'humans:sword';
+    battleTap(10 * TILE_SIZE + 15, 10 * TILE_SIZE + 15);
+    battleTap(30 * TILE_SIZE + 15, 10 * TILE_SIZE + 15);
+  });
+  await page.click('[data-dock="battle-settings"]');
+  await page.click('[data-sheet="battle-settings"] [data-battle-size="custom"]');
+  await page.locator('#battle-field-cols').fill('150');
+  await page.locator('#battle-field-rows').fill('140');
+  await page.locator('#battle-field-rows').press('Tab');
+
+  const resized = await page.evaluate(() => ({
+    cols: COLS,
+    rows: ROWS,
+    settlers: settlers.length,
+    enemies: enemies.length,
+    sides: [battleSide(settlers[0].x), battleSide(enemies[0].x)],
+    savedSize: [loadData('battle-choices', null)?.fieldCols, loadData('battle-choices', null)?.fieldRows]
+  }));
+  expect(resized).toEqual({ cols: 128, rows: 128, settlers: 1, enemies: 1, sides: ['green', 'red'], savedSize: [128, 128] });
+  await page.reload();
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  await expect(page.locator('[data-screen="battle"] [data-battle-difficulty="hard"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-screen="battle"] [data-battle-field="desert"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-screen="battle"] [data-battle-size="custom"]')).toHaveClass(/active/);
+  await expect(page.locator('#battle-menu-cols')).toHaveValue('128');
+  await expect(page.locator('#battle-menu-rows')).toHaveValue('128');
 });
 
 test('battle field highlights can use classic colours, side colours, or be disabled', async ({ page }) => {
@@ -286,24 +356,24 @@ test('the battle settings pick the field: a glade, desert, or savanna, and the l
     battle.preset = 'humans:sword'; battleTap(at(10, 10).x, at(10, 10).y);
   });
   await page.click('[data-dock="battle-settings"]');
-  await page.click('[data-battle-field="desert"]');
+  await page.click('[data-sheet="battle-settings"] [data-battle-field="desert"]');
   const desert = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, total: COLS * ROWS, units: settlers.length }));
-  await expect(page.locator('[data-battle-field="desert"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-field="desert"]')).toHaveClass(/on/);
   expect(desert).toEqual({ field: 'desert', sand: 40 * 26, savanna: 0, total: 40 * 26, units: 1 });
-  await page.click('[data-battle-field="savanna"]');
+  await page.click('[data-sheet="battle-settings"] [data-battle-field="savanna"]');
   const savanna = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, units: settlers.length }));
-  await expect(page.locator('[data-battle-field="savanna"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-field="savanna"]')).toHaveClass(/on/);
   expect(savanna).toEqual({ field: 'savanna', sand: 0, savanna: 40 * 26, units: 1 });
-  await page.click('[data-battle-field="glade"]');
+  await page.click('[data-sheet="battle-settings"] [data-battle-field="glade"]');
   const glade = await page.evaluate(() => ({ field: battle.field, sand: desertTiles.length, savanna: savannaTiles.length, units: settlers.length }));
   expect(glade).toEqual({ field: 'glade', sand: 0, savanna: 0, units: 1 });
 });
 
 test('ten taps on the battlefield heading activate the connected Backrooms maze without saving it', async ({ page }) => {
-  await openBattle(page);
+  await openBattle(page, 'small');
   await page.click('[data-dock="battle-settings"]');
-  await expect(page.locator('[data-battle-field="backrooms"]')).toHaveCount(0);
-  await page.click('[data-battle-field="desert"]');
+  await expect(page.locator('[data-sheet="battle-settings"] [data-battle-field="backrooms"]')).toHaveCount(0);
+  await page.click('[data-sheet="battle-settings"] [data-battle-field="desert"]');
   const beforeActivation = await page.evaluate(() => {
     battle.category = 'units';
     battle.preset = 'humans:club';
@@ -316,19 +386,48 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
   expect(beforeActivation).toBe(2);
   for (let click = 0; click < 9; click++) await page.click('[data-battle-secret-trigger]');
   expect(await page.evaluate(() => battle.field)).not.toBe('backrooms');
+  const epochBeforeBackrooms = await page.evaluate(() => worldEpoch());
   await page.click('[data-battle-secret-trigger]');
+  const epochAfterBackrooms = await page.evaluate(() => worldEpoch());
   const maze = await page.evaluate(() => {
     const walls = buildings.filter(building => building.battleMazeWall);
+    const columns = Math.floor((game.COLS - 6) / 3) + 1;
+    const rows = Math.floor((game.ROWS - 6) / 3) + 1;
     const start = { x: 2 * TILE_SIZE + 15, y: 2 * TILE_SIZE + 15 };
-    const finish = { x: 34 * TILE_SIZE + 15, y: 22 * TILE_SIZE + 15 };
+    const finish = {
+      x: (2 + (columns - 1) * 3) * TILE_SIZE + 15,
+      y: (2 + (rows - 1) * 3) * TILE_SIZE + 15
+    };
     const playerPath = findPathAStar(start.x, start.y, finish.x, finish.y);
     const enemyPath = findPathAStar(start.x, start.y, finish.x, finish.y, true);
     const before = walls.length;
     // (looked at before the taps below: the second one puts a wall on the open floor)
     const lineupCleared = battle.lineup.length === 0 && settlers.length === 0 && enemies.length === 0;
     const wallKeys = new Set(walls.map(building => `${getGridPos(building.x, building.y).gx},${getGridPos(building.x, building.y).gy}`));
-    const crossings = Array.from({ length: 6 }, (_, row) => 2 + row * 4)
-      .filter(y => !wallKeys.has(`20,${y}`) && !wallKeys.has(`21,${y}`) && !wallKeys.has(`20,${y + 1}`) && !wallKeys.has(`21,${y + 1}`)).length;
+    const middleRoom = Math.ceil(columns / 2);
+    const crossingX = 2 + (middleRoom - 1) * 3 + 2;
+    const crossings = Array.from({ length: rows }, (_, row) => 2 + row * 3)
+      .filter(y => !wallKeys.has(`${crossingX},${y}`) && !wallKeys.has(`${crossingX + 1},${y}`) &&
+        !wallKeys.has(`${crossingX},${y + 1}`) && !wallKeys.has(`${crossingX + 1},${y + 1}`)).length;
+    const internalPassages = (firstColumn, lastColumn) => {
+      let edges = 0;
+      for (let cy = 0; cy < rows; cy++) {
+        for (let cx = firstColumn; cx <= lastColumn; cx++) {
+          const x = 2 + cx * 3, y = 2 + cy * 3;
+          if (cx < lastColumn && !wallKeys.has(`${x + 2},${y}`) && !wallKeys.has(`${x + 2},${y + 1}`)) edges++;
+          if (cy < rows - 1 && !wallKeys.has(`${x},${y + 2}`) && !wallKeys.has(`${x + 1},${y + 2}`)) edges++;
+        }
+      }
+      return edges - ((lastColumn - firstColumn + 1) * rows - 1);
+    };
+    const leftPassages = internalPassages(0, middleRoom - 1);
+    const rightPassages = internalPassages(middleRoom, columns - 1);
+    const internalPassagesInRange = leftPassages >= 0 && leftPassages <= 3 && rightPassages >= 0 && rightPassages <= 3;
+    const isolatedWallTiles = [...wallKeys].filter(key => {
+      const [gx, gy] = key.split(',').map(Number);
+      return gx > 0 && gy > 0 && gx < game.COLS - 1 && gy < game.ROWS - 1 &&
+        [[0, -1], [1, 0], [0, 1], [-1, 0]].every(([dx, dy]) => !wallKeys.has(`${gx + dx},${gy + dy}`));
+    }).length;
     const firstLayout = [...wallKeys].sort().join(';');
     const wall = walls.find(building => {
       const { gx, gy } = getGridPos(building.x, building.y);
@@ -337,8 +436,25 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
     battleTap(wall.x, wall.y);
     const placementRejected = battle.lineup.length === 0;
     battleTap(start.x, start.y);
+    const guardedWall = buildings.find(building => building.battleMazeWall && !isBorderZone(getGridPos(building.x, building.y).gx, getGridPos(building.x, building.y).gy));
+    const hpBeforeEnemy = guardedWall.hp;
+    const enemy = createConfiguredEnemy({ x: guardedWall.x - 25, y: guardedWall.y }, 'raider');
+    enemy.speed = 0;
+    enemy.isBlockedPath = true;
+    const defender = window.sim.helpers.makeSettler(999, guardedWall.x + 25, guardedWall.y, {});
+    game.enemies = [enemy];
+    game.settlers = [defender];
+    tickEnemy(enemy, 1 / 60);
+    const wallUnaffectedByEnemy = guardedWall.hp === hpBeforeEnemy;
     return {
       field: battle.field,
+      size: [game.COLS, game.ROWS],
+      resources: [trees.length, cacti.length, boulders.length, grassList.length, berryBushes.length, sticks.length, pebbles.length, logs.length,
+        ironOres.length, coalOres.length, boars.length, naturalRocks.length, waterTiles.length, farmPlots.length, desertTiles.length, savannaTiles.length, beachTiles.length],
+      terrainIndex: (() => {
+        const index = getTileIndex();
+        return [index.trees.size, index.cacti.size, index.boulders.size, index.ores.size, index.rocks.size, index.water.size];
+      })(),
       lineupCleared,
       savedChoice: loadData('battle-choices', null)?.field,
       walls: before,
@@ -347,6 +463,11 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
       crossings,
       playerCanNavigate: playerPath.path.length > 0 && !playerPath.isBlockedPath,
       enemyCanNavigate: enemyPath.path.length > 0 && !enemyPath.isBlockedPath,
+      wallUnaffectedByEnemy,
+      leftPassages,
+      rightPassages,
+      internalPassagesInRange,
+      isolatedWallTiles,
       firstLayout,
       secondLayoutDiffers: (() => {
         setBattleField('glade');
@@ -361,6 +482,10 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
     };
   });
   expect(maze.field).toBe('backrooms');
+  expect(epochAfterBackrooms).toBeGreaterThan(epochBeforeBackrooms);
+  expect(maze.size).toEqual([20, 13]);
+  expect(maze.resources).toEqual(Array(17).fill(0));
+  expect(maze.terrainIndex).toEqual([0, 0, 0, 0, 0, 0]);
   expect(maze.lineupCleared).toBe(true);
   expect(maze.savedChoice).toBe('desert');
   expect(maze.walls).toBeGreaterThan(100);
@@ -371,6 +496,9 @@ test('ten taps on the battlefield heading activate the connected Backrooms maze 
   expect(maze.secondLayoutDiffers).toBe(true);
   expect(maze.playerCanNavigate).toBe(true);
   expect(maze.enemyCanNavigate).toBe(true);
+  expect(maze.wallUnaffectedByEnemy).toBe(true);
+  expect(maze.internalPassagesInRange).toBe(true);
+  expect(maze.isolatedWallTiles).toBe(0);
   await page.evaluate(() => leaveBattleMode());
   expect(await page.evaluate(() => battle.field)).not.toBe('backrooms');
   expect(await page.evaluate(() => loadData('battle-choices', null)?.field)).toBe('desert');
@@ -1262,6 +1390,7 @@ test('the pause menu leaves battle mode and the Endless map size comes back (#38
   await openGame(page);
   await page.evaluate(() => { mapSettings = { cols: 60, rows: 60 }; showMenuScreen('home'); });
   await page.click('#mode-battles');
+  await page.click('#battle-play');
   await page.click('#btn-pause-toggle'); // the Menu is the pause button at the top now (#145)
   await page.click('#exit-to-menu-button');
   // out of the battle: Endless, or already the world behind the menu (#193)
@@ -1337,6 +1466,27 @@ test('every placed unit keeps its look, and a new one leaves the others theirs (
   expect(r.placed.red).toEqual(r.before.red);
   expect(r.rebuilt).toEqual(r.placed);
   expect(r.everyEntryHasOne).toBe(true);
+});
+
+test('a placed dummy keeps its look when another building is placed', async ({ page }) => {
+  await openBattle(page);
+  const r = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.category = 'buildings';
+    battle.building = 'dummy';
+    battleTap(at(10, 10).x, at(10, 10).y);
+    const first = buildings.find(b => b.type === 'dummy').variant;
+    battle.building = 'wall_wood';
+    battleTap(at(12, 10).x, at(12, 10).y);
+    const afterPlacement = buildings.find(b => b.type === 'dummy').variant;
+    resetBattleUnits();
+    const afterReset = buildings.find(b => b.type === 'dummy').variant;
+    return { first, entry: battle.lineup.find(e => e.building === 'dummy').variant, afterPlacement, afterReset };
+  });
+  expect(typeof r.first).toBe('string');
+  expect(r.entry).toBe(r.first);
+  expect(r.afterPlacement).toBe(r.first);
+  expect(r.afterReset).toBe(r.first);
 });
 
 test('placed units face the other side, red ones too (playtest: the enemies stood facing away)', async ({ page }) => {

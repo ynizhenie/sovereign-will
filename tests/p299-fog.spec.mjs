@@ -147,6 +147,7 @@ test('a watchtower sees farther than a building; what\'s explored is saved and l
   expect(r).toEqual({ store: false, tower: true, afterReset: false, loaded: true });
   await page.evaluate(() => { exitToMainMenu(); showMenuScreen('home'); });
   await page.click('#mode-battles');
+  await page.click('#battle-play'); // (#417: Battles opens its settings first)
   expect(await page.evaluate(() => [hasFog(), isVisible(0, 0)])).toEqual([false, true]);
   // (a page error first, if any: it failed now and then on CI, the HUD left on Endless's)
   expect(errors).toEqual([]);

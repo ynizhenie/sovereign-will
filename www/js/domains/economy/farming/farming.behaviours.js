@@ -8,6 +8,7 @@ import { hasToolFamily } from '../../colony/equipment/index.js';
 import { canAfford, hasRoomToCarry, payCost } from '../../colony/storage/index.js';
 import { isTileOccupied } from '../building/index.js';
 import { isWaterReachable } from '../../world/index.js';
+import { addUnitExperience, getUnitWorkSpeedMultiplier } from '../../colony/settlers/index.js';
 import { getMapResourceDef, harvest, isFreeHands, pickApplesFrom, appleTreesAmong } from '../gathering/index.js';
 import { makeAppleTree } from './farming.rules.js';
 import { ejectEntitiesFromTile, getReachDistanceToResource, getReachSteps, getSettlerReach, moveEntityTowards } from '../../../engine/movement/index.js';
@@ -77,7 +78,7 @@ export function waterCrops(s, tick) {
 
 // ---- Fertiliser
 
-// A farmer with a backpack, between waves, carries dung from a compost heap (#232) to a wheat plot not fertilised yet;
+// A farmer with a backpack, between waves, carries dung from a compost heap (#232) to a crop not fertilised yet;
 // the plot's next harvest yields more (GAME_CONFIG.fertilizer). Called off its way (a wave), it drops the
 // dung where it is (#201)
 export function fertilize(s, tick) {
@@ -165,7 +166,7 @@ export function tendFarmZones(s, tick) {
     moveEntityTowards(s, target.x, target.y, s.speed, false, tick.dt);
     s.plantProgress = 0;
   } else {
-    s.plantProgress = (s.plantProgress || 0) + tick.dt;
+    s.plantProgress = (s.plantProgress || 0) + tick.dt * getUnitWorkSpeedMultiplier(s, 'farming');
     s.working = 0.1;
     faceTowards(s, target.x, target.y);
     if (s.plantProgress >= farming.plantSeconds) {
@@ -173,11 +174,17 @@ export function tendFarmZones(s, tick) {
       playSound('dig', target);
       const cropId = farming.crops[target.crop];
       payCost(getDefinition('buildings', cropId).cost || {});
-      if (cropId === 'wheat') game.farmPlots.push({ x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0 });
+      if (cropId === 'wheat' || cropId === 'rice') {
+        game.farmPlots.push({
+          x: target.x, y: target.y, growth: 0, priority: 0, harvestProgress: 0,
+          crop: target.crop, yield: { ...farming.harvest[target.crop] }
+        });
+      }
       else {
         const tree = { x: target.x, y: target.y, hp: 1, maxHp: 3, isGrowing: true, growProgress: 0, priority: 0 };
         game.trees.push(cropId === 'apple_sapling' ? makeAppleTree(tree) : tree);
       }
+      addUnitExperience(s, 1, 'farming');
       ejectEntitiesFromTile(target.x, target.y);
       resetTileIndex();
     }
