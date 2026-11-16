@@ -101,7 +101,7 @@ export function drawEnemyTentSites() {
 // Enemies: body, weapon, quiver, the target mark, health
 // The enemies' shadows (those the colony sees), into the frame's shadows (see drawShadowLayer)
 export function drawEnemyShadows() {
-  if (tinyUnit()) return;
+  if (simpleUnit()) return;
   const view = getViewRect(60), seen = [];
   // (one by one: the tiles' buckets are for what stands still, see engine/world/spatial.js)
   for (const list of [game.enemies, game.scouts]) for (const en of list) if (en.x >= view.x0 && en.x <= view.x1 && en.y >= view.y0 && en.y <= view.y1 && isVisible(en.x, en.y)) seen.push(en);

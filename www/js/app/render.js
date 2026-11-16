@@ -3,7 +3,7 @@
 import { TILE_SIZE, forEachInRect, game, getTileIndex, townHall } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewRect, getViewScale, glBeginFrame, glCamera, glEndFrame, glReady } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot, getEnemyDef } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression } from '../domains/colony/settlers/index.js';
+import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression, simpleUnit } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
@@ -113,6 +113,7 @@ export function render() {
 }
 
 function drawUnitLevelIndicators() {
+  if (simpleUnit()) return;
   const view = getViewRect(60);
   for (const unit of game.settlers) {
     if (!hasUnitProgression(unit) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;

@@ -118,6 +118,53 @@ test('allies in a fight stand apart, workers at one thing aren\'t pushed off it;
   expect(r.goes).toBe(true);
 });
 
+test('distant settlers and enemies skip exact collision checks', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const checks = await page.evaluate(() => {
+    const make = window.sim.helpers.makeSettler;
+    settlers = [make(1, townHall.x + 200, townHall.y), make(2, townHall.x + 230, townHall.y)];
+    enemies = [make(3, townHall.x + 200, townHall.y + 400), make(4, townHall.x + 230, townHall.y + 400)];
+    const hypot = Math.hypot;
+    let calls = 0;
+    Math.hypot = (...args) => { calls++; return hypot(...args); };
+    try { separateSettlersFromEnemies(); } finally { Math.hypot = hypot; }
+    return calls;
+  });
+  expect(checks).toBe(0);
+});
+
+test('enemy separation finds overlaps across spatial cells with large unit lists', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    const make = window.sim.helpers.makeSettler;
+    for (const list of [game.trees, game.cacti, game.boulders, game.naturalRocks, game.waterTiles, game.ironOres, game.coalOres, game.berryBushes]) list.length = 0;
+    resetTileIndex();
+    settlers = Array.from({ length: 40 }, (_, i) => make(i + 1, 100 + i * 70, 100));
+    enemies = Array.from({ length: 40 }, (_, i) => make(i + 101, 100 + i * 70, 500));
+    const x = Math.floor((townHall.x + 150) / 48) * 48 + 46, y = townHall.y + 180;
+    settlers[0] = make(1, x, y);
+    enemies[0] = make(101, x + 20, y);
+    const reach = settlers[0].visualRadius + enemies[0].radius;
+    const before = Math.hypot(settlers[0].x - enemies[0].x, settlers[0].y - enemies[0].y);
+    separateSettlersFromEnemies();
+    const after = Math.hypot(settlers[0].x - enemies[0].x, settlers[0].y - enemies[0].y);
+    settlers = Array.from({ length: 120 }, (_, i) =>
+      Object.assign(make(i + 201, 100 + (i % 20) * 80, 700 + Math.floor(i / 20) * 80), { struckAt: pathTick }));
+    enemies = [];
+    settlers[0] = Object.assign(make(201, x, y), { struckAt: pathTick });
+    settlers[1] = Object.assign(make(202, x + 10, y), { struckAt: pathTick });
+    const allyBefore = Math.hypot(settlers[0].x - settlers[1].x, settlers[0].y - settlers[1].y);
+    separateAllies(settlers, true);
+    const allyAfter = Math.hypot(settlers[0].x - settlers[1].x, settlers[0].y - settlers[1].y);
+    return { before, after, reach, allyBefore, allyAfter };
+  });
+  expect(result.before).toBeLessThan(result.reach);
+  expect(result.after).toBeGreaterThanOrEqual(result.reach - 0.01);
+  expect(result.allyAfter).toBeGreaterThan(result.allyBefore);
+});
+
 test('a continent\'s beach has only pebbles and boulders; the base starts with grass, bushes, sticks and pebbles near it (#326)', async ({ page }) => {
   test.setTimeout(60000);
   await openGame(page);

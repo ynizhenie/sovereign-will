@@ -93,10 +93,9 @@ export const mechanicsConfig = {
   // a torch post is lit with postFirewood. (#279) Asleep it mends as its shelter heals
   // (sleepHealPerSecond at the town hall); a corpse within sleepCorpseTiles of where it sleeps is taken away
   // first; one ordered to work at night does it at drowsyPace
-  // (#308) weather, Endless only: clear for firstClearSeconds, then spells of weather (weights, clear twice as
-  // likely after one; #306: rarer and shorter), each seconds long (from..to), coming on and going off over
-  // `fade`; the wind's strength range for each; a storm's lightning every boltSeconds; rain makes the fires
-  // burn rainFireBurn times faster
+  // (#308) weather, Endless only: clear and other spells have separate durations and consecutive limits;
+  // weighted choice, coming on and going off over `fade`; the wind's strength range for each; a storm's
+  // lightning every boltSeconds; rain makes the fires burn rainFireBurn times faster
   // (#299) the base's land (Endless): a square of startTiles round the town hall (as big as a default map),
   // and a circle of buildingTiles round each building but those in skip; settlers work and the player builds
   // only on it. waveTiles: how far past it the frontier is (getFrontier: waves come in there, as from the
@@ -110,7 +109,7 @@ export const mechanicsConfig = {
   // that hit it for a while after
   fog: { hallTiles: 12, buildingTiles: 5, towerTiles: 12, settlerTiles: 7, everySeconds: 0.25, dim: 0.55,
     nightShare: 0.6, petShare: 1.6, enemySightTiles: 8, enemyRememberSeconds: 4 },
-  weather: { firstClearSeconds: 240, seconds: [60, 130], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
+  weather: { clearSeconds: [300, 600], seconds: [180, 360], fade: 12, weights: { clear: 55, rain: 19, fog: 15, storm: 11 },
     wind: { clear: [0.12, 0.45], rain: [0.4, 0.75], fog: [0.02, 0.1], storm: [0.8, 1.2] }, boltSeconds: [6, 14], rainFireBurn: 1.5 },
   daytime: { morning: 30, day: 180, evening: 30, night: 120, darkness: 0.72, hallLightTiles: 1.5, torchLightTiles: 2.5, campfireLightTiles: 2.5,
     handTorchTiles: 1.8, portalLightTiles: 1.2, staffLightTiles: 1, shelterLightTiles: 1.5, wakeSeconds: 30, postFirewood: 1, enemyTorchShare: 0.3,

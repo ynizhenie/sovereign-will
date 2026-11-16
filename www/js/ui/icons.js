@@ -704,8 +704,17 @@ export const ICONS = {
     icRound(c, '#f0b27a', 5, 17, 9, 6, 3);
   },
   club: c => {
-    icLine(c, '#6d4520', 3.5, [[6, 27], [16, 15]]);
-    c.save(); c.translate(21, 10); c.rotate(-Math.PI / 4); icRound(c, '#7a4b21', -5.5, -9, 11, 18, 5); c.restore();
+    c.save(); c.translate(9.15, 22.85); c.rotate(-Math.PI / 4); c.scale(1.55, 1.55);
+    icRect(c, '#6d4520', -2.5, -1.3, 6.5, 2.6);
+    for (const gx of [-1.6, 0.2, 2]) icLine(c, 'rgba(0, 0, 0, 0.35)', 0.6, [[gx, -1.3], [gx + 0.8, 1.3]]);
+    const head = [[4, -1.5], [8, -2.4], [12, -3], [14.5, -2.2], [15, 0], [14.5, 2.2], [12, 3], [8, 2.4], [4, 1.5]];
+    icFill(c, '#8b5a2b', head);
+    c.strokeStyle = 'rgba(0, 0, 0, 0.45)'; c.lineWidth = 0.8; icPath(c, head); c.stroke();
+    icLine(c, 'rgba(70, 40, 15, 0.6)', 0.6, [[5, 0.4], [10, 1.4], [14, 0.6]]);
+    icLine(c, 'rgba(255, 230, 190, 0.35)', 0.6, [[6, -1.2], [10, -2.3], [13.5, -1.8]]);
+    icCircle(c, '#5c3a17', 10, -1.2, 0.7);
+    icCircle(c, '#5c3a17', 12.6, 1.4, 0.7);
+    c.restore();
   },
   sword: c => icSword(c, '#e0e0e0', '#fff'),
   iron_sword: c => icSword(c, '#b0bec5', '#eceff1'),

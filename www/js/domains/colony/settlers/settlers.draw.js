@@ -20,9 +20,10 @@ import { drawPet } from '../pets/index.js';
 import { isBigBody, isPet } from './settlers.rules.js';
 import { hasClearEnemyLine } from '../../../engine/movement/index.js';
 
-// Keep character detail intact at every camera zoom level.
-export const simpleUnit = () => false;
-export const tinyUnit = () => false;
+const SIMPLE_UNIT_SCALE = 0.55, SIMPLE_UNIT_COUNT = 180;
+const unitCount = () => game.settlers.length + game.enemies.length + game.scouts.length;
+export const simpleUnit = () => getViewScale() < SIMPLE_UNIT_SCALE || unitCount() > SIMPLE_UNIT_COUNT;
+export const tinyUnit = () => getViewScale() < 0.4 && unitCount() > SIMPLE_UNIT_COUNT;
 
 export function drawLevelIndicator(x, y, level) {
   const text = String(level);
@@ -416,7 +417,6 @@ export function drawFigure(unit, o) {
   const camoColor = o.camoColor || o.body;
   const shadeUniform = amount => shade(o.camouflage ? camoColor : o.body, amount);
   const uniformColor = o.camouflage ? shade(camoColor, -0.48) : o.body;
-  const camoDark = shade(camoColor, -0.72), camoMid = shade(camoColor, -0.34), camoLight = shade(camoColor, -0.12);
   ctx.save();
   ctx.translate(x, y);
   // (#306) zoomed out a figure is a handful of pixels: a shadow, its legs, its body and its head — the
@@ -428,10 +428,12 @@ export function drawFigure(unit, o) {
     ctx.beginPath(); ctx.roundRect(-r * 0.3, r * 0.25, r * 0.6, r * 0.72, r * 0.12); ctx.fill();
     ctx.fillStyle = uniformColor;
     ctx.beginPath(); ctx.roundRect(-r * 0.6, -r * 0.48, r * 1.2, r * 0.98, r * 0.32); ctx.fill();
-    drawHeadTexture(ctx, lookOf(unit), unitKin(unit), o.skin, 0, -r * 0.9, r * 0.5, unit.facing || 0, false, 0);
+    ctx.fillStyle = o.skin;
+    ctx.beginPath(); ctx.arc(0, -r * 0.9, r * 0.35, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
     return;
   }
+  const camoDark = shade(camoColor, -0.72), camoMid = shade(camoColor, -0.34), camoLight = shade(camoColor, -0.12);
   // (#306) a zombie lunges as it strikes
   const z = !o.lying && !o.dead && !o.carryPoint ? zombieReach(unit) : null;
   if (z && z.lunge) ctx.translate(Math.cos(unit.facing || 0) * z.lunge, Math.sin(unit.facing || 0) * z.lunge * 0.7);
@@ -877,7 +879,7 @@ export function drawSelectedPaths() {
 
 // The settlers' shadows, into the frame's shadows (drawn under everything standing, see drawShadowLayer)
 export function drawSettlerShadows() {
-  if (!tinyUnit()) drawFigureShadows(game.settlers, getViewRect(60));
+  if (!simpleUnit()) drawFigureShadows(game.settlers, getViewRect(60));
 }
 
 export function drawSettlers(only = null) {

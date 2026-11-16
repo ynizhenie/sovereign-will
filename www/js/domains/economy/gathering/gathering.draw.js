@@ -268,9 +268,9 @@ const shadowRes = () => {
   heldShadowRes = want;
   return want;
 };
-// the sun to a step: a shadow 20 high moves no more than about a screen px a step (the zoom is within twice the
+// the sun to a step: a shadow 20 high moves less than a screen px a step (the zoom is within twice the
 // pictures' size), so every piece on the screen is painted again every few seconds, not every one
-const sunStep = () => Math.min(0.5, 0.02 / heldShadowRes);
+const sunStep = () => Math.min(0.5, 0.03 / heldShadowRes);
 const stillSun = () => { const sun = getSun(), q = sunStep(); return { dx: Math.round(sun.dx / q) * q, dy: Math.round(sun.dy / q) * q }; };
 // (a piece looked at again every second, for a tree felled or grown: a moment late for its shadow is not seen)
 const shadowStamps = stamper(stillLists, SHADOW_MARGIN, () => { const sun = stillSun(); return `${sunStep()}:${sun.dx},${sun.dy}`; }, 60);

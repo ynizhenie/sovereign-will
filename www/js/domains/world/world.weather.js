@@ -12,8 +12,9 @@ import { playSound } from '../../app/index.js';
 import { getSun } from './world.daytime.js';
 
 const config = () => GAME_CONFIG.weather;
-/** @type {{ kind: string, level: number, left: number, wind: number, windTo: number, windAngle: number, flash: number, thunderIn: number, nextBolt: number, bolt: { x: number, seed: number } | null }} */
-const CLEAR = { kind: 'clear', level: 0, left: 0, wind: 0.3, windTo: 0.3, windAngle: 0, flash: 0, thunderIn: -1, nextBolt: 0, bolt: null };
+/** @type {{ kind: string, level: number, left: number, streak: number, wind: number, windTo: number, windAngle: number, flash: number, thunderIn: number, nextBolt: number, bolt: { x: number, seed: number } | null }} */
+const CLEAR = { kind: 'clear', level: 0, left: 0, streak: 1, wind: 0.3, windTo: 0.3, windAngle: 0, flash: 0, thunderIn: -1, nextBolt: 0, bolt: null };
+const MAX_CLEAR_STREAK = 5, MAX_OTHER_STREAK = 2;
 
 /** @returns {typeof CLEAR} */
 export function getWeather() {
@@ -30,23 +31,35 @@ export function setStandingWeather(kind) {
 
 export function setStartingWeather(kind) {
   const c = config();
-  if (!c.wind[kind]) { game.weather = { ...CLEAR, left: c.firstClearSeconds }; return; }
-  const [lo, hi] = c.wind[kind];
-  const left = kind === 'clear' ? c.firstClearSeconds : c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
+  const startingKind = c.wind[kind] ? kind : 'clear';
+  const [lo, hi] = c.wind[startingKind];
+  const left = duration(startingKind, c);
   const wind = (lo + hi) / 2;
-  game.weather = { ...CLEAR, kind, level: kind === 'clear' ? 0 : 1, left, wind, windTo: wind };
+  game.weather = { ...CLEAR, kind: startingKind, level: startingKind === 'clear' ? 0 : 1, left, streak: 1, wind, windTo: wind };
 }
 // rain falling now, 0..1 (a storm is rain too)
 export const rainLevel = () => { const w = getWeather(); return w.kind === 'rain' || w.kind === 'storm' ? w.level : 0; };
 
-function pickKind(after) {
-  const weights = { ...config().weights };
+function duration(kind, c = config()) {
+  const [min, max] = kind === 'clear' ? c.clearSeconds : c.seconds;
+  return min + rand() * (max - min);
+}
+
+function pickKind(after, streak, c) {
+  const weights = { ...c.weights };
   if (after !== 'clear') weights.clear *= 2; // (a spell of weather, then most often clear again)
-  else weights.clear = 0;
+  if (streak >= (after === 'clear' ? MAX_CLEAR_STREAK : MAX_OTHER_STREAK)) weights[after] = 0;
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (total <= 0) throw new Error('Weather weights must include an available next kind');
   let n = rand() * total;
-  for (const [kind, w] of Object.entries(weights)) { n -= w; if (n < 0) return kind; }
-  return 'clear';
+  let last = 'clear';
+  for (const [kind, w] of Object.entries(weights)) {
+    if (w <= 0) continue;
+    last = kind;
+    n -= w;
+    if (n < 0) return kind;
+  }
+  return last;
 }
 
 export function tickWeather(dt) {
@@ -54,12 +67,14 @@ export function tickWeather(dt) {
   if (game.gameMode === 'battle' && game.weather) game.weather.left = Infinity; // (a battle's stands: its wind and lightning go on)
   else if (game.gameMode !== 'endless' || !game.gameStarted) return;
   const c = config();
-  if (!game.weather) game.weather = { ...CLEAR, left: c.firstClearSeconds };
+  if (!game.weather) game.weather = { ...CLEAR, left: duration('clear', c) };
   const w = game.weather;
   w.left -= dt;
   if (w.left <= 0) {
-    w.kind = pickKind(w.kind);
-    w.left = c.seconds[0] + rand() * (c.seconds[1] - c.seconds[0]);
+    const previousKind = w.kind, previousStreak = Math.max(1, w.streak || 1);
+    w.kind = pickKind(previousKind, previousStreak, c);
+    w.streak = w.kind === previousKind ? previousStreak + 1 : 1;
+    w.left = duration(w.kind, c);
     w.level = 0;
   }
   // coming on at the start, going off at the end

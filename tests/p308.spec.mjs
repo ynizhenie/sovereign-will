@@ -7,7 +7,7 @@ test('the weather changes by spells, comes on and goes off; rain waters the crop
   await page.click('#play-button');
   const r = await page.evaluate(() => {
     const kinds = new Set(), levels = new Set();
-    for (let s = 0; s < 1800; s++) { tickWeather(1); kinds.add(weather.kind); levels.add(Math.round(weather.level * 10)); }
+    for (let s = 0; s < 7200; s++) { tickWeather(1); kinds.add(weather.kind); levels.add(Math.round(weather.level * 10)); }
     // rain: crops grow as if watered, a fire burns faster
     const grow = wet => {
       weather = { ...weather, kind: wet ? 'rain' : 'clear', level: wet ? 1 : 0, left: 999 };
@@ -33,6 +33,36 @@ test('the weather changes by spells, comes on and goes off; rain waters the crop
   expect(r.kinds.length).toBeGreaterThanOrEqual(3);
   expect(r).toMatchObject({ ramps: true, wetGrows: true, wetBurns: true, sways: true });
   expect(errors).toEqual([]);
+});
+
+test('weather spells use their duration ranges and consecutive limits', async ({ page }) => {
+  await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    setStartingWeather('clear');
+    const sequence = [weather.kind], durations = [{ kind: weather.kind, seconds: weather.left }];
+    for (let i = 0; i < 200; i++) {
+      weather.left = 0;
+      tickWeather(0);
+      sequence.push(weather.kind);
+      durations.push({ kind: weather.kind, seconds: weather.left });
+    }
+    const maxRuns = { clear: 0, rain: 0, fog: 0, storm: 0 };
+    let previous = null, run = 0;
+    for (const kind of sequence) {
+      run = kind === previous ? run + 1 : 1;
+      previous = kind;
+      maxRuns[kind] = Math.max(maxRuns[kind] || 0, run);
+    }
+    const durationsValid = durations.every(({ kind, seconds }) =>
+      kind === 'clear' ? seconds >= 300 && seconds <= 600 : seconds >= 180 && seconds <= 360);
+    return { durationsValid, maxClear: maxRuns.clear, maxRain: maxRuns.rain, maxFog: maxRuns.fog, maxStorm: maxRuns.storm };
+  });
+  expect(result.durationsValid).toBe(true);
+  expect(result.maxClear).toBeLessThanOrEqual(5);
+  expect(result.maxRain).toBeLessThanOrEqual(2);
+  expect(result.maxFog).toBeLessThanOrEqual(2);
+  expect(result.maxStorm).toBeLessThanOrEqual(2);
 });
 
 test('fog renders as a mottled pale veil rather than round banks (#308)', async ({ page }) => {

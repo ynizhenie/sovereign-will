@@ -8,8 +8,8 @@ import { game } from '../world/index.js';
 
 const CELL = 48; // world px: a cell is a little wider than how far a push or a look reaches
 
-/** @type {{ tick: number, settlers: any[] | null, enemies: any[] | null, cols: number, settlerBuckets: Map<number, any[]>, enemyBuckets: Map<number, any[]> }} */
-let picture = { tick: -1, settlers: null, enemies: null, cols: 0, settlerBuckets: new Map(), enemyBuckets: new Map() };
+/** @type {{ tick: number, settlers: any[] | null, enemies: any[] | null, cols: number, settlerBuckets: Map<number, any[]>, enemyBuckets: Map<number, any[]>, enemyOrder: Map<any, number> }} */
+let picture = { tick: -1, settlers: null, enemies: null, cols: 0, settlerBuckets: new Map(), enemyBuckets: new Map(), enemyOrder: new Map() };
 
 /** @param {any[]} list @param {number} cols */
 function sortIntoBuckets(list, cols) {
@@ -29,10 +29,16 @@ function current() {
     const cols = Math.ceil(game.WORLD_WIDTH / CELL) + 3;
     picture = {
       tick: game.pathTick, settlers: game.settlers, enemies: game.enemies, cols,
-      settlerBuckets: sortIntoBuckets(game.settlers, cols), enemyBuckets: sortIntoBuckets(game.enemies, cols)
+      settlerBuckets: sortIntoBuckets(game.settlers, cols), enemyBuckets: sortIntoBuckets(game.enemies, cols),
+      enemyOrder: new Map(game.enemies.map((enemy, index) => [enemy, index]))
     };
   }
   return picture;
+}
+
+export function refreshMovingBuckets() {
+  picture.tick = -1;
+  current();
 }
 
 // Calls fn for each thing of the list within r of (x, y) (not in order); fn returning true stops it, and
@@ -57,6 +63,15 @@ function someNear(which, x, y, r, fn) {
 /** @param {number} x @param {number} y @param {number} r @param {(unit: any) => void} fn */
 export function forEachSettlerNear(x, y, r, fn) {
   someNear('settlers', x, y, r, unit => { fn(unit); return false; });
+}
+
+/** @param {number} x @param {number} y @param {number} r @param {(unit: any) => void} fn */
+export function forEachEnemyNear(x, y, r, fn) {
+  const now = current(), nearby = [];
+  someNear('enemies', x, y, r, unit => { nearby.push(unit); return false; });
+  nearby.sort((a, b) =>
+    (now.enemyOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (now.enemyOrder.get(b) ?? Number.MAX_SAFE_INTEGER));
+  for (const enemy of nearby) fn(enemy);
 }
 
 // Whether a settler within r of (x, y) is as fn says

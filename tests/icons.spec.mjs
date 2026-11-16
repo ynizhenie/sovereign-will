@@ -55,3 +55,17 @@ test('rice zone icon uses a white fill and edge', async ({ page }) => {
   expect(colors.fills).toContain('rgba(255, 255, 255, 0.45)');
   expect(colors.strokes).toContain('#ffffff');
 });
+
+test('club HUD icon runs diagonally like the other weapons', async ({ page }) => {
+  await openGame(page);
+  const pixels = await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 32;
+    drawIcon(canvas.getContext('2d'), 'club', 16, 16, 32);
+    const data = canvas.getContext('2d').getImageData(0, 0, 32, 32).data;
+    const alphaAt = (x, y) => data[(y * 32 + x) * 4 + 3];
+    return { head: alphaAt(22, 10), grip: alphaAt(10, 22), horizontal: alphaAt(24, 16) };
+  });
+  expect(pixels.head).toBeGreaterThan(0);
+  expect(pixels.grip).toBeGreaterThan(0);
+  expect(pixels.horizontal).toBe(0);
+});
