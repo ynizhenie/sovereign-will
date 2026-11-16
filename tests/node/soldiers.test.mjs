@@ -69,10 +69,31 @@ test('soldiers engage enemies anywhere in battle mode, even when they are not wa
   });
 });
 
+test('a settler keeps retaliating at one archer when another hits, then switches after the lock expires', () => {
+  expect(sim.soldiersRetaliationTargetStaysStable()).toEqual({
+    startsWithFirst: true,
+    ignoresOtherShot: true,
+    keepsMovingTowardFirst: true,
+    switchesAfterLock: true,
+    movesTowardSecond: true
+  });
+});
+
+test('after its retaliation target dies, a settler picks the nearest living enemy', () => {
+  expect(sim.soldiersPicksNearestAfterRetaliationDies()).toEqual({
+    retaliationCleared: true,
+    nearestChosen: true
+  });
+});
+
 test('soldiers destroy active wave spawners when only a few wave enemies remain', async () => {
   expect(await sim.soldiersClearWaveSpawner()).toEqual({
     waveAssaultEnabled: true,
     activeSpawnerDamaged: true,
     inactiveSpawnerIgnored: true
   });
+});
+
+test('soldiers clear wave tents, graves, and portals after the enemies are gone', () => {
+  expect(sim.clearWaveStructuresAfterEnemiesGone()).toEqual({ allDestroyed: true });
 });

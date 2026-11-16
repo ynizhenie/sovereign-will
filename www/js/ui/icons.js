@@ -293,7 +293,7 @@ export const ICONS = {
     c.save(); c.translate(23.5, 19.5); c.rotate(-0.5); icRound(c, '#8e5a2b', -4.5, -2.6, 9, 5.2, 1.5); c.restore();
   },
   zone_wheat: c => icZone(c, 'rgba(241, 196, 15, 0.45)', '#f1c40f'),
-  zone_rice: c => icZone(c, 'rgba(52, 152, 219, 0.45)', '#3498db'),
+  zone_rice: c => icZone(c, 'rgba(255, 255, 255, 0.45)', '#ffffff'),
   zone_sapling: c => icZone(c, 'rgba(46, 204, 113, 0.45)', '#2ecc71'),
   zone_apple: c => icZone(c, 'rgba(231, 76, 60, 0.45)', '#e74c3c'),
 

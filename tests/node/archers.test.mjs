@@ -14,3 +14,7 @@ test('an archer climbs a tower walled in on three sides (#173)', async () => {
 test('an archer comes down from a walled-in tower onto a free tile, not into a wall (#173)', async () => {
   expect(await sim.climbDownInPocket()).toEqual({ onFreeTile: true, offTower: true });
 });
+
+test('arrows and bullets disappear past every edge of the map', () => {
+  expect(sim.projectilesDisappearBeyondMap()).toEqual({ allGone: true, noArrowsDropped: true });
+});

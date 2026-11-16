@@ -29,6 +29,7 @@ export const mechanicsConfig = {
   unitProgression: {
     experienceToLevel: {
       combat: [0, 10, 25],
+      hunting: [0, 10, 25],
       other: [0, 30, 60]
     },
     healthBonus: [0, 25, 50],

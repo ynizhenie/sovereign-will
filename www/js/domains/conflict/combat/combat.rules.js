@@ -8,7 +8,7 @@ import { damageSettler, faceTowards, getUnitHuntingDamageMultiplier, getUnitLeve
 import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
-import { tileVariantHash } from '../../world/index.js';
+import { territoryRadiusToward, tileVariantHash } from '../../world/index.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { playSound } from '../../../app/index.js';
 import { shakeOnHit } from '../morale/index.js';
@@ -30,7 +30,7 @@ export function getProjectileAimPoint(shooter, target, projectileSpeed, projecti
   if (!['bow', 'crossbow', 'rifle'].includes(shooter.weapon) || getUnitLevel(shooter, 'ranged') < 2 || projectileSpeed <= 0) return point;
 
   const dx = target.x - originX, dy = target.y - originY;
-  const vx = target.moveVx || 0, vy = target.moveVy || 0;
+  const vx = target.aimVx || 0, vy = target.aimVy || 0;
   const a = vx * vx + vy * vy - projectileSpeed * projectileSpeed;
   const b = 2 * (dx * vx + dy * vy);
   const c = dx * dx + dy * dy;
@@ -349,9 +349,8 @@ export function isDefenseAlert() {
     game.enemies.some(en => en.fromWave && !en.prepWave));
 }
 
-// How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
-// out by far buildings on one side, in the open on the other): its farthest building within 40° of the
-// angle, at least minRadius tiles
+// How far the base reaches from the town hall that way: the farthest building in a narrow cone (at most
+// 40°, with a two-tile half-width), at least minRadius tiles and no farther than the player's territory.
 // (#322: each building's angle and distance from the hall worked out once a tick: at night with no torch every settler asked
 // this for every resource it looked at, two arctangents a building each time)
 const bearingsOnce = onceThisTick();
@@ -361,17 +360,19 @@ const buildingBearings = () => bearingsOnce(() => {
   own.forEach((b, i) => { angles[i] = Math.atan2(b.y - townHall.y, b.x - townHall.x); distances[i] = Math.hypot(b.x - townHall.x, b.y - townHall.y); });
   return { angles, distances };
 });
-const TURN = Math.PI * 2, CONE = Math.PI * 40 / 180;
-export function baseRadiusToward(angle) {
+const TURN = Math.PI * 2, MAX_BUILDING_CONE = Math.PI * 40 / 180, BUILDING_HALF_WIDTH = 2 * TILE_SIZE;
+export function baseRadiusToward(angle, padding = 0) {
   const { angles, distances } = buildingBearings();
   let far = 0;
   for (let i = 0; i < angles.length; i++) {
     if (distances[i] <= far) continue;
     let d = Math.abs(angles[i] - angle) % TURN; // (the angle between them, the short way round)
     if (d > Math.PI) d = TURN - d;
-    if (d <= CONE) far = distances[i];
+    const cone = Math.min(MAX_BUILDING_CONE, Math.atan2(BUILDING_HALF_WIDTH, distances[i]));
+    if (d <= cone) far = distances[i];
   }
-  return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  const radius = Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  return Math.min(radius, Math.max(0, territoryRadiusToward(angle, radius + padding) - padding));
 }
 
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
@@ -408,12 +409,20 @@ export function getThreatArc() {
   return { centre: Math.round(centre / step) * step, half: Math.ceil(half / step) * step };
 }
 
-// An enemy inside the base, or next to one of its buildings or the town hall
-export function isInsideBase(en) {
+// An enemy close enough to threaten one of the base's structures
+export function isNearBaseStructure(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
-  // (#322: the buildings near it, not all of them: asked for every enemy by every fighter, every tick)
-  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
+  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= near + townHall.radius ||
     someNear(game.buildings, en.x, en.y, near, b => b.side !== 'red' && Math.hypot(en.x - b.x, en.y - b.y) <= near);
+}
+
+// An enemy inside the directional base zone, or next to one of its buildings or the town hall
+export function isInsideBase(en) {
+  const dx = en.x - townHall.x, dy = en.y - townHall.y;
+  const distance = Math.hypot(dx, dy);
+  // Use the same directional boundary as the base zone; a distant building must not make the whole base a circle.
+  return distance <= baseRadiusToward(Math.atan2(dy, dx)) + GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE + townHall.radius ||
+    isNearBaseStructure(en);
 }
 
 // Squads and their posts, rebuilt when the soldiers, the buildings or the wave's side change: squads of
@@ -521,6 +530,10 @@ export function tickProjectiles(dt = 1 / 60) {
     let proj = game.projectiles[i];
     if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
     proj.x += proj.vx * k; proj.y += proj.vy * k; proj.life -= k;
+    if (proj.x < 0 || proj.y < 0 || proj.x >= game.WORLD_WIDTH || proj.y >= game.WORLD_HEIGHT) {
+      game.projectiles.splice(i, 1);
+      continue;
+    }
     let hit = false, host = null;
 
     if (proj.fromEnemy) {

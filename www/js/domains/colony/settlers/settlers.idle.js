@@ -280,7 +280,7 @@ export function idlePastime(s, tick) {
 // A patrol's waypoint at `angle` round the town hall: a tile past the base's edge, or nearer in where
 // that's blocked (a wall, water, a tree)
 function edgePoint(s, angle) {
-  const r = baseRadiusToward(angle) + TILE_SIZE;
+  const r = baseRadiusToward(angle, TILE_SIZE) + TILE_SIZE;
   const target = { x: townHall.x + Math.cos(angle) * r, y: townHall.y + Math.sin(angle) * r };
   const grid = getGridPos(target.x, target.y), reach = getSettlerReach(s);
   for (let ring = 0; ring <= 4; ring++) {

@@ -1,13 +1,16 @@
 // Farm zones and wheat plots
 
 import { drawIcon, isTabShown } from '../../../ui/index.js';
-import { TILE_SIZE, forEachInRect, game } from '../../../engine/world/index.js';
+import { TILE_SIZE, forEachInRect, game, townHall } from '../../../engine/world/index.js';
 import { ctx, getViewRect } from '../../../engine/platform/index.js';
+import { baseRadiusToward } from '../../conflict/combat/index.js';
 import { drawFarmPlotArt } from '../gathering/index.js';
+
+const BASE_ZONE_SEGMENTS = 96;
 
 // Farm zones, while the Farming tab is open: a tint and a frame in the crop's colour
 export function drawFarmZones() {
-  const ZONE_COLORS = { wheat: '241, 196, 15', rice: '52, 152, 219', sapling: '46, 204, 113', apple: '231, 76, 60' };
+  const ZONE_COLORS = { wheat: '241, 196, 15', rice: '255, 255, 255', sapling: '46, 204, 113', apple: '231, 76, 60' };
   if (!isTabShown('tab-farming')) return;
   const v = getViewRect(30), visible = list => {
     const found = [];
@@ -31,6 +34,27 @@ export function drawFarmZones() {
     ctx.strokeStyle = `rgba(${rgb}, 0.55)`;
     ctx.lineWidth = 1; ctx.strokeRect(z.x - 13.5, z.y - 13.5, TILE_SIZE - 3, TILE_SIZE - 3);
   });
+}
+
+// The inner edge of the patrol posts and the night work area without torches
+export function drawBaseZoneBoundary() {
+  if (!isTabShown('tab-farming') || game.gameMode !== 'endless') return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  for (let i = 0; i < BASE_ZONE_SEGMENTS; i++) {
+    const angle = i * Math.PI * 2 / BASE_ZONE_SEGMENTS;
+    const radius = baseRadiusToward(angle, TILE_SIZE) + TILE_SIZE;
+    const x = townHall.x + Math.cos(angle) * radius;
+    const y = townHall.y + Math.sin(angle) * radius;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
 }
 
 // Wheat plots: growing, ripe, being harvested

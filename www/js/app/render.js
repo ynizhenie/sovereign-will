@@ -6,7 +6,7 @@ import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, draw
 import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
-import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
+import { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatureOnCard, treesToDrawOver, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawMenuOutpostHealthBar, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
@@ -62,6 +62,7 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
+  drawBaseZoneBoundary();
   drawEditorOutposts();
   // all the shadows at once, on the ground under everything that stands on it (world.daytime.js)
   drawShadowLayer(drawStillShadows, () => { drawSettlerShadows(); drawEnemyShadows(); });

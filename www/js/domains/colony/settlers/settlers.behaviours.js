@@ -19,7 +19,7 @@ import { getTerritoryBox, hasFog, inReliefZone, isVisible, isWaterReachable, rel
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, shelterFromEnemy, strikeBack } from '../../conflict/combat/index.js';
 import { isGhostStunned, panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
@@ -134,6 +134,8 @@ function fishingSpots() {
 
 // Housekeeping every settler gets each tick, before any behaviour
 export function prepareSettler(s, dt) {
+  s.aimVx = 0;
+  s.aimVy = 0;
   clampEntityToBounds(s);
   // (#279) a worker with a weapon is a soldier (with a bow, an archer); a foreman takes no weapon: one it has
   // goes back to the store
@@ -275,6 +277,7 @@ export const SETTLER_BEHAVIOURS = [
   restWhileRaid, // (...and the base resting)
   panic,
   followCommand, // (#326: the player's orders by tap, in Endless)
+  shelterFromEnemy,
   strikeBack,
   followMaster, // (#326: a necromancer's zombie keeps by it)
   sleepAtNight,

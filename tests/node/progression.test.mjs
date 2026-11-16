@@ -23,6 +23,10 @@ test('nine independent skills reach level 2 with their configured work bonuses',
   expect(result.meleeHealth).toBe(125);
 });
 
+test('hunting reaches levels 2 and 3 at 10 and 25 experience', () => {
+  expect(sim.huntingProgression()).toEqual([1, 2, 2, 3]);
+});
+
 test('a demon cutting up a corpse shows its combat level, while a hunter butchering a boar shows hunting', () => {
   expect(sim.butcherProgression()).toEqual({
     demon: { track: 'melee', level: 3 },

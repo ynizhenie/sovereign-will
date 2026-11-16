@@ -15,6 +15,9 @@ const config = () => GAME_CONFIG.territory;
 
 /** @type {{ stamp: any[], mask: Uint8Array, box: { x0: number, y0: number, x1: number, y1: number } } | null} */
 let territory = null;
+let radialCacheMask = null;
+let radialCacheCamps = '';
+const radialLimitCache = new Map();
 
 // Off while the settlers are in an enemy camp (a raid's: its own small map, #255)
 let enabled = true;
@@ -71,6 +74,49 @@ export function inEnemyTerritory(x, y) {
     const centre = getGridPos(camp.x, camp.y), radius = camp.radius || 0;
     return Math.abs(gx - centre.gx) <= radius && Math.abs(gy - centre.gy) <= radius;
   });
+}
+
+// The farthest point on this ray before it leaves the player's territory.
+export function territoryRadiusToward(angle, maxRadius) {
+  if (!hasTerritory()) return maxRadius;
+  const { mask } = getTerritory();
+  const camps = game.enemyCamps?.length ? game.enemyCamps : game.enemyCamp ? [game.enemyCamp] : [];
+  const campStamp = camps.map(camp => `${camp.x},${camp.y},${camp.radius || 0}`).join(';');
+  if (mask !== radialCacheMask || campStamp !== radialCacheCamps) {
+    radialCacheMask = mask;
+    radialCacheCamps = campStamp;
+    radialLimitCache.clear();
+  }
+  const cached = radialLimitCache.get(angle);
+  if (cached && cached.limit !== undefined) return Math.min(maxRadius, cached.limit);
+
+  const step = TILE_SIZE / 4, cos = Math.cos(angle), sin = Math.sin(angle);
+  const entry = cached || { checkedTo: -step, lastInside: 0 };
+  const inside = distance => {
+    const x = townHall.x + cos * distance, y = townHall.y + sin * distance;
+    const gx = Math.floor(x / TILE_SIZE), gy = Math.floor(y / TILE_SIZE);
+    if (gx < 0 || gy < 0 || gx >= game.COLS || gy >= game.ROWS || !mask[gy * game.COLS + gx]) return false;
+    return !inEnemyTerritory(x, y);
+  };
+  for (let distance = entry.checkedTo + step; distance <= maxRadius; distance += step) {
+    if (!inside(distance)) {
+      entry.limit = entry.lastInside;
+      break;
+    }
+    entry.checkedTo = distance;
+    entry.lastInside = distance;
+  }
+  if (entry.limit === undefined && maxRadius > entry.checkedTo) {
+    if (inside(maxRadius)) {
+      entry.checkedTo = maxRadius;
+      entry.lastInside = maxRadius;
+    } else {
+      entry.limit = entry.lastInside;
+    }
+  }
+  if (!cached && radialLimitCache.size >= 4096) radialLimitCache.clear();
+  radialLimitCache.set(angle, entry);
+  return Math.min(maxRadius, entry.limit === undefined ? maxRadius : entry.limit);
 }
 
 // The box round the base's land (all the map, out of Endless)

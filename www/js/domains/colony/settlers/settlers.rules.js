@@ -220,6 +220,13 @@ export function damageSettler(settler, amount, attacker = null, attackerTrack = 
     settler.lastAttacker = attacker;
     settler.lastAttackerTrack = attackerTrack || getUnitWeaponProgressionTrack(attacker) || undefined;
     settler.lastAttackedTick = game.pathTick;
+    if (game.enemies.includes(attacker)) {
+      const lockActive = settler.retaliationUntil > game.pathTick;
+      if (!lockActive || settler.retaliationTarget === attacker) {
+        settler.retaliationTarget = attacker;
+        settler.retaliationUntil = game.pathTick + 90;
+      }
+    }
     if (game.gameMode === 'endless' && (petKindOf(settler) === 'dog' || petKindOf(settler) === 'beast')) {
       const keeper = game.settlers.find(s => s.id === settler.petKeeperId);
       if (keeper && keeper.hp > 0 && !keeper.isPossessed) {
@@ -235,6 +242,12 @@ export function damageSettler(settler, amount, attacker = null, attackerTrack = 
 export function getRecentAttacker(settler) {
   const recent = game.pathTick - (settler.lastAttackedTick || -Infinity) < 4 * 60;
   return recent && game.enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
+}
+
+// Keep retaliating against one attacker briefly so incoming shots from a group don't make a settler zigzag.
+export function getRetaliationTarget(settler) {
+  const target = settler.retaliationTarget;
+  return settler.retaliationUntil > game.pathTick && target?.hp > 0 && game.enemies.includes(target) ? target : null;
 }
 
 export function getPossessed() { return game.settlers.find(s => s.isPossessed); }

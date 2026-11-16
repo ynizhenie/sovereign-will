@@ -182,7 +182,7 @@ test('graveyard menu scene has ghosts and a necromancer working its graves', asy
     const initial = {
       scene: menuWorld.scene,
       faction: getPlayerFaction().id,
-      playerColorMatchesFaction: menuWorld.playerColor === getPlayerFaction().color,
+      playerColorInPalette: GAME_CONFIG.factionColors.includes(menuWorld.playerColor),
       hall: getPlayerFaction().hall,
       desertTiles: game.desertTiles.length,
       savannaTiles: game.savannaTiles.length,
@@ -233,7 +233,7 @@ test('graveyard menu scene has ghosts and a necromancer working its graves', asy
     };
   });
   expect(result).toMatchObject({
-    scene: 'graveyard', faction: 'undead', playerColorMatchesFaction: true,
+    scene: 'graveyard', faction: 'undead', playerColorInPalette: true,
     hall: 'graveyard', graves: 8, gravesHavePassages: true, resourceOverlaps: [],
     cacti: 0, pebbles: 0, trees: 7, grass: 7,
     necromancers: 1, necromancerType: 'zombie', soulLantern: true,
@@ -418,6 +418,30 @@ test('menu scenes use random distinct side colours and their fixed difficulties'
     expect(scene.hallHp).toBe(hp);
     expect(scene.hallMaxHp).toBe(hp);
   }
+});
+
+test('graveyard scene chooses its faction colour from the menu palette', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    const colorFor = value => {
+      const random = Math.random;
+      try {
+        Math.random = () => value;
+        enterMenuWorld('hunt');
+        enterMenuWorld('graveyard');
+        return menuWorld.playerColor;
+      } finally { Math.random = random; }
+    };
+    return {
+      palette: GAME_CONFIG.factionColors,
+      first: colorFor(0.1),
+      second: colorFor(0.9)
+    };
+  });
+  expect(result.palette).toContain(result.first);
+  expect(result.palette).toContain(result.second);
+  expect(result.first).not.toBe(result.second);
 });
 
 test('only the zombie and demon scenes allow tapping enemies to defeat them', async ({ page }) => {

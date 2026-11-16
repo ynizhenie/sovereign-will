@@ -17,7 +17,7 @@ sim.progression = progression;
 
 function butcherProgression() {
   const demon = { type: 'imp', weapon: 'sword', workKind: 'butcher', butcherTarget: {}, progression: { melee: 25, hunting: 0 } };
-  const hunter = { type: 'normal', weapon: 'sword', workKind: 'butcher', progression: { melee: 0, hunting: 30 } };
+  const hunter = { type: 'normal', weapon: 'sword', workKind: 'butcher', progression: { melee: 0, hunting: 10 } };
   const demonTrack = getUnitDisplayProgressionTrack(demon), hunterTrack = getUnitDisplayProgressionTrack(hunter);
   return {
     demon: { track: demonTrack, level: getUnitLevel(demon, demonTrack) },
@@ -42,7 +42,7 @@ sim.progressionCombatStats = progressionCombatStats;
 
 function projectileLead() {
   const shooter = { type: 'normal', weapon: 'bow', experience: 0, x: 0, y: 0 };
-  const target = { x: 100, y: 0, moveVx: 1, moveVy: 0 };
+  const target = { x: 100, y: 0, aimVx: 1, aimVy: 0 };
   const levelOne = getProjectileAimPoint(shooter, target, 5, 80);
   setUnitExperience(shooter, 10);
   const levelTwo = getProjectileAimPoint(shooter, target, 5, 80);
@@ -73,7 +73,8 @@ sim.ghostProgression = ghostProgression;
 function progressionSkills() {
   const unit = { type: 'normal', weapon: 'bow', tool: 'rod', quiver: true, arrows: 8, hp: 100, maxHp: 100 };
   for (const track of ['ranged', 'melee', 'healing', 'hunting', 'fishing', 'farming', 'axe', 'pickaxe', 'building']) {
-    setUnitExperience(unit, ['ranged', 'melee', 'healing'].includes(track) ? 10 : 30, track);
+    const experience = ['ranged', 'melee', 'healing', 'hunting'].includes(track) ? 10 : 30;
+    setUnitExperience(unit, experience, track);
   }
   return {
     levels: Object.fromEntries(UNIT_PROGRESSION_TRACKS.map(track => [track, getUnitLevel(unit, track)])),
@@ -91,6 +92,16 @@ function progressionSkills() {
 }
 
 sim.progressionSkills = progressionSkills;
+
+function huntingProgression() {
+  const hunter = { type: 'normal', weapon: 'bow', progression: {} };
+  return [9.99, 10, 24.99, 25].map(experience => {
+    setUnitExperience(hunter, experience, 'hunting');
+    return getUnitLevel(hunter, 'hunting');
+  });
+}
+
+sim.huntingProgression = huntingProgression;
 
 function petDamage() {
   return {

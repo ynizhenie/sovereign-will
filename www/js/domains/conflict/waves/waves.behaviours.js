@@ -240,6 +240,8 @@ function enemyPetKeepsNear(en, dt) {
 // breaks through what blocks its way, and strikes
 export function tickEnemy(en, dt) {
   if (en.hp <= 0) return;
+  en.aimVx = 0;
+  en.aimVy = 0;
   if (game.gameMode === 'menu' && game.menuScene === 'demon' && en.menuStaged) {
     const target = en.menuEntryTarget;
     if (target && Math.hypot(target.x - en.x, target.y - en.y) > 8) {

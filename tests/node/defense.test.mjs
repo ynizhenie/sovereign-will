@@ -13,6 +13,34 @@ test('ahead of a wave soldiers form squads at posts: the door first, all within 
   expect(await sim.deployment({})).toEqual({ squads: 3, firstPostByDoor: true, postsWithinBase: true, allAtPosts: true });
 });
 
+test('a distant building does not make soldiers attack enemies still preparing for a wave', async () => {
+  expect(await sim.holdsPostDuringPreparation({})).toEqual({
+    enemyUntouched: true,
+    holdingPost: true
+  });
+});
+
+test('a distant building does not make enemies outside the directional base count as threats', async () => {
+  expect(await sim.holdsPostAgainstEnemyOutsideDirectionalBase({})).toEqual({
+    withinOldCircularRadius: true,
+    outsideDirectionalBase: true,
+    enemyUntouched: true,
+    holdingPost: true
+  });
+});
+
+test('workers defend the town hall from a wave enemy that gets close during the march', async () => {
+  expect(await sim.workersDefendTownHallFromWave({})).toEqual({ enemyHurt: true });
+});
+
+test('workers stay sheltered while a wave enemy remains inside the base', async () => {
+  expect(await sim.workersStayShelteredFromWaveThreat({})).toEqual({
+    staysByHall: true,
+    wasHit: true,
+    enemyUntouched: true
+  });
+});
+
 test('a squad holds its post until an enemy comes within 6 tiles, then fights (#14)', async () => {
   expect(await sim.holdAndEngage({})).toEqual({ held: true, engaged: true });
 });

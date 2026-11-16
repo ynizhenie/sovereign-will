@@ -66,13 +66,23 @@ export function stepsOntoSpikes(entity, vx, vy) {
 // at half pace (dt halved) walks at half speed
 /** @param {((gx: number, gy: number) => boolean) | null} [extraBlocked] */
 export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = false, dt = 1 / 60, smooth = false, extraBlocked = /** @type {((gx: number, gy: number) => boolean) | null} */ (null)) {
+  const startX = entity.x, startY = entity.y;
+  entity.aimVx = 0;
+  entity.aimVy = 0;
+  if (moveEntityStep(entity, targetX, targetY, speed, isEnemy, dt, smooth, extraBlocked) === true || dt <= 0) return;
+  const steps = dt * 60;
+  entity.aimVx = (entity.x - startX) / steps;
+  entity.aimVy = (entity.y - startY) / steps;
+}
+
+function moveEntityStep(entity, targetX, targetY, speed, isEnemy, dt, smooth, extraBlocked) {
   if (!isEnemy && !smooth) { entity.moveVx = 0; entity.moveVy = 0; }
   // the undead's blighted ground holds enemies back
   if (isEnemy && !game.plagueMode && isBlighted(entity.x, entity.y)) speed *= GAME_CONFIG.blight.slowFactor; // (#404: not in the Plague)
   // through a portal pair of its own side (#326), except while movement has a territory constraint
   if (game.buildings.length && !extraBlocked) {
     const via = takePortal(entity, targetX, targetY, isEnemy ? 'red' : 'green');
-    if (via === true) return;
+    if (via === true) return true;
     if (via) { targetX = via.x; targetY = via.y; }
   }
   speed *= GAME_CONFIG.movementScale * dt * 60;
@@ -83,17 +93,18 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
   replanIfNeeded(entity, targetX, targetY, isEnemy, extraBlocked);
   if (isEnemy && (entity.directBlockedTimer || 0) <= 0 && hasClearEnemyLine(entity.x, entity.y, targetX, targetY, bodyRadius, !!entity.panic)) {
     stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, isEnemy, false, extraBlocked);
-    return;
+    return false;
   }
   if (smooth && !isEnemy && hasClearSettlerLine(entity.x, entity.y, targetX, targetY, bodyRadius, !!entity.panic) &&
-    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, false, true)) return;
+    stepStraightAtTarget(entity, targetX, targetY, speed, bodyRadius, false, true)) return false;
   if (!isEnemy && pathBlockedAhead(entity)) {
     entity.path = null;
     entity.pathRetryTimer = 0;
-    return;
+    return false;
   }
   if (entity.path && entity.path.length > 0) stepAlongPath(entity, targetX, targetY, speed, isEnemy, bodyRadius, smooth, extraBlocked);
   else if (!isEnemy) stepCloseToTarget(entity, targetX, targetY, speed, bodyRadius, smooth);
+  return false;
 }
 
 function hasClearSettlerLine(startX, startY, targetX, targetY, radius, allowBattleBorder = false) {

@@ -31,10 +31,15 @@
  * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
+ * @property {number} [aimVx]        horizontal speed while moving this tick
+ * @property {number} [aimVy]        vertical speed while moving this tick
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
  * @property {number} [attackCooldown]
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
+ * @property {Enemy | null} [shelteringFromEnemy] the in-base threat it is staying sheltered from
  * @property {Enemy | null} [lastAttacker] the enemy that most recently damaged it
+ * @property {Enemy | null} [retaliationTarget] the enemy it is briefly focusing after being hit
+ * @property {number} [retaliationUntil] the tick when its retaliation target expires
  * @property {number | null} [petKeeperId] the nearby soldier or archer a dog or beast follows in Endless
  * @property {Enemy | null} [petAttackTarget] an enemy that recently attacked its pet
  * @property {number} [petAttackTick] when that enemy attacked the pet
@@ -187,6 +192,8 @@
  * @property {number} [siegeTargetTick] the last tick it kept attacking that building
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
+ * @property {number} [aimVx]        horizontal speed while moving this tick
+ * @property {number} [aimVy]        vertical speed while moving this tick
  * @property {number} [pathRetryTimer] movement retry delay
  * @property {number} [directBlockedTimer] delay before retrying direct movement
  * @property {Enemy | null} [escort] a ghost's necromancer

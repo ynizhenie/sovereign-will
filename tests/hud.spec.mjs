@@ -45,26 +45,39 @@ test('the population icon follows the faction and role counters are hidden', asy
   }
 });
 
-test('farm zones are drawn only with the Farming tab open (#106)', async ({ page }) => {
+test('farm zones and the base night-work boundary are drawn with the Zones tab open (#106)', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
   const r = await page.evaluate(() => {
     const g = getGridPos(townHall.x, townHall.y);
     const z = window.sim.helpers.tileCenter(g.gx + 4, g.gy + 4);
     for (const list of [trees, grassList, sticks, pebbles, berryBushes, boulders]) { const i = list.findIndex(o => o.x === z.x && o.y === z.y); if (i !== -1) list.splice(i, 1); }
-    farmZones = [{ x: z.x, y: z.y, crop: 'wheat' }];
+    farmZones = [{ x: z.x, y: z.y, crop: 'wheat' }, { x: z.x + TILE_SIZE, y: z.y, crop: 'rice' }];
     // count strokes of the zone frame colour while rendering
-    const drawn = () => {
+    const zoneFrames = color => {
       let frames = 0;
       const original = ctx.strokeRect;
-      ctx.strokeRect = function (...args) { if (String(ctx.strokeStyle).includes('241, 196, 15, 0.55')) frames++; return original.apply(this, args); };
+      ctx.strokeRect = function (...args) { if (String(ctx.strokeStyle).includes(color)) frames++; return original.apply(this, args); };
       try { render(); } finally { ctx.strokeRect = original; }
       return frames;
     };
-    const onBuild = drawn();
+    const baseBoundary = () => {
+      let strokes = 0;
+      const original = ctx.stroke;
+      ctx.stroke = function (...args) {
+        if (String(ctx.strokeStyle).includes('255, 255, 255, 0.8')) strokes++;
+        return original.apply(this, args);
+      };
+      try { render(); } finally { ctx.stroke = original; }
+      return strokes;
+    };
+    const onBuild = { wheat: zoneFrames('241, 196, 15, 0.55'), rice: zoneFrames('255, 255, 255, 0.55'), base: baseBoundary() };
     switchTab(document.querySelector('.tab-btn[data-arg="tab-farming"]'), 'tab-farming');
-    const onFarming = drawn();
+    const onFarming = { wheat: zoneFrames('241, 196, 15, 0.55'), rice: zoneFrames('255, 255, 255, 0.55'), base: baseBoundary() };
     return { onBuild, onFarming };
   });
-  expect(r).toEqual({ onBuild: 0, onFarming: 1 });
+  expect(r).toEqual({
+    onBuild: { wheat: 0, rice: 0, base: 0 },
+    onFarming: { wheat: 1, rice: 1, base: 1 }
+  });
 });

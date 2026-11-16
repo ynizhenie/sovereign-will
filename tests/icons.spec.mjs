@@ -35,3 +35,23 @@ test('every icon the config and the texts name has a drawing, and none is left a
   expect(r).toEqual({ missing: [], leftOnScreen: false });
   expect(errors).toEqual([]);
 });
+
+test('rice zone icon uses a white fill and edge', async ({ page }) => {
+  await openGame(page);
+  const colors = await page.evaluate(() => {
+    const fills = [], strokes = [];
+    const originalFill = ctx.fill, originalStroke = ctx.stroke;
+    ctx.fill = function (...args) {
+      fills.push(String(ctx.fillStyle));
+      return originalFill.apply(this, args);
+    };
+    ctx.stroke = function (...args) {
+      strokes.push(String(ctx.strokeStyle));
+      return originalStroke.apply(this, args);
+    };
+    try { ICONS.zone_rice(ctx); } finally { ctx.fill = originalFill; ctx.stroke = originalStroke; }
+    return { fills, strokes };
+  });
+  expect(colors.fills).toContain('rgba(255, 255, 255, 0.45)');
+  expect(colors.strokes).toContain('#ffffff');
+});

@@ -136,7 +136,7 @@ Object.assign(window.sim, (() => {
     const campIgnored = !fightEnemies(soldier, createSettlerTick(1 / 60));
     enemies = [waveRaider];
     soldier.fightTarget = null;
-    game.wavePreparation = { wave: game.waveNum, stage: 'march' };
+    game.wavePreparation = null;
     const waveThreatAllowed = fightEnemies(soldier, createSettlerTick(1 / 60)) && soldier.fightTarget === waveRaider;
     return { baseThreatChosen, campIgnored, waveThreatAllowed };
   }
@@ -163,6 +163,20 @@ Object.assign(window.sim, (() => {
     return { waveAssaultEnabled, activeSpawnerDamaged, inactiveSpawnerIgnored };
   }
 
+  function clearWaveStructuresAfterEnemiesGone({ seed = 'clear-wave-structures' } = {}) {
+    setUp(seed);
+    game.gameMode = 'endless';
+    const soldier = makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier', speed: 0 });
+    settlers = [soldier];
+    enemyTents = [
+      { x: soldier.x + 12, y: soldier.y, spawner: 'tent', hp: 30, maxHp: 30, waveActive: true, summonsLeft: 0 },
+      { x: soldier.x - 12, y: soldier.y, spawner: 'grave', hp: 30, maxHp: 30, waveActive: true, summonsLeft: 0 },
+      { x: soldier.x, y: soldier.y + 12, spawner: 'portal', hp: 30, maxHp: 30, waveActive: true, wavePortal: true, summonsLeft: 0 }
+    ];
+    run(8, { each: () => { waveTimer = 50; } });
+    return { allDestroyed: enemyTents.length === 0 };
+  }
+
   function battleTargetsEnemies({ seed = 'soldiers-battle-target' } = {}) {
     setUp(seed);
     game.gameMode = 'battle';
@@ -179,5 +193,52 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn, soldiersDoNotChaseEnemyCamp: doNotChaseEnemyCamp, soldiersBattleTargetsEnemies: battleTargetsEnemies, soldiersClearWaveSpawner: clearWaveSpawnerWhenFewEnemies };
+  function retaliationTargetStaysStable({ seed = 'soldier-retaliation-target' } = {}) {
+    setUp(seed);
+    game.gameMode = 'battle';
+    const soldier = makeSettler(1, townHall.x, townHall.y + 250, { weapon: 'sword', role: 'soldier' });
+    const first = createConfiguredEnemy({ x: townHall.x + 180, y: townHall.y + 250 }, 'raider_archer');
+    const second = createConfiguredEnemy({ x: townHall.x - 180, y: townHall.y + 250 }, 'raider_archer');
+    settlers = [soldier];
+    enemies = [first, second];
+
+    damageSettler(soldier, 1, first);
+    const startsWithFirst = getRetaliationTarget(soldier) === first;
+    strikeBack(soldier, createSettlerTick(1 / 60));
+    game.pathTick += 30;
+    damageSettler(soldier, 1, second);
+    const ignoresOtherShot = getRetaliationTarget(soldier) === first;
+    const beforeSecondStep = soldier.x;
+    strikeBack(soldier, createSettlerTick(1 / 60));
+    const keepsMovingTowardFirst = soldier.x > beforeSecondStep;
+    game.pathTick += 61;
+    damageSettler(soldier, 1, second);
+    const switchesAfterLock = getRetaliationTarget(soldier) === second;
+    const beforeSwitchStep = soldier.x;
+    strikeBack(soldier, createSettlerTick(1 / 60));
+    const movesTowardSecond = soldier.x < beforeSwitchStep;
+    return { startsWithFirst, ignoresOtherShot, keepsMovingTowardFirst, switchesAfterLock, movesTowardSecond };
+  }
+
+  function picksNearestAfterRetaliationDies({ seed = 'soldier-retaliation-death' } = {}) {
+    setUp(seed);
+    game.gameMode = 'battle';
+    const soldier = makeSettler(1, townHall.x, townHall.y + 250, { weapon: 'sword', role: 'soldier' });
+    const first = createConfiguredEnemy({ x: townHall.x + 450, y: townHall.y + 250 }, 'raider_archer');
+    const second = createConfiguredEnemy({ x: townHall.x - 250, y: townHall.y + 250 }, 'raider_archer');
+    const nearest = createConfiguredEnemy({ x: townHall.x + 50, y: townHall.y + 350 }, 'raider_archer');
+    settlers = [soldier];
+    enemies = [first, second, nearest];
+
+    damageSettler(soldier, 1, first);
+    first.hp = 0;
+    game.pathTick += 30;
+    damageSettler(soldier, 1, second);
+    const retaliationCleared = getRetaliationTarget(soldier) === null;
+    enemies = [second, nearest];
+    fightEnemies(soldier, createSettlerTick(1 / 60));
+    return { retaliationCleared, nearestChosen: soldier.fightTarget === nearest };
+  }
+
+  return { soldiersPostsToThreat: postsToThreat, soldiersMarkedTent: markedTent, soldiersSingles: singles, soldiersNearBase: nearBase, soldiersTower: archerTower, soldiersMarked, soldiersWayIn: wayIn, soldiersDoNotChaseEnemyCamp: doNotChaseEnemyCamp, soldiersBattleTargetsEnemies: battleTargetsEnemies, soldiersRetaliationTargetStaysStable: retaliationTargetStaysStable, soldiersPicksNearestAfterRetaliationDies: picksNearestAfterRetaliationDies, soldiersClearWaveSpawner: clearWaveSpawnerWhenFewEnemies, clearWaveStructuresAfterEnemiesGone };
 })());
