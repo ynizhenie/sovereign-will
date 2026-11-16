@@ -975,7 +975,8 @@ function prepareStagingShelter() {
       const gx = centre.gx + dx, gy = centre.gy + dy, at = tileCenter(gx, gy);
       if (isTileBlockedForSettler(gx, gy) || game.buildings.some(building => dist(building, at) < 30) ||
         game.blueprints.some(bp => dist(bp, at) < 30) || game.enemyTents.some(tent => dist(tent, at) < 30) ||
-        game.enemies.some(enemy => enemy.hp > 0 && dist(enemy, at) < 60)) continue;
+        game.enemies.some(enemy => enemy.hp > 0 && dist(enemy, at) < 60) ||
+        raid.raiders.some(settler => settler.raidSpot && dist(settler.raidSpot, at) < 30)) continue; // (not on a raider's place in the line: it could never get there)
       point = at;
       break;
     }

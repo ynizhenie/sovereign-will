@@ -76,11 +76,12 @@ test('menu scenes start with an empty warehouse and unlimited capacity; the figh
         enemyColor = getEnemyFaction().color.toLowerCase();
       }
       if (scene === 'farm') {
+        const seeds = menuWorld.farmCrop === 'rice' ? 'riceSeeds' : 'wheatSeeds'; // (wheat or rice, picked at random, #417)
         tickMenuScene(1);
         stayedEmptyDuringStartup = Object.entries(stock).every(([resource, amount]) =>
-          resource === 'wheatSeeds' ? amount === Infinity : amount === 0);
+          resource === seeds ? amount === Infinity : amount === 0);
         tickMenuScene(1);
-        restockedAfterStartup = stock.wheatSeeds >= 10;
+        restockedAfterStartup = stock[seeds] >= 10;
       }
       return state;
     });
