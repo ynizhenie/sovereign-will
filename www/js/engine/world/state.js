@@ -76,7 +76,7 @@ export const game = {
   pebbles: [],
   logs: [],             // pieces of a felled tree's log lying about (#298)
   stumps: [],           // { x, y } where a tree was felled: its stump, till a tree grows again (see finishHarvest)
-  loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
+  loot: [],             // { x, y, yield, items, corpseDropAge? } piles dropped by units (#210)
   piles: [],
   dayTime: 0,           // seconds into the day (#257, world.daytime.js); the game starts in the morning
   editorHideTimeAndWeather: true,

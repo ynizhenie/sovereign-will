@@ -127,7 +127,7 @@ export function drawCorpses() {
     const grey = c.side === 'enemy' ? '#6e6e6e' : '#8a8a8a';
     const cloth = dull(c.side === 'enemy' ? getEnemyColor(null) : getSettlerColor(null)), kin = unitKin(c);
     if (c.pet) drawPetCorpse(c, grey);
-    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', horns: kin === 'demons', lying: true, dead: true });
+    else drawFigure(c, { x: c.x, y: c.y, r: Math.min(c.radius, 16), body: cloth, skin: '#9a9a9a', horns: kin === 'demons', lying: true, dead: true, armor: c.armor || null });
     if (!game.plagueMode && corpseHasWorms(c)) drawWorms(c);
     // (#404) the weapon it will rise with, lying by it
     else if (game.plagueMode && c.weapon && c.weapon !== 'fist' && !c.pet) {

@@ -5,7 +5,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, helmetOf, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, getUnitHuntingDamageMultiplier, getUnitLevel, getUnitWeaponProgressionTrack, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
-import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
 import { territoryRadiusToward, tileVariantHash } from '../../world/index.js';
@@ -307,19 +307,77 @@ export function addCorpse(unit, side, kind) {
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
   const weapon = side === 'enemy' && def.ranged ? def.weapon : unit.weapon;
-  game.corpses.push({
+  const corpse = {
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
     experience: unit.experience || 0, progression: unit.progression ? { ...unit.progression } : undefined,
     weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet, helmetGear: helmetOf(unit)?.id,
     pet: def.pet, stuck: unit.stuck
-  }); // (its look and body type, #306; its arrows stay in it, #326)
+  }; // (its look and body type, #306; its arrows stay in it, #326)
+  game.corpses.push(corpse);
+  return corpse;
+}
+
+/**
+ * @param {ReturnType<typeof addCorpse>} corpse
+ * @param {{ yield: Record<string, number>, items: string[] }} pile
+ * @param {number} [index]
+ */
+export function addCorpseLoot(corpse, pile, index = 0) {
+  const radius = Math.min(corpse.radius || 11, 16);
+  const angle = index * 2.1;
+  const distance = radius * 0.9 + index * 14;
+  const preferred = {
+    x: corpse.x + Math.cos(angle) * distance,
+    y: corpse.y + Math.sin(angle) * distance + 4
+  };
+  const reach = getSettlerReach({ x: townHall.x, y: townHall.y }, true);
+  const reachable = (x, y) => {
+    const grid = getGridPos(x, y);
+    return getReachSteps(reach, grid.gx, grid.gy) >= 0 && !isTileBlockedForSettler(grid.gx, grid.gy);
+  };
+  let position = reachable(preferred.x, preferred.y) ? preferred : null;
+  const origin = getGridPos(preferred.x, preferred.y);
+  for (let ring = 0; !position && ring <= 8; ring++) {
+    let bestDistance = Infinity;
+    for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+      const x = (origin.gx + dx) * TILE_SIZE + TILE_SIZE / 2;
+      const y = (origin.gy + dy) * TILE_SIZE + TILE_SIZE / 2;
+      if (!reachable(x, y)) continue;
+      const candidateDistance = Math.hypot(x - preferred.x, y - preferred.y);
+      if (candidateDistance < bestDistance) {
+        position = { x, y };
+        bestDistance = candidateDistance;
+      }
+    }
+  }
+  if (!position) {
+    let bestDistance = Infinity;
+    for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) {
+      if (getReachSteps(reach, gx, gy) <= 0) continue;
+      const x = gx * TILE_SIZE + TILE_SIZE / 2;
+      const y = gy * TILE_SIZE + TILE_SIZE / 2;
+      const candidateDistance = Math.hypot(x - preferred.x, y - preferred.y);
+      if (candidateDistance < bestDistance) {
+        position = { x, y };
+        bestDistance = candidateDistance;
+      }
+    }
+  }
+  game.loot.push({
+    ...pile,
+    ...(position || preferred),
+    hp: 1, maxHp: 1, priority: 0, corpseDropAge: 0
+  });
 }
 
 export function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
+  for (const pile of game.loot) if (pile.corpseDropAge !== undefined) pile.corpseDropAge += dt;
+  game.loot = game.loot.filter(pile => pile.corpseDropAge === undefined || pile.corpseDropAge < lifetime);
 }
 
 // Damage to an enemy, less what its armour, shield and helmet take, as a settler's (#203)

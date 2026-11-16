@@ -180,9 +180,49 @@ Object.assign(window.sim, (() => {
     tickWaveTimer(0.02);
     const wave = enemies.filter(enemy => enemy.fromWave && enemy.hp > 0 && enemy.prepWave === game.waveNum);
     const spawnedAtCamp = wave.length > 0 && wave.every(enemy => inEnemyTerritory(enemy.x, enemy.y));
+    const toCampX = camp.x - townHall.x, toCampY = camp.y - townHall.y;
+    const campSide = Math.abs(toCampX) >= Math.abs(toCampY)
+      ? (toCampX < 0 ? 'west' : 'east')
+      : (toCampY < 0 ? 'north' : 'south');
+    const box = getTerritoryBox(), joined = getEnemyReach();
+    const gx0 = Math.max(1, Math.floor(box.x0 / TILE_SIZE) - 1);
+    const gy0 = Math.max(1, Math.floor(box.y0 / TILE_SIZE) - 1);
+    const gx1 = Math.min(game.COLS - 2, Math.ceil(box.x1 / TILE_SIZE));
+    const gy1 = Math.min(game.ROWS - 2, Math.ceil(box.y1 / TILE_SIZE));
+    const positions = [];
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+      if (isTileBlockedForEnemyStrict(gx, gy) || joined[gy * game.COLS + gx] !== 1) continue;
+      if (inTerritory(x, y) || inEnemyTerritory(x, y) ||
+        ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inTerritory(x + dx * TILE_SIZE, y + dy * TILE_SIZE))) continue;
+      if ((campSide === 'east' && x < box.x1) || (campSide === 'west' && x >= box.x0) ||
+        (campSide === 'south' && y < box.y1) || (campSide === 'north' && y >= box.y0)) continue;
+      positions.push({ x, y });
+    }
+    positions.sort((a, b) => Math.abs((campSide === 'east' || campSide === 'west' ? a.y - townHall.y : a.x - townHall.x)) -
+      Math.abs((campSide === 'east' || campSide === 'west' ? b.y - townHall.y : b.x - townHall.x)));
+    const slots = positions.slice(0, Math.min(positions.length, wave.length));
+    slots.sort((a, b) => campSide === 'east' || campSide === 'west' ? a.y - b.y : a.x - b.x);
+    const nonBuilderIndex = wave.findIndex(enemy => !enemy.buildTarget);
+    const blockedSlot = nonBuilderIndex < 0 || !slots.length ? null
+      : slots[Math.min(slots.length - 1, Math.floor((nonBuilderIndex + 0.5) * slots.length / wave.length))];
+    if (blockedSlot) {
+      naturalRocks.push({ ...blockedSlot });
+      invalidateAllPaths();
+    }
     game.waveTimer = 15.01;
     tickWaveTimer(0.02);
     const targets = wave.map(enemy => enemy.muster);
+    const blockedGrid = blockedSlot && getGridPos(blockedSlot.x, blockedSlot.y);
+    const reachable = getEnemyReach();
+    const blockedMusterAvoided = !!blockedGrid && wave.every(enemy => {
+      const grid = getGridPos(enemy.muster.x, enemy.muster.y);
+      return grid.gx !== blockedGrid.gx || grid.gy !== blockedGrid.gy;
+    });
+    const allTargetsReachable = wave.every(enemy => {
+      const grid = getGridPos(enemy.muster.x, enemy.muster.y);
+      return !isTileBlockedForEnemyStrict(grid.gx, grid.gy) && reachable[grid.gy * game.COLS + grid.gx] === 1;
+    });
     const toCamp = { x: camp.x - townHall.x, y: camp.y - townHall.y };
     const stagingAtBoundary = targets.every(target => target &&
       [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inTerritory(target.x + dx * TILE_SIZE, target.y + dy * TILE_SIZE)));
@@ -209,6 +249,8 @@ Object.assign(window.sim, (() => {
       stagingOnCampSide,
       previousWaveUnaffected,
       buildersNearStaging,
+      blockedMusterAvoided,
+      allTargetsReachable,
       allHaveSafeRoutes,
       allTargetsOutsidePlayerZone: targets.every(target => !inTerritory(target.x, target.y)),
       enteredPlayerZone
@@ -546,6 +588,36 @@ Object.assign(window.sim, (() => {
     };
   }
 
+  function campPreservesBeach({ seed = 'camp-beach' } = {}) {
+    game.mapSettings = { cols: 128, rows: 128 };
+    start(seed);
+    clearResources();
+    const radius = GAME_CONFIG.raid.campRadiusTiles;
+    const reach = getSettlerReach({ x: townHall.x, y: townHall.y });
+    const hall = getGridPos(townHall.x, townHall.y);
+    let sand = null;
+    for (let distance = radius + 2; distance < Math.max(game.COLS, game.ROWS) && !sand; distance++) {
+      for (let dy = -distance; dy <= distance && !sand; dy++) for (let dx = -distance; dx <= distance; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== distance) continue;
+        const gx = hall.gx + dx, gy = hall.gy + dy;
+        if (getReachSteps(reach, gx, gy) < 0) continue;
+        let clear = true;
+        for (let oy = -radius; oy <= radius && clear; oy++) for (let ox = -radius; ox <= radius; ox++) {
+          if (isTileBlockedForSettler(gx + ox, gy + oy) ||
+            inTerritory((gx + ox) * TILE_SIZE + 15, (gy + oy) * TILE_SIZE + 15)) {
+            clear = false;
+            break;
+          }
+        }
+        if (clear) sand = window.sim.helpers.tileCenter(gx, gy);
+      }
+    }
+    if (!sand) return { campCreated: false, sandPreserved: false };
+    beachTiles.push(sand);
+    const camp = createEnemyCamp(sand);
+    return { campCreated: !!camp, sandPreserved: beachTiles.includes(sand) };
+  }
+
   // A scout sent to the camp: it walks there, looks, is spotted, comes home; the camp is still there (33)
   function scoutTheCamp({ seed = 'scout-camp' } = {}) {
     window.sim.campOpens({ seed });
@@ -568,5 +640,5 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { waveMusters, wavePreparationTiming, wavePreparationPathAvoidsPlayerTerritory, waveBuilderStartsNearRally, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, shortWaveIntervals, waveStructuresSpawnUnits, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, scoutTheCamp };
+  return { waveMusters, wavePreparationTiming, wavePreparationPathAvoidsPlayerTerritory, waveBuilderStartsNearRally, waveMustersOutsideCamp, waveStagesAtPlayerBoundary, shortWaveIntervals, waveStructuresSpawnUnits, wavesArriveByRaftWithoutCamp, raftWavePreparation, demonWaveWithoutCamp, demonCampWavePortals, tentBlueprintAppearsOnArrival, waveTentSitesNearPlayerTerritory, enemyCampVoicePhrases, scoutsBetweenWaves, campLayouts, campPreservesBeach, scoutTheCamp };
 })());

@@ -563,7 +563,7 @@ export function drawFigure(unit, o) {
     ctx.restore();
   }
   // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
-  if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
+  if (o.armor) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (largeWoman) { drawHand(hand); drawHand(other); }
   else {
     if (!behind) arm(right * shoulder, hand);

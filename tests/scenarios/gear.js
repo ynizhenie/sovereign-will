@@ -51,27 +51,56 @@ Object.assign(window.sim, (() => {
   function lootToArmory({ seed = 'loot-armory' } = {}) {
     start(seed);
     clearResources();
-    const loot = GAME_CONFIG.loot, chance = loot.itemChance;
+    const loot = GAME_CONFIG.loot, chance = loot.itemChance, resourceChance = loot.resourceChance;
     loot.itemChance = 1;
+    loot.resourceChance = 1;
     const en = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y + 40 }, 'raider');
     enemies = [en];
     en.hp = 0;
     removeDeadEnemies();
     loot.itemChance = chance;
-    const dropped = window.game.loot.length === 1 && window.game.loot[0].items.includes('weapons:sword');
+    loot.resourceChance = resourceChance;
+    const dropped = window.game.loot.some(pile => (pile.items || []).includes('weapons:sword'));
+    const foodBefore = stock.food;
     settlers = [makeSettler(1, townHall.x + 60, townHall.y + 40)];
     // picked up, it's carried to the storage first, not in the armory at once (#261)
     let carried = null;
     run(15, { each: () => {
       settlers[0].hunger = 999;
       const c = settlers[0].carrying;
-      if (carried === null && window.game.loot.length === 0) carried = !!c && (c.items || [c]).some(i => i.type === 'armory:weapons:sword') && !window.game.armory['weapons:sword'];
+      if (carried === null && c && (c.items || [c]).some(i => i.type === 'armory:weapons:sword') && !window.game.armory['weapons:sword']) carried = true;
     } });
     const stored = window.game.armory['weapons:sword'] || 0;
+    const foodCollected = stock.food > foodBefore;
     const wood = stock.wood = 0, stone = stock.stone = 0;
     craftWeapon('sword');
-    return { dropped, picked: window.game.loot.length === 0, carried, stored, usedArmory: (window.game.armory['weapons:sword'] || 0) === stored - 1 && stock.wood === wood && stock.stone === stone,
+    return { dropped, picked: window.game.loot.length === 0, carried, stored, foodCollected, usedArmory: (window.game.armory['weapons:sword'] || 0) === stored - 1 && stock.wood === wood && stock.stone === stone,
       going: settlers[0].targetEquipment && settlers[0].targetEquipment.weapon };
+  }
+
+  function corpseResourcePriority({ seed = 'corpse-resource-priority' } = {}) {
+    start(seed);
+    clearResources();
+    const worker = makeSettler(1, townHall.x + 60, townHall.y + 60, { tool: 'axe' });
+    settlers = [worker];
+    const tree = { x: townHall.x + 90, y: townHall.y + 60, hp: 100, maxHp: 100, isGrowing: false, priority: 0 };
+    trees.push(tree);
+    const itemChance = GAME_CONFIG.loot.itemChance, resourceChance = GAME_CONFIG.loot.resourceChance;
+    try {
+      GAME_CONFIG.loot.itemChance = 0;
+      GAME_CONFIG.loot.resourceChance = 1;
+      const enemy = createConfiguredEnemy({ x: townHall.x + 210, y: townHall.y + 60 }, 'raider');
+      enemy.hp = 0;
+      enemies = [enemy];
+      removeDeadEnemies();
+      const resource = window.game.loot.find(pile => pile.corpseDropAge !== undefined &&
+        Object.values(pile.yield || {}).some(amount => amount > 0));
+      run(0.05, { each: () => { worker.hunger = 999; } });
+      return { corpseResourceExists: !!resource, pickedCorpseResource: worker.pickedRes === resource, treeUnpicked: worker.pickedRes !== tree };
+    } finally {
+      GAME_CONFIG.loot.itemChance = itemChance;
+      GAME_CONFIG.loot.resourceChance = resourceChance;
+    }
   }
 
   // Making things (#211, #248): no workshop, no axe; with one, an axe ordered is paid for, made there by a
@@ -163,5 +192,5 @@ Object.assign(window.sim, (() => {
     };
   }
 
-  return { craftAfterCrafterLeaves, craftTimes, crafting, lootToArmory, orderGearFor, armorOff };
+  return { craftAfterCrafterLeaves, craftTimes, crafting, lootToArmory, corpseResourcePriority, orderGearFor, armorOff };
 })());

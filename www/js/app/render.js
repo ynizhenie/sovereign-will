@@ -85,6 +85,7 @@ export function render() {
   drawBloodOnGround();
   drawDung();
   drawCorpses();
+  drawLoot(true);
   drawEnemyTentSites();
   drawDepthSortedScene();
   drawMenuOutpostHealthBar();

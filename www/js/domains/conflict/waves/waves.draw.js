@@ -69,9 +69,11 @@ export function drawEnemyRafts() {
 
 // Things fallen enemies dropped (#210, #232): the thing itself on the ground, a faint shadow under it (an old
 // save's pile of resources: a little sack)
-export function drawLoot() {
+export function drawLoot(corpseDropsOnly = false) {
   const v = getViewRect(30), visible = [];
-  forEachInRect(game.loot, v.x0, v.y0, v.x1, v.y1, pile => visible.push(pile));
+  forEachInRect(game.loot, v.x0, v.y0, v.x1, v.y1, pile => {
+    if ((pile.corpseDropAge !== undefined) === corpseDropsOnly) visible.push(pile);
+  });
   for (const pile of visible) {
     const key = (pile.items || [])[0];
     const [category, id] = key ? key.split(':') : [];
@@ -79,7 +81,8 @@ export function drawLoot() {
     castShadow(ctx, pile.x, pile.y + 5, 8, 3, 6); // (#326: by the sun, as everything else)
     // (no thing in it: what it yields, as a crumbled zombie's rot and bones, #253)
     const res = !item && Object.keys(pile.yield || {}).find(id => GAME_CONFIG.resources[id]);
-    drawIcon(ctx, item ? item.icon : res ? GAME_CONFIG.resources[res].icon : 'bundle', pile.x, pile.y, 18);
+    const icon = item ? item.icon : res && pile.corpseDropAge === undefined ? GAME_CONFIG.resources[res].icon : 'bundle';
+    drawIcon(ctx, icon, pile.x, pile.y, 18);
   }
 }
 

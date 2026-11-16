@@ -84,11 +84,18 @@ test('wave enemies stage outside the player boundary on the camp-facing side bef
     stagingOnCampSide: true,
     previousWaveUnaffected: true,
     buildersNearStaging: true,
+    blockedMusterAvoided: true,
+    allTargetsReachable: true,
     allHaveSafeRoutes: true,
     allTargetsOutsidePlayerZone: true,
     enteredPlayerZone: false
   });
   expect(errors).toEqual([]);
+});
+
+test('enemy camps leave beach sand intact', async ({ page }) => {
+  await openGame(page);
+  expect(await sim(page, 'campPreservesBeach', {})).toEqual({ campCreated: true, sandPreserved: true });
 });
 
 test('waves still spawn and stage when the interval is 30 seconds or less', async ({ page }) => {

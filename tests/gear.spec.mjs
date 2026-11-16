@@ -10,6 +10,12 @@ test('a backpack goes to a worker, never an archer, and is put on at the town ha
     .toMatchObject({ who: null, stored: 1 });
 });
 
+test('resource rewards on corpses are picked before ordinary work', async ({ page }) => {
+  await openGame(page);
+  const result = await sim(page, 'corpseResourcePriority', {});
+  expect(result).toEqual({ corpseResourceExists: true, pickedCorpseResource: true, treeUnpicked: true });
+});
+
 test('crafts that need rope stay affordable when the rope can be made; only the medic bag still needs herbs', async ({ page }) => {
   await openGame(page);
   await page.click('#play-button');
