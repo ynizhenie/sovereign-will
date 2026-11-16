@@ -9,7 +9,7 @@
 /**
  * How a settler or an enemy looks (#306, settlers.looks.js): a man or a woman, one of the five looks of that
  * kind, and a shade (its hair's colour, of the colours its kind has)
- * @typedef {{ female: boolean, style: number, shade: number }} Look
+ * @typedef {{ female: boolean, style: number, shade: number, pinkHair?: boolean, singleHorn?: boolean, crossEyes?: boolean }} Look
  */
 
 /**
@@ -434,6 +434,7 @@
  * @property {boolean} addingToGroup
  * @property {Object | null} defensePlan
  * @property {Settler[]} settlers
+ * @property {{ pinkHair: boolean, demonSingleHorn: boolean, undeadCrossEyes: boolean }} rareAppearances
  * @property {Enemy[]} enemies
  * @property {Building[]} buildings
  * @property {Object[]} craftOrders   things being made: { key, category, id, crafter, stage, progress, for, yields?, waitFor? }

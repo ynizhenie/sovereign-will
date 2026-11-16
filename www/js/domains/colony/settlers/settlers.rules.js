@@ -72,7 +72,8 @@ export function changeSettlerType(s, type) {
 /** @returns {import('../../../engine/world/types.js').Settler} */
 export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
-  const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook());
+  const faction = Object.values(GAME_CONFIG.factions).find(f => (f.units || []).includes(typeKey))?.id || getPlayerFaction().id;
+  const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook(faction, !!t.big));
   /** @type {import('../../../engine/world/types.js').Settler} */
   const s = {
     id, x, y, hp: t.hp, maxHp: t.hp, ...(t.pet === 'ghost' ? {} : { experience: 0, level: 1 }), ...extra,

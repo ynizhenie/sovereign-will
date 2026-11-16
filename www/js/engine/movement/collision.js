@@ -213,7 +213,7 @@ export function clampEntityToBounds(ent) {
 export function ejectEntitiesFromTile(x, y) {
   const allEntities = [...game.settlers, ...game.enemies];
   allEntities.forEach(ent => {
-    if (Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {
+    if (!ent.ghostly && Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {
       const offsets = [
         {x: 0, y: -TILE_SIZE}, {x: 0, y: TILE_SIZE}, {x: -TILE_SIZE, y: 0}, {x: TILE_SIZE, y: 0}
       ];

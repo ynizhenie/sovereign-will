@@ -6,6 +6,7 @@
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
 import { getViewScale } from '../../../engine/platform/index.js';
+import { game } from '../../../engine/world/index.js';
 
 const config = () => GAME_CONFIG.looks;
 
@@ -17,23 +18,46 @@ function pick(weights) {
   return weights.length - 1;
 }
 
-export function newLook() {
+/** @param {string} [faction] @param {boolean} [big] @returns {import('../../../engine/world/types.js').Look} */
+export function newLook(faction = 'humans', big = false) {
   const c = config(), female = Math.random() < c.femaleChance;
-  return { female, style: pick(female ? c.female : c.male), shade: Math.floor(Math.random() * 1e6) };
+  /** @type {import('../../../engine/world/types.js').Look} */
+  const look = { female, style: pick(female ? c.female : c.male), shade: Math.floor(Math.random() * 1e6) };
+  const rare = game.rareAppearances;
+  if (faction === 'humans' && female && !rare.pinkHair && Math.random() < 0.001) {
+    look.pinkHair = true;
+    rare.pinkHair = true;
+  } else if (faction === 'demons' && !big && !rare.demonSingleHorn && Math.random() < 0.001) {
+    look.singleHorn = true;
+    rare.demonSingleHorn = true;
+  } else if (faction === 'undead' && !rare.undeadCrossEyes && Math.random() < 0.001) {
+    look.crossEyes = true;
+    rare.undeadCrossEyes = true;
+  }
+  return look;
+}
+
+function unitFaction(unit) {
+  if (unit.enemyKey) {
+    if (unit.enemyKey.startsWith('demon_') || unit.enemyKey.startsWith('demons_')) return 'demons';
+    if (unit.enemyKey.startsWith('undead_')) return 'undead';
+    return 'humans';
+  }
+  return Object.values(GAME_CONFIG.factions).find(faction => (faction.units || []).includes(unit.type))?.id || 'humans';
 }
 
 /** @param {any} unit */
 export function lookOf(unit) {
-  if (!unit.look) unit.look = newLook();
+  if (!unit.look) unit.look = newLook(unitFaction(unit), !!(unit.bigBody || GAME_CONFIG.settlerTypes[unit.type]?.big));
   return unit.look;
 }
 
 // Its hair: on the head of radius hr at (0, hy), its colour from its kind's (kin), facing f; away: the back
 // of its head all hair. walk: its steps, for a woman's hair to sway. ctx: where to draw
-/** @param {CanvasRenderingContext2D} ctx @param {{ female: boolean, style: number, shade: number }} look */
+/** @param {CanvasRenderingContext2D} ctx @param {import('../../../engine/world/types.js').Look} look */
 export function drawHair(ctx, look, kin, hy, hr, f, away, walk) {
   const colours = config().hair[kin] || config().hair.humans;
-  const hair = colours[look.shade % colours.length];
+  const hair = look.pinkHair ? '#e84393' : colours[look.shade % colours.length];
   const side = Math.cos(f) >= 0 ? 1 : -1, sway = Math.sin(walk * 0.35) * hr * 0.12;
   const cap = (from = Math.PI * 1.05, to = Math.PI * 1.95, lift = 0) => {
     ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, hy - lift, hr * 1.04, from, to); ctx.closePath(); ctx.fill();
@@ -91,7 +115,7 @@ const headTextures = new Map();
 export function drawHeadTexture(ctx, look, kin, skin, x, y, radius, facing, away, walk) {
   const side = Math.cos(facing) < 0 ? -1 : 1;
   const colours = config().hair[kin] || config().hair.humans;
-  const hair = colours[look.shade % colours.length];
+  const hair = look.pinkHair ? '#e84393' : colours[look.shade % colours.length];
   const animated = look.female ? [0, 1, 3].includes(look.style) : !away && look.style === 3;
   const sway = animated ? Math.round(Math.sin(walk * 0.35) * 4) / 4 : 0;
   const walkPhase = animated ? Math.asin(sway) / 0.35 : 0;

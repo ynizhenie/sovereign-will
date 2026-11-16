@@ -575,14 +575,15 @@ export function drawFigure(unit, o) {
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
   drawHeadTexture(ctx, look, unitKin(unit), o.skin, 0, hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
   // (#326, 27.10, 27) a helmet: an iron cap over the top of the head, a rim round it
+  const hornedHelmet = unit.helmet && (unit.helmetGear === 'horned_helmet' || unit.helmet === 'horned_helmet');
   if (unit.helmet) {
-    const horned = unit.helmetGear === 'horned_helmet' || unit.helmet === 'horned_helmet';
+    const horned = !!hornedHelmet;
     ctx.fillStyle = horned ? '#5d6670' : '#8e9aa6'; ctx.strokeStyle = horned ? '#303840' : '#4d5660'; ctx.lineWidth = Math.max(0.8, hr * 0.14);
     ctx.beginPath(); ctx.arc(0, hy - hr * 0.08, hr * 1.06, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.beginPath(); ctx.ellipse(-hr * 0.35, hy - hr * 0.62, hr * 0.28, hr * 0.14, -0.5, 0, Math.PI * 2); ctx.fill();
     if (horned) {
       ctx.strokeStyle = '#303840'; ctx.lineWidth = hr * 0.28; ctx.lineCap = 'round';
-      for (const side of [-1, 1]) {
+      for (const side of (look.singleHorn ? [1] : [-1, 1])) {
         ctx.beginPath(); ctx.moveTo(side * hr * 0.72, hy - hr * 0.45);
         ctx.quadraticCurveTo(side * hr * 1.35, hy - hr * 1.2, side * hr * 1.08, hy - hr * 1.55);
         ctx.stroke();
@@ -592,8 +593,8 @@ export function drawFigure(unit, o) {
   }
   // a demon's horns through its hair (and its helmet)
   // (#326: a big demon's curled, a ram's)
-  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35), big);
-  if (o.dead) {
+  if (o.horns && !(look.singleHorn && hornedHelmet)) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35), big, !!look.singleHorn && !big);
+  if (o.dead || look.crossEyes) {
     ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2;
     for (const sx of [-1, 1]) { const cx = sx * hr * 0.38, cy = hy; ctx.beginPath(); ctx.moveTo(cx - 1.6, cy - 1.6); ctx.lineTo(cx + 1.6, cy + 1.6); ctx.moveTo(cx + 1.6, cy - 1.6); ctx.lineTo(cx - 1.6, cy + 1.6); ctx.stroke(); }
   } else if (Math.sin(f) > -0.5 && !o.lying) {

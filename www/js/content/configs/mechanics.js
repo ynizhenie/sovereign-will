@@ -40,8 +40,8 @@ export const mechanicsConfig = {
     trainingSecondsPerExperience: 60,
     healingSecondsPerExperience: 10
   },
-  // fighting (#208): at most meleePerEnemy settlers in melee on one enemy (meleePerBig on a big one), round
-  // it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
+  // fighting (#208): at most meleePerEnemy attackers in melee with one normal unit (meleePerBig on a big one),
+  // round it rather than in a heap; while enemies are about, a settler leaves for a tent below retreatShare of its
   // health when an armed one is within coverRange px to hold the line (alone, only below a quarter). (Archers
   // stepping back from melee enemies shot less and lost more in seeded waves: they stand and shoot.) A big one's
   // blow hits at most splashMax at once, the one it aims at and the nearest round it (#209)

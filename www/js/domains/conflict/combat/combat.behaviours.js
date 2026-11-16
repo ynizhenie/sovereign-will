@@ -107,7 +107,18 @@ export function strikeBack(s, tick) {
   if (!attacker || (attacker === recentAttacker && game.pathTick - (s.lastAttackedTick || 0) > 90)) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
   if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
-  return engageEnemy(s, tick, attacker, attacker, tick.dt);
+  let target = attacker;
+  const attackerDistance = Math.hypot(attacker.x - s.x, attacker.y - s.y);
+  let nearestDistance = Infinity;
+  for (const enemy of threatsThisTick(tick).list) {
+    if (enemy === attacker || (enemy.toCatch && enemy.toCatch !== s.id)) continue;
+    const distance = Math.hypot(enemy.x - s.x, enemy.y - s.y);
+    if (distance < nearestDistance) { nearestDistance = distance; target = enemy; }
+  }
+  if (target !== attacker && (nearestDistance >= attackerDistance ||
+      (!isRangedWeapon(s.weapon) && meleeFull(target, tick)))) target = attacker;
+  s.fightTarget = target;
+  return engageEnemy(s, tick, target, target === attacker ? attacker : null, tick.dt);
 }
 
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
@@ -219,8 +230,9 @@ function chooseSettlerTarget(s, tick) {
   // ...or the one its captain gave it (#248), unless the player marked one for it
   if (s.captainTarget && (!game.enemies.includes(s.captainTarget) || isCampGuardUnavailable(s.captainTarget) || !canDefendEnemy(s.captainTarget))) s.captainTarget = null;
   if (!attacker && s.captainTarget && !(targetEnemy && targetEnemy.markedTarget)) targetEnemy = s.captainTarget;
-  if (attacker) targetEnemy = attacker;
-  // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
+  if (attacker && (!targetEnemy ||
+      Math.hypot(attacker.x - s.x, attacker.y - s.y) < Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y))) targetEnemy = attacker;
+  // Keep the melee limit, but don't send units to another enemy just because others are still approaching this one.
   if (targetEnemy && !attacker && !isRangedWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
     const others = candidates.filter(en => en !== targetEnemy && !meleeFull(en, tick));
     const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
@@ -244,10 +256,9 @@ function chooseSettlerTarget(s, tick) {
   return { targetEnemy, attacker };
 }
 
-// Enough settlers in melee on that enemy this tick already (GAME_CONFIG.combatAI)
 function meleeFull(en, tick) {
   const ai = GAME_CONFIG.combatAI;
-  return (tick.meleeOn.get(en) || 0) >= (en.type === 'big' ? ai.meleePerBig : ai.meleePerEnemy);
+  return (tick.meleeFighting.get(en) || 0) >= (en.type === 'big' ? ai.meleePerBig : ai.meleePerEnemy);
 }
 
 // An archer's arrows: from the storage it's at, or it walks to a storage when empty (#326: a platform keeps
@@ -361,6 +372,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
       : dist <= Math.max(approach + extraBody, pastBodies) && hasMeleeReach(s, targetEnemy);
     if (inReach) {
+      if (!shoots) tick.meleeFighting.set(targetEnemy, (tick.meleeFighting.get(targetEnemy) || 0) + 1);
       performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger, targetEnemy);
     } else if (attacker !== targetEnemy && breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through

@@ -19,3 +19,14 @@ test('the undead: zombies only to hire, the staff, no farming or food, blight; g
   expect(r).toMatchObject({ fromMeat: 3, fromBerries: 2 });
 });
 
+test('player and enemy ghosts pass through rocks and trees without being pushed out', async ({ page }) => {
+  await openGame(page);
+  const r = await sim(page, 'undeadGhostFlight');
+  expect(r).toEqual({
+    stayedInRock: true,
+    stayedAfterEjection: true,
+    playerPath: { passedRock: true, passedTree: true, reachedTarget: true },
+    enemyPath: { passedRock: true, passedTree: true, reachedTarget: true }
+  });
+});
+

@@ -107,7 +107,8 @@ export function createSettlerTick(dt) {
     heapTakers: new Map(),           // compost heap -> farmers going to take dung from it this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
-    meleeOn: new Map(),              // enemy -> settlers fighting it in melee this tick (#208)
+    meleeOn: new Map(),              // enemy -> settlers assigned melee approach slots this tick (#208)
+    meleeFighting: new Map(),        // enemy -> settlers already in melee reach this tick
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     // (not one with a fish trap on it, #248)

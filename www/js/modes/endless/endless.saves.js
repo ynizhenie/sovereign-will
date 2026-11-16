@@ -153,6 +153,7 @@ export function loadGame(data) {
   game.gameMode = 'endless';
   Object.assign(sides.player, data.sides && data.sides.player);
   Object.assign(sides.enemy, data.sides && data.sides.enemy);
+  game.rareAppearances = { pinkHair: false, demonSingleHorn: false, undeadCrossEyes: false };
   if (data.playerFaction) sides.player.faction = data.playerFaction;
   game.gameDifficulty = data.difficulty;
   game.cardMode = !!data.cardMode;

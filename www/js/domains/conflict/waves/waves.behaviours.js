@@ -7,7 +7,7 @@ import { getFrontier, getTerritoryMask, hasFog, inEnemyTerritory, inTerritory, i
 import { removeBuilding } from '../../economy/building/index.js';
 import { enemyBuildingAttack, enemyDamagePerSecond, enemyHitCooldown, findNearestEnemyTent, getEnemyDef } from './waves.rules.js';
 import { getEnemyFaction } from '../../factions/index.js';
-import { addUnitExperience, damageSettler, faceTowards, getUnitAttackSpeedMultiplier, getUnitHealingSpeedMultiplier, getUnitWeaponProgressionTrack, isUntouchable, speak, startSwing, tauntOnSight } from '../../colony/settlers/index.js';
+import { addUnitExperience, damageSettler, faceTowards, getUnitAttackSpeedMultiplier, getUnitHealingSpeedMultiplier, getUnitWeaponProgressionTrack, isBigBody, isUntouchable, speak, startSwing, tauntOnSight } from '../../colony/settlers/index.js';
 import { scheduleRespawn } from '../../economy/gathering/index.js';
 import { isShelter } from '../healing/index.js';
 import { enemyNecromancy } from '../../factions/undead/index.js';
@@ -36,7 +36,8 @@ function blocksPlayerTerritory(gx, gy) {
 
 // Every enemy's tick, last first
 export function tickEnemies(dt) {
-  for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt);
+  const tick = { meleeFighting: new Map() };
+  for (let i = game.enemies.length - 1; i >= 0; i--) tickEnemy(game.enemies[i], dt, tick);
 }
 
 function tendCampfire(en, dt) {
@@ -238,7 +239,7 @@ function enemyPetKeepsNear(en, dt) {
 
 // One enemy: builds its tent, or picks a target (a settler near it or the town hall), shoots or walks up,
 // breaks through what blocks its way, and strikes
-export function tickEnemy(en, dt) {
+export function tickEnemy(en, dt, tick = { meleeFighting: new Map() }) {
   if (en.hp <= 0) return;
   en.aimVx = 0;
   en.aimVy = 0;
@@ -345,7 +346,7 @@ export function tickEnemy(en, dt) {
   const struck = en.struckBy && game.settlers.includes(en.struckBy) && en.struckBy.hp > 0 && !isUntouchable(en.struckBy) &&
     game.pathTick - (en.struckTick || -Infinity) < STRUCK_TICKS ? en.struckBy : null;
   if (struck) en.attackTarget = struck;
-  const { target, minDist } = chooseEnemyTarget(en);
+  const { target, minDist } = chooseEnemyTarget(en, tick);
   const { shooting, meleeDef, moveTarget } = chooseEnemyAttack(en, enemyDef, target);
   // (#326) an archer out of arrows (and tents to fill up at) draws its dagger, as the player's do
   en.weapon = enemyDef.ranged && meleeDef !== enemyDef ? 'dagger' : en.raisedWeapon || meleeDef.weapon || 'sword';
@@ -363,7 +364,10 @@ export function tickEnemy(en, dt) {
   const canShoot = shooting && clearShot && minDist < shotOf(enemyDef).range;
   const holdsGround = keepsAway || canStrike || canShoot;
   walkOrBreakThrough(en, enemyDef, moveTarget, holdsGround, dt, !!struck && target === struck, canStrike || canShoot);
-  if (canStrike) enemyStrike(en, enemyDef, meleeDef, target, dt);
+  if (canStrike) {
+    if (target !== townHall) tick.meleeFighting.set(target, (tick.meleeFighting.get(target) || 0) + 1);
+    enemyStrike(en, enemyDef, meleeDef, target, dt);
+  }
 }
 const STRUCK_TICKS = 120; // (2 s: how long a hit turns it)
 
@@ -703,9 +707,14 @@ function buildEnemyTent(en, dt) {
 // What the enemy goes for: the settler it locked onto (unless another is much closer), the closest
 // settler, or the town hall; and how far that is
 /** @returns {{ target: Settler | TownHall, minDist: number }} */
-function chooseEnemyTarget(en) {
+function chooseEnemyTarget(en, tick) {
   if (game.plagueMode) {
-    const target = plagueEnemyTarget(en);
+    let target = plagueEnemyTarget(en);
+    if (target && isEnemyTargetFull(target, tick)) {
+      target = game.settlers
+        .filter(s => !isUntouchable(s) && !isEnemyTargetFull(s, tick))
+        .sort((a, b) => Math.hypot(en.x - a.x, en.y - a.y) - Math.hypot(en.x - b.x, en.y - b.y))[0] || null;
+    }
     return { target: target || en.plagueGoal || townHall, minDist: target ? Math.hypot(en.x - target.x, en.y - target.y) : Math.hypot(en.x - (en.plagueGoal || townHall).x, en.y - (en.plagueGoal || townHall).y) };
   }
   /** @type {Settler | TownHall} */
@@ -719,14 +728,15 @@ function chooseEnemyTarget(en) {
   const def = getEnemyDef(en);
   const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? shotOf(def).range + 30 : 0);
   const sees = (s, d) => !foggy || d <= sight || (en.struckBy === s && game.pathTick - (en.struckTick || -Infinity) < fog.enemyRememberSeconds * 60);
+  const isFull = s => isEnemyTargetFull(s, tick);
   game.settlers.forEach(s => {
-    if (isUntouchable(s)) return; // (a ghost: nothing to hit, #314)
+    if (isUntouchable(s) || isFull(s)) return; // (a ghost: nothing to hit, #314)
     let d = Math.hypot(en.x - s.x, en.y - s.y);
     if (d < minDist && sees(s, d)) { minDist = d; closestSettler = s; }
   });
 
   let lockedTarget = en.attackTarget;
-  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) ||
+  if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) || isFull(lockedTarget) ||
       (!en.scoutChasing && en.campIntruderTarget !== lockedTarget &&
         !sees(lockedTarget, Math.hypot(en.x - lockedTarget.x, en.y - lockedTarget.y) * (foggy ? 0.7 : 1))))) lockedTarget = null;
   if (lockedTarget) {
@@ -745,6 +755,11 @@ function chooseEnemyTarget(en) {
     minDist = Math.hypot(en.x - closestSettler.x, en.y - closestSettler.y);
   }
   return { target, minDist };
+}
+
+function isEnemyTargetFull(settler, tick) {
+  const limit = isBigBody(settler) ? GAME_CONFIG.combatAI.meleePerBig : GAME_CONFIG.combatAI.meleePerEnemy;
+  return (tick.meleeFighting.get(settler) || 0) >= limit;
 }
 
 // How it attacks: an archer shoots; with an empty quiver it walks to the nearest enemy tent for more

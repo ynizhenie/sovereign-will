@@ -141,11 +141,18 @@ export function getEnemyDef(enemy) {
 }
 
 // A new enemy from GAME_CONFIG.enemies; type and radius come from the config unless given
-/** @returns {import('../../../engine/world/types.js').Enemy} */
-export function createConfiguredEnemy(pos, enemyKey, type, radius) {
+/**
+ * @param {import('../../../engine/world/types.js').Point} pos
+ * @param {string} enemyKey
+ * @param {string} [type]
+ * @param {number} [radius]
+ * @param {import('../../../engine/world/types.js').Look} [appearance]
+ * @returns {import('../../../engine/world/types.js').Enemy}
+ */
+export function createConfiguredEnemy(pos, enemyKey, type, radius, appearance) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
-  const look = definition.pet ? newPetLook(definition.pet) : newLook();
+  const look = appearance || (definition.pet ? newPetLook(definition.pet) : newLook(enemyFactionOf(definition.id).id, !!definition.big));
   /** @type {import('../../../engine/world/types.js').Enemy} */
   const enemy = {
     look, // (#306: a man or a woman, one of their looks; a pet's its own, #314)

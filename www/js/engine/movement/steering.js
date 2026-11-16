@@ -69,6 +69,41 @@ export function moveEntityTowards(entity, targetX, targetY, speed, isEnemy = fal
   const startX = entity.x, startY = entity.y;
   entity.aimVx = 0;
   entity.aimVy = 0;
+  if (entity.ghostly) {
+    entity.moveVx = 0;
+    entity.moveVy = 0;
+    if (dt <= 0) return;
+    const dx = targetX - entity.x, dy = targetY - entity.y, distance = Math.hypot(dx, dy);
+    if (distance > 0) {
+      const ghostSpeed = isEnemy && !game.plagueMode && isBlighted(entity.x, entity.y)
+        ? speed * GAME_CONFIG.blight.slowFactor : speed;
+      const step = Math.min(distance, Math.max(0, ghostSpeed * GAME_CONFIG.movementScale * dt * 60));
+      const moveVx = dx / distance * step, moveVy = dy / distance * step;
+      const tileSteps = Math.max(1, Math.ceil(step / (TILE_SIZE / 2)));
+      let canFly = true;
+      for (let i = 1; i <= tileSteps; i++) {
+        const ratio = i / tileSteps;
+        const grid = getGridPos(entity.x + moveVx * ratio, entity.y + moveVy * ratio);
+        if (extraBlocked && extraBlocked(grid.gx, grid.gy)) {
+          canFly = false;
+          break;
+        }
+      }
+      if (canFly) {
+        entity.moveVx = moveVx;
+        entity.moveVy = moveVy;
+        entity.x += moveVx;
+        entity.y += moveVy;
+        clampEntityToBounds(entity);
+        const frameSteps = dt * 60;
+        entity.aimVx = (entity.x - startX) / frameSteps;
+        entity.aimVy = (entity.y - startY) / frameSteps;
+        return;
+      }
+    } else {
+      return;
+    }
+  }
   if (moveEntityStep(entity, targetX, targetY, speed, isEnemy, dt, smooth, extraBlocked) === true || dt <= 0) return;
   const steps = dt * 60;
   entity.aimVx = (entity.x - startX) / steps;
@@ -491,7 +526,7 @@ export function getResourceApproachPoint(entity, resource) {
 }
 
 export function rescueSettlerFromResource(settler) {
-  if (settler.towerAssignment) return;
+  if (settler.towerAssignment || settler.ghostly) return;
   // solid things sit on tile centers, so only the settler's own tile can be within 14px of it
   const tile = getGridPos(settler.x, settler.y);
   const cx = tile.gx * TILE_SIZE + 15, cy = tile.gy * TILE_SIZE + 15, key = `${cx},${cy}`;
