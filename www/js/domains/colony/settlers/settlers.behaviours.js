@@ -25,7 +25,7 @@ import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.j
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
-import { collectBones, corpsesToGraves, followMaster, necromancy } from '../../factions/undead/index.js';
+import { collectBones, corpsesToGraves, followMaster, necromancy, workGrave } from '../../factions/undead/index.js';
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip, isRangedWeapon } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
@@ -433,8 +433,25 @@ export function tickSettlers(dt) {
 
 // (#404) the hero walks where the player taps (no stick or keys)
 function tickPlagueHero(hero, tick) {
+  const plague = game.plague;
+  hero.plagueGraveWorkActive = false;
+  if (hero.plagueGraveTarget && (!plague || plague.energy >= plague.maxEnergy)) {
+    hero.plagueGraveTarget = null;
+    hero.plagueMoveTarget = null;
+    hero.graveTarget = null;
+    hero.graveTimer = 0;
+    hero.raising = undefined;
+  }
+  if (hero.plagueGraveTarget && !game.buildings.includes(hero.plagueGraveTarget)) {
+    hero.plagueGraveTarget = null;
+    hero.plagueMoveTarget = null;
+    hero.graveTarget = null;
+    hero.graveTimer = 0;
+    hero.raising = null;
+  }
   const target = hero.plagueMoveTarget;
-  if (target && Math.hypot(target.x - hero.x, target.y - hero.y) > 18) {
+  const stoppingDistance = hero.plagueGraveTarget ? 32 : 18;
+  if (target && Math.hypot(target.x - hero.x, target.y - hero.y) > stoppingDistance) {
     hero.raising = null;
     moveEntityTowards(hero, target.x, target.y, hero.speed * (game.plague?.speedFactor || 1), false, tick.dt, true);
     hero.isIdle = false;
@@ -449,12 +466,21 @@ function tickPlagueHero(hero, tick) {
   hero.isIdle = false; // (#404: standing, it neither sways nor shows the idle "zZ")
   hero.activity = 'plagueIdle';
   hero.swaying = false;
-  healPlagueSquad(hero, tick.dt);
+  if (healPlagueSquad(hero, tick.dt)) return;
+  if (plague && hero.plagueGraveTarget && plague.energy < plague.maxEnergy && workGrave(hero, tick, {
+    nearbyOnly: true,
+    ignoreRest: true,
+    targetGrave: hero.plagueGraveTarget,
+    onHarvest: () => {}
+  })) {
+    hero.plagueGraveWorkActive = true;
+    hero.activity = 'necromancy';
+  }
 }
 
 function healPlagueSquad(hero, dt) {
   const plague = game.plague;
-  if (!plague) return;
+  if (!plague) return false;
   const radius = plague.healRange;
   const patients = game.settlers
     .filter(unit => (unit.plagueHero || unit.plagueUnit) && unit.hp > 0 && unit.hp < unit.maxHp &&
@@ -463,7 +489,7 @@ function healPlagueSquad(hero, dt) {
     .slice(0, plague.healTargets);
   if (!patients.length) {
     hero.raising = null;
-    return;
+    return false;
   }
   hero.working = 0.1;
   hero.workKind = 'plagueHeal';
@@ -473,4 +499,5 @@ function healPlagueSquad(hero, dt) {
     patient.hp = Math.min(patient.maxHp, patient.hp + plague.healStrength * dt);
     patient.treatedAt = game.pathTick;
   }
+  return true;
 }

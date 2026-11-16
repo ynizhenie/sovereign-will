@@ -107,6 +107,10 @@ export const glGroups = () => ({ sway: swayGroups.size, waves: waveGroups.size }
 // how many things are kept in a layer (for the tests)
 /** @param {number} layer */
 export const glKept = layer => keptSprites[layer].size;
+export const glPoolStats = () => pools.map((pool, b) => ({
+  shown: shownIn[b],
+  visible: pool.reduce((count, sprite) => count + Number(sprite.visible), 0)
+}));
 export function glDropAll() {
   for (let layer = 0; layer < keptSprites.length; layer++) { for (const sprite of keptSprites[layer].values()) sprite.destroy(); keptSprites[layer].clear(); }
 }

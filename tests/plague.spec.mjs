@@ -325,7 +325,7 @@ test('Plague: upgrade cards affect the hero and squad, while the menu shows only
     document.getElementById('plague-upgrades-close').click();
     return {
       oneRow: new Set(rows).size === 1, speedFactor: plague.speedFactor, squadSpeed: +(zombie.speed / GAME_CONFIG.settlerTypes.zombie.speed).toFixed(2),
-      currentOnly: stats.length === 13 && stats.every(text => !text.includes('→')),
+      currentOnly: stats.length === 14 && stats.every(text => !text.includes('→')),
       healthRowsTogether: [...healthLabels].map(label => label.textContent).join(' / ') === 'Здоровье / Здоровье зомби / большого зомби',
       highlightedStats,
       groupCount,
@@ -341,6 +341,140 @@ test('Plague: upgrade cards affect the hero and squad, while the menu shows only
   });
   expect(r.standing).toEqual({ swaying: false, idle: false }); // (no sway, no "zZ" over it)
   expect(r.level).toContain('2');
+  expect(errors).toEqual([]);
+});
+
+test('Plague grave work multiplies energy regeneration, but only while the Necromancer works there', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { tickSettlers } = await import('/js/domains/colony/settlers/index.js');
+    const { tickPlague } = await import('/js/modes/plague/plague.rules.js');
+    const hero = settlers.find(unit => unit.plagueHero);
+    game.settlers = [hero];
+    const grave = { type: 'grave', x: hero.x, y: hero.y, rest: 0 };
+    game.buildings = [grave];
+    game.corpses = [];
+    plague.energy = 0;
+    tickSettlers(1);
+    const waitsForOrder = plague.energy === 0 && !hero.plagueGraveWorkActive;
+    tickPlague(1);
+    const normalGain = plague.energy;
+    plague.energy = 0;
+    mouse.x = grave.x; mouse.y = grave.y; handleCanvasClick();
+    tickSettlers(1 / 60);
+    const working = hero.activity === 'necromancy' && hero.plagueGraveWorkActive;
+    tickPlague(1);
+    const graveGain = plague.energy;
+    plague.offer = ['grave_energy'];
+    applyPlagueCardOffer();
+    document.querySelector('#plague-card-offer .plague-upgrade-card').click();
+    const upgradedMultiplier = plague.graveEnergyMultiplier;
+    plague.energy = 0;
+    tickPlague(1);
+    const upgradedGain = plague.energy;
+    mouse.x = hero.x + 100; mouse.y = hero.y + 100; handleCanvasClick();
+    plague.energy = 0;
+    tickPlague(1);
+    const afterCancelGain = plague.energy;
+
+    hero.x = grave.x; hero.y = grave.y;
+    plague.energy = plague.maxEnergy - 0.1;
+    mouse.x = grave.x; mouse.y = grave.y; handleCanvasClick();
+    tickSettlers(1 / 60);
+    tickPlague(1);
+    const cappedEnergy = plague.energy;
+    tickSettlers(1 / 60);
+    document.getElementById('plague-upgrades-toggle').click();
+    const graveStat = [...document.querySelectorAll('.plague-character-stat')]
+      .find(row => row.querySelector('span').textContent === 'Из могилы');
+    const graveStatValue = graveStat?.querySelector('b').textContent;
+    document.getElementById('plague-upgrades-close').click();
+    return {
+      waitsForOrder, normalGain, working, graveGain, upgradedMultiplier, upgradedGain, afterCancelGain, cappedEnergy,
+      maxEnergy: plague.maxEnergy, stoppedAtCapacity: hero.plagueGraveTarget === null, graveStatValue
+    };
+  });
+  expect(result.waitsForOrder).toBe(true);
+  expect(result.normalGain).toBe(0.25);
+  expect(result.working).toBe(true);
+  expect(result.graveGain).toBeCloseTo(0.275, 4);
+  expect(result.upgradedMultiplier).toBeCloseTo(1.2, 4);
+  expect(result.upgradedGain).toBeCloseTo(0.3, 4);
+  expect(result.afterCancelGain).toBe(0.25);
+  expect(result.cappedEnergy).toBe(result.maxEnergy);
+  expect(result.stoppedAtCapacity).toBe(true);
+  expect(result.graveStatValue).toBe('×1.20');
+  expect(errors).toEqual([]);
+});
+
+test('Plague Necromancer stops grave work and follows a new map command', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { tickSettlers } = await import('/js/domains/colony/settlers/index.js');
+    const hero = settlers.find(unit => unit.plagueHero);
+    game.settlers = [hero];
+    game.buildings = [{ type: 'grave', x: hero.x, y: hero.y, rest: 0 }];
+    game.corpses = [];
+    plague.energy = 0;
+    const workSeconds = GAME_CONFIG.graveWork.seconds;
+    mouse.x = game.buildings[0].x; mouse.y = game.buildings[0].y; handleCanvasClick();
+    tickSettlers(workSeconds);
+    const startedWorking = hero.plagueGraveWorkActive;
+    const destination = { x: hero.x + 100, y: hero.y + 100 };
+    mouse.x = destination.x; mouse.y = destination.y; handleCanvasClick();
+    tickSettlers(workSeconds);
+    return {
+      startedWorking,
+      stoppedWorking: !hero.plagueGraveWorkActive,
+      cancelledGrave: hero.plagueGraveTarget === null,
+      destination: hero.plagueMoveTarget,
+      moving: hero.activity === 'plagueMove'
+    };
+  });
+  expect(result.startedWorking).toBe(true);
+  expect(result.stoppedWorking).toBe(true);
+  expect(result.cancelledGrave).toBe(true);
+  expect(result.destination).toMatchObject({ x: expect.any(Number), y: expect.any(Number) });
+  expect(result.moving).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Plague revival shows a brief effect only after a successful resurrection', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { drawPlagueReviveEffects } = await import('/js/domains/factions/undead/index.js');
+    const { tickPlague, updatePlagueHud } = await import('/js/modes/plague/plague.rules.js');
+    const button = document.getElementById('plague-revive');
+    const corpse = game.corpses.find(item => !item.pet);
+    if (!corpse) throw new Error('Plague cemetery did not provide a corpse for the revival test');
+    game.corpses = [];
+    button.click();
+    const failedReviveEffects = plague.reviveFx.length;
+    corpse.x = settlers.find(unit => unit.plagueHero).x + 10;
+    corpse.y = settlers.find(unit => unit.plagueHero).y;
+    game.corpses = [corpse];
+    plague.reviveTimer = 0;
+    plague.energy = plague.maxEnergy;
+    updatePlagueHud();
+    button.click();
+    let arcs = 0;
+    const originalArc = ctx.arc;
+    ctx.arc = function(...args) { arcs++; return originalArc.apply(this, args); };
+    try { drawPlagueReviveEffects(); } finally { ctx.arc = originalArc; }
+    const activeEffects = plague.reviveFx.length;
+    tickPlague(0.3);
+    const persistsDuringEffect = plague.reviveFx.length;
+    tickPlague(0.4);
+    return { failedReviveEffects, activeEffects, persistsDuringEffect, expiredEffects: plague.reviveFx.length, arcs };
+  });
+  expect(result.failedReviveEffects).toBe(0);
+  expect(result.activeEffects).toBe(1);
+  expect(result.persistsDuringEffect).toBe(1);
+  expect(result.expiredEffects).toBe(0);
+  expect(result.arcs).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
 

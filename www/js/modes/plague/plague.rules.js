@@ -16,6 +16,7 @@ import { runLoading } from '../../ui/index.js';
 
 const STARTING_ENERGY = 15;
 const STARTING_MAX_ENERGY = 30;
+const STARTING_GRAVE_ENERGY_MULTIPLIER = 1.10;
 const STARTING_SQUAD = 8;
 const BASE_HERO_HEALTH = 180;
 const RAISE_COST = { normal: 5, big: 10 };
@@ -118,6 +119,7 @@ const CARD_DEFS = {
     p.speedFactor += 0.1;
     for (const unit of game.settlers) if (unit.plagueUnit) unit.speed *= p.speedFactor / before;
   } },
+  grave_energy: { name: 'plague.card.graveEnergy', desc: 'plague.card.graveEnergyDesc', apply: p => { p.graveEnergyMultiplier += 0.1; } },
   heal_targets: { name: 'plague.card.healTargets', desc: 'plague.card.healTargetsDesc', apply: p => { p.healTargets++; } },
   heal_strength: { name: 'plague.card.healStrength', desc: 'plague.card.healStrengthDesc', apply: p => { p.healStrength += 1.5; } },
   heal_range: { name: 'plague.card.healRange', desc: 'plague.card.healRangeDesc', apply: p => { p.healRange += TILE_SIZE; } },
@@ -143,6 +145,8 @@ const newPlagueState = () => ({
   bandInterval: rangeOf('interval', game.plagueSettings?.interval),
   bandCount: rangeOf('groups', game.plagueSettings?.groups),
   energy: STARTING_MAX_ENERGY, maxEnergy: STARTING_MAX_ENERGY, energyRegen: 0.25,
+  graveEnergyMultiplier: STARTING_GRAVE_ENERGY_MULTIPLIER,
+  reviveFx: [],
   maxSquad: STARTING_SQUAD, raisesPerCast: 1, raiseCostFactor: 1, reviveRange: REVIVE_RANGE,
   reviveCooldown: 1.5, reviveTimer: 0, groupTimer: rollRange(rangeOf('interval', game.plagueSettings?.interval)),
   groupSpawnQueue: [], groupId: 0, groups: [], groupsCleared: 0, elapsedTime: 0,
@@ -373,6 +377,7 @@ function reviveNearby() {
     unit.speed = GAME_CONFIG.settlerTypes.zombie.speed * p.speedFactor; // (#404: a big one as fast: the squad keeps with the hero)
     game.settlers.push(unit);
     game.corpses.splice(game.corpses.indexOf(corpse), 1);
+    p.reviveFx.push({ x: corpse.x, y: corpse.y, t: 0, dur: 0.65 });
     playSound('raise', corpse); // (#404)
     p.energy -= cost;
     raised++;
@@ -436,7 +441,8 @@ function drawCharacterStats(plague) {
     ] },
     { title: 'plague.stats.groupEnergy', stats: [
       ['plague.stats.energy', String(plague.maxEnergy), upgraded('energy_capacity')],
-      ['plague.stats.energyRegen', perSecond(plague.energyRegen), upgraded('energy_regen')]
+      ['plague.stats.energyRegen', perSecond(plague.energyRegen), upgraded('energy_regen')],
+      ['plague.stats.graveEnergy', `×${plague.graveEnergyMultiplier.toFixed(2)}`, upgraded('grave_energy')]
     ] },
     { title: 'plague.stats.groupRaising', stats: [
       ['plague.stats.raiseCooldown', `${+plague.reviveCooldown.toFixed(2)} ${t('plague.stats.seconds')}`, upgraded('revive_cooldown')],
@@ -622,7 +628,9 @@ export function tickPlague(dt) {
     camera.y += (hero.y - camera.y) * follow;
     clampCamera();
   }
-  p.energy = Math.min(p.maxEnergy, p.energy + p.energyRegen * dt);
+  const graveWorkMultiplier = hero?.plagueGraveWorkActive ? p.graveEnergyMultiplier : 1;
+  p.energy = Math.min(p.maxEnergy, p.energy + p.energyRegen * graveWorkMultiplier * dt);
+  p.reviveFx = p.reviveFx.filter(fx => { fx.t += dt; return fx.t < fx.dur; });
   p.reviveTimer = Math.max(0, p.reviveTimer - dt);
   p.elapsedTime += dt;
   updatePlagueHud();

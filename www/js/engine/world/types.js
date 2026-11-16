@@ -24,6 +24,8 @@
  * @property {boolean} [plagueHero]
  * @property {boolean} [plagueUnit]
  * @property {{x: number, y: number} | null} [plagueMoveTarget]
+ * @property {Building | null} [plagueGraveTarget]
+ * @property {boolean} [plagueGraveWorkActive]
  * @property {number} [quiverCapacity]
  * @property {string} role           'worker', 'soldier' or 'archer'
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)

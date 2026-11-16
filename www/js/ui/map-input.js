@@ -40,10 +40,20 @@ export function handleCanvasClick() {
     closeSelectedCard();
     const hero = game.settlers.find(s => s.plagueHero && s.hp > 0);
     if (hero) {
-      hero.plagueMoveTarget = {
-        x: Math.max(hero.radius, Math.min(game.WORLD_WIDTH - hero.radius, mouse.x)),
-        y: Math.max(hero.radius, Math.min(game.WORLD_HEIGHT - hero.radius, mouse.y))
-      };
+      const grave = game.buildings
+        .filter(building => building.type === 'grave' && Math.hypot(mouse.x - building.x, mouse.y - building.y) < (building.radius || 14) + 10)
+        .sort((a, b) => Math.hypot(mouse.x - a.x, mouse.y - a.y) - Math.hypot(mouse.x - b.x, mouse.y - b.y))[0];
+      if (hero.plagueGraveTarget !== grave) {
+        hero.graveTarget = null; hero.graveTimer = 0; hero.raising = undefined;
+        hero.plagueGraveWorkActive = false;
+      }
+      hero.plagueGraveTarget = grave || null;
+      hero.plagueMoveTarget = grave
+        ? { x: grave.x, y: grave.y }
+        : {
+          x: Math.max(hero.radius, Math.min(game.WORLD_WIDTH - hero.radius, mouse.x)),
+          y: Math.max(hero.radius, Math.min(game.WORLD_HEIGHT - hero.radius, mouse.y))
+        };
     }
     return;
   }

@@ -10,7 +10,7 @@ import { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from '../domains/e
 import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatureOnCard, treesToDrawOver, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawMenuOutpostHealthBar, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
-import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
+import { drawBlight, drawPlagueReviveEffects, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
 import { beginShadowFrame, drawDarkness, drawFireflies, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, isVisible, setPrewarmingChunks } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBackroomsFloor, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
@@ -93,6 +93,7 @@ export function render() {
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
+  drawPlagueReviveEffects();
   drawSouls(); // (flying into a necromancer's lantern, out of it into a grave, #326)
   drawProjectiles();
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)

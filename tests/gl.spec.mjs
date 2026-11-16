@@ -37,6 +37,30 @@ test('with WebGL off (as it is to begin with) there is no second canvas', async 
   expect(errors).toEqual([]);
 });
 
+test('with WebGL on, changing the battle size does not leave prewarmed terrain sprites visible', async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-gl', 'on'); } catch (e) { /* none */ } });
+  const errors = await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#mode-battles');
+  await page.click('#battle-play');
+  await page.waitForFunction(() => glReady());
+  const r = await page.evaluate(() => {
+    isPaused = true;
+    for (let i = 0; i < 6; i++) render();
+    setBattleFieldSize('small');
+    render();
+    return {
+      field: [battle.fieldCols, battle.fieldRows],
+      lists: [game.ironOres, game.coalOres, game.naturalRocks, game.farmPlots].map(list => list.length),
+      pools: glPoolStats()
+    };
+  });
+  expect(r.field).toEqual([20, 13]);
+  expect(r.lists).toEqual([0, 0, 0, 0]);
+  expect(r.pools.every(pool => pool.visible === pool.shown)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('with WebGL on, nature is kept on the card: a tree felled or taken away leaves it, a new one comes to it', async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-gl', 'on'); } catch (e) { /* none */ } });
   const errors = await openGame(page);
