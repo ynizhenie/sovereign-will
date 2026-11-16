@@ -4,12 +4,12 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
-import { isTileOccupied } from '../../economy/building/index.js';
+import { isSpawnSpotFree, isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { armorOf, helmetOf, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
 import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict, moveEntityTowards } from '../../../engine/movement/index.js';
-import { addCorpse, getBaseRadius } from '../combat/index.js';
+import { addCorpse, addCorpseLoot, getBaseRadius } from '../combat/index.js';
 import { openDemonPortal, openDemonPortalAt } from '../../factions/demons/index.js';
 import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inEnemyTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
 import { addUnitExperience, generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
@@ -141,11 +141,18 @@ export function getEnemyDef(enemy) {
 }
 
 // A new enemy from GAME_CONFIG.enemies; type and radius come from the config unless given
-/** @returns {import('../../../engine/world/types.js').Enemy} */
-export function createConfiguredEnemy(pos, enemyKey, type, radius) {
+/**
+ * @param {import('../../../engine/world/types.js').Point} pos
+ * @param {string} enemyKey
+ * @param {string} [type]
+ * @param {number} [radius]
+ * @param {import('../../../engine/world/types.js').Look} [appearance]
+ * @returns {import('../../../engine/world/types.js').Enemy}
+ */
+export function createConfiguredEnemy(pos, enemyKey, type, radius, appearance) {
   const definition = getDefinition('enemies', enemyKey);
   if (!definition) return /** @type {any} */ (null); // callers pass keys that are in the config
-  const look = definition.pet ? newPetLook(definition.pet) : newLook();
+  const look = appearance || (definition.pet ? newPetLook(definition.pet) : newLook(enemyFactionOf(definition.id).id, !!definition.big));
   /** @type {import('../../../engine/world/types.js').Enemy} */
   const enemy = {
     look, // (#306: a man or a woman, one of their looks; a pet's its own, #314)
@@ -356,8 +363,16 @@ export function findNearestEnemyTent(origin) {
   return nearest;
 }
 
-export function grantEnemyReward(enemy) {
-  addResources(enemy.reward);
+/** @param {ReturnType<typeof addCorpse>} corpse */
+export function grantEnemyReward(enemy, corpse, lootIndex = 0) {
+  if (game.gameMode !== 'endless' || game.plagueMode) {
+    addResources(enemy.reward);
+    return;
+  }
+  if (rand() >= GAME_CONFIG.loot.resourceChance) return;
+  for (const [resource, amount] of Object.entries(enemy.reward || {})) {
+    if (amount > 0) addCorpseLoot(corpse, { yield: { [resource]: amount }, items: [] }, lootIndex++);
+  }
 }
 
 /** @returns {{ x: number, y: number, progress: number, maxProgress: number, builder: import('../../../engine/world/types.js').Enemy | null, waveActive?: boolean } | null} */
@@ -390,7 +405,7 @@ export function getNearbyEnemyTentSite(origin) {
       if (Math.hypot(gx - centre.gx, gy - centre.gy) > radius || isBorderZone(gx, gy)) continue;
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15, key = `${x},${y}`;
       if (reserved.has(key) || game.enemyTentBlueprints.some(site => site.x === x && site.y === y) ||
-          game.enemyTents.some(tent => tent.x === x && tent.y === y) || isTileOccupied(x, y) ||
+          !isSpawnSpotFree(x, y) ||
           (territory && inTerritory(x, y)) || inEnemyTerritory(x, y)) continue;
       const nearPlayer = territory && territoryNear(gx, gy);
       if (camps.length ? !nearPlayer : nearPlayer) continue;
@@ -811,6 +826,7 @@ function stageWaveAtPlayerEdge() {
     ? (toCampX < 0 ? 'west' : 'east')
     : (toCampY < 0 ? 'north' : 'south') : null;
   const box = getTerritoryBox();
+  const joined = getEnemyReach();
   const gx0 = Math.max(1, Math.floor(box.x0 / TILE_SIZE) - 1);
   const gy0 = Math.max(1, Math.floor(box.y0 / TILE_SIZE) - 1);
   const gx1 = Math.min(game.COLS - 2, Math.ceil(box.x1 / TILE_SIZE));
@@ -820,6 +836,7 @@ function stageWaveAtPlayerEdge() {
     const positions = [];
     for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
       const x = gx * TILE_SIZE + TILE_SIZE / 2, y = gy * TILE_SIZE + TILE_SIZE / 2;
+      if (isTileBlockedForEnemyStrict(gx, gy) || joined[gy * game.COLS + gx] !== 1) continue;
       if (inTerritory(x, y) || inEnemyTerritory(x, y) ||
         ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inTerritory(x + dx * TILE_SIZE, y + dy * TILE_SIZE))) continue;
       if ((side === 'east' && x < box.x1) || (side === 'west' && x >= box.x0) ||
@@ -1150,7 +1167,8 @@ export function tickEnemyTents(dt) {
 
 // What a fallen enemy drops (GAME_CONFIG.loot, #210, #232): for each thing it held, now and then the thing
 // itself, more often part of what it costs; a pile on the ground the settlers pick up
-export function dropLoot(en) {
+/** @param {ReturnType<typeof addCorpse>|null} [corpse] */
+export function dropLoot(en, corpse = null) {
   if (game.gameMode !== 'endless' || game.plagueMode) return;
   const loot = GAME_CONFIG.loot;
   const held = [];
@@ -1162,11 +1180,18 @@ export function dropLoot(en) {
   const helmet = helmetOf(en);
   if (helmet) held.push(['gear', helmet.id]);
   // the thing itself, each with itemChance, lying apart (#232: no more bundles of a share of their cost)
+  let nextLootIndex = 0;
   held.forEach(([category, id], i) => {
     if (rand() >= loot.itemChance) return;
-    const a = i * 2.1;
-    game.loot.push({ x: en.x + Math.cos(a) * 8 * i, y: en.y + Math.sin(a) * 8 * i, hp: 1, maxHp: 1, priority: 0, yield: {}, items: [`${category}:${id}`] });
+    if (corpse) {
+      addCorpseLoot(corpse, { yield: {}, items: [`${category}:${id}`] }, i);
+    } else {
+      const a = i * 2.1;
+      game.loot.push({ x: en.x + Math.cos(a) * 8 * i, y: en.y + Math.sin(a) * 8 * i, hp: 1, maxHp: 1, priority: 0, yield: {}, items: [`${category}:${id}`] });
+    }
+    nextLootIndex = i + 1;
   });
+  return nextLootIndex;
 }
 
 // Dead enemies: their reward, a corpse, and off the list; a tent site its builder died at goes too
@@ -1181,7 +1206,11 @@ export function removeDeadEnemies() {
     if (en.hp <= 0 && !en.rewardGranted) {
       en.rewardGranted = true;
       markEnemyKillForPlague(en);
-      if (!en.crumbled) { grantEnemyReward(en); addCorpse(en, 'enemy', en.enemyKey); dropLoot(en); }
+      if (!en.crumbled) {
+        const corpse = addCorpse(en, 'enemy', en.enemyKey);
+        const lootIndex = dropLoot(en, corpse) || 0;
+        grantEnemyReward(en, corpse, lootIndex);
+      }
     }
   });
   game.enemies = game.enemies.filter(en => en.hp > 0);

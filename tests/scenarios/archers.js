@@ -63,5 +63,17 @@ Object.assign(window.sim, (() => {
     return { onFreeTile: !isTileBlockedForSettler(g.gx, g.gy), offTower: archer.x !== tower.x || archer.y !== tower.y };
   }
 
-  return { huntClearShots, climbWalledTower, climbDownInPocket };
+  function projectilesDisappearBeyondMap({ seed = 'projectiles-at-map-edge' } = {}) {
+    start(seed);
+    game.projectiles = [
+      { x: 1, y: townHall.y, vx: -5, vy: 0, life: 100, damage: 0, fromEnemy: false },
+      { x: game.WORLD_WIDTH - 1, y: townHall.y, vx: 5, vy: 0, life: 100, damage: 0, fromEnemy: true },
+      { x: townHall.x, y: 1, vx: 0, vy: -5, life: 100, damage: 0, fromEnemy: false },
+      { x: townHall.x, y: game.WORLD_HEIGHT - 1, vx: 0, vy: 5, life: 100, damage: 0, fromEnemy: true }
+    ];
+    tickProjectiles(1 / 60);
+    return { allGone: game.projectiles.length === 0, noArrowsDropped: game.stuckArrows.length === 0 };
+  }
+
+  return { huntClearShots, climbWalledTower, climbDownInPocket, projectilesDisappearBeyondMap };
 })());

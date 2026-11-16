@@ -106,7 +106,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   // (a picture covers the rectangle it was painted for: the piece, or the part of it its layer has anything in, see bounds)
   /** @param {Chunk} p */
   // (the ground's own pieces go to the graphics card's canvas when that's on, see engine/platform/gl.js)
-  const onCard = target === ctx && (layer === 'grass' || layer === 'terrain') && glReady();
+  const onCard = target === ctx && (layer === 'grass' || layer === 'terrain') && glReady() && !prewarmingChunks;
   const blit = p => {
     const dx0 = snapX(p.x0), dy0 = snapY(p.y0), dw = snapX(p.x1) - dx0, dh = snapY(p.y1) - dy0;
     if (onCard) glChunk(p, m.e + m.a * dx0, m.f + m.d * dy0, m.a * dw, m.d * dh);
@@ -413,11 +413,14 @@ export function drawGrassGround() {
 export function prewarmVisibleWorldChunks() {
   const transform = ctx.getTransform();
   const scale = getViewScale();
+  const wasPrewarming = prewarmingChunks;
+  prewarmingChunks = true;
   ctx.setTransform(scale, 0, 0, scale, canvas.width / 2 - camera.x * scale, canvas.height / 2 - camera.y * scale);
   try {
     drawGrassGround();
     drawSand();
   } finally {
+    prewarmingChunks = wasPrewarming;
     ctx.setTransform(transform);
   }
 }

@@ -54,7 +54,7 @@ export function getCorpseHeap() {
   return heap;
 }
 
-const inBase = c => dist(c, townHall) < getBaseRadius() + TILE_SIZE;
+const inBase = c => dist(c, townHall) < baseRadiusToward(Math.atan2(c.y - townHall.y, c.x - townHall.x)) + TILE_SIZE;
 
 // A corpse on the way to the heap (before deliverCarrying would take it "home")
 export function carryCorpse(s, tick) {

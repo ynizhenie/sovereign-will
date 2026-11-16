@@ -20,6 +20,14 @@ test('the corpse heap is four tiles beyond the base radius in its chosen directi
   expect(result.beyondBaseTiles).toBeCloseTo(4, 0);
 });
 
+test('a distant building does not make a corpse heap count as inside the base', () => {
+  expect(sim.corpseOutsideDistantBuildingBase({})).toMatchObject({
+    heapFound: true,
+    carriedOnce: true,
+    corpseOutsideBase: true
+  });
+});
+
 test('in a wave a medic heals with its herbs (30 hp each); with the wave beaten and a tent it keeps them (#279: no potions)', () => {
   expect(sim.medicHeal({})).toEqual({ hp: 40, herbsLeft: 1 });
   expect(sim.medicHeal({ waveOver: true })).toEqual({ hp: 10, herbsLeft: 2 });

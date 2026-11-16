@@ -212,6 +212,7 @@ test('an archer keeps its dagger drawn while breaking a wall, and paths do not c
     attacker.fromWave = true;
     game.enemies = [attacker];
     archer.lastAttacker = attacker; archer.lastAttackedTick = game.pathTick;
+    archer.retaliationTarget = attacker; archer.retaliationUntil = game.pathTick + 90; // (#418: whom it strikes back at, as a hit sets it)
     archer.path = [{ x: wall.x, y: wall.y }, { x: attacker.x, y: attacker.y }];
     const distanceBeforeThreat = Math.hypot(attacker.x - archer.x, attacker.y - archer.y);
     strikeBack(archer, createSettlerTick(1 / 60));

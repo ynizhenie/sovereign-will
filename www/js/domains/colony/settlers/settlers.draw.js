@@ -20,9 +20,10 @@ import { drawPet } from '../pets/index.js';
 import { isBigBody, isPet } from './settlers.rules.js';
 import { hasClearEnemyLine } from '../../../engine/movement/index.js';
 
-// Keep character detail intact at every camera zoom level.
-export const simpleUnit = () => false;
-export const tinyUnit = () => false;
+const SIMPLE_UNIT_SCALE = 0.55, SIMPLE_UNIT_COUNT = 180;
+const unitCount = () => game.settlers.length + game.enemies.length + game.scouts.length;
+export const simpleUnit = () => getViewScale() < SIMPLE_UNIT_SCALE || unitCount() > SIMPLE_UNIT_COUNT;
+export const tinyUnit = () => getViewScale() < 0.4 && unitCount() > SIMPLE_UNIT_COUNT;
 
 export function drawLevelIndicator(x, y, level) {
   const text = String(level);
@@ -416,7 +417,6 @@ export function drawFigure(unit, o) {
   const camoColor = o.camoColor || o.body;
   const shadeUniform = amount => shade(o.camouflage ? camoColor : o.body, amount);
   const uniformColor = o.camouflage ? shade(camoColor, -0.48) : o.body;
-  const camoDark = shade(camoColor, -0.72), camoMid = shade(camoColor, -0.34), camoLight = shade(camoColor, -0.12);
   ctx.save();
   ctx.translate(x, y);
   // (#306) zoomed out a figure is a handful of pixels: a shadow, its legs, its body and its head — the
@@ -428,10 +428,12 @@ export function drawFigure(unit, o) {
     ctx.beginPath(); ctx.roundRect(-r * 0.3, r * 0.25, r * 0.6, r * 0.72, r * 0.12); ctx.fill();
     ctx.fillStyle = uniformColor;
     ctx.beginPath(); ctx.roundRect(-r * 0.6, -r * 0.48, r * 1.2, r * 0.98, r * 0.32); ctx.fill();
-    drawHeadTexture(ctx, lookOf(unit), unitKin(unit), o.skin, 0, -r * 0.9, r * 0.5, unit.facing || 0, false, 0);
+    ctx.fillStyle = o.skin;
+    ctx.beginPath(); ctx.arc(0, -r * 0.9, r * 0.35, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
     return;
   }
+  const camoDark = shade(camoColor, -0.72), camoMid = shade(camoColor, -0.34), camoLight = shade(camoColor, -0.12);
   // (#306) a zombie lunges as it strikes
   const z = !o.lying && !o.dead && !o.carryPoint ? zombieReach(unit) : null;
   if (z && z.lunge) ctx.translate(Math.cos(unit.facing || 0) * z.lunge, Math.sin(unit.facing || 0) * z.lunge * 0.7);
@@ -563,7 +565,7 @@ export function drawFigure(unit, o) {
     ctx.restore();
   }
   // its armour over it, under its arms (#298: it was over everything, arms too, and didn't fit the body)
-  if (o.armor && !o.dead) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
+  if (o.armor) drawArmor(r, o.armor, facesAway(unit) && !o.lying);
   if (largeWoman) { drawHand(hand); drawHand(other); }
   else {
     if (!behind) arm(right * shoulder, hand);
@@ -575,14 +577,15 @@ export function drawFigure(unit, o) {
   const f = unit.facing || 0, ex = Math.cos(f) * hr * 0.35, ey = Math.max(-0.1, Math.sin(f)) * hr * 0.3;
   drawHeadTexture(ctx, look, unitKin(unit), o.skin, 0, hy, hr, f, !o.lying && !o.dead && Math.sin(f) < -0.5, o.lying || o.dead ? 0 : unit.walk || 0);
   // (#326, 27.10, 27) a helmet: an iron cap over the top of the head, a rim round it
+  const hornedHelmet = unit.helmet && (unit.helmetGear === 'horned_helmet' || unit.helmet === 'horned_helmet');
   if (unit.helmet) {
-    const horned = unit.helmetGear === 'horned_helmet' || unit.helmet === 'horned_helmet';
+    const horned = !!hornedHelmet;
     ctx.fillStyle = horned ? '#5d6670' : '#8e9aa6'; ctx.strokeStyle = horned ? '#303840' : '#4d5660'; ctx.lineWidth = Math.max(0.8, hr * 0.14);
     ctx.beginPath(); ctx.arc(0, hy - hr * 0.08, hr * 1.06, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'; ctx.beginPath(); ctx.ellipse(-hr * 0.35, hy - hr * 0.62, hr * 0.28, hr * 0.14, -0.5, 0, Math.PI * 2); ctx.fill();
     if (horned) {
       ctx.strokeStyle = '#303840'; ctx.lineWidth = hr * 0.28; ctx.lineCap = 'round';
-      for (const side of [-1, 1]) {
+      for (const side of (look.singleHorn ? [1] : [-1, 1])) {
         ctx.beginPath(); ctx.moveTo(side * hr * 0.72, hy - hr * 0.45);
         ctx.quadraticCurveTo(side * hr * 1.35, hy - hr * 1.2, side * hr * 1.08, hy - hr * 1.55);
         ctx.stroke();
@@ -592,8 +595,8 @@ export function drawFigure(unit, o) {
   }
   // a demon's horns through its hair (and its helmet)
   // (#326: a big demon's curled, a ram's)
-  if (o.horns) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35), big);
-  if (o.dead) {
+  if (o.horns && !(look.singleHorn && hornedHelmet)) drawHorns(0, hy + hr * 0.35, hr * (look.female ? 1.15 : 1.35), big, !!look.singleHorn && !big);
+  if (o.dead || look.crossEyes) {
     ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2;
     for (const sx of [-1, 1]) { const cx = sx * hr * 0.38, cy = hy; ctx.beginPath(); ctx.moveTo(cx - 1.6, cy - 1.6); ctx.lineTo(cx + 1.6, cy + 1.6); ctx.moveTo(cx + 1.6, cy - 1.6); ctx.lineTo(cx - 1.6, cy + 1.6); ctx.stroke(); }
   } else if (Math.sin(f) > -0.5 && !o.lying) {
@@ -876,7 +879,7 @@ export function drawSelectedPaths() {
 
 // The settlers' shadows, into the frame's shadows (drawn under everything standing, see drawShadowLayer)
 export function drawSettlerShadows() {
-  if (!tinyUnit()) drawFigureShadows(game.settlers, getViewRect(60));
+  if (!simpleUnit()) drawFigureShadows(game.settlers, getViewRect(60));
 }
 
 export function drawSettlers(only = null) {

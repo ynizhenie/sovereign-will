@@ -1,7 +1,7 @@
 // Bodies and what stops them: walls, water, natural obstacles, the map's edge, and units pushed apart
 
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, getTileIndex, townHall } from '../world/index.js';
-import { forEachSettlerNear } from './neighbours.js';
+import { forEachEnemyNear, forEachSettlerNear, refreshMovingBuckets } from './neighbours.js';
 
 export function collidesWithBoxList(x, y, radius, objects, halfSize) {
   return objects.some(object => {
@@ -150,16 +150,21 @@ export function separateSettlersFromEnemies() {
 }
 
 export function separateSettlersFromEnemiesOnce() {
+  refreshMovingBuckets();
+  let maxEnemyRadius = 0;
+  for (const en of game.enemies) maxEnemyRadius = Math.max(maxEnemyRadius, en.radius || 0);
   let moved = false;
   for (const s of game.settlers) {
     if (s.towerAssignment || s.ghostly) continue; // up in a watchtower; (#314) a ghost: through everyone
     const sRadius = s.visualRadius || s.radius;
-    for (const en of game.enemies) {
-      if (en.ghostly) continue;
+    forEachEnemyNear(s.x, s.y, sRadius + maxEnemyRadius, en => {
+      if (en.ghostly) return;
       let dx = s.x - en.x, dy = s.y - en.y;
+      const reach = sRadius + en.radius;
+      if (Math.abs(dx) >= reach || Math.abs(dy) >= reach) return;
       let dist = Math.hypot(dx, dy);
-      const overlap = sRadius + en.radius - dist;
-      if (overlap <= 0) continue;
+      const overlap = reach - dist;
+      if (overlap <= 0) return;
       if (dist === 0) { dx = 1; dy = 0; dist = 1; }
       const nx = dx / dist, ny = dy / dist;
       const canMove = (unit, share, sign) => !collidesWithWall(unit.x + sign * nx * overlap * share, unit.y + sign * ny * overlap * share, Math.min(unit.radius, 13));
@@ -169,7 +174,7 @@ export function separateSettlersFromEnemiesOnce() {
       s.x += nx * overlap * settlerShare; s.y += ny * overlap * settlerShare;
       en.x -= nx * overlap * enemyShare; en.y -= ny * overlap * enemyShare;
       moved = true;
-    }
+    });
   }
   return moved;
 }
@@ -178,27 +183,58 @@ export function separateSettlersFromEnemiesOnce() {
 // pair of one side pushed apart, a part of the way a tick (gently: one walking past another isn't shoved), not
 // one asleep (lying), up in a tower, or a ghost; not into a wall. fightingOnly: only those that struck in the last
 // few seconds (settlers: two working at one tuft of grass were pushed out of its reach, both, for good)
-const ALLY_PUSH = 0.35, FIGHTING_TICKS = 180;
+const ALLY_PUSH = 0.35, FIGHTING_TICKS = 180, ALLY_SPATIAL_THRESHOLD = 100;
 export function separateAllies(units, fightingOnly = false) {
   const live = units.filter(u => !(game.plagueMode && (u.plagueUnit || u.plagueHero))
     && !u.asleep && !u.towerAssignment && !u.ghostly && !(u.hp <= 0)
     && (!fightingOnly || (u.struckAt !== undefined && game.pathTick - u.struckAt < FIGHTING_TICKS)));
+  const separatePair = (a, b, i, j) => {
+    const ar = Math.min(a.visualRadius || a.radius, 13) * 0.85, br = Math.min(b.visualRadius || b.radius, 13) * 0.85;
+    if (fightingOnly && game.gameMode === 'battle' && a.fightTarget &&
+      a.fightTarget === b.fightTarget && game.enemies.includes(a.fightTarget) && a.fightTarget.hp > 0) return;
+    let dx = a.x - b.x, dy = a.y - b.y;
+    if (Math.abs(dx) > ar + br || Math.abs(dy) > ar + br) return;
+    let dist = Math.hypot(dx, dy);
+    const overlap = ar + br - dist;
+    if (overlap <= 0) return;
+    if (dist === 0) { dx = (i % 2 ? 1 : -1); dy = 0; dist = 1; }
+    const push = overlap * ALLY_PUSH;
+    const nx = dx / dist * push, ny = dy / dist * push;
+    if (!a.isPossessed && !collidesWithWall(a.x + nx, a.y + ny, Math.min(a.radius, 13))) { a.x += nx; a.y += ny; }
+    if (!b.isPossessed && !collidesWithWall(b.x - nx, b.y - ny, Math.min(b.radius, 13))) { b.x -= nx; b.y -= ny; }
+  };
+
+  if ((units === game.settlers || units === game.enemies) && live.length > ALLY_SPATIAL_THRESHOLD) {
+    refreshMovingBuckets();
+    const order = new Map(live.map((unit, i) => [unit, i]));
+    if (units === game.settlers) {
+      const nearby = [];
+      for (let i = 0; i < live.length; i++) {
+        const a = live[i];
+        nearby.length = 0;
+        forEachSettlerNear(a.x, a.y, 48, b => {
+          const j = order.get(b);
+          if (j !== undefined && j > i) nearby.push(b);
+        });
+        nearby.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+        for (const b of nearby) separatePair(a, b, i, order.get(b));
+      }
+    } else {
+      for (let i = 0; i < live.length; i++) {
+        const a = live[i];
+        forEachEnemyNear(a.x, a.y, 48, b => {
+          const j = order.get(b);
+          if (j !== undefined && j > i) separatePair(a, b, i, j);
+        });
+      }
+    }
+    return;
+  }
+
   for (let i = 0; i < live.length; i++) {
-    const a = live[i], ar = Math.min(a.visualRadius || a.radius, 13) * 0.85;
+    const a = live[i];
     for (let j = i + 1; j < live.length; j++) {
-      const b = live[j], br = Math.min(b.visualRadius || b.radius, 13) * 0.85;
-      if (fightingOnly && game.gameMode === 'battle' && a.fightTarget &&
-        a.fightTarget === b.fightTarget && game.enemies.includes(a.fightTarget) && a.fightTarget.hp > 0) continue;
-      let dx = a.x - b.x, dy = a.y - b.y;
-      if (Math.abs(dx) > ar + br || Math.abs(dy) > ar + br) continue;
-      let dist = Math.hypot(dx, dy);
-      const overlap = ar + br - dist;
-      if (overlap <= 0) continue;
-      if (dist === 0) { dx = (i % 2 ? 1 : -1); dy = 0; dist = 1; }
-      const push = overlap * ALLY_PUSH;
-      const nx = dx / dist * push, ny = dy / dist * push;
-      if (!a.isPossessed && !collidesWithWall(a.x + nx, a.y + ny, Math.min(a.radius, 13))) { a.x += nx; a.y += ny; }
-      if (!b.isPossessed && !collidesWithWall(b.x - nx, b.y - ny, Math.min(b.radius, 13))) { b.x -= nx; b.y -= ny; }
+      separatePair(a, live[j], i, j);
     }
   }
 }
@@ -213,7 +249,7 @@ export function clampEntityToBounds(ent) {
 export function ejectEntitiesFromTile(x, y) {
   const allEntities = [...game.settlers, ...game.enemies];
   allEntities.forEach(ent => {
-    if (Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {
+    if (!ent.ghostly && Math.abs(ent.x - x) < 16 + ent.radius && Math.abs(ent.y - y) < 16 + ent.radius) {
       const offsets = [
         {x: 0, y: -TILE_SIZE}, {x: 0, y: TILE_SIZE}, {x: -TILE_SIZE, y: 0}, {x: TILE_SIZE, y: 0}
       ];

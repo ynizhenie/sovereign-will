@@ -40,10 +40,20 @@ export function handleCanvasClick() {
     closeSelectedCard();
     const hero = game.settlers.find(s => s.plagueHero && s.hp > 0);
     if (hero) {
-      hero.plagueMoveTarget = {
-        x: Math.max(hero.radius, Math.min(game.WORLD_WIDTH - hero.radius, mouse.x)),
-        y: Math.max(hero.radius, Math.min(game.WORLD_HEIGHT - hero.radius, mouse.y))
-      };
+      const grave = game.buildings
+        .filter(building => building.type === 'grave' && Math.hypot(mouse.x - building.x, mouse.y - building.y) < (building.radius || 14) + 10)
+        .sort((a, b) => Math.hypot(mouse.x - a.x, mouse.y - a.y) - Math.hypot(mouse.x - b.x, mouse.y - b.y))[0];
+      if (hero.plagueGraveTarget !== grave) {
+        hero.graveTarget = null; hero.graveTimer = 0; hero.raising = undefined;
+        hero.plagueGraveWorkActive = false;
+      }
+      hero.plagueGraveTarget = grave || null;
+      hero.plagueMoveTarget = grave
+        ? { x: grave.x, y: grave.y }
+        : {
+          x: Math.max(hero.radius, Math.min(game.WORLD_WIDTH - hero.radius, mouse.x)),
+          y: Math.max(hero.radius, Math.min(game.WORLD_HEIGHT - hero.radius, mouse.y))
+        };
     }
     return;
   }
@@ -65,8 +75,8 @@ export function handleCanvasClick() {
   if (game.buildMode === 'interact' && buildingTapped(tile)) return;
   // Blight tab (the undead): mark ground for a necromancer to blight; the same tile again takes the
   // mark away, as farm zones
-  if (game.buildMode === 'blight' || game.buildMode === 'blight_clear') {
-    toggleBlightZone(tile.gx, tile.gy, tile.gxIdx, tile.gyIdx, game.buildMode === 'blight_clear');
+  if (game.buildMode === 'blight') {
+    toggleBlightZone(tile.gx, tile.gy, tile.gxIdx, tile.gyIdx, false);
     return;
   }
   // Farming tab: paint (or clear) farm zone tiles
@@ -77,7 +87,13 @@ export function handleCanvasClick() {
     if (kind !== 'clear' && !inTerritory(tile.gx, tile.gy)) { showNotification(t('build.outside'), true); return; }
     // (#279) relief and post zones; Remove zone takes any off
     if (kind === 'relief' || kind === 'post' || kind === 'path') toggleZone(tile.gx, tile.gy, kind);
-    else { if (kind === 'clear') toggleZone(tile.gx, tile.gy, 'clear'); toggleFarmZone(tile.gx, tile.gy, kind); }
+    else {
+      if (kind === 'clear') {
+        if (getPlayerFaction().id === 'undead') toggleBlightZone(tile.gx, tile.gy, tile.gxIdx, tile.gyIdx, true);
+        toggleZone(tile.gx, tile.gy, 'clear');
+      }
+      toggleFarmZone(tile.gx, tile.gy, kind);
+    }
     return;
   }
   if (game.buildMode !== 'interact' && game.buildMode !== 'demolish' && !canPlaceHere(tile)) return;

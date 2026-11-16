@@ -226,7 +226,7 @@ function layWorldCamp(midX, midY, camp) {
     const grid = getGridPos(object.x, object.y);
     return Math.abs(grid.gx - midX) <= clear && Math.abs(grid.gy - midY) <= clear;
   };
-  for (const list of ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres', 'beachTiles']) {
+  for (const list of ['trees', 'cacti', 'boulders', 'grassList', 'berryBushes', 'sticks', 'pebbles', 'ironOres', 'coalOres']) {
     game[list] = game[list].filter(object => !inside(object));
   }
   game.boars = game.boars.filter(boar => !inside(boar));

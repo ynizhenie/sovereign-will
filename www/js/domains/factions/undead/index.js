@@ -1,6 +1,6 @@
 // The door of domains/factions/undead/: what it gives to the rest of the game. Other folders import from
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
-export { collectBones, corpsesToGraves, followMaster, necromancy, nextAutoBlightTile } from './undead.behaviours.js';
-export { drawBlight, drawRaising, drawSouls, drawStaff } from './undead.draw.js';
+export { collectBones, corpsesToGraves, followMaster, necromancy, nextAutoBlightTile, workGrave } from './undead.behaviours.js';
+export { drawBlight, drawPlagueReviveEffects, drawRaising, drawSouls, drawStaff } from './undead.draw.js';
 export { enemyNecromancy, fadeClearedBlight, getNecromancy, raiseTemporaryZombie, isBlighted, makeBonesAndRot, raiseOnBlight, tickLanterns, toggleBlightZone, updateTemporaryZombies, zombiesOf } from './undead.rules.js';

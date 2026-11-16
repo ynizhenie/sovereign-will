@@ -93,6 +93,8 @@ const REACH_SLACK = 2;
 /** @typedef {{ startIndex: number, signature: number | null, steps: Int16Array, visited: number[] }} Reach */
 /** @type {{ signature: number | null, size: number, byStart: Map<number, Reach> }} */
 let sharedReach = { signature: null, size: 0, byStart: new Map() };
+// The maps settlers share, dropped (a game loaded starts without them)
+export function resetSharedReach() { sharedReach = { signature: null, size: 0, byStart: new Map() }; }
 
 /** @param {Reach | undefined} r @param {number} index @param {number | null} signature @param {number} size */
 const nearTo = (r, index, signature, size) => !!r && r.signature === signature && r.steps.length === size && r.steps[index] !== -1 && r.steps[index] <= REACH_SLACK;

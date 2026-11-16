@@ -5,10 +5,10 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, helmetOf, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, getUnitHuntingDamageMultiplier, getUnitLevel, getUnitWeaponProgressionTrack, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
-import { getReachSteps, getSettlerReach } from '../../../engine/movement/index.js';
+import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
 import { woundBoar } from '../../economy/hunting/index.js';
 import { removeBuilding } from '../../economy/building/index.js';
-import { tileVariantHash } from '../../world/index.js';
+import { territoryRadiusToward, tileVariantHash } from '../../world/index.js';
 import { getEnemyFaction } from '../../factions/index.js';
 import { playSound } from '../../../app/index.js';
 import { shakeOnHit } from '../morale/index.js';
@@ -30,7 +30,7 @@ export function getProjectileAimPoint(shooter, target, projectileSpeed, projecti
   if (!['bow', 'crossbow', 'rifle'].includes(shooter.weapon) || getUnitLevel(shooter, 'ranged') < 2 || projectileSpeed <= 0) return point;
 
   const dx = target.x - originX, dy = target.y - originY;
-  const vx = target.moveVx || 0, vy = target.moveVy || 0;
+  const vx = target.aimVx || 0, vy = target.aimVy || 0;
   const a = vx * vx + vy * vy - projectileSpeed * projectileSpeed;
   const b = 2 * (dx * vx + dy * vy);
   const c = dx * dx + dy * dy;
@@ -307,19 +307,77 @@ export function addCorpse(unit, side, kind) {
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
   const weapon = side === 'enemy' && def.ranged ? def.weapon : unit.weapon;
-  game.corpses.push({
+  const corpse = {
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
     experience: unit.experience || 0, progression: unit.progression ? { ...unit.progression } : undefined,
     weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet, helmetGear: helmetOf(unit)?.id,
     pet: def.pet, stuck: unit.stuck
-  }); // (its look and body type, #306; its arrows stay in it, #326)
+  }; // (its look and body type, #306; its arrows stay in it, #326)
+  game.corpses.push(corpse);
+  return corpse;
+}
+
+/**
+ * @param {ReturnType<typeof addCorpse>} corpse
+ * @param {{ yield: Record<string, number>, items: string[] }} pile
+ * @param {number} [index]
+ */
+export function addCorpseLoot(corpse, pile, index = 0) {
+  const radius = Math.min(corpse.radius || 11, 16);
+  const angle = index * 2.1;
+  const distance = radius * 0.9 + index * 14;
+  const preferred = {
+    x: corpse.x + Math.cos(angle) * distance,
+    y: corpse.y + Math.sin(angle) * distance + 4
+  };
+  const reach = getSettlerReach({ x: townHall.x, y: townHall.y }, true);
+  const reachable = (x, y) => {
+    const grid = getGridPos(x, y);
+    return getReachSteps(reach, grid.gx, grid.gy) >= 0 && !isTileBlockedForSettler(grid.gx, grid.gy);
+  };
+  let position = reachable(preferred.x, preferred.y) ? preferred : null;
+  const origin = getGridPos(preferred.x, preferred.y);
+  for (let ring = 0; !position && ring <= 8; ring++) {
+    let bestDistance = Infinity;
+    for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+      const x = (origin.gx + dx) * TILE_SIZE + TILE_SIZE / 2;
+      const y = (origin.gy + dy) * TILE_SIZE + TILE_SIZE / 2;
+      if (!reachable(x, y)) continue;
+      const candidateDistance = Math.hypot(x - preferred.x, y - preferred.y);
+      if (candidateDistance < bestDistance) {
+        position = { x, y };
+        bestDistance = candidateDistance;
+      }
+    }
+  }
+  if (!position) {
+    let bestDistance = Infinity;
+    for (let gy = 0; gy < game.ROWS; gy++) for (let gx = 0; gx < game.COLS; gx++) {
+      if (getReachSteps(reach, gx, gy) <= 0) continue;
+      const x = gx * TILE_SIZE + TILE_SIZE / 2;
+      const y = gy * TILE_SIZE + TILE_SIZE / 2;
+      const candidateDistance = Math.hypot(x - preferred.x, y - preferred.y);
+      if (candidateDistance < bestDistance) {
+        position = { x, y };
+        bestDistance = candidateDistance;
+      }
+    }
+  }
+  game.loot.push({
+    ...pile,
+    ...(position || preferred),
+    hp: 1, maxHp: 1, priority: 0, corpseDropAge: 0
+  });
 }
 
 export function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
   game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
+  for (const pile of game.loot) if (pile.corpseDropAge !== undefined) pile.corpseDropAge += dt;
+  game.loot = game.loot.filter(pile => pile.corpseDropAge === undefined || pile.corpseDropAge < lifetime);
 }
 
 // Damage to an enemy, less what its armour, shield and helmet take, as a settler's (#203)
@@ -349,9 +407,8 @@ export function isDefenseAlert() {
     game.enemies.some(en => en.fromWave && !en.prepWave));
 }
 
-// How far the base reaches from the town hall that way (#232: posts stood at the same distance all round,
-// out by far buildings on one side, in the open on the other): its farthest building within 40° of the
-// angle, at least minRadius tiles
+// How far the base reaches from the town hall that way: the farthest building in a narrow cone (at most
+// 40°, with a two-tile half-width), at least minRadius tiles and no farther than the player's territory.
 // (#322: each building's angle and distance from the hall worked out once a tick: at night with no torch every settler asked
 // this for every resource it looked at, two arctangents a building each time)
 const bearingsOnce = onceThisTick();
@@ -361,17 +418,19 @@ const buildingBearings = () => bearingsOnce(() => {
   own.forEach((b, i) => { angles[i] = Math.atan2(b.y - townHall.y, b.x - townHall.x); distances[i] = Math.hypot(b.x - townHall.x, b.y - townHall.y); });
   return { angles, distances };
 });
-const TURN = Math.PI * 2, CONE = Math.PI * 40 / 180;
-export function baseRadiusToward(angle) {
+const TURN = Math.PI * 2, MAX_BUILDING_CONE = Math.PI * 40 / 180, BUILDING_HALF_WIDTH = 2 * TILE_SIZE;
+export function baseRadiusToward(angle, padding = 0) {
   const { angles, distances } = buildingBearings();
   let far = 0;
   for (let i = 0; i < angles.length; i++) {
     if (distances[i] <= far) continue;
     let d = Math.abs(angles[i] - angle) % TURN; // (the angle between them, the short way round)
     if (d > Math.PI) d = TURN - d;
-    if (d <= CONE) far = distances[i];
+    const cone = Math.min(MAX_BUILDING_CONE, Math.atan2(BUILDING_HALF_WIDTH, distances[i]));
+    if (d <= cone) far = distances[i];
   }
-  return Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  const radius = Math.max(far, GAME_CONFIG.defense.minRadius * TILE_SIZE);
+  return Math.min(radius, Math.max(0, territoryRadiusToward(angle, radius + padding) - padding));
 }
 
 // How far the base reaches from the town hall: its farthest building, at least minRadius tiles
@@ -408,12 +467,20 @@ export function getThreatArc() {
   return { centre: Math.round(centre / step) * step, half: Math.ceil(half / step) * step };
 }
 
-// An enemy inside the base, or next to one of its buildings or the town hall
-export function isInsideBase(en) {
+// An enemy close enough to threaten one of the base's structures
+export function isNearBaseStructure(en) {
   const near = GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE;
-  // (#322: the buildings near it, not all of them: asked for every enemy by every fighter, every tick)
-  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= getBaseRadius() + near + townHall.radius ||
+  return Math.hypot(en.x - townHall.x, en.y - townHall.y) <= near + townHall.radius ||
     someNear(game.buildings, en.x, en.y, near, b => b.side !== 'red' && Math.hypot(en.x - b.x, en.y - b.y) <= near);
+}
+
+// An enemy inside the directional base zone, or next to one of its buildings or the town hall
+export function isInsideBase(en) {
+  const dx = en.x - townHall.x, dy = en.y - townHall.y;
+  const distance = Math.hypot(dx, dy);
+  // Use the same directional boundary as the base zone; a distant building must not make the whole base a circle.
+  return distance <= baseRadiusToward(Math.atan2(dy, dx)) + GAME_CONFIG.defense.nearBaseTiles * TILE_SIZE + townHall.radius ||
+    isNearBaseStructure(en);
 }
 
 // Squads and their posts, rebuilt when the soldiers, the buildings or the wave's side change: squads of
@@ -521,6 +588,10 @@ export function tickProjectiles(dt = 1 / 60) {
     let proj = game.projectiles[i];
     if (!proj.startTile) proj.startTile = getGridPos(proj.x, proj.y);
     proj.x += proj.vx * k; proj.y += proj.vy * k; proj.life -= k;
+    if (proj.x < 0 || proj.y < 0 || proj.x >= game.WORLD_WIDTH || proj.y >= game.WORLD_HEIGHT) {
+      game.projectiles.splice(i, 1);
+      continue;
+    }
     let hit = false, host = null;
 
     if (proj.fromEnemy) {

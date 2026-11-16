@@ -135,6 +135,10 @@ test('six swordsmen on two raiders a few steps apart: both fought, at most three
   expect(r.most).toBeLessThanOrEqual(4); // three fighting, and now and then one passing by
 });
 
+test('a closer melee enemy stays the target after a distant archer attacks', async () => {
+  expect(await sim.closestMeleeTargetAfterRangedHit()).toEqual({ closest: true });
+});
+
 test('ranged units of both sides use dagger damage when breaking structures', async () => {
   const result = await sim.rangedUnitsUseDaggersOnStructures();
   expect(result.playerResults).toEqual([

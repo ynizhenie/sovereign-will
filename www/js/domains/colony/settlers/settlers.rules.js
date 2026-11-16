@@ -8,7 +8,7 @@ import { armorOf, hasGear, hasWorkingShield, helmetOf } from '../equipment/index
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
-import { addCorpse, bleed } from '../../conflict/combat/index.js';
+import { addCorpse, addCorpseLoot, bleed } from '../../conflict/combat/index.js';
 import { isDefeated } from '../../../modes/endless/index.js';
 import { battle } from '../../../modes/battle/index.js';
 import { playSound } from '../../../app/index.js';
@@ -72,7 +72,8 @@ export function changeSettlerType(s, type) {
 /** @returns {import('../../../engine/world/types.js').Settler} */
 export function createSettler(typeKey, id, x, y, extra = {}) {
   const t = GAME_CONFIG.settlerTypes[typeKey];
-  const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook());
+  const faction = Object.values(GAME_CONFIG.factions).find(f => (f.units || []).includes(typeKey))?.id || getPlayerFaction().id;
+  const look = extra.look || (t.pet ? newPetLook(t.pet) : newLook(faction, !!t.big));
   /** @type {import('../../../engine/world/types.js').Settler} */
   const s = {
     id, x, y, hp: t.hp, maxHp: t.hp, ...(t.pet === 'ghost' ? {} : { experience: 0, level: 1 }), ...extra,
@@ -220,6 +221,13 @@ export function damageSettler(settler, amount, attacker = null, attackerTrack = 
     settler.lastAttacker = attacker;
     settler.lastAttackerTrack = attackerTrack || getUnitWeaponProgressionTrack(attacker) || undefined;
     settler.lastAttackedTick = game.pathTick;
+    if (game.enemies.includes(attacker)) {
+      const lockActive = settler.retaliationUntil > game.pathTick;
+      if (!lockActive || settler.retaliationTarget === attacker) {
+        settler.retaliationTarget = attacker;
+        settler.retaliationUntil = game.pathTick + 90;
+      }
+    }
     if (game.gameMode === 'endless' && (petKindOf(settler) === 'dog' || petKindOf(settler) === 'beast')) {
       const keeper = game.settlers.find(s => s.id === settler.petKeeperId);
       if (keeper && keeper.hp > 0 && !keeper.isPossessed) {
@@ -235,6 +243,12 @@ export function damageSettler(settler, amount, attacker = null, attackerTrack = 
 export function getRecentAttacker(settler) {
   const recent = game.pathTick - (settler.lastAttackedTick || -Infinity) < 4 * 60;
   return recent && game.enemies.includes(settler.lastAttacker) ? settler.lastAttacker : null;
+}
+
+// Keep retaliating against one attacker briefly so incoming shots from a group don't make a settler zigzag.
+export function getRetaliationTarget(settler) {
+  const target = settler.retaliationTarget;
+  return settler.retaliationUntil > game.pathTick && target?.hp > 0 && game.enemies.includes(target) ? target : null;
 }
 
 export function getPossessed() { return game.settlers.find(s => s.isPossessed); }
@@ -314,17 +328,28 @@ export function tickMeals(dt) {
 }
 
 // What a fallen settler held (#279): each thing, with the same chance as an enemy's (GAME_CONFIG.loot), lies
-// where it fell for the others to pick up (into the armory); the rest is lost. A medic's herbs go back to the
-// stock. Endless only (a battle's units come back as they were placed)
-export function dropSettlerLoot(s) {
-  if (s.bagHerbs > 0) { stock.herbs += s.bagHerbs; s.bagHerbs = 0; }
-  if (game.gameMode !== 'endless' || game.plagueMode) return; // (#404: the Plague's dead keep theirs, to rise with it)
+// where it fell for the others to pick up (into the armory); the rest is lost. Endless only (a battle's units
+// come back as they were placed)
+/** @param {ReturnType<typeof addCorpse>|null} [corpse] */
+export function dropSettlerLoot(s, corpse = null) {
+  const endlessLoot = game.gameMode === 'endless' && !game.plagueMode;
+  let lootIndex = 0;
+  if (s.bagHerbs > 0) {
+    if (endlessLoot && corpse) addCorpseLoot(corpse, { yield: { herbs: s.bagHerbs }, items: [] }, lootIndex++);
+    else stock.herbs += s.bagHerbs;
+    s.bagHerbs = 0;
+  }
+  if (!endlessLoot) return; // (#404: the Plague's dead keep theirs, to rise with it)
   const held = [];
   if (s.weapon && s.weapon !== 'fist' && getDefinition('weapons', s.weapon)) held.push(`weapons:${s.weapon}`);
   if (s.tool && s.tool !== 'none' && getDefinition('tools', s.tool)) held.push(`tools:${s.tool}`);
   for (const id of Object.keys(GAME_CONFIG.gear)) if (hasGear(s, id) && getDefinition('gear', id)) held.push(`gear:${id}`);
   held.forEach((key, i) => {
     if (rand() >= GAME_CONFIG.loot.itemChance) return;
+    if (corpse) {
+      addCorpseLoot(corpse, { yield: {}, items: [key] }, i + lootIndex);
+      return;
+    }
     const a = i * 2.1;
     game.loot.push({ x: s.x + Math.cos(a) * 8 * i, y: s.y + Math.sin(a) * 8 * i, hp: 1, maxHp: 1, priority: 0, yield: {}, items: [key] });
   });
@@ -338,9 +363,9 @@ export function removeDeadSettlers() {
       if (!s.fled) {
         addUnitExperience(s.lastAttacker, 1, s.lastAttackerTrack);
         onUnitDeath(s, 'settler');
-        dropSettlerLoot(s);
       }
-      if (!s.crumbled) addCorpse(s, 'settler', s.type); // a crumbled zombie leaves only rot
+      const corpse = !s.crumbled ? addCorpse(s, 'settler', s.type) : null; // a crumbled zombie leaves only rot
+      if (!s.fled) dropSettlerLoot(s, corpse);
       if (game.selectedSettler === s) game.selectedSettler = null;
     }
   });

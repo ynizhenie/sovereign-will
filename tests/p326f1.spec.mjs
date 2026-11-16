@@ -54,6 +54,32 @@ test('a move order wakes a settler sleeping at night (#326)', async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test('a move order and possession wake a sleeping pet (#326)', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(() => {
+    spawnSettler('dog');
+    const dog = settlers.find(s => s.type === 'dog');
+    const start = { x: dog.x, y: dog.y };
+    const spot = { x: townHall.x - 200, y: townHall.y - 150 };
+    dog.petSleep = 30;
+    selectedSettler = dog; selectedGroup = [];
+    commandTap([dog], spot.x, spot.y);
+    for (let i = 0; i < 60; i++) update(1 / 60);
+    const wokeForOrder = dog.petSleep === 0 && Math.hypot(dog.x - start.x, dog.y - start.y) > 10;
+
+    clearOrders(dog);
+    dog.petSleep = 30;
+    switchPossession();
+    update(1 / 60);
+    return {
+      wokeForOrder,
+      wokeWhenPossessed: dog.isPossessed && dog.petSleep === 0 && dog.activity === 'playerControlled'
+    };
+  });
+  expect(r).toEqual({ wokeForOrder: true, wokeWhenPossessed: true });
+  expect(errors).toEqual([]);
+});
+
 test('campfire seats are only offered while the fire is burning (#326)', async ({ page }) => {
   const errors = await start(page);
   const r = await page.evaluate(() => {

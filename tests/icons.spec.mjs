@@ -35,3 +35,37 @@ test('every icon the config and the texts name has a drawing, and none is left a
   expect(r).toEqual({ missing: [], leftOnScreen: false });
   expect(errors).toEqual([]);
 });
+
+test('rice zone icon uses a white fill and edge', async ({ page }) => {
+  await openGame(page);
+  const colors = await page.evaluate(() => {
+    const fills = [], strokes = [];
+    const originalFill = ctx.fill, originalStroke = ctx.stroke;
+    ctx.fill = function (...args) {
+      fills.push(String(ctx.fillStyle));
+      return originalFill.apply(this, args);
+    };
+    ctx.stroke = function (...args) {
+      strokes.push(String(ctx.strokeStyle));
+      return originalStroke.apply(this, args);
+    };
+    try { ICONS.zone_rice(ctx); } finally { ctx.fill = originalFill; ctx.stroke = originalStroke; }
+    return { fills, strokes };
+  });
+  expect(colors.fills).toContain('rgba(255, 255, 255, 0.45)');
+  expect(colors.strokes).toContain('#ffffff');
+});
+
+test('club HUD icon runs diagonally like the other weapons', async ({ page }) => {
+  await openGame(page);
+  const pixels = await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 32;
+    drawIcon(canvas.getContext('2d'), 'club', 16, 16, 32);
+    const data = canvas.getContext('2d').getImageData(0, 0, 32, 32).data;
+    const alphaAt = (x, y) => data[(y * 32 + x) * 4 + 3];
+    return { head: alphaAt(22, 10), grip: alphaAt(10, 22), horizontal: alphaAt(24, 16) };
+  });
+  expect(pixels.head).toBeGreaterThan(0);
+  expect(pixels.grip).toBeGreaterThan(0);
+  expect(pixels.horizontal).toBe(0);
+});

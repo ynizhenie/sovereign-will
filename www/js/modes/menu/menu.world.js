@@ -75,12 +75,6 @@ export function enterMenuWorld(scene = '') {
   else if (menuWorld.scene === 'hunt') menuWorld.faction = menuWorld.huntFaction;
   else if (menuWorld.scene === 'graveyard') {
     menuWorld.faction = 'undead';
-    menuWorld.playerColor = GAME_CONFIG.factions.undead.color;
-    if (menuWorld.enemyColor === menuWorld.playerColor) {
-      const enemyColor = GAME_CONFIG.factionColors.find(color => color !== menuWorld.playerColor);
-      if (!enemyColor) throw new Error('The graveyard scene needs a distinct enemy colour');
-      menuWorld.enemyColor = enemyColor;
-    }
   } else menuWorld.faction = 'humans'; // (the others are the humans')
   document.body.classList.add('menu-world');
   fitCanvasToScreen();

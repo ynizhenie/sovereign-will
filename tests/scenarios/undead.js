@@ -307,5 +307,50 @@ Object.assign(window.sim, (() => {
       } };
   }
 
-  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerControl, soulsAndGhosts, necromancerHeals, undeadBlight: blight, undeadEnemies };
+  function ghostFlight({ seed = 'undead-ghost-flight' } = {}) {
+    asUndead(seed);
+    clearResources();
+    const origin = getGridPos(townHall.x, townHall.y);
+    const row = origin.gy + 6, startX = tileCenter(origin.gx - 5, row).x;
+    const target = tileCenter(origin.gx + 5, row);
+    const rock = tileCenter(origin.gx - 1, row), tree = tileCenter(origin.gx + 1, row);
+    naturalRocks.push({ ...rock, hp: 100, maxHp: 100 });
+    trees.push({ ...tree, hp: 100, maxHp: 100 });
+    invalidateAllPaths();
+
+    const playerGhost = createSettler('ghost', 9001, rock.x, rock.y);
+    settlers = [playerGhost]; enemies = [];
+    rescueSettlerFromResource(playerGhost);
+    const stayedInRock = Math.hypot(playerGhost.x - rock.x, playerGhost.y - rock.y) < 1;
+    ejectEntitiesFromTile(rock.x, rock.y);
+    const stayedAfterEjection = Math.hypot(playerGhost.x - rock.x, playerGhost.y - rock.y) < 1;
+
+    const walkThrough = (unit, isEnemy) => {
+      unit.x = startX;
+      unit.y = target.y;
+      const visited = new Set();
+      for (let i = 0; i < 180; i++) {
+        moveEntityTowards(unit, target.x, target.y, unit.speed, isEnemy, 1 / 60);
+        const grid = getGridPos(unit.x, unit.y);
+        visited.add(`${grid.gx},${grid.gy}`);
+      }
+      return {
+        passedRock: visited.has(`${origin.gx - 1},${row}`),
+        passedTree: visited.has(`${origin.gx + 1},${row}`),
+        reachedTarget: Math.hypot(unit.x - target.x, unit.y - target.y) < 1
+      };
+    };
+    const playerPath = walkThrough(playerGhost, false);
+    const enemyGhost = createConfiguredEnemy({ x: startX, y: target.y }, 'undead_ghost');
+    settlers = []; enemies = [enemyGhost];
+    const enemyPath = walkThrough(enemyGhost, true);
+    return {
+      stayedInRock,
+      stayedAfterEjection,
+      playerPath,
+      enemyPath
+    };
+  }
+
+  return { undeadRaiseFromAfar: raiseFromAfar, undeadRotSpent: rotSpent, undeadColony, bowMakesSkeleton, necromancerRaises, necromancerControl, soulsAndGhosts, necromancerHeals, undeadBlight: blight, undeadEnemies, undeadGhostFlight: ghostFlight };
 })());

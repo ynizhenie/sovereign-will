@@ -159,13 +159,13 @@ export function makeBattleUnit(entry) {
   // and a new look every time would give every unit another face — and another man or a woman
   // (#314) a pet's its own look: a coat of its kind, not a man's
   const pet = GAME_CONFIG.settlerTypes[preset.type].pet;
-  const look = entry.look || (entry.look = pet ? newPetLook(pet) : newLook());
+  const look = entry.look || (entry.look = pet ? newPetLook(pet) : newLook(preset.faction, !!GAME_CONFIG.settlerTypes[preset.type].big));
   // (#326) on the red half: an enemy, the very same unit
   const enemyKey = battleSide(entry.x) === 'red'
     ? preset.preset === 'rifle' ? battleRifleEnemyKey(preset.faction) : presetEnemyKey(preset.faction, preset.preset)
     : null;
   if (enemyKey) {
-    const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, enemyKey);
+    const en = createConfiguredEnemy({ x: entry.x, y: entry.y }, enemyKey, undefined, undefined, look);
     en.battleEntry = entry;
     if (preset.preset === 'rifle') Object.assign(en, { camouflage: true, rifleAmmo: GAME_CONFIG.weapons.rifle.combat.magazine });
     en.look = look;

@@ -14,7 +14,7 @@ export const enemiesConfig = {
   // healer: walks up to the most hurt of its own side within range px and heals it from healRange;
   //   bagSize: herbs carried, tentStock: shared stock in enemy tents, refill: herbs taken at once,
   //   healSeconds: seconds between herbs; tool: what it's drawn holding instead of a weapon.
-  // reward: added to the stock when it dies.
+  // reward: added to stock outside Endless; in Endless it lies by the corpse for workers to collect.
   enemies: {
     raider_club: { id: 'raider_club', hp: 50, speed: 0.95, damage: 10, reward: { food: 1 }, weapon: 'club',
       type: 'normal', radius: 10, waveKey: 'club', buildsTents: true, reach: 6, siege: { buildings: 10, resources: 2 } },
@@ -89,9 +89,8 @@ export const enemiesConfig = {
   // player points at is hunted; any settler within fleeTiles of one, it runs off the map
   scouts: { fromWave: 2, checkSeconds: 40, chance: 0.5, max: 2, staySeconds: 40, fleeTiles: 5 },
 
-  // loot (#210, #232): for each thing a fallen enemy held (its weapon, armour, shield), itemChance it drops
-  // that thing itself, lying on the ground (into the armory once carried in); a fallen settler's too (#279)
-  loot: { itemChance: 0.35 },
+  // loot (#210, #232): itemChance is per held item; resourceChance is for its resource reward in Endless
+  loot: { itemChance: 0.35, resourceChance: 0.5 },
 
   // Waves use battle presets. Each preset's weight changes smoothly after its unlock wave; bigger bodies and
   // pets enter later. Gear chances also grow independently as the waves advance.

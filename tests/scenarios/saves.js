@@ -31,7 +31,12 @@ Object.assign(window.sim, (() => {
     tower.guards = [archer]; archer.towerAssignment = tower; // pointers both ways, as the save is made
     const saved = JSON.parse(JSON.stringify(serializeGame()));
     const before = snapshot();
-    // how it goes on without saving
+    // how it goes on without saving: from no caches, as a loaded game starts (#322: a settler's walking map is
+    // used while it's a step or two from where it was worked out, and shared with its neighbours, so a game
+    // that kept them goes a little differently from one that worked them out again)
+    for (const unit of [...settlers, ...enemies]) for (const key of UNSAVED_FIELDS) delete unit[key];
+    for (const s of settlers) storageChoice.delete(s);
+    resetSharedReach();
     run(5, { holdWaves: false });
     const goesOn = snapshot();
     sides.player.faction = 'humans';

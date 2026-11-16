@@ -46,6 +46,7 @@ export const game = {
   armory: {},           // tools, weapons and gear in store, by '<category>:<id>' (loot, #210)
   // the things on the map (WORLD_LISTS)
   settlers: [],
+  rareAppearances: { pinkHair: false, demonSingleHorn: false, undeadCrossEyes: false },
   enemyCamps: [],          // persistent enemy camps on the Endless map
   enemyCamp: null,          // the enemy's persistent camp on the Endless map
   enemyCampCount: 1,        // selected Endless camp count, 0..3
@@ -76,7 +77,7 @@ export const game = {
   pebbles: [],
   logs: [],             // pieces of a felled tree's log lying about (#298)
   stumps: [],           // { x, y } where a tree was felled: its stump, till a tree grows again (see finishHarvest)
-  loot: [],             // { x, y, yield, items } piles fallen enemies dropped (#210)
+  loot: [],             // { x, y, yield, items, corpseDropAge? } piles dropped by units (#210)
   piles: [],
   dayTime: 0,           // seconds into the day (#257, world.daytime.js); the game starts in the morning
   editorHideTimeAndWeather: true,
@@ -84,6 +85,7 @@ export const game = {
   wasNight: false,
   autoBlight: false,    // the undead's necromancers blight by themselves (#253); autoBlightDone: none left to
   autoBlightDone: false,
+  showBaseZone: false,
   portalQueue: [],      // a wave's enemy demons still to come out of the portals (#250)
   portalTimer: 0,            // { x, y, type, amount } stock on the ground by a full storage (#248, storage.stores.js)
   ironOres: [],

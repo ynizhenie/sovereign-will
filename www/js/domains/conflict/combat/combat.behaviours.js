@@ -4,16 +4,19 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { TILE_SIZE, firstOf, game, onceThisTick, townHall } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isArrowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
-import { faceTowards, getRecentAttacker } from '../../colony/settlers/index.js';
+import { faceTowards, getRecentAttacker, getRetaliationTarget } from '../../colony/settlers/index.js';
 import { collidesWithBoxList, moveEntityTowards } from '../../../engine/movement/index.js';
-import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInsideBase, performAttack, shouldUseRangedDagger } from './combat.rules.js';
+import { NORMAL_BODIES, getBaseRadius, getDefensePlan, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInsideBase, isNearBaseStructure, performAttack, shouldUseRangedDagger } from './combat.rules.js';
 import { getNecromancy } from '../../factions/undead/index.js';
 import { getEnemyDef } from '../waves/index.js';
 
 const isCampGuardUnavailable = en => en.campGuard &&
   !(game.gameMode === 'battle' || (game.raidActive && en.campId === game.raidCampId));
-const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || en.menuThreat || isInsideBase(en) ||
-  ((!game.wavePreparation || game.wavePreparation.stage === 'march') && (en.fromWave || en.waveSummoned)));
+const isPreparingWaveEnemy = en => !!game.wavePreparation &&
+  en.fromWave && en.prepWave === game.wavePreparation.wave;
+const isPrematureWaveTarget = en => isPreparingWaveEnemy(en) && !isNearBaseStructure(en);
+const canDefendEnemy = en => !en.ghostly && !isPrematureWaveTarget(en) && (game.gameMode === 'battle' || en.menuThreat || isInsideBase(en) ||
+  (!game.wavePreparation && (en.fromWave || en.waveSummoned)));
 
 // (#322) The enemies there are to fight, and which of them are inside the base: the same for every settler of a tick (they
 // move after the settlers have had theirs), so found once in it, not by each of sixty fighters for each of sixty enemies
@@ -21,9 +24,9 @@ const canDefendEnemy = en => !en.ghostly && (game.gameMode === 'battle' || en.me
 function threatsThisTick(tick) {
   if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
     const inside = new Set(game.enemies.filter(isInsideBase));
-    const marching = !game.wavePreparation || game.wavePreparation.stage === 'march';
-    const list = game.enemies.filter(en => !en.ghostly && !en.menuStaged && !isCampGuardUnavailable(en) && // (a ghost isn't fought, as canDefendEnemy)
-      (game.gameMode === 'battle' || en.menuThreat || inside.has(en) || (marching && (en.fromWave || en.waveSummoned))));
+    const waveStarted = !game.wavePreparation;
+    const list = game.enemies.filter(en => !en.ghostly && !en.menuStaged && !isCampGuardUnavailable(en) && !isPrematureWaveTarget(en) &&
+      (game.gameMode === 'battle' || en.menuThreat || inside.has(en) || (waveStarted && (en.fromWave || en.waveSummoned))));
     tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
   }
   return tick.threats;
@@ -91,9 +94,12 @@ export function holdPost(s, tick) {
 // hit it in the last second and a half. Tower guards keep shooting from up there; an archer with no arrows
 // can't; the possessed are the player's
 export function strikeBack(s, tick) {
-  if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
+  // The menu demon picks its nearest foe in fightEnemies; don't divert it to whoever last hit it.
+  if (s.isPossessed || s.towerAssignment ||
+      (game.gameMode === 'menu' && game.menuScene === 'demon' && s.type === 'demon') ||
+      (game.gameMode === 'menu' && !game.enemies.length)) return false;
   if (s.plagueUnit && game.settlers.some(master => master.id === s.masterId && master.plagueMoveTarget)) return false;
-  const recentAttacker = getRecentAttacker(s);
+  const recentAttacker = getRetaliationTarget(s);
   const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
     ? recentAttacker : getPetAttackTarget(s);
   if (attacker && isCampGuardUnavailable(attacker)) return false;
@@ -101,7 +107,19 @@ export function strikeBack(s, tick) {
   if (!attacker || (attacker === recentAttacker && game.pathTick - (s.lastAttackedTick || 0) > 90)) return false;
   if (attacker === s.catchTarget || (attacker.toCatch && attacker.toCatch !== s.id)) return false; // (one being caught for a cage, #250)
   if (isArrowWeapon(s.weapon) && (!s.quiver || (s.arrows || 0) <= 0)) return false;
-  return engageEnemy(s, tick, attacker, attacker, tick.dt);
+  let target = attacker;
+  const attackerDistance = Math.hypot(attacker.x - s.x, attacker.y - s.y);
+  let nearestDistance = Infinity;
+  for (const enemy of threatsThisTick(tick).list) {
+    if (enemy === attacker || (enemy.toCatch && enemy.toCatch !== s.id)) continue;
+    const distance = Math.hypot(enemy.x - s.x, enemy.y - s.y);
+    if (distance < nearestDistance) { nearestDistance = distance; target = enemy; }
+  }
+  // (another only if it's a tile nearer: two shooting from about as far, it keeps to the one it's after)
+  if (target !== attacker && (nearestDistance >= attackerDistance - TILE_SIZE ||
+      (!isRangedWeapon(s.weapon) && meleeFull(target, tick)))) target = attacker;
+  s.fightTarget = target;
+  return engageEnemy(s, tick, target, target === attacker ? attacker : null, tick.dt);
 }
 
 // Fight enemies: strike back at an attacker first, otherwise the enemy closest to the town hall.
@@ -140,6 +158,18 @@ export function fightEnemies(s, tick) {
   return engageEnemy(s, tick, targetEnemy, attacker, dt);
 }
 
+export function shelterFromEnemy(s, tick) {
+  const enemy = s.shelteringFromEnemy;
+  if (!enemy) return false;
+  if (!game.enemies.includes(enemy) || !canDefendEnemy(enemy) || !canShelterFrom(s, tick, enemy, null)) {
+    s.shelteringFromEnemy = null;
+    return false;
+  }
+  if (Math.hypot(townHall.x - s.x, townHall.y - s.y) > townHall.radius + 15) moveSettlerToTownHall(s, s.speed, tick.dt);
+  s.patrolTarget = null;
+  return true;
+}
+
 const MENU_GUARD = 4 * 30; // (how far from the menu's warehouse its squad goes for a zombie)
 
 const KEEP_TARGET = 40; // (px: as an enemy's, chooseEnemyTarget)
@@ -161,7 +191,7 @@ function getPetAttackTarget(s) {
 function chooseSettlerTarget(s, tick) {
   let targetEnemy = null;
   let minBaseDist = Infinity;
-  const isWaveThreat = en => en.menuThreat || ((!game.wavePreparation || game.wavePreparation.stage === 'march') &&
+  const isWaveThreat = en => en.menuThreat || (!game.wavePreparation &&
     (en.fromWave || en.waveSummoned));
   const threats = threatsThisTick(tick);
   const candidates = threats.list.filter(en => !(en.toCatch && en.toCatch !== s.id));
@@ -192,7 +222,7 @@ function chooseSettlerTarget(s, tick) {
     if (marked) targetEnemy = marked;
   }
   // ...but whoever is hitting this settler right now comes first of all
-  const recentAttacker = getRecentAttacker(s);
+  const recentAttacker = getRetaliationTarget(s);
   const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
     ? recentAttacker : getPetAttackTarget(s);
   // a squad soldier goes for the enemy that came near its post (see holdPost)
@@ -201,8 +231,9 @@ function chooseSettlerTarget(s, tick) {
   // ...or the one its captain gave it (#248), unless the player marked one for it
   if (s.captainTarget && (!game.enemies.includes(s.captainTarget) || isCampGuardUnavailable(s.captainTarget) || !canDefendEnemy(s.captainTarget))) s.captainTarget = null;
   if (!attacker && s.captainTarget && !(targetEnemy && targetEnemy.markedTarget)) targetEnemy = s.captainTarget;
-  if (attacker) targetEnemy = attacker;
-  // in melee, not a heap on one enemy: one that has enough on it already gives way to the next best (#208)
+  if (attacker && (!targetEnemy ||
+      Math.hypot(attacker.x - s.x, attacker.y - s.y) < Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y))) targetEnemy = attacker;
+  // Keep the melee limit, but don't send units to another enemy just because others are still approaching this one.
   if (targetEnemy && !attacker && !isRangedWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
     const others = candidates.filter(en => en !== targetEnemy && !meleeFull(en, tick));
     const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
@@ -226,10 +257,9 @@ function chooseSettlerTarget(s, tick) {
   return { targetEnemy, attacker };
 }
 
-// Enough settlers in melee on that enemy this tick already (GAME_CONFIG.combatAI)
 function meleeFull(en, tick) {
   const ai = GAME_CONFIG.combatAI;
-  return (tick.meleeOn.get(en) || 0) >= (en.type === 'big' ? ai.meleePerBig : ai.meleePerEnemy);
+  return (tick.meleeFighting.get(en) || 0) >= (en.type === 'big' ? ai.meleePerBig : ai.meleePerEnemy);
 }
 
 // An archer's arrows: from the storage it's at, or it walks to a storage when empty (#326: a platform keeps
@@ -295,19 +325,16 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
   const emptyQuiverDagger = usesDagger(s); // (#326: out of arrows, a dagger: melee)
   const shoots = rangedWeapon && !emptyQuiverDagger && !closeDagger;
 
-  // (a necromancer's staff fights: it doesn't shelter at the town hall, #232)
-  let isUnarmedOrRod = (s.weapon === 'fist') && !getNecromancy(s);
-  let isToolWorker = isUnarmedOrRod && (hasAxeTool(s.tool) || hasPickaxeTool(s.tool));
-  let enemyNearTownHall = targetEnemy && Math.hypot(targetEnemy.x - townHall.x, targetEnemy.y - townHall.y) < 240;
   // tent-summoned enemies alone don't call workers off their work, unless they come close
   // workers keep working through a wave and only react to an enemy close by
   const alarm = tick.isWaveActive && !tick.tentAssault ? GAME_CONFIG.defense.workerAlarm : 260;
   const aloneNecromancer = !!getNecromancy(s) && !game.settlers.some(o => o !== s && o.hp > 0 && o.tool !== 'necro_staff' && o.role !== 'pet');
-  const aloneMedic = hasToolFamily(s.tool, 'medic') && !game.settlers.some(o => o !== s && o.hp > 0 && o.role !== 'pet' &&
-    (o.weapon !== 'fist' || getNecromancy(o)));
+  const aloneMedic = isAloneMedic(s);
+  const canShelter = canShelterFrom(s, tick, targetEnemy, attacker);
   if (targetEnemy && (distToClosestEn < alarm || s.role !== 'worker' || aloneNecromancer || aloneMedic)) {
     // (in battle mode there's no town hall to shelter at: the unarmed fight too)
-    if (isUnarmedOrRod && tick.defendersCount > 0 && !(isToolWorker && enemyNearTownHall) && !attacker && !aloneMedic && game.gameMode !== 'battle') {
+    if (canShelter) {
+      s.shelteringFromEnemy = targetEnemy;
       let distToTown = Math.hypot(townHall.x - s.x, townHall.y - s.y);
       if (distToTown > townHall.radius + 15) {
         moveSettlerToTownHall(s, s.speed, dt);
@@ -346,6 +373,7 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
       ? dist < approach && hasLineOfFire(s.x, s.y, targetEnemy.x, targetEnemy.y)
       : dist <= Math.max(approach + extraBody, pastBodies) && hasMeleeReach(s, targetEnemy);
     if (inReach) {
+      if (!shoots) tick.meleeFighting.set(targetEnemy, (tick.meleeFighting.get(targetEnemy) || 0) + 1);
       performAttack(s, targetEnemy.x, targetEnemy.y, closeDagger, targetEnemy);
     } else if (attacker !== targetEnemy && breakWhatsInTheWay(s)) {
       // (#326) the enemy's wall or door in its way, broken through
@@ -367,6 +395,19 @@ export function engageEnemy(s, tick, targetEnemy, attacker, dt) {
     return true;
   }
   return false;
+}
+
+function canShelterFrom(s, tick, enemy, attacker) {
+  if (game.gameMode === 'battle' || !tick.defendersCount || attacker || !enemy) return false;
+  if (s.weapon !== 'fist' || getNecromancy(s)) return false;
+  const toolWorker = hasAxeTool(s.tool) || hasPickaxeTool(s.tool);
+  const enemyNearTownHall = Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) < 240;
+  return !(toolWorker && enemyNearTownHall) && !isAloneMedic(s);
+}
+
+function isAloneMedic(s) {
+  return hasToolFamily(s.tool, 'medic') && !game.settlers.some(o => o !== s && o.hp > 0 && o.role !== 'pet' &&
+    (o.weapon !== 'fist' || getNecromancy(o)));
 }
 
 // (#326) On a way through the enemy's buildings (findPathAStar's, when the way round is long): the one next on

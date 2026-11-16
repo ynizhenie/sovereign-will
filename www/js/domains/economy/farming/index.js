@@ -4,5 +4,5 @@
 export { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from './farming.behaviours.js';
 // (an apple tree is picked where any other resource is worked: see gathering.behaviours)
 export { pickApplesFrom } from '../gathering/index.js';
-export { drawFarmPlots, drawFarmZones } from './farming.draw.js';
+export { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from './farming.draw.js';
 export { growCrops, makeAppleTree, placeAppleTrees, toggleFarmZone } from './farming.rules.js';

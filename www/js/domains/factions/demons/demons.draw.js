@@ -13,7 +13,11 @@ export function drawPortal(x, y, color) {
 // A demon's horns on its head (x, y its top's middle, r the head's size). Bone-pale with a dark edge, they show on a
 // dark head too (#251). (#326) One style for every demon: a horn thick at the head, curving out and up and thin at
 // the tip; a big demon's (curled) a ram's, out, up and round back down
-export function drawHorns(x, y, r, curled = false) {
+export function drawHorns(x, y, r, curled = false, single = false) {
+  if (single) {
+    drawHorn(x + r * 0.1, y - r * 0.72, 1, r * (curled ? 1.25 : 0.8), curled);
+    return;
+  }
   for (const side of [-1, 1]) drawHorn(x + side * r * 0.42, y - r * 0.72, side, r * (curled ? 1.25 : 0.8), curled);
 }
 

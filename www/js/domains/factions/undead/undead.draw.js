@@ -64,6 +64,33 @@ export function drawSouls() {
   }
 }
 
+export function drawPlagueReviveEffects() {
+  if (!game.plagueMode || !game.plague?.reviveFx?.length) return;
+  for (const fx of game.plague.reviveFx) {
+    const progress = Math.min(1, fx.t / fx.dur), alpha = 1 - progress;
+    const radius = 7 + progress * 18;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#d4a0e8'; ctx.lineWidth = 2 * alpha;
+    ctx.beginPath(); ctx.arc(fx.x, fx.y, radius, 0, Math.PI * 2); ctx.stroke();
+    const glow = ctx.createRadialGradient(fx.x, fx.y, 1, fx.x, fx.y, radius);
+    glow.addColorStop(0, 'rgba(190, 120, 220, 0.6)');
+    glow.addColorStop(1, 'rgba(100, 45, 130, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(fx.x, fx.y, radius, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 6; i++) {
+      const angle = i * Math.PI / 3 + progress * 1.5;
+      const distance = 5 + progress * 16;
+      ctx.fillStyle = '#e6c6f2';
+      ctx.beginPath();
+      ctx.arc(fx.x + Math.cos(angle) * distance, fx.y + Math.sin(angle) * distance - progress * 12,
+        1.5 * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 // The undead's blighted ground, and ground marked for it (while the Blight tab is open)
 export function drawBlight() {
   const fading = new Map(game.blightZones.filter(z => z.clearing !== undefined).map(z => [`${z.x},${z.y}`, z.clearing / GAME_CONFIG.blight.clearSeconds]));

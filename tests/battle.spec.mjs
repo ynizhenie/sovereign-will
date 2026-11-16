@@ -801,6 +801,36 @@ test('player and enemy medics and necromancers follow separate nearby fighters, 
   });
 });
 
+test('player and enemy medics and necromancers prioritize melee fighters over closer archers', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const playerNecromancer = Object.assign(createSettler('zombie', 1, 250, 300), { tool: 'necro_staff' });
+    const playerMedic = Object.assign(createSettler('normal', 2, 270, 300), { tool: 'medbag' });
+    const playerArcher = Object.assign(createSettler('normal', 3, 260, 300), { weapon: 'bow', role: 'archer' });
+    const playerFighter = Object.assign(createSettler('normal', 4, 450, 300), { weapon: 'sword', role: 'soldier' });
+    game.settlers = [playerNecromancer, playerMedic, playerArcher, playerFighter];
+
+    const enemyNecromancer = createConfiguredEnemy({ x: 1100, y: 300 }, 'undead_necromancer');
+    const enemyMedic = createConfiguredEnemy({ x: 1080, y: 300 }, 'raider_medic');
+    const enemyArcher = createConfiguredEnemy({ x: 1090, y: 300 }, 'raider_archer');
+    const enemyFighter = createConfiguredEnemy({ x: 850, y: 300 }, 'raider');
+    game.enemies = [enemyNecromancer, enemyMedic, enemyArcher, enemyFighter];
+
+    playerNecromancerKeepsBack(playerNecromancer, 1 / 60);
+    playerMedicKeepsBack(playerMedic, 1 / 60);
+    necromancerKeepsBack(enemyNecromancer, 1 / 60);
+    enemyMedicKeepsBack(enemyMedic, 1 / 60);
+
+    return {
+      playerNecromancer: playerNecromancer.supportAnchor === playerFighter,
+      playerMedic: playerMedic.supportAnchor === playerArcher,
+      enemyNecromancer: enemyNecromancer.supportAnchor === enemyFighter,
+      enemyMedic: enemyMedic.supportAnchor === enemyArcher
+    };
+  });
+  expect(result).toEqual({ playerNecromancer: true, playerMedic: true, enemyNecromancer: true, enemyMedic: true });
+});
+
 test('player supports stay behind advancing soldiers and enemy supports behind their own soldiers in Endless', async ({ page }) => {
   await openBattle(page);
   const result = await page.evaluate(() => {
@@ -1301,6 +1331,89 @@ test('a fighting settler keeps facing its target while it moves', async ({ page 
   });
   expect(maxAimError.samples).toBeGreaterThan(0);
   expect(maxAimError.maxError).toBeLessThan(0.1);
+});
+
+test('battle melee fighters do not count approaching allies toward the melee limit', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    for (const gy of [11, 12, 13, 14]) {
+      battle.preset = 'humans:club'; battleTap(at(15, gy).x, at(15, gy).y);
+    }
+    battle.preset = 'humans:club'; battleTap(at(20, 13).x, at(20, 13).y);
+    battle.preset = 'humans:bow'; battleTap(at(24, 13).x, at(24, 13).y);
+    const melee = enemies.find(enemy => enemy.enemyKey === 'raider_club');
+    const archer = enemies.find(enemy => enemy.enemyKey === 'raider_archer');
+    enemies.forEach(enemy => { enemy.hp = enemy.maxHp = 100000; enemy.speed = 0; enemy.damage = 0; });
+    startBattleFight();
+    update(1 / 60);
+    return {
+      targets: settlers.map(settler => settler.meleeApproachTarget?.enemyKey),
+      meleeCloser: settlers.every(settler =>
+        Math.hypot(melee.x - settler.x, melee.y - settler.y) <
+        Math.hypot(archer.x - settler.x, archer.y - settler.y))
+    };
+  });
+  expect(result.meleeCloser).toBe(true);
+  expect(result.targets).toEqual(['raider_club', 'raider_club', 'raider_club', 'raider_club']);
+});
+
+test('battle melee fighters do not chase a distant archer over a nearer attacker', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
+    battle.preset = 'humans:club'; battleTap(at(15, 13).x, at(15, 13).y);
+    battle.preset = 'humans:club'; battleTap(at(20, 13).x, at(20, 13).y);
+    battle.preset = 'humans:bow'; battleTap(at(22, 13).x, at(22, 13).y);
+    const settler = settlers[0];
+    const melee = enemies.find(enemy => enemy.enemyKey === 'raider_club');
+    const archer = enemies.find(enemy => enemy.enemyKey === 'raider_archer');
+    enemies.forEach(enemy => { enemy.hp = enemy.maxHp = 100000; enemy.speed = 0; enemy.damage = 0; });
+    startBattleFight();
+    damageSettler(settler, 1, archer);
+    update(1 / 60);
+    return {
+      target: settler.meleeApproachTarget?.enemyKey,
+      meleeCloser: Math.hypot(melee.x - settler.x, melee.y - settler.y) <
+        Math.hypot(archer.x - settler.x, archer.y - settler.y)
+    };
+  });
+  expect(result.meleeCloser).toBe(true);
+  expect(result.target).toBe('raider_club');
+});
+
+test('enemy fighters respect the 3/5 target limits', async ({ page }) => {
+  await openBattle(page);
+  const result = await page.evaluate(() => {
+    const makeEnemy = (x, y) => {
+      const enemy = createConfiguredEnemy({ x, y }, 'raider');
+      enemy.speed = 0;
+      return enemy;
+    };
+    const normal = createSettler('normal', 1, 600, 300);
+    const reserve = createSettler('normal', 2, 900, 300);
+    townHall.x = 1100; townHall.y = 750;
+    game.settlers = [normal, reserve];
+    game.enemies = [0, 1, 2, 3].map(i => makeEnemy(610, 300 + i * 2));
+    tickEnemies(1 / 60);
+    const normalCount = game.enemies.filter(enemy => enemy.attackTarget === normal).length;
+    const normalOtherCount = game.enemies.filter(enemy => enemy.attackTarget === reserve).length;
+
+    const big = Object.assign(createSettler('normal', 3, 600, 500), {
+      type: 'big', bigBody: true, radius: 13, visualRadius: 18
+    });
+    const bigReserve = createSettler('normal', 4, 900, 500);
+    game.settlers = [big, bigReserve];
+    game.enemies = [0, 1, 2, 3, 4, 5].map(i => makeEnemy(610, 500 + i * 2));
+    tickEnemies(1 / 60);
+    return {
+      normalCount,
+      normalOtherCount,
+      bigCount: game.enemies.filter(enemy => enemy.attackTarget === big).length,
+      bigOtherCount: game.enemies.filter(enemy => enemy.attackTarget === bigReserve).length
+    };
+  });
+  expect(result).toEqual({ normalCount: 3, normalOtherCount: 1, bigCount: 5, bigOtherCount: 1 });
 });
 
 test('a fighting settler faces its movement direction instead of an enemy behind a wall', async ({ page }) => {

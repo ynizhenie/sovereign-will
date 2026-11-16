@@ -37,7 +37,8 @@ export function* resetGameSteps(map) {
   townHall.hp = townHall.maxHp = TOWN_HALL_HP; // battle mode makes it unbreakable
   townHall.repairRequested = false;
   resetRaid(); // (#255: a party out on a raid: the base back first, then all of it reset)
-  game.settlers = []; game.blueprints = []; game.buildings = []; game.editorOutposts = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.enemyHerbStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.stumps = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.demonWaveTransit = null; game.autoBlight = false; game.autoBlightDone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
+  game.settlers = []; game.blueprints = []; game.buildings = []; game.editorOutposts = []; game.armorOrder = null; game.enemies = []; game.enemyTents = []; game.enemyTentBlueprints = []; game.enemyArrowStock = 0; game.enemyHerbStock = 0; game.playerGear = { armor: false, shield: false }; game.armory = {}; game.loot = []; game.logs = []; game.stumps = []; game.piles = []; game.paths = {}; game.portalQueue = []; game.portalTimer = 0; game.demonWaveTransit = null; game.autoBlight = false; game.autoBlightDone = false; game.showBaseZone = false; game.dayTime = GAME_CONFIG.daytime.morning / 2; game.nightId = 0; // (dayTime: half way through the morning, it was dark as night as it began)
+  game.rareAppearances = { pinkHair: false, demonSingleHorn: false, undeadCrossEyes: false };
   townHall.store = {}; game.craftOrders = []; game.enemyCamp = null; game.enemyCamps = []; game.enemyCampDestroyed = false; game.raidCampId = null; game.enemyRafts = []; game.wavePreparation = null; game.scouts = []; game.scoutClock = 0; game.weather = null; game.reliefZones = []; game.postZones = []; game.pathZones = []; game.unlocked = {}; game.cardsDue = 0; game.cardsWave = 0; game.cardOffer = null;
   game.projectiles = []; game.stuckArrows = []; game.soulFx = []; game.foodMix = {}; game.corpses = []; game.bloodSplats = []; game.dung = []; game.farmPlots = []; game.farmZones = []; game.blightZones = []; game.boars = []; game.selectedSettler = null; game.selectedGroup = []; game.addingToGroup = false; game.pendingRespawns = [];
   clearBoarWallows(); // (#306) the ground the last world's boars dug goes with that world
@@ -89,11 +90,10 @@ export function setPaused(paused) {
   btn.setAttribute('aria-label', t(game.isPaused ? 'pause.resumeHint' : 'pause.pauseHint'));
   btn.classList.toggle('paused', game.isPaused);
   document.getElementById('pause-menu').hidden = !game.isPaused;
-  // saving and loading are Endless's: not in a battle (#254)
+  // Endless and Plague keep separate save lists; battles and the editor have none.
   const endless = game.gameMode === 'endless' && !game.plagueMode;
-  document.getElementById('save-game-button').hidden = !endless || isInCamp(); // (not in a raid's camp, #255; on the way there or back it saves, #298)
-  document.getElementById('load-game-button').hidden = !endless;
-  document.getElementById('pause-load').hidden = true;
+  const plague = game.gameMode === 'endless' && game.plagueMode;
+  document.getElementById('save-game-button').hidden = !(endless || plague) || (endless && isInCamp()); // (not in a raid's camp, #255; on the way there or back it saves, #298)
 }
 
 export function exitToMainMenu() {

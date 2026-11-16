@@ -261,13 +261,19 @@ function corpseBy(grave) {
 
 // A necromancer works a grave that isn't resting (another necromancer not on it): a while at it, then its
 // bones and rot; then the grave rests restSeconds, unless a corpse lies by it
-function workGrave(s, tick) {
+/** @typedef {{ nearbyOnly?: boolean, ignoreRest?: boolean, targetGrave?: import('../../../engine/world/types.js').Building | null, onHarvest?: ((config: typeof GAME_CONFIG.graveWork, grave: import('../../../engine/world/types.js').Building) => void) | null }} GraveWorkOptions */
+/** @param {GraveWorkOptions} [options] */
+export function workGrave(s, tick, options = {}) {
+  const { nearbyOnly = false, ignoreRest = false, targetGrave = null, onHarvest = null } = options;
   const c = graveWork();
   const menuGraveyard = game.gameMode === 'menu' && game.menuScene === 'graveyard';
   const taken = new Set(game.settlers.filter(o => o !== s && o.graveTarget).map(o => o.graveTarget));
-  const ready = b => b.type === 'grave' && (menuGraveyard || !((b.rest || 0) > 0) || corpseBy(b)) && !taken.has(b);
-  let grave = s.graveTarget && game.buildings.includes(s.graveTarget) && ready(s.graveTarget) ? s.graveTarget : null;
-  if (!grave) {
+  const ready = b => b.type === 'grave' && (menuGraveyard || ignoreRest || !((b.rest || 0) > 0) || corpseBy(b)) &&
+    !taken.has(b) && (!nearbyOnly || Math.hypot(b.x - s.x, b.y - s.y) <= 32);
+  let grave = targetGrave
+    ? (game.buildings.includes(targetGrave) && ready(targetGrave) ? targetGrave : null)
+    : s.graveTarget && game.buildings.includes(s.graveTarget) && ready(s.graveTarget) ? s.graveTarget : null;
+  if (!grave && !targetGrave) {
     const choices = game.buildings.filter(ready);
     if (menuGraveyard) {
       const otherGraves = choices.filter(b => b !== s.lastGraveTarget);
@@ -280,15 +286,21 @@ function workGrave(s, tick) {
   s.graveTarget = grave;
   if (!grave) return false;
   s.patrolTarget = null;
-  if (Math.hypot(grave.x - s.x, grave.y - s.y) > 32) { moveEntityTowards(s, grave.x, grave.y, s.speed, false, tick.dt); s.graveTimer = 0; return true; }
+  if (Math.hypot(grave.x - s.x, grave.y - s.y) > 32) {
+    if (nearbyOnly) { s.graveTarget = null; s.graveTimer = 0; return false; }
+    moveEntityTowards(s, grave.x, grave.y, s.speed, false, tick.dt); s.graveTimer = 0; return true;
+  }
   faceTowards(s, grave.x, grave.y);
   s.working = 0.1;
   s.raising = { x: grave.x, y: grave.y, until: game.pathTick + 2 }; // (its thread to the grave)
   s.graveTimer = (s.graveTimer || 0) + tick.dt;
   if (s.graveTimer < c.seconds) return true;
   s.graveTimer = 0;
-  stock.bones = (stock.bones || 0) + c.bones;
-  stock.rot = (stock.rot || 0) + c.rot;
+  if (onHarvest) onHarvest(c, grave);
+  else {
+    stock.bones = (stock.bones || 0) + c.bones;
+    stock.rot = (stock.rot || 0) + c.rot;
+  }
   if (!corpseBy(grave)) grave.rest = c.restSeconds;
   if (menuGraveyard) s.lastGraveTarget = grave;
   s.graveTarget = null;

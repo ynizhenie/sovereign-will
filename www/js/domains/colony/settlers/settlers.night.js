@@ -46,7 +46,7 @@ export function nightReach(s, target = s || townHall) {
   if (!isNight() || !needsTorches() || (s && (s.torchInHand || onFuelDuty(s)))) return Infinity;
   if (getFreeStock('torches') > 0) return Infinity;
   const angle = Math.atan2(target.y - townHall.y, target.x - townHall.x);
-  return baseRadiusToward(angle) + TILE_SIZE;
+  return baseRadiusToward(angle, TILE_SIZE) + TILE_SIZE;
 }
 
 // Each tick: a new night counted, the morning puts torches out; who's awake out of the light takes a torch

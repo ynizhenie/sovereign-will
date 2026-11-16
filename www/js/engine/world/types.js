@@ -9,7 +9,7 @@
 /**
  * How a settler or an enemy looks (#306, settlers.looks.js): a man or a woman, one of the five looks of that
  * kind, and a shade (its hair's colour, of the colours its kind has)
- * @typedef {{ female: boolean, style: number, shade: number }} Look
+ * @typedef {{ female: boolean, style: number, shade: number, pinkHair?: boolean, singleHorn?: boolean, crossEyes?: boolean }} Look
  */
 
 /**
@@ -24,6 +24,8 @@
  * @property {boolean} [plagueHero]
  * @property {boolean} [plagueUnit]
  * @property {{x: number, y: number} | null} [plagueMoveTarget]
+ * @property {Building | null} [plagueGraveTarget]
+ * @property {boolean} [plagueGraveWorkActive]
  * @property {number} [quiverCapacity]
  * @property {string} role           'worker', 'soldier' or 'archer'
  * @property {boolean} [drowsy]      up at night for an order of the player's, working at half its pace (#279)
@@ -31,10 +33,15 @@
  * @property {number} [struckAt]     the tick it last struck at something (#279: a torch in hand goes to its side)
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
+ * @property {number} [aimVx]        horizontal speed while moving this tick
+ * @property {number} [aimVy]        vertical speed while moving this tick
  * @property {number} [battleAttackSpeed] battle-only variation in attack cadence
  * @property {number} [attackCooldown]
  * @property {Enemy | null} [fightTarget] the enemy it's currently fighting
+ * @property {Enemy | null} [shelteringFromEnemy] the in-base threat it is staying sheltered from
  * @property {Enemy | null} [lastAttacker] the enemy that most recently damaged it
+ * @property {Enemy | null} [retaliationTarget] the enemy it is briefly focusing after being hit
+ * @property {number} [retaliationUntil] the tick when its retaliation target expires
  * @property {number | null} [petKeeperId] the nearby soldier or archer a dog or beast follows in Endless
  * @property {Enemy | null} [petAttackTarget] an enemy that recently attacked its pet
  * @property {number} [petAttackTick] when that enemy attacked the pet
@@ -94,6 +101,7 @@
  * @property {boolean} [trapped]    held in the other side's iron trap (#326)
  * @property {number} [trappedFor]  seconds it's held yet
  * @property {((s: any, tick: any, markedOnly?: boolean) => boolean) | null} [lastBehaviour] the behaviour that took it last tick (everyday work goes on without the whole list, #322)
+ * @property {{ x: number, y: number }} [pathSeen] where it was at the last look for worn paths (kept on it, so in saves)
  * @property {boolean} [isIdle]
  * @property {boolean} [wasIdle]    it was idle last tick (cleanDung)
  * @property {boolean} [chopTrip]   on its way to chop firewood (chopFirewood)
@@ -187,6 +195,8 @@
  * @property {number} [siegeTargetTick] the last tick it kept attacking that building
  * @property {number} [moveVx]       eased horizontal movement step
  * @property {number} [moveVy]       eased vertical movement step
+ * @property {number} [aimVx]        horizontal speed while moving this tick
+ * @property {number} [aimVy]        vertical speed while moving this tick
  * @property {number} [pathRetryTimer] movement retry delay
  * @property {number} [directBlockedTimer] delay before retrying direct movement
  * @property {Enemy | null} [escort] a ghost's necromancer
@@ -427,6 +437,7 @@
  * @property {boolean} addingToGroup
  * @property {Object | null} defensePlan
  * @property {Settler[]} settlers
+ * @property {{ pinkHair: boolean, demonSingleHorn: boolean, undeadCrossEyes: boolean }} rareAppearances
  * @property {Enemy[]} enemies
  * @property {Building[]} buildings
  * @property {Object[]} craftOrders   things being made: { key, category, id, crafter, stage, progress, for, yields?, waitFor? }
@@ -459,6 +470,7 @@
  * @property {boolean} wasNight
  * @property {boolean} autoBlight   the undead's necromancers blight the nearest ground by themselves (#253)
  * @property {boolean} autoBlightDone none left to blight: the switch is off for good
+ * @property {boolean} showBaseZone whether the base's patrol boundary is drawn while the Zones tab is shown
  * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
  * @property {number} portalTimer
  * @property {number | null} [portalWavePrep] the wave number assigned to queued portal spawns during preparation

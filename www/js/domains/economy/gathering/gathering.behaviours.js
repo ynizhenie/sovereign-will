@@ -17,6 +17,9 @@ export function canGather(s, tick) {
   return s.role === 'worker' || (s.role !== 'worker' && !tick.isWaveActive);
 }
 
+const isCorpseResourceLoot = resource => resource.corpseDropAge !== undefined &&
+  Object.values(resource.yield || {}).some(amount => amount > 0);
+
 // Can this settler work this resource with what it has in hand?
 export function canSettlerHarvest(s, r, tick) {
   const kind = tick.resourceKind.get(r);
@@ -42,6 +45,7 @@ export function canSettlerHarvest(s, r, tick) {
   if (kind === 'grass' && game.boars.some(b => (b.hidden || b.hideTarget) && b.hideTarget === r)) return false;
   // loot (#210): not while an enemy is close to it
   if (kind === 'loot' && someEnemyNear(r.x, r.y, 150, () => true)) return false; // (#306: an enemy close to it)
+  if (isCorpseResourceLoot(r)) return true;
   if (kind === 'grass' && hasToolFamily(s.tool, 'medic')) return true; // medics gather grass for herbs
   if (kind === 'grass' && tick.idleFarmer === s) return true; // so does a farmer with nothing else to do
 
@@ -170,6 +174,8 @@ export function pickResourceToHarvest(s, tick, markedOnly = false) {
       const felled = availableRes.filter(r => tick.resourceKind.get(r) === 'log' || r.fallen);
       if (felled.length) availableRes = felled;
     }
+    const corpseLoot = availableRes.filter(isCorpseResourceLoot);
+    if (corpseLoot.length) availableRes = corpseLoot;
     // nearest by walking distance; straight-line distance picked things behind rock walls or sealed off.
     // (#306) Walking is never shorter than the straight way there in tiles, so what's farther off than the
     // best so far can be left out before its distance is asked for

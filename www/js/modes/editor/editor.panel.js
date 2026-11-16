@@ -8,8 +8,8 @@ import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setStartingWeather, timeOfPhase } from '../../domains/world/index.js';
 import { showMenuScreen } from '../menu/index.js';
-import { openGenerator } from '../endless/index.js';
-import { loadSavedMaps, renderSavedMapList, storeSavedMaps } from './editor.maps.js';
+import { openGenerator, setMapSource } from '../endless/index.js';
+import { initMapManager } from './editor.maps.js';
 import { EDITOR_TOOLS, clearEditorMap, editor, redoEditor, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
 
 export function renderEditorPanel() {
@@ -75,13 +75,9 @@ export function renderEditorFaction() {
   }
 }
 
-// The editor's menu screen: new map (size, empty or generated) and the saved maps to open or delete
+// The editor's menu screen: new map (size, empty or generated) and faction
 export function renderEditorMapList() {
   renderEditorFaction();
-  renderSavedMapList(document.getElementById('editor-map-list'), {
-    open: map => startEditor({ map }),
-    remove: name => { const maps = loadSavedMaps(); delete maps[name]; storeSavedMaps(maps); renderEditorMapList(); }
-  });
 }
 
 export let editorNewSize = 192;
@@ -138,6 +134,29 @@ export function initEditorPanel() {
   [editorMapCols, editorMapRows].forEach(input => input.addEventListener('change', rememberEditorChoices));
   document.getElementById('mode-editor').disabled = false;
   onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
+  initMapManager({
+    openEditor: map => startEditor({ map }),
+    selectEndless: map => {
+      game.customMap = map;
+      setMapSource('custom');
+      const choices = loadData('endlessChoices', {});
+      choices.customMap = map.name;
+      choices.mapSource = 'custom';
+      saveData('endlessChoices', choices);
+      showMenuScreen('endless');
+    },
+    selectedEndless: () => game.customMap?.name ?? null,
+    changed: (oldName, newName, maps) => {
+      if (oldName && game.customMap?.name === oldName) {
+        game.customMap = newName ? maps[newName] : Object.values(maps)[0] || null;
+        const choices = loadData('endlessChoices', {});
+        choices.customMap = game.customMap?.name ?? null;
+        if (!game.customMap) choices.mapSource = 'random';
+        saveData('endlessChoices', choices);
+        if (!game.customMap) setMapSource('random');
+      }
+    }
+  });
   onTap(document.getElementById('editor-new-empty'), () => startEditor({ ...editorDimensions(), generate: false }));
   onTap(document.getElementById('editor-new-generated'), () => startEditor({ ...editorDimensions(), generate: true }));
   // (#326, 27.10, 19) the shared seed panel's generator settings

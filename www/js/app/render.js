@@ -3,14 +3,14 @@
 import { TILE_SIZE, forEachInRect, game, getTileIndex, townHall } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewRect, getViewScale, glBeginFrame, glCamera, glEndFrame, glReady } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot, getEnemyDef } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression } from '../domains/colony/settlers/index.js';
+import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression, simpleUnit } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
-import { drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
+import { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
 import { depthSortedTrees, drawCactiBouldersGrassBushes, drawDepthTree, keepNatureOnCard, treesToDrawOver, drawPriorityMarks, drawStillShadows, drawSticksPebblesOre, drawTrees } from '../domains/economy/gathering/index.js';
 import { drawBlueprints, drawBuildGrid, drawBuildings, drawLitWindows, drawMenuOutpostHealthBar, drawTownHall, drawUpgrades } from '../domains/economy/building/index.js';
 import { drawBloodOnGround, drawCorpses, drawProjectiles } from '../domains/conflict/combat/index.js';
-import { drawBlight, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
+import { drawBlight, drawPlagueReviveEffects, drawRaising, drawSouls } from '../domains/factions/undead/index.js';
 import { beginShadowFrame, drawDarkness, drawFireflies, drawFog, drawGrassGround, drawMapBorder, drawPaths, drawShadowLayer, endShadowFrame, drawRocks, drawSand, drawTerritory, drawWater, drawWeatherScreen, drawWeatherWorld, isContinentMap, isVisible, setPrewarmingChunks } from '../domains/world/index.js';
 import { isDefeated } from '../modes/endless/index.js';
 import { battle, drawBackroomsFloor, drawBattleOverlay, drawBattleResult } from '../modes/battle/index.js';
@@ -62,6 +62,7 @@ export function render() {
   drawWater(terrain);
   drawRocks(terrain);
   drawTerritory(); // (the base's land, #299)
+  drawBaseZoneBoundary();
   drawEditorOutposts();
   // all the shadows at once, on the ground under everything that stands on it (world.daytime.js)
   drawShadowLayer(drawStillShadows, () => { drawSettlerShadows(); drawEnemyShadows(); });
@@ -84,6 +85,7 @@ export function render() {
   drawBloodOnGround();
   drawDung();
   drawCorpses();
+  drawLoot(true);
   drawEnemyTentSites();
   drawDepthSortedScene();
   drawMenuOutpostHealthBar();
@@ -91,6 +93,7 @@ export function render() {
   drawMoraleMarks();
   drawAllSpeech(ctx); // what they say, over them all and their panic marks (#252, #279)
   drawRaising();
+  drawPlagueReviveEffects();
   drawSouls(); // (flying into a necromancer's lantern, out of it into a grave, #326)
   drawProjectiles();
   drawWeatherWorld(); // (the water moving, the desert's shimmer, fog, #308)
@@ -110,6 +113,7 @@ export function render() {
 }
 
 function drawUnitLevelIndicators() {
+  if (simpleUnit()) return;
   const view = getViewRect(60);
   for (const unit of game.settlers) {
     if (!hasUnitProgression(unit) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;

@@ -19,13 +19,13 @@ import { getTerritoryBox, hasFog, inReliefZone, isVisible, isWaterReachable, rel
 import { getMapResourceKind, getWorkPriority, getWorkableResources, harvest, harvestMarked } from '../../economy/gathering/index.js';
 import { healAtTent, isShelter, repairTent, treatWounded } from '../../conflict/healing/index.js';
 import { clampEntityToBounds, getReachSteps, getSettlerReach, isTileBlockedForSettler, moveEntityTowards, rescueSettlerFromResource } from '../../../engine/movement/index.js';
-import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, strikeBack } from '../../conflict/combat/index.js';
+import { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, followCommand, holdPost, restockQuiver, isDefenseAlert, isInSafeArea, shelterFromEnemy, strikeBack } from '../../conflict/combat/index.js';
 import { isGhostStunned, panic, playerMedicKeepsBack } from '../../conflict/morale/index.js';
 import { collectWorms, emptyFishTrap, fish } from '../../economy/fishing/index.js';
 import { assignTowerArchers, guardTower } from '../../conflict/towers/index.js';
 import { farmerGathersGrass, fertilize, findZoneBlockers, pickApples, tendFarmZones, waterCrops } from '../../economy/farming/index.js';
 import { chopFirewood, cook } from '../../economy/cooking/index.js';
-import { collectBones, corpsesToGraves, followMaster, necromancy } from '../../factions/undead/index.js';
+import { collectBones, corpsesToGraves, followMaster, necromancy, workGrave } from '../../factions/undead/index.js';
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip, isRangedWeapon } from '../equipment/index.js';
 import { followOrder } from './settlers.orders.js';
@@ -107,7 +107,8 @@ export function createSettlerTick(dt) {
     heapTakers: new Map(),           // compost heap -> farmers going to take dung from it this tick
     raiseAssignments: new Set(),     // corpses a necromancer is raising (or a demon eating) this tick
     markedAssignments: new Map(),    // enemy the player pointed at -> soldiers going for it this tick
-    meleeOn: new Map(),              // enemy -> settlers fighting it in melee this tick (#208)
+    meleeOn: new Map(),              // enemy -> settlers assigned melee approach slots this tick (#208)
+    meleeFighting: new Map(),        // enemy -> settlers already in melee reach this tick
     blightAssignments: new Set(),    // marked tiles a necromancer is blighting this tick
     idleFarmer: null,                // the farmer farmerGathersGrass is finding grass for
     // (not one with a fish trap on it, #248)
@@ -134,6 +135,8 @@ function fishingSpots() {
 
 // Housekeeping every settler gets each tick, before any behaviour
 export function prepareSettler(s, dt) {
+  s.aimVx = 0;
+  s.aimVy = 0;
   clampEntityToBounds(s);
   // (#279) a worker with a weapon is a soldier (with a bow, an archer); a foreman takes no weapon: one it has
   // goes back to the store
@@ -275,6 +278,7 @@ export const SETTLER_BEHAVIOURS = [
   restWhileRaid, // (...and the base resting)
   panic,
   followCommand, // (#326: the player's orders by tap, in Endless)
+  shelterFromEnemy,
   strikeBack,
   followMaster, // (#326: a necromancer's zombie keeps by it)
   sleepAtNight,
@@ -429,8 +433,25 @@ export function tickSettlers(dt) {
 
 // (#404) the hero walks where the player taps (no stick or keys)
 function tickPlagueHero(hero, tick) {
+  const plague = game.plague;
+  hero.plagueGraveWorkActive = false;
+  if (hero.plagueGraveTarget && (!plague || plague.energy >= plague.maxEnergy)) {
+    hero.plagueGraveTarget = null;
+    hero.plagueMoveTarget = null;
+    hero.graveTarget = null;
+    hero.graveTimer = 0;
+    hero.raising = undefined;
+  }
+  if (hero.plagueGraveTarget && !game.buildings.includes(hero.plagueGraveTarget)) {
+    hero.plagueGraveTarget = null;
+    hero.plagueMoveTarget = null;
+    hero.graveTarget = null;
+    hero.graveTimer = 0;
+    hero.raising = null;
+  }
   const target = hero.plagueMoveTarget;
-  if (target && Math.hypot(target.x - hero.x, target.y - hero.y) > 18) {
+  const stoppingDistance = hero.plagueGraveTarget ? 32 : 18;
+  if (target && Math.hypot(target.x - hero.x, target.y - hero.y) > stoppingDistance) {
     hero.raising = null;
     moveEntityTowards(hero, target.x, target.y, hero.speed * (game.plague?.speedFactor || 1), false, tick.dt, true);
     hero.isIdle = false;
@@ -445,12 +466,21 @@ function tickPlagueHero(hero, tick) {
   hero.isIdle = false; // (#404: standing, it neither sways nor shows the idle "zZ")
   hero.activity = 'plagueIdle';
   hero.swaying = false;
-  healPlagueSquad(hero, tick.dt);
+  if (healPlagueSquad(hero, tick.dt)) return;
+  if (plague && hero.plagueGraveTarget && plague.energy < plague.maxEnergy && workGrave(hero, tick, {
+    nearbyOnly: true,
+    ignoreRest: true,
+    targetGrave: hero.plagueGraveTarget,
+    onHarvest: () => {}
+  })) {
+    hero.plagueGraveWorkActive = true;
+    hero.activity = 'necromancy';
+  }
 }
 
 function healPlagueSquad(hero, dt) {
   const plague = game.plague;
-  if (!plague) return;
+  if (!plague) return false;
   const radius = plague.healRange;
   const patients = game.settlers
     .filter(unit => (unit.plagueHero || unit.plagueUnit) && unit.hp > 0 && unit.hp < unit.maxHp &&
@@ -459,7 +489,7 @@ function healPlagueSquad(hero, dt) {
     .slice(0, plague.healTargets);
   if (!patients.length) {
     hero.raising = null;
-    return;
+    return false;
   }
   hero.working = 0.1;
   hero.workKind = 'plagueHeal';
@@ -469,4 +499,5 @@ function healPlagueSquad(hero, dt) {
     patient.hp = Math.min(patient.maxHp, patient.hp + plague.healStrength * dt);
     patient.treatedAt = game.pathTick;
   }
+  return true;
 }

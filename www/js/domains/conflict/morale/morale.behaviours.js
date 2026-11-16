@@ -9,6 +9,7 @@ import { getFrontier, isOutskirts, isVisible } from '../../world/index.js';
 import { getPlayerFaction } from '../../factions/index.js';
 import { moveSettlerToTownHall } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, startSwing } from '../../colony/settlers/index.js';
+import { isRangedWeapon } from '../../colony/equipment/index.js';
 import { collidesWithWall, findPathAStar, isTileBlockedForEnemyStrict, isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { makeBoarFlee } from '../../economy/hunting/index.js';
 import { liftMorale } from './morale.rules.js';
@@ -119,14 +120,16 @@ export function boarsPanic() {
   }
 }
 
-function chooseSupportAnchor(unit, allies, supports) {
+function chooseSupportAnchor(unit, allies, supports, enemySide) {
   const claimed = supports
     .filter(other => other !== unit && other.hp > 0 && allies.includes(other.supportAnchor))
     .map(other => other.supportAnchor);
   const unclaimed = allies.filter(ally => !claimed.includes(ally));
   const candidates = unclaimed.length ? unclaimed : allies;
-  candidates.sort((a, b) => Math.hypot(a.x - unit.x, a.y - unit.y) - Math.hypot(b.x - unit.x, b.y - unit.y));
-  return candidates[0];
+  const fighters = candidates.filter(ally => enemySide ? !getEnemyDef(ally).ranged : !isRangedWeapon(ally.weapon));
+  const prioritized = fighters.length ? fighters : candidates;
+  prioritized.sort((a, b) => Math.hypot(a.x - unit.x, a.y - unit.y) - Math.hypot(b.x - unit.x, b.y - unit.y));
+  return prioritized[0];
 }
 
 function supportBacklineSpot(anchor, opponents, enemySide) {
@@ -209,7 +212,7 @@ function keepSupportBehind(unit, dt, allies, supports, opponents, enemySide, smo
     supportSpotCache.delete(unit);
     return false;
   }
-  const anchor = chooseSupportAnchor(unit, allies, supports);
+  const anchor = chooseSupportAnchor(unit, allies, supports, enemySide);
   unit.supportAnchor = anchor;
   const spot = reachableSupportSpot(unit, anchor, supportBacklineSpot(anchor, opponents, enemySide), enemySide);
   if (!spot) {

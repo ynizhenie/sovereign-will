@@ -10,8 +10,6 @@ import { getBaseRadius } from '../conflict/combat/index.js';
 import { tileVariantHash } from './world.draw.js';
 
 const config = () => GAME_CONFIG.paths;
-/** @type {WeakMap<object, { x: number, y: number }>} where each settler was at the last look */
-const lastSeen = new WeakMap();
 
 // (#306) a field is no road: the tiles of a plot or a marked zone take no wear and draw none, so no trodden
 // lanes come up between the wheat
@@ -29,8 +27,8 @@ export function tickPaths() {
     const base = getBaseRadius(), tiles = getTileIndex(), fields = fieldTiles();
     for (const s of game.settlers) {
       if (s.ghostly) continue; // (#326: a ghost treads no path)
-      const was = lastSeen.get(s);
-      lastSeen.set(s, { x: s.x, y: s.y });
+      const was = s.pathSeen; // (kept on the settler, so a loaded game wears its paths as the saved one would have)
+      s.pathSeen = { x: s.x, y: s.y };
       if (!was || Math.hypot(s.x - was.x, s.y - was.y) < c.minStep) continue; // (standing: no wear)
       if (Math.hypot(s.x - townHall.x, s.y - townHall.y) > base) continue; // (only in the base)
       const g = getGridPos(s.x, s.y), key = `${g.gx},${g.gy}`;

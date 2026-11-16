@@ -5,7 +5,9 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await openGame(page);
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-maps'); showMenuScreen('home'); });
   await page.locator('#mode-editor').click();
-  await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
+  await page.locator('#editor-open-maps').click();
+  await expect(page.locator('#map-manager-list')).toContainText('Сохранённых карт пока нет');
+  await page.locator('[data-screen="maps"] [data-back]').click();
   await expect(page.locator('.editor-start')).toContainText('Выберите карту для открытия в редакторе');
   await expect(page.locator('#editor-new-empty')).toHaveText('Пустая карта');
   await expect(page.locator('#editor-new-generated')).toHaveText('Сгенерировать карту');
@@ -105,10 +107,39 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#btn-pause-toggle').click(); // the Menu is the pause button at the top (#145)
   await page.locator('#exit-to-menu-button').click();
   await expect(page.locator('#main-menu')).toBeVisible();
-  await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveText('Озерцо · 128×128');
+  await page.locator('#editor-open-maps').click();
+  await expect(page.locator('#map-manager-list [data-map="Озерцо"]')).toContainText('Озерцо');
+
+  const mapName = page.locator('#map-manager-list [data-map-name]');
+  await mapName.fill('Пруд');
+  await mapName.press('Tab');
+  await expect(page.locator('#map-manager-list [data-map="Пруд"]')).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#map-manager-list [data-export-map="Пруд"]').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('Пруд.json');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const mapFile = Buffer.concat(chunks);
+  expect(JSON.parse(mapFile.toString()).format).toBe('sovereign-will-map');
+  await page.locator('#map-import-file').setInputFiles({
+    name: 'pond.json',
+    mimeType: 'application/json',
+    buffer: mapFile
+  });
+  await expect(page.locator('#map-manager-list [data-map]')).toHaveCount(2);
+  await expect(page.locator('#map-manager-list [data-map="Пруд (2)"]')).toBeVisible();
+  await page.locator('#map-manager-list [data-delete-map="Пруд (2)"]').click();
+  await page.locator('#map-manager-list [data-cancel-delete="Пруд (2)"]').click();
+  await expect(page.locator('#map-manager-list [data-map="Пруд (2)"]')).toBeVisible();
+  await page.locator('#map-manager-list [data-delete-map="Пруд (2)"]').click();
+  await page.locator('#map-manager-list [data-confirm-delete="Пруд (2)"]').click();
+  await page.locator('#map-manager-list [data-map-name]').fill('Озерцо');
+  await page.locator('#map-manager-list [data-map-name]').press('Tab');
 
   // open it again: the water is still there
-  await page.locator('#editor-map-list [data-map="Озерцо"]').click();
+  await page.locator('#map-manager-list [data-map="Озерцо"]').click();
   await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   expect(await page.evaluate(() => [waterTiles.length, savannaTiles.length, COLS])).toEqual([10, 1, 128]);
   expect(await page.evaluate(() => getDayPhase())).toBe('night');
@@ -118,10 +149,14 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   // Endless: Custom map lists it, and hides the map size and generator
   await page.locator('[data-screen="editor"] [data-back]').click();
   await page.locator('#mode-endless').click();
-  await expect(page.locator('#custom-map-list')).toBeHidden();
+  await expect(page.locator('#endless-open-maps')).toBeHidden();
   await page.locator('[data-map-source="custom"]').click();
-  await expect(page.locator('#custom-map-list [data-map="Озерцо"]')).toHaveClass(/active/);
+  await expect(page.locator('#endless-open-maps')).toBeVisible();
+  await page.locator('#endless-open-maps').click();
+  await expect(page.locator('#map-manager-list .save-tile-wrap.current [data-map="Озерцо"]')).toBeVisible();
   await expect(page.locator('#open-generator')).toBeHidden();
+  await page.locator('#map-manager-list [data-map="Озерцо"]').click();
+  await expect(page.locator('[data-screen="endless"]')).toBeVisible();
   await page.locator('#play-button').click();
   await started(page);
   expect(await page.evaluate(() => [COLS, waterTiles.length, savannaTiles.length, gameMode])).toEqual([128, 10, 1, 'endless']);
@@ -131,11 +166,12 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.evaluate(() => exitToMainMenu());
   await page.locator('[data-screen="home"] #mode-editor').click();
   // delete asks first: No keeps it, Yes deletes it (#143)
-  await page.locator('#editor-map-list [data-delete-map="Озерцо"]').click();
-  await expect(page.locator('#editor-map-list')).toContainText('Удалить «Озерцо · 128×128»?');
-  await page.locator('#editor-map-list [data-cancel-delete="Озерцо"]').click();
-  await expect(page.locator('#editor-map-list [data-map="Озерцо"]')).toHaveCount(1);
-  await page.locator('#editor-map-list [data-delete-map="Озерцо"]').click();
-  await page.locator('#editor-map-list [data-confirm-delete="Озерцо"]').click();
-  await expect(page.locator('#editor-map-list')).toContainText('Сохранённых карт пока нет');
+  await page.locator('#editor-open-maps').click();
+  await page.locator('#map-manager-list [data-delete-map="Озерцо"]').click();
+  await expect(page.locator('#map-manager-list')).toContainText('Удалить «Озерцо · 128×128»?');
+  await page.locator('#map-manager-list [data-cancel-delete="Озерцо"]').click();
+  await expect(page.locator('#map-manager-list [data-map="Озерцо"]')).toBeVisible();
+  await page.locator('#map-manager-list [data-delete-map="Озерцо"]').click();
+  await page.locator('#map-manager-list [data-confirm-delete="Озерцо"]').click();
+  await expect(page.locator('#map-manager-list')).toContainText('Сохранённых карт пока нет');
 });

@@ -61,6 +61,7 @@ export function getUnitExperience(unit, track = getUnitProgressionTrack(unit)) {
 }
 
 function getExperienceThresholds(track) {
+  if (track === 'hunting') return progression.experienceToLevel.hunting;
   return COMBAT_TRACKS.has(track) ? progression.experienceToLevel.combat : progression.experienceToLevel.other;
 }
 

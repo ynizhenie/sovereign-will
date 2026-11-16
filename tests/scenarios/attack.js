@@ -79,6 +79,24 @@ Object.assign(window.sim, (() => {
     return { most, bothFought: enemies.every(en => en.hp < en.maxHp) };
   }
 
+  function closestMeleeTargetAfterRangedHit({ seed = 'closest-melee-after-ranged-hit' } = {}) {
+    start(seed);
+    game.gameMode = 'endless';
+    game.wavePreparation = null;
+    clearResources();
+    const soldier = makeSettler(1, townHall.x, townHall.y, { weapon: 'sword', role: 'soldier' });
+    const melee = createConfiguredEnemy({ x: soldier.x + 100, y: soldier.y }, 'raider');
+    const archer = createConfiguredEnemy({ x: soldier.x + 170, y: soldier.y }, 'raider_archer');
+    melee.fromWave = archer.fromWave = true;
+    melee.speed = archer.speed = 0;
+    melee.damage = archer.damage = 0;
+    settlers = [soldier];
+    enemies = [melee, archer];
+    damageSettler(soldier, 1, archer);
+    fightEnemies(soldier, createSettlerTick(1 / 60));
+    return { closest: soldier.meleeApproachTarget === melee };
+  }
+
   function campProtection({ seed = 'camp-protection' } = {}) {
     start(seed);
     clearResources();
@@ -223,5 +241,5 @@ Object.assign(window.sim, (() => {
     return { buildingDamaged: wall.hp < wall.maxHp, soundPlayed: Number.isFinite(audio.last.swing) };
   }
 
-  return { struckWhileCarrying, meleeSlots, enemyHealer, enemyHealerHerbs, oneBlow, campProtection, enemyBuildingWeaponRange, rangedUnitsUseDaggersOnStructures, holdsBehindBreachedWall, enemyBuildingBreakSound };
+  return { struckWhileCarrying, meleeSlots, closestMeleeTargetAfterRangedHit, enemyHealer, enemyHealerHerbs, oneBlow, campProtection, enemyBuildingWeaponRange, rangedUnitsUseDaggersOnStructures, holdsBehindBreachedWall, enemyBuildingBreakSound };
 })());

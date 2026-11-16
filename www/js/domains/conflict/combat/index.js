@@ -1,7 +1,7 @@
 // The door of domains/conflict/combat/: what it gives to the rest of the game. Other folders import from
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
-export { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, holdPost, joinsTentAssault, restockQuiver, strikeBack, TENT_ASSAULT_FIGHT_DISTANCE } from './combat.behaviours.js';
+export { clearEnemyTents, engageEnemy, escortGatherers, fightEnemies, holdPost, joinsTentAssault, restockQuiver, shelterFromEnemy, strikeBack, TENT_ASSAULT_FIGHT_DISTANCE } from './combat.behaviours.js';
 export { clearOrders, commandTap, fightByOrders, followCommand, holdPosition, orderTap } from './combat.orders.js';
 export { drawBloodOnGround, drawBodyBlood, drawBurning, drawCorpses, drawProjectiles, drawTargetMark, drawWeaponBlood } from './combat.draw.js';
-export { addCorpse, ageBloodAndDung, ageStuckArrows, applySpikeTraps, areAdjacentTiles, baseRadiusToward, bleed, damageEnemy, getBaseRadius, getProjectileAimPoint, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInSafeArea, performAttack, shouldUseRangedDagger, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from './combat.rules.js';
+export { addCorpse, addCorpseLoot, ageBloodAndDung, ageStuckArrows, applySpikeTraps, areAdjacentTiles, baseRadiusToward, bleed, damageEnemy, getBaseRadius, getProjectileAimPoint, hasLineOfFire, hasMeleeReach, isDefenseAlert, isInSafeArea, performAttack, shouldUseRangedDagger, tickProjectiles, trackAllFootprints, updateBurning, updateCorpses } from './combat.rules.js';

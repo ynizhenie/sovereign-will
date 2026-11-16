@@ -8,8 +8,9 @@ import { applySeedFromUI, createDefaultSeed, game } from '../../engine/world/ind
 import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
 import { resetGameSteps } from '../../app/index.js';
 import { mainMenu } from '../menu/index.js';
-import { loadSavedMaps, renderSavedMapList } from '../editor/index.js';
+import { loadSavedMaps } from '../editor/index.js';
 import { createEnemyCamps } from './endless.raid.js';
+import { clearActiveSave, selectActiveSaveForSeed } from './endless.saves.js';
 
 export const playButton = document.getElementById('play-button');
 
@@ -45,6 +46,7 @@ export const startGame = async (e) => {
     if (starting) return; // (a second tap while the world is made)
     starting = true;
     try {
+      clearActiveSave();
       const selectedCards = /** @type {HTMLElement | null} */ (document.querySelector('.cards-option.active'));
       game.cardMode = selectedCards?.dataset.cards === 'on';
       const selectedWave = /** @type {HTMLElement | null} */ (document.querySelector('[data-wave-interval].active'));
@@ -57,6 +59,7 @@ export const startGame = async (e) => {
       const selectedDifficulty = /** @type {HTMLElement | null} */ (document.querySelector('.difficulty-option.active'));
       if (selectedDifficulty) game.gameDifficulty = /** @type {string} */ (selectedDifficulty.dataset.difficulty);
       applySeedFromUI();
+      selectActiveSaveForSeed(game.worldSeed.value);
       // (#299) the size picked in the menu (its default one too, never tapped)
       const picked = /** @type {HTMLElement | null} */ (document.querySelector('.map-option.active'));
       if (picked) { if (picked.dataset.mapSize === 'custom') applyCustomMap(); else game.mapSettings = { cols: Number(picked.dataset.mapSize), rows: Number(picked.dataset.mapSize) }; }
@@ -85,10 +88,7 @@ export function renderCustomMapList() {
   // a custom map is played as the faction it was made for
   if (mapSource === 'custom' && game.customMap && game.customMap.faction && sides.player.faction !== game.customMap.faction) setSideFaction('player', game.customMap.faction);
   renderFactionPicker();
-  renderSavedMapList(document.getElementById('custom-map-list'), {
-    selected: game.customMap && game.customMap.name,
-    open: map => { game.customMap = map; renderCustomMapList(); }
-  });
+  document.getElementById('endless-open-maps').textContent = t('editor.savedMaps');
 }
 
 export function setMapSource(source) {

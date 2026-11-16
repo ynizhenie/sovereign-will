@@ -76,6 +76,35 @@ Object.assign(window.sim, (() => {
     return { heap: true, beyondBaseTiles };
   }
 
+  function corpseOutsideDistantBuildingBase({ seed = 'corpse-outside-distant-base', seconds = 40 }) {
+    asFaction('humans', seed);
+    const east = nearHall(18, 0);
+    placeBuilding('warehouse', east.x, east.y);
+    invalidateAllPaths();
+    const porter = makeSettler(1, townHall.x + 30, townHall.y + 40);
+    settlers = [porter];
+    const corpse = { ...nearHall(2, 2), radius: 10, side: 'enemy', kind: 'raider', age: 0 };
+    corpses = [corpse];
+    let carrying = false, pickups = 0;
+    run(seconds, { each: () => {
+      porter.hunger = 999;
+      const hasCorpse = porter.carrying?.corpse === corpse;
+      if (hasCorpse && !carrying) pickups++;
+      carrying = hasCorpse;
+    } });
+    const heap = getCorpseHeap();
+    const angle = Math.atan2(corpse.y - townHall.y, corpse.x - townHall.x);
+    const beyondDirectionalBase = Math.hypot(corpse.x - townHall.x, corpse.y - townHall.y) -
+      baseRadiusToward(angle);
+    back();
+    return {
+      heapFound: !!heap,
+      carriedOnce: pickups === 1,
+      corpseOutsideBase: beyondDirectionalBase > TILE_SIZE,
+      beyondBaseTiles: beyondDirectionalBase / TILE_SIZE
+    };
+  }
+
   // In a wave a medic heals with its herbs, 30 each (#279: no potions). With the wave beaten and a tent, it keeps its herbs
   function heal({ seed = 'medic-heal', waveOver = false } = {}) {
     asFaction('humans', seed);
@@ -90,5 +119,5 @@ Object.assign(window.sim, (() => {
     return { hp: Math.round(patient.hp), herbsLeft: medic.bagHerbs || 0 };
   }
 
-  return { porterCorpses: corpsesOut, manyCorpses, directionalCorpseHeap, medicHeal: heal };
+  return { porterCorpses: corpsesOut, manyCorpses, directionalCorpseHeap, corpseOutsideDistantBuildingBase, medicHeal: heal };
 })());

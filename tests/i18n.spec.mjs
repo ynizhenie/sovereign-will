@@ -19,6 +19,23 @@ test('the game starts in English (#41)', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('blight and base-zone controls are translated in every language', async ({ page }) => {
+  await openFresh(page);
+  const labels = await page.evaluate(() => Object.fromEntries(Object.entries(LANGUAGES).map(([code, language]) => [
+    code,
+    {
+      autoBlight: language.text['btn.autoBlight'],
+      baseZone: language.text['btn.baseZone'],
+      baseCategory: language.text['panel.base']
+    }
+  ])));
+  expect(labels).toEqual({
+    en: { autoBlight: '[[rot]] Spread blight', baseZone: '[[hall]] Base zone', baseCategory: 'Base' },
+    ru: { autoBlight: '[[rot]] Распространять порчу', baseZone: '[[hall]] Зона базы', baseCategory: 'База' },
+    uk: { autoBlight: '[[rot]] Поширювати псування', baseZone: '[[hall]] Зона бази', baseCategory: 'База' }
+  });
+});
+
 test('picking Ukrainian in the menu switches every text, and is remembered (#41)', async ({ page }) => {
   await openFresh(page);
   await page.evaluate(() => enterMenuWorld('fishing')); // (the humans' HUD: the menu's scene may be the undead's, #417)
@@ -29,7 +46,7 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
   await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Робітник 15[[food]]']);
   await expect.poll(() => iconText(page, '#btn-wall_wood')).toEqual(['[[wall_wood]] Дерев\'яна стіна 5[[wood]]']);
-  await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[wheat]]Зони']);
+  await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[path]]Зони']);
   await expect(page.locator('#seed-reroll')).toHaveAttribute('aria-label', 'Новий випадковий сід');
   await page.click('#play-button');
   await expect(page.locator('#group-materials')).toContainText('Матеріали');

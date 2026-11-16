@@ -11,12 +11,14 @@ const openBattle = async page => {
 };
 const at = (gx, gy) => ({ x: gx * 30 + 15, y: gy * 30 + 15 });
 
-test('a battle\'s difficulty: on Hard the red side is as strong as yours; Endless\'s choice comes back (#255)', async ({ page }) => {
+test('battle difficulty hints describe the opposing side independently of its color (#255)', async ({ page }) => {
   await openBattle(page);
   const place = () => page.evaluate(([p]) => { battle.category = 'units'; battle.preset = 'humans:sword'; battle.lineup = []; battleTap(p.x, p.y); return [enemies[0].maxHp, enemies[0].damage]; }, [at(30, 10)]);
   expect(await place()).toEqual([75, 50]);
   await page.click('[data-dock="battle-settings"]');
+  await expect(page.locator('#battle-difficulty-hint')).toHaveText('У противников на 25% меньше здоровья, чем у вашего отряда.');
   await page.locator('[data-battle-difficulty="hard"]:visible').click();
+  await expect(page.locator('#battle-difficulty-hint')).toHaveText('У противников столько же здоровья, сколько у вашего отряда.');
   expect(await page.evaluate(() => [enemies[0].maxHp, enemies[0].damage])).toEqual([100, 50]); // (made again at once)
   await page.evaluate(() => { closeSheet(); setBattleCategory('units'); });
   expect(await page.locator('#battle-presets [data-preset="humans:sword"] .tile-cost').innerText()).toContain('100'); // (a tile shows the unit as one of yours, #326)

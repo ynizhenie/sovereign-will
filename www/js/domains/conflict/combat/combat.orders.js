@@ -107,6 +107,7 @@ export function followCommand(s, tick) {
   if (game.gameMode !== 'endless' || s.raider || (!s.orderTarget && !s.orderSpot)) return false;
   if (s.orderSpot && !s.holdOrder && !getSelection().includes(s)) { delete s.orderSpot; if (!s.orderTarget) return false; }
   if (s.asleep) { s.asleep = false; s.sleepSpot = null; }
+  if (s.petSleep > 0) s.petSleep = 0;
   const spotGiven = !!s.orderSpot;
   fightByOrders(s, tick.dt, false);
   if (!spotGiven) {

@@ -23,6 +23,8 @@ export function updateUI() {
   // the blight-by-itself switch (#253): lit while on, greyed for good with none left
   const autoBlight = document.getElementById('btn-auto-blight');
   if (autoBlight) { autoBlight.classList.toggle('on', !!game.autoBlight); autoBlight.disabled = !!game.autoBlightDone; }
+  const baseZone = document.getElementById('btn-base-zone');
+  if (baseZone) baseZone.classList.toggle('on', !!game.showBaseZone);
   updateResourceStrip();
   updateSheetStock();
   Object.keys(GAME_CONFIG.resources).forEach(resourceKey => {
