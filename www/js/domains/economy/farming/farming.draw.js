@@ -38,7 +38,7 @@ export function drawFarmZones() {
 
 // The inner edge of the patrol posts and the night work area without torches
 export function drawBaseZoneBoundary() {
-  if (!isTabShown('tab-farming') || game.gameMode !== 'endless') return;
+  if (!game.showBaseZone || !isTabShown('tab-farming') || game.gameMode !== 'endless') return;
   ctx.save();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
   ctx.lineWidth = 2;

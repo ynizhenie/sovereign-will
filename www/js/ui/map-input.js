@@ -65,8 +65,8 @@ export function handleCanvasClick() {
   if (game.buildMode === 'interact' && buildingTapped(tile)) return;
   // Blight tab (the undead): mark ground for a necromancer to blight; the same tile again takes the
   // mark away, as farm zones
-  if (game.buildMode === 'blight' || game.buildMode === 'blight_clear') {
-    toggleBlightZone(tile.gx, tile.gy, tile.gxIdx, tile.gyIdx, game.buildMode === 'blight_clear');
+  if (game.buildMode === 'blight') {
+    toggleBlightZone(tile.gx, tile.gy, tile.gxIdx, tile.gyIdx, false);
     return;
   }
   // Farming tab: paint (or clear) farm zone tiles
@@ -77,7 +77,13 @@ export function handleCanvasClick() {
     if (kind !== 'clear' && !inTerritory(tile.gx, tile.gy)) { showNotification(t('build.outside'), true); return; }
     // (#279) relief and post zones; Remove zone takes any off
     if (kind === 'relief' || kind === 'post' || kind === 'path') toggleZone(tile.gx, tile.gy, kind);
-    else { if (kind === 'clear') toggleZone(tile.gx, tile.gy, 'clear'); toggleFarmZone(tile.gx, tile.gy, kind); }
+    else {
+      if (kind === 'clear') {
+        if (getPlayerFaction().id === 'undead') toggleBlightZone(tile.gx, tile.gy, tile.gxIdx, tile.gyIdx, true);
+        toggleZone(tile.gx, tile.gy, 'clear');
+      }
+      toggleFarmZone(tile.gx, tile.gy, kind);
+    }
     return;
   }
   if (game.buildMode !== 'interact' && game.buildMode !== 'demolish' && !canPlaceHere(tile)) return;

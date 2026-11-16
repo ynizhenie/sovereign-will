@@ -49,6 +49,16 @@ test('the undead pay bones for every building, and their blight is in the Zones 
     window.sim.helpers.clearResources();
     const undead = cost();
     const blight = !document.querySelector('#tab-farming .undead-only').hidden && !document.getElementById('tab-btn-blight');
+    const autoBlightLabel = document.getElementById('btn-auto-blight').textContent.trim();
+    const clearButtonCount = document.querySelectorAll('#tab-farming #btn-zone_clear').length;
+    const separateBlightClearButton = !!document.getElementById('btn-blight_clear');
+    const hall = getGridPos(townHall.x, townHall.y);
+    const clearPoint = window.sim.helpers.tileCenter(hall.gx + 6, hall.gy + 6);
+    postZones.push(clearPoint);
+    blightZones.push({ ...clearPoint, done: false });
+    buildMode = 'zone_clear';
+    mouse.x = clearPoint.x; mouse.y = clearPoint.y; handleCanvasClick();
+    const clearsBoth = postZones.length === 0 && blightZones.length === 0;
     // a wall ordered and built: the bones are paid
     Object.assign(stock, { wood: 50, stone: 50, bones: 50 });
     const bones0 = stock.bones;
@@ -59,13 +69,17 @@ test('the undead pay bones for every building, and their blight is in the Zones 
     const built = buildings.some(b => b.type === 'wall_wood');
     const paid = bones0 - stock.bones;
     sides.player.faction = 'humans'; sides.player.color = '#e9c46a';
-    return { humans, undead, blight, built, paid };
+    return { humans, undead, blight, autoBlightLabel, clearButtonCount, separateBlightClearButton, clearsBoth, built, paid };
   });
   expect(r.humans.wall.bones).toBeUndefined();
   expect(r.undead.wall.bones).toBeGreaterThanOrEqual(2);
   expect(r.undead.grave.bones).toBeGreaterThan(0);
   expect(r.undead.smithy.bones).toBeGreaterThan(0);
   expect(r.blight).toBe(true);
+  expect(r.autoBlightLabel).toContain('Распространять порчу');
+  expect(r.clearButtonCount).toBe(1);
+  expect(r.separateBlightClearButton).toBe(false);
+  expect(r.clearsBoth).toBe(true);
   expect(r.built).toBe(true);
   expect(r.paid).toBeGreaterThanOrEqual(r.undead.wall.bones - 1); // (bones made meanwhile by the hall)
   expect(errors).toEqual([]);

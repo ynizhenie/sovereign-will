@@ -466,6 +466,7 @@
  * @property {boolean} wasNight
  * @property {boolean} autoBlight   the undead's necromancers blight the nearest ground by themselves (#253)
  * @property {boolean} autoBlightDone none left to blight: the switch is off for good
+ * @property {boolean} showBaseZone whether the base's patrol boundary is drawn while the Zones tab is shown
  * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
  * @property {number} portalTimer
  * @property {number | null} [portalWavePrep] the wave number assigned to queued portal spawns during preparation

@@ -641,6 +641,32 @@ test('the demon menu scene: full health, varied human waves, and a meal before t
   expect(result.outpostDamaged).toBe(false);
 });
 
+test('the menu demon chooses the nearest foe over a distant archer that hit it', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const result = await page.evaluate(() => {
+    enterMenuWorld('demon');
+    const demon = settlers[0];
+    demon.x = townHall.x - 250;
+    demon.y = townHall.y + 150;
+    const nearest = createConfiguredEnemy({ x: demon.x + 140, y: demon.y }, 'raider');
+    const archer = createConfiguredEnemy({ x: demon.x + 220, y: demon.y }, 'raider_archer');
+    for (const enemy of [nearest, archer]) {
+      enemy.menuThreat = true;
+      enemy.attackTarget = demon;
+      game.enemies.push(enemy);
+    }
+    demon.retaliationTarget = archer;
+    demon.retaliationUntil = game.pathTick + 90;
+    stepGame(1 / 60);
+    return {
+      choseNearest: demon.meleeApproachTarget === nearest,
+      choseArcher: demon.meleeApproachTarget === archer
+    };
+  });
+  expect(result).toEqual({ choseNearest: true, choseArcher: false });
+});
+
 test('the defeated demon scene keeps humans until it restarts', async ({ page }) => {
   await page.goto('/');
   await opened(page);

@@ -42,6 +42,7 @@ export const PAGE_ACTIONS = {
   showCraftKind: kind => showCraftKind(kind),
   // the undead's blight spreading by itself (#253): on and off, till there's none left to blight
   toggleAutoBlight: () => { if (!game.autoBlightDone) game.autoBlight = !game.autoBlight; },
+  toggleBaseZone: () => { game.showBaseZone = !game.showBaseZone; updateUI(); },
   openHall: () => openHallCard(),
   // Point: back to selecting, nothing open and nobody selected (#232)
   pointMode: () => { setMode('interact'); closeOverlays(); deselectSettler(); },

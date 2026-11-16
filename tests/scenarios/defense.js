@@ -49,6 +49,95 @@ Object.assign(window.sim, (() => {
     };
   }
 
+  function holdsPostDuringPreparation({ seed = 'far-base-prep-defense', seconds = 6 }) {
+    start(seed);
+    clearResources();
+    placeBuilding('warehouse', nearHall(18, 0).x, nearHall(18, 0).y);
+    const soldier = makeSettler(1, townHall.x, townHall.y + 40, { weapon: 'sword', role: 'soldier' });
+    settlers = [soldier];
+    const enemy = createConfiguredEnemy({ x: townHall.x + 15 * TILE_SIZE, y: townHall.y }, 'raider');
+    enemy.fromWave = true;
+    enemy.prepWave = game.waveNum;
+    enemy.speed = 0;
+    enemy.damage = 0;
+    enemy.hp = enemy.maxHp = 1e4;
+    enemies = [enemy];
+    game.wavePreparation = { wave: game.waveNum, stage: 'march' };
+    waveTimer = 9;
+    defensePlan = null;
+    run(seconds, { holdWaves: false, each: () => { waveTimer = 9; } });
+    const post = getDefensePlan().squadOf.get(soldier).post;
+    return {
+      enemyUntouched: enemy.hp === enemy.maxHp,
+      holdingPost: Math.hypot(soldier.x - post.x, soldier.y - post.y) < 30
+    };
+  }
+
+  function holdsPostAgainstEnemyOutsideDirectionalBase({ seed = 'far-base-outside-defense', seconds = 6 }) {
+    start(seed);
+    clearResources();
+    placeBuilding('warehouse', nearHall(18, 0).x, nearHall(18, 0).y);
+    const soldier = makeSettler(1, townHall.x, townHall.y + 40, { weapon: 'sword', role: 'soldier' });
+    settlers = [soldier];
+    const enemy = createConfiguredEnemy({ x: townHall.x, y: townHall.y - 12 * TILE_SIZE }, 'raider');
+    enemy.speed = 0;
+    enemy.damage = 0;
+    enemy.hp = enemy.maxHp = 1e4;
+    enemies = [enemy];
+    game.wavePreparation = { wave: game.waveNum, stage: 'gather' };
+    waveTimer = 9;
+    defensePlan = null;
+    run(seconds, { holdWaves: false, each: () => { waveTimer = 9; } });
+    const post = getDefensePlan().squadOf.get(soldier).post;
+    return {
+      withinOldCircularRadius: Math.hypot(enemy.x - townHall.x, enemy.y - townHall.y) < getBaseRadius(),
+      outsideDirectionalBase: !isInsideBase(enemy),
+      enemyUntouched: enemy.hp === enemy.maxHp,
+      holdingPost: Math.hypot(soldier.x - post.x, soldier.y - post.y) < 30
+    };
+  }
+
+  function workersDefendTownHallFromWave({ seed = 'worker-hall-threat' } = {}) {
+    start(seed);
+    clearResources();
+    const worker = makeSettler(1, townHall.x + 80, townHall.y, { tool: 'axe' });
+    settlers = [worker];
+    const enemy = createConfiguredEnemy({ x: townHall.x + 60, y: townHall.y }, 'raider');
+    enemy.fromWave = true;
+    enemy.prepWave = game.waveNum;
+    enemy.speed = 0;
+    enemy.damage = 0;
+    enemy.hp = enemy.maxHp = 1e4;
+    enemies = [enemy];
+    game.wavePreparation = { wave: game.waveNum, stage: 'march' };
+    waveTimer = 9;
+    run(1, { holdWaves: false, each: () => { waveTimer = 9; } });
+    return { enemyHurt: enemy.hp < enemy.maxHp };
+  }
+
+  function workersStayShelteredFromWaveThreat({ seed = 'worker-shelter-threat', seconds = 8 } = {}) {
+    start(seed);
+    clearResources();
+    const worker = makeSettler(1, townHall.x + 180, townHall.y, { tool: 'none' });
+    const defender = makeSettler(2, townHall.x, townHall.y + 40, { weapon: 'sword', role: 'soldier' });
+    defender.isPossessed = true;
+    settlers = [worker, defender];
+    const enemy = createConfiguredEnemy({ x: townHall.x + 210, y: townHall.y }, 'raider');
+    enemy.fromWave = true;
+    enemy.speed = 0;
+    enemy.damage = 0;
+    enemy.hitDamage = 0;
+    enemy.attackCooldown = 1e4;
+    enemy.hp = enemy.maxHp = 1e4;
+    enemies = [enemy];
+    run(seconds, { each: () => { waveTimer = 50; } });
+    return {
+      staysByHall: worker.shelteringFromEnemy === enemy && Math.hypot(worker.x - townHall.x, worker.y - townHall.y) < townHall.radius + 20,
+      wasHit: worker.lastAttackedTick > 0,
+      enemyUntouched: enemy.hp === enemy.maxHp
+    };
+  }
+
   // One squad at its post; a wave raider standing off, then walking up to it
   function holdAndEngage({ seed = 'engage-test' }) {
     start(seed);
@@ -141,5 +230,5 @@ Object.assign(window.sim, (() => {
     return { allInside: settlers.every(s => isInSafeArea(s.x, s.y)), leftBase, applesLeft: apple.applesReady };
   }
 
-  return { preWaveWorkTiming, deployment, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack };
+  return { preWaveWorkTiming, deployment, holdsPostDuringPreparation, holdsPostAgainstEnemyOutsideDirectionalBase, workersDefendTownHallFromWave, workersStayShelteredFromWaveThreat, holdAndEngage, archersManTowers, workersStayClose, baseBreach, workersComeBack };
 })());

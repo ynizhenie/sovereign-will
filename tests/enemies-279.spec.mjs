@@ -112,6 +112,55 @@ test('wave builders construct and activate faction-specific spawners when the wa
   expect(errors).toEqual([]);
 });
 
+test('enemy spawner sites do not overlap enemies', async ({ page }) => {
+  const errors = await openGame(page);
+  const result = await page.evaluate(() => {
+    const { tileCenter, clearResources } = window.sim.helpers;
+    sides.enemy.faction = 'humans';
+    game.mapSettings = { cols: 128, rows: 128 };
+    window.sim.start('enemy-spawner-clearance');
+    clearResources();
+    game.enemyCamp = null;
+    game.enemyCamps = [];
+    game.enemyTents = [];
+    game.enemyTentBlueprints = [];
+    game.enemies = [];
+    const hall = getGridPos(townHall.x, townHall.y);
+    const builder = createConfiguredEnemy(tileCenter(hall.gx + 25, hall.gy + 20), 'raider');
+    game.enemies.push(builder);
+    const site = getNearbyEnemyTentSite(builder);
+    const siteAvoidsBuilder = !!site && Math.hypot(site.x - builder.x, site.y - builder.y) >= 22;
+    const siteIsFree = !!site && isSpawnSpotFree(site.x, site.y);
+    if (site) {
+      builder.buildTarget = site;
+      for (let frame = 0; frame < 60 * 15 && !game.enemyTents.some(tent => tent.x === site.x && tent.y === site.y); frame++) {
+        game.pathTick++;
+        tickEnemy(builder, 1 / 60);
+      }
+    }
+    const spawner = site && game.enemyTents.find(tent => tent.x === site.x && tent.y === site.y);
+    const buildClearance = spawner && Math.hypot(spawner.x - builder.x, spawner.y - builder.y) >= 22;
+    const beforeLeaving = spawner && Math.hypot(spawner.x - builder.x, spawner.y - builder.y);
+    for (let frame = 0; frame < 60 * 2 && spawner; frame++) {
+      game.pathTick++;
+      tickEnemy(builder, 1 / 60);
+    }
+    return {
+      foundSite: !!site,
+      siteAvoidsBuilder,
+      siteIsFree,
+      builtSpawner: !!spawner,
+      buildClearance,
+      builderLeavesSpawner: !!spawner && Math.hypot(spawner.x - builder.x, spawner.y - builder.y) > beforeLeaving + 10
+    };
+  });
+  expect(result).toEqual({
+    foundSite: true, siteAvoidsBuilder: true, siteIsFree: true, builtSpawner: true,
+    buildClearance: true, builderLeavesSpawner: true
+  });
+  expect(errors).toEqual([]);
+});
+
 test('waves arrive by raft when no enemy camp exists', async ({ page }) => {
   await openGame(page);
   const r = await sim(page, 'wavesArriveByRaftWithoutCamp', {});

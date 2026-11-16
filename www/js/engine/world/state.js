@@ -84,6 +84,7 @@ export const game = {
   wasNight: false,
   autoBlight: false,    // the undead's necromancers blight by themselves (#253); autoBlightDone: none left to
   autoBlightDone: false,
+  showBaseZone: false,
   portalQueue: [],      // a wave's enemy demons still to come out of the portals (#250)
   portalTimer: 0,            // { x, y, type, amount } stock on the ground by a full storage (#248, storage.stores.js)
   ironOres: [],

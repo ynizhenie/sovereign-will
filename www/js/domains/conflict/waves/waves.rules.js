@@ -4,7 +4,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
 import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
-import { isTileOccupied } from '../../economy/building/index.js';
+import { isSpawnSpotFree, isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { showNotification } from '../../../ui/index.js';
 import { armorOf, helmetOf, isRangedWeapon, putOnGear } from '../../colony/equipment/index.js';
@@ -390,7 +390,7 @@ export function getNearbyEnemyTentSite(origin) {
       if (Math.hypot(gx - centre.gx, gy - centre.gy) > radius || isBorderZone(gx, gy)) continue;
       const x = gx * TILE_SIZE + 15, y = gy * TILE_SIZE + 15, key = `${x},${y}`;
       if (reserved.has(key) || game.enemyTentBlueprints.some(site => site.x === x && site.y === y) ||
-          game.enemyTents.some(tent => tent.x === x && tent.y === y) || isTileOccupied(x, y) ||
+          !isSpawnSpotFree(x, y) ||
           (territory && inTerritory(x, y)) || inEnemyTerritory(x, y)) continue;
       const nearPlayer = territory && territoryNear(gx, gy);
       if (camps.length ? !nearPlayer : nearPlayer) continue;

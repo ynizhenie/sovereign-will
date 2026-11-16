@@ -1141,6 +1141,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 
 /* the blight-by-itself switch (#253) */
 #btn-auto-blight.on { background: #6c3483; border-color: #a569bd; }
+#btn-base-zone.on { background: #117864; border-color: #48c9b0; color: #fff; }
 
 /* Cards (#255): a locked thing's tile greyed under a lock; three cards over the map after a wave beaten */
 .btn.tile.locked { opacity: 0.45; filter: grayscale(0.8); }

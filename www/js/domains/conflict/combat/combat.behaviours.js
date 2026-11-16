@@ -94,7 +94,10 @@ export function holdPost(s, tick) {
 // hit it in the last second and a half. Tower guards keep shooting from up there; an archer with no arrows
 // can't; the possessed are the player's
 export function strikeBack(s, tick) {
-  if (s.isPossessed || s.towerAssignment || (game.gameMode === 'menu' && !game.enemies.length)) return false; // (the menu's fight: yes, #256)
+  // The menu demon picks its nearest foe in fightEnemies; don't divert it to whoever last hit it.
+  if (s.isPossessed || s.towerAssignment ||
+      (game.gameMode === 'menu' && game.menuScene === 'demon' && s.type === 'demon') ||
+      (game.gameMode === 'menu' && !game.enemies.length)) return false;
   if (s.plagueUnit && game.settlers.some(master => master.id === s.masterId && master.plagueMoveTarget)) return false;
   const recentAttacker = getRetaliationTarget(s);
   const attacker = recentAttacker && !isCampGuardUnavailable(recentAttacker) && canDefendEnemy(recentAttacker)
