@@ -2,8 +2,8 @@
 // each part of a step and of the drawing took (perfMark, put between the calls in update.js and render.js), and every
 // drop: a frame that came much later than the ones before it, with what most likely held it up. The work of the frame
 // before it in the game's steps (logic) or in drawing (draw), the browser freeing memory (gc: the page's memory went
-// down), or none of our own work at all (outside: the graphics card, the browser putting the picture on the screen,
-// another app). A panel shows a graph of the frames, the numbers and the last drops; "Copy report" puts all of it as
+// down), our frame begun late (late: the browser busy with something else first: input, timers, laying out the page),
+// or none of our own work at all (outside: the graphics card, the browser putting the picture on the screen, another app). A panel shows a graph of the frames, the numbers and the last drops; "Copy report" puts all of it as
 // text on the clipboard to be sent. Off, every perfMark is one check of a flag.
 
 import { canvas, getViewScale, glReady, loadSetting, onTap, saveSetting, t } from '../engine/platform/index.js';
@@ -19,23 +19,28 @@ const SPIKES_KEPT = 40;
 let cursor = 0; // when the last mark was made
 let current = new Map(), previous = new Map(); // ms per part: this frame's so far, and the last one's
 let lastStart = 0, lastHeap = 0, lastPaints = null;
-let prevWork = { js: 0, step: 0, draw: 0, steps: 0, paints: 0 };
+let prevWork = { js: 0, late: 0, step: 0, draw: 0, steps: 0, paints: 0 };
 const stats = newStats();
 let panel = null, graph = null, text = null, panelDue = 0, longTasks = { count: 0, ms: 0 };
 
-/** @typedef {{ at: number, interval: number, cause: string, js: number, step: number, draw: number, steps: number,
+/** @typedef {{ at: number, interval: number, cause: string, js: number, late: number, step: number, draw: number, steps: number,
  *   paints: number, heapDrop: number, top: string[], units: string }} Spike */
 function newStats() {
   return {
     started: performance.now(), frames: 0, intervals: new Float32Array(RING), next: 0, filled: 0,
     buckets: new Array(BUCKETS.length).fill(0), parts: /** @type {Map<string, { ms: number, max: number }>} */ (new Map()),
-    spikes: /** @type {Spike[]} */ ([]), causes: { logic: 0, draw: 0, gc: 0, outside: 0 },
+    spikes: /** @type {Spike[]} */ ([]), causes: { logic: 0, draw: 0, gc: 0, late: 0, outside: 0 },
     worst: 0, median: 16.7, gcs: 0
   };
 }
 
-// The step's or the drawing's start; then each mark gives the time since the last one to its part
-export function perfBegin() { if (perf.on) cursor = performance.now(); }
+// The frame's start (its requestAnimationFrame time: how late our work began after it is a part of its own, the
+// browser busy before it); then each mark gives the time since the last one to its part
+export function perfBegin(frameTime) {
+  if (!perf.on) return;
+  cursor = performance.now();
+  if (frameTime !== undefined) current.set('late start', Math.max(0, cursor - frameTime));
+}
 export function perfMark(part) {
   if (!perf.on) return;
   const now = performance.now();
@@ -64,7 +69,7 @@ export function perfFrame(start, end, step, draw, steps) {
   }
   [previous, current] = [current, previous];
   current.clear();
-  prevWork = { js: end - start, step, draw, steps, paints: painted };
+  prevWork = { js: end - start, late: previous.get('late start') || 0, step, draw, steps, paints: painted };
   if (end - panelDue > 250) { panelDue = end; showPanel(); }
 }
 
@@ -80,11 +85,11 @@ function record(interval, heapDrop) {
   if (interval < Math.max(25, stats.median * 1.75)) return;
   // what held it up: the last frame's own work (it ran just before this one's turn came), or not ours
   const w = prevWork;
-  const cause = w.step > interval * 0.4 ? 'logic' : w.draw > interval * 0.4 ? 'draw' : heapDrop ? 'gc' : 'outside';
+  const cause = w.step > interval * 0.4 ? 'logic' : w.draw > interval * 0.4 ? 'draw' : heapDrop ? 'gc' : w.late > interval * 0.4 ? 'late' : 'outside';
   stats.causes[cause]++;
   const top = [...previous].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([part, ms]) => `${part} ${ms.toFixed(1)}`);
   stats.spikes.push({
-    at: (performance.now() - stats.started) / 1000, interval, cause, js: w.js, step: w.step, draw: w.draw, steps: w.steps,
+    at: (performance.now() - stats.started) / 1000, interval, cause, js: w.js, late: w.late, step: w.step, draw: w.draw, steps: w.steps,
     paints: w.paints, heapDrop, top, units: `${game.settlers.length}s ${game.enemies.length}e ${game.projectiles.length}p`
   });
   if (stats.spikes.length > SPIKES_KEPT) stats.spikes.shift();
@@ -132,7 +137,7 @@ function showPanel() {
     .map(([part, v]) => `${part.padEnd(12)} ${(v.ms / Math.max(1, stats.frames)).toFixed(2)} max ${v.max.toFixed(0)}`);
   const last = stats.spikes.slice(-3).reverse().map(sp => `${Math.round(sp.interval)}ms ${sp.cause} ${sp.top[0] || ''}`);
   text.textContent = `${s.fps.toFixed(0)} fps  1% low ${s.low1.toFixed(0)}  worst ${Math.round(stats.worst)}ms\n`
-    + `drops ${c.logic + c.draw + c.gc + c.outside}: logic ${c.logic} draw ${c.draw} gc ${c.gc} out ${c.outside}\n`
+    + `drops ${c.logic + c.draw + c.gc + c.late + c.outside}: logic ${c.logic} draw ${c.draw} late ${c.late} out ${c.outside}\n`
     + `${parts.join('\n')}\n${last.join('\n')}`;
   drawGraph();
 }
@@ -171,7 +176,7 @@ export function setPerfMonitor(on) {
 export function perfReport() {
   const s = summary(), seconds = (performance.now() - stats.started) / 1000;
   const parts = [...stats.parts].sort((a, b) => b[1].ms - a[1].ms)
-    .map(([part, v]) => `  ${part.padEnd(14)} avg ${(v.ms / Math.max(1, stats.frames)).toFixed(2)} ms  max ${v.max.toFixed(1)} ms`);
+    .map(([part, v]) => `  ${part.padEnd(22)} avg ${(v.ms / Math.max(1, stats.frames)).toFixed(2)} ms  max ${v.max.toFixed(1)} ms`);
   const labels = BUCKETS.map((limit, i) => `${i ? BUCKETS[i - 1] : 0}-${limit === Infinity ? '' : limit}`);
   const memory = /** @type {any} */ (performance).memory;
   return [
@@ -181,11 +186,11 @@ export function perfReport() {
     `mode ${game.gameMode} map ${game.COLS}x${game.ROWS} units ${game.settlers.length} settlers ${game.enemies.length} enemies ${game.buildings.length} buildings`,
     `over ${seconds.toFixed(0)} s, ${stats.frames} frames: ${s.fps.toFixed(1)} fps, 1% low ${s.low1.toFixed(1)}, 0.1% low ${s.low01.toFixed(1)}, worst ${stats.worst.toFixed(0)} ms`,
     `frame waits (ms): ${labels.map((label, i) => `${label}: ${stats.buckets[i]}`).join('  ')}`,
-    `drops: logic ${stats.causes.logic}, draw ${stats.causes.draw}, gc ${stats.causes.gc}, outside ${stats.causes.outside}; memory freed ${stats.gcs} times`
+    `drops: logic ${stats.causes.logic}, draw ${stats.causes.draw}, gc ${stats.causes.gc}, late ${stats.causes.late}, outside ${stats.causes.outside}; memory freed ${stats.gcs} times`
       + (memory ? `; heap ${(memory.usedJSHeapSize / 1048576).toFixed(0)} MB` : '') + (longTasks.count ? `; long tasks ${longTasks.count} (${longTasks.ms.toFixed(0)} ms)` : ''),
     `parts (per frame):`, ...parts,
-    `last drops (s since start, wait, cause, our work js/step/draw ms, steps, ground pieces painted, memory freed MB, top parts):`,
-    ...stats.spikes.slice().reverse().map(sp => `  ${sp.at.toFixed(1)}s ${sp.interval.toFixed(0)}ms ${sp.cause} js ${sp.js.toFixed(1)} step ${sp.step.toFixed(1)} draw ${sp.draw.toFixed(1)}`
+    `last drops (s since start, wait, cause, our frame js (late start, step, draw) ms, steps, ground pieces painted, memory freed MB, top parts):`,
+    ...stats.spikes.slice().reverse().map(sp => `  ${sp.at.toFixed(1)}s ${sp.interval.toFixed(0)}ms ${sp.cause} js ${sp.js.toFixed(1)} late ${sp.late.toFixed(1)} step ${sp.step.toFixed(1)} draw ${sp.draw.toFixed(1)}`
       + ` x${sp.steps} paints ${sp.paints}${sp.heapDrop ? ` gc ${sp.heapDrop.toFixed(1)}` : ''} ${sp.units} | ${sp.top.join(', ')}`)
   ].join('\n');
 }

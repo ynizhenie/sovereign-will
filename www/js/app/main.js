@@ -47,7 +47,7 @@ function refreshHud(now) {
 export function gameLoop(now) {
   // (the next frame asked for first: a frame that fails doesn't stop the game for good)
   requestAnimationFrame(gameLoop);
-  perfBegin();
+  perfBegin(now);
   if (typeof syncMenuWorld === 'function') syncMenuWorld(); // the world behind the main menu
   syncHudMode();
   if (typeof updateMusic === 'function') updateMusic();
