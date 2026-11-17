@@ -21,6 +21,7 @@ import { battle, updateBattle } from '../modes/battle/index.js';
 import { isRaidPicking, isRaiding, raid, tickCards, tickRaid, tickRaidCamp } from '../modes/endless/index.js';
 import { boarsPanic, tickMorale } from '../domains/conflict/morale/index.js';
 import { plagueCardPending, tickPlague } from '../modes/plague/index.js';
+import { perfMark } from './perfmon.js';
 
 // hud: the panels brought up to date at the end of it (the loop does that itself, a few times a second: see gameLoop)
 export function update(dt, hud = true) {
@@ -39,6 +40,7 @@ export function update(dt, hud = true) {
   if (game.gameMode === 'menu') {
     if (game.menuScene === 'fishing') updatePendingRespawns(dt);
     updateMenuScene(dt);
+    perfMark('menu scene');
     return;
   }
 
@@ -55,46 +57,61 @@ export function update(dt, hud = true) {
   tickMeals(dt);
   tickBoarRespawn(dt);
   growCrops(dt);
+  perfMark('misc');
   tickBoars(dt);
+  perfMark('boars');
   tickCampfires(dt);
   tickFishPopulation(dt);
   tickFishTraps(dt);
   tickSmelters(dt);
+  perfMark('misc');
   tickSettlers(dt);
+  perfMark('settlers');
   tickEnemyRafts(dt);
   tickEnemyTents(dt);
   tickPortalWave(dt); // (the demons' wave, a few at a time, #250)
   tickScouts(dt); // (scouts between waves, #279)
   tickDemonCamp(dt); // (their corpse pits and cages)
+  perfMark('waves');
   tickProjectiles(dt);
+  perfMark('projectiles');
   tickEnemies(dt);
+  perfMark('enemies');
 
   separateSettlersFromEnemies();
   separateAllies(game.settlers, true); separateAllies(game.enemies, true); // (#326)
+  perfMark('collisions');
   for (const unit of game.settlers) tickAnimation(unit, dt);
   ageBloodAndDung(dt);
   trackAllFootprints();
   for (const unit of game.enemies) tickAnimation(unit, dt);
   applySpikeTraps(dt);
   tickIronTraps(dt); // (#248)
+  perfMark('animation');
 
   removeDeadSettlers();
   removeDeadEnemies();
   updateCorpses(dt);
   ageStuckArrows(dt);
   tickLanterns(dt); // (souls out of a necromancer's lantern by a grave or the hall, #326)
+  perfMark('dead');
 
   keepStoresInStep(); // what lies where, in step with the stock (#248)
+  perfMark('stores');
   tickPaths(); // ground walked a lot wears into paths (#248)
+  perfMark('paths');
   tickDaytime(dt); // day and night (#257)
   tickWeather(dt); // (#308)
+  perfMark('day/weather');
   tickFog(dt); // (what the colony sees, #299)
+  perfMark('fog');
   tickMenuScene(dt); // (the main menu's scene, #256)
   tickNight();
   tickVoices(dt); // (#252)
   if (!isRaiding() || raid.scouting) tickCards(); // (#255; scouting doesn't pause the world)
   tickRaidCamp(dt); // (#255)
   tickRaid(dt);
+  perfMark('rest');
   if (hud) { updateUI(); refreshAffordability(); }
   return true; // (a whole step of the game made: the panels have something new to show)
 }

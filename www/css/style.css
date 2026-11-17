@@ -539,6 +539,50 @@ body.menu-world #defeat-overlay { display: none !important; }
   display: none;
 }
 
+/* the performance monitor (app/perfmon.js): over the game, out of the way of the top bar and the dock */
+#perf-panel {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  z-index: 40;
+  width: 248px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.62);
+  border-radius: 6px;
+  pointer-events: auto;
+}
+#perf-panel[hidden] {
+  display: none;
+}
+#perf-panel canvas {
+  /* (not the game's: the rule for every canvas would stretch it over the panel) */
+  position: static;
+  display: block;
+  width: 240px !important;
+  height: 60px !important;
+  cursor: default;
+}
+#perf-panel pre {
+  margin: 4px 0;
+  font: 10px/1.25 monospace;
+  color: #ecf0f1;
+  white-space: pre;
+  overflow: hidden;
+}
+#perf-panel .perf-buttons {
+  display: flex;
+  gap: 4px;
+}
+#perf-panel .perf-buttons button {
+  flex: 1;
+  font: bold 11px sans-serif;
+  padding: 5px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: #34495e;
+  color: #fff;
+}
+
 .menu-back {
   align-self: flex-start;
   background: none;
