@@ -18,6 +18,7 @@ import { drawBodyBlood, drawBurning, drawWeaponBlood } from '../../conflict/comb
 import { drawHorns } from '../../factions/demons/index.js';
 import { drawPet } from '../pets/index.js';
 import { isBigBody, isPet } from './settlers.rules.js';
+import { drawUnitPicture, facingStep } from './settlers.pictures.js';
 import { hasClearEnemyLine } from '../../../engine/movement/index.js';
 
 const SIMPLE_UNIT_SCALE = 0.55, SIMPLE_UNIT_COUNT = 180;
@@ -971,6 +972,8 @@ export function drawSettlers(only = null) {
     };
     const at = fn => { ctx.save(); ctx.translate(s.x, s.y); fn(); ctx.restore(); };
 
+    // (its figure and all it wears and holds: a picture painted a few times a second, see settlers.pictures.js)
+    const figure = () => {
     if (simple) {
       // (#306) at this size only the figure (drawFigure), its health bar and what's on fire or marked
     } else {
@@ -985,9 +988,7 @@ export function drawSettlers(only = null) {
     if (s.asleep) ctx.globalAlpha = 0.85;
     drawFigure(s, { x: s.x, y: s.y, r, body: getSettlerColor(s), camoColor: getSettlerColor(s), camouflage: !!s.camouflage, skin: SKIN[faction] || SKIN.humans, horns: faction === 'demons', lying: !!s.asleep, hand: true, shield: !!s.shield, handPoint: food || undefined, carryPoint: inHands && !s.asleep ? carryAt(s) : undefined, otherPoint: onBack ? null : (bowDraw(s) || {}).other || null, armor: !s.asleep && armorOf(s) ? String(s.armor) : null, simple, shadow: false });
     ctx.globalAlpha = 1;
-    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawBodyBlood(s, r);
-    drawHealSparks(s); // (#326)
     if (!simple) at(() => {
       // a commander's whistle on a cord on its chest (#248), seen from the front
       if (s.whistle && !s.asleep && !away) { ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-2, -r * 0.2, 5, 3); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(2, -r * 0.2, 2, 3); }
@@ -1000,6 +1001,13 @@ export function drawSettlers(only = null) {
     }
 
     if (crafting) drawWorkpiece(s);
+    if (!simple && isCensored(s)) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
+    };
+    const key = `${simple ? 1 : 0}|${s.type}|${s.weapon}|${s.tool}|${s.armor}|${s.helmet}|${s.shield ? 1 : 0}|${s.carrying ? s.carrying.type : ''}|`
+      + `${s.asleep ? 1 : 0}|${s.eating ? 1 : 0}|${s.torchInHand ? 1 : 0}|${facingStep(s.facing)}|${onBack ? 1 : 0}|${workTool}|${s.temporary !== undefined ? 1 : 0}`;
+    drawUnitPicture(s, key, figure);
+    if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
+    drawHealSparks(s); // (#326)
     if (s.asleep) drawSleepZs(s.x + r, s.y - r);
 
     // selected: a ring round its feet (#326: one picked with it, a fainter one)
@@ -1019,8 +1027,6 @@ export function drawSettlers(only = null) {
     }
     if (s.orderBubble && s.orderBubble.until > game.pathTick) drawOrderBubble(s.x + r, top - 14, s.orderBubble.icon);
     // (talking in a knot: what they say, not dots, #279: settlers.voices.js talkInKnots)
-
-    if (!simple && isCensored(s)) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - 15, top - 6, 30, 4);
     ctx.fillStyle = '#2ecc71'; ctx.fillRect(s.x - 15, top - 6, (Math.max(0, s.hp) / s.maxHp) * 30, 4);
