@@ -327,8 +327,9 @@ export function tickEnemy(en, dt, tick = { meleeFighting: new Map() }) {
 
   if (game.pathTick % 15 === 0) {
     const sight = Math.max(GAME_CONFIG.fog.enemySightTiles * TILE_SIZE, enemyDef.ranged ? shotOf(enemyDef).range + 30 : 0);
-    for (const settler of game.settlers) {
-      if (settler.hp <= 0 || isUntouchable(settler) || Math.hypot(settler.x - en.x, settler.y - en.y) > sight) continue;
+    const visible = game.settlers.filter(settler => settler.hp > 0 && !isUntouchable(settler) &&
+      Math.hypot(settler.x - en.x, settler.y - en.y) <= sight);
+    for (const settler of visible) {
       if (tauntOnSight(en, settler)) break;
     }
   }
@@ -631,7 +632,8 @@ function musterHold(en, dt) {
   }
   if (Math.hypot(en.muster.x - en.x, en.muster.y - en.y) > 6) moveEntityTowards(en, en.muster.x, en.muster.y, en.speed, true, dt);
   else faceTowards(en, townHall.x, townHall.y);
-  if (Math.random() < dt * 0.12) speak(en, getEnemyFaction().id, 'taunt');
+  const hasTargets = game.settlers.some(settler => settler.hp > 0);
+  if (hasTargets && Math.random() < dt * 0.12) speak(en, getEnemyFaction().id, 'taunt');
   return true;
 }
 

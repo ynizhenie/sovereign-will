@@ -379,10 +379,10 @@ function took(s, behaviour) {
 function tauntVisibleEnemy(s) {
   if (game.pathTick % 15 !== 0) return;
   const sight = GAME_CONFIG.fog.settlerTiles * TILE_SIZE;
-  for (const enemy of game.enemies) {
-    if (enemy.hp <= 0 || (hasFog() && !isVisible(enemy.x, enemy.y)) ||
-        (game.wavePreparation && enemy.prepWave === game.wavePreparation.wave) ||
-        Math.hypot(enemy.x - s.x, enemy.y - s.y) > sight) continue;
+  const visible = game.enemies.filter(enemy => enemy.hp > 0 && (!hasFog() || isVisible(enemy.x, enemy.y)) &&
+    !(game.wavePreparation && enemy.prepWave === game.wavePreparation.wave) &&
+    Math.hypot(enemy.x - s.x, enemy.y - s.y) <= sight);
+  for (const enemy of visible) {
     if (tauntOnSight(s, enemy)) break;
   }
 }

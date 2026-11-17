@@ -61,22 +61,25 @@ export function tauntOnSight(unit, opponent) {
   return true;
 }
 
-// (#326, 27.10, 24) What it may say: its faction's for the event, or the ones for the side it's against when there
-// are such (voice.<faction>.<event>.vs.<other>: no brains wanted off the undead); about the walls (….walls) only
-// when the colony has a wall or a door
+// What it may say: faction/event, optionally against an opponent; walls only when built
 const WALLS = ['wall_wood', 'wall_stone', 'door', 'iron_door'];
 export function phrasesFor(unit, faction, event, opponentFaction = null) {
   const text = key => { const s = t(key); return s && s !== key ? s.split('|') : []; };
   const against = opponentFaction || (unit.enemyKey ? getPlayerFaction() : getEnemyFaction()).id;
-  const key = `voice.${faction}.${event}`, vs = text(`${key}.vs.${against}`);
-  let list = vs.length ? vs : text(key);
+  const phraseEvent = event === 'tauntOnSight' ? 'encounter' : event;
+  const key = `voice.${faction}.${phraseEvent}`, vs = text(`${key}.vs.${against}`);
+  const matchup = text(`${key}.vs.${against}`);
+  const tauntPhrases = event === 'tauntOnSight' ? matchup
+    : event === 'taunt' ? matchup.length ? matchup : text(key) : [];
+  let list = event === 'tauntOnSight' || event === 'taunt' ? tauntPhrases : vs.length ? vs : text(key);
   if (event === 'idle') {
     const weather = getWeather();
     const context = weather.level > 0.3 && (weather.kind === 'rain' || weather.kind === 'storm')
       ? 'wet' : weather.kind === 'clear' ? 'dry' : null;
     if (context) list = [...list, ...text(`${key}.${context}`)];
   }
-  return game.buildings.some(b => WALLS.includes(b.type) && b.side !== 'red') ? [...list, ...text(`${key}.walls`)] : list;
+  const wallKey = `${key}.walls`;
+  return game.buildings.some(b => WALLS.includes(b.type) && b.side !== 'red') ? [...list, ...text(wallKey)] : list;
 }
 
 // What it says, shown and heard
