@@ -8,7 +8,7 @@
 // loading puts the real object back in its place.
 
 import { escapeHtml, iconHtml, rebuildConfigHud, renderedFaction, runLoading, setRichText, updateSeedHud } from '../../ui/index.js';
-import { camera, clampCamera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
+import { camera, clampCamera, exportFile, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { createWorldSeed, game, resetTileIndex, setWorldSize, townHall, WORLD_LISTS } from '../../engine/world/index.js';
 import { stock } from '../../domains/colony/storage/index.js';
 import { sides } from '../../domains/factions/index.js';
@@ -444,20 +444,21 @@ function renameSave(key, value) {
   renderSaveList(saveManagerMode);
 }
 
-function exportSave(key) {
+async function exportSave(key) {
   const save = loadSaves(saveManagerMode)[key];
-  if (!save) { showSaveStatus(t('save.failed'), false); return; }
-  const blob = new Blob([JSON.stringify({ format: 'sovereign-will-save', version: 1, save }, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  if (!save) { showSaveStatus(t('save.exportFailed'), false); return; }
   const filename = [...displayedName(save)].map(char => {
     const code = char.charCodeAt(0);
     return code < 32 || '<>:"/\\|?*'.includes(char) ? '-' : char;
   }).join('').trim().slice(0, 64) || 'save';
-  link.href = url;
-  link.download = `${filename}.json`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    const exported = await exportFile(`${filename}.json`,
+      JSON.stringify({ format: 'sovereign-will-save', version: 1, save }, null, 2));
+    if (exported) showSaveStatus(t('save.exported'), true);
+  } catch (error) {
+    console.error('Could not export save', error);
+    showSaveStatus(t('save.exportFailed'), false);
+  }
 }
 
 function validGameData(data) {

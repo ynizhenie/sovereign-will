@@ -4,7 +4,7 @@
 // a crypt, the demons' an obsidian gate with fire in it.
 
 import { ctx } from '../../../engine/platform/index.js';
-import { getPlayerFaction, getSettlerColor } from '../../factions/index.js';
+import { getSettlerColor, getTownHallFaction } from '../../factions/index.js';
 import { drawShadowPath, getSun } from '../../world/index.js';
 
 const rect = (x, y, w, h, fill, stroke, lw = 1) => {
@@ -529,7 +529,7 @@ function drawHellgate(x, y) {
 }
 
 export function drawHallArt(x, y) {
-  const hall = getPlayerFaction().hall;
+  const hall = getTownHallFaction().hall;
   if (hall === 'hellgate') drawHellgate(x, y);
   else if (hall === 'graveyard') drawGraveyard(x, y);
   else drawHumanHall(x, y);

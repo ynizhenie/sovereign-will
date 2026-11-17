@@ -55,30 +55,65 @@ test('the selected settler shows what it is doing, when it eats, and what it car
   expect(missing).toEqual([]);
 });
 
-test('a map is made for a faction, and Endless plays it as that faction (#170)', async ({ page }) => {
+test('maps are faction-independent, the editor shows every faction building, and Endless keeps the chosen faction', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(async () => {
     localStorage.removeItem('sovereign-will-maps');
     showMenuScreen('editor');
-    renderEditorMapList();
-    document.querySelector('#editor-faction [data-faction="undead"]').click();
     await startEditor({ cols: 30, rows: 30, generate: false });
+    sides.player.faction = 'humans';
+    document.querySelector('.top-editor').click();
+    const hallFactionButtons = document.querySelectorAll('#editor-hall-faction [data-hall-faction]').length;
+    const hallFactionPickerVisible = !!document.getElementById('editor-hall-faction').getClientRects().length;
+    document.querySelector('#editor-hall-faction [data-hall-faction="demons"]').click();
+    const previewFaction = getTownHallFaction().id;
+    const playerFactionAfterPreviewChange = getPlayerFaction().id;
     editor.category = 'buildings';
     renderEditorPanel();
     const tools = [...document.querySelectorAll('#editor-tools [data-tool]')].map(b => b.dataset.tool);
+    const buildingSections = [...document.querySelectorAll('#editor-tools .panel-heading')].map(h => h.textContent);
+    const hasHealth = !!document.querySelector('#editor-tools .tile-cost');
     document.getElementById('editor-name').value = 'Кладбище';
     saveEditorMap();
     leaveEditor();
-    const saved = loadSavedMaps()['Кладбище'].faction;
+    const saved = loadSavedMaps()['Кладбище'];
     sides.player.faction = 'humans';
     showMenuScreen('endless');
     setMapSource('custom');
     const played = sides.player.faction;
-    setSideFaction('player', 'humans');
-    const stillLocked = sides.player.faction;
+    setSideFaction('player', 'undead');
+    const selected = sides.player.faction;
     const humansDisabled = document.querySelector('#faction-player [data-faction="humans"]').disabled;
     setMapSource('random');
-    return { tent: tools.includes('tent'), grave: tools.includes('grave'), saved, played, stillLocked, humansDisabled };
+    return {
+      buildings: ['town_hall', 'outpost', 'tent', 'grave', 'demon_den'].every(id => tools.includes(id)),
+      sections: ['Ратуша и аванпост', 'Общие', 'Люди', 'Демоны', 'Нежить'].every(name => buildingSections.includes(name)),
+      landmarksAboveCommon: buildingSections.indexOf('Ратуша и аванпост') < buildingSections.indexOf('Общие'),
+      editorFactionChoice: !!document.querySelector('#editor-faction'),
+      hallFactionButtons,
+      hallFactionPickerVisible,
+      hallFactionAffectsOnlyPreview: previewFaction === 'demons' && playerFactionAfterPreviewChange === 'humans',
+      hasHealth,
+      savedHasFaction: Object.prototype.hasOwnProperty.call(saved, 'faction'),
+      savedHasHallFaction: Object.prototype.hasOwnProperty.call(saved, 'hallFaction'),
+      played,
+      selected,
+      humansDisabled
+    };
   });
-  expect(r).toEqual({ tent: false, grave: true, saved: 'undead', played: 'undead', stillLocked: 'undead', humansDisabled: true });
+  expect(r).toEqual({
+    buildings: true,
+    sections: true,
+    landmarksAboveCommon: true,
+    editorFactionChoice: false,
+    hallFactionButtons: 3,
+    hallFactionPickerVisible: true,
+    hallFactionAffectsOnlyPreview: true,
+    hasHealth: false,
+    savedHasFaction: false,
+    savedHasHallFaction: false,
+    played: 'humans',
+    selected: 'undead',
+    humansDisabled: false
+  });
 });

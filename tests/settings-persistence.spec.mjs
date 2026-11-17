@@ -69,7 +69,7 @@ test('map-editor setup choices survive reload', async ({ page }) => {
   await page.locator('#editor-map-cols').dispatchEvent('change');
   await page.locator('#editor-map-rows').fill('224');
   await page.locator('#editor-map-rows').dispatchEvent('change');
-  await page.locator('#editor-faction [data-faction="demons"]').click();
+  await expect(page.locator('#editor-faction')).toHaveCount(0);
   await page.reload();
 
   await page.evaluate(() => showMenuScreen('endless'));
@@ -78,5 +78,5 @@ test('map-editor setup choices survive reload', async ({ page }) => {
   await expect(page.locator('[data-editor-size="custom"]')).toHaveClass(/active/);
   await expect(page.locator('#editor-map-cols')).toHaveValue('208');
   await expect(page.locator('#editor-map-rows')).toHaveValue('224');
-  await expect(page.locator('#editor-faction [data-faction="demons"]')).toHaveClass(/active/);
+  await expect(page.locator('#editor-faction')).toHaveCount(0);
 });

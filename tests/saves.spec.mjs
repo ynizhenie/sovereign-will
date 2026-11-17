@@ -1,6 +1,70 @@
 import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
 
+test('native exports write the file to cache and open the system share sheet', async ({ page }) => {
+  await openGame(page);
+  const calls = await page.evaluate(async () => {
+    const { exportFile } = await import('/js/engine/platform/index.js');
+    const calls = [];
+    Object.defineProperty(window, 'Capacitor', {
+      configurable: true,
+      value: {
+        isNativePlatform: () => true,
+        Plugins: {
+          Filesystem: {
+            writeFile: async options => {
+              calls.push({ kind: 'write', options });
+              return { uri: 'file:///cache/exports/save.json' };
+            }
+          },
+          Share: { share: async options => calls.push({ kind: 'share', options }) }
+        }
+      }
+    });
+    await exportFile('save.json', '{"version":1}');
+    return calls;
+  });
+  expect(calls).toEqual([
+    {
+      kind: 'write',
+      options: { path: 'exports/save.json', data: '{"version":1}', directory: 'CACHE', recursive: true }
+    },
+    {
+      kind: 'share',
+      options: { title: 'save.json', dialogTitle: 'save.json', files: ['file:///cache/exports/save.json'] }
+    }
+  ]);
+});
+
+test('mobile browser exports use Web Share for files when it is available', async ({ page }) => {
+  await openGame(page);
+  const result = await page.evaluate(async () => {
+    const { exportFile } = await import('/js/engine/platform/index.js');
+    let shared;
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: options => options.files?.[0] instanceof File
+    });
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async options => {
+        shared = {
+          title: options.title,
+          name: options.files[0].name,
+          data: await options.files[0].text(),
+          type: options.files[0].type
+        };
+      }
+    });
+    const exported = await exportFile('save.json', '{"version":1}');
+    return { exported, shared };
+  });
+  expect(result).toEqual({
+    exported: true,
+    shared: { title: 'save.json', name: 'save.json', data: '{"version":1}', type: 'application/json' }
+  });
+});
+
 test('save slots are independent, keep the seed as their default name, and live in the Endless saves screen', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => localStorage.removeItem('sovereign-will-saves'));

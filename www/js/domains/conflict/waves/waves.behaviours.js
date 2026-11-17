@@ -770,7 +770,7 @@ function isEnemyTargetFull(settler, tick) {
 function chooseEnemyAttack(en, enemyDef, target) {
   let shooting = en.type === 'archer';
   let meleeDef = game.plagueMode && enemyDef.healer
-    ? getDefinition('enemies', 'raider_club') || enemyDef
+    ? { ...enemyDef, weapon: 'fist' }
     : enemyDef;
   /** @type {{ x: number, y: number }} */
   let moveTarget = target;

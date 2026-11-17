@@ -307,11 +307,14 @@ export function addCorpse(unit, side, kind) {
   // (#314) a pet leaves its own body: a dog's or a hellhound's, not a man's (an enemy's kind is its enemyKey)
   const def = getDefinition(side === 'enemy' ? 'enemies' : 'settlerTypes', kind) || {};
   const weapon = side === 'enemy' && def.ranged ? def.weapon : unit.weapon;
+  const carried = game.plagueMode && side === 'enemy' && def.healer
+    ? { weapon: 'fist', tool: 'none', shield: false, armor: null, helmet: false, helmetGear: undefined }
+    : { weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet, helmetGear: helmetOf(unit)?.id };
   const corpse = {
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
     experience: unit.experience || 0, progression: unit.progression ? { ...unit.progression } : undefined,
-    weapon, tool: unit.tool, shield: unit.shield, armor: unit.armor, helmet: unit.helmet, helmetGear: helmetOf(unit)?.id,
+    ...carried,
     pet: def.pet, stuck: unit.stuck
   }; // (its look and body type, #306; its arrows stay in it, #326)
   game.corpses.push(corpse);

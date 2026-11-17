@@ -217,6 +217,61 @@ test('Plague bands come in on standable ground away from the hero, armed as Endl
   expect(errors).toEqual([]);
 });
 
+test('Plague healers carry one medbag, fight unarmed, and leave unarmed corpses', async ({ page }) => {
+  const errors = await openGame(page);
+  await startPlague(page);
+  const result = await page.evaluate(async () => {
+    const { createConfiguredEnemy, getEnemyDef, removeDeadEnemies, tickEnemies } =
+      await import('/js/domains/conflict/waves/index.js');
+    const hero = settlers.find(s => s.plagueHero);
+    const medic = createConfiguredEnemy({ x: hero.x + 40, y: hero.y }, 'raider_medic');
+    game.enemies.length = 0;
+    game.enemies.push(medic);
+    tickEnemies(1 / 60);
+    const attackWeapon = medic.weapon;
+
+    medic.weapon = 'club';
+    medic.armor = 'iron';
+    medic.shield = true;
+    medic.helmet = 'helmet';
+    medic.helmetGear = 'helmet';
+    medic.hp = 0;
+    game.loot.length = 0;
+    removeDeadEnemies();
+    const corpse = game.corpses[game.corpses.length - 1];
+    game.corpses.length = 0;
+    game.corpses.push(corpse);
+    corpse.x = hero.x + 10;
+    corpse.y = hero.y;
+
+    game.plague.reviveTimer = 0;
+    game.plague.energy = 100;
+    document.getElementById('plague-revive').click();
+    const raised = settlers.find(s => s.plagueUnit && !s.plagueHero);
+    return {
+      attackWeapon,
+      tool: getEnemyDef(medic).tool,
+      corpse: {
+        weapon: corpse.weapon,
+        tool: corpse.tool,
+        armor: corpse.armor,
+        shield: corpse.shield,
+        helmet: corpse.helmet,
+        helmetGear: corpse.helmetGear || null,
+        loot: game.loot.length
+      },
+      raised: raised && { weapon: raised.weapon, tool: raised.tool, armor: raised.armor, shield: raised.shield, helmet: raised.helmet }
+    };
+  });
+  expect(result).toMatchObject({
+    attackWeapon: 'fist',
+    tool: 'medbag',
+    corpse: { weapon: 'fist', tool: 'none', armor: null, shield: false, helmet: false, helmetGear: null, loot: 0 },
+    raised: { weapon: 'fist', tool: 'none', armor: null, shield: false, helmet: false }
+  });
+  expect(errors).toEqual([]);
+});
+
 test('Plague groups in the same batch spawn within a five-second jitter window', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));

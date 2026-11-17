@@ -215,7 +215,6 @@
                 <input id="editor-map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
-            <div class="faction-side"><span data-i18n="menu.you">You</span><div id="editor-faction" class="faction-options"></div></div>
             <div class="editor-start">
                 <div class="editor-start-title" data-i18n="editor.start">Choose a map and open it in the editor:</div>
                 <div class="editor-start-options">
@@ -275,6 +274,7 @@
             <input id="preset-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="gen.presetName" placeholder="Preset name" />
             <button id="preset-save" class="fps-option" data-i18n="gen.save">Save</button>
         </div>
+        <div id="preset-current" class="preset-current" role="status" aria-live="polite"></div>
         <div id="preset-list" class="preset-list"></div>
         <div id="generator-fields" class="generator-fields"></div>
     </div>
@@ -696,6 +696,8 @@
           <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
           <button class="btn" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
         </div>
+        <div class="panel-heading" data-i18n="editor.hallAppearance">Town hall appearance</div>
+        <div id="editor-hall-faction" class="faction-options"></div>
         <div class="panel-heading" data-i18n="editor.startTime">Time of day</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-start-time="morning" data-i18n="daytime.morning">Morning</button>
