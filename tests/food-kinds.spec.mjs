@@ -27,6 +27,21 @@ test('Food opens onto what it is made of; food without a kind tops up the scarce
   await expect(page.locator('#resources-hud .res-chip:has(#food-kind-berries-txt)')).toBeHidden();
 });
 
+test('demon food phrases do not assume a particular ingredient', async ({ page }) => {
+  const errors = await openGame(page);
+  const lines = await page.evaluate(() => {
+    const all = {};
+    for (const language of ['en', 'ru', 'uk']) {
+      setLanguage(language);
+      all[language] = ['cooked', 'ate'].map(event => t(`voice.demons.${event}`)).join('|');
+    }
+    setLanguage('ru');
+    return all;
+  });
+  expect(JSON.stringify(lines)).not.toMatch(/meat|fish|rice|bread|berry|apple|мяс|рыб|рис|хлеб|ягод|яблок|м'яс|риб|хліб|ягід|яблук/i);
+  expect(errors).toEqual([]);
+});
+
 test('the watering can is made at the smithy (iron in it, #248), only for a farmer (#106)', async ({ page }) => {
   await openGame(page);
   await expect(page.locator('#craft-gear #btn-wateringCan')).toHaveCount(1);

@@ -243,10 +243,10 @@ test('player and enemy taunt once when they first see an opponent, using the opp
     game.pathTick = 30;
     tickEnemy(enemy, 1 / 60);
     return {
-      playerUsesDemonVsUndead: t('voice.demons.tauntOnSight.vs.undead').split('|').includes(playerTaunt),
+      playerUsesDemonVsUndead: t('voice.demons.encounter.vs.undead').split('|').includes(playerTaunt),
       playerRepeated,
       playerPhraseIsSeparate: !t('voice.demons.taunt.vs.undead').split('|').includes(playerTaunt),
-      enemyUsesUndeadPhrase: t('voice.undead.tauntOnSight.vs.demons').split('|').includes(enemy.say?.text),
+      enemyUsesUndeadPhrase: t('voice.undead.encounter.vs.demons').split('|').includes(enemy.say?.text),
       enemyPhraseIsSeparate: !t('voice.undead.taunt').split('|').includes(enemy.say?.text)
     };
   });
@@ -266,16 +266,59 @@ test('every faction matchup has distinct localized encounter taunts', async ({ p
     for (const language of ['en', 'ru', 'uk']) {
       setLanguage(language);
       for (const speaker of factions) for (const opponent of factions) {
-        const key = `voice.${speaker}.tauntOnSight.vs.${opponent}`;
-        const encounter = t(key);
-        const regular = t(`voice.${speaker}.taunt.vs.${opponent}`);
-        if (encounter === key || !encounter || encounter === regular) missing.push(`${language} ${key}`);
+        const key = `voice.${speaker}.encounter.vs.${opponent}`;
+        const regularKey = `voice.${speaker}.taunt.vs.${opponent}`;
+        const regular = t(regularKey) === regularKey ? t(`voice.${speaker}.taunt`) : t(regularKey);
+        const phrase = t(key);
+        if (!phrase || phrase === key || phrase === regular) missing.push(`${language} ${key}`);
+      }
+      for (const speaker of factions) {
+        const key = `voice.${speaker}.taunt`;
+        if (t(key) === key) missing.push(`${language} ${key}`);
+      }
+      for (const speaker of factions) {
+        const key = `voice.${speaker}.taunt.vs.undead`;
+        if (t(key) === key) missing.push(`${language} ${key}`);
+      }
+      for (const speaker of factions) {
+        const wallsKey = `voice.${speaker}.taunt.walls`;
+        if (t(wallsKey) === wallsKey) missing.push(`${language} ${wallsKey}`);
       }
     }
     setLanguage('ru');
     return missing;
   });
   expect(missing).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('encounter taunts use single-target phrases for visible groups too', async ({ page }) => {
+  const errors = await openGame(page);
+  await page.click('#play-button');
+  const result = await page.evaluate(() => {
+    setSideFaction('player', 'humans');
+    setSideFaction('enemy', 'demons');
+    game.pathTick = 15;
+    game.fogEnabled = false;
+    game.wavePreparation = null;
+    const player = createSettler('normal', 1, 300, 300);
+    const secondPlayer = createSettler('normal', 2, 320, 300);
+    const enemy = createConfiguredEnemy({ x: 400, y: 300 }, 'demon_imp');
+    const secondEnemy = createConfiguredEnemy({ x: 430, y: 300 }, 'demon_imp');
+    game.settlers = [player, secondPlayer];
+    game.enemies = [enemy, secondEnemy];
+    tickSettlers(1 / 60);
+    const playerLine = player.say?.text;
+    const playerSingle = phrasesFor(player, 'humans', 'tauntOnSight', 'demons').includes(playerLine);
+
+    tickVoices(3);
+    game.pathTick = 30;
+    tickEnemy(enemy, 1 / 60);
+    const enemyLine = enemy.say?.text;
+    const enemySingle = phrasesFor(enemy, 'demons', 'tauntOnSight', 'humans').includes(enemyLine);
+    return { playerSingle, enemySingle };
+  });
+  expect(result).toEqual({ playerSingle: true, enemySingle: true });
   expect(errors).toEqual([]);
 });
 
@@ -307,7 +350,7 @@ test('encounter taunts wait until wave preparation ends; wave calls remain a sep
     const enemyWaveCall = enemy.say?.text;
     return {
       silentDuringPreparation,
-      playerHasEncounterLine: t('voice.humans.tauntOnSight.vs.demons').split('|').includes(playerEncounter),
+      playerHasEncounterLine: t('voice.humans.encounter.vs.demons').split('|').includes(playerEncounter),
       enemyKeepsWaveCall: t('voice.demons.charge').split('|').includes(enemyWaveCall)
     };
   });
