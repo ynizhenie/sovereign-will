@@ -267,11 +267,17 @@ function spawnDemonHumans(demon) {
   const levelBonus = Math.min(2, Math.max(0, getUnitLevel(demon) - 1));
   const count = 3 + Math.floor(Math.random() * 3) + 2 * levelBonus;
   const melee = ['raider_club', 'raider'];
+  const medic = 'raider_medic_club';
   /** @type {{ key: string, armor?: boolean }[]} */
-  const group = [{ key: 'raider_medic_club' }, { key: pick(melee) }];
+  const group = [{ key: medic }, { key: pick(melee) }];
+  let medicCount = 1;
   const archerCount = Math.floor(Math.random() * (Math.min(2, count - group.length) + 1));
   for (let i = 0; i < archerCount; i++) group.push({ key: 'raider_archer' });
-  while (group.length < count) group.push({ key: pick([...melee, 'raider_medic_club']) });
+  while (group.length < count) {
+    const key = pick(medicCount < 3 ? [...melee, medic] : melee);
+    group.push({ key });
+    if (key === medic) medicCount++;
+  }
 
   const leather = group.filter(member => member.key !== 'raider_medic_club');
   leather[Math.floor(Math.random() * leather.length)].armor = true;

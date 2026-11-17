@@ -5,7 +5,7 @@ import { camera, clampCamera, loadData, onTap, saveData, setZoom, t } from '../.
 import { TILE_SIZE, applySeedFromUI, createWorldSeed, game, getGridPos, rand, setBorderMargin, townHall } from '../../engine/world/index.js';
 import { isTileBlockedForEnemyStrict } from '../../engine/movement/index.js';
 import { copyUnitProgression, createSettler } from '../../domains/colony/settlers/index.js';
-import { createConfiguredEnemy, dressForWave, getWavePresetPool, pickWavePreset } from '../../domains/conflict/waves/index.js';
+import { createConfiguredEnemy, dressForWave, getWavePresetPool, pickWavePreset, setEnemyLevelForWave } from '../../domains/conflict/waves/index.js';
 import { isSpawnSpotFree, isTileOccupied } from '../../domains/economy/building/index.js';
 import { canUseShield, isRangedWeapon } from '../../domains/colony/equipment/index.js';
 import { getPlayerFaction, sides } from '../../domains/factions/index.js';
@@ -567,8 +567,7 @@ function bandLevel(level) {
 }
 
 // A band of humans crossing the map: 3 to 5 of them to begin with, the most of them one more for every 3 levels
-// (30 at most); each picked and armed as Endless's wave of the band's level is (its kinds and gear by their
-// chances then), no crossbowmen
+// (30 at most); each picked and armed as Endless's wave of the band's level is (its kinds and gear by their chances).
 function spawnGroup() {
   const p = game.plague, groupId = ++p.groupId, level = playerLevel(p);
   const maxCount = plagueGroupMaxSize(level);
@@ -577,7 +576,7 @@ function spawnGroup() {
   if (!route) return; // (no edge with room for it, away from the hero: the next time)
   const { spots, goal } = route;
   const band = bandLevel(level);
-  const pool = getWavePresetPool('humans', band).filter(option => option.preset.weapon !== 'crossbow');
+  const pool = getWavePresetPool('humans', band);
   const group = { id: groupId, size: 0, killed: 0, escaped: 0, resolved: false };
   p.groups.push(group);
   for (const spot of spots) {
@@ -587,6 +586,7 @@ function spawnGroup() {
     const enemy = createConfiguredEnemy(spot, def.id);
     if (!enemy) continue;
     dressForWave(enemy, def, band);
+    setEnemyLevelForWave(enemy, groupId);
     enemy.plagueGroupId = groupId;
     enemy.plagueGoal = { ...goal };
     group.size++;

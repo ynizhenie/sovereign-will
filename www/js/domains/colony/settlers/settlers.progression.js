@@ -134,11 +134,17 @@ export function setUnitExperience(unit, experience, track = getUnitProgressionTr
 }
 
 export function copyUnitProgression(unit, source) {
-  const sourceData = source && (source.progression || source.experience !== undefined) ? progressionData(source) : null;
+  if (!unit || !source) return;
+  const sourceLevel = source.level;
+  const sourceTrack = getUnitProgressionTrack(source);
+  const sourceData = source.progression || source.experience !== undefined ? progressionData(source) : null;
   if (sourceData) {
     for (const track of UNIT_PROGRESSION_TRACKS) {
       if (sourceData[track] > 0) setUnitExperience(unit, sourceData[track], track);
     }
+  }
+  if (sourceTrack && sourceLevel > 1 && !(sourceData?.[sourceTrack] > 0)) {
+    setUnitExperience(unit, getUnitExperienceForLevel(sourceLevel, sourceTrack), sourceTrack);
   }
 }
 

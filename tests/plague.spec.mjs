@@ -36,6 +36,56 @@ test('Plague defaults use a six-tile squad search, improved recovery and healing
   expect(errors).toEqual([]);
 });
 
+test('Plague groups level their enemies by group number', async ({ page }) => {
+  await openGame(page);
+  await startPlague(page);
+  const groups = await page.evaluate(() => {
+    const p = game.plague;
+    return [10, 20, 30].map(groupNumber => {
+      game.enemies = [];
+      p.groupId = groupNumber - 1;
+      p.groupTimer = 1000;
+      p.groupSpawnQueue = [0];
+      tickPlague(0);
+      const spawned = game.enemies.filter(enemy => enemy.plagueGroupId === groupNumber);
+      return { groupNumber, levels: [...new Set(spawned.map(enemy => enemy.level))] };
+    });
+  });
+  expect(groups).toEqual([
+    { groupNumber: 10, levels: [1] },
+    { groupNumber: 20, levels: [2] },
+    { groupNumber: 30, levels: [3] }
+  ]);
+});
+
+test('Plague groups can use crossbow presets', async ({ page }) => {
+  await openGame(page);
+  await startPlague(page);
+  const weapons = await page.evaluate(() => {
+    const presets = GAME_CONFIG.wavePresets;
+    const savedItems = Object.fromEntries(Object.entries(presets.items).map(([id, rule]) => [id, { ...rule }]));
+    const savedBig = { ...presets.big }, savedPet = { ...presets.pet };
+    try {
+      Object.values(presets.items).forEach(rule => Object.assign(rule, { fromWave: 1, startWeight: 0, endWeight: 0 }));
+      Object.assign(presets.items.crossbow, { fromWave: 1, startWeight: 1, endWeight: 1 });
+      presets.big.fromWave = Infinity;
+      presets.pet.fromWave = Infinity;
+      game.plague.groupId = 0;
+      game.plague.groupTimer = 1000;
+      game.plague.groupSpawnQueue = [0];
+      game.enemies = [];
+      tickPlague(0);
+      return game.enemies.map(enemy => enemy.weapon);
+    } finally {
+      for (const [id, rule] of Object.entries(savedItems)) Object.assign(presets.items[id], rule);
+      Object.assign(presets.big, savedBig);
+      Object.assign(presets.pet, savedPet);
+    }
+  });
+  expect(weapons.length).toBeGreaterThan(0);
+  expect([...new Set(weapons)]).toEqual(['crossbow']);
+});
+
 test('Plague maps keep deserts inside savanna and cap each biome at half the map', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page);
@@ -186,7 +236,7 @@ test('Plague does not accumulate resources for packs at the hidden town hall', a
   expect(errors).toEqual([]);
 });
 
-test('Plague bands come in on standable ground away from the hero, armed as Endless\'s waves, no crossbowmen (#404, 2, 3, 8)', async ({ page }) => {
+test('early Plague bands come in on standable ground away from the hero and use Endless wave presets (#404, 2, 3, 8)', async ({ page }) => {
   const errors = await openGame(page);
   await startPlague(page); // (#418: no check for savanna here: a Plague map may have none, as the test of its biomes says)
   const r = await page.evaluate(() => {
@@ -225,6 +275,8 @@ test('Plague healers carry one medbag, fight unarmed, and leave unarmed corpses'
       await import('/js/domains/conflict/waves/index.js');
     const hero = settlers.find(s => s.plagueHero);
     const medic = createConfiguredEnemy({ x: hero.x + 40, y: hero.y }, 'raider_medic');
+    const levelTwoHealingExperience = getUnitExperienceForLevel(2, 'healing');
+    setUnitExperience(medic, levelTwoHealingExperience, 'healing');
     game.enemies.length = 0;
     game.enemies.push(medic);
     tickEnemies(1 / 60);
@@ -251,6 +303,7 @@ test('Plague healers carry one medbag, fight unarmed, and leave unarmed corpses'
     return {
       attackWeapon,
       tool: getEnemyDef(medic).tool,
+      levelTwoHealingExperience,
       corpse: {
         weapon: corpse.weapon,
         tool: corpse.tool,
@@ -258,17 +311,27 @@ test('Plague healers carry one medbag, fight unarmed, and leave unarmed corpses'
         shield: corpse.shield,
         helmet: corpse.helmet,
         helmetGear: corpse.helmetGear || null,
+        level: corpse.level,
+        progression: corpse.progression,
         loot: game.loot.length
       },
-      raised: raised && { weapon: raised.weapon, tool: raised.tool, armor: raised.armor, shield: raised.shield, helmet: raised.helmet }
+      raised: raised && {
+        weapon: raised.weapon, tool: raised.tool, armor: raised.armor, shield: raised.shield, helmet: raised.helmet,
+        level: raised.level, healingLevel: getUnitLevel(raised, 'healing'), healingExperience: raised.progression.healing
+      }
     };
   });
   expect(result).toMatchObject({
     attackWeapon: 'fist',
     tool: 'medbag',
-    corpse: { weapon: 'fist', tool: 'none', armor: null, shield: false, helmet: false, helmetGear: null, loot: 0 },
-    raised: { weapon: 'fist', tool: 'none', armor: null, shield: false, helmet: false }
+    corpse: {
+      weapon: 'fist', tool: 'none', armor: null, shield: false, helmet: false, helmetGear: null,
+      level: 2, loot: 0
+    },
+    raised: { weapon: 'fist', tool: 'none', armor: null, shield: false, helmet: false, level: 2, healingLevel: 2 }
   });
+  expect(result.corpse.progression).toMatchObject({ healing: result.levelTwoHealingExperience });
+  expect(result.raised.healingExperience).toBe(result.levelTwoHealingExperience);
   expect(errors).toEqual([]);
 });
 

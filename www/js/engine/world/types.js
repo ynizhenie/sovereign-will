@@ -473,7 +473,7 @@
  * @property {boolean} showBaseZone whether the base's patrol boundary is drawn while the Zones tab is shown
  * @property {string[]} portalQueue  a wave's enemy demons still to come out of the portals (#250)
  * @property {number} portalTimer
- * @property {number | null} [portalWavePrep] the wave number assigned to queued portal spawns during preparation
+ * @property {number | null} [portalWavePrep] the wave number assigned to queued portal spawns
  * @property {Object | null} [demonWaveTransit] demons entering and leaving their wave portals
  * @property {{ x: number, y: number, type: string, amount: number, layer?: number }[]} piles  stock on the ground by a full storage (#248), in packs (#279)
  * @property {Object<string, number>} armory  tools, weapons, gear in store, by '<category>:<id>'

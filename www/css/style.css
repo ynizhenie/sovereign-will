@@ -334,6 +334,23 @@ body.menu-world #defeat-overlay { display: none !important; }
   gap: 9px;
   padding: 14px;
 }
+.mode-description-screen { gap: 14px; }
+.mode-description-screen p { margin: 0; color: #d5d9e0; font-size: 14px; line-height: 1.55; text-align: left; }
+.mode-title-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.mode-title-trigger .ic { width: 0.85em; height: 0.85em; opacity: 0.75; }
+.mode-title-trigger:hover, .mode-title-trigger:focus-visible { color: #f1c40f; }
+.mode-title-trigger:focus-visible { outline: 2px solid #f1c40f; outline-offset: 3px; border-radius: 3px; }
 
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
 .main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }

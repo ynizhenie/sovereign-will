@@ -460,8 +460,6 @@ export function drawEnemyCampOutpostArt(x, y, faction) {
   rect(x - 14, y - 16, 28, 4, '#a47643', '#3e2918');
   rect(x - 14, y + 9, 28, 4, '#6d4520', '#3e2918');
   rect(x - 4, y + 1, 8, 12, '#3e2723', '#241713');
-  line(x, y - 18, x, y - 26, '#5c3a17', 2);
-  poly([[x, y - 25], [x + 10, y - 22], [x, y - 19]], '#c0392b', '#6d201b', 1);
 }
 
 // The demons' den: a mound of dark stone, horned at the top, its mouth glowing
@@ -476,8 +474,7 @@ export function drawDenArt(x, y) {
 
 // ---- The town hall
 
-// The humans': a timber hall on a stone footing, a tiled roof, its chimney, a door, windows, the colony's
-// flag on a pole at the corner
+// The humans': a timber hall on a stone footing, a tiled roof, its chimney, a door and windows
 function drawHumanHall(x, y) {
   const w = 58, h = 50;
   shadow(x, y, w, h, 6);
@@ -485,9 +482,6 @@ function drawHumanHall(x, y) {
   house(x, y - 2, w, h - 4, { roof: '#a04000', roofDark: '#873600', wall: '#c8a46a', wallDark: '#7a5230', door: '#4e3016' });
   for (const wx of [-18, 12]) { rect(x + wx, y + 9, 7, 6, '#f7dc6f', '#5c3a17'); line(x + wx + 3.5, y + 9, x + wx + 3.5, y + 15, '#5c3a17'); }
   rect(x + 12, y - h / 2 - 2, 6, 10, '#7f8c8d', '#34495e');
-  // the flag
-  line(x - w / 2 + 2, y - h / 2 + 8, x - w / 2 + 2, y - h / 2 - 14, '#3e2723', 2);
-  poly([[x - w / 2 + 3, y - h / 2 - 14], [x - w / 2 + 16, y - h / 2 - 10], [x - w / 2 + 3, y - h / 2 - 6]], getSettlerColor(), '#2c3e50');
 }
 
 // The undead's: a square of dark earth inside an iron fence, rows of headstones, a stone crypt at the back

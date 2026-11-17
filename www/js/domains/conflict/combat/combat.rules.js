@@ -313,6 +313,7 @@ export function addCorpse(unit, side, kind) {
   const corpse = {
     x: unit.x, y: unit.y, radius: unit.visualRadius || unit.radius, side, kind, age: 0, big, wormsTaken: false,
     look: unit.look, type: unit.type, enemyKey: unit.enemyKey, bigBody: unit.bigBody || big,
+    ...(unit.level !== undefined ? { level: unit.level } : {}),
     experience: unit.experience || 0, progression: unit.progression ? { ...unit.progression } : undefined,
     ...carried,
     pet: def.pet, stuck: unit.stuck
