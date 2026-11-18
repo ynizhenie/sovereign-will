@@ -17,7 +17,7 @@ export const POSES_PER_SECOND = 12;
 export const unitPictures = { on: true };
 const STEPS_PER_POSE = Math.round(60 / POSES_PER_SECOND); // (the game's steps are 60 a second)
 
-/** @typedef {{ canvas: HTMLCanvasElement, key: string, scale: number, pose: number, w: number, h: number, halfW: number, up: number, shadows: any[] }} Picture */
+/** @typedef {{ canvas: HTMLCanvasElement, key: string, scale: number, pose: number, w: number, h: number, left: number, up: number, shadows: any[] }} Picture */
 /** @type {WeakMap<object, Picture>} */
 const pictures = new WeakMap();
 /** @type {WeakMap<object, number>} (a unit with no id of its own, an enemy: a number for when its turn comes) */
@@ -35,13 +35,16 @@ export function newPictureFrame() { poseBudget = { frame: poseBudget.frame + 1, 
 // How many pictures have been painted and laid down since the page opened (the tests, and the performance monitor)
 export const unitPictureTotals = { painted: 0, laid: 0 };
 
-// What's round a unit of radius r, in world units: its weapon held out, a spear or a banner over its head, a shield
+// What's round a unit of radius r, in world units: its weapon held out, a spear or a banner over its head, a shield.
+// (#425: measured over every battle preset fighting, in radii: 3.77 to a side (a crossbow or a bow drawn, either way
+// it faces), 2.27 up, 1.77 down; a box with room to spare round that: wider than the 3.3 it was (a drawn bow's tip
+// was cut), and not 4.6 up, a fifth fewer pixels to paint and lay)
 /** @param {number} r */
-const boxOf = r => ({ halfW: Math.max(36, r * 3.3), up: Math.max(50, r * 4.6), down: Math.max(20, r * 1.9) });
+const boxOf = r => { const side = Math.max(45, r * 4.1); return { left: side, right: side, up: Math.max(30, r * 2.7), down: Math.max(23, r * 2.1) }; };
 // (round a building: the biggest, the hall-sized dens, are two tiles; its shadow isn't in the picture)
-const BUILDING_BOX = { halfW: 34, up: 40, down: 30 };
+const BUILDING_BOX = { left: 34, right: 34, up: 40, down: 30 };
 
-/** @param {any} owner @param {string} key @param {number} pose @param {{ halfW: number, up: number, down: number }} box @param {() => void} paint @param {boolean} catching */
+/** @param {any} owner @param {string} key @param {number} pose @param {{ left: number, right: number, up: number, down: number }} box @param {() => void} paint @param {boolean} catching */
 function drawPicture(owner, key, pose, box, paint, catching) {
   const scale = getViewScale();
   let pic = pictures.get(owner);
@@ -50,17 +53,17 @@ function drawPicture(owner, key, pose, box, paint, catching) {
   const due = !pic || pic.key !== key || pic.scale !== scale || (posed && (poseBudget.left > 0 || pose - pic.pose >= POSE_STALE));
   if (posed && due) poseBudget.left--;
   if (due) {
-    const { halfW, up, down } = box;
-    const w = Math.max(1, Math.ceil(halfW * 2 * scale)), h = Math.max(1, Math.ceil((up + down) * scale));
-    if (!pic) { pic = { canvas: document.createElement('canvas'), key, scale, pose, w, h, halfW, up, shadows: [] }; pictures.set(owner, pic); }
+    const { left, right, up, down } = box;
+    const w = Math.max(1, Math.ceil((left + right) * scale)), h = Math.max(1, Math.ceil((up + down) * scale));
+    if (!pic) { pic = { canvas: document.createElement('canvas'), key, scale, pose, w, h, left, up, shadows: [] }; pictures.set(owner, pic); }
     const c = pic.canvas;
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
     const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, w, h);
     g.globalAlpha = 1;
-    // the owner's place at the picture's (halfW, up), at the screen's scale
-    const base = new DOMMatrix([scale, 0, 0, scale, halfW * scale - owner.x * scale, up * scale - owner.y * scale]);
+    // the owner's place at the picture's (left, up), at the screen's scale
+    const base = new DOMMatrix([scale, 0, 0, scale, left * scale - owner.x * scale, up * scale - owner.y * scale]);
     g.setTransform(base);
     if (catching) catchShadows(base.inverse());
     const was = drawingOn(g);
@@ -68,14 +71,14 @@ function drawPicture(owner, key, pose, box, paint, catching) {
       drawingOn(was);
       if (catching) pic.shadows = caughtShadows();
     }
-    Object.assign(pic, { key, scale, pose, w, h, halfW, up });
+    Object.assign(pic, { key, scale, pose, w, h, left, up });
     unitPictureTotals.painted++;
   }
   if (!pic) return; // (made above when there was none)
   if (catching) castCaught(pic.shadows);
   // laid on whole screen pixels (a picture laid between two is blurred)
   const e = canvas.width / 2 - camera.x * scale, f = canvas.height / 2 - camera.y * scale;
-  const x = (Math.round(e + (owner.x - pic.halfW) * scale) - e) / scale, y = (Math.round(f + (owner.y - pic.up) * scale) - f) / scale;
+  const x = (Math.round(e + (owner.x - pic.left) * scale) - e) / scale, y = (Math.round(f + (owner.y - pic.up) * scale) - f) / scale;
   ctx.drawImage(pic.canvas, x, y, pic.w / scale, pic.h / scale);
   unitPictureTotals.laid++;
 }
