@@ -268,9 +268,10 @@ const shadowRes = () => {
   heldShadowRes = want;
   return want;
 };
-// the sun to a step: a shadow 20 high moves less than a screen px a step (the zoom is within twice the
-// pictures' size), so every piece on the screen is painted again every few seconds, not every one
-const sunStep = () => Math.min(0.5, 0.03 / heldShadowRes);
+// the sun to a step: a shadow 20 high moves two or three screen px a step (the zoom is within twice the pictures'
+// size), so every piece on the screen is painted again every six seconds or so (#425: at a pixel a step it was every
+// second and a half, and on a Mi Pad 4 the ground's pieces were never done being painted while shadows were on)
+const sunStep = () => Math.min(0.5, 0.12 / heldShadowRes);
 const stillSun = () => { const sun = getSun(), q = sunStep(); return { dx: Math.round(sun.dx / q) * q, dy: Math.round(sun.dy / q) * q }; };
 // (a piece looked at again every second, for a tree felled or grown: a moment late for its shadow is not seen)
 const shadowStamps = stamper(stillLists, SHADOW_MARGIN, () => { const sun = stillSun(); return `${sunStep()}:${sun.dx},${sun.dy}`; }, 60);
