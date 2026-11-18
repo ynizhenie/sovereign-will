@@ -25,8 +25,9 @@ export let ctx = screenCtx;
 export function drawingOn(g) { const was = ctx; ctx = g; return was; }
 
 // How many canvas pixels to a CSS pixel at most: the sharpest picture (up to 2; a screen denser than that
-// is capped, more pixels cost frame time)
-const QUALITY_RATIO = 2;
+// is capped, more pixels cost frame time). (#425) An Android device 1.5: a Mi Pad 4 went from 38-42 fps at 2 to 56
+// at 1.5 (and 53 at 1), the picture still sharp
+const QUALITY_RATIO = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '') ? 1.5 : 2;
 
 // ---- Screen and camera
 //
