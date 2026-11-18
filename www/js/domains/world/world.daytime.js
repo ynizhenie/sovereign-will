@@ -289,10 +289,11 @@ export function castCaught(list) {
     if (alpha >= MIN_SHADOW_ALPHA) keptShadows.push({ path: s.path, at: s.at, alpha, filter: s.filter });
   }
 }
-// (#425) the picture is made again only when the view moved (it's in the screen's pixels) or POSE_STEPS game steps have
-// gone (the sun moving, a thing set down or gone): on a phone making it and handing it to the graphics card every frame
-// was a third of the frame (Mi Pad 4: 32 fps with shadows, 42 without)
-const POSE_STEPS = 5;
+// (#425) the picture is made again only when the view moved (it's in the screen's pixels), a building's shadow came or
+// went, the sun moved on a twentieth, or else every REMAKE_STEPS game steps (a tree felled, a bush grown: the still
+// things' pieces are painted again as it's made): on a phone making it and handing it to the graphics card every frame
+// was a third of the frame (Mi Pad 4: 32 fps with shadows, 42 without), and twelve times a second still most of that
+const REMAKE_STEPS = 30;
 let layerFor = { key: '', pose: -1 };
 
 // The frame begins: c's transform is the world's now (the camera's); the shadows drawn in the world from here to
@@ -333,7 +334,8 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
     shadowLayer = { canvas, g };
   }
   const { canvas: layer, g } = shadowLayer;
-  const m = c.getTransform(), key = `${width}x${height}|${m.a},${m.b},${m.c},${m.d},${m.e},${m.f}|${lastShadows.length}`, pose = Math.floor(game.pathTick / POSE_STEPS);
+  const m = c.getTransform(), pose = Math.floor(game.pathTick / REMAKE_STEPS);
+  const key = `${width}x${height}|${m.a},${m.b},${m.c},${m.d},${m.e},${m.f}|${lastShadows.length}|${Math.round(sun.dx * 20)},${Math.round(sun.dy * 20)}`;
   const remade = c !== ctx || key !== layerFor.key || pose !== layerFor.pose;
   if (remade) {
     layerFor = { key, pose };
