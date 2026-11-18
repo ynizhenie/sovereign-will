@@ -26,18 +26,31 @@ const unitCount = () => game.settlers.length + game.enemies.length + game.scouts
 export const simpleUnit = () => getViewScale() < SIMPLE_UNIT_SCALE || unitCount() > SIMPLE_UNIT_COUNT;
 export const tinyUnit = () => getViewScale() < 0.4 && unitCount() > SIMPLE_UNIT_COUNT;
 
+// (#425) A level's number as a picture, painted once for each level and zoom: written out as outlined text over every
+// unit every frame it was a fifth of a big battle's frame on a Mi Pad 4 (text is the canvas's dearest thing to draw)
+/** @type {Map<string, HTMLCanvasElement>} */
+const levelBadges = new Map();
+const BADGE_W = 16, BADGE_H = 10; // (world px left of and round the point it's written at)
 export function drawLevelIndicator(x, y, level) {
-  const text = String(level);
-  ctx.save();
-  ctx.font = 'bold 7px sans-serif';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
-  ctx.fillStyle = '#fff';
-  ctx.strokeText(text, x, y);
-  ctx.fillText(text, x, y);
-  ctx.restore();
+  const scale = getViewScale(), key = `${level}|${scale}`;
+  let badge = levelBadges.get(key);
+  if (!badge) {
+    if (levelBadges.size > 64) levelBadges.clear();
+    badge = document.createElement('canvas');
+    badge.width = Math.max(1, Math.ceil(BADGE_W * scale)); badge.height = Math.max(1, Math.ceil(BADGE_H * scale));
+    const g = /** @type {CanvasRenderingContext2D} */ (badge.getContext('2d'));
+    g.setTransform(scale, 0, 0, scale, 0, 0);
+    g.font = 'bold 7px sans-serif';
+    g.textAlign = 'right';
+    g.textBaseline = 'middle';
+    g.lineWidth = 1.5;
+    g.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+    g.fillStyle = '#fff';
+    g.strokeText(String(level), BADGE_W - 1, BADGE_H / 2);
+    g.fillText(String(level), BADGE_W - 1, BADGE_H / 2);
+    levelBadges.set(key, badge);
+  }
+  ctx.drawImage(badge, x - BADGE_W + 1, y - BADGE_H / 2, BADGE_W, BADGE_H);
 }
 
 // A strike: the held weapon or tool swings through once over `seconds`
@@ -1004,7 +1017,7 @@ export function drawSettlers(only = null) {
     if (!simple && isCensored(s)) drawCensor(s, r, SKIN[faction] || SKIN.humans); // (#298)
     };
     const key = `${simple ? 1 : 0}|${s.type}|${s.weapon}|${s.tool}|${s.armor}|${s.helmet}|${s.shield ? 1 : 0}|${s.carrying ? s.carrying.type : ''}|`
-      + `${s.asleep ? 1 : 0}|${s.eating ? 1 : 0}|${s.torchInHand ? 1 : 0}|${facingStep(s.facing)}|${onBack ? 1 : 0}|${workTool}|${s.temporary !== undefined ? 1 : 0}`;
+      + `${s.asleep ? 1 : 0}|${s.eating ? 1 : 0}|${s.torchInHand ? 1 : 0}|${onBack ? 1 : 0}|${workTool}|${s.temporary !== undefined ? 1 : 0}`;
     drawUnitPicture(s, key, figure);
     if ((s.burning || 0) > 0) drawBurning(s.x, s.y, r);
     drawHealSparks(s); // (#326)

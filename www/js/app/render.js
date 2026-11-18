@@ -3,7 +3,7 @@
 import { TILE_SIZE, forEachInRect, game, getTileIndex, townHall } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewRect, getViewScale, glBeginFrame, glCamera, glEndFrame, glReady } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot, getEnemyDef } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression, simpleUnit } from '../domains/colony/settlers/index.js';
+import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression, simpleUnit, newPictureFrame } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
@@ -21,6 +21,7 @@ import { perfMark } from './perfmon.js';
 const sceneItems = [];
 
 export function render() {
+  newPictureFrame(); // (#425: the units' pictures painted this frame, counted from here)
   if (game.loading) {
     if (!game.loadingRender) return; // (#326) keep the last frame under the loading screen while the world is made
     game.loadingRenderFrame = (game.loadingRenderFrame || 0) + 1;

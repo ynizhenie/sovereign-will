@@ -24,6 +24,14 @@ const pictures = new WeakMap();
 const turns = new WeakMap();
 let nextTurn = 0;
 
+// (#425) At most POSE_BUDGET pictures painted a frame for a new pose (what one looks like changing, or the zoom, is
+// painted at once regardless): in a big battle the rest hold their pose a little longer, but never more than
+// POSE_STALE poses, instead of the frame going slow (a Mi Pad 4 with 70 units fighting: ~25 painted a frame, 20 ms)
+const POSE_BUDGET = 8, POSE_STALE = 6;
+let poseBudget = { frame: -1, left: POSE_BUDGET };
+// a frame begins (render.js)
+export function newPictureFrame() { poseBudget = { frame: poseBudget.frame + 1, left: POSE_BUDGET }; }
+
 // How many pictures have been painted and laid down since the page opened (the tests, and the performance monitor)
 export const unitPictureTotals = { painted: 0, laid: 0 };
 
@@ -37,7 +45,11 @@ const BUILDING_BOX = { halfW: 34, up: 40, down: 30 };
 function drawPicture(owner, key, pose, box, paint, catching) {
   const scale = getViewScale();
   let pic = pictures.get(owner);
-  if (!pic || pic.key !== key || pic.scale !== scale || pic.pose !== pose) {
+  // (only a new pose waits for the frame's budget; a changed look, a new zoom or a first picture never waits)
+  const posed = !!pic && pic.key === key && pic.scale === scale && pic.pose !== pose;
+  const due = !pic || pic.key !== key || pic.scale !== scale || (posed && (poseBudget.left > 0 || pose - pic.pose >= POSE_STALE));
+  if (posed && due) poseBudget.left--;
+  if (due) {
     const { halfW, up, down } = box;
     const w = Math.max(1, Math.ceil(halfW * 2 * scale)), h = Math.max(1, Math.ceil((up + down) * scale));
     if (!pic) { pic = { canvas: document.createElement('canvas'), key, scale, pose, w, h, halfW, up, shadows: [] }; pictures.set(owner, pic); }
@@ -59,6 +71,7 @@ function drawPicture(owner, key, pose, box, paint, catching) {
     Object.assign(pic, { key, scale, pose, w, h, halfW, up });
     unitPictureTotals.painted++;
   }
+  if (!pic) return; // (made above when there was none)
   if (catching) castCaught(pic.shadows);
   // laid on whole screen pixels (a picture laid between two is blurred)
   const e = canvas.width / 2 - camera.x * scale, f = canvas.height / 2 - camera.y * scale;

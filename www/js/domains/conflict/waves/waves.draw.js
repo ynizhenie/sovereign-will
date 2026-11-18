@@ -204,7 +204,7 @@ export function drawEnemy(en) {
     at(() => { if (en.captain) drawEnemyBanner(en); }); // (the flag shows even zoomed out)
     };
     const key = `${simple ? 1 : 0}|${en.enemyKey}|${en.weapon}|${en.armor}|${en.helmet}|${en.shield ? 1 : 0}|${en.asleep ? 1 : 0}|${en.torch ? 1 : 0}|`
-      + `${en.captain ? 1 : 0}|${facingStep(en.facing)}|${healing ? 1 : 0}|${building ? 1 : 0}|${(en.arrows || 0) > 0 ? 1 : 0}`;
+      + `${en.captain ? 1 : 0}|${healing ? 1 : 0}|${building ? 1 : 0}|${(en.arrows || 0) > 0 ? 1 : 0}`;
     drawUnitPicture(en, key, figure);
     if (en.asleep) drawSleepZs(en.x + en.radius, en.y - en.radius);
     if ((en.burning || 0) > 0) drawBurning(en.x, en.y, en.radius);
