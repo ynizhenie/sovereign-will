@@ -2,6 +2,6 @@
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
 export { clampEntityToBounds, collidesWithBoxList, collidesWithWall, collidesWithWater, ejectEntitiesFromTile, separateAllies, separateSettlersFromEnemies } from './collision.js';
-export { forEachSettlerNear, someEnemyNear, someSettlerNear } from './neighbours.js';
+export { countNear, forEachSettlerNear, someEnemyNear, someSettlerNear } from './neighbours.js';
 export { findPathAStar, getEnemyReach, getReachDistanceToResource, getReachSteps, getSettlerReach, hasClearEnemyLine, invalidateAllPaths, isTileBlockedForEnemyStrict, isTileBlockedForSettler, resetSharedReach, setReachBounds } from './pathfinding.js';
 export { getResourceApproachPoint, moveEntityTowards, rescueSettlerFromResource } from './steering.js';
