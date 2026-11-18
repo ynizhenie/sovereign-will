@@ -320,6 +320,8 @@ test('stone wall shadow follows its stone post and connected arms without round 
   expect(errors).toEqual([]);
 });
 
+// (#425: the still things', walls' and buildings' shadows; a unit's is drawn straight on the frame, a little darker where
+// it falls on one of those)
 test('overlapping shadows in the world are no darker than one', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
@@ -332,7 +334,9 @@ test('overlapping shadows in the world are no darker than one', async ({ page })
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 300, 300);
       beginShadowFrame(ctx); beginShadowFrame(ctx); // (none kept from the frame before)
-      drawShadowLayer(() => {}, () => { for (let i = 0; i < shadows; i++) drawShadowPath(ctx, shadow, getSun().alpha); });
+      for (let i = 0; i < shadows; i++) drawShadowPath(ctx, shadow, getSun().alpha); // (a building's: kept for the next frame's picture)
+      beginShadowFrame(ctx);
+      drawShadowLayer(() => {}, () => {});
       endShadowFrame();
       const value = ctx.getImageData(120, 120, 1, 1).data[0];
       ctx.restore();

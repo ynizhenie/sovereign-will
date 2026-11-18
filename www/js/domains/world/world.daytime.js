@@ -266,8 +266,13 @@ let keptShadows = [], lastShadows = [];
 // the frame's world transform and its inverse while its shadows are kept (null: they aren't)
 /** @type {DOMMatrix | null} */
 let worldInverse = null;
-// (drawShadowPath fills the picture itself as it's made)
-let fillingLayer = false;
+// (#425) the figures' shadows filled straight on the frame (they move every frame; the picture is kept a few)
+let fillingFrame = false;
+// (#425) the picture is made again only when the view moved (it's in the screen's pixels) or POSE_STEPS game steps have
+// gone (the sun moving, a thing set down or gone): on a phone making it and handing it to the graphics card every frame
+// was a third of the frame (Mi Pad 4: 32 fps with shadows, 42 without)
+const POSE_STEPS = 5;
+let layerFor = { key: '', pose: -1 };
 
 // The frame begins: c's transform is the world's now (the camera's); the shadows drawn in the world from here to
 // endShadowFrame are kept for the next frame's picture
@@ -306,29 +311,38 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
     shadowLayer = { canvas, g };
   }
   const { canvas: layer, g } = shadowLayer;
-  if (layer.width !== width || layer.height !== height) { layer.width = width; layer.height = height; }
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  g.globalCompositeOperation = 'source-over';
-  g.globalAlpha = 1;
-  g.filter = 'none';
-  g.clearRect(0, 0, width, height);
-  g.fillStyle = '#000';
-  const world = toLayer().multiply(c.getTransform());
-  g.setTransform(world);
-  drawStill(g);
-  for (const shadow of lastShadows) fillShadow(g, world.multiply(shadow.at), shadow, sun.alpha);
-  fillingLayer = true;
-  try { drawNow(); } finally { fillingLayer = false; }
-  // (with the ground on the graphics card's canvas the shadows lie there too, on the ground and under what stands on it)
-  if (c === ctx && glReady()) { glLayer(layer, width / SHADOW_SCALE, height / SHADOW_SCALE, sun.alpha); return; }
-  c.save();
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.globalCompositeOperation = 'source-over';
-  c.globalAlpha = sun.alpha;
-  c.filter = 'none';
-  c.imageSmoothingEnabled = true;
-  c.drawImage(layer, 0, 0, width, height, 0, 0, width / SHADOW_SCALE, height / SHADOW_SCALE);
-  c.restore();
+  const m = c.getTransform(), key = `${width}x${height}|${m.a},${m.b},${m.c},${m.d},${m.e},${m.f}|${lastShadows.length}`, pose = Math.floor(game.pathTick / POSE_STEPS);
+  const remade = c !== ctx || key !== layerFor.key || pose !== layerFor.pose;
+  if (remade) {
+    layerFor = { key, pose };
+    if (layer.width !== width || layer.height !== height) { layer.width = width; layer.height = height; }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.filter = 'none';
+    g.clearRect(0, 0, width, height);
+    g.fillStyle = '#000';
+    const world = toLayer().multiply(m);
+    g.setTransform(world);
+    drawStill(g);
+    for (const shadow of lastShadows) fillShadow(g, world.multiply(shadow.at), shadow, sun.alpha);
+  }
+  // (with the ground on the graphics card's canvas the shadows lie there too, on the ground and under what stands on it;
+  // handed over again only when it was made again)
+  if (c === ctx && glReady()) glLayer(layer, width / SHADOW_SCALE, height / SHADOW_SCALE, sun.alpha, remade);
+  else {
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = sun.alpha;
+    c.filter = 'none';
+    c.imageSmoothingEnabled = true;
+    c.drawImage(layer, 0, 0, width, height, 0, 0, width / SHADOW_SCALE, height / SHADOW_SCALE);
+    c.restore();
+  }
+  // the figures' shadows, where they are this frame, over the ground's (a little darker where one falls on a tree's)
+  fillingFrame = true;
+  try { drawNow(); } finally { fillingFrame = false; }
 }
 
 // A shadow of the shape path (with c's transform) as dark as alpha. In the world it goes into the frame's shadows (see
@@ -336,8 +350,11 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha */
 export function drawShadowPath(c, path, alpha) {
   if (!shadowsEnabled || alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
-  if (c === ctx && shadowLayer && fillingLayer) {
-    fillShadow(shadowLayer.g, toLayer().multiply(c.getTransform()), { path, alpha: alpha * c.globalAlpha, filter: c.filter }, getSun().alpha);
+  if (fillingFrame) {
+    c.save();
+    c.fillStyle = `rgba(0, 0, 0, ${alpha * c.globalAlpha})`;
+    c.fill(path);
+    c.restore();
     return;
   }
   if (c === ctx && worldInverse) {

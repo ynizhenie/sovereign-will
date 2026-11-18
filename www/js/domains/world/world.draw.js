@@ -1075,6 +1075,19 @@ function fishyWater() {
   if (lists.length !== fishy.lists.length || lists.some((v, i) => v !== fishy.lists[i])) fishy = { lists, list: game.waterTiles.filter(mayHaveFish) };
   return fishy.list;
 }
+// (#425) the tiles a fish shows on at this zoom's spacing (every Nth of the fishy ones), kept with the fishy list: a frame
+// went through all the fishy water in view working out each tile's hash to draw one in fourteen of them
+/** @type {{ from: any[] | null, every: number, list: any[], set: Set<any> }} */
+let fishTiles = { from: null, every: 0, list: [], set: new Set() };
+/** @param {number} every */
+function fishTilesOf(every) {
+  const from = fishyWater();
+  if (fishTiles.from !== from || fishTiles.every !== every) {
+    const list = from.filter(w => tileVariantHash(w.x, w.y) % every === 0);
+    fishTiles = { from, every, list, set: new Set(list) };
+  }
+  return fishTiles;
+}
 const SPOTS_PER_FRAME = 1500;
 function fishingSpots() {
   const water = game.waterTiles;
@@ -1095,7 +1108,11 @@ export function drawWater(terrain) {
   const fishEvery = scale >= 0.9 ? 7 : scale >= 0.6 ? 14 : 28, clock = performance.now() / 850;
   ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
   const each = cached
-    ? (/** @type {(w: any) => void} */ fn) => { if (fishShown) forEachInRect(fishyWater(), view.x0, view.y0, view.x1, view.y1, fn); for (const w of fishingSpots()) if (!mayHaveFish(w) && w.x >= view.x0 && w.x <= view.x1 && w.y >= view.y0 && w.y <= view.y1) fn(w); }
+    ? (/** @type {(w: any) => void} */ fn) => {
+      const fish = fishShown ? fishTilesOf(fishEvery) : null;
+      if (fish) forEachInRect(fish.list, view.x0, view.y0, view.x1, view.y1, fn);
+      for (const w of fishingSpots()) if (!(fish && fish.set.has(w)) && w.x >= view.x0 && w.x <= view.x1 && w.y >= view.y0 && w.y <= view.y1) fn(w);
+    }
     : (/** @type {(w: any) => void} */ fn) => inView(game.waterTiles, fn);
   each(w => {
     if (!cached) drawWaterTile(w, terrain);
