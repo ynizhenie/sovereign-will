@@ -5,7 +5,7 @@ export { CHUNK, chunkPaintTotals, chunkStats, drawChunks, isPrewarmingChunks, ma
 export { drawPaths, isPathTile, tickPaths } from './world.paths.js';
 export { inReliefZone, reliefZoneSpot, toggleZone, zonesOf } from './world.zones.js';
 export { drawWeatherScreen, drawWeatherWorld, getWeather, rainLevel, setStandingWeather, setStartingWeather, tickWeather, windNow, windSway } from './world.weather.js';
-export { areShadowsEnabled, beginShadowFrame, castShadow, drawShadowLayer, drawShadowPath, drawDarkness, drawFireflies, getDarkness, getDayPhase, getLights, getSun, endShadowFrame, isNight, MIN_SHADOW_ALPHA, nightProgress, setShadowsEnabled, tickDaytime, timeOfPhase } from './world.daytime.js';
+export { areShadowsEnabled, beginShadowFrame, castCaught, castShadow, catchShadows, caughtShadows, drawShadowLayer, drawShadowPath, drawDarkness, drawFireflies, getDarkness, getDayPhase, getLights, getSun, endShadowFrame, isNight, MIN_SHADOW_ALPHA, nightProgress, setShadowsEnabled, tickDaytime, timeOfPhase } from './world.daytime.js';
 export { ORE_KINDS, generateMap, generateMapSteps, getMapCount, getOreSpawnerRadius, getOreSpawners, getOreSpotsAround, isDesertTile, isSavannaTile, isWaterReachable, markStartingZoneBoars, markStartingZoneResources, placeBeaches, placeLakeBeaches, placeOre, pointIn, spawnForestAware, spawnResource, startingBoarCount } from './world.generator.js';
 export { isContinentMap } from './world.continent.js';
 export { drawTerritory, getFrontier, getFrontierTiles, getTerritoryBox, getTerritoryMask, hasTerritory, inEnemyTerritory, inTerritory, isOutskirts, setTerritoryEnabled, territoryRadiusToward } from './world.territory.js';

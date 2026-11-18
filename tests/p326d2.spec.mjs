@@ -189,6 +189,7 @@ test('doors draw above the wall and their fence gate rotates with the opening', 
     delete wall.progress; delete wall.maxProgress;
     delete door.progress; delete door.maxProgress;
     game.buildings = [door, wall];
+    unitPictures.on = false; // (#425: drawn on the screen itself, to see the calls; kept pictures lay them in the same order)
     const original = ctx.fillRect, order = [];
     ctx.fillRect = function (...args) {
       if (this.fillStyle === '#7a4a20') order.push('wall');
@@ -212,6 +213,7 @@ test('doors draw above the wall and their fence gate rotates with the opening', 
       return { doorAboveWall: doorHandle > lastWall, turnedGate: transforms.some(([a, b, c, d]) => Math.abs(b) > 0.9 || Math.abs(c) > 0.9) };
     } finally {
       ctx.fillRect = original;
+      unitPictures.on = true;
     }
   });
   expect(result.doorAboveWall).toBe(true);
@@ -255,6 +257,7 @@ test('buildings higher on the map are drawn behind buildings lower on the map', 
     delete upper.progress; delete upper.maxProgress;
     delete lower.progress; delete lower.maxProgress;
     game.buildings = [lower, upper];
+    unitPictures.on = false; // (#425: drawn on the screen itself, to see the calls; kept pictures lay them in the same order)
 
     const fillRect = ctx.fillRect, order = [];
     ctx.fillRect = function (...args) {
@@ -265,6 +268,7 @@ test('buildings higher on the map are drawn behind buildings lower on the map', 
       drawBuildings();
     } finally {
       ctx.fillRect = fillRect;
+      unitPictures.on = true;
     }
     return order;
   });

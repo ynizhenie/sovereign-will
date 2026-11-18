@@ -6,7 +6,7 @@
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
 import { TILE_SIZE, forEachInRect, game, townHall } from '../../engine/world/index.js';
 import { isVisible } from './world.fog.js';
-import { camera, canvas, ctx, getViewRect, getViewScale, glLayer, glReady, loadSetting, saveSetting } from '../../engine/platform/index.js';
+import { camera, canvas, ctx, getViewRect, getViewScale, glLayer, glReady, loadSetting, saveSetting, screenPixelRatio } from '../../engine/platform/index.js';
 import { getBuildingColor, getEnemyColor, getSettlerColor } from '../factions/index.js';
 
 const config = () => GAME_CONFIG.daytime;
@@ -257,7 +257,9 @@ export const MIN_SHADOW_ALPHA = 0.1;
 //   hardly move in a frame)
 // It used to be a picture per shadow, each taken out of the shadows already drawn and laid down by itself: a few
 // copies of a picture between canvases for every shadow, which was most of what a frame cost
-const SHADOW_SCALE = 0.5;
+// (#425: half the screen's CSS pixels, so on a dense screen a quarter of its canvas: as soft as on an ordinary one, and a
+// phone blending it and handing it to the graphics card does a quarter of the pixels it did)
+const shadowScale = () => 0.5 / Math.max(1, screenPixelRatio);
 /** @typedef {{ path: Path2D, at: DOMMatrix, alpha: number, filter: string }} KeptShadow */
 /** @type {{ canvas: HTMLCanvasElement, g: CanvasRenderingContext2D } | null} */
 let shadowLayer = null;
@@ -268,6 +270,25 @@ let keptShadows = [], lastShadows = [];
 let worldInverse = null;
 // (#425) the figures' shadows filled straight on the frame (they move every frame; the picture is kept a few)
 let fillingFrame = false;
+// (#425) the shadows a kept picture's drawing casts (a building's, settlers.pictures.js), caught as it's painted, in the
+// world where they fall (inverse: from the picture to the world), and cast again each frame from there
+/** @typedef {{ path: Path2D, at: DOMMatrix, share: number, filter: string }} CaughtShadow */
+/** @type {{ inverse: DOMMatrix, list: CaughtShadow[] } | null} */
+let catching = null;
+/** @param {DOMMatrix} inverse */
+export function catchShadows(inverse) { catching = { inverse, list: [] }; }
+/** @returns {CaughtShadow[]} */
+export function caughtShadows() { const list = catching ? catching.list : []; catching = null; return list; }
+// (as the sun is now: share is of the sun's darkness then)
+/** @param {CaughtShadow[]} list */
+export function castCaught(list) {
+  if (!worldInverse || !shadowsEnabled || !list.length) return;
+  const sun = getSun();
+  for (const s of list) {
+    const alpha = s.share * sun.alpha;
+    if (alpha >= MIN_SHADOW_ALPHA) keptShadows.push({ path: s.path, at: s.at, alpha, filter: s.filter });
+  }
+}
 // (#425) the picture is made again only when the view moved (it's in the screen's pixels) or POSE_STEPS game steps have
 // gone (the sun moving, a thing set down or gone): on a phone making it and handing it to the graphics card every frame
 // was a third of the frame (Mi Pad 4: 32 fps with shadows, 42 without)
@@ -284,7 +305,7 @@ export function beginShadowFrame(c = ctx) {
 export function endShadowFrame() { worldInverse = null; }
 
 // (from the screen to the shadows' picture, half its size: a shadow is soft)
-const toLayer = () => new DOMMatrix([SHADOW_SCALE, 0, 0, SHADOW_SCALE, 0, 0]);
+const toLayer = () => { const s = shadowScale(); return new DOMMatrix([s, 0, 0, s, 0, 0]); };
 
 /** @param {CanvasRenderingContext2D} g @param {DOMMatrix} transform @param {{ path: Path2D, alpha: number, filter: string }} shape @param {number} sunAlpha */
 function fillShadow(g, transform, shape, sunAlpha) {
@@ -304,6 +325,7 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
   if (!shadowsEnabled || typeof document === 'undefined') return;
   const sun = getSun();
   if (sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
+  const SHADOW_SCALE = shadowScale();
   const width = Math.max(1, Math.ceil(c.canvas.width * SHADOW_SCALE)), height = Math.max(1, Math.ceil(c.canvas.height * SHADOW_SCALE));
   if (!shadowLayer) {
     const canvas = document.createElement('canvas'), g = canvas.getContext('2d');
@@ -349,6 +371,10 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
 // above); anywhere else (a thing's picture, a portrait) it's filled where it is
 /** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha */
 export function drawShadowPath(c, path, alpha) {
+  if (catching) {
+    catching.list.push({ path, at: catching.inverse.multiply(c.getTransform()), share: alpha * c.globalAlpha / Math.max(1e-6, getSun().alpha), filter: c.filter });
+    return;
+  }
   if (!shadowsEnabled || alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
   if (fillingFrame) {
     c.save();
