@@ -12,11 +12,17 @@ export const canvas = document.getElementById('gameCanvas');
 // may tear). Set when the canvas is made: a change takes effect the next time the game starts
 export const VSYNC = loadSetting('vsync', 'on') !== 'off';
 
-export const ctx = canvas.getContext('2d', {
+const screenCtx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d', {
   alpha: GL, // (clear where the ground shows through from the graphics card's canvas under it, see gl.js)
   desynchronized: !VSYNC,
   willReadFrequently: false
-});
+}));
+// What everything draws on: the screen's canvas, or for a while another one (drawingOn: a unit's picture, see
+// settlers.pictures.js), so the same drawing code paints either without a word changed
+/** @type {CanvasRenderingContext2D} */
+export let ctx = screenCtx;
+/** @param {CanvasRenderingContext2D} g @returns {CanvasRenderingContext2D} what was drawn on till now */
+export function drawingOn(g) { const was = ctx; ctx = g; return was; }
 
 // How many canvas pixels to a CSS pixel at most: the sharpest picture (up to 2; a screen denser than that
 // is capped, more pixels cost frame time)
