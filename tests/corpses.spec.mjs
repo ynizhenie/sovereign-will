@@ -47,7 +47,8 @@ test('corpses keep the fallen unit body type, faction visuals, and armor', async
       if (['#9aa7b1', '#8d5a35'].includes(String(this.fillStyle))) armorColors.push(String(this.fillStyle));
       return fill.apply(this, args);
     };
-    try { drawCorpses(); } finally { ctx.fill = fill; }
+    unitPictures.on = false; // (#425: drawn on the screen itself, to see the calls; a kept picture holds the same)
+    try { drawCorpses(); } finally { ctx.fill = fill; unitPictures.on = true; }
     return {
       player: { type: playerCorpse.type, weapon: playerCorpse.weapon, armor: playerCorpse.armor, look: playerCorpse.look, kin: unitKin(playerCorpse) },
       enemy: { type: enemyCorpse.type, enemyKey: enemyCorpse.enemyKey, bigBody: enemyCorpse.bigBody, weapon: enemyCorpse.weapon, armor: enemyCorpse.armor, kin: unitKin(enemyCorpse) },

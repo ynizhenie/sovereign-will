@@ -3,7 +3,7 @@
 import { TILE_SIZE, forEachInRect, game, getTileIndex, townHall } from '../engine/world/index.js';
 import { camera, canvas, ctx, getViewRect, getViewScale, glBeginFrame, glCamera, glEndFrame, glReady } from '../engine/platform/index.js';
 import { drawEnemies, drawEnemyRafts, drawEnemyShadows, drawEnemyTentSites, drawEnemyTents, drawLoot, getEnemyDef } from '../domains/conflict/waves/index.js';
-import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression, simpleUnit } from '../domains/colony/settlers/index.js';
+import { drawAllSpeech, drawDung, drawLevelIndicator, drawSelectedPaths, drawSettlerShadows, drawSettlers, getUnitDisplayProgressionTrack, getUnitLevel, hasUnitProgression, simpleUnit, newPictureFrame } from '../domains/colony/settlers/index.js';
 import { drawPiles, drawStoreContents } from '../domains/colony/storage/index.js';
 import { drawBoars, drawWallows } from '../domains/economy/hunting/index.js';
 import { drawBaseZoneBoundary, drawFarmPlots, drawFarmZones } from '../domains/economy/farming/index.js';
@@ -21,6 +21,7 @@ import { perfMark } from './perfmon.js';
 const sceneItems = [];
 
 export function render() {
+  newPictureFrame(); // (#425: the units' pictures painted this frame, counted from here)
   if (game.loading) {
     if (!game.loadingRender) return; // (#326) keep the last frame under the loading screen while the world is made
     game.loadingRenderFrame = (game.loadingRenderFrame || 0) + 1;
@@ -124,19 +125,35 @@ export function render() {
   if (isDefeated()) { ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 }
 
+// (#425) a unit's level worked out every LEVEL_STEPS game steps, not every frame for every unit (its track, its
+// experience against the thresholds: a big battle's frame spent more on that than on the numbers' pictures)
+const LEVEL_STEPS = 30;
+/** @type {WeakMap<object, { tick: number, level: number }>} */
+const levels = new WeakMap();
+const levelOf = unit => {
+  const kept = levels.get(unit);
+  if (kept && game.pathTick >= kept.tick && game.pathTick - kept.tick < LEVEL_STEPS) return kept.level;
+  const level = hasUnitProgression(unit) ? getUnitLevel(unit, getUnitDisplayProgressionTrack(unit)) : 0;
+  levels.set(unit, { tick: game.pathTick, level });
+  return level;
+};
+
 function drawUnitLevelIndicators() {
   if (simpleUnit()) return;
   const view = getViewRect(60);
   for (const unit of game.settlers) {
-    if (!hasUnitProgression(unit) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    if (unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    const level = levelOf(unit);
+    if (!level) continue;
     const radius = unit.visualRadius || unit.radius || 11, top = unit.y - radius * 1.45;
-    drawLevelIndicator(unit.x - 18, top - 4, getUnitLevel(unit, getUnitDisplayProgressionTrack(unit)));
+    drawLevelIndicator(unit.x - 18, top - 4, level);
   }
   for (const list of [game.enemies, game.scouts]) for (const unit of list) {
-    if (!hasUnitProgression(unit) || !isVisible(unit.x, unit.y) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    if (!isVisible(unit.x, unit.y) || unit.x < view.x0 || unit.x > view.x1 || unit.y < view.y0 || unit.y > view.y1) continue;
+    const level = levelOf(unit);
+    if (!level) continue;
     const radius = unit.radius || 11, top = unit.y - radius * 1.45;
-    drawLevelIndicator(unit.x - 15, top - 3.5,
-      getUnitLevel(unit, getUnitDisplayProgressionTrack(unit)));
+    drawLevelIndicator(unit.x - 15, top - 3.5, level);
   }
 }
 

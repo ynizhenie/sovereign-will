@@ -189,6 +189,7 @@ test('doors draw above the wall and their fence gate rotates with the opening', 
     delete wall.progress; delete wall.maxProgress;
     delete door.progress; delete door.maxProgress;
     game.buildings = [door, wall];
+    unitPictures.on = false; // (#425: drawn on the screen itself, to see the calls; kept pictures lay them in the same order)
     const original = ctx.fillRect, order = [];
     ctx.fillRect = function (...args) {
       if (this.fillStyle === '#7a4a20') order.push('wall');
@@ -212,6 +213,7 @@ test('doors draw above the wall and their fence gate rotates with the opening', 
       return { doorAboveWall: doorHandle > lastWall, turnedGate: transforms.some(([a, b, c, d]) => Math.abs(b) > 0.9 || Math.abs(c) > 0.9) };
     } finally {
       ctx.fillRect = original;
+      unitPictures.on = true;
     }
   });
   expect(result.doorAboveWall).toBe(true);
@@ -255,6 +257,7 @@ test('buildings higher on the map are drawn behind buildings lower on the map', 
     delete upper.progress; delete upper.maxProgress;
     delete lower.progress; delete lower.maxProgress;
     game.buildings = [lower, upper];
+    unitPictures.on = false; // (#425: drawn on the screen itself, to see the calls; kept pictures lay them in the same order)
 
     const fillRect = ctx.fillRect, order = [];
     ctx.fillRect = function (...args) {
@@ -265,6 +268,7 @@ test('buildings higher on the map are drawn behind buildings lower on the map', 
       drawBuildings();
     } finally {
       ctx.fillRect = fillRect;
+      unitPictures.on = true;
     }
     return order;
   });
@@ -320,6 +324,8 @@ test('stone wall shadow follows its stone post and connected arms without round 
   expect(errors).toEqual([]);
 });
 
+// (#425: the still things', walls' and buildings' shadows; a unit's is drawn straight on the frame, a little darker where
+// it falls on one of those)
 test('overlapping shadows in the world are no darker than one', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
@@ -332,7 +338,9 @@ test('overlapping shadows in the world are no darker than one', async ({ page })
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 300, 300);
       beginShadowFrame(ctx); beginShadowFrame(ctx); // (none kept from the frame before)
-      drawShadowLayer(() => {}, () => { for (let i = 0; i < shadows; i++) drawShadowPath(ctx, shadow, getSun().alpha); });
+      for (let i = 0; i < shadows; i++) drawShadowPath(ctx, shadow, getSun().alpha); // (a building's: kept for the next frame's picture)
+      beginShadowFrame(ctx);
+      drawShadowLayer(() => {}, () => {});
       endShadowFrame();
       const value = ctx.getImageData(120, 120, 1, 1).data[0];
       ctx.restore();

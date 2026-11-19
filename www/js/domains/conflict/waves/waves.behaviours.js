@@ -731,11 +731,14 @@ function chooseEnemyTarget(en, tick) {
   const sight = Math.max(fog.enemySightTiles * TILE_SIZE, def.ranged ? shotOf(def).range + 30 : 0);
   const sees = (s, d) => !foggy || d <= sight || (en.struckBy === s && game.pathTick - (en.struckTick || -Infinity) < fog.enemyRememberSeconds * 60);
   const isFull = s => isEnemyTargetFull(s, tick);
-  game.settlers.forEach(s => {
-    if (isUntouchable(s) || isFull(s)) return; // (a ghost: nothing to hit, #314)
-    let d = Math.hypot(en.x - s.x, en.y - s.y);
-    if (d < minDist && sees(s, d)) { minDist = d; closestSettler = s; }
-  });
+  // (#425: the distance first, squared: only one nearer than the best so far is asked the rest)
+  for (const s of game.settlers) {
+    const dx = en.x - s.x, dy = en.y - s.y, d2 = dx * dx + dy * dy;
+    if (d2 >= minDist * minDist) continue;
+    if (isUntouchable(s) || isFull(s)) continue; // (a ghost: nothing to hit, #314)
+    const d = Math.sqrt(d2);
+    if (sees(s, d)) { minDist = d; closestSettler = s; }
+  }
 
   let lockedTarget = en.attackTarget;
   if (lockedTarget && (!game.settlers.includes(lockedTarget) || isUntouchable(lockedTarget) || isFull(lockedTarget) ||

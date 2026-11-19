@@ -35,7 +35,8 @@ export function stepGame(dt, hud = true) {
 // (#322) The panels (the stock's numbers, the wave's timer, the cards) are brought up to date HUD_PER_SECOND times a second, not
 // at every step of the game: the page was gone through sixty times a second (and several times a frame on a slow device, a step
 // each), a fifth of what a quiet step cost. Prices short of stock every third time, about as often as before
-const HUD_PER_SECOND = 20;
+// (#425: 10 on an Android device: the panels' text laid out again twenty times a second was 2 ms of a phone's frame)
+const HUD_PER_SECOND = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '') ? 10 : 20;
 const hud = { due: false, last: 0, count: 0 };
 function refreshHud(now) {
   if (!hud.due || now - hud.last < 1000 / HUD_PER_SECOND - 1) return;

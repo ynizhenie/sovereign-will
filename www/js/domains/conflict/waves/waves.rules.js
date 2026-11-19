@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, getGridPos, isBorderZone, rand, townHall, keepWhere } from '../../../engine/world/index.js';
 import { addResources } from '../../colony/storage/index.js';
 import { isSpawnSpotFree, isTileOccupied } from '../../economy/building/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
@@ -864,7 +864,7 @@ function stageWaveAtPlayerEdge() {
   }
   const builders = wave.filter(enemy => enemy.waveTentBuilder || enemy.tentBuildTarget);
   const staleSites = new Set(builders.map(builder => builder.tentBuildTarget));
-  game.enemyTentBlueprints = game.enemyTentBlueprints.filter(site => !staleSites.has(site));
+  game.enemyTentBlueprints = keepWhere(game.enemyTentBlueprints, site => !staleSites.has(site));
   for (const builder of builders) delete builder.tentBuildTarget;
   for (const builder of builders) {
     const site = getNearbyEnemyTentSite(builder);
@@ -1213,6 +1213,6 @@ export function removeDeadEnemies() {
       }
     }
   });
-  game.enemies = game.enemies.filter(en => en.hp > 0);
-  game.enemyTentBlueprints = game.enemyTentBlueprints.filter(site => game.enemies.includes(site.builder));
+  game.enemies = keepWhere(game.enemies, en => en.hp > 0);
+  game.enemyTentBlueprints = keepWhere(game.enemyTentBlueprints, site => game.enemies.includes(site.builder));
 }

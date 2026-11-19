@@ -8,8 +8,10 @@
 
 import { loadSetting } from './storage.js';
 
-// (remembered, used from the next start: the game's canvas is made clear or solid with it)
-export const GL = loadSetting('gl', 'off') === 'on';
+// (remembered, used from the next start: the game's canvas is made clear or solid with it). Not chosen yet: on for an
+// Android device (#425: a Mi Pad 4 drew twice as fast with it, zoomed out), off elsewhere
+export const GL_DEFAULT = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '') ? 'on' : 'off';
+export const GL = loadSetting('gl', GL_DEFAULT) === 'on';
 
 /** @type {any} */
 let PIXI = null;
@@ -377,14 +379,14 @@ export function glWaves(shown, time, half) {
 // ---- A whole layer painted on a canvas of its own each frame (the shadows): laid over what's on the card so far, see-through
 /** @type {WeakMap<HTMLCanvasElement, any>} */
 const layerTextures = new WeakMap();
-/** @param {HTMLCanvasElement} layer @param {number} w @param {number} h (on the screen, canvas px) @param {number} alpha */
-export function glLayer(layer, w, h, alpha) {
+/** @param {HTMLCanvasElement} layer @param {number} w @param {number} h (on the screen, canvas px) @param {number} alpha @param {boolean} [changed] */
+export function glLayer(layer, w, h, alpha, changed = true) {
   let texture = layerTextures.get(layer);
   if (!texture || texture.source.width !== layer.width || texture.source.height !== layer.height) {
     if (texture) texture.destroy(true);
     texture = new PIXI.Texture({ source: new PIXI.CanvasSource({ resource: layer, scaleMode: 'linear' }) });
     layerTextures.set(layer, texture);
-  } else texture.source.update();
+  } else if (changed) texture.source.update(); // (#425: handed to the graphics card again only when it was drawn again)
   const sprite = next();
   sprite.texture = texture;
   sprite.alpha = alpha;

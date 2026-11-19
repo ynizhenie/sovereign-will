@@ -10,7 +10,7 @@
 // keepStoresInStep() puts any change of the stock made without a place (a cost paid, a refund) in step.
 
 import { GAME_CONFIG } from '../../../content/configs/index.js';
-import { TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, getTileIndex, onceThisTick, townHall, keepWhere } from '../../../engine/world/index.js';
 import { isTileBlockedForSettler, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getStorages, moveSettlerToTownHall, stock } from './storage.rules.js';
 import { getPlayerFaction } from '../../factions/index.js';
@@ -174,7 +174,7 @@ export function keepStoresInStep() {
     if (have > there + EPS) storeInto(townHall, id, have - there);
     else if (have < there - EPS) takeOff(id, there - have, storages);
   }
-  game.piles = game.piles.filter(p => p.amount > EPS);
+  game.piles = keepWhere(game.piles, p => p.amount > EPS);
 }
 
 function takeOff(id, amount, storages) {

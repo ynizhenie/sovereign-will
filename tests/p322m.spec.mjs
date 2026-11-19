@@ -33,6 +33,8 @@ test('the pieces round the screen are painted ahead: a step of the camera finds 
   await page.click('#play-button');
   const r = await page.evaluate(() => {
     isPaused = true;
+    // (#425: the ground's pieces; the still things' shadows are painted as their picture is made, on a step of the view)
+    setShadowsEnabled(false);
     setZoom(0.6 / getBaseScale() * screenPixelRatio);
     camera.x = townHall.x; camera.y = townHall.y;
     for (let i = 0; i < 120; i++) render(); // (two seconds: time for the ring to be painted)
