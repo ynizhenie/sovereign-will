@@ -67,7 +67,7 @@
 
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
-        <h1 data-i18n="menu.endless">Endless</h1>
+        <h1><button class="mode-title-trigger" data-mode-info="endless"><span data-i18n="menu.endless">Endless</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
 
         <button id="play-button" data-i18n="menu.play">PLAY</button>
@@ -165,7 +165,7 @@
 
     <div class="main-menu-content" data-screen="battle" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
-        <h1 data-i18n="menu.battles">Battles</h1>
+        <h1><button class="mode-title-trigger" data-mode-info="battle"><span data-i18n="menu.battles">Battles</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <button id="battle-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <div class="wave-settings">
             <div data-i18n="menu.difficulty">Difficulty:</div>
@@ -199,7 +199,7 @@
 
     <div class="main-menu-content" data-screen="editor" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
-        <h1 data-i18n="menu.editor">Map editor</h1>
+        <h1><button class="mode-title-trigger" data-mode-info="editor"><span data-i18n="menu.editor">Map editor</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <!-- (#326, 27.10, 19) the generator's settings for a generated map, as Endless's gear -->
         <button id="editor-open-generator" class="menu-gear" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
         <div class="wave-settings">
@@ -215,7 +215,6 @@
                 <input id="editor-map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
-            <div class="faction-side"><span data-i18n="menu.you">You</span><div id="editor-faction" class="faction-options"></div></div>
             <div class="editor-start">
                 <div class="editor-start-title" data-i18n="editor.start">Choose a map and open it in the editor:</div>
                 <div class="editor-start-options">
@@ -230,7 +229,7 @@
 
     <div class="main-menu-content plague-menu" data-screen="plague" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
-        <h1 data-i18n="plague.title">Plague</h1>
+        <h1><button class="mode-title-trigger" data-mode-info="plague"><span data-i18n="plague.title">Plague</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <button id="plague-open-saves" class="menu-button" data-i18n="menu.saves">Saves</button>
         <div class="wave-settings">
@@ -275,6 +274,7 @@
             <input id="preset-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="gen.presetName" placeholder="Preset name" />
             <button id="preset-save" class="fps-option" data-i18n="gen.save">Save</button>
         </div>
+        <div id="preset-current" class="preset-current" role="status" aria-live="polite"></div>
         <div id="preset-list" class="preset-list"></div>
         <div id="generator-fields" class="generator-fields"></div>
     </div>
@@ -365,6 +365,12 @@
         <h1 data-i18n="music.player">Music player</h1>
         <!-- (#326) each track: its name, when it plays, a button to listen to it, and a switch to turn it off -->
         <div id="music-player"></div>
+    </div>
+
+    <div class="main-menu-content mode-description-screen" data-screen="mode-description" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <h1 id="mode-description-title"></h1>
+        <p id="mode-description-text"></p>
     </div>
 </div>
 
@@ -696,6 +702,8 @@
           <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
           <button class="btn" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
         </div>
+        <div class="panel-heading" data-i18n="editor.hallAppearance">Town hall appearance</div>
+        <div id="editor-hall-faction" class="faction-options"></div>
         <div class="panel-heading" data-i18n="editor.startTime">Time of day</div>
         <div class="sub-tabs">
           <button class="btn sub-tab" data-start-time="morning" data-i18n="daytime.morning">Morning</button>

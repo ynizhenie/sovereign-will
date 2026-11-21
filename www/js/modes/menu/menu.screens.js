@@ -7,6 +7,12 @@ import { flagHtml, iconHtml } from '../../ui/index.js';
 import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
+const MODE_INFO = {
+  endless: { title: 'menu.endless', description: 'menu.modeInfo.endless' },
+  plague: { title: 'plague.title', description: 'menu.modeInfo.plague' },
+  battle: { title: 'menu.battles', description: 'menu.modeInfo.battle' },
+  editor: { title: 'menu.editor', description: 'menu.modeInfo.editor' }
+};
 const seedPanel = document.getElementById('seed-settings');
 if (!seedPanel) throw new Error('The shared seed panel is missing');
 const seedInputElement = document.getElementById('seed-input');
@@ -104,6 +110,21 @@ export function initMenuScreens() {
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
   onTap(document.getElementById('open-music-player'), () => showMenuScreen('music'));
+  document.querySelectorAll('[data-mode-info]').forEach(button => onTap(button, () => {
+    const mode = button.dataset.modeInfo;
+    const info = MODE_INFO[mode];
+    if (!info) throw new Error(`Unknown mode information screen: ${mode}`);
+    const title = document.getElementById('mode-description-title');
+    const description = document.getElementById('mode-description-text');
+    const back = document.querySelector('[data-screen="mode-description"] [data-back]');
+    if (!title || !description || !back) throw new Error('The mode description screen is incomplete');
+    title.dataset.i18n = info.title;
+    title.textContent = t(info.title);
+    description.dataset.i18n = info.description;
+    description.textContent = t(info.description);
+    back.dataset.backTo = mode;
+    showMenuScreen('mode-description');
+  }));
   document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => {
     // opened from the pause menu (#254): back to it, over the game
     if (mainMenu.dataset.fromPause === 'yes') {

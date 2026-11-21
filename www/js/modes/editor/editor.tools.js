@@ -20,7 +20,7 @@ import { invalidateAllPaths } from '../../engine/movement/index.js';
 import { showMenuScreen } from '../menu/index.js';
 import { setMapSource, startGame } from '../endless/index.js';
 import { loadSavedMaps, makeBuilt, placeBoar, serializeMap, storeSavedMaps } from './editor.maps.js';
-import { renderEditorMapList, renderEditorPanel } from './editor.panel.js';
+import { renderEditorPanel } from './editor.panel.js';
 
 // What can be put on a tile, by palette category (the eraser has its own button), in sections (#255: ore
 // with the ground). kind: a GAME_CONFIG.mapResources entry; building: a GAME_CONFIG.buildings one.
@@ -57,11 +57,11 @@ export const editor = {
   tool: 'tree',
   category: 'nature',
   brush: 1,     // 1, 3 or 5: a 3×3 (5×5) brush covers the tapped tile and the ones round it
+  hallFaction: 'humans',
   startTime: 'morning', // the time of day an Endless game on it starts at (#257): morning, day, evening, night
   weather: 'clear',
   hideTimeAndWeather: true,
   name: '',     // the name it was opened or last saved as
-  faction: 'humans' // whose map it is (the player's side is 'humans' until the saved sides load): its buildings in the palette, its town hall; Endless plays it as them
 };
 
 // ---- Editing
@@ -293,7 +293,6 @@ export async function startEditor(source) {
   try {
     if (source.map) {
       editor.name = source.map.name;
-      editor.faction = source.map.faction || 'humans';
       editor.startTime = source.map.startTime || 'morning';
       editor.weather = ['clear', 'rain', 'fog', 'storm'].includes(source.map.weather) ? source.map.weather : 'clear';
     } else {
@@ -332,7 +331,6 @@ export function leaveEditor() {
   game.gameMode = 'endless';
   document.body.classList.remove('editor-mode');
   exitToMainMenu();
-  renderEditorMapList();
   showMenuScreen('editor');
 }
 

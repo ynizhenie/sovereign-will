@@ -111,11 +111,15 @@ export const enemiesConfig = {
       crossbow: { fromWave: 11, startWeight: 3, endWeight: 18 }
     }
   },
+  // Enemy level 1 lasts for firstLevelWaves; each following level ramps in over rampWaves, up to maxLevel.
+  waveLevels: { firstLevelWaves: 10, rampWaves: 10, maxLevel: 3 },
   waveGear: {
     rampWaves: 12,
     leather: { fromWave: 4, startChance: 0.04, endChance: 0.28 },
+    bone_armor: { fromWave: 4, startChance: 0.04, endChance: 0.28 },
     shield: { fromWave: 6, startChance: 0.05, endChance: 0.32 },
     helmet: { fromWave: 8, startChance: 0.03, endChance: 0.24 },
+    horned_helmet: { fromWave: 8, startChance: 0.03, endChance: 0.24 },
     iron: { fromWave: 10, startChance: 0.03, endChance: 0.22 }
   },
 

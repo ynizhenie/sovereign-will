@@ -12,7 +12,7 @@ import { getEnemyReach, invalidateAllPaths, isTileBlockedForEnemyStrict, moveEnt
 import { addCorpse, addCorpseLoot, getBaseRadius } from '../combat/index.js';
 import { openDemonPortal, openDemonPortalAt } from '../../factions/demons/index.js';
 import { getFrontier, getFrontierTiles, getTerritoryBox, hasTerritory, inEnemyTerritory, inTerritory, isNight, isOutskirts } from '../../world/index.js';
-import { addUnitExperience, generateUnitName, newLook, newPetLook, noteDay, someoneSays } from '../../colony/settlers/index.js';
+import { addUnitExperience, generateUnitName, getUnitExperienceForLevel, getUnitProgressionTrack, newLook, newPetLook, noteDay, setUnitExperience, someoneSays } from '../../colony/settlers/index.js';
 import { playSound } from '../../../app/index.js';
 import { onUnitDeath } from '../morale/index.js';
 import { markEnemyKillForPlague } from '../../../modes/plague/index.js';
@@ -521,9 +521,33 @@ export function getWaveGearChance(item, wave = game.waveNum) {
   const gear = item === 'leather' ? ['gear:leather_armor', 'gear:bone_armor', 'gear:armor']
     : item === 'helmet' ? ['gear:helmet', 'gear:horned_helmet']
       : [`gear:${item === 'iron' ? 'armor' : item}`];
+  const factions = GAME_CONFIG.gear[item]?.factions;
+  if (factions && !factions.includes(getEnemyFaction().id)) return 0;
   if (!rule || wave < rule.fromWave || (!game.plagueMode && !gear.some(key => development.has(key)))) return 0;
   const progress = Math.min(1, Math.max(0, (wave - rule.fromWave) / GAME_CONFIG.waveGear.rampWaves));
   return rule.startChance + (rule.endChance - rule.startChance) * progress;
+}
+
+// A linear roll moves each wave range into the next level; the schedule is set in enemies.js.
+export function getEnemyLevelForWave(wave, roll) {
+  const { firstLevelWaves, rampWaves, maxLevel } = GAME_CONFIG.waveLevels;
+  if (wave <= firstLevelWaves) return 1;
+
+  const wavesAfterFirstLevel = wave - firstLevelWaves;
+  const currentLevel = Math.min(maxLevel, Math.ceil(wavesAfterFirstLevel / rampWaves));
+  if (currentLevel >= maxLevel) return maxLevel;
+
+  const waveInRamp = wavesAfterFirstLevel - (currentLevel - 1) * rampWaves;
+  const nextLevelChance = waveInRamp / rampWaves;
+  return (roll ?? rand()) < nextLevelChance ? currentLevel + 1 : currentLevel;
+}
+
+export function setEnemyLevelForWave(enemy, wave) {
+  const track = getUnitProgressionTrack(enemy);
+  if (!track) return 1;
+  const level = getEnemyLevelForWave(wave);
+  if (level > 1) setUnitExperience(enemy, getUnitExperienceForLevel(level, track), track);
+  return level;
 }
 
 // Armour, a shield and a helmet become more common as the enemy faction develops.
@@ -531,13 +555,21 @@ export function dressForWave(enemy, def, wave = game.waveNum) {
   if (def.pet) return; // (a pet wears nothing, #326)
   if (!enemy.armor) {
     const ironChance = getWaveGearChance('iron', wave), leatherChance = getWaveGearChance('leather', wave);
+    const boneChance = getWaveGearChance('bone_armor', wave);
     const armourRoll = rand();
     const armourId = armourRoll < ironChance ? 'armor'
-      : armourRoll < ironChance + leatherChance ? getEnemyFaction().id === 'undead' ? 'bone_armor' : 'leather_armor' : null;
+      : armourRoll < ironChance + leatherChance ? 'leather_armor'
+        : armourRoll < ironChance + leatherChance + boneChance ? 'bone_armor' : null;
     if (armourId) putOnGear(enemy, armourId);
   }
   if (!enemy.shield && !def.ranged && !def.healer && !def.necromancer && rand() < getWaveGearChance('shield', wave)) enemy.shield = true;
-  if (!enemy.helmet && rand() < getWaveGearChance('helmet', wave)) putOnGear(enemy, getEnemyFaction().id === 'demons' ? 'horned_helmet' : 'helmet');
+  if (!enemy.helmet) {
+    const helmetChance = getWaveGearChance('helmet', wave), hornedChance = getWaveGearChance('horned_helmet', wave);
+    const helmetRoll = rand();
+    const helmetId = helmetRoll < helmetChance ? 'helmet'
+      : helmetRoll < helmetChance + hornedChance ? 'horned_helmet' : null;
+    if (helmetId) putOnGear(enemy, helmetId);
+  }
 }
 
 export function startNextWave(preparing = false) {
@@ -589,6 +621,7 @@ export function startNextWave(preparing = false) {
     enemy.fromWave = true; // the wave the base deploys against (see isDefenseAlert)
     if (preparing) enemy.prepWave = game.wavePreparation?.wave ?? game.waveNum;
     dressForWave(enemy, def);
+    setEnemyLevelForWave(enemy, game.waveNum);
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true; // (a night wave, #257)
     musterAt(enemy);
     if (!game.enemyCamps?.length && !game.enemyCamp && !queued && !prepPortal) raftUnits.push(enemy);
@@ -637,7 +670,7 @@ export function startNextWave(preparing = false) {
   }
 
   if (queued) {
-    game.portalWavePrep = preparing ? game.wavePreparation?.wave ?? game.waveNum : null;
+    game.portalWavePrep = preparing ? game.wavePreparation?.wave ?? game.waveNum : game.waveNum;
     game.portalTimer = 0;
     tickPortalWave(0); // (the first of them at once)
   }
@@ -734,6 +767,7 @@ export function tickPortalWave(dt) {
     enemy.fromWave = true;
     if (game.wavePreparation && game.portalWavePrep === game.wavePreparation.wave) enemy.prepWave = game.wavePreparation.wave;
     dressForWave(enemy, GAME_CONFIG.enemies[id]);
+    setEnemyLevelForWave(enemy, game.portalWavePrep ?? game.waveNum);
     if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) enemy.torch = true;
     musterAt(enemy); // (#279)
     game.enemies.push(enemy);
@@ -1158,6 +1192,7 @@ export function tickEnemyTents(dt) {
         summoned.summoned = true; // from a tent, not the wave: doesn't call off an assault on the tents
         summoned.waveSummoned = true;
         dressForWave(summoned, def);
+        setEnemyLevelForWave(summoned, wave);
         if (isNight() && rand() < GAME_CONFIG.daytime.enemyTorchShare) summoned.torch = true;
         game.enemies.push(summoned);
       }

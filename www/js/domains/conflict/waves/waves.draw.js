@@ -161,7 +161,7 @@ export function drawEnemy(en) {
     const torchAside = (en.weapon === 'rifle' && en.torch) || torchAtSide(en, !!en.torch, en.weapon !== 'fist' || (enemyDef.tool && enemyDef.tool !== 'none') || enemyDef.necromancer);
     const torchHeld = en.torch && !torchAside;
     const drawMedicBag = front => {
-      if (!healing || !enemyDef.healer) return;
+      if (!healing || !enemyDef.healer || game.plagueMode) return;
       const r = en.visualRadius || en.radius, f = en.facing || 0;
       const sideOn = Math.abs(Math.cos(f)) > 0.85, x = sideOn ? -Math.cos(f) * r * 0.3 : -handSide(en) * r * 0.72, y = r * 0.18;
       const farSlot = sideOn || Math.sin(f) < -0.25;
@@ -175,7 +175,7 @@ export function drawEnemy(en) {
       if (torchHeld) applyBackPose(en); else applyHeldItemPose(en);
       if (enemyDef.necromancer) drawStaff(getEnemyColor(null), getDarkness()); // (#326)
       else if (building) drawWorkTool('hammer', itemScale(en));
-      else if (healing && enemyDef.healer) drawWorkTool('herbs', itemScale(en));
+      else if (healing && enemyDef.healer && !game.plagueMode) drawWorkTool('herbs', itemScale(en));
       else if (enemyDef.tool === 'medbag') drawHeldTool('medbag', itemScale(en), 1);
       else drawHeldWeapon((en.swingT || 0) > 0 && en.swingWeapon ? en.swingWeapon : en.weapon, itemScale(en), torchHeld ? 0 : (bowDraw(en) || { pull: 0 }).pull); // (in its hand, as big as it, #279; drawn, #306)
       drawWeaponBlood(en, (en.swingT || 0) > 0 && en.swingWeapon ? en.swingWeapon : en.weapon);

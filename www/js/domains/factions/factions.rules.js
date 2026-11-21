@@ -3,8 +3,8 @@
 
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { game } from '../../engine/world/index.js';
-import { mapSource, renderFactionPicker } from '../../modes/endless/index.js';
 import { editor } from '../../modes/editor/index.js';
+import { renderFactionPicker } from '../../modes/endless/index.js';
 import { menuWorld } from '../../modes/menu/index.js';
 import { loadData, saveData } from '../../engine/platform/index.js';
 import { getPlaguePlayerFaction } from '../../modes/plague/index.js';
@@ -13,12 +13,15 @@ import { getPlaguePlayerFaction } from '../../modes/plague/index.js';
 // (#306) battle: the colours of Battles' two sides, chosen in its settings
 export const sides = { player: { faction: 'humans', color: '#e9c46a' }, enemy: { faction: 'humans', color: '#c0392b' }, battle: { green: '#2ecc71', red: '#c0392b' } };
 
-// in the map editor, the faction the map is made for
 export function getPlayerFaction() {
   if (game.plagueMode) return getPlaguePlayerFaction();
-  if (game.gameMode === 'editor' && typeof editor !== 'undefined') return GAME_CONFIG.factions[editor.faction];
   if (game.gameMode === 'menu' && typeof menuWorld !== 'undefined') return GAME_CONFIG.factions[menuWorld.faction];
   return GAME_CONFIG.factions[sides.player.faction];
+}
+
+export function getTownHallFaction() {
+  if (game.gameMode === 'editor') return GAME_CONFIG.factions[editor.hallFaction] || GAME_CONFIG.factions.humans;
+  return getPlayerFaction();
 }
 
 export function getEnemyFaction() {
@@ -67,15 +70,8 @@ export function freeColor(wanted, other) {
   return all[(i + 1) % all.length];
 }
 
-// The faction a custom map in Endless fixes for the player, or null
-export function getLockedPlayerFaction() {
-  return typeof mapSource !== 'undefined' && mapSource === 'custom' && game.customMap && game.customMap.faction ? game.customMap.faction : null;
-}
-
 export function setSideFaction(side, faction) {
   if (!GAME_CONFIG.factions[faction] || !GAME_CONFIG.factions[faction].ready) return;
-  const locked = side === 'player' && getLockedPlayerFaction();
-  if (locked && faction !== locked) return;
   const other = side === 'player' ? sides.enemy : sides.player;
   sides[side].faction = faction;
   sides[side].color = freeColor(GAME_CONFIG.factions[faction].color, other.color);
@@ -119,7 +115,7 @@ export function setBattleColor(side, color) {
 // Whether the player's faction has this (a resource, building, tool, gear...): yes unless the item names
 // the factions it's for (`factions`) and the player's isn't one of them
 export function isForPlayerFaction(item) {
-  return !item.factions || item.factions.includes(getPlayerFaction().id); // (#326: the menu's and the editor's own faction there)
+  return !item.factions || item.factions.includes(getPlayerFaction().id); // (#326: the menu's own faction there)
 }
 
 // (#279) what a building costs the player's faction: as in GAME_CONFIG, and for one with buildBones (the undead)

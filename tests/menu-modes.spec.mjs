@@ -24,6 +24,29 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   expect(errors).toEqual([]);
 });
 
+test('each mode title opens an information screen that returns to its menu', async ({ page }) => {
+  await openFresh(page);
+  for (const [modeButton, screen, mode] of [
+    ['#mode-endless', 'endless', 'endless'],
+    ['#mode-plague', 'plague', 'plague'],
+    ['#mode-battles', 'battle', 'battle'],
+    ['#mode-editor', 'editor', 'editor']
+  ]) {
+    await page.click(modeButton);
+    const title = page.locator(`[data-screen="${screen}"] [data-mode-info="${mode}"]`);
+    await expect(title).toBeVisible();
+    await expect(title.locator('.ic-info')).toBeVisible();
+    await expect(title).toHaveText(/\S+/);
+    await title.click();
+    await expect(page.locator('[data-screen="mode-description"]')).toBeVisible();
+    await expect(page.locator('#mode-description-title')).not.toBeEmpty();
+    await expect(page.locator('#mode-description-text')).not.toBeEmpty();
+    await page.click('[data-screen="mode-description"] [data-back]');
+    await expect(page.locator(`[data-screen="${screen}"]`)).toBeVisible();
+    await page.click(`[data-screen="${screen}"] [data-back]`);
+  }
+});
+
 test('shadows can be disabled in settings and the choice is remembered', async ({ page }) => {
   const errors = await openFresh(page);
   await page.click('#open-settings');

@@ -33,6 +33,31 @@ test('behind the menu the game runs a little world: a soldier with a spear, a wa
   expect(errors).toEqual([]);
 });
 
+test('the demon menu group has at most three medics and two archers', async ({ page }) => {
+  await page.goto('/');
+  await opened(page);
+  const group = await page.evaluate(() => {
+    enterMenuWorld('demon');
+    const demon = settlers.find(settler => settler.type === 'demon');
+    setUnitExperience(demon, getUnitExperienceForLevel(3, 'melee'), 'melee');
+    const originalRandom = Math.random;
+    Math.random = () => 0.999;
+    try {
+      enemies = [];
+      Object.assign(menuWorld.demonFight, { next: 0, gap: 6, awaitingMeal: false });
+      tickMenuScene(1 / 60);
+      return {
+        count: enemies.length,
+        medics: enemies.filter(enemy => enemy.enemyKey === 'raider_medic_club').length,
+        archers: enemies.filter(enemy => enemy.enemyKey === 'raider_archer').length
+      };
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+  expect(group).toEqual({ count: 9, medics: 3, archers: 2 });
+});
+
 test('a tapped boar is marked and hunted, butchered and its meat carried to the warehouse; the soldier changes faction on a tap (#193)', async ({ page }) => {
   await page.goto('/');
   await opened(page);
