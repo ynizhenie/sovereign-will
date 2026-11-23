@@ -3,7 +3,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isWithinTownHallBuffer, rand, townHall, keepWhere } from '../../../engine/world/index.js';
 import { armorOf, hasGear, hasWorkingShield, helmetOf } from '../equipment/index.js';
 import { canAfford, payCost, showCostError, stock } from '../storage/index.js';
 import { getPlayerFaction, isForPlayerFaction } from '../../factions/index.js';
@@ -278,7 +278,7 @@ export function deselectSettler() { game.selectedSettler = null; game.selectedGr
 export function getSelection() {
   const lead = getSelectedSettler();
   if (!lead) return [];
-  game.selectedGroup = game.selectedGroup.filter(s => s !== lead && game.settlers.includes(s));
+  game.selectedGroup = keepWhere(game.selectedGroup, s => s !== lead && game.settlers.includes(s));
   return [lead, ...game.selectedGroup];
 }
 
@@ -369,5 +369,5 @@ export function removeDeadSettlers() {
       if (game.selectedSettler === s) game.selectedSettler = null;
     }
   });
-  game.settlers = game.settlers.filter(s => s.hp > 0);
+  game.settlers = keepWhere(game.settlers, s => s.hp > 0);
 }

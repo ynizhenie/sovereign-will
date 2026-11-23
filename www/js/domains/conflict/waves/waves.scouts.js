@@ -4,7 +4,7 @@
 // to hunt (marked: soldiers go for it, waves.behaviours' scoutFlees runs it off).
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { BORDER_MARGIN, TILE_SIZE, game, rand, townHall } from '../../../engine/world/index.js';
+import { BORDER_MARGIN, TILE_SIZE, game, rand, townHall, keepWhere } from '../../../engine/world/index.js';
 import { getFrontier } from '../../world/index.js';
 import { getEnemyReach, moveEntityTowards } from '../../../engine/movement/index.js';
 import { getEnemyFaction } from '../../factions/index.js';
@@ -75,7 +75,7 @@ export function tickScouts(dt) {
     }
     moveEntityTowards(s, s.scoutTo.x, s.scoutTo.y, s.speed * 0.7, true, dt);
   }
-  game.scouts = game.scouts.filter(s => !s.gone);
+  game.scouts = keepWhere(game.scouts, s => !s.gone);
 }
 
 // A tap on a scout (Point mode): it's an enemy now, marked to hunt, and it runs. True when one was tapped

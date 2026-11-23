@@ -2,7 +2,7 @@
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { t } from '../../../engine/platform/index.js';
-import { TILE_SIZE, game, getGridPos, isBorderZone, isWithinTownHallBuffer, rand, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, game, getGridPos, isBorderZone, isWithinTownHallBuffer, rand, townHall, keepWhere } from '../../../engine/world/index.js';
 import { stock } from '../../colony/storage/index.js';
 import { createConfiguredEnemy } from '../../conflict/waves/index.js';
 import { getPlayerFaction, sides } from '../index.js';
@@ -91,7 +91,7 @@ export function updateTemporaryZombies(dt) {
   const crumbled = unit => unit.temporary !== undefined && (unit.temporary -= dt) <= 0;
   const gone = game.settlers.filter(crumbled);
   if (gone.length) {
-    game.settlers = game.settlers.filter(s => !gone.includes(s));
+    game.settlers = keepWhere(game.settlers, s => !gone.includes(s));
     if (game.selectedSettler && gone.includes(game.selectedSettler)) game.selectedSettler = null;
     const z = GAME_CONFIG.temporaryZombie;
     for (const s of gone) {
@@ -100,7 +100,7 @@ export function updateTemporaryZombies(dt) {
       dropSettlerLoot(s); // (what it held, as from any that falls, #279)
     }
   }
-  game.enemies = game.enemies.filter(en => !crumbled(en));
+  game.enemies = keepWhere(game.enemies, en => !crumbled(en));
 }
 
 // A corpse on blighted ground rises as a temporary zombie after a while; not one lying by a grave: it's
@@ -152,7 +152,7 @@ function armFromCorpse(zombie, corpse, reach) {
   }
   zombie.role = zombie.weapon === 'fist' ? 'worker' : isRangedWeapon(zombie.weapon) ? 'archer' : 'soldier';
   if (zombie.shield && !canUseShield(zombie)) zombie.shield = false;
-  game.loot = game.loot.filter(p => p.items.length || Object.keys(p.yield || {}).length);
+  game.loot = keepWhere(game.loot, p => p.items.length || Object.keys(p.yield || {}).length);
 }
 
 function weaponByCorpse(corpse, reach) {

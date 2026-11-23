@@ -48,6 +48,18 @@ export function setPrewarmingChunks(prewarming) { prewarmingChunks = prewarming;
 const PAINT_MS = 4;
 const AHEAD = 1; // (pieces round the screen painted ahead)
 const STILL_PAINTS_PER_FRAME = 4;
+// (#419) A piece painted in bands across it, a few at a frame, when the device paints slower than a piece fits in
+// PAINT_MS (a phone: 20-45 ms a piece at screen resolution). Each band takes what's within its layer's reach of it
+// (how far past its spot a thing is drawn: a tree's crown, a tile's edge) and is clipped to itself, so every pixel gets
+// what the whole piece's painting gives it; the still shadows keep what they found by the piece, so they're always
+// painted whole
+const STRIP_REACH = { grass: TILE_SIZE / 2, terrain: TILE_SIZE, nature: 90, tufts: 40 };
+const STRIP_MIN_TILES = 2;
+const UNSPLIT = new Set(['shadows']);
+/** @type {Map<string, number>} ms per canvas pixel each layer was last painted at (how wide a band fits in the budget) */
+const paintCost = new Map();
+/** @type {Map<string, Map<string, { canvas: HTMLCanvasElement, pad: number, bleed: number, pw: number, ph: number, stamp: string, x0: number, y0: number, x1: number, y1: number, next: number }>>} */
+const paintJobs = new Map();
 // (#306) world px painted past a piece's edge: a patch of grass crossing the edge is whole on either side of it,
 // instead of being cut off at it
 const PAD = 6;
@@ -75,6 +87,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     // Chunk canvases contain map-specific pixels; don't let equal-sized worlds reuse them.
     chunkLayers.clear();
     drawnChunks.clear();
+    paintJobs.clear();
     cacheWorldEpoch = epoch;
     previousView = null; previousScale = 0;
     stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0;
@@ -116,18 +129,51 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
   /** @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @param {string} now */
-  const painted = (cx, cy, x0, y0, x1, y1, chunk, now, res) => {
-    const startedAt = performance.now();
-    const canvas = chunk ? chunk.canvas : document.createElement('canvas');
-    const pad = Math.ceil(PAD * res), bleed = pad / res;
-    const pw = Math.ceil((x1 - x0) * res), ph = Math.ceil((y1 - y0) * res);
-    canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
-    const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
-    g.setTransform(res, 0, 0, res, pad - x0 * res, pad - y0 * res);
-    paint(g, x0 - bleed, y0 - bleed, x1 + bleed, y1 + bleed);
-    const took = performance.now() - startedAt;
-    framePaintMs += took; paintTotals.count++; paintTotals.ms += took;
-    return { canvas, pad, pw, ph, stamp: now, frame: frameOf, x0, y0, x1, y1 };
+  let jobs = paintJobs.get(layer);
+  if (!jobs) paintJobs.set(layer, (jobs = new Map()));
+  // (#419) the piece painted, or as much of it as this frame's budget allows: the picture when it's whole, null till then
+  /** @returns {Chunk | null} */
+  /** @param {string} key @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {string} now @param {number} res @param {Chunk | undefined} chunk */
+  const painted = (key, x0, y0, x1, y1, now, res, chunk) => {
+    const cost = paintCost.get(layer);
+    const pad = Math.ceil(PAD * res), pw = Math.ceil((x1 - x0) * res), ph = Math.ceil((y1 - y0) * res);
+    const whole = prewarmingChunks || UNSPLIT.has(layer) || cost === undefined || cost * (pw + pad * 2) * (ph + pad * 2) <= PAINT_MS * 1.5;
+    let job = jobs.get(key);
+    if (!job || job.stamp !== now || job.x0 !== x0 || job.y0 !== y0 || job.x1 !== x1 || job.y1 !== y1) {
+      // (painted whole this frame: into its old picture's canvas, as nothing shows it meanwhile; in bands, a new one,
+      // the old picture shown till it's done)
+      const canvas = whole && chunk ? chunk.canvas : document.createElement('canvas');
+      canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
+      job = { canvas, pad, bleed: pad / res, pw, ph, stamp: now, x0, y0, x1, y1, next: y0 - pad / res };
+      jobs.set(key, job);
+    }
+    const g = /** @type {CanvasRenderingContext2D} */ (job.canvas.getContext('2d'));
+    g.setTransform(res, 0, 0, res, job.pad - x0 * res, job.pad - y0 * res);
+    const left = x0 - job.bleed, right = x1 + job.bleed, top = y0 - job.bleed, bottom = y1 + job.bleed;
+    const width = job.canvas.width;
+    do {
+      const startedAt = performance.now();
+      let to = bottom;
+      if (!(whole && job.next === top)) {
+        const rows = Math.max(STRIP_MIN_TILES * TILE_SIZE * res, Math.max(1, PAINT_MS - framePaintMs) / /** @type {number} */ (cost) / width);
+        to = Math.min(bottom, job.next + rows / res);
+      }
+      if (job.next === top && to === bottom) paint(g, left, top, right, bottom);
+      else {
+        g.save();
+        g.beginPath(); g.rect(left, job.next, right - left, to - job.next); g.clip();
+        const reach = STRIP_REACH[layer] ?? 90;
+        paint(g, left, Math.max(top, job.next - reach), right, Math.min(bottom, to + reach));
+        g.restore();
+      }
+      const took = performance.now() - startedAt, pixels = width * (to - job.next) * res;
+      if (pixels > 0) paintCost.set(layer, cost === undefined ? took / pixels : /** @type {number} */ (paintCost.get(layer)) * 0.7 + took / pixels * 0.3);
+      framePaintMs += took; paintTotals.ms += took;
+      job.next = to;
+    } while (job.next < bottom && (prewarmingChunks || framePaintMs < PAINT_MS));
+    if (job.next < bottom) return null;
+    jobs.delete(key); paintTotals.count++;
+    return { canvas: job.canvas, pad: job.pad, pw: job.pw, ph: job.ph, stamp: now, frame: frameOf, x0, y0, x1, y1 };
   };
   // the screen's pieces first (a changed one repainted before any painting ahead), then the ring round it
   for (const ahead of [false, true]) {
@@ -153,38 +199,48 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (!shown) {
           if (free) {
             const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
-            if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, painted(cx, cy, x0, y0, x1, y1, chunk, now, pieceRes)); framePaints++; }
+            if (!chunk || chunk.stamp !== now) {
+              const done = painted(key, x0, y0, x1, y1, now, pieceRes, chunk);
+              if (done) { chunks.delete(key); chunks.set(key, done); } else if (chunk) chunk.frame = frameOf;
+              framePaints++;
+            }
             else if (chunk) chunk.frame = frameOf;
           }
           else if (chunk) chunk.frame = frameOf;
           continue;
         }
         if (chunk) chunks.delete(key); // (to the end: the most recently shown)
-        if (!free) {
-          if (chunk && (!invalidated || keepOld)) {
-            if (!invalidated) stats.warmReady++;
-            else stats.pending++;
-            chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key);
-          } else if (keepOld && oldPicture(chunks, cx, cy)) {
-            // (shown this frame: not to be dropped at the end of it)
-            const old = /** @type {Chunk} */ (oldPicture(chunks, cx, cy));
-            old.frame = frameOf; blit(old);
-            stats.pending++;
-          } else {
-            // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
-            // or rasterize each one this frame: preview it until its turn in the queue.
-            // An invalidated overlay is left off the screen rather than showing a removed thing.
-            if (preview) preview(x0, y0, x1, y1);
-            stats.pending++;
-            // Nature and tufts are overlays on the already painted ground. Only a missing base layer
-            // without its own fallback leaves a visible hole.
-            if (!preview && (layer === 'grass' || layer === 'terrain')) stats.holes++;
+        // its own picture, up to date: painted now if this frame has the time (the whole of it, or its last bands)
+        let ready = null;
+        if (free) {
+          const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
+          if (chunk && chunk.stamp === now) ready = chunk;
+          else {
+            ready = painted(key, x0, y0, x1, y1, now, pieceRes, chunk);
+            framePaints++; stats.late++;
           }
-          continue;
         }
-        const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
-        if (!chunk || chunk.stamp !== now) { chunks.delete(key); chunks.set(key, (chunk = painted(cx, cy, x0, y0, x1, y1, chunk, now, pieceRes))); framePaints++; stats.late++; }
-        if (chunk) { stats.warmReady++; chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key); }
+        if (ready) { stats.warmReady++; ready.frame = frameOf; chunks.set(key, ready); blit(ready); visible.add(key); continue; }
+        if (chunk && (!invalidated || keepOld)) {
+          // (as while it waits its turn, so while it's being painted afresh in bands: the picture it had)
+          if (!invalidated) stats.warmReady++;
+          else stats.pending++;
+          chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key);
+        } else if (keepOld && oldPicture(chunks, cx, cy)) {
+          // (shown this frame: not to be dropped at the end of it)
+          const old = /** @type {Chunk} */ (oldPicture(chunks, cx, cy));
+          old.frame = frameOf; blit(old);
+          stats.pending++;
+        } else {
+          // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
+          // or rasterize each one this frame: preview it until its turn in the queue.
+          // An invalidated overlay is left off the screen rather than showing a removed thing.
+          if (preview) preview(x0, y0, x1, y1);
+          stats.pending++;
+          // Nature and tufts are overlays on the already painted ground. Only a missing base layer
+          // without its own fallback leaves a visible hole.
+          if (!preview && (layer === 'grass' || layer === 'terrain')) stats.holes++;
+        }
       }
     }
   }
@@ -1019,6 +1075,19 @@ function fishyWater() {
   if (lists.length !== fishy.lists.length || lists.some((v, i) => v !== fishy.lists[i])) fishy = { lists, list: game.waterTiles.filter(mayHaveFish) };
   return fishy.list;
 }
+// (#425) the tiles a fish shows on at this zoom's spacing (every Nth of the fishy ones), kept with the fishy list: a frame
+// went through all the fishy water in view working out each tile's hash to draw one in fourteen of them
+/** @type {{ from: any[] | null, every: number, list: any[], set: Set<any> }} */
+let fishTiles = { from: null, every: 0, list: [], set: new Set() };
+/** @param {number} every */
+function fishTilesOf(every) {
+  const from = fishyWater();
+  if (fishTiles.from !== from || fishTiles.every !== every) {
+    const list = from.filter(w => tileVariantHash(w.x, w.y) % every === 0);
+    fishTiles = { from, every, list, set: new Set(list) };
+  }
+  return fishTiles;
+}
 const SPOTS_PER_FRAME = 1500;
 function fishingSpots() {
   const water = game.waterTiles;
@@ -1039,7 +1108,11 @@ export function drawWater(terrain) {
   const fishEvery = scale >= 0.9 ? 7 : scale >= 0.6 ? 14 : 28, clock = performance.now() / 850;
   ctx.fillStyle = 'rgba(18, 67, 91, 0.82)';
   const each = cached
-    ? (/** @type {(w: any) => void} */ fn) => { if (fishShown) forEachInRect(fishyWater(), view.x0, view.y0, view.x1, view.y1, fn); for (const w of fishingSpots()) if (!mayHaveFish(w) && w.x >= view.x0 && w.x <= view.x1 && w.y >= view.y0 && w.y <= view.y1) fn(w); }
+    ? (/** @type {(w: any) => void} */ fn) => {
+      const fish = fishShown ? fishTilesOf(fishEvery) : null;
+      if (fish) forEachInRect(fish.list, view.x0, view.y0, view.x1, view.y1, fn);
+      for (const w of fishingSpots()) if (!(fish && fish.set.has(w)) && w.x >= view.x0 && w.x <= view.x1 && w.y >= view.y0 && w.y <= view.y1) fn(w);
+    }
     : (/** @type {(w: any) => void} */ fn) => inView(game.waterTiles, fn);
   each(w => {
     if (!cached) drawWaterTile(w, terrain);

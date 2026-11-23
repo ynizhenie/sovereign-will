@@ -2,7 +2,7 @@
 // before and during a wave
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall } from '../../../engine/world/index.js';
+import { game, getGridPos, getTileIndex, isDoor, onceThisTick, someNear, thingAt, TILE_SIZE, townHall, keepWhere } from '../../../engine/world/index.js';
 import { armorOf, getWeaponStats, helmetOf, isArrowWeapon, isCrossbowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { damageSettler, faceTowards, getUnitHuntingDamageMultiplier, getUnitLevel, getUnitWeaponProgressionTrack, isBigBody, isUntouchable, speak, startSwing } from '../../colony/settlers/index.js';
 import { getReachSteps, getSettlerReach, isTileBlockedForSettler } from '../../../engine/movement/index.js';
@@ -379,9 +379,9 @@ export function addCorpseLoot(corpse, pile, index = 0) {
 export function updateCorpses(dt) {
   const lifetime = GAME_CONFIG.corpses.seconds;
   for (const corpse of game.corpses) corpse.age += dt;
-  game.corpses = game.corpses.filter(corpse => corpse.age < lifetime);
+  game.corpses = keepWhere(game.corpses, corpse => corpse.age < lifetime);
   for (const pile of game.loot) if (pile.corpseDropAge !== undefined) pile.corpseDropAge += dt;
-  game.loot = game.loot.filter(pile => pile.corpseDropAge === undefined || pile.corpseDropAge < lifetime);
+  game.loot = keepWhere(game.loot, pile => pile.corpseDropAge === undefined || pile.corpseDropAge < lifetime);
 }
 
 // Damage to an enemy, less what its armour, shield and helmet take, as a settler's (#203)
@@ -667,9 +667,9 @@ export function tickProjectiles(dt = 1 / 60) {
 // Blood on the ground dries; dung goes after a while
 export function ageBloodAndDung(dt) {
   for (const splat of game.bloodSplats) splat.age += dt;
-  game.bloodSplats = game.bloodSplats.filter(splat => bloodAlpha(splat.age) > 0);
+  game.bloodSplats = keepWhere(game.bloodSplats, splat => bloodAlpha(splat.age) > 0);
   for (const pile of game.dung) pile.age += dt;
-  game.dung = game.dung.filter(pile => pile.age < GAME_CONFIG.relief.dungSeconds);
+  game.dung = keepWhere(game.dung, pile => pile.age < GAME_CONFIG.relief.dungSeconds);
 }
 
 // Units stepping in blood or dung leave footprints

@@ -61,6 +61,15 @@ function someNear(which, x, y, r, fn) {
 
 // Each settler within r of (x, y)
 /** @param {number} x @param {number} y @param {number} r @param {(unit: any) => void} fn */
+// (#425) How many of the settlers or the enemies within the box of r round (x, y) fn says yes to (the morale's count
+// of who's about: it went through both whole lists for every unit, every step)
+/** @param {'settlers' | 'enemies'} which @param {number} x @param {number} y @param {number} r @param {(unit: any) => boolean} fn */
+export function countNear(which, x, y, r, fn) {
+  let n = 0;
+  someNear(which, x, y, r, unit => { if (fn(unit)) n++; return false; });
+  return n;
+}
+
 export function forEachSettlerNear(x, y, r, fn) {
   someNear('settlers', x, y, r, unit => { fn(unit); return false; });
 }

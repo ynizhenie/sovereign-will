@@ -7,6 +7,7 @@ import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { game, townHall } from '../../../engine/world/index.js';
 import { getEnemyFaction, getPlayerFaction } from '../../factions/index.js';
 import { hasGear } from '../../colony/equipment/index.js';
+import { countNear } from '../../../engine/movement/index.js';
 import { enemyFactionOf, getEnemyDef } from '../waves/index.js';
 
 const config = () => GAME_CONFIG.morale;
@@ -127,7 +128,11 @@ export function tickMorale(dt) {
       if (steadied(unit, side, captains)) { setMorale(unit, Math.max(unit.morale, baseMorale(unit, side), config().calmAbove), side); continue; }
       // a panic passes by itself, foes about or not
       if (unit.panic) { setMorale(unit, unit.morale + c.panicRecoverPerSecond * dt, side); continue; }
-      const around = list => { let n = 0; for (const o of list) if (o.hp > 0 && Math.abs(o.x - unit.x) <= c.nearRange && Math.abs(o.y - unit.y) <= c.nearRange && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange) n++; return n; };
+      const near = o => o.hp > 0 && Math.abs(o.x - unit.x) <= c.nearRange && Math.abs(o.y - unit.y) <= c.nearRange && Math.hypot(o.x - unit.x, o.y - unit.y) <= c.nearRange;
+      // (#425: from the units' buckets round it, not the whole lists)
+      const around = list => list === game.settlers ? countNear('settlers', unit.x, unit.y, c.nearRange, near)
+        : list === game.enemies ? countNear('enemies', unit.x, unit.y, c.nearRange, near)
+          : list.reduce((n, o) => n + (near(o) ? 1 : 0), 0); // (the boars, or the boars' foes: through the list, as before)
       const foesNear = around(foes);
       if (foesNear > 0 && foesNear > (around(units) + 1) * c.outnumbered) {
         shakeMorale(unit, c.outnumberedPerSecond * dt, side);

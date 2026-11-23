@@ -118,6 +118,15 @@ export function forEachInRect(list, x0, y0, x1, y1, fn) {
 // What a list of tiles that rarely change is like now (which array, how many, the first and the last): the
 // same while none came or went (#299: a picture made of them kept till this changes)
 /** @param {any[]} list */
+// (#425) The list without what keep says no to: the same list when nothing goes (a list made anew every step "just in
+// case" undid every cache kept by the list, its spatial index among them, and was a new array a step for the browser
+// to free: loot, piles, corpses, blood, the settlers and enemies were, every step)
+/** @template T @param {T[]} list @param {(item: T) => boolean} keep @returns {T[]} */
+export function keepWhere(list, keep) {
+  for (let i = 0; i < list.length; i++) if (!keep(list[i])) return list.filter(keep);
+  return list;
+}
+
 export function listStamp(list) {
   return list.length ? [list, list.length, list[0], list[list.length - 1]] : [list, 0];
 }

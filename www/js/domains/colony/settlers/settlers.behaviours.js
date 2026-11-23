@@ -28,6 +28,7 @@ import { chopFirewood, cook } from '../../economy/cooking/index.js';
 import { collectBones, corpsesToGraves, followMaster, necromancy, workGrave } from '../../factions/undead/index.js';
 import { carryCaptive, catchForCage, eatCorpse, goToSacrifice, tendCorpses } from '../../factions/demons/index.js';
 import { craftItem, equip, isRangedWeapon } from '../equipment/index.js';
+import { perf, perfMark } from '../../../app/index.js';
 import { followOrder } from './settlers.orders.js';
 import { IDLE_ACTIVITIES, cleanDung, idlePastime } from './settlers.idle.js';
 import { carryCorpse, haulCorpses } from './settlers.corpses.js';
@@ -399,7 +400,9 @@ export function tickSettlers(dt) {
   const settlers = game.gameMode === 'endless'
     ? game.settlers.filter(s => !isCombatPet(s)).concat(game.settlers.filter(isCombatPet))
     : game.settlers;
-  settlers.forEach(s => {
+  // (the performance monitor, when it's on: each settler's time under what it ended up doing)
+  settlers.forEach(s => { tickSettler(s); if (perf.on) perfMark(`s:${s.activity || 'nothing'}`); });
+  function tickSettler(s) {
     prepareSettler(s, dt);
     if (!s.leaving && s.hp > 0) tauntVisibleEnemy(s);
     if (isGhostStunned(s)) { s.isIdle = false; s.swaying = false; s.activity = 'ghostStunned'; return; }
@@ -427,7 +430,7 @@ export function tickSettlers(dt) {
       if (behaviour(s, tick)) { took(s, behaviour); return; }
     }
     s.lastBehaviour = null;
-  });
+  }
   if (game.settlers.some(s => s.leftColony)) game.settlers = game.settlers.filter(s => !s.leftColony); // (#314: let go, gone)
 }
 

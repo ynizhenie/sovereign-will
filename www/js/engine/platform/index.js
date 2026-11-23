@@ -3,7 +3,7 @@
 
 export { audio, initAudio, midi, noise, setMusicOn, setSoundOn, startAudio, tone } from './audio.js';
 export { camera, clampCamera, getMaxZoom, getViewRect, setZoom, updateInputPos } from './camera.js';
-export { VSYNC, canvas, canvasCssSize, ctx, drawProgressBar, fitCanvasToScreen, getBaseScale, getViewScale, initCanvas, screenPixelRatio, setFont } from './canvas.js';
+export { VSYNC, canvas, canvasCssSize, ctx, drawProgressBar, drawingOn, fitCanvasToScreen, getBaseScale, getViewScale, initCanvas, screenPixelRatio, setFont } from './canvas.js';
 export { onTap } from './dom.js';
 export { exportFile } from './files.js';
 export { GL, glBand, glBeginFrame, glCamera, glChunk, glDrop, glDropAll, glEndFrame, glForgetChunk, glFrame, glGroups, glKeep, glKept, glLayer, glPoolStats, glReady, glSprite, glSway, glSwayDropAll, glWaveDropAll, glWaveGroup, glWaves, glWind } from './gl.js';

@@ -1,7 +1,7 @@
 // Soldiers fight: the enemy the player marked, their post in a squad, whoever attacks, and the enemy tents
 
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
-import { TILE_SIZE, firstOf, game, onceThisTick, townHall } from '../../../engine/world/index.js';
+import { TILE_SIZE, firstOf, game, onceThisTick, townHall, keepWhere } from '../../../engine/world/index.js';
 import { getWeaponStats, hasAxeTool, hasPickaxeTool, hasToolFamily, isArrowWeapon, isRangedWeapon, usesDagger } from '../../colony/equipment/index.js';
 import { findNearestStorage, isAtStorage, moveSettlerToTownHall, stock, takeStock, walkToStorage } from '../../colony/storage/index.js';
 import { faceTowards, getRecentAttacker, getRetaliationTarget } from '../../colony/settlers/index.js';
@@ -20,14 +20,14 @@ const canDefendEnemy = en => !en.ghostly && !isPrematureWaveTarget(en) && (game.
 
 // (#322) The enemies there are to fight, and which of them are inside the base: the same for every settler of a tick (they
 // move after the settlers have had theirs), so found once in it, not by each of sixty fighters for each of sixty enemies
-/** @returns {{ list: any[], inside: Set<any> }} */
+/** @returns {{ list: any[], inside: Set<any>, lists: { base: any[], wave: any[] | null } | null }} */
 function threatsThisTick(tick) {
   if (!tick.threats || tick.threats.enemies !== game.enemies || tick.threats.count !== game.enemies.length) {
     const inside = new Set(game.enemies.filter(isInsideBase));
     const waveStarted = !game.wavePreparation;
     const list = game.enemies.filter(en => !en.ghostly && !en.menuStaged && !isCampGuardUnavailable(en) && !isPrematureWaveTarget(en) &&
       (game.gameMode === 'battle' || en.menuThreat || inside.has(en) || (waveStarted && (en.fromWave || en.waveSummoned))));
-    tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside };
+    tick.threats = { enemies: game.enemies, count: game.enemies.length, list, inside, lists: null };
   }
   return tick.threats;
 }
@@ -194,11 +194,16 @@ function chooseSettlerTarget(s, tick) {
   const isWaveThreat = en => en.menuThreat || (!game.wavePreparation &&
     (en.fromWave || en.waveSummoned));
   const threats = threatsThisTick(tick);
-  const candidates = threats.list.filter(en => !(en.toCatch && en.toCatch !== s.id));
-  const baseThreats = candidates.filter(en => threats.inside.has(en));
+  // (#425) the same lists for every settler of the step but where one's being caught for a cage by another: worked out
+  // once a step, not three new lists for every settler every step
+  const candidates = keepWhere(threats.list, en => !(en.toCatch && en.toCatch !== s.id));
+  const shared = candidates === threats.list;
+  const lists = shared ? (threats.lists || (threats.lists = { base: threats.list.filter(en => threats.inside.has(en)), wave: null })) : null;
+  const baseThreats = lists ? lists.base : candidates.filter(en => threats.inside.has(en));
+  const waveThreats = () => (lists ? (lists.wave || (lists.wave = candidates.filter(isWaveThreat))) : candidates.filter(isWaveThreat));
   const prioritized = game.gameMode === 'battle'
     ? candidates
-    : baseThreats.length ? baseThreats : candidates.filter(isWaveThreat);
+    : baseThreats.length ? baseThreats : waveThreats();
   const scoreOf = en => {
     let dToTown = Math.hypot(en.x - townHall.x, en.y - townHall.y);
     let dToSettler = Math.hypot(en.x - s.x, en.y - s.y);
@@ -235,8 +240,13 @@ function chooseSettlerTarget(s, tick) {
       Math.hypot(attacker.x - s.x, attacker.y - s.y) < Math.hypot(targetEnemy.x - s.x, targetEnemy.y - s.y))) targetEnemy = attacker;
   // Keep the melee limit, but don't send units to another enemy just because others are still approaching this one.
   if (targetEnemy && !attacker && !isRangedWeapon(s.weapon) && !targetEnemy.markedTarget && meleeFull(targetEnemy, tick)) {
-    const others = candidates.filter(en => en !== targetEnemy && !meleeFull(en, tick));
-    const next = others.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    // (the nearest of the others with room round it: one look through them, not a sort)
+    let next = null, nextD = Infinity;
+    for (const en of candidates) {
+      if (en === targetEnemy || meleeFull(en, tick)) continue;
+      const d = Math.hypot(en.x - s.x, en.y - s.y);
+      if (d < nextD) { nextD = d; next = en; }
+    }
     if (next && Math.hypot(next.x - s.x, next.y - s.y) < 300) targetEnemy = next;
   }
   // on the way to the enemy tents: only fight what's in the way, then carry on (clearEnemyTents); but an

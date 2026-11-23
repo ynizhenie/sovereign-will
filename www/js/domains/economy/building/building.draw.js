@@ -9,7 +9,27 @@ import { getHallRepairStep, getSmelterLimits, needsRepair } from './building.rul
 import { getBuildingColor, getEnemyColor, getPlayerFaction } from '../../factions/index.js';
 import { LINK, drawBackroomsWall, drawCampfireArt, drawDenArt, drawDoorArt, drawDummyArt, drawEnemyCampOutpostArt, drawHallArt, drawSmelterArt, drawSmithyArt, drawSpikesArt, drawStoneWall, drawTentArt, drawTorchPostArt, drawWallShadows, drawWarehouseArt, drawWatchtowerArt, drawWoodWall, drawWorkshopArt, pickDummyVariant, shadow } from './building.art.js';
 import { drawPortal } from '../../factions/demons/index.js';
-import { drawShadowPath, getDarkness, tileVariantHash } from '../../world/index.js';
+import { drawShadowPath, getDarkness, getSun, tileVariantHash } from '../../world/index.js';
+import { drawThingPicture } from '../../colony/settlers/index.js';
+
+// (#425) Buildings kept as pictures, and what each one's look depends on besides where it is (anything not here, or
+// moving every frame: a campfire's flames, a lit torch, a portal, a smelter's counts, is drawn each frame as before)
+/** @type {Record<string, (b: any, links: number, doorLinks: number, door: any) => string | number>} */
+const PICTURE_KEYS = {
+  wall_wood: (b, links, doorLinks) => `${links},${doorLinks}`,
+  wall_stone: (b, links) => `${links},${b.battleMazeWall ? 1 : 0}`,
+  door: (b, links, doorLinks, door) => `${links},${door ? Math.round(door.open * 20) : 0},${door && door.swing ? `${door.swing.x},${door.swing.y}` : ''}`,
+  iron_door: (b, links, doorLinks, door) => `${links},${door ? Math.round(door.open * 20) : 0},${door && door.swing ? `${door.swing.x},${door.swing.y}` : ''}`,
+  iron_trap: b => `${b.holding ? 1 : 0},${b.bait ? 1 : 0}`,
+  grave: () => '', sacrifice_circle: () => '', tent: () => '', watchtower: () => '', workshop: () => '', smithy: () => '',
+  mine: () => '', warehouse: () => '', demon_den: () => '',
+  spikes: b => b.usesLeft || 0,
+  fish_trap: b => `${(b.baitLeft || 0) > 0 ? 1 : 0},${b.fish || 0}`,
+  dung_heap: b => b.dung || 0,
+  dummy: b => b.variant || '',
+  cage: b => (b.captive ? 1 : 0),
+  corpse_pit: b => (b.corpses || []).length
+};
 
 // A damaged building looks it: cracks spread over it as it loses hp, soot darkens it, and below a
 // third of its hp some of it has fallen out. The cracks are fixed per building (by where it stands).
@@ -329,11 +349,14 @@ export function drawBuildings() {
     return { x: b.x, y: b.y, type: b.type, mask, ...state };
   });
   drawWallShadows(wallShadows);
+  // (the sun's way in tenths: a building's picture is painted again as it moves on, its shadow with it)
+  const sun = getSun(), sunStep = `${Math.round(sun.dx * 10)},${Math.round(sun.dy * 10)}`;
   nearby.sort((a, b) => {
     const doorOrder = Number(a.type === 'door' || a.type === 'iron_door') - Number(b.type === 'door' || b.type === 'iron_door');
     return doorOrder || a.y - b.y || a.x - b.x;
   }).forEach(b => {
-    // (the look: building.art.js, #251)
+    // (the look: building.art.js, #251; #425: for most a picture kept till what it shows changes, see settlers.pictures.js)
+    const art = () => {
     if (b.type === 'wall_wood') {
       drawWoodWall(b.x, b.y, links.get(b) || 0, doorLinks.get(b) || 0);
     } else if (b.type === 'wall_stone') {
@@ -437,6 +460,10 @@ export function drawBuildings() {
 		ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x - 13, b.y - 18, 26 * Math.min(1, (b.smeltProgress || 0) / getSmelterLimits().seconds), 2);
 	  }
 }
+    };
+    const keyOf = PICTURE_KEYS[b.type];
+    if (keyOf) drawThingPicture(b, `${b.type}|${sunStep}|${keyOf(b, links.get(b) || 0, doorLinks.get(b) || 0, doorStates.get(b))}`, art);
+    else art();
 
     drawDamage(b.x, b.y, 14, b.hp / b.maxHp, b.type);
 
