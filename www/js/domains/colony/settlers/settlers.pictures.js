@@ -24,13 +24,22 @@ const pictures = new WeakMap();
 const turns = new WeakMap();
 let nextTurn = 0;
 
-// (#425) At most POSE_BUDGET pictures painted a frame for a new pose (what one looks like changing, or the zoom, is
-// painted at once regardless): in a big battle the rest hold their pose a little longer, but never more than
+// (#425) At most POSE_BUDGET pictures painted a frame for a new pose (what one looks like changing is painted at once
+// regardless): in a big battle the rest hold their pose a little longer, but never more than
 // POSE_STALE poses, instead of the frame going slow (a Mi Pad 4 with 70 units fighting: ~25 painted a frame, 20 ms)
 const POSE_BUDGET = 8, POSE_STALE = 6;
-let poseBudget = { frame: -1, left: POSE_BUDGET };
+// Zooming, the pictures aren't all painted again at the new size each frame (a Mi Pad 4 with 30 buildings and a few units:
+// 35-50 fps while pinching, 60 still): the old picture is stretched to its place meanwhile, and once the zoom has stopped
+// they're painted again within the frame's budget. A picture stretched past FAR_SCALE either way (too soft or too coarse)
+// is painted at once
+const FAR_SCALE = 1.6;
+let poseBudget = { frame: -1, left: POSE_BUDGET }, frameScale = 0, zooming = false;
 // a frame begins (render.js)
-export function newPictureFrame() { poseBudget = { frame: poseBudget.frame + 1, left: POSE_BUDGET }; }
+export function newPictureFrame() {
+  const scale = getViewScale();
+  zooming = scale !== frameScale; frameScale = scale;
+  poseBudget = { frame: poseBudget.frame + 1, left: POSE_BUDGET };
+}
 
 // How many pictures have been painted and laid down since the page opened (the tests, and the performance monitor)
 export const unitPictureTotals = { painted: 0, laid: 0 };
@@ -48,10 +57,14 @@ const BUILDING_BOX = { left: 34, right: 34, up: 40, down: 30 };
 function drawPicture(owner, key, pose, box, paint, catching) {
   const scale = getViewScale();
   let pic = pictures.get(owner);
-  // (only a new pose waits for the frame's budget; a changed look, a new zoom or a first picture never waits)
-  const posed = !!pic && pic.key === key && pic.scale === scale && pic.pose !== pose;
-  const due = !pic || pic.key !== key || pic.scale !== scale || (posed && (poseBudget.left > 0 || pose - pic.pose >= POSE_STALE));
-  if (posed && due) poseBudget.left--;
+  // (a new pose and a new zoom wait for the frame's budget, the zoom also for its end; a changed look, a zoom far from
+  // the picture's or a first picture never wait)
+  const posed = !!pic && pic.key === key && pic.pose !== pose;
+  const resized = !!pic && pic.key === key && pic.scale !== scale;
+  const far = !!pic && resized && (pic.scale / scale > FAR_SCALE || scale / pic.scale > FAR_SCALE);
+  const waiting = (posed || (resized && !zooming)) && !far;
+  const due = !pic || pic.key !== key || far || (waiting && (poseBudget.left > 0 || (posed && pose - pic.pose >= POSE_STALE)));
+  if (waiting && due) poseBudget.left--;
   if (due) {
     const { left, right, up, down } = box;
     const w = Math.max(1, Math.ceil((left + right) * scale)), h = Math.max(1, Math.ceil((up + down) * scale));
@@ -76,10 +89,10 @@ function drawPicture(owner, key, pose, box, paint, catching) {
   }
   if (!pic) return; // (made above when there was none)
   if (catching) castCaught(pic.shadows);
-  // laid on whole screen pixels (a picture laid between two is blurred)
+  // laid on whole screen pixels (a picture laid between two is blurred); one of another zoom's stretched to its size
   const e = canvas.width / 2 - camera.x * scale, f = canvas.height / 2 - camera.y * scale;
   const x = (Math.round(e + (owner.x - pic.left) * scale) - e) / scale, y = (Math.round(f + (owner.y - pic.up) * scale) - f) / scale;
-  ctx.drawImage(pic.canvas, x, y, pic.w / scale, pic.h / scale);
+  ctx.drawImage(pic.canvas, x, y, pic.w / pic.scale, pic.h / pic.scale);
   unitPictureTotals.laid++;
 }
 

@@ -26,13 +26,14 @@ const unitCount = () => game.settlers.length + game.enemies.length + game.scouts
 export const simpleUnit = () => getViewScale() < SIMPLE_UNIT_SCALE || unitCount() > SIMPLE_UNIT_COUNT;
 export const tinyUnit = () => getViewScale() < 0.4 && unitCount() > SIMPLE_UNIT_COUNT;
 
-// (#425) A level's number as a picture, painted once for each level and zoom: written out as outlined text over every
+// (#425) A level's number as a picture, painted once for each level and zoom step: written out as outlined text over every
 // unit every frame it was a fifth of a big battle's frame on a Mi Pad 4 (text is the canvas's dearest thing to draw)
 /** @type {Map<string, HTMLCanvasElement>} */
 const levelBadges = new Map();
 const BADGE_W = 16, BADGE_H = 10; // (world px left of and round the point it's written at)
 export function drawLevelIndicator(x, y, level) {
-  const scale = getViewScale(), key = `${level}|${scale}`;
+  // (painted at zoom steps of a fifth: zooming, not again each frame)
+  const scale = 2 ** (Math.round(Math.log2(getViewScale()) * 3) / 3), key = `${level}|${scale}`;
   let badge = levelBadges.get(key);
   if (!badge) {
     if (levelBadges.size > 64) levelBadges.clear();

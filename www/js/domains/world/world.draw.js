@@ -64,6 +64,9 @@ const paintJobs = new Map();
 // instead of being cut off at it
 const PAD = 6;
 let frameOf = 0;
+// (the still shadows painted again when the sun moves: one piece a frame, each its old picture till its turn; all at
+// once they were a 50-100 ms frame every six seconds on a Mi Pad 4, painted whole as they are)
+let shadowPaints = 0;
 let framePaints = 0, framePaintMs = 0, framePaintLimit = STILL_PAINTS_PER_FRAME, framePaintLayer = 'grass', priorityPassed = false;
 let previousView = null, previousScale = 0;
 let cacheWorldEpoch = -1;
@@ -105,7 +108,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   if (layer === 'grass') {
     const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
     previousView = v; previousScale = scale;
-    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0; framePaints = 0; framePaintMs = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
+    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0; framePaints = 0; framePaintMs = 0; shadowPaints = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
     if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
@@ -193,7 +196,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         // (#322) only the part of the piece the layer has anything in is painted, kept and laid down
         const part = stamp.bounds && stamp.bounds(cx, cy);
         if (part) { x0 = Math.max(x0, part[0]); y0 = Math.max(y0, part[1]); x1 = Math.min(x1, part[2]); y1 = Math.min(y1, part[3]); }
-        const free = prewarmingChunks || (framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed));
+        const free = prewarmingChunks || (framePaints < framePaintLimit && framePaintMs < PAINT_MS && (layer === framePaintLayer || priorityPassed) &&
+          (layer !== 'shadows' || !chunk || shadowPaints < 1));
         const invalidated = typeof stamp.dirty === 'function' && stamp.dirty(cx, cy);
         // (off the screen: only painted ahead while there's time this frame, and its stamp only worked out then)
         if (!shown) {
@@ -202,7 +206,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
             if (!chunk || chunk.stamp !== now) {
               const done = painted(key, x0, y0, x1, y1, now, pieceRes, chunk);
               if (done) { chunks.delete(key); chunks.set(key, done); } else if (chunk) chunk.frame = frameOf;
-              framePaints++;
+              framePaints++; if (layer === 'shadows') shadowPaints++;
             }
             else if (chunk) chunk.frame = frameOf;
           }
@@ -217,7 +221,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
           if (chunk && chunk.stamp === now) ready = chunk;
           else {
             ready = painted(key, x0, y0, x1, y1, now, pieceRes, chunk);
-            framePaints++; stats.late++;
+            framePaints++; stats.late++; if (layer === 'shadows') shadowPaints++;
           }
         }
         if (ready) { stats.warmReady++; ready.frame = frameOf; chunks.set(key, ready); blit(ready); visible.add(key); continue; }
