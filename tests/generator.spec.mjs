@@ -79,6 +79,7 @@ test('the generator identifies its active preset and accepts values beyond the o
     localStorage.removeItem('map-presets');
   });
   await page.reload();
+  await page.evaluate(() => showMenuScreen('endless')); // (the generator's button is on Endless's screen)
   await page.click('#open-generator');
 
   await expect(page.locator('#preset-standard')).toHaveClass(/active/);
