@@ -1,39 +1,45 @@
 import { test, expect } from './helpers.mjs';
 import { openGame, sim, iconText } from './helpers.mjs';
 
-test('native exports write the file to cache and open the system share sheet', async ({ page }) => {
+test('native exports write the file into Downloads; if that fails, to cache and the system share sheet (#420)', async ({ page }) => {
   await openGame(page);
-  const calls = await page.evaluate(async () => {
+  const runs = await page.evaluate(async () => {
     const { exportFile } = await import('/js/engine/platform/index.js');
-    const calls = [];
-    Object.defineProperty(window, 'Capacitor', {
-      configurable: true,
-      value: {
-        isNativePlatform: () => true,
-        Plugins: {
-          Filesystem: {
-            writeFile: async options => {
-              calls.push({ kind: 'write', options });
-              return { uri: 'file:///cache/exports/save.json' };
-            }
-          },
-          Share: { share: async options => calls.push({ kind: 'share', options }) }
+    const run = async downloadsWork => {
+      const calls = [];
+      Object.defineProperty(window, 'Capacitor', {
+        configurable: true,
+        value: {
+          isNativePlatform: () => true,
+          Plugins: {
+            Filesystem: {
+              checkPermissions: async () => ({ publicStorage: 'granted' }),
+              requestPermissions: async () => calls.push({ kind: 'ask' }),
+              writeFile: async options => {
+                calls.push({ kind: 'write', options });
+                if (options.directory === 'EXTERNAL_STORAGE' && !downloadsWork) throw new Error('no access');
+                return { uri: `file:///${options.directory}/${options.path}` };
+              }
+            },
+            Share: { share: async options => calls.push({ kind: 'share', options }) }
+          }
         }
-      }
-    });
-    await exportFile('save.json', '{"version":1}');
-    return calls;
+      });
+      const exported = await exportFile('save.json', '{"version":1}');
+      return { exported, calls };
+    };
+    return [await run(true), await run(false)];
   });
-  expect(calls).toEqual([
-    {
-      kind: 'write',
-      options: { path: 'exports/save.json', data: '{"version":1}', directory: 'CACHE', recursive: true }
-    },
-    {
-      kind: 'share',
-      options: { title: 'save.json', dialogTitle: 'save.json', files: ['file:///cache/exports/save.json'] }
-    }
-  ]);
+  const downloads = { path: 'Download/SovereignWill/save.json', data: '{"version":1}', directory: 'EXTERNAL_STORAGE', encoding: 'utf8', recursive: true };
+  expect(runs[0]).toEqual({ exported: 'Download/SovereignWill/save.json', calls: [{ kind: 'write', options: downloads }] });
+  expect(runs[1]).toEqual({
+    exported: true,
+    calls: [
+      { kind: 'write', options: downloads },
+      { kind: 'write', options: { path: 'exports/save.json', data: '{"version":1}', directory: 'CACHE', encoding: 'utf8', recursive: true } },
+      { kind: 'share', options: { title: 'save.json', dialogTitle: 'save.json', files: ['file:///CACHE/exports/save.json'] } }
+    ]
+  });
 });
 
 test('mobile browser exports use Web Share for files when it is available', async ({ page }) => {
@@ -210,4 +216,18 @@ test('save names can be changed and a selected save can be exported then importe
   });
   await expect(page.locator('#save-list [data-save]')).toHaveCount(2);
   await expect(page.locator('#save-list .tile-name b').filter({ hasText: 'My colony' })).toHaveCount(2);
+});
+
+test('a choice tapped on a phone is kept: a random map after a custom one stays random (#420)', async ({ page }) => {
+  await openGame(page);
+  const saved = await page.evaluate(() => {
+    const button = /** @type {HTMLElement} */ (document.querySelector('[data-map-source="random"]'));
+    const touch = new Touch({ identifier: 1, target: button, clientX: 5, clientY: 5 });
+    localStorage.setItem('sovereign-will-endlessChoices', JSON.stringify({ mapSource: 'custom', customMap: 'Island' }));
+    button.dispatchEvent(new TouchEvent('touchstart', { touches: [touch], changedTouches: [touch], bubbles: true }));
+    button.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touch], bubbles: true, cancelable: true }));
+    return JSON.parse(localStorage.getItem('sovereign-will-endlessChoices') || '{}');
+  });
+  expect(saved.mapSource).toBe('random');
+  expect(saved.customMap).toBeNull();
 });

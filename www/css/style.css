@@ -1214,6 +1214,8 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .save-map-actions .save-export { flex: 1 1 auto; min-width: 0; }
 .save-map-actions .save-delete { flex: 0 0 28px; min-height: 28px; padding: 2px 4px; font-size: 10px; }
 .save-map-actions .save-delete[hidden] { display: none; }
+.save-map-actions .save-export[hidden] { display: none; }
+.save-map-actions .save-delete.asking { flex: 1 1 auto; padding: 2px 8px; } /* (a save's "Delete?", in Export's place) */
 .save-map-confirm { display: flex; flex-direction: column; gap: 4px; }
 .save-map-confirm .item-question { font-size: 12px; line-height: 1.2; text-align: center; color: #f1c40f; }
 .save-map-confirm-buttons .btn { flex: 1 1 0; min-width: 0; min-height: 28px; padding: 4px; }

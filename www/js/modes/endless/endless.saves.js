@@ -398,7 +398,6 @@ export function renderSaveList(mode = saveManagerMode) {
     exportButton.dataset.exportSave = key;
     exportButton.textContent = t('save.export');
     onTap(exportButton, () => exportSave(key));
-    wrap.append(nameInput, exportButton);
     const del = document.createElement('button');
     del.className = 'btn tile-act save-delete';
     del.dataset.deleteSave = key;
@@ -409,8 +408,9 @@ export function renderSaveList(mode = saveManagerMode) {
       if (!del.classList.contains('asking')) {
         del.classList.add('asking');
         del.dataset.confirmDelete = key;
+        exportButton.hidden = true; // (the question in Export's place, as wide)
         del.textContent = t('save.deleteAsk');
-        setTimeout(() => { if (del.isConnected) { del.classList.remove('asking'); delete del.dataset.confirmDelete; del.innerHTML = iconHtml('close'); } }, 3000);
+        setTimeout(() => { if (del.isConnected) { del.classList.remove('asking'); delete del.dataset.confirmDelete; del.innerHTML = iconHtml('close'); exportButton.hidden = false; } }, 3000);
         return;
       }
       const left = loadSaves(mode); delete left[key];
@@ -418,7 +418,11 @@ export function renderSaveList(mode = saveManagerMode) {
       if (activeSaveKeys[mode] === key) activeSaveKeys[mode] = null;
       renderSaveList(mode);
     });
-    wrap.append(tile, del);
+    // (#420) laid out as the saved maps are: the tile, its name, then Export and the × side by side
+    const actions = document.createElement('div');
+    actions.className = 'save-map-actions';
+    actions.append(exportButton, del);
+    wrap.append(tile, nameInput, actions);
     list.appendChild(wrap);
   }
 }
@@ -454,7 +458,8 @@ async function exportSave(key) {
   try {
     const exported = await exportFile(`${filename}.json`,
       JSON.stringify({ format: 'sovereign-will-save', version: 1, save }, null, 2));
-    if (exported) showSaveStatus(t('save.exported'), true);
+    if (typeof exported === 'string') showSaveStatus(t('save.exportedTo', { path: exported }), true);
+    else if (exported) showSaveStatus(t('save.exported'), true);
   } catch (error) {
     console.error('Could not export save', error);
     showSaveStatus(t('save.exportFailed'), false);

@@ -209,7 +209,8 @@ async function exportMap(map) {
   try {
     const exported = await exportFile(`${safeMapFilename(map.name)}.json`,
       JSON.stringify({ format: 'sovereign-will-map', version: 1, map }, null, 2));
-    if (exported) showMapManagerStatus(t('editor.mapExported', { name: map.name }));
+    if (typeof exported === 'string') showMapManagerStatus(t('editor.mapExportedTo', { path: exported }));
+    else if (exported) showMapManagerStatus(t('editor.mapExported', { name: map.name }));
   } catch (error) {
     console.error('Could not export map', error);
     showMapManagerStatus(t('editor.mapExportFailed'));

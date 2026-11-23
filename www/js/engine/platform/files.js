@@ -1,17 +1,39 @@
+// A file the player keeps (an exported save or map) handed over to the device.
+// On the phone (#420): written into the device's Downloads, under SovereignWill/, where a file manager finds it; if
+// that can't be done (no permission, a device that won't have it), the system's Share sheet with the file instead.
+// In a browser: the browser's own download (or its Share sheet where there's one for files).
+// Returns where it went ('Download/SovereignWill/<name>'), true when shared or downloaded, false when the player
+// cancelled the sharing.
+
+const FOLDER = 'Download/SovereignWill';
+
+/** @param {string} filename @param {string} data @param {string} [mimeType] @returns {Promise<string | boolean>} */
 export async function exportFile(filename, data, mimeType = 'application/json') {
-  const capacitor = window.Capacitor;
+  const capacitor = /** @type {any} */ (window).Capacitor;
   if (capacitor?.isNativePlatform?.()) {
     const filesystem = capacitor.Plugins?.Filesystem;
     const share = capacitor.Plugins?.Share;
-    if (!filesystem || !share) throw new Error('Native file export requires Filesystem and Share plugins');
-    const { uri } = await filesystem.writeFile({
-      path: `exports/${filename}`,
-      data,
-      directory: 'CACHE',
-      recursive: true
-    });
+    if (!filesystem) throw new Error('Native file export requires the Filesystem plugin');
+    // (utf8: without it the plugin takes the text for base64)
+    try {
+      if (filesystem.requestPermissions) {
+        const status = await filesystem.checkPermissions().catch(() => null);
+        if (status && status.publicStorage !== 'granted') await filesystem.requestPermissions();
+      }
+      await filesystem.writeFile({ path: `${FOLDER}/${filename}`, data, directory: 'EXTERNAL_STORAGE', encoding: 'utf8', recursive: true });
+      return `${FOLDER}/${filename}`;
+    } catch (error) {
+      console.warn('Could not write the file into Downloads, sharing it instead', error);
+    }
+    if (!share) throw new Error('Native file export requires the Share plugin');
+    const { uri } = await filesystem.writeFile({ path: `exports/${filename}`, data, directory: 'CACHE', encoding: 'utf8', recursive: true });
     if (!uri) throw new Error('Filesystem did not return an export URI');
-    await share.share({ title: filename, dialogTitle: filename, files: [uri] });
+    try {
+      await share.share({ title: filename, dialogTitle: filename, files: [uri] });
+    } catch (error) {
+      if (/cancel/i.test(String(/** @type {any} */ (error)?.message))) return false;
+      throw error;
+    }
     return true;
   }
 

@@ -218,5 +218,8 @@ export function restoreEndlessChoices() {
     saveData('endlessChoices', out);
   };
   screen.addEventListener('click', remember);
+  // (#420) on a phone a tap is the button's touchend, which stops the click (engine/platform/dom.js onTap): none of what
+  // was picked there was kept (a custom map came back after choosing a random one and starting the game again)
+  screen.addEventListener('touchend', remember);
   screen.addEventListener('change', remember);
 }
