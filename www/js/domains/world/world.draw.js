@@ -58,6 +58,10 @@ const STRIP_MIN_TILES = 2;
 const UNSPLIT = new Set(['shadows']);
 /** @type {Map<string, number>} ms per canvas pixel each layer was last painted at (how wide a band fits in the budget) */
 const paintCost = new Map();
+// (the tests: every piece painted in bands of STRIP_MIN_TILES, as a slow device does, to check it gives the same picture)
+export const chunkBands = { always: false };
+/** (the tests) a layer's pictures by "res|cx,cy" @param {string} layer */
+export const chunkPictures = layer => chunkLayers.get(layer) || new Map();
 /** @type {Map<string, Map<string, { canvas: HTMLCanvasElement, pad: number, bleed: number, pw: number, ph: number, stamp: string, x0: number, y0: number, x1: number, y1: number, next: number }>>} */
 const paintJobs = new Map();
 // (#306) world px painted past a piece's edge: a patch of grass crossing the edge is whole on either side of it,
@@ -140,7 +144,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   const painted = (key, x0, y0, x1, y1, now, res, chunk) => {
     const cost = paintCost.get(layer);
     const pad = Math.ceil(PAD * res), pw = Math.ceil((x1 - x0) * res), ph = Math.ceil((y1 - y0) * res);
-    const whole = prewarmingChunks || UNSPLIT.has(layer) || cost === undefined || cost * (pw + pad * 2) * (ph + pad * 2) <= PAINT_MS * 1.5;
+    const whole = !(chunkBands.always && !UNSPLIT.has(layer)) && (prewarmingChunks || UNSPLIT.has(layer) || cost === undefined || cost * (pw + pad * 2) * (ph + pad * 2) <= PAINT_MS * 1.5);
     let job = jobs.get(key);
     if (!job || job.stamp !== now || job.x0 !== x0 || job.y0 !== y0 || job.x1 !== x1 || job.y1 !== y1) {
       // (painted whole this frame: into its old picture's canvas, as nothing shows it meanwhile; in bands, a new one,
@@ -158,7 +162,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
       const startedAt = performance.now();
       let to = bottom;
       if (!(whole && job.next === top)) {
-        const rows = Math.max(STRIP_MIN_TILES * TILE_SIZE * res, Math.max(1, PAINT_MS - framePaintMs) / /** @type {number} */ (cost) / width);
+        const rows = chunkBands.always || cost === undefined ? STRIP_MIN_TILES * TILE_SIZE * res
+          : Math.max(STRIP_MIN_TILES * TILE_SIZE * res, Math.max(1, PAINT_MS - framePaintMs) / cost / width);
         to = Math.min(bottom, job.next + rows / res);
       }
       if (job.next === top && to === bottom) paint(g, left, top, right, bottom);
@@ -173,7 +178,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
       if (pixels > 0) paintCost.set(layer, cost === undefined ? took / pixels : /** @type {number} */ (paintCost.get(layer)) * 0.7 + took / pixels * 0.3);
       framePaintMs += took; paintTotals.ms += took;
       job.next = to;
-    } while (job.next < bottom && (prewarmingChunks || framePaintMs < PAINT_MS));
+    } while (job.next < bottom && (prewarmingChunks || chunkBands.always || framePaintMs < PAINT_MS));
     if (job.next < bottom) return null;
     jobs.delete(key); paintTotals.count++;
     return { canvas: job.canvas, pad: job.pad, pw: job.pw, ph: job.ph, stamp: now, frame: frameOf, x0, y0, x1, y1 };

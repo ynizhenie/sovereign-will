@@ -1,5 +1,6 @@
 // Units as pictures: a unit's figure, what it wears and what it holds drawn into a small picture of its own
-// POSES_PER_SECOND times a second (Lima's pick of the comparison: 12), and that picture laid down where the unit
+// POSES_PER_SECOND times a second (Lima's pick of the comparison was 12; seen in play the figures stepped at what
+// looked like 5 fps against their smooth gliding, so 30: a weak device's limit is the budget a frame, see POSE_BUDGET), and that picture laid down where the unit
 // is every frame, so it moves smoothly and only its pose is held a few frames. Measured on a Mi Pad 4 the graphics
 // card was most of a frame (86% busy) carrying out the dozens of shapes each unit is drawn with, every frame; a
 // picture is one call. Painted again at once when what it looks like changes (the key: what it holds, wears,
@@ -12,7 +13,7 @@ import { camera, canvas, ctx, drawingOn, getViewScale } from '../../../engine/pl
 import { game } from '../../../engine/world/index.js';
 import { castCaught, catchShadows, caughtShadows } from '../../world/index.js';
 
-export const POSES_PER_SECOND = 12;
+export const POSES_PER_SECOND = 30;
 // off: every unit and building drawn straight on the screen each frame, as before (the tests compare the two)
 export const unitPictures = { on: true };
 const STEPS_PER_POSE = Math.round(60 / POSES_PER_SECOND); // (the game's steps are 60 a second)
@@ -27,7 +28,8 @@ let nextTurn = 0;
 // (#425) At most POSE_BUDGET pictures painted a frame for a new pose (what one looks like changing is painted at once
 // regardless): in a big battle the rest hold their pose a little longer, but never more than
 // POSE_STALE poses, instead of the frame going slow (a Mi Pad 4 with 70 units fighting: ~25 painted a frame, 20 ms)
-const POSE_BUDGET = 8, POSE_STALE = 6;
+// (the stale limit in time: half a second, as it was at 12 poses a second)
+const POSE_BUDGET = 8, POSE_STALE = Math.round(POSES_PER_SECOND / 2);
 // Zooming, the pictures aren't all painted again at the new size each frame (a Mi Pad 4 with 30 buildings and a few units:
 // 35-50 fps while pinching, 60 still): the old picture is stretched to its place meanwhile, and once the zoom has stopped
 // they're painted again within the frame's budget. A picture stretched past FAR_SCALE either way (too soft or too coarse)
@@ -103,7 +105,7 @@ export function drawUnitPicture(unit, key, paint) {
   if (!unitPictures.on) { paint(); return; }
   let turn = unit.id;
   if (turn === undefined) { turn = turns.get(unit); if (turn === undefined) turns.set(unit, (turn = nextTurn++)); }
-  const pose = Math.floor((game.pathTick + turn * 3) / STEPS_PER_POSE);
+  const pose = Math.floor((game.pathTick + turn) / STEPS_PER_POSE);
   drawPicture(unit, key, pose, boxOf(unit.visualRadius || unit.radius || 11), paint, false);
 }
 

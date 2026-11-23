@@ -8,4 +8,4 @@ export { onTap } from './dom.js';
 export { GL, glBand, glBeginFrame, glCamera, glChunk, glDrop, glDropAll, glEndFrame, glForgetChunk, glFrame, glGroups, glKeep, glKept, glLayer, glPoolStats, glReady, glSprite, glSway, glSwayDropAll, glWaveDropAll, glWaveGroup, glWaves, glWind } from './gl.js';
 export { applyPageTexts, currentLanguage, initI18n, setLanguage, statLabel, t } from './i18n.js';
 export { initInput, isTap, isTouchScreen, keys, mouse, shiftDown } from './input.js';
-export { loadData, loadSetting, saveData, saveSetting } from './storage.js';
+export { DEV_SETTINGS, loadData, loadSetting, saveData, saveSetting } from './storage.js';

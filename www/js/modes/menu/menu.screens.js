@@ -1,7 +1,7 @@
 // The main menu's screens: home, Endless setup and saves, settings (language, frame rate, sound, music), and the opening
 
 import { LANGUAGES } from '../../content/language/index.js';
-import { audio, currentLanguage, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
+import { audio, currentLanguage, DEV_SETTINGS, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, perf, previewTrack, setPerfMonitor, setTrackOn } from '../../app/index.js';
 import { flagHtml, iconHtml } from '../../ui/index.js';
 import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
@@ -131,6 +131,8 @@ export function initMenuScreens() {
     markVsync(button.dataset.vsync);
     document.getElementById('vsync-note').hidden = (button.dataset.vsync === 'on') === VSYNC;
   }));
+  // the developers' settings (WebGL, the performance monitor): hidden but with ?dev
+  if (DEV_SETTINGS) document.querySelectorAll('.dev-setting').forEach(row => { /** @type {HTMLElement} */ (row).hidden = false; });
   // a trial: the ground and nature drawn by the graphics card (remembered, used from the next start)
   const markGl = value => document.querySelectorAll('[data-gl]').forEach(b => b.classList.toggle('active', b.dataset.gl === value));
   markGl(GL ? 'on' : 'off');

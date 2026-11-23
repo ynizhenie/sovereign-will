@@ -52,7 +52,7 @@ export function drawEnemyRafts() {
   const view = getViewRect(40);
   forEachInRect(game.enemyRafts, view.x0, view.y0, view.x1, view.y1, raft => {
     if (!isVisible(raft.x, raft.y)) return;
-    castShadow(ctx, raft.x, raft.y + 8, 24, 6, 8);
+    castShadow(ctx, raft.x, raft.y + 8, 24, 6, 8, true);
     ctx.save();
     ctx.translate(raft.x, raft.y);
     ctx.rotate(Math.atan2(raft.dy, raft.dx));

@@ -307,8 +307,9 @@
             <div class="settings-note" id="vsync-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
         </div>
 
-        <!-- a trial: the ground and nature drawn by the graphics card (on the next start), see engine/platform/gl.js -->
-        <div class="wave-settings">
+        <!-- a trial: the ground and nature drawn by the graphics card (on the next start), see engine/platform/gl.js;
+             a developers' setting, shown with ?dev (DEV_SETTINGS) -->
+        <div class="wave-settings dev-setting" hidden>
             <div data-i18n="menu.gl">WebGL (trial):</div>
             <div class="wave-options">
                 <button class="fps-option" data-gl="off" data-i18n="menu.off">Off</button>
@@ -325,8 +326,8 @@
             </div>
         </div>
 
-        <!-- what the frames take and where they drop, with a report to send (app/perfmon.js) -->
-        <div class="wave-settings">
+        <!-- what the frames take and where they drop, with a report to send (app/perfmon.js); a developers' setting -->
+        <div class="wave-settings dev-setting" hidden>
             <div data-i18n="menu.perfMonitor">Performance monitor:</div>
             <div class="wave-options">
                 <button class="fps-option" data-perf-monitor="off" data-i18n="menu.off">Off</button>
