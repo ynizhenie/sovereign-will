@@ -115,6 +115,8 @@ button.cant-afford { opacity: 0.55; }
   #dock .dock-btn:not(.active):hover { background: var(--plank) center / cover; color: var(--text); }
 }
 .panel-heading, .wave-settings, .seed-settings, .generator-fields h2 { color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+/* a setting's name over its choices: bigger and lighter than the dim grey, which hardly read on the scene behind */
+.wave-settings { font-size: 13px; color: #d4cfb6; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
 .resources-grid div, .resource-group-members div { font-weight: 400; padding: 4px 3px; }
 .resources-grid .resource-group { border: none; }
 .resource-group-members { background: var(--bg); border: 1px solid var(--edge); }

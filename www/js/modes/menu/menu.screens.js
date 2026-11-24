@@ -178,16 +178,27 @@ export function initMenuScreens() {
     markShadows(areShadowsEnabled());
   }));
   // (#326) the languages: in Settings each with its flag and its name, and by the Settings button the flag of the one now
-  const markLanguage = () => { document.querySelectorAll('[data-language]').forEach(b => b.classList.toggle('active', b.dataset.language === currentLanguage)); renderMusicPlayer(); };
+  // (a drop-down: the one now shown, the list under it opened by a tap on it and closed by a choice or a tap elsewhere)
+  const currentButton = /** @type {HTMLElement} */ (document.getElementById('language-current'));
+  const languageList = /** @type {HTMLElement} */ (document.getElementById('language-list'));
+  const openList = open => { languageList.hidden = !open; currentButton.setAttribute('aria-expanded', String(open)); };
+  const markLanguage = () => {
+    languageList.querySelectorAll('[data-language]').forEach(b => b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.language === currentLanguage));
+    currentButton.innerHTML = `${flagHtml(currentLanguage)}<span>${LANGUAGES[currentLanguage].label}</span><i class="language-caret" aria-hidden="true">▾</i>`;
+    renderMusicPlayer();
+  };
   const flagBox = document.getElementById('menu-flags');
   for (const [code, language] of Object.entries(LANGUAGES)) {
     const button = document.createElement('button');
     button.className = 'wave-option language-option';
     button.dataset.language = code;
+    button.setAttribute('role', 'option');
     button.innerHTML = `${flagHtml(code)}<span>${language.label}</span>`;
-    languageOptions.appendChild(button);
-    onTap(button, () => { setLanguage(code); markLanguage(); showFlag(); });
+    languageList.appendChild(button);
+    onTap(button, () => { setLanguage(code); markLanguage(); showFlag(); openList(false); });
   }
+  onTap(currentButton, () => openList(languageList.hidden));
+  document.addEventListener('pointerdown', e => { if (!languageList.hidden && !languageOptions.contains(/** @type {Node} */ (e.target))) openList(false); });
   // (#326) by the Settings button one flag, the language's now: a tap on it is the next language
   const flagButton = document.createElement('button');
   flagButton.className = 'flag-button';

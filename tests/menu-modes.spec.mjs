@@ -141,7 +141,7 @@ test('the frame-rate setting is remembered (#39)', async ({ page }) => {
 });
 
 test('the first screen has Play, the map editor and the settings; Play opens the modes, and a mode\'s Back comes back to them', async ({ page }) => {
-  await openGame(page);
+  await openFresh(page);
   await page.evaluate(() => showMenuScreen('home'));
   await expect(page.locator('[data-screen="home"] .menu-button:visible')).toHaveCount(3);
   await page.click('#open-modes');

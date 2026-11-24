@@ -291,7 +291,11 @@
 
         <div class="wave-settings">
             <div data-i18n="menu.language">Language:</div>
-            <div class="wave-options" id="language-options"></div>
+            <!-- a drop-down: the language now, and a tap shows the others (menu.screens.js) -->
+            <div class="language-picker" id="language-options">
+                <button id="language-current" class="wave-option language-option language-current" aria-haspopup="listbox" aria-expanded="false"></button>
+                <div id="language-list" class="language-list" role="listbox" hidden></div>
+            </div>
         </div>
 
         <div class="wave-settings">

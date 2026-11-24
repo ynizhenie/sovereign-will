@@ -27,8 +27,10 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
   expect(await page.evaluate(() => currentLanguage)).toBe(from);
   // in Settings: each language with its flag, the same choice; the flag by Settings follows
   await page.evaluate(() => showMenuScreen('settings'));
-  expect(await page.locator('#language-options .language-option svg').count()).toBe(3);
+  expect(await page.locator('#language-list .language-option svg').count()).toBe(3);
+  await page.locator('#language-current').click(); // (a drop-down: the list opened first)
   await page.locator('#language-options [data-language="uk"]').click();
+  await expect(page.locator('#language-list')).toBeHidden(); // (and closed by the choice)
   expect(await page.evaluate(() => currentLanguage)).toBe('uk');
   expect(await page.locator('#open-settings').innerText()).toBe('Налаштування');
   expect(await page.locator('#menu-flags .flag-button').getAttribute('aria-label')).toBe(await page.evaluate(() => LANGUAGES.uk.label));
