@@ -6,7 +6,7 @@ import { openGame } from './helpers.mjs';
 async function openBattle(page) {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });
@@ -242,7 +242,7 @@ test('a battle\'s settings: night and rain are only to look at; blight is unavai
   expect(r).toEqual({ dark: true, rain: 'rain', still: true, night: false, blighted: false, torches: [true, true, false], post: true, asleep: false });
   // Endless after it: its own day and weather, nothing of the battle's
   expect(await page.evaluate(() => { leaveBattleMode(); showMenuScreen('home'); return 1; })).toBe(1);
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await page.click('#play-button');
   expect(await page.evaluate(() => [getWeather().kind, getDayPhase()])).toEqual(['clear', 'morning']);
   expect(errors).toEqual([]);

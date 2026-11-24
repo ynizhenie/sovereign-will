@@ -291,6 +291,7 @@ export const ruLanguage = {
       'menu.newSeed': 'Новый случайный сид',
       'menu.language': 'Язык:',
       'menu.endless': 'Бесконечный',
+      'menu.modes': 'Режимы',
       'plague.mode': 'Чума',
       'plague.title': 'Чума',
       'plague.groupInterval': 'Интервал появления отрядов (секунды)',

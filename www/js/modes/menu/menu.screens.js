@@ -107,6 +107,7 @@ export function initMenuScreens() {
   // the opening animation, once, as the page loads (style.css: #main-menu.intro)
   document.getElementById('main-menu').classList.add('intro');
   setTimeout(() => document.getElementById('main-menu').classList.remove('intro'), 3500);
+  onTap(document.getElementById('open-modes'), () => showMenuScreen('modes'));
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
   onTap(document.getElementById('open-music-player'), () => showMenuScreen('music'));

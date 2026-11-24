@@ -6,7 +6,7 @@ import { openGame, started } from './helpers.mjs';
 const openBattle = async page => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play');
 };
 const at = (gx, gy) => ({ x: gx * 30 + 15, y: gy * 30 + 15 });

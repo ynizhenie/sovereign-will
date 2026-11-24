@@ -6,7 +6,7 @@ import { openGame } from './helpers.mjs';
 test('Battles: the undead and demons look their own, combat is always automatic, the sides\' colours chosen (#306, 1-3)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const r = await page.evaluate(() => {
     const { makeSettler } = window.sim.helpers;
@@ -26,7 +26,7 @@ test('Battles: the undead and demons look their own, combat is always automatic,
 test('generated enemy battle presets keep their faction visual when armed', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const result = await page.evaluate(() => {
     const key = presetEnemyKey('demons', 'spear');
@@ -41,7 +41,7 @@ test('generated enemy battle presets keep their faction visual when armed', asyn
 test('generated enemy battle presets speak phrases from their own faction', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const result = await page.evaluate(() => {
     setSideFaction('enemy', 'humans');
@@ -60,7 +60,7 @@ test('generated enemy battle presets speak phrases from their own faction', asyn
 test('enemy fighters get the same dark uniform shading as armed player soldiers', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const result = await page.evaluate(() => {
     const fighter = createConfiguredEnemy({ x: townHall.x + 120, y: townHall.y }, 'raider');

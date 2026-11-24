@@ -14,10 +14,11 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   await expect(page.locator('#mode-battles')).toBeEnabled(); // #38
   await expect(page.locator('#mode-editor')).toBeEnabled(); // #37
   await expect(page.locator('#exit-app')).toBeHidden(); // a browser tab can't close itself
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(home).toBeHidden();
   await page.click('[data-screen="endless"] [data-back]');
+  await page.click('[data-screen="modes"] [data-back]'); // (a mode's Back is to the modes, theirs to the first screen)
   await page.click('#open-settings');
   await expect(page.locator('#language-options')).toBeVisible();
   await expect(page.locator('#fps-options')).toBeVisible();
@@ -32,6 +33,8 @@ test('each mode title opens an information screen that returns to its menu', asy
     ['#mode-battles', 'battle', 'battle'],
     ['#mode-editor', 'editor', 'editor']
   ]) {
+    await page.evaluate(() => showMenuScreen('home'));
+    if (modeButton !== '#mode-editor') await page.click('#open-modes');
     await page.click(modeButton);
     const title = page.locator(`[data-screen="${screen}"] [data-mode-info="${mode}"]`);
     await expect(title).toBeVisible();
@@ -80,7 +83,7 @@ test('shadows can be disabled in settings and the choice is remembered', async (
 
 test('two difficulties: on Hard enemies are as strong as the player\'s own units (#39, #255)', async ({ page }) => {
   await openFresh(page);
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   expect(await page.locator('#difficulty-options .difficulty-option').count()).toBe(2); // (the Plague has its own)
   const r = await page.evaluate(() => ['normal', 'hard'].map(level => {
     document.querySelector(`#difficulty-options .difficulty-option[data-difficulty="${level}"]`).click();
@@ -135,4 +138,17 @@ test('the frame-rate setting is remembered (#39)', async ({ page }) => {
   await page.reload();
   await page.click('#open-settings');
   await expect(page.locator('.fps-option[data-fps].active')).toHaveAttribute('data-fps', '30');
+});
+
+test('the first screen has Play, the map editor and the settings; Play opens the modes, and a mode\'s Back comes back to them', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await expect(page.locator('[data-screen="home"] .menu-button:visible')).toHaveCount(3);
+  await page.click('#open-modes');
+  await expect(page.locator('[data-screen="modes"]')).toBeVisible();
+  await page.click('#mode-plague');
+  await page.click('[data-screen="plague"] [data-back]');
+  await expect(page.locator('[data-screen="modes"]')).toBeVisible();
+  await page.click('[data-screen="modes"] [data-back]');
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
 });

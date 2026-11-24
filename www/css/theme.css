@@ -138,9 +138,9 @@ body.menu-world #main-menu { background: transparent; }
 .main-menu-content h1 { font-weight: 700; letter-spacing: 0; }
 .menu-back { background: none; color: var(--text-dim); }
 
-/* the first screen's buttons: a plank framed in metal corners, the corners kept whatever the size */
-.main-menu-content[data-screen="home"] { gap: 16px; }
-.main-menu-content[data-screen="home"] .menu-button {
+/* the first screen's buttons (and Play's modes): a plank framed in metal corners, the corners kept whatever the size */
+.main-menu-content[data-screen="home"], .main-menu-content[data-screen="modes"] { gap: 16px; }
+.main-menu-content[data-screen="home"] .menu-button, .main-menu-content[data-screen="modes"] .menu-button {
   min-height: 62px;
   padding: 0;
   font-size: 20px;
@@ -155,9 +155,9 @@ body.menu-world #main-menu { background: transparent; }
   border-radius: 0;
 }
 @media (hover: hover) {
-  .main-menu-content[data-screen="home"] .menu-button:not(:disabled):hover { color: var(--text-bright); filter: brightness(1.12); }
+  .main-menu-content[data-screen="home"] .menu-button:not(:disabled):hover, .main-menu-content[data-screen="modes"] .menu-button:not(:disabled):hover { color: var(--text-bright); filter: brightness(1.12); }
 }
-.main-menu-content[data-screen="home"] .menu-button:disabled { color: var(--text-dim); filter: saturate(0.4) brightness(0.8); }
+.main-menu-content[data-screen="home"] .menu-button:disabled, .main-menu-content[data-screen="modes"] .menu-button:disabled { color: var(--text-dim); filter: saturate(0.4) brightness(0.8); }
 
 /* the game's name: old gold letters with a dark edge below and a soft shadow (a gradient fill can't take a
    text-shadow, so the shadows are filters) */

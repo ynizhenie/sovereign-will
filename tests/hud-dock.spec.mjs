@@ -201,7 +201,7 @@ test.describe('on a touch screen', () => {
 test('battle: a category opens its sheet, picking a unit shows it on the chip; the top bar counts both sides', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await expect(page.locator('#placing-chip')).toBeVisible(); // what a tap places, from the start
   await page.click('[data-battle-category="units"]');

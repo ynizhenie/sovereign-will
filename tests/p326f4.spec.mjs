@@ -42,7 +42,7 @@ test('a soldier by a captain with a banner keeps its morale, one far off doesn\'
 test('in a battle a medic starts with its bag full (#326, 17)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const r = await page.evaluate(() => {
     battle.category = 'units'; battle.preset = 'humans:medic'; battleTap(6 * TILE_SIZE + 15, 12 * TILE_SIZE + 15);

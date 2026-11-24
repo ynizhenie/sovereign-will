@@ -291,6 +291,7 @@ export const ukLanguage = {
       'menu.newSeed': 'Новий випадковий сід',
       'menu.language': 'Мова:',
       'menu.endless': 'Нескінченний',
+      'menu.modes': 'Режими',
       'plague.mode': 'Чума',
       'plague.title': 'Чума',
       'plague.groupInterval': 'Інтервал появи загонів (секунди)',

@@ -291,6 +291,7 @@ export const enLanguage = {
       'menu.newSeed': 'New random seed',
       'menu.language': 'Language:',
       'menu.endless': 'Endless',
+      'menu.modes': 'Modes',
       'plague.mode': 'Plague',
       'plague.title': 'Plague',
       'plague.groupInterval': 'Time between bands (seconds)',

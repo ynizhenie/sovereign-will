@@ -42,7 +42,7 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await page.click('#open-settings');
   await page.click('#language-options button[data-language="uk"]');
   await page.click('#main-menu [data-screen="settings"] [data-back]');
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
   await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Робітник 15[[food]]']);
   await expect.poll(() => iconText(page, '#btn-wall_wood')).toEqual(['[[wall_wood]] Дерев\'яна стіна 5[[wood]]']);

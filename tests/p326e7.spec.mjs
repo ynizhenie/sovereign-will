@@ -8,7 +8,7 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
   await page.evaluate(() => showMenuScreen('home'));
   const layout = await page.evaluate(() => {
     const rect = id => document.getElementById(id).getBoundingClientRect();
-    const endless = rect('mode-endless'), settings = rect('open-settings'), flag = rect('menu-flags');
+    const endless = rect('open-modes'), settings = rect('open-settings'), flag = rect('menu-flags');
     return {
       aligned: Math.abs(endless.width - settings.width) < 1,
       flagBottomLeft: flag.left < 20 && innerHeight - flag.bottom < 20

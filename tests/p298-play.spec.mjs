@@ -60,7 +60,7 @@ test('at night the asleep can be picked for a raid: they wake and go (#298, 12)'
 test('Battles: the armour button cycles through leather, bone, iron and off', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play');
   await page.click('[data-battle-category="units"]');
   const b = page.locator('[data-battle-gear="armor"]');

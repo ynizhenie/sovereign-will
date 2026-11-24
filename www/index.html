@@ -28,12 +28,18 @@
     </div>
     <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless/Saves/Battles setup, Settings -->
     <div class="main-menu-content" data-screen="home">
-        <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
-        <button id="mode-plague" class="menu-button" data-i18n="plague.mode">Plague</button>
-        <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
+        <button id="open-modes" class="menu-button menu-button-primary" data-i18n="menu.play">Play</button>
         <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>
         <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
+    </div>
+    <!-- Play: the game's modes -->
+    <div class="main-menu-content" data-screen="modes" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="menu.modes">Modes</h1>
+        <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
+        <button id="mode-plague" class="menu-button" data-i18n="plague.mode">Plague</button>
+        <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
     </div>
     <!-- The current language; tapping its flag cycles languages. -->
     <div class="flag-box" id="menu-flags"></div>
@@ -66,7 +72,7 @@
     </div>
 
     <div class="main-menu-content" data-screen="endless" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="endless"><span data-i18n="menu.endless">Endless</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
 
@@ -164,7 +170,7 @@
     </div>
 
     <div class="main-menu-content" data-screen="battle" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="battle"><span data-i18n="menu.battles">Battles</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <button id="battle-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <div class="wave-settings">
@@ -228,7 +234,7 @@
     </div>
 
     <div class="main-menu-content plague-menu" data-screen="plague" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="plague"><span data-i18n="plague.title">Plague</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
         <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
         <button id="plague-open-saves" class="menu-button" data-i18n="menu.saves">Saves</button>

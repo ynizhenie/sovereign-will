@@ -4,7 +4,7 @@ import { openGame } from './helpers.mjs';
 test('medics and necromancers find a reachable backline spot when their preferred tile is blocked', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await expect(page.locator('[data-battle-category="units"]')).toBeVisible();
 

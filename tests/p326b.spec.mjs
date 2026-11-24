@@ -6,7 +6,7 @@ import { openGame } from './helpers.mjs';
 async function openBattle(page) {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   return errors;
 }

@@ -5,7 +5,7 @@ import { openGame, started } from './helpers.mjs';
 async function openBattle(page, size) {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await expect(page.locator('[data-screen="battle"]')).toBeVisible();
   if (size) await page.click(`[data-screen="battle"] [data-battle-size="${size}"]`);
   await page.click('#battle-play');
@@ -41,7 +41,7 @@ test('battle mode: an empty field split in two, placing and removing units (#38)
 test('battle menu and Battle settings choose and apply the battlefield size', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await expect(page.locator('[data-screen="battle"] [data-battle-size="medium"]')).toHaveClass(/active/);
   const activeColors = await page.evaluate(() => [
     getComputedStyle(document.querySelector('[data-screen="battle"] [data-battle-size="medium"]')).backgroundColor,
@@ -63,7 +63,7 @@ test('battle menu and Battle settings choose and apply the battlefield size', as
   await expect(page.locator('#battle-menu-rows')).toHaveValue('30');
   await page.reload();
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await expect(page.locator('[data-screen="battle"] [data-battle-difficulty="hard"]')).toHaveClass(/active/);
   await expect(page.locator('[data-screen="battle"] [data-battle-field="desert"]')).toHaveClass(/active/);
   await expect(page.locator('[data-screen="battle"] [data-battle-size="custom"]')).toHaveClass(/active/);
@@ -97,7 +97,7 @@ test('battle menu and Battle settings choose and apply the battlefield size', as
   expect(resized).toEqual({ cols: 128, rows: 128, settlers: 1, enemies: 1, sides: ['green', 'red'], savedSize: [128, 128] });
   await page.reload();
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await expect(page.locator('[data-screen="battle"] [data-battle-difficulty="hard"]')).toHaveClass(/active/);
   await expect(page.locator('[data-screen="battle"] [data-battle-field="desert"]')).toHaveClass(/active/);
   await expect(page.locator('[data-screen="battle"] [data-battle-size="custom"]')).toHaveClass(/active/);
@@ -1502,7 +1502,7 @@ test('melee fighters do not recoil when paths are replanned toward moving enemie
 test('the pause menu leaves battle mode and the Endless map size comes back (#38, #145)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => { mapSettings = { cols: 60, rows: 60 }; showMenuScreen('home'); });
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play');
   await page.click('#btn-pause-toggle'); // the Menu is the pause button at the top now (#145)
   await page.click('#exit-to-menu-button');

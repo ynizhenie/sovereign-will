@@ -94,7 +94,7 @@ test('save slots are independent, keep the seed as their default name, and live 
   await expect(page.locator('#pause-menu')).toBeVisible();
   await page.click('#exit-to-menu-button');
   await page.evaluate(() => { resetGame(); }); // the stock's gone back to the start
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await expect(page.locator('#open-saves')).toBeVisible();
   await expect(page.locator('#mode-saves')).toHaveCount(0);
   await page.click('#open-saves');
@@ -109,7 +109,7 @@ test('save slots are independent, keep the seed as their default name, and live 
   await expect.poll(() => page.evaluate(() => [stock.stone, waveNum, gameStarted, savannaTiles.length])).toEqual([123, 5, true, 1]);
   // delete it, asked first
   await page.evaluate(() => exitToMainMenu());
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await page.click('#open-saves');
   for (let i = 0; i < 2; i++) {
     await page.click('#save-list [data-delete-save]');
@@ -177,7 +177,7 @@ test('the combined save menu lists saves from every world; Battles have no save 
   await page.click('[data-screen="saves"] [data-back]');
   // A battle has no combined save menu in its pause screen.
   await page.evaluate(() => { exitToMainMenu(); showMenuScreen('home'); });
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await expect(page.locator('[data-battle-category="units"]')).toBeVisible();
   await page.click('#btn-pause-toggle');
