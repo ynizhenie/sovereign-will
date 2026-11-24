@@ -16,20 +16,34 @@ export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
   tools.innerHTML = '';
   let chosen = '';
-  const forFaction = tl => !tl.building || !getDefinition('buildings', tl.building).factions || getDefinition('buildings', tl.building).factions.includes(editor.faction);
-  // as Endless's (#255): the category's things as tiles, in sections
-  const shown = EDITOR_TOOLS.filter(tl => tl.category === editor.category && forFaction(tl));
-  const sections = [...new Set(shown.map(tl => tl.section || ''))];
-  for (const section of sections) {
-    if (sections.length > 1 || section) {
+  const shown = EDITOR_TOOLS.filter(tl => tl.category === editor.category);
+  const landmarks = new Set(['town_hall', 'outpost']);
+  const groups = editor.category === 'buildings'
+    ? [
+      { title: t('editor.section.hallAndOutpost'), section: '', tools: shown.filter(tl => landmarks.has(tl.id)) },
+      { title: t('battle.buildingsCommon'), section: '', tools: shown.filter(tl =>
+        !landmarks.has(tl.id) && (!tl.building || !getDefinition('buildings', tl.building).factions)) },
+      ...Object.values(GAME_CONFIG.factions).filter(faction => faction.ready).map(faction => ({
+        title: faction.label,
+        section: '',
+        tools: shown.filter(tl => tl.building && getDefinition('buildings', tl.building).factions?.includes(faction.id))
+      }))
+    ].filter(group => group.tools.length)
+    : [...new Set(shown.map(tl => tl.section || ''))].map(section => ({
+      title: '',
+      section,
+      tools: shown.filter(tl => (tl.section || '') === section)
+    }));
+  for (const group of groups) {
+    if (editor.category === 'buildings' || groups.length > 1 || group.section) {
       const heading = document.createElement('div');
       heading.className = 'panel-heading';
-      heading.textContent = t(`editor.section.${section}`);
+      heading.textContent = group.title || t(`editor.section.${group.section}`);
       tools.appendChild(heading);
     }
     const grid = document.createElement('div');
     grid.className = 'tile-grid';
-    for (const tool of shown.filter(tl => (tl.section || '') === section)) {
+    for (const tool of group.tools) {
       const button = document.createElement('button');
       button.className = 'btn tile' + (editor.tool === tool.id ? ' active' : '');
       button.dataset.tool = tool.id;
@@ -61,37 +75,18 @@ export function updateEditorTitle() {
   document.getElementById('editor-map-label').textContent = name || t('editor.untitled');
 }
 
-// The editor menu's faction choice
-export function renderEditorFaction() {
-  const row = document.getElementById('editor-faction');
-  row.innerHTML = '';
-  for (const faction of Object.values(GAME_CONFIG.factions).filter(f => f.ready)) {
-    const button = document.createElement('button');
-    button.className = 'faction-option' + (editor.faction === faction.id ? ' active' : '');
-    button.dataset.faction = faction.id;
-    button.textContent = faction.label;
-    onTap(button, () => { editor.faction = faction.id; rememberEditorChoices(); renderEditorFaction(); });
-    row.appendChild(button);
-  }
-}
-
-// The editor's menu screen: new map (size, empty or generated) and faction
-export function renderEditorMapList() {
-  renderEditorFaction();
-}
-
 export let editorNewSize = 192;
 let editorUsesCustomSize = false;
 const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
 const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
 const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
-const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, faction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'tree', hideTimeAndWeather: true };
+const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, hallFaction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'tree', hideTimeAndWeather: true };
 const rememberEditorChoices = () => saveData('editor-choices', {
   size: editorNewSize,
   custom: editorUsesCustomSize,
   cols: editorMapCols.value,
   rows: editorMapRows.value,
-  faction: editor.faction,
+  hallFaction: editor.hallFaction,
   startTime: editor.startTime,
   hideTimeAndWeather: editor.hideTimeAndWeather,
   brush: editor.brush,
@@ -107,6 +102,24 @@ const editorDimensions = () => {
   return { cols: dimension(editorMapCols), rows: dimension(editorMapRows) };
 };
 
+function renderEditorHallFaction() {
+  const picker = document.getElementById('editor-hall-faction');
+  picker.innerHTML = '';
+  for (const faction of Object.values(GAME_CONFIG.factions).filter(item => item.ready)) {
+    const button = document.createElement('button');
+    button.className = `faction-option${editor.hallFaction === faction.id ? ' active' : ''}`;
+    button.dataset.hallFaction = faction.id;
+    button.textContent = faction.label;
+    button.title = faction.label;
+    onTap(button, () => {
+      editor.hallFaction = faction.id;
+      rememberEditorChoices();
+      renderEditorHallFaction();
+    });
+    picker.appendChild(button);
+  }
+}
+
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEditorPanel() {
   const saved = loadData('editor-choices', EDITOR_DEFAULTS);
@@ -114,13 +127,15 @@ export function initEditorPanel() {
   editorUsesCustomSize = !!saved.custom;
   editorMapCols.value = String(Math.max(128, Math.min(512, Number(saved.cols) || EDITOR_DEFAULTS.cols)));
   editorMapRows.value = String(Math.max(128, Math.min(512, Number(saved.rows) || EDITOR_DEFAULTS.rows)));
-  editor.faction = GAME_CONFIG.factions[saved.faction]?.ready ? saved.faction : EDITOR_DEFAULTS.faction;
+  const savedHallFaction = saved.hallFaction || saved.faction;
+  editor.hallFaction = GAME_CONFIG.factions[savedHallFaction]?.ready ? savedHallFaction : EDITOR_DEFAULTS.hallFaction;
   editor.startTime = ['morning', 'day', 'evening', 'night'].includes(saved.startTime) ? saved.startTime : EDITOR_DEFAULTS.startTime;
   editor.hideTimeAndWeather = saved.hideTimeAndWeather !== false;
   game.editorHideTimeAndWeather = editor.hideTimeAndWeather;
   editor.brush = [1, 3, 5].includes(Number(saved.brush)) ? Number(saved.brush) : EDITOR_DEFAULTS.brush;
   editor.category = ['terrain', 'nature', 'buildings'].includes(saved.category) ? saved.category : EDITOR_DEFAULTS.category;
   editor.tool = EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
+  renderEditorHallFaction();
   editorCustomSize.hidden = !editorUsesCustomSize;
   document.querySelectorAll('[data-editor-size]').forEach(button => button.classList.toggle('active',
     button.dataset.editorSize === (editorUsesCustomSize ? 'custom' : String(editorNewSize))));
@@ -133,7 +148,7 @@ export function initEditorPanel() {
   }));
   [editorMapCols, editorMapRows].forEach(input => input.addEventListener('change', rememberEditorChoices));
   document.getElementById('mode-editor').disabled = false;
-  onTap(document.getElementById('mode-editor'), () => { renderEditorMapList(); showMenuScreen('editor'); });
+  onTap(document.getElementById('mode-editor'), () => showMenuScreen('editor'));
   initMapManager({
     openEditor: map => startEditor({ map }),
     selectEndless: map => {

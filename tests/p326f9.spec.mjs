@@ -124,30 +124,52 @@ test('undead and demon wave enemies use their faction armour and helmet variants
   const errors = await openGame(page);
   await page.click('#play-button');
   const result = await page.evaluate(() => {
-    const oldLeatherChance = GAME_CONFIG.waveGear.leather.endChance;
-    const oldHelmetChance = GAME_CONFIG.waveGear.helmet.endChance;
-    GAME_CONFIG.waveGear.leather.endChance = 1;
-    GAME_CONFIG.waveGear.helmet.endChance = 1;
-    game.armory = { 'gear:leather_armor': 1, 'gear:bone_armor': 1, 'gear:helmet': 1, 'gear:horned_helmet': 1 };
-    game.unlocked = {};
-    game.playerGear = {};
-    game.settlers = [];
-    game.buildings = [];
-    game.plagueMode = false;
-    setSideFaction('enemy', 'undead');
-    const undead = createConfiguredEnemy({ x: townHall.x + 300, y: townHall.y }, presetEnemyKey('undead', 'bow'));
-    dressForWave(undead, getEnemyDef(undead), 20);
-    setSideFaction('enemy', 'demons');
-    const demon = createConfiguredEnemy({ x: townHall.x + 340, y: townHall.y }, presetEnemyKey('demons', 'spear'));
-    dressForWave(demon, getEnemyDef(demon), 20);
-    GAME_CONFIG.waveGear.leather.endChance = oldLeatherChance;
-    GAME_CONFIG.waveGear.helmet.endChance = oldHelmetChance;
-    return {
-      undead: [undead.armor, undead.helmetGear],
-      demon: [demon.armor, demon.helmetGear],
-      developmentItems: getPlayerDevelopment()
-    };
+    const ids = ['leather', 'bone_armor', 'helmet', 'horned_helmet'];
+    const saved = Object.fromEntries(ids.map(id => [id, { ...GAME_CONFIG.waveGear[id] }]));
+    try {
+      for (const id of ids) Object.assign(GAME_CONFIG.waveGear[id], { startChance: 0.25, endChance: 0.25 });
+      game.armory = { 'gear:leather_armor': 1, 'gear:bone_armor': 1, 'gear:helmet': 1, 'gear:horned_helmet': 1 };
+      game.unlocked = {};
+      game.playerGear = {};
+      game.settlers = [];
+      game.buildings = [];
+      game.plagueMode = false;
+
+      const sampleFactionGear = factionId => {
+        setSideFaction('enemy', factionId);
+        const armor = new Set(), helmets = new Set();
+        for (let i = 0; i < 128; i++) {
+          const enemy = createConfiguredEnemy(
+            { x: townHall.x + 300 + i, y: townHall.y },
+            presetEnemyKey(factionId, 'spear')
+          );
+          dressForWave(enemy, getEnemyDef(enemy), 20);
+          if (enemy.armor) armor.add(enemy.armor);
+          if (enemy.helmetGear) helmets.add(enemy.helmetGear);
+        }
+        return {
+          armor: [...armor].sort(),
+          helmets: [...helmets].sort(),
+          boneChance: getWaveGearChance('bone_armor', 20),
+          hornedChance: getWaveGearChance('horned_helmet', 20)
+        };
+      };
+
+      return {
+        undead: sampleFactionGear('undead'),
+        demons: sampleFactionGear('demons'),
+        developmentItems: getPlayerDevelopment()
+      };
+    } finally {
+      for (const [id, rule] of Object.entries(saved)) Object.assign(GAME_CONFIG.waveGear[id], rule);
+    }
   });
-  expect(result).toEqual({ undead: ['bone', 'helmet'], demon: ['leather', 'horned_helmet'], developmentItems: 2 });
+  expect(result.undead).toEqual({
+    armor: ['bone', 'leather'], helmets: ['helmet'], boneChance: 0.25, hornedChance: 0
+  });
+  expect(result.demons).toEqual({
+    armor: ['leather'], helmets: ['helmet', 'horned_helmet'], boneChance: 0, hornedChance: 0.25
+  });
+  expect(result.developmentItems).toBe(2);
   expect(errors).toEqual([]);
 });

@@ -1,7 +1,7 @@
 // Saved maps: stored on the device as plain data, and a world built from one
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { camera, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
+import { camera, exportFile, loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { TILE_SIZE, game, newWorldEpoch, rand, townHall } from '../../engine/world/index.js';
 import { createBuildingBlueprint } from '../../domains/economy/building/index.js';
 import { placeBeaches, setStartingWeather } from '../../domains/world/index.js';
@@ -60,7 +60,7 @@ export function serializeMap(name) {
     resources[kind] = game[def.list].filter(r => !r.oreSpawner).map(tile);
   }
   return {
-    name, cols: game.COLS, rows: game.ROWS, faction: editor.faction, startTime: editor.startTime, weather: editor.weather,
+    name, cols: game.COLS, rows: game.ROWS, startTime: editor.startTime, weather: editor.weather,
     hall: [townHall.x, townHall.y],
     waterRuns: toRuns(game.waterTiles),
     sandRuns: toRuns(game.desertTiles),
@@ -204,14 +204,17 @@ function safeMapFilename(name) {
   }).join('').trim().slice(0, 64) || 'map';
 }
 
-function exportMap(map) {
-  const blob = new Blob([JSON.stringify({ format: 'sovereign-will-map', version: 1, map }, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${safeMapFilename(map.name)}.json`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+async function exportMap(map) {
+  if (!map) { showMapManagerStatus(t('editor.mapExportFailed')); return; }
+  try {
+    const exported = await exportFile(`${safeMapFilename(map.name)}.json`,
+      JSON.stringify({ format: 'sovereign-will-map', version: 1, map }, null, 2));
+    if (typeof exported === 'string') showMapManagerStatus(t('editor.mapExportedTo', { path: exported }));
+    else if (exported) showMapManagerStatus(t('editor.mapExported', { name: map.name }));
+  } catch (error) {
+    console.error('Could not export map', error);
+    showMapManagerStatus(t('editor.mapExportFailed'));
+  }
 }
 
 function isValidSavedMap(map) {
@@ -339,13 +342,18 @@ export function renderMapManager(list, options) {
     exportButton.dataset.exportMap = name;
     exportButton.textContent = t('editor.exportMap');
     onTap(exportButton, () => exportMap(loadSavedMaps()[name]));
-    wrap.append(nameInput, exportButton);
+    const actions = document.createElement('div');
+    actions.className = 'save-map-actions';
+    actions.appendChild(exportButton);
     const removeButton = document.createElement('button');
     removeButton.className = 'btn tile-act save-delete';
     removeButton.dataset.deleteMap = name;
     removeButton.setAttribute('aria-label', t('list.deleteQuestion', { name }));
     removeButton.innerHTML = iconHtml('close');
+    actions.appendChild(removeButton);
+    let confirmation = null;
     onTap(removeButton, () => {
+      if (confirmation) return;
       removeButton.hidden = true;
       const question = document.createElement('span');
       question.className = 'item-question';
@@ -369,9 +377,15 @@ export function renderMapManager(list, options) {
         options.changed(name, null, latest);
         refresh();
       });
-      wrap.append(question, confirm, cancel);
+      const buttons = document.createElement('div');
+      buttons.className = 'save-map-confirm-buttons';
+      buttons.append(confirm, cancel);
+      confirmation = document.createElement('div');
+      confirmation.className = 'save-map-confirm';
+      confirmation.append(question, buttons);
+      wrap.appendChild(confirmation);
     });
-    wrap.append(tile, removeButton);
+    wrap.append(tile, nameInput, actions);
     list.appendChild(wrap);
   }
 }

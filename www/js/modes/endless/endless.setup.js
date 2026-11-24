@@ -5,7 +5,7 @@ import { openTab, runLoading } from '../../ui/index.js';
 import { GAME_CONFIG } from '../../content/configs/index.js';
 import { loadData, onTap, saveData, saveSetting, t } from '../../engine/platform/index.js';
 import { applySeedFromUI, createDefaultSeed, game } from '../../engine/world/index.js';
-import { getLockedPlayerFaction, loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
+import { loadSides, setSideColor, setSideFaction, sides } from '../../domains/factions/index.js';
 import { resetGameSteps } from '../../app/index.js';
 import { mainMenu } from '../menu/index.js';
 import { loadSavedMaps } from '../editor/index.js';
@@ -85,10 +85,18 @@ export function renderCustomMapList() {
   // the chosen map may have been deleted or changed in the editor since
   if (game.customMap) game.customMap = maps[game.customMap.name] || null;
   if (mapSource === 'custom' && !game.customMap) game.customMap = maps[savedName] || Object.values(maps)[0] || null;
-  // a custom map is played as the faction it was made for
-  if (mapSource === 'custom' && game.customMap && game.customMap.faction && sides.player.faction !== game.customMap.faction) setSideFaction('player', game.customMap.faction);
   renderFactionPicker();
-  document.getElementById('endless-open-maps').textContent = t('editor.savedMaps');
+  const mapsButton = document.getElementById('endless-open-maps');
+  const selectedName = mapSource === 'custom' ? game.customMap?.name : null;
+  if (selectedName) {
+    mapsButton.removeAttribute('data-i18n');
+    mapsButton.textContent = selectedName;
+    mapsButton.title = selectedName;
+  } else {
+    mapsButton.dataset.i18n = 'editor.savedMaps';
+    mapsButton.textContent = t('editor.savedMaps');
+    mapsButton.removeAttribute('title');
+  }
 }
 
 export function setMapSource(source) {
@@ -108,8 +116,7 @@ export function renderFactionPicker() {
       const button = document.createElement('button');
       button.className = 'faction-option' + (sides[side].faction === faction.id ? ' active' : '');
       button.dataset.faction = faction.id;
-      const locked = side === 'player' && getLockedPlayerFaction();
-      button.disabled = !faction.ready || (!!locked && faction.id !== locked);
+      button.disabled = !faction.ready;
       button.textContent = faction.ready ? faction.label : `${faction.label} · ${t('menu.soon')}`;
       onTap(button, () => setSideFaction(side, faction.id));
       row.appendChild(button);
@@ -211,5 +218,8 @@ export function restoreEndlessChoices() {
     saveData('endlessChoices', out);
   };
   screen.addEventListener('click', remember);
+  // (#420) on a phone a tap is the button's touchend, which stops the click (engine/platform/dom.js onTap): none of what
+  // was picked there was kept (a custom map came back after choosing a random one and starting the game again)
+  screen.addEventListener('touchend', remember);
   screen.addEventListener('change', remember);
 }

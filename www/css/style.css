@@ -334,6 +334,23 @@ body.menu-world #defeat-overlay { display: none !important; }
   gap: 9px;
   padding: 14px;
 }
+.mode-description-screen { gap: 14px; }
+.mode-description-screen p { margin: 0; color: #d5d9e0; font-size: 14px; line-height: 1.55; text-align: left; }
+.mode-title-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.mode-title-trigger .ic { width: 0.85em; height: 0.85em; opacity: 0.75; }
+.mode-title-trigger:hover, .mode-title-trigger:focus-visible { color: #f1c40f; }
+.mode-title-trigger:focus-visible { outline: 2px solid #f1c40f; outline-offset: 3px; border-radius: 3px; }
 
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
 .main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }
@@ -798,6 +815,7 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   flex: 1;
   width: auto;
 }
+.preset-current { min-height: 1.2em; color: #aeb4c0; font-size: 12px; text-align: center; }
 
 /* (#326) the selected settler's card: everything shown, scrolling when there's a lot */
 .selected-unit-box.has-settler { position: relative; display: flex; flex-direction: column; width: min(94vw, 400px); height: min(30vh, 220px); box-sizing: border-box; white-space: normal; overflow: hidden; padding: 8px 48px 8px 10px; }
@@ -1192,9 +1210,15 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .save-tile-wrap.current .save-tile { border-color: #9c78e8; }
 .save-tile-wrap .save-tile { min-height: 44px; padding-right: 22px; }
 .save-name-input { width: 100%; min-width: 0; box-sizing: border-box; }
-.save-export { align-self: flex-start; }
-.save-tile-wrap .save-delete { position: absolute; top: 3px; right: 3px; min-height: 0; padding: 2px 4px; font-size: 10px; }
-.save-tile-wrap .save-delete.asking { background: #c0392b; border-color: #e74c3c; color: #fff; }
+.save-map-actions, .save-map-confirm-buttons { display: flex; align-items: stretch; gap: 4px; }
+.save-map-actions .save-export { flex: 1 1 auto; min-width: 0; }
+.save-map-actions .save-delete { flex: 0 0 28px; min-height: 28px; padding: 2px 4px; font-size: 10px; }
+.save-map-actions .save-delete[hidden] { display: none; }
+.save-map-actions .save-export[hidden] { display: none; }
+.save-map-actions .save-delete.asking { flex: 1 1 auto; padding: 2px 8px; } /* (a save's "Delete?", in Export's place) */
+.save-map-confirm { display: flex; flex-direction: column; gap: 4px; }
+.save-map-confirm .item-question { font-size: 12px; line-height: 1.2; text-align: center; color: #f1c40f; }
+.save-map-confirm-buttons .btn { flex: 1 1 0; min-width: 0; min-height: 28px; padding: 4px; }
 
 /* the blight-by-itself switch (#253) */
 #btn-auto-blight.on { background: #6c3483; border-color: #a569bd; }

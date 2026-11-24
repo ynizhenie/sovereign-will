@@ -159,6 +159,11 @@ export const ICONS = {
     icRect(c, '#95a5a6', 12, 22, 8, 3); icRect(c, '#7f8c8d', 12.5, 25.5, 7, 3);
     icLine(c, '#fff', 1.8, [[12, 11], [14, 8]]);
   },
+  info: c => {
+    icRing(c, '#f1c40f', 2.5, 16, 16, 12);
+    icCircle(c, '#f1c40f', 16, 9, 1.7);
+    icRound(c, '#f1c40f', 14.8, 13, 2.4, 10, 1);
+  },
   heart: c => {
     c.fillStyle = '#e74c3c'; c.beginPath(); c.moveTo(16, 28); c.bezierCurveTo(2, 18, 3, 6, 10, 6); c.bezierCurveTo(13, 6, 15, 8, 16, 11);
     c.bezierCurveTo(17, 8, 19, 6, 22, 6); c.bezierCurveTo(29, 6, 30, 18, 16, 28); c.fill();

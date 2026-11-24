@@ -157,6 +157,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#open-generator')).toBeHidden();
   await page.locator('#map-manager-list [data-map="Озерцо"]').click();
   await expect(page.locator('[data-screen="endless"]')).toBeVisible();
+  await expect(page.locator('#endless-open-maps')).toHaveText('Озерцо');
   await page.locator('#play-button').click();
   await started(page);
   expect(await page.evaluate(() => [COLS, waterTiles.length, savannaTiles.length, gameMode])).toEqual([128, 10, 1, 'endless']);
@@ -167,8 +168,13 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('[data-screen="home"] #mode-editor').click();
   // delete asks first: No keeps it, Yes deletes it (#143)
   await page.locator('#editor-open-maps').click();
+  const exportHeight = await page.locator('#map-manager-list [data-export-map="Озерцо"]').evaluate(button => button.getBoundingClientRect().height);
+  expect(exportHeight).toBeLessThan(60);
   await page.locator('#map-manager-list [data-delete-map="Озерцо"]').click();
   await expect(page.locator('#map-manager-list')).toContainText('Удалить «Озерцо · 128×128»?');
+  await expect(page.locator('#map-manager-list [data-delete-map="Озерцо"]')).toBeHidden();
+  await expect(page.locator('#map-manager-list [data-confirm-delete="Озерцо"]')).toHaveCount(1);
+  await expect(page.locator('#map-manager-list [data-cancel-delete="Озерцо"]')).toHaveCount(1);
   await page.locator('#map-manager-list [data-cancel-delete="Озерцо"]').click();
   await expect(page.locator('#map-manager-list [data-map="Озерцо"]')).toBeVisible();
   await page.locator('#map-manager-list [data-delete-map="Озерцо"]').click();
