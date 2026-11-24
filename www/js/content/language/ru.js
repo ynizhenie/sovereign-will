@@ -785,6 +785,8 @@ export const ruLanguage = {
       'loading.world': 'Создаём мир…',
       'loading.save': 'Загружаем сохранение…',
       'menu.nextScene': '[[reroll]] Другая сценка',
+      'menu.nextSceneHint': 'Другая сценка',
+      'menu.showMenuHint': 'Назад в меню',
       'menu.showMenu': '[[menu]] Меню',
       'voice.humans.hired': 'Готов к работе!|К вашим услугам.|С чего начать?|Здравствуйте, я новенький.|Рад быть здесь.',
       'voice.humans.tool': 'Вот это дело!|Теперь пригодится.|Сгодится.',

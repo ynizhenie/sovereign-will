@@ -286,7 +286,7 @@ body.menu-ui-hidden #main-menu::before { opacity: 0; }
 body.menu-ui-hidden.menu-world #gameCanvas, body.menu-ui-hidden.menu-world #worldCanvas { filter: none; }
 #menu-eye-box { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: none; }
 body.menu-world #menu-eye-box { display: flex; }
-#menu-scene-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: none; gap: 8px; }
+#menu-scene-bar { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: none; flex-direction: row; width: auto; gap: 8px; }
 body.menu-ui-hidden #menu-scene-bar { display: flex; }
 
 /* ---- The game opening, as the page loads (#main-menu.intro, main.js; the curtain lifted, menu-scene.js):
@@ -1532,6 +1532,16 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .language-list .language-option { justify-content: center; }
 /* (a developers' row, hidden: its class's display mustn't show it) */
 .dev-setting[hidden] { display: none; }
+/* (glide.js) the soft light sliding under the mouse along a row of options */
+.glide { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; border-radius: 6px; opacity: 0;
+  background: rgba(255, 236, 190, 0.1); box-shadow: inset 0 0 0 1px rgba(255, 228, 160, 0.45), 0 0 10px rgba(255, 220, 140, 0.18);
+  transition: transform 0.18s cubic-bezier(0.25, 0.8, 0.3, 1), width 0.18s ease, height 0.18s ease, opacity 0.15s ease; }
+.glide.on { opacity: 1; }
+.glide.jump { transition: none; }
+/* a menu screen coming in: faded up a little, not appearing at once */
+@keyframes menu-screen-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+#main-menu .main-menu-content:not([hidden]) { animation: menu-screen-in 0.22s ease-out both; }
+@media (prefers-reduced-motion: reduce) { #main-menu .main-menu-content:not([hidden]) { animation: none; } .glide { transition: none; } }
 .language-option .flag { flex: none; }
 
 /* (#326) the music player in Settings: a long list that scrolls inside the panel */

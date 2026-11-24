@@ -785,6 +785,8 @@ export const ukLanguage = {
       'loading.world': 'Створюємо світ…',
       'loading.save': 'Завантажуємо збереження…',
       'menu.nextScene': '[[reroll]] Інша сценка',
+      'menu.nextSceneHint': 'Інша сценка',
+      'menu.showMenuHint': 'Назад до меню',
       'menu.showMenu': '[[menu]] Меню',
       'voice.humans.hired': 'Готовий до роботи!|До ваших послуг.|З чого почати?|Привіт, я новенький.|Радий бути тут.',
       'voice.humans.tool': 'Оце діло!|Стане в пригоді.|Згодиться.',

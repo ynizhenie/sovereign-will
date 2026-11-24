@@ -785,6 +785,8 @@ export const enLanguage = {
       'loading.world': 'Making the world…',
       'loading.save': 'Loading the save…',
       'menu.nextScene': '[[reroll]] Next scene',
+      'menu.nextSceneHint': 'Next scene',
+      'menu.showMenuHint': 'Back to the menu',
       'menu.showMenu': '[[menu]] Menu',
       'voice.humans.hired': 'Ready to work!|At your service.|Where do I start?|Hello, I\'m new here.|Glad to be here.',
       'voice.humans.tool': 'Now we\'re talking!|This will come in handy.|This will do.',

@@ -713,9 +713,15 @@ test('the menu put away to watch, the scene changed there, the menu brought back
     return { eye: bounds('#menu-hide'), flag: bounds('#menu-flags .flag-button') };
   });
   expect(controlSizes.eye).toEqual(controlSizes.flag);
+  const eyeAt = await page.locator('#menu-hide').boundingBox();
   await page.click('#menu-hide');
   await expect(page.locator('#main-menu .main-menu-content[data-screen="home"]')).toBeHidden();
   await expect(page.locator('#menu-scene-bar')).toBeVisible();
+  // (the menu brought back from the very corner the eye was in, the next scene beside it)
+  const showAt = await page.locator('#menu-show').boundingBox(), nextAt = await page.locator('#menu-next-scene').boundingBox();
+  expect(Math.abs(showAt.x - eyeAt.x)).toBeLessThan(1);
+  expect(Math.abs(showAt.y - eyeAt.y)).toBeLessThan(1);
+  expect(nextAt.x + nextAt.width).toBeLessThanOrEqual(showAt.x);
   await page.click('#menu-next-scene');
   expect(await page.evaluate(() => menuWorld.scene)).toBe('fishing');
   expect(await page.evaluate(() => chunkStats())).toMatchObject({ pending: 0, holes: 0 });
