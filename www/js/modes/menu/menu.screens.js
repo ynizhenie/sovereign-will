@@ -67,6 +67,26 @@ export function setSettingsDrawer(name) {
 }
 addEventListener('resize', placeDrawer);
 
+// The menu's one pane of glass (#menu-glass) laid under the screen showing: from screen to screen it moves and takes
+// the new one's size, so the pane stays and only what's on it changes
+let glassFor = '';
+function placeGlass() {
+  const glass = document.getElementById('menu-glass');
+  const screen = /** @type {HTMLElement | null} */ (document.querySelector('#main-menu .main-menu-content[data-screen]:not([hidden])'));
+  if (!glass) return;
+  if (!screen || !screen.offsetWidth) { glass.classList.remove('on'); glassFor = ''; return; }
+  // (the first time, or back from nothing: in place at once, then it moves from there)
+  glass.classList.toggle('jump', !glassFor);
+  Object.assign(glass.style, { left: `${screen.offsetLeft}px`, top: `${screen.offsetTop}px`, width: `${screen.offsetWidth}px`, height: `${screen.offsetHeight}px` });
+  glass.classList.add('on');
+  glassFor = screen.dataset.screen || '';
+}
+if (typeof ResizeObserver !== 'undefined') {
+  const watch = new ResizeObserver(() => placeGlass());
+  queueMicrotask(() => document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => watch.observe(screen)));
+}
+addEventListener('resize', () => placeGlass());
+
 export function showMenuScreen(name) {
   if (name === 'music') { showMenuScreen('settings'); setSettingsDrawer('sound'); return; } // (the player is in Sound's panel now)
   if (name !== 'settings' && settingsDrawer) setSettingsDrawer(null);
@@ -84,6 +104,7 @@ export function showMenuScreen(name) {
     screen.hidden = screen.dataset.screen !== name;
   });
   document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
+  placeGlass();
 }
 
 // (#326) The player in Settings: each track of the game by where it plays, with its name, when it plays, a button to listen to it

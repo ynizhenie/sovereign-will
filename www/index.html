@@ -16,6 +16,9 @@
 <div id="main-menu" data-menu-screen="home">
     <!-- dark while the game opens, lifted onto the world behind the menu (style.css: the game opening) -->
     <div id="intro-curtain"></div>
+    <!-- the menu's one pane of glass, under whichever screen shows: it moves and takes the next screen's size,
+         rather than each screen bringing a pane of its own (menu.screens.js placeGlass) -->
+    <div id="menu-glass" aria-hidden="true"></div>
     <!-- the game's name, big, on top of the main menu's first screen -->
     <div class="menu-title" id="menu-title"><span>Sovereign Will</span></div>
     <!-- put the menu away to watch the scene behind it; there, change the scene or bring the menu back (#256) -->

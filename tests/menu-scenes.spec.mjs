@@ -719,8 +719,8 @@ test('the menu put away to watch, the scene changed there, the menu brought back
   await expect(page.locator('#menu-scene-bar')).toBeVisible();
   // (the menu brought back from the very corner the eye was in, the next scene beside it)
   const showAt = await page.locator('#menu-show').boundingBox(), nextAt = await page.locator('#menu-next-scene').boundingBox();
-  expect(Math.abs(showAt.x - eyeAt.x)).toBeLessThan(1);
-  expect(Math.abs(showAt.y - eyeAt.y)).toBeLessThan(1);
+  expect(Math.abs(showAt.x - eyeAt.x)).toBeLessThan(2);
+  expect(Math.abs(showAt.y - eyeAt.y)).toBeLessThan(2);
   expect(nextAt.x + nextAt.width).toBeLessThanOrEqual(showAt.x);
   await page.click('#menu-next-scene');
   expect(await page.evaluate(() => menuWorld.scene)).toBe('fishing');

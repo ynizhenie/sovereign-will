@@ -39,7 +39,7 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
     const flag = document.getElementById('menu-flags');
     return getComputedStyle(flag).display !== 'none' && flag.getBoundingClientRect().width > 0;
   }));
-  expect(flagVisible).toEqual([true, true, true, true, true, true]);
+  expect(flagVisible).toEqual([true, false, false, false, false, false]); // (on the first screen only, with the eye)
   expect(errors).toEqual([]);
 });
 
