@@ -65,7 +65,7 @@ export function setSettingsDrawer(name) {
   if (name === 'sound') renderMusicPlayer();
   placeDrawer();
 }
-addEventListener('resize', placeDrawer);
+if (typeof addEventListener === 'function') addEventListener('resize', placeDrawer); // (not in the Node tests)
 
 // The menu's one pane of glass (#menu-glass) laid under the screen showing: from screen to screen it moves and takes
 // the new one's size, so the pane stays and only what's on it changes
@@ -85,7 +85,7 @@ if (typeof ResizeObserver !== 'undefined') {
   const watch = new ResizeObserver(() => placeGlass());
   queueMicrotask(() => document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => watch.observe(screen)));
 }
-addEventListener('resize', () => placeGlass());
+if (typeof addEventListener === 'function') addEventListener('resize', () => placeGlass());
 
 export function showMenuScreen(name) {
   if (name === 'music') { showMenuScreen('settings'); setSettingsDrawer('sound'); return; } // (the player is in Sound's panel now)
