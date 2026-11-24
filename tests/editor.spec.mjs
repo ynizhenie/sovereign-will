@@ -148,6 +148,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
 
   // Endless: Custom map lists it, and hides the map size and generator
   await page.locator('[data-screen="editor"] [data-back]').click();
+  await page.locator('#open-modes').click(); // (the modes are behind Play)
   await page.locator('#mode-endless').click();
   await expect(page.locator('#endless-open-maps')).toBeHidden();
   await page.locator('[data-map-source="custom"]').click();

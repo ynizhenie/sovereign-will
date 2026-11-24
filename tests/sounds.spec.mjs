@@ -102,7 +102,7 @@ test('sounds play where things happen on screen, not far off it, and not too oft
   expect(r).toEqual({ first: true, throttled: true, offScreen: true, silent: true });
 
   // the Settings remember it
-  await page.evaluate(() => { document.getElementById('main-menu').style.display = ''; showMenuScreen('settings'); });
+  await page.evaluate(() => { document.getElementById('main-menu').style.display = ''; showMenuScreen('settings'); setSettingsDrawer('sound'); });
   await page.click('[data-music="off"]');
   await page.click('[data-sound="off"]');
   expect(await page.evaluate(() => [loadSetting('music', 'on'), loadSetting('sound', 'on'), JSON.stringify(musicMix())])).toEqual(['off', 'off', '{}']);

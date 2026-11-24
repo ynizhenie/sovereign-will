@@ -26,7 +26,7 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
   for (let i = 1; i < codes.length; i++) await page.locator('#menu-flags .flag-button').click();
   expect(await page.evaluate(() => currentLanguage)).toBe(from);
   // in Settings: each language with its flag, the same choice; the flag by Settings follows
-  await page.evaluate(() => showMenuScreen('settings'));
+  await page.evaluate(() => { showMenuScreen('settings'); setSettingsDrawer('general'); });
   expect(await page.locator('#language-list .language-option svg').count()).toBe(3);
   await page.locator('#language-current').click(); // (a drop-down: the list opened first)
   await page.locator('#language-options [data-language="uk"]').click();
@@ -47,9 +47,9 @@ test('the music player lists every track with its name and when it plays; a trac
   const errors = await openGame(page);
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-musicOff'); showMenuScreen('settings'); });
   await expect(page.locator('#music-player')).toBeHidden();
-  await page.click('#open-music-player');
-  await expect(page.locator('[data-screen="music"]')).toBeVisible();
-  await expect(page.locator('[data-screen="settings"]')).toBeVisible(); // (drawn out beside Settings, not instead of it)
+  await page.click('[data-settings-group="sound"]'); // (the player is in Sound's panel, beside Settings)
+  await expect(page.locator('#music-player')).toBeVisible();
+  await expect(page.locator('[data-screen="settings"]')).toBeVisible();
   const r0 = await page.evaluate(() => ({
     rows: [...document.querySelectorAll('#music-player .music-row')].map(r => ({ id: r.dataset.track, text: r.querySelector('.music-name').innerText })),
     expected: 1 + Object.entries(GAME_CONFIG.battleMusic).filter(([key, tracks]) => Array.isArray(tracks) && !key.startsWith('backrooms')).map(([, tracks]) => tracks).reduce((n, tracks) => n + tracks.length, 0) + GAME_CONFIG.plagueMusic.length + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
@@ -66,7 +66,7 @@ test('the music player lists every track with its name and when it plays; a trac
   expect(await page.evaluate(() => musicPreview.id)).toBe('');
   // switched off: not picked (and kept on the device); all of a theme off: none
   await page.evaluate(() => { showMenuScreen('settings'); audio.musicOn = true; });
-  await page.click('#open-music-player');
+  await page.click('[data-settings-group="sound"]');
   await page.locator('#music-player [data-track="arena_muster"] .music-toggle').click();
   const r = await page.evaluate(() => {
     startBattleMode(); battle.phase = 'setup';

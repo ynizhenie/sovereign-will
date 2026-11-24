@@ -40,6 +40,7 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await openFresh(page);
   await page.evaluate(() => enterMenuWorld('fishing')); // (the humans' HUD: the menu's scene may be the undead's, #417)
   await page.click('#open-settings');
+  await page.click('[data-settings-group="general"]');
   await page.click('#language-current'); // (a drop-down)
   await page.click('#language-options button[data-language="uk"]');
   await page.click('#main-menu [data-screen="settings"] [data-back]');

@@ -39,33 +39,37 @@ function initSwitches() {
   }
 }
 
-// The music player: a panel drawn out beside Settings, not a screen of its own (it stays out while Settings shows)
-let musicDrawer = false;
-const placeMusicDrawer = () => {
-  const panel = /** @type {HTMLElement} */ (document.querySelector('[data-screen="music"]'));
+// Settings' groups (General, Graphics, Sound): each a panel drawn out beside Settings, one at a time, put away by a tap
+// on its button again; on a narrow screen it comes out under the buttons (the music player is in Sound's)
+/** @type {string | null} */
+let settingsDrawer = null;
+const drawerOf = name => /** @type {HTMLElement} */ (document.querySelector(`[data-drawer="${name}"]`));
+const placeDrawer = () => {
+  if (!settingsDrawer) return;
+  const panel = drawerOf(settingsDrawer);
   const settings = /** @type {HTMLElement} */ (document.querySelector('[data-screen="settings"]'));
-  const box = settings.getBoundingClientRect(), width = Math.min(300, innerWidth - 24);
-  // (beside it when there's room, else over it)
-  const left = box.right + 12 + width <= innerWidth - 8 ? box.right + 12 : Math.max(12, box.left + (box.width - width) / 2);
-  panel.style.setProperty('--drawer-top', `${box.top}px`);
-  panel.style.setProperty('--drawer-left', `${left}px`);
+  const box = settings.getBoundingClientRect(), width = Math.min(320, innerWidth - 24);
+  const beside = box.right + 12 + width <= innerWidth - 8;
+  const top = beside ? box.top : box.bottom + 10;
+  panel.style.setProperty('--drawer-top', `${top}px`);
+  panel.style.setProperty('--drawer-left', `${beside ? box.right + 12 : Math.max(12, box.left + (box.width - width) / 2)}px`);
   panel.style.setProperty('--drawer-width', `${width}px`);
-  panel.style.setProperty('--drawer-height', `${box.height}px`);
+  panel.style.setProperty('--drawer-max-height', `${Math.max(160, innerHeight - top - 12)}px`);
+  panel.classList.toggle('below', !beside);
 };
-/** @param {boolean} open */
-export function setMusicDrawer(open) {
-  const panel = /** @type {HTMLElement} */ (document.querySelector('[data-screen="music"]'));
-  musicDrawer = open;
-  if (open) { renderMusicPlayer(); placeMusicDrawer(); }
-  panel.classList.toggle('drawer', open);
-  panel.hidden = !open;
-  document.getElementById('open-music-player')?.classList.toggle('active', open);
+/** @param {string | null} name the group to draw out, null: none */
+export function setSettingsDrawer(name) {
+  settingsDrawer = name;
+  document.querySelectorAll('[data-drawer]').forEach(panel => { /** @type {HTMLElement} */ (panel).hidden = /** @type {HTMLElement} */ (panel).dataset.drawer !== name; });
+  document.querySelectorAll('[data-settings-group]').forEach(button => button.classList.toggle('active', /** @type {HTMLElement} */ (button).dataset.settingsGroup === name));
+  if (name === 'sound') renderMusicPlayer();
+  placeDrawer();
 }
-addEventListener('resize', () => { if (musicDrawer) placeMusicDrawer(); });
+addEventListener('resize', placeDrawer);
 
 export function showMenuScreen(name) {
-  if (name === 'music') { showMenuScreen('settings'); setMusicDrawer(true); return; } // (it's beside Settings now)
-  if (name !== 'settings' && musicDrawer) setMusicDrawer(false);
+  if (name === 'music') { showMenuScreen('settings'); setSettingsDrawer('sound'); return; } // (the player is in Sound's panel now)
+  if (name !== 'settings' && settingsDrawer) setSettingsDrawer(null);
   if (name !== 'settings' && name !== 'music' && musicPreview.id) previewTrack(''); // (a track listened to stops as the menu is left, #326)
   if (name === 'settings' || name === 'music') renderMusicPlayer();
   if (name === 'endless' || name === 'editor' || name === 'plague') {
@@ -77,7 +81,7 @@ export function showMenuScreen(name) {
     seedScreen = null;
   }
   document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => {
-    screen.hidden = screen.dataset.screen !== name && !(screen.dataset.screen === 'music' && musicDrawer);
+    screen.hidden = screen.dataset.screen !== name;
   });
   document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
 }
@@ -156,8 +160,10 @@ export function initMenuScreens() {
   onTap(document.getElementById('open-modes'), () => showMenuScreen('modes'));
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
-  onTap(document.getElementById('open-music-player'), () => setMusicDrawer(!musicDrawer));
-  onTap(document.getElementById('music-close'), () => setMusicDrawer(false));
+  document.querySelectorAll('[data-settings-group]').forEach(button => onTap(/** @type {HTMLElement} */ (button), () => {
+    const name = /** @type {HTMLElement} */ (button).dataset.settingsGroup || null;
+    setSettingsDrawer(settingsDrawer === name ? null : name);
+  }));
   initSwitches();
   document.querySelectorAll('[data-mode-info]').forEach(button => onTap(button, () => {
     const mode = button.dataset.modeInfo;
@@ -232,7 +238,7 @@ export function initMenuScreens() {
   const openList = open => { languageList.hidden = !open; currentButton.setAttribute('aria-expanded', String(open)); };
   const markLanguage = () => {
     languageList.querySelectorAll('[data-language]').forEach(b => b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.language === currentLanguage));
-    currentButton.innerHTML = `${flagHtml(currentLanguage)}<span>${LANGUAGES[currentLanguage].label}</span><i class="language-caret" aria-hidden="true">▾</i>`;
+    currentButton.innerHTML = `${flagHtml(currentLanguage)}<span>${LANGUAGES[currentLanguage].label}</span><i class="language-caret" aria-hidden="true"></i>`;
     renderMusicPlayer();
   };
   const flagBox = document.getElementById('menu-flags');
