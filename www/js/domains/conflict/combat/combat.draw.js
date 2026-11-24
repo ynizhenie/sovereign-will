@@ -3,7 +3,7 @@
 import { GAME_CONFIG, getDefinition } from '../../../content/configs/index.js';
 import { drawIcon } from '../../../ui/index.js';
 import { forEachInRect, game } from '../../../engine/world/index.js';
-import { ctx, getViewRect } from '../../../engine/platform/index.js';
+import { ctx, getViewRect, getViewScale } from '../../../engine/platform/index.js';
 import { bloodAlpha, bodyBloodAlpha } from './combat.rules.js';
 import { corpseHasWorms } from '../../economy/fishing/index.js';
 import { tileVariantHash } from '../../world/index.js';
@@ -83,14 +83,41 @@ export function drawTargetMark(en) {
   ctx.stroke();
 }
 
+// What's drawn many times a frame and the same each time (a splat of blood, an arrow that stopped) painted once into a
+// small picture for each zoom step and laid with one call (a battle on a Mi Pad 4: blood and stuck arrows were an
+// eighth of the frame, shapes filled one by one). box: [x0, y0, w, h] in world units round the thing's point
+/** @type {Map<string, { canvas: HTMLCanvasElement, box: number[] }>} */
+const sprites = new Map();
+/** @param {string} name @param {number[]} box @param {(g: CanvasRenderingContext2D) => void} paint */
+function sprite(name, box, paint) {
+  const scale = 2 ** (Math.ceil(Math.log2(getViewScale()) * 2) / 2), key = `${name}|${scale}`;
+  let sp = sprites.get(key);
+  if (!sp) {
+    if (sprites.size > 64) sprites.clear();
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.ceil(box[2] * scale)); canvas.height = Math.max(1, Math.ceil(box[3] * scale));
+    const g = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+    g.setTransform(scale, 0, 0, scale, -box[0] * scale, -box[1] * scale);
+    paint(g);
+    sprites.set(key, (sp = { canvas, box }));
+  }
+  return sp;
+}
+
 // Blood on the ground, and footprints out of blood or dung
+const SPLAT_R = 16; // (a splat's picture is painted this big and laid at its own size)
+const splatOf = color => sprite(`splat|${color}`, [-SPLAT_R * 1.3, -SPLAT_R, SPLAT_R * 2.6, SPLAT_R * 2], g => {
+  g.fillStyle = color === 'dung' ? 'rgb(92, 64, 26)' : 'rgb(100, 0, 0)';
+  g.beginPath(); g.ellipse(0, 0, SPLAT_R * 1.3, SPLAT_R, 0, 0, Math.PI * 2); g.fill();
+});
 export function drawBloodOnGround() {
   const v = getViewRect(30);
+  const blood = splatOf('blood').canvas, dung = splatOf('dung').canvas;
   forEachInRect(game.bloodSplats, v.x0, v.y0, v.x1, v.y1, b => {
-    const rgb = b.color === 'dung' ? '92, 64, 26' : '100, 0, 0';
-    ctx.fillStyle = `rgba(${rgb}, ${0.55 * bloodAlpha(b.age)})`;
-    ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r * 1.3, b.r, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.55 * bloodAlpha(b.age);
+    ctx.drawImage(b.color === 'dung' ? dung : blood, b.x - b.r * 1.3, b.y - b.r, b.r * 2.6, b.r * 2);
   });
+  ctx.globalAlpha = 1;
 }
 
 // Worms on a corpse (a fisher's bait, see corpseHasWorms): a few pink ones crawling over it, each its own way,
@@ -201,32 +228,50 @@ function drawPetCorpse(c, grey) {
   ctx.restore();
 }
 
-// (#326) An arrow that stopped: its shaft and fletching out of what it hit, a short stub; fading as it goes
-function drawStuckArrow(x, y, a, fromEnemy, alpha) {
-  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(a);
-  ctx.fillStyle = '#8e5a2b'; ctx.fillRect(-9, -0.75, 9, 1.5);
-  ctx.fillStyle = fletching(fromEnemy);
-  ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-12, 2.5); ctx.closePath(); ctx.fill();
-  ctx.restore();
+// (#326) An arrow that stopped: its shaft and fletching out of what it hit, a short stub; fading as it goes.
+// A bolt: its thicker shaft and fletching. Each a picture (see sprite), laid turned the way it flew
+/** @param {CanvasRenderingContext2D} g @param {string} feather */
+function paintStuckArrow(g, feather) {
+  g.fillStyle = '#8e5a2b'; g.fillRect(-9, -0.75, 9, 1.5);
+  g.fillStyle = feather;
+  g.beginPath(); g.moveTo(-9, 0); g.lineTo(-12, -2.5); g.lineTo(-7, 0); g.lineTo(-12, 2.5); g.closePath(); g.fill();
+}
+/** @param {CanvasRenderingContext2D} g @param {string} feather */
+function paintStuckBolt(g, feather) {
+  g.fillStyle = '#6d4520'; g.fillRect(-7, -1, 7, 2);
+  g.fillStyle = feather;
+  g.beginPath(); g.moveTo(-7, 0); g.lineTo(-10, -2.8); g.lineTo(-5, 0); g.lineTo(-10, 2.8); g.closePath(); g.fill();
 }
 const fadeOf = age => Math.min(1, Math.max(0, (GAME_CONFIG.stuckArrows.seconds - age) / 4));
-
-// (#326) A bolt that stopped: its thicker shaft and fletching out of what it hit
-function drawStuckBolt(x, y, a, fromEnemy, alpha) {
-  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(a);
-  ctx.fillStyle = '#6d4520'; ctx.fillRect(-7, -1, 7, 2);
-  ctx.fillStyle = fletching(fromEnemy);
-  ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-10, -2.8); ctx.lineTo(-5, 0); ctx.lineTo(-10, 2.8); ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
-const drawStuck = (a, x, y, alpha) => (a.bolt ? drawStuckBolt : drawStuckArrow)(x, y, a.a, a.fromEnemy, alpha);
+const STUCK_BOX = [-13, -3.5, 14, 7];
+/** @type {DOMMatrix} */ let stuckView;
+/** @type {HTMLCanvasElement[]} (this frame's four pictures: an arrow or a bolt, ours or theirs) */ let stuckSprites = [];
+const stuckSpritesNow = () => {
+  stuckSprites = [];
+  for (const bolt of [false, true]) for (const fromEnemy of [false, true]) {
+    const feather = fletching(fromEnemy);
+    stuckSprites.push(sprite(`${bolt ? 'bolt' : 'arrow'}|${feather}`, STUCK_BOX, g => (bolt ? paintStuckBolt : paintStuckArrow)(g, feather)).canvas);
+  }
+};
+const drawStuck = (a, x, y, alpha) => {
+  if (alpha <= 0) return;
+  const picture = stuckSprites[(a.bolt ? 2 : 0) + (a.fromEnemy ? 1 : 0)];
+  const m = stuckView, cos = Math.cos(a.a), sin = Math.sin(a.a);
+  ctx.setTransform(m.a * cos + m.c * sin, m.b * cos + m.d * sin, m.c * cos - m.a * sin, m.d * cos - m.b * sin, m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f);
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(picture, STUCK_BOX[0], STUCK_BOX[1], STUCK_BOX[2], STUCK_BOX[3]);
+};
 
 // Arrows and fireballs in flight, and those that stopped: on the ground, in the living, in corpses and dummies
 export function drawProjectiles() {
-  for (const a of game.stuckArrows) drawStuck(a, a.x, a.y, fadeOf(a.age));
-  for (const list of [game.settlers, game.enemies]) for (const u of list) if (u.stuck) for (const a of u.stuck) drawStuck(a, u.x + a.x, u.y + a.y, fadeOf(a.age));
-  for (const c of game.corpses) if (c.stuck) for (const a of c.stuck) drawStuck(a, c.x + a.x, c.y + a.y, Math.max(0, Math.min(1, (GAME_CONFIG.corpses.seconds - c.age) / 10)) * 0.9);
-  for (const d of game.buildings) if (d.arrowsStuck) for (const a of d.arrowsStuck) drawStuck(a, d.x + a.x, d.y + a.y, 1);
+  // (only what's on the screen)
+  const v = getViewRect(20), seen = (x, y) => x >= v.x0 && x <= v.x1 && y >= v.y0 && y <= v.y1;
+  stuckView = ctx.getTransform(); stuckSpritesNow();
+  for (const a of game.stuckArrows) if (seen(a.x, a.y)) drawStuck(a, a.x, a.y, fadeOf(a.age));
+  for (const list of [game.settlers, game.enemies]) for (const u of list) if (u.stuck && seen(u.x, u.y)) for (const a of u.stuck) drawStuck(a, u.x + a.x, u.y + a.y, fadeOf(a.age));
+  for (const c of game.corpses) if (c.stuck && seen(c.x, c.y)) for (const a of c.stuck) drawStuck(a, c.x + a.x, c.y + a.y, Math.max(0, Math.min(1, (GAME_CONFIG.corpses.seconds - c.age) / 10)) * 0.9);
+  for (const d of game.buildings) if (d.arrowsStuck && seen(d.x, d.y)) for (const a of d.arrowsStuck) drawStuck(a, d.x + a.x, d.y + a.y, 1);
+  ctx.setTransform(stuckView); ctx.globalAlpha = 1;
   game.projectiles.forEach(proj => {
     // fireballs bigger and orange; a bolt is short and thick; everything else is an arrow, pointing where it flies
     if (proj.fire) { ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f1c40f'; }

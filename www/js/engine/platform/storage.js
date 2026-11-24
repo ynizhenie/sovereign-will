@@ -8,6 +8,9 @@ export function loadSetting(name, fallback) {
   try { return localStorage.getItem(key(name)) || fallback; } catch (e) { return fallback; }
 }
 
+// The developers' settings (WebGL, the performance monitor) shown: the page opened with ?dev, or the setting 'dev' on
+export const DEV_SETTINGS = (typeof location !== 'undefined' && /[?&]dev\b/.test(location.search || '')) || loadSetting('dev', 'off') === 'on';
+
 export function saveSetting(name, value) {
   try { localStorage.setItem(key(name), value); return true; } catch (e) { return false; }
 }

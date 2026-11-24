@@ -30,7 +30,7 @@ function drawBoarBody(b, dead) {
   ctx.save();
   ctx.translate(b.x, b.y + (lying ? 4 : 0));
   ctx.scale(d * look.size, (dead ? -1 : 1) * look.size);
-  if (!dead) { ctx.save(); ctx.scale(d, 1); castShadow(ctx, 0, lying ? 5 : 9, 12, 3.5, lying ? 6 : 12); ctx.restore(); } // (#307)
+  if (!dead) { ctx.save(); ctx.scale(d, 1); castShadow(ctx, 0, lying ? 5 : 9, 12, 3.5, lying ? 6 : 12, true); ctx.restore(); } // (#307)
   // legs (folded under it lying)
   const step = dead || lying ? 0 : Math.sin((b.step || 0) * 0.5) * 1.6;
   ctx.fillStyle = '#4e2f1f';

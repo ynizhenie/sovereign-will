@@ -55,7 +55,7 @@ function drawHound(s, d, kind, id, sideColor) {
   // (#326) a bite: a lunge of the whole body, its jaws open wide and snapping shut (bite: 0..1 through it)
   const since = game.pathTick - (s.struckAt ?? -1e9), biting = since < 16, bite = biting ? since / 16 : 0;
   const lunge = biting ? Math.sin(Math.PI * bite) * 4 : 0, gape = biting ? Math.max(0, Math.sin(Math.PI * Math.min(1, bite * 1.6))) : 0;
-  castShadow(ctx, 0, lying ? 4 : 8, 11, 3, lying ? 5 : 10);
+  castShadow(ctx, 0, lying ? 4 : 8, 11, 3, lying ? 5 : 10, true);
   ctx.save();
   ctx.scale(d, 1);
   ctx.translate(lunge, lying ? 4 : 0);
@@ -116,7 +116,7 @@ function drawHound(s, d, kind, id, sideColor) {
 function drawGhost(s, d, id, color) {
   const bob = Math.sin(game.pathTick * 0.08 + id) * 2.5;
   ctx.save();
-  ctx.globalAlpha = 0.25; castShadow(ctx, 0, 10, 7, 2, 4); ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.25; castShadow(ctx, 0, 10, 7, 2, 4, true); ctx.globalAlpha = 1;
   ctx.translate(0, -6 + bob);
   ctx.scale(d, 1);
   ctx.globalAlpha = 0.72;

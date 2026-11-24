@@ -6,11 +6,12 @@
 // or none of our own work at all (outside: the graphics card, the browser putting the picture on the screen, another app). A panel shows a graph of the frames, the numbers and the last drops; "Copy report" puts all of it as
 // text on the clipboard to be sent. Off, every perfMark is one check of a flag.
 
-import { canvas, getViewScale, glReady, loadSetting, onTap, saveSetting, t } from '../engine/platform/index.js';
+import { DEV_SETTINGS, canvas, getViewScale, glReady, loadSetting, onTap, saveSetting, t } from '../engine/platform/index.js';
 import { game } from '../engine/world/index.js';
 import { chunkPaintTotals } from '../domains/world/index.js';
 
-export const perf = { on: loadSetting('perfMonitor', 'off') === 'on' };
+// (on again at the next start only with the developers' settings shown: hidden, it couldn't be turned off)
+export const perf = { on: DEV_SETTINGS && loadSetting('perfMonitor', 'off') === 'on' };
 
 const RING = 1200; // frames kept for the graph and the lows (ten seconds at 120 fps)
 const BUCKETS = [9, 12, 17, 25, 34, 50, Infinity]; // ms: a frame's wait, counted into the first it's under

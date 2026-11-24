@@ -265,6 +265,10 @@ const shadowScale = () => 0.5 / Math.max(1, screenPixelRatio);
 let shadowLayer = null;
 /** @type {KeptShadow[]} */
 let keptShadows = [], lastShadows = [];
+// the shadows of what moves on its own (a boar, a pet, a raft) kept from a frame for the next one's, but filled straight on
+// it, not into the picture: in the picture they moved only when it was made again, twice a second (Lima: "the shadows jerk")
+/** @type {KeptShadow[]} */
+let movingShadows = [], lastMoving = [];
 // the frame's world transform and its inverse while its shadows are kept (null: they aren't)
 /** @type {DOMMatrix | null} */
 let worldInverse = null;
@@ -300,6 +304,7 @@ let layerFor = { key: '', pose: -1 };
 // endShadowFrame are kept for the next frame's picture
 export function beginShadowFrame(c = ctx) {
   lastShadows = keptShadows; keptShadows = [];
+  lastMoving = movingShadows; movingShadows = [];
   worldInverse = shadowsEnabled && typeof document !== 'undefined' ? c.getTransform().inverse() : null;
 }
 
@@ -364,15 +369,26 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
     c.drawImage(layer, 0, 0, width, height, 0, 0, width / SHADOW_SCALE, height / SHADOW_SCALE);
     c.restore();
   }
-  // the figures' shadows, where they are this frame, over the ground's (a little darker where one falls on a tree's)
+  // what moves on its own where it was the frame before, and the figures' shadows where they are this frame, over the
+  // ground's (a little darker where one falls on a tree's)
+  for (const shadow of lastMoving) {
+    c.save();
+    c.setTransform(m.multiply(shadow.at));
+    c.globalAlpha = Math.min(1, shadow.alpha);
+    c.filter = shadow.filter;
+    c.fillStyle = '#000';
+    c.fill(shadow.path);
+    c.restore();
+  }
   fillingFrame = true;
   try { drawNow(); } finally { fillingFrame = false; }
 }
 
 // A shadow of the shape path (with c's transform) as dark as alpha. In the world it goes into the frame's shadows (see
 // above); anywhere else (a thing's picture, a portrait) it's filled where it is
-/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha */
-export function drawShadowPath(c, path, alpha) {
+// moving: of a thing that moves on its own (see movingShadows)
+/** @param {CanvasRenderingContext2D} c @param {Path2D} path @param {number} alpha @param {boolean} [moving] */
+export function drawShadowPath(c, path, alpha, moving = false) {
   if (catching) {
     catching.list.push({ path, at: catching.inverse.multiply(c.getTransform()), share: alpha * c.globalAlpha / Math.max(1e-6, getSun().alpha), filter: c.filter });
     return;
@@ -386,7 +402,7 @@ export function drawShadowPath(c, path, alpha) {
     return;
   }
   if (c === ctx && worldInverse) {
-    keptShadows.push({ path, at: worldInverse.multiply(c.getTransform()), alpha: alpha * c.globalAlpha, filter: c.filter });
+    (moving ? movingShadows : keptShadows).push({ path, at: worldInverse.multiply(c.getTransform()), alpha: alpha * c.globalAlpha, filter: c.filter });
     return;
   }
   c.save();
@@ -396,8 +412,8 @@ export function drawShadowPath(c, path, alpha) {
 }
 
 // A thing's shadow on the ground: an ellipse round its foot (x, y) of rx by ry, cast away from the sun by its
-// height and stretched along the way it falls. c: where to draw
-export function castShadow(c, x, y, rx, ry, height = 10) {
+// height and stretched along the way it falls. c: where to draw; moving: a thing that moves on its own (see movingShadows)
+export function castShadow(c, x, y, rx, ry, height = 10, moving = false) {
   if (!shadowsEnabled) return;
   const sun = getSun();
   if (sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
@@ -405,5 +421,5 @@ export function castShadow(c, x, y, rx, ry, height = 10) {
   const path = new Path2D();
   const cx = x + ox * 0.5, cy = y + oy * 0.5, ex = rx + Math.abs(ox) * 0.5, ey = ry + Math.abs(oy) * 0.25;
   path.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
-  drawShadowPath(c, path, sun.alpha);
+  drawShadowPath(c, path, sun.alpha, moving);
 }
