@@ -26,30 +26,36 @@ function dim(row) {
   if (glide) glide.classList.remove('on');
 }
 
+/** @type {HTMLElement | null} */
+let under = null; // the option the light is under
+
+/** @param {HTMLElement} glide @param {HTMLElement} option */
+function fit(glide, option) {
+  // (its size set at once, not slid: a row's options are as wide as each other, and a size can't be slid smoothly)
+  glide.style.width = `${option.offsetWidth}px`;
+  glide.style.height = `${option.offsetHeight}px`;
+  glide.style.transform = `translate3d(${option.offsetLeft}px, ${option.offsetTop}px, 0)`;
+}
+
 export function initGlide() {
   document.addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse') return;
     const option = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest?.(OPTION) || null);
     const row = option && !option.matches(':disabled') ? option.parentElement : null;
+    if (option === under && row === lit) return; // (the same option: nothing to move)
     if (row !== lit && lit) dim(lit);
+    under = row ? option : null;
     if (!row || !option) { lit = null; return; }
     const glide = glideOf(row);
-    const place = `translate(${option.offsetLeft}px, ${option.offsetTop}px)`;
     // (coming into the row: put where the pointer is at once, then slide from there)
     if (row !== lit || !glide.classList.contains('on')) {
       glide.classList.add('jump');
-      glide.style.transform = place;
-      glide.style.width = `${option.offsetWidth}px`;
-      glide.style.height = `${option.offsetHeight}px`;
+      fit(glide, option);
       void glide.offsetWidth; // (the jump laid out before the slide is turned back on)
       glide.classList.remove('jump');
       glide.classList.add('on');
-    } else {
-      glide.style.transform = place;
-      glide.style.width = `${option.offsetWidth}px`;
-      glide.style.height = `${option.offsetHeight}px`;
-    }
+    } else fit(glide, option);
     lit = row;
   }, { passive: true });
-  document.addEventListener('pointerleave', () => { if (lit) dim(lit); lit = null; });
+  document.addEventListener('pointerleave', () => { if (lit) dim(lit); lit = null; under = null; });
 }
