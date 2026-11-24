@@ -309,9 +309,9 @@
         </div>
 
         <!-- (#322) VSYNC (on the next start) and the picture's quality (its resolution) -->
-        <div class="wave-settings">
+        <div class="wave-settings switch-row">
             <div data-i18n="menu.vsync">VSYNC:</div>
-            <div class="wave-options">
+            <div class="wave-options switch">
                 <button class="fps-option" data-vsync="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-vsync="on" data-i18n="menu.on">On</button>
             </div>
@@ -320,51 +320,51 @@
 
         <!-- a trial: the ground and nature drawn by the graphics card (on the next start), see engine/platform/gl.js;
              a developers' setting, shown with ?dev (DEV_SETTINGS) -->
-        <div class="wave-settings dev-setting" hidden>
+        <div class="wave-settings switch-row dev-setting" hidden>
             <div data-i18n="menu.gl">WebGL (trial):</div>
-            <div class="wave-options">
+            <div class="wave-options switch">
                 <button class="fps-option" data-gl="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-gl="on" data-i18n="menu.on">On</button>
             </div>
             <div class="settings-note" id="gl-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
         </div>
 
-        <div class="wave-settings">
+        <div class="wave-settings switch-row">
             <div data-i18n="menu.showFps">Show FPS:</div>
-            <div class="wave-options" id="show-fps-options">
+            <div class="wave-options switch" id="show-fps-options">
                 <button class="fps-option" data-show-fps="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-show-fps="on" data-i18n="menu.on">On</button>
             </div>
         </div>
 
         <!-- what the frames take and where they drop, with a report to send (app/perfmon.js); a developers' setting -->
-        <div class="wave-settings dev-setting" hidden>
+        <div class="wave-settings switch-row dev-setting" hidden>
             <div data-i18n="menu.perfMonitor">Performance monitor:</div>
-            <div class="wave-options">
+            <div class="wave-options switch">
                 <button class="fps-option" data-perf-monitor="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-perf-monitor="on" data-i18n="menu.on">On</button>
             </div>
         </div>
 
-        <div class="wave-settings">
+        <div class="wave-settings switch-row">
             <div data-i18n="menu.shadows">Shadows:</div>
-            <div class="wave-options" id="shadows-options">
+            <div class="wave-options switch" id="shadows-options">
                 <button class="fps-option" data-shadows="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-shadows="on" data-i18n="menu.on">On</button>
             </div>
         </div>
 
-        <div class="wave-settings">
+        <div class="wave-settings switch-row">
             <div data-i18n="menu.sound">Sound:</div>
-            <div class="wave-options">
+            <div class="wave-options switch">
                 <button class="fps-option" data-sound="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-sound="on" data-i18n="menu.on">On</button>
             </div>
         </div>
 
-        <div class="wave-settings">
+        <div class="wave-settings switch-row">
             <div data-i18n="menu.music">Music:</div>
-            <div class="wave-options">
+            <div class="wave-options switch">
                 <button class="fps-option" data-music="off" data-i18n="menu.off">Off</button>
                 <button class="fps-option" data-music="on" data-i18n="menu.on">On</button>
             </div>
@@ -372,8 +372,9 @@
         <button id="open-music-player" class="menu-button" data-i18n="menu.openMusicPlayer">Open music player</button>
     </div>
 
+    <!-- (a panel drawn out beside Settings, menu.screens.js setMusicDrawer; its Back puts it away) -->
     <div class="main-menu-content" data-screen="music" hidden>
-        <button class="menu-back" data-back-to="settings" data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" id="music-close" data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="music.player">Music player</h1>
         <!-- (#326) each track: its name, when it plays, a button to listen to it, and a switch to turn it off -->
         <div id="music-player"></div>

@@ -41,7 +41,7 @@ export function initGlide() {
   document.addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse') return;
     const option = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest?.(OPTION) || null);
-    const row = option && !option.matches(':disabled') ? option.parentElement : null;
+    const row = option && !option.matches(':disabled') && !option.parentElement?.classList.contains('switch') ? option.parentElement : null;
     if (option === under && row === lit) return; // (the same option: nothing to move)
     if (row !== lit && lit) dim(lit);
     under = row ? option : null;

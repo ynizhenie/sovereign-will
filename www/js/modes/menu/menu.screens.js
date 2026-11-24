@@ -21,7 +21,51 @@ const seedInput = /** @type {HTMLInputElement} */ (seedInputElement);
 /** @type {'endless' | 'editor' | 'plague' | null} */
 let seedScreen = 'endless';
 
+// An Off / On setting drawn as a switch (style.css .wave-options.switch): a tap on the half already chosen flips it to
+// the other, as a switch does, rather than choosing it again
+function initSwitches() {
+  for (const track of document.querySelectorAll('#main-menu .wave-options.switch')) {
+    const flip = /** @param {Event} e */ e => {
+      const button = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest('button'));
+      if (!button || !button.classList.contains('active')) return;
+      const other = [...track.querySelectorAll('button')].find(b => b !== button);
+      if (!other) return;
+      e.stopPropagation(); e.preventDefault();
+      if (e.type === 'click') other.click(); // (a touch's own click is stopped by preventDefault; the touch flips it below)
+      else other.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    };
+    track.addEventListener('click', flip, true);
+    track.addEventListener('touchend', flip, true);
+  }
+}
+
+// The music player: a panel drawn out beside Settings, not a screen of its own (it stays out while Settings shows)
+let musicDrawer = false;
+const placeMusicDrawer = () => {
+  const panel = /** @type {HTMLElement} */ (document.querySelector('[data-screen="music"]'));
+  const settings = /** @type {HTMLElement} */ (document.querySelector('[data-screen="settings"]'));
+  const box = settings.getBoundingClientRect(), width = Math.min(300, innerWidth - 24);
+  // (beside it when there's room, else over it)
+  const left = box.right + 12 + width <= innerWidth - 8 ? box.right + 12 : Math.max(12, box.left + (box.width - width) / 2);
+  panel.style.setProperty('--drawer-top', `${box.top}px`);
+  panel.style.setProperty('--drawer-left', `${left}px`);
+  panel.style.setProperty('--drawer-width', `${width}px`);
+  panel.style.setProperty('--drawer-height', `${box.height}px`);
+};
+/** @param {boolean} open */
+export function setMusicDrawer(open) {
+  const panel = /** @type {HTMLElement} */ (document.querySelector('[data-screen="music"]'));
+  musicDrawer = open;
+  if (open) { renderMusicPlayer(); placeMusicDrawer(); }
+  panel.classList.toggle('drawer', open);
+  panel.hidden = !open;
+  document.getElementById('open-music-player')?.classList.toggle('active', open);
+}
+addEventListener('resize', () => { if (musicDrawer) placeMusicDrawer(); });
+
 export function showMenuScreen(name) {
+  if (name === 'music') { showMenuScreen('settings'); setMusicDrawer(true); return; } // (it's beside Settings now)
+  if (name !== 'settings' && musicDrawer) setMusicDrawer(false);
   if (name !== 'settings' && name !== 'music' && musicPreview.id) previewTrack(''); // (a track listened to stops as the menu is left, #326)
   if (name === 'settings' || name === 'music') renderMusicPlayer();
   if (name === 'endless' || name === 'editor' || name === 'plague') {
@@ -32,7 +76,9 @@ export function showMenuScreen(name) {
   } else {
     seedScreen = null;
   }
-  document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => { screen.hidden = screen.dataset.screen !== name; });
+  document.querySelectorAll('#main-menu .main-menu-content[data-screen]').forEach(screen => {
+    screen.hidden = screen.dataset.screen !== name && !(screen.dataset.screen === 'music' && musicDrawer);
+  });
   document.getElementById('main-menu').dataset.menuScreen = name; // the title shows on the first screen
 }
 
@@ -110,7 +156,9 @@ export function initMenuScreens() {
   onTap(document.getElementById('open-modes'), () => showMenuScreen('modes'));
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
-  onTap(document.getElementById('open-music-player'), () => showMenuScreen('music'));
+  onTap(document.getElementById('open-music-player'), () => setMusicDrawer(!musicDrawer));
+  onTap(document.getElementById('music-close'), () => setMusicDrawer(false));
+  initSwitches();
   document.querySelectorAll('[data-mode-info]').forEach(button => onTap(button, () => {
     const mode = button.dataset.modeInfo;
     const info = MODE_INFO[mode];

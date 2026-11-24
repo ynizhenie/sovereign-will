@@ -63,6 +63,7 @@ test('battle settings survive reload', async ({ page }) => {
 test('map-editor setup choices survive reload', async ({ page }) => {
   await openGame(page);
   await page.locator('[data-screen="endless"] [data-back]').click();
+  await page.locator('[data-screen="modes"] [data-back]').click(); // (a mode's Back is to the modes)
   await page.locator('#mode-editor').click();
   await page.locator('[data-editor-size="custom"]').click();
   await page.locator('#editor-map-cols').fill('208');
@@ -74,6 +75,7 @@ test('map-editor setup choices survive reload', async ({ page }) => {
 
   await page.evaluate(() => showMenuScreen('endless'));
   await page.locator('[data-screen="endless"] [data-back]').click();
+  await page.locator('[data-screen="modes"] [data-back]').click(); // (a mode's Back is to the modes)
   await page.locator('#mode-editor').click();
   await expect(page.locator('[data-editor-size="custom"]')).toHaveClass(/active/);
   await expect(page.locator('#editor-map-cols')).toHaveValue('208');

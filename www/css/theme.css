@@ -130,8 +130,8 @@ button.cant-afford { opacity: 0.55; }
 /* ---- The main menu */
 .main-menu-content {
   /* (no blur of the scene behind: it was worked out again every frame over the moving scene, and made a screen's
-     fading in stutter; a touch darker instead, to read the same) */
-  background: rgba(30, 50, 34, 0.42);
+     fading in stutter; near solid instead, in the colour the blurred scene gave it) */
+  background: rgba(62, 78, 46, 0.93);
   border: none;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);

@@ -152,3 +152,22 @@ test('the first screen has Play, the map editor and the settings; Play opens the
   await page.click('[data-screen="modes"] [data-back]');
   await expect(page.locator('[data-screen="home"]')).toBeVisible();
 });
+
+test('an On / Off setting is a switch: a tap on either half, or on the chosen one, flips it; the music player opens beside Settings and goes away with it', async ({ page }) => {
+  await openFresh(page);
+  await page.evaluate(() => showMenuScreen('settings'));
+  const on = () => page.evaluate(() => areShadowsEnabled());
+  expect(await on()).toBe(true);
+  await page.click('[data-shadows="on"]'); // (the chosen half: flipped off)
+  expect(await on()).toBe(false);
+  await page.click('[data-shadows="off"]'); // (again the chosen half: back on)
+  expect(await on()).toBe(true);
+  await page.click('#open-music-player');
+  await expect(page.locator('[data-screen="music"]')).toBeVisible();
+  await expect(page.locator('[data-screen="settings"]')).toBeVisible();
+  await page.click('#music-close');
+  await expect(page.locator('[data-screen="music"]')).toBeHidden();
+  await page.click('#open-music-player');
+  await page.click('[data-screen="settings"] [data-back]');
+  await expect(page.locator('[data-screen="music"]')).toBeHidden();
+});

@@ -49,7 +49,7 @@ test('the music player lists every track with its name and when it plays; a trac
   await expect(page.locator('#music-player')).toBeHidden();
   await page.click('#open-music-player');
   await expect(page.locator('[data-screen="music"]')).toBeVisible();
-  await expect(page.locator('[data-screen="settings"]')).toBeHidden();
+  await expect(page.locator('[data-screen="settings"]')).toBeVisible(); // (drawn out beside Settings, not instead of it)
   const r0 = await page.evaluate(() => ({
     rows: [...document.querySelectorAll('#music-player .music-row')].map(r => ({ id: r.dataset.track, text: r.querySelector('.music-name').innerText })),
     expected: 1 + Object.entries(GAME_CONFIG.battleMusic).filter(([key, tracks]) => Array.isArray(tracks) && !key.startsWith('backrooms')).map(([, tracks]) => tracks).reduce((n, tracks) => n + tracks.length, 0) + GAME_CONFIG.plagueMusic.length + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
