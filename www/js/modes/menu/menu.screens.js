@@ -1,7 +1,7 @@
 // The main menu's screens: home, Endless setup and saves, settings (language, frame rate, sound, music), and the opening
 
 import { LANGUAGES } from '../../content/language/index.js';
-import { audio, currentLanguage, DEV_SETTINGS, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicOn, setSoundOn, t, VSYNC } from '../../engine/platform/index.js';
+import { audio, currentLanguage, DEV_SETTINGS, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicVolume, setSoundVolume, t, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, perf, previewTrack, setPerfMonitor, setTrackOn } from '../../app/index.js';
 import { flagHtml, iconHtml } from '../../ui/index.js';
 import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
@@ -164,9 +164,17 @@ export const applyShowFps = value => {
 export const languageOptions = document.getElementById('language-options');
 
 // ---- The Settings: sound and music on / off, remembered on the device
+// the sound's and the music's sliders (0-100) as loud as they are, their filled part drawn to the knob
 export const markAudioOptions = () => {
-  document.querySelectorAll('[data-sound]').forEach(b => b.classList.toggle('active', (b.dataset.sound === 'on') === audio.soundOn));
-  document.querySelectorAll('[data-music]').forEach(b => b.classList.toggle('active', (b.dataset.music === 'on') === audio.musicOn));
+  for (const [id, volume] of /** @type {[string, number][]} */ ([['sound', audio.soundVolume], ['music', audio.musicVolume]])) {
+    const slider = /** @type {HTMLInputElement | null} */ (document.getElementById(`${id}-volume`));
+    if (!slider) continue;
+    const value = Math.round(volume * 100);
+    if (document.activeElement !== slider) slider.value = String(value);
+    slider.style.setProperty('--fill', `${value}%`);
+    const shown = document.getElementById(`${id}-volume-value`);
+    if (shown) shown.textContent = String(value);
+  }
 };
 
 // What this file sets up as the game starts (called by app/boot.js)
@@ -283,6 +291,8 @@ export function initMenuScreens() {
   showFlag();
   markLanguage();
   markAudioOptions();
-  document.querySelectorAll('[data-sound]').forEach(b => onTap(b, () => { setSoundOn(b.dataset.sound === 'on'); markAudioOptions(); }));
-  document.querySelectorAll('[data-music]').forEach(b => onTap(b, () => { setMusicOn(b.dataset.music === 'on'); markAudioOptions(); }));
+  for (const [id, set] of /** @type {[string, (volume: number) => void][]} */ ([['sound', setSoundVolume], ['music', setMusicVolume]])) {
+    const slider = /** @type {HTMLInputElement} */ (document.getElementById(`${id}-volume`));
+    slider.addEventListener('input', () => { set(Number(slider.value) / 100); markAudioOptions(); });
+  }
 }

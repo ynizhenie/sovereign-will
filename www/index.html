@@ -370,20 +370,16 @@
     </div>
     <div class="main-menu-content settings-drawer" data-drawer="sound" hidden>
         <h2 data-i18n="settings.sound">Sound</h2>
-            <div class="wave-settings switch-row">
+            <!-- how loud, 0-100 (0: off) -->
+            <div class="wave-settings volume-row">
                 <div data-i18n="menu.sound">Sound:</div>
-                <div class="wave-options switch">
-                    <button class="fps-option" data-sound="off" data-i18n="menu.off">Off</button>
-                    <button class="fps-option" data-sound="on" data-i18n="menu.on">On</button>
-                </div>
+                <div class="volume"><input type="range" class="volume-slider" id="sound-volume" min="0" max="100" step="1"><span class="volume-value" id="sound-volume-value"></span></div>
             </div>
 
-            <div class="wave-settings switch-row">
+            <!-- how loud, 0-100 (0: off) -->
+            <div class="wave-settings volume-row">
                 <div data-i18n="menu.music">Music:</div>
-                <div class="wave-options switch">
-                    <button class="fps-option" data-music="off" data-i18n="menu.off">Off</button>
-                    <button class="fps-option" data-music="on" data-i18n="menu.on">On</button>
-                </div>
+                <div class="volume"><input type="range" class="volume-slider" id="music-volume" min="0" max="100" step="1"><span class="volume-value" id="music-volume-value"></span></div>
             </div>
         <!-- (#326) each track: its name, when it plays, a button to listen to it, and a switch to turn it off -->
         <div class="music-player-title" data-i18n="music.player">Music player</div>

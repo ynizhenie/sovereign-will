@@ -1,7 +1,7 @@
 // The door of engine/platform/: what it gives to the rest of the game. Other folders import from
 // here, never from its files directly (ESLint checks it); a name not listed is the folder's own business.
 
-export { audio, initAudio, midi, noise, setMusicOn, setSoundOn, startAudio, tone } from './audio.js';
+export { audio, initAudio, midi, noise, setMusicOn, setMusicVolume, setSoundOn, setSoundVolume, startAudio, tone } from './audio.js';
 export { camera, clampCamera, getMaxZoom, getViewRect, setZoom, updateInputPos } from './camera.js';
 export { VSYNC, canvas, canvasCssSize, ctx, drawProgressBar, drawingOn, fitCanvasToScreen, getBaseScale, getViewScale, initCanvas, screenPixelRatio, setFont } from './canvas.js';
 export { onTap } from './dom.js';

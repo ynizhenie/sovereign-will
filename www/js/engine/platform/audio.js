@@ -5,13 +5,17 @@ import { loadSetting, saveSetting } from './storage.js';
 import { MUSIC_STYLES, SOUND } from '../../app/index.js';
 
 /** @type {{ ctx: AudioContext | null, master: GainNode | null, sfx: GainNode | null, music: GainNode | null,
- *   noise: AudioBuffer | null, layers: Object<string, any>, last: Object<string, number>, soundOn: boolean, musicOn: boolean }} */
+ *   noise: AudioBuffer | null, layers: Object<string, any>, last: Object<string, number>, soundOn: boolean, musicOn: boolean,
+ *   soundVolume: number, musicVolume: number }} */
 export const audio = {
   ctx: null, master: null, sfx: null, music: null, noise: null,
   layers: {},            // music styles: { gain, next, step, bar } each
   last: {},              // when each sound last played (audio time)
   soundOn: loadSetting('sound', 'on') === 'on',
-  musicOn: loadSetting('music', 'on') === 'on'
+  musicOn: loadSetting('music', 'on') === 'on',
+  // how loud, 0..1 (Settings' sliders); 0 is off. Before the sliders there was only on or off: on is all the way
+  soundVolume: Number(loadSetting('soundVolume', loadSetting('sound', 'on') === 'on' ? '1' : '0')),
+  musicVolume: Number(loadSetting('musicVolume', loadSetting('music', 'on') === 'on' ? '1' : '0'))
 };
 
 // ---- Setting up (on the first gesture)
@@ -26,8 +30,8 @@ export function startAudio() {
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -12; limiter.ratio.value = 6;
   limiter.connect(audio.master);
-  audio.sfx = ctx.createGain(); audio.sfx.gain.value = SOUND.sfxVolume; audio.sfx.connect(limiter);
-  audio.music = ctx.createGain(); audio.music.gain.value = SOUND.musicVolume; audio.music.connect(limiter);
+  audio.sfx = ctx.createGain(); audio.sfx.gain.value = SOUND.sfxVolume * audio.soundVolume; audio.sfx.connect(limiter);
+  audio.music = ctx.createGain(); audio.music.gain.value = SOUND.musicVolume * audio.musicVolume; audio.music.connect(limiter);
   // a second of white noise, for whooshes, rustles and drums
   const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -44,6 +48,22 @@ export function startAudio() {
 export function setSoundOn(on) { audio.soundOn = on; saveSetting('sound', on ? 'on' : 'off'); }
 
 export function setMusicOn(on) { audio.musicOn = on; saveSetting('music', on ? 'on' : 'off'); }
+
+// How loud the sounds and the music are, 0..1 (0: off, as the switch was)
+/** @param {number} volume */
+export function setSoundVolume(volume) {
+  audio.soundVolume = Math.min(1, Math.max(0, volume));
+  saveSetting('soundVolume', String(audio.soundVolume));
+  setSoundOn(audio.soundVolume > 0);
+  if (audio.sfx) audio.sfx.gain.value = SOUND.sfxVolume * audio.soundVolume;
+}
+/** @param {number} volume */
+export function setMusicVolume(volume) {
+  audio.musicVolume = Math.min(1, Math.max(0, volume));
+  saveSetting('musicVolume', String(audio.musicVolume));
+  setMusicOn(audio.musicVolume > 0);
+  if (audio.music) audio.music.gain.value = SOUND.musicVolume * audio.musicVolume;
+}
 
 // ---- Building blocks: a tone and a burst of noise, each with a quick attack and a fading tail
 

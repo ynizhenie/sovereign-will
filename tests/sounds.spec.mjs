@@ -103,11 +103,14 @@ test('sounds play where things happen on screen, not far off it, and not too oft
 
   // the Settings remember it
   await page.evaluate(() => { document.getElementById('main-menu').style.display = ''; showMenuScreen('settings'); setSettingsDrawer('sound'); });
-  await page.click('[data-music="off"]');
-  await page.click('[data-sound="off"]');
+  // (how loud: a slider each, 0-100; 0 is off)
+  await page.locator('#music-volume').fill('0');
+  await page.locator('#sound-volume').fill('0');
   expect(await page.evaluate(() => [loadSetting('music', 'on'), loadSetting('sound', 'on'), JSON.stringify(musicMix())])).toEqual(['off', 'off', '{}']);
-  await page.click('[data-music="on"]');
-  await page.click('[data-sound="on"]');
+  await page.locator('#music-volume').fill('40');
+  await page.locator('#sound-volume').fill('100');
+  expect(await page.evaluate(() => [audio.musicOn, audio.musicVolume, loadSetting('musicVolume', ''), audio.soundOn])).toEqual([true, 0.4, '0.4', true]);
+  await expect(page.locator('#music-volume-value')).toHaveText('40');
   expect(errors).toEqual([]);
 });
 
