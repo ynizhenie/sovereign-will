@@ -181,6 +181,23 @@ export const nativeApp = window.Capacitor && window.Capacitor.isNativePlatform &
 
 export const exitButton = document.getElementById('exit-app');
 
+// Back in the menu without looking for the button (Esc, Android's back): what's open over the screen first (the
+// language's list, a group's panel, the scene watched), else the screen's own Back. False: nothing to go back from
+// (the first screen, or no menu showing)
+export function menuBack() {
+  const menu = document.getElementById('main-menu');
+  if (!menu || getComputedStyle(menu).display === 'none') return false;
+  const list = document.getElementById('language-list');
+  if (list && !list.hidden) { list.hidden = true; return true; }
+  if (settingsDrawer) { setSettingsDrawer(null); return true; }
+  if (document.body.classList.contains('menu-ui-hidden')) { document.getElementById('menu-show')?.click(); return true; }
+  const screen = document.querySelector('#main-menu .main-menu-content[data-screen]:not([hidden])');
+  const back = /** @type {HTMLElement | null} */ (screen && screen.querySelector('.menu-back'));
+  if (!back) return false;
+  back.click();
+  return true;
+}
+
 // frame rate (Settings), remembered on the device
 export const fpsOptions = document.querySelectorAll('.fps-option[data-fps]');
 
@@ -254,6 +271,14 @@ export function initMenuScreens() {
     }
     showMenuScreen(button.dataset.backTo || 'home');
   }));
+  document.addEventListener('keydown', e => { if (e.code === 'Escape' && menuBack()) e.preventDefault(); });
+  // Android's back: back in the menu; on its first screen the app goes to the background; in a game, the pause menu
+  // (and back into the game from it)
+  if (nativeApp && nativeApp.addListener) nativeApp.addListener('backButton', () => {
+    if (menuBack()) return;
+    if (getComputedStyle(mainMenu).display !== 'none') { (nativeApp.minimizeApp || nativeApp.exitApp).call(nativeApp); return; }
+    document.getElementById('btn-pause-toggle')?.click();
+  });
   exitButton.hidden = !nativeApp;
   onTap(exitButton, () => { if (nativeApp) nativeApp.exitApp(); });
   markFps();

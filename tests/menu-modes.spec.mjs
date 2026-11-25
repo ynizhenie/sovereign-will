@@ -178,3 +178,22 @@ test('Settings are groups: a tap draws a group\'s panel out, a tap again puts it
   await page.click('[data-screen="settings"] [data-back]');
   await expect(page.locator('[data-drawer="sound"]')).toBeHidden();
 });
+
+test('Esc goes back in the menu: a group\'s panel shut first, then a screen at a time to the first one, where it does nothing', async ({ page }) => {
+  await openFresh(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#open-settings');
+  await page.click('[data-settings-group="sound"]');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-drawer="sound"]')).toBeHidden();
+  await expect(page.locator('[data-screen="settings"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
+  await page.click('#open-modes');
+  await page.click('#mode-plague');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-screen="modes"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
+});
