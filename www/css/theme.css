@@ -140,9 +140,14 @@ button.cant-afford { opacity: 0.55; }
 #main-menu .main-menu-content[data-screen] { background: none; box-shadow: none; }
 #menu-glass { position: absolute; z-index: 0; pointer-events: none; border-radius: 8px; opacity: 0;
   background: rgba(62, 78, 46, 0.93); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
-  transition: left 0.32s cubic-bezier(0.22, 0.9, 0.3, 1), top 0.32s cubic-bezier(0.22, 0.9, 0.3, 1),
-    width 0.32s cubic-bezier(0.22, 0.9, 0.3, 1), height 0.32s cubic-bezier(0.22, 0.9, 0.3, 1), opacity 0.2s ease; }
+  transition: left 0.2s cubic-bezier(0.22, 0.9, 0.3, 1), top 0.2s cubic-bezier(0.22, 0.9, 0.3, 1),
+    width 0.2s cubic-bezier(0.22, 0.9, 0.3, 1), height 0.2s cubic-bezier(0.22, 0.9, 0.3, 1), opacity 0.15s ease; }
 #menu-glass.on { opacity: 1; }
+/* a short screen (a phone on its side): the first screen's buttons smaller, so the three fit under the name */
+@media (max-height: 520px) {
+  .main-menu-content[data-screen="home"], .main-menu-content[data-screen="modes"] { gap: 8px; }
+  .main-menu-content[data-screen="home"] .menu-button, .main-menu-content[data-screen="modes"] .menu-button { min-height: 46px; font-size: 17px; border-width: 16px 22px; }
+}
 #menu-glass.jump { transition: opacity 0.2s ease; }
 body.menu-ui-hidden #menu-glass, body.loading #menu-glass { display: none; }
 @media (prefers-reduced-motion: reduce) { #menu-glass { transition: none; } }

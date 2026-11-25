@@ -45,11 +45,30 @@ function initSwitches() {
 let settingsDrawer = null;
 const drawerOf = name => /** @type {HTMLElement} */ (document.querySelector(`[data-drawer="${name}"]`));
 const placeDrawer = () => {
-  if (!settingsDrawer) return;
-  const panel = drawerOf(settingsDrawer);
   const settings = /** @type {HTMLElement} */ (document.querySelector('[data-screen="settings"]'));
-  const box = settings.getBoundingClientRect(), width = Math.min(320, innerWidth - 24);
-  const beside = box.right + 12 + width <= innerWidth - 8;
+  // (Settings' step aside slid, from where it was to where it goes; the glass under it slides itself, placeGlass)
+  const stepTo = /** @param {number} shift */ shift => {
+    const from = Number.parseFloat(settings.style.left || '0');
+    settings.style.left = shift ? `${shift}px` : '';
+    if (from !== shift && settings.animate) settings.animate([{ left: `${from}px` }, { left: `${shift}px` }], { duration: 200, easing: 'cubic-bezier(0.22, 0.9, 0.3, 1)' });
+    placeGlass();
+  };
+  if (!settingsDrawer) { if (settings.style.left) stepTo(0); return; }
+  const panel = drawerOf(settingsDrawer);
+  // (where Settings stands by itself; with no room beside it but room for the two side by side, as on a phone on its
+  // side, Settings steps left and the two stand in the middle together)
+  const at = settings.getBoundingClientRect(), was = Number.parseFloat(settings.style.left || '0');
+  /** @type {{ top: number, bottom: number, left: number, right: number, width: number }} */
+  let box = { top: at.top, bottom: at.bottom, left: at.left - was, right: at.right - was, width: at.width };
+  let room = innerWidth - box.right - 20, shift = 0;
+  if (room < 240 && innerWidth - box.width - 36 >= 240) {
+    room = Math.min(320, innerWidth - box.width - 36);
+    shift = Math.round((innerWidth - (box.width + 12 + room)) / 2 - box.left);
+    box = { ...box, left: box.left + shift, right: box.right + shift };
+  }
+  stepTo(shift);
+  // (beside it when there's room for one at least 240 wide; under it on a phone upright)
+  const beside = room >= 240, width = beside ? Math.min(320, room) : Math.min(320, innerWidth - 24);
   const top = beside ? box.top : box.bottom + 10;
   panel.style.setProperty('--drawer-top', `${top}px`);
   panel.style.setProperty('--drawer-left', `${beside ? box.right + 12 : Math.max(12, box.left + (box.width - width) / 2)}px`);
@@ -77,7 +96,9 @@ function placeGlass() {
   if (!screen || !screen.offsetWidth) { glass.classList.remove('on'); glassFor = ''; return; }
   // (the first time, or back from nothing: in place at once, then it moves from there)
   glass.classList.toggle('jump', !glassFor);
-  Object.assign(glass.style, { left: `${screen.offsetLeft}px`, top: `${screen.offsetTop}px`, width: `${screen.offsetWidth}px`, height: `${screen.offsetHeight}px` });
+  // (where the screen goes, not where a step aside sliding it has it now: its set left, not the sliding one)
+  const sliding = Number.parseFloat(getComputedStyle(screen).left) || 0, going = Number.parseFloat(screen.style.left || '0');
+  Object.assign(glass.style, { left: `${screen.offsetLeft - sliding + going}px`, top: `${screen.offsetTop}px`, width: `${screen.offsetWidth}px`, height: `${screen.offsetHeight}px` });
   glass.classList.add('on');
   glassFor = screen.dataset.screen || '';
 }
