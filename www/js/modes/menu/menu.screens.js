@@ -50,7 +50,8 @@ const placeDrawer = () => {
   const stepTo = /** @param {number} shift */ shift => {
     const from = Number.parseFloat(settings.style.left || '0');
     settings.style.left = shift ? `${shift}px` : '';
-    if (from !== shift && settings.animate) settings.animate([{ left: `${from}px` }, { left: `${shift}px` }], { duration: 200, easing: 'cubic-bezier(0.22, 0.9, 0.3, 1)' });
+    // (played as a transform from where it was: the graphics card's, smooth; nothing of it stays when it's done)
+    if (from !== shift && settings.animate) settings.animate([{ transform: `translateX(${from - shift}px)` }, { transform: 'none' }], { duration: GLASS_MS, easing: GLASS_EASE });
     placeGlass();
   };
   if (!settingsDrawer) { if (settings.style.left) stepTo(0); return; }
@@ -89,16 +90,28 @@ if (typeof addEventListener === 'function') addEventListener('resize', placeDraw
 // The menu's one pane of glass (#menu-glass) laid under the screen showing: from screen to screen it moves and takes
 // the new one's size, so the pane stays and only what's on it changes
 let glassFor = '';
+const GLASS_MS = 340, GLASS_EASE = 'cubic-bezier(0.25, 0.85, 0.3, 1)';
 function placeGlass() {
   const glass = document.getElementById('menu-glass');
   const screen = /** @type {HTMLElement | null} */ (document.querySelector('#main-menu .main-menu-content[data-screen]:not([hidden])'));
   if (!glass) return;
   if (!screen || !screen.offsetWidth) { glass.classList.remove('on'); glassFor = ''; return; }
-  // (the first time, or back from nothing: in place at once, then it moves from there)
-  glass.classList.toggle('jump', !glassFor);
   // (where the screen goes, not where a step aside sliding it has it now: its set left, not the sliding one)
   const sliding = Number.parseFloat(getComputedStyle(screen).left) || 0, going = Number.parseFloat(screen.style.left || '0');
-  Object.assign(glass.style, { left: `${screen.offsetLeft - sliding + going}px`, top: `${screen.offsetTop}px`, width: `${screen.offsetWidth}px`, height: `${screen.offsetHeight}px` });
+  const to = { left: screen.offsetLeft - sliding + going, top: screen.offsetTop, width: screen.offsetWidth, height: screen.offsetHeight };
+  // where it shows now (mid-move too), to move from: laid at once where it goes, and played from there to it by the
+  // graphics card (a transform), not its size and place worked out again each frame on a page the scene keeps busy
+  const from = glassFor ? glass.getBoundingClientRect() : null, parent = /** @type {HTMLElement} */ (glass.offsetParent || glass.parentElement);
+  const origin = parent.getBoundingClientRect();
+  glass.getAnimations?.().forEach(a => a.cancel());
+  Object.assign(glass.style, { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
+  if (from && from.width && glass.animate) {
+    const now = { x: origin.left + to.left - parent.scrollLeft, y: origin.top + to.top - parent.scrollTop };
+    const dx = from.left - now.x, dy = from.top - now.y, sx = from.width / to.width, sy = from.height / to.height;
+    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 || Math.abs(sx - 1) > 0.002 || Math.abs(sy - 1) > 0.002) {
+      glass.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` }, { transform: 'none' }], { duration: GLASS_MS, easing: GLASS_EASE });
+    }
+  }
   glass.classList.add('on');
   glassFor = screen.dataset.screen || '';
 }

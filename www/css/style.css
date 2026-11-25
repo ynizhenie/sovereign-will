@@ -1559,7 +1559,7 @@ body.menu-ui-hidden #menu-flags { display: none; }
 /* Settings' groups: a panel drawn out beside Settings (under it on a narrow screen), stretching out to its place */
 #main-menu .settings-drawer:not([hidden]) { position: fixed; z-index: 2; margin: 0; overflow-y: auto; max-width: none;
   top: var(--drawer-top); left: var(--drawer-left); width: var(--drawer-width); max-height: var(--drawer-max-height);
-  background: rgba(62, 78, 46, 0.97); transform-origin: left center; animation: drawer-out 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
+  background: rgba(62, 78, 46, 0.97); transform-origin: left center; animation: drawer-out 0.36s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
 #main-menu .settings-drawer.below:not([hidden]) { transform-origin: center top; animation-name: drawer-down; }
 #main-menu .settings-drawer h2 { margin: 0; font-size: 18px; color: var(--text-bright, #fff); }
 @keyframes drawer-out { from { opacity: 0; transform: translate3d(-28px, 0, 0) scaleX(0.82); } to { opacity: 1; transform: none; } }
@@ -1585,7 +1585,7 @@ body.menu-ui-hidden #menu-flags { display: none; }
 @keyframes menu-screen-in { from { opacity: 0; } to { opacity: 1; } }
 /* (the blur behind a screen off while it comes in: fading a blurred backdrop is what stuttered) */
 /* (backwards, not both: a transform left on a panel after it came in put the scene's canvas over it) */
-#main-menu .main-menu-content:not([hidden]) { animation: menu-screen-in 0.16s ease backwards; }
+#main-menu .main-menu-content:not([hidden]) { animation: menu-screen-in 0.26s ease 0.05s backwards; }
 /* the language's flag and the eye: on the first screen only */
 #main-menu:not([data-menu-screen="home"]) #menu-flags, #main-menu:not([data-menu-screen="home"]) #menu-eye-box { display: none !important; }
 @media (prefers-reduced-motion: reduce) { #main-menu .main-menu-content:not([hidden]) { animation: none; } .glide { transition: none; } }
