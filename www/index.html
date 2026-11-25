@@ -381,8 +381,14 @@
                 <div data-i18n="menu.music">Music:</div>
                 <div class="volume"><input type="range" class="volume-slider" id="music-volume" min="0" max="100" step="1"><span class="volume-value" id="music-volume-value"></span></div>
             </div>
-        <!-- (#326) each track: its name, when it plays, a button to listen to it, and a switch to turn it off -->
-        <div class="music-player-title" data-i18n="music.player">Music player</div>
+        <!-- the music's tracks one by one: a big screen of their own -->
+        <button id="open-music-player" class="menu-button settings-advanced" data-i18n="settings.advanced">Advanced</button>
+    </div>
+    <!-- (#326) the music player, from Sound's Advanced: a big screen of its own in the middle; each track its name, when
+         it plays, a button to listen to it and a switch to turn it off. Back is to Settings with Sound open -->
+    <div class="main-menu-content music-screen" data-screen="music" hidden>
+        <button class="menu-back" id="music-back" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="music.playerTitle">Music</h1>
         <div id="music-player"></div>
     </div>
 

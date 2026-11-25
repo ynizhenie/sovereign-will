@@ -174,7 +174,10 @@ test('Settings are groups: a tap draws a group\'s panel out, a tap again puts it
   await page.click('[data-settings-group="graphics"]');
   await expect(page.locator('[data-drawer="graphics"]')).toBeHidden();
   await page.click('[data-settings-group="sound"]');
+  await page.click('#open-music-player'); // (Advanced: the music player's own screen)
   await expect(page.locator('#music-player .music-row').first()).toBeVisible();
+  await page.click('#music-back'); // (back to Settings with Sound open again)
+  await expect(page.locator('[data-drawer="sound"]')).toBeVisible();
   await page.click('[data-screen="settings"] [data-back]');
   await expect(page.locator('[data-drawer="sound"]')).toBeHidden();
 });

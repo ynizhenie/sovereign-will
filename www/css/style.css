@@ -1578,7 +1578,11 @@ body.menu-ui-hidden #menu-flags { display: none; }
   background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); transition: transform 0.15s ease; }
 .volume-slider::-moz-range-thumb { width: 22px; height: 22px; border: none; border-radius: 50%; background: #e9e2c8; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
 .volume-slider:active::-webkit-slider-thumb { transform: scale(1.15); }
-.music-player-title { margin-top: 6px; font-size: 13px; font-weight: bold; color: #d4cfb6; }
+/* Sound's Advanced, and the music player's own screen: wide, in the middle, the tracks in two columns where there's room */
+.settings-advanced { margin-top: 4px; }
+#main-menu .main-menu-content.music-screen { width: min(760px, 94vw); max-width: none; max-height: calc(100vh - 2 * clamp(16px, 9vh, 96px)); overflow-y: auto; }
+.music-screen #music-player:not(#x) { max-height: none; overflow: visible; columns: 2 300px; column-gap: 20px; }
+.music-screen #music-player > * { break-inside: avoid; }
 @media (prefers-reduced-motion: reduce) { #main-menu .settings-drawer { animation: none; } .wave-options.switch::after { transition: none; } }
 .glide.jump { transition: none; }
 /* a menu screen coming in: faded up a little, not appearing at once */

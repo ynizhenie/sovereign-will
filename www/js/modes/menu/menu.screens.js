@@ -82,7 +82,6 @@ export function setSettingsDrawer(name) {
   settingsDrawer = name;
   document.querySelectorAll('[data-drawer]').forEach(panel => { /** @type {HTMLElement} */ (panel).hidden = /** @type {HTMLElement} */ (panel).dataset.drawer !== name; });
   document.querySelectorAll('[data-settings-group]').forEach(button => button.classList.toggle('active', /** @type {HTMLElement} */ (button).dataset.settingsGroup === name));
-  if (name === 'sound') renderMusicPlayer();
   placeDrawer();
 }
 if (typeof addEventListener === 'function') addEventListener('resize', placeDrawer); // (not in the Node tests)
@@ -122,7 +121,6 @@ if (typeof ResizeObserver !== 'undefined') {
 if (typeof addEventListener === 'function') addEventListener('resize', () => placeGlass());
 
 export function showMenuScreen(name) {
-  if (name === 'music') { showMenuScreen('settings'); setSettingsDrawer('sound'); return; } // (the player is in Sound's panel now)
   if (name !== 'settings' && settingsDrawer) setSettingsDrawer(null);
   if (name !== 'settings' && name !== 'music' && musicPreview.id) previewTrack(''); // (a track listened to stops as the menu is left, #326)
   if (name === 'settings' || name === 'music') renderMusicPlayer();
@@ -240,6 +238,9 @@ export function initMenuScreens() {
   onTap(document.getElementById('open-modes'), () => showMenuScreen('modes'));
   onTap(document.getElementById('mode-endless'), () => showMenuScreen('endless'));
   onTap(document.getElementById('open-settings'), () => showMenuScreen('settings'));
+  // Sound's Advanced: the music player, a big screen of its own; its Back is to Settings with Sound open again
+  onTap(document.getElementById('open-music-player'), () => showMenuScreen('music'));
+  onTap(document.getElementById('music-back'), () => { showMenuScreen('settings'); setSettingsDrawer('sound'); });
   document.querySelectorAll('[data-settings-group]').forEach(button => onTap(/** @type {HTMLElement} */ (button), () => {
     const name = /** @type {HTMLElement} */ (button).dataset.settingsGroup || null;
     setSettingsDrawer(settingsDrawer === name ? null : name);
