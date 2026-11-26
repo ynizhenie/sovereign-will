@@ -44,10 +44,11 @@ test('each mode title opens an information screen that returns to its menu', asy
     await expect(title.locator('.ic-info')).toBeVisible();
     await expect(title).toHaveText(/\S+/);
     await title.click();
-    await expect(page.locator('[data-screen="mode-description"]')).toBeVisible();
+    await expect(page.locator('#mode-info')).toBeVisible(); // (a pop-up over the mode's screen)
     await expect(page.locator('#mode-description-title')).not.toBeEmpty();
     await expect(page.locator('#mode-description-text')).not.toBeEmpty();
-    await page.click('[data-screen="mode-description"] [data-back]');
+    await page.click('#mode-info-close');
+    await expect(page.locator('#mode-info')).toBeHidden();
     await expect(page.locator(`[data-screen="${screen}"]`)).toBeVisible();
     await page.click(`[data-screen="${screen}"] [data-back]`);
   }

@@ -226,7 +226,6 @@
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
             <div class="editor-start">
-                <div class="editor-start-title" data-i18n="editor.start">Choose a map and open it in the editor:</div>
                 <div class="editor-start-options">
                     <button id="editor-new-empty" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.empty">Empty map</button>
                     <button id="editor-new-generated" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.generated">Generate map</button>
@@ -403,10 +402,13 @@
         <div id="music-player"></div>
     </div>
 
-    <div class="main-menu-content mode-description-screen" data-screen="mode-description" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
-        <h1 id="mode-description-title"></h1>
-        <p id="mode-description-text"></p>
+    <!-- a mode's few words, popped up over its screen (the title's (i)); a tap on its cross or round it shuts it -->
+    <div id="mode-info" class="menu-popup" hidden>
+        <div class="main-menu-content menu-popup-card">
+            <button class="menu-back" id="mode-info-close" data-i18n="menu.back">[[back]] Back</button>
+            <h1 id="mode-description-title"></h1>
+            <p id="mode-description-text"></p>
+        </div>
     </div>
 </div>
 

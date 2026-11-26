@@ -243,6 +243,8 @@ export function menuBack() {
   if (!menu || getComputedStyle(menu).display === 'none') return false;
   const list = document.getElementById('language-list');
   if (list && !list.hidden) { list.hidden = true; return true; }
+  const info = document.getElementById('mode-info');
+  if (info && !info.hidden) { info.hidden = true; return true; }
   if (settingsDrawer) { setSettingsDrawer(null); return true; }
   if (document.body.classList.contains('menu-ui-hidden')) { document.getElementById('menu-show')?.click(); return true; }
   const screen = document.querySelector('#main-menu .main-menu-content[data-screen]:not([hidden])');
@@ -303,6 +305,15 @@ export function initMenuScreens() {
   }));
   initSwitches();
   initSegments();
+  // A number field with limits (a custom map's size, the waves' interval...) kept within them: a number typed past
+  // them is set to the nearest limit before what reads it sees it (any number went in, 1929999999999 too)
+  document.addEventListener('change', e => {
+    const input = /** @type {HTMLInputElement} */ (e.target);
+    if (!(input instanceof HTMLInputElement) || input.type !== 'number' || input.min === '' || input.max === '') return;
+    const value = Number(input.value), min = Number(input.min), max = Number(input.max);
+    const kept = Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : Number(input.defaultValue || min);
+    if (String(kept) !== input.value) input.value = String(kept);
+  }, true);
   // Interface size: the menu's and the game's panels' zoom (style.css --ui-scale), remembered
   const markUiScale = () => document.querySelectorAll('[data-ui-scale]').forEach(b => b.classList.toggle('active', Number(/** @type {HTMLElement} */ (b).dataset.uiScale) === uiScale()));
   markUiScale();
@@ -325,15 +336,17 @@ export function initMenuScreens() {
     if (!info) throw new Error(`Unknown mode information screen: ${mode}`);
     const title = document.getElementById('mode-description-title');
     const description = document.getElementById('mode-description-text');
-    const back = document.querySelector('[data-screen="mode-description"] [data-back]');
-    if (!title || !description || !back) throw new Error('The mode description screen is incomplete');
+    if (!title || !description) throw new Error('The mode description is incomplete');
     title.dataset.i18n = info.title;
     title.textContent = t(info.title);
     description.dataset.i18n = info.description;
     description.textContent = t(info.description);
-    back.dataset.backTo = mode;
-    showMenuScreen('mode-description');
+    /** @type {HTMLElement} */ (document.getElementById('mode-info')).hidden = false;
   }));
+  // (shut by its cross, or a tap round it)
+  const modeInfo = /** @type {HTMLElement} */ (document.getElementById('mode-info'));
+  onTap(/** @type {HTMLElement} */ (document.getElementById('mode-info-close')), () => { modeInfo.hidden = true; });
+  modeInfo.addEventListener('click', e => { if (e.target === modeInfo) modeInfo.hidden = true; });
   document.querySelectorAll('#main-menu [data-back]').forEach(button => onTap(button, () => {
     // opened from the pause menu (#254): back to it, over the game
     if (mainMenu.dataset.fromPause === 'yes') {
