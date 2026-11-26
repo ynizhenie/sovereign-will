@@ -166,7 +166,7 @@
             <div id="seed-settings" class="seed-settings">
                 <label for="seed-input" data-i18n="menu.seed">World seed</label>
                 <div class="seed-row">
-                    <input id="seed-input" type="text" value="default-world-seed" />
+                    <input id="seed-input" type="text" value="default-world-seed" maxlength="24" autocapitalize="characters" spellcheck="false" autocomplete="off" />
                     <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
                 </div>
             </div>
@@ -225,12 +225,15 @@
                 <input id="editor-map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
-            <div class="editor-start">
-                <div class="editor-start-options">
-                    <button id="editor-new-empty" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.empty">Empty map</button>
-                    <button id="editor-new-generated" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.generated">Generate map</button>
+            <!-- a new map: the land made by the generator, or bare; then one button to open it -->
+            <div class="wave-settings switch-row">
+                <div data-i18n="editor.generateLand">Generate land:</div>
+                <div class="wave-options switch">
+                    <button class="fps-option" data-editor-generate="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option active" data-editor-generate="on" data-i18n="menu.on">On</button>
                 </div>
             </div>
+            <button id="editor-new" class="menu-button menu-button-primary" data-i18n="editor.newMapOpen">New map</button>
         </div>
         <div data-seed-slot="editor"></div>
         <button id="editor-open-maps" class="menu-button" data-i18n="editor.savedMaps">Saved maps</button>

@@ -9,11 +9,11 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await expect(page.locator('#map-manager-list')).toContainText('Сохранённых карт пока нет');
   await page.locator('[data-screen="maps"] [data-back]').click();
   await expect(page.locator('.editor-start .editor-start-title')).toHaveCount(0); // (no line telling what the buttons say)
-  await expect(page.locator('#editor-new-empty')).toHaveText('Пустая карта');
-  await expect(page.locator('#editor-new-generated')).toHaveText('Сгенерировать карту');
-  await expect(page.locator('.editor-start-options .menu-button-primary')).toHaveCount(2);
+  await expect(page.locator('#editor-new')).toHaveText('Новая карта'); // (one button; the land generated or not by a switch)
+  await expect(page.locator('[data-editor-generate="on"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-screen="editor"] #editor-new.menu-button-primary')).toHaveCount(1);
   await page.locator('[data-editor-size="128"]').click();
-  await page.locator('#editor-new-empty').click();
+  await page.evaluate(() => newEditorMap(false));
   await expect(page.locator('#loading-screen')).toBeVisible();
   await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock

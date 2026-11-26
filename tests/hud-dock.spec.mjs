@@ -235,7 +235,7 @@ test('editor: a category opens its sheet, a tool or the eraser shows on the chip
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-editor');
-  await page.click('#editor-new-empty');
+  await page.evaluate(() => newEditorMap(false));
   await expect(page.locator('#editor-map-label')).toHaveText('Новая карта');
   await page.click('[data-editor-category="nature"]');
   await page.click('#editor-tools [data-tool="tree"]');

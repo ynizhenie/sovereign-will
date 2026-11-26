@@ -24,10 +24,13 @@ export const GENERATOR_GROUPS = [
   ['regrowth', ['respawnDelay', 'oreRespawnDelay']]
 ];
 
-// A typed-in number, kept sensible: never negative, a whole number
-export function cleanValue(raw) {
+// The most each count may be: a typed number past it is set to it (any number went in, 1400000000000 too)
+export const GENERATOR_MAX = { startCoast: 200, ironSpawners: 30, coalSpawners: 30, orePerSpawner: 50, oreSpawnerRadius: 20, respawnDelay: 3600, oreRespawnDelay: 3600 };
+
+// A typed-in number, kept sensible: never negative, a whole number, no more than its key's top
+export function cleanValue(raw, key = '') {
   const n = Number(raw);
-  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+  return Number.isFinite(n) ? Math.min(GENERATOR_MAX[key] ?? Infinity, Math.max(0, Math.round(n))) : null;
 }
 
 // A group of fields as a card that folds (open, or shut, as it was left): its name the card's head
@@ -70,7 +73,7 @@ function renderContinentFields(container) {
   const C = GAME_CONFIG.continent;
   grid(card(container, 'land', t('gen.group.cland')), [
     percentField(t('gen.c.margin'), () => C.margin, v => { C.margin = v; }, MAX_CONTINENT_MARGIN),
-    numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; })
+    numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; }, GENERATOR_MAX.startCoast)
   ]);
   grid(card(container, 'biomes', t('gen.group.cbiomes')), ['mountains', 'desert', 'savanna', 'forest', 'lakes'].map(k =>
     percentField(t(`gen.c.${k}`), () => C[k], v => { C[k] = v; })));
@@ -96,15 +99,15 @@ function percentField(label, get, set, max = 1, step = 'any') {
   }, 0, Math.round(max * 100), step, '%');
 }
 
-// A field of a whole number
-function numberField(label, get, set) {
+// A field of a whole number, up to max
+function numberField(label, get, set, max) {
   return labelledNumber(label, get(), raw => {
     const n = Number(raw);
     if (!Number.isFinite(n)) return;
-    set(Math.max(0, Math.round(n)));
+    set(Math.min(max, Math.max(0, Math.round(n))));
     rememberSettings();
     renderGeneratorFields();
-  }, 0, null, 1, '');
+  }, 0, max, 1, '');
 }
 
 function labelledNumber(label, value, onChange, min, max, step, unit) {
@@ -146,11 +149,12 @@ export function generatorField(key) {
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '0';
+    if (GENERATOR_MAX[key]) input.max = String(GENERATOR_MAX[key]);
     input.step = '1';
     input.value = current;
     input.dataset.key = key;
     input.addEventListener('change', () => {
-      const clean = cleanValue(input.value);
+      const clean = cleanValue(input.value, key);
       if (clean === null) { input.value = current; return; }
       onChange(clean);
       rememberSettings();

@@ -11,7 +11,6 @@ test('the generator exposes the ore and regrowth settings a continent uses (#20;
     viewport: innerHeight
   }));
   expect(size.height).toBeLessThanOrEqual(size.viewport * 0.75);
-  expect(size.content).toBeGreaterThan(size.height);
   const r = await page.evaluate(() => {
     const keys = GENERATOR_GROUPS.flatMap(([, k]) => k);
     const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
@@ -72,7 +71,7 @@ test('own presets are saved on the device, loaded and deleted (#20)', async ({ p
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
 });
 
-test('the generator identifies its active preset and accepts values beyond the old caps', async ({ page }) => {
+test('the generator identifies its active preset and keeps a typed number within its limits', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => {
     localStorage.removeItem('generator-settings');
@@ -87,10 +86,12 @@ test('the generator identifies its active preset and accepts values beyond the o
   await expect(page.locator('#preset-save')).toBeDisabled();
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
   const fields = page.locator('#generator-fields input:not([data-key])');
-  await fields.nth(1).fill('1000');
+  await fields.nth(1).fill('1000'); // (past its top: set to it)
   await fields.nth(1).dispatchEvent('change');
-  expect(await page.evaluate(() => GAME_CONFIG.continent.startCoast)).toBe(1000);
-  await expect(page.locator('#generator-fields input:not([data-key])').nth(1)).not.toHaveAttribute('max');
+  expect(await page.evaluate(() => GAME_CONFIG.continent.startCoast)).toBe(200);
+  await fields.nth(1).fill('100');
+  await fields.nth(1).dispatchEvent('change');
+  expect(await page.evaluate(() => GAME_CONFIG.continent.startCoast)).toBe(100);
 
   await page.locator('#generator-fields input:not([data-key])').nth(0).fill('25');
   await page.locator('#generator-fields input:not([data-key])').nth(0).dispatchEvent('change');
@@ -106,11 +107,11 @@ test('the generator identifies its active preset and accepts values beyond the o
   await page.click('#preset-list [data-preset="Open range"]');
   await expect(page.locator('#preset-name')).toHaveValue('Open range');
   await expect(page.locator('#preset-save')).toHaveText('Обновить');
-  await page.locator('#generator-fields input:not([data-key])').nth(1).fill('1200');
+  await page.locator('#generator-fields input:not([data-key])').nth(1).fill('120');
   await page.locator('#generator-fields input:not([data-key])').nth(1).dispatchEvent('change');
   await expect(page.locator('#preset-save')).toBeEnabled();
   await page.click('#preset-save');
-  expect(await page.evaluate(() => loadPresets()['Open range'].continent.startCoast)).toBe(1200);
+  expect(await page.evaluate(() => loadPresets()['Open range'].continent.startCoast)).toBe(120);
   await expect(page.locator('#preset-list [data-preset="Open range"]')).toHaveClass(/active/);
 
   await page.click('#preset-standard');
@@ -140,7 +141,7 @@ test('the editor shares Endless\' seed and the generator gear: a generated map i
     await page.evaluate(seed => {
       document.getElementById('seed-input').value = seed;
       document.querySelector('[data-editor-size="128"]').click();
-      document.getElementById('editor-new-generated').click();
+      newEditorMap(true);
     }, seed);
     await page.waitForFunction(() => game.loading);
     await page.waitForFunction(() => !game.loading);

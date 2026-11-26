@@ -121,6 +121,10 @@ function renderEditorHallFaction() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
+// A new map in the editor, the land generated or bare, at the size chosen
+/** @param {boolean} generate */
+export function newEditorMap(generate) { startEditor({ ...editorDimensions(), generate }); }
+
 export function initEditorPanel() {
   const saved = loadData('editor-choices', EDITOR_DEFAULTS);
   editorNewSize = [128, 192, 256].includes(Number(saved.size)) ? Number(saved.size) : EDITOR_DEFAULTS.size;
@@ -172,8 +176,11 @@ export function initEditorPanel() {
       }
     }
   });
-  onTap(document.getElementById('editor-new-empty'), () => startEditor({ ...editorDimensions(), generate: false }));
-  onTap(document.getElementById('editor-new-generated'), () => startEditor({ ...editorDimensions(), generate: true }));
+  // a new map: one button, the land generated or not by the switch beside it (remembered)
+  const markGenerate = () => document.querySelectorAll('[data-editor-generate]').forEach(b => b.classList.toggle('active', (/** @type {HTMLElement} */ (b).dataset.editorGenerate === 'on') === (loadData('editorGenerate', true) !== false)));
+  markGenerate();
+  document.querySelectorAll('[data-editor-generate]').forEach(b => onTap(/** @type {HTMLElement} */ (b), () => { saveData('editorGenerate', /** @type {HTMLElement} */ (b).dataset.editorGenerate === 'on'); markGenerate(); }));
+  onTap(/** @type {HTMLElement} */ (document.getElementById('editor-new')), () => newEditorMap(loadData('editorGenerate', true) !== false));
   // (#326, 27.10, 19) the shared seed panel's generator settings
   onTap(document.getElementById('editor-open-generator'), () => openGenerator('editor'));
   onTap(document.getElementById('editor-save'), saveEditorMap);

@@ -288,7 +288,12 @@ export const markAudioOptions = () => {
 export function initMenuScreens() {
   // ---- Main menu screens: home (modes), endless (setup), settings
   seedInput.value = loadSetting('worldSeed', seedInput.value);
-  seedInput.addEventListener('input', () => saveSetting('worldSeed', seedInput.value));
+  // (a seed is a code: letters, digits and a dash, at most 24; anything else typed or pasted is left out)
+  seedInput.addEventListener('input', () => {
+    const clean = seedInput.value.replace(/[^A-Za-z0-9-]/g, '').slice(0, 24);
+    if (clean !== seedInput.value) seedInput.value = clean;
+    saveSetting('worldSeed', seedInput.value);
+  });
 
   // the opening animation, once, as the page loads (style.css: #main-menu.intro)
   document.getElementById('main-menu').classList.add('intro');

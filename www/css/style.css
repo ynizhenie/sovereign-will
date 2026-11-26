@@ -390,6 +390,22 @@ body.menu-world #defeat-overlay { display: none !important; }
 @media (min-width: 1300px) and (min-height: 760px) { #main-menu { --menu-auto: 1.3; } }
 @media (min-width: 1700px) and (min-height: 950px) { #main-menu { --menu-auto: 1.45; } }
 .hud-layer, #pause-menu { zoom: var(--ui-scale, 1); }
+/* On a wide screen the long screens laid out wide, in two columns, rather than scrolling down: Endless's (Play and
+   Saves side by side, the factions on the left, the rest beside them), the Plague's, and the generator's cards */
+@media (min-width: 900px) and (min-height: 520px) {
+  #main-menu .main-menu-content[data-screen="endless"]:not([hidden]), #main-menu .main-menu-content[data-screen="plague"]:not([hidden]),
+  #main-menu .main-menu-content[data-screen="generator"]:not([hidden]) {
+    width: min(780px, calc(94vw / var(--menu-zoom))); max-width: none;
+    display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: row dense; column-gap: 18px; align-content: start; align-items: start; }
+  #main-menu .main-menu-content[data-screen="endless"] > h1, #main-menu .main-menu-content[data-screen="plague"] > h1,
+  #main-menu .main-menu-content[data-screen="generator"] > * { grid-column: 1 / -1; }
+  #main-menu .main-menu-content[data-screen="endless"] > .faction-settings { grid-column: 1; grid-row: span 4; }
+  #main-menu .main-menu-content[data-screen="endless"] > :last-child { grid-column: 1 / -1; }
+  #main-menu .main-menu-content[data-screen="plague"] > :not(h1):not(.menu-back):not(button) { grid-column: 1 / -1; }
+  #main-menu .generator-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; align-items: start; }
+  #main-menu .generator-fields > [data-card="nature"] { grid-column: 1 / -1; }
+  #main-menu .generator-fields > [data-card="nature"] .generator-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+}
 /* a screen other than the first: from near the top, not in the middle of the screen (room below for a group's panel
    on a phone, and Modes not floating halfway down) */
 #main-menu:not([data-menu-screen="home"]) { justify-content: flex-start; padding-top: var(--menu-top); padding-bottom: 16px; }
