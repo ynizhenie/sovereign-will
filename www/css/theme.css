@@ -153,19 +153,21 @@ body.menu-ui-hidden #menu-glass, body.loading #menu-glass { display: none; }
 #main-menu, .menu-overlay { background: rgba(7, 11, 7, 0.92); }
 body.menu-world #main-menu { background: transparent; }
 .main-menu-content h1 { font-weight: 700; letter-spacing: 0; }
-/* Back: a red cross in the pane's top right corner, the same on every screen (its word and arrow kept for a screen
-   reader, not shown); Esc and Android's back do it too (menu.screens.js menuBack) */
-.menu-back { position: absolute !important; top: 12px; right: 12px; z-index: 2; width: 34px; height: 34px; min-height: 0;
-  padding: 0 !important; border-radius: 6px; background: rgba(0, 0, 0, 0.22); font-size: 0 !important; color: transparent;
-  overflow: hidden; transition: background-color 0.15s ease; }
+/* Back: a red box stuck to the pane's top left corner (its rounding the pane's), a white cross in it; the same on
+   every screen (its word and arrow kept for a screen reader, not shown); Esc and Android's back do it too
+   (menu.screens.js menuBack) */
+.menu-back { position: absolute !important; top: 0; left: 0; z-index: 2; width: 38px; height: 38px; min-height: 0;
+  padding: 0 !important; border-radius: 8px 0 8px 0; background: #b83a2c; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+  font-size: 0 !important; color: transparent; overflow: hidden; transition: background-color 0.15s ease; }
 .menu-back > * { display: none; }
-.menu-back::before, .menu-back::after { content: ''; position: absolute; left: 9px; right: 9px; top: 50%; height: 3px; margin-top: -1.5px;
-  border-radius: 2px; background: #e25546; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); transform: rotate(45deg); }
+.menu-back::before, .menu-back::after { content: ''; position: absolute; left: 10px; right: 10px; top: 50%; height: 3px; margin-top: -1.5px;
+  border-radius: 1.5px; background: #fff; transform: rotate(45deg); }
 .menu-back::after { transform: rotate(-45deg); }
-@media (hover: hover) { .menu-back:hover { background: rgba(192, 57, 43, 0.3); } }
-.menu-back:active { background: rgba(192, 57, 43, 0.45); }
-/* (a screen's gear, the map generator: top left, across from the cross; its name clear of both) */
-.menu-gear { right: auto !important; left: 12px; top: 12px !important; width: 34px; height: 34px; padding: 0 !important; display: grid; place-items: center; border: none !important; background: rgba(0, 0, 0, 0.22) !important; }
+@media (hover: hover) { .menu-back:hover { background: #cf4434; } }
+.menu-back:active { background: #9c2f23; }
+/* (a screen's gear, the map generator: top right, across from it; the pane's name clear of both) */
+.menu-gear { left: auto !important; right: 12px !important; top: 10px !important; width: 34px; height: 34px; padding: 0 !important;
+  display: grid; place-items: center; border: none !important; background: rgba(0, 0, 0, 0.22) !important; }
 .main-menu-content[data-screen] > h1 { padding: 0 44px; }
 
 /* the first screen's buttons (and Play's modes): a plank framed in metal corners, the corners kept whatever the size */
