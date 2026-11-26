@@ -21,6 +21,29 @@ const seedInput = /** @type {HTMLInputElement} */ (seedInputElement);
 /** @type {'endless' | 'editor' | 'plague' | null} */
 let seedScreen = 'endless';
 
+// A row of options as one segmented track (style.css .segmented): the chosen one's plank a thumb sliding under it,
+// placed where the chosen option is whenever the choice or the row's size changes (shown at last, say)
+function initSegments() {
+  for (const row of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#main-menu .wave-options.segmented'))) {
+    const thumb = document.createElement('div');
+    thumb.className = 'segment-thumb jump';
+    row.prepend(thumb);
+    const place = () => {
+      const chosen = /** @type {HTMLElement | null} */ (row.querySelector(':scope > .active'));
+      thumb.hidden = !chosen || !row.offsetWidth;
+      if (thumb.hidden || !chosen) { thumb.classList.add('jump'); return; }
+      thumb.style.width = `${chosen.offsetWidth}px`;
+      thumb.style.transform = `translateX(${chosen.offsetLeft}px)`;
+      if (thumb.classList.contains('jump')) { void thumb.offsetWidth; thumb.classList.remove('jump'); }
+    };
+    // (the options' own classes watched, not the thumb's: its own changes would wake this again)
+    const watch = new MutationObserver(place);
+    for (const option of row.querySelectorAll(':scope > button')) watch.observe(option, { attributes: true, attributeFilter: ['class'] });
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(place).observe(row);
+    place();
+  }
+}
+
 // An Off / On setting drawn as a switch (style.css .wave-options.switch): a tap on the half already chosen flips it to
 // the other, as a switch does, rather than choosing it again
 function initSwitches() {
@@ -274,6 +297,7 @@ export function initMenuScreens() {
     setSettingsDrawer(settingsDrawer === name ? null : name);
   }));
   initSwitches();
+  initSegments();
   // Interface size: the menu's and the game's panels' zoom (style.css --ui-scale), remembered
   const markUiScale = () => document.querySelectorAll('[data-ui-scale]').forEach(b => b.classList.toggle('active', Number(/** @type {HTMLElement} */ (b).dataset.uiScale) === uiScale()));
   markUiScale();
