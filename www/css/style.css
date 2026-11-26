@@ -319,14 +319,14 @@ body.menu-world #defeat-overlay { display: none !important; }
 .main-menu-content[data-screen="endless"] {
   gap: 9px;
   padding: 14px;
-  max-height: 84vh;
+  max-height: var(--menu-room);
   overflow-y: auto;
 }
 
 .main-menu-content[data-screen="saves"] {
   gap: 9px;
   padding: 14px;
-  max-height: 84vh;
+  max-height: var(--menu-room);
   overflow-y: auto;
 }
 
@@ -353,7 +353,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 .mode-title-trigger:focus-visible { outline: 2px solid #f1c40f; outline-offset: 3px; border-radius: 3px; }
 
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
-.main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }
+.main-menu-content[data-screen="plague"] { max-height: var(--menu-room); overflow-y: auto; }
 .plague-menu { gap: 12px; }
 .plague-spawn-settings { display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .plague-range { display: flex; flex-direction: column; gap: 6px; }
@@ -375,9 +375,16 @@ body.menu-world #defeat-overlay { display: none !important; }
    screen, the name in the middle of the space above them. --title-size is its letters' height: 10% of
    the screen's width (it fits a phone's width with room to spare), at least 34px, at most 110px */
 #main-menu { --title-size: clamp(34px, min(10vw, 15vh), 110px); flex-direction: column; justify-content: safe center; }
+/* the menu bigger on a bigger screen (it's laid out in pixels a phone's size): all of it, panes, text, buttons */
+/* (--menu-room: the height a screen may take under the menu's top, in its own zoomed pixels: a screen taller
+   scrolls inside itself, rather than going off the bottom) */
+#main-menu { --menu-zoom: 1; --menu-top: clamp(16px, 9vh, 96px); --menu-room: calc(100vh / var(--menu-zoom) - var(--menu-top) - 24px); }
+@media (min-width: 900px) and (min-height: 520px) { #main-menu { zoom: 1.15; --menu-zoom: 1.15; } }
+@media (min-width: 1300px) and (min-height: 760px) { #main-menu { zoom: 1.3; --menu-zoom: 1.3; } }
+@media (min-width: 1700px) and (min-height: 950px) { #main-menu { zoom: 1.45; --menu-zoom: 1.45; } }
 /* a screen other than the first: from near the top, not in the middle of the screen (room below for a group's panel
    on a phone, and Modes not floating halfway down) */
-#main-menu:not([data-menu-screen="home"]) { justify-content: flex-start; padding-top: clamp(16px, 9vh, 96px); padding-bottom: 16px; }
+#main-menu:not([data-menu-screen="home"]) { justify-content: flex-start; padding-top: var(--menu-top); padding-bottom: 16px; }
 .menu-title {
   position: relative;
   z-index: 1;
@@ -775,10 +782,10 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 }
 .main-menu-content {
   position: relative;
-  max-height: 92vh;
+  max-height: var(--menu-room);
   overflow-y: auto;
 }
-.main-menu-content.generator-screen { max-height: 75vh; }
+.main-menu-content.generator-screen { max-height: min(calc(75vh / var(--menu-zoom)), var(--menu-room)); }
 .generator-fields {
   display: flex;
   flex-direction: column;
@@ -1580,7 +1587,7 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .volume-slider:active::-webkit-slider-thumb { transform: scale(1.15); }
 /* Sound's Advanced, and the music player's own screen: wide, in the middle, the tracks in two columns where there's room */
 .settings-advanced { margin-top: 4px; }
-#main-menu .main-menu-content.music-screen { width: min(760px, 94vw); max-width: none; max-height: calc(100vh - 2 * clamp(16px, 9vh, 96px)); overflow-y: auto; }
+#main-menu .main-menu-content.music-screen { width: min(760px, 94vw); max-width: none; max-height: var(--menu-room); overflow-y: auto; }
 .music-screen #music-player:not(#x) { max-height: none; overflow: visible; columns: 2 300px; column-gap: 20px; }
 .music-screen #music-player > * { break-inside: avoid; }
 @media (prefers-reduced-motion: reduce) { #main-menu .settings-drawer { animation: none; } .wave-options.switch::after { transition: none; } }
@@ -1603,6 +1610,6 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .music-listen { flex: none; width: 34px; min-height: 30px; padding: 0; }
 .music-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .music-name b { font-size: 13px; }
-.music-name small { font-size: 11px; color: #d4cfb6; } /* (it was the text dimmed: grey on the pane) */
+.music-part { margin: 6px 0 2px; font-size: 12px; color: #d4cfb6; break-after: avoid; } /* (when the tracks under it play) */
 .music-toggle { flex: none; min-width: 52px; min-height: 30px; padding: 0 8px; font-size: 12px; }
 .music-toggle.on, .music-listen.on { background: #2e6da4; border-color: #46b8da; color: #fff; }

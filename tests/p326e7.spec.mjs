@@ -58,7 +58,14 @@ test('the music player lists every track with its name and when it plays; a trac
   const rows = r0.rows;
   expect(rows.length).toBe(r0.expected);
   expect(rows.every(r => !r.text.includes('music.'))).toBe(true); // (every name and "when" is a real text)
-  expect(rows.find(r => r.id === 'humans_meadow').text).toContain('Поселение, днём');
+  // (when they play: short headings over the tracks, not a line under each)
+  expect(await page.evaluate(() => {
+    const meadow = document.querySelector('#music-player [data-track="humans_meadow"]');
+    let el = meadow && meadow.previousElementSibling;
+    while (el && !el.classList.contains('music-part')) el = el.previousElementSibling;
+    return el && el.textContent;
+  })).toBe('Днём');
+  expect(await page.locator('#music-player .music-part').evaluateAll(parts => parts.every(p => !p.textContent.includes('music.')))).toBe(true);
   // listened to: it plays alone, and stops as the menu is left
   await page.evaluate(() => { audio.musicOn = false; });
   await page.locator('#music-player [data-track="humans_harvest"] .music-listen').click();

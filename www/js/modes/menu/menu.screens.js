@@ -58,23 +58,25 @@ const placeDrawer = () => {
   const panel = drawerOf(settingsDrawer);
   // (where Settings stands by itself; with no room beside it but room for the two side by side, as on a phone on its
   // side, Settings steps left and the two stand in the middle together)
+  // (in the menu's own pixels: it's zoomed on a big screen, see style.css, and a panel's place is set inside it)
+  const z = menuZoom(), W = innerWidth / z, H = innerHeight / z;
   const at = settings.getBoundingClientRect(), was = Number.parseFloat(settings.style.left || '0');
   /** @type {{ top: number, bottom: number, left: number, right: number, width: number }} */
-  let box = { top: at.top, bottom: at.bottom, left: at.left - was, right: at.right - was, width: at.width };
-  let room = innerWidth - box.right - 20, shift = 0;
-  if (room < 240 && innerWidth - box.width - 36 >= 240) {
-    room = Math.min(320, innerWidth - box.width - 36);
-    shift = Math.round((innerWidth - (box.width + 12 + room)) / 2 - box.left);
+  let box = { top: at.top / z, bottom: at.bottom / z, left: at.left / z - was, right: at.right / z - was, width: at.width / z };
+  let room = W - box.right - 20, shift = 0;
+  if (room < 240 && W - box.width - 36 >= 240) {
+    room = Math.min(320, W - box.width - 36);
+    shift = Math.round((W - (box.width + 12 + room)) / 2 - box.left);
     box = { ...box, left: box.left + shift, right: box.right + shift };
   }
   stepTo(shift);
   // (beside it when there's room for one at least 240 wide; under it on a phone upright)
-  const beside = room >= 240, width = beside ? Math.min(320, room) : Math.min(320, innerWidth - 24);
+  const beside = room >= 240, width = beside ? Math.min(320, room) : Math.min(320, W - 24);
   const top = beside ? box.top : box.bottom + 10;
   panel.style.setProperty('--drawer-top', `${top}px`);
   panel.style.setProperty('--drawer-left', `${beside ? box.right + 12 : Math.max(12, box.left + (box.width - width) / 2)}px`);
   panel.style.setProperty('--drawer-width', `${width}px`);
-  panel.style.setProperty('--drawer-max-height', `${Math.max(160, innerHeight - top - 12)}px`);
+  panel.style.setProperty('--drawer-max-height', `${Math.max(160, H - top - 12)}px`);
   panel.classList.toggle('below', !beside);
 };
 /** @param {string | null} name the group to draw out, null: none */
@@ -89,6 +91,8 @@ if (typeof addEventListener === 'function') addEventListener('resize', placeDraw
 // The menu's one pane of glass (#menu-glass) laid under the screen showing: from screen to screen it moves and takes
 // the new one's size, so the pane stays and only what's on it changes
 let glassFor = '';
+// how much the menu is zoomed (style.css: bigger on a bigger screen)
+const menuZoom = () => Number.parseFloat(getComputedStyle(mainMenu).zoom) || 1;
 const GLASS_MS = 340, GLASS_EASE = 'cubic-bezier(0.25, 0.85, 0.3, 1)';
 function placeGlass() {
   const glass = document.getElementById('menu-glass');
@@ -105,8 +109,9 @@ function placeGlass() {
   glass.getAnimations?.().forEach(a => a.cancel());
   Object.assign(glass.style, { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
   if (from && from.width && glass.animate) {
-    const now = { x: origin.left + to.left - parent.scrollLeft, y: origin.top + to.top - parent.scrollTop };
-    const dx = from.left - now.x, dy = from.top - now.y, sx = from.width / to.width, sy = from.height / to.height;
+    const z = menuZoom(); // (the rects are the screen's, the glass's place and transform the zoomed menu's)
+    const now = { x: origin.left / z + to.left - parent.scrollLeft, y: origin.top / z + to.top - parent.scrollTop };
+    const dx = from.left / z - now.x, dy = from.top / z - now.y, sx = from.width / z / to.width, sy = from.height / z / to.height;
     if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 || Math.abs(sx - 1) > 0.002 || Math.abs(sy - 1) > 0.002) {
       glass.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` }, { transform: 'none' }], { duration: GLASS_MS, easing: GLASS_EASE });
     }
@@ -151,7 +156,17 @@ export function renderMusicPlayer() {
     head.className = 'music-group';
     head.textContent = group.label;
     box.appendChild(head);
+    // (the tracks under short headings of when they play, By day, Fight by night...: no line under each; the menu's
+    // one and the Plague's, one a level in turn, need none)
+    let part = '';
     for (const track of group.tracks) {
+      if (group.id !== 'menu' && group.id !== 'plague' && track.when !== part) {
+        part = track.when;
+        const sub = document.createElement('div');
+        sub.className = 'music-part';
+        sub.textContent = t(track.when);
+        box.appendChild(sub);
+      }
       const row = document.createElement('div');
       row.className = 'music-row' + (isTrackOn(track.id) ? '' : ' off');
       row.dataset.track = track.id;
@@ -162,7 +177,7 @@ export function renderMusicPlayer() {
       onTap(listen, () => { previewTrack(musicPreview.id === track.id ? '' : track.id); renderMusicPlayer(); });
       const name = document.createElement('span');
       name.className = 'music-name';
-      name.innerHTML = `<b>${word(track.id)}</b><small>${t(track.when)}</small>`;
+      name.innerHTML = `<b>${word(track.id)}</b>`;
       const toggle = document.createElement('button');
       toggle.className = 'btn music-toggle' + (isTrackOn(track.id) ? ' on' : '');
       toggle.textContent = t(isTrackOn(track.id) ? 'menu.on' : 'menu.off');

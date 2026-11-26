@@ -712,7 +712,9 @@ test('the menu put away to watch, the scene changed there, the menu brought back
     };
     return { eye: bounds('#menu-hide'), flag: bounds('#menu-flags .flag-button') };
   });
-  expect(controlSizes.eye).toEqual(controlSizes.flag);
+  // (as big as each other, to a pixel: the menu is zoomed on a bigger screen and rounds a little)
+  expect(Math.abs(controlSizes.eye.width - controlSizes.flag.width)).toBeLessThan(1);
+  expect(Math.abs(controlSizes.eye.height - controlSizes.flag.height)).toBeLessThan(1);
   const eyeAt = await page.locator('#menu-hide').boundingBox();
   await page.click('#menu-hide');
   await expect(page.locator('#main-menu .main-menu-content[data-screen="home"]')).toBeHidden();
