@@ -3,7 +3,7 @@
 import { LANGUAGES } from '../../content/language/index.js';
 import { audio, currentLanguage, DEV_SETTINGS, GL, loadSetting, onTap, saveSetting, setLanguage, setMusicVolume, setSoundVolume, t, VSYNC } from '../../engine/platform/index.js';
 import { fpsCounter, isTrackOn, loop, musicCatalog, musicPreview, perf, previewTrack, setPerfMonitor, setTrackOn } from '../../app/index.js';
-import { flagHtml, iconHtml } from '../../ui/index.js';
+import { dimGlide, flagHtml, iconHtml } from '../../ui/index.js';
 import { areShadowsEnabled, setShadowsEnabled } from '../../domains/world/index.js';
 
 export const mainMenu = document.getElementById('main-menu');
@@ -24,7 +24,12 @@ let seedScreen = 'endless';
 // A row of options as one segmented track (style.css .segmented): the chosen one's plank a thumb sliding under it,
 // placed where the chosen option is whenever the choice or the row's size changes (shown at last, say)
 function initSegments() {
-  for (const row of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#main-menu .wave-options.segmented'))) {
+  // (every row of options in the menu that's only its options' buttons, not the On / Off switches)
+  for (const row of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#main-menu .wave-options:not(.switch)'))) {
+    const options = [...row.children];
+    // (choices only: a row of actions, buttons with names of their own like the editor's Empty map, stays as it is)
+    if (options.length < 2 || !options.every(el => el.tagName === 'BUTTON' && !el.id)) continue;
+    row.classList.add('segmented');
     const thumb = document.createElement('div');
     thumb.className = 'segment-thumb jump';
     row.prepend(thumb);
@@ -302,7 +307,17 @@ export function initMenuScreens() {
   const markUiScale = () => document.querySelectorAll('[data-ui-scale]').forEach(b => b.classList.toggle('active', Number(/** @type {HTMLElement} */ (b).dataset.uiScale) === uiScale()));
   markUiScale();
   document.querySelectorAll('[data-ui-scale]').forEach(button => onTap(/** @type {HTMLElement} */ (button), () => {
-    setUiScale(Number(/** @type {HTMLElement} */ (button).dataset.uiScale)); markUiScale(); placeGlass(); placeDrawer();
+    // (the menu grown or shrunk to its new size smoothly, from where the tap was, not all at once)
+    const before = menuZoom(), at = button.getBoundingClientRect();
+    dimGlide();
+    setUiScale(Number(/** @type {HTMLElement} */ (button).dataset.uiScale)); markUiScale();
+    glassFor = ''; placeGlass(); placeDrawer();
+    const after = menuZoom();
+    if (before !== after && mainMenu.animate) {
+      const origin = `${(at.left + at.width / 2) / after}px ${(at.top + at.height / 2) / after}px`; // (in the menu's zoomed pixels)
+      mainMenu.animate([{ transform: `scale(${before / after})`, transformOrigin: origin }, { transform: 'none', transformOrigin: origin }],
+        { duration: 260, easing: 'cubic-bezier(0.22, 0.9, 0.3, 1)' });
+    }
   }));
   document.querySelectorAll('[data-mode-info]').forEach(button => onTap(button, () => {
     const mode = button.dataset.modeInfo;

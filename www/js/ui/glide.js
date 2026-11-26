@@ -29,6 +29,10 @@ function dim(row) {
 /** @type {HTMLElement | null} */
 let under = null; // the option the light is under
 
+// The light put out (the rows moved under a still pointer, as when the menu's zoom changes): it comes back where the
+// pointer is at its next move
+export function dimGlide() { if (lit) dim(lit); lit = null; under = null; }
+
 /** @param {HTMLElement} glide @param {HTMLElement} option */
 function fit(glide, option) {
   // (its size set at once, not slid: a row's options are as wide as each other, and a size can't be slid smoothly)
