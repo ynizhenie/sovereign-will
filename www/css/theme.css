@@ -146,7 +146,8 @@ button.cant-afford { opacity: 0.55; }
 /* a short screen (a phone on its side): the first screen's buttons smaller, so the three fit under the name */
 @media (max-height: 520px) {
   .main-menu-content[data-screen="home"], .main-menu-content[data-screen="modes"] { gap: 8px; }
-  .main-menu-content[data-screen="home"] .menu-button, .main-menu-content[data-screen="modes"] .menu-button, .main-menu-content[data-screen="editor-hub"] .menu-button { min-height: 46px; font-size: 17px; border-width: 16px 22px; }
+  /* (the pause menu's too: its buttons all alike, none looking pressed) */
+.main-menu-content[data-screen="home"] .menu-button, .main-menu-content[data-screen="modes"] .menu-button, .main-menu-content[data-screen="editor-hub"] .menu-button, #pause-menu .menu-button { min-height: 46px; font-size: 17px; border-width: 16px 22px; }
 }
 body.menu-ui-hidden #menu-glass, body.loading #menu-glass { display: none; }
 @media (prefers-reduced-motion: reduce) { #menu-glass { transition: none; } }
@@ -171,8 +172,9 @@ body.menu-world #main-menu { background: transparent; }
 .main-menu-content[data-screen] > h1 { padding: 0 44px; }
 
 /* the first screen's buttons (and Play's modes): a plank framed in metal corners, the corners kept whatever the size */
-.main-menu-content[data-screen="home"], .main-menu-content[data-screen="modes"], .main-menu-content[data-screen="editor-hub"] { gap: 16px; }
-.main-menu-content[data-screen="home"] .menu-button, .main-menu-content[data-screen="modes"] .menu-button, .main-menu-content[data-screen="editor-hub"] .menu-button {
+.main-menu-content[data-screen="home"], .main-menu-content[data-screen="modes"], .main-menu-content[data-screen="editor-hub"], #pause-menu .main-menu-content { gap: 16px; }
+/* (the pause menu's too: its buttons all alike, none looking pressed) */
+.main-menu-content[data-screen="home"] .menu-button, .main-menu-content[data-screen="modes"] .menu-button, .main-menu-content[data-screen="editor-hub"] .menu-button, #pause-menu .menu-button {
   min-height: 62px;
   padding: 0;
   font-size: 20px;
