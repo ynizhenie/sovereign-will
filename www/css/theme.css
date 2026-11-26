@@ -156,11 +156,11 @@ body.menu-world #main-menu { background: transparent; }
 /* Back: a red box stuck to the pane's top left corner (its rounding the pane's), a white cross in it; the same on
    every screen (its word and arrow kept for a screen reader, not shown); Esc and Android's back do it too
    (menu.screens.js menuBack) */
-.menu-back { position: absolute !important; top: 0; left: 0; z-index: 2; width: 38px; height: 38px; min-height: 0;
+.menu-back { position: absolute !important; top: 0; left: 0; z-index: 2; width: 30px; height: 30px; min-height: 0;
   padding: 0 !important; border-radius: 8px 0 8px 0; background: #b83a2c; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
   font-size: 0 !important; color: transparent; overflow: hidden; transition: background-color 0.15s ease; }
 .menu-back > * { display: none; }
-.menu-back::before, .menu-back::after { content: ''; position: absolute; left: 10px; right: 10px; top: 50%; height: 3px; margin-top: -1.5px;
+.menu-back::before, .menu-back::after { content: ''; position: absolute; left: 3px; right: 3px; top: 50%; height: 3px; margin-top: -1.5px;
   border-radius: 1.5px; background: #fff; transform: rotate(45deg); }
 .menu-back::after { transform: rotate(-45deg); }
 @media (hover: hover) { .menu-back:hover { background: #cf4434; } }
