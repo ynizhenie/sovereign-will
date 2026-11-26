@@ -52,7 +52,7 @@ function initSegments() {
 // An Off / On setting drawn as a switch (style.css .wave-options.switch): a tap on the half already chosen flips it to
 // the other, as a switch does, rather than choosing it again
 function initSwitches() {
-  for (const track of document.querySelectorAll('#main-menu .wave-options.switch')) {
+  for (const track of document.querySelectorAll('.wave-options.switch')) { // (the menu's and the game's sheets')
     const flip = /** @param {Event} e */ e => {
       const button = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest('button'));
       if (!button || !button.classList.contains('active')) return;

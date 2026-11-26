@@ -192,6 +192,12 @@ export const ICONS = {
     icFill(c, '#e67e22', star);
   },
   menu: c => { for (const y of [8, 15, 22]) icRound(c, '#ecf0f1', 5, y, 22, 3.5, 1.7); },
+  // (the editor's hand: the map moved, nothing put down) four arrows out from the middle
+  move: c => {
+    icLine(c, '#ecf0f1', 3, [[16, 5], [16, 27]]); icLine(c, '#ecf0f1', 3, [[5, 16], [27, 16]]);
+    icFill(c, '#ecf0f1', [[16, 1], [21, 7], [11, 7]]); icFill(c, '#ecf0f1', [[16, 31], [21, 25], [11, 25]]);
+    icFill(c, '#ecf0f1', [[1, 16], [7, 11], [7, 21]]); icFill(c, '#ecf0f1', [[31, 16], [25, 11], [25, 21]]);
+  },
   pause: c => { icRound(c, '#ecf0f1', 8, 6, 6, 20, 1.5); icRound(c, '#ecf0f1', 18, 6, 6, 20, 1.5); },
   play: c => icFill(c, '#ecf0f1', [[9, 5], [26, 16], [9, 27]]),
   eye: c => {

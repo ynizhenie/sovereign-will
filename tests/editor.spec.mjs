@@ -54,7 +54,8 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   expect(await page.evaluate(() => savannaTiles.length)).toBe(1);
 
   await page.locator('[data-editor-category="terrain"]').click();
-  await page.locator('[data-brush="3"]').click();
+  await expect(page.locator('#editor-brush')).toBeVisible(); // (the brush: a slider at the side)
+  await page.evaluate(() => { const b = document.getElementById('editor-brush-size'); b.value = '3'; b.dispatchEvent(new Event('input')); });
   const pond = await page.evaluate(() => {
     const rect = canvas.getBoundingClientRect();
     const x = townHall.x + 8 * TILE_SIZE + 15, y = townHall.y + 8 * TILE_SIZE + 15;
@@ -63,8 +64,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   });
   await page.mouse.click(pond.x, pond.y);
   expect(await page.evaluate(() => [waterTiles.length, isWaterReachable(waterTiles.find(w => w.x === townHall.x + 8 * TILE_SIZE + 15 && w.y === townHall.y + 8 * TILE_SIZE + 15))])).toEqual([10, false]);
-  await page.locator('[data-editor-category="terrain"]').click();
-  await page.locator('[data-brush="1"]').click();
+  await page.evaluate(() => { const b = document.getElementById('editor-brush-size'); b.value = '1'; b.dispatchEvent(new Event('input')); });
 
   // Fish traps only sit on reachable water, and placing/removing one leaves water in place
   await page.locator('[data-editor-category="buildings"]').click();

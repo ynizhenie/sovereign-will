@@ -339,7 +339,7 @@ body.menu-world #defeat-overlay { display: none !important; }
   background: rgba(0, 0, 0, 0.45); animation: menu-screen-in 0.18s ease backwards; }
 .menu-popup[hidden] { display: none; }
 .menu-popup-card { gap: 12px; max-width: 360px; padding-top: 22px; animation: drawer-down 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
-.menu-popup-card h1 { padding: 0 30px; }
+.menu-popup-card h1 { display: none; } /* (the screen behind already says its name: the card only its words) */
 .menu-popup-card p { margin: 0; color: #e4dcc0; font-size: 15px; line-height: 1.5; text-align: center; }
 .mode-title-trigger {
   display: inline-flex;
@@ -835,6 +835,10 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 .preset-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .preset-presets #preset-standard { flex: 0 0 auto; padding: 8px 14px; }
 .preset-presets .preset-list { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+/* a saved preset a chip as big as Standard, its × beside it (they were rows across the pane) */
+.preset-presets .item-row { flex: 0 0 auto; gap: 2px; }
+.preset-presets .item-row .item-name { flex: 0 0 auto; padding: 8px 14px; }
+.preset-presets .item-row .item-delete { padding: 8px 9px; }
 .preset-row { display: flex; gap: 6px; }
 .preset-row input { flex: 1; width: auto; }
 
@@ -1209,7 +1213,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .btn.tile-act { flex: 1; padding: 1px 0; min-height: 20px; display: inline-flex; align-items: center; justify-content: center; }
 .sub-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
 .btn.sub-tab { flex: 1; }
-.btn.sub-tab.on { background: #2e6da4; border-color: #46b8da; }
+.btn.sub-tab.on { background: var(--plank-green) center / cover; border-color: transparent; color: #fff; box-shadow: var(--glow); } /* (chosen: green, as everywhere, not blue) */
 #battle-panel .battle-gear { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
 #battle-panel .battle-gear > .btn { min-width: 0; min-height: 34px; padding: 4px 2px; font-size: 11px; line-height: 1.15; white-space: normal; }
 
@@ -1648,3 +1652,17 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .music-part { margin: 6px 0 2px; font-size: 12px; color: #d4cfb6; break-after: avoid; } /* (when the tracks under it play) */
 .music-toggle { flex: none; min-width: 52px; min-height: 30px; padding: 0 8px; font-size: 12px; }
 .music-toggle.on, .music-listen.on { background: #2e6da4; border-color: #46b8da; color: #fff; }
+
+/* The editor's brush: a slider at the left of the screen, half way down, only in the editor */
+#editor-brush { position: fixed; left: 10px; top: 50%; transform: translateY(-50%); z-index: 6; display: none; flex-direction: column; align-items: center; gap: 8px;
+  padding: 10px 8px; border-radius: 8px; background: rgba(24, 30, 18, 0.88); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); color: #d4cfb6; font-size: 12px; font-weight: bold; }
+body.editor-mode:not(.menu-world) #editor-brush { display: flex; zoom: var(--ui-scale, 1); }
+#editor-brush input { -webkit-appearance: none; appearance: none; writing-mode: vertical-lr; direction: rtl; width: 8px; height: 110px; margin: 0; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(to top, #6fa34f 0 var(--fill, 0%), #1e1f19 var(--fill, 0%) 100%); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7); }
+#editor-brush input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+#editor-brush b { color: #e8c76a; }
+
+/* The editor's Map sheet: two columns where there's room (its name and look; its time and weather) */
+.editor-map-grid { display: grid; grid-template-columns: 1fr; gap: 6px 22px; }
+@media (min-width: 700px) { .editor-map-grid { grid-template-columns: 1fr 1fr; } }
+.editor-map-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

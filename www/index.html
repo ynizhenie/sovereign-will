@@ -739,50 +739,58 @@
 
       <!-- the map editor: what to put down (the dock picks the category), and the map's own settings -->
       <div id="editor-panel" class="hud-sheet" data-sheet="editor">
-        <div class="sub-tabs editor-brush">
-          <button class="btn sub-tab on" data-brush="1" data-i18n="editor.brush1">Brush 1</button>
-          <button class="btn sub-tab" data-brush="3">3×3</button>
-          <button class="btn sub-tab" data-brush="5">5×5</button>
-        </div>
-        <div class="battle-hint" id="editor-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
         <div id="editor-tools"></div>
       </div>
       <!-- the map's own (#255): its name, saving and playing it; its starting time; clearing it -->
       <div class="hud-sheet" data-sheet="editor-map">
-        <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
-        <div class="editor-toolbar">
-          <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
-          <button class="btn" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
-        </div>
-        <div class="panel-heading" data-i18n="editor.hallAppearance">Town hall appearance</div>
-        <div id="editor-hall-faction" class="faction-options"></div>
-        <div class="panel-heading" data-i18n="editor.startTime">Time of day</div>
-        <div class="sub-tabs">
-          <button class="btn sub-tab" data-start-time="morning" data-i18n="daytime.morning">Morning</button>
-          <button class="btn sub-tab" data-start-time="day" data-i18n="daytime.day">Day</button>
-          <button class="btn sub-tab" data-start-time="evening" data-i18n="daytime.evening">Evening</button>
-          <button class="btn sub-tab" data-start-time="night" data-i18n="daytime.night">Night</button>
-        </div>
-        <div class="panel-heading" data-i18n="editor.weather">Weather</div>
-        <div class="sub-tabs">
-          <button class="btn sub-tab" data-editor-weather="clear" data-i18n="battle.weather.clear">Clear</button>
-          <button class="btn sub-tab" data-editor-weather="rain" data-i18n="battle.weather.rain">Rain</button>
-          <button class="btn sub-tab" data-editor-weather="fog" data-i18n="battle.weather.fog">Fog</button>
-          <button class="btn sub-tab" data-editor-weather="storm" data-i18n="battle.weather.storm">Storm</button>
-        </div>
-        <div class="wave-settings editor-visibility-setting">
-          <div data-i18n="editor.hideTimeAndWeather">Hide time-of-day and weather effects:</div>
-          <div class="wave-options" id="editor-hide-time-weather-options">
-            <button class="fps-option active" data-hide-time-weather="on" data-i18n="menu.on">On</button>
-            <button class="fps-option" data-hide-time-weather="off" data-i18n="menu.off">Off</button>
+        <!-- (laid out in two columns where there's room: the map's name and look; its time and weather) -->
+        <div class="editor-map-grid">
+          <div class="editor-map-col">
+            <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
+            <div class="editor-toolbar">
+              <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
+              <button class="btn" id="editor-save" data-i18n="editor.save">Save</button>
+            </div>
+            <div class="panel-heading" data-i18n="editor.hallAppearance">Town hall appearance</div>
+            <div id="editor-hall-faction" class="faction-options"></div>
+            <div class="editor-toolbar">
+              <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">Clear the map</button>
+            </div>
           </div>
-        </div>
-        <div class="editor-toolbar">
-          <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">[[broom]] Clear the map</button>
+          <div class="editor-map-col">
+            <div class="panel-heading" data-i18n="editor.startTime">Time of day</div>
+            <div class="sub-tabs">
+              <button class="btn sub-tab" data-start-time="morning" data-i18n="daytime.morning">Morning</button>
+              <button class="btn sub-tab" data-start-time="day" data-i18n="daytime.day">Day</button>
+              <button class="btn sub-tab" data-start-time="evening" data-i18n="daytime.evening">Evening</button>
+              <button class="btn sub-tab" data-start-time="night" data-i18n="daytime.night">Night</button>
+            </div>
+            <div class="panel-heading" data-i18n="editor.weather">Weather</div>
+            <div class="sub-tabs">
+              <button class="btn sub-tab" data-editor-weather="clear" data-i18n="battle.weather.clear">Clear</button>
+              <button class="btn sub-tab" data-editor-weather="rain" data-i18n="battle.weather.rain">Rain</button>
+              <button class="btn sub-tab" data-editor-weather="fog" data-i18n="battle.weather.fog">Fog</button>
+              <button class="btn sub-tab" data-editor-weather="storm" data-i18n="battle.weather.storm">Storm</button>
+            </div>
+            <div class="wave-settings switch-row editor-visibility-setting">
+              <div data-i18n="editor.hideTimeAndWeather">Hide time-of-day and weather effects:</div>
+              <div class="wave-options switch" id="editor-hide-time-weather-options">
+                <button class="fps-option" data-hide-time-weather="off" data-i18n="menu.off">Off</button>
+                <button class="fps-option active" data-hide-time-weather="on" data-i18n="menu.on">On</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
+  </div>
+
+  <!-- the editor's brush: how big a patch a tap puts down, a slider at the screen's side (not in each sheet) -->
+  <div id="editor-brush">
+    <span data-i18n="editor.brushName">Brush</span>
+    <input id="editor-brush-size" type="range" min="1" max="5" step="2" value="1" aria-label="Brush size" />
+    <b id="editor-brush-value">1</b>
   </div>
 
   <!-- the dock: a row of big buttons, one per sheet (a tap opens it, again closes it); each mode its own row -->
@@ -799,6 +807,7 @@
       <button class="dock-btn" data-action="toggleSheet" data-arg="battle-settings" data-dock="battle-settings"><i class="ic ic-gear"></i><span data-i18n="dock.battle">Battle</span></button>
     </div>
     <div class="dock-row" data-hud-mode="editor">
+      <button class="dock-btn" id="editor-hand"><i class="ic ic-move"></i><span data-i18n="dock.hand">Move</span></button>
       <button class="dock-btn" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
       <button class="dock-btn" data-editor-category="nature" data-dock="editor:nature"><i class="ic ic-tree"></i><span data-i18n="editor.cat.nature">Nature</span></button>
       <button class="dock-btn" data-editor-category="buildings" data-dock="editor:buildings"><i class="ic ic-build"></i><span data-i18n="editor.cat.buildings">Buildings</span></button>

@@ -3,7 +3,7 @@
 // ---- Panels
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, escapeHtml, iconHtml, showPlacing, toggleSheet } from '../../ui/index.js';
+import { closeSheet, escapeHtml, hidePlacing, iconHtml, showPlacing, toggleSheet } from '../../ui/index.js';
 import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setStartingWeather, timeOfPhase } from '../../domains/world/index.js';
@@ -56,16 +56,21 @@ export function renderEditorPanel() {
     }
     tools.appendChild(grid);
   }
-  document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('on', Number(b.dataset.brush) === editor.brush));
   document.querySelectorAll('[data-start-time]').forEach(b => b.classList.toggle('on', b.dataset.startTime === editor.startTime));
   document.querySelectorAll('[data-editor-weather]').forEach(b => b.classList.toggle('on', b.dataset.editorWeather === editor.weather));
   document.querySelectorAll('[data-hide-time-weather]').forEach(b =>
     b.classList.toggle('active', (b.dataset.hideTimeWeather === 'on') === editor.hideTimeAndWeather));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
+  document.getElementById('editor-hand')?.classList.toggle('active', editor.tool === 'pan');
+  const brushSize = /** @type {HTMLInputElement | null} */ (document.getElementById('editor-brush-size'));
+  if (brushSize) { brushSize.value = String(editor.brush); brushSize.style.setProperty('--fill', `${((editor.brush - 1) / 4) * 100}%`); }
+  const brushValue = document.getElementById('editor-brush-value');
+  if (brushValue) brushValue.textContent = editor.brush === 1 ? '1' : `${editor.brush}×${editor.brush}`;
   document.getElementById('editor-top-size').textContent = `${game.COLS}×${game.ROWS}`;
   updateEditorTitle();
   if (editor.tool === 'erase') chosen = document.getElementById('editor-erase').innerHTML;
-  if (chosen) showPlacing(chosen);
+  if (editor.tool === 'pan') hidePlacing(); // (the hand: nothing to put down, no chip)
+  else if (chosen) showPlacing(chosen);
   rememberEditorChoices();
 }
 
@@ -80,7 +85,8 @@ let editorUsesCustomSize = false;
 const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
 const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
 const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
-const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, hallFaction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'tree', hideTimeAndWeather: true };
+// (the tool to begin with: the hand, the map moved and nothing put down till something's picked)
+const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, hallFaction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'pan', hideTimeAndWeather: true };
 const rememberEditorChoices = () => saveData('editor-choices', {
   size: editorNewSize,
   custom: editorUsesCustomSize,
@@ -138,7 +144,7 @@ export function initEditorPanel() {
   game.editorHideTimeAndWeather = editor.hideTimeAndWeather;
   editor.brush = [1, 3, 5].includes(Number(saved.brush)) ? Number(saved.brush) : EDITOR_DEFAULTS.brush;
   editor.category = ['terrain', 'nature', 'buildings'].includes(saved.category) ? saved.category : EDITOR_DEFAULTS.category;
-  editor.tool = EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
+  editor.tool = saved.tool === 'pan' || saved.tool === 'erase' || EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
   renderEditorHallFaction();
   editorCustomSize.hidden = !editorUsesCustomSize;
   document.querySelectorAll('[data-editor-size]').forEach(button => button.classList.toggle('active',
@@ -185,7 +191,11 @@ export function initEditorPanel() {
   // (#326, 27.10, 19) the shared seed panel's generator settings
   onTap(document.getElementById('editor-open-generator'), () => openGenerator('editor'));
   onTap(document.getElementById('editor-save'), saveEditorMap);
-  document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); rememberEditorChoices(); renderEditorPanel(); }));
+  // the brush: a slider at the side, 1, 3 or 5 tiles across
+  const brush = /** @type {HTMLInputElement} */ (document.getElementById('editor-brush-size'));
+  brush.addEventListener('input', () => { editor.brush = Number(brush.value); rememberEditorChoices(); renderEditorPanel(); });
+  // the hand: the map moved, nothing put down
+  onTap(/** @type {HTMLElement} */ (document.getElementById('editor-hand')), () => { editor.tool = 'pan'; rememberEditorChoices(); closeSheet(); renderEditorPanel(); });
   // the dock: a category's sheet opens (again: closes); the eraser is picked at once
   document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
     editor.category = /** @type {string} */ (button.dataset.editorCategory);
