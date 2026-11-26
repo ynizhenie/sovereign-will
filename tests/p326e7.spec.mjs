@@ -58,13 +58,16 @@ test('the music player lists every track with its name and when it plays; a trac
   const rows = r0.rows;
   expect(rows.length).toBe(r0.expected);
   expect(rows.every(r => !r.text.includes('music.'))).toBe(true); // (every name and "when" is a real text)
-  // (when they play: short headings over the tracks, not a line under each)
+  // (a card a group; in a side's the calm, then the fight's, a night track with a moon; each "Track N — name")
   expect(await page.evaluate(() => {
     const meadow = document.querySelector('#music-player [data-track="humans_meadow"]');
     let el = meadow && meadow.previousElementSibling;
     while (el && !el.classList.contains('music-part')) el = el.previousElementSibling;
-    return el && el.textContent;
-  })).toBe('Днём');
+    const night = GAME_CONFIG.factions.humans.music.nightAmbient[0];
+    return [el && el.textContent, meadow.closest('.music-card').dataset.group, meadow.classList.contains('night'),
+      document.querySelector(`#music-player [data-track="${night}"]`).classList.contains('night'),
+      document.querySelector('#music-player [data-track="menu"] .music-number').textContent];
+  })).toEqual(['Спокойно', 'humans', false, true, 'Трек 0 —']);
   expect(await page.locator('#music-player .music-part').evaluateAll(parts => parts.every(p => !p.textContent.includes('music.')))).toBe(true);
   // listened to: it plays alone, and stops as the menu is left
   await page.evaluate(() => { audio.musicOn = false; });

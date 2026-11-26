@@ -91,6 +91,15 @@ if (typeof addEventListener === 'function') addEventListener('resize', placeDraw
 // The menu's one pane of glass (#menu-glass) laid under the screen showing: from screen to screen it moves and takes
 // the new one's size, so the pane stays and only what's on it changes
 let glassFor = '';
+// The player's Interface size (Settings > General): 0.85 to 1.45, on the menu and the game's panels (style.css --ui-scale)
+const UI_SCALES = [0.85, 1, 1.15, 1.3, 1.45]; // (shown as 1 to 5; 2 is as it was)
+export const uiScale = () => { const v = Number(loadSetting('uiScale', '1')); return UI_SCALES.includes(v) ? v : 1; };
+/** @param {number} scale */
+export function setUiScale(scale) {
+  saveSetting('uiScale', String(scale));
+  document.documentElement.style.setProperty('--ui-scale', String(uiScale()));
+}
+if (typeof document !== 'undefined' && document.documentElement) document.documentElement.style.setProperty('--ui-scale', String(uiScale()));
 // how much the menu is zoomed (style.css: bigger on a bigger screen)
 const menuZoom = () => Number.parseFloat(getComputedStyle(mainMenu).zoom) || 1;
 const GLASS_MS = 340, GLASS_EASE = 'cubic-bezier(0.25, 0.85, 0.3, 1)';
@@ -151,41 +160,45 @@ export function renderMusicPlayer() {
   if (!box) return;
   box.innerHTML = '';
   const word = id => (id === 'menu' ? t('music.menuName') : t(`music.name.${id.slice(id.indexOf('_') + 1)}`));
+  let number = 0; // (every track numbered in turn, the menu's 0)
+  const el = (tag, className, text) => { const e = document.createElement(tag); e.className = className; if (text !== undefined) e.textContent = text; return e; };
+  /** @param {{ id: string }} track */
+  const row = track => {
+    const line = el('div', 'music-row' + (isTrackOn(track.id) ? '' : ' off'));
+    line.dataset.track = track.id;
+    const listen = el('button', 'btn music-listen' + (musicPreview.id === track.id ? ' on' : ''));
+    listen.innerHTML = iconHtml(musicPreview.id === track.id ? 'stop' : 'play');
+    listen.setAttribute('aria-label', t(musicPreview.id === track.id ? 'music.stop' : 'music.listen'));
+    onTap(listen, () => { previewTrack(musicPreview.id === track.id ? '' : track.id); renderMusicPlayer(); });
+    const name = el('span', 'music-name');
+    name.innerHTML = `<span class="music-number">${t('music.track', { n: number++ })}</span><b>${word(track.id)}</b><i class="ic ic-moon music-moon" aria-hidden="true"></i>`;
+    const toggle = el('button', 'btn music-toggle' + (isTrackOn(track.id) ? ' on' : ''), t(isTrackOn(track.id) ? 'menu.on' : 'menu.off'));
+    onTap(toggle, () => { setTrackOn(track.id, !isTrackOn(track.id)); renderMusicPlayer(); });
+    line.append(listen, name, toggle);
+    return line;
+  };
+  // A card a group: the menu's, the Plague's (one a level in turn), the Battles' and each side's; in a side's the calm
+  // tracks, then the fight's, those of the night marked with a moon (the Battles' duel and uneven fight under them)
+  const CALM = ['ambient', 'nightAmbient'], FIGHT = ['battle', 'nightBattle'], NIGHT = ['nightAmbient', 'nightBattle'];
+  const cards = el('div', 'music-cards');
   for (const group of musicCatalog()) {
-    const head = document.createElement('div');
-    head.className = 'music-group';
-    head.textContent = group.label;
-    box.appendChild(head);
-    // (the tracks under short headings of when they play, By day, Fight by night...: no line under each; the menu's
-    // one and the Plague's, one a level in turn, need none)
-    let part = '';
-    for (const track of group.tracks) {
-      if (group.id !== 'menu' && group.id !== 'plague' && track.when !== part) {
-        part = track.when;
-        const sub = document.createElement('div');
-        sub.className = 'music-part';
-        sub.textContent = t(track.when);
-        box.appendChild(sub);
+    const card = el('div', 'music-card');
+    card.dataset.group = group.id;
+    card.appendChild(el('div', 'music-group', group.label));
+    const tracks = /** @type {any[]} */ (group.tracks);
+    const add = list => list.forEach(track => { const line = row(track); if (NIGHT.includes(track.kind)) line.classList.add('night'); card.appendChild(line); });
+    if (group.id === 'menu' || group.id === 'plague') add(tracks);
+    else {
+      for (const [kinds, part] of [[CALM, 'calm'], [FIGHT, 'fight']]) {
+        const list = tracks.filter(track => kinds.includes(track.kind));
+        if (list.length) { card.appendChild(el('div', 'music-part', t(`music.${part}`))); add(list); }
       }
-      const row = document.createElement('div');
-      row.className = 'music-row' + (isTrackOn(track.id) ? '' : ' off');
-      row.dataset.track = track.id;
-      const listen = document.createElement('button');
-      listen.className = 'btn music-listen' + (musicPreview.id === track.id ? ' on' : '');
-      listen.innerHTML = iconHtml(musicPreview.id === track.id ? 'stop' : 'play');
-      listen.setAttribute('aria-label', t(musicPreview.id === track.id ? 'music.stop' : 'music.listen'));
-      onTap(listen, () => { previewTrack(musicPreview.id === track.id ? '' : track.id); renderMusicPlayer(); });
-      const name = document.createElement('span');
-      name.className = 'music-name';
-      name.innerHTML = `<b>${word(track.id)}</b>`;
-      const toggle = document.createElement('button');
-      toggle.className = 'btn music-toggle' + (isTrackOn(track.id) ? ' on' : '');
-      toggle.textContent = t(isTrackOn(track.id) ? 'menu.on' : 'menu.off');
-      onTap(toggle, () => { setTrackOn(track.id, !isTrackOn(track.id)); renderMusicPlayer(); });
-      row.append(listen, name, toggle);
-      box.appendChild(row);
+      const other = tracks.filter(track => !CALM.includes(track.kind) && !FIGHT.includes(track.kind));
+      if (other.length) { card.appendChild(el('div', 'music-part', t('music.when.arenaDuel'))); add(other); }
     }
+    cards.appendChild(card);
   }
+  box.appendChild(cards);
 }
 
 // Exit closes the app on Android; a browser tab can't close itself, so there it isn't shown
@@ -261,6 +274,12 @@ export function initMenuScreens() {
     setSettingsDrawer(settingsDrawer === name ? null : name);
   }));
   initSwitches();
+  // Interface size: the menu's and the game's panels' zoom (style.css --ui-scale), remembered
+  const markUiScale = () => document.querySelectorAll('[data-ui-scale]').forEach(b => b.classList.toggle('active', Number(/** @type {HTMLElement} */ (b).dataset.uiScale) === uiScale()));
+  markUiScale();
+  document.querySelectorAll('[data-ui-scale]').forEach(button => onTap(/** @type {HTMLElement} */ (button), () => {
+    setUiScale(Number(/** @type {HTMLElement} */ (button).dataset.uiScale)); markUiScale(); placeGlass(); placeDrawer();
+  }));
   document.querySelectorAll('[data-mode-info]').forEach(button => onTap(button, () => {
     const mode = button.dataset.modeInfo;
     const info = MODE_INFO[mode];
