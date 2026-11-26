@@ -312,6 +312,12 @@ export function initMenuScreens() {
   initSegments();
   // A number field with limits (a custom map's size, the waves' interval...) kept within them: a number typed past
   // them is set to the nearest limit before what reads it sees it (any number went in, 1929999999999 too)
+  // (and past the top while typing: cut back to it at once, as a typed digit too many)
+  document.addEventListener('input', e => {
+    const input = /** @type {HTMLInputElement} */ (e.target);
+    if (!(input instanceof HTMLInputElement) || input.type !== 'number' || input.max === '') return;
+    if (Number(input.value) > Number(input.max)) input.value = input.max;
+  }, true);
   document.addEventListener('change', e => {
     const input = /** @type {HTMLInputElement} */ (e.target);
     if (!(input instanceof HTMLInputElement) || input.type !== 'number' || input.min === '' || input.max === '') return;

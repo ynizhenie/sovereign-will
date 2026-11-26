@@ -8,10 +8,11 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#editor-open-maps').click();
   await expect(page.locator('#map-manager-list')).toContainText('Сохранённых карт пока нет');
   await page.locator('[data-screen="maps"] [data-back]').click();
-  await expect(page.locator('.editor-start .editor-start-title')).toHaveCount(0); // (no line telling what the buttons say)
-  await expect(page.locator('#editor-new')).toHaveText('Новая карта'); // (one button; the land generated or not by a switch)
+  // (the editor's first screen: New map and My maps; New map's own: its size, the land generated or not, Create)
+  await expect(page.locator('[data-screen="editor-hub"]')).toBeVisible();
+  await page.locator('#editor-open-new').click();
+  await expect(page.locator('#editor-new')).toHaveText('Создать');
   await expect(page.locator('[data-editor-generate="on"]')).toHaveClass(/active/);
-  await expect(page.locator('[data-screen="editor"] #editor-new.menu-button-primary')).toHaveCount(1);
   await page.locator('[data-editor-size="128"]').click();
   await page.evaluate(() => newEditorMap(false));
   await expect(page.locator('#loading-screen')).toBeVisible();
@@ -147,7 +148,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#exit-to-menu-button').click();
 
   // Endless: Custom map lists it, and hides the map size and generator
-  await page.locator('[data-screen="editor"] [data-back]').click();
+  await page.locator('[data-screen="editor-hub"] [data-back]').click();
   await page.locator('#open-modes').click(); // (the modes are behind Play)
   await page.locator('#mode-endless').click();
   await expect(page.locator('#endless-open-maps')).toBeHidden();

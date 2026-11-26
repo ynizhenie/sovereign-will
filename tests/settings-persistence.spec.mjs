@@ -65,6 +65,7 @@ test('map-editor setup choices survive reload', async ({ page }) => {
   await page.locator('[data-screen="endless"] [data-back]').click();
   await page.locator('[data-screen="modes"] [data-back]').click(); // (a mode's Back is to the modes)
   await page.locator('#mode-editor').click();
+  await page.locator('#editor-open-new').click();
   await page.locator('[data-editor-size="custom"]').click();
   await page.locator('#editor-map-cols').fill('208');
   await page.locator('#editor-map-cols').dispatchEvent('change');
@@ -77,6 +78,7 @@ test('map-editor setup choices survive reload', async ({ page }) => {
   await page.locator('[data-screen="endless"] [data-back]').click();
   await page.locator('[data-screen="modes"] [data-back]').click(); // (a mode's Back is to the modes)
   await page.locator('#mode-editor').click();
+  await page.locator('#editor-open-new').click();
   await expect(page.locator('[data-editor-size="custom"]')).toHaveClass(/active/);
   await expect(page.locator('#editor-map-cols')).toHaveValue('208');
   await expect(page.locator('#editor-map-rows')).toHaveValue('224');

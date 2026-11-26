@@ -207,36 +207,45 @@
         </div>
     </div>
 
-    <div class="main-menu-content" data-screen="editor" hidden>
+    <!-- The map editor: a new map, or one of the saved ones (as Modes: two framed buttons) -->
+    <div class="main-menu-content" data-screen="editor-hub" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="editor"><span data-i18n="menu.editor">Map editor</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
-        <!-- (#326, 27.10, 19) the generator's settings for a generated map, as Endless's gear -->
-        <button id="editor-open-generator" class="menu-gear" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
+        <button id="editor-open-new" class="menu-button menu-button-primary" data-i18n="editor.newMapOpen">New map</button>
+        <button id="editor-open-maps" class="menu-button" data-i18n="editor.myMaps">My maps</button>
+    </div>
+
+    <!-- A new map: its size, the land generated or bare (the generator's gear beside), its seed, then Create -->
+    <div class="main-menu-content" data-screen="editor" hidden>
+        <button class="menu-back" data-back data-back-to="editor-hub" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="editor.newMapOpen">New map</h1>
         <div class="wave-settings">
-            <div data-i18n="editor.newMap">New map:</div>
+            <div data-i18n="editor.size">Size:</div>
             <div class="wave-options">
                 <!-- (#326) the sizes of Endless's maps (continents): the editor's are the same -->
-                <button class="editor-size-option" data-editor-size="128" data-i18n="menu.mapSmall">Small 128</button>
-                <button class="editor-size-option active" data-editor-size="192" data-i18n="menu.mapMedium">Medium 192</button>
-                <button class="editor-size-option" data-editor-size="256" data-i18n="menu.mapLarge">Large 256</button>
+                <button class="editor-size-option" data-editor-size="128" data-i18n="menu.mapSmall">Small</button>
+                <button class="editor-size-option active" data-editor-size="192" data-i18n="menu.mapMedium">Medium</button>
+                <button class="editor-size-option" data-editor-size="256" data-i18n="menu.mapLarge">Large</button>
                 <button class="editor-size-option" data-editor-size="custom" data-i18n="menu.mapCustom">Custom</button>
             </div>
             <div id="editor-map-custom" class="map-custom" hidden>
                 <input id="editor-map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
-            <!-- a new map: the land made by the generator, or bare; then one button to open it -->
-            <div class="wave-settings switch-row">
-                <div data-i18n="editor.generateLand">Generate land:</div>
-                <div class="wave-options switch">
+        </div>
+        <div class="wave-settings switch-row">
+            <div data-i18n="editor.generateLand">Generate land:</div>
+            <span class="switch-with-gear">
+                <!-- (#326, 27.10, 19) the generator's settings for a generated map -->
+                <button id="editor-open-generator" class="menu-gear" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
+                <span class="wave-options switch">
                     <button class="fps-option" data-editor-generate="off" data-i18n="menu.off">Off</button>
                     <button class="fps-option active" data-editor-generate="on" data-i18n="menu.on">On</button>
-                </div>
-            </div>
-            <button id="editor-new" class="menu-button menu-button-primary" data-i18n="editor.newMapOpen">New map</button>
+                </span>
+            </span>
         </div>
         <div data-seed-slot="editor"></div>
-        <button id="editor-open-maps" class="menu-button" data-i18n="editor.savedMaps">Saved maps</button>
+        <button id="editor-new" class="menu-button menu-button-primary" data-i18n="editor.create">Create</button>
     </div>
 
     <div class="main-menu-content plague-menu" data-screen="plague" hidden>

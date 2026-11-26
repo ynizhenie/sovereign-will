@@ -11,6 +11,7 @@ test('the editor\'s new maps are of Endless\'s sizes, one from the generator is 
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-maps'); showMenuScreen('home'); });
   expect(await page.locator('[data-editor-size]').evaluateAll(b => b.map(x => x.dataset.editorSize))).toEqual(['128', '192', '256', 'custom']);
   await page.locator('#mode-editor').click();
+  await page.locator('#editor-open-new').click();
   await page.locator('[data-editor-size="128"]').click();
   await page.evaluate(() => {
     const fill = document.getElementById('loading-fill');
@@ -48,6 +49,7 @@ test('a big map is saved as runs, not tile by tile, and opens as it was; a map s
   const errors = await openGame(page);
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-maps'); showMenuScreen('home'); });
   await page.locator('#mode-editor').click();
+  await page.locator('#editor-open-new').click();
   await page.locator('[data-editor-size="128"]').click();
   await page.evaluate(() => newEditorMap(true));
   await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
@@ -75,6 +77,7 @@ test('map dimensions cannot be changed after opening it in the editor', async ({
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.locator('#mode-editor').click();
+  await page.locator('#editor-open-new').click();
   await page.locator('[data-editor-size="128"]').click();
   await page.evaluate(() => newEditorMap(false));
   expect(await page.locator('[data-resize]').count()).toBe(0);

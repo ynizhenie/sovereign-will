@@ -152,7 +152,8 @@ export function initEditorPanel() {
   }));
   [editorMapCols, editorMapRows].forEach(input => input.addEventListener('change', rememberEditorChoices));
   document.getElementById('mode-editor').disabled = false;
-  onTap(document.getElementById('mode-editor'), () => showMenuScreen('editor'));
+  onTap(document.getElementById('mode-editor'), () => showMenuScreen('editor-hub'));
+  onTap(/** @type {HTMLElement} */ (document.getElementById('editor-open-new')), () => showMenuScreen('editor'));
   initMapManager({
     openEditor: map => startEditor({ map }),
     selectEndless: map => {

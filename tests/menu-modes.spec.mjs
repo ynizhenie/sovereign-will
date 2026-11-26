@@ -34,7 +34,7 @@ test('each mode title opens an information screen that returns to its menu', asy
     ['#mode-endless', 'endless', 'endless'],
     ['#mode-plague', 'plague', 'plague'],
     ['#mode-battles', 'battle', 'battle'],
-    ['#mode-editor', 'editor', 'editor']
+    ['#mode-editor', 'editor-hub', 'editor']
   ]) {
     await page.evaluate(() => showMenuScreen('home'));
     if (modeButton !== '#mode-editor') await page.click('#open-modes');

@@ -122,6 +122,7 @@ test('the editor shares Endless\' seed and the generator gear: a generated map i
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-editor');
+  await page.click('#editor-open-new');
   await page.click('#editor-open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
   await page.click('[data-screen="generator"] [data-back-to]');
