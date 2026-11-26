@@ -794,46 +794,33 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   overflow-y: auto;
 }
 .main-menu-content.generator-screen { max-height: min(calc(75vh / var(--menu-zoom)), var(--menu-room)); }
-.generator-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: left;
-  font-size: 11px;
-}
-.generator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
-.generator-fields h2, .generator-fields h3 {
-  font-size: 12px;
-  color: #8a91a0;
-  text-transform: uppercase;
-  margin: 8px 0 2px;
-}
-/* (#326) a kind of map's section: the one this game's size uses lit */
-.generator-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: #b5bac5;
-}
-.generator-field > span:last-child { display: flex; align-items: center; gap: 3px; color: #8a91a0; }
-.generator-field input {
-  width: 46px;
-  padding: 4px;
-  background: #111318;
-  border: 1px solid #353a46;
-  border-radius: 4px;
-  color: #fff;
-  text-align: center;
-}
-.preset-row {
-  display: flex;
-  gap: 6px;
-}
-.preset-row input {
-  flex: 1;
-  width: auto;
-}
-.preset-current { min-height: 1.2em; color: #aeb4c0; font-size: 12px; text-align: center; }
+/* The map generator: a card a group that folds (its head its name), a share a slider with its value, a count a number */
+.generator-fields { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 13px; }
+.gen-card { background: rgba(0, 0, 0, 0.18); padding: 6px 12px 10px; }
+.gen-card-head { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 4px 0;
+  font-size: 12px; font-weight: bold; color: #e8c76a; letter-spacing: 0.06em; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.gen-card-head::-webkit-details-marker { display: none; }
+.gen-card-head::after { content: ''; width: 7px; height: 7px; margin-right: 4px; border-right: 2px solid #e8c76a; border-bottom: 2px solid #e8c76a;
+  transform: rotate(-45deg); transition: transform 0.2s ease; }
+.gen-card[open] > .gen-card-head::after { transform: rotate(45deg); }
+.generator-fields h3 { margin: 8px 0 2px; font-size: 12px; font-weight: bold; color: #d4cfb6; }
+.generator-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.generator-field { display: flex; align-items: center; gap: 10px; color: #eee; }
+.generator-field > span:first-child { flex: 0 0 40%; min-width: 0; }
+.generator-field > span:last-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: #d4cfb6; }
+.generator-field input[type="number"] { width: 64px; padding: 4px; background: #111318; border: 1px solid #353a46; border-radius: 4px; color: #fff; text-align: center; }
+.generator-field input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; width: auto; height: 8px; margin: 0; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(to right, #6fa34f 0 var(--fill, 0%), #1e1f19 var(--fill, 0%) 100%); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7); }
+.generator-field input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+.generator-field input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: #e9e2c8; }
+.gen-value { flex: 0 0 40px; text-align: right; font-style: normal; font-size: 12px; color: #e8c76a; font-variant-numeric: tabular-nums; }
+/* the presets on a row (Standard and the player's), and under it a name and Save for a new one */
+.preset-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.preset-presets #preset-standard { flex: 0 0 auto; padding: 8px 14px; }
+.preset-presets .preset-list { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.preset-row { display: flex; gap: 6px; }
+.preset-row input { flex: 1; width: auto; }
 
 /* (#326) the selected settler's card: everything shown, scrolling when there's a lot */
 .selected-unit-box.has-settler { position: relative; display: flex; flex-direction: column; width: min(94vw, 400px); height: min(30vh, 220px); box-sizing: border-box; white-space: normal; overflow: hidden; padding: 8px 48px 8px 10px; }

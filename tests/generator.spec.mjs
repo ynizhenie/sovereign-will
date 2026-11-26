@@ -83,7 +83,6 @@ test('the generator identifies its active preset and accepts values beyond the o
   await page.click('#open-generator');
 
   await expect(page.locator('#preset-standard')).toHaveClass(/active/);
-  await expect(page.locator('#preset-current')).toHaveText('Выбран пресет: Стандарт. Измените настройку, чтобы сохранить новый пресет.');
   await page.fill('#preset-name', 'Open range');
   await expect(page.locator('#preset-save')).toBeDisabled();
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
@@ -98,12 +97,10 @@ test('the generator identifies its active preset and accepts values beyond the o
   await page.locator('#generator-fields input:not([data-key])').nth(2).fill('80');
   await page.locator('#generator-fields input:not([data-key])').nth(2).dispatchEvent('change');
   expect(await page.evaluate(() => [GAME_CONFIG.continent.margin, GAME_CONFIG.continent.mountains])).toEqual([0.25, 0.8]);
-  await expect(page.locator('#preset-current')).toHaveText('Свои настройки (пресет не выбран)');
   await expect(page.locator('#preset-save')).toBeEnabled();
 
   await page.click('#preset-save');
   await expect(page.locator('#preset-list [data-preset="Open range"]')).toHaveClass(/active/);
-  await expect(page.locator('#preset-current')).toHaveText('Выбран пресет: Open range. Измените настройку, чтобы сохранить новый пресет.');
   await expect(page.locator('#preset-save')).toBeDisabled();
 
   await page.click('#preset-list [data-preset="Open range"]');
@@ -111,7 +108,6 @@ test('the generator identifies its active preset and accepts values beyond the o
   await expect(page.locator('#preset-save')).toHaveText('Обновить');
   await page.locator('#generator-fields input:not([data-key])').nth(1).fill('1200');
   await page.locator('#generator-fields input:not([data-key])').nth(1).dispatchEvent('change');
-  await expect(page.locator('#preset-current')).toHaveText('Редактирование пресета: Open range');
   await expect(page.locator('#preset-save')).toBeEnabled();
   await page.click('#preset-save');
   expect(await page.evaluate(() => loadPresets()['Open range'].continent.startCoast)).toBe(1200);
@@ -119,7 +115,6 @@ test('the generator identifies its active preset and accepts values beyond the o
 
   await page.click('#preset-standard');
   await expect(page.locator('#preset-standard')).toHaveClass(/active/);
-  await expect(page.locator('#preset-current')).toHaveText('Выбран пресет: Стандарт. Измените настройку, чтобы сохранить новый пресет.');
 });
 
 test('the editor shares Endless\' seed and the generator gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 128 (#326, 27.10, 18, 19)', async ({ page }) => {

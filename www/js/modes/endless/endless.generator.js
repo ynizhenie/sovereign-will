@@ -30,45 +30,58 @@ export function cleanValue(raw) {
   return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
 }
 
+// A group of fields as a card that folds (open, or shut, as it was left): its name the card's head
+const cardsShut = new Set(['nature']);
+/** @param {HTMLElement} container @param {string} id @param {string} title */
+function card(container, id, title) {
+  const box = document.createElement('details');
+  box.className = 'gen-card';
+  box.dataset.card = id;
+  box.open = !cardsShut.has(id);
+  box.addEventListener('toggle', () => { if (box.open) cardsShut.delete(id); else cardsShut.add(id); });
+  const head = document.createElement('summary');
+  head.className = 'gen-card-head';
+  head.textContent = title;
+  box.appendChild(head);
+  container.appendChild(box);
+  return box;
+}
+/** @param {HTMLElement} box @param {HTMLElement[]} fields @param {string} [title] */
+function grid(box, fields, title) {
+  if (title) { const heading = document.createElement('h3'); heading.textContent = title; box.appendChild(heading); }
+  const g = document.createElement('div'); g.className = 'generator-grid';
+  fields.forEach(f => g.appendChild(f));
+  box.appendChild(g);
+}
+
 export function renderGeneratorFields() {
   const container = document.getElementById('generator-fields');
   container.innerHTML = '';
   renderContinentFields(container);
   for (const [group, keys] of GENERATOR_GROUPS) {
-    // each group: a heading, then its fields two to a row
-    const heading = document.createElement('h3');
-    heading.textContent = t(`gen.group.${group}`);
-    const grid = document.createElement('div');
-    grid.className = 'generator-grid';
-    for (const key of keys.filter(k => k in GAME_CONFIG.map)) grid.appendChild(generatorField(key));
-    container.append(heading, grid);
+    grid(card(container, group, t(`gen.group.${group}`)), keys.filter(k => k in GAME_CONFIG.map).map(generatorField));
   }
   updatePresetSelection();
 }
 
 // (#326) The continent's: the sea round the land and the base's distance from it, the biomes' shares of the land, and what
-// grows on each biome (as a share of its tiles), each a percent
+// grows on each biome (as a share of its tiles), each a percent; what grows in one card, Nature, a heading a biome
 function renderContinentFields(container) {
   const C = GAME_CONFIG.continent;
-  const grid = (title, fields) => {
-    const heading = document.createElement('h3'); heading.textContent = title;
-    const box = document.createElement('div'); box.className = 'generator-grid';
-    fields.forEach(f => box.appendChild(f));
-    container.append(heading, box);
-  };
-  grid(t('gen.group.cland'), [
+  grid(card(container, 'land', t('gen.group.cland')), [
     percentField(t('gen.c.margin'), () => C.margin, v => { C.margin = v; }, MAX_CONTINENT_MARGIN),
     numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; })
   ]);
-  grid(t('gen.group.cbiomes'), ['mountains', 'desert', 'savanna', 'forest', 'lakes'].map(k =>
+  grid(card(container, 'biomes', t('gen.group.cbiomes')), ['mountains', 'desert', 'savanna', 'forest', 'lakes'].map(k =>
     percentField(t(`gen.c.${k}`), () => C[k], v => { C[k] = v; })));
+  const nature = card(container, 'nature', t('gen.group.nature'));
   for (const biome of CONTINENT_BIOMES) {
     const table = C.grow[biome];
-    grid(t(`gen.group.grow.${biome}`), Object.keys(table).map(kind => {
+    grid(nature, Object.keys(table).map(kind => {
       const others = Object.entries(table).filter(([k]) => k !== kind).reduce((a, [, c]) => a + c, 0);
       const remaining = Math.max(0, 1 - others);
       return percentField(t(`gen.res.${kind}`), () => table[kind], v => { table[kind] = v; }, remaining, '0.1');
-    }));
+    }), t(`gen.group.grow.${biome}`));
   }
 }
 
@@ -100,14 +113,22 @@ function labelledNumber(label, value, onChange, min, max, step, unit) {
   const name = document.createElement('span'); name.textContent = label;
   const boxes = document.createElement('span');
   const input = document.createElement('input');
-  input.type = 'number';
+  // (a share: a slider with its value beside it; a count of tiles or a time: a number to type, no top to it)
+  input.type = unit === '%' && max !== null ? 'range' : 'number';
   if (min !== null) input.min = String(min);
   if (max !== null) input.max = String(max);
-  input.step = String(step);
+  input.step = String(step === 'any' ? 0.5 : step);
   input.value = String(value);
   input.addEventListener('change', () => onChange(input.value));
   boxes.appendChild(input);
-  if (unit) boxes.appendChild(document.createTextNode(` ${unit}`));
+  if (input.type === 'range') {
+    const shown = document.createElement('i');
+    shown.className = 'gen-value';
+    const show = () => { shown.textContent = `${input.value}%`; input.style.setProperty('--fill', `${max ? (Number(input.value) / max) * 100 : 0}%`); };
+    input.addEventListener('input', show);
+    show();
+    boxes.appendChild(shown);
+  } else if (unit) boxes.appendChild(document.createTextNode(` ${unit}`));
   row.append(name, boxes);
   return row;
 }
@@ -211,9 +232,6 @@ function updatePresetSelection() {
     button.classList.toggle('active', isSelected);
     button.setAttribute('aria-pressed', String(isSelected));
   });
-  document.getElementById('preset-current').textContent = selected
-    ? t('gen.currentPreset', { name: selected.kind === 'standard' ? t('gen.standard') : selected.name })
-    : isExistingPreset ? t('gen.editingPreset', { name: presetName }) : t('gen.customSettings');
   const saveLabel = isExistingPreset ? 'gen.update' : 'gen.save';
   saveButton.dataset.i18n = saveLabel;
   saveButton.textContent = t(saveLabel);
