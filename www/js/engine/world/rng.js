@@ -32,7 +32,12 @@ export function createDefaultSeed() {
     values[0] = Date.now() >>> 0;
     values[1] = Math.floor(Math.random() * 4294967296);
   }
-  return `lima-${Date.now().toString(36)}-${values[0].toString(36)}-${values[1].toString(36)}`;
+  // (short and easy to read out and type: eight letters and digits in two halves, none that look alike, K7PM-2XQ9;
+  // any old seed still works, it's only a string)
+  const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += ALPHABET[(i < 4 ? values[0] >>> (i * 5) : values[1] >>> ((i - 4) * 5)) & 31];
+  return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
 export const worldSeedInput = document.getElementById('seed-input');

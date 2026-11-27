@@ -4,7 +4,7 @@ import { openGame } from './helpers.mjs';
 // The Plague (#402), as #404 asked for it
 async function startPlague(page) {
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-plague');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-plague');
   await page.click('#plague-play');
   await page.waitForFunction(() => gameStarted && !loading && plagueMode, null, { timeout: 60000 });
   await page.evaluate(() => { isPaused = true; });
@@ -13,7 +13,7 @@ async function startPlague(page) {
 test('Plague defaults use a six-tile squad search, improved recovery and healing, with Play at the top', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-plague');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-plague');
   const menuOrder = await page.locator('[data-screen="plague"]').evaluate(screen => {
     const children = [...screen.children];
     return children.indexOf(screen.querySelector('#plague-play')) < children.indexOf(screen.querySelector('.plague-spawn-settings')) &&
@@ -338,7 +338,7 @@ test('Plague healers carry one medbag, fight unarmed, and leave unarmed corpses'
 test('Plague groups in the same batch spawn within a five-second jitter window', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-plague');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-plague');
   for (const [kind, value] of [['interval', 10], ['groups', 3]]) {
     const box = page.locator(`[data-plague-range="${kind}"]`);
     await box.locator('[data-plague-range-mode="custom"]').click();
@@ -664,7 +664,7 @@ test('Endless reapplies its selected wave and card settings after Plague', async
   await page.locator('#wave-custom').dispatchEvent('change');
   await startPlague(page);
   await page.evaluate(() => exitToMainMenu());
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await page.click('#play-button');
   await page.waitForFunction(() => gameStarted && !loading && !plagueMode, null, { timeout: 60000 });
   const settings = await page.evaluate(() => ({ waveInterval, waveTimer, cardMode }));
@@ -717,7 +717,7 @@ test('Plague keeps its own sides, midday and clear weather; Endless\'s come back
 test('Plague menu: the default ranges or the player\'s own, kept to switch back and forth (#404, 13)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-plague');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-plague');
   const box = page.locator('[data-plague-range="interval"]');
   await expect(box.locator('.plague-range-fields')).toBeHidden();
   await box.locator('[data-plague-range-mode="custom"]').click();
@@ -741,7 +741,7 @@ test('Plague saves are separate and available from its setup and pause menus', a
     localStorage.removeItem('sovereign-will-plagueSaves');
     showMenuScreen('home');
   });
-  await page.click('#mode-plague');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-plague');
   await expect(page.locator('#plague-open-saves')).toBeVisible();
   await page.click('#plague-open-saves');
   await expect(page.locator('#save-list [data-save]')).toHaveCount(0);
@@ -771,7 +771,7 @@ test('Plague saves are separate and available from its setup and pause menus', a
 
   await page.click('#btn-pause-toggle');
   await page.click('#exit-to-menu-button');
-  await page.click('#mode-plague');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-plague');
   await page.click('#plague-open-saves');
   await expect(page.locator('#save-list [data-save]')).toHaveCount(1);
   await expect(page.locator('[data-screen="saves"] [data-back]')).toHaveAttribute('data-back-to', 'plague');

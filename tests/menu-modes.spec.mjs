@@ -14,13 +14,17 @@ test('the main menu shows the modes; Endless and Settings open their screens and
   await expect(page.locator('#mode-battles')).toBeEnabled(); // #38
   await expect(page.locator('#mode-editor')).toBeEnabled(); // #37
   await expect(page.locator('#exit-app')).toBeHidden(); // a browser tab can't close itself
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await expect(page.locator('#play-button')).toBeVisible();
   await expect(home).toBeHidden();
   await page.click('[data-screen="endless"] [data-back]');
+  await page.click('[data-screen="modes"] [data-back]'); // (a mode's Back is to the modes, theirs to the first screen)
   await page.click('#open-settings');
+  await page.click('[data-settings-group="general"]');
   await expect(page.locator('#language-options')).toBeVisible();
+  await page.click('[data-settings-group="graphics"]'); // (one group's panel at a time)
   await expect(page.locator('#fps-options')).toBeVisible();
+  await expect(page.locator('#language-options')).toBeHidden();
   expect(errors).toEqual([]);
 });
 
@@ -30,18 +34,21 @@ test('each mode title opens an information screen that returns to its menu', asy
     ['#mode-endless', 'endless', 'endless'],
     ['#mode-plague', 'plague', 'plague'],
     ['#mode-battles', 'battle', 'battle'],
-    ['#mode-editor', 'editor', 'editor']
+    ['#mode-editor', 'editor-hub', 'editor']
   ]) {
+    await page.evaluate(() => showMenuScreen('home'));
+    if (modeButton !== '#mode-editor') await page.click('#open-modes');
     await page.click(modeButton);
     const title = page.locator(`[data-screen="${screen}"] [data-mode-info="${mode}"]`);
     await expect(title).toBeVisible();
     await expect(title.locator('.ic-info')).toBeVisible();
     await expect(title).toHaveText(/\S+/);
     await title.click();
-    await expect(page.locator('[data-screen="mode-description"]')).toBeVisible();
+    await expect(page.locator('#mode-info')).toBeVisible(); // (a pop-up over the mode's screen)
     await expect(page.locator('#mode-description-title')).not.toBeEmpty();
     await expect(page.locator('#mode-description-text')).not.toBeEmpty();
-    await page.click('[data-screen="mode-description"] [data-back]');
+    await page.click('#mode-info-close');
+    await expect(page.locator('#mode-info')).toBeHidden();
     await expect(page.locator(`[data-screen="${screen}"]`)).toBeVisible();
     await page.click(`[data-screen="${screen}"] [data-back]`);
   }
@@ -50,6 +57,7 @@ test('each mode title opens an information screen that returns to its menu', asy
 test('shadows can be disabled in settings and the choice is remembered', async ({ page }) => {
   const errors = await openFresh(page);
   await page.click('#open-settings');
+  await page.click('[data-settings-group="graphics"]');
   await expect(page.locator('[data-shadows="on"]')).toHaveClass(/active/);
   await page.click('[data-shadows="off"]');
   await expect(page.locator('[data-shadows="off"]')).toHaveClass(/active/);
@@ -71,6 +79,7 @@ test('shadows can be disabled in settings and the choice is remembered', async (
 
   await page.reload();
   await page.click('#open-settings');
+  await page.click('[data-settings-group="graphics"]');
   await expect(page.locator('[data-shadows="off"]')).toHaveClass(/active/);
   expect(await page.evaluate(() => areShadowsEnabled())).toBe(false);
   await page.click('[data-shadows="on"]');
@@ -80,7 +89,7 @@ test('shadows can be disabled in settings and the choice is remembered', async (
 
 test('two difficulties: on Hard enemies are as strong as the player\'s own units (#39, #255)', async ({ page }) => {
   await openFresh(page);
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   expect(await page.locator('#difficulty-options .difficulty-option').count()).toBe(2); // (the Plague has its own)
   const r = await page.evaluate(() => ['normal', 'hard'].map(level => {
     document.querySelector(`#difficulty-options .difficulty-option[data-difficulty="${level}"]`).click();
@@ -131,8 +140,64 @@ test('the game runs at the same speed whatever the frame rate (#39)', async ({ p
 test('the frame-rate setting is remembered (#39)', async ({ page }) => {
   await openFresh(page);
   await page.click('#open-settings');
+  await page.click('[data-settings-group="graphics"]');
   await page.click('.fps-option[data-fps="30"]');
   await page.reload();
   await page.click('#open-settings');
   await expect(page.locator('.fps-option[data-fps].active')).toHaveAttribute('data-fps', '30');
+});
+
+test('the first screen has Play, the map editor and the settings; Play opens the modes, and a mode\'s Back comes back to them', async ({ page }) => {
+  await openFresh(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await expect(page.locator('[data-screen="home"] .menu-button:visible')).toHaveCount(3);
+  await page.click('#open-modes');
+  await expect(page.locator('[data-screen="modes"]')).toBeVisible();
+  await page.click('#mode-plague');
+  await page.click('[data-screen="plague"] [data-back]');
+  await expect(page.locator('[data-screen="modes"]')).toBeVisible();
+  await page.click('[data-screen="modes"] [data-back]');
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
+});
+
+test('Settings are groups: a tap draws a group\'s panel out, a tap again puts it away; an On / Off setting is a switch the chosen half of which flips it; the music player is in Sound\'s', async ({ page }) => {
+  await openFresh(page);
+  await page.evaluate(() => showMenuScreen('settings'));
+  await expect(page.locator('[data-drawer]:visible')).toHaveCount(0);
+  await page.click('[data-settings-group="graphics"]');
+  await expect(page.locator('[data-drawer="graphics"]')).toBeVisible();
+  const on = () => page.evaluate(() => areShadowsEnabled());
+  expect(await on()).toBe(true);
+  await page.click('[data-shadows="on"]'); // (the chosen half: flipped off)
+  expect(await on()).toBe(false);
+  await page.click('[data-shadows="off"]'); // (again the chosen half: back on)
+  expect(await on()).toBe(true);
+  await page.click('[data-settings-group="graphics"]');
+  await expect(page.locator('[data-drawer="graphics"]')).toBeHidden();
+  await page.click('[data-settings-group="sound"]');
+  await page.click('#open-music-player'); // (Advanced: the music player's own screen)
+  await expect(page.locator('#music-player .music-row').first()).toBeVisible();
+  await page.click('#music-back'); // (back to Settings with Sound open again)
+  await expect(page.locator('[data-drawer="sound"]')).toBeVisible();
+  await page.click('[data-screen="settings"] [data-back]');
+  await expect(page.locator('[data-drawer="sound"]')).toBeHidden();
+});
+
+test('Esc goes back in the menu: a group\'s panel shut first, then a screen at a time to the first one, where it does nothing', async ({ page }) => {
+  await openFresh(page);
+  await page.evaluate(() => showMenuScreen('home'));
+  await page.click('#open-settings');
+  await page.click('[data-settings-group="sound"]');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-drawer="sound"]')).toBeHidden();
+  await expect(page.locator('[data-screen="settings"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
+  await page.click('#open-modes');
+  await page.click('#mode-plague');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-screen="modes"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
 });

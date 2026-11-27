@@ -43,6 +43,45 @@ function makeNoise() {
   };
 }
 
+// (a lake starts this many tiles from the sea, at the nearest)
+const LAKE_FROM_SEA = 4;
+
+// A tile goes with most of the nine round it (itself too): the single notches and spurs of a coast smoothed away.
+// `allowed` says where it may become 1.
+/** @param {Uint8Array} mask @param {number} cols @param {number} rows @param {(i: number) => boolean} allowed */
+function smoothMask(mask, cols, rows, allowed) {
+  const was = mask.slice();
+  for (let gy = 1; gy < rows - 1; gy++) {
+    for (let gx = 1; gx < cols - 1; gx++) {
+      let count = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) count += was[(gy + dy) * cols + gx + dx];
+      const i = gy * cols + gx;
+      mask[i] = count >= 5 && allowed(i) ? 1 : 0;
+    }
+  }
+}
+
+// The joined pieces (side by side) of a mask, each a list of its tiles
+/** @param {Uint8Array} mask @param {number} cols @param {number} rows @returns {number[][]} */
+function blobsOf(mask, cols, rows) {
+  const seen = new Uint8Array(mask.length), blobs = [];
+  for (let s = 0; s < mask.length; s++) {
+    if (!mask[s] || seen[s]) continue;
+    const blob = [s];
+    seen[s] = 1;
+    for (let k = 0; k < blob.length; k++) {
+      const c = blob[k], gx = c % cols, gy = (c - gx) / cols;
+      for (const [x, y] of [[gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1]]) {
+        if (x < 0 || y < 0 || x >= cols || y >= rows) continue;
+        const j = y * cols + x;
+        if (mask[j] && !seen[j]) { seen[j] = 1; blob.push(j); }
+      }
+    }
+    blobs.push(blob);
+  }
+  return blobs;
+}
+
 // The value below which `share` of the values are (of a sample of them)
 function quantile(values, share) {
   const sample = [];
@@ -79,6 +118,7 @@ export function* generateContinent() {
       land[at(gx, gy)] = e > 0.08 ? 1 : 0;
     }
   }
+  smoothMask(land, cols, rows, i => elevation[i] > -1); // (not into the sea round the edge)
   // the biggest mass is the continent; islands of 30 tiles or more stay, smaller ones go under
   const mass = new Int32Array(n).fill(-1), sizes = [];
   for (let i = 0; i < n; i++) {
@@ -128,11 +168,21 @@ export function* generateContinent() {
   }
   /** @param {Float32Array} values @param {number} share @returns {number} */
   const pick = (values, share) => quantile(landTiles.map(i => values[i]), share);
-  const mountainAt = pick(height, 1 - C.mountains), desertAt = pick(wet, C.desert), forestAt = pick(wet, 1 - C.forest), lakeAt = pick(hollow, 1 - C.lakes);
+  const mountainAt = pick(height, 1 - C.mountains), desertAt = pick(wet, C.desert), forestAt = pick(wet, 1 - C.forest);
   const savannaAt = pick(wet, Math.min(C.desert + C.savanna, 1 - C.forest));
+  // Lakes whole, in the hollows inland: (they were cut where they came within three tiles of the sea, and the cut
+  // followed the steps of the distance from it: lakes with straight sides and a thin strip of land along the sea)
+  const inland = landTiles.filter(i => coast[i] > LAKE_FROM_SEA);
+  const lakeAt = inland.length ? quantile(inland.map(i => hollow[i]), 1 - Math.min(1, C.lakes * landTiles.length / inland.length)) : Infinity;
+  const lake = new Uint8Array(n);
+  for (const i of landTiles) if (hollow[i] >= lakeAt && height[i] < mountainAt) lake[i] = 1;
+  smoothMask(lake, cols, rows, i => land[i] === 1 && height[i] < mountainAt);
+  for (const blob of blobsOf(lake, cols, rows)) {
+    if (blob.length < 4 || blob.some(i => coast[i] <= LAKE_FROM_SEA)) for (const i of blob) lake[i] = 0;
+  }
   const biome = new Uint8Array(n); // (SEA)
   for (const i of landTiles) {
-    biome[i] = height[i] >= mountainAt ? MOUNTAIN : hollow[i] >= lakeAt && coast[i] > 3 ? LAKE :
+    biome[i] = height[i] >= mountainAt ? MOUNTAIN : lake[i] ? LAKE :
       wet[i] <= desertAt ? DESERT : wet[i] >= forestAt ? FOREST : wet[i] <= savannaAt ? SAVANNA : GRASS;
   }
 
@@ -155,10 +205,10 @@ export function* generateContinent() {
   }
 
   // Natural mountain tiles are first placed near the start, then moved rather than simply removed when they
-  // would occupy the hall's protected three-tile radius.
+  // would stand in the hall's room (as near as the room the other things keep, by the tile's middle).
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
-      if (biome[at(gx, gy)] !== MOUNTAIN || Math.hypot(gx - start.gx, gy - start.gy) > 3) continue;
+      if (biome[at(gx, gy)] !== MOUNTAIN || Math.hypot(gx + 0.5 - start.gx, gy + 0.5 - start.gy) >= 5) continue;
       biome[at(gx, gy)] = GRASS;
       for (let attempt = 0; attempt < 200; attempt++) {
         const replacementX = Math.floor(rand() * cols);
@@ -173,21 +223,13 @@ export function* generateContinent() {
     }
   }
 
-  // Lakes also stay clear of the hall. Move them, rather than leaving a gap in the generated shoreline.
-  for (let gy = 0; gy < rows; gy++) {
-    for (let gx = 0; gx < cols; gx++) {
-      if (biome[at(gx, gy)] !== LAKE || !isWithinTownHallResourceBuffer(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15)) continue;
-      biome[at(gx, gy)] = GRASS;
-      for (let attempt = 0; attempt < 200; attempt++) {
-        const replacementX = Math.floor(rand() * cols), replacementY = Math.floor(rand() * rows);
-        const replacement = at(replacementX, replacementY);
-        if (replacementX < 3 || replacementY < 3 || replacementX >= cols - 3 || replacementY >= rows - 3 ||
-            Math.hypot(replacementX - start.gx, replacementY - start.gy) <= 5 ||
-            biome[replacement] === SEA || biome[replacement] === LAKE || biome[replacement] === MOUNTAIN) continue;
-        biome[replacement] = LAKE;
-        break;
-      }
-    }
+  // Lakes also stay clear of the hall: a lake that comes into its room goes whole (its tiles were moved one by one
+  // to random places: ponds of a tile all over the map, and a lake with a bite out of it)
+  const lakeMask = new Uint8Array(n);
+  for (let i = 0; i < n; i++) if (biome[i] === LAKE) lakeMask[i] = 1;
+  for (const blob of blobsOf(lakeMask, cols, rows)) {
+    if (!blob.some(i => isWithinTownHallResourceBuffer((i % cols) * TILE_SIZE + 15, Math.floor(i / cols) * TILE_SIZE + 15))) continue;
+    for (const i of blob) biome[i] = wet[i] <= desertAt ? DESERT : wet[i] >= forestAt ? FOREST : wet[i] <= savannaAt ? SAVANNA : GRASS;
   }
 
   // ---- The tiles into the world's lists
@@ -240,7 +282,7 @@ export function* generateContinent() {
     for (let gx = 0; gx < cols; gx++) {
       const i = at(gx, gy), b = biome[i];
       // (nothing within five tiles of the hall: room to walk up to it, as on a default map)
-      if (!BIOME_TABLE[b] || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
+      if (!BIOME_TABLE[b] || Math.hypot(gx + 0.5 - hall.gx, gy + 0.5 - hall.gy) < 5) continue;
       // (#326: a beach grows only pebbles and stones)
       const table = b !== DESERT && sand[i] ? C.grow.beach : (b !== DESERT && nearMountain(gx, gy)) ? C.grow.foothills : C.grow[BIOME_TABLE[b]];
       const roll = rand();
@@ -264,7 +306,7 @@ export function* generateContinent() {
   for (let gy = Math.ceil(hall.gy - startHalf); gy < hall.gy + startHalf; gy++) {
     for (let gx = Math.ceil(hall.gx - startHalf); gx < hall.gx + startHalf; gx++) {
       const b = biome[at(gx, gy)];
-      if ((b !== GRASS && b !== FOREST && b !== SAVANNA) || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
+      if ((b !== GRASS && b !== FOREST && b !== SAVANNA) || Math.hypot(gx + 0.5 - hall.gx, gy + 0.5 - hall.gy) < 5) continue;
       const { x, y } = tile(gx, gy);
       if (isSpawnSpotFree(x, y)) startBoarSpots.push({ x, y });
     }
@@ -284,7 +326,7 @@ export function* generateContinent() {
   for (const [kind, count] of Object.entries(C.nearBase)) {
     for (let k = 0, tries = 0; k < count && tries < count * 20; tries++) {
       const gx = hall.gx + Math.round((rand() - 0.5) * 2 * C.nearBaseTiles), gy = hall.gy + Math.round((rand() - 0.5) * 2 * C.nearBaseTiles);
-      if (gx < 0 || gy < 0 || gx >= cols || gy >= rows || Math.hypot(gx - hall.gx, gy - hall.gy) < 5) continue;
+      if (gx < 0 || gy < 0 || gx >= cols || gy >= rows || Math.hypot(gx + 0.5 - hall.gx, gy + 0.5 - hall.gy) < 5) continue;
       const b = biome[at(gx, gy)], { x, y } = tile(gx, gy);
       if ((b !== GRASS && b !== FOREST && b !== SAVANNA && !(b === DESERT && kind === 'pebble')) || sand[at(gx, gy)] && kind !== 'pebble' || taken.has(`${x},${y}`)) continue;
       taken.add(`${x},${y}`); addMapResource(kind, x, y); k++;

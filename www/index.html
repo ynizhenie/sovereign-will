@@ -16,24 +16,34 @@
 <div id="main-menu" data-menu-screen="home">
     <!-- dark while the game opens, lifted onto the world behind the menu (style.css: the game opening) -->
     <div id="intro-curtain"></div>
+    <!-- the menu's one pane of glass, under whichever screen shows: it moves and takes the next screen's size,
+         rather than each screen bringing a pane of its own (menu.screens.js placeGlass) -->
+    <div id="menu-glass" aria-hidden="true"></div>
     <!-- the game's name, big, on top of the main menu's first screen -->
     <div class="menu-title" id="menu-title"><span>Sovereign Will</span></div>
     <!-- put the menu away to watch the scene behind it; there, change the scene or bring the menu back (#256) -->
     <div class="flag-box menu-eye-box" id="menu-eye-box">
         <button id="menu-hide" class="flag-button menu-eye-button" data-i18n-title="menu.hideMenu" aria-label="Hide the menu"><i class="ic ic-eye"></i></button>
     </div>
-    <div id="menu-scene-bar">
-        <button id="menu-next-scene" class="btn" data-i18n="menu.nextScene">[[reroll]] Next scene</button>
-        <button id="menu-show" class="btn" data-i18n="menu.showMenu">[[menu]] Menu</button>
+    <!-- (the menu put away: in the eye's corner, the next scene and, where the eye was, the menu back) -->
+    <div id="menu-scene-bar" class="flag-box">
+        <button id="menu-next-scene" class="flag-button menu-eye-button" data-i18n-title="menu.nextSceneHint" aria-label="Next scene"><i class="ic ic-reroll"></i></button>
+        <button id="menu-show" class="flag-button menu-eye-button" data-i18n-title="menu.showMenuHint" aria-label="Back to the menu"><i class="ic ic-menu"></i></button>
     </div>
     <!-- the main menu has screens (showMenuScreen in main.js): modes, Endless/Saves/Battles setup, Settings -->
     <div class="main-menu-content" data-screen="home">
-        <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
-        <button id="mode-plague" class="menu-button" data-i18n="plague.mode">Plague</button>
-        <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
+        <button id="open-modes" class="menu-button menu-button-primary" data-i18n="menu.play">Play</button>
         <button id="mode-editor" class="menu-button" data-i18n="menu.editor" disabled>Map editor</button>
         <button id="open-settings" class="menu-button" data-i18n="menu.settings">Settings</button>
         <button id="exit-app" class="menu-button" data-i18n="menu.exit" hidden>Exit</button>
+    </div>
+    <!-- Play: the game's modes -->
+    <div class="main-menu-content" data-screen="modes" hidden>
+        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="menu.modes">Modes</h1>
+        <button id="mode-endless" class="menu-button menu-button-primary" data-i18n="menu.endless">Endless</button>
+        <button id="mode-plague" class="menu-button" data-i18n="plague.mode">Plague</button>
+        <button id="mode-battles" class="menu-button" data-i18n="menu.battles">Battles</button>
     </div>
     <!-- The current language; tapping its flag cycles languages. -->
     <div class="flag-box" id="menu-flags"></div>
@@ -66,12 +76,11 @@
     </div>
 
     <div class="main-menu-content" data-screen="endless" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="endless"><span data-i18n="menu.endless">Endless</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
-        <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
 
-        <button id="play-button" data-i18n="menu.play">PLAY</button>
-        <button id="open-saves" class="menu-button" data-i18n="menu.saves">Saves</button>
+        <button id="play-button" data-i18n="menu.newGame">New game</button>
+        <button id="open-saves" class="menu-button" data-i18n="menu.loadGame">Load game</button>
 
         <div class="wave-settings faction-settings">
             <div data-i18n="menu.factions">Factions:</div>
@@ -130,9 +139,13 @@
 
         <div class="wave-settings">
             <div data-i18n="menu.map">Map:</div>
-            <div class="wave-options">
-                <button class="map-source-option active" data-map-source="random" data-i18n="menu.randomMap">Random</button>
-                <button class="map-source-option" data-map-source="custom" data-i18n="menu.customMap">Custom map</button>
+            <!-- (the random map's settings by it, as the editor's island's by its switch) -->
+            <div class="options-with-gear">
+                <div class="wave-options">
+                    <button class="map-source-option active" data-map-source="random" data-i18n="menu.randomMap">Random</button>
+                    <button class="map-source-option" data-map-source="custom" data-i18n="menu.customMap">Custom map</button>
+                </div>
+                <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
             </div>
             <button id="endless-open-maps" class="menu-button custom-map-only" data-i18n="editor.savedMaps">Saved maps</button>
         </div>
@@ -156,7 +169,7 @@
             <div id="seed-settings" class="seed-settings">
                 <label for="seed-input" data-i18n="menu.seed">World seed</label>
                 <div class="seed-row">
-                    <input id="seed-input" type="text" value="default-world-seed" />
+                    <input id="seed-input" type="text" value="default-world-seed" maxlength="24" autocapitalize="characters" spellcheck="false" autocomplete="off" />
                     <button id="seed-reroll" type="button" data-i18n-title="menu.newSeed" aria-label="New random seed"><i class="ic ic-reroll"></i></button>
                 </div>
             </div>
@@ -164,9 +177,9 @@
     </div>
 
     <div class="main-menu-content" data-screen="battle" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="battle"><span data-i18n="menu.battles">Battles</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
-        <button id="battle-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
+        <button id="battle-play" class="menu-button menu-button-primary" data-i18n="menu.play">Play</button>
         <div class="wave-settings">
             <div data-i18n="menu.difficulty">Difficulty:</div>
             <div class="wave-options">
@@ -197,41 +210,52 @@
         </div>
     </div>
 
-    <div class="main-menu-content" data-screen="editor" hidden>
+    <!-- The map editor: a new map, or one of the saved ones (as Modes: two framed buttons) -->
+    <div class="main-menu-content" data-screen="editor-hub" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="editor"><span data-i18n="menu.editor">Map editor</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
-        <!-- (#326, 27.10, 19) the generator's settings for a generated map, as Endless's gear -->
-        <button id="editor-open-generator" class="menu-gear" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
+        <button id="editor-open-new" class="menu-button menu-button-primary" data-i18n="editor.newMapOpen">New map</button>
+        <button id="editor-open-maps" class="menu-button" data-i18n="editor.myMaps">My maps</button>
+    </div>
+
+    <!-- A new map: its size, the land generated or bare (the generator's gear beside), its seed, then Create -->
+    <div class="main-menu-content" data-screen="editor" hidden>
+        <button class="menu-back" data-back data-back-to="editor-hub" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="editor.newMapOpen">New map</h1>
         <div class="wave-settings">
-            <div data-i18n="editor.newMap">New map:</div>
+            <div data-i18n="editor.size">Size:</div>
             <div class="wave-options">
                 <!-- (#326) the sizes of Endless's maps (continents): the editor's are the same -->
-                <button class="editor-size-option" data-editor-size="128" data-i18n="menu.mapSmall">Small 128</button>
-                <button class="editor-size-option active" data-editor-size="192" data-i18n="menu.mapMedium">Medium 192</button>
-                <button class="editor-size-option" data-editor-size="256" data-i18n="menu.mapLarge">Large 256</button>
+                <button class="editor-size-option" data-editor-size="128" data-i18n="menu.mapSmall">Small</button>
+                <button class="editor-size-option active" data-editor-size="192" data-i18n="menu.mapMedium">Medium</button>
+                <button class="editor-size-option" data-editor-size="256" data-i18n="menu.mapLarge">Large</button>
                 <button class="editor-size-option" data-editor-size="custom" data-i18n="menu.mapCustom">Custom</button>
             </div>
             <div id="editor-map-custom" class="map-custom" hidden>
                 <input id="editor-map-cols" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map width" /> ×
                 <input id="editor-map-rows" class="menu-number" type="number" min="128" max="512" step="1" value="192" aria-label="Map height" />
             </div>
-            <div class="editor-start">
-                <div class="editor-start-title" data-i18n="editor.start">Choose a map and open it in the editor:</div>
-                <div class="editor-start-options">
-                    <button id="editor-new-empty" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.empty">Empty map</button>
-                    <button id="editor-new-generated" class="menu-button menu-button-primary editor-launch-option" data-i18n="editor.generated">Generate map</button>
-                </div>
-            </div>
+        </div>
+        <div class="wave-settings switch-row">
+            <div data-i18n="editor.generateLand">Generate land:</div>
+            <span class="switch-with-gear">
+                <!-- (#326, 27.10, 19) the generator's settings for a generated map -->
+                <button id="editor-open-generator" class="menu-gear" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
+                <span class="wave-options switch">
+                    <button class="fps-option" data-editor-generate="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option active" data-editor-generate="on" data-i18n="menu.on">On</button>
+                </span>
+            </span>
         </div>
         <div data-seed-slot="editor"></div>
-        <button id="editor-open-maps" class="menu-button" data-i18n="editor.savedMaps">Saved maps</button>
+        <button id="editor-new" class="menu-button menu-button-primary" data-i18n="editor.create">Create</button>
     </div>
 
     <div class="main-menu-content plague-menu" data-screen="plague" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
+        <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="plague"><span data-i18n="plague.title">Plague</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
-        <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.play">PLAY</button>
-        <button id="plague-open-saves" class="menu-button" data-i18n="menu.saves">Saves</button>
+        <button id="plague-play" class="menu-button menu-button-primary" data-i18n="menu.newGame">New game</button>
+        <button id="plague-open-saves" class="menu-button" data-i18n="menu.loadGame">Load game</button>
         <div class="wave-settings">
           <div data-i18n="menu.difficulty">Difficulty:</div>
           <div class="wave-options" id="plague-difficulty-options">
@@ -269,109 +293,143 @@
     <div class="main-menu-content generator-screen" data-screen="generator" hidden>
         <button class="menu-back" data-back-to="endless" data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="menu.generator">Map generator</h1>
-        <div class="preset-row">
-            <button id="preset-standard" class="fps-option" data-i18n="gen.standard">Standard</button>
-            <input id="preset-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="gen.presetName" placeholder="Preset name" />
+        <!-- the presets: the chosen one's name opens a list of them (Standard and the player's, each with its cross);
+             Save keeps what's set as a new one -->
+        <div class="preset-bar">
+            <span class="preset-label" data-i18n="gen.presets">Preset:</span>
+            <div class="preset-pick-wrap">
+                <button id="preset-pick" class="fps-option" aria-haspopup="true" aria-expanded="false"><span id="preset-pick-name"></span></button>
+                <div id="preset-menu" class="preset-menu" hidden>
+                    <button id="preset-standard" class="fps-option" data-i18n="gen.standard">Standard</button>
+                    <div id="preset-list" class="preset-list"></div>
+                </div>
+            </div>
             <button id="preset-save" class="fps-option" data-i18n="gen.save">Save</button>
         </div>
-        <div id="preset-current" class="preset-current" role="status" aria-live="polite"></div>
-        <div id="preset-list" class="preset-list"></div>
         <div id="generator-fields" class="generator-fields"></div>
     </div>
 
+    <!-- Settings: a button for each group; a tap draws its panel out beside (under it on a narrow screen), a tap again
+         puts it away (menu.screens.js setSettingsDrawer) -->
     <div class="main-menu-content" data-screen="settings" hidden>
         <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="menu.settings">Settings</h1>
-
-        <div class="wave-settings">
-            <div data-i18n="menu.language">Language:</div>
-            <div class="wave-options" id="language-options"></div>
-        </div>
-
-        <div class="wave-settings">
-            <div data-i18n="menu.fps">Frame rate:</div>
-            <div class="wave-options" id="fps-options">
-                <button class="fps-option" data-fps="30">30</button>
-                <button class="fps-option" data-fps="60">60</button>
-                <button class="fps-option" data-fps="display" data-i18n="menu.fpsDisplay">Screen</button>
-            </div>
-        </div>
-
-        <!-- (#322) VSYNC (on the next start) and the picture's quality (its resolution) -->
-        <div class="wave-settings">
-            <div data-i18n="menu.vsync">VSYNC:</div>
-            <div class="wave-options">
-                <button class="fps-option" data-vsync="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-vsync="on" data-i18n="menu.on">On</button>
-            </div>
-            <div class="settings-note" id="vsync-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
-        </div>
-
-        <!-- a trial: the ground and nature drawn by the graphics card (on the next start), see engine/platform/gl.js;
-             a developers' setting, shown with ?dev (DEV_SETTINGS) -->
-        <div class="wave-settings dev-setting" hidden>
-            <div data-i18n="menu.gl">WebGL (trial):</div>
-            <div class="wave-options">
-                <button class="fps-option" data-gl="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-gl="on" data-i18n="menu.on">On</button>
-            </div>
-            <div class="settings-note" id="gl-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
-        </div>
-
-        <div class="wave-settings">
-            <div data-i18n="menu.showFps">Show FPS:</div>
-            <div class="wave-options" id="show-fps-options">
-                <button class="fps-option" data-show-fps="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-show-fps="on" data-i18n="menu.on">On</button>
-            </div>
-        </div>
-
-        <!-- what the frames take and where they drop, with a report to send (app/perfmon.js); a developers' setting -->
-        <div class="wave-settings dev-setting" hidden>
-            <div data-i18n="menu.perfMonitor">Performance monitor:</div>
-            <div class="wave-options">
-                <button class="fps-option" data-perf-monitor="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-perf-monitor="on" data-i18n="menu.on">On</button>
-            </div>
-        </div>
-
-        <div class="wave-settings">
-            <div data-i18n="menu.shadows">Shadows:</div>
-            <div class="wave-options" id="shadows-options">
-                <button class="fps-option" data-shadows="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-shadows="on" data-i18n="menu.on">On</button>
-            </div>
-        </div>
-
-        <div class="wave-settings">
-            <div data-i18n="menu.sound">Sound:</div>
-            <div class="wave-options">
-                <button class="fps-option" data-sound="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-sound="on" data-i18n="menu.on">On</button>
-            </div>
-        </div>
-
-        <div class="wave-settings">
-            <div data-i18n="menu.music">Music:</div>
-            <div class="wave-options">
-                <button class="fps-option" data-music="off" data-i18n="menu.off">Off</button>
-                <button class="fps-option" data-music="on" data-i18n="menu.on">On</button>
-            </div>
-        </div>
-        <button id="open-music-player" class="menu-button" data-i18n="menu.openMusicPlayer">Open music player</button>
+        <button class="menu-button settings-group" data-settings-group="general" data-i18n="settings.general">General</button>
+        <button class="menu-button settings-group" data-settings-group="graphics" data-i18n="settings.graphics">Graphics</button>
+        <button class="menu-button settings-group" data-settings-group="sound" data-i18n="settings.sound">Sound</button>
     </div>
+    <div class="main-menu-content settings-drawer" data-drawer="general" hidden>
+        <h2 data-i18n="settings.general">General</h2>
+            <div class="wave-settings">
+                <div data-i18n="menu.language">Language:</div>
+                <!-- a drop-down: the language now, and a tap shows the others (menu.screens.js) -->
+                <div class="language-picker" id="language-options">
+                    <button id="language-current" class="wave-option language-option language-current" aria-haspopup="listbox" aria-expanded="false"></button>
+                    <div id="language-list" class="language-list" role="listbox" hidden></div>
+                </div>
+            </div>
 
-    <div class="main-menu-content" data-screen="music" hidden>
-        <button class="menu-back" data-back-to="settings" data-i18n="menu.back">[[back]] Back</button>
-        <h1 data-i18n="music.player">Music player</h1>
-        <!-- (#326) each track: its name, when it plays, a button to listen to it, and a switch to turn it off -->
+        <!-- how big the menu and the game's panels are (the player's choice, over what the screen's size gives) -->
+        <div class="wave-settings">
+            <div data-i18n="settings.uiScale">Interface size:</div>
+            <div class="wave-options segmented" id="ui-scale-options">
+                <button class="fps-option" data-ui-scale="0.85">1</button>
+                <button class="fps-option" data-ui-scale="1">2</button>
+                <button class="fps-option" data-ui-scale="1.15">3</button>
+                <button class="fps-option" data-ui-scale="1.3">4</button>
+                <button class="fps-option" data-ui-scale="1.45">5</button>
+            </div>
+        </div>
+    </div>
+    <div class="main-menu-content settings-drawer" data-drawer="graphics" hidden>
+        <h2 data-i18n="settings.graphics">Graphics</h2>
+            <div class="wave-settings">
+                <div data-i18n="menu.fps">Frame rate:</div>
+                <div class="wave-options segmented" id="fps-options">
+                    <button class="fps-option" data-fps="30">30</button>
+                    <button class="fps-option" data-fps="60">60</button>
+                    <button class="fps-option" data-fps="display" data-i18n="menu.fpsDisplay">Screen</button>
+                </div>
+            </div>
+
+            <!-- (#322) VSYNC (on the next start) and the picture's quality (its resolution) -->
+            <div class="wave-settings switch-row">
+                <div data-i18n="menu.vsync">VSYNC:</div>
+                <div class="wave-options switch">
+                    <button class="fps-option" data-vsync="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option" data-vsync="on" data-i18n="menu.on">On</button>
+                </div>
+                <div class="settings-note" id="vsync-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
+            </div>
+
+            <!-- a trial: the ground and nature drawn by the graphics card (on the next start), see engine/platform/gl.js;
+                 a developers' setting, shown with ?dev (DEV_SETTINGS) -->
+            <div class="wave-settings switch-row dev-setting" hidden>
+                <div data-i18n="menu.gl">WebGL (trial):</div>
+                <div class="wave-options switch">
+                    <button class="fps-option" data-gl="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option" data-gl="on" data-i18n="menu.on">On</button>
+                </div>
+                <div class="settings-note" id="gl-note" hidden data-i18n="menu.vsyncRestart">Takes effect when the game is started again</div>
+            </div>
+
+            <div class="wave-settings switch-row">
+                <div data-i18n="menu.showFps">Show FPS:</div>
+                <div class="wave-options switch" id="show-fps-options">
+                    <button class="fps-option" data-show-fps="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option" data-show-fps="on" data-i18n="menu.on">On</button>
+                </div>
+            </div>
+
+            <!-- what the frames take and where they drop, with a report to send (app/perfmon.js); a developers' setting -->
+            <div class="wave-settings switch-row dev-setting" hidden>
+                <div data-i18n="menu.perfMonitor">Performance monitor:</div>
+                <div class="wave-options switch">
+                    <button class="fps-option" data-perf-monitor="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option" data-perf-monitor="on" data-i18n="menu.on">On</button>
+                </div>
+            </div>
+
+            <div class="wave-settings switch-row">
+                <div data-i18n="menu.shadows">Shadows:</div>
+                <div class="wave-options switch" id="shadows-options">
+                    <button class="fps-option" data-shadows="off" data-i18n="menu.off">Off</button>
+                    <button class="fps-option" data-shadows="on" data-i18n="menu.on">On</button>
+                </div>
+            </div>
+
+    </div>
+    <div class="main-menu-content settings-drawer" data-drawer="sound" hidden>
+        <h2 data-i18n="settings.sound">Sound</h2>
+            <!-- how loud, 0-100 (0: off) -->
+            <div class="wave-settings volume-row">
+                <div data-i18n="menu.sound">Sound:</div>
+                <div class="volume"><input type="range" class="volume-slider" id="sound-volume" min="0" max="100" step="1"><span class="volume-value" id="sound-volume-value"></span></div>
+            </div>
+
+            <!-- how loud, 0-100 (0: off) -->
+            <div class="wave-settings volume-row">
+                <div data-i18n="menu.music">Music:</div>
+                <div class="volume"><input type="range" class="volume-slider" id="music-volume" min="0" max="100" step="1"><span class="volume-value" id="music-volume-value"></span></div>
+            </div>
+        <!-- the music's tracks one by one: a big screen of their own -->
+        <button id="open-music-player" class="menu-button settings-advanced" data-i18n="settings.advanced">Advanced</button>
+    </div>
+    <!-- (#326) the music player, from Sound's Advanced: a big screen of its own in the middle; each track its name, when
+         it plays, a button to listen to it and a switch to turn it off. Back is to Settings with Sound open -->
+    <div class="main-menu-content music-screen" data-screen="music" hidden>
+        <button class="menu-back" id="music-back" data-i18n="menu.back">[[back]] Back</button>
+        <h1 data-i18n="music.playerTitle">Music</h1>
         <div id="music-player"></div>
     </div>
 
-    <div class="main-menu-content mode-description-screen" data-screen="mode-description" hidden>
-        <button class="menu-back" data-back data-i18n="menu.back">[[back]] Back</button>
-        <h1 id="mode-description-title"></h1>
-        <p id="mode-description-text"></p>
+    <!-- a mode's few words, popped up over its screen (the title's (i)); a tap on its cross or round it shuts it -->
+    <div id="mode-info" class="menu-popup" hidden>
+        <div class="main-menu-content menu-popup-card">
+            <button class="menu-back" id="mode-info-close" data-i18n="menu.back">[[back]] Back</button>
+            <h1 id="mode-description-title"></h1>
+            <p id="mode-description-text"></p>
+        </div>
     </div>
 </div>
 
@@ -688,50 +746,58 @@
 
       <!-- the map editor: what to put down (the dock picks the category), and the map's own settings -->
       <div id="editor-panel" class="hud-sheet" data-sheet="editor">
-        <div class="sub-tabs editor-brush">
-          <button class="btn sub-tab on" data-brush="1" data-i18n="editor.brush1">Brush 1</button>
-          <button class="btn sub-tab" data-brush="3">3×3</button>
-          <button class="btn sub-tab" data-brush="5">5×5</button>
-        </div>
-        <div class="battle-hint" id="editor-hint" data-i18n="editor.hint">Pick something, tap the map to put it there. Drag to look around</div>
         <div id="editor-tools"></div>
       </div>
       <!-- the map's own (#255): its name, saving and playing it; its starting time; clearing it -->
       <div class="hud-sheet" data-sheet="editor-map">
-        <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
-        <div class="editor-toolbar">
-          <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
-          <button class="btn" id="editor-save" data-i18n="editor.save">[[save]] Save</button>
-        </div>
-        <div class="panel-heading" data-i18n="editor.hallAppearance">Town hall appearance</div>
-        <div id="editor-hall-faction" class="faction-options"></div>
-        <div class="panel-heading" data-i18n="editor.startTime">Time of day</div>
-        <div class="sub-tabs">
-          <button class="btn sub-tab" data-start-time="morning" data-i18n="daytime.morning">Morning</button>
-          <button class="btn sub-tab" data-start-time="day" data-i18n="daytime.day">Day</button>
-          <button class="btn sub-tab" data-start-time="evening" data-i18n="daytime.evening">Evening</button>
-          <button class="btn sub-tab" data-start-time="night" data-i18n="daytime.night">Night</button>
-        </div>
-        <div class="panel-heading" data-i18n="editor.weather">Weather</div>
-        <div class="sub-tabs">
-          <button class="btn sub-tab" data-editor-weather="clear" data-i18n="battle.weather.clear">Clear</button>
-          <button class="btn sub-tab" data-editor-weather="rain" data-i18n="battle.weather.rain">Rain</button>
-          <button class="btn sub-tab" data-editor-weather="fog" data-i18n="battle.weather.fog">Fog</button>
-          <button class="btn sub-tab" data-editor-weather="storm" data-i18n="battle.weather.storm">Storm</button>
-        </div>
-        <div class="wave-settings editor-visibility-setting">
-          <div data-i18n="editor.hideTimeAndWeather">Hide time-of-day and weather effects:</div>
-          <div class="wave-options" id="editor-hide-time-weather-options">
-            <button class="fps-option active" data-hide-time-weather="on" data-i18n="menu.on">On</button>
-            <button class="fps-option" data-hide-time-weather="off" data-i18n="menu.off">Off</button>
+        <!-- (laid out in two columns where there's room: the map's name and look; its time and weather) -->
+        <div class="editor-map-grid">
+          <div class="editor-map-col">
+            <div class="panel-heading" data-i18n="editor.mapHeading">Map</div>
+            <div class="editor-toolbar">
+              <input id="editor-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="editor.name" placeholder="Map name" />
+              <button class="btn" id="editor-save" data-i18n="editor.save">Save</button>
+            </div>
+            <div class="panel-heading" data-i18n="editor.hallAppearance">Town hall appearance</div>
+            <div id="editor-hall-faction" class="faction-options"></div>
+            <div class="editor-toolbar">
+              <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">Clear the map</button>
+            </div>
           </div>
-        </div>
-        <div class="editor-toolbar">
-          <button class="btn btn-disarm" id="editor-clear" data-i18n="editor.clear">[[broom]] Clear the map</button>
+          <div class="editor-map-col">
+            <div class="panel-heading" data-i18n="editor.startTime">Time of day</div>
+            <div class="sub-tabs">
+              <button class="btn sub-tab" data-start-time="morning" data-i18n="daytime.morning">Morning</button>
+              <button class="btn sub-tab" data-start-time="day" data-i18n="daytime.day">Day</button>
+              <button class="btn sub-tab" data-start-time="evening" data-i18n="daytime.evening">Evening</button>
+              <button class="btn sub-tab" data-start-time="night" data-i18n="daytime.night">Night</button>
+            </div>
+            <div class="panel-heading" data-i18n="editor.weather">Weather</div>
+            <div class="sub-tabs">
+              <button class="btn sub-tab" data-editor-weather="clear" data-i18n="battle.weather.clear">Clear</button>
+              <button class="btn sub-tab" data-editor-weather="rain" data-i18n="battle.weather.rain">Rain</button>
+              <button class="btn sub-tab" data-editor-weather="fog" data-i18n="battle.weather.fog">Fog</button>
+              <button class="btn sub-tab" data-editor-weather="storm" data-i18n="battle.weather.storm">Storm</button>
+            </div>
+            <div class="wave-settings switch-row editor-visibility-setting">
+              <div data-i18n="editor.hideTimeAndWeather">Hide time-of-day and weather effects:</div>
+              <div class="wave-options switch" id="editor-hide-time-weather-options">
+                <button class="fps-option" data-hide-time-weather="off" data-i18n="menu.off">Off</button>
+                <button class="fps-option active" data-hide-time-weather="on" data-i18n="menu.on">On</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
+  </div>
+
+  <!-- the editor's brush: how big a patch a tap puts down, a slider at the screen's side (not in each sheet) -->
+  <div id="editor-brush">
+    <span data-i18n="editor.brushName">Brush</span>
+    <input id="editor-brush-size" type="range" min="1" max="5" step="2" value="1" aria-label="Brush size" />
+    <b id="editor-brush-value">1</b>
   </div>
 
   <!-- the dock: a row of big buttons, one per sheet (a tap opens it, again closes it); each mode its own row -->
@@ -748,11 +814,13 @@
       <button class="dock-btn" data-action="toggleSheet" data-arg="battle-settings" data-dock="battle-settings"><i class="ic ic-gear"></i><span data-i18n="dock.battle">Battle</span></button>
     </div>
     <div class="dock-row" data-hud-mode="editor">
-      <button class="dock-btn" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
+      <!-- the two tools that put nothing down first, then what's put down, then the map's settings, each set apart -->
+      <button class="dock-btn" id="editor-hand"><i class="ic ic-move"></i><span data-i18n="dock.hand">Move</span></button>
+      <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
+      <button class="dock-btn dock-apart" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
       <button class="dock-btn" data-editor-category="nature" data-dock="editor:nature"><i class="ic ic-tree"></i><span data-i18n="editor.cat.nature">Nature</span></button>
       <button class="dock-btn" data-editor-category="buildings" data-dock="editor:buildings"><i class="ic ic-build"></i><span data-i18n="editor.cat.buildings">Buildings</span></button>
-      <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
-      <button class="dock-btn" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>
+      <button class="dock-btn dock-apart" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>
     </div>
     <div id="plague-actions" class="dock-row" data-hud-mode="plague" hidden>
       <button class="dock-btn" id="plague-revive">

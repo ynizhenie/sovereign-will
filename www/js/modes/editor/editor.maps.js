@@ -404,7 +404,7 @@ export function initMapManager(actions) {
   /** @param {'editor' | 'endless'} mode */
   const open = mode => {
     origin = mode;
-    back.dataset.backTo = mode;
+    back.dataset.backTo = mode === 'editor' ? 'editor-hub' : mode; // (the editor's maps are from its first screen)
     showMapManagerStatus('');
     showMenuScreen('maps');
     render();

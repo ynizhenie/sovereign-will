@@ -136,20 +136,16 @@ test('connected walls and doors cast one combined angular shadow', async ({ page
   await page.click('#play-button');
   const result = await page.evaluate(() => {
     const originals = {
-      rect: Path2D.prototype.rect,
-      roundRect: Path2D.prototype.roundRect,
+      closePath: Path2D.prototype.closePath,
       ellipse: Path2D.prototype.ellipse,
       fill: ctx.fill
     };
     const fills = [];
     let rectangles = 0, ellipses = 0;
-    Path2D.prototype.rect = function (...args) {
+    // (each rectangle a closed shape of its own corners, not rect or roundRect: joined, those reached to the world's corner)
+    Path2D.prototype.closePath = function (...args) {
       rectangles++;
-      return originals.rect.apply(this, args);
-    };
-    Path2D.prototype.roundRect = function (...args) {
-      rectangles++;
-      return originals.roundRect.apply(this, args);
+      return originals.closePath.apply(this, args);
     };
     Path2D.prototype.ellipse = function (...args) {
       ellipses++;
@@ -167,8 +163,7 @@ test('connected walls and doors cast one combined angular shadow', async ({ page
       ]);
       return { rectangles, ellipses, combinedPasses: fills.length };
     } finally {
-      Path2D.prototype.rect = originals.rect;
-      Path2D.prototype.roundRect = originals.roundRect;
+      Path2D.prototype.closePath = originals.closePath;
       Path2D.prototype.ellipse = originals.ellipse;
       ctx.fill = originals.fill;
     }
@@ -305,19 +300,7 @@ test('stone walls use the wooden wall post-and-arm shape with masonry detail', a
 test('stone wall shadow follows its stone post and connected arms without round shapes', async ({ page }) => {
   const errors = await openGame(page);
   await page.click('#play-button');
-  const shadows = await page.evaluate(() => {
-    const rect = Path2D.prototype.rect, shapes = [];
-    Path2D.prototype.rect = function (...args) {
-      shapes.push(args);
-      return rect.apply(this, args);
-    };
-    try {
-      drawWallShadows([{ x: 300, y: 300, type: 'wall_stone', mask: LINK.e | LINK.s }]);
-      return shapes;
-    } finally {
-      Path2D.prototype.rect = rect;
-    }
-  });
+  const shadows = await page.evaluate(() => wallShadowShape({ x: 300, y: 300, type: 'wall_stone', mask: LINK.e | LINK.s })[0].rects);
   expect(shadows).toContainEqual([-7, -11, 14, 24]);
   expect(shadows).toContainEqual([5.25, -12, 5.5, 25]);
   expect(shadows).toContainEqual([-7, 5.5, 14, 7]);

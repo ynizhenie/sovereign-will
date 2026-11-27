@@ -27,7 +27,7 @@ button, .btn, .menu-button, .tab-btn {
 }
 button *, .ic { pointer-events: none; -webkit-user-drag: none; }
 button:focus { outline: none; }
-button:focus-visible { outline: 2px solid #46b8da; outline-offset: 1px; }
+button:focus-visible { outline: 2px solid #7cc35a; outline-offset: 1px; }
 input, textarea { user-select: text; -webkit-user-select: text; }
 
 #game-container {
@@ -130,8 +130,8 @@ button.btn-no { animation: btn-no 0.35s ease; }
   border: 1px solid #353a46;
 }
 .resources-grid .resource-group.open {
-  border-color: #46b8da;
-  background: rgba(46, 109, 164, 0.35);
+  border-color: #7cc35a;
+  background: rgba(63, 122, 46, 0.35);
 }
 .resource-details {
   /* an open group drops down over what's below, so the panel doesn't change size */
@@ -146,7 +146,7 @@ button.btn-no { animation: btn-no 0.35s ease; }
   top: 2px;
   padding: 4px;
   background: #1b1d22;
-  border: 1px solid #46b8da;
+  border: 1px solid #7cc35a;
   border-radius: 6px;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
   display: grid;
@@ -192,7 +192,7 @@ button.btn-no { animation: btn-no 0.35s ease; }
   box-sizing: border-box;
 }
 
-.btn.active { background: #2e6da4; border-color: #46b8da; }
+.btn.active { background: #3f7a2e; border-color: #7cc35a; }
 .btn-demolish { background: #962d2d; }
 .btn-disarm { background: #d35400; text-align: center; }
 .btn-armor { background: #27ae60; text-align: center; }
@@ -286,7 +286,7 @@ body.menu-ui-hidden #main-menu::before { opacity: 0; }
 body.menu-ui-hidden.menu-world #gameCanvas, body.menu-ui-hidden.menu-world #worldCanvas { filter: none; }
 #menu-eye-box { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: none; }
 body.menu-world #menu-eye-box { display: flex; }
-#menu-scene-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: none; gap: 8px; }
+#menu-scene-bar { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: none; flex-direction: row; width: auto; gap: 8px; }
 body.menu-ui-hidden #menu-scene-bar { display: flex; }
 
 /* ---- The game opening, as the page loads (#main-menu.intro, main.js; the curtain lifted, menu-scene.js):
@@ -319,14 +319,14 @@ body.menu-world #defeat-overlay { display: none !important; }
 .main-menu-content[data-screen="endless"] {
   gap: 9px;
   padding: 14px;
-  max-height: 84vh;
+  max-height: var(--menu-room);
   overflow-y: auto;
 }
 
 .main-menu-content[data-screen="saves"] {
   gap: 9px;
   padding: 14px;
-  max-height: 84vh;
+  max-height: var(--menu-room);
   overflow-y: auto;
 }
 
@@ -334,8 +334,13 @@ body.menu-world #defeat-overlay { display: none !important; }
   gap: 9px;
   padding: 14px;
 }
-.mode-description-screen { gap: 14px; }
-.mode-description-screen p { margin: 0; color: #d5d9e0; font-size: 14px; line-height: 1.55; text-align: left; }
+/* a mode's few words: a card popped up over its screen, the screen dimmed behind */
+.menu-popup { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(0, 0, 0, 0.45); animation: menu-screen-in 0.18s ease backwards; }
+.menu-popup[hidden] { display: none; }
+.menu-popup-card { gap: 12px; max-width: 360px; padding-top: 22px; animation: drawer-down 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
+.menu-popup-card h1 { display: none; } /* (the screen behind already says its name: the card only its words) */
+.menu-popup-card p { margin: 0; color: #e4dcc0; font-size: 15px; line-height: 1.5; text-align: center; }
 .mode-title-trigger {
   display: inline-flex;
   align-items: center;
@@ -353,7 +358,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 .mode-title-trigger:focus-visible { outline: 2px solid #f1c40f; outline-offset: 3px; border-radius: 3px; }
 
 .main-menu-content[data-screen="endless"] .wave-settings { gap: 4px; }
-.main-menu-content[data-screen="plague"] { max-height: 84vh; overflow-y: auto; }
+.main-menu-content[data-screen="plague"] { max-height: var(--menu-room); overflow-y: auto; }
 .plague-menu { gap: 12px; }
 .plague-spawn-settings { display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .plague-range { display: flex; flex-direction: column; gap: 6px; }
@@ -374,7 +379,36 @@ body.menu-world #defeat-overlay { display: none !important; }
 /* the game's name on the main menu's first screen (no plate behind it): the buttons in the middle of the
    screen, the name in the middle of the space above them. --title-size is its letters' height: 10% of
    the screen's width (it fits a phone's width with room to spare), at least 34px, at most 110px */
-#main-menu { --title-size: clamp(34px, 10vw, 110px); flex-direction: column; justify-content: safe center; }
+#main-menu { --title-size: clamp(34px, min(10vw, 15vh), 110px); flex-direction: column; justify-content: safe center; }
+/* the menu bigger on a bigger screen (it's laid out in pixels a phone's size): all of it, panes, text, buttons */
+/* (--menu-room: the height a screen may take under the menu's top, in its own zoomed pixels: a screen taller
+   scrolls inside itself, rather than going off the bottom) */
+/* (--ui-scale: the player's Interface size, Settings > General, on the menu and the game's panels alike) */
+#main-menu { --menu-auto: 1; --menu-zoom: calc(var(--menu-auto) * var(--ui-scale, 1)); zoom: var(--menu-zoom);
+  --menu-top: clamp(16px, 9vh, 96px); --menu-room: calc(100vh / var(--menu-zoom) - var(--menu-top) - 24px); }
+@media (min-width: 900px) and (min-height: 520px) { #main-menu { --menu-auto: 1.15; } }
+@media (min-width: 1300px) and (min-height: 760px) { #main-menu { --menu-auto: 1.3; } }
+@media (min-width: 1700px) and (min-height: 950px) { #main-menu { --menu-auto: 1.45; } }
+.hud-layer, #pause-menu { zoom: var(--ui-scale, 1); }
+/* On a wide screen the long screens laid out wide, in two columns, rather than scrolling down: Endless's (Play and
+   Saves side by side, the factions on the left, the rest beside them), the Plague's, and the generator's cards */
+@media (min-width: 900px) and (min-height: 520px) {
+  #main-menu .main-menu-content[data-screen="endless"]:not([hidden]), #main-menu .main-menu-content[data-screen="plague"]:not([hidden]),
+  #main-menu .main-menu-content[data-screen="generator"]:not([hidden]) {
+    width: min(780px, calc(94vw / var(--menu-zoom))); max-width: none;
+    display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: row dense; column-gap: 18px; align-content: start; align-items: start; }
+  #main-menu .main-menu-content[data-screen="endless"] > h1, #main-menu .main-menu-content[data-screen="plague"] > h1,
+  #main-menu .main-menu-content[data-screen="generator"] > :not(.menu-back) { grid-column: 1 / -1; }
+  #main-menu .main-menu-content[data-screen="endless"] > .faction-settings { grid-column: 1; grid-row: span 4; }
+  #main-menu .main-menu-content[data-screen="endless"] > :last-child { grid-column: 1 / -1; }
+  #main-menu .main-menu-content[data-screen="plague"] > :not(h1):not(.menu-back):not(button) { grid-column: 1 / -1; }
+  #main-menu .generator-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; align-items: start; }
+  #main-menu .generator-fields > [data-card="nature"] { grid-column: 1 / -1; }
+  #main-menu .generator-fields > [data-card="nature"] .generator-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+}
+/* a screen other than the first: from near the top, not in the middle of the screen (room below for a group's panel
+   on a phone, and Modes not floating halfway down) */
+#main-menu:not([data-menu-screen="home"]) { justify-content: flex-start; padding-top: var(--menu-top); padding-bottom: 16px; }
 .menu-title {
   position: relative;
   z-index: 1;
@@ -613,9 +647,9 @@ body.menu-world #defeat-overlay { display: none !important; }
 
 .wave-option.active, .map-option.active, .battle-size-option.active, .map-source-option.active, .editor-size-option.active,
 .difficulty-option.active, .cards-option.active, .fps-option.active {
-  background: #2e6da4;
+  background: #3f7a2e;
   color: #fff;
-  border-color: #46b8da;
+  border-color: #7cc35a;
 }
 
 .seed-settings {
@@ -641,7 +675,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 #seed-input:focus {
-  border-color: #46b8da;
+  border-color: #7cc35a;
 }
 
 .seed-row {
@@ -662,7 +696,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 #seed-reroll:active, #btn-generate-name:active {
-  border-color: #46b8da;
+  border-color: #7cc35a;
 }
 
 /* battle mode (#38) and the map editor (#37): their own sheets and dock rows (the HUD, below) */
@@ -705,7 +739,7 @@ body[data-hud="editor"] .editor-only { display: inline-flex; }
 .item-row { display: flex; align-items: center; gap: 4px; }
 .item-row .item-name { flex: 1; min-width: 0; text-align: left; padding: 7px 10px; background: #252830; border: 1px solid #353a46;
   border-radius: 5px; color: #ddd; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.item-row .item-name.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.item-row .item-name.active { background: #3f7a2e; border-color: #7cc35a; color: #fff; }
 .item-row .item-delete, .item-row .item-confirm, .item-row .item-cancel { padding: 7px 10px; background: #252830; border: 1px solid #353a46;
   border-radius: 5px; color: #ddd; font-size: 12px; font-weight: bold; cursor: pointer; }
 .item-row .item-confirm { background: #c0392b; border-color: #e74c3c; color: #fff; }
@@ -749,13 +783,13 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 .faction-options { flex: 1; display: flex; gap: 4px; }
 .faction-option { flex: 1; padding: 6px 2px; background: #252830; border: 1px solid #353a46; border-radius: 5px; color: #ddd;
   font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.faction-option.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.faction-option.active { background: #3f7a2e; border-color: #7cc35a; color: #fff; }
 .faction-option:disabled { opacity: 0.45; cursor: default; }
 .color-options { display: flex; flex-wrap: nowrap; gap: 4px; justify-content: flex-end; }
 [data-sheet="battle-settings"] .color-options { justify-content: center; } /* (#326) */
 [data-sheet="battle-settings"] .color-options + .panel-heading, [data-sheet="battle-settings"] .panel-heading:has(+ .color-options) { text-align: center; }
 .color-swatch { flex: 1 1 0; min-width: 14px; max-width: 26px; aspect-ratio: 1; border-radius: 50%; border: 2px solid #353a46; cursor: pointer; padding: 0; } /* (#326) all in one line */
-.color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px #46b8da; }
+.color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px #7cc35a; }
 .color-swatch:disabled { opacity: 0.25; cursor: default; }
 
 /* map generator screen (#20) */
@@ -772,50 +806,51 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 }
 .main-menu-content {
   position: relative;
-  max-height: 92vh;
+  max-height: var(--menu-room);
   overflow-y: auto;
 }
-.main-menu-content.generator-screen { max-height: 75vh; }
-.generator-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: left;
-  font-size: 11px;
-}
-.generator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
-.generator-fields h2, .generator-fields h3 {
-  font-size: 12px;
-  color: #8a91a0;
-  text-transform: uppercase;
-  margin: 8px 0 2px;
-}
-/* (#326) a kind of map's section: the one this game's size uses lit */
-.generator-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: #b5bac5;
-}
-.generator-field > span:last-child { display: flex; align-items: center; gap: 3px; color: #8a91a0; }
-.generator-field input {
-  width: 46px;
-  padding: 4px;
-  background: #111318;
-  border: 1px solid #353a46;
-  border-radius: 4px;
-  color: #fff;
-  text-align: center;
-}
-.preset-row {
-  display: flex;
-  gap: 6px;
-}
-.preset-row input {
-  flex: 1;
-  width: auto;
-}
-.preset-current { min-height: 1.2em; color: #aeb4c0; font-size: 12px; text-align: center; }
+.main-menu-content.generator-screen { max-height: min(calc(75vh / var(--menu-zoom)), var(--menu-room)); }
+/* The map generator: a card a group that folds (its head its name), a share a slider with its value, a count a number */
+.generator-fields { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 13px; }
+.gen-card { background: rgba(0, 0, 0, 0.18); padding: 6px 12px 10px; }
+.gen-card-head { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 4px 0;
+  font-size: 12px; font-weight: bold; color: #e8c76a; letter-spacing: 0.06em; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.gen-card-head::-webkit-details-marker { display: none; }
+.gen-card-head::after { content: ''; width: 7px; height: 7px; margin-right: 4px; border-right: 2px solid #e8c76a; border-bottom: 2px solid #e8c76a;
+  transform: rotate(-45deg); transition: transform 0.2s ease; }
+.gen-card[open] > .gen-card-head::after { transform: rotate(45deg); }
+.generator-fields h3 { margin: 8px 0 2px; font-size: 12px; font-weight: bold; color: #d4cfb6; }
+.generator-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.generator-field { display: flex; align-items: center; gap: 10px; color: #eee; }
+.generator-field > span:first-child { flex: 0 0 40%; min-width: 0; }
+.generator-field > span:last-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: #d4cfb6; }
+.generator-field input[type="number"] { width: 64px; padding: 4px; background: #111318; border: 1px solid #353a46; border-radius: 4px; color: #fff; text-align: center; }
+.generator-field input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; width: auto; height: 8px; margin: 0; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(to right, #6fa34f 0 var(--fill, 0%), #1e1f19 var(--fill, 0%) 100%); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7); }
+.generator-field input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+.generator-field input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: #e9e2c8; }
+.gen-value { flex: 0 0 40px; text-align: right; font-style: normal; font-size: 12px; color: #e8c76a; font-variant-numeric: tabular-nums; }
+/* the presets: the chosen one's name, a list of them dropping from it; Save on the right */
+.preset-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.preset-label { flex: none; color: #d4cfb6; font-size: 14px; }
+.preset-pick-wrap { position: relative; flex: 0 1 260px; min-width: 0; }
+#preset-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; height: 35px; padding: 0 14px; }
+#preset-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#preset-pick::after { content: ''; flex: none; width: 7px; height: 7px; margin-top: -4px; border-right: 2px solid #e8c76a; border-bottom: 2px solid #e8c76a;
+  transform: rotate(45deg); transition: transform 0.2s; }
+#preset-pick[aria-expanded="true"]::after { margin-top: 3px; transform: rotate(-135deg); }
+/* the list drops down over what's under it */
+.preset-menu { position: absolute; left: 0; top: calc(100% + 4px); z-index: 20; min-width: 100%; max-height: 260px; overflow: auto;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 8px; background: #2a3322; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); }
+.preset-menu[hidden] { display: none; }
+.preset-menu #preset-standard { flex: none; height: 35px; padding: 0 14px; text-align: left; }
+.preset-menu .preset-list { display: flex; flex-direction: column; gap: 4px; }
+.preset-menu .item-row { flex: none; display: flex; gap: 4px; }
+.preset-menu .item-row .item-name { flex: 1; height: 35px; padding: 0 14px; text-align: left; }
+.preset-menu .item-row .item-delete { flex: none; width: 35px; height: 35px; padding: 0; }
+.preset-menu .item-question { flex: 1; align-self: center; font-size: 12px; }
+#preset-save { flex: none; height: 35px; padding: 0 16px; margin-left: auto; }
 
 /* (#326) the selected settler's card: everything shown, scrolling when there's a lot */
 .selected-unit-box.has-settler { position: relative; display: flex; flex-direction: column; width: min(94vw, 400px); height: min(30vh, 220px); box-sizing: border-box; white-space: normal; overflow: hidden; padding: 8px 48px 8px 10px; }
@@ -863,7 +898,7 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 /* the defeat screen (#191): over the game, which shows the base; the panel and possession go dead */
 #defeat-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding-top: calc(var(--top-h) + 10px); background: rgba(0, 0, 0, 0.25); }
 #defeat-overlay[hidden] { display: none; }
-.defeat-box { background: rgba(20, 21, 26, 0.92); border: 1px solid #c0392b; border-radius: 10px; padding: 14px 18px; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,0.6); max-width: 90%; }
+.defeat-box { background: rgba(20, 21, 26, 0.92); border: 1px solid #c0392b; border-radius: 8px; padding: 14px 18px; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,0.6); max-width: 90%; }
 .defeat-title { color: #e74c3c; font: bold 32px sans-serif; }
 .defeat-survived { color: #fff; font-size: 16px; margin: 6px 0 12px; }
 .defeat-buttons { display: flex; flex-direction: column; gap: 8px; }
@@ -922,7 +957,7 @@ body[data-hud]:not(.menu-world) #hud-bottom { transition-delay: 0.12s; }
   padding: 0;
   font-size: 16px;
   color: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
 }
 .top-center {
@@ -1007,7 +1042,7 @@ body:not([data-hud="endless"]) .btn-worldmap { display: none; }
 }
 .world-map { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(5, 8, 12, 0.72); }
 .world-map[hidden] { display: none; }
-.world-map-box { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: rgba(20, 26, 32, 0.95); box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6); max-width: calc(100vw - 32px); }
+.world-map-box { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 8px; background: rgba(20, 26, 32, 0.95); box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6); max-width: calc(100vw - 32px); }
 .world-map-head { display: flex; align-items: center; gap: 8px; color: #ecf0f1; font-size: 15px; }
 .world-map-head b { flex: 1; }
 /* (not the game's own canvas filling the screen: its side the room there is, a side shorter for a map not square) */
@@ -1025,7 +1060,7 @@ body:not([data-hud="endless"]) .btn-worldmap { display: none; }
   align-items: center;
   gap: 4px;
   padding: 3px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
 }
@@ -1089,7 +1124,7 @@ body.placing:not(.sheet-open) #placing-chip { display: flex; animation: chip-pop
   overscroll-behavior: contain;
   touch-action: pan-y;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.55);
   opacity: 0;
   transform: translateY(16px);
@@ -1108,6 +1143,9 @@ body.sheet-open #sheet-frame {
 /* ---- The dock: one row per mode */
 #dock { bottom: 0; height: var(--dock-h); padding-bottom: env(safe-area-inset-bottom); }
 .dock-row { display: none; height: 100%; max-width: 640px; margin: 0 auto; gap: 4px; padding: 5px 6px; }
+/* (the editor's: its kinds of button set apart by a wider gap) */
+.dock-row .dock-apart { margin-left: 14px; }
+@media (max-width: 520px) { .dock-row .dock-apart { margin-left: 6px; } }
 body[data-hud="endless"] .dock-row[data-hud-mode="endless"],
 body[data-hud="battle"] .dock-row[data-hud-mode="battle"],
 body[data-hud="editor"] .dock-row[data-hud-mode="editor"] { display: flex; }
@@ -1132,7 +1170,7 @@ body[data-battle-phase="fight"] .dock-row[data-hud-mode="battle"],
 body[data-battle-phase="result"] .dock-row[data-hud-mode="battle"] { opacity: 0.4; pointer-events: none; }
 
 /* the world's seed, in the pause menu (it was over the map) */
-.pause-seed { font-size: 11px; color: #8a91a0; word-break: break-all; user-select: text; -webkit-user-select: text; }
+.pause-seed { font-size: 13px; color: #d4cfb6; word-break: break-all; user-select: text; -webkit-user-select: text; }
 
 /* the colony sheet's stock row: what there is of what its prices ask for (bottom-panel.js) */
 .sheet-stock { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--edge, #2d313b); }
@@ -1164,7 +1202,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .selected-gear .btn .ic-no { width: 10px; height: 10px; }
 /* a thing it has: its name, then into the store or taken apart (#248) */
 .gear-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 2px 1px 6px; font-size: 11px; border: 1px solid #4a5160; border-radius: 5px; }
-.selected-gear .btn-store { background: #2e6da4; }
+.selected-gear .btn-store { background: #3f7a2e; }
 .info-cost { color: #c9cdd6; }
 .info-cost b { color: #fff; font-variant-numeric: tabular-nums; }
 .info-cost.short, .info-cost.short b { color: #ff6b6b; }
@@ -1188,7 +1226,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .btn.tile-act { flex: 1; padding: 1px 0; min-height: 20px; display: inline-flex; align-items: center; justify-content: center; }
 .sub-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
 .btn.sub-tab { flex: 1; }
-.btn.sub-tab.on { background: #2e6da4; border-color: #46b8da; }
+.btn.sub-tab.on { background: var(--plank-green) center / cover; border-color: transparent; color: #fff; box-shadow: var(--glow); } /* (chosen: green, as everywhere, not blue) */
 #battle-panel .battle-gear { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
 #battle-panel .battle-gear > .btn { min-width: 0; min-height: 34px; padding: 4px 2px; font-size: 11px; line-height: 1.15; white-space: normal; }
 
@@ -1233,7 +1271,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .card-offer-title { color: #f5f0e1; font-size: 18px; font-weight: 700; text-align: center; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .card-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 100%; }
 .card { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; min-height: 186px; padding: 10px 8px;
-  background: linear-gradient(180deg, #2b303b, #1d2028); border: 2px solid var(--card-edge); border-radius: 10px; color: #f5f0e1;
+  background: linear-gradient(180deg, #2b303b, #1d2028); border: 2px solid var(--card-edge); border-radius: 8px; color: #f5f0e1;
   box-shadow: 0 0 14px var(--card-glow), 0 6px 16px rgba(0, 0, 0, 0.6); cursor: pointer; font: inherit; }
 .card:hover { transform: translateY(-3px); }
 .card-common { --card-edge: #95a5a6; --card-glow: rgba(149, 165, 166, 0.25); }
@@ -1270,7 +1308,7 @@ body[data-hud="plague"] .plague-stats {
   max-width: calc(100vw - 100px);
   padding: 3px 5px;
   border: 1px solid rgba(200, 192, 206, 0.32);
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(7, 11, 7, 0.9);
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
 }
@@ -1356,7 +1394,7 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   min-height: 132px;
   padding: 14px;
   border: 1px solid #8e6a9c;
-  border-radius: 10px;
+  border-radius: 8px;
   background: linear-gradient(160deg, #33273b, #1d2028);
   color: #f5f0e1;
   text-align: center;
@@ -1377,7 +1415,7 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   padding: 18px;
   overflow: auto;
   border: 1px solid #8e6a9c;
-  border-radius: 12px;
+  border-radius: 8px;
   background: linear-gradient(160deg, #33273b, #1d2028);
 }
 .plague-upgrades-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -1394,7 +1432,7 @@ body[data-hud="plague"] .plague-upgrades-toggle {
   min-width: 0;
   padding: 8px 10px 6px;
   border: 1px solid rgba(142, 106, 156, 0.38);
-  border-radius: 9px;
+  border-radius: 8px;
   background: linear-gradient(120deg, rgba(142, 106, 156, 0.1), rgba(29, 32, 40, 0.48));
 }
 .plague-character-group-title {
@@ -1508,7 +1546,7 @@ body.booting > * { visibility: hidden; }
 body.loading #main-menu .main-menu-content, body.loading #menu-title, body.loading #menu-eye-box, body.loading #menu-scene-bar, body.loading #menu-flags { display: none !important; }
 
 /* (#326) leaving a possessed unit whose card is closed: a pill over the dock */
-#btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 18px; pointer-events: auto; }
+#btn-leave-unit { align-self: center; margin-bottom: 8px; padding: 8px 16px; border-radius: 6px; pointer-events: auto; }
 
 /* (#326) the eye and language flag use matching compact control boxes at opposite corners */
 .flag-box { position: fixed; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 5;
@@ -1520,18 +1558,127 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .menu-eye-button { width: 34px; height: 24px; align-items: center; justify-content: center; color: #d5dfd5; }
 .menu-eye-button .ic { width: 20px; height: 20px; }
 .flag-button .flag { width: 100%; height: auto; }
-.flag-button.active { border-color: #46b8da; }
+.flag-button.active { border-color: #7cc35a; }
 .language-option { display: inline-flex; align-items: center; gap: 6px; }
+/* Settings' language: a drop-down */
+.language-picker { position: relative; }
+.language-current { width: 100%; justify-content: center; }
+.language-caret { display: inline-block; width: 0; height: 0; margin-left: 6px; opacity: 0.8; /* (a drawn triangle, not a text arrow) */
+  border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; }
+.language-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5; display: flex; flex-direction: column;
+  gap: 4px; padding: 4px; background: #1b2419; border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7); }
+.language-list[hidden] { display: none; }
+.language-list .language-option { justify-content: center; }
+/* (a developers' row, hidden: its class's display mustn't show it) */
+.dev-setting[hidden] { display: none; }
+/* (glide.js) the soft light sliding under the mouse along a row of options */
+.glide { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; border-radius: 6px; opacity: 0;
+  background: rgba(255, 236, 190, 0.1); box-shadow: inset 0 0 0 1px rgba(255, 228, 160, 0.45), 0 0 10px rgba(255, 220, 140, 0.18);
+  /* only what the graphics card moves by itself (transform, opacity): smooth while the scene behind keeps the page busy */
+  will-change: transform, opacity; transition: transform 0.22s cubic-bezier(0.22, 0.9, 0.3, 1), opacity 0.18s ease; }
+.glide.on { opacity: 1; }
+/* An Off / On setting as a switch: its name on the left, a track with a knob on the right. The two buttons are still
+   there (its halves, their words hidden), so a tap on either half works; a tap on the chosen half flips it
+   (menu.screens.js initSwitches) */
+.wave-settings.switch-row { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.switch-row .settings-note { flex-basis: 100%; text-align: left; }
+.wave-options.switch { position: relative; flex: none; width: 58px; height: 30px; gap: 0; padding: 0; border-radius: 15px;
+  background: #1e1f19; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06); transition: background-color 0.25s ease; }
+.wave-options.switch .fps-option { flex: 1; min-height: 0; height: 100%; padding: 0; border: none; border-radius: 15px; font-size: 0;
+  color: transparent; background: transparent; box-shadow: none; position: relative; z-index: 1; cursor: pointer; }
+.wave-options.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); will-change: transform; }
+.wave-options.switch:has(> .fps-option:last-of-type.active) { background: #4f7a3a; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45), 0 0 10px rgba(120, 190, 90, 0.35); }
+.wave-options.switch:has(> .fps-option:last-of-type.active)::after { transform: translateX(28px); }
+/* Settings' groups: a panel drawn out beside Settings (under it on a narrow screen), stretching out to its place */
+#main-menu .settings-drawer:not([hidden]) { position: fixed; z-index: 2; margin: 0; overflow-y: auto; max-width: none;
+  top: var(--drawer-top); left: var(--drawer-left); width: var(--drawer-width); max-height: var(--drawer-max-height);
+  background: rgba(62, 78, 46, 0.97); transform-origin: left center; animation: drawer-out 0.36s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
+#main-menu .settings-drawer.below:not([hidden]) { transform-origin: center top; animation-name: drawer-down; }
+#main-menu .settings-drawer h2 { margin: 0; font-size: 18px; color: var(--text-bright, #fff); }
+@keyframes drawer-out { from { opacity: 0; transform: translate3d(-28px, 0, 0) scaleX(0.82); } to { opacity: 1; transform: none; } }
+@keyframes drawer-down { from { opacity: 0; transform: translate3d(0, -18px, 0) scaleY(0.82); } to { opacity: 1; transform: none; } }
+.main-menu-content .menu-button.settings-group.active { background: var(--plank-green) center / cover; color: var(--text-bright); box-shadow: var(--glow); }
+/* (in a panel the language's list opens in its place, not over the panel's edge) */
+.settings-drawer .language-list { position: static; margin-top: 4px; box-shadow: none; }
+/* Settings' sound and music: how loud, a slider from 0 to 100, its part up to the knob filled */
+.wave-settings.volume-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.volume { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 190px; }
+.volume-value { min-width: 26px; text-align: right; font-size: 12px; color: #d4cfb6; font-variant-numeric: tabular-nums; }
+.volume-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 4px; cursor: pointer; margin: 0;
+  background: linear-gradient(to right, #6fa34f 0 var(--fill, 100%), #1e1f19 var(--fill, 100%) 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7); }
+.volume-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); transition: transform 0.15s ease; }
+.volume-slider::-moz-range-thumb { width: 22px; height: 22px; border: none; border-radius: 50%; background: #e9e2c8; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+.volume-slider:active::-webkit-slider-thumb { transform: scale(1.15); }
+/* Sound's Advanced, and the music player's own screen: wide, in the middle, the tracks in two columns where there's room */
+.settings-advanced { margin-top: 4px; }
+#main-menu .main-menu-content.music-screen { width: min(760px, 94vw); max-width: none; max-height: var(--menu-room); overflow-y: auto; }
+.music-screen #music-player:not(#x) { max-height: none; overflow: visible; }
+/* a card a group, side by side where there's room; a night track with a moon by its name */
+/* A row of options as one segmented track, no gaps: the chosen one's green plank slides along it, as a switch's
+   knob does (menu.screens.js initSegments) */
+.wave-options.segmented { position: relative; gap: 0; padding: 3px; border-radius: 8px; background: #1e1f19;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.wave-options.segmented > button { position: relative; z-index: 1; background: transparent !important;
+  box-shadow: none !important; border: none; border-radius: 5px; transition: color 0.2s ease; }
+.wave-options.segmented > .active { color: #fff; }
+.segment-thumb { position: absolute; left: 0; top: 3px; bottom: 3px; z-index: 0; border-radius: 5px; pointer-events: none;
+  background: var(--plank-green) center / cover; box-shadow: var(--glow); transition: transform 0.28s cubic-bezier(0.34, 1.3, 0.64, 1), width 0.28s ease; }
+.segment-thumb.jump { transition: none; }
+/* the editor's generate switch with the generator's gear beside it (not in the pane's corner) */
+.switch-with-gear { display: inline-flex; align-items: center; gap: 8px; }
+.switch-with-gear .menu-gear { position: static !important; }
+.options-with-gear { display: flex; align-items: center; gap: 8px; }
+.options-with-gear > .wave-options { flex: 1; min-width: 0; }
+.options-with-gear > .menu-gear { position: static !important; flex: none; }
+.music-screen > h1 { display: flex; align-items: center; gap: 14px; } /* ——— Music ——— */
+.music-screen > h1::before, .music-screen > h1::after { content: ''; flex: 1; height: 2px; background: linear-gradient(to right, transparent, rgba(232, 199, 106, 0.7)); }
+.music-screen > h1::after { background: linear-gradient(to left, transparent, rgba(232, 199, 106, 0.7)); }
+.music-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+.music-card { background: rgba(0, 0, 0, 0.18); border-radius: 0; padding: 6px 12px 8px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.music-card .music-group { margin-top: 4px; }
+.music-number { margin-right: 6px; font-size: 12px; color: #e8c76a; white-space: nowrap; }
+.music-name { flex-direction: row !important; align-items: baseline; flex-wrap: wrap; }
+.music-moon { width: 14px; height: 14px; margin-left: 6px; align-self: center; }
+.music-row:not(.night) .music-moon { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { #main-menu .settings-drawer { animation: none; } .wave-options.switch::after { transition: none; } }
+.glide.jump { transition: none; }
+/* a menu screen coming in: faded up a little, not appearing at once */
+@keyframes menu-screen-in { from { opacity: 0; } to { opacity: 1; } }
+/* (the blur behind a screen off while it comes in: fading a blurred backdrop is what stuttered) */
+/* (backwards, not both: a transform left on a panel after it came in put the scene's canvas over it) */
+#main-menu .main-menu-content:not([hidden]) { animation: menu-screen-in 0.26s ease 0.05s backwards; }
+/* the language's flag and the eye: on the first screen only */
+#main-menu:not([data-menu-screen="home"]) #menu-flags, #main-menu:not([data-menu-screen="home"]) #menu-eye-box { display: none !important; }
+@media (prefers-reduced-motion: reduce) { #main-menu .main-menu-content:not([hidden]) { animation: none; } .glide { transition: none; } }
 .language-option .flag { flex: none; }
 
 /* (#326) the music player in Settings: a long list that scrolls inside the panel */
 #music-player { max-height: 38vh; overflow-y: auto; text-align: left; padding-right: 2px; }
-.music-group { margin: 10px 0 4px; font-size: 12px; opacity: 0.75; letter-spacing: 0.06em; text-transform: uppercase; }
+.music-group { margin: 10px 0 4px; font-size: 12px; font-weight: bold; color: #e8c76a; letter-spacing: 0.06em; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
 .music-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
 .music-row.off .music-name { opacity: 0.45; }
 .music-listen { flex: none; width: 34px; min-height: 30px; padding: 0; }
 .music-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .music-name b { font-size: 13px; }
-.music-name small { font-size: 11px; opacity: 0.7; }
+.music-part { margin: 6px 0 2px; font-size: 12px; color: #d4cfb6; break-after: avoid; } /* (when the tracks under it play) */
 .music-toggle { flex: none; min-width: 52px; min-height: 30px; padding: 0 8px; font-size: 12px; }
-.music-toggle.on, .music-listen.on { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.music-toggle.on, .music-listen.on { background: #3f7a2e; border-color: #7cc35a; color: #fff; }
+
+/* The editor's brush: a slider at the left of the screen, half way down, only in the editor */
+#editor-brush { position: fixed; left: 10px; top: 50%; transform: translateY(-50%); z-index: 6; display: none; flex-direction: column; align-items: center; gap: 8px;
+  padding: 10px 8px; border-radius: 8px; background: rgba(24, 30, 18, 0.88); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); color: #d4cfb6; font-size: 12px; font-weight: bold; }
+body.editor-mode:not(.menu-world) #editor-brush { display: flex; zoom: var(--ui-scale, 1); }
+#editor-brush input { -webkit-appearance: none; appearance: none; writing-mode: vertical-lr; direction: rtl; width: 8px; height: 110px; margin: 0; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(to top, #6fa34f 0 var(--fill, 0%), #1e1f19 var(--fill, 0%) 100%); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7); }
+#editor-brush input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+#editor-brush b { color: #e8c76a; }
+
+/* The editor's Map sheet: two columns where there's room (its name and look; its time and weather) */
+.editor-map-grid { display: grid; grid-template-columns: 1fr; gap: 6px 22px; }
+@media (min-width: 700px) { .editor-map-grid { grid-template-columns: 1fr 1fr; } }
+.editor-map-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

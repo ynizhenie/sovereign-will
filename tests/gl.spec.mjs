@@ -41,7 +41,7 @@ test('with WebGL on, changing the battle size does not leave prewarmed terrain s
   await page.addInitScript(() => { try { localStorage.setItem('sovereign-will-gl', 'on'); } catch (e) { /* none */ } });
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play');
   await page.waitForFunction(() => glReady());
   const r = await page.evaluate(() => {

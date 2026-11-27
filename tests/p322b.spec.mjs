@@ -171,7 +171,8 @@ test('zooming across a size of the terrain\'s pictures leaves no hole or flash: 
     const blue = () => { const px = Math.round(canvas.width / 2), py = Math.round(canvas.height / 2); const d = ctx.getImageData(px, py, 1, 1).data; return d[2] > d[0] + 20; };
     const sizes = [];
     // painted at the size for a scale near 1, then zoomed to where the next size is, one frame at a time
-    setZoom(1.0 / getBaseScale()); for (let i = 0; i < 30; i++) render(); const settled = blue();
+    // (a slow runner paints a piece in bands, a few milliseconds a frame: as many frames as that takes, up to 200)
+    setZoom(1.0 / getBaseScale()); for (let i = 0; i < 200 && (i < 30 || !blue()); i++) render(); const settled = blue();
     const scaleBefore = getViewScale();
     const flashes = [];
     for (const scale of [1.5, 0.6, 0.2, 1.0, 2.4]) {

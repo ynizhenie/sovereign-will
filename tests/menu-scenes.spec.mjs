@@ -712,10 +712,18 @@ test('the menu put away to watch, the scene changed there, the menu brought back
     };
     return { eye: bounds('#menu-hide'), flag: bounds('#menu-flags .flag-button') };
   });
-  expect(controlSizes.eye).toEqual(controlSizes.flag);
+  // (as big as each other, to a pixel: the menu is zoomed on a bigger screen and rounds a little)
+  expect(Math.abs(controlSizes.eye.width - controlSizes.flag.width)).toBeLessThan(1);
+  expect(Math.abs(controlSizes.eye.height - controlSizes.flag.height)).toBeLessThan(1);
+  const eyeAt = await page.locator('#menu-hide').boundingBox();
   await page.click('#menu-hide');
   await expect(page.locator('#main-menu .main-menu-content[data-screen="home"]')).toBeHidden();
   await expect(page.locator('#menu-scene-bar')).toBeVisible();
+  // (the menu brought back from the very corner the eye was in, the next scene beside it)
+  const showAt = await page.locator('#menu-show').boundingBox(), nextAt = await page.locator('#menu-next-scene').boundingBox();
+  expect(Math.abs(showAt.x - eyeAt.x)).toBeLessThan(2);
+  expect(Math.abs(showAt.y - eyeAt.y)).toBeLessThan(2);
+  expect(nextAt.x + nextAt.width).toBeLessThanOrEqual(showAt.x);
   await page.click('#menu-next-scene');
   expect(await page.evaluate(() => menuWorld.scene)).toBe('fishing');
   expect(await page.evaluate(() => chunkStats())).toMatchObject({ pending: 0, holes: 0 });

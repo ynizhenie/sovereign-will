@@ -8,12 +8,13 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#editor-open-maps').click();
   await expect(page.locator('#map-manager-list')).toContainText('Сохранённых карт пока нет');
   await page.locator('[data-screen="maps"] [data-back]').click();
-  await expect(page.locator('.editor-start')).toContainText('Выберите карту для открытия в редакторе');
-  await expect(page.locator('#editor-new-empty')).toHaveText('Пустая карта');
-  await expect(page.locator('#editor-new-generated')).toHaveText('Сгенерировать карту');
-  await expect(page.locator('.editor-start-options .menu-button-primary')).toHaveCount(2);
+  // (the editor's first screen: New map and My maps; New map's own: its size, the land generated or not, Create)
+  await expect(page.locator('[data-screen="editor-hub"]')).toBeVisible();
+  await page.locator('#editor-open-new').click();
+  await expect(page.locator('#editor-new')).toHaveText('Создать');
+  await expect(page.locator('[data-editor-generate="on"]')).toHaveClass(/active/);
   await page.locator('[data-editor-size="128"]').click();
-  await page.locator('#editor-new-empty').click();
+  await page.evaluate(() => newEditorMap(false));
   await expect(page.locator('#loading-screen')).toBeVisible();
   await expect(page.locator('#loading-screen')).toBeHidden({ timeout: 30000 });
   await expect(page.locator('[data-editor-category="terrain"]')).toBeVisible(); // the editor's dock
@@ -53,7 +54,8 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   expect(await page.evaluate(() => savannaTiles.length)).toBe(1);
 
   await page.locator('[data-editor-category="terrain"]').click();
-  await page.locator('[data-brush="3"]').click();
+  await expect(page.locator('#editor-brush')).toBeVisible(); // (the brush: a slider at the side)
+  await page.evaluate(() => { const b = document.getElementById('editor-brush-size'); b.value = '3'; b.dispatchEvent(new Event('input')); });
   const pond = await page.evaluate(() => {
     const rect = canvas.getBoundingClientRect();
     const x = townHall.x + 8 * TILE_SIZE + 15, y = townHall.y + 8 * TILE_SIZE + 15;
@@ -62,8 +64,7 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   });
   await page.mouse.click(pond.x, pond.y);
   expect(await page.evaluate(() => [waterTiles.length, isWaterReachable(waterTiles.find(w => w.x === townHall.x + 8 * TILE_SIZE + 15 && w.y === townHall.y + 8 * TILE_SIZE + 15))])).toEqual([10, false]);
-  await page.locator('[data-editor-category="terrain"]').click();
-  await page.locator('[data-brush="1"]').click();
+  await page.evaluate(() => { const b = document.getElementById('editor-brush-size'); b.value = '1'; b.dispatchEvent(new Event('input')); });
 
   // Fish traps only sit on reachable water, and placing/removing one leaves water in place
   await page.locator('[data-editor-category="buildings"]').click();
@@ -147,7 +148,8 @@ test('editor screens: new map, tools, save by name, open and delete saved maps (
   await page.locator('#exit-to-menu-button').click();
 
   // Endless: Custom map lists it, and hides the map size and generator
-  await page.locator('[data-screen="editor"] [data-back]').click();
+  await page.locator('[data-screen="editor-hub"] [data-back]').click();
+  await page.locator('#open-modes').click(); // (the modes are behind Play)
   await page.locator('#mode-endless').click();
   await expect(page.locator('#endless-open-maps')).toBeHidden();
   await page.locator('[data-map-source="custom"]').click();

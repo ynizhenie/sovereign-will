@@ -331,7 +331,7 @@ export function leaveEditor() {
   game.gameMode = 'endless';
   document.body.classList.remove('editor-mode');
   exitToMainMenu();
-  showMenuScreen('editor');
+  showMenuScreen('editor-hub');
 }
 
 export function saveEditorMap() {

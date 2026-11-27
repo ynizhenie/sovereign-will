@@ -46,7 +46,7 @@ test('a helmet is made at a smithy, worn by anyone but a pet, takes part of a hi
 test('in a battle the Helmet switch puts one on what is placed next, on either side, not on a pet (#326, 27.10, 27)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play');
   const r = await page.evaluate(() => {
     const put = (id, gx, gy) => { battle.category = 'units'; battle.preset = id; battleTap(gx * TILE_SIZE + 15, gy * TILE_SIZE + 15); };
@@ -95,7 +95,7 @@ test('bone armour and horned helmets keep their stats and variants', async ({ pa
 test('battle gear variants can be applied across factions', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play');
   const result = await page.evaluate(() => {
     battle.category = 'units';

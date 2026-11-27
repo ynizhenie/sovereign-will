@@ -11,7 +11,6 @@ test('the generator exposes the ore and regrowth settings a continent uses (#20;
     viewport: innerHeight
   }));
   expect(size.height).toBeLessThanOrEqual(size.viewport * 0.75);
-  expect(size.content).toBeGreaterThan(size.height);
   const r = await page.evaluate(() => {
     const keys = GENERATOR_GROUPS.flatMap(([, k]) => k);
     const fields = [...document.querySelectorAll('#generator-fields .generator-field')].filter(f => f.querySelector('input[data-key]'));
@@ -56,23 +55,28 @@ test('own presets are saved on the device, loaded and deleted (#20)', async ({ p
   await page.click('#open-generator');
   const ore = page.locator('#generator-fields input[data-key="orePerSpawner"]');
   await ore.nth(1).fill('9'); await ore.nth(1).dispatchEvent('change');
-  await page.fill('#preset-name', 'Rich ore');
-  await page.click('#preset-save');
-  await expect(page.locator('#preset-list [data-preset="Rich ore"]')).toHaveCount(1);
+  await page.click('#preset-save'); // (no name to type: the next free "Preset N")
+  await expect(page.locator('#preset-list [data-preset="Пресет 1"]')).toHaveCount(1);
+  await expect(page.locator('#preset-pick')).toHaveText('Пресет 1');
   await page.reload();
   await page.evaluate(() => showMenuScreen('endless'));
   await page.click('#open-generator');
   expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(9); // the generator settings are remembered too
+  await expect(page.locator('#preset-menu')).toBeHidden(); // (the list drops from the chosen one's name)
+  await page.click('#preset-pick');
   await page.click('#preset-standard');
+  await expect(page.locator('#preset-menu')).toBeHidden();
   expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(6);
-  await page.click('#preset-list [data-preset="Rich ore"]');
+  await page.click('#preset-pick');
+  await page.click('#preset-list [data-preset="Пресет 1"]');
   expect(await page.evaluate(() => GAME_CONFIG.map.orePerSpawner.max)).toBe(9);
-  await page.click('#preset-list [data-delete-preset="Rich ore"]');
-  await page.click('#preset-list [data-confirm-delete="Rich ore"]'); // asks first (#143)
+  await page.click('#preset-pick');
+  await page.click('#preset-list [data-delete-preset="Пресет 1"]');
+  await page.click('#preset-list [data-confirm-delete="Пресет 1"]'); // asks first (#143)
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
 });
 
-test('the generator identifies its active preset and accepts values beyond the old caps', async ({ page }) => {
+test('the generator identifies its active preset and keeps a typed number within its limits', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => {
     localStorage.removeItem('generator-settings');
@@ -83,49 +87,47 @@ test('the generator identifies its active preset and accepts values beyond the o
   await page.click('#open-generator');
 
   await expect(page.locator('#preset-standard')).toHaveClass(/active/);
-  await expect(page.locator('#preset-current')).toHaveText('Выбран пресет: Стандарт. Измените настройку, чтобы сохранить новый пресет.');
-  await page.fill('#preset-name', 'Open range');
+  await expect(page.locator('#preset-pick')).toHaveText('Стандарт');
   await expect(page.locator('#preset-save')).toBeDisabled();
   await expect(page.locator('#preset-list [data-preset]')).toHaveCount(0);
   const fields = page.locator('#generator-fields input:not([data-key])');
-  await fields.nth(1).fill('1000');
+  await fields.nth(1).fill('1000'); // (past its top: set to it)
   await fields.nth(1).dispatchEvent('change');
-  expect(await page.evaluate(() => GAME_CONFIG.continent.startCoast)).toBe(1000);
-  await expect(page.locator('#generator-fields input:not([data-key])').nth(1)).not.toHaveAttribute('max');
+  expect(await page.evaluate(() => GAME_CONFIG.continent.startCoast)).toBe(200);
+  await fields.nth(1).fill('100');
+  await fields.nth(1).dispatchEvent('change');
+  expect(await page.evaluate(() => GAME_CONFIG.continent.startCoast)).toBe(100);
 
   await page.locator('#generator-fields input:not([data-key])').nth(0).fill('25');
   await page.locator('#generator-fields input:not([data-key])').nth(0).dispatchEvent('change');
   await page.locator('#generator-fields input:not([data-key])').nth(2).fill('80');
   await page.locator('#generator-fields input:not([data-key])').nth(2).dispatchEvent('change');
   expect(await page.evaluate(() => [GAME_CONFIG.continent.margin, GAME_CONFIG.continent.mountains])).toEqual([0.25, 0.8]);
-  await expect(page.locator('#preset-current')).toHaveText('Свои настройки (пресет не выбран)');
   await expect(page.locator('#preset-save')).toBeEnabled();
+  await expect(page.locator('#preset-pick')).toHaveText('Свои');
 
   await page.click('#preset-save');
-  await expect(page.locator('#preset-list [data-preset="Open range"]')).toHaveClass(/active/);
-  await expect(page.locator('#preset-current')).toHaveText('Выбран пресет: Open range. Измените настройку, чтобы сохранить новый пресет.');
+  await expect(page.locator('#preset-list [data-preset="Пресет 1"]')).toHaveClass(/active/);
   await expect(page.locator('#preset-save')).toBeDisabled();
 
-  await page.click('#preset-list [data-preset="Open range"]');
-  await expect(page.locator('#preset-name')).toHaveValue('Open range');
-  await expect(page.locator('#preset-save')).toHaveText('Обновить');
-  await page.locator('#generator-fields input:not([data-key])').nth(1).fill('1200');
+  // changed again and saved: a second preset, the first kept as it was
+  await page.locator('#generator-fields input:not([data-key])').nth(1).fill('120');
   await page.locator('#generator-fields input:not([data-key])').nth(1).dispatchEvent('change');
-  await expect(page.locator('#preset-current')).toHaveText('Редактирование пресета: Open range');
   await expect(page.locator('#preset-save')).toBeEnabled();
   await page.click('#preset-save');
-  expect(await page.evaluate(() => loadPresets()['Open range'].continent.startCoast)).toBe(1200);
-  await expect(page.locator('#preset-list [data-preset="Open range"]')).toHaveClass(/active/);
+  expect(await page.evaluate(() => [loadPresets()['Пресет 1'].continent.startCoast, loadPresets()['Пресет 2'].continent.startCoast])).toEqual([100, 120]);
+  await expect(page.locator('#preset-list [data-preset="Пресет 2"]')).toHaveClass(/active/);
 
+  await page.click('#preset-pick');
   await page.click('#preset-standard');
   await expect(page.locator('#preset-standard')).toHaveClass(/active/);
-  await expect(page.locator('#preset-current')).toHaveText('Выбран пресет: Стандарт. Измените настройку, чтобы сохранить новый пресет.');
 });
 
 test('the editor shares Endless\' seed and the generator gear: a generated map is the seed\'s, Back goes back to the editor; a custom Endless map is at least 128 (#326, 27.10, 18, 19)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
   await page.click('#mode-editor');
+  await page.click('#editor-open-new');
   await page.click('#editor-open-generator');
   await expect(page.locator('[data-screen="generator"]')).toBeVisible();
   await page.click('[data-screen="generator"] [data-back-to]');
@@ -145,7 +147,7 @@ test('the editor shares Endless\' seed and the generator gear: a generated map i
     await page.evaluate(seed => {
       document.getElementById('seed-input').value = seed;
       document.querySelector('[data-editor-size="128"]').click();
-      document.getElementById('editor-new-generated').click();
+      newEditorMap(true);
     }, seed);
     await page.waitForFunction(() => game.loading);
     await page.waitForFunction(() => !game.loading);
@@ -384,11 +386,11 @@ test('the continent\'s own settings: its fields, labelled; they shape a continen
   expect(after.forests).toBe(0);
   expect(after.trees).toBeLessThan(before.trees);
   // a preset keeps both kinds of settings, Standard puts the continent's back
-  await page.fill('#preset-name', 'No mountains');
   await page.click('#preset-save');
   await page.evaluate(() => document.getElementById('preset-standard').click());
   expect(await page.evaluate(() => [GAME_CONFIG.continent.mountains, GAME_CONFIG.continent.forest])).toEqual([0.07, 0.3]);
-  await page.click('#preset-list [data-preset="No mountains"]');
+  await page.click('#preset-pick');
+  await page.click('#preset-list [data-preset="Пресет 1"]');
   expect(await page.evaluate(() => [GAME_CONFIG.continent.mountains, GAME_CONFIG.continent.forest])).toEqual([0, 0]);
   // a biome's chances can't add up to more than its tiles
   const over = await page.evaluate(() => { const t = GAME_CONFIG.continent.grow.forest; const keys = Object.keys(t); return keys.length; });

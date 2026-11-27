@@ -6,7 +6,7 @@ import { openGame } from './helpers.mjs';
 test('Battles: every faction\'s buildings can be placed and stand through a fight; the enemy in armour with a shield (#279, c1.2, c1.4)', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const r = await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });

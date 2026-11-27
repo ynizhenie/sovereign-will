@@ -106,6 +106,11 @@ test('a tap past the base\'s land neither builds nor marks there, with a word wh
     const spot = { x: far.x, y: far.y + 2 * TILE_SIZE }, home = { x: townHall.x - 6 * TILE_SIZE + 0, y: townHall.y + 6 * TILE_SIZE };
     const saidBuild = tap(spot.x, spot.y, 'warehouse');
     const placedFar = blueprints.length;
+    // (the base's spot cleared: what stands there is the map's luck)
+    for (const list of ['trees', 'boulders', 'naturalRocks', 'waterTiles', 'cacti', 'berryBushes', 'grassList', 'sticks', 'pebbles']) {
+      window[list] = window[list].filter(o => Math.abs(o.x - home.x) > 2 * TILE_SIZE || Math.abs(o.y - home.y) > 2 * TILE_SIZE);
+    }
+    resetTileIndex();
     tap(home.x, home.y, 'warehouse');
     // a farm zone past it
     const saidZone = tap(spot.x + TILE_SIZE, spot.y, 'zone_wheat');

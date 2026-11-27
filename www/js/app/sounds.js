@@ -267,7 +267,7 @@ export function previewTrack(id) { musicPreview.id = id; if (id) startAudio(); }
 // Every track by where it plays: [{ id, label, tracks: [{ id, when }] }] (label: a faction's name or a text key; when: a text key)
 export function musicCatalog() {
   const groups = [{ id: 'menu', label: t('music.group.menu'), tracks: [{ id: 'menu', when: 'music.when.menu' }] }];
-  const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle', 'duel', 'unfair'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind] }))) });
+  const set = (id, label, music, keys) => groups.push({ id, label, tracks: ['ambient', 'nightAmbient', 'battle', 'nightBattle', 'duel', 'unfair'].flatMap(kind => (music[kind] || []).map(track => ({ id: track, when: keys[kind], kind }))) });
   groups.push({ id: 'plague', label: t('plague.mode'), tracks: GAME_CONFIG.plagueMusic.map(id => ({ id, when: 'music.when.plague' })) });
   set('arena', t('music.group.arena'), GAME_CONFIG.battleMusic, {
     ambient: 'music.when.arenaAmbient', nightAmbient: 'music.when.arenaAmbientNight',

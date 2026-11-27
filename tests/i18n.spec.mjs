@@ -11,7 +11,7 @@ async function openFresh(page) {
 
 test('the game starts in English (#41)', async ({ page }) => {
   const errors = await openFresh(page);
-  await expect(page.locator('#play-button')).toHaveText('PLAY');
+  await expect(page.locator('#play-button')).toHaveText('New game');
   await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Worker 15[[food]]']);
   await expect.poll(() => iconText(page, '.tab-btn:first-child')).toEqual(['[[build]]Build']);
   await expect(page.locator('#language-options button.active')).toHaveText('English');
@@ -40,10 +40,12 @@ test('picking Ukrainian in the menu switches every text, and is remembered (#41)
   await openFresh(page);
   await page.evaluate(() => enterMenuWorld('fishing')); // (the humans' HUD: the menu's scene may be the undead's, #417)
   await page.click('#open-settings');
+  await page.click('[data-settings-group="general"]');
+  await page.click('#language-current'); // (a drop-down)
   await page.click('#language-options button[data-language="uk"]');
   await page.click('#main-menu [data-screen="settings"] [data-back]');
-  await page.click('#mode-endless');
-  await expect(page.locator('#play-button')).toHaveText('ГРАТИ');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
+  await expect(page.locator('#play-button')).toHaveText('Нова гра');
   await expect.poll(() => iconText(page, '#btn-hire-normal')).toEqual(['[[worker]] Робітник 15[[food]]']);
   await expect.poll(() => iconText(page, '#btn-wall_wood')).toEqual(['[[wall_wood]] Дерев\'яна стіна 5[[wood]]']);
   await expect.poll(() => iconText(page, '.tab-btn:nth-child(2)')).toEqual(['[[path]]Зони']);

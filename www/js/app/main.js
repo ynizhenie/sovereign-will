@@ -9,7 +9,7 @@ import { game } from '../engine/world/index.js';
 import { update } from './update.js';
 import { render } from './render.js';
 import { perfBegin, perfFrame, perfMark } from './perfmon.js';
-import { isDefeated, updateDefeat } from '../modes/endless/index.js';
+import { isDefeated, tickAutosave, updateDefeat } from '../modes/endless/index.js';
 import { syncMenuWorld } from '../modes/menu/index.js';
 import { updateMusic } from './sounds.js';
 
@@ -28,6 +28,7 @@ export const loop = { lastTime: performance.now(), stepTime: 0, lastDrawn: 0, fr
 // One step of the game, unless it's lost: then the world stops and no more waves come
 export function stepGame(dt, hud = true) {
   updateDefeat(dt);
+  tickAutosave();
   if (isDefeated()) return false;
   return update(dt, hud) === true;
 }

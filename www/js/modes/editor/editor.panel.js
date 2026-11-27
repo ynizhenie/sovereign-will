@@ -3,7 +3,7 @@
 // ---- Panels
 
 import { GAME_CONFIG, getDefinition } from '../../content/configs/index.js';
-import { closeSheet, escapeHtml, iconHtml, showPlacing, toggleSheet } from '../../ui/index.js';
+import { closeSheet, escapeHtml, hidePlacing, iconHtml, showPlacing, toggleSheet } from '../../ui/index.js';
 import { loadData, onTap, saveData, t } from '../../engine/platform/index.js';
 import { game } from '../../engine/world/index.js';
 import { setStartingWeather, timeOfPhase } from '../../domains/world/index.js';
@@ -11,6 +11,27 @@ import { showMenuScreen } from '../menu/index.js';
 import { openGenerator, setMapSource } from '../endless/index.js';
 import { initMapManager } from './editor.maps.js';
 import { EDITOR_TOOLS, clearEditorMap, editor, redoEditor, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
+
+// The buildings of some factions, each once: under its faction, or, one of several (a campfire: the humans' and the
+// demons'), under those together (it was under each of them)
+/** @param {typeof EDITOR_TOOLS} shown */
+function factionGroups(shown) {
+  const ready = Object.values(GAME_CONFIG.factions).filter(faction => faction.ready);
+  /** @type {Map<string, { title: string, section: string, tools: typeof EDITOR_TOOLS, order: number }>} */
+  const groups = new Map();
+  for (const tool of shown) {
+    const owners = tool.building ? ready.filter(faction => getDefinition('buildings', tool.building).factions?.includes(faction.id)) : [];
+    if (!owners.length) continue;
+    const key = owners.map(faction => faction.id).join('+');
+    if (!groups.has(key)) {
+      // (one faction's first, in the factions' order; those of several after them)
+      const order = owners.length === 1 ? ready.indexOf(owners[0]) : ready.length + owners.length;
+      groups.set(key, { title: owners.map((faction, i) => i ? faction.label.toLowerCase() : faction.label).join(t('editor.and')), section: '', tools: [], order });
+    }
+    /** @type {{ tools: typeof EDITOR_TOOLS }} */ (groups.get(key)).tools.push(tool);
+  }
+  return [...groups.values()].sort((a, b) => a.order - b.order);
+}
 
 export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
@@ -23,11 +44,7 @@ export function renderEditorPanel() {
       { title: t('editor.section.hallAndOutpost'), section: '', tools: shown.filter(tl => landmarks.has(tl.id)) },
       { title: t('battle.buildingsCommon'), section: '', tools: shown.filter(tl =>
         !landmarks.has(tl.id) && (!tl.building || !getDefinition('buildings', tl.building).factions)) },
-      ...Object.values(GAME_CONFIG.factions).filter(faction => faction.ready).map(faction => ({
-        title: faction.label,
-        section: '',
-        tools: shown.filter(tl => tl.building && getDefinition('buildings', tl.building).factions?.includes(faction.id))
-      }))
+      ...factionGroups(shown)
     ].filter(group => group.tools.length)
     : [...new Set(shown.map(tl => tl.section || ''))].map(section => ({
       title: '',
@@ -56,16 +73,22 @@ export function renderEditorPanel() {
     }
     tools.appendChild(grid);
   }
-  document.querySelectorAll('[data-brush]').forEach(b => b.classList.toggle('on', Number(b.dataset.brush) === editor.brush));
   document.querySelectorAll('[data-start-time]').forEach(b => b.classList.toggle('on', b.dataset.startTime === editor.startTime));
   document.querySelectorAll('[data-editor-weather]').forEach(b => b.classList.toggle('on', b.dataset.editorWeather === editor.weather));
   document.querySelectorAll('[data-hide-time-weather]').forEach(b =>
     b.classList.toggle('active', (b.dataset.hideTimeWeather === 'on') === editor.hideTimeAndWeather));
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
+  document.getElementById('editor-hand')?.classList.toggle('active', editor.tool === 'pan');
+  const brushSize = /** @type {HTMLInputElement | null} */ (document.getElementById('editor-brush-size'));
+  // (the Node tests' page has no style to set: only the value there)
+  if (brushSize) { brushSize.value = String(editor.brush); if (typeof brushSize.style?.setProperty === 'function') brushSize.style.setProperty('--fill', `${((editor.brush - 1) / 4) * 100}%`); }
+  const brushValue = document.getElementById('editor-brush-value');
+  if (brushValue) brushValue.textContent = editor.brush === 1 ? '1' : `${editor.brush}×${editor.brush}`;
   document.getElementById('editor-top-size').textContent = `${game.COLS}×${game.ROWS}`;
   updateEditorTitle();
   if (editor.tool === 'erase') chosen = document.getElementById('editor-erase').innerHTML;
-  if (chosen) showPlacing(chosen);
+  if (editor.tool === 'pan') hidePlacing(); // (the hand: nothing to put down, no chip)
+  else if (chosen) showPlacing(chosen);
   rememberEditorChoices();
 }
 
@@ -80,7 +103,8 @@ let editorUsesCustomSize = false;
 const editorCustomSize = /** @type {HTMLElement} */ (document.getElementById('editor-map-custom'));
 const editorMapCols = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-cols'));
 const editorMapRows = /** @type {HTMLInputElement} */ (document.getElementById('editor-map-rows'));
-const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, hallFaction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'tree', hideTimeAndWeather: true };
+// (the tool to begin with: the hand, the map moved and nothing put down till something's picked)
+const EDITOR_DEFAULTS = { size: 192, custom: false, cols: 192, rows: 192, hallFaction: 'humans', startTime: 'morning', brush: 1, category: 'nature', tool: 'pan', hideTimeAndWeather: true };
 const rememberEditorChoices = () => saveData('editor-choices', {
   size: editorNewSize,
   custom: editorUsesCustomSize,
@@ -121,6 +145,10 @@ function renderEditorHallFaction() {
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
+// A new map in the editor, the land generated or bare, at the size chosen
+/** @param {boolean} generate */
+export function newEditorMap(generate) { startEditor({ ...editorDimensions(), generate }); }
+
 export function initEditorPanel() {
   const saved = loadData('editor-choices', EDITOR_DEFAULTS);
   editorNewSize = [128, 192, 256].includes(Number(saved.size)) ? Number(saved.size) : EDITOR_DEFAULTS.size;
@@ -134,7 +162,7 @@ export function initEditorPanel() {
   game.editorHideTimeAndWeather = editor.hideTimeAndWeather;
   editor.brush = [1, 3, 5].includes(Number(saved.brush)) ? Number(saved.brush) : EDITOR_DEFAULTS.brush;
   editor.category = ['terrain', 'nature', 'buildings'].includes(saved.category) ? saved.category : EDITOR_DEFAULTS.category;
-  editor.tool = EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
+  editor.tool = saved.tool === 'pan' || saved.tool === 'erase' || EDITOR_TOOLS.some(tool => tool.id === saved.tool) ? saved.tool : EDITOR_DEFAULTS.tool;
   renderEditorHallFaction();
   editorCustomSize.hidden = !editorUsesCustomSize;
   document.querySelectorAll('[data-editor-size]').forEach(button => button.classList.toggle('active',
@@ -148,7 +176,8 @@ export function initEditorPanel() {
   }));
   [editorMapCols, editorMapRows].forEach(input => input.addEventListener('change', rememberEditorChoices));
   document.getElementById('mode-editor').disabled = false;
-  onTap(document.getElementById('mode-editor'), () => showMenuScreen('editor'));
+  onTap(document.getElementById('mode-editor'), () => showMenuScreen('editor-hub'));
+  onTap(/** @type {HTMLElement} */ (document.getElementById('editor-open-new')), () => showMenuScreen('editor'));
   initMapManager({
     openEditor: map => startEditor({ map }),
     selectEndless: map => {
@@ -172,12 +201,19 @@ export function initEditorPanel() {
       }
     }
   });
-  onTap(document.getElementById('editor-new-empty'), () => startEditor({ ...editorDimensions(), generate: false }));
-  onTap(document.getElementById('editor-new-generated'), () => startEditor({ ...editorDimensions(), generate: true }));
+  // a new map: one button, the land generated or not by the switch beside it (remembered)
+  const markGenerate = () => document.querySelectorAll('[data-editor-generate]').forEach(b => b.classList.toggle('active', (/** @type {HTMLElement} */ (b).dataset.editorGenerate === 'on') === (loadData('editorGenerate', true) !== false)));
+  markGenerate();
+  document.querySelectorAll('[data-editor-generate]').forEach(b => onTap(/** @type {HTMLElement} */ (b), () => { saveData('editorGenerate', /** @type {HTMLElement} */ (b).dataset.editorGenerate === 'on'); markGenerate(); }));
+  onTap(/** @type {HTMLElement} */ (document.getElementById('editor-new')), () => newEditorMap(loadData('editorGenerate', true) !== false));
   // (#326, 27.10, 19) the shared seed panel's generator settings
   onTap(document.getElementById('editor-open-generator'), () => openGenerator('editor'));
   onTap(document.getElementById('editor-save'), saveEditorMap);
-  document.querySelectorAll('[data-brush]').forEach(button => onTap(button, () => { editor.brush = Number(button.dataset.brush); rememberEditorChoices(); renderEditorPanel(); }));
+  // the brush: a slider at the side, 1, 3 or 5 tiles across
+  const brush = /** @type {HTMLInputElement} */ (document.getElementById('editor-brush-size'));
+  brush.addEventListener('input', () => { editor.brush = Number(brush.value); rememberEditorChoices(); renderEditorPanel(); });
+  // the hand: the map moved, nothing put down
+  onTap(/** @type {HTMLElement} */ (document.getElementById('editor-hand')), () => { editor.tool = 'pan'; rememberEditorChoices(); closeSheet(); renderEditorPanel(); });
   // the dock: a category's sheet opens (again: closes); the eraser is picked at once
   document.querySelectorAll('[data-editor-category]').forEach(button => onTap(button, () => {
     editor.category = /** @type {string} */ (button.dataset.editorCategory);

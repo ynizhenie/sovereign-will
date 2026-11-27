@@ -34,7 +34,8 @@ test('what was picked on the Endless screen and in Settings is still picked afte
     for (const sel of ['[data-difficulty="hard"]', '[data-cards="on"]', '[data-wave-interval="240"]', '[data-map-size="custom"]']) document.querySelector(sel).click();
     const mapCols = document.getElementById('map-cols'); mapCols.value = '512'; mapCols.dispatchEvent(new Event('change', { bubbles: true }));
     showMenuScreen('settings');
-    for (const sel of ['[data-fps="60"]', '[data-show-fps="on"]', '[data-sound="off"]', '[data-vsync="off"]']) { const b = document.querySelector(sel); if (b) b.click(); }
+    for (const sel of ['[data-fps="60"]', '[data-show-fps="on"]', '[data-vsync="off"]']) { const b = document.querySelector(sel); if (b) b.click(); }
+    const sound = document.getElementById('sound-volume'); sound.value = '0'; sound.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await page.waitForTimeout(100);
   await page.reload();
@@ -43,7 +44,7 @@ test('what was picked on the Endless screen and in Settings is still picked afte
     return {
       difficulty: on('[data-difficulty="hard"]'), cards: on('[data-cards="on"]'), wave: on('[data-wave-interval="240"]'), map: on('[data-map-size="custom"]'),
       gameDifficulty: game.gameDifficulty, waveInterval: game.waveInterval, mapCols: game.mapSettings.cols,
-      fps: on('[data-fps="60"]'), showFps: on('[data-show-fps="on"]'), sound: on('[data-sound="off"]'), vsync: on('[data-vsync="off"]')
+      fps: on('[data-fps="60"]'), showFps: on('[data-show-fps="on"]'), sound: document.getElementById('sound-volume').value === '0' && !audio.soundOn, vsync: on('[data-vsync="off"]')
     };
   });
   expect(r).toEqual({ difficulty: true, cards: true, wave: true, map: true, gameDifficulty: 'hard', waveInterval: 240, mapCols: 512, fps: true, showFps: true, sound: true, vsync: true });

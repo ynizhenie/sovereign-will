@@ -86,7 +86,7 @@ test('the picked ones\' ways drawn dashed, moving; the card shows the group and 
 test('in a battle the picked group goes where it is told, an enemy tapped is theirs (#326)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => showMenuScreen('home'));
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   const r = await page.evaluate(() => {
     const at = (gx, gy) => ({ x: gx * TILE_SIZE + 15, y: gy * TILE_SIZE + 15 });

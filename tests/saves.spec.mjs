@@ -94,7 +94,7 @@ test('save slots are independent, keep the seed as their default name, and live 
   await expect(page.locator('#pause-menu')).toBeVisible();
   await page.click('#exit-to-menu-button');
   await page.evaluate(() => { resetGame(); }); // the stock's gone back to the start
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await expect(page.locator('#open-saves')).toBeVisible();
   await expect(page.locator('#mode-saves')).toHaveCount(0);
   await page.click('#open-saves');
@@ -109,7 +109,7 @@ test('save slots are independent, keep the seed as their default name, and live 
   await expect.poll(() => page.evaluate(() => [stock.stone, waveNum, gameStarted, savannaTiles.length])).toEqual([123, 5, true, 1]);
   // delete it, asked first
   await page.evaluate(() => exitToMainMenu());
-  await page.click('#mode-endless');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-endless');
   await page.click('#open-saves');
   for (let i = 0; i < 2; i++) {
     await page.click('#save-list [data-delete-save]');
@@ -177,7 +177,7 @@ test('the combined save menu lists saves from every world; Battles have no save 
   await page.click('[data-screen="saves"] [data-back]');
   // A battle has no combined save menu in its pause screen.
   await page.evaluate(() => { exitToMainMenu(); showMenuScreen('home'); });
-  await page.click('#mode-battles');
+  await page.evaluate(() => showMenuScreen('modes')); await page.click('#mode-battles');
   await page.click('#battle-play'); // (#417: Battles opens its settings first)
   await expect(page.locator('[data-battle-category="units"]')).toBeVisible();
   await page.click('#btn-pause-toggle');
@@ -230,4 +230,32 @@ test('a choice tapped on a phone is kept: a random map after a custom one stays 
   });
   expect(saved.mapSource).toBe('random');
   expect(saved.customMap).toBeNull();
+});
+
+test('the game saves itself into its save when a wave is beaten, when the app goes to the background and when it is left for the menu', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => localStorage.removeItem('sovereign-will-saves'));
+  await page.click('#play-button');
+  const saves = () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('sovereign-will-saves') || '{}')).map(save => [save.seed, save.wave]));
+  const [seed, first] = await page.evaluate(() => [worldSeed.value, waveNum]);
+  // a new game as it begins: nothing saved
+  await page.evaluate(() => tickAutosave());
+  expect(await saves()).toEqual([]);
+  // the next wave come and its enemy still about (standing far off, harmless): not yet; it gone: saved, once
+  await page.evaluate(() => {
+    const foe = createNormalEnemy({ x: 45, y: 45 }, 'raider');
+    Object.assign(foe, { speed: 0, damage: 0, fromWave: true });
+    enemies.push(foe); waveNum++; tickAutosave();
+  });
+  await page.waitForTimeout(300);
+  expect(await saves()).toEqual([]);
+  await page.evaluate(() => { enemies.length = 0; tickAutosave(); });
+  await expect.poll(saves).toEqual([[seed, first + 1]]);
+  // the app to the background: into the same save
+  await page.evaluate(() => { waveNum++; Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
+  await expect.poll(saves).toEqual([[seed, first + 2]]);
+  await page.evaluate(() => { delete document.hidden; });
+  // left for the menu: saved as it was, still the one save
+  await page.evaluate(() => { waveNum++; exitToMainMenu(); });
+  await expect.poll(saves).toEqual([[seed, first + 3]]);
 });

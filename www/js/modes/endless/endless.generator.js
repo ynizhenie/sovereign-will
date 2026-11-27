@@ -24,10 +24,37 @@ export const GENERATOR_GROUPS = [
   ['regrowth', ['respawnDelay', 'oreRespawnDelay']]
 ];
 
-// A typed-in number, kept sensible: never negative, a whole number
-export function cleanValue(raw) {
+// The most each count may be: a typed number past it is set to it (any number went in, 1400000000000 too)
+export const GENERATOR_MAX = { startCoast: 200, ironSpawners: 30, coalSpawners: 30, orePerSpawner: 50, oreSpawnerRadius: 20, respawnDelay: 3600, oreRespawnDelay: 3600 };
+
+// A typed-in number, kept sensible: never negative, a whole number, no more than its key's top
+export function cleanValue(raw, key = '') {
   const n = Number(raw);
-  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+  return Number.isFinite(n) ? Math.min(GENERATOR_MAX[key] ?? Infinity, Math.max(0, Math.round(n))) : null;
+}
+
+// A group of fields as a card that folds (open, or shut, as it was left): its name the card's head
+const cardsShut = new Set(['nature']);
+/** @param {HTMLElement} container @param {string} id @param {string} title */
+function card(container, id, title) {
+  const box = document.createElement('details');
+  box.className = 'gen-card';
+  box.dataset.card = id;
+  box.open = !cardsShut.has(id);
+  box.addEventListener('toggle', () => { if (box.open) cardsShut.delete(id); else cardsShut.add(id); });
+  const head = document.createElement('summary');
+  head.className = 'gen-card-head';
+  head.textContent = title;
+  box.appendChild(head);
+  container.appendChild(box);
+  return box;
+}
+/** @param {HTMLElement} box @param {HTMLElement[]} fields @param {string} [title] */
+function grid(box, fields, title) {
+  if (title) { const heading = document.createElement('h3'); heading.textContent = title; box.appendChild(heading); }
+  const g = document.createElement('div'); g.className = 'generator-grid';
+  fields.forEach(f => g.appendChild(f));
+  box.appendChild(g);
 }
 
 export function renderGeneratorFields() {
@@ -35,40 +62,29 @@ export function renderGeneratorFields() {
   container.innerHTML = '';
   renderContinentFields(container);
   for (const [group, keys] of GENERATOR_GROUPS) {
-    // each group: a heading, then its fields two to a row
-    const heading = document.createElement('h3');
-    heading.textContent = t(`gen.group.${group}`);
-    const grid = document.createElement('div');
-    grid.className = 'generator-grid';
-    for (const key of keys.filter(k => k in GAME_CONFIG.map)) grid.appendChild(generatorField(key));
-    container.append(heading, grid);
+    grid(card(container, group, t(`gen.group.${group}`)), keys.filter(k => k in GAME_CONFIG.map).map(generatorField));
   }
   updatePresetSelection();
 }
 
 // (#326) The continent's: the sea round the land and the base's distance from it, the biomes' shares of the land, and what
-// grows on each biome (as a share of its tiles), each a percent
+// grows on each biome (as a share of its tiles), each a percent; what grows in one card, Nature, a heading a biome
 function renderContinentFields(container) {
   const C = GAME_CONFIG.continent;
-  const grid = (title, fields) => {
-    const heading = document.createElement('h3'); heading.textContent = title;
-    const box = document.createElement('div'); box.className = 'generator-grid';
-    fields.forEach(f => box.appendChild(f));
-    container.append(heading, box);
-  };
-  grid(t('gen.group.cland'), [
+  grid(card(container, 'land', t('gen.group.cland')), [
     percentField(t('gen.c.margin'), () => C.margin, v => { C.margin = v; }, MAX_CONTINENT_MARGIN),
-    numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; })
+    numberField(t('gen.c.startCoast'), () => C.startCoast, v => { C.startCoast = v; }, GENERATOR_MAX.startCoast)
   ]);
-  grid(t('gen.group.cbiomes'), ['mountains', 'desert', 'savanna', 'forest', 'lakes'].map(k =>
+  grid(card(container, 'biomes', t('gen.group.cbiomes')), ['mountains', 'desert', 'savanna', 'forest', 'lakes'].map(k =>
     percentField(t(`gen.c.${k}`), () => C[k], v => { C[k] = v; })));
+  const nature = card(container, 'nature', t('gen.group.nature'));
   for (const biome of CONTINENT_BIOMES) {
     const table = C.grow[biome];
-    grid(t(`gen.group.grow.${biome}`), Object.keys(table).map(kind => {
+    grid(nature, Object.keys(table).map(kind => {
       const others = Object.entries(table).filter(([k]) => k !== kind).reduce((a, [, c]) => a + c, 0);
       const remaining = Math.max(0, 1 - others);
       return percentField(t(`gen.res.${kind}`), () => table[kind], v => { table[kind] = v; }, remaining, '0.1');
-    }));
+    }), t(`gen.group.grow.${biome}`));
   }
 }
 
@@ -83,15 +99,15 @@ function percentField(label, get, set, max = 1, step = 'any') {
   }, 0, Math.round(max * 100), step, '%');
 }
 
-// A field of a whole number
-function numberField(label, get, set) {
+// A field of a whole number, up to max
+function numberField(label, get, set, max) {
   return labelledNumber(label, get(), raw => {
     const n = Number(raw);
     if (!Number.isFinite(n)) return;
-    set(Math.max(0, Math.round(n)));
+    set(Math.min(max, Math.max(0, Math.round(n))));
     rememberSettings();
     renderGeneratorFields();
-  }, 0, null, 1, '');
+  }, 0, max, 1, '');
 }
 
 function labelledNumber(label, value, onChange, min, max, step, unit) {
@@ -100,14 +116,22 @@ function labelledNumber(label, value, onChange, min, max, step, unit) {
   const name = document.createElement('span'); name.textContent = label;
   const boxes = document.createElement('span');
   const input = document.createElement('input');
-  input.type = 'number';
+  // (a share: a slider with its value beside it; a count of tiles or a time: a number to type, no top to it)
+  input.type = unit === '%' && max !== null ? 'range' : 'number';
   if (min !== null) input.min = String(min);
   if (max !== null) input.max = String(max);
-  input.step = String(step);
+  input.step = String(step === 'any' ? 0.5 : step);
   input.value = String(value);
   input.addEventListener('change', () => onChange(input.value));
   boxes.appendChild(input);
-  if (unit) boxes.appendChild(document.createTextNode(` ${unit}`));
+  if (input.type === 'range') {
+    const shown = document.createElement('i');
+    shown.className = 'gen-value';
+    const show = () => { shown.textContent = `${input.value}%`; input.style.setProperty('--fill', `${max ? (Number(input.value) / max) * 100 : 0}%`); };
+    input.addEventListener('input', show);
+    show();
+    boxes.appendChild(shown);
+  } else if (unit) boxes.appendChild(document.createTextNode(` ${unit}`));
   row.append(name, boxes);
   return row;
 }
@@ -125,11 +149,12 @@ export function generatorField(key) {
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '0';
+    if (GENERATOR_MAX[key]) input.max = String(GENERATOR_MAX[key]);
     input.step = '1';
     input.value = current;
     input.dataset.key = key;
     input.addEventListener('change', () => {
-      const clean = cleanValue(input.value);
+      const clean = cleanValue(input.value, key);
       if (clean === null) { input.value = current; return; }
       onChange(clean);
       rememberSettings();
@@ -199,9 +224,6 @@ function currentPreset() {
 
 function updatePresetSelection() {
   const selected = currentPreset();
-  const presetName = document.getElementById('preset-name').value.trim();
-  const isExistingPreset = !!presetName && Object.prototype.hasOwnProperty.call(loadPresets(), presetName);
-  const saveButton = document.getElementById('preset-save');
   const standardButton = document.getElementById('preset-standard');
   const standardIsSelected = selected?.kind === 'standard';
   standardButton.classList.toggle('active', standardIsSelected);
@@ -211,13 +233,16 @@ function updatePresetSelection() {
     button.classList.toggle('active', isSelected);
     button.setAttribute('aria-pressed', String(isSelected));
   });
-  document.getElementById('preset-current').textContent = selected
-    ? t('gen.currentPreset', { name: selected.kind === 'standard' ? t('gen.standard') : selected.name })
-    : isExistingPreset ? t('gen.editingPreset', { name: presetName }) : t('gen.customSettings');
-  const saveLabel = isExistingPreset ? 'gen.update' : 'gen.save';
-  saveButton.dataset.i18n = saveLabel;
-  saveButton.textContent = t(saveLabel);
-  saveButton.disabled = !!selected || !presetName;
+  // (on the button: the chosen one's name, or Custom when what's set is none of them)
+  document.getElementById('preset-pick-name').textContent = !selected ? t('gen.custom') : selected.kind === 'standard' ? t('gen.standard') : selected.name;
+  // (what's set is a preset already: nothing new to keep)
+  /** @type {HTMLButtonElement} */ (document.getElementById('preset-save')).disabled = !!selected;
+}
+
+/** @param {boolean} open */
+function setPresetMenu(open) {
+  document.getElementById('preset-menu').hidden = !open;
+  document.getElementById('preset-pick').setAttribute('aria-expanded', String(open));
 }
 
 export function applyMapSettings(settings) {
@@ -242,10 +267,10 @@ export function renderPresetList() {
     attr: 'preset',
     selected: selected?.kind === 'saved' ? selected.name : undefined,
     onPick: name => {
-      document.getElementById('preset-name').value = name;
       applyMapSettings(loadPresets()[name]);
       rememberSettings();
       renderPresetList();
+      setPresetMenu(false);
     },
     onDelete: name => { const presets = loadPresets(); delete presets[name]; savePresets(presets); renderPresetList(); }
   });
@@ -255,7 +280,11 @@ export function renderPresetList() {
 // The screen, from Endless or the editor (27.10, 19): Back goes back there
 export function openGenerator(from) {
   /** @type {HTMLElement} */ (document.querySelector('[data-screen="generator"] [data-back-to]')).dataset.backTo = from;
-  renderGeneratorFields(); renderPresetList(); showMenuScreen('generator');
+  // (from the editor, where the switch is the Island's: the island's settings)
+  const title = /** @type {HTMLElement} */ (document.querySelector('[data-screen="generator"] h1'));
+  title.dataset.i18n = from === 'editor' ? 'gen.islandTitle' : 'menu.generator';
+  title.textContent = t(title.dataset.i18n);
+  setPresetMenu(false); renderGeneratorFields(); renderPresetList(); showMenuScreen('generator');
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
@@ -264,21 +293,25 @@ export function initEndlessGenerator() {
   if (saved && typeof saved === 'object' && saved.map && saved.continent) applyMapSettings(saved);
   onTap(document.getElementById('open-generator'), () => openGenerator('endless'));
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
+  onTap(document.getElementById('preset-pick'), () => setPresetMenu(document.getElementById('preset-menu').hidden));
+  // (a tap anywhere else puts the list away)
+  document.addEventListener('pointerdown', e => {
+    const target = /** @type {Element} */ (e.target);
+    if (!document.getElementById('preset-menu').hidden && !target.closest?.('.preset-pick-wrap')) setPresetMenu(false);
+  });
   onTap(document.getElementById('preset-standard'), () => {
-    document.getElementById('preset-name').value = '';
     applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS });
     rememberSettings();
+    setPresetMenu(false);
   });
+  // Save: what's set kept as a new preset, named the next free "Preset N"
   onTap(document.getElementById('preset-save'), () => {
-    const input = document.getElementById('preset-name');
-    const name = input.value.trim();
-    if (!name || currentPreset()) { updatePresetSelection(); return; }
+    if (currentPreset()) { updatePresetSelection(); return; }
     const presets = loadPresets();
-    const updating = Object.prototype.hasOwnProperty.call(presets, name);
-    presets[name] = currentSettings();
+    let n = 1;
+    while (Object.prototype.hasOwnProperty.call(presets, t('gen.presetN', { n }))) n++;
+    presets[t('gen.presetN', { n })] = currentSettings();
     savePresets(presets);
-    if (!updating) input.value = '';
     renderPresetList();
   });
-  document.getElementById('preset-name').addEventListener('input', updatePresetSelection);
 }

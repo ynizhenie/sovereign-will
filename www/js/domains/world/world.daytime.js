@@ -327,7 +327,11 @@ function fillShadow(g, transform, shape, sunAlpha) {
 // This frame's shadows laid on the ground (with c's transform the world's): drawStill(g) lays the still things' pictures
 // into the shadows' picture g (which has the world's transform), drawNow() draws the figures' shadows
 /** @param {(g: CanvasRenderingContext2D) => void} drawStill @param {() => void} drawNow */
-export function drawShadowLayer(drawStill, drawNow, c = ctx) {
+// (after the still things changed, the picture is made again for SETTLE_FRAMES: their pieces are painted again one a frame)
+const SETTLE_FRAMES = 30;
+let stillSeen = -1, settleLeft = 0;
+/** @param {(g: CanvasRenderingContext2D) => void} drawStill @param {() => void} drawNow @param {CanvasRenderingContext2D} [c] @param {() => number} [stillVersion] */
+export function drawShadowLayer(drawStill, drawNow, c = ctx, stillVersion) {
   if (!shadowsEnabled || typeof document === 'undefined') return;
   const sun = getSun();
   if (sun.alpha * c.globalAlpha < MIN_SHADOW_ALPHA) return;
@@ -341,7 +345,10 @@ export function drawShadowLayer(drawStill, drawNow, c = ctx) {
   const { canvas: layer, g } = shadowLayer;
   const m = c.getTransform(), pose = Math.floor(game.pathTick / REMAKE_STEPS);
   const key = `${width}x${height}|${m.a},${m.b},${m.c},${m.d},${m.e},${m.f}|${lastShadows.length}|${Math.round(sun.dx * 20)},${Math.round(sun.dy * 20)}`;
-  const remade = c !== ctx || key !== layerFor.key || pose !== layerFor.pose;
+  const version = stillVersion ? stillVersion() : 0;
+  if (version !== stillSeen) { stillSeen = version; settleLeft = SETTLE_FRAMES; }
+  const remade = c !== ctx || key !== layerFor.key || pose !== layerFor.pose || settleLeft > 0;
+  if (settleLeft > 0) settleLeft--;
   if (remade) {
     layerFor = { key, pose };
     if (layer.width !== width || layer.height !== height) { layer.width = width; layer.height = height; }

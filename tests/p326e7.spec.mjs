@@ -8,7 +8,7 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
   await page.evaluate(() => showMenuScreen('home'));
   const layout = await page.evaluate(() => {
     const rect = id => document.getElementById(id).getBoundingClientRect();
-    const endless = rect('mode-endless'), settings = rect('open-settings'), flag = rect('menu-flags');
+    const endless = rect('open-modes'), settings = rect('open-settings'), flag = rect('menu-flags');
     return {
       aligned: Math.abs(endless.width - settings.width) < 1,
       flagBottomLeft: flag.left < 20 && innerHeight - flag.bottom < 20
@@ -26,9 +26,11 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
   for (let i = 1; i < codes.length; i++) await page.locator('#menu-flags .flag-button').click();
   expect(await page.evaluate(() => currentLanguage)).toBe(from);
   // in Settings: each language with its flag, the same choice; the flag by Settings follows
-  await page.evaluate(() => showMenuScreen('settings'));
-  expect(await page.locator('#language-options .language-option svg').count()).toBe(3);
+  await page.evaluate(() => { showMenuScreen('settings'); setSettingsDrawer('general'); });
+  expect(await page.locator('#language-list .language-option svg').count()).toBe(3);
+  await page.locator('#language-current').click(); // (a drop-down: the list opened first)
   await page.locator('#language-options [data-language="uk"]').click();
+  await expect(page.locator('#language-list')).toBeHidden(); // (and closed by the choice)
   expect(await page.evaluate(() => currentLanguage)).toBe('uk');
   expect(await page.locator('#open-settings').innerText()).toBe('Налаштування');
   expect(await page.locator('#menu-flags .flag-button').getAttribute('aria-label')).toBe(await page.evaluate(() => LANGUAGES.uk.label));
@@ -37,7 +39,7 @@ test('one flag by the Settings button, the language\'s now: a tap is the next la
     const flag = document.getElementById('menu-flags');
     return getComputedStyle(flag).display !== 'none' && flag.getBoundingClientRect().width > 0;
   }));
-  expect(flagVisible).toEqual([true, true, true, true, true, true]);
+  expect(flagVisible).toEqual([true, false, false, false, false, false]); // (on the first screen only, with the eye)
   expect(errors).toEqual([]);
 });
 
@@ -45,9 +47,10 @@ test('the music player lists every track with its name and when it plays; a trac
   const errors = await openGame(page);
   await page.evaluate(() => { localStorage.removeItem('sovereign-will-musicOff'); showMenuScreen('settings'); });
   await expect(page.locator('#music-player')).toBeHidden();
-  await page.click('#open-music-player');
+  await page.click('[data-settings-group="sound"]');
+  await page.click('#open-music-player'); // (Sound's Advanced: the player is a big screen of its own)
   await expect(page.locator('[data-screen="music"]')).toBeVisible();
-  await expect(page.locator('[data-screen="settings"]')).toBeHidden();
+  await expect(page.locator('#music-player')).toBeVisible();
   const r0 = await page.evaluate(() => ({
     rows: [...document.querySelectorAll('#music-player .music-row')].map(r => ({ id: r.dataset.track, text: r.querySelector('.music-name').innerText })),
     expected: 1 + Object.entries(GAME_CONFIG.battleMusic).filter(([key, tracks]) => Array.isArray(tracks) && !key.startsWith('backrooms')).map(([, tracks]) => tracks).reduce((n, tracks) => n + tracks.length, 0) + GAME_CONFIG.plagueMusic.length + Object.values(GAME_CONFIG.factions).filter(f => f.ready && f.music).reduce((n, f) => n + f.music.ambient.length + f.music.battle.length + f.music.nightAmbient.length + f.music.nightBattle.length, 0)
@@ -55,7 +58,17 @@ test('the music player lists every track with its name and when it plays; a trac
   const rows = r0.rows;
   expect(rows.length).toBe(r0.expected);
   expect(rows.every(r => !r.text.includes('music.'))).toBe(true); // (every name and "when" is a real text)
-  expect(rows.find(r => r.id === 'humans_meadow').text).toContain('Поселение, днём');
+  // (a card a group; in a side's the calm, then the fight's, a night track with a moon; each "Track N — name")
+  expect(await page.evaluate(() => {
+    const meadow = document.querySelector('#music-player [data-track="humans_meadow"]');
+    let el = meadow && meadow.previousElementSibling;
+    while (el && !el.classList.contains('music-part')) el = el.previousElementSibling;
+    const night = GAME_CONFIG.factions.humans.music.nightAmbient[0];
+    return [el && el.textContent, meadow.closest('.music-card').dataset.group, meadow.classList.contains('night'),
+      document.querySelector(`#music-player [data-track="${night}"]`).classList.contains('night'),
+      document.querySelector('#music-player [data-track="menu"] .music-number').textContent];
+  })).toEqual(['Спокойно', 'humans', false, true, 'Трек 0 —']);
+  expect(await page.locator('#music-player .music-part').evaluateAll(parts => parts.every(p => !p.textContent.includes('music.')))).toBe(true);
   // listened to: it plays alone, and stops as the menu is left
   await page.evaluate(() => { audio.musicOn = false; });
   await page.locator('#music-player [data-track="humans_harvest"] .music-listen').click();
@@ -63,8 +76,7 @@ test('the music player lists every track with its name and when it plays; a trac
   await page.evaluate(() => showMenuScreen('home'));
   expect(await page.evaluate(() => musicPreview.id)).toBe('');
   // switched off: not picked (and kept on the device); all of a theme off: none
-  await page.evaluate(() => { showMenuScreen('settings'); audio.musicOn = true; });
-  await page.click('#open-music-player');
+  await page.evaluate(() => { showMenuScreen('music'); audio.musicOn = true; });
   await page.locator('#music-player [data-track="arena_muster"] .music-toggle').click();
   const r = await page.evaluate(() => {
     startBattleMode(); battle.phase = 'setup';
