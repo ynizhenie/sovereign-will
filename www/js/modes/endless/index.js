@@ -5,5 +5,5 @@ export { initEndlessCards, isLocked, pickCard, syncCards, tickCards } from './en
 export { initEndlessGenerator, openGenerator } from './endless.generator.js';
 export { enterCamp, isInCamp, isPlacingRaidPortal, isRaidPicking, isRaiding, leaveCamp, openRaidPicker, raid, raidAction, raidOrders, raidTap, resetRaid, restWhileRaid, startRaid, tickRaid, tickRaidCamp } from './endless.raid.js';
 export { initEndlessRules, isCameraLocked, isDefeated, updateDefeat } from './endless.rules.js';
-export { initEndlessSaves } from './endless.saves.js';
+export { autosave, initEndlessSaves, tickAutosave } from './endless.saves.js';
 export { initEndlessSetup, mapSource, renderFactionPicker, restoreEndlessChoices, setMapSource, startGame } from './endless.setup.js';

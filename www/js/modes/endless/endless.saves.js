@@ -298,8 +298,33 @@ export function saveCurrentGame() {
   return saveNow(currentSaveKey(mode), mode).catch(e => { console.error(e); showSaveStatus(t('save.failed'), false); flashSaveButton(t('save.failed'), false); });
 }
 
-/** @param {string | null} overwriteKey @param {SaveMode} [mode] */
-async function saveNow(overwriteKey, mode = game.plagueMode ? 'plague' : 'endless') {
+// ---- Autosave: into the game's save (the one loaded or last saved, or a new one for this world), quietly, when a
+// wave is beaten, when the app goes to the background and when the game is left for the menu (a phone's app closed
+// lost everything since the last save made by hand)
+/** @type {{ seed: string | null, wave: number }} */
+const autosaved = { seed: null, wave: -1 };
+export function autosave() {
+  if (game.gameMode !== 'endless' || !game.gameStarted) return;
+  const mode = game.plagueMode ? 'plague' : 'endless';
+  // (not in a raid's camp, as by hand; not a game that's lost)
+  if (mode === 'endless' && isInCamp()) return;
+  if (townHall.hp <= 0 || game.settlers.length === 0) return;
+  autosaved.seed = game.worldSeed.value; autosaved.wave = game.waveNum;
+  return saveNow(currentSaveKey(mode), mode, true).catch(e => console.error(e));
+}
+
+// Each frame: a wave's enemies all gone (killed, or run), the game saved, once a wave
+export function tickAutosave() {
+  if (game.gameMode !== 'endless' || !game.gameStarted || game.isPaused) return;
+  // (another world, a game loaded or begun: its wave as it is now counts as saved)
+  if (autosaved.seed !== game.worldSeed.value) { autosaved.seed = game.worldSeed.value; autosaved.wave = game.waveNum; return; }
+  if (game.waveNum <= autosaved.wave) return;
+  const fighting = game.enemies.some(enemy => enemy.fromWave) || game.enemyRafts.some(raft => raft.units.length) || game.portalQueue.length > 0;
+  if (!fighting) autosave();
+}
+
+/** @param {string | null} overwriteKey @param {SaveMode} [mode] @param {boolean} [quiet] (an autosave: nothing said of it) */
+async function saveNow(overwriteKey, mode = game.plagueMode ? 'plague' : 'endless', quiet = false) {
   const now = new Date();
   const seed = game.worldSeed.value;
   const saves = loadSaves(mode);
@@ -308,10 +333,9 @@ async function saveNow(overwriteKey, mode = game.plagueMode ? 'plague' : 'endles
   const name = previous?.nameEdited ? previous.name : seed;
   const save = { name, nameEdited: !!previous?.nameEdited, savedAt: now.getTime(), seed, wave: game.waveNum, ...(await squeeze(serializeGame())) };
   saves[targetKey] = save;
-  if (!storeSaves(saves, mode)) { showSaveStatus(t('save.failed'), false); flashSaveButton(t('save.failed'), false); return; }
+  if (!storeSaves(saves, mode)) { if (!quiet) { showSaveStatus(t('save.failed'), false); flashSaveButton(t('save.failed'), false); } return; }
   activeSaveKeys[mode] = targetKey;
-  showSaveStatus(t('save.done'), true);
-  flashSaveButton(t('save.done'), true);
+  if (!quiet) { showSaveStatus(t('save.done'), true); flashSaveButton(t('save.done'), true); }
   renderSaveList(mode);
 }
 
@@ -516,6 +540,9 @@ async function importSaveFile(file) {
 
 // What this file sets up as the game starts (called by app/boot.js)
 export function initEndlessSaves() {
+  // (the app to the background: a phone may close it there)
+  document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(); });
+  window.addEventListener('pagehide', () => autosave());
   onTap(document.getElementById('save-game-button'), openSaveMenuFromPause);
   onTap(document.getElementById('save-overwrite-button'), () => {
     if (game.gameMode !== 'endless' || !game.gameStarted) return;

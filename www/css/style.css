@@ -1631,6 +1631,9 @@ body.menu-ui-hidden #menu-flags { display: none; }
 /* the editor's generate switch with the generator's gear beside it (not in the pane's corner) */
 .switch-with-gear { display: inline-flex; align-items: center; gap: 8px; }
 .switch-with-gear .menu-gear { position: static !important; }
+.options-with-gear { display: flex; align-items: center; gap: 8px; }
+.options-with-gear > .wave-options { flex: 1; min-width: 0; }
+.options-with-gear > .menu-gear { position: static !important; flex: none; }
 .music-screen > h1 { display: flex; align-items: center; gap: 14px; } /* ——— Music ——— */
 .music-screen > h1::before, .music-screen > h1::after { content: ''; flex: 1; height: 2px; background: linear-gradient(to right, transparent, rgba(232, 199, 106, 0.7)); }
 .music-screen > h1::after { background: linear-gradient(to left, transparent, rgba(232, 199, 106, 0.7)); }

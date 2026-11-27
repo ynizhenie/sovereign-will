@@ -231,3 +231,31 @@ test('a choice tapped on a phone is kept: a random map after a custom one stays 
   expect(saved.mapSource).toBe('random');
   expect(saved.customMap).toBeNull();
 });
+
+test('the game saves itself into its save when a wave is beaten, when the app goes to the background and when it is left for the menu', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => localStorage.removeItem('sovereign-will-saves'));
+  await page.click('#play-button');
+  const saves = () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('sovereign-will-saves') || '{}')).map(save => [save.seed, save.wave]));
+  const [seed, first] = await page.evaluate(() => [worldSeed.value, waveNum]);
+  // a new game as it begins: nothing saved
+  await page.evaluate(() => tickAutosave());
+  expect(await saves()).toEqual([]);
+  // the next wave come and its enemy still about (standing far off, harmless): not yet; it gone: saved, once
+  await page.evaluate(() => {
+    const foe = createNormalEnemy({ x: 45, y: 45 }, 'raider');
+    Object.assign(foe, { speed: 0, damage: 0, fromWave: true });
+    enemies.push(foe); waveNum++; tickAutosave();
+  });
+  await page.waitForTimeout(300);
+  expect(await saves()).toEqual([]);
+  await page.evaluate(() => { enemies.length = 0; tickAutosave(); });
+  await expect.poll(saves).toEqual([[seed, first + 1]]);
+  // the app to the background: into the same save
+  await page.evaluate(() => { waveNum++; Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
+  await expect.poll(saves).toEqual([[seed, first + 2]]);
+  await page.evaluate(() => { delete document.hidden; });
+  // left for the menu: saved as it was, still the one save
+  await page.evaluate(() => { waveNum++; exitToMainMenu(); });
+  await expect.poll(saves).toEqual([[seed, first + 3]]);
+});

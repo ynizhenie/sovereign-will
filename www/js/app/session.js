@@ -12,7 +12,7 @@ import { applyFactionCosts, getPlayerFaction, sides } from '../domains/factions/
 import { leaveMenuWorld, showMenuScreen } from '../modes/menu/index.js';
 import { leaveBattleMode } from '../modes/battle/index.js';
 import { leaveEditor, loadCustomMapSteps } from '../modes/editor/index.js';
-import { isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
+import { autosave, isInCamp, resetRaid, syncCards } from '../modes/endless/index.js';
 import { exitPlagueMode } from '../modes/plague/index.js';
 
 export function resetGame(map) {
@@ -97,6 +97,7 @@ export function setPaused(paused) {
 }
 
 export function exitToMainMenu() {
+  autosave(); // (the game as it is, before anything of it is put away: its state is taken at once, written a moment after)
   exitPlagueMode();
   setPaused(false);
   resetRaid(); // (#255)

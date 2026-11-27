@@ -78,7 +78,6 @@
     <div class="main-menu-content" data-screen="endless" hidden>
         <button class="menu-back" data-back data-back-to="modes" data-i18n="menu.back">[[back]] Back</button>
         <h1><button class="mode-title-trigger" data-mode-info="endless"><span data-i18n="menu.endless">Endless</span><i class="ic ic-info" aria-hidden="true"></i></button></h1>
-        <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
 
         <button id="play-button" data-i18n="menu.newGame">New game</button>
         <button id="open-saves" class="menu-button" data-i18n="menu.loadGame">Load game</button>
@@ -140,9 +139,13 @@
 
         <div class="wave-settings">
             <div data-i18n="menu.map">Map:</div>
-            <div class="wave-options">
-                <button class="map-source-option active" data-map-source="random" data-i18n="menu.randomMap">Random</button>
-                <button class="map-source-option" data-map-source="custom" data-i18n="menu.customMap">Custom map</button>
+            <!-- (the random map's settings by it, as the editor's island's by its switch) -->
+            <div class="options-with-gear">
+                <div class="wave-options">
+                    <button class="map-source-option active" data-map-source="random" data-i18n="menu.randomMap">Random</button>
+                    <button class="map-source-option" data-map-source="custom" data-i18n="menu.customMap">Custom map</button>
+                </div>
+                <button id="open-generator" class="menu-gear random-map-only" data-i18n-title="menu.generator" aria-label="Map generator"><i class="ic ic-gear"></i></button>
             </div>
             <button id="endless-open-maps" class="menu-button custom-map-only" data-i18n="editor.savedMaps">Saved maps</button>
         </div>
