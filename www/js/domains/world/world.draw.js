@@ -42,6 +42,12 @@ const drawnChunks = new Map();
 /** @type {Map<string, Set<string>>} */
 const waitingPieces = new Map();
 const FADE_MS = 220;
+// (the whole map's pictures for zooming out, see the end of drawChunks: this fine, in these layers; the still shadows
+// go with the sun, so they're not kept ahead)
+const FAR_RES = 0.25, FAR_PREFIX = `${FAR_RES}|`, FAR_LAYERS = new Set(['grass', 'terrain', 'nature', 'tufts']);
+const FAR_LOOKS = 6; // (pieces looked at a frame for one to paint: working out a piece's stamp costs too)
+/** @type {Map<string, number>} */
+const farCursor = new Map();
 let prewarmingChunks = false;
 export const isPrewarmingChunks = () => prewarmingChunks;
 export function setPrewarmingChunks(prewarming) { prewarmingChunks = prewarming; }
@@ -99,6 +105,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     chunkLayers.clear();
     drawnChunks.clear();
     waitingPieces.clear();
+    farCursor.clear();
     paintJobs.clear();
     cacheWorldEpoch = epoch;
     previousView = null; previousScale = 0;
@@ -285,14 +292,40 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
       }
     }
   }
+  // The whole map's far pictures, small, painted with the time a frame has left once nothing on the screen waits:
+  // zoomed out, every piece then has a picture to show at once till its own is painted (they came in one by one, the
+  // sides last, half a second on a Mac and longer on a phone: a piece of trees takes longer than a frame has to spare)
+  if (FAR_LAYERS.has(layer) && !prewarmingChunks && stats.pending === 0 && framePaints < framePaintLimit && framePaintMs < PAINT_MS &&
+      (layer === framePaintLayer || priorityPassed)) {
+    const across = lastX + 1, total = across * (lastY + 1);
+    let cursor = farCursor.get(layer) || 0;
+    for (let looked = 0; looked < FAR_LOOKS && framePaints < framePaintLimit && framePaintMs < PAINT_MS; looked++) {
+      const at = cursor++ % total, cx = at % across, cy = (at - cx) / across;
+      if (stamp.empty && stamp.empty(cx, cy)) continue;
+      const key = `${FAR_RES}|${cx},${cy}`, chunk = chunks.get(key);
+      let x0 = cx * size, y0 = cy * size, x1 = Math.min(game.WORLD_WIDTH, x0 + size), y1 = Math.min(game.WORLD_HEIGHT, y0 + size);
+      const part = stamp.bounds && stamp.bounds(cx, cy);
+      if (part) { x0 = Math.max(x0, part[0]); y0 = Math.max(y0, part[1]); x1 = Math.min(x1, part[2]); y1 = Math.min(y1, part[3]); }
+      const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
+      if (chunk && chunk.stamp === now) continue;
+      const done = painted(key, x0, y0, x1, y1, now, FAR_RES, chunk);
+      framePaints++;
+      if (done) { done.frame = chunk ? chunk.frame : 0; chunks.set(key, done); }
+    }
+    farCursor.set(layer, cursor % total);
+  }
   if (layer === framePaintLayer) priorityPassed = true;
   drawnChunks.set(layer, visible);
-  // the least recently shown dropped past the budget, never one this frame has (on the screen or just round it)
-  let pixels = 0;
-  for (const c of chunks.values()) pixels += c.canvas.width * c.canvas.height;
+  // the least recently shown dropped past the budget, never one this frame has (on the screen or just round it); the far
+  // pictures don't count towards the number kept (they're small, and there's one for every piece of the map)
+  // (they're out of the pixels too: counted in, they pushed the screen's pieces out at a full zoom out, and those were
+  // painted again, pushing them out in turn, without end)
+  let pixels = 0, kept = 0;
+  for (const [key, c] of chunks) if (!key.startsWith(FAR_PREFIX)) { pixels += c.canvas.width * c.canvas.height; kept++; }
   for (const [key, c] of chunks) {
-    if (chunks.size <= MAX_CHUNKS && pixels <= MAX_PIXELS) break;
-    if (c.frame === frameOf) continue;
+    if (kept <= MAX_CHUNKS && pixels <= MAX_PIXELS) break;
+    if (c.frame === frameOf || key.startsWith(FAR_PREFIX)) continue;
+    kept--;
     pixels -= c.canvas.width * c.canvas.height;
     chunks.delete(key);
     if (onCard) glForgetChunk(c);
