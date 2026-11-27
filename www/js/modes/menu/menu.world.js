@@ -145,6 +145,8 @@ export function enterMenuWorld(scene = '') {
         if (graveSites.length === 8) break;
       }
     }
+    // (a small screen with no free tile left: one grave beside the hall all the same, the scene stands on it)
+    if (!graveSites.length) graveSites.push(near(3, 1));
   }
   const terrainTiles = [];
   if (menuWorld.terrain === 'savanna') {
