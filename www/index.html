@@ -811,12 +811,13 @@
       <button class="dock-btn" data-action="toggleSheet" data-arg="battle-settings" data-dock="battle-settings"><i class="ic ic-gear"></i><span data-i18n="dock.battle">Battle</span></button>
     </div>
     <div class="dock-row" data-hud-mode="editor">
+      <!-- the two tools that put nothing down first, then what's put down, then the map's settings, each set apart -->
       <button class="dock-btn" id="editor-hand"><i class="ic ic-move"></i><span data-i18n="dock.hand">Move</span></button>
-      <button class="dock-btn" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
+      <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
+      <button class="dock-btn dock-apart" data-editor-category="terrain" data-dock="editor:terrain"><i class="ic ic-water"></i><span data-i18n="editor.cat.terrain">Terrain</span></button>
       <button class="dock-btn" data-editor-category="nature" data-dock="editor:nature"><i class="ic ic-tree"></i><span data-i18n="editor.cat.nature">Nature</span></button>
       <button class="dock-btn" data-editor-category="buildings" data-dock="editor:buildings"><i class="ic ic-build"></i><span data-i18n="editor.cat.buildings">Buildings</span></button>
-      <button class="dock-btn" id="editor-erase"><i class="ic ic-eraser"></i><span data-i18n="dock.eraser">Eraser</span></button>
-      <button class="dock-btn" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>
+      <button class="dock-btn dock-apart" data-action="toggleSheet" data-arg="editor-map" data-dock="editor-map"><i class="ic ic-gear"></i><span data-i18n="dock.map">Map</span></button>
     </div>
     <div id="plague-actions" class="dock-row" data-hud-mode="plague" hidden>
       <button class="dock-btn" id="plague-revive">

@@ -1143,6 +1143,9 @@ body.sheet-open #sheet-frame {
 /* ---- The dock: one row per mode */
 #dock { bottom: 0; height: var(--dock-h); padding-bottom: env(safe-area-inset-bottom); }
 .dock-row { display: none; height: 100%; max-width: 640px; margin: 0 auto; gap: 4px; padding: 5px 6px; }
+/* (the editor's: its kinds of button set apart by a wider gap) */
+.dock-row .dock-apart { margin-left: 14px; }
+@media (max-width: 520px) { .dock-row .dock-apart { margin-left: 6px; } }
 body[data-hud="endless"] .dock-row[data-hud-mode="endless"],
 body[data-hud="battle"] .dock-row[data-hud-mode="battle"],
 body[data-hud="editor"] .dock-row[data-hud-mode="editor"] { display: flex; }

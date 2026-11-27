@@ -12,6 +12,27 @@ import { openGenerator, setMapSource } from '../endless/index.js';
 import { initMapManager } from './editor.maps.js';
 import { EDITOR_TOOLS, clearEditorMap, editor, redoEditor, saveEditorMap, startEditor, undoEditor } from './editor.tools.js';
 
+// The buildings of some factions, each once: under its faction, or, one of several (a campfire: the humans' and the
+// demons'), under those together (it was under each of them)
+/** @param {typeof EDITOR_TOOLS} shown */
+function factionGroups(shown) {
+  const ready = Object.values(GAME_CONFIG.factions).filter(faction => faction.ready);
+  /** @type {Map<string, { title: string, section: string, tools: typeof EDITOR_TOOLS, order: number }>} */
+  const groups = new Map();
+  for (const tool of shown) {
+    const owners = tool.building ? ready.filter(faction => getDefinition('buildings', tool.building).factions?.includes(faction.id)) : [];
+    if (!owners.length) continue;
+    const key = owners.map(faction => faction.id).join('+');
+    if (!groups.has(key)) {
+      // (one faction's first, in the factions' order; those of several after them)
+      const order = owners.length === 1 ? ready.indexOf(owners[0]) : ready.length + owners.length;
+      groups.set(key, { title: owners.map((faction, i) => i ? faction.label.toLowerCase() : faction.label).join(t('editor.and')), section: '', tools: [], order });
+    }
+    /** @type {{ tools: typeof EDITOR_TOOLS }} */ (groups.get(key)).tools.push(tool);
+  }
+  return [...groups.values()].sort((a, b) => a.order - b.order);
+}
+
 export function renderEditorPanel() {
   const tools = document.getElementById('editor-tools');
   tools.innerHTML = '';
@@ -23,11 +44,7 @@ export function renderEditorPanel() {
       { title: t('editor.section.hallAndOutpost'), section: '', tools: shown.filter(tl => landmarks.has(tl.id)) },
       { title: t('battle.buildingsCommon'), section: '', tools: shown.filter(tl =>
         !landmarks.has(tl.id) && (!tl.building || !getDefinition('buildings', tl.building).factions)) },
-      ...Object.values(GAME_CONFIG.factions).filter(faction => faction.ready).map(faction => ({
-        title: faction.label,
-        section: '',
-        tools: shown.filter(tl => tl.building && getDefinition('buildings', tl.building).factions?.includes(faction.id))
-      }))
+      ...factionGroups(shown)
     ].filter(group => group.tools.length)
     : [...new Set(shown.map(tl => tl.section || ''))].map(section => ({
       title: '',

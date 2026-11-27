@@ -110,7 +110,6 @@ button.cant-afford { opacity: 0.55; }
 #dock .dock-btn { background: var(--plank) center / cover; border: 1px solid var(--edge); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); color: var(--text-dim); }
 #dock .dock-btn.active { background: var(--plank-green) center / cover; color: var(--text-bright); box-shadow: var(--glow); }
 /* the eraser is a mode, not a sheet: on, it turns gold */
-#dock #editor-erase.active { background: var(--plank) center / cover; box-shadow: 0 0 0 1px var(--gold); color: var(--gold); }
 @media (hover: hover) {
   #dock .dock-btn:not(.active):hover { background: var(--plank) center / cover; color: var(--text); }
 }

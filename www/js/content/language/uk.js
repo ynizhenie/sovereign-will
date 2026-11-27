@@ -1200,6 +1200,7 @@ export const ukLanguage = {
       'editor.size': 'Розмір:',
       'editor.myMaps': 'Мої мапи',
       'editor.generateLand': 'Острів:',
+      'editor.and': ' і ',
       'editor.newMapOpen': 'Нова мапа',
       'editor.generated': 'Згенерувати мапу',
       'editor.savedMaps': 'Мої мапи',

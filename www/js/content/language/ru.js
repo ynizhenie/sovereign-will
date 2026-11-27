@@ -1200,6 +1200,7 @@ export const ruLanguage = {
       'editor.size': 'Размер:',
       'editor.myMaps': 'Мои карты',
       'editor.generateLand': 'Остров:',
+      'editor.and': ' и ',
       'editor.newMapOpen': 'Новая карта',
       'editor.generated': 'Сгенерировать карту',
       'editor.savedMaps': 'Мои карты',

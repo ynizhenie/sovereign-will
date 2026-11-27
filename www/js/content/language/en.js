@@ -1200,6 +1200,7 @@ export const enLanguage = {
       'editor.size': 'Size:',
       'editor.myMaps': 'My maps',
       'editor.generateLand': 'Island:',
+      'editor.and': ' and ',
       'editor.newMapOpen': 'New map',
       'editor.generated': 'Generate map',
       'editor.savedMaps': 'My maps',
