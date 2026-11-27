@@ -63,7 +63,8 @@ export function renderEditorPanel() {
   document.getElementById('editor-erase').classList.toggle('active', editor.tool === 'erase');
   document.getElementById('editor-hand')?.classList.toggle('active', editor.tool === 'pan');
   const brushSize = /** @type {HTMLInputElement | null} */ (document.getElementById('editor-brush-size'));
-  if (brushSize) { brushSize.value = String(editor.brush); brushSize.style.setProperty('--fill', `${((editor.brush - 1) / 4) * 100}%`); }
+  // (the Node tests' page has no style to set: only the value there)
+  if (brushSize) { brushSize.value = String(editor.brush); if (typeof brushSize.style?.setProperty === 'function') brushSize.style.setProperty('--fill', `${((editor.brush - 1) / 4) * 100}%`); }
   const brushValue = document.getElementById('editor-brush-value');
   if (brushValue) brushValue.textContent = editor.brush === 1 ? '1' : `${editor.brush}×${editor.brush}`;
   document.getElementById('editor-top-size').textContent = `${game.COLS}×${game.ROWS}`;
