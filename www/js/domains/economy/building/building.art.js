@@ -50,65 +50,67 @@ export const LINK = { n: 1, e: 2, s: 4, w: 8 };
 const ARMS = [[LINK.n, 0, -1], [LINK.e, 1, 0], [LINK.s, 0, 1], [LINK.w, -1, 0]];
 
 /** @typedef {{ x: number, y: number, type: string, mask: number, open?: number, swing?: { x: number, y: number } }} WallShadowPiece */
-// A piece's shadow shape, round its middle
-/** @param {WallShadowPiece} piece */
-function wallShadowShape(piece) {
-  const wood = piece.type === 'wall_wood', stone = piece.type === 'wall_stone';
+// A piece's shadow shape, round its middle: its rectangles, each [x, y, w, h], turned by a matrix where it's turned (a door)
+/** @param {WallShadowPiece} piece @returns {{ m: DOMMatrix | null, rects: number[][] }[]} */
+export function wallShadowShape(piece) {
+  const wall = piece.type === 'wall_wood' || piece.type === 'wall_stone';
   const door = piece.type === 'door' || piece.type === 'iron_door';
-  const shape = new Path2D();
-  if (wood) {
-    shape.roundRect(-7, -11, 14, 24, 2);
+  /** @type {number[][]} */
+  const rects = [];
+  if (wall) {
+    rects.push([-7, -11, 14, 24]);
     for (const [bit, dx, dy] of ARMS) {
       if (!(piece.mask & bit)) continue;
       if (dy) {
-        for (let k = 0; k < 3; k++) shape.roundRect(-7, dy * (9 + k * 6) - 3.5, 14, 7, 2);
+        for (let k = 0; k < 3; k++) rects.push([-7, dy * (9 + k * 6) - 3.5, 14, 7]);
       } else {
-        for (let k = 0; k < 3; k++) shape.roundRect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25, 2);
+        for (let k = 0; k < 3; k++) rects.push([dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25]);
       }
     }
-  } else if (stone) {
-    shape.rect(-7, -11, 14, 24);
-    for (const [bit, dx, dy] of ARMS) {
-      if (!(piece.mask & bit)) continue;
-      if (dy) {
-        for (let k = 0; k < 3; k++) shape.rect(-7, dy * (9 + k * 6) - 3.5, 14, 7);
-      } else {
-        for (let k = 0; k < 3; k++) shape.rect(dx * (8 + k * 5.5) - 2.75, -12, 5.5, 25);
-      }
-    }
-  } else if (door) {
+    return [{ m: null, rects }];
+  }
+  if (door) {
     const vertical = (piece.mask & (LINK.n | LINK.s)) && !(piece.mask & (LINK.e | LINK.w));
-    const orientation = new DOMMatrix().rotate(vertical ? 90 : 0), frame = new Path2D();
+    const orientation = new DOMMatrix().rotate(vertical ? 90 : 0);
     const along = vertical ? [piece.mask & LINK.s, piece.mask & LINK.n] : [piece.mask & LINK.w, piece.mask & LINK.e];
     for (const [connected, dx] of along.map((value, i) => [value, i ? 1 : -1])) {
-      if (connected) frame.rect(dx < 0 ? -15 : 11, -7, 4, 14);
+      if (connected) rects.push([dx < 0 ? -15 : 11, -7, 4, 14]);
     }
-    frame.rect(-15, -9, 5, 18);
-    frame.rect(10, -9, 5, 18);
-    shape.addPath(frame, orientation);
+    rects.push([-15, -9, 5, 18], [10, -9, 5, 18]);
     const swing = piece.swing || { x: 0, y: 1 };
     const yAxis = vertical ? { x: -1, y: 0 } : { x: 0, y: 1 };
     const sign = swing.x * yAxis.x + swing.y * yAxis.y >= 0 ? 1 : -1;
     const open = piece.open || 0, leaf = open < 0.98 ? 20 - open * 6 : 14;
-    const leafPath = new Path2D(), leafTransform = orientation.multiply(new DOMMatrix().translate(-10, 0).rotate(sign * open * 0.46 * 180 / Math.PI));
-    leafPath.rect(0, -3, leaf, 6);
-    shape.addPath(leafPath, leafTransform);
-  } else {
-    shape.rect(-8, -8, 16, 16);
-    for (const [bit, dx, dy] of ARMS) {
-      if (!(piece.mask & bit)) continue;
-      if (dy) shape.rect(-7, dy < 0 ? -15 : 7, 14, 8);
-      else shape.rect(dx < 0 ? -15 : 7, -7, 8, 14);
-    }
+    const leafTransform = orientation.multiply(new DOMMatrix().translate(-10, 0).rotate(sign * open * 0.46 * 180 / Math.PI));
+    return [{ m: orientation, rects }, { m: leafTransform, rects: [[0, -3, leaf, 6]] }];
   }
-  return shape;
+  rects.push([-8, -8, 16, 16]);
+  for (const [bit, dx, dy] of ARMS) {
+    if (!(piece.mask & bit)) continue;
+    if (dy) rects.push([-7, dy < 0 ? -15 : 7, 14, 8]);
+    else rects.push([dx < 0 ? -15 : 7, -7, 8, 14]);
+  }
+  return [{ m: null, rects }];
 }
 
 // The pieces' shapes where they stand, the walls' (10 high) and the doors' (8): put together again only when the
 // pieces in view change or a door moves, not every frame; the sun moves them along as it goes
-/** @type {{ key: number, count: number, tall: Path2D, low: Path2D, dx: number, dy: number, shadow: Path2D | null } | null} */
+/** @type {{ key: number, count: number, shapes: { x: number, y: number, tall: boolean, parts: { m: DOMMatrix | null, rects: number[][] }[] }[], dx: number, dy: number, shadow: Path2D | null } | null} */
 let wallShadowShapes = null;
 const WALL_KINDS = ['wall_wood', 'wall_stone', 'door', 'iron_door'];
+
+// Each rectangle into the path as a closed shape of its own, its corners worked out here (put together with addPath
+// and roundRect, the pieces' paths joined a shape to the world's corner in Chrome: a wide shadow from the map's top
+// left to a stone wall standing near wooden ones)
+/** @param {Path2D} path @param {number} ox @param {number} oy @param {DOMMatrix | null} m @param {number[]} r */
+function addRect(path, ox, oy, m, [x, y, w, h]) {
+  const corners = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+  corners.forEach(([cx, cy], i) => {
+    const px = m ? m.a * cx + m.c * cy + m.e : cx, py = m ? m.b * cx + m.d * cy + m.f : cy;
+    if (i === 0) path.moveTo(ox + px, oy + py); else path.lineTo(ox + px, oy + py);
+  });
+  path.closePath();
+}
 
 // Fill one combined silhouette so connected wall sections do not darken each other's shadows.
 /** @param {WallShadowPiece[]} pieces */
@@ -122,18 +124,17 @@ export function drawWallShadows(pieces) {
     if (piece.swing) key = Math.imul(key, 31) + piece.swing.x * 3 + piece.swing.y * 5 | 0;
   }
   if (!wallShadowShapes || key !== wallShadowShapes.key || pieces.length !== wallShadowShapes.count) {
-    const tall = new Path2D(), low = new Path2D();
-    for (const piece of pieces) {
-      (piece.type === 'wall_wood' || piece.type === 'wall_stone' ? tall : low).addPath(wallShadowShape(piece), new DOMMatrix().translate(piece.x, piece.y));
-    }
-    wallShadowShapes = { key, count: pieces.length, tall, low, dx: NaN, dy: NaN, shadow: null };
+    const shapes = pieces.map(piece => ({ x: piece.x, y: piece.y, tall: piece.type === 'wall_wood' || piece.type === 'wall_stone', parts: wallShadowShape(piece) }));
+    wallShadowShapes = { key, count: pieces.length, shapes, dx: NaN, dy: NaN, shadow: null };
   }
   // (and cast as before while the sun hasn't moved a tenth of a pixel)
   const kept = wallShadowShapes;
   if (!kept.shadow || Math.abs(kept.dx - sun.dx) * 10 > 0.1 || Math.abs(kept.dy - sun.dy) * 10 > 0.1) {
     const shadow = new Path2D();
-    shadow.addPath(kept.tall, new DOMMatrix().translate(sun.dx * 10 * 0.35, sun.dy * 10 * 0.35));
-    shadow.addPath(kept.low, new DOMMatrix().translate(sun.dx * 8 * 0.35, sun.dy * 8 * 0.35));
+    for (const { x, y, tall, parts } of kept.shapes) {
+      const height = (tall ? 10 : 8) * 0.35, ox = x + sun.dx * height, oy = y + sun.dy * height;
+      for (const { m, rects } of parts) for (const r of rects) addRect(shadow, ox, oy, m, r);
+    }
     Object.assign(kept, { shadow, dx: sun.dx, dy: sun.dy });
   }
   const shadow = /** @type {Path2D} */ (kept.shadow);
