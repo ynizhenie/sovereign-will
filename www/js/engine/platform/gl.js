@@ -136,7 +136,7 @@ const chunkTextures = new WeakMap();
 /** @type {WeakMap<HTMLCanvasElement, any>} */
 const canvasTextures = new WeakMap();
 /** @param {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number }} chunk @param {number} x @param {number} y @param {number} w @param {number} h (on the screen, canvas px) */
-export function glChunk(chunk, x, y, w, h) {
+export function glChunk(chunk, x, y, w, h, alpha = 1) {
   let texture = chunkTextures.get(chunk);
   if (!texture) {
     // (a piece painted again is a new record of the same canvas: its old texture goes)
@@ -151,6 +151,7 @@ export function glChunk(chunk, x, y, w, h) {
   sprite.skew.set(0, 0);
   sprite.position.set(x, y);
   sprite.scale.set(w / chunk.pw, h / chunk.ph);
+  sprite.alpha = alpha;
 }
 // A texture goes. A sprite of the pool that showed it last (hidden now, or about to be given another) lets go of it first:
 // the card's batch of sprites, put together in an earlier frame, could still reach for it and stop the frame

@@ -176,7 +176,7 @@ export function* generateContinent() {
   const lakeAt = inland.length ? quantile(inland.map(i => hollow[i]), 1 - Math.min(1, C.lakes * landTiles.length / inland.length)) : Infinity;
   const lake = new Uint8Array(n);
   for (const i of landTiles) if (hollow[i] >= lakeAt && height[i] < mountainAt) lake[i] = 1;
-  smoothMask(lake, cols, rows, i => land[i] && height[i] < mountainAt);
+  smoothMask(lake, cols, rows, i => land[i] === 1 && height[i] < mountainAt);
   for (const blob of blobsOf(lake, cols, rows)) {
     if (blob.length < 4 || blob.some(i => coast[i] <= LAKE_FROM_SEA)) for (const i of blob) lake[i] = 0;
   }

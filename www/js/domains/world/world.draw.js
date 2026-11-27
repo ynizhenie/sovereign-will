@@ -32,12 +32,16 @@ const MAX_CHUNKS = 96;
 // (#322) and the pictures of a layer kept no more than this many pixels in all (a sharp piece of the terrain is four times a plain one's)
 const MAX_PIXELS = 16e6;
 
-/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame: number, x0: number, y0: number, x1: number, y1: number }} Chunk */
+/** @typedef {{ canvas: HTMLCanvasElement, pad: number, pw: number, ph: number, stamp: string, frame: number, x0: number, y0: number, x1: number, y1: number, fadeAt?: number }} Chunk */
 /** @typedef {((cx: number, cy: number) => string) & { dirty?: (cx: number, cy: number) => boolean, empty?: (cx: number, cy: number) => boolean, bounds?: (cx: number, cy: number) => number[] | undefined }} ChunkStamp */
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
 const drawnChunks = new Map();
+// layer -> the pieces shown before their own picture was ready ("cx,cy"): theirs fades in when it is
+/** @type {Map<string, Set<string>>} */
+const waitingPieces = new Map();
+const FADE_MS = 220;
 let prewarmingChunks = false;
 export const isPrewarmingChunks = () => prewarmingChunks;
 export function setPrewarmingChunks(prewarming) { prewarmingChunks = prewarming; }
@@ -94,6 +98,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     // Chunk canvases contain map-specific pixels; don't let equal-sized worlds reuse them.
     chunkLayers.clear();
     drawnChunks.clear();
+    waitingPieces.clear();
     paintJobs.clear();
     cacheWorldEpoch = epoch;
     previousView = null; previousScale = 0;
@@ -110,9 +115,13 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   const visible = new Set();
   const size = CHUNK * TILE_SIZE, v = getViewRect(), scale = getViewScale();
   if (layer === 'grass') {
-    const moving = previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5 || Math.abs(scale - previousScale) > 0.002);
+    const zooming = previousView && Math.abs(scale - previousScale) > 0.002;
+    const moving = zooming || previousView && (Math.abs(v.x0 - previousView.x0) > 0.5 || Math.abs(v.y0 - previousView.y0) > 0.5);
     previousView = v; previousScale = scale;
-    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0; framePaints = 0; framePaintMs = 0; shadowPaints = 0; framePaintLimit = moving ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
+    // (a zoom out brings a ring of new pieces onto the screen at once, all round it: painted as many as the frame's time
+    // allows, as when still, not one a frame as in a pan, where they came in turn and showed their previews, then popped
+    // in one by one, the sides last)
+    frameOf++; stats.holes = 0; stats.late = 0; stats.pending = 0; stats.warmReady = 0; stats.warmTotal = 0; framePaints = 0; framePaintMs = 0; shadowPaints = 0; framePaintLimit = moving && !zooming ? 1 : STILL_PAINTS_PER_FRAME; priorityPassed = false;
     const layers = scale < 0.7 ? ['grass', 'terrain', 'nature', 'tufts'] : scale < 0.95 ? ['grass', 'terrain', 'nature'] : ['grass', 'terrain'];
     if (areShadowsEnabled() && getSun().alpha >= MIN_SHADOW_ALPHA) layers.push('shadows');
     // While still, let every layer use the remaining paint budget. Rotating priorities
@@ -127,11 +136,18 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   /** @param {Chunk} p */
   // (the ground's own pieces go to the graphics card's canvas when that's on, see engine/platform/gl.js)
   const onCard = target === ctx && (layer === 'grass' || layer === 'terrain') && glReady() && !prewarmingChunks;
+  const clock = performance.now();
   const blit = p => {
     const dx0 = snapX(p.x0), dy0 = snapY(p.y0), dw = snapX(p.x1) - dx0, dh = snapY(p.y1) - dy0;
-    if (onCard) glChunk(p, m.e + m.a * dx0, m.f + m.d * dy0, m.a * dw, m.d * dh);
+    // (a piece that came onto the screen before its picture was ready fades in over what stood for it meanwhile)
+    const alpha = p.fadeAt === undefined ? 1 : Math.min(1, (clock - p.fadeAt) / FADE_MS);
+    if (alpha >= 1) p.fadeAt = undefined;
+    if (onCard) glChunk(p, m.e + m.a * dx0, m.f + m.d * dy0, m.a * dw, m.d * dh, alpha);
+    else if (alpha < 1) { const was = target.globalAlpha; target.globalAlpha = was * alpha; target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh); target.globalAlpha = was; }
     else target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
   };
+  let waiting = waitingPieces.get(layer);
+  if (!waiting) waitingPieces.set(layer, (waiting = new Set()));
   const lastX = Math.ceil(game.COLS / CHUNK) - 1, lastY = Math.ceil(game.ROWS / CHUNK) - 1;
   const cx0 = Math.max(0, Math.floor(v.x0 / size)), cx1 = Math.min(lastX, Math.floor(v.x1 / size));
   const cy0 = Math.max(0, Math.floor(v.y0 / size)), cy1 = Math.min(lastY, Math.floor(v.y1 / size));
@@ -229,13 +245,23 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
             framePaints++; stats.late++; if (layer === 'shadows') shadowPaints++;
           }
         }
-        if (ready) { stats.warmReady++; ready.frame = frameOf; chunks.set(key, ready); blit(ready); visible.add(key); continue; }
+        if (ready) {
+          // (shown without a picture of its own before: it fades in over its preview or old picture, not popped in)
+          if (waiting.delete(`${cx},${cy}`) && !prewarmingChunks) ready.fadeAt = clock;
+          if (ready.fadeAt !== undefined) {
+            // (under it while it fades in: what stood for it)
+            const old = keepOld ? oldPicture(chunks, cx, cy, ready) : null;
+            if (old) { old.frame = frameOf; blit(old); } else if (preview) preview(x0, y0, x1, y1);
+          }
+          stats.warmReady++; ready.frame = frameOf; chunks.set(key, ready); blit(ready); visible.add(key); continue;
+        }
         if (chunk && (!invalidated || keepOld)) {
           // (as while it waits its turn, so while it's being painted afresh in bands: the picture it had)
           if (!invalidated) stats.warmReady++;
           else stats.pending++;
           chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key);
         } else if (keepOld && oldPicture(chunks, cx, cy)) {
+          waiting.add(`${cx},${cy}`);
           // (shown this frame: not to be dropped at the end of it)
           const old = /** @type {Chunk} */ (oldPicture(chunks, cx, cy));
           old.frame = frameOf; blit(old);
@@ -245,6 +271,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
           // or rasterize each one this frame: preview it until its turn in the queue.
           // An invalidated overlay is left off the screen rather than showing a removed thing.
           if (preview) preview(x0, y0, x1, y1);
+          waiting.add(`${cx},${cy}`);
           stats.pending++;
           // Nature and tufts are overlays on the already painted ground. Only a missing base layer
           // without its own fallback leaves a visible hole.
@@ -269,9 +296,9 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
 
 // (#392) a piece's picture at any size, the finest first
 const SIZES = [4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
-/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy */
-const oldPicture = (chunks, cx, cy) => {
-  for (const res of SIZES) { const chunk = chunks.get(`${res}|${cx},${cy}`); if (chunk) return chunk; }
+/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy @param {Chunk | null} [not] */
+const oldPicture = (chunks, cx, cy, not = null) => {
+  for (const res of SIZES) { const chunk = chunks.get(`${res}|${cx},${cy}`); if (chunk && chunk !== not) return chunk; }
   return null;
 };
 
