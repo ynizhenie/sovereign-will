@@ -137,14 +137,21 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   // (the ground's own pieces go to the graphics card's canvas when that's on, see engine/platform/gl.js)
   const onCard = target === ctx && (layer === 'grass' || layer === 'terrain') && glReady() && !prewarmingChunks;
   const clock = performance.now();
-  const blit = p => {
+  /** @param {Chunk} p @param {boolean} [solid] */
+  const blit = (p, solid = false) => {
     const dx0 = snapX(p.x0), dy0 = snapY(p.y0), dw = snapX(p.x1) - dx0, dh = snapY(p.y1) - dy0;
     // (a piece that came onto the screen before its picture was ready fades in over what stood for it meanwhile)
-    const alpha = p.fadeAt === undefined ? 1 : Math.min(1, (clock - p.fadeAt) / FADE_MS);
-    if (alpha >= 1) p.fadeAt = undefined;
+    const alpha = solid || p.fadeAt === undefined ? 1 : Math.min(1, (clock - p.fadeAt) / FADE_MS);
+    if (alpha >= 1 && !solid) p.fadeAt = undefined;
     if (onCard) glChunk(p, m.e + m.a * dx0, m.f + m.d * dy0, m.a * dw, m.d * dh, alpha);
     else if (alpha < 1) { const was = target.globalAlpha; target.globalAlpha = was * alpha; target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh); target.globalAlpha = was; }
     else target.drawImage(p.canvas, p.pad, p.pad, p.pw, p.ph, dx0, dy0, dw, dh);
+  };
+  // (under a piece while it fades in, every frame of it: what stood for it; without it the screen's black showed through)
+  /** @param {Chunk} p @param {number} cx @param {number} cy @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 */
+  // (only a piece with no picture of it at all fades in, so what stood for it is its preview, if its layer has one)
+  const under = (p, cx, cy, x0, y0, x1, y1) => {
+    if (p.fadeAt !== undefined && preview) preview(x0, y0, x1, y1);
   };
   let waiting = waitingPieces.get(layer);
   if (!waiting) waitingPieces.set(layer, (waiting = new Set()));
@@ -248,23 +255,21 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (ready) {
           // (shown without a picture of its own before: it fades in over its preview or old picture, not popped in)
           if (waiting.delete(`${cx},${cy}`) && !prewarmingChunks) ready.fadeAt = clock;
-          if (ready.fadeAt !== undefined) {
-            // (under it while it fades in: what stood for it)
-            const old = keepOld ? oldPicture(chunks, cx, cy, ready) : null;
-            if (old) { old.frame = frameOf; blit(old); } else if (preview) preview(x0, y0, x1, y1);
-          }
-          stats.warmReady++; ready.frame = frameOf; chunks.set(key, ready); blit(ready); visible.add(key); continue;
+          stats.warmReady++; ready.frame = frameOf; chunks.set(key, ready); under(ready, cx, cy, x0, y0, x1, y1); blit(ready); visible.add(key); continue;
         }
         if (chunk && (!invalidated || keepOld)) {
           // (as while it waits its turn, so while it's being painted afresh in bands: the picture it had)
           if (!invalidated) stats.warmReady++;
           else stats.pending++;
-          chunk.frame = frameOf; chunks.set(key, chunk); blit(chunk); visible.add(key);
-        } else if (keepOld && oldPicture(chunks, cx, cy)) {
-          waiting.add(`${cx},${cy}`);
+          chunk.frame = frameOf; chunks.set(key, chunk); under(chunk, cx, cy, x0, y0, x1, y1); blit(chunk); visible.add(key);
+        } else if ((keepOld || !invalidated) && oldPicture(chunks, cx, cy)) {
+          // (its picture at another size, as the zoom changed: the same thing, shown till it's painted at this one, and
+          // that one put in its place at once, not faded in: faded, the trees went and came back at every step of a
+          // zoom, and the shadows, see-through, darkened over their old picture)
+          waiting.delete(`${cx},${cy}`);
           // (shown this frame: not to be dropped at the end of it)
           const old = /** @type {Chunk} */ (oldPicture(chunks, cx, cy));
-          old.frame = frameOf; blit(old);
+          old.frame = frameOf; blit(old, true);
           stats.pending++;
         } else {
           // A quick pan can expose dozens of uncached pieces at once. Don't even stamp
@@ -296,9 +301,9 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
 
 // (#392) a piece's picture at any size, the finest first
 const SIZES = [4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
-/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy @param {Chunk | null} [not] */
-const oldPicture = (chunks, cx, cy, not = null) => {
-  for (const res of SIZES) { const chunk = chunks.get(`${res}|${cx},${cy}`); if (chunk && chunk !== not) return chunk; }
+/** @param {Map<string, Chunk>} chunks @param {number} cx @param {number} cy */
+const oldPicture = (chunks, cx, cy) => {
+  for (const res of SIZES) { const chunk = chunks.get(`${res}|${cx},${cy}`); if (chunk) return chunk; }
   return null;
 };
 
