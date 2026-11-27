@@ -277,7 +277,7 @@ export const ukLanguage = {
     },
     text: {
       'activity.fetchNightTorch': 'Іде по смолоскип на ніч',
-      'menu.play': 'ГРАТИ',
+      'menu.play': 'Грати',
       'menu.waveInterval': 'Інтервал хвиль (с):',
       'menu.custom': 'Свій',
       'menu.mapSize': 'Розмір мапи:',
@@ -368,6 +368,8 @@ export const ukLanguage = {
       'plague.card.healRangeDesc': 'Радіус зцілення збільшується на одну клітинку.',
       'menu.battles': 'Битви',
       'menu.saves': 'Збереження',
+      'menu.newGame': 'Нова гра',
+      'menu.loadGame': 'Завантажити гру',
       'menu.editor': 'Редактор мап',
       'menu.modeInfo.endless': 'Будуйте поселення й тримайтеся проти хвиль ворогів. Що довше протримаєтеся, то вони сильніші.',
       'menu.modeInfo.plague': 'Ви — некромант. Піднімайте полеглих і ведіть нежить крізь живих.',

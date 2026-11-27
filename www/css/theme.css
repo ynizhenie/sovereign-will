@@ -188,9 +188,9 @@ body.menu-world #main-menu { background: transparent; }
   border-radius: 0;
 }
 @media (hover: hover) {
-  .main-menu-content[data-screen="home"] .menu-button:not(:disabled):hover, .main-menu-content[data-screen="modes"] .menu-button:not(:disabled):hover { color: var(--text-bright); filter: brightness(1.12); }
+  .main-menu-content[data-screen="home"] .menu-button:not(:disabled):hover, .main-menu-content[data-screen="modes"] .menu-button:not(:disabled):hover { color: var(--text-bright) !important; filter: brightness(1.12); }
 }
-.main-menu-content[data-screen="home"] .menu-button:disabled, .main-menu-content[data-screen="modes"] .menu-button:disabled { color: var(--text-dim); filter: saturate(0.4) brightness(0.8); }
+.main-menu-content[data-screen="home"] .menu-button:disabled, .main-menu-content[data-screen="modes"] .menu-button:disabled { color: var(--text-dim) !important; filter: saturate(0.4) brightness(0.8); }
 
 /* the game's name: old gold letters with a dark edge below and a soft shadow (a gradient fill can't take a
    text-shadow, so the shadows are filters) */
@@ -219,3 +219,8 @@ html:root :is(.btn, .menu-button, .tab-btn, .wave-option, .fps-option, .faction-
 html:root .wave-options.segmented > button, html:root .wave-options.switch > button { background: transparent !important; box-shadow: none !important; }
 html:root .wave-options.segmented > button:not(.active) { color: #cfc8ad; }
 html:root .music-toggle.on, html:root .music-listen.on { background: var(--plank-green) center / cover; border-color: transparent; }
+/* (not the framed buttons of the first screens and the pause: they're a picture of their own, plank and frame; the raised
+   look put a second plank under the frame of all but the first, and their words another colour) */
+html:root :is(.main-menu-content[data-screen="home"], .main-menu-content[data-screen="modes"], .main-menu-content[data-screen="editor-hub"], #pause-menu) .menu-button {
+  background: none !important; box-shadow: none !important; color: var(--text-menu) !important;
+}

@@ -277,7 +277,7 @@ export const ruLanguage = {
     },
     text: {
       'activity.fetchNightTorch': 'Идёт за факелом на ночь',
-      'menu.play': 'ИГРАТЬ',
+      'menu.play': 'Играть',
       'menu.waveInterval': 'Интервал волн (сек):',
       'menu.custom': 'Своё',
       'menu.mapSize': 'Размер карты:',
@@ -368,6 +368,8 @@ export const ruLanguage = {
       'plague.card.healRangeDesc': 'Радиус исцеления увеличивается на одну клетку.',
       'menu.battles': 'Битвы',
       'menu.saves': 'Сохранения',
+      'menu.newGame': 'Новая игра',
+      'menu.loadGame': 'Загрузить игру',
       'menu.editor': 'Редактор карт',
       'menu.modeInfo.endless': 'Стройте поселение и держитесь против волн врагов. Чем дольше продержитесь, тем они сильнее.',
       'menu.modeInfo.plague': 'Вы — некромант. Поднимайте павших и ведите нежить сквозь живых.',

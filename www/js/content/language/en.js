@@ -277,7 +277,7 @@ export const enLanguage = {
     },
     text: {
       'activity.fetchNightTorch': 'Fetching a torch for the night',
-      'menu.play': 'PLAY',
+      'menu.play': 'Play',
       'menu.waveInterval': 'Wave interval (s):',
       'menu.custom': 'Custom',
       'menu.mapSize': 'Map size:',
@@ -368,6 +368,8 @@ export const enLanguage = {
       'plague.card.healRangeDesc': 'Healing radius increases by one tile.',
       'menu.battles': 'Battles',
       'menu.saves': 'Saves',
+      'menu.newGame': 'New game',
+      'menu.loadGame': 'Load game',
       'menu.editor': 'Map editor',
       'menu.modeInfo.endless': 'Build a settlement and hold out against the waves. The longer you last, the harder they come.',
       'menu.modeInfo.plague': 'You are the necromancer. Raise the fallen and lead your undead through the living.',
