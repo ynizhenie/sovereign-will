@@ -398,7 +398,7 @@ body.menu-world #defeat-overlay { display: none !important; }
     width: min(780px, calc(94vw / var(--menu-zoom))); max-width: none;
     display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: row dense; column-gap: 18px; align-content: start; align-items: start; }
   #main-menu .main-menu-content[data-screen="endless"] > h1, #main-menu .main-menu-content[data-screen="plague"] > h1,
-  #main-menu .main-menu-content[data-screen="generator"] > * { grid-column: 1 / -1; }
+  #main-menu .main-menu-content[data-screen="generator"] > :not(.menu-back) { grid-column: 1 / -1; }
   #main-menu .main-menu-content[data-screen="endless"] > .faction-settings { grid-column: 1; grid-row: span 4; }
   #main-menu .main-menu-content[data-screen="endless"] > :last-child { grid-column: 1 / -1; }
   #main-menu .main-menu-content[data-screen="plague"] > :not(h1):not(.menu-back):not(button) { grid-column: 1 / -1; }
@@ -831,16 +831,26 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
   background: radial-gradient(circle at 35% 30%, #fff8e2, #d9cfae 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
 .generator-field input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: #e9e2c8; }
 .gen-value { flex: 0 0 40px; text-align: right; font-style: normal; font-size: 12px; color: #e8c76a; font-variant-numeric: tabular-nums; }
-/* the presets on a row (Standard and the player's), and under it a name and Save for a new one */
-.preset-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.preset-presets #preset-standard { flex: 0 0 auto; padding: 8px 14px; }
-.preset-presets .preset-list { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
-/* a saved preset a chip as big as Standard, its × beside it (they were rows across the pane) */
-.preset-presets .item-row { flex: 0 0 auto; gap: 2px; }
-.preset-presets .item-row .item-name { flex: 0 0 auto; padding: 8px 14px; }
-.preset-presets .item-row .item-delete { padding: 8px 9px; }
-.preset-row { display: flex; gap: 6px; }
-.preset-row input { flex: 1; width: auto; }
+/* the presets: the chosen one's name, a list of them dropping from it; Save on the right */
+.preset-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.preset-label { flex: none; color: #d4cfb6; font-size: 14px; }
+.preset-pick-wrap { position: relative; flex: 0 1 260px; min-width: 0; }
+#preset-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; height: 35px; padding: 0 14px; }
+#preset-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#preset-pick::after { content: ''; flex: none; width: 7px; height: 7px; margin-top: -4px; border-right: 2px solid #e8c76a; border-bottom: 2px solid #e8c76a;
+  transform: rotate(45deg); transition: transform 0.2s; }
+#preset-pick[aria-expanded="true"]::after { margin-top: 3px; transform: rotate(-135deg); }
+/* the list drops down over what's under it */
+.preset-menu { position: absolute; left: 0; top: calc(100% + 4px); z-index: 20; min-width: 100%; max-height: 260px; overflow: auto;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 8px; background: #2a3322; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); }
+.preset-menu[hidden] { display: none; }
+.preset-menu #preset-standard { flex: none; height: 35px; padding: 0 14px; text-align: left; }
+.preset-menu .preset-list { display: flex; flex-direction: column; gap: 4px; }
+.preset-menu .item-row { flex: none; display: flex; gap: 4px; }
+.preset-menu .item-row .item-name { flex: 1; height: 35px; padding: 0 14px; text-align: left; }
+.preset-menu .item-row .item-delete { flex: none; width: 35px; height: 35px; padding: 0; }
+.preset-menu .item-question { flex: 1; align-self: center; font-size: 12px; }
+#preset-save { flex: none; height: 35px; padding: 0 16px; margin-left: auto; }
 
 /* (#326) the selected settler's card: everything shown, scrolling when there's a lot */
 .selected-unit-box.has-settler { position: relative; display: flex; flex-direction: column; width: min(94vw, 400px); height: min(30vh, 220px); box-sizing: border-box; white-space: normal; overflow: hidden; padding: 8px 48px 8px 10px; }

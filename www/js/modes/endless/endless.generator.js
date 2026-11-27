@@ -224,9 +224,6 @@ function currentPreset() {
 
 function updatePresetSelection() {
   const selected = currentPreset();
-  const presetName = document.getElementById('preset-name').value.trim();
-  const isExistingPreset = !!presetName && Object.prototype.hasOwnProperty.call(loadPresets(), presetName);
-  const saveButton = document.getElementById('preset-save');
   const standardButton = document.getElementById('preset-standard');
   const standardIsSelected = selected?.kind === 'standard';
   standardButton.classList.toggle('active', standardIsSelected);
@@ -236,10 +233,16 @@ function updatePresetSelection() {
     button.classList.toggle('active', isSelected);
     button.setAttribute('aria-pressed', String(isSelected));
   });
-  const saveLabel = isExistingPreset ? 'gen.update' : 'gen.save';
-  saveButton.dataset.i18n = saveLabel;
-  saveButton.textContent = t(saveLabel);
-  saveButton.disabled = !!selected || !presetName;
+  // (on the button: the chosen one's name, or Custom when what's set is none of them)
+  document.getElementById('preset-pick-name').textContent = !selected ? t('gen.custom') : selected.kind === 'standard' ? t('gen.standard') : selected.name;
+  // (what's set is a preset already: nothing new to keep)
+  /** @type {HTMLButtonElement} */ (document.getElementById('preset-save')).disabled = !!selected;
+}
+
+/** @param {boolean} open */
+function setPresetMenu(open) {
+  document.getElementById('preset-menu').hidden = !open;
+  document.getElementById('preset-pick').setAttribute('aria-expanded', String(open));
 }
 
 export function applyMapSettings(settings) {
@@ -264,10 +267,10 @@ export function renderPresetList() {
     attr: 'preset',
     selected: selected?.kind === 'saved' ? selected.name : undefined,
     onPick: name => {
-      document.getElementById('preset-name').value = name;
       applyMapSettings(loadPresets()[name]);
       rememberSettings();
       renderPresetList();
+      setPresetMenu(false);
     },
     onDelete: name => { const presets = loadPresets(); delete presets[name]; savePresets(presets); renderPresetList(); }
   });
@@ -277,7 +280,11 @@ export function renderPresetList() {
 // The screen, from Endless or the editor (27.10, 19): Back goes back there
 export function openGenerator(from) {
   /** @type {HTMLElement} */ (document.querySelector('[data-screen="generator"] [data-back-to]')).dataset.backTo = from;
-  renderGeneratorFields(); renderPresetList(); showMenuScreen('generator');
+  // (from the editor, where the switch is the Island's: the island's settings)
+  const title = /** @type {HTMLElement} */ (document.querySelector('[data-screen="generator"] h1'));
+  title.dataset.i18n = from === 'editor' ? 'gen.islandTitle' : 'menu.generator';
+  title.textContent = t(title.dataset.i18n);
+  setPresetMenu(false); renderGeneratorFields(); renderPresetList(); showMenuScreen('generator');
 }
 
 // What this file sets up as the game starts (called by app/boot.js)
@@ -286,21 +293,25 @@ export function initEndlessGenerator() {
   if (saved && typeof saved === 'object' && saved.map && saved.continent) applyMapSettings(saved);
   onTap(document.getElementById('open-generator'), () => openGenerator('endless'));
   document.querySelectorAll('#main-menu [data-back-to]').forEach(button => onTap(button, () => showMenuScreen(button.dataset.backTo)));
+  onTap(document.getElementById('preset-pick'), () => setPresetMenu(document.getElementById('preset-menu').hidden));
+  // (a tap anywhere else puts the list away)
+  document.addEventListener('pointerdown', e => {
+    const target = /** @type {Element} */ (e.target);
+    if (!document.getElementById('preset-menu').hidden && !target.closest?.('.preset-pick-wrap')) setPresetMenu(false);
+  });
   onTap(document.getElementById('preset-standard'), () => {
-    document.getElementById('preset-name').value = '';
     applyMapSettings({ map: STANDARD_MAP_SETTINGS, continent: STANDARD_CONTINENT_SETTINGS });
     rememberSettings();
+    setPresetMenu(false);
   });
+  // Save: what's set kept as a new preset, named the next free "Preset N"
   onTap(document.getElementById('preset-save'), () => {
-    const input = document.getElementById('preset-name');
-    const name = input.value.trim();
-    if (!name || currentPreset()) { updatePresetSelection(); return; }
+    if (currentPreset()) { updatePresetSelection(); return; }
     const presets = loadPresets();
-    const updating = Object.prototype.hasOwnProperty.call(presets, name);
-    presets[name] = currentSettings();
+    let n = 1;
+    while (Object.prototype.hasOwnProperty.call(presets, t('gen.presetN', { n }))) n++;
+    presets[t('gen.presetN', { n })] = currentSettings();
     savePresets(presets);
-    if (!updating) input.value = '';
     renderPresetList();
   });
-  document.getElementById('preset-name').addEventListener('input', updatePresetSelection);
 }

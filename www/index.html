@@ -290,13 +290,17 @@
     <div class="main-menu-content generator-screen" data-screen="generator" hidden>
         <button class="menu-back" data-back-to="endless" data-i18n="menu.back">[[back]] Back</button>
         <h1 data-i18n="menu.generator">Map generator</h1>
-        <!-- the presets: Standard and the player's, then saving what's set as one (no line telling which is chosen) -->
-        <div class="preset-presets">
-            <button id="preset-standard" class="fps-option" data-i18n="gen.standard">Standard</button>
-            <div id="preset-list" class="preset-list"></div>
-        </div>
-        <div class="preset-row">
-            <input id="preset-name" class="menu-number" type="text" maxlength="24" data-i18n-placeholder="gen.presetName" placeholder="New preset" />
+        <!-- the presets: the chosen one's name opens a list of them (Standard and the player's, each with its cross);
+             Save keeps what's set as a new one -->
+        <div class="preset-bar">
+            <span class="preset-label" data-i18n="gen.presets">Preset:</span>
+            <div class="preset-pick-wrap">
+                <button id="preset-pick" class="fps-option" aria-haspopup="true" aria-expanded="false"><span id="preset-pick-name"></span></button>
+                <div id="preset-menu" class="preset-menu" hidden>
+                    <button id="preset-standard" class="fps-option" data-i18n="gen.standard">Standard</button>
+                    <div id="preset-list" class="preset-list"></div>
+                </div>
+            </div>
             <button id="preset-save" class="fps-option" data-i18n="gen.save">Save</button>
         </div>
         <div id="generator-fields" class="generator-fields"></div>
