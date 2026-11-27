@@ -27,7 +27,7 @@ button, .btn, .menu-button, .tab-btn {
 }
 button *, .ic { pointer-events: none; -webkit-user-drag: none; }
 button:focus { outline: none; }
-button:focus-visible { outline: 2px solid #46b8da; outline-offset: 1px; }
+button:focus-visible { outline: 2px solid #7cc35a; outline-offset: 1px; }
 input, textarea { user-select: text; -webkit-user-select: text; }
 
 #game-container {
@@ -130,8 +130,8 @@ button.btn-no { animation: btn-no 0.35s ease; }
   border: 1px solid #353a46;
 }
 .resources-grid .resource-group.open {
-  border-color: #46b8da;
-  background: rgba(46, 109, 164, 0.35);
+  border-color: #7cc35a;
+  background: rgba(63, 122, 46, 0.35);
 }
 .resource-details {
   /* an open group drops down over what's below, so the panel doesn't change size */
@@ -146,7 +146,7 @@ button.btn-no { animation: btn-no 0.35s ease; }
   top: 2px;
   padding: 4px;
   background: #1b1d22;
-  border: 1px solid #46b8da;
+  border: 1px solid #7cc35a;
   border-radius: 6px;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
   display: grid;
@@ -192,7 +192,7 @@ button.btn-no { animation: btn-no 0.35s ease; }
   box-sizing: border-box;
 }
 
-.btn.active { background: #2e6da4; border-color: #46b8da; }
+.btn.active { background: #3f7a2e; border-color: #7cc35a; }
 .btn-demolish { background: #962d2d; }
 .btn-disarm { background: #d35400; text-align: center; }
 .btn-armor { background: #27ae60; text-align: center; }
@@ -647,9 +647,9 @@ body.menu-world #defeat-overlay { display: none !important; }
 
 .wave-option.active, .map-option.active, .battle-size-option.active, .map-source-option.active, .editor-size-option.active,
 .difficulty-option.active, .cards-option.active, .fps-option.active {
-  background: #2e6da4;
+  background: #3f7a2e;
   color: #fff;
-  border-color: #46b8da;
+  border-color: #7cc35a;
 }
 
 .seed-settings {
@@ -675,7 +675,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 #seed-input:focus {
-  border-color: #46b8da;
+  border-color: #7cc35a;
 }
 
 .seed-row {
@@ -696,7 +696,7 @@ body.menu-world #defeat-overlay { display: none !important; }
 }
 
 #seed-reroll:active, #btn-generate-name:active {
-  border-color: #46b8da;
+  border-color: #7cc35a;
 }
 
 /* battle mode (#38) and the map editor (#37): their own sheets and dock rows (the HUD, below) */
@@ -739,7 +739,7 @@ body[data-hud="editor"] .editor-only { display: inline-flex; }
 .item-row { display: flex; align-items: center; gap: 4px; }
 .item-row .item-name { flex: 1; min-width: 0; text-align: left; padding: 7px 10px; background: #252830; border: 1px solid #353a46;
   border-radius: 5px; color: #ddd; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.item-row .item-name.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.item-row .item-name.active { background: #3f7a2e; border-color: #7cc35a; color: #fff; }
 .item-row .item-delete, .item-row .item-confirm, .item-row .item-cancel { padding: 7px 10px; background: #252830; border: 1px solid #353a46;
   border-radius: 5px; color: #ddd; font-size: 12px; font-weight: bold; cursor: pointer; }
 .item-row .item-confirm { background: #c0392b; border-color: #e74c3c; color: #fff; }
@@ -783,13 +783,13 @@ body.battle-mode #save-game-button, body.editor-mode #save-game-button { display
 .faction-options { flex: 1; display: flex; gap: 4px; }
 .faction-option { flex: 1; padding: 6px 2px; background: #252830; border: 1px solid #353a46; border-radius: 5px; color: #ddd;
   font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.faction-option.active { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.faction-option.active { background: #3f7a2e; border-color: #7cc35a; color: #fff; }
 .faction-option:disabled { opacity: 0.45; cursor: default; }
 .color-options { display: flex; flex-wrap: nowrap; gap: 4px; justify-content: flex-end; }
 [data-sheet="battle-settings"] .color-options { justify-content: center; } /* (#326) */
 [data-sheet="battle-settings"] .color-options + .panel-heading, [data-sheet="battle-settings"] .panel-heading:has(+ .color-options) { text-align: center; }
 .color-swatch { flex: 1 1 0; min-width: 14px; max-width: 26px; aspect-ratio: 1; border-radius: 50%; border: 2px solid #353a46; cursor: pointer; padding: 0; } /* (#326) all in one line */
-.color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px #46b8da; }
+.color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px #7cc35a; }
 .color-swatch:disabled { opacity: 0.25; cursor: default; }
 
 /* map generator screen (#20) */
@@ -1189,7 +1189,7 @@ button.armed { outline: 2px solid #f1c40f; outline-offset: 1px; }
 .selected-gear .btn .ic-no { width: 10px; height: 10px; }
 /* a thing it has: its name, then into the store or taken apart (#248) */
 .gear-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 2px 1px 6px; font-size: 11px; border: 1px solid #4a5160; border-radius: 5px; }
-.selected-gear .btn-store { background: #2e6da4; }
+.selected-gear .btn-store { background: #3f7a2e; }
 .info-cost { color: #c9cdd6; }
 .info-cost b { color: #fff; font-variant-numeric: tabular-nums; }
 .info-cost.short, .info-cost.short b { color: #ff6b6b; }
@@ -1545,7 +1545,7 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .menu-eye-button { width: 34px; height: 24px; align-items: center; justify-content: center; color: #d5dfd5; }
 .menu-eye-button .ic { width: 20px; height: 20px; }
 .flag-button .flag { width: 100%; height: auto; }
-.flag-button.active { border-color: #46b8da; }
+.flag-button.active { border-color: #7cc35a; }
 .language-option { display: inline-flex; align-items: center; gap: 6px; }
 /* Settings' language: a drop-down */
 .language-picker { position: relative; }
@@ -1651,7 +1651,7 @@ body.menu-ui-hidden #menu-flags { display: none; }
 .music-name b { font-size: 13px; }
 .music-part { margin: 6px 0 2px; font-size: 12px; color: #d4cfb6; break-after: avoid; } /* (when the tracks under it play) */
 .music-toggle { flex: none; min-width: 52px; min-height: 30px; padding: 0 8px; font-size: 12px; }
-.music-toggle.on, .music-listen.on { background: #2e6da4; border-color: #46b8da; color: #fff; }
+.music-toggle.on, .music-listen.on { background: #3f7a2e; border-color: #7cc35a; color: #fff; }
 
 /* The editor's brush: a slider at the left of the screen, half way down, only in the editor */
 #editor-brush { position: fixed; left: 10px; top: 50%; transform: translateY(-50%); z-index: 6; display: none; flex-direction: column; align-items: center; gap: 8px;

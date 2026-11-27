@@ -206,3 +206,17 @@ body.menu-world #main-menu { background: transparent; }
 /* ---- The defeat screen */
 .defeat-box { background: var(--bg); border: 1px solid #c0392b; }
 .defeat-title { font: 700 32px var(--font); }
+
+/* A plank not chosen raised, not sunk: a light edge on top, a shadow under it, its words
+   light (the dark plank and dim words read as a button already pressed); pressed, it goes down a little */
+html:root :is(.btn, .menu-button, .tab-btn, .wave-option, .map-option, .battle-size-option, .map-source-option, .editor-size-option,
+  .difficulty-option, .cards-option, .fps-option, .faction-option, .menu-gear, #seed-reroll, #btn-generate-name, .item-row .item-name,
+  .item-row .item-delete, #dock .dock-btn):not(.active):not(.on):not(.menu-button-primary):not(#play-button) {
+  background: linear-gradient(to bottom, rgba(255, 238, 200, 0.12), rgba(0, 0, 0, 0.16)), var(--plank) center / cover;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.25), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.45);
+  color: #e9e1c6;
+}
+html:root :is(.btn, .menu-button, .tab-btn, .wave-option, .fps-option, .faction-option, #dock .dock-btn):not(:disabled):active { transform: translateY(1px); }
+html:root .wave-options.segmented > button, html:root .wave-options.switch > button { background: transparent !important; box-shadow: none !important; }
+html:root .wave-options.segmented > button:not(.active) { color: #cfc8ad; }
+html:root .music-toggle.on, html:root .music-listen.on { background: var(--plank-green) center / cover; border-color: transparent; }
