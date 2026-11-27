@@ -97,8 +97,8 @@ function around(list, x0, y0, x1, y1, keep = null) {
 const STAMPS_PER_FRAME = 4;
 /** @param {(lists: any[][]) => any[][]} listsOf @param {number} [margin] (world px round a piece of what's in it that shows in it) @param {() => string} [sunOf] @param {number} [ticks] (how often a piece is looked at again) */
 function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) {
-  /** @type {{ signatures: any[][], members: any[][], epoch: number, made: number, world: number, sun: string | null, stamps: Map<string, { tick: number, epoch: number, sun: string, things: number, count: number, parts: number[], counts: number[], stamp: string }>, dirty: Set<string> }} */
-  const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), sun: null, stamps: new Map(), dirty: new Set() };
+  /** @type {{ changes: number, signatures: any[][], members: any[][], epoch: number, made: number, world: number, sun: string | null, stamps: Map<string, { tick: number, epoch: number, sun: string, things: number, count: number, parts: number[], counts: number[], stamp: string }>, dirty: Set<string> }} */
+  const state = { signatures: [], members: [], epoch: 0, made: 0, world: worldEpoch(), sun: null, stamps: new Map(), dirty: new Set(), changes: 0 };
   /** @type {any[][]} */
   const current = [];
   /** @param {any[]} list */
@@ -115,7 +115,7 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
   // (#392) what's changed in the lists, and the sun: once a frame, not for every piece on the screen and round it
   const look = () => {
       if (state.world !== worldEpoch()) {
-        state.world = worldEpoch(); state.signatures = []; state.members = []; state.epoch++; state.stamps.clear(); state.dirty.clear();
+        state.world = worldEpoch(); state.signatures = []; state.members = []; state.epoch++; state.stamps.clear(); state.dirty.clear(); state.changes++;
       }
       listsOf(current);
       if (!state.signatures.length) {
@@ -125,6 +125,7 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
         let changed = current.length !== state.signatures.length;
         for (let n = 0; !changed && n < current.length; n++) changed = !signatureMatches(state.signatures[n], current[n]);
         if (changed) {
+          state.changes++;
           for (let n = 0; n < current.length; n++) {
             if (signatureMatches(state.signatures[n], current[n])) continue;
             const before = new Set(state.members[n] || []), after = new Set(current[n] || []);
@@ -176,6 +177,8 @@ function stamper(listsOf, margin = MARGIN, sunOf = sunKey, ticks = STAMP_TICKS) 
   stamp.empty = (cx, cy) => { const key = `${cx},${cy}`; if (!state.stamps.has(key) || state.dirty.has(key)) stamp(cx, cy); return state.stamps.get(key)?.count === 0; };
   return {
     newFrame() { state.made = 0; look(); },
+    // (a number that changes when something came or went in the lists)
+    changes: () => state.changes,
     stamp,
     // what's in and round piece (cx, cy), and how it is, as a number (the same while they stay the same)
     /** @param {number} cx @param {number} cy */
@@ -309,6 +312,13 @@ function paintStillShadows(g, x0, y0, x1, y1) {
   g.fillStyle = '#000';
   g.fill(shadow);
   paintRockShadows(g, x0, y0, x1, y1, sun);
+}
+
+// Something of the still things came or went: their shadows' picture is made again (in the editor, paused, it was made
+// again only when the view moved, and a tree painted over with water left its shadow)
+export function stillShadowsVersion() {
+  shadowStamps.newFrame();
+  return shadowStamps.changes();
 }
 
 // The still things' shadows into the frame's shadows' picture g (with the world's transform)
