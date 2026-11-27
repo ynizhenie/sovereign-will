@@ -95,6 +95,49 @@ function lineUp(at, side, i) {
   return side === 'left' || side === 'right' ? { x: at.x, y: at.y + step } : { x: at.x + step, y: at.y };
 }
 
+// The party's places in their line, each on ground they can walk to from home: a place on water or a rock is moved to
+// the nearest that is (one stood in a lake, nobody got there, and the attack never opened)
+// (through a portal they're put there, not walked: only clear ground then)
+/** @param {{ x: number, y: number }} at @param {string} side @param {number} count @param {boolean} [walked] */
+function lineUpOnLand(at, side, count, walked = true) {
+  const cols = game.COLS, rows = game.ROWS;
+  const clear = (gx, gy) => gx >= 0 && gy >= 0 && gx < cols && gy < rows && !isTileBlockedForSettler(gx, gy);
+  // (walked: got to from home round what's in the way and round the camp's land, which they don't cross before the
+  // word to go in; a place past it, or across a lake, was as good as none)
+  let reached = null;
+  if (walked) {
+    reached = new Uint8Array(cols * rows);
+    const outside = (gx, gy) => clear(gx, gy) && !inEnemyTerritory(gx * TILE_SIZE + TILE_SIZE / 2, gy * TILE_SIZE + TILE_SIZE / 2);
+    const home = getGridPos(townHall.x, townHall.y), queue = [];
+    // (from the tiles round the hall: the hall's own stand blocked)
+    for (let dy = -3; dy <= 2; dy++) for (let dx = -3; dx <= 2; dx++) {
+      const gx = home.gx + dx, gy = home.gy + dy;
+      if (outside(gx, gy) && !reached[gy * cols + gx]) { reached[gy * cols + gx] = 1; queue.push(gy * cols + gx); }
+    }
+    for (let k = 0; k < queue.length; k++) {
+      const gx = queue[k] % cols, gy = (queue[k] - gx) / cols;
+      for (const [x, y] of [[gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1]]) {
+        if (outside(x, y) && !reached[y * cols + x]) { reached[y * cols + x] = 1; queue.push(y * cols + x); }
+      }
+    }
+  }
+  const ok = (gx, gy) => clear(gx, gy) && (!reached || reached[gy * cols + gx] === 1);
+  /** @type {Set<string>} */
+  const taken = new Set();
+  return Array.from({ length: count }, (_, i) => {
+    const spot = lineUp(at, side, i), { gx, gy } = getGridPos(spot.x, spot.y);
+    if (ok(gx, gy)) return spot;
+    for (let r = 1; r <= 8; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || taken.has(`${gx + dx},${gy + dy}`) || !ok(gx + dx, gy + dy)) continue;
+        taken.add(`${gx + dx},${gy + dy}`);
+        return { x: (gx + dx) * TILE_SIZE + TILE_SIZE / 2, y: (gy + dy) * TILE_SIZE + TILE_SIZE / 2 };
+      }
+    }
+    return spot;
+  });
+}
+
 // ---- The camp's zone, while it's there
 
 // The armed, as the camp's defenders mirror them (#279: taken when the camp appears, so it's the same camp
@@ -743,16 +786,18 @@ export function startRaid(party, scouting = false, arrows = 0, buildCamp = true)
   else if (raid.side === 'right') raid.gather.x += (camp.radius + 1) * TILE_SIZE;
   else if (raid.side === 'top') raid.gather.y -= (camp.radius + 1) * TILE_SIZE;
   else raid.gather.y += (camp.radius + 1) * TILE_SIZE;
+  const gatherSpots = lineUpOnLand(raid.gather, raid.side, party.length);
   party.forEach((s, i) => {
     s.raider = true; s.isPossessed = false;
     if (s.asleep) { s.asleep = false; s.sleepSpot = null; } // (woken for it, #298)
-    s.raidSpot = lineUp(raid.gather, raid.side, i);
+    s.raidSpot = gatherSpots[i];
   });
   if (demonRaid && !prepareDemonRaidPortals(camp)) {
     resetRaidState();
     return false;
   }
-  party.forEach((s, i) => { s.raidSpot = lineUp(raid.rally || raid.gather, raid.side, i); });
+  const rallySpots = lineUpOnLand(raid.rally || raid.gather, raid.side, party.length);
+  party.forEach((s, i) => { s.raidSpot = rallySpots[i]; });
   closeSelectedCard();
   updateRaidBar();
   return true;
@@ -952,8 +997,9 @@ function placeDemonRaidPortal(x, y) {
   raid.demonExit = point;
   raid.gather = point;
   raid.placingPortal = false;
+  const portalSpots = lineUpOnLand(point, raid.side, raid.raiders.length, false);
   raid.raiders.forEach((settler, i) => {
-    const spot = lineUp(point, raid.side, i);
+    const spot = portalSpots[i];
     settler.x = spot.x;
     settler.y = spot.y;
     settler.raidSpot = spot;
@@ -1185,8 +1231,9 @@ export function tickRaid(dt) {
         raid.phase = 'staging';
         raid.timer = 0;
         if (raid.exitPortal) {
+          const portalSpots = lineUpOnLand(raid.gather, raid.side, raid.raiders.length, false);
           raid.raiders.forEach((settler, i) => {
-            const spot = lineUp(raid.gather, raid.side, i);
+            const spot = portalSpots[i];
             settler.x = spot.x; settler.y = spot.y;
             settler.raidSpot = spot;
             settler.path = null; settler.pathTarget = null;

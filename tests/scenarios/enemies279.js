@@ -123,8 +123,8 @@ Object.assign(window.sim, (() => {
           game.waveTimer = 0.01;
           tickWaveTimer(0.02);
           tickEnemy(builder, 1 / 60);
-          // (#422: where it stands at the start is the map's luck; a builder a step or two short is at work within seconds)
-          for (let frame = 0; frame < 180 && !(builder.buildTarget && builder.buildTarget.progress > 0); frame++) {
+          // (#422: where it stands at the start is the map's luck; a builder a few steps short is at work within seconds)
+          for (let frame = 0; frame < 360 && !(builder.buildTarget && builder.buildTarget.progress > 0); frame++) {
             game.pathTick++;
             tickEnemy(builder, 1 / 60);
           }

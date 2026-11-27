@@ -54,7 +54,7 @@ html, body, button, input, select, textarea { font-family: var(--font); }
 /* options and tabs not chosen are quieter */
 .tab-btn, .wave-option, .map-option, .battle-size-option, .map-source-option, .editor-size-option, .difficulty-option, .cards-option, .fps-option,
 .faction-option { color: var(--text-dim); }
-[data-sheet="battle-settings"] .battle-size-option:not(.active) { color: var(--text); }
+[data-sheet="battle-settings"] .battle-size-option:not(.active) { color: #fff; }
 @media (hover: hover) {
   .tab-btn:not(:disabled):hover, .wave-option:not(:disabled):hover, .map-option:not(:disabled):hover,
   .battle-size-option:not(:disabled):hover, .map-source-option:not(:disabled):hover, .editor-size-option:not(:disabled):hover,
@@ -213,7 +213,6 @@ html:root :is(.btn, .menu-button, .tab-btn, .wave-option, .map-option, .battle-s
   .item-row .item-delete, #dock .dock-btn):not(.active):not(.on):not(.menu-button-primary):not(#play-button) {
   background: linear-gradient(to bottom, rgba(255, 238, 200, 0.12), rgba(0, 0, 0, 0.16)), var(--plank) center / cover;
   box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.25), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.45);
-  color: #e9e1c6;
 }
 html:root :is(.btn, .menu-button, .tab-btn, .wave-option, .fps-option, .faction-option, #dock .dock-btn):not(:disabled):active { transform: translateY(1px); }
 html:root .wave-options.segmented > button, html:root .wave-options.switch > button { background: transparent !important; box-shadow: none !important; }
