@@ -37,6 +37,11 @@ const MAX_PIXELS = 16e6;
 // layer -> its pictures by "res|cx,cy"
 /** @type {Map<string, Map<string, Chunk>>} */
 const chunkLayers = new Map();
+// layer -> each piece's picture before its last painting, by the same key: an undo in the editor brings a piece back as it
+// was, and its old picture is put back at once instead of painted again (an undone clear of the whole map was painted
+// again piece by piece, a few a frame). Kept only for the pieces on the screen and round it (see the end of drawChunks)
+/** @type {Map<string, Map<string, Chunk>>} */
+const spareLayers = new Map();
 const drawnChunks = new Map();
 // layer -> the pieces shown before their own picture was ready ("cx,cy"): theirs fades in when it is
 /** @type {Map<string, Set<string>>} */
@@ -46,6 +51,7 @@ const FADE_MS = 220;
 // go with the sun, so they're not kept ahead)
 const FAR_RES = 0.25, FAR_PREFIX = `${FAR_RES}|`, FAR_LAYERS = new Set(['grass', 'terrain', 'nature', 'tufts']);
 const FAR_LOOKS = 6; // (pieces looked at a frame for one to paint: working out a piece's stamp costs too)
+const FAR_SPARE_PIXELS = 4e6; // (a layer's far spares, see spareLayers: all of a large map's, 256 tiles across)
 /** @type {Map<string, number>} */
 const farCursor = new Map();
 let prewarmingChunks = false;
@@ -103,6 +109,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   if (cacheWorldEpoch !== epoch) {
     // Chunk canvases contain map-specific pixels; don't let equal-sized worlds reuse them.
     chunkLayers.clear();
+    spareLayers.clear();
     drawnChunks.clear();
     waitingPieces.clear();
     farCursor.clear();
@@ -119,6 +126,8 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   }
   let chunks = chunkLayers.get(layer);
   if (!chunks) chunkLayers.set(layer, (chunks = new Map()));
+  let spares = spareLayers.get(layer);
+  if (!spares) spareLayers.set(layer, (spares = new Map()));
   const visible = new Set();
   const size = CHUNK * TILE_SIZE, v = getViewRect(), scale = getViewScale();
   if (layer === 'grass') {
@@ -177,9 +186,11 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     const whole = !(chunkBands.always && !UNSPLIT.has(layer)) && (prewarmingChunks || UNSPLIT.has(layer) || cost === undefined || cost * (pw + pad * 2) * (ph + pad * 2) <= PAINT_MS * 1.5);
     let job = jobs.get(key);
     if (!job || job.stamp !== now || job.x0 !== x0 || job.y0 !== y0 || job.x1 !== x1 || job.y1 !== y1) {
-      // (painted whole this frame: into its old picture's canvas, as nothing shows it meanwhile; in bands, a new one,
-      // the old picture shown till it's done)
-      const canvas = whole && chunk ? chunk.canvas : document.createElement('canvas');
+      // (painted whole this frame: into the canvas of the picture before its old one, as nothing shows that; in bands, a new
+      // one, the old picture shown till it's done. The old picture is kept as the spare, see spareLayers)
+      const spare = whole && chunk && spares.get(key);
+      if (spare) spares.delete(key);
+      const canvas = spare ? spare.canvas : document.createElement('canvas');
       canvas.width = pw + pad * 2; canvas.height = ph + pad * 2;
       job = { canvas, pad, bleed: pad / res, pw, ph, stamp: now, x0, y0, x1, y1, next: y0 - pad / res };
       jobs.set(key, job);
@@ -211,7 +222,25 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
     } while (job.next < bottom && (prewarmingChunks || chunkBands.always || framePaintMs < PAINT_MS));
     if (job.next < bottom) return null;
     jobs.delete(key); paintTotals.count++;
+    if (chunk) keepSpare(key, chunk);
     return { canvas: job.canvas, pad: job.pad, pw: job.pw, ph: job.ph, stamp: now, frame: frameOf, x0, y0, x1, y1 };
+  };
+  /** @param {string} key @param {Chunk} old */
+  const keepSpare = (key, old) => {
+    const was = spares.get(key);
+    if (was && was !== old && onCard) glForgetChunk(was);
+    spares.delete(key); spares.set(key, old); // (to the end: the most recent)
+  };
+  // the piece's spare picture when it's what the piece is now: swapped with its picture, nothing painted
+  /** @param {string} key @param {string} now @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {Chunk | undefined} chunk @returns {Chunk | null} */
+  const fromSpare = (key, now, x0, y0, x1, y1, chunk) => {
+    const spare = spares.get(key);
+    if (!spare || spare.stamp !== now || spare.x0 !== x0 || spare.y0 !== y0 || spare.x1 !== x1 || spare.y1 !== y1) return null;
+    spares.delete(key);
+    if (chunk) spares.set(key, chunk);
+    jobs.delete(key); // (a painting of it in bands under way: not needed now)
+    spare.frame = frameOf;
+    return spare;
   };
   // the screen's pieces first (a changed one repainted before any painting ahead), then the ring round it
   for (const ahead of [false, true]) {
@@ -238,7 +267,9 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (!shown) {
           if (free) {
             const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
-            if (!chunk || chunk.stamp !== now) {
+            const back = chunk && chunk.stamp === now ? null : fromSpare(key, now, x0, y0, x1, y1, chunk);
+            if (back) { chunks.delete(key); chunks.set(key, back); }
+            else if (!chunk || chunk.stamp !== now) {
               const done = painted(key, x0, y0, x1, y1, now, pieceRes, chunk);
               if (done) { chunks.delete(key); chunks.set(key, done); } else if (chunk) chunk.frame = frameOf;
               framePaints++; if (layer === 'shadows') shadowPaints++;
@@ -254,6 +285,7 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
         if (free) {
           const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
           if (chunk && chunk.stamp === now) ready = chunk;
+          else if ((ready = fromSpare(key, now, x0, y0, x1, y1, chunk))) { /* (its picture before, put back) */ }
           else {
             ready = painted(key, x0, y0, x1, y1, now, pieceRes, chunk);
             framePaints++; stats.late++; if (layer === 'shadows') shadowPaints++;
@@ -308,8 +340,9 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
       if (part) { x0 = Math.max(x0, part[0]); y0 = Math.max(y0, part[1]); x1 = Math.min(x1, part[2]); y1 = Math.min(y1, part[3]); }
       const now = `${game.COLS}x${game.ROWS}|${stamp(cx, cy)}`;
       if (chunk && chunk.stamp === now) continue;
-      const done = painted(key, x0, y0, x1, y1, now, FAR_RES, chunk);
-      framePaints++;
+      const back = fromSpare(key, now, x0, y0, x1, y1, chunk);
+      const done = back || painted(key, x0, y0, x1, y1, now, FAR_RES, chunk);
+      if (!back) framePaints++;
       if (done) { done.frame = chunk ? chunk.frame : 0; chunks.set(key, done); }
     }
     farCursor.set(layer, cursor % total);
@@ -320,6 +353,27 @@ export function drawChunks(layer, res, stamp, paint, preview, target = ctx, keep
   // pictures don't count towards the number kept (they're small, and there's one for every piece of the map)
   // (they're out of the pixels too: counted in, they pushed the screen's pieces out at a full zoom out, and those were
   // painted again, pushing them out in turn, without end)
+  // (a spare kept only while its piece is on the screen or just round it, at the size it's shown there: about a screen's
+  // pictures more, not counted in the budget, which the pieces kept round it fill. The far ones up to FAR_SPARE_PIXELS, the
+  // oldest dropped first: dropped as they went off the screen, an undo painted the whole map's far pictures again, seconds
+  // of a phone's spare time)
+  let farPixels = 0;
+  for (const [key, c] of spares) {
+    if (key.startsWith(FAR_PREFIX)) { farPixels += c.canvas.width * c.canvas.height; continue; }
+    const cx = Math.floor(c.x0 / size), cy = Math.floor(c.y0 / size), at = key.slice(0, key.indexOf('|'));
+    const shown = cx >= cx0 && cx <= cx1 && cy >= cy0 && cy <= cy1;
+    const near = cx >= cx0 - AHEAD && cx <= cx1 + AHEAD && cy >= cy0 - AHEAD && cy <= cy1 + AHEAD;
+    if (shown ? at === String(res) : near && at === String(Math.min(res, 1))) continue;
+    spares.delete(key);
+    if (onCard) glForgetChunk(c);
+  }
+  for (const [key, c] of spares) {
+    if (farPixels <= FAR_SPARE_PIXELS) break;
+    if (!key.startsWith(FAR_PREFIX)) continue;
+    farPixels -= c.canvas.width * c.canvas.height;
+    spares.delete(key);
+    if (onCard) glForgetChunk(c);
+  }
   let pixels = 0, kept = 0;
   for (const [key, c] of chunks) if (!key.startsWith(FAR_PREFIX)) { pixels += c.canvas.width * c.canvas.height; kept++; }
   for (const [key, c] of chunks) {
